@@ -225,6 +225,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 {
     pj_pool_t *pool;
     pj_ice_strans_cb ice_st_cb;
+    pj_ice_strans_cfg ice_st_cfg;
     struct transport_ice *tp_ice;
     pj_status_t status;
 
@@ -245,6 +246,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     tp_ice->oa_role = ROLE_NONE;
     tp_ice->use_ice = PJ_FALSE;
 
+    pj_memcpy(&ice_st_cfg, cfg, sizeof(pj_ice_strans_cfg));
     if (cb)
 	pj_memcpy(&tp_ice->cb, cb, sizeof(pjmedia_ice_cb));
 
@@ -258,8 +260,18 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     ice_st_cb.on_ice_complete = &ice_on_ice_complete;
     ice_st_cb.on_rx_data = &ice_on_rx_data;
 
+    /* Configure RTP socket buffer settings, if not set */
+    if (ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size == 0) {
+	ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size = 
+			    PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
+    }
+    if (ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size == 0) {
+	ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size = 
+			    PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
+    }
+
     /* Create ICE */
-    status = pj_ice_strans_create(name, cfg, comp_cnt, tp_ice, 
+    status = pj_ice_strans_create(name, &ice_st_cfg, comp_cnt, tp_ice, 
 				  &ice_st_cb, &tp_ice->ice_st);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);

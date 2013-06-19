@@ -295,6 +295,26 @@ typedef struct pj_stun_sock_cfg
      */
     pj_bool_t qos_ignore_error;
 
+    /**
+     * Specify target value for socket receive buffer size. It will be
+     * applied using setsockopt(). When it fails to set the specified size,
+     * it will try with lower value until the highest possible is
+     * successfully set.
+     *
+     * Default: 0 (OS default)
+     */
+    unsigned so_rcvbuf_size;
+
+    /**
+     * Specify target value for socket send buffer size. It will be
+     * applied using setsockopt(). When it fails to set the specified size,
+     * it will try with lower value until the highest possible is
+     * successfully set.
+     *
+     * Default: 0 (OS default)
+     */
+    unsigned so_sndbuf_size;
+
 } pj_stun_sock_cfg;
 
 

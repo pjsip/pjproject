@@ -1217,6 +1217,46 @@
 
 
 /**
+ * Specify target value for socket receive buffer size. It will be
+ * applied to RTP socket of media transport using setsockopt(). When
+ * transport failed to set the specified size, it will try with lower
+ * value until the highest possible is successfully set.
+ *
+ * Setting this to zero will leave the socket receive buffer size to
+ * OS default (e.g: usually 8 KB on desktop platforms).
+ *
+ * Default: 64 KB when video is enabled, otherwise zero (OS default)
+ */
+#ifndef PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
+#   if PJMEDIA_HAS_VIDEO
+#	define PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE	(64*1024)
+#   else
+#	define PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE	0
+#   endif
+#endif
+
+
+/**
+ * Specify target value for socket send buffer size. It will be
+ * applied to RTP socket of media transport using setsockopt(). When
+ * transport failed to set the specified size, it will try with lower
+ * value until the highest possible is successfully set.
+ *
+ * Setting this to zero will leave the socket send buffer size to
+ * OS default (e.g: usually 8 KB on desktop platforms).
+ *
+ * Default: 64 KB when video is enabled, otherwise zero (OS default)
+ */
+#ifndef PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE
+#   if PJMEDIA_HAS_VIDEO
+#	define PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE	(64*1024)
+#   else
+#	define PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE	0
+#   endif
+#endif
+
+
+/**
  * @}
  */
 

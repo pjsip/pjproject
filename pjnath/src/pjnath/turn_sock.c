@@ -810,6 +810,46 @@ static void turn_on_state(pj_turn_session *sess,
 	    return;
 	}
 
+	/* Apply socket buffer size */
+	if (turn_sock->setting.so_rcvbuf_size > 0) {
+	    unsigned sobuf_size = turn_sock->setting.so_rcvbuf_size;
+	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_RCVBUF(),
+					      PJ_TRUE, &sobuf_size);
+	    if (status != PJ_SUCCESS) {
+		pj_perror(3, turn_sock->obj_name, status,
+			  "Failed setting SO_RCVBUF");
+	    } else {
+		if (sobuf_size < turn_sock->setting.so_rcvbuf_size) {
+		    PJ_LOG(4, (turn_sock->obj_name, 
+			       "Warning! Cannot set SO_RCVBUF as configured,"
+			       " now=%d, configured=%d", sobuf_size,
+			       turn_sock->setting.so_rcvbuf_size));
+		} else {
+		    PJ_LOG(5, (turn_sock->obj_name, "SO_RCVBUF set to %d",
+			       sobuf_size));
+		}
+	    }
+	}
+	if (turn_sock->setting.so_sndbuf_size > 0) {
+	    unsigned sobuf_size = turn_sock->setting.so_sndbuf_size;
+	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_SNDBUF(),
+					      PJ_TRUE, &sobuf_size);
+	    if (status != PJ_SUCCESS) {
+		pj_perror(3, turn_sock->obj_name, status,
+			  "Failed setting SO_SNDBUF");
+	    } else {
+		if (sobuf_size < turn_sock->setting.so_sndbuf_size) {
+		    PJ_LOG(4, (turn_sock->obj_name, 
+			       "Warning! Cannot set SO_SNDBUF as configured,"
+			       " now=%d, configured=%d", sobuf_size,
+			       turn_sock->setting.so_sndbuf_size));
+		} else {
+		    PJ_LOG(5, (turn_sock->obj_name, "SO_SNDBUF set to %d",
+			       sobuf_size));
+		}
+	    }
+	}
+
 	/* Create active socket */
 	pj_activesock_cfg_default(&asock_cfg);
 	asock_cfg.grp_lock = turn_sock->grp_lock;

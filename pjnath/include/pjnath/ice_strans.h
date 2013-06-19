@@ -370,6 +370,40 @@ typedef struct pj_ice_strans_cfg
 	 */
 	pj_qos_params qos_params;
 
+	/**
+	 * Specify target value for socket receive buffer size. It will be
+	 * applied using setsockopt(). When it fails to set the specified
+	 * size, it will try with lower value until the highest possible is
+	 * successfully set.
+	 *
+	 * When this is set to zero, this component will apply socket receive
+	 * buffer size settings specified in STUN and TURN socket config
+	 * above, i.e: \a stun::cfg::so_rcvbuf_size and
+	 * \a turn::cfg::so_rcvbuf_size. Otherwise, this setting will be
+	 * applied to STUN and TURN sockets for this component, overriding
+	 * the setting specified in STUN/TURN socket config.
+	 *
+	 * Default: 0
+	 */
+	unsigned so_rcvbuf_size;
+
+	/**
+	 * Specify target value for socket send buffer size. It will be
+	 * applied using setsockopt(). When it fails to set the specified
+	 * size, it will try with lower value until the highest possible is
+	 * successfully set.
+	 *
+	 * When this is set to zero, this component will apply socket send
+	 * buffer size settings specified in STUN and TURN socket config
+	 * above, i.e: \a stun::cfg::so_sndbuf_size and
+	 * \a turn::cfg::so_sndbuf_size. Otherwise, this setting will be
+	 * applied to STUN and TURN sockets for this component, overriding
+	 * the setting specified in STUN/TURN socket config.
+	 *
+	 * Default: 0
+	 */
+	unsigned so_sndbuf_size;
+
     } comp[PJ_ICE_MAX_COMP];
 
 } pj_ice_strans_cfg;

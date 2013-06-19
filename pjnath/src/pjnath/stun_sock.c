@@ -237,6 +237,46 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (status != PJ_SUCCESS && !cfg->qos_ignore_error)
 	goto on_error;
 
+    /* Apply socket buffer size */
+    if (cfg->so_rcvbuf_size > 0) {
+	unsigned sobuf_size = cfg->so_rcvbuf_size;
+	status = pj_sock_setsockopt_sobuf(stun_sock->sock_fd, pj_SO_RCVBUF(),
+					  PJ_TRUE, &sobuf_size);
+	if (status != PJ_SUCCESS) {
+	    pj_perror(3, stun_sock->obj_name, status,
+		      "Failed setting SO_RCVBUF");
+	} else {
+	    if (sobuf_size < cfg->so_rcvbuf_size) {
+		PJ_LOG(4, (stun_sock->obj_name, 
+			   "Warning! Cannot set SO_RCVBUF as configured, "
+			   "now=%d, configured=%d",
+			   sobuf_size, cfg->so_rcvbuf_size));
+	    } else {
+		PJ_LOG(5, (stun_sock->obj_name, "SO_RCVBUF set to %d",
+			   sobuf_size));
+	    }
+	}
+    }
+    if (cfg->so_sndbuf_size > 0) {
+	unsigned sobuf_size = cfg->so_sndbuf_size;
+	status = pj_sock_setsockopt_sobuf(stun_sock->sock_fd, pj_SO_SNDBUF(),
+					  PJ_TRUE, &sobuf_size);
+	if (status != PJ_SUCCESS) {
+	    pj_perror(3, stun_sock->obj_name, status,
+		      "Failed setting SO_SNDBUF");
+	} else {
+	    if (sobuf_size < cfg->so_sndbuf_size) {
+		PJ_LOG(4, (stun_sock->obj_name, 
+			   "Warning! Cannot set SO_SNDBUF as configured, "
+			   "now=%d, configured=%d",
+			   sobuf_size, cfg->so_sndbuf_size));
+	    } else {
+		PJ_LOG(5, (stun_sock->obj_name, "SO_SNDBUF set to %d",
+			   sobuf_size));
+	    }
+	}
+    }
+
     /* Bind socket */
     max_bind_retry = MAX_BIND_RETRY;
     if (cfg->port_range && cfg->port_range < max_bind_retry)

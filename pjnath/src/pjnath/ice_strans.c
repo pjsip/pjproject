@@ -296,6 +296,16 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 		  sizeof(ice_st->cfg.turn.cfg.qos_params));
     }
 
+    /* Override with component specific socket buffer size settings, if any */
+    if (ice_st->cfg.comp[comp->comp_id-1].so_rcvbuf_size > 0) {
+	ice_st->cfg.turn.cfg.so_rcvbuf_size = 
+	    ice_st->cfg.comp[comp->comp_id-1].so_rcvbuf_size;
+    }
+    if (ice_st->cfg.comp[comp->comp_id-1].so_sndbuf_size > 0) {
+	ice_st->cfg.turn.cfg.so_sndbuf_size = 
+	    ice_st->cfg.comp[comp->comp_id-1].so_sndbuf_size;
+    }
+
     /* Create the TURN transport */
     status = pj_turn_sock_create(&ice_st->cfg.stun_cfg, ice_st->cfg.af,
 				 ice_st->cfg.turn.conn_type,
@@ -381,6 +391,16 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    pj_memcpy(&ice_st->cfg.stun.cfg.qos_params,
 		      &ice_st->cfg.comp[comp_id-1].qos_params,
 		      sizeof(ice_st->cfg.stun.cfg.qos_params));
+	}
+
+	/* Override component specific socket buffer size settings, if any */
+	if (ice_st->cfg.comp[comp_id-1].so_rcvbuf_size > 0) {
+	    ice_st->cfg.stun.cfg.so_rcvbuf_size = 
+		ice_st->cfg.comp[comp_id-1].so_rcvbuf_size;
+	}
+	if (ice_st->cfg.comp[comp_id-1].so_sndbuf_size > 0) {
+	    ice_st->cfg.stun.cfg.so_sndbuf_size = 
+		ice_st->cfg.comp[comp_id-1].so_sndbuf_size;
 	}
 
 	/* Create the STUN transport */
