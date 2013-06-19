@@ -479,7 +479,7 @@ static void systest_audio_test(void)
     const pjmedia_dir dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     pjmedia_aud_param param;
     pjmedia_aud_test_results result;
-    int textbufpos;
+    pj_size_t textbufpos;
     enum gui_key key;
     unsigned problem_count = 0;
     const char *problems[16];
@@ -654,7 +654,8 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 {
     pjmedia_frame frm;
     short *buf;
-    unsigned i, clock_rate, samples_per_frame, read, len;
+    unsigned i, clock_rate, samples_per_frame;
+    pj_size_t read, len;
     unsigned start_pos;
     pj_bool_t first;
     pj_status_t status;
@@ -894,7 +895,7 @@ on_return:
 	}
     } else {
 	char msg[200];
-	int msglen;
+	pj_size_t msglen;
 
 	pj_ansi_snprintf(msg, sizeof(msg),
 			 "The sound device latency:\r\n"
@@ -1066,7 +1067,8 @@ on_return:
  */
 static void systest_list_audio_devs()
 {
-    unsigned i, dev_count, len=0;
+    unsigned i, dev_count;
+    pj_size_t len=0;
     pj_status_t status;
     test_item_t *ti;
     enum gui_key key;
@@ -1118,7 +1120,7 @@ static void systest_list_audio_devs()
 static void systest_display_settings(void)
 {
     pjmedia_aud_dev_info di;
-    int len = 0;
+    pj_size_t len = 0;
     enum gui_key key;
     test_item_t *ti;
     const char *title = "Audio Settings";

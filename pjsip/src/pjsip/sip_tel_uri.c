@@ -210,9 +210,9 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
 
 
     /* Print other parameters. */
-    printed = pjsip_param_print_on(&uri->other_param, buf, (endbuf-buf), 
-				   &pjsip_TEL_PNAME_SPEC, 
-				   &pjsip_TEL_PVALUE_SPEC, ';');
+    printed = (int)pjsip_param_print_on(&uri->other_param, buf, (endbuf-buf), 
+					&pjsip_TEL_PNAME_SPEC, 
+					&pjsip_TEL_PVALUE_SPEC, ';');
     if (printed < 0)
 	return -1;
     buf += printed;

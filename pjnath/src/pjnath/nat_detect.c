@@ -410,7 +410,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
 	{
 	    /* Permanent error */
-	    end_session(sess, -bytes_read, PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
+	    end_session(sess, (pj_status_t)-bytes_read, 
+			PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
 	    goto on_return;
 	}
 

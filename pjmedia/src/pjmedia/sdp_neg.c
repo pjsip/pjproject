@@ -910,7 +910,7 @@ static pj_status_t process_answer(pj_pool_t *pool,
 PJ_INLINE(void) rewrite_pt(pj_pool_t *pool, pj_str_t *attr_val,
 			   const pj_str_t *old_pt, const pj_str_t *new_pt)
 {
-    int len_diff = new_pt->slen - old_pt->slen;
+    int len_diff = (int)(new_pt->slen - old_pt->slen);
 
     /* Note that attribute value should be null-terminated. */
     if (len_diff > 0) {

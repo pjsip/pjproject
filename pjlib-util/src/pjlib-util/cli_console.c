@@ -57,12 +57,12 @@ struct cli_console_fe
 };
 
 static void console_write_log(pj_cli_front_end *fe, int level,
-		              const char *data, int len)
+		              const char *data, pj_size_t len)
 {
     struct cli_console_fe * cfe = (struct cli_console_fe *)fe;
 
     if (cfe->sess->log_level > level)
-        printf("%.*s", len, data);
+        printf("%.*s", (int)len, data);
 }
 
 static void console_quit(pj_cli_front_end *fe, pj_cli_sess *req)
@@ -197,7 +197,7 @@ static void send_err_arg(pj_cli_sess *sess,
 {
     pj_str_t send_data;
     char data_str[256];
-    unsigned len;
+    pj_size_t len;
     unsigned i;
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
 
@@ -261,7 +261,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
 			  pj_bool_t with_return)
 {
     unsigned i;
-    unsigned len;
+    pj_size_t len;
     pj_str_t send_data;
     char data[1028];
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
@@ -466,7 +466,7 @@ static int readline_thread(void * p)
     printf("%s", fe->cfg.prompt_str.ptr);
 
     while (!fe->thread_quit) {
-	unsigned input_len = 0;
+	pj_size_t input_len = 0;
 	pj_str_t input_str;
 	char *recv_buf = fe->input.buf;
 	pj_bool_t is_valid = PJ_TRUE;
@@ -478,8 +478,9 @@ static int readline_thread(void * p)
 	     * If exit is desired end script with q for quit
 	     */
  	    /* Reopen stdin/stdout/stderr to /dev/console */
-#if defined(PJ_WIN32) && PJ_WIN32!=0 && \
-  (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
+#if ((defined(PJ_WIN32) && PJ_WIN32!=0) || \
+     (defined(PJ_WIN64) && PJ_WIN64!=0)) && \
+     (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
 	    if (freopen ("CONIN$", "r", stdin) == NULL) {
 #else
 	    if (1) {

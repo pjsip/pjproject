@@ -975,7 +975,7 @@ PJ_DEF(void) pjmedia_jbuf_put_frame3(pjmedia_jbuf *jb,
     /* Attempt to store the frame */
     min_frame_size = PJ_MIN(frame_size, jb->jb_frame_size);
     status = jb_framelist_put_at(&jb->jb_framelist, frame_seq, frame,
-				 min_frame_size, bit_info, ts,
+				 (unsigned)min_frame_size, bit_info, ts,
 				 PJMEDIA_JB_NORMAL_FRAME);
     
     /* Jitter buffer is full, remove some older frames */
@@ -989,12 +989,12 @@ PJ_DEF(void) pjmedia_jbuf_put_frame3(pjmedia_jbuf *jb,
 	 * So we're confident about 'distance' value here.
 	 */
 	distance = (frame_seq - jb_framelist_origin(&jb->jb_framelist)) -
-		   jb->jb_max_count + 1;
+		   (int)jb->jb_max_count + 1;
 	pj_assert(distance > 0);
 
 	removed = jb_framelist_remove_head(&jb->jb_framelist, distance);
 	status = jb_framelist_put_at(&jb->jb_framelist, frame_seq, frame,
-				     min_frame_size, bit_info, ts,
+				     (unsigned)min_frame_size, bit_info, ts,
 				     PJMEDIA_JB_NORMAL_FRAME);
 
 	jb->jb_discard += removed;
@@ -1125,7 +1125,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
 {
     PJ_ASSERT_RETURN(jb && state, PJ_EINVAL);
 
-    state->frame_size = jb->jb_frame_size;
+    state->frame_size = (unsigned)jb->jb_frame_size;
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
     

@@ -12,6 +12,7 @@
 #define EXPORT
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN64) && PJ_WIN64!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0) 
 #   include "../../speex/win32/config.h"
 #else

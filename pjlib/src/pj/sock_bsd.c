@@ -60,7 +60,7 @@ const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
 const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
 #ifdef SOL_IP
 const pj_uint16_t PJ_SOL_IP	= SOL_IP;
-#elif defined(PJ_WIN32) && PJ_WIN32
+#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) 
 const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
 #else
 const pj_uint16_t PJ_SOL_IP	= 0;
@@ -70,7 +70,7 @@ const pj_uint16_t PJ_SOL_IP	= 0;
 const pj_uint16_t PJ_SOL_TCP	= SOL_TCP;
 #elif defined(IPPROTO_TCP)
 const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
-#elif defined(PJ_WIN32) && PJ_WIN32
+#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
 #else
 const pj_uint16_t PJ_SOL_TCP	= 6;
@@ -80,7 +80,7 @@ const pj_uint16_t PJ_SOL_TCP	= 6;
 const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
 #elif defined(IPPROTO_UDP)
 const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
-#elif defined(PJ_WIN32) && PJ_WIN32
+#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
 #else
 const pj_uint16_t PJ_SOL_UDP	= 17;
@@ -88,7 +88,7 @@ const pj_uint16_t PJ_SOL_UDP	= 17;
 
 #ifdef SOL_IPV6
 const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
-#elif defined(PJ_WIN32) && PJ_WIN32
+#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 #   if defined(IPPROTO_IPV6) || (_WIN32_WINNT >= 0x0501)
 	const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
 #   else
@@ -304,7 +304,7 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
 
     return PJ_SUCCESS;
 
-#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+#elif defined(PJ_WIN32) || defined(PJ_WIN64) || defined(PJ_WIN32_WINCE)
     /*
      * Implementation on Windows, using WSAStringToAddress().
      * Should also work on Unicode systems.
@@ -378,7 +378,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 
     return PJ_SUCCESS;
 
-#elif defined(PJ_WIN32) || defined(PJ_WIN32_WINCE)
+#elif defined(PJ_WIN32) || defined(PJ_WIN64) || defined(PJ_WIN32_WINCE)
     /*
      * Implementation on Windows, using WSAAddressToString().
      * Should also work on Unicode systems.
@@ -461,7 +461,7 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
     return &hostname;
 }
 
-#if defined(PJ_WIN32)
+#if defined(PJ_WIN32) || defined(PJ_WIN64)
 /*
  * Create new socket/endpoint for communication and returns a descriptor.
  */
@@ -474,7 +474,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
     /* Sanity checks. */
     PJ_ASSERT_RETURN(sock!=NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN((unsigned)PJ_INVALID_SOCKET==INVALID_SOCKET, 
+    PJ_ASSERT_RETURN((SOCKET)PJ_INVALID_SOCKET==INVALID_SOCKET, 
                      (*sock=PJ_INVALID_SOCKET, PJ_EINVAL));
 
     *sock = WSASocket(af, type, proto, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -599,6 +599,7 @@ PJ_DEF(pj_status_t) pj_sock_close(pj_sock_t sock)
 
     PJ_CHECK_STACK();
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     rc = closesocket(sock);
 #else
@@ -659,7 +660,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     flags |= MSG_NOSIGNAL;
 #endif
 
-    *len = send(sock, (const char*)buf, *len, flags);
+    *len = send(sock, (const char*)buf, (int)(*len), flags);
 
     if (*len < 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -683,7 +684,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     
     CHECK_ADDR_LEN(to, tolen);
 
-    *len = sendto(sock, (const char*)buf, *len, flags, 
+    *len = sendto(sock, (const char*)buf, (int)(*len), flags, 
 		  (const struct sockaddr*)to, tolen);
 
     if (*len < 0) 
@@ -703,7 +704,7 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
 
-    *len = recv(sock, (char*)buf, *len, flags);
+    *len = recv(sock, (char*)buf, (int)(*len), flags);
 
     if (*len < 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
@@ -724,7 +725,7 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
 
-    *len = recvfrom(sock, (char*)buf, *len, flags, 
+    *len = recvfrom(sock, (char*)buf, (int)(*len), flags, 
 		    (struct sockaddr*)from, (socklen_t*)fromlen);
 
     if (*len < 0) 

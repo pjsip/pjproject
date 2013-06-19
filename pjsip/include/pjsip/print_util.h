@@ -30,7 +30,7 @@
 #define copy_advance_pair_check(buf,str1,len1,str2)   \
 	do { \
 	    if (str2.slen) { \
-		printed = len1+str2.slen; \
+		printed = len1+(int)str2.slen; \
 		if (printed >= (endbuf-buf)) return -1;	\
 		pj_memcpy(buf,str1,len1); \
 		pj_memcpy(buf+len1, str2.ptr, str2.slen); \
@@ -53,7 +53,7 @@
 
 #define copy_advance_pair_quote(buf,str1,len1,str2,quotebegin,quoteend) \
 	do { \
-		printed = len1+str2.slen+2; \
+		printed = len1+(int)str2.slen+2; \
 		if (printed >= (endbuf-buf)) return -1;	\
 		pj_memcpy(buf,str1,len1); \
 		*(buf+len1)=quotebegin; \
@@ -67,7 +67,8 @@
 	  if (str2.slen) { \
 	    if (len1+str2.slen >= (endbuf-buf)) return -1; \
 	    pj_memcpy(buf,str1,len1); \
-	    printed=pj_strncpy2_escape(buf+len1,&str2,(endbuf-buf-len1),&unres);\
+	    printed=(int)pj_strncpy2_escape(buf+len1,&str2,(endbuf-buf-len1), \
+					    &unres);\
 	    if (printed < 0) return -1; \
 	    buf += (printed+len1); \
 	  } \
@@ -83,7 +84,7 @@
 #define copy_advance_escape(buf,str,unres)    \
 	do { \
 	    printed = \
-		pj_strncpy2_escape(buf, &(str), (endbuf-buf), &(unres)); \
+		(int)pj_strncpy2_escape(buf, &(str), (endbuf-buf), &(unres)); \
 	    if (printed < 0) return -1; \
 	    buf += printed; \
 	} while (0)

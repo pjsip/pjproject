@@ -47,10 +47,10 @@ PJ_DEF(unsigned) pj_fifobuf_max_size (pj_fifobuf_t *fifobuf)
     PJ_CHECK_STACK();
 
     if (fifobuf->uend >= fifobuf->ubegin) {
-	s1 = fifobuf->last - fifobuf->uend;
-	s2 = fifobuf->ubegin - fifobuf->first;
+	s1 = (unsigned)(fifobuf->last - fifobuf->uend);
+	s2 = (unsigned)(fifobuf->ubegin - fifobuf->first);
     } else {
-	s1 = s2 = fifobuf->ubegin - fifobuf->uend;
+	s1 = s2 = (unsigned)(fifobuf->ubegin - fifobuf->uend);
     }
     
     return s1<s2 ? s2 : s1;
@@ -72,7 +72,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 
     /* try to allocate from the end part of the fifo */
     if (fifobuf->uend >= fifobuf->ubegin) {
-	available = fifobuf->last - fifobuf->uend;
+	available = (unsigned)(fifobuf->last - fifobuf->uend);
 	if (available >= size+SZ) {
 	    char *ptr = fifobuf->uend;
 	    fifobuf->uend += (size+SZ);
@@ -92,7 +92,7 @@ PJ_DEF(void*) pj_fifobuf_alloc (pj_fifobuf_t *fifobuf, unsigned size)
 
     /* try to allocate from the start part of the fifo */
     start = (fifobuf->uend <= fifobuf->ubegin) ? fifobuf->uend : fifobuf->first;
-    available = fifobuf->ubegin - start;
+    available = (unsigned)(fifobuf->ubegin - start);
     if (available >= size+SZ) {
 	char *ptr = start;
 	fifobuf->uend = start + size + SZ;

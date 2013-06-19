@@ -17,6 +17,9 @@
 			Name="Smartphone 2003 (ARMV4)"
 		/>
 		<Platform
+			Name="x64"
+		/>
+		<Platform
 			Name="Windows Mobile 6 Standard SDK (ARMV4I)"
 		/>
 		<Platform
@@ -225,6 +228,66 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="Debug|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
 			Name="Release|Win32"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
@@ -414,6 +477,65 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
@@ -609,6 +731,66 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="Debug-Static|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
 			Name="Release-Dynamic|Win32"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
@@ -798,6 +980,65 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
@@ -993,6 +1234,66 @@
 			/>
 		</Configuration>
 		<Configuration
+			Name="Debug-Dynamic|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
 			Name="Release-Static|Win32"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
@@ -1182,6 +1483,65 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|x64"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../..,../../third_party/BaseClasses"
+				PreprocessorDefinitions="_LIB;"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\lib\pjmedia-videodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration

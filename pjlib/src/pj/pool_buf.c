@@ -83,7 +83,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
 {
 #if PJ_HAS_POOL_ALT_API == 0
     struct creation_param param;
-    long align_diff;
+    pj_size_t align_diff;
 
     PJ_ASSERT_RETURN(buf && size, NULL);
 
@@ -94,7 +94,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
     }
 
     /* Check and align buffer */
-    align_diff = (long)buf;
+    align_diff = (pj_size_t)buf;
     if (align_diff & (PJ_POOL_ALIGNMENT-1)) {
 	align_diff &= (PJ_POOL_ALIGNMENT-1);
 	buf = (void*) (((char*)buf) + align_diff);

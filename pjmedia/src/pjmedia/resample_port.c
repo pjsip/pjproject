@@ -192,7 +192,7 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
 	if (tmp_frame.size) {
 	    pjmedia_copy_samples((pj_int16_t*)frame->buf, 
 				 (const pj_int16_t*)tmp_frame.buf, 
-				 frame->size >> 1);
+				 (unsigned)frame->size >> 1);
 	}
 	return PJ_SUCCESS;
     }

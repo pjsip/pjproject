@@ -158,7 +158,7 @@ static struct avi_reader_port *create_avi_port(pj_pool_t *pool)
     pjmedia_port_info_init(&port->base.info, &name, SIGNATURE, 
 			   8000, 1, 16, 80);
 
-    port->fd = (pj_oshandle_t)-1;
+    port->fd = (pj_oshandle_t)(pj_ssize_t)-1;
     port->base.get_frame = &avi_get_frame;
     port->base.on_destroy = &avi_on_destroy;
 
@@ -785,7 +785,7 @@ static pj_status_t avi_on_destroy(pjmedia_port *this_port)
 
     pj_assert(this_port->info.signature == SIGNATURE);
 
-    if (fport->fd != (pj_oshandle_t) -1)
+    if (fport->fd != (pj_oshandle_t) (pj_ssize_t)-1)
         pj_file_close(fport->fd);
     return PJ_SUCCESS;
 }

@@ -807,7 +807,7 @@ PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
     /* Create request token to map the request to the perm structures
      * which the request belongs.
      */
-    req_token = (void*)(long)pj_rand();
+    req_token = (void*)(pj_ssize_t)pj_rand();
 
     /* Process the addresses */
     for (i=0; i<addr_cnt; ++i) {
@@ -1023,7 +1023,8 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 	    goto on_return;
 
 	/* Send the Send Indication */
-	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, send_ind_len,
+	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, 
+				      (unsigned)send_ind_len,
 				      sess->srv_addr,
 				      pj_sockaddr_get_len(sess->srv_addr));
     }
@@ -1207,7 +1208,8 @@ static pj_status_t stun_on_send_msg(pj_stun_session *stun,
     PJ_UNUSED_ARG(token);
 
     sess = (pj_turn_session*) pj_stun_session_get_user_data(stun);
-    return (*sess->cb.on_send_pkt)(sess, (const pj_uint8_t*)pkt, pkt_size, 
+    return (*sess->cb.on_send_pkt)(sess, (const pj_uint8_t*)pkt, 
+				   (unsigned)pkt_size, 
 				   dst_addr, addr_len);
 }
 
@@ -1887,7 +1889,7 @@ static unsigned refresh_permissions(pj_turn_session *sess,
 		    /* Create request token to map the request to the perm
 		     * structures which the request belongs.
 		     */
-		    req_token = (void*)(long)pj_rand();
+		    req_token = (void*)(pj_ssize_t)pj_rand();
 		}
 
 		status = pj_stun_msg_add_sockaddr_attr(

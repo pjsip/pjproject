@@ -160,7 +160,7 @@ int tsx_basic_test(struct tsx_test_param *param)
 
 struct tsx_test_state
 {
-    int pool_cnt;
+    pj_size_t pool_cnt;
 };
 
 static void save_tsx_test_state(struct tsx_test_state *st)

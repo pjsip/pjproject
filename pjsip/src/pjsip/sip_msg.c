@@ -399,7 +399,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 				    char *buf, pj_size_t size)
 {
     char *p=buf, *end=buf+size;
-    int len;
+    pj_size_t len;
     pjsip_hdr *hdr;
     pj_str_t clen_hdr =  { "Content-Length: ", 16};
 
@@ -497,7 +497,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	    }
 	    pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
 	    p += ctype_hdr.slen;
-	    p += print_media_type(p, end-p, media);
+	    p += print_media_type(p, (unsigned)(end-p), media);
 	    *p++ = '\r';
 	    *p++ = '\n';
 
@@ -535,7 +535,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	 */
 	if (clen_pos) {
 	    char tmp[16];
-	    len = pj_utoa(len, tmp);
+	    len = pj_utoa((unsigned long)len, tmp);
 	    if (len > CLEN_SPACE) len = CLEN_SPACE;
 	    pj_memcpy(clen_pos+CLEN_SPACE-len, tmp, len);
 	}
@@ -762,7 +762,7 @@ static int pjsip_generic_string_hdr_print( pjsip_generic_string_hdr *hdr,
     p += hdr->hvalue.slen;
     *p = '\0';
 
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_generic_string_hdr* pjsip_generic_string_hdr_clone( pj_pool_t *pool, 
@@ -844,7 +844,7 @@ static int pjsip_generic_int_hdr_print( pjsip_generic_int_hdr *hdr,
 
     p += pj_utoa(hdr->ivalue, p);
 
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_generic_int_hdr* pjsip_generic_int_hdr_clone( pj_pool_t *pool, 
@@ -923,7 +923,7 @@ static int pjsip_generic_array_hdr_print( pjsip_generic_array_hdr *hdr,
 	}
     }
 
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_generic_array_hdr* pjsip_generic_array_hdr_clone( pj_pool_t *pool, 
@@ -1071,7 +1071,7 @@ static int pjsip_clen_hdr_print( pjsip_clen_hdr *hdr,
     p += len;
     *p = '\0';
 
-    return p-buf;
+    return (int)(p-buf);
 }
 
 static pjsip_clen_hdr* pjsip_clen_hdr_clone( pj_pool_t *pool, const pjsip_clen_hdr *rhs)
@@ -1141,7 +1141,7 @@ static int pjsip_cseq_hdr_print( pjsip_cseq_hdr *hdr, char *buf, pj_size_t size)
 
     *p = '\0';
 
-    return p-buf;
+    return (int)(p-buf);
 }
 
 static pjsip_cseq_hdr* pjsip_cseq_hdr_clone( pj_pool_t *pool, 
@@ -1212,7 +1212,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	*p++ = ':';
 	*p++ = ' ';
 	*p++ = '*';
-	return p - buf;
+	return (int)(p - buf);
 
     } else {
 	int printed;
@@ -1262,15 +1262,15 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	    buf += printed + 9;
 	}
 
-	printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
-				       &pc->pjsip_TOKEN_SPEC,
-				       &pc->pjsip_TOKEN_SPEC, 
-				       ';');
+	printed = (int)pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf,
+					    &pc->pjsip_TOKEN_SPEC,
+					    &pc->pjsip_TOKEN_SPEC, 
+					    ';');
 	if (printed < 0)
 	    return printed;
 	buf += printed;
 
-	return buf-startbuf;
+	return (int)(buf-startbuf);
     }
 }
 
@@ -1359,7 +1359,7 @@ static int print_media_type(char *buf, unsigned len,
 
     p += printed;
 
-    return p-buf;
+    return (int)(p-buf);
 }
 
 
@@ -1387,11 +1387,11 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     *p++ = ':';
     *p++ = ' ';
 
-    len = print_media_type(p, buf+size-p, &hdr->media);
+    len = print_media_type(p, (unsigned)(buf+size-p), &hdr->media);
     p += len;
 
     *p = '\0';
-    return p-buf;
+    return (int)(p-buf);
 }
 
 static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool, 
@@ -1511,7 +1511,7 @@ PJ_DEF(pjsip_to_hdr*) pjsip_fromto_hdr_set_to( pjsip_fromto_hdr *hdr )
 static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr, 
 				   char *buf, pj_size_t size)
 {
-    int printed;
+    pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
@@ -1538,7 +1538,7 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
 	return -1;
     buf += printed;
 
-    return buf-startbuf;
+    return (int)(buf-startbuf);
 }
 
 static pjsip_fromto_hdr* pjsip_fromto_hdr_clone( pj_pool_t *pool, 
@@ -1692,7 +1692,7 @@ PJ_DEF(pjsip_route_hdr*) pjsip_routing_hdr_set_route( pjsip_routing_hdr *hdr )
 static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
 				    char *buf, pj_size_t size )
 {
-    int printed;
+    pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
@@ -1734,7 +1734,7 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
 	return -1;
     buf += printed;
 
-    return buf-startbuf;
+    return (int)(buf-startbuf);
 }
 
 static pjsip_routing_hdr* pjsip_routing_hdr_clone( pj_pool_t *pool,
@@ -1831,7 +1831,7 @@ static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
     char *endbuf = buf + size;
     const pj_str_t *hname = &hdr->name;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
-    int printed;
+    pj_ssize_t printed;
     
     if ((pj_ssize_t)size < hdr->name.slen + 2+11)
 	return -1;
@@ -1866,11 +1866,11 @@ static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr,
 				   &pc->pjsip_TOKEN_SPEC, 
 				   ';');
     if (printed < 0)
-	return printed;
+	return (int)printed;
 
     p += printed;
 
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool, 
@@ -1976,7 +1976,7 @@ PJ_DEF(pjsip_via_hdr*) pjsip_via_hdr_create( pj_pool_t *pool )
 static int pjsip_via_hdr_print( pjsip_via_hdr *hdr, 
 				char *buf, pj_size_t size)
 {
-    int printed;
+    pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     pj_str_t sip_ver = { "SIP/2.0/", 8 };
@@ -2064,7 +2064,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
 	return -1;
     buf += printed;
     
-    return buf-startbuf;
+    return (int)(buf-startbuf);
 }
 
 static pjsip_via_hdr* pjsip_via_hdr_clone( pj_pool_t *pool, 
@@ -2208,7 +2208,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
 
     body->data = pj_pool_alloc(pool, text->slen);
     pj_memcpy(body->data, text->ptr, text->slen);
-    body->len = text->slen;
+    body->len = (unsigned)text->slen;
 
     body->clone_data = &pjsip_clone_text_data;
     body->print_body = &pjsip_print_text_body;

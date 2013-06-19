@@ -71,7 +71,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
 {
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
-    const unsigned required_size = frame->size;
+    const unsigned required_size = (unsigned)frame->size;
     pj_status_t status;
 
     pjmedia_clock_src_update(&snd_port->play_clocksrc, &frame->timestamp);

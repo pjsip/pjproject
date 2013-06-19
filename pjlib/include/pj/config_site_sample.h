@@ -475,7 +475,7 @@
 #   define PJ_HASH_USE_OWN_TOLOWER	1
 #   define PJSIP_UNESCAPE_IN_PLACE	1
 
-#   ifdef PJ_WIN32
+#   if defined(PJ_WIN32) || defined(PJ_WIN64) 
 #     define PJSIP_MAX_NET_EVENTS	10
 #   endif
 

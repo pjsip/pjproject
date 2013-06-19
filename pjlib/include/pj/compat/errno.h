@@ -21,7 +21,8 @@
 #define __PJ_COMPAT_ERRNO_H__
 
 #if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
-    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0
 
     typedef unsigned long pj_os_err_type;
 #   define pj_get_native_os_error()	    GetLastError()

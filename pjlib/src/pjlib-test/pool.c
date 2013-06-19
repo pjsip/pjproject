@@ -93,7 +93,8 @@ static int pool_alignment_test(void)
     if (!pool)
 	return -300;
 
-#define IS_ALIGNED(p)	((((unsigned long)p) & (PJ_POOL_ALIGNMENT-1)) == 0)
+#define IS_ALIGNED(p)	((((unsigned long)(pj_ssize_t)p) & \
+			   (PJ_POOL_ALIGNMENT-1)) == 0)
 
     for (i=0; i<LOOP; ++i) {
 	/* Test first allocation */
@@ -195,7 +196,7 @@ static int drain_test(pj_size_t size, pj_size_t increment)
 	    size = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) & 
 		   ~(PJ_POOL_ALIGNMENT - 1);
 	else
-	    size = freesize;
+	    size = (int)freesize;
 
 	p = pj_pool_alloc(pool, size);
 	if (!p) {

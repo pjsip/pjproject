@@ -278,7 +278,8 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 
             info->host_api = p;
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN64) && PJ_WIN64!=0)
             info->def_devname = "0";
 #elif defined(PJ_LINUX) && PJ_LINUX!=0
             info->def_devname = "/dev/video0";

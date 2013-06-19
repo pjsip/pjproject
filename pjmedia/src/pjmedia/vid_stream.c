@@ -502,7 +502,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 	    PJ_PERROR(4,(stream->name.ptr, status,
         			     "Error generating RTCP SDES"));
 	} else {
-	    len += sdes_len;
+	    len += (int)sdes_len;
 	}
     }
 
@@ -517,7 +517,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 	    PJ_PERROR(4,(stream->name.ptr, status,
         			     "Error generating RTCP BYE"));
 	} else {
-	    len += bye_len;
+	    len += (int)bye_len;
 	}
     }
 
@@ -606,7 +606,8 @@ static void on_rx_rtp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((channel->port.info.name.ptr, "RTP recv() error", -bytes_read));
+	LOGERR_((channel->port.info.name.ptr, "RTP recv() error", 
+		(pj_status_t)-bytes_read));
 	return;
     }
 
@@ -615,7 +616,7 @@ static void on_rx_rtp( void *data,
 	return;
 
     /* Update RTP and RTCP session. */
-    status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, bytes_read,
+    status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, (int)bytes_read,
 				    &hdr, &payload, &payloadlen);
     if (status != PJ_SUCCESS) {
 	LOGERR_((channel->port.info.name.ptr, "RTP decode error", status));
@@ -777,7 +778,7 @@ static void on_rx_rtcp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	LOGERR_((stream->cname.ptr, "RTCP recv() error", 
-		 -bytes_read));
+		 (pj_status_t)-bytes_read));
 	return;
     }
 
@@ -869,7 +870,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	status = pjmedia_rtp_encode_rtp(&channel->rtp,
 	                                channel->pt,
 	                                (has_more_data == PJ_FALSE ? 1 : 0),
-	                                frame_out.size,
+	                                (int)frame_out.size,
 	                                rtp_ts_len,
 	                                (const void**)&rtphdr,
 	                                &rtphdrlen);
@@ -899,7 +900,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	    /* Ignore this error */
 	}
 
-	pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
+	pjmedia_rtcp_tx_rtp(&stream->rtcp, (unsigned)frame_out.size);
 	total_sent += frame_out.size;
 	pkt_cnt++;
 
@@ -1071,7 +1072,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	/* Decode */
 	status = pjmedia_vid_codec_decode(stream->codec, cnt,
 	                                  stream->rx_frames,
-	                                  frame->size, frame);
+	                                  (unsigned)frame->size, frame);
 	if (status != PJ_SUCCESS) {
 	    LOGERR_((channel->port.info.name.ptr, "codec decode() error",
 		     status));
@@ -1291,7 +1292,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	/* It should big enough to hold (minimally) RTCP SR with an SDES. */
 	min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
 			    sizeof(pjmedia_rtcp_common) +
-			    (4 + stream->cname.slen) +
+			    (4 + (unsigned)stream->cname.slen) +
 			    32;
 
 	if (channel->buf_size < min_out_pkt_size)
@@ -1599,7 +1600,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
      */
     stream->out_rtcp_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
 				 sizeof(pjmedia_rtcp_common) +
-				 (4 + stream->cname.slen) +
+				 (4 + (unsigned)stream->cname.slen) +
 				 32;
     if (stream->out_rtcp_pkt_size > PJMEDIA_MAX_MTU)
 	stream->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;

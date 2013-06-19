@@ -36,7 +36,8 @@
 
 
 /* A macro just to get rid of type mismatch between char and unsigned char */
-#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, len)
+#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, \
+					      (unsigned)len)
 
 /* Logging. */
 #define THIS_FILE   "sip_auth_client.c"

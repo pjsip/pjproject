@@ -61,7 +61,7 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
 {
     pj_uint8_t *query, *p = (pj_uint8_t*)packet;
     const char *startlabel, *endlabel, *endname;
-    unsigned d;
+    pj_size_t d;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(packet && size && qtype && name, PJ_EINVAL);
@@ -106,7 +106,7 @@ PJ_DEF(pj_status_t) pj_dns_make_query( void *packet,
     p += 2;
 
     /* Done, calculate length */
-    *size = p - (pj_uint8_t*)packet;
+    *size = (unsigned)(p - (pj_uint8_t*)packet);
 
     return 0;
 }

@@ -437,7 +437,7 @@ PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
  */
 PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
 				    const char *buffer,
-				    int len);
+				    pj_size_t len);
 
 /**
  * Parse an input cmdline string. The first word of the command line is the

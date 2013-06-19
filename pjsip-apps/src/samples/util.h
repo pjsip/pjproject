@@ -155,8 +155,8 @@ void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
 {
 #if !defined(PJ_HAS_POOL_ALT_API) || PJ_HAS_POOL_ALT_API==0
     pj_pool_t   *p;
-    unsigned     total_alloc = 0;
-    unsigned     total_used = 0;
+    pj_size_t    total_alloc = 0;
+    pj_size_t    total_used = 0;
 
     /* Accumulate memory usage in active list. */
     p = cp->used_list.next;

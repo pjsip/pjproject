@@ -105,7 +105,7 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    if (fgets(buf, len, stdin) == NULL)
+    if (fgets(buf, (int)len, stdin) == NULL)
 	return PJ_FALSE;
 
     /* Remove trailing newlines. */

@@ -51,7 +51,11 @@ extern "C" {
 #endif
 
 #ifdef _MSC_VER
-#pragma pack(4)
+#   ifdef WIN64
+#	pragma pack(8)
+#   else
+#	pragma pack(4)
+#   endif
 #endif
 
 #include "crypto_kernel.h"

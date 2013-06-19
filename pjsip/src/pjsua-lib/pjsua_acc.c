@@ -299,7 +299,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
      */
 #if PJSUA_ADD_ICE_TAGS
     if (acc_cfg->ice_cfg.enable_ice) {
-	unsigned new_len;
+	pj_ssize_t new_len;
 	pj_str_t new_prm;
 
 	new_len = acc_cfg->contact_params.slen + 10;
@@ -320,12 +320,13 @@ static pj_status_t initialize_acc(unsigned acc_id)
     if (acc_cfg->use_rfc5626) {
 	if (acc_cfg->rfc5626_instance_id.slen==0) {
 	    const pj_str_t *hostname;
-	    pj_uint32_t hval, pos;
+	    pj_uint32_t hval;
+	    pj_size_t pos;
 	    char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
 
 	    hostname = pj_gethostname();
 	    pos = pj_ansi_strlen(instprm) - 10;
-	    hval = pj_hash_calc(0, hostname->ptr, hostname->slen);
+	    hval = pj_hash_calc(0, hostname->ptr, (unsigned)hostname->slen);
 	    pj_val_to_hex_digit( ((char*)&hval)[0], instprm+pos+0);
 	    pj_val_to_hex_digit( ((char*)&hval)[1], instprm+pos+2);
 	    pj_val_to_hex_digit( ((char*)&hval)[2], instprm+pos+4);
@@ -334,7 +335,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	    pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
 	} else {
 	    const char *prmname = ";+sip.instance=\"";
-	    unsigned len;
+	    pj_size_t len;
 
 	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
 	    acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
@@ -350,7 +351,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	    acc->rfc5626_regprm = pj_str(";reg-id=1");
 	} else {
 	    const char *prmname = ";reg-id=";
-	    unsigned len;
+	    pj_size_t len;
 
 	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
 	    acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
@@ -997,7 +998,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Global outbound proxy */
     if (global_route_crc != acc->global_route_crc) {
-	unsigned i, rcnt;
+	unsigned i;
+	pj_size_t rcnt;
 
 	/* Remove the outbound proxies from the route set */
 	rcnt = pj_list_size(&acc->route_set);
@@ -1362,7 +1364,7 @@ done:
 	/* Need to use outbound, append the contact with +sip.instance and
 	 * reg-id parameters.
 	 */
-	unsigned len;
+	pj_ssize_t len;
 	pj_str_t reg_contact;
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
@@ -1682,7 +1684,8 @@ void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
     const pj_str_t HNAME = { "Service-Route", 13 };
     const pj_str_t HROUTE = { "Route", 5 };
     pjsip_uri *uri[PJSUA_ACC_MAX_PROXIES];
-    unsigned i, uri_cnt = 0, rcnt;
+    unsigned i, uri_cnt = 0;
+    pj_size_t rcnt;
 
     /* Find and parse Service-Route headers */
     for (;;) {

@@ -245,13 +245,13 @@ PJ_DEF(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool,
                              	    int sepchar)
 {
     char *new_param, *p;
-    int len;
+    pj_size_t len;
 
     len = param->slen + pname->slen + pvalue->slen + 3;
     p = new_param = (char*) pj_pool_alloc(pool, len);
     
     if (param->slen) {
-	int old_len = param->slen;
+	pj_size_t old_len = param->slen;
 	pj_memcpy(p, param->ptr, old_len);
 	p += old_len;
     }
@@ -560,7 +560,7 @@ static pj_status_t int_register_parser( const char *name,
     rec.hname[rec.hname_len] = '\0';
 
     /* Calculate hash value. */
-    rec.hname_hash = pj_hash_calc(0, rec.hname, rec.hname_len);
+    rec.hname_hash = pj_hash_calc(0, rec.hname, (unsigned)rec.hname_len);
 
     /* Get the pos to insert the new handler. */
     for (pos=0; pos < handler_count; ++pos) {
@@ -595,7 +595,8 @@ PJ_DEF(pj_status_t) pjsip_register_hdr_parser( const char *hname,
 					       const char *hshortname,
 					       pjsip_parse_hdr_func *fptr)
 {
-    unsigned i, len;
+    unsigned i;
+    pj_size_t len;
     char hname_lcase[PJSIP_MAX_HNAME_LEN+1];
     pj_status_t status;
 
@@ -681,7 +682,7 @@ static pjsip_parse_hdr_func* find_handler(const pj_str_t *hname)
     }
 
     /* First, common case, try to find handler with exact name */
-    hash = pj_hash_calc(0, hname->ptr, hname->slen);
+    hash = pj_hash_calc(0, hname->ptr, (unsigned)hname->slen);
     handler = find_handler_imp(hash, hname);
     if (handler)
 	return handler;
@@ -1064,7 +1065,7 @@ parse_headers:
 		                    &ctype_hdr->media);
 
 		body->data = scanner->curptr;
-		body->len = scanner->end - scanner->curptr;
+		body->len = (unsigned)(scanner->end - scanner->curptr);
 		body->print_body = &pjsip_print_text_body;
 		body->clone_data = &pjsip_clone_text_data;
 	    }
@@ -2278,7 +2279,7 @@ PJ_DEF(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
     PJ_END
 
     if (parsed_len) {
-	*parsed_len = (scanner.curptr - scanner.begin);
+	*parsed_len = (unsigned)(scanner.curptr - scanner.begin);
     }
 
     pj_scan_fini(&scanner);

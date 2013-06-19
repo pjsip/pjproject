@@ -87,7 +87,7 @@ typedef struct pj_cli_front_end_op
      * @param len 	Length of this message.
      */
     void (*on_write_log)(pj_cli_front_end *fe, int level,
-		         const char *data, int len);
+		         const char *data, pj_size_t len);
 
     /**
      * Callback to be called when the application is quitting, to signal the

@@ -523,7 +523,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 	unsigned i, n;
 	pj_uint8_t *dst = (pj_uint8_t*) output->buf;
 
-	n = (input->size >> 1);
+	n = ((unsigned)input->size >> 1);
 	for (i=0; i!=n; ++i, ++dst) {
 	    *dst = pjmedia_linear2alaw(samples[i]);
 	}
@@ -531,7 +531,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 	unsigned i, n;
 	pj_uint8_t *dst = (pj_uint8_t*) output->buf;
 
-	n = (input->size >> 1);
+	n = ((unsigned)input->size >> 1);
 	for (i=0; i!=n; ++i, ++dst) {
 	    *dst = pjmedia_linear2ulaw(samples[i]);
 	}

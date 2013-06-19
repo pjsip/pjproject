@@ -73,12 +73,12 @@ struct test_state
     pj_bool_t	    is_verbose;	    /* verbose flag, e.g: cert info	    */
     pj_bool_t	    echo;	    /* echo received data		    */
     pj_status_t	    err;	    /* error flag			    */
-    unsigned	    sent;	    /* bytes sent			    */
-    unsigned	    recv;	    /* bytes received			    */
+    pj_size_t	    sent;	    /* bytes sent			    */
+    pj_size_t	    recv;	    /* bytes received			    */
     pj_uint8_t	    read_buf[256];  /* read buffer			    */
     pj_bool_t	    done;	    /* test done flag			    */
     char	   *send_str;	    /* data to send once connected	    */
-    unsigned	    send_str_len;   /* send data length			    */
+    pj_size_t	    send_str_len;   /* send data length			    */
     pj_bool_t	    check_echo;	    /* flag to compare sent & echoed data   */
     const char	   *check_echo_ptr; /* pointer/cursor for comparing data    */
     struct send_key send_key;	    /* send op key			    */
@@ -363,7 +363,7 @@ static pj_bool_t ssl_on_data_sent(pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(op_key);
 
     if (sent < 0) {
-	st->err = -sent;
+	st->err = (pj_status_t)-sent;
     } else {
 	st->sent += sent;
 
@@ -1113,7 +1113,8 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     pj_sockaddr addr, listen_addr;
     pj_ssl_cert_t *cert = NULL;
     pj_status_t status;
-    unsigned i, cli_err = 0, tot_sent = 0, tot_recv = 0;
+    unsigned i, cli_err = 0;
+    pj_size_t tot_sent = 0, tot_recv = 0;
     pj_time_val start;
 
     pool = pj_pool_create(mem, "ssl_perf", 256, 256, NULL);

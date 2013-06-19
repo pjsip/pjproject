@@ -540,7 +540,7 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
     pj_bool_t is_stun;
 
     if (turn_sock->conn_type == PJ_TURN_TP_UDP)
-	return bufsize;
+	return (unsigned)bufsize;
 
     /* Quickly check if this is STUN message, by checking the first two bits and
      * size field which must be multiple of 4 bytes
@@ -550,7 +550,7 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
 
     if (is_stun) {
 	pj_size_t msg_len = GETVAL16H((const pj_uint8_t*)buf, 2);
-	return (msg_len+20 <= bufsize) ? msg_len+20 : 0;
+	return (unsigned)((msg_len+20 <= bufsize) ? msg_len+20 : 0);
     } else {
 	/* This must be ChannelData. */
 	pj_turn_channel_data cd;

@@ -124,7 +124,7 @@ PJ_DEF(pj_status_t) pj_file_write( pj_oshandle_t fd,
     BOOL rc;
     DWORD bytesWritten;
 
-    rc = WriteFile(fd, data, *size, &bytesWritten, NULL);
+    rc = WriteFile(fd, data, (DWORD)*size, &bytesWritten, NULL);
     if (!rc) {
         *size = -1;
         return PJ_RETURN_OS_ERROR(GetLastError());
@@ -141,7 +141,7 @@ PJ_DEF(pj_status_t) pj_file_read( pj_oshandle_t fd,
     BOOL rc;
     DWORD bytesRead;
 
-    rc = ReadFile(fd, data, *size, &bytesRead, NULL);
+    rc = ReadFile(fd, data, (DWORD)*size, &bytesRead, NULL);
     if (!rc) {
         *size = -1;
         return PJ_RETURN_OS_ERROR(GetLastError());

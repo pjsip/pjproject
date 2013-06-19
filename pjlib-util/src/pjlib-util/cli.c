@@ -319,9 +319,9 @@ PJ_DEF(void) pj_cli_write_log(pj_cli_t *cli,
     }
 }
 
-PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
-				    const char *buffer,
-				    int len)
+PJ_DEF(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
+				   const char *buffer,
+				   pj_size_t len)
 {
     struct pj_cli_front_end *fe;
 
@@ -507,7 +507,7 @@ static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli,
     }
     pj_strcat(&cmd_val, cmd);
     return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr, 
-					  cmd_val.slen, NULL);
+					  (unsigned)cmd_val.slen, NULL);
 }
 
 /* Add command to the command hash */
@@ -530,7 +530,7 @@ static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
     pj_strdup(cli->pool, &add_cmd, &cmd_val);
     
     pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr, 
-		cmd_val.slen, 0, cmd);
+		(unsigned)cmd_val.slen, 0, cmd);
 }
 
 /**
@@ -845,7 +845,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 {    
     pj_scanner scanner;
     pj_str_t str;
-    int len;    
+    pj_size_t len;    
     pj_cli_cmd_spec *cmd;
     pj_cli_cmd_spec *next_cmd;
     pj_status_t status = PJ_SUCCESS;
@@ -887,7 +887,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 	PJ_TRY {
 	    val->argc = 0;	    
 	    while (!pj_scan_is_eof(&scanner)) {
-		info->err_pos = scanner.curptr - scanner.begin;
+		info->err_pos = (int)(scanner.curptr - scanner.begin);
 		if (*scanner.curptr == '\'' || *scanner.curptr == '"' ||
 		    *scanner.curptr == '{')
 		{
@@ -944,7 +944,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 	    data.ptr[data.slen] = ' ';
 	    data.ptr[data.slen+1] = 0;
 
-	    info->err_pos = pj_ansi_strlen(cmdline);
+	    info->err_pos = (int)pj_ansi_strlen(cmdline);
 	}
     } 
    

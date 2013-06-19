@@ -231,7 +231,8 @@ typedef struct pj_scan_state
  * @param callback  Callback to be called when the scanner encounters syntax
  *		    error condition.
  */
-PJ_DECL(void) pj_scan_init( pj_scanner *scanner, char *bufstart, int buflen, 
+PJ_DECL(void) pj_scan_init( pj_scanner *scanner, char *bufstart, 
+			    pj_size_t buflen, 
 			    unsigned options,
 			    pj_syn_err_func_ptr callback );
 

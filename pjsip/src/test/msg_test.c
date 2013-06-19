@@ -247,7 +247,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     pjsip_msg *parsed_msg, *ref_msg = NULL;
     static pjsip_msg *print_msg;
     pj_status_t status = PJ_SUCCESS;
-    int len;
+    pj_ssize_t len;
     pj_str_t str1, str2;
     pjsip_hdr *hdr1, *hdr2;
     pj_timestamp t1, t2;
@@ -809,7 +809,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 	"c=IN IP4 pc33.atlanta.com\r\n"
 	"m=audio 3456 RTP/AVP 0 1 3 99\r\n"
 	"a=rtpmap:0 PCMU/8000\r\n";
-    body->len = pj_ansi_strlen((const char*) body->data);
+    body->len = (unsigned)pj_ansi_strlen((const char*) body->data);
     body->print_body = &pjsip_print_text_body;
 
     return msg;
@@ -1888,7 +1888,8 @@ static int hdr_test(void)
     for (i=0; i<PJ_ARRAY_SIZE(hdr_test_data); ++i) {
 	struct hdr_test_t  *test = &hdr_test_data[i];
 	pj_str_t hname;
-	int len, parsed_len;
+	pj_size_t len;
+	int parsed_len;
 	pj_pool_t *pool;
 	pjsip_hdr *parsed_hdr1=NULL, *parsed_hdr2=NULL;
 	char *input, *output;
@@ -1994,7 +1995,8 @@ int msg_test(void)
 	unsigned parse;
 	unsigned print;
     } run[COUNT];
-    unsigned i, max, avg_len;
+    unsigned i, max;
+    int avg_len;
     char desc[250];
     pj_status_t status;
 
@@ -2016,7 +2018,7 @@ int msg_test(void)
 
     /* Calculate average message length */
     for (i=0, avg_len=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
-	avg_len += test_array[i].len;
+	avg_len += (int)test_array[i].len;
     }
     avg_len /= PJ_ARRAY_SIZE(test_array);
 

@@ -530,7 +530,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
     pj_int16_t *pcm_in;
-    unsigned in_size;
+    pj_size_t in_size;
 
     pj_assert(gsm_data && input && output);
     

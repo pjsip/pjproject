@@ -194,7 +194,7 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
         *p++ = (char) (digval + '0');
     } while (val > 0);
 
-    len = p-buf;
+    len = (int)(p-buf);
     while (len < min_dig) {
 	*p++ = (char)pad;
 	++len;

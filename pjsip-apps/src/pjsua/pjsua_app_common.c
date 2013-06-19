@@ -142,7 +142,7 @@ void log_call_dump(int call_id)
     unsigned log_decor;
 
     pjsua_call_dump(call_id, PJ_TRUE, some_buf, sizeof(some_buf), "  ");
-    call_dump_len = strlen(some_buf);
+    call_dump_len = (unsigned)strlen(some_buf);
 
     log_decor = pj_log_get_decor();
     pj_log_set_decor(log_decor & ~(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));

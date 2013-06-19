@@ -246,7 +246,8 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 	char  *p;
 	const char *whitespace = " \t\r\n";
 	char  cDelimiter;
-	int   len, token_len;
+	pj_size_t   len;
+	int token_len;
 	
 	pj_bzero(line, sizeof(line));
 	if (fgets(line, sizeof(line), fhnd) == NULL) break;
@@ -285,7 +286,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 	    }
 	    
 	    *p = '\0';
-	    token_len = p-token;
+	    token_len = (int)(p-token);
 	    
 	    if (token_len > 0) {
 		if (*token == '#')
@@ -2175,5 +2176,5 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     }
 
     *(cfg.ptr + cfg.slen) = '\0';
-    return cfg.slen;
+    return (int)cfg.slen;
 }

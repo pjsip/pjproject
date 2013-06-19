@@ -49,13 +49,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
         if (bytes_received < 0) {
             if (-bytes_received != recv_rec->last_err) {
-                recv_rec->last_err = -bytes_received;
-                app_perror("...error receiving data", -bytes_received);
+                recv_rec->last_err = (pj_status_t)-bytes_received;
+                app_perror("...error receiving data", recv_rec->last_err);
             }
         } else if (bytes_received == 0) {
             /* note: previous error, or write callback */
         } else {
-            pj_atomic_add(total_bytes, bytes_received);
+            pj_atomic_add(total_bytes, (pj_atomic_value_t)bytes_received);
 
             if (!send_rec->is_pending) {
                 pj_ssize_t sent = bytes_received;
@@ -106,7 +106,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     struct op_key *send_rec = (struct op_key*)op_key;
 
     if (bytes_sent <= 0) {
-        pj_status_t rc = -bytes_sent;
+        pj_status_t rc = (pj_status_t)-bytes_sent;
         if (rc != send_rec->last_err) {
             send_rec->last_err = rc;
             app_perror("...send error(2)", rc);

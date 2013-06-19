@@ -446,7 +446,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 		nal = &h264_fmtp->sprop_param_sets[
 					  h264_fmtp->sprop_param_sets_len];
 		tmp_len = PJ_ARRAY_SIZE(h264_fmtp->sprop_param_sets) -
-			  h264_fmtp->sprop_param_sets_len -
+			  (int)h264_fmtp->sprop_param_sets_len -
 			  PJ_ARRAY_SIZE(start_code);
 		status = pj_base64_decode(&tmp_st,
 					  nal + PJ_ARRAY_SIZE(start_code),

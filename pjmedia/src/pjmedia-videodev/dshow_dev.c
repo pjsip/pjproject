@@ -633,7 +633,7 @@ static pj_status_t dshow_stream_put_frame(pjmedia_vid_dev_stream *strm,
     }
 
     hr = SourceFilter_Deliver(stream->dgraph.csource_filter,
-                              frame->buf, frame->size);
+                              frame->buf, (long)frame->size);
     if (FAILED(hr))
         return hr;
 

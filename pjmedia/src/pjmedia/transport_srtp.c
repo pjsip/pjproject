@@ -801,7 +801,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 {
     pj_status_t status;
     transport_srtp *srtp = (transport_srtp*) tp;
-    int len = size;
+    int len = (int)size;
     err_status_t err;
 
     if (srtp->bypass_srtp)
@@ -845,7 +845,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 {
     pj_status_t status;
     transport_srtp *srtp = (transport_srtp*) tp;
-    int len = size;
+    int len = (int)size;
     err_status_t err;
 
     if (srtp->bypass_srtp) {
@@ -932,7 +932,7 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
     }
 
     /* Make sure buffer is 32bit aligned */
-    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return );
+    PJ_ASSERT_ON_FAIL( (((pj_ssize_t)pkt) & 0x03)==0, return );
 
     if (srtp->probation_cnt > 0)
 	--srtp->probation_cnt;
@@ -1005,7 +1005,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     }
 
     /* Make sure buffer is 32bit aligned */
-    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return );
+    PJ_ASSERT_ON_FAIL( (((pj_ssize_t)pkt) & 0x03)==0, return );
 
     pj_lock_acquire(srtp->mutex);
 
@@ -1117,7 +1117,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 {
     pj_str_t input;
     char *token;
-    int token_len;
+    pj_size_t token_len;
     pj_str_t tmp;
     pj_status_t status;
     int itmp;
@@ -1681,7 +1681,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(srtp->session_inited, PJ_EINVALIDOP);
 
     /* Make sure buffer is 32bit aligned */
-    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return PJ_EINVAL);
+    PJ_ASSERT_ON_FAIL( (((pj_ssize_t)pkt) & 0x03)==0, return PJ_EINVAL);
 
     pj_lock_acquire(srtp->mutex);
 

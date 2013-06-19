@@ -65,7 +65,7 @@ PJ_DEF(pjsip_proxy_authorization_hdr*) pjsip_proxy_authorization_hdr_create(pj_p
 
 static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_size_t size)
 {
-    int printed;
+    pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
@@ -227,7 +227,7 @@ PJ_DEF(pjsip_proxy_authenticate_hdr*) pjsip_proxy_authenticate_hdr_create(pj_poo
 static int print_digest_challenge( pjsip_digest_challenge *chal,
 				   char *buf, pj_size_t size)
 {
-    int printed;
+    pj_ssize_t printed;
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();

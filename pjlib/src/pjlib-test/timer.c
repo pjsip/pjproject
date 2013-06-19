@@ -59,7 +59,8 @@ static int test_timer_heap(void)
     pj_timer_heap_t *timer;
     pj_time_val delay;
     pj_status_t rc;    int err=0;
-    unsigned size, count;
+    pj_size_t size;
+    unsigned count;
 
     size = pj_timer_heap_mem_size(MAX_COUNT)+MAX_COUNT*sizeof(pj_timer_entry);
     pool = pj_pool_create( mem, NULL, size, 4000, NULL);

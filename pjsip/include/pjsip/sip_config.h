@@ -578,7 +578,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * @see PJSIP_TLS_TRANSPORT_REUSEADDR
  */
 #ifndef PJSIP_TCP_TRANSPORT_REUSEADDR
-# if defined(PJ_WIN32) && PJ_WIN32
+# if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 #   define PJSIP_TCP_TRANSPORT_REUSEADDR	0
 # else
 #   define PJSIP_TCP_TRANSPORT_REUSEADDR	1
@@ -702,7 +702,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * @see PJSIP_TCP_TRANSPORT_REUSEADDR
  */
 #ifndef PJSIP_TLS_TRANSPORT_REUSEADDR
-# if defined(PJ_WIN32) && PJ_WIN32
+# if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64)
 #   define PJSIP_TLS_TRANSPORT_REUSEADDR	0
 # else
 #   define PJSIP_TLS_TRANSPORT_REUSEADDR	1

@@ -311,7 +311,7 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 				  pjmedia_frame *frame)
 {
     struct file_port *fport = (struct file_port *)this_port;
-    unsigned frame_size;
+    pj_size_t frame_size;
 
     if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM)
 	frame_size = frame->size;

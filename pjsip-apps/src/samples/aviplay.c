@@ -155,7 +155,7 @@ static pj_status_t codec_get_frame(pjmedia_port *port,
         if (status != PJ_SUCCESS) goto on_error;
 	
         status = pjmedia_vid_codec_decode(codec, 1, frame,
-                                          frame->size, &enc_frame);
+                                          (unsigned)frame->size, &enc_frame);
         if (status != PJ_SUCCESS) goto on_error;
 	
         frame->size = frame_size;
@@ -169,7 +169,7 @@ static pj_status_t codec_get_frame(pjmedia_port *port,
     if (status != PJ_SUCCESS) goto on_error;
     
     status = pjmedia_vid_codec_decode(codec, 1, &enc_frame,
-                                      frame->size, frame);
+                                      (unsigned)frame->size, frame);
     if (status != PJ_SUCCESS) goto on_error;
     
     return PJ_SUCCESS;

@@ -202,7 +202,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
     ioqueue_init(ioqueue);
 
-    ioqueue->max = max_fd;
+    ioqueue->max = (unsigned)max_fd;
     ioqueue->count = 0;
     PJ_FD_ZERO(&ioqueue->rfdset);
     PJ_FD_ZERO(&ioqueue->wfdset);
@@ -323,6 +323,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 {
     pj_ioqueue_key_t *key = NULL;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     u_long value;
 #else
@@ -369,6 +370,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     /* Set socket to nonblocking. */
     value = 1;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(sock, FIONBIO, &value)) {
 #else
@@ -762,6 +764,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     /* Set socket to nonblocking. */
     val = 1;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0 || \
     defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
     if (ioctlsocket(new_sock, FIONBIO, &val)) {
 #else

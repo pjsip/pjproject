@@ -34,7 +34,8 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 {
     pj_str_t codec_id = pj_str(codec_name);
     pj_pool_t *pool = NULL;
-    unsigned count, samples_per_frame, encoded_frame_len = 0, pos;
+    unsigned count, samples_per_frame;
+    pj_size_t encoded_frame_len = 0, pos;
     pjmedia_codec *codec = NULL;
     const pjmedia_codec_info *ci[1];
     pjmedia_codec_param codec_param;
@@ -125,7 +126,7 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 	}
 
 	if (out_frame.size) {
-	    int cnt;
+	    pj_size_t cnt;
 
 	    cnt = fwrite(out_frame.buf, out_frame.size, 1, output);
 
@@ -152,7 +153,7 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 
     pos = 0;
     for (;;) {
-	int count;
+	pj_size_t count;
 	
 	count = fread(in_frame.buf, encoded_frame_len, 1, fref);
 	if (count != 1)
@@ -444,7 +445,7 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
     pos = 0;
     for (;;) {
-	int count;
+	pj_size_t count;
 	
 	count = fread(pkt, samples_per_frame*2, 1, fref);
 	if (count != 1)

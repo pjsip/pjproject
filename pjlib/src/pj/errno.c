@@ -100,7 +100,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
             if (len >= size) len = size-1;
             pj_memcpy(buf, err_str[i].msg, len);
             buf[len] = '\0';
-            return len;
+            return (int)len;
         }
     }
 #endif

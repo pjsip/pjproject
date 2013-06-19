@@ -58,7 +58,7 @@ struct sock_data
     char		*buffer;
     pj_size_t		 bufsize;
     pj_bool_t		 unregistered;
-    unsigned		 received;
+    pj_ssize_t		 received;
 } sock_data;
 
 static void on_read_complete(pj_ioqueue_key_t *key, 
@@ -81,7 +81,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     if (bytes_read < 0) {
 	if (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
-	    app_perror("ioqueue reported recv error", -bytes_read);
+	    app_perror("ioqueue reported recv error", (pj_status_t)-bytes_read);
     } else {
 	sock_data.received += bytes_read;
     }

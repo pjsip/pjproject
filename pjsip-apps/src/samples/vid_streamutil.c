@@ -302,7 +302,8 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
 	write_frame.buf = play_file->dec_buf;
 	write_frame.size = play_file->dec_buf_size;
 	status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
-	                                  write_frame.size, &write_frame);
+	                                  (unsigned)write_frame.size, 
+					  &write_frame);
 	if (status != PJ_SUCCESS)
 	    return;
     } else {
@@ -494,13 +495,13 @@ int main(int argc, char *argv[])
 
 	case OPT_SRTP_TX_KEY:
 	    tmp_key_len = hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
-						     strlen(pj_optarg));
+						     (int)strlen(pj_optarg));
 	    pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
 	    break;
 
 	case OPT_SRTP_RX_KEY:
 	    tmp_key_len = hex_string_to_octet_string(tmp_rx_key, pj_optarg,
-						     strlen(pj_optarg));
+						     (int)strlen(pj_optarg));
 	    pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
 	    break;
 #endif

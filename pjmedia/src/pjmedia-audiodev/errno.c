@@ -139,7 +139,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 	    pj_unicode_to_ansi(wbuf, len, buf, bufsize);
 	}
 #else
-	mr = (*waveGetErrText)(native_err, buf, bufsize);
+	mr = (*waveGetErrText)(native_err, buf, (UINT)bufsize);
 #endif
 
 	if (mr==MMSYSERR_NOERROR) {

@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 	    *payload_len = pktz->cfg.mtu;
 	else
 	    *payload_len = nal_end - nal_start + HEADER_SIZE_FU_A;
-	*pos = *payload + *payload_len - buf;
+	*pos = (unsigned)(*payload + *payload_len - buf);
 
 #if DBG_PACKETIZE
 	PJ_LOG(3, ("h264pack", "Packetized fragmented H264 NAL unit "
@@ -242,7 +242,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 	/* Init the first NAL unit in the packet */
 	nal[0] = nal_start;
 	nal_size[0] = nal_end - nal_start;
-	total_size = nal_size[0] + HEADER_SIZE_STAP_A;
+	total_size = (int)nal_size[0] + HEADER_SIZE_STAP_A;
 	NRI = (*nal_octet & 0x60) >> 5;
 
 	/* Populate next NAL units */
@@ -266,7 +266,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 	    }
 
 	    /* Update total payload size (2 octet NAL size + NAL) */
-	    total_size += (2 + nal_size[nal_cnt]);
+	    total_size += (2 + (int)nal_size[nal_cnt]);
 	    if (total_size <= pktz->cfg.mtu) {
 		pj_uint8_t tmp_nri;
 
@@ -306,7 +306,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 	    *payload = nal[0] - HEADER_SIZE_STAP_A;
 	    pj_assert(*payload >= buf+*pos);
 	    *payload_len = p - *payload;
-	    *pos = nal[nal_cnt-1] + nal_size[nal_cnt-1] - buf;
+	    *pos = (unsigned)(nal[nal_cnt-1] + nal_size[nal_cnt-1] - buf);
 
 #if DBG_PACKETIZE
 	    PJ_LOG(3, ("h264pack", "Packetized aggregation of "
@@ -321,7 +321,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
     /* Single NAL unit packet */
     *payload = nal_start;
     *payload_len = nal_end - nal_start;
-    *pos = nal_end - buf;
+    *pos = (unsigned)(nal_end - buf);
 
 #if DBG_PACKETIZE
     PJ_LOG(3, ("h264pack", "Packetized single H264 NAL unit "
@@ -399,7 +399,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	p += payload_len;
 
 	/* Update the bitstream writing offset */
-	*bits_pos = p - bits;
+	*bits_pos = (unsigned)(p - bits);
 	pktz->unpack_last_sync_pos = *bits_pos;
 
 #if DBG_UNPACKETIZE
@@ -450,7 +450,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	    ++cnt;
 
 	    /* Update the bitstream writing offset */
-	    *bits_pos = p - bits;
+	    *bits_pos = (unsigned)(p - bits);
 	    pktz->unpack_last_sync_pos = *bits_pos;
 	}
 
@@ -509,7 +509,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	p += (payload_len - 2);
 
 	/* Update the bitstream writing offset */
-	*bits_pos = p - bits;
+	*bits_pos = (unsigned)(p - bits);
 	if (E) {
 	    /* Update the sync pos only if the end bit flag is set */
 	    pktz->unpack_last_sync_pos = *bits_pos;

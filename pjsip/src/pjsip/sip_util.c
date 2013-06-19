@@ -274,7 +274,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
 	body->content_type.subtype = str_PLAIN;
 	body->data = pj_pool_alloc(tdata->pool, param_text->slen );
 	pj_memcpy(body->data, param_text->ptr, param_text->slen);
-	body->len = param_text->slen;
+	body->len = (unsigned)param_text->slen;
 	body->print_body = &pjsip_print_text_body;
 	msg->body = body;
     }
@@ -1301,7 +1301,7 @@ stateless_send_resolver_callback( pj_status_t status,
 	}
 
 	/* Check if request message is larger than 1300 bytes. */
-	len = tdata->buf.cur - tdata->buf.start;
+	len = (int)(tdata->buf.cur - tdata->buf.start);
 	if (len >= PJSIP_UDP_SIZE_THRESHOLD) {
 	    int i;
 	    int count = tdata->dest_info.addr.count;

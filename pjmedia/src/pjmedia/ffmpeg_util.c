@@ -103,7 +103,7 @@ static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl)
     const char *LOG_SENDER = "ffmpeg";
     enum { LOG_LEVEL = 5 };
     char buf[100];
-    int bufsize = sizeof(buf), len;
+    pj_size_t bufsize = sizeof(buf), len;
     pj_str_t fmt_st;
 
     /* Custom callback needs to filter log level by itself */

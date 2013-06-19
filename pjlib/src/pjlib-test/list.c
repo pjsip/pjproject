@@ -57,7 +57,7 @@ typedef struct list_node
 static int compare_node(void *value, const pj_list_type *nd)
 {
     list_node *node = (list_node*)nd;
-    return ((long)value == node->value) ? 0 : -1;
+    return ((long)(pj_ssize_t)value == node->value) ? 0 : -1;
 }
 
 #define PJ_SIGNED_ARRAY_SIZE(a)	((int)PJ_ARRAY_SIZE(a))
@@ -207,7 +207,8 @@ int list_test()
 	if (p != &nodes[i]) {
 	    return -1;
 	}
-	p = (list_node*) pj_list_search(&list, (void*)(long)i, &compare_node);
+	p = (list_node*) pj_list_search(&list, (void*)(pj_ssize_t)i, 
+					&compare_node);
 	pj_assert( p == &nodes[i] );
 	if (p != &nodes[i]) {
 	    return -1;

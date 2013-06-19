@@ -124,7 +124,8 @@ PJ_INLINE(void) unlock_timer_heap( pj_timer_heap_t *ht )
 }
 
 
-static void copy_node( pj_timer_heap_t *ht, int slot, pj_timer_entry *moved_node )
+static void copy_node( pj_timer_heap_t *ht, pj_size_t slot, 
+		       pj_timer_entry *moved_node )
 {
     PJ_CHECK_STACK();
 
@@ -132,7 +133,7 @@ static void copy_node( pj_timer_heap_t *ht, int slot, pj_timer_entry *moved_node
     ht->heap[slot] = moved_node;
     
     // Update the corresponding slot in the parallel <timer_ids_> array.
-    ht->timer_ids[moved_node->_timer_id] = slot;
+    ht->timer_ids[moved_node->_timer_id] = (int)slot;
 }
 
 static pj_timer_id_t pop_freelist( pj_timer_heap_t *ht )
@@ -235,7 +236,7 @@ static pj_timer_entry * remove_node( pj_timer_heap_t *ht, size_t slot)
     
     if (slot < ht->cur_size)
     {
-	int parent;
+	pj_size_t parent;
 	pj_timer_entry *moved_node = ht->heap[ht->cur_size];
 	
 	// Move the end node to the location being removed and update

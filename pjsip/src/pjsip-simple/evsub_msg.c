@@ -62,7 +62,7 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
 {
     char *p = buf;
     char *endbuf = buf+size;
-    int printed;
+    pj_ssize_t printed;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
@@ -76,10 +76,10 @@ static int pjsip_event_hdr_print( pjsip_event_hdr *hdr,
 				   &pc->pjsip_TOKEN_SPEC, 
 				   &pc->pjsip_TOKEN_SPEC, ';');
     if (printed < 0)
-	return printed;
+	return (int)printed;
 
     p += printed;
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_event_hdr* pjsip_event_hdr_clone( pj_pool_t *pool, 
@@ -161,7 +161,7 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
 {
     char *p = buf;
     char *endbuf = buf+size;
-    int printed;
+    pj_ssize_t printed;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(p, hdr->name);
@@ -189,11 +189,11 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
 				    &pc->pjsip_TOKEN_SPEC,
 				    ';');
     if (printed < 0)
-	return printed;
+	return (int)printed;
 
     p += printed;
 
-    return p - buf;
+    return (int)(p - buf);
 }
 
 static pjsip_sub_state_hdr* 

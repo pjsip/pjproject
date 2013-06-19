@@ -386,7 +386,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 
     if (status != PJ_SUCCESS) {
 	pj_str_t err_str;
-	int title_len;
+	pj_ssize_t title_len;
 
 	call->last_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
 	pj_strcpy2(&call->last_text, "Media init error: ");

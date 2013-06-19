@@ -380,7 +380,7 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 	return 0;
     
     pj_memcpy(buf, cert->privkey_pass.ptr, cert->privkey_pass.slen);
-    return cert->privkey_pass.slen;
+    return (int)cert->privkey_pass.slen;
 }
 
 
@@ -987,7 +987,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      errmsg));
 
 	    /* Workaround for ticket #985 */
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0)
 	    if (ssock->param.timer_heap) {
 		pj_time_val interval = {0, DELAYED_CLOSE_TIMEOUT};
 
@@ -1130,7 +1130,7 @@ static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata)
 	    buf->len -= ((char*)wdata->next - buf->start);
 	} else {
 	    /* Overlapped */
-	    unsigned right_len, left_len;
+	    pj_size_t right_len, left_len;
 	    right_len = buf->buf + buf->max_len - (char*)wdata;
 	    left_len  = (char*)wdata->next - buf->buf;
 	    buf->len -= (right_len + left_len);
@@ -1138,13 +1138,13 @@ static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata)
     } else if (spl->prev == wdata) {
 	/* This is the last data, just adjust the buffer length */
 	if (wdata->prev < wdata) {
-	    unsigned jump_len;
+	    pj_size_t jump_len;
 	    jump_len = (char*)wdata -
 		       ((char*)wdata->prev + wdata->prev->record_len);
 	    buf->len -= (wdata->record_len + jump_len);
 	} else {
 	    /* Overlapped */
-	    unsigned right_len, left_len;
+	    pj_size_t right_len, left_len;
 	    right_len = buf->buf + buf->max_len -
 			((char*)wdata->prev + wdata->prev->record_len);
 	    left_len  = (char*)wdata + wdata->record_len - buf->buf;
@@ -1387,7 +1387,7 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
     /* Socket error or closed */
     if (data && size > 0) {
 	/* Consume the whole data */
-	nwritten = BIO_write(ssock->ossl_rbio, data, size);
+	nwritten = BIO_write(ssock->ossl_rbio, data, (int)size);
 	if (nwritten < size) {
 	    status = GET_SSL_STATUS(ssock);
 	    goto on_error;
@@ -1413,7 +1413,7 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 	do {
 	    read_data_t *buf = *(OFFSET_OF_READ_DATA_PTR(ssock, data));
 	    void *data_ = (pj_int8_t*)buf->data + buf->len;
-	    int size_ = ssock->read_size - buf->len;
+	    int size_ = (int)(ssock->read_size - buf->len);
 
 	    /* SSL_read() may write some data to BIO write when re-negotiation
 	     * is on progress, so let's protect it with write mutex.
@@ -1455,7 +1455,7 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 
 	    } else {
 
-		int err = SSL_get_error(ssock->ossl_ssl, size);
+		int err = SSL_get_error(ssock->ossl_ssl, (int)size);
 		
 		/* SSL might just return SSL_ERROR_WANT_READ in 
 		 * re-negotiation.
@@ -1663,7 +1663,7 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
 
     /* Start read */
     status = pj_activesock_start_read2(ssock->asock, ssock->pool, 
-				       ssock->param.read_buffer_size,
+				       (unsigned)ssock->param.read_buffer_size,
 				       ssock->asock_rbuf,
 				       PJ_IOQUEUE_ALWAYS_ASYNC);
     if (status != PJ_SUCCESS)
@@ -1742,7 +1742,7 @@ static pj_bool_t asock_on_connect_complete (pj_activesock_t *asock,
 
     /* Start read */
     status = pj_activesock_start_read2(ssock->asock, ssock->pool, 
-				       ssock->param.read_buffer_size,
+				       (unsigned)ssock->param.read_buffer_size,
 				       ssock->asock_rbuf,
 				       PJ_IOQUEUE_ALWAYS_ASYNC);
     if (status != PJ_SUCCESS)
@@ -2180,7 +2180,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock,
      * until re-negotiation is completed.
      */
     pj_lock_acquire(ssock->write_mutex);
-    nwritten = SSL_write(ssock->ossl_ssl, data, size);
+    nwritten = SSL_write(ssock->ossl_ssl, data, (int)size);
     pj_lock_release(ssock->write_mutex);
     
     if (nwritten == size) {

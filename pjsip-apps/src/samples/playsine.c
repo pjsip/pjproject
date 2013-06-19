@@ -83,7 +83,8 @@ static pj_status_t sine_get_frame( pjmedia_port *port,
 {
     port_data *sine = port->port_data.pdata;
     pj_int16_t *samples = frame->buf;
-    unsigned i, count, left, right;
+    unsigned i, left, right;
+    pj_size_t count;
 
     /* Get number of samples */
     count = frame->size / 2 / PJMEDIA_PIA_CCNT(&port->info);

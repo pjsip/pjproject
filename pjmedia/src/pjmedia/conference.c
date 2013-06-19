@@ -709,7 +709,7 @@ PJ_DEF(pjmedia_port*) pjmedia_conf_get_master_port(pjmedia_conf *conf)
 PJ_DEF(pj_status_t) pjmedia_conf_set_port0_name(pjmedia_conf *conf,
 						const pj_str_t *name)
 {
-    unsigned len;
+    pj_size_t len;
 
     /* Sanity check. */
     PJ_ASSERT_RETURN(conf != NULL && name != NULL, PJ_EINVAL);
@@ -1524,8 +1524,8 @@ static pj_status_t read_port( pjmedia_conf *conf,
 
 	} else {
 
-	    pjmedia_copy_samples(frame, cport->rx_buf, count);
-	    cport->rx_buf_count -= count;
+	    pjmedia_copy_samples(frame, cport->rx_buf, (unsigned)count);
+	    cport->rx_buf_count -= (unsigned)count;
 	    if (cport->rx_buf_count) {
 		pjmedia_move_samples(cport->rx_buf, cport->rx_buf+count,
 				     cport->rx_buf_count);

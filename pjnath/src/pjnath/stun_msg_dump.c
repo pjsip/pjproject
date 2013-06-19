@@ -199,7 +199,7 @@ static int print_attr(char *buffer, unsigned length,
 	    const pj_stun_msgint_attr *attr;
 
 	    attr = (const pj_stun_msgint_attr*) ahdr;
-	    len = print_binary(p, end-p, attr->hmac, 20);
+	    len = print_binary(p, (unsigned)(end-p), attr->hmac, 20);
 	    APPLY();
 	}
 	break;
@@ -209,7 +209,7 @@ static int print_attr(char *buffer, unsigned length,
 	    const pj_stun_binary_attr *attr;
 
 	    attr = (const pj_stun_binary_attr*) ahdr;
-	    len = print_binary(p, end-p, attr->data, attr->length);
+	    len = print_binary(p, (unsigned)(end-p), attr->data, attr->length);
 	    APPLY();
 	}
 	break;
@@ -226,7 +226,7 @@ static int print_attr(char *buffer, unsigned length,
 	    for (i=0; i<8; ++i)
 		data[i] = ((const pj_uint8_t*)&attr->value)[7-i];
 
-	    len = print_binary(p, end-p, data, 8);
+	    len = print_binary(p, (unsigned)(end-p), data, 8);
 	    APPLY();
 	}
 	break;
@@ -238,7 +238,7 @@ static int print_attr(char *buffer, unsigned length,
 	break;
     }
 
-    return (p-buffer);
+    return (int)(p-buffer);
 
 on_return:
     return len;
@@ -280,14 +280,14 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     APPLY();
 
     for (i=0; i<msg->attr_count; ++i) {
-	len = print_attr(p, end-p, msg->attr[i]);
+	len = print_attr(p, (unsigned)(end-p), msg->attr[i]);
 	APPLY();
     }
 
 on_return:
     *p = '\0';
     if (printed_len)
-	*printed_len = (p-buffer);
+	*printed_len = (unsigned)(p-buffer);
     return buffer;
 
 #undef APPLY

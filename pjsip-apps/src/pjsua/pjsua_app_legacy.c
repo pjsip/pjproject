@@ -61,7 +61,7 @@ static void print_buddy_list()
 /*
  * Input URL.
  */
-static void ui_input_url(const char *title, char *buf, int len, 
+static void ui_input_url(const char *title, char *buf, pj_size_t len, 
 			 input_result *result)
 {
     result->nb_result = PJSUA_APP_NO_NB;
@@ -79,7 +79,7 @@ static void ui_input_url(const char *title, char *buf, int len,
     printf("%s: ", title);
 
     fflush(stdout);
-    if (fgets(buf, len, stdin) == NULL)
+    if (fgets(buf, (int)len, stdin) == NULL)
 	return;
     len = strlen(buf);
 
@@ -98,7 +98,7 @@ static void ui_input_url(const char *title, char *buf, int len,
 
     if (pj_isdigit(*buf) || *buf=='-') {
 	
-	int i;
+	unsigned i;
 	
 	if (*buf=='-')
 	    i = 1;
@@ -143,7 +143,7 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    if (fgets(buf, len, stdin) == NULL)
+    if (fgets(buf, (int)len, stdin) == NULL)
 	return PJ_FALSE;
 
     /* Remove trailing newlines. */
@@ -1674,7 +1674,7 @@ void legacy_main()
     char menuin[80];    
     char buf[128];    
 
-    keystroke_help(current_call);
+    keystroke_help();
 
     for (;;) {
 
@@ -1688,7 +1688,8 @@ void legacy_main()
 	     * If exit is desired end script with q for quit
 	     */
  	    /* Reopen stdin/stdout/stderr to /dev/console */
-#if defined(PJ_WIN32) && PJ_WIN32!=0 && \
+#if ((defined(PJ_WIN32) && PJ_WIN32!=0) || \
+     (defined(PJ_WIN64) && PJ_WIN64!=0)) && \
   (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
 	    if (freopen ("CONIN$", "r", stdin) == NULL) {
 #else
@@ -1847,9 +1848,11 @@ void legacy_main()
 	    ui_echo(menuin);
 	    break;
 
-	case 's':	    
-	    ui_sleep(menuin);
-	    break;
+	case 's':
+	    if (pj_ansi_strnicmp(menuin, "sleep", 5)==0) {
+		ui_sleep(menuin);
+		break;
+	    }
 	    /* Continue below */
 
 	case 'u':

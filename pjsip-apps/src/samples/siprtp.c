@@ -1101,7 +1101,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 }
 
 
-#if defined(PJ_WIN32) && PJ_WIN32 != 0
+#if (defined(PJ_WIN32) && PJ_WIN32 != 0) || (defined(PJ_WIN64) && PJ_WIN64 != 0)
 #include <windows.h>
 static void boost_priority(void)
 {
@@ -1195,13 +1195,13 @@ static void on_rx_rtp(void *user_data, void *pkt, pj_ssize_t size)
 
     /* Check for errors */
     if (size < 0) {
-	app_perror(THIS_FILE, "RTP recv() error", -size);
+	app_perror(THIS_FILE, "RTP recv() error", (pj_status_t)-size);
 	return;
     }
 
     /* Decode RTP packet. */
     status = pjmedia_rtp_decode_rtp(&strm->in_sess, 
-				    pkt, size, 
+				    pkt, (int)size, 
 				    &hdr, &payload, &payload_len);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "RTP decode error", status);
@@ -1234,7 +1234,7 @@ static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size)
 
     /* Check for errors */
     if (size < 0) {
-	app_perror(THIS_FILE, "Error receiving RTCP packet", -size);
+	app_perror(THIS_FILE, "Error receiving RTCP packet",(pj_status_t)-size);
 	return;
     }
 
@@ -1862,7 +1862,7 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    if (fgets(buf, len, stdin) == NULL)
+    if (fgets(buf, (int)len, stdin) == NULL)
 	return PJ_FALSE;
 
     /* Remove trailing newlines. */
@@ -2024,7 +2024,7 @@ static void app_log_writer(int level, const char *buffer, int len)
 	pj_log_write(level, buffer, len);
 
     if (log_file) {
-	int count = fwrite(buffer, len, 1, log_file);
+	pj_size_t count = fwrite(buffer, len, 1, log_file);
 	PJ_UNUSED_ARG(count);
 	fflush(log_file);
     }

@@ -101,7 +101,7 @@ static pj_uint8_t cand_type_prefs[4] =
 #define CHECK_NAME_LEN		128
 #define LOG4(expr)		PJ_LOG(4,expr)
 #define LOG5(expr)		PJ_LOG(4,expr)
-#define GET_LCAND_ID(cand)	(cand - ice->lcand)
+#define GET_LCAND_ID(cand)	(unsigned)(cand - ice->lcand)
 #define GET_CHECK_ID(cl, chk)	(chk - (cl)->checks)
 
 

@@ -44,7 +44,7 @@
  * buf_size size packets as fast as possible.
  */
 static int sock_producer_consumer(int sock_type,
-                                  unsigned buf_size,
+                                  pj_size_t buf_size,
                                   unsigned loop, 
                                   unsigned *p_bandwidth)
 {
@@ -54,7 +54,7 @@ static int sock_producer_consumer(int sock_type,
     pj_timestamp start, stop;
     unsigned i;
     pj_highprec_t elapsed, bandwidth;
-    pj_size_t total_received;
+    pj_highprec_t total_received;
     pj_status_t rc;
 
     /* Create pool. */

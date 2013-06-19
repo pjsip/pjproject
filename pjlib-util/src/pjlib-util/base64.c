@@ -116,7 +116,7 @@ PJ_DEF(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
 	po += 4;
     }
 
-    *out_len = po - output;
+    *out_len = (int)(po - output);
     return PJ_SUCCESS;
 }
 
@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
 				     pj_uint8_t *out, int *out_len)
 {
     const char *buf = input->ptr;
-    int len = input->slen;
+    int len = (int)input->slen;
     int i, j, k;
     int c[4];
 

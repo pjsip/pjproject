@@ -32,8 +32,9 @@
 #endif
 
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0 && defined(PJ_DEBUG) && PJ_DEBUG!=0 \
-    && !PJ_NATIVE_STRING_IS_UNICODE
+#if ((defined(PJ_WIN32) && PJ_WIN32!=0) || \
+     (defined(PJ_WIN64) && PJ_WIN64 != 0)) && \
+     defined(PJ_DEBUG) && PJ_DEBUG!=0 && !PJ_NATIVE_STRING_IS_UNICODE
 #   include <windows.h>
 #   define TRACE_(msg)	OutputDebugString(msg)
 #endif

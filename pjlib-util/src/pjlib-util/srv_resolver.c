@@ -102,7 +102,7 @@ PJ_DEF(pj_status_t) pj_dns_srv_resolve( const pj_str_t *domain_name,
 					pj_dns_srv_resolver_cb *cb,
 					pj_dns_srv_async_query **p_query)
 {
-    int len;
+    pj_size_t len;
     pj_str_t target_name;
     pj_dns_srv_async_query *query_job;
     pj_status_t status;

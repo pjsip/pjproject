@@ -826,7 +826,7 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 static pj_status_t tcp_start_read(struct tcp_transport *tcp)
 {
     pj_pool_t *pool;
-    pj_ssize_t size;
+    pj_uint32_t size;
     pj_sockaddr *rem_addr;
     void *readbuf[1];
     pj_status_t status;
@@ -1113,7 +1113,7 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
 		  bytes_sent));
 
 	status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
-				     -bytes_sent;
+				     (pj_status_t)-bytes_sent;
 
 	tcp_init_shutdown(tcp, status);
 

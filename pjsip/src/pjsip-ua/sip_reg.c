@@ -995,7 +995,7 @@ static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
 	     * if we don't have exact Contact header count, or
 	     * from the request as the last resort.
 	     */
-	    unsigned our_contact_cnt;
+	    pj_size_t our_contact_cnt;
 
 	    our_contact_cnt = pj_list_size(&regc->contact_hdr_list);
 

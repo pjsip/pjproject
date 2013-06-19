@@ -86,7 +86,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
     pj_bool_t has_more = PJ_FALSE;
 
     enc_buf = port_data->enc_buf;
-    enc_size_left = port_data->enc_buf_size;
+    enc_size_left = (unsigned)port_data->enc_buf_size;
 
     /*
      * Encode
@@ -99,7 +99,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
     if (status != PJ_SUCCESS) goto on_error;
 
     enc_buf += enc_frames[enc_cnt].size;
-    enc_size_left -= enc_frames[enc_cnt].size;
+    enc_size_left -= (unsigned)enc_frames[enc_cnt].size;
 
     ++enc_cnt;
     while (has_more) {
@@ -113,7 +113,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 	    break;
 
 	enc_buf += enc_frames[enc_cnt].size;
-	enc_size_left -= enc_frames[enc_cnt].size;
+	enc_size_left -= (unsigned)enc_frames[enc_cnt].size;
 
 	++enc_cnt;
 
@@ -127,7 +127,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
      * Decode
      */
     status = pjmedia_vid_codec_decode(codec, enc_cnt, enc_frames,
-				      frame->size, frame);
+				      (unsigned)frame->size, frame);
     if (status != PJ_SUCCESS) goto on_error;
 
     /* Display */

@@ -487,7 +487,7 @@ static void wsola_fade_out(pjmedia_wsola *wsola,
 	    *buf = (pj_int16_t)(*buf * fade_pos / fade_cnt);
 	}
 	if (buf != end)
-	    pjmedia_zero_samples(buf, end - buf);
+	    pjmedia_zero_samples(buf, (unsigned)(end - buf));
 	wsola->fade_out_pos = 0;
     } else {
 	for (; buf != end; --fade_pos, ++buf) {
@@ -661,7 +661,7 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 	}
 
 	/* How many new samples do we have */
-	dist = templ - start;
+	dist = (unsigned)(templ - start);
 
 	/* Not enough buffer to hold the result */
 	if (reg1_len + dist > wsola->buf_size) {
@@ -719,7 +719,7 @@ static unsigned compress(pjmedia_wsola *wsola, pj_int16_t *buf, unsigned count,
 	CHECK_(start < end);
 
 	start = find_pitch(buf, start, end, wsola->templ_size, 0);
-	dist = start - buf;
+	dist = (unsigned)(start - buf);
 
 	if (wsola->options & PJMEDIA_WSOLA_NO_HANNING) {
 	    overlapp_add_simple(buf, wsola->hanning_size, buf, start);

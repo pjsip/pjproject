@@ -46,7 +46,7 @@ static int worker_thread(void *arg)
             continue;
         }
 
-        pj_atomic_add(total_bytes, len);
+	pj_atomic_add(total_bytes, (pj_atomic_value_t)len);
 
         rc = pj_sock_sendto(sock, buf, &len, 0, &addr, addrlen);
         if (rc != PJ_SUCCESS) {

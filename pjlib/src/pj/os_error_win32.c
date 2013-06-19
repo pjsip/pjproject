@@ -142,7 +142,7 @@ PJ_DEF(void) pj_set_netos_error(pj_status_t code)
 int platform_strerror( pj_os_err_type os_errcode, 
                        char *buf, pj_size_t bufsize)
 {
-    int len = 0;
+    pj_size_t len = 0;
     PJ_DECL_UNICODE_TEMP_BUF(wbuf,128);
 
     pj_assert(buf != NULL);
@@ -193,7 +193,7 @@ int platform_strerror( pj_os_err_type os_errcode,
 			     os_errcode,
 			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
 			     buf,
-			     bufsize,
+			     (int)bufsize,
 			     NULL);
 	buf[bufsize-1] = '\0';
 #endif
@@ -215,6 +215,6 @@ int platform_strerror( pj_os_err_type os_errcode,
 	buf[len] = '\0';
     }
 
-    return len;
+    return (int)len;
 }
 

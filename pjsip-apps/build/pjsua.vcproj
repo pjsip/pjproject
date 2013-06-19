@@ -17,6 +17,9 @@
 			Name="Smartphone 2003 (ARMV4)"
 		/>
 		<Platform
+			Name="x64"
+		/>
+		<Platform
 			Name="Windows Mobile 6 Standard SDK (ARMV4I)"
 		/>
 		<Platform
@@ -234,12 +237,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
+			Name="Release|x64"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -255,11 +258,12 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
 				PrecompiledHeaderFile=""
 			/>
 			<Tool
@@ -273,12 +277,14 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
+				AdditionalDependencies="Iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -287,86 +293,16 @@
 				Name="VCBscMakeTool"
 			/>
 			<Tool
-				Name="VCCodeSignTool"
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -572,12 +508,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
+			Name="Debug|x64"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -593,12 +529,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
 				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -611,12 +549,15 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
+				AdditionalDependencies="Iphlpapi.lib  dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				IgnoreDefaultLibraryNames="msvcrt.lib"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -625,86 +566,16 @@
 				Name="VCBscMakeTool"
 			/>
 			<Tool
-				Name="VCCodeSignTool"
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -909,12 +780,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
+			Name="Debug-Static|x64"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -930,12 +801,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
 				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -948,12 +821,14 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
+				AdditionalDependencies="Iphlpapi.lib  dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -962,86 +837,16 @@
 				Name="VCBscMakeTool"
 			/>
 			<Tool
-				Name="VCCodeSignTool"
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -1246,12 +1051,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+			Name="Release-Dynamic|x64"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1267,11 +1072,12 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
 				PrecompiledHeaderFile=""
 			/>
 			<Tool
@@ -1285,12 +1091,14 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
+				AdditionalDependencies="Iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -1299,86 +1107,16 @@
 				Name="VCBscMakeTool"
 			/>
 			<Tool
-				Name="VCCodeSignTool"
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -1583,12 +1321,12 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+			Name="Debug-Dynamic|x64"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1604,12 +1342,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
+				TargetEnvironment="3"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
 				PrecompiledHeaderFile=""
+				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1622,12 +1362,14 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
+				AdditionalDependencies="Iphlpapi.lib  dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				TargetMachine="17"
 			/>
 			<Tool
 				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -1636,86 +1378,16 @@
 				Name="VCBscMakeTool"
 			/>
 			<Tool
-				Name="VCCodeSignTool"
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
-				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
-				IgnoreDefaultLibraryNames="oldnames.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
@@ -1894,6 +1566,755 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
 				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|x64"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win64-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="3"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="Iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
+				TargetMachine="17"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCManifestTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCAppVerifierTool"
+			/>
+			<Tool
+				Name="VCWebDeploymentTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles="pjsua.bmp|$(ProjectDir)\..\src\pjsua\wm\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="aygshell.lib coredll.lib winsock.lib ws2.lib"
+				OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
+				IgnoreDefaultLibraryNames="oldnames.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2900,18 +3321,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-					ExcludedFromBuild="true"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2949,18 +3359,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-					ExcludedFromBuild="true"
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2998,18 +3397,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-					ExcludedFromBuild="true"
+					Name="Debug-Static|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3047,18 +3435,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-					ExcludedFromBuild="true"
+					Name="Release-Dynamic|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3096,18 +3473,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-					ExcludedFromBuild="true"
+					Name="Debug-Dynamic|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3136,6 +3502,115 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -3285,7 +3760,23 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|x64"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -3301,7 +3792,23 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug-Static|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|x64"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -3317,7 +3824,23 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Debug-Dynamic|x64"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Release-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|x64"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -3356,16 +3879,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+					Name="Release|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3401,16 +3915,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+					Name="Debug|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3446,16 +3951,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					Name="Debug-Static|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3491,16 +3987,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+					Name="Release-Dynamic|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3536,16 +4023,7 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+					Name="Debug-Dynamic|x64"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -3573,6 +4051,105 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|x64"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"

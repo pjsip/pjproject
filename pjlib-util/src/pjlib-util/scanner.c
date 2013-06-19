@@ -111,8 +111,9 @@ PJ_DEF(void) pj_cis_invert( pj_cis_t *cis )
     }
 }
 
-PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart, int buflen, 
-			   unsigned options, pj_syn_err_func_ptr callback )
+PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart, 
+			   pj_size_t buflen, unsigned options, 
+			   pj_syn_err_func_ptr callback )
 {
     PJ_CHECK_STACK();
 
@@ -549,7 +550,7 @@ PJ_DEF(void) pj_scan_get_until_chr( pj_scanner *scanner,
 				     const char *until_spec, pj_str_t *out)
 {
     register char *s = scanner->curptr;
-    int speclen;
+    pj_size_t speclen;
 
     if (s >= scanner->end) {
 	pj_scan_syntax_err(scanner);

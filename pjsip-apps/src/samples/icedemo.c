@@ -547,7 +547,7 @@ static int print_cand(char buffer[], unsigned maxlen,
 
     *p = '\0';
 
-    return p-buffer;
+    return (int)(p-buffer);
 }
 
 /* 
@@ -622,7 +622,7 @@ static int encode_session(char buffer[], unsigned maxlen)
 
 	/* And encode the candidates as SDP */
 	for (j=0; j<cand_cnt; ++j) {
-	    printed = print_cand(p, maxlen - (p-buffer), &cand[j]);
+	    printed = print_cand(p, maxlen - (unsigned)(p-buffer), &cand[j]);
 	    if (printed < 0)
 		return -PJ_ETOOSMALL;
 	    p += printed;
@@ -633,7 +633,7 @@ static int encode_session(char buffer[], unsigned maxlen)
 	return -PJ_ETOOSMALL;
 
     *p = '\0';
-    return p - buffer;
+    return (int)(p - buffer);
 }
 
 
@@ -727,7 +727,7 @@ static void icedemo_input_remote(void)
     comp0_addr[0] = '\0';
 
     while (!done) {
-	int len;
+	pj_size_t len;
 	char *line;
 
 	printf(">");
@@ -1077,7 +1077,7 @@ static void icedemo_console(void)
     while (!app_quit) {
 	char input[80], *cmd;
 	const char *SEP = " \t\r\n";
-	int len;
+	pj_size_t len;
 
 	icedemo_print_menu();
 

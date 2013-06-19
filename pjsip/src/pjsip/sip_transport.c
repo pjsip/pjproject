@@ -1626,7 +1626,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	pj_bzero(&rdata->msg_info, sizeof(rdata->msg_info));
 	pj_list_init(&rdata->msg_info.parse_err);
 	rdata->msg_info.msg_buf = current_pkt;
-	rdata->msg_info.len = remaining_len;
+	rdata->msg_info.len = (int)remaining_len;
 
 	/* For TCP transport, check if the whole message has been received. */
 	if ((tr->flag & PJSIP_TRANSPORT_DATAGRAM) == 0) {
@@ -1646,7 +1646,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	}
 
 	/* Update msg_info. */
-	rdata->msg_info.len = msg_fragment_size;
+	rdata->msg_info.len = (int)msg_fragment_size;
 
 	/* Null terminate packet */
 	saved = current_pkt[msg_fragment_size];

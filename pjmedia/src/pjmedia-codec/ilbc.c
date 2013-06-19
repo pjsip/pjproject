@@ -668,7 +668,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_int16_t *pcm_in;
-    unsigned nsamples;
+    pj_size_t nsamples;
 #if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     UInt32 npackets;
     OSStatus err;

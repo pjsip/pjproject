@@ -127,7 +127,7 @@ int main()
 	f = fopen("tonegen.pcm", "wb");
 
 	for (i=0; i<8000/SAMPLES_PER_FRAME; ++i) {
-	    int count;
+	    pj_size_t count;
 	    pjmedia_port_get_frame(port, &frm);
 	    count = fwrite(buf, SAMPLES_PER_FRAME, 2, f);
 	    if (count != 2)

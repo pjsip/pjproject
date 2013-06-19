@@ -51,7 +51,8 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 {
     pjmedia_frame frm;
     short *buf;
-    unsigned i, samples_per_frame, read, len;
+    unsigned i, samples_per_frame;
+    pj_size_t read, len;
     unsigned start_pos;
     pj_status_t status;
 

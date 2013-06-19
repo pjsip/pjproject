@@ -272,7 +272,7 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
 {
 #define SEPARATOR   '$'
     char *key, *p;
-    int len;
+    pj_ssize_t len;
     pj_size_t len_required;
     pj_str_t *host;
 
@@ -541,7 +541,7 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
      */
     if(pj_hash_get_lower(mod_tsx_layer.htable, 
 		         tsx->transaction_key.ptr,
-		         tsx->transaction_key.slen, 
+		         (unsigned)tsx->transaction_key.slen, 
 		         NULL))
     {
 	pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -561,7 +561,8 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 #ifdef PRECALC_HASH
     pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
                        tsx->transaction_key.ptr,
-    		       tsx->transaction_key.slen, tsx->hashed_key, tsx);
+    		       (unsigned)tsx->transaction_key.slen, 
+		       tsx->hashed_key, tsx);
 #else
     pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
                        tsx->transaction_key.ptr,
@@ -598,7 +599,8 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
     /* Register the transaction to the hash table. */
 #ifdef PRECALC_HASH
     pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    		       tsx->transaction_key.slen, tsx->hashed_key, NULL);
+    		       (unsigned)tsx->transaction_key.slen, tsx->hashed_key, 
+		       NULL);
 #else
     pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
     		       tsx->transaction_key.slen, 0, NULL);
@@ -644,8 +646,8 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
 
     pj_mutex_lock(mod_tsx_layer.mutex);
     tsx = (pjsip_transaction*)
-    	  pj_hash_get_lower( mod_tsx_layer.htable, key->ptr, key->slen,
-                             &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key->ptr, 
+			     (unsigned)key->slen, &hval );
     pj_mutex_unlock(mod_tsx_layer.mutex);
 
     TSX_TRACE_((THIS_FILE, 
@@ -778,7 +780,8 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     pj_mutex_lock( mod_tsx_layer.mutex );
 
     tsx = (pjsip_transaction*) 
-    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, (unsigned)key.slen, 
+			     &hval );
 
 
     TSX_TRACE_((THIS_FILE, 
@@ -828,7 +831,8 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
     pj_mutex_lock( mod_tsx_layer.mutex );
 
     tsx = (pjsip_transaction*) 
-    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, (unsigned)key.slen, 
+			     &hval );
 
 
     TSX_TRACE_((THIS_FILE, 
@@ -1845,9 +1849,9 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    pjsip_status_code sc;
 	    pj_str_t err;
 
-	    tsx->transport_err = -sent;
+	    tsx->transport_err = (pj_status_t)-sent;
 
-	    err =pj_strerror(-sent, errmsg, sizeof(errmsg));
+	    err =pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
 	    PJ_LOG(2,(tsx->obj_name,
 		      "Failed to send %s! err=%d (%s)",
@@ -1887,7 +1891,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    }
 
 	} else {
-	    PJ_PERROR(2,(tsx->obj_name, -sent,
+	    PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
 		         "Temporary failure in sending %s, "
 		         "will try next server",
 		         pjsip_tx_data_get_info(send_state->tdata)));
@@ -1934,7 +1938,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	pj_time_val delay = {0, 0};
 	char errmsg[PJ_ERR_MSG_SIZE];
 
-	pj_strerror(-sent, errmsg, sizeof(errmsg));
+	pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
 	PJ_LOG(2,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		pjsip_tx_data_get_info(tdata), -sent, errmsg));
@@ -1943,7 +1947,7 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	 * See https://trac.pjsip.org/repos/ticket/1646
 	 */
 	lock_timer(tsx);
-	tsx->transport_err = -sent;
+	tsx->transport_err = (pj_status_t)-sent;
 	tsx_cancel_timer(tsx, &tsx->timeout_timer);
 	tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
 	                   TRANSPORT_ERR_TIMER);

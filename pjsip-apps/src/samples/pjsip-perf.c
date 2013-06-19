@@ -67,7 +67,7 @@
 #include <pjlib.h>
 #include <stdio.h>
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0)
 #  include <windows.h>
 #endif
 
@@ -1006,7 +1006,7 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 
     } else if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 	report_completion(inv->cause);
-	inv->mod_data[mod_test.id] = (void*)1;
+	inv->mod_data[mod_test.id] = (void*)(pj_ssize_t)1;
     }
 }
 
@@ -1093,7 +1093,7 @@ static pj_status_t verify_sip_url(const char *c_url)
     pjsip_uri *p;
     pj_pool_t *pool;
     char *url;
-    int len = (c_url ? pj_ansi_strlen(c_url) : 0);
+    pj_size_t len = (c_url ? pj_ansi_strlen(c_url) : 0);
 
     if (!len) return -1;
 
@@ -1370,18 +1370,18 @@ static void tsx_completion_cb(void *token, pjsip_event *event)
 
     if (tsx->state==PJSIP_TSX_STATE_TERMINATED) {
 	report_completion(tsx->status_code);
-	tsx->mod_data[mod_test.id] = (void*)1;
+	tsx->mod_data[mod_test.id] = (void*)(pj_ssize_t)1;
     }
     else if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	     tsx->state == PJSIP_TSX_STATE_CONFIRMED) {
 
 	report_completion(tsx->status_code);
-	tsx->mod_data[mod_test.id] = (void*)1;
+	tsx->mod_data[mod_test.id] = (void*)(pj_ssize_t)1;
 	
     } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED) {
 
 	report_completion(tsx->status_code);
-	tsx->mod_data[mod_test.id] = (void*)1;
+	tsx->mod_data[mod_test.id] = (void*)(pj_ssize_t)1;
 
 	TERMINATE_TSX(tsx, tsx->status_code);
     }
@@ -1421,7 +1421,7 @@ static pj_status_t submit_job(void)
 static int client_thread(void *arg)
 {
     pj_time_val end_time, last_report, now;
-    unsigned thread_index = (unsigned)(long)arg;
+    unsigned thread_index = (unsigned)(long)(pj_ssize_t)arg;
     unsigned cycle = 0, last_cycle = 0;
 
     pj_thread_sleep(100);
@@ -1578,7 +1578,7 @@ static const char *good_number(char *buf, pj_int32_t val)
 static int server_thread(void *arg)
 {
     pj_time_val timeout = { 0, 1 };
-    unsigned thread_index = (unsigned)(long)arg;
+    unsigned thread_index = (unsigned)(long)(pj_ssize_t)arg;
     pj_time_val last_report, next_report;
 
     pj_gettimeofday(&last_report);
@@ -1639,7 +1639,7 @@ static void write_report(const char *msg)
 {
     puts(msg);
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0)
     OutputDebugString(msg);
     OutputDebugString("\n");
 #endif
@@ -1715,7 +1715,8 @@ int main(int argc, char *argv[])
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &client_thread, 
-				      (void*)(long)i, 0, 0, &app.thread[i]);
+				      (void*)(pj_ssize_t)i, 0, 0, 
+				      &app.thread[i]);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Unable to create thread", status);
 		return 1;
@@ -1824,7 +1825,8 @@ int main(int argc, char *argv[])
 
 	for (i=0; i<app.thread_count; ++i) {
 	    status = pj_thread_create(app.pool, NULL, &server_thread, 
-				      (void*)(long)i, 0, 0, &app.thread[i]);
+				      (void*)(pj_ssize_t)i, 0, 0, 
+				      &app.thread[i]);
 	    if (status != PJ_SUCCESS) {
 		app_perror(THIS_FILE, "Unable to create thread", status);
 		return 1;

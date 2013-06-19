@@ -628,7 +628,7 @@ static pj_status_t avi_dev_strm_get_frame(pjmedia_vid_dev_stream *strm,
             return status;
 
         return pjmedia_vid_codec_decode(stream->adi->codec, 1, &enc_frame,
-                                        frame->size, frame);
+                                        (unsigned)frame->size, frame);
     } else {
         return pjmedia_port_get_frame(stream->adi->vid, frame);
     }

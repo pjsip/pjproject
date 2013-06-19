@@ -191,7 +191,7 @@ static pj_pool_t* cpool_create_pool(pj_pool_factory *pf,
     pj_list_insert_before( &cp->used_list, pool );
 
     /* Mark factory data */
-    pool->factory_data = (void*) (long) idx;
+    pool->factory_data = (void*) (pj_ssize_t) idx;
 
     /* Increment used count. */
     ++cp->used_count;
@@ -251,7 +251,7 @@ static void cpool_release_pool( pj_pool_factory *pf, pj_pool_t *pool)
     /*
      * Otherwise put the pool in our recycle list.
      */
-    i = (unsigned) (unsigned long) pool->factory_data;
+    i = (unsigned) (unsigned long) (pj_ssize_t) pool->factory_data;
 
     pj_assert(i<PJ_CACHING_POOL_ARRAY_SIZE);
     if (i >= PJ_CACHING_POOL_ARRAY_SIZE ) {
@@ -279,10 +279,10 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
 			     cp->capacity, cp->max_capacity, cp->used_count));
     if (detail) {
 	pj_pool_t *pool = (pj_pool_t*) cp->used_list.next;
-	pj_uint32_t total_used = 0, total_capacity = 0;
+	pj_size_t total_used = 0, total_capacity = 0;
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
 	while (pool != (void*)&cp->used_list) {
-	    unsigned pool_capacity = pj_pool_get_capacity(pool);
+	    pj_size_t pool_capacity = pj_pool_get_capacity(pool);
 	    PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used", 
 				  pj_pool_getobjname(pool), 
 				  pj_pool_get_used_size(pool), 

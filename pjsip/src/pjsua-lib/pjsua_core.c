@@ -85,7 +85,7 @@ PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
 		 PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE |
 		 PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
 		 PJ_LOG_HAS_INDENT;
-#if defined(PJ_WIN32) && PJ_WIN32 != 0
+#if (defined(PJ_WIN32) && PJ_WIN32 != 0) || (defined(PJ_WIN64) && PJ_WIN64 != 0)
     cfg->decor |= PJ_LOG_HAS_COLOR;
 #endif
 }
@@ -2679,7 +2679,7 @@ PJ_DEF(pj_status_t) pjsua_verify_url(const char *c_url)
     pjsip_uri *p;
     pj_pool_t *pool;
     char *url;
-    int len = (c_url ? pj_ansi_strlen(c_url) : 0);
+    pj_size_t len = (c_url ? pj_ansi_strlen(c_url) : 0);
 
     if (!len) return PJSIP_EINVALIDURI;
 
@@ -2703,7 +2703,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     pjsip_uri *p;
     pj_pool_t *pool;
     char *url;
-    int len = (c_url ? pj_ansi_strlen(c_url) : 0);
+    pj_size_t len = (c_url ? pj_ansi_strlen(c_url) : 0);
 
     if (!len) return PJSIP_EINVALIDURI;
 

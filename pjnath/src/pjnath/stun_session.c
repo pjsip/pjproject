@@ -953,7 +953,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     }
 
     /* Dump packet */
-    dump_tx_msg(sess, tdata->msg, tdata->pkt_size, server);
+    dump_tx_msg(sess, tdata->msg, (unsigned)tdata->pkt_size, server);
 
     /* If this is a STUN request message, then send the request with
      * a new STUN client transaction.
@@ -973,7 +973,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
 	/* Send the request! */
 	status = pj_stun_client_tsx_send_msg(tdata->client_tsx, retransmit,
-					     tdata->pkt, tdata->pkt_size);
+					     tdata->pkt, 
+					     (unsigned)tdata->pkt_size);
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    pj_stun_msg_destroy_tdata(sess, tdata);
 	    LOG_ERR_(sess, "Error sending STUN request", status);
@@ -1165,10 +1166,10 @@ static pj_status_t send_response(pj_stun_session *sess, void *token,
     }
 
     /* Print log */
-    dump_tx_msg(sess, response, out_len, addr);
+    dump_tx_msg(sess, response, (unsigned)out_len, addr);
 
     /* Send packet */
-    status = sess->cb.on_send_msg(sess, token, out_pkt, out_len, 
+    status = sess->cb.on_send_msg(sess, token, out_pkt, (unsigned)out_len, 
 				  addr, addr_len);
 
     return status;
@@ -1442,7 +1443,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	goto on_return;
     }
 
-    dump_rx_msg(sess, msg, pkt_size, src_addr);
+    dump_rx_msg(sess, msg, (unsigned)pkt_size, src_addr);
 
     /* For requests, check if we have cached response */
     status = check_cached_response(sess, sess->rx_pool, msg, 
@@ -1456,20 +1457,23 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type))
     {
 	status = on_incoming_response(sess, options, 
-				      (const pj_uint8_t*) packet, pkt_size, 
-				      msg, src_addr, src_addr_len);
+				      (const pj_uint8_t*) packet, 
+				      (unsigned)pkt_size, msg, 
+				      src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 
 	status = on_incoming_request(sess, options, token, sess->rx_pool, 
-				     (const pj_uint8_t*) packet, pkt_size, 
+				     (const pj_uint8_t*) packet, 
+				     (unsigned)pkt_size, 
 				     msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_INDICATION(msg->hdr.type)) {
 
 	status = on_incoming_indication(sess, token, sess->rx_pool, 
-					(const pj_uint8_t*) packet, pkt_size,
-					msg, src_addr, src_addr_len);
+					(const pj_uint8_t*) packet, 
+					(unsigned)pkt_size, msg, src_addr, 
+					src_addr_len);
 
     } else {
 	pj_assert(!"Unexpected!");

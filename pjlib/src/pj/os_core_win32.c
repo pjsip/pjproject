@@ -408,7 +408,7 @@ PJ_DEF(pj_status_t) pj_thread_register ( const char *cstr_thread_name,
 			 cstr_thread_name, thread->idthread);
     else
 	pj_ansi_snprintf(thread->obj_name, sizeof(thread->obj_name), 
-		         "thr%p", (void*)thread->idthread);
+		         "thr%p", (void*)(pj_ssize_t)thread->idthread);
     
     rc = pj_thread_local_set(thread_tls_id, thread);
     if (rc != PJ_SUCCESS)
@@ -499,7 +499,7 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     PJ_LOG(6, (rec->obj_name, "Thread created"));
 
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
-    rec->stk_size = stack_size ? stack_size : 0xFFFFFFFFUL;
+    rec->stk_size = stack_size ? (pj_uint32_t)stack_size : 0xFFFFFFFFUL;
     rec->stk_max_usage = 0;
 #endif
 
@@ -634,8 +634,9 @@ PJ_DEF(void) pj_thread_check_stack(const char *file, int line)
     pj_assert(thread);
 
     /* Calculate current usage. */
-    usage = (&stk_ptr > thread->stk_start) ? &stk_ptr - thread->stk_start :
-		thread->stk_start - &stk_ptr;
+    usage = (&stk_ptr > thread->stk_start) ? 
+		(pj_uint32_t)(&stk_ptr - thread->stk_start) :
+		(pj_uint32_t)(thread->stk_start - &stk_ptr);
 
     /* Assert if stack usage is dangerously high. */
     pj_assert("STACK OVERFLOW!! " && (usage <= thread->stk_size - 128));

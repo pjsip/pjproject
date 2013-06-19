@@ -163,7 +163,7 @@ static void send_msg_callback(pjsip_send_state *stateless_data,
 
     if (sent < 1) {
 	/* Obtain the error code. */
-	send_status = -sent;
+	send_status = (int)-sent;
     } else {
 	send_status = PJ_SUCCESS;
     }
@@ -415,7 +415,7 @@ static pj_status_t rt_send_request(int thread_id)
 	pjsip_endpt_cancel_timer(endpt, &rt_test_data[thread_id].timeout_timer);
     }
     timeout_delay.sec = 100; timeout_delay.msec = 0;
-    rt_test_data[thread_id].timeout_timer.user_data = (void*)1;
+    rt_test_data[thread_id].timeout_timer.user_data = (void*)(pj_ssize_t)1;
     pjsip_endpt_schedule_timer(endpt, &rt_test_data[thread_id].timeout_timer,
 			       &timeout_delay);
 
@@ -445,7 +445,7 @@ static pj_bool_t rt_on_rx_response(pjsip_rx_data *rdata)
 	if (!rt_stop) {
 	    pj_time_val tx_delay = { 0, 0 };
 	    pj_assert(rt_test_data[thread_id].tx_timer.user_data == NULL);
-	    rt_test_data[thread_id].tx_timer.user_data = (void*)1;
+	    rt_test_data[thread_id].tx_timer.user_data = (void*)(pj_ssize_t)1;
 	    pjsip_endpt_schedule_timer(endpt, &rt_test_data[thread_id].tx_timer,
 				       &tx_delay);
 	}
@@ -468,7 +468,7 @@ static void rt_timeout_timer( pj_timer_heap_t *timer_heap,
     
     if (rt_test_data[entry->id].tx_timer.user_data == NULL) {
 	pj_time_val delay = { 0, 0 };
-	rt_test_data[entry->id].tx_timer.user_data = (void*)1;
+	rt_test_data[entry->id].tx_timer.user_data = (void*)(pj_ssize_t)1;
 	pjsip_endpt_schedule_timer(endpt, &rt_test_data[entry->id].tx_timer,
 				   &delay);
     }
@@ -585,7 +585,8 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	}
 
 	/* Create thread, suspended. */
-	status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, (void*)(long)i, 0,
+	status = pj_thread_create(pool, "rttest%p", &rt_worker_thread, 
+				  (void*)(pj_ssize_t)i, 0,
 				  PJ_THREAD_SUSPENDED, &rt_test_data[i].thread);
 	if (status != PJ_SUCCESS) {
 	    app_perror("   error: unable to create thread", status);
@@ -599,7 +600,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	pj_thread_resume(rt_test_data[i].thread);
 
 	/* Schedule first message transmissions. */
-	rt_test_data[i].tx_timer.user_data = (void*)1;
+	rt_test_data[i].tx_timer.user_data = (void*)(pj_ssize_t)1;
 	pjsip_endpt_schedule_timer(endpt, &rt_test_data[i].tx_timer, &delay);
     }
 

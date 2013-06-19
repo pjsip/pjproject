@@ -71,7 +71,7 @@
 
 static char *ver_info(pj_uint32_t ver, char *buf)
 {
-    int len;
+    pj_size_t len;
 
     if (ver == 0) {
 	*buf = '\0';
@@ -125,7 +125,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     static char si_buffer[PJ_SYS_INFO_BUFFER_SIZE];
     static pj_sys_info si;
     static pj_bool_t si_initialized;
-    unsigned left = PJ_SYS_INFO_BUFFER_SIZE, len;
+    pj_size_t left = PJ_SYS_INFO_BUFFER_SIZE, len;
 
     if (si_initialized)
 	return &si;

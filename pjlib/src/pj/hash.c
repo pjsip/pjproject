@@ -141,7 +141,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
     if (hval && *hval != 0) {
 	hash = *hval;
 	if (keylen==PJ_HASH_KEY_STRING) {
-	    keylen = pj_ansi_strlen((const char*)key);
+	    keylen = (unsigned)pj_ansi_strlen((const char*)key);
 	}
     } else {
 	/* This slightly differs with pj_hash_calc() because we need 
@@ -156,7 +156,7 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
                 else 
 		    hash = hash * PJ_HASH_MULTIPLIER + *p;
 	    }
-	    keylen = p - (const unsigned char*)key;
+	    keylen = (unsigned)(p - (const unsigned char*)key);
 	} else {
 	    const pj_uint8_t *p = (const pj_uint8_t*)key,
 				  *end = p + keylen;

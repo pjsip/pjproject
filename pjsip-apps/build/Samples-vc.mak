@@ -1,7 +1,14 @@
 
 LIBEXT = .lib
 
+!if "$(ARCH)" == "win64"
+TARGET = x86_64-x64-vc$(VC_VER)-$(BUILD_MODE)
+TARGET_FLAGS = /DPJ_WIN64=1 /DPJ_M_X86_64=1 
+!else
+
 TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
+TARGET_FLAGS = /DPJ_WIN32=1 /DPJ_M_I386=1 
+!endif
 
 !if "$(BUILD_MODE)" == "debug"
 BUILD_FLAGS = /MTd /Od /Zi /W4
@@ -45,7 +52,7 @@ LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 	  $(PJMEDIA_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
 	  $(THIRD_PARTY_LIBS)
 
-CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
+CFLAGS 	= $(TARGET_FLAGS) \
 	  $(BUILD_FLAGS) \
 	  -I..\..\pjsip\include \
 	  -I..\..\pjlib\include \

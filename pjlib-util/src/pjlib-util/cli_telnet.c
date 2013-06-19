@@ -33,6 +33,7 @@
 #include <pj/compat/socket.h>
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN64) && PJ_WIN64!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
 
 #define EADDRINUSE WSAEADDRINUSE 
@@ -687,7 +688,7 @@ static void send_err_arg(cli_telnet_sess *sess,
 {
     pj_str_t send_data;
     char data_str[256];
-    unsigned len;
+    pj_size_t len;
     unsigned i;
     cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
 
@@ -760,7 +761,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 			  pj_bool_t with_last_cmd)
 {
     unsigned i;
-    unsigned len;
+    pj_size_t len;
     pj_str_t send_data;
     char data[1028];
     cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
@@ -992,7 +993,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
     status = pj_cli_sess_parse(&sess->base, (char *)&sess->rcmd->rbuf, cmd_val, 
 			       pool, &info);    
 
-    len = pj_ansi_strlen((char *)sess->rcmd->rbuf);
+    len = (unsigned)pj_ansi_strlen((char *)sess->rcmd->rbuf);
 
     switch (status) {
     case PJ_CLI_EINVARG:
@@ -1033,7 +1034,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 		pj_memcpy(&sess->rcmd->rbuf[len], info.hint[0].name.ptr, 
 			  info.hint[0].name.slen);
 
-		len += info.hint[0].name.slen;
+		len += (unsigned)info.hint[0].name.slen;
 		sess->rcmd->rbuf[len] = 0;		    
 	    }
 	} else {
@@ -1166,7 +1167,7 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
 	telnet_sess_send(sess, &send_data);
 	pj_ansi_strncpy((char*)&sess->rcmd->rbuf, history->ptr, history->slen);
 	sess->rcmd->rbuf[history->slen] = 0;
-	sess->rcmd->len = history->slen;
+	sess->rcmd->len = (unsigned)history->slen;
 	sess->rcmd->cur_pos = sess->rcmd->len;
 	return PJ_TRUE;
     }
@@ -1256,9 +1257,9 @@ static pj_status_t telnet_sess_send(cli_telnet_sess *sess,
         if (clen < sz) {
             pj_ansi_snprintf((char *)sess->buf + CLI_TELNET_BUF_SIZE,
                              MAX_CUT_MSG_LEN, CUT_MSG);
-            sess->buf_len = CLI_TELNET_BUF_SIZE +
+            sess->buf_len = (unsigned)(CLI_TELNET_BUF_SIZE +
                             pj_ansi_strlen((char *)sess->buf+
-				           CLI_TELNET_BUF_SIZE);
+				            CLI_TELNET_BUF_SIZE));
         } else
             sess->buf_len += clen;
     } else if (status == PJ_SUCCESS && sz < str->slen) {
@@ -1294,13 +1295,13 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {	    	    
 	    pj_scan_get_until_ch(&scanner, '\n', &out_str);	    
-	    str_len = scanner.curptr - str_begin;
+	    str_len = (int)(scanner.curptr - str_begin);
 	    if (*scanner.curptr == '\n') {		
 		if ((str_len > 1) && (out_str.ptr[str_len-2] == '\r')) 
 		{	    		    
 		    continue;
 		} else {		    
-		    int str_pos = str_begin - scanner.begin;
+		    int str_pos = (int)(str_begin - scanner.begin);
 
 		    if (str_len > 0) {
 			pj_str_t s;
@@ -1316,7 +1317,7 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
 		}
 	    } else {
 		pj_str_t s;
-		int str_pos = str_begin - scanner.begin;
+		int str_pos = (int)(str_begin - scanner.begin);
 
 		pj_strset(&s, &str->ptr[str_pos], str_len);
 		telnet_sess_send(sess, &s);
@@ -1358,7 +1359,7 @@ static void telnet_sess_destroy(pj_cli_sess *sess)
 }
 
 static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
-		                const char *data, int len)
+		                const char *data, pj_size_t len)
 {
     cli_telnet_fe *tfe = (cli_telnet_fe *)fe;
     pj_cli_sess *sess;    

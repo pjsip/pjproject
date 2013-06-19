@@ -402,7 +402,8 @@ static void call_on_state_changed( pjsip_inv_session *inv,
 static void call_on_rx_offer(pjsip_inv_session *inv, const pjmedia_sdp_session *offer)
 {
     call_t *call = (call_t*) inv->mod_data[mod_sipecho.id];
-    pjsip_inv_set_sdp_answer(inv, create_answer(call - app.call, inv->pool_prov, offer));
+    pjsip_inv_set_sdp_answer(inv, create_answer((int)(call - app.call), 
+			     inv->pool_prov, offer));
 }
 
 static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e)
@@ -501,7 +502,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 				   &local_uri, &dlg);
 
     if (status == PJ_SUCCESS)
-	answer = create_answer(call-app.call, dlg->pool, sdp_info->sdp);
+	answer = create_answer((int)(call-app.call), dlg->pool, sdp_info->sdp);
     if (status == PJ_SUCCESS)
     	status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &call->inv);
     if (status == PJ_SUCCESS)

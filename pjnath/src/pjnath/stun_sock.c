@@ -119,7 +119,7 @@ static void start_ka_timer(pj_stun_sock *stun_sock);
 /* Keep-alive timer callback */
 static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
-#define INTERNAL_MSG_TOKEN  (void*)1
+#define INTERNAL_MSG_TOKEN  (void*)(pj_ssize_t)1
 
 
 /*
@@ -909,7 +909,7 @@ process_app_data:
     if (stun_sock->cb.on_rx_data) {
 	pj_bool_t ret;
 
-	ret = (*stun_sock->cb.on_rx_data)(stun_sock, data, size,
+	ret = (*stun_sock->cb.on_rx_data)(stun_sock, data, (unsigned)size,
 					  src_addr, addr_len);
 	status = pj_grp_lock_release(stun_sock->grp_lock);
 	return status!=PJ_EGONE ? PJ_TRUE : PJ_FALSE;

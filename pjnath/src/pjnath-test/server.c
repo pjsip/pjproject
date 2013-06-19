@@ -732,7 +732,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 
     pj_sockaddr_cp(&pa->sockaddr, src_addr);
     da->data = (pj_uint8_t*)data;
-    da->length = size;
+    da->length = (unsigned)size;
 
     /* Encode Data indication */
     status = pj_stun_msg_encode(alloc->data_ind, buffer, sizeof(buffer), 0,

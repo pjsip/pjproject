@@ -87,7 +87,7 @@
 
 
 /* Define to 1 if you have the <windows.h> header file. */
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64 != 0)
 #   define HAVE_WINDOWS_H   1
 #endif
 

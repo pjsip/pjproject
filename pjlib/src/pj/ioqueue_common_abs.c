@@ -240,7 +240,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	      status = PJ_STATUS_FROM_OS(value);
 	  }
  	}
-#elif defined(PJ_WIN32) && PJ_WIN32!=0
+#elif (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0) 
 	status = PJ_SUCCESS; /* success */
 #else
 	/* Excellent information in D.J. Bernstein page:
@@ -523,6 +523,7 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
              * that error is easier to catch.
              */
 #	    if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
+	       defined(PJ_WIN64) && PJ_WIN64 != 0 || \
 	       defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
                 rc = pj_sock_recv(h->fd, read_op->buf, &bytes_read, 
 				  read_op->flags);
@@ -540,7 +541,8 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
         }
 	
 	if (rc != PJ_SUCCESS) {
-#	    if defined(PJ_WIN32) && PJ_WIN32 != 0
+#	    if (defined(PJ_WIN32) && PJ_WIN32 != 0) || \
+	       (defined(PJ_WIN64) && PJ_WIN64 != 0) 
 	    /* On Win32, for UDP, WSAECONNRESET on the receive side 
 	     * indicates that previous sending has triggered ICMP Port 
 	     * Unreachable message.
@@ -1281,7 +1283,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
 
             (*key->cb.on_accept_complete)(key, op_key, 
                                           PJ_INVALID_SOCKET,
-                                          bytes_status);
+                                          (pj_status_t)bytes_status);
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;

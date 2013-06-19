@@ -280,7 +280,7 @@ void cli_destroy()
 
 /* Get input URL */
 static void get_input_url(char *buf, 
-			  int len,
+			  pj_size_t len,
 			  pj_cli_cmd_val *cval,
 			  struct input_result *result)
 {
@@ -305,7 +305,7 @@ static void get_input_url(char *buf,
 
     if (pj_isdigit(*buf) || *buf=='-') {
 
-	int i;
+	unsigned i;
 
 	if (*buf=='-')
 	    i = 1;
@@ -315,7 +315,7 @@ static void get_input_url(char *buf,
 	for (; i<len; ++i) {
 	    if (!pj_isdigit(buf[i])) {
 		pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr, 
-		    err_invalid_input.slen);
+				      (int)err_invalid_input.slen);
 		return;
 	    }
 	}
@@ -331,7 +331,7 @@ static void get_input_url(char *buf,
 	    return;
 
 	pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr, 
-			      err_invalid_input.slen);
+			      (int)err_invalid_input.slen);
 	result->nb_result = PJSUA_APP_NO_NB;
 	return;
 
@@ -790,13 +790,13 @@ static pj_status_t cmd_del_account(pj_cli_cmd_val *cval)
     if (!pjsua_acc_is_valid(i)) {
 	pj_ansi_snprintf(out_str, sizeof(out_str), 
 		        "Invalid account id %d\n", i);
-	str_len = pj_ansi_strlen(out_str);
+	str_len = (unsigned)pj_ansi_strlen(out_str);
 	pj_cli_sess_write_msg(cval->sess, out_str, str_len);
     } else {
 	pjsua_acc_del(i);
 	pj_ansi_snprintf(out_str, sizeof(out_str),
 			 "Account %d deleted\n", i);
-	str_len = pj_ansi_strlen(out_str);
+	str_len = (unsigned)pj_ansi_strlen(out_str);
 	pj_cli_sess_write_msg(cval->sess, out_str, str_len);
     }
     return PJ_SUCCESS;
@@ -2492,7 +2492,7 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
 	status = cmd_vid_win_list();
 	break;
     case CMD_VIDEO_WIN_ARRANGE:
-	status = cmd_arrange_vid_win(cval);
+	status = cmd_arrange_vid_win();
 	break;
     case CMD_VIDEO_WIN_SHOW:	
     case CMD_VIDEO_WIN_HIDE:

@@ -228,14 +228,14 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	} tmp;
 	unsigned rec_incl;
 	pj_ssize_t sz;
-	unsigned sz_read = 0;
+	pj_size_t sz_read = 0;
 	pj_status_t status;
 
 	TRACE_((file->obj_name, "Reading packet.."));
 
 	/* Read PCAP packet header */
 	sz = sizeof(tmp.rec);
-	status = read_file(file, &tmp.rec, &sz);
+	status = read_file(file, &tmp.rec, &sz); 
 	if (status != PJ_SUCCESS) {
 	    TRACE_((file->obj_name, "read_file() error: %d", status));
 	    return status;

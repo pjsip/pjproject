@@ -111,7 +111,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 	return 2;
     } else {
 	if (tab->count < MAX_LABEL) {
-	    tab->a[tab->count].pos = (p-pkt);
+	    tab->a[tab->count].pos = (unsigned)(p-pkt);
 	    tab->a[tab->count].label.ptr = (char*)(p+1);
 	    tab->a[tab->count].label.slen = name->slen;
 	    ++tab->count;
@@ -136,7 +136,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 	*p = (pj_uint8_t)label.slen;
 	pj_memcpy(p+1, label.ptr, label.slen);
 
-	size -= (label.slen+1);
+	size -= (int)(label.slen+1);
 	p += (label.slen+1);
 
 	if (endlabel != endname && *endlabel == '.')
@@ -149,7 +149,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 
     *p++ = '\0';
 
-    return p-pos;
+    return (int)(p-pos);
 }
 
 static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
@@ -232,7 +232,7 @@ static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
 	return -1;
     }
 
-    return p-pos;
+    return (int)(p-pos);
 }
 
 static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
@@ -319,7 +319,7 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
 	size -= len;
     }
 
-    return p - pkt;
+    return (int)(p - pkt);
 }
 
 
@@ -339,7 +339,7 @@ static int server_thread(void *p)
 	PJ_FD_ZERO(&rset);
 	PJ_FD_SET(srv->sock, &rset);
 
-	rc = pj_sock_select(srv->sock+1, &rset, NULL, NULL, &timeout);
+	rc = pj_sock_select((int)(srv->sock+1), &rset, NULL, NULL, &timeout);
 	if (rc != 1)
 	    continue;
 
@@ -355,7 +355,7 @@ static int server_thread(void *p)
 	PJ_LOG(5,(THIS_FILE, "Server %d processing packet", srv - &g_server[0]));
 	srv->pkt_count++;
 
-	rc = pj_dns_parse_packet(pool, pkt, pkt_len, &req);
+	rc = pj_dns_parse_packet(pool, pkt, (unsigned)pkt_len, &req);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("server error parsing packet", rc);
 	    continue;

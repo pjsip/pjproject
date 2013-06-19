@@ -84,7 +84,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             return;
 
         if (bytes_read < 0) {
-            pj_status_t rc = -bytes_read;
+            pj_status_t rc = (pj_status_t)-bytes_read;
             char errmsg[PJ_ERR_MSG_SIZE];
 
 	    if (rc != last_error) {
@@ -424,7 +424,7 @@ static int perform_test(pj_bool_t allow_concur,
     /* Calculate total bytes received. */
     total_received = 0;
     for (i=0; i<sockpair_cnt; ++i) {
-        total_received = items[i].bytes_recv;
+        total_received = (pj_uint32_t)items[i].bytes_recv;
     }
 
     /* bandwidth = total_received*1000/total_elapsed_usec */

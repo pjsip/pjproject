@@ -431,7 +431,7 @@ static int txdata_test_uri_params(void)
     pjsip_via_hdr *via;
     pjsip_parser_err_report err_list;
     pjsip_msg *msg;
-    int len;
+    pj_ssize_t len;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "   header param in URI to create request"));

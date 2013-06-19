@@ -565,7 +565,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	/* Extract the mono frame to temporary buffer */
 	extract_mono_frame((const pj_int16_t*)frame->buf, sc->put_buf, ch, 
 			   PJMEDIA_PIA_CCNT(&this_port->info),
-			   frame->size * 8 / 
+			   (unsigned)frame->size * 8 / 
 			     PJMEDIA_PIA_BITS(&this_port->info) /
 			     PJMEDIA_PIA_CCNT(&this_port->info));
 

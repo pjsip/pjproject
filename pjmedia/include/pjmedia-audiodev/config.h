@@ -50,6 +50,7 @@ PJ_BEGIN_DECL
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 #   if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+       (defined(PJ_WIN64) && PJ_WIN64!=0) || \
        (defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0)
 #	define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	0
 #   else

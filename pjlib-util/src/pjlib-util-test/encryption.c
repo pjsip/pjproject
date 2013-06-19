@@ -468,7 +468,7 @@ static int crc32_test(void)
     for (i=0; i<PJ_ARRAY_SIZE(crc32_test_data); ++i) {
 	pj_crc32_context ctx;
 	pj_uint32_t crc0, crc1;
-	unsigned len;
+	pj_size_t len;
 
 	len = pj_ansi_strlen(crc32_test_data[i].input);
 	crc0 = pj_crc32_calc((pj_uint8_t*)crc32_test_data[i].input, len);
@@ -591,7 +591,7 @@ static int base64_test(void)
 	if (base64_test_vec[i].flag & ENCODE) {
 	    out_len = sizeof(output);
 	    rc = pj_base64_encode((pj_uint8_t*)base64_test_vec[i].base256,
-				  strlen(base64_test_vec[i].base256),
+				  (int)strlen(base64_test_vec[i].base256),
 				  output, &out_len);
 	    if (rc != PJ_SUCCESS)
 		return -90;
@@ -712,7 +712,7 @@ int encryption_benchmark()
     double total_len;
 
     input_len = 2048;
-    total_len = input_len * LOOP;
+    total_len = (unsigned)input_len * LOOP;
     pool = pj_pool_create(mem, "enc", input_len+256, 0, NULL);
     if (!pool)
 	return PJ_ENOMEM;
@@ -726,7 +726,7 @@ int encryption_benchmark()
     /* Dry run */
     for (i=0; i<PJ_ARRAY_SIZE(algorithms); ++i) {
 	algorithms[i].init_context(&context);
-	algorithms[i].update(&context, input, input_len);
+	algorithms[i].update(&context, input, (unsigned)input_len);
 	algorithms[i].final(&context, digest);
     }
 
@@ -738,7 +738,7 @@ int encryption_benchmark()
 	pj_get_timestamp(&t1);
 	algorithms[i].init_context(&context);
 	for (j=0; j<LOOP; ++j) {
-	    algorithms[i].update(&context, input, input_len);
+	    algorithms[i].update(&context, input, (unsigned)input_len);
 	}
 	algorithms[i].final(&context, digest);
 	pj_get_timestamp(&t2);

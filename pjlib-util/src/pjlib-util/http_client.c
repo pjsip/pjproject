@@ -229,7 +229,7 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
         return PJ_FALSE;
 
     if (sent <= 0) {
-        hreq->error = (sent < 0 ? -sent : PJLIB_UTIL_EHTTPLOST);
+        hreq->error = (sent < 0 ? (pj_status_t)-sent : PJLIB_UTIL_EHTTPLOST);
         pj_http_req_cancel(hreq, PJ_TRUE);
         return PJ_FALSE;
     } 
@@ -773,7 +773,7 @@ PJ_DEF(void) pj_http_req_param_default(pj_http_req_param *param)
  * user:passwd part of an URI. If user:passwd part is not
  * present, NULL will be returned.
  */
-static char *get_url_at_pos(const char *str, long len)
+static char *get_url_at_pos(const char *str, pj_size_t len)
 {
     const char *end = str + len;
     const char *p = str;
@@ -801,7 +801,7 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
                                           pj_http_url *hurl)
 {
     pj_scanner scanner;
-    int len = url->slen;
+    pj_size_t len = url->slen;
     PJ_USE_EXCEPTION;
 
     if (!len) return -1;
@@ -973,7 +973,7 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
 	/* Remove "username:password@" from the URL */
 	pj_assert(user_pos != 0 && user_pos < at_pos);
 	user_pos += 2;
-	removed_len = at_pos + 1 - user_pos;
+	removed_len = (int)(at_pos + 1 - user_pos);
 	pj_memmove(user_pos, at_pos+1, hreq->url.ptr+hreq->url.slen-at_pos-1);
 	hreq->url.slen -= removed_len;
 
@@ -1159,12 +1159,12 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
     else
 	phdr->name = pj_str("Proxy-Authorization");
 
-    len = PJ_BASE256_TO_BASE64_LEN(user_pass.slen) + 10;
+    len = (int)(PJ_BASE256_TO_BASE64_LEN(user_pass.slen) + 10);
     phdr->value.ptr = (char*)pj_pool_alloc(hreq->pool, len);
     phdr->value.slen = 0;
 
     pj_strcpy2(&phdr->value, "Basic ");
-    len -= phdr->value.slen;
+    len -= (int)phdr->value.slen;
     pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
 		     phdr->value.ptr + phdr->value.slen, &len);
     phdr->value.slen += len;
@@ -1175,7 +1175,8 @@ static pj_status_t auth_respond_basic(pj_http_req *hreq)
 /** Length of digest string. */
 #define MD5_STRLEN 32
 /* A macro just to get rid of type mismatch between char and unsigned char */
-#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, len)
+#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, \
+		   (unsigned)len)
 
 /* Transform digest to string.
  * output must be at least PJSIP_MD5STRLEN+1 bytes.
@@ -1337,7 +1338,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 	phdr->name = pj_str("Proxy-Authorization");
 
     /* Allocate space for the header */
-    len = 8 + /* Digest */
+    len = (int)(8 + /* Digest */
 	  16 + hreq->param.auth_cred.username.slen + /* username= */
 	  12 + chal->realm.slen + /* realm= */
 	  12 + chal->nonce.slen + /* nonce= */
@@ -1348,7 +1349,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 	  8 + /* nc=.. */
 	  30 + /* cnonce= */
 	  12 + chal->opaque.slen + /* opaque=".." */
-	  0;
+	  0);
     phdr->value.ptr = (char*)pj_pool_alloc(hreq->pool, len);
 
     /* Configure buffer to temporarily store the digest */
@@ -1537,8 +1538,8 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
 
             /* Header field "Content-Length" */
             pj_utoa(hreq->param.reqdata.total_size ? 
-                    hreq->param.reqdata.total_size: 
-                    hreq->param.reqdata.size, buf);
+                    (unsigned long)hreq->param.reqdata.total_size: 
+                    (unsigned long)hreq->param.reqdata.size, buf);
             str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%s: %s\r\n",
                          CONTENT_LENGTH, buf);
         }

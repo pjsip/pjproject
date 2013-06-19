@@ -370,7 +370,7 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
      */
     pj_md5_init(&ctx);
     pj_md5_update(&ctx, (pj_uint8_t*)rdata->msg_info.via->branch_param.ptr,
-		  rdata->msg_info.via->branch_param.slen);
+		  (unsigned)rdata->msg_info.via->branch_param.slen);
     pj_md5_final(&ctx, digest);
 
     branch.ptr = (char*)

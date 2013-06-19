@@ -253,8 +253,8 @@ static int compliance_test_0(pj_bool_t allow_concur)
     pj_ioqueue_key_t *skey=NULL, *ckey0=NULL, *ckey1=NULL;
     pj_ioqueue_op_key_t accept_op;
     int bufsize = BUF_MIN_SIZE;
-    pj_ssize_t status = -1;
-    int pending_op = 0;
+    int status = -1;
+    pj_ssize_t pending_op = 0;
     pj_timestamp t_elapsed;
     pj_str_t s;
     pj_status_t rc;
@@ -467,7 +467,7 @@ on_error:
     if (ioque != NULL)
 	pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
-    return status;
+    return (int)status;
 
 }
 
@@ -482,7 +482,7 @@ static int compliance_test_1(pj_bool_t allow_concur)
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioque = NULL;
     pj_ioqueue_key_t *ckey1 = NULL;
-    pj_ssize_t status = -1;
+    int status = -1;
     int pending_op = 0;
     pj_str_t s;
     pj_status_t rc;
@@ -640,7 +640,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
     int i, bufsize = BUF_MIN_SIZE;
-    pj_ssize_t status;
+    int status;
     int test_loop, pending_op = 0;
     pj_timestamp t_elapsed;
     pj_str_t s;

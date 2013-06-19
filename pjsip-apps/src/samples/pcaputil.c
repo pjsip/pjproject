@@ -88,7 +88,7 @@ static void cleanup()
         pj_ssize_t pos = pjmedia_wav_writer_port_get_pos(app.wav);
         if (pos >= 0) {
             unsigned msec;
-            msec = pos / 2 * 1000 / PJMEDIA_PIA_SRATE(&app.wav->info);
+            msec = (unsigned)pos / 2 * 1000 / PJMEDIA_PIA_SRATE(&app.wav->info);
             printf("Written: %dm:%02ds.%03d\n",
                     msec / 1000 / 60,
                     (msec / 1000) % 60,
@@ -162,7 +162,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 	 * We will decode it again to get the payload after we do
 	 * SRTP decoding
 	 */
-	status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, sz, &r, 
+	status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r, 
 					&p, payload_size);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
@@ -174,7 +174,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 	/* Decrypt SRTP */
 #if PJMEDIA_HAS_SRTP
 	if (app.srtp) {
-	    int len = sz;
+	    int len = (int)sz;
 	    status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE, 
 						        buf, &len);
 	    if (status != PJ_SUCCESS) {
@@ -187,7 +187,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 	    sz = len;
 
 	    /* Decode RTP packet again */
-	    status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, sz, &r,
+	    status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, (int)sz, &r,
 					    &p, payload_size);
 	    if (status != PJ_SUCCESS) {
 		char errmsg[PJ_ERR_MSG_SIZE];
@@ -376,8 +376,8 @@ static void pcap2wav(const pj_str_t *codec,
 	    pcm_frame.buf = pcm;
 	    pcm_frame.size = samples_per_frame * 2;
 
-	    T( pjmedia_codec_decode(app.codec, &frames[i], pcm_frame.size, 
-				     &pcm_frame) );
+	    T( pjmedia_codec_decode(app.codec, &frames[i], 
+				    (unsigned)pcm_frame.size, &pcm_frame) );
 	    if (app.wav) {
 		T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
 	    }
@@ -400,7 +400,7 @@ static void pcap2wav(const pj_str_t *codec,
 	    pcm_frame.size = samples_per_frame * 2;
 
 	    if (app.codec->op->recover) {
-		T( pjmedia_codec_recover(app.codec, pcm_frame.size, 
+		T( pjmedia_codec_recover(app.codec, (unsigned)pcm_frame.size, 
 					 &pcm_frame) );
 	    } else {
 		pj_bzero(pcm_frame.buf, pcm_frame.size);

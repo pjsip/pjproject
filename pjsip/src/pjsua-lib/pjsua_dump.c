@@ -130,7 +130,7 @@ static unsigned dump_media_stat(const char *indent,
 
     if (len < 1 || len > end-p) {
 	*p = '\0';
-	return (p-buf);
+	return (unsigned)(p-buf);
     }
     p += len;
 
@@ -188,7 +188,7 @@ static unsigned dump_media_stat(const char *indent,
 
     if (len < 1 || len > end-p) {
 	*p = '\0';
-	return (p-buf);
+	return (unsigned)(p-buf);
     }
     p += len;
 
@@ -203,11 +203,11 @@ static unsigned dump_media_stat(const char *indent,
 	   );
     if (len < 1 || len > end-p) {
 	*p = '\0';
-	return (p-buf);
+	return (unsigned)(p-buf);
     }
     p += len;
 
-    return (p-buf);
+    return (unsigned)(p-buf);
 }
 
 
@@ -447,7 +447,7 @@ static void dump_media_session(const char *indent,
 
 
 	if (has_stat) {
-	    len = dump_media_stat(indent, p, end-p, &stat,
+	    len = dump_media_stat(indent, p, (unsigned)(end-p), &stat,
 				  rx_info, tx_info);
 	    p += len;
 	}
@@ -948,7 +948,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 
     print_call(indent, call_id, tmp, sizeof(tmp));
 
-    len = pj_ansi_strlen(tmp);
+    len = (int)pj_ansi_strlen(tmp);
     pj_ansi_strcpy(buffer, tmp);
 
     p += len;
@@ -993,7 +993,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 
     /* Dump session statistics */
     if (with_media)
-	dump_media_session(indent, p, end-p, call);
+	dump_media_session(indent, p, (unsigned)(end-p), call);
 
     pjsip_dlg_dec_lock(dlg);
 

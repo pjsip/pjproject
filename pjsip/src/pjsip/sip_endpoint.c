@@ -916,8 +916,8 @@ on_return:
  * receives a message from the network.
  */
 static void endpt_on_rx_msg( pjsip_endpoint *endpt,
-				      pj_status_t status,
-				      pjsip_rx_data *rdata )
+			     pj_status_t status,
+			     pjsip_rx_data *rdata )
 {
     pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_process_rdata_param proc_prm;
@@ -1204,7 +1204,7 @@ PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,
 {
 #if PJ_LOG_MAX_LEVEL > 0
     char newformat[256];
-    int len;
+    pj_size_t len;
     va_list marker;
 
     va_start(marker, format);

@@ -58,7 +58,11 @@ typedef unsigned char	pj_uint8_t;
 typedef size_t		pj_size_t;
 
 /** Large signed integer. */
-typedef long		pj_ssize_t;
+#if defined(PJ_WIN64) && PJ_WIN64!=0
+    typedef pj_int64_t     pj_ssize_t;
+#else
+    typedef long           pj_ssize_t;
+#endif
 
 /** Status code. */
 typedef int		pj_status_t;
@@ -250,7 +254,11 @@ typedef struct pj_pipe_t pj_pipe_t;
 typedef void *pj_oshandle_t;
 
 /** Socket handle. */
-typedef long pj_sock_t;
+#if defined(PJ_WIN64) && PJ_WIN64!=0
+    typedef pj_int64_t pj_sock_t;
+#else
+    typedef long pj_sock_t;
+#endif
 
 /** Generic socket address. */
 typedef void pj_sockaddr_t;

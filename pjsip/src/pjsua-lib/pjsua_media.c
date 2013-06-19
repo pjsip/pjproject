@@ -592,7 +592,7 @@ static void ice_init_complete_cb(void *user_data)
 /* Deferred callback to notify ICE negotiation failure */
 static void ice_failed_nego_cb(void *user_data)
 {
-    int call_id = (int)(long)user_data;
+    int call_id = (int)(pj_ssize_t)user_data;
     pjsua_call *call = NULL;
     pjsip_dialog *dlg = NULL;
 
@@ -641,7 +641,7 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
 		/* Defer the callback to a timer */
 		pjsua_schedule_timer2(&ice_failed_nego_cb,
-				      (void*)(long)call->index, 1);
+				      (void*)(pj_ssize_t)call->index, 1);
 	    }
         }
 	/* Check if default ICE transport address is changed */

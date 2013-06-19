@@ -49,7 +49,8 @@ static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
 			    PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
 			    PJ_LOG_HAS_INDENT
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN64) && PJ_WIN64!=0)
 			    | PJ_LOG_HAS_COLOR
 #endif
 			    ;
@@ -103,12 +104,12 @@ static void logging_shutdown(void)
 static void log_set_indent(int indent)
 {
     if (indent < 0) indent = 0;
-    pj_thread_local_set(thread_indent_tls_id, (void*)(long)indent);
+    pj_thread_local_set(thread_indent_tls_id, (void*)(pj_ssize_t)indent);
 }
 
 static int log_get_raw_indent()
 {
-    return (long)pj_thread_local_get(thread_indent_tls_id);
+    return (long)(pj_ssize_t)pj_thread_local_get(thread_indent_tls_id);
 }
 
 #else
@@ -267,7 +268,8 @@ static void suspend_logging(int *saved_level)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	pj_thread_local_set(thread_suspended_tls_id, (void*)PJ_TRUE);
+	pj_thread_local_set(thread_suspended_tls_id, 
+			    (void*)(pj_ssize_t)PJ_TRUE);
     } 
     else
 #endif
@@ -378,7 +380,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     }
     if (log_decor & PJ_LOG_HAS_SENDER) {
 	enum { SENDER_WIDTH = 14 };
-	int sender_len = strlen(sender);
+	pj_size_t sender_len = strlen(sender);
 	if (pre!=log_buffer) *pre++ = ' ';
 	if (sender_len <= SENDER_WIDTH) {
 	    while (sender_len < SENDER_WIDTH)
@@ -394,7 +396,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     if (log_decor & PJ_LOG_HAS_THREAD_ID) {
 	enum { THREAD_WIDTH = 12 };
 	const char *thread_name = pj_thread_get_name(pj_thread_this());
-	int thread_len = strlen(thread_name);
+	pj_size_t thread_len = strlen(thread_name);
 	*pre++ = ' ';
 	if (thread_len <= THREAD_WIDTH) {
 	    while (thread_len < THREAD_WIDTH)
@@ -433,7 +435,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     }
 #endif
 
-    len = pre - log_buffer;
+    len = (int)(pre - log_buffer);
 
     /* Print the whole message to the string log_buffer. */
     print_len = pj_ansi_vsnprintf(pre, sizeof(log_buffer)-len, format, 

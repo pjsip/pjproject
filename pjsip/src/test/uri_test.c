@@ -1039,7 +1039,8 @@ int uri_test(void)
 	unsigned print;
 	unsigned cmp;
     } run[COUNT];
-    unsigned i, max, avg_len;
+    unsigned i, max;
+    pj_ssize_t avg_len;
     char desc[200];
     pj_status_t status;
 
@@ -1074,12 +1075,12 @@ int uri_test(void)
 			  "<tt>pjsip_parse_uri()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), (int)avg_len);
 
     report_ival("uri-parse-per-sec", max, "URI/sec", desc);
 
     /* URI parsing bandwidth */
-    report_ival("uri-parse-bandwidth-mb", avg_len*max/1000000, "MB/sec",
+    report_ival("uri-parse-bandwidth-mb", (int)avg_len*max/1000000, "MB/sec",
 	        "URI parsing bandwidth in megabytes (number of megabytes "
 		"worth of URI that can be parsed per second)");
 
@@ -1094,7 +1095,7 @@ int uri_test(void)
 			  "<tt>pjsip_uri_print()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), (int)avg_len);
 
     report_ival("uri-print-per-sec", max, "URI/sec", desc);
 
@@ -1108,7 +1109,7 @@ int uri_test(void)
 			  "<tt>pjsip_uri_cmp()</tt> per second "
 			  "(tested with %d URI set, with average length of "
 			  "%d chars)",
-			  (int)PJ_ARRAY_SIZE(uri_test_array), avg_len);
+			  (int)PJ_ARRAY_SIZE(uri_test_array), (int)avg_len);
 
     report_ival("uri-cmp-per-sec", max, "URI/sec", desc);
 

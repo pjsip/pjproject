@@ -339,9 +339,9 @@ public:
  * stack.
  */
 struct pj_exception_state_t
-{
-    struct pj_exception_state_t *prev;  /**< Previous state in the list. */
+{    
     pj_jmp_buf state;                   /**< jmp_buf.                    */
+    struct pj_exception_state_t *prev;  /**< Previous state in the list. */
 };
 
 /**

@@ -454,7 +454,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	 * extradata of ffmpeg codec context.
 	 */
 	if (data->fmtp.sprop_param_sets_len) {
-	    ctx->extradata_size = data->fmtp.sprop_param_sets_len;
+	    ctx->extradata_size = (int)data->fmtp.sprop_param_sets_len;
 	    ctx->extradata = data->fmtp.sprop_param_sets;
 	}
     }
@@ -1288,10 +1288,10 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     /* Alloc buffers if needed */
     ff->whole = (ff->param.packing == PJMEDIA_VID_PACKING_WHOLE);
     if (!ff->whole) {
-	ff->enc_buf_size = ff->enc_vafp.framebytes;
+	ff->enc_buf_size = (unsigned)ff->enc_vafp.framebytes;
 	ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
 
-	ff->dec_buf_size = ff->dec_vafp.framebytes;
+	ff->dec_buf_size = (unsigned)ff->dec_vafp.framebytes;
 	ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
     }
 
@@ -1420,7 +1420,7 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
      */
     PJ_ALIGN_DATA(pj_uint32_t i[4], 16);
 
-    if ((long)i & 0xF) {
+    if ((long)(pj_ssize_t)i & 0xF) {
 	PJ_LOG(2,(THIS_FILE, "Stack alignment fails"));
     }
 
@@ -1502,7 +1502,8 @@ static pj_status_t ffmpeg_codec_encode_begin(pjmedia_vid_codec *codec,
 	whole_frm.buf = ff->enc_buf;
 	whole_frm.size = ff->enc_buf_size;
 	status = ffmpeg_codec_encode_whole(codec, opt, input,
-	                                   whole_frm.size, &whole_frm);
+	                                   (unsigned)whole_frm.size, 
+					   &whole_frm);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -1618,7 +1619,7 @@ static pj_status_t check_decode_result(pjmedia_vid_codec *codec,
 	    PJ_LOG(5,(THIS_FILE, "Reallocating decoding buffer %u --> %u",
 		       (unsigned)ff->dec_buf_size,
 		       (unsigned)ff->dec_vafp.framebytes));
-	    ff->dec_buf_size = ff->dec_vafp.framebytes;
+	    ff->dec_buf_size = (unsigned)ff->dec_vafp.framebytes;
 	    ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
 	}
 
@@ -1681,7 +1682,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     /* Init packet, the container of the encoded data */
     av_init_packet(&avpacket);
     avpacket.data = (pj_uint8_t*)input->buf;
-    avpacket.size = input->size;
+    avpacket.size = (int)input->size;
 
     /* ffmpeg warns:
      * - input buffer padding, at least FF_INPUT_BUFFER_PADDING_SIZE

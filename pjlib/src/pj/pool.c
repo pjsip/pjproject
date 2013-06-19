@@ -31,8 +31,8 @@
 #  include <pj/pool_i.h>
 #endif
 
-#define LOG(expr)   			PJ_LOG(6,expr)
-#define ALIGN_PTR(PTR,ALIGNMENT)	(PTR + (-(long)(PTR) & (ALIGNMENT-1)))
+#define LOG(expr)   		    PJ_LOG(6,expr)
+#define ALIGN_PTR(PTR,ALIGNMENT)    (PTR + (-(pj_ssize_t)(PTR) & (ALIGNMENT-1)))
 
 PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
@@ -92,7 +92,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 {
     pj_pool_block *block = pool->block_list.next;
     void *p;
-    unsigned block_size;
+    pj_size_t block_size;
 
     PJ_CHECK_STACK();
 

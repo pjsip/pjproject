@@ -60,7 +60,7 @@ struct playlist_port
     pjmedia_port     base;
     unsigned	     options;
     pj_bool_t	     eof;
-    pj_size_t	     bufsize;
+    pj_uint32_t	     bufsize;
     char	    *buf;
     char	    *readpos;
 
@@ -107,8 +107,8 @@ static struct playlist_port *create_file_list_port(pj_pool_t *pool,
  */
 static pj_status_t file_fill_buffer(struct playlist_port *fport)
 {
-    pj_ssize_t size_left = fport->bufsize;
-    unsigned size_to_read;
+    pj_uint32_t size_left = fport->bufsize;
+    pj_uint32_t size_to_read;
     pj_ssize_t size;
     pj_status_t status;
     int current_file = fport->current_file;
@@ -133,7 +133,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 	    return PJ_ECANCELLED;
 	}
 	
-	size_left -= size;
+	size_left -= (pj_uint32_t)size;
 	fport->fpos_list[current_file] += size;
 	
 	/* If size is less than size_to_read, it indicates that we've
@@ -318,7 +318,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     /* Create file buffer once for this operation.
      */
     if (buff_size < 1) buff_size = PJMEDIA_FILE_PORT_BUFSIZE;
-    fport->bufsize = buff_size;
+    fport->bufsize = (pj_uint32_t)buff_size;
 
 
     /* Create buffer. */
@@ -569,7 +569,7 @@ static pj_status_t file_list_get_frame(pjmedia_port *this_port,
 				       pjmedia_frame *frame)
 {
     struct playlist_port *fport = (struct playlist_port*)this_port;
-    unsigned frame_size;
+    pj_size_t frame_size;
     pj_status_t status;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
@@ -606,7 +606,7 @@ static pj_status_t file_list_get_frame(pjmedia_port *this_port,
 	/* Split read.
 	 * First stage: read until end of buffer.
 	 */
-	endread = (fport->buf+fport->bufsize) - fport->readpos;
+	endread = (unsigned)((fport->buf+fport->bufsize) - fport->readpos);
 	pj_memcpy(frame->buf, fport->readpos, endread);
 
 	/* Second stage: fill up buffer, and read from the start of buffer. */

@@ -231,7 +231,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 	return 2;
     } else {
 	if (tab->count < MAX_LABEL) {
-	    tab->a[tab->count].pos = (p-pkt);
+	    tab->a[tab->count].pos = (unsigned)(p-pkt);
 	    tab->a[tab->count].label.ptr = (char*)(p+1);
 	    tab->a[tab->count].label.slen = name->slen;
 	    ++tab->count;
@@ -256,7 +256,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 	*p = (pj_uint8_t)label.slen;
 	pj_memcpy(p+1, label.ptr, label.slen);
 
-	size -= (label.slen+1);
+	size -= (int)(label.slen+1);
 	p += (label.slen+1);
 
 	if (endlabel != endname && *endlabel == '.')
@@ -269,7 +269,7 @@ static int print_name(pj_uint8_t *pkt, int size,
 
     *p++ = '\0';
 
-    return p-pos;
+    return (int)(p-pos);
 }
 
 static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
@@ -352,7 +352,7 @@ static int print_rr(pj_uint8_t *pkt, int size, pj_uint8_t *pos,
 	return -1;
     }
 
-    return p-pos;
+    return (int)(p-pos);
 }
 
 static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
@@ -432,7 +432,7 @@ static int print_packet(const pj_dns_parsed_packet *rec, pj_uint8_t *pkt,
 	size -= len;
     }
 
-    return p - pkt;
+    return (int)(p - pkt);
 }
 
 
@@ -457,7 +457,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     srv = (pj_dns_server*) pj_activesock_get_user_data(asock);
     pool = pj_pool_create(srv->pf, "dnssrvrx", 512, 256, NULL);
 
-    status = pj_dns_parse_packet(pool, data, size, &req);
+    status = pj_dns_parse_packet(pool, data, (unsigned)size, &req);
     if (status != PJ_SUCCESS) {
 	char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 	pj_sockaddr_print(src_addr, addrinfo, sizeof(addrinfo), 3);

@@ -628,7 +628,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	pjmedia_tone_desc *dig = &tonegen->digits[tonegen->cur_digit];
 	unsigned required, cnt, on_samp, off_samp;
 
-	required = end - dst;
+	required = (unsigned)(end - dst);
 	on_samp = dig->on_msec * clock_rate / 1000;
 	off_samp = dig->off_msec * clock_rate / 1000;
 
@@ -728,7 +728,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
     }
 
     if (dst < end)
-	pjmedia_zero_samples(dst, end-dst);
+	pjmedia_zero_samples(dst, (unsigned)(end-dst));
 
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = PJMEDIA_PIA_AVG_FSZ(&port->info);

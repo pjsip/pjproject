@@ -60,7 +60,7 @@ struct file_reader_port
     pjmedia_wave_fmt_tag fmt_tag;
     pj_uint16_t	     bytes_per_sample;
     pj_bool_t	     eof;
-    pj_size_t	     bufsize;
+    pj_uint32_t	     bufsize;
     char	    *buf;
     char	    *readpos;
     char	    *eofpos;
@@ -107,7 +107,7 @@ static struct file_reader_port *create_file_port(pj_pool_t *pool)
  */
 static pj_status_t fill_buffer(struct file_reader_port *fport)
 {
-    pj_ssize_t size_left = fport->bufsize;
+    pj_uint32_t size_left = fport->bufsize;
     unsigned size_to_read;
     pj_ssize_t size;
     pj_status_t status;
@@ -135,8 +135,8 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
             size = (pj_ssize_t)fport->data_left;
         }
 
-	size_left -= size;
-        fport->data_left -= size;
+	size_left -= (pj_uint32_t)size;
+        fport->data_left -= (pj_uint32_t)size;
 	fport->fpos += size;
 
 	/* If size is less than size_to_read, it indicates that we've
@@ -375,7 +375,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     /* Create file buffer.
      */
-    fport->bufsize = buff_size;
+    fport->bufsize = (pj_uint32_t)buff_size;
 
 
     /* samples_per_frame must be smaller than bufsize (because get_frame()
@@ -541,7 +541,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 				  pjmedia_frame *frame)
 {
     struct file_reader_port *fport = (struct file_reader_port*)this_port;
-    unsigned frame_size;
+    pj_size_t frame_size;
     pj_status_t status;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
@@ -617,7 +617,7 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	/* Split read.
 	 * First stage: read until end of buffer. 
 	 */
-	endread = (fport->buf+fport->bufsize) - fport->readpos;
+	endread = (unsigned)((fport->buf+fport->bufsize) - fport->readpos);
 	pj_memcpy(frame->buf, fport->readpos, endread);
 
 	/* End Of Buffer and EOF and NO LOOP */

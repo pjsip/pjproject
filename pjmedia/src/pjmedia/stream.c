@@ -528,7 +528,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		frame_out.buf = p_out_samp + samples_count;
 		frame_out.size = frame->size - samples_count*2;
 		status = pjmedia_codec_recover(stream->codec,
-					       frame_out.size,
+					       (unsigned)frame_out.size,
 					       &frame_out);
 
 		++stream->plc_cnt;
@@ -577,7 +577,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 			frame_out.buf = p_out_samp + samples_count;
 			frame_out.size = frame->size - samples_count*2;
 			status = pjmedia_codec_recover(stream->codec,
-						       frame_out.size,
+						       (unsigned)frame_out.size,
 						       &frame_out);
 			if (status != PJ_SUCCESS)
 			    break;
@@ -632,7 +632,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		    frame_out.buf = p_out_samp + samples_count;
 		    frame_out.size = frame->size - samples_count*2;
 		    status = pjmedia_codec_recover(stream->codec,
-						   frame_out.size,
+						   (unsigned)frame_out.size,
 						   &frame_out);
 		    if (status != PJ_SUCCESS)
 			break;
@@ -683,7 +683,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    frame_out.buf = p_out_samp + samples_count;
 	    frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
 	    status = pjmedia_codec_decode( stream->codec, &frame_in,
-					   frame_out.size, &frame_out);
+					   (unsigned)frame_out.size, 
+					   &frame_out);
 	    if (status != 0) {
 		LOGERR_((port->info.name.ptr, "codec decode() error", 
 			 status));
@@ -1125,7 +1126,7 @@ static void rebuffer(pjmedia_stream *stream,
 	} else {
 	    pj_bzero(stream->enc_buf + stream->enc_buf_count, frame->size);
 	}
-	stream->enc_buf_count += (frame->size >> 1);
+	stream->enc_buf_count += ((unsigned)frame->size >> 1);
     }
 
     /* How many samples are needed */
@@ -1192,7 +1193,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
-	ts_len = (frame->size >> 1) / stream->codec_param.info.channel_cnt;
+	ts_len = ((unsigned)frame->size >> 1) / 
+		 stream->codec_param.info.channel_cnt;
     else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED)
 	ts_len = PJMEDIA_PIA_SPF(&stream->port.info) /
 		 PJMEDIA_PIA_CCNT(&stream->port.info);
@@ -1236,7 +1238,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
          */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 stream->tx_event_pt, first, 
-					 frame_out.size,
+					 (int)frame_out.size,
 					 (first ? rtp_ts_len : 0), 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
@@ -1295,7 +1297,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 channel->pt, 0, 
-					 frame_out.size, rtp_ts_len, 
+					 (int)frame_out.size, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -1319,7 +1321,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 channel->pt, 0, 
-					 frame_out.size, rtp_ts_len, 
+					 (int)frame_out.size, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -1391,7 +1393,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     }
 
     /* Update stat */
-    pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
+    pjmedia_rtcp_tx_rtp(&stream->rtcp, (unsigned)frame_out.size);
     stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
@@ -1629,7 +1631,8 @@ static void on_rx_rtp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((stream->port.info.name.ptr, "RTP recv() error", -bytes_read));
+	LOGERR_((stream->port.info.name.ptr, "RTP recv() error", 
+		(pj_status_t)-bytes_read));
 	return;
     }
 
@@ -1638,7 +1641,7 @@ static void on_rx_rtp( void *data,
 	return;
 
     /* Update RTP and RTCP session. */
-    status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, bytes_read,
+    status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, (int)bytes_read,
 				    &hdr, &payload, &payloadlen);
     if (status != PJ_SUCCESS) {
 	LOGERR_((stream->port.info.name.ptr, "RTP decode error", status));
@@ -1887,7 +1890,7 @@ static void on_rx_rtcp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	LOGERR_((stream->port.info.name.ptr, "RTCP recv() error", 
-		 -bytes_read));
+		(pj_status_t)-bytes_read));
 	return;
     }
 
@@ -2298,7 +2301,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
      */
     stream->out_rtcp_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
 				 sizeof(pjmedia_rtcp_common) +
-				 (4 + stream->cname.slen) +
+				 (4 + (unsigned)stream->cname.slen) +
 				 32;
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     if (info->rtcp_xr_enabled) {
@@ -2464,7 +2467,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
          */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp,
 					 stream->tx_event_pt, first,
-					 frame_out.size, 0,
+					 (int)frame_out.size, 0,
 					 (const void**)&rtphdr,
 					 &rtphdrlen);
 	if (status == PJ_SUCCESS) {
@@ -2766,7 +2769,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    goto on_return;
 
 	/* Increment digit count only if all digits are valid. */
-	stream->tx_dtmf_count += digit_char->slen;
+	stream->tx_dtmf_count += (int)digit_char->slen;
     }
 
 on_return:

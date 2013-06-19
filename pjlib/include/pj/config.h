@@ -77,10 +77,15 @@
 #   define PJ_WIN32 1
 
 #elif defined(PJ_WIN32) || defined(_WIN32) || defined(__WIN32__) || \
-	defined(_WIN64) || defined(WIN32) || defined(__TOS_WIN__)
-    /*
-     * Win32
-     */
+	defined(WIN32) || defined(PJ_WIN64) || defined(_WIN64) || \
+	defined(WIN64) || defined(__TOS_WIN__) 
+#   if defined(PJ_WIN64) || defined(_WIN64) || defined(WIN64)
+	/*
+	 * Win64
+	 */
+#	undef PJ_WIN64
+#	define PJ_WIN64 1
+#   endif
 #   undef PJ_WIN32
 #   define PJ_WIN32 1
 #   include <pj/compat/os_win32.h>
