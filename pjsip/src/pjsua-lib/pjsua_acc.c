@@ -652,6 +652,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     acc->contact.slen = 0;
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
+    acc->next_rtp_port = 0;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {

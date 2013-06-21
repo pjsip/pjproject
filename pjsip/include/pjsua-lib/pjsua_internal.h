@@ -263,6 +263,8 @@ typedef struct pjsua_acc
 
     pjsip_evsub	    *mwi_sub;	    /**< MWI client subscription	*/
     pjsip_dialog    *mwi_dlg;	    /**< Dialog for MWI sub.		*/
+
+    pj_uint16_t      next_rtp_port; /**< Next RTP port to be used.      */
 } pjsua_acc;
 
 
