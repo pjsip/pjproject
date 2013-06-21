@@ -282,6 +282,12 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     /* Loop retry to bind RTP and RTCP sockets. */
     for (i=0; i<RTP_RETRY; ++i, next_rtp_port += 2) {
 
+        if (cfg->port > 0 && cfg->port_range > 0 &&
+            next_rtp_port > cfg->port + cfg->port_range)
+        {
+            next_rtp_port = (pj_uint16_t)cfg->port;
+        }
+
 	/* Create RTP socket. */
 	status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[0]);
 	if (status != PJ_SUCCESS) {
