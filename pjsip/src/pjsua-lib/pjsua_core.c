@@ -832,6 +832,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	    goto on_error;
     }
 
+    /* Initialize SIP message logging, if not yet */
+    if (pjsua_var.log_cfg.msg_logging && pjsua_msg_logger.id < 0)
+	pjsip_endpt_register_module(pjsua_var.endpt, &pjsua_msg_logger);
+
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT != 0
     if (!(pj_get_sys_info()->flags & PJ_SYS_HAS_IOS_BG)) {

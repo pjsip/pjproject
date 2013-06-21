@@ -41,6 +41,8 @@
 #  include <pj/compat/cc_gcce.h>
 #elif defined(__ARMCC__)
 #  include <pj/compat/cc_armcc.h>
+#elif defined(CC_DUMMY)
+#  include <pj/compat/cc_dummy.h>
 #else
 #  error "Unknown compiler."
 #endif
