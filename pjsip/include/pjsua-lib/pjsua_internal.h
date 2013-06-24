@@ -229,6 +229,10 @@ typedef struct pjsua_acc
     pj_status_t	     reg_last_err;  /**< Last registration error.	*/
     int		     reg_last_code; /**< Last status last register.	*/
 
+    pj_str_t         reg_mapped_addr;/**< Our addr as seen by reg srv.
+                                          Only if allow_sdp_nat_rewrite
+                                          is set                        */
+
     struct {
 	pj_bool_t	 active;    /**< Flag of reregister status.	*/
 	pj_timer_entry   timer;	    /**< Timer for reregistration.	*/

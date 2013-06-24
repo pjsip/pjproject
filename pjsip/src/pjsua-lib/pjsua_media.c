@@ -239,11 +239,13 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pj_sockaddr mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
     char addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    pjsua_acc *acc;
     pj_sock_t sock[2];
-    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
 
     use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
     af = use_ipv6 ? pj_AF_INET6() : pj_AF_INET();
+
+    acc = &pjsua_var.acc[call_med->call->acc_id];
 
     /* Make sure STUN server resolution has completed */
     if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
@@ -423,6 +425,19 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    break;
 
 	} else {
+	    if (acc->cfg.allow_sdp_nat_rewrite && acc->reg_mapped_addr.slen) {
+		pj_status_t status;
+
+		/* Take the address from mapped addr as seen by registrar */
+		status = pj_sockaddr_set_str_addr(af, &bound_addr,
+		                                  &acc->reg_mapped_addr);
+		if (status != PJ_SUCCESS) {
+		    /* just leave bound_addr with whatever it was
+		    pj_bzero(pj_sockaddr_get_addr(&bound_addr),
+		             pj_sockaddr_get_addr_len(&bound_addr));
+		     */
+		}
+	    }
 
 	    if (!pj_sockaddr_has_addr(&bound_addr)) {
 		pj_sockaddr addr;

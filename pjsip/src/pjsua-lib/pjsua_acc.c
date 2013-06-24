@@ -650,6 +650,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Invalidate */
     acc->valid = PJ_FALSE;
     acc->contact.slen = 0;
+    acc->reg_mapped_addr.slen = 0;
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
     acc->next_rtp_port = 0;
@@ -1255,6 +1256,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
 	    acc->contact.slen = 0;
+	    acc->reg_mapped_addr.slen = 0;
 	}
     }
 
@@ -1463,6 +1465,13 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
                 pjsip_publishc_set_via_sent_by(acc->publish_sess,
                                                &acc->via_addr, acc->via_tp);
         }
+    }
+
+    /* Save mapped address if needed */
+    if (acc->cfg.allow_sdp_nat_rewrite &&
+	pj_strcmp(&acc->reg_mapped_addr, via_addr))
+    {
+	pj_strdup(acc->pool, &acc->reg_mapped_addr, via_addr);
     }
 
     /* Only update if account is configured to auto-update */
@@ -1989,6 +1998,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 	acc->contact.slen = 0;
+	acc->reg_mapped_addr.slen = 0;
 	
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2000,6 +2010,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 	acc->contact.slen = 0;
+	acc->reg_mapped_addr.slen = 0;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2014,6 +2025,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
 	    acc->contact.slen = 0;
+	    acc->reg_mapped_addr.slen = 0;
 
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2119,6 +2131,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 	acc->contact.slen = 0;
+	acc->reg_mapped_addr.slen = 0;
     }
 
     /* initialize SIP registration if registrar is configured */
@@ -2167,6 +2180,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pj_pool_release(pool);
 	acc->regc = NULL;
 	acc->contact.slen = 0;
+	acc->reg_mapped_addr.slen = 0;
 	return status;
     }
 

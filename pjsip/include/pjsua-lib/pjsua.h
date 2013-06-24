@@ -3031,6 +3031,18 @@ typedef struct pjsua_acc_config
     pj_bool_t        allow_via_rewrite;
 
     /**
+     * This option controls whether the IP address in SDP should be replaced
+     * with the IP address found in Via header of the REGISTER response, ONLY
+     * when STUN and ICE are not used. If the value is FALSE (the original
+     * behavior), then the local IP address will be used. If TRUE, and when
+     * STUN and ICE are disabled, then the IP address found in registration
+     * response will be used.
+     *
+     * Default: PJ_FALSE (no)
+     */
+    pj_bool_t        allow_sdp_nat_rewrite;
+
+    /**
      * Control the use of SIP outbound feature. SIP outbound is described in
      * RFC 5626 to enable proxies or registrar to send inbound requests back
      * to UA using the same connection initiated by the UA for its
