@@ -1454,7 +1454,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
      * from the response.
      */
     if (acc->cfg.allow_via_rewrite &&
-        (acc->via_addr.host.slen == 0 || acc->via_tp != tp))
+        (pj_strcmp(&acc->via_addr.host, via_addr) || acc->via_tp != tp))
     {
         if (pj_strcmp(&acc->via_addr.host, via_addr))
             pj_strdup(acc->pool, &acc->via_addr.host, via_addr);
