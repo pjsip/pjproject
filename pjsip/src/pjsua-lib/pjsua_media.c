@@ -239,13 +239,11 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     pj_sockaddr mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
     char addr_buf[PJ_INET6_ADDRSTRLEN+10];
-    pjsua_acc *acc;
+    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
     pj_sock_t sock[2];
 
     use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
     af = use_ipv6 ? pj_AF_INET6() : pj_AF_INET();
-
-    acc = &pjsua_var.acc[call_med->call->acc_id];
 
     /* Make sure STUN server resolution has completed */
     if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
