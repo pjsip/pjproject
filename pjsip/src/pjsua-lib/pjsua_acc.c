@@ -1451,10 +1451,17 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
         via_addr = &via->sent_by.host;
 
     /* If allow_via_rewrite is enabled, we save the Via "received" address
-     * from the response.
+     * from the response, if either of the following condition is met:
+     *  - the Via "received" address differs from saved one (or we haven't
+     *    saved any yet)
+     *  - transport is different
+     *  - only the port has changed, AND either the received address is
+     *    public IP or allow_contact_rewrite is 2
      */
     if (acc->cfg.allow_via_rewrite &&
-        (pj_strcmp(&acc->via_addr.host, via_addr) || acc->via_tp != tp))
+        (pj_strcmp(&acc->via_addr.host, via_addr) || acc->via_tp != tp ||
+         (acc->via_addr.port != rport &&
+           (!is_private_ip(via_addr) || acc->cfg.allow_contact_rewrite == 2))))
     {
         if (pj_strcmp(&acc->via_addr.host, via_addr))
             pj_strdup(acc->pool, &acc->via_addr.host, via_addr);
