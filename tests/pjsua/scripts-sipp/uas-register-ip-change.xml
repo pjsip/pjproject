@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+<!DOCTYPE scenario SYSTEM "sipp.dtd">
+
+<scenario name="Basic UAS responder">
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 401 Unauthorized
+      [last_Via:];received=1.1.1.1;rport=1111
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      WWW-Authenticate: digest realm="test"
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=1.1.1.1;rport=1111
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <!-- REREGISTER -->
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=1.1.1.1;rport=1111
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Subject: Reregister due to IP change, this has two Contacts
+      Content-Length: 0
+    ]]>
+  </send>
+
+
+  <!-- REFRESH, GOT IP CHANGE AGAIN -->
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=2.2.2.2;rport=2222
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Subject: Refresh, got IP change again
+      Content-Length: 0
+    ]]>
+  </send>
+
+
+  <!-- REREGISTER -->
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=2.2.2.2;rport=2222
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Subject: Reregister due to IP change to 2.2.2.2, this has two Contacts
+      Content-Length: 0
+    ]]>
+  </send>
+
+
+  <!-- WHATEVER -->
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=2.2.2.2;rport=2222
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Subject: Whatever 1
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <!-- WHATEVER -->
+  <recv request="REGISTER" crlf="true">
+  </recv>
+
+  <send>
+    <![CDATA[
+      SIP/2.0 200 OK
+      [last_Via:];received=2.2.2.2;rport=2222
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Subject: Whatever 2
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <!-- definition of the response time repartition table (unit is ms)   -->
+  <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
+
+  <!-- definition of the call length repartition table (unit is ms)     -->
+  <CallLengthRepartition value="10, 50, 100, 500, 1000, 5000, 10000"/>
+
+</scenario>
+
