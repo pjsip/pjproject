@@ -1,67 +1,53 @@
-%module pjsua
+/* $Id$ */
 
-%include "typemaps.i"
+%module (directors="1") pjsua
+
 %include "enums.swg"
-%include "arrays_java.i"
+%include "../my_typemaps.i"
 
 %header %{
     #include <pjsua-lib/pjsua.h>
-    extern pjsua_callback* PJSUA_CALLBACK_PROXY;
 %}
 
-/* 'void *' shall be handled as byte arrays */
-%typemap(jni)		 void * "void *"
-%typemap(jtype) 	 void * "byte[]"
-%typemap(jstype) 	 void * "byte[]"
-%typemap(javain) 	 void * "$javainput"
-%typemap(javadirectorin) void * "$jniinput"
-%typemap(in) 		 void * { $1 = $input; }
-%typemap(out) 		 void * { $result = $1; }
-%typemap(javaout)	 void * { return $jnicall; }
+/* Strip "pjsua_" prefix from pjsua functions, for better compatibility with 
+ * pjsip-jni & csipsimple.
+ */
+%rename("%(strip:[pjsua_])s", %$isfunction) "";
 
-/* Apply output args */
-%apply unsigned	*INOUT  { unsigned *count };
-%apply unsigned *OUTPUT { unsigned *tx_level };
-%apply unsigned *OUTPUT { unsigned *rx_level };
-%apply unsigned *OUTPUT { unsigned *p_tail_ms };
-%apply int 	*OUTPUT { pjsua_acc_id *p_acc_id };
-%apply int 	*OUTPUT { pjsua_call_id *p_call_id };
-%apply int	*OUTPUT { pjsua_transport_id *p_id };
-%apply int	*OUTPUT { pjsua_recorder_id *p_id };
-%apply int 	*OUTPUT { pjsua_player_id *p_id };
-%apply int 	*OUTPUT { pjsua_buddy_id *p_buddy_id };
-%apply int 	*OUTPUT { pjsua_conf_port_id *p_id };
-%apply int 	*OUTPUT { int *capture_dev };
-%apply int 	*OUTPUT { int *playback_dev };
-%apply int 	*OUTPUT { pj_stun_nat_type * };
-%apply int[ANY] 	{ pjmedia_format_id dec_fmt_id[8] };
+/* Map 'void *' simply as long, app can use this "long" as index of its real user data */
+%apply long { void * };
 
-/* Array of pj_str_t */
+/* Handle void *[ANY], e.g: pjsip_tx_data::mod_data, pjsip_transaction::mod_data */
+//%ignore pjsip_tx_data::mod_data;
+//%ignore pjsip_transaction::mod_data;
+%apply long[ANY] { void *[ANY] };
+
+/* Map "int*" & "unsigned*" as input & output */
+%apply unsigned	*INOUT  { unsigned * };
+%apply int	*INOUT  { int * };
+
+/* Map the following args as input & output */
+%apply int 	*INOUT	{ pj_stun_nat_type * };
+%apply int 	*INOUT	{ pjsip_status_code * };
+%apply int[ANY] 	{ pjmedia_format_id dec_fmt_id[ANY] };
+
+/* Handle array of pj_str_t */
 JAVA_ARRAYSOFCLASSES(pj_str_t)
-#ifndef __cplusplus
-    /* On C target, pj_str_t::cArrayWrap/Unwrap Java code are missing, this somehow 'fixes' it. */
-    JAVA_ARRAYSOFCLASSES(struct pj_str_t)
-#endif
 
-/* Array of pj_ssl_cipher in pjsip_tls_setting. Warning: this breaks JAVA_ARRAYS_TYPEMAPS(int)! */
-%typemap(out) int[] %{$result = SWIG_JavaArrayOutInt(jenv, (int*)$1, arg1->ciphers_num); %}
-%apply int[] { pj_ssl_cipher* };
-%ignore pjsip_tls_setting::ciphers;
-%ignore pjsip_tls_setting::ciphers_num;
-%extend pjsip_tls_setting {
-    void setCiphers(pj_ssl_cipher *ciphers, int num) {
-        int i;
-	$self->ciphers = (pj_ssl_cipher*)calloc(num, sizeof(pj_ssl_cipher));
-	for (i=0; i<num; ++i) $self->ciphers[i] = ciphers[i];
-	$self->ciphers_num = num;
-    }
-    pj_ssl_cipher* getCiphers() {
-	return $self->ciphers;
-    }
-};
+/* Handle pointer-to-pointer-to-object as input & output */
+MY_JAVA_CLASS_INOUT(pjmedia_port, p_port)
+MY_JAVA_CLASS_INOUT(pjsip_tx_data, p_tdata)
 
+/* Handle array of pj_ssl_cipher in pjsip_tls_setting. */
+MY_JAVA_MEMBER_ARRAY_OF_ENUM(pjsip_tls_setting, pj_ssl_cipher, ciphers, ciphers_num)
 
-/* C++ SWIG target doesn't support nested class (C version does though).
+/* Handle array of pointer in struct/class member */
+MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjsip_regc_cbparam, pjsip_contact_hdr, contact, contact_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_session, pjmedia_sdp_media, media, media_count)
+MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_media, pjmedia_sdp_bandw, bandw, bandw_count)
+MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_media, pjmedia_sdp_attr, attr, attr_count)
+
+/* C++ SWIG target doesn't support nested class (C version does though!).
  * This is minimal workaround, ignore nested class as if it is not there.
  * TODO: proper workaround will be moving out inner classes to global scope.
  */
@@ -71,43 +57,7 @@ JAVA_ARRAYSOFCLASSES(pj_str_t)
     %nestedworkaround pjsip_event::body;
 #endif
 
-/* Typemaps for marshalling pjmedia_port ** */
-%typemap(jni) pjmedia_port **p_port "jobject"
-%typemap(jtype) pjmedia_port **p_port "pjmedia_port"
-%typemap(jstype) pjmedia_port **p_port "pjmedia_port"
-
-/* Typemaps for pjmedia_port ** as a parameter output type */
-%typemap(in) pjmedia_port **p_port (pjmedia_port *ppMediaPort = 0) %{ $1 = &ppMediaPort; %}
-%typemap(argout) pjmedia_port **p_port {
-  // Give Java proxy the C pointer (of newly created object)
-  jclass clazz = JCALL1(FindClass, jenv, "org/pjsip/pjsua/pjmedia_port");
-  jfieldID fid = JCALL3(GetFieldID, jenv, clazz, "swigCPtr", "J");
-  jlong cPtr = 0;
-  *(pjmedia_port **)&cPtr = *$1;
-  JCALL3(SetLongField, jenv, $input, fid, cPtr);
-}
-%typemap(javain) pjmedia_port **p_port "$javainput"
-
-
-/* Strip "pjsua_" prefix from pjsua functions, for better compatibility with 
- * pjsip-jni & csipsimple.
- */
-%rename("%(strip:[pjsua_])s", %$isfunction) "";
-
-/* Automatically init pjsua_config::cb to cb proxy via pjsua_config_default() */
-/* 1. Hide 'cb' from 'pjsua_config' */
-%ignore pjsua_config::cb;
-/* 2. Ignore original pjsua_config_default() */
-%ignore pjsua_config_default;
-/* 3. Optional, put back "pjsua_" prefix, if stripping is not preferred */
-//%rename(pjsua_config_default) config_default;
-/* 4. Put custom implementation */
-%inline %{
-    void config_default(pjsua_config *cfg) {
-        pjsua_config_default(cfg);
-	cfg->cb = *PJSUA_CALLBACK_PROXY;
-    }
-%}
+%include "../callbacks.i"
 
 /* Global constants */
 #define PJ_SUCCESS  0

@@ -60,7 +60,7 @@ typedef struct pjsip_regc pjsip_regc;
  *  The application's callback is called when the client registration process
  *  has finished.
  */
-struct pjsip_regc_cbparam
+typedef struct pjsip_regc_cbparam
 {
     pjsip_regc		*regc;	    /**< Client registration structure.	    */
     void		*token;	    /**< Arbitrary token set by application */
@@ -77,11 +77,11 @@ struct pjsip_regc_cbparam
     int			 expiration;/**< Next expiration interval.	    */
     int			 contact_cnt;/**<Number of contacts in response.    */
     pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
-};
+} pjsip_regc_cbparam;
 
 
 /** Type declaration for callback to receive registration result. */
-typedef void pjsip_regc_cb(struct pjsip_regc_cbparam *param);
+typedef void pjsip_regc_cb(pjsip_regc_cbparam *param);
 
 /**
  * Client registration information.

@@ -1,3 +1,5 @@
+/* $Id$ */
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -11,7 +13,6 @@ import org.pjsip.pjsua.pjsua_transport_config;
 import org.pjsip.pjsua.pjsip_transport_type_e;
 import org.pjsip.pjsua.pj_str_t;
 import org.pjsip.pjsua.PjsuaCallback;
-import org.pjsip.pjsua.pjsua_cb;
 
 class MyPjsuaCallback extends PjsuaCallback {
 	@Override
@@ -67,8 +68,8 @@ public class hello {
 		{
 			pjsua_config cfg = new pjsua_config();
 			pjsua.config_default(cfg);
-			/* Setup callback for callback proxy */
-			pjsua_cb.setPjsuaCallback(new MyPjsuaCallback());
+			/* Setup callback */
+			cfg.setCb(new MyPjsuaCallback());
 			status = pjsua.init(cfg, null, null);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error inintializing pjsua", status);
@@ -105,7 +106,7 @@ public class hello {
 		/* Make call to the URL. */
 		{
 			pj_str_t call_target = pj_str("sip:localhost");
-			status = pjsua.call_make_call(acc_id[0], call_target, null, null, null, call_id);
+			status = pjsua.call_make_call(acc_id[0], call_target, null, 0, null, call_id);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error making call", status);
 			}

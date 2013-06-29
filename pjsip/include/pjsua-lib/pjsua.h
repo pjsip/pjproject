@@ -472,8 +472,8 @@ typedef struct pjsua_mwi_info
  */
 typedef struct pjsua_reg_info
 {
-    struct pjsip_regc_cbparam	*cbparam;   /**< Parameters returned by
-						 registration callback.	*/
+    pjsip_regc_cbparam	*cbparam;	/**< Parameters returned by
+					     registration callback.	*/
 } pjsua_reg_info;
 
 

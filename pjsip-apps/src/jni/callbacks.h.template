@@ -1,0 +1,15 @@
+/* $Id$ */
+
+#include <pjsua-lib/pjsua.h>
+
+#ifndef SWIG /* SWIG should ignore these */
+class PjsuaCallback;
+extern void setPjsuaCallback(PjsuaCallback* callback);
+extern pjsua_callback* PJSUA_CALLBACK_PROXY;
+#endif
+
+class PjsuaCallback {
+public:
+  $PJSUA_CALLBACK_CLASS$
+  virtual ~PjsuaCallback() {}
+};

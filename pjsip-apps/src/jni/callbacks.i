@@ -1,14 +1,16 @@
-%module (directors="1") pjsua_cb
-
-#pragma SWIG nowarn=312		/* nested struct/class/union */
+/* $Id$ */
 
 %header %{
-    #include <pjsua-lib/pjsua.h>
     #include "callbacks.h"
 %}
 
-# Get pjsua definitions
-%import "output/pjsua.i"
-
 %feature("director") PjsuaCallback;
-%include "callbacks.h"
+%ignore pjsua_config::cb;
+%extend pjsua_config {
+    void setCb(PjsuaCallback *pjsuaCb) {
+	$self->cb = *PJSUA_CALLBACK_PROXY;
+	setPjsuaCallback(pjsuaCb);
+    }
+}
+
+%include <callbacks.h>

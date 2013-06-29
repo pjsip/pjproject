@@ -2,8 +2,8 @@
 
 #!/usr/bin/python
 
-# import re
-import sys #, os, traceback
+import re
+import sys, os #, traceback
 from collections import OrderedDict
 from pycparser import parse_file, c_ast, c_generator
 
@@ -56,10 +56,14 @@ FORCE_STRUCT_AS_OPAQUE = [
 	'pjmedia_port',
 	'pjmedia_transport',
 	'pjsua_media_transport',
-	'pjsua_callback'
+	'pjsua_callback',
+	'pjmedia_stream'
 ]
 
 FORCE_EXPORT = [
+	'pjsip_event',
+	'pjsip_transaction',
+	'pjmedia_sdp_session',
 	#'pj_str' # plain export result doesn't work!
 ]
 
@@ -100,7 +104,7 @@ class MyGen(c_generator.CGenerator):
     def visit_IdentifierType(self, n):
 	if not self.deps_frozen:
 	    for name in n.names: self._add_dep(name)
-        return ' '.join(n.names)
+	return super(MyGen, self).visit_IdentifierType(n)
 
     def _check_video(self, name):
 	if NO_VIDEO and name and ((name.find('_vid_') > 0) or (name.find('_video_') > 0)):
@@ -128,7 +132,7 @@ class MyGen(c_generator.CGenerator):
 	    name in self.deps or name in self.deps_pending:
 	    return
 	    
-	if name in FORCE_STRUCT_AS_OPAQUE:
+	if name in FORCE_STRUCT_AS_OPAQUE and (not name == 'pjsua_callback'):
 	    self.deps.append(name)
 	    return
 	    
@@ -170,6 +174,60 @@ class MyGen(c_generator.CGenerator):
 	    code = code.replace('typedef enum '+name+' '+name+';\n', '', 1)
 	return code
 	
+    def _gen_pjsua_callback(self):
+	# init
+	cbclass  = ''
+	cbproxy = ''
+	cbdef = []
+
+        n = self.nodes['pjsua_callback'][0]
+	raw_lines = self._print_node(n).splitlines()
+	for idx, line in enumerate(raw_lines):
+	    if idx in [0, 1, len(raw_lines)-1]: continue
+	    fstrs = []
+	    # pointer to function type format
+	    m = re.match('\s+(.*)\(\*(.*)\)(\(.*\));', line)
+	    if m:
+		fstrs = [m.group(1).strip(), m.group(2), m.group(3)]
+	    else:
+	        # typedef'd format
+	        m = re.match('\s+(.*)\s+(.*);', line)
+		if (not m) or (not self.nodes.has_key(m.group(1))):
+		    cbdef.append('  NULL')
+		    continue
+		fstrs = ['', m.group(2), '']
+	        n = self.nodes[m.group(1)][0]
+		raw = self._print_node(n)
+		m = re.match('typedef\s+(.*)\(\*(.*)\)(\(.*\));', raw)
+		if not m:
+		    cbdef.append('  NULL')
+		    continue
+		fstrs[0] = m.group(1).strip()
+		fstrs[2] = m.group(3)
+	
+	    cbclass += '  virtual ' + ' '.join(fstrs)
+    	    if fstrs[0] == 'void':
+		cbclass += ' {}\n'
+	    elif fstrs[1] == 'on_create_media_transport':
+	        cbclass += ' { return base_tp; }\n'
+	    elif fstrs[1] == 'on_call_redirected':
+	        cbclass += ' { return PJSIP_REDIRECT_STOP; }\n'
+	    else:
+	        cbclass += ' { return 0; }\n'
+
+	    cbproxy += 'static ' + ' '.join(fstrs)
+	    params = re.findall('(\w+)[,\)]', fstrs[2])
+    	    if fstrs[0] == 'void':
+		cbproxy += ' { cb->'+fstrs[1]+'('+','.join(params)+'); }\n'
+	    else:
+	        cbproxy += ' { return cb->'+fstrs[1]+'('+','.join(params)+'); }\n'
+
+	    cbdef.append('  &' + fstrs[1])
+		
+	# trail	
+	
+        return [cbclass, cbproxy, ',\n'.join(cbdef)+'\n']
+    
     # Generate code from the specified node.
     def _print_node(self, node):
         s = ''
@@ -188,6 +246,31 @@ class MyGen(c_generator.CGenerator):
 	        ss += self._print_node(node)
 	    s += self._process_opaque_struct(name, ss)
 	return s
+	
+    def write_pjsua_callback(self, outdir):
+        cb = self._gen_pjsua_callback()
+	
+	fout = open(outdir+'/callbacks.h', 'w+')
+        fin  = open('callbacks.h.template', 'r')
+        for line in fin:
+	    if line.find(r'$PJSUA_CALLBACK_CLASS$') >= 0:
+		fout.write(cb[0])
+	    else:
+                fout.write(line)
+	fin.close()
+	fout.close()
+
+	fout = open(outdir+'/callbacks.c', 'w+')
+        fin  = open('callbacks.c.template', 'r')
+        for line in fin:
+	    if line.find(r'$PJSUA_CALLBACK_PROXY$') >= 0:
+		fout.write(cb[1])
+	    elif line.find(r'$PJSUA_CALLBACK_DEF$') >= 0:
+		fout.write(cb[2])
+	    else:
+                fout.write(line)
+	fin.close()
+	fout.close()
 
 # MAIN		
 ast = parse_file(SOURCE_PATH, use_cpp=True, cpp_path=CPP_PATH, cpp_args=CPP_CFLAGS)
@@ -204,5 +287,10 @@ mygen = MyGen(ast)
 #for d in mygen.deps:
 #   print d
 
+sys.argv.pop(0)
+outdir = sys.argv.pop() if len(sys.argv) else 'output'
+mygen.write_pjsua_callback(outdir)
+
 s = mygen.go()
 print s
+
