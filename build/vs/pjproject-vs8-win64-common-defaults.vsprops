@@ -11,7 +11,7 @@
 	<Tool
 		Name="VCLinkerTool"
 		SubSystem="1"
-		TargetMachine="1"
+		TargetMachine="17"
 	/>
 	<UserMacro
 		Name="TargetCPU"

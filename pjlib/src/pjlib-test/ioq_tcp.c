@@ -254,7 +254,7 @@ static int compliance_test_0(pj_bool_t allow_concur)
     pj_ioqueue_op_key_t accept_op;
     int bufsize = BUF_MIN_SIZE;
     int status = -1;
-    pj_ssize_t pending_op = 0;
+    int pending_op = 0;
     pj_timestamp t_elapsed;
     pj_str_t s;
     pj_status_t rc;
@@ -467,7 +467,7 @@ on_error:
     if (ioque != NULL)
 	pj_ioqueue_destroy(ioque);
     pj_pool_release(pool);
-    return (int)status;
+    return status;
 
 }
 

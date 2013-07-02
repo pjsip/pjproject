@@ -399,7 +399,7 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 				    char *buf, pj_size_t size)
 {
     char *p=buf, *end=buf+size;
-    pj_size_t len;
+    pj_ssize_t len;
     pjsip_hdr *hdr;
     pj_str_t clen_hdr =  { "Content-Length: ", 16};
 

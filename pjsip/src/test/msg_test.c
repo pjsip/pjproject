@@ -1888,7 +1888,7 @@ static int hdr_test(void)
     for (i=0; i<PJ_ARRAY_SIZE(hdr_test_data); ++i) {
 	struct hdr_test_t  *test = &hdr_test_data[i];
 	pj_str_t hname;
-	pj_size_t len;
+	pj_ssize_t len;
 	int parsed_len;
 	pj_pool_t *pool;
 	pjsip_hdr *parsed_hdr1=NULL, *parsed_hdr2=NULL;
@@ -1995,8 +1995,7 @@ int msg_test(void)
 	unsigned parse;
 	unsigned print;
     } run[COUNT];
-    unsigned i, max;
-    int avg_len;
+    unsigned i, max, avg_len;
     char desc[250];
     pj_status_t status;
 
@@ -2018,7 +2017,7 @@ int msg_test(void)
 
     /* Calculate average message length */
     for (i=0, avg_len=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
-	avg_len += (int)test_array[i].len;
+	avg_len += (unsigned)test_array[i].len;
     }
     avg_len /= PJ_ARRAY_SIZE(test_array);
 
