@@ -1197,7 +1197,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
     if (status != PJ_SUCCESS) {
 	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
 						  sizeof(*key), &hval);
-	if (cache)
+	if (cache && --cache->ref_cnt <= 0)
 	    free_entry(resolver, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
     }
@@ -1233,7 +1233,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
     if (ttl == 0) {
 	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
 						  sizeof(*key), &hval);
-	if (cache)
+	if (cache && --cache->ref_cnt <= 0)
 	    free_entry(resolver, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
 	return;
@@ -1243,6 +1243,13 @@ static void update_res_cache(pj_dns_resolver *resolver,
     cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
     					      sizeof(*key), &hval);
     if (cache == NULL) {
+	cache = alloc_entry(resolver);
+    } else if (cache->ref_cnt > 1) {
+	/* When cache entry is being used by callback (to app), just decrement
+	 * ref_cnt so it will be freed after the callback returns and allocate
+	 * new entry.
+	 */
+	cache->ref_cnt--;
 	cache = alloc_entry(resolver);
     } else {
 	/* Reset cache to avoid bloated cache pool */
