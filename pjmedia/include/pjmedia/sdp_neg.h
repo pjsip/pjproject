@@ -313,6 +313,22 @@ typedef struct pjmedia_sdp_neg pjmedia_sdp_neg;
 
 
 /**
+ * Flags to be given to pjmedia_sdp_neg_modify_local_offer2().
+ */
+typedef enum pjmedia_mod_offer_flag
+{
+   /**
+    * Allow media type in the SDP to be changed.
+    * When generating a new offer, in the case that a media line doesn't match
+    * the active SDP, the new media line will be considered to replace the
+    * existing media at the same position.
+    */
+   PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE = 1
+
+} pjmedia_mod_offer_flag;
+
+
+/**
  * Get the state string description of the specified state.
  *
  * @param state		Negotiator state.
@@ -500,7 +516,8 @@ pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
  * After calling this function, application can send the SDP as offer 
  * to remote party, using signaling protocol such as SIP.
  * The negotiator state will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
- * where it waits for SDP answer from remote.
+ * where it waits for SDP answer from remote. See also
+ * #pjmedia_sdp_neg_modify_local_offer2()
  *
  * @param pool		Pool to allocate memory. The pool's lifetime needs
  *			to be valid for the duration of the negotiator.
@@ -514,6 +531,29 @@ PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 				    pjmedia_sdp_neg *neg,
 				    const pjmedia_sdp_session *local);
+
+/**
+ * Modify local session with a new SDP and treat this as a new offer. 
+ * This function can only be called in state PJMEDIA_SDP_NEG_STATE_DONE.
+ * After calling this function, application can send the SDP as offer 
+ * to remote party, using signaling protocol such as SIP.
+ * The negotiator state will move to PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
+ * where it waits for SDP answer from remote.
+ *
+ * @param pool		Pool to allocate memory. The pool's lifetime needs
+ *			to be valid for the duration of the negotiator.
+ * @param neg		The SDP negotiator instance.
+ * @param flags         Bitmask from pjmedia_mod_offer_flag.
+ * @param local		The new local SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate
+ *			error code.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_sdp_neg_modify_local_offer2( pj_pool_t *pool,
+				     pjmedia_sdp_neg *neg,
+                                     unsigned flags,
+				     const pjmedia_sdp_session *local);
 
 /**
  * This function can only be called in PJMEDIA_SDP_NEG_STATE_DONE state.

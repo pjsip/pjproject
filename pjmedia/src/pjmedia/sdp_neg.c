@@ -276,6 +276,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 				    pjmedia_sdp_neg *neg,
 				    const pjmedia_sdp_session *local)
 {
+    return pjmedia_sdp_neg_modify_local_offer2(pool, neg, 0, local);
+}
+
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
+                                    pj_pool_t *pool,
+				    pjmedia_sdp_neg *neg,
+                                    unsigned flags,
+				    const pjmedia_sdp_session *local)
+{
     pjmedia_sdp_session *new_offer;
     pjmedia_sdp_session *old_offer;
     char media_used[PJMEDIA_MAX_SDP_MEDIA];
@@ -314,45 +323,63 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
     pj_strdup(pool, &new_offer->origin.addr_type,&old_offer->origin.addr_type);
     pj_strdup(pool, &new_offer->origin.addr, &old_offer->origin.addr);
 
-    /* Generating the new offer, in the case media lines doesn't match the
-     * active SDP (e.g. current/active SDP's have m=audio and m=video lines, 
-     * and the new offer only has m=audio line), the negotiator will fix 
-     * the new offer by reordering and adding the missing media line with 
-     * port number set to zero.
-     */
-    for (oi = 0; oi < old_offer->media_count; ++oi) {
-	pjmedia_sdp_media *om;
-	pjmedia_sdp_media *nm;
-	unsigned ni; /* new offer media index */
-	pj_bool_t found = PJ_FALSE;
+    if ((flags & PJMEDIA_SDP_NEG_ALLOW_MEDIA_CHANGE) == 0) {
+       /* Generating the new offer, in the case media lines doesn't match the
+        * active SDP (e.g. current/active SDP's have m=audio and m=video lines,
+        * and the new offer only has m=audio line), the negotiator will fix 
+        * the new offer by reordering and adding the missing media line with 
+        * port number set to zero.
+        */
+        for (oi = 0; oi < old_offer->media_count; ++oi) {
+	    pjmedia_sdp_media *om;
+	    pjmedia_sdp_media *nm;
+	    unsigned ni; /* new offer media index */
+	    pj_bool_t found = PJ_FALSE;
 
-	om = old_offer->media[oi];
-	for (ni = oi; ni < new_offer->media_count; ++ni) {
-	    nm = new_offer->media[ni];
-	    if (pj_strcmp(&nm->desc.media, &om->desc.media) == 0) {
-		if (ni != oi) {
-		    /* The same media found but the position unmatched to the 
-		     * old offer, so let's put this media in the right place, 
-		     * and keep the order of the rest.
-		     */
-		    pj_array_insert(new_offer->media,		 /* array    */
-				    sizeof(new_offer->media[0]), /* elmt size*/
-				    ni,				 /* count    */
-				    oi,				 /* pos      */
-				    &nm);			 /* new elmt */
-		}
-		found = PJ_TRUE;
-		break;
+	    om = old_offer->media[oi];
+	    for (ni = oi; ni < new_offer->media_count; ++ni) {
+	        nm = new_offer->media[ni];
+	        if (pj_strcmp(&nm->desc.media, &om->desc.media) == 0) {
+		    if (ni != oi) {
+		        /* The same media found but the position unmatched to
+                         * the old offer, so let's put this media in the right
+                         * place, and keep the order of the rest.
+		         */
+		        pj_array_insert(
+                            new_offer->media,		 /* array    */
+			    sizeof(new_offer->media[0]), /* elmt size*/
+			    ni,				 /* count    */
+		            oi,				 /* pos      */
+			    &nm);			 /* new elmt */
+		    }
+		    found = PJ_TRUE;
+		    break;
+	        }
 	    }
-	}
-	if (!found) {
-	    pjmedia_sdp_media *m;
+	    if (!found) {
+	        pjmedia_sdp_media *m;
 
-	    m = sdp_media_clone_deactivate(pool, om, om, local);
+	        m = sdp_media_clone_deactivate(pool, om, om, local);
+
+	        pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
+			        new_offer->media_count++, oi, &m);
+	    }
+        }
+    } else {
+        /* If media type change is allowed, the negotiator only needs to fix 
+         * the new offer by adding the missing media line(s) with port number
+         * set to zero.
+         */
+        for (oi = new_offer->media_count; oi < old_offer->media_count; ++oi) {
+            pjmedia_sdp_media *m;
+
+	    m = sdp_media_clone_deactivate(pool, old_offer->media[oi],
+                                           old_offer->media[oi], local);
 
 	    pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
-			    new_offer->media_count++, oi, &m);
-	}
+	                    new_offer->media_count++, oi, &m);
+
+        }
     }
 
     /* New_offer fixed */
