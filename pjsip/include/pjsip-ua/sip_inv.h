@@ -372,6 +372,7 @@ struct pjsip_inv_session
     pjsip_role_e	 role;			    /**< Invite role.	    */
     unsigned		 options;		    /**< Options in use.    */
     pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
+    unsigned             sdp_neg_flags;             /**< SDP neg flags.     */
     pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
     pjsip_tx_data	*invite_req;		    /**< Saved invite req   */
     pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */

@@ -1768,9 +1768,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 			  tsx->last_tx->msg->body->data;
 
 	    /* Feed the original offer to negotiator */
-	    status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, 
-							inv->neg,
-						        reoffer_sdp);
+	    status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov, 
+							 inv->neg,
+                                                         inv->sdp_neg_flags,
+						         reoffer_sdp);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(1,(inv->obj_name, "Error updating local offer for "
 			  "forked 2xx/183 response (err=%d)", status));
@@ -2130,8 +2131,9 @@ PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
         {
             status = pjsip_inv_set_sdp_answer(inv, sdp);
         }  else if (neg_state == PJMEDIA_SDP_NEG_STATE_DONE) {
-            status = pjmedia_sdp_neg_modify_local_offer(inv->pool,
-                                                        inv->neg, sdp);
+            status = pjmedia_sdp_neg_modify_local_offer2(inv->pool, inv->neg,
+                                                         inv->sdp_neg_flags,
+                                                         sdp);
         } else
             return PJMEDIA_SDPNEG_EINSTATE;
     } else {
@@ -2598,9 +2600,9 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 		break;
 
 	    case PJMEDIA_SDP_NEG_STATE_DONE:
-		status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov,
-							    inv->neg,
-							    new_offer);
+		status = pjmedia_sdp_neg_modify_local_offer2(
+                             inv->pool_prov, inv->neg,
+                             inv->sdp_neg_flags, new_offer);
 		if (status != PJ_SUCCESS)
 		    goto on_return;
 		break;
@@ -2660,8 +2662,8 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 	/* Notify negotiator about the new offer. This will fix the offer
 	 * with correct SDP origin.
 	 */
-	status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, inv->neg,
-						    offer);
+	status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov, inv->neg,
+						     inv->sdp_neg_flags, offer);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -4358,9 +4360,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 			 * fix the offer with correct SDP origin.
 			 */
 			status = 
-			    pjmedia_sdp_neg_modify_local_offer(inv->pool_prov,
-							       inv->neg,
-							       sdp);
+			    pjmedia_sdp_neg_modify_local_offer2(
+                                inv->pool_prov, inv->neg,
+                                inv->sdp_neg_flags, sdp);
 
 			/* Retrieve the "fixed" offer from negotiator */
 			if (status==PJ_SUCCESS) {
