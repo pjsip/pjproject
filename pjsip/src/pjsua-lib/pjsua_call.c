@@ -722,7 +722,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Create outgoing dialog: */
     status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				   &acc->cfg.id, &contact,
-				   dest_uri, dest_uri, &dlg);
+				   dest_uri,
+                                   (msg_data->target_uri.slen? 
+                                    &msg_data->target_uri: dest_uri),
+                                   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
 	goto on_error;

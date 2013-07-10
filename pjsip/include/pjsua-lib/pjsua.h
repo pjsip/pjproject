@@ -1685,6 +1685,13 @@ PJ_DECL(void) pjsua_config_dup(pj_pool_t *pool,
 struct pjsua_msg_data
 {
     /**
+     * Optional remote target URI (i.e. Target header). If NULL, the target
+     * will be set to the remote URI (To header). At the moment this field
+     * is only used by #pjsua_call_make_call() and #pjsua_im_send().
+     */
+    pj_str_t    target_uri;
+
+    /**
      * Additional message headers as linked list. Application can add
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using

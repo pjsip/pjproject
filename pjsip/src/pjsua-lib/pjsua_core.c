@@ -162,6 +162,8 @@ PJ_DEF(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
     msg_data = PJ_POOL_ZALLOC_T(pool, pjsua_msg_data);
     PJ_ASSERT_RETURN(msg_data != NULL, NULL);
 
+    pj_strdup(pool, &msg_data->target_uri, &rhs->target_uri);
+
     pj_list_init(&msg_data->hdr_list);
     hdr = rhs->hdr_list.next;
     while (hdr != &rhs->hdr_list) {
