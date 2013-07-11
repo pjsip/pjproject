@@ -4,7 +4,7 @@
 %include "typemaps.i"
 
 /* Auto destroy JNI object, useful for director */
-%inline %{
+%header %{
 class LocalRefGuard {
     JNIEnv* jenv;
     jobject jobj;

@@ -100,7 +100,7 @@ public class hello {
 		
 		/* Add local account */
 		{
-			status = pjsua.acc_add_local(tp_id[0], pjsua.PJ_TRUE, acc_id);
+			status = pjsua.acc_add_local(tp_id[0], true, acc_id);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error creating local UDP account", status);
 			}
@@ -149,6 +149,10 @@ public class hello {
 				System.out.println("Test create contact: " + contact[0]);
 				
 				pjsua.pj_pool_release(my_pool);
+			} else if (userInput.equals("d")) {
+				pjsua.dump(false);
+			} else if (userInput.equals("dd")) {
+				pjsua.dump(true);
 			}
 		}
 

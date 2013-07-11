@@ -22,6 +22,9 @@
 //%ignore pjsip_transaction::mod_data;
 %apply long long[ANY]   { void *[ANY] };
 
+/* Map pj_bool_t */
+%apply bool { pj_bool_t };
+
 /* Map "int*" & "unsigned*" as input & output */
 %apply unsigned	*INOUT  { unsigned * };
 %apply int      *INOUT  { int * };
@@ -68,6 +71,4 @@ MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_media, pjmedia_sdp_attr, attr, attr_
 
 /* Global constants */
 #define PJ_SUCCESS  0
-#define PJ_TRUE     1
-#define PJ_FALSE    0
 
