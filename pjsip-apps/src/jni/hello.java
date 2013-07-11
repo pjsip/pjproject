@@ -3,6 +3,11 @@
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
+
+import org.pjsip.pjsua.pj_pool_t;
+import org.pjsip.pjsua.pjsip_rx_data;
+import org.pjsip.pjsua.pjsip_transport_type_e;
+
 import org.pjsip.pjsua.pjsua;
 import org.pjsip.pjsua.pjsua_acc_config;
 import org.pjsip.pjsua.pjsua_call_info;
@@ -10,21 +15,34 @@ import org.pjsip.pjsua.pjsua_call_media_status;
 import org.pjsip.pjsua.pjsua_config;
 import org.pjsip.pjsua.pjsua_logging_config;
 import org.pjsip.pjsua.pjsua_transport_config;
-import org.pjsip.pjsua.pjsip_transport_type_e;
-import org.pjsip.pjsua.pj_str_t;
 import org.pjsip.pjsua.PjsuaCallback;
 
 class MyPjsuaCallback extends PjsuaCallback {
 	@Override
 	public void on_call_media_state(int call_id)
 	{
-	    System.out.println("======== Call media started (call id: " + call_id + ")");
-	    pjsua_call_info info = new pjsua_call_info();
-	    pjsua.call_get_info(call_id, info);
-	    if (info.getMedia_status() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE) {
-		pjsua.conf_connect(info.getConf_slot(), 0);
-		pjsua.conf_connect(0, info.getConf_slot());
-	    }
+		System.out.println("======== Call media started (call id: " + call_id + ")");
+		pjsua_call_info info = new pjsua_call_info();
+		pjsua.call_get_info(call_id, info);
+		if (info.getMedia_status() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE) {
+			pjsua.conf_connect(info.getConf_slot(), 0);
+			pjsua.conf_connect(0, info.getConf_slot());
+		}
+	}
+	@Override
+	public void on_pager(int call_id, String from, String to, String contact, String mime_type, String body)
+	{
+		System.out.println("======== Incoming pager (call id: " + call_id + ")");
+		System.out.println("From     : " + from);
+		System.out.println("To       : " + to);
+		System.out.println("Contact  : " + contact);
+		System.out.println("Mimetype : " + mime_type);
+		System.out.println("Body     : " + body);
+	}
+	@Override
+	public void on_incoming_call(int acc_id, int call_id, pjsip_rx_data rdata) {
+		/* Auto answer */
+		pjsua.call_answer(call_id, 200, null, null);
 	}
 }
 
@@ -39,13 +57,6 @@ public class hello {
 		System.exit(status);
 	}
 
-	protected static pj_str_t pj_str(String st) {
-		pj_str_t st_ = new pj_str_t();
-		st_.setPtr(st);
-		st_.setSlen(st.length());
-		return st_;
-	}
-	
 	public static void main(String[] args) {
 		int[] tp_id = new int[1];
 		int[] acc_id = new int[1];
@@ -104,9 +115,8 @@ public class hello {
 		}
 		
 		/* Make call to the URL. */
-		{
-			pj_str_t call_target = pj_str("sip:localhost");
-			status = pjsua.call_make_call(acc_id[0], call_target, null, 0, null, call_id);
+		if (false) {
+			status = pjsua.call_make_call(acc_id[0], "sip:localhost", null, 0, null, call_id);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error making call", status);
 			}
@@ -116,6 +126,9 @@ public class hello {
 		for (;;) {
 			String userInput;
 			BufferedReader inBuffReader = new BufferedReader(new InputStreamReader(System.in));
+
+			System.out.println("Press 'h' to hangup all calls, 'q' to quit");
+
 			try {
 				userInput = inBuffReader.readLine();
 			} catch (IOException e) {
@@ -123,13 +136,20 @@ public class hello {
 				break;
 			}
 			
-			System.out.println("Press 'h' to hangup all calls, 'q' to quit");
-			
-			if (userInput.equals("q"))
+			if (userInput.equals("q")) {
 				break;
-
-			if (userInput.equals("h"))
+			} else if (userInput.equals("h")) {
 				pjsua.call_hangup_all();
+			} else if (userInput.equals("c")) {
+				/* Test string as output param, it is wrapped as string array */
+				String[] contact = new String[1];
+				pj_pool_t my_pool = pjsua.pool_create("hello", 256, 256);
+				
+				pjsua.acc_create_uac_contact(my_pool, contact, 0, "sip:localhost");
+				System.out.println("Test create contact: " + contact[0]);
+				
+				pjsua.pj_pool_release(my_pool);
+			}
 		}
 
 		/* Finally, destroy pjsua */

@@ -3729,14 +3729,14 @@ PJ_DECL(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
  * for the specified account.
  *
  * @param pool		Pool to allocate memory for the string.
- * @param contact	The string where the Contact will be stored.
+ * @param p_contact	The string where the Contact will be stored.
  * @param acc_id	Account ID.
  * @param uri		Destination URI of the request.
  *
  * @return		PJ_SUCCESS on success, other on error.
  */
 PJ_DECL(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
-						   pj_str_t *contact,
+						   pj_str_t *p_contact,
 						   pjsua_acc_id acc_id,
 						   const pj_str_t *uri);
 							   
@@ -3747,14 +3747,14 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
  * incoming request.
  *
  * @param pool		Pool to allocate memory for the string.
- * @param contact	The string where the Contact will be stored.
+ * @param p_contact	The string where the Contact will be stored.
  * @param acc_id	Account ID.
  * @param rdata		Incoming request.
  *
  * @return		PJ_SUCCESS on success, other on error.
  */
 PJ_DECL(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
-						   pj_str_t *contact,
+						   pj_str_t *p_contact,
 						   pjsua_acc_id acc_id,
 						   pjsip_rx_data *rdata );
 							   

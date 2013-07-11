@@ -15,24 +15,31 @@
 %rename("%(strip:[pjsua_])s", %$isfunction) "";
 
 /* Map 'void *' simply as long, app can use this "long" as index of its real user data */
-%apply long { void * };
+%apply long long { void * };
 
 /* Handle void *[ANY], e.g: pjsip_tx_data::mod_data, pjsip_transaction::mod_data */
 //%ignore pjsip_tx_data::mod_data;
 //%ignore pjsip_transaction::mod_data;
-%apply long[ANY] { void *[ANY] };
+%apply long long[ANY]   { void *[ANY] };
 
 /* Map "int*" & "unsigned*" as input & output */
 %apply unsigned	*INOUT  { unsigned * };
-%apply int	*INOUT  { int * };
+%apply int      *INOUT  { int * };
 
 /* Map the following args as input & output */
-%apply int 	*INOUT	{ pj_stun_nat_type * };
-%apply int 	*INOUT	{ pjsip_status_code * };
-%apply int[ANY] 	{ pjmedia_format_id dec_fmt_id[ANY] };
+%apply int      *INOUT	{ pj_stun_nat_type * };
+%apply int      *INOUT	{ pjsip_status_code * };
+%apply int[ANY]         { pjmedia_format_id dec_fmt_id[ANY] };
+%apply pj_str_t *INOUT  { pj_str_t *p_contact };
 
-/* Handle array of pj_str_t */
-JAVA_ARRAYSOFCLASSES(pj_str_t)
+/* Handle members typed array of pj_str_t */
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, nameserver, nameserver_count)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, outbound_proxy, outbound_proxy_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, stun_srv, stun_srv_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_acc_config, proxy, proxy_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, stun_srv, stun_srv_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, stun_srv, stun_srv_cnt)
+MY_JAVA_MEMBER_ARRAY_OF_STR(pjsip_generic_array_hdr, values, count)
 
 /* Handle pointer-to-pointer-to-object as input & output */
 MY_JAVA_CLASS_INOUT(pjmedia_port, p_port)

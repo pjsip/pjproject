@@ -5,6 +5,7 @@
 %}
 
 %feature("director") PjsuaCallback;
+%ignore pjsua_callback;
 %ignore pjsua_config::cb;
 %extend pjsua_config {
     void setCb(PjsuaCallback *pjsuaCb) {
