@@ -2041,7 +2041,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 				const pjsua_call_vid_strm_op_param *param)
 {
     pjsua_call *call;
-    pjsip_dialog *dlg;
+    pjsip_dialog *dlg = NULL;
     pjsua_call_vid_strm_op_param param_;
     pj_status_t status;
 
