@@ -1058,6 +1058,12 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 	    a_name = &bound_name;
 	}
 
+        /* Init local address. */
+        status = pj_sock_getsockname(sock, &tp->base.local_addr, 
+				     &tp->base.addr_len);
+        if (status != PJ_SUCCESS)
+	    return status;
+
 	/* Assign the socket and published address to transport. */
 	udp_set_socket(tp, sock, a_name);
 
