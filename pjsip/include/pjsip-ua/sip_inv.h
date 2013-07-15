@@ -161,6 +161,31 @@ typedef struct pjsip_inv_callback
 			const pjmedia_sdp_session *offer);
 
     /**
+     * This callback is optional, and is called when the invite session has
+     * received a re-INVITE from the peer. It will be called after
+     * on_rx_offer() callback and works only for re-INVITEs. It allows more
+     * fine-grained control over the response to a re-INVITE, e.g. sending
+     * a provisional response first. Application can return PJ_SUCCESS and
+     * send a reply using the function #pjsip_inv_initial_answer() or
+     * #pjsip_inv_answer(), as with the initial INVITE. If application
+     * returns non-PJ_SUCCESS, it needs to set the SDP answer with
+     * #pjsip_inv_set_sdp_answer() and the re-INVITE will be answered
+     * automatically.
+     *
+     * @param inv	The invite session.
+     * @param offer	Remote offer.
+     * @param rdata     The received re-INVITE request.
+     *
+     * @return		- PJ_SUCCESS: application will answer the re-INVITE
+     *                    manually
+     *                  - non-PJ_SUCCESS: answer the re-INVITE automatically
+     *                    using the SDP set via #pjsip_inv_set_sdp_answer()
+     */
+    pj_status_t (*on_rx_reinvite)(pjsip_inv_session *inv,
+    		                  const pjmedia_sdp_session *offer,
+                                  pjsip_rx_data *rdata);
+
+    /**
      * This callback is optional, and it is used to ask the application
      * to create a fresh offer, when the invite session has received 
      * re-INVITE without offer. This offer then will be sent in the
@@ -698,9 +723,7 @@ PJ_DECL(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 						pjsip_tx_data **p_tdata);
 
 /**
- * Create a response message to the initial INVITE request. This function
- * can only be called for the initial INVITE request, as subsequent
- * re-INVITE request will be answered automatically.
+ * Create a response message to an INVITE request.
  *
  * @param inv		The UAS invite session.
  * @param st_code	The st_code contains the status code to be sent, 
@@ -796,6 +819,24 @@ PJ_DECL(pj_status_t) pjsip_inv_end_session( pjsip_inv_session *inv,
 					    const pj_str_t *st_text,
 					    pjsip_tx_data **p_tdata );
 
+
+/**
+ * Create a CANCEL request for an ongoing re-INVITE transaction. If no
+ * provisional response has been received, the function will not create
+ * CANCEL request (the function will return PJ_SUCCESS but the \a p_tdata
+ * will contain NULL) because we cannot send CANCEL before receiving
+ * provisional response. If then a provisional response is received,
+ * the invite session will send CANCEL automatically.
+ *
+ * @param inv		The invite session.
+ * @param p_tdata	Pointer to receive the message to be created. Note
+ *			that it's possible to receive NULL here while the
+ *			function returns PJ_SUCCESS, see the description.
+ *
+ * @return		PJ_SUCCESS if termination is initiated.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_cancel_reinvite( pjsip_inv_session *inv,
+					        pjsip_tx_data **p_tdata );
 
 
 /**

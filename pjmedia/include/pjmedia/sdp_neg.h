@@ -52,15 +52,15 @@
  *     create_w_local_offer()  +-------------+  send_local_offer()
  *     ----------------------->| LOCAL_OFFER |<-----------------------
  *    |                        +-------------+______                  |
- *    |                               |             \______ cancel()  |
- *    |           set_remote_answer() |                    \______    |
- *    |                               V                            \  |
+ *    |                               |             \_____________    |
+ *    |           set_remote_answer() |           cancel_offer()  \   |
+ *    |                               V                            v  |
  * +--+---+                     +-----------+     negotiate()     +-~----+
  * | NULL |                     | WAIT_NEGO |-------------------->| DONE |
  * +------+                     +-----------+                     +------+
- *    |                               A                               |
- *    |            set_local_answer() |                               |
- *    |                               |                               |
+ *    |                               A      ______________________^  |
+ *    |            set_local_answer() |     /     cancel_offer()      |
+ *    |                               |    /                          |
  *    |                        +--------------+   set_remote_offer()  |
  *     ----------------------->| REMOTE_OFFER |<----------------------
  *     create_w_remote_offer() +--------------+
