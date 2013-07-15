@@ -4,13 +4,36 @@
 include ../../../build.mak
 include $(PJDIR)/build/common.mak
 
+# Get JDK location
+ifeq ("$(JAVA_HOME)","")
+  # Get javac location to determine JDK location
+  JAVAC_PATH = $(shell which javac)
+  ifeq ("$(JAVAC_PATH)","")
+    $(error Cannot determine JDK location using 'which' command. Please define JAVA_HOME envvar)
+  endif
+
+  JAVAC_PATH := $(realpath $(JAVAC_PATH))
+  JAVA_BIN := $(dir $(JAVAC_PATH))
+  JAVA_HOME := $(patsubst %/bin/,%,$(JAVA_BIN))
+endif
+
+# OS specific
+ifeq ($(OS),Windows_NT)
+MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,--kill-at
+MY_JNI_LIB       = $(MY_PACKAGE_BIN)/pjsua.dll
+else
+MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,-soname,pjsua.so
+MY_JNI_LIB       = $(MY_PACKAGE_BIN)/libpjsua.so
+MY_JNI_CFLAGS	 := -fPIC
+endif
+
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		 = swig
-MY_JDK		 = /c/Program\ Files\ \(x86\)/Java/jdk1.7.0_21
-MY_JAVA		 = $(MY_JDK)/bin/java.exe
-MY_JAVAC	 = $(MY_JDK)/bin/javac.exe
-MY_JNI_CFLAGS	 = -I$(MY_JDK)/include -I$(MY_JDK)/include/win32 -I.
-MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,--kill-at
+MY_JDK		 = $(JAVA_HOME)
+MY_JAVA		 = $(MY_JDK)/bin/java
+MY_JAVAC	 = $(MY_JDK)/bin/javac
+MY_JNI_CFLAGS	 := $(MY_JNI_CFLAGS) -I$(MY_JDK)/include -I$(MY_JDK)/include/win32 \
+		   -I$(MY_JDK)/include/linux -I.
 
 # Build settings
 MY_CFLAGS	 = $(PJ_CFLAGS) $(MY_JNI_CFLAGS)
@@ -24,7 +47,6 @@ MY_SWIG_FLAG	 = -c++ -I$(MY_OUT_DIR) # -debug-tmsearch -debug-tmused # -Wall
 MY_SWIG_WRAPPER	 = $(MY_OUT_DIR)/pjsua_wrap
 MY_PACKAGE_SRC	 = $(MY_OUT_DIR)/src/$(subst .,/,$(MY_PACKAGE))
 MY_PACKAGE_BIN	 = $(MY_OUT_DIR)/bin
-MY_JNI_LIB       = $(MY_PACKAGE_BIN)/pjsua.dll
 
 all: $(MY_JNI_LIB) java
 

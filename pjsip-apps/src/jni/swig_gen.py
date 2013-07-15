@@ -13,13 +13,21 @@ SOURCE_PATH  = PJ_ROOT_PATH + "pjsip/include/pjsua-lib/pjsua.h"
 #SOURCE_PATH  = PJ_ROOT_PATH + "pjlib-util/include/pjlib-util/scanner.h"
 #SOURCE_PATH  = PJ_ROOT_PATH + "pjlib/include/pj/types.h"
 
-# CPP (C preprocessor) settings, CPP is needed by pycparser.
-CPP_PATH	 = 'C:/devs/bin/cpp.exe' if sys.platform == 'win32' else 'cpp'
+# CPP is needed by pycparser.
+if sys.platform == 'win32':
+	PYCPARSER_DIR="C:/devs/tools/pycparser"
+	CPP_PATH='C:/devs/bin/cpp.exe'
+else:
+	PYCPARSER_DIR="/home/bennylp/Desktop/opt/src/pycparser-master"
+	CPP_PATH='cpp'
+
+# CPP (C preprocessor) settings
 CPP_CFLAGS   = [
-	r'-DPJ_AUTOCONF',
-	r'-DCC_DUMMY',
-	r'-Djmp_buf=int',
-	r'-IC:/devs/tools/pycparser/utils/fake_libc_include',
+	'-DPJ_AUTOCONF',
+	'-DCC_DUMMY',
+	'-U__GNUC__',
+	'-Djmp_buf=int',
+	'-I' + PYCPARSER_DIR + '/utils/fake_libc_include',
 	"-I" + PJ_ROOT_PATH + "pjlib/include",
 	"-I" + PJ_ROOT_PATH + "pjlib-util/include",
 	"-I" + PJ_ROOT_PATH + "pjnath/include",
