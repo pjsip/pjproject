@@ -525,7 +525,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     /* Create request. */
     status = pjsip_endpt_create_request(pjsua_var.endpt, 
 					&pjsip_message_method,
-                                        (msg_data->target_uri.slen? 
+                                        (msg_data && msg_data->target_uri.slen? 
                                          &msg_data->target_uri: to),
 					&acc->cfg.id,
 					to, NULL, NULL, -1, NULL, &tdata);
