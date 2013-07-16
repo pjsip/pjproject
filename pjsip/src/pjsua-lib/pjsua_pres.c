@@ -2094,7 +2094,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     acc = &pjsua_var.acc[acc_id];
 
-    if (!acc->cfg.mwi_enabled) {
+    if (!acc->cfg.mwi_enabled || !acc->regc) {
 	if (acc->mwi_sub) {
 	    /* Terminate MWI subscription */
 	    pjsip_evsub *sub = acc->mwi_sub;
