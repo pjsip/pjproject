@@ -1842,6 +1842,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
                 /* Do not return failure first, allow the application
                  * to set the answer in the on_rx_reinvite() callback.
                  */
+        	PJ_LOG(5,(inv->obj_name, "Ignoring on_rx_offer() status "
+        		  "because on_rx_reinvite() is implemented"));
                 return PJ_SUCCESS;
             }
 	    return PJ_EINVALIDOP;
@@ -4370,12 +4372,16 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
             if (status == PJ_SUCCESS && mod_inv.cb.on_rx_reinvite &&
                 inv->notify)
             {
+        	pj_status_t rc;
+
 	        sdp_info = pjsip_rdata_get_sdp_info(rdata);
-                if ((*mod_inv.cb.on_rx_reinvite)
-                        (inv, sdp_info->sdp, rdata) == PJ_SUCCESS)
-                {
+                rc = (*mod_inv.cb.on_rx_reinvite)(inv, sdp_info->sdp,
+                				  rdata);
+                if (rc == PJ_SUCCESS) {
                     /* Application will send its own response.
                      * Our job is done. */
+		    PJ_LOG(5,(inv->obj_name, "on_rx_reinvite() returns %d",
+			      rc));
                     return;
                 }
 
