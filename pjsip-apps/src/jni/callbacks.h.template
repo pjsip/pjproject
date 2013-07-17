@@ -2,14 +2,46 @@
 
 #include <pjsua-lib/pjsua.h>
 
+/*
+ * Wrapper of pjsua_logging_config callback
+ */
+class PjsuaLoggingConfigCallback {
+public:
+  virtual void on_log(int level, const char *data) {}
+  virtual ~PjsuaLoggingConfigCallback() {}
+};
+
 #ifndef SWIG /* SWIG should ignore these */
-class PjsuaCallback;
-extern void setPjsuaCallback(PjsuaCallback* callback);
-extern pjsua_callback* PJSUA_CALLBACK_PROXY;
+extern void pjsua_logging_config_callback_proxy(int level, const char *data, int len);
+extern void setPjsuaLoggingConfigCallback(PjsuaLoggingConfigCallback *callback);
 #endif
 
+
+/*
+ * Wrapper of pj_timer_heap_callback
+ */
+class PjTimerHeapCallback {
+public:
+  virtual void on_timer(pj_timer_heap_t *timer_heap, pj_timer_entry *entry) {}
+  virtual ~PjTimerHeapCallback() {}
+};
+
+#ifndef SWIG /* SWIG should ignore these */
+extern void pj_timer_heap_callback_proxy(pj_timer_heap_t *timer_heap, pj_timer_entry *entry);
+extern void setPjTimerHeapCallback(pj_timer_entry *entry, PjTimerHeapCallback *callback);
+#endif
+
+
+/*
+ * Wrapper of pjsua_callback
+ */
 class PjsuaCallback {
 public:
   $PJSUA_CALLBACK_CLASS$
   virtual ~PjsuaCallback() {}
 };
+
+#ifndef SWIG /* SWIG should ignore these */
+extern void setPjsuaCallback(PjsuaCallback* callback);
+extern pjsua_callback* pjsua_callback_proxy;
+#endif

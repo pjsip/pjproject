@@ -12,6 +12,8 @@ PJ_ROOT_PATH = "../../../"
 SOURCE_PATH  = PJ_ROOT_PATH + "pjsip/include/pjsua-lib/pjsua.h"
 #SOURCE_PATH  = PJ_ROOT_PATH + "pjlib-util/include/pjlib-util/scanner.h"
 #SOURCE_PATH  = PJ_ROOT_PATH + "pjlib/include/pj/types.h"
+OUTDIR = "output" if len(sys.argv)<=1 else sys.argv[1]
+
 
 # CPP is needed by pycparser.
 if sys.platform == 'win32':
@@ -61,6 +63,8 @@ FORCE_STRUCT_AS_OPAQUE = [
 	'pjsip_tx_data_op_key',
 	'pjsip_rx_data_op_key',
 	'pjsip_module',
+	'pjsip_uri',
+	'pjsip_uri_vptr',
 	'pjmedia_port',
 	'pjmedia_transport',
 	'pjsua_media_transport'
@@ -71,7 +75,7 @@ FORCE_EXPORT = [
 ]
 
 class MyGen(c_generator.CGenerator):
-	
+
 	def __init__(self, ast):
 		super(MyGen, self).__init__()
 		self.ast = ast
@@ -85,7 +89,7 @@ class MyGen(c_generator.CGenerator):
 			name = self._get_node_name(ext)
 			if name and not name.startswith(BASE_PREFIX):
 				continue
-		
+
 			if name in self.nodes:
 				self.nodes[name].append(ext)
 				# always put typedef later, swig issue
@@ -93,7 +97,7 @@ class MyGen(c_generator.CGenerator):
 					self.nodes[name].reverse()
 			else:
 				self.nodes[name] = [ext]
-				
+
 		# Generate dependencies, they are all APIs to be exported
 		for name in self.nodes.keys():
 			if (not name) or \
@@ -101,7 +105,7 @@ class MyGen(c_generator.CGenerator):
 					  and self._check_video(name)):
 				self._add_dep(name)
 		self.deps_frozen = True
-	
+
 	# Override visit_IdentifierType() to collect "node name" and generate dependencies
 	# from this node's children
 	def visit_IdentifierType(self, n):
@@ -113,7 +117,7 @@ class MyGen(c_generator.CGenerator):
 		if NO_VIDEO and name and ((name.find('_vid_') > 0) or (name.find('_video_') > 0)):
 			return False
 		return True
-	
+
 	def _get_node_name(self, node):
 		s = getattr(node, 'name', None)
 		if s:
@@ -134,11 +138,11 @@ class MyGen(c_generator.CGenerator):
 		if (name and not name.startswith(BASE_PREFIX)) or \
 			name in self.deps or name in self.deps_pending:
 			return
-			
+
 		if name in FORCE_STRUCT_AS_OPAQUE:
 			self.deps.append(name)
 			return
-			
+
 		self.deps_pending.append(name)
 		for node in self.nodes[name]:
 			self.visit(node)
@@ -146,7 +150,7 @@ class MyGen(c_generator.CGenerator):
 			print 'Error initializing dep!'
 			sys.exit(1)
 		self.deps.append(name)
-		
+
 	# Opaque struct is identified by empty struct member declaration.
 	def _is_struct_opaque(self, node):
 		if isinstance(node, c_ast.Typedef) and isinstance(node.type, c_ast.TypeDecl) and \
@@ -176,15 +180,14 @@ class MyGen(c_generator.CGenerator):
 			code = code.replace('typedef struct '+name+' '+name+';\n', '', 1)
 			code = code.replace('typedef enum '+name+' '+name+';\n', '', 1)
 		return code
-	
-	def _gen_pjsua_callback(self):
+
+	def _gen_pjsua_callback(self, code):
 		# init
 		cbclass  = ''
 		cbproxy = ''
 		cbdef = []
 
-		n = self.nodes['pjsua_callback'][0]
-		raw_lines = self._print_node(n).splitlines()
+		raw_lines = code.splitlines()
 		for idx, line in enumerate(raw_lines):
 			if idx in [0, 1, len(raw_lines)-1]: continue
 			fstrs = []
@@ -207,7 +210,7 @@ class MyGen(c_generator.CGenerator):
 					continue
 				fstrs[0] = m.group(1).strip()
 				fstrs[2] = m.group(3)
-		
+
 			cbclass += '  virtual ' + ' '.join(fstrs)
 			if fstrs[0] == 'void':
 				cbclass += ' {}\n'
@@ -226,11 +229,38 @@ class MyGen(c_generator.CGenerator):
 				cbproxy += ' { return cb->'+fstrs[1]+'('+','.join(params)+'); }\n'
 
 			cbdef.append('  &' + fstrs[1])
-				
-		# trail	
-		
+
 		return [cbclass, cbproxy, ',\n'.join(cbdef)+'\n']
-	
+
+	def _process_pjsua_callback(self, name, code):
+		if name != 'pjsua_callback':
+			return code
+
+		cb = self._gen_pjsua_callback(code)
+
+		fout = open(OUTDIR+'/callbacks.h', 'w+')
+		fin  = open('callbacks.h.template', 'r')
+		for line in fin:
+			if line.find(r'$PJSUA_CALLBACK_CLASS$') >= 0:
+				fout.write(cb[0])
+			else:
+				fout.write(line)
+		fin.close()
+		fout.close()
+
+		fout = open(OUTDIR+'/callbacks.c', 'w+')
+		fin  = open('callbacks.c.template', 'r')
+		for line in fin:
+			if line.find(r'$PJSUA_CALLBACK_PROXY$') >= 0:
+				fout.write(cb[1])
+			elif line.find(r'$PJSUA_CALLBACK_DEF$') >= 0:
+				fout.write(cb[2])
+			else:
+				fout.write(line)
+		fin.close()
+		fout.close()
+		return ''
+
 	# Generate code from the specified node.
 	def _print_node(self, node):
 		s = ''
@@ -247,33 +277,12 @@ class MyGen(c_generator.CGenerator):
 			ss = ''
 			for node in self.nodes[name]:
 				ss += self._print_node(node)
-			s += self._process_opaque_struct(name, ss)
-		return s
-	
-	def write_pjsua_callback(self, outdir):
-		cb = self._gen_pjsua_callback()
-		
-		fout = open(outdir+'/callbacks.h', 'w+')
-		fin  = open('callbacks.h.template', 'r')
-		for line in fin:
-			if line.find(r'$PJSUA_CALLBACK_CLASS$') >= 0:
-				fout.write(cb[0])
-			else:
-				fout.write(line)
-		fin.close()
-		fout.close()
 
-		fout = open(outdir+'/callbacks.c', 'w+')
-		fin  = open('callbacks.c.template', 'r')
-		for line in fin:
-			if line.find(r'$PJSUA_CALLBACK_PROXY$') >= 0:
-				fout.write(cb[1])
-			elif line.find(r'$PJSUA_CALLBACK_DEF$') >= 0:
-				fout.write(cb[2])
-			else:
-				fout.write(line)
-		fin.close()
-		fout.close()
+			ss = self._process_opaque_struct(name, ss)
+			ss = self._process_pjsua_callback(name, ss)
+			s += ss
+		return s
+
 
 # MAIN			
 ast = parse_file(SOURCE_PATH, use_cpp=True, cpp_path=CPP_PATH, cpp_args=CPP_CFLAGS)
@@ -289,10 +298,6 @@ mygen = MyGen(ast)
 #print '\n\nFound ' + str(len(mygen.deps)) + ' dependencies:'
 #for d in mygen.deps:
 #   print d
-
-sys.argv.pop(0)
-outdir = sys.argv.pop() if len(sys.argv) else 'output'
-mygen.write_pjsua_callback(outdir)
 
 s = mygen.go()
 print s

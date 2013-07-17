@@ -1,5 +1,12 @@
 /* $Id$ */
 
+/* TODO:
+ * - fix memory leaks in pj_str_t - java String typemaps
+ * - typemap for pj_str_t as output param for callback/director,
+ *   e.g: "st_text" param in pjsua_callback::on_call_replace_request()
+ * - workaround for nested struct/union, i.e: moving out inner classes to global scope
+ */
+
 %module (directors="1") pjsua
 
 %include "enums.swg"
@@ -14,6 +21,14 @@
  */
 %rename("%(strip:[pjsua_])s", %$isfunction) "";
 
+/* Suppress pjsua_schedule_timer2(), app can still use pjsua_schedule_timer() */
+%ignore pjsua_schedule_timer2;
+
+/* Suppress aux function pjsua_resolve_stun_servers(), usually app won't need this
+ * as app can just simply configure STUN server to use STUN.
+ */
+%ignore pjsua_resolve_stun_servers;
+
 /* Map 'void *' simply as long, app can use this "long" as index of its real user data */
 %apply long long { void * };
 
@@ -25,6 +40,9 @@
 /* Map pj_bool_t */
 %apply bool { pj_bool_t };
 
+/* Map pjsua_call_dump() output buffer */
+%apply (char *STRING, size_t LENGTH) { (char *buffer, unsigned maxlen) };
+
 /* Map "int*" & "unsigned*" as input & output */
 %apply unsigned	*INOUT  { unsigned * };
 %apply int      *INOUT  { int * };
@@ -32,8 +50,10 @@
 /* Map the following args as input & output */
 %apply int      *INOUT	{ pj_stun_nat_type * };
 %apply int      *INOUT	{ pjsip_status_code * };
-%apply int[ANY]         { pjmedia_format_id dec_fmt_id[ANY] };
 %apply pj_str_t *INOUT  { pj_str_t *p_contact };
+
+/* Apply array of integer on array of enum */
+%apply int[ANY]         { pjmedia_format_id dec_fmt_id[ANY] };
 
 /* Handle members typed array of pj_str_t */
 MY_JAVA_MEMBER_ARRAY_OF_STR(pjsua_config, nameserver, nameserver_count)

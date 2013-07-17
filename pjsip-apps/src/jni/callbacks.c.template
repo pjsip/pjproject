@@ -2,6 +2,42 @@
 
 #include "callbacks.h"
 
+/*
+ * Wrapper of pjsua_logging_config callback
+ */
+static PjsuaLoggingConfigCallback *pjsua_logging_config_cb = NULL;
+
+void pjsua_logging_config_callback_proxy(int level, const char *data, int len)
+{
+  PJ_UNUSED_ARG(len);
+  pjsua_logging_config_cb->on_log(level, data);
+}
+
+void setPjsuaLoggingConfigCallback(PjsuaLoggingConfigCallback *callback)
+{
+  pjsua_logging_config_cb = callback;
+}
+
+
+/*
+ * Wrapper of pj_timer_heap_callback
+ */
+void pj_timer_heap_callback_proxy(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
+{
+  PjTimerHeapCallback *cb = (PjTimerHeapCallback*)entry->user_data;
+  pj_assert(cb);
+  cb->on_timer(timer_heap, entry);
+}
+
+void setPjTimerHeapCallback(pj_timer_entry *entry, PjTimerHeapCallback *callback)
+{
+  entry->user_data = callback;
+}
+
+
+/*
+ * Wrapper of pjsua_callback
+ */
 static PjsuaCallback* cb = NULL;
 
 void setPjsuaCallback(PjsuaCallback* callback) {
@@ -14,4 +50,4 @@ static pjsua_callback my_cb_proxy = {
   $PJSUA_CALLBACK_DEF$
 };
 
-pjsua_callback* PJSUA_CALLBACK_PROXY = &my_cb_proxy;
+pjsua_callback* pjsua_callback_proxy = &my_cb_proxy;

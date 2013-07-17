@@ -4,18 +4,11 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
 
-import org.pjsip.pjsua.pj_pool_t;
-import org.pjsip.pjsua.pjsip_rx_data;
-import org.pjsip.pjsua.pjsip_transport_type_e;
+import org.pjsip.pjsua.*;
 
-import org.pjsip.pjsua.pjsua;
-import org.pjsip.pjsua.pjsua_acc_config;
-import org.pjsip.pjsua.pjsua_call_info;
-import org.pjsip.pjsua.pjsua_call_media_status;
-import org.pjsip.pjsua.pjsua_config;
-import org.pjsip.pjsua.pjsua_logging_config;
-import org.pjsip.pjsua.pjsua_transport_config;
-import org.pjsip.pjsua.PjsuaCallback;
+class app_config {
+	public static int cur_call_id = -1;
+}
 
 class MyPjsuaCallback extends PjsuaCallback {
 	@Override
@@ -29,6 +22,8 @@ class MyPjsuaCallback extends PjsuaCallback {
 			pjsua.conf_connect(0, info.getConf_slot());
 		}
 	}
+	
+	/* Testing pj_str_t-String map with director */
 	@Override
 	public void on_pager(int call_id, String from, String to, String contact, String mime_type, String body)
 	{
@@ -43,8 +38,31 @@ class MyPjsuaCallback extends PjsuaCallback {
 	public void on_incoming_call(int acc_id, int call_id, pjsip_rx_data rdata) {
 		/* Auto answer */
 		pjsua.call_answer(call_id, 200, null, null);
+		app_config.cur_call_id = call_id;
 	}
 }
+
+class MyLogger extends PjsuaLoggingConfigCallback {
+	@Override
+	public void on_log(int level, String data)
+	{
+		System.out.print("LOG: " + data);
+	}
+}
+
+class MyTimerCallback extends PjTimerHeapCallback {
+	private int _user_data;
+	
+	/* Use this class itself to store app user data */
+	MyTimerCallback(int user_data) { _user_data = user_data; }
+	
+	@Override
+	public void on_timer(pj_timer_heap_t timer_heap, pj_timer_entry entry)
+	{
+		System.out.println("======== Timer fired (user data = " + _user_data + ")");
+	}
+}
+
 
 public class hello {
 	static {
@@ -79,9 +97,14 @@ public class hello {
 		{
 			pjsua_config cfg = new pjsua_config();
 			pjsua.config_default(cfg);
-			/* Setup callback */
 			cfg.setCb(new MyPjsuaCallback());
-			status = pjsua.init(cfg, null, null);
+
+			pjsua_logging_config log_cfg = new pjsua_logging_config();
+			pjsua.logging_config_default(log_cfg);
+			log_cfg.setLevel(4);
+			log_cfg.setCb(new MyLogger());
+
+			status = pjsua.init(cfg, log_cfg, null);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error inintializing pjsua", status);
 			}
@@ -116,10 +139,23 @@ public class hello {
 		
 		/* Make call to the URL. */
 		if (false) {
-			status = pjsua.call_make_call(acc_id[0], "sip:localhost", null, 0, null, call_id);
+			status = pjsua.call_make_call(acc_id[0], "sip:localhost:6000", null, 0, null, call_id);
 			if (status != pjsua.PJ_SUCCESS) {
 				pj_error_exit("Error making call", status);
 			}
+			app_config.cur_call_id = call_id[0];
+		}
+		
+		/* Test timer */
+		{
+			pj_timer_entry timer = new pj_timer_entry();
+			timer.setCb(new MyTimerCallback(1234567890));
+
+			pj_time_val tv = new pj_time_val();
+			tv.setSec(0);
+			tv.setMsec(1000);
+
+			pjsua.schedule_timer(timer, tv);
 		}
 		
 		/* Wait until user press "q" to quit. */
@@ -140,6 +176,7 @@ public class hello {
 				break;
 			} else if (userInput.equals("h")) {
 				pjsua.call_hangup_all();
+				app_config.cur_call_id = -1;
 			} else if (userInput.equals("c")) {
 				/* Test string as output param, it is wrapped as string array */
 				String[] contact = new String[1];
@@ -153,6 +190,22 @@ public class hello {
 				pjsua.dump(false);
 			} else if (userInput.equals("dd")) {
 				pjsua.dump(true);
+			} else if (userInput.equals("dq")) {
+				if (app_config.cur_call_id == -1) {
+					System.out.println("No active call");
+					continue;
+				}
+				
+				byte[] buf = new byte[1024*2];
+				pjsua.call_dump(app_config.cur_call_id, true, buf, "");
+
+				/* Build string from byte array, find null terminator first */
+				int len = 0;
+				while (len < buf.length && buf[len] != 0) ++len;
+				String call_dump = new String(buf, 0, len);
+
+				System.out.println("Statistics of call " + app_config.cur_call_id);
+				System.out.println(call_dump);
 			}
 		}
 

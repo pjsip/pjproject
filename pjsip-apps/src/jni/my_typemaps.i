@@ -213,6 +213,7 @@ public:
       memcpy($1->ptr, str_ptr, str_len);
       $1->slen = str_len;
     }
+    jenv->ReleaseStringUTFChars($input, str_ptr);
   }
 }
 
