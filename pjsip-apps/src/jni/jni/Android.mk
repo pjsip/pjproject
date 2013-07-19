@@ -1,4 +1,4 @@
-# $Id$
+# $Id: Makefile 4563 2013-07-15 05:34:14Z bennylp $
 
 # Get PJ build settings
 include ../../../build.mak
@@ -41,44 +41,63 @@ MY_LDFLAGS	 = $(PJ_LDFLAGS) $(PJ_LDLIBS) $(MY_JNI_LDFLAGS) -static-libstdc++
 
 # Output/intermediate path settings
 MY_PACKAGE	 = org.pjsip.pjsua
-MY_OUT_DIR	 = output
+MY_OUT_DIR	 = jni/output
 MY_SWIG_IF	 = $(MY_OUT_DIR)/pjsua.i
 MY_SWIG_FLAG	 = -c++ -I$(MY_OUT_DIR) # -debug-tmsearch -debug-tmused # -Wall
 MY_SWIG_WRAPPER	 = $(MY_OUT_DIR)/pjsua_wrap
-MY_PACKAGE_SRC	 = $(MY_OUT_DIR)/src/$(subst .,/,$(MY_PACKAGE))
+MY_PACKAGE_SRC	 = src/$(subst .,/,$(MY_PACKAGE))
 MY_PACKAGE_BIN	 = $(MY_OUT_DIR)/bin
 
-all: $(MY_JNI_LIB) java
+TEST_PACKAGE	 = org.pjsip.hello
+TEST_SRC	 = src/$(subst .,/,$(TEST_PACKAGE))
+
+# Android build settings
+LOCAL_PATH	:= $(call my-dir)/pjsip-apps/src/jni
+LOCAL_MODULE    := libpjsua
+LOCAL_MODULE_FILENAME := libpjsua
+LOCAL_CFLAGS    := -Werror $(APP_CFLAGS) -frtti
+LOCAL_LDFLAGS   := $(APP_LDFLAGS)
+LOCAL_LDLIBS    := $(APP_LDLIBS)
+LOCAL_SRC_FILES := $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp
+
+MY_JNI_WRAP	:= $(MY_SWIG_WRAPPER).cpp
+
+jni: $(MY_JNI_LIB) java
 
 clean:
 	rm -rf $(MY_OUT_DIR)
+	rm -rf $(MY_PACKAGE_SRC)
 
-$(MY_SWIG_IF).tmp: swig_gen.py
+$(MY_SWIG_IF).tmp: jni/swig_gen.py
 	@mkdir -p $(MY_OUT_DIR)
-	python swig_gen.py > $(MY_SWIG_IF).tmp
+	python jni/swig_gen.py > $(MY_SWIG_IF).tmp
 
-$(MY_SWIG_IF): header.i $(MY_SWIG_IF).tmp
-	cat header.i > $(MY_SWIG_IF)
+$(MY_SWIG_IF): jni/header.i $(MY_SWIG_IF).tmp
+	cat jni/header.i > $(MY_SWIG_IF)
 	cat $(MY_SWIG_IF).tmp >> $(MY_SWIG_IF)
 
-$(MY_SWIG_WRAPPER).c: $(MY_SWIG_IF) callbacks.i my_typemaps.i
+$(MY_SWIG_WRAPPER).cpp: $(MY_SWIG_IF) jni/callbacks.i jni/my_typemaps.i
 	@# Cleanup java outdir first, to remove any old/deprecated java files
 	rm -rf $(MY_PACKAGE_SRC)
 	@mkdir -p $(MY_PACKAGE_SRC)
-	$(MY_SWIG) $(MY_SWIG_FLAG) -o $(MY_SWIG_WRAPPER).c -package $(MY_PACKAGE) \
+	$(MY_SWIG) $(MY_SWIG_FLAG) -o $(MY_SWIG_WRAPPER).cpp -package $(MY_PACKAGE) \
 		-outdir $(MY_PACKAGE_SRC) -java $(MY_SWIG_IF) > $(MY_SWIG_WRAPPER)-tm.log
 
-$(MY_JNI_LIB): $(MY_SWIG_WRAPPER).c
+$(MY_JNI_LIB): $(MY_SWIG_WRAPPER).cpp
 	@mkdir -p $(MY_PACKAGE_BIN)
-	$(PJ_CXX) -shared -o $(MY_JNI_LIB) $(MY_SWIG_WRAPPER).c $(MY_OUT_DIR)/callbacks.c \
+	$(PJ_CXX) -shared -o $(MY_JNI_LIB) $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 
-java: hello.java
+java: $(TEST_SRC)/hello.java
 	@mkdir -p $(MY_PACKAGE_BIN)
 	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) $(MY_PACKAGE_SRC)/*.java
-	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) -classpath "$(MY_PACKAGE_BIN)" hello.java
+	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) -classpath "$(MY_PACKAGE_BIN)" $(TEST_SRC)/hello.java
 
 test: $(MY_PACKAGE_BIN)/hello.class
 	@# Need to specify classpath and library path, alternatively, they can be set via
 	@# CLASSPATH and java.library.path env settings
 	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" hello
+
+.PHONY: $(MY_JNI_WRAP)
+
+include $(BUILD_SHARED_LIBRARY)
