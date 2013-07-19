@@ -213,6 +213,15 @@ PJ_DECL(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
                                               pj_timer_heap_callback *cb );
 
 /**
+ * Queries whether a timer entry is currently running.
+ *
+ * @param entry     The timer entry to query.
+ *
+ * @return          PJ_TRUE if the timer is running.  PJ_FALSE if not.
+ */
+PJ_DECL(pj_bool_t) pj_timer_entry_running( pj_timer_entry *entry );
+
+/**
  * Schedule a timer entry which will expire AFTER the specified delay.
  *
  * @param ht        The timer heap.

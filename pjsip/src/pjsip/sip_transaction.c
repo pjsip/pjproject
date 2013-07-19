@@ -2224,6 +2224,18 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
 {
     pj_status_t status;
 
+    if (resched && pj_timer_entry_running(&tsx->retransmit_timer)) {
+	/* We've been asked to reschedule but the timer is already rerunning.
+	 * This can only happen in a race condition where, between removing
+	 * this retransmit timer from the heap and actually scheduling it,
+	 * another thread has got in and rescheduled the timer itself.  In
+	 * this scenario, the transmission has already happened and so we
+	 * should just quit out immediately, without either resending the
+	 * message or restarting the timer.
+	 */
+	return PJ_SUCCESS;
+    }
+
     PJ_ASSERT_RETURN(tsx->last_tx!=NULL, PJ_EBUG);
 
     PJ_LOG(5,(tsx->obj_name, "Retransmiting %s, count=%d, restart?=%d", 
@@ -2332,6 +2344,7 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	 * timeout.
 	 */
 	lock_timer(tsx);
+	tsx_cancel_timer( tsx, &tsx->timeout_timer );
 	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
 	                    TIMEOUT_TIMER);
 	unlock_timer(tsx);
@@ -2677,6 +2690,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		}
 
 		lock_timer(tsx);
+		tsx_cancel_timer(tsx, &tsx->timeout_timer);
 		tsx_schedule_timer( tsx, &tsx->timeout_timer,
                                     &timeout, TIMEOUT_TIMER);
 		unlock_timer(tsx);
@@ -2705,6 +2719,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	     * non-reliable transports, and zero for reliable transports.
 	     */
 	    lock_timer(tsx);
+	    tsx_cancel_timer(tsx, &tsx->timeout_timer);
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		/* Start timer H for INVITE */
 		tsx_schedule_timer(tsx, &tsx->timeout_timer,

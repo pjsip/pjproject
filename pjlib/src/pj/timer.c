@@ -466,6 +466,11 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
     return entry;
 }
 
+PJ_DEF(pj_bool_t) pj_timer_entry_running( pj_timer_entry *entry )
+{
+    return (entry->_timer_id >= 1);
+}
+
 #if PJ_TIMER_DEBUG
 static pj_status_t schedule_w_grp_lock_dbg(pj_timer_heap_t *ht,
                                            pj_timer_entry *entry,
