@@ -15,6 +15,12 @@ public:
 %}
 
 /*
+ * Typemap for setting member of inner struct/union.
+ */
+%typemap(memberin) NESTED_INNER "if ($input) pj_memcpy(&$1, $input, sizeof(*$input));"
+
+
+/*
  * Add director typemaps for "int *INOUT"
  */
 %typemap(javadirectorin) int *INOUT "$jniinput"

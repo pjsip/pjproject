@@ -789,10 +789,10 @@ struct pjsip_msg
     union
     {
 	/** Request Line. */
-	struct pjsip_request_line   req;
+	pjsip_request_line   req;
 
 	/** Status Line. */
-	struct pjsip_status_line    status;
+	pjsip_status_line    status;
     } line;
 
     /** List of message headers. */

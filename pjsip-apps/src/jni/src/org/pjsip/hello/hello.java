@@ -46,7 +46,7 @@ class MyLogger extends PjsuaLoggingConfigCallback {
 	@Override
 	public void on_log(int level, String data)
 	{
-		System.out.print("LOG: " + data);
+		System.out.print("LOG" + level + ": " + data);
 	}
 }
 
@@ -73,6 +73,12 @@ public class hello {
 		pjsua.perror("hello", message, status);
 		pjsua.destroy();
 		System.exit(status);
+	}
+	
+	protected static boolean check_active_call() {
+		if (app_config.cur_call_id == -1)
+			System.out.println("No active call");
+		return (app_config.cur_call_id > -1);
 	}
 
 	public static void main(String[] args) {
@@ -191,10 +197,7 @@ public class hello {
 			} else if (userInput.equals("dd")) {
 				pjsua.dump(true);
 			} else if (userInput.equals("dq")) {
-				if (app_config.cur_call_id == -1) {
-					System.out.println("No active call");
-					continue;
-				}
+				if (!check_active_call()) continue;
 				
 				byte[] buf = new byte[1024*2];
 				pjsua.call_dump(app_config.cur_call_id, true, buf, "");
@@ -206,6 +209,13 @@ public class hello {
 
 				System.out.println("Statistics of call " + app_config.cur_call_id);
 				System.out.println(call_dump);
+			} else if (userInput.equals("si")) {
+				/* Test nested struct in pjsua_stream_info */
+				if (!check_active_call()) continue;
+
+				pjsua_stream_info si = new pjsua_stream_info();
+				pjsua.call_get_stream_info(app_config.cur_call_id, 0, si);
+				System.out.println("Audio codec being used: " + si.getInfo().getAud().getFmt().getEncoding_name());
 			}
 		}
 

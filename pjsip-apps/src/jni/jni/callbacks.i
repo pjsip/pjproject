@@ -56,3 +56,12 @@
 %ignore pjsip_msg_body::clone_data;
 %ignore pjsip_tx_data::cb;
 %ignore pjsip_transaction::state_handler;
+
+/* Ignore some struct members with aux credential callbacks, at least temporarily */
+%ignore pjsip_cred_info::ext;
+%ignore pjsip_cred_info_ext;
+%ignore pjsip_cred_info_ext_aka;
+
+%ignore pj_stun_auth_cred::data::dyn_cred;
+%ignore pj_stun_auth_cred_data::dyn_cred;
+%ignore pj_stun_auth_cred_data_dyn_cred;

@@ -261,6 +261,67 @@ class MyGen(c_generator.CGenerator):
 		fout.close()
 		return ''
 
+
+	# Move out inner struct/union
+	def _process_nested_struct_union(self, code):
+		if not (code.startswith('struct') or \
+			code.startswith('typedef struct') or \
+			code.startswith('typedef union')):
+			return code
+			
+		# max nested level is 5
+		name = ['','','','','']
+		type = ['','','','','']
+		content = ['','','','','']
+		level = 0
+		s = ''
+		for line in code.splitlines():
+			line_s = line.lstrip()
+			if (not line_s) or (line_s == '{'): continue
+
+			last_level = level
+			level = (len(line) - len(line_s)) / 2
+
+			if level < last_level:
+				if not line_s.startswith('}'):
+					print "bad tabulation!"
+
+				# closing bracket, get var name
+				varname = ''
+				vartail = ''
+				m = re.match(r'\}\s*(\w+)(.*);', line_s)
+				if m:
+					varname = m.group(1)
+					vartail = m.group(2)
+					if level > 0:
+						name[level] = '$name' + str(level-1) + '$_' + varname
+				# print inner struct/union in outer
+				ss = type[level] + ' ' + name[level] + '\n'
+				ss += '{\n' + content[level] + '};\n'
+				if level > 0:
+					s += "%inline %{\n" + ss + '%}\n'
+					s += "%apply NESTED_INNER { " + name[level] + " " + varname + " };\n"
+				else:
+					s += ss
+				content[level] = ''
+				# print inner struct member var at global scope
+				if level > 0:
+					content[level-1] += ' '*level*2 + type[level] + ' ' + name[level] + ' ' + varname + vartail + ';\n'
+					s = s.replace('$name' + str(level) + '$', '$name' + str(level-1) + '$_' + varname)
+				else:
+					s = s.replace('$name' + str(level) + '$', name[level])
+
+			elif level >= last_level:
+				if line_s.startswith('typedef'): line_s = line_s[8:]
+				if (line_s.startswith('union') or line_s.startswith('struct')) and not line_s.endswith(';'):
+					ll = line_s.split()
+					type[level] = ll[0]
+					name[level] = ll[1] if len(ll) > 1 else ''
+				else:
+					content[level-1] += line + '\n'
+		return s
+		
+
 	# Generate code from the specified node.
 	def _print_node(self, node):
 		s = ''
@@ -280,6 +341,7 @@ class MyGen(c_generator.CGenerator):
 
 			ss = self._process_opaque_struct(name, ss)
 			ss = self._process_pjsua_callback(name, ss)
+			ss = self._process_nested_struct_union(ss)
 			s += ss
 		return s
 

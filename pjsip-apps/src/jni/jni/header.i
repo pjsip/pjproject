@@ -77,16 +77,6 @@ MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_session, pjmedia_sdp_media, media, m
 MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_media, pjmedia_sdp_bandw, bandw, bandw_count)
 MY_JAVA_MEMBER_ARRAY_OF_POINTER(pjmedia_sdp_media, pjmedia_sdp_attr, attr, attr_count)
 
-/* C++ SWIG target doesn't support nested class (C version does though!).
- * This is minimal workaround, ignore nested class as if it is not there.
- * TODO: proper workaround will be moving out inner classes to global scope.
- */
-#ifdef __cplusplus
-    %nestedworkaround pjmedia_codec_fmtp::param;
-    %nestedworkaround pjsip_cred_info::ext;
-    %nestedworkaround pjsip_event::body;
-#endif
-
 %include "../callbacks.i"
 
 /* Global constants */
