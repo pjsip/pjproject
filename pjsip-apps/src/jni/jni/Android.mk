@@ -60,7 +60,7 @@ LOCAL_LDFLAGS   := $(APP_LDFLAGS)
 LOCAL_LDLIBS    := $(APP_LDLIBS)
 LOCAL_SRC_FILES := $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp
 
-MY_JNI_WRAP	:= $(MY_SWIG_WRAPPER).cpp
+MY_JNI_WRAP	:= $(LOCAL_PATH)/$(MY_SWIG_WRAPPER).cpp
 
 jni: $(MY_JNI_LIB) java
 
@@ -97,6 +97,8 @@ test: $(MY_PACKAGE_BIN)/hello.class
 	@# Need to specify classpath and library path, alternatively, they can be set via
 	@# CLASSPATH and java.library.path env settings
 	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" hello
+
+$(MY_JNI_WRAP): $(MY_SWIG_WRAPPER).cpp
 
 .PHONY: $(MY_JNI_WRAP)
 
