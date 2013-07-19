@@ -65,14 +65,8 @@ if test "$1" = "--use-ndk-cflags"; then
   export CFLAGS="${CFLAGS} ${NDK_CFLAGS}"
 fi
 
-HOST_OS=$(uname -s)
-case $HOST_OS in
-  Darwin) BUILD_MACHINE="darwin-x86";;
-  Linux) BUILD_MACHINE="linux-x86";;
-  CYGWIN*|*_NT-*) BUILD_MACHINE="windows";;
-esac
-
-ANDROID_TC="${ANDROID_NDK_ROOT}/toolchains/${TC_DIR}-4.4.3/prebuilt/${BUILD_MACHINE}"
+ANDROID_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/toolchains/${TC_DIR}-* | sed 's/clang/0/' | sort -gr | head -1`
+ANDROID_TC=`ls -d ${ANDROID_TC_VER}/prebuilt/*`
 if test ! -d ${ANDROID_TC}; then
   echo "$F error: unable to find directory ${ANDROID_TC} in Android NDK"
   exit 1
