@@ -32,6 +32,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 
 
@@ -1748,6 +1749,10 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    if (sub->expires->ivalue != 0) {
 		unsigned timeout = (sub->expires->ivalue > TIME_UAC_REFRESH) ?
 		    sub->expires->ivalue - TIME_UAC_REFRESH : sub->expires->ivalue;
+
+		/* Reduce timeout by about 1 - 10 secs (randomized) */
+		if (timeout > 10)
+		    timeout += -10 + (pj_rand() % 10);
 
 		PJ_LOG(5,(sub->obj_name, "Will refresh in %d seconds", 
 			  timeout));
