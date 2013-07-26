@@ -10,6 +10,7 @@ import org.pjsip.pjsua.*;
 
 class app_config {
 	public static int cur_call_id = -1;
+	public static int cur_acc_id = -1;
 }
 
 class MyPjsuaCallback extends PjsuaCallback {
@@ -82,11 +83,10 @@ public class hello {
 			System.out.println("No active call");
 		return (app_config.cur_call_id > -1);
 	}
-
-	public static void main(String[] args) {
+	
+	public static int init() {
 		int[] tp_id = new int[1];
 		int[] acc_id = new int[1];
-		int[] call_id = new int[1];
 		int status;
 
 		/* Say hello first */
@@ -97,7 +97,7 @@ public class hello {
 			status = pjsua.create();
 			if (status != pjsua.PJ_SUCCESS) {
 				System.out.println("Error creating pjsua: " + status);
-				System.exit(status);
+				return status;
 			}
 		}
 		
@@ -114,7 +114,8 @@ public class hello {
 
 			status = pjsua.init(cfg, log_cfg, null);
 			if (status != pjsua.PJ_SUCCESS) {
-				pj_error_exit("Error inintializing pjsua", status);
+				System.out.println("Error initializing pjsua: " + status);
+				return status;
 			}
 		}
 		
@@ -125,7 +126,8 @@ public class hello {
 			cfg.setPort(6000);
 			status = pjsua.transport_create(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, cfg, tp_id);
 			if (status != pjsua.PJ_SUCCESS) {
-				pj_error_exit("Error creating transport", status);
+				System.out.println("Error creating transport: " + status);
+				return status;
 			}
 		}
 		
@@ -133,25 +135,19 @@ public class hello {
 		{
 			status = pjsua.acc_add_local(tp_id[0], true, acc_id);
 			if (status != pjsua.PJ_SUCCESS) {
-				pj_error_exit("Error creating local UDP account", status);
+				System.out.println("Error creating local UDP account: " + status);
+				return status;
 			}
+			app_config.cur_acc_id = acc_id[0]; 
 		}
 		
 		/* Start pjsua */
 		{
 			status = pjsua.start();
 			if (status != pjsua.PJ_SUCCESS) {
-				pj_error_exit("Error starting pjsua", status);
+				System.out.println("Error starting pjsua: " + status);
+				return status;
 			}
-		}
-		
-		/* Make call to the URL. */
-		if (false) {
-			status = pjsua.call_make_call(acc_id[0], "sip:localhost:6000", null, 0, null, call_id);
-			if (status != pjsua.PJ_SUCCESS) {
-				pj_error_exit("Error making call", status);
-			}
-			app_config.cur_call_id = call_id[0];
 		}
 		
 		/* Test timer */
@@ -164,6 +160,33 @@ public class hello {
 			tv.setMsec(1000);
 
 			pjsua.schedule_timer(timer, tv);
+		}
+		
+		return pjsua.PJ_SUCCESS;
+	}
+
+
+	public static void destroy() {
+		pjsua.destroy();
+	}
+	
+
+	public static void main(String[] args)
+	{
+		/* Init pjsua */
+		int status = init();
+		if (status != pjsua.PJ_SUCCESS) {
+			pj_error_exit("Failed initializing pjsua", status);
+		}
+		
+		/* Make call to the URL. */
+		if (args.length > 1) {
+			int[] call_id = new int[1];
+			status = pjsua.call_make_call(app_config.cur_acc_id, args[1], null, 0, null, call_id);
+			if (status != pjsua.PJ_SUCCESS) {
+				pj_error_exit("Error making call", status);
+			}
+			app_config.cur_call_id = call_id[0];
 		}
 		
 		/* Wait until user press "q" to quit. */
@@ -220,11 +243,9 @@ public class hello {
 				System.out.println("Audio codec being used: " + si.getInfo().getAud().getFmt().getEncoding_name());
 			}
 		}
-
-		/* Finally, destroy pjsua */
-		{
-			pjsua.destroy();
-		}
 		
+		/* Finally, destroy pjsua */
+		destroy();
+
 	}
 }

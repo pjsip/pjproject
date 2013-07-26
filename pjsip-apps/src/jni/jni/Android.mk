@@ -17,15 +17,9 @@ ifeq ("$(JAVA_HOME)","")
   JAVA_HOME := $(patsubst %/bin/,%,$(JAVA_BIN))
 endif
 
-# OS specific
-ifeq ($(OS),Windows_NT)
-MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,--kill-at
-MY_JNI_LIB       = $(MY_PACKAGE_BIN)/pjsua.dll
-else
 MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,-soname,pjsua.so
 MY_JNI_LIB       = $(MY_PACKAGE_BIN)/libpjsua.so
 MY_JNI_CFLAGS	 := -fPIC
-endif
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		 = swig
@@ -43,7 +37,7 @@ MY_LDFLAGS	 = $(PJ_LDFLAGS) $(PJ_LDLIBS) $(MY_JNI_LDFLAGS) -static-libstdc++
 MY_PACKAGE	 = org.pjsip.pjsua
 MY_OUT_DIR	 = jni/output
 MY_SWIG_IF	 = $(MY_OUT_DIR)/pjsua.i
-MY_SWIG_FLAG	 = -c++ -I$(MY_OUT_DIR) # -debug-tmsearch -debug-tmused # -Wall
+MY_SWIG_FLAG	 = -c++ -I$(MY_OUT_DIR)
 MY_SWIG_WRAPPER	 = $(MY_OUT_DIR)/pjsua_wrap
 MY_PACKAGE_SRC	 = src/$(subst .,/,$(MY_PACKAGE))
 MY_PACKAGE_BIN	 = $(MY_OUT_DIR)/bin
@@ -64,38 +58,20 @@ LOCAL_SRC_FILES := $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp
 jni: $(MY_JNI_LIB) java
 
 clean:
-	rm -rf $(MY_OUT_DIR)
+	rm -rf $(MY_SWIG_WRAPPER).*
 	rm -rf $(MY_PACKAGE_SRC)
-
-$(MY_SWIG_IF).tmp: jni/swig_gen.py
-	@mkdir -p $(MY_OUT_DIR)
-	python jni/swig_gen.py > $(MY_SWIG_IF).tmp
-
-$(MY_SWIG_IF): jni/header.i $(MY_SWIG_IF).tmp
-	cat jni/header.i > $(MY_SWIG_IF)
-	cat $(MY_SWIG_IF).tmp >> $(MY_SWIG_IF)
 
 $(MY_SWIG_WRAPPER).cpp: $(MY_SWIG_IF) jni/callbacks.i jni/my_typemaps.i
 	@# Cleanup java outdir first, to remove any old/deprecated java files
 	rm -rf $(MY_PACKAGE_SRC)
 	@mkdir -p $(MY_PACKAGE_SRC)
 	$(MY_SWIG) $(MY_SWIG_FLAG) -o $(MY_SWIG_WRAPPER).cpp -package $(MY_PACKAGE) \
-		-outdir $(MY_PACKAGE_SRC) -java $(MY_SWIG_IF) > $(MY_SWIG_WRAPPER)-tm.log
+		-outdir $(MY_PACKAGE_SRC) -java $(MY_SWIG_IF)
 
 $(MY_JNI_LIB): $(MY_SWIG_WRAPPER).cpp
 	@mkdir -p $(MY_PACKAGE_BIN)
 	$(PJ_CXX) -shared -o $(MY_JNI_LIB) $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
-
-java: $(TEST_SRC)/hello.java
-	@mkdir -p $(MY_PACKAGE_BIN)
-	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) $(MY_PACKAGE_SRC)/*.java
-	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) -classpath "$(MY_PACKAGE_BIN)" $(TEST_SRC)/hello.java
-
-test: $(MY_PACKAGE_BIN)/hello.class
-	@# Need to specify classpath and library path, alternatively, they can be set via
-	@# CLASSPATH and java.library.path env settings
-	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" hello
 
 $(LOCAL_PATH)/$(MY_SWIG_WRAPPER).cpp: $(MY_SWIG_WRAPPER).cpp
 
