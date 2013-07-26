@@ -1,5 +1,7 @@
 /* $Id: hello.java 4566 2013-07-17 20:20:50Z nanang $ */
 
+package org.pjsip.hello;
+
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;

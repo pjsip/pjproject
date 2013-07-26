@@ -21,7 +21,7 @@ if sys.platform == 'win32':
 	CPP_PATH='C:/devs/bin/cpp.exe'
 else:
     PYCPARSER_DIR="/Library/Python/2.7/site-packages/pycparser"
-    CPP_PATH='/Users/ming/teluu/android/android-ndk-r7c/toolchains/arm-linux-androideabi-4.4.3/prebuilt/darwin-x86/bin/arm-linux-androideabi-cpp'
+    CPP_PATH='/Users/ming/teluu/android/android-ndk-r8e/toolchains/arm-linux-androideabi-4.7/prebuilt/darwin-x86_64/bin/arm-linux-androideabi-cpp'
 
 # CPP (C preprocessor) settings
 CPP_CFLAGS   = [

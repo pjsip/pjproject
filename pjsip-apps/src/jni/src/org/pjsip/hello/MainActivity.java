@@ -10,6 +10,11 @@ public class MainActivity extends Activity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
+		
+		/* Call test app here
+		String [] args = {"sip:192.168.1.49"};
+		hello.main(args);
+		*/
 	}
 
 	@Override

@@ -1,1 +1,1 @@
-jni/Android.mk
+include jni/Android.mk

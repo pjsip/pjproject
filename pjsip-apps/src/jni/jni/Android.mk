@@ -52,15 +52,14 @@ TEST_PACKAGE	 = org.pjsip.hello
 TEST_SRC	 = src/$(subst .,/,$(TEST_PACKAGE))
 
 # Android build settings
-LOCAL_PATH	:= $(call my-dir)/pjsip-apps/src/jni
+LOCAL_PATH	:= $(PJDIR)/pjsip-apps/src/jni
+include $(CLEAR_VARS)
 LOCAL_MODULE    := libpjsua
 LOCAL_MODULE_FILENAME := libpjsua
 LOCAL_CFLAGS    := -Werror $(APP_CFLAGS) -frtti
 LOCAL_LDFLAGS   := $(APP_LDFLAGS)
 LOCAL_LDLIBS    := $(APP_LDLIBS)
 LOCAL_SRC_FILES := $(MY_SWIG_WRAPPER).cpp $(MY_OUT_DIR)/callbacks.cpp
-
-MY_JNI_WRAP	:= $(LOCAL_PATH)/$(MY_SWIG_WRAPPER).cpp
 
 jni: $(MY_JNI_LIB) java
 
@@ -98,8 +97,8 @@ test: $(MY_PACKAGE_BIN)/hello.class
 	@# CLASSPATH and java.library.path env settings
 	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" hello
 
-$(MY_JNI_WRAP): $(MY_SWIG_WRAPPER).cpp
+$(LOCAL_PATH)/$(MY_SWIG_WRAPPER).cpp: $(MY_SWIG_WRAPPER).cpp
 
-.PHONY: $(MY_JNI_WRAP)
+$(LOCAL_PATH)/$(MY_OUT_DIR)/callbacks.cpp: $(MY_OUT_DIR)/callbacks.cpp
 
 include $(BUILD_SHARED_LIBRARY)
