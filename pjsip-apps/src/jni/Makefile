@@ -82,7 +82,7 @@ java: $(TEST_SRC)/hello.java
 	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) $(MY_PACKAGE_SRC)/*.java
 	$(MY_JAVAC) -d $(MY_PACKAGE_BIN) -classpath "$(MY_PACKAGE_BIN)" $(TEST_SRC)/hello.java
 
-test: $(MY_PACKAGE_BIN)/hello.class
+test:
 	@# Need to specify classpath and library path, alternatively, they can be set via
 	@# CLASSPATH and java.library.path env settings
-	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" hello
+	$(MY_JAVA) -cp $(MY_PACKAGE_BIN) -Djava.library.path="$(MY_PACKAGE_BIN)" $(TEST_PACKAGE).hello

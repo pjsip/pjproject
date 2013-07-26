@@ -278,11 +278,11 @@ public:
 %define MY_JAVA_MEMBER_ARRAY_OF_POINTER(CLASS_NAME, TYPE, NAME, COUNT_NAME)
 
 %ignore CLASS_NAME::COUNT_NAME;
-%typemap(jni) 	   TYPE* NAME[ANY] "jlongArray"
-%typemap(jtype)    TYPE* NAME[ANY] "long[]"
-%typemap(jstype)   TYPE* NAME[ANY] "TYPE[]"
-%typemap(javain)   TYPE* NAME[ANY] "TYPE.cArrayUnwrap($javainput)"
-%typemap(javaout)  TYPE* NAME[ANY] {return TYPE.cArrayWrap($jnicall, $owner);}
+%typemap(jni) 	   TYPE* NAME[ANY], TYPE NAME[ANY] "jlongArray"
+%typemap(jtype)    TYPE* NAME[ANY], TYPE NAME[ANY] "long[]"
+%typemap(jstype)   TYPE* NAME[ANY], TYPE NAME[ANY] "TYPE[]"
+%typemap(javain)   TYPE* NAME[ANY], TYPE NAME[ANY] "TYPE.cArrayUnwrap($javainput)"
+%typemap(javaout)  TYPE* NAME[ANY], TYPE NAME[ANY] {return TYPE.cArrayWrap($jnicall, $owner);}
 
 %typemap(in)       TYPE* NAME[ANY] (jlong *jarr) %{
   if (!SWIG_JavaArrayInUlong(jenv, &jarr, (unsigned long**)&$1, $input))
@@ -290,13 +290,23 @@ public:
   arg1->COUNT_NAME = jenv->GetArrayLength($input);
 %}
 
-%typemap(freearg)  TYPE* NAME[ANY] %{ if ($1) delete [] $1; %}
+%typemap(in)       TYPE NAME[ANY] (jlong *jarr) %{
+  if (!SWIG_JavaArrayInUlong(jenv, &jarr, (unsigned long**)&$1, $input))
+    return $null;
+  arg1->COUNT_NAME = jenv->GetArrayLength($input);
+%}
+
+%typemap(freearg)  TYPE* NAME[ANY], TYPE NAME[ANY] %{ if ($1) delete [] $1; %}
 
 %typemap(memberin) TYPE* NAME[ANY] %{
   for (size_t i = 0; i < (size_t)arg1->COUNT_NAME; i++) $1[i] = $input[i];
 %}
 
-%typemap(out)      TYPE* NAME[ANY] %{
+%typemap(memberin) TYPE NAME[ANY] %{
+  for (size_t i = 0; i < (size_t)arg1->COUNT_NAME; i++) $1[i] = **(TYPE**)(&$input[i]);
+%}
+
+%typemap(out)      TYPE* NAME[ANY], TYPE NAME[ANY] %{
   $result = SWIG_JavaArrayOutUlong(jenv, (unsigned long*)$1, arg1->COUNT_NAME);
 %}
 

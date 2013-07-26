@@ -11,6 +11,14 @@ import org.pjsip.pjsua.*;
 class app_config {
 	public static int cur_call_id = -1;
 	public static int cur_acc_id = -1;
+	
+	public static int sip_port = 6000;
+	
+	public static boolean is_reg = true;
+	public static String user = "301";
+	public static String pwd = "pw301"; 
+	public static String domain = "pjsip.org"; 
+	public static String proxy[] = { "sip:sip.pjsip.org;transport=tcp" }; 
 }
 
 class MyPjsuaCallback extends PjsuaCallback {
@@ -123,7 +131,7 @@ public class hello {
 		{
 			pjsua_transport_config cfg = new pjsua_transport_config();
 			pjsua.transport_config_default(cfg);
-			cfg.setPort(6000);
+			cfg.setPort(app_config.sip_port);
 			status = pjsua.transport_create(pjsip_transport_type_e.PJSIP_TRANSPORT_UDP, cfg, tp_id);
 			if (status != pjsua.PJ_SUCCESS) {
 				System.out.println("Error creating transport: " + status);
@@ -131,7 +139,7 @@ public class hello {
 			}
 		}
 		
-		/* Add local account */
+		/* Add UDP local account */
 		{
 			status = pjsua.acc_add_local(tp_id[0], true, acc_id);
 			if (status != pjsua.PJ_SUCCESS) {
@@ -139,6 +147,52 @@ public class hello {
 				return status;
 			}
 			app_config.cur_acc_id = acc_id[0]; 
+		}
+		
+		/* Add SIP TCP transport */
+		{
+			pjsua_transport_config cfg = new pjsua_transport_config();
+			pjsua.transport_config_default(cfg);
+			cfg.setPort(app_config.sip_port);
+			status = pjsua.transport_create(pjsip_transport_type_e.PJSIP_TRANSPORT_TCP, cfg, tp_id);
+			if (status != pjsua.PJ_SUCCESS) {
+				System.out.println("Error creating transport: " + status);
+				return status;
+			}
+		}
+		
+		/* Add TCP local account */
+		{
+			status = pjsua.acc_add_local(tp_id[0], true, acc_id);
+			if (status != pjsua.PJ_SUCCESS) {
+				System.out.println("Error creating local UDP account: " + status);
+				return status;
+			}
+			app_config.cur_acc_id = acc_id[0]; 
+		}
+		
+		/* Add registered account */
+		if (app_config.is_reg) {
+			pjsip_cred_info [] cred_info = { new pjsip_cred_info() };
+			cred_info[0].setUsername(app_config.user);
+			cred_info[0].setData_type(0);
+			cred_info[0].setData(app_config.pwd);
+			cred_info[0].setRealm("*");
+			cred_info[0].setScheme("Digest");
+
+			pjsua_acc_config acc_cfg = new pjsua_acc_config();
+			pjsua.acc_config_default(acc_cfg);
+			acc_cfg.setId("sip:" + app_config.user + "@" + app_config.domain);
+			acc_cfg.setCred_info(cred_info);
+			acc_cfg.setReg_uri("sip:" + app_config.domain);
+			acc_cfg.setProxy(app_config.proxy);
+			
+			status = pjsua.acc_add(acc_cfg, true, acc_id);
+			if (status != pjsua.PJ_SUCCESS) {
+				System.out.println("Error creating account " + acc_cfg.getId() + ": " + status);
+				return status;
+			}
+			app_config.cur_acc_id = acc_id[0];
 		}
 		
 		/* Start pjsua */
