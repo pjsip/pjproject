@@ -668,6 +668,19 @@
 #   define PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER	1
 #endif
 
+/**
+ * This specifies the behavior of the SDP negotiator when responding to an
+ * offer, whether it should answer with multiple formats or not.
+ *
+ * Note that this behavior can be changed during run-time by calling
+ * pjmedia_sdp_neg_set_allow_multiple_codecs().
+ *
+ * Default is 0 (to maintain backward compatibility)
+ */
+#ifndef PJMEDIA_SDP_NEG_ANSWER_MULTIPLE_CODECS
+#   define PJMEDIA_SDP_NEG_ANSWER_MULTIPLE_CODECS	0
+#endif
+
 
 /**
  * This specifies the maximum number of the customized SDP format

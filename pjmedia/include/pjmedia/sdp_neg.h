@@ -416,6 +416,23 @@ PJ_DECL(pj_status_t)
 pjmedia_sdp_neg_set_prefer_remote_codec_order(pjmedia_sdp_neg *neg,
 					      pj_bool_t prefer_remote);
 
+/**
+ * This specifies the behavior of the SDP negotiator when responding to an
+ * offer, whether it should answer with multiple formats or not.
+ *
+ * By default, the value in PJMEDIA_SDP_NEG_ANSWER_MULTIPLE_CODECS will
+ * be used.
+ *
+ * @param neg           The SDP negotiator instance.
+ * @param answer_multiple
+ *                      If non-zero, the negotiator will respond with
+ *                      multiple formats. If zero only a single format
+ *                      will be returned.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_sdp_neg_set_answer_multiple_codecs(pjmedia_sdp_neg *neg,
+                                           pj_bool_t answer_multiple);
+
 
 /**
  * Get SDP negotiator state.
