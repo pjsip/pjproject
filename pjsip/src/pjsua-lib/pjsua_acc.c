@@ -1048,6 +1048,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Credential info */
     {
 	unsigned i;
+	pj_bool_t cred_changed = PJ_FALSE;
 
 	/* Selective update credential info. */
 	for (i = 0; i < cfg->cred_count; ++i) {
@@ -1071,6 +1072,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
 	    /* Not found, insert this */
 	    if (j == acc->cfg.cred_count) {
+		cred_changed = PJ_TRUE;
+
 		/* If account credential is full, discard the last one. */
 		if (acc->cfg.cred_count == PJ_ARRAY_SIZE(acc->cfg.cred_info)) {
     		    pj_array_erase(acc->cfg.cred_info, sizeof(pjsip_cred_info),
@@ -1097,8 +1100,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
 	}
 
-	update_reg = PJ_TRUE;
-	unreg_first = PJ_TRUE;
+	if (cred_changed) {
+	    update_reg = PJ_TRUE;
+	    unreg_first = PJ_TRUE;
+	}
     }
 
     /* Authentication preference */
