@@ -685,12 +685,78 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
 /* Get config */
 PJ_DEF(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
+                                         pj_pool_t *pool,
                                          pjsua_acc_config *acc_cfg)
 {
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc)
                      && pjsua_var.acc[acc_id].valid, PJ_EINVAL);
-    pj_memcpy(acc_cfg, &pjsua_var.acc[acc_id].cfg, sizeof(*acc_cfg));
+    //this now would not work due to corrupt header list
+    //pj_memcpy(acc_cfg, &pjsua_var.acc[acc_id].cfg, sizeof(*acc_cfg));
+    pjsua_acc_config_dup(pool, acc_cfg, &pjsua_var.acc[acc_id].cfg);
     return PJ_SUCCESS;
+}
+
+/* Compare two SIP headers. Return zero if equal */
+static int pjsip_hdr_cmp(const pjsip_hdr *h1, const pjsip_hdr *h2)
+{
+    char buf1[PJSIP_MAX_URL_SIZE];
+    char buf2[PJSIP_MAX_URL_SIZE];
+    pj_str_t p1, p2;
+
+    p1.ptr = buf1;
+    p1.slen = 0;
+    p2.ptr = buf2;
+    p2.slen = 0;
+
+    p1.slen = pjsip_hdr_print_on((void*)h1, buf1, sizeof(buf1));
+    if (p1.slen < 0)
+	p1.slen = 0;
+    p2.slen = pjsip_hdr_print_on((void*)h2, buf2, sizeof(buf2));
+    if (p2.slen < 0)
+	p2.slen = 0;
+
+    return pj_strcmp(&p1, &p2);
+}
+
+/* Update SIP header list from another list. Return PJ_TRUE if
+ * the list has been updated */
+static pj_bool_t update_hdr_list(pj_pool_t *pool, pjsip_hdr *dst,
+                                 const pjsip_hdr *src)
+{
+    pjsip_hdr *dst_i;
+    const pjsip_hdr *src_i;
+    pj_bool_t changed = PJ_FALSE;
+
+    /* Remove header that's no longer needed */
+    for (dst_i = dst->next; dst_i != dst; ) {
+	for (src_i = src->next; src_i != src; src_i = src_i->next) {
+	    if (pjsip_hdr_cmp(dst_i, src_i) == 0)
+		break;
+	}
+	if (src_i == src) {
+	    pjsip_hdr *next = dst_i->next;
+	    pj_list_erase(dst_i);
+	    changed = PJ_TRUE;
+	    dst_i = next;
+	} else {
+	    dst_i = dst_i->next;
+	}
+    }
+
+    /* Add new header */
+    for (src_i = src->next; src_i != src; src_i = src_i->next) {
+	for (dst_i = dst->next; dst_i != dst; dst_i = dst_i->next) {
+	    if (pjsip_hdr_cmp(dst_i, src_i) == 0)
+		break;
+	}
+	if (dst_i == dst) {
+	    dst_i = pjsip_hdr_clone(pool, src_i);
+	    pj_list_push_back(dst, dst_i);
+	    changed = PJ_TRUE;
+	}
+    }
+
+    return changed;
 }
 
 /*
@@ -777,6 +843,15 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
 	reg_sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(reg_uri);
     }
+
+    /* REGISTER header list */
+    if (update_hdr_list(acc->pool, &acc->cfg.reg_hdr_list, &cfg->reg_hdr_list)) {
+	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
+    }
+
+    /* SUBSCRIBE header list */
+    update_hdr_list(acc->pool, &acc->cfg.sub_hdr_list, &cfg->sub_hdr_list);
 
     /* Global outbound proxy */
     global_route_crc = calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy, 

@@ -2108,9 +2108,11 @@ static pj_status_t modify_video_account(pjsua_acc_config *acc_cfg)
 static pj_status_t cmd_show_account_video()
 {
     pjsua_acc_config acc_cfg;
+    pj_pool_t *pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
     
-    pjsua_acc_get_config(current_acc, &acc_cfg);
+    pjsua_acc_get_config(current_acc, pool, &acc_cfg);
     app_config_show_video(current_acc, &acc_cfg);
+    pj_pool_release(pool);
     return PJ_SUCCESS;
 }
 
@@ -2118,10 +2120,11 @@ static pj_status_t cmd_video_acc_handler(pj_cli_cmd_val *cval)
 {
     pjsua_acc_config acc_cfg;
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
+    pj_pool_t *pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
 
     CHECK_PJSUA_RUNNING();
 
-    pjsua_acc_get_config(current_acc, &acc_cfg);
+    pjsua_acc_get_config(current_acc, pool, &acc_cfg);
 
     switch(cmd_id) {
     case CMD_VIDEO_ACC_AUTORX:	
@@ -2148,6 +2151,7 @@ static pj_status_t cmd_video_acc_handler(pj_cli_cmd_val *cval)
 	break;
     }
     modify_video_account(&acc_cfg);
+    pj_pool_release(pool);
     return PJ_SUCCESS;
 }
 

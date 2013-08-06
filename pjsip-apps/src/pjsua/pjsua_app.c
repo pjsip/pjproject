@@ -1279,6 +1279,7 @@ static pj_status_t app_init()
     pjsua_transport_id transport_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
+    pj_pool_t *tmp_pool;
     pj_status_t status;
 
     /** Create pjsua **/
@@ -1288,6 +1289,7 @@ static pj_status_t app_init()
 
     /* Create pool for application */
     app_config.pool = pjsua_pool_create("pjsua-app", 1000, 1000);
+    tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);;
 
     /* Init CLI & its FE settings */
     if (!app_running) {
@@ -1299,8 +1301,10 @@ static pj_status_t app_init()
 
     /** Parse args **/
     status = load_config(app_cfg.argc, app_cfg.argv, &uri_arg);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(tmp_pool);
 	return status;
+    }
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
@@ -1339,8 +1343,10 @@ static pj_status_t app_init()
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
 			&app_config.media_cfg);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(tmp_pool);
 	return status;
+    }
 
     /* Initialize our module to handle otherwise unhandled request */
     status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
@@ -1587,7 +1593,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(aid, &acc_cfg);
+	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
@@ -1626,7 +1632,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(aid, &acc_cfg);
+	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    if (app_config.ipv6)
 		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
@@ -1660,7 +1666,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(aid, &acc_cfg);
+	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
@@ -1685,7 +1691,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(aid, &acc_cfg);
+	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    if (app_config.ipv6)
 		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
@@ -1720,7 +1726,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(acc_id, &acc_cfg);
+	    pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    pjsua_acc_modify(acc_id, &acc_cfg);
 	}
@@ -1744,7 +1750,7 @@ static pj_status_t app_init()
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
-	    pjsua_acc_get_config(aid, &acc_cfg);
+	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
 	    if (app_config.ipv6)
 		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
@@ -1829,9 +1835,11 @@ static pj_status_t app_init()
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
 
+    pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
 
 on_error:
+    pj_pool_release(tmp_pool);
     app_destroy();
     return status;
 }

@@ -312,8 +312,9 @@ static void vid_handle_menu(char *menuin)
     } else if (strcmp(argv[1], "acc")==0) {
 	pjsua_acc_config acc_cfg;
 	pj_bool_t changed = PJ_FALSE;
+	pj_pool_t *tmp_pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
 
-	pjsua_acc_get_config(current_acc, &acc_cfg);
+	pjsua_acc_get_config(current_acc, tmp_pool, &acc_cfg);
 
 	if (argc == 3 && strcmp(argv[2], "show")==0) {
 	    app_config_show_video(current_acc, &acc_cfg);
@@ -334,6 +335,7 @@ static void vid_handle_menu(char *menuin)
 	    acc_cfg.vid_rend_dev = dev;
 	    changed = PJ_TRUE;
 	} else {
+	    pj_pool_release(tmp_pool);
 	    goto on_error;
 	}
 
@@ -343,6 +345,7 @@ static void vid_handle_menu(char *menuin)
 		PJ_PERROR(1,(THIS_FILE, status, "Error modifying account %d",
 			     current_acc));
 	}
+	pj_pool_release(tmp_pool);
 
     } else if (strcmp(argv[1], "call")==0) {
 	pjsua_call_vid_strm_op_param param;

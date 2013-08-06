@@ -3589,11 +3589,13 @@ PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
  * data is only valid until the account is destroyed.
  *
  * @param acc_id	The account ID.
+ * @param pool		Pool to duplicate the config.
  * @param acc_cfg	Structure to receive the settings.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
+                                          pj_pool_t *pool,
                                           pjsua_acc_config *acc_cfg);
 
 
