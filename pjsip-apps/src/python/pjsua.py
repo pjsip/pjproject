@@ -474,10 +474,43 @@ class TransportConfig:
                    transport. If empty, the default behavior is to get
                    the public address from STUN or from the selected
                    local interface. Format is "host:port".
+    qos_type    -- High level traffic classification.
+                   Enumerator:
+                     0: PJ_QOS_TYPE_BEST_EFFORT
+                          Best effort traffic (default value). Any QoS function calls with 
+                          specifying this value are effectively no-op
+                     1: PJ_QOS_TYPE_BACKGROUND
+                          Background traffic.
+                     2: PJ_QOS_TYPE_VIDEO
+                          Video traffic.
+                     3: PJ_QOS_TYPE_VOICE
+                          Voice traffic.
+                     4: PJ_QOS_TYPE_CONTROL
+                          Control traffic.
+    qos_params_flags    -- Determines which values to set, bitmask of pj_qos_flag.
+                             PJ_QOS_PARAM_HAS_DSCP = 1
+                             PJ_QOS_PARAM_HAS_SO_PRIO = 2
+                             PJ_QOS_PARAM_HAS_WMM = 4
+    qos_params_dscp_val -- The 6 bits DSCP value to set.
+    qos_params_so_prio  -- Socket SO_PRIORITY value.
+    qos_params_wmm_prio -- Standard WMM priorities.
+                            Enumerator:
+                              0: PJ_QOS_WMM_PRIO_BULK_EFFORT: Bulk effort priority
+                              1: PJ_QOS_WMM_PRIO_BULK: Bulk priority.
+                              2: PJ_QOS_WMM_PRIO_VIDEO: Video priority
+                              3: PJ_QOS_WMM_PRIO_VOICE: Voice priority.
     """
     port = 0
     bound_addr = ""
     public_addr = ""
+    
+    qos_type = 0
+    qos_params_flags = 0
+    qos_params_dscp_val = 0
+    qos_params_so_prio = 0
+    qos_params_wmm_prio = 0
+    
+    
 
     def __init__(self, port=0, 
                  bound_addr="", public_addr=""):
@@ -485,11 +518,27 @@ class TransportConfig:
         self.bound_addr = bound_addr
         self.public_addr = public_addr
 
+    def _cvt_from_pjsua(self, cfg):
+        self.port = cfg.port
+        self.bound_addr = cfg.bound_addr
+        self.public_addr = cfg.public_addr
+        self.qos_type = cfg.qos_type
+        self.qos_params_flags = cfg.qos_params_flags
+        self.qos_params_dscp_val = cfg.qos_params_dscp_val
+        self.qos_params_so_prio = cfg.qos_params_so_prio
+        self.qos_params_wmm_prio = cfg.qos_params_wmm_prio
+
     def _cvt_to_pjsua(self):
         cfg = _pjsua.transport_config_default()
         cfg.port = self.port
         cfg.bound_addr = self.bound_addr
         cfg.public_addr = self.public_addr
+        cfg.qos_type = self.qos_type
+        cfg.qos_params_flags = self.qos_params_flags
+        cfg.qos_params_dscp_val = self.qos_params_dscp_val
+        cfg.qos_params_so_prio = self.qos_params_so_prio
+        cfg.qos_params_wmm_prio = self.qos_params_wmm_prio
+
         return cfg
 
 
@@ -704,6 +753,8 @@ class AccountConfig:
                                transport is required, 1=hop-by-hop secure
                                transport such as TLS is required, 2=end-to-
                                end secure transport is required (i.e. "sips").
+    rtp_transport_cfg       -- the rtp-transport-configuration that is usede, when
+                               a rtp-connection is being established.
     """
     priority = 0
     id = ""
@@ -723,6 +774,7 @@ class AccountConfig:
     ka_data = "\r\n"
     use_srtp = 0
     srtp_secure_signaling = 1
+    rtp_transport_cfg = None
 
     def __init__(self, domain="", username="", password="", 
                  display="", registrar="", proxy=""):
@@ -748,9 +800,10 @@ class AccountConfig:
         if domain!="":
             self.build_config(domain, username, password,
                               display, registrar, proxy)
+        self.rtp_transport_cfg = _pjsua.transport_config_default()
 
     def build_config(self, domain, username, password, display="",
-                     registrar="", proxy=""):
+                     registrar="", proxy="", rtp_transport_cfg = None):
         """
         Construct account config. If domain argument is specified, 
         a typical configuration will be built.
@@ -784,6 +837,11 @@ class AccountConfig:
         self.proxy.append(proxy)
         if username != "":
             self.auth_cred.append(AuthCred("*", username, password))
+        
+        if (rtp_transport_cfg is not None):
+            self.rtp_transport_cfg = rtp_transport_cfg
+        else:
+            self.rtp_transport_cfg = _pjsua.Transport_Config()
     
     def _cvt_from_pjsua(self, cfg):
         self.priority = cfg.priority
@@ -807,6 +865,8 @@ class AccountConfig:
         self.ka_data = cfg.ka_data
         self.use_srtp = cfg.use_srtp
         self.srtp_secure_signaling = cfg.srtp_secure_signaling
+        if (self.rtp_transport_cfg is not None):
+            self.rtp_transport_cfg._cvt_from_pjsua(cfg.rtp_transport_cfg)
 
     def _cvt_to_pjsua(self):
         cfg = _pjsua.acc_config_default()
@@ -827,6 +887,7 @@ class AccountConfig:
             c.data_type = cred.passwd_type
             c.data = cred.passwd
             cfg.cred_info.append(c)
+            
         cfg.auth_initial_send = self.auth_initial_send
         cfg.auth_initial_algorithm = self.auth_initial_algorithm
         cfg.transport_id = self.transport_id
@@ -835,6 +896,9 @@ class AccountConfig:
         cfg.ka_data = self.ka_data
         cfg.use_srtp = self.use_srtp
         cfg.srtp_secure_signaling = self.srtp_secure_signaling
+
+        cfg.rtp_transport_cfg = self.rtp_transport_cfg._cvt_to_pjsua()
+        
         return cfg
  
  

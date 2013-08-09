@@ -1327,6 +1327,12 @@ typedef struct
     unsigned	port;
     PyObject   *public_addr;
     PyObject   *bound_addr;
+    pj_qos_type  qos_type;
+    pj_uint8_t  qos_params_flags;
+    pj_uint8_t  qos_params_dscp_val;
+    pj_uint8_t  qos_params_so_prio;
+    pj_qos_wmm_prio  qos_params_wmm_prio;
+
 } PyObj_pjsua_transport_config;
 
 
@@ -1337,7 +1343,7 @@ typedef struct
 static void PyObj_pjsua_transport_config_delete(PyObj_pjsua_transport_config* self)
 {
     Py_XDECREF(self->public_addr);    
-    Py_XDECREF(self->bound_addr);    
+    Py_XDECREF(self->bound_addr);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -1349,7 +1355,11 @@ static void PyObj_pjsua_transport_config_export(pjsua_transport_config *cfg,
     cfg->public_addr	= PyString_ToPJ(obj->public_addr);
     cfg->bound_addr	= PyString_ToPJ(obj->bound_addr);
     cfg->port		= obj->port;
-
+    cfg->qos_type	= obj->qos_type;
+    cfg->qos_params.flags	= obj->qos_params_flags;
+    cfg->qos_params.dscp_val	= obj->qos_params_dscp_val;
+    cfg->qos_params.so_prio	= obj->qos_params_so_prio;
+    cfg->qos_params.wmm_prio	= obj->qos_params_wmm_prio;
 }
 
 static void PyObj_pjsua_transport_config_import(PyObj_pjsua_transport_config *obj,
@@ -1361,7 +1371,13 @@ static void PyObj_pjsua_transport_config_import(PyObj_pjsua_transport_config *ob
     Py_XDECREF(obj->bound_addr);    
     obj->bound_addr = PyString_FromPJ(&cfg->bound_addr);
 
-    obj->port = cfg->port;
+    obj->port		= cfg->port;
+    obj->qos_type	= cfg->qos_type;
+    obj->qos_params_flags	= cfg->qos_params.flags;
+    obj->qos_params_dscp_val	= cfg->qos_params.dscp_val;
+    obj->qos_params_so_prio	= cfg->qos_params.so_prio;
+    obj->qos_params_wmm_prio	= cfg->qos_params.wmm_prio;
+
 }
 
 
@@ -1381,7 +1397,7 @@ static PyObject * PyObj_pjsua_transport_config_new(PyTypeObject *type,
     self = (PyObj_pjsua_transport_config *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->public_addr = PyString_FromString("");
-	self->bound_addr = PyString_FromString("");
+        self->bound_addr = PyString_FromString("");
     }
 
     return (PyObject *)self;
@@ -1419,6 +1435,56 @@ static PyMemberDef PyObj_pjsua_transport_config_members[] =
         "published address of a transport (the public_addr field should be "
         "used for that purpose)."		
     },    
+    {
+        "qos_type", T_INT,
+        offsetof(PyObj_pjsua_transport_config, qos_type), 0,
+        "High level traffic classification."
+        "Enumerator:"
+        "  0: PJ_QOS_TYPE_BEST_EFFORT"
+        "       Best effort traffic (default value). Any QoS function calls with "
+        "       specifying this value are effectively no-op"
+        "  1: PJ_QOS_TYPE_BACKGROUND"
+        "       Background traffic."
+        "  2: PJ_QOS_TYPE_VIDEO"
+        "       Video traffic."
+        "  3: PJ_QOS_TYPE_VOICE"
+        "       Voice traffic."
+        "  4: PJ_QOS_TYPE_CONTROL"
+        "       Control traffic."
+    },
+    {
+        "qos_params_flags", T_INT,
+        offsetof(PyObj_pjsua_transport_config, qos_params_flags), 0,
+        "Determines which values to set, bitmask of pj_qos_flag."
+        "   PJ_QOS_PARAM_HAS_DSCP = 1"
+        "   PJ_QOS_PARAM_HAS_SO_PRIO = 2"
+        "   PJ_QOS_PARAM_HAS_WMM = 4"
+    },
+    {
+        "qos_params_dscp_val", T_INT,
+        offsetof(PyObj_pjsua_transport_config, qos_params_dscp_val), 0,
+        "The 6 bits DSCP value to set."
+        "Example: 46=EF, 26=AF31, 24=CS3..."
+    },
+    {
+        "qos_params_so_prio", T_INT,
+        offsetof(PyObj_pjsua_transport_config, qos_params_so_prio), 0,
+        "Socket SO_PRIORITY value."
+    },
+    {
+        "qos_params_wmm_prio", T_INT,
+        offsetof(PyObj_pjsua_transport_config, qos_params_wmm_prio), 0,
+        "Standard WMM priorities."
+        "Enumerator:"
+        "  0: PJ_QOS_WMM_PRIO_BULK_EFFORT"
+        "       Bulk effort priority"
+        "  1: PJ_QOS_WMM_PRIO_BULK"
+        "       Bulk priority."
+        "  2: PJ_QOS_WMM_PRIO_VIDEO"
+        "       Video priority"
+        "  3: PJ_QOS_WMM_PRIO_VOICE"
+        "       Voice priority."
+    },
     {NULL}  /* Sentinel */
 };
 
@@ -1675,6 +1741,7 @@ typedef struct
     PyObject	    *ka_data;
     unsigned	     use_srtp;
     unsigned	     srtp_secure_signaling;
+    PyObject	    *rtp_transport_cfg;
 } PyObj_pjsua_acc_config;
 
 
@@ -1694,6 +1761,7 @@ static void PyObj_pjsua_acc_config_delete(PyObj_pjsua_acc_config* self)
     Py_XDECREF(self->contact_params);
     Py_XDECREF(self->contact_uri_params);
     Py_XDECREF(self->ka_data);
+    Py_XDECREF(self->rtp_transport_cfg);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -1727,7 +1795,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->cred_info = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->cred_count; ++i) {
 	PyObj_pjsip_cred_info * ci;
-	
+
 	ci = (PyObj_pjsip_cred_info *)
 	     PyObj_pjsip_cred_info_new(&PyTyp_pjsip_cred_info,NULL,NULL);
 	PyObj_pjsip_cred_info_import(ci, &cfg->cred_info[i]);
@@ -1755,6 +1823,12 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->ka_data = PyString_FromPJ(&cfg->ka_data);
     obj->use_srtp = cfg->use_srtp;
     obj->srtp_secure_signaling = cfg->srtp_secure_signaling;
+
+    Py_XDECREF(obj->rtp_transport_cfg);
+    PyObj_pjsua_transport_config *tconf;
+    tconf = (PyObj_pjsua_transport_config*) PyObj_pjsua_transport_config_new(&PyTyp_pjsua_transport_config,NULL, NULL);
+    PyObj_pjsua_transport_config_import(tconf, &cfg->rtp_cfg);
+    obj->rtp_transport_cfg = (PyObject *) tconf;
 }
 
 static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
@@ -1784,8 +1858,8 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     if (cfg->cred_count > PJ_ARRAY_SIZE(cfg->cred_info))
 	cfg->cred_count = PJ_ARRAY_SIZE(cfg->cred_info);
     for (i = 0; i < cfg->cred_count; i++) {
-        PyObj_pjsip_cred_info *ci;
-	ci = (PyObj_pjsip_cred_info*) 
+	PyObj_pjsip_cred_info *ci;
+	ci = (PyObj_pjsip_cred_info*)
 	     PyList_GetItem((PyObject *)obj->cred_info, i);
 	PyObj_pjsip_cred_info_export(&cfg->cred_info[i], ci);
     }
@@ -1805,6 +1879,10 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->ka_data = PyString_ToPJ(obj->ka_data);
     cfg->use_srtp = obj->use_srtp;
     cfg->srtp_secure_signaling = obj->srtp_secure_signaling;
+
+    PyObj_pjsua_transport_config *tconf;
+	tconf = (PyObj_pjsua_transport_config*)	obj->rtp_transport_cfg;
+	PyObj_pjsua_transport_config_export(&cfg->rtp_cfg, tconf);
 }
 
 
@@ -1996,6 +2074,11 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
 	"srtp_secure_signaling", T_INT,
 	offsetof(PyObj_pjsua_acc_config, srtp_secure_signaling), 0,
 	"Specify if SRTP requires secure signaling to be used."
+    },
+    {
+	"rtp_transport_cfg", T_OBJECT_EX,
+	offsetof(PyObj_pjsua_acc_config, rtp_transport_cfg), 0,
+	"Transport configuration for RTP."
     },
 
     {NULL}  /* Sentinel */
