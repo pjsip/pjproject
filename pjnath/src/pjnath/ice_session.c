@@ -899,9 +899,6 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 
     PJ_CHECK_STACK();
 
-    pj_ansi_strcpy(laddr, pj_sockaddr_print(&lcand->addr, laddr,
-                                            sizeof(laddr), 0));
-
     len = pj_ansi_snprintf(buffer, bufsize,
 			   "%d: [%d] %s:%d-->%s:%d",
 			   (int)GET_CHECK_ID(clist, check),
