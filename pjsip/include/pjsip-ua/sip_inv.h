@@ -172,6 +172,10 @@ typedef struct pjsip_inv_callback
      * #pjsip_inv_set_sdp_answer() and the re-INVITE will be answered
      * automatically.
      *
+     * Remarks: Application may need to monitor on_tsx_state_changed()
+     * callback to check whether the re-INVITE is already answered
+     * automatically with 487 due to being cancelled.
+     *
      * @param inv	The invite session.
      * @param offer	Remote offer.
      * @param rdata     The received re-INVITE request.

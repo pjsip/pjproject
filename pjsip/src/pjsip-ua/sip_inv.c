@@ -4271,18 +4271,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
     {
 
 	/*
-	 * Handle strandled incoming CANCEL.
+	 * Handle strandled incoming CANCEL or CANCEL for re-INVITE
 	 */
-	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
-	pjsip_tx_data *tdata;
-	pj_status_t status;
-
-	status = pjsip_dlg_create_response(dlg, rdata, 200, NULL, &tdata);
-	if (status != PJ_SUCCESS) return;
-
-	status = pjsip_dlg_send_response(dlg, tsx, tdata);
-	if (status != PJ_SUCCESS) return;
-
+        inv_respond_incoming_cancel(inv, tsx, e);
     }
     else if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	     tsx->role == PJSIP_ROLE_UAS)
