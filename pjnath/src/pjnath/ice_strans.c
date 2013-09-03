@@ -1182,7 +1182,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
      * https://trac.pjsip.org/repos/ticket/1416:
      * Once ICE has failed, also send data with the default candidate.
      */
-    if (ice_st->ice && ice_st->state < PJ_ICE_STRANS_STATE_FAILED) {
+    if (ice_st->ice && ice_st->state == PJ_ICE_STRANS_STATE_RUNNING) {
 	if (comp->turn_sock) {
 	    pj_turn_sock_lock(comp->turn_sock);
 	}
