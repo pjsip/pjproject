@@ -84,6 +84,22 @@ struct pjsip_regc_cbparam
 typedef void pjsip_regc_cb(struct pjsip_regc_cbparam *param);
 
 /**
+ * Structure to hold parameters when calling application's callback
+ * specified in #pjsip_regc_set_reg_tsx_cb().
+ * To update contact address, application can set the field contact_cnt
+ * and contact inside the callback.
+ */
+struct pjsip_regc_tsx_cb_param
+{
+    struct pjsip_regc_cbparam   cbparam;
+    int                         contact_cnt;
+    pj_str_t                    contact[PJSIP_REGC_MAX_CONTACT];
+};
+
+/** Type declaration for callback set in #pjsip_regc_set_reg_tsx_cb(). */
+typedef void pjsip_regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param);
+
+/**
  * Client registration information.
  */
 struct pjsip_regc_info
@@ -189,6 +205,21 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     int ccnt,
 				     const pj_str_t contact[],
 				     pj_uint32_t expires);
+
+/**
+ * Set callback to be called when the registration received a final response.
+ * This callback is different with the one specified during creation via
+ * #pjsip_regc_create(). This callback will be called for any final response
+ * (including 401/407/423) and before any subsequent requests are sent.
+ * In case of unregistration, this callback will not be called.
+ *
+ * @param regc	    The client registration structure.
+ * @param tsx_cb    Pointer to callback function to receive registration status.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_reg_tsx_cb(pjsip_regc *regc,
+				               pjsip_regc_tsx_cb *tsx_cb);
 
 /**
  * Set the "sent-by" field of the Via header for outgoing requests.

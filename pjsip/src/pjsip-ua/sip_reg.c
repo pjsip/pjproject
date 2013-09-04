@@ -75,6 +75,7 @@ struct pjsip_regc
 
     void			*token;
     pjsip_regc_cb		*cb;
+    pjsip_regc_tsx_cb           *tsx_cb;
 
     pj_str_t			 str_srv_url;
     pjsip_uri			*srv_url;
@@ -727,6 +728,26 @@ PJ_DEF(pj_status_t) pjsip_regc_update_expires(  pjsip_regc *regc,
     return PJ_SUCCESS;
 }
 
+static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
+                          pjsip_regc *regc, 
+                          pj_status_t status, int st_code, 
+			  const pj_str_t *reason,
+			  pjsip_rx_data *rdata, pj_int32_t expiration,
+			  int contact_cnt, pjsip_contact_hdr *contact[])
+{
+    cbparam->regc = regc;
+    cbparam->token = regc->token;
+    cbparam->status = status;
+    cbparam->code = st_code;
+    cbparam->reason = *reason;
+    cbparam->rdata = rdata;
+    cbparam->contact_cnt = contact_cnt;
+    cbparam->expiration = expiration;
+    if (contact_cnt) {
+	pj_memcpy( cbparam->contact, contact, 
+		   contact_cnt*sizeof(pjsip_contact_hdr*));
+    }
+}
 
 static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code, 
 			  const pj_str_t *reason,
@@ -735,23 +756,11 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
 {
     struct pjsip_regc_cbparam cbparam;
 
-
     if (!regc->cb)
 	return;
 
-    cbparam.regc = regc;
-    cbparam.token = regc->token;
-    cbparam.status = status;
-    cbparam.code = st_code;
-    cbparam.reason = *reason;
-    cbparam.rdata = rdata;
-    cbparam.contact_cnt = contact_cnt;
-    cbparam.expiration = expiration;
-    if (contact_cnt) {
-	pj_memcpy( cbparam.contact, contact, 
-		   contact_cnt*sizeof(pjsip_contact_hdr*));
-    }
-
+    cbparam_init(&cbparam, regc, status, st_code, reason, rdata, expiration,
+                 contact_cnt, contact);
     (*regc->cb)(&cbparam);
 }
 
@@ -812,6 +821,15 @@ static void schedule_registration ( pjsip_regc *regc, pj_int32_t expiration )
         regc->next_reg.sec += delay.sec;
     }
 }
+
+PJ_DEF(pj_status_t) pjsip_regc_set_reg_tsx_cb( pjsip_regc *regc,
+				               pjsip_regc_tsx_cb *tsx_cb)
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    regc->tsx_cb = tsx_cb;
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjsip_regc_set_via_sent_by( pjsip_regc *regc,
 				                pjsip_host_port *via_addr,
@@ -1035,6 +1053,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
     pjsip_regc *regc = (pjsip_regc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
     pj_bool_t handled = PJ_TRUE;
+    pj_bool_t update_contact = PJ_FALSE;
 
     pj_atomic_inc(regc->busy_ctr);
     pj_lock_acquire(regc->lock);
@@ -1056,6 +1075,49 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 	}
     }
 
+    if (regc->_delete_flag == 0 && regc->tsx_cb &&
+        regc->current_op == REGC_REGISTERING)
+    {
+        struct pjsip_regc_tsx_cb_param param;
+
+        param.contact_cnt = -1;
+        cbparam_init(&param.cbparam, regc, PJ_SUCCESS, tsx->status_code,
+		     &tsx->status_text,
+                     (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
+	              event->body.tsx_state.src.rdata : NULL,
+                     -1, 0, NULL);
+
+        /* Call regc tsx callback before handling any response */
+        pj_lock_release(regc->lock);
+        (*regc->tsx_cb)(&param);
+        pj_lock_acquire(regc->lock);
+
+        if (param.contact_cnt >= 0) {
+            /* Since we receive non-2xx response, it means that (some) contact
+             * bindings haven't been established so we can safely remove these
+             * contact headers. This is to avoid removing non-existent contact
+             * bindings later.
+             */
+            if (tsx->status_code/100 != 2) {
+                pjsip_contact_hdr *h;
+
+	        h = regc->contact_hdr_list.next;
+	        while (h != &regc->contact_hdr_list) {
+                    pjsip_contact_hdr *next = h->next;
+
+                    if (h->expires == -1) {
+                        pj_list_erase(h);
+                    }
+                    h = next;
+                }
+	    }
+
+            /* Update contact address */
+            pjsip_regc_update_contact(regc, param.contact_cnt, param.contact);
+            update_contact = PJ_TRUE;
+        }
+    }
+
     /* Handle 401/407 challenge (even when _delete_flag is set) */
     if (tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED ||
 	tsx->status_code == PJSIP_SC_UNAUTHORIZED)
@@ -1066,7 +1128,49 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 	/* reset current op */
 	regc->current_op = REGC_IDLE;
 
-	status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
+        if (update_contact) {
+            pjsip_msg *msg;
+            pjsip_hdr *hdr, *ins_hdr;
+            pjsip_contact_hdr *chdr;
+
+            /* Delete Contact headers, but we shouldn't delete headers
+             * which are supposed to remove contact bindings since
+             * we cannot reconstruct those headers.
+             */
+            msg = tsx->last_tx->msg;
+            hdr = msg->hdr.next;
+            ins_hdr = &msg->hdr;
+            while (hdr != &msg->hdr) {
+                pjsip_hdr *next = hdr->next;
+
+                if (hdr->type == PJSIP_H_CONTACT) {
+                    chdr = (pjsip_contact_hdr *)hdr;
+                    if (chdr->expires != 0) {
+                        pj_list_erase(hdr);
+                        ins_hdr = next;
+                    }
+                }
+                hdr = next;
+            }
+
+            /* Add Contact headers. */
+            chdr = regc->contact_hdr_list.next;
+            while (chdr != &regc->contact_hdr_list) {
+	        pj_list_insert_before(ins_hdr, (pjsip_hdr*)
+                    pjsip_hdr_shallow_clone(tsx->last_tx->pool, chdr));
+	        chdr = chdr->next;
+            }
+
+            /* Also add bindings which are to be removed */
+            while (!pj_list_empty(&regc->removed_contact_hdr_list)) {
+	        chdr = regc->removed_contact_hdr_list.next;
+	        pj_list_insert_before(ins_hdr, (pjsip_hdr*)
+                    pjsip_hdr_clone(tsx->last_tx->pool, chdr));
+	        pj_list_erase(chdr);
+            }
+        }
+
+        status = pjsip_auth_clt_reinit_req( &regc->auth_sess,
 					    rdata, 
 					    tsx->last_tx,  
 					    &tdata);

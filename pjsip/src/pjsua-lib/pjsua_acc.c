@@ -1494,6 +1494,7 @@ static pj_bool_t is_private_ip(const pj_str_t *addr)
 
 /* Update NAT address from the REGISTER response */
 static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
+                                    int contact_rewrite_method,
 				    struct pjsip_regc_cbparam *param)
 {
     pjsip_transport *tp;
@@ -1678,12 +1679,13 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 			 (int)via_addr->slen,
 			 via_addr->ptr,
 			 rport,
-			 acc->cfg.contact_rewrite_method));
+			 contact_rewrite_method));
 
-    pj_assert(acc->cfg.contact_rewrite_method == 1 ||
-	      acc->cfg.contact_rewrite_method == 2);
+    pj_assert(contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER ||
+	      contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG ||
+              contact_rewrite_method == PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE);
 
-    if (acc->cfg.contact_rewrite_method == 1) {
+    if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
 	/* Unregister current contact */
 	pjsua_acc_set_registration(acc->index, PJ_FALSE);
 	if (acc->regc != NULL) {
@@ -1761,12 +1763,16 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     }
 
-    if (acc->cfg.contact_rewrite_method == 2 && acc->regc != NULL) {
+    if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG &&
+        acc->regc != NULL)
+    {
 	pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
     }
 
     /* Perform new registration */
-    pjsua_acc_set_registration(acc->index, PJ_TRUE);
+    if (contact_rewrite_method < PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE) {
+        pjsua_acc_set_registration(acc->index, PJ_TRUE);
+    }
 
     pj_pool_release(pool);
 
@@ -2058,6 +2064,37 @@ on_return:
 					 "active": "not active")));
 }
 
+static void regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param)
+{
+    pjsua_acc *acc = (pjsua_acc*) param->cbparam.token;
+
+    PJSUA_LOCK();
+
+    if (param->cbparam.regc != acc->regc) {
+        PJSUA_UNLOCK();
+	return;
+    }
+
+    pj_log_push_indent();
+
+    if ((acc->cfg.contact_rewrite_method &
+         PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE) ==
+        PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE &&
+        param->cbparam.code >= 400 &&
+        param->cbparam.rdata)
+    {
+        if (acc_check_nat_addr(acc, PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE,
+                               &param->cbparam))
+        {
+            param->contact_cnt = 1;
+            param->contact[0] = acc->reg_contact;
+        }
+    }
+
+    PJSUA_UNLOCK();
+    pj_log_pop_indent();
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -2126,7 +2163,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    update_rfc5626_status(acc, param->rdata);
 
 	    /* Check NAT bound address */
-	    if (acc_check_nat_addr(acc, param)) {
+            if (acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
+                                   param))
+            {
 		PJSUA_UNLOCK();
 		pj_log_pop_indent();
 		return;
@@ -2270,6 +2309,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	acc->reg_mapped_addr.slen = 0;
 	return status;
     }
+
+    pjsip_regc_set_reg_tsx_cb(acc->regc, regc_tsx_cb);
 
     /* If account is locked to specific transport, then set transport to
      * the client registration.
