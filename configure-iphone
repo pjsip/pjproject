@@ -18,7 +18,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "             to use. By default, the compiler is deduced from the"
   echo "             SDK."
   echo "  ARCH       Optional flags to specify target architecture, e.g."
-  echo "                ARCH='-arch armv6'"
+  echo "             ARCH='-arch armv6'. Default is armv7."
   echo ""
   exit 0
 fi
@@ -74,15 +74,14 @@ fi
 # full path as it's not normally in user's PATH
 
 if test "${CC}" = ""; then
-  # Try to use llvm-gcc if available
+  # Try to use clang if available
+  ccpath="${DEVPATH}/../../../Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
+  # Next, try to use llvm-gcc
   gccpath="${DEVPATH}/usr/bin/llvm-gcc"
-  if test -e ${gccpath}; then
+  if test -e ${ccpath}; then
+    export CC="${ccpath}" 
+  elif test -e ${gccpath}; then
     export CC="${gccpath}"
-
-    if test "${ARCH}" = ""; then
-       export ARCH="-arch armv7"
-       echo "$F: ARCH is not specified, choosing ${ARCH}"
-    fi
   else
     for archpath in `ls -d ${SDKPATH}/usr/lib/gcc/arm-apple-darwin*`; do
        archname=`basename ${archpath}`
@@ -102,6 +101,11 @@ fi
 if test "${CC}" = ""; then
     echo "$F error: unable to find gcc for ${IPHONESDK}. If you think you have the right gcc, set the full path in CC environment variable."
     exit 1
+fi
+
+if test "${ARCH}" = ""; then
+  export ARCH="-arch armv7"
+  echo "$F: ARCH is not specified, choosing ${ARCH}"
 fi
 
 # Set CXX if not set
