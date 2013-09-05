@@ -288,7 +288,7 @@
 
 /**
  * Maximum length of command buffer.
- * Default: 120
+ * Default: 512
  */
 #ifndef PJ_CLI_MAX_CMDBUF
 #   define PJ_CLI_MAX_CMDBUF		512
