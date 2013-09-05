@@ -447,7 +447,7 @@ parse_msg:
 print_msg:
     var.print_len = var.print_len + entry->len;
     pj_get_timestamp(&t1);
-    if (var.flag && FLAG_PRINT_ONLY)
+    if (var.flag & FLAG_PRINT_ONLY)
 	ref_msg = print_msg;
     len = pjsip_msg_print(ref_msg, msgbuf1, PJSIP_MAX_PKT_LEN);
     if (len < 1) {
