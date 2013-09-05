@@ -50,6 +50,12 @@
      */
     #define USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER 0
 
+    /* Starting iOS SDK 7, Audio Session API is deprecated. */
+    #ifdef __IPHONE_7_0
+        #define USE_AUDIO_SESSION_API 0
+    #else
+        #define USE_AUDIO_SESSION_API 1
+    #endif
 #endif
 
 /* For Mac OS 10.5.x and earlier */
@@ -176,7 +182,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 				     pjmedia_dir dir,
 				     struct coreaudio_stream *strm,
 				     AudioUnit *io_unit);
-#if !COREAUDIO_MAC
+#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
 static void interruptionListener(void *inClientData, UInt32 inInterruption);
 static void propListener(void *                 inClientData,
                          AudioSessionPropertyID inID,
@@ -236,7 +242,6 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
     pj_status_t status;
 #if !COREAUDIO_MAC
     unsigned i;
-    OSStatus ostatus;
 #endif
 
     pj_list_init(&cf->streams);
@@ -283,6 +288,7 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
  	cdi->info.default_samples_per_sec = 8000;
 
 	/* Set the device capabilities here */
+#if USE_AUDIO_SESSION_API != 0
  	cdi->info.caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
 			 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY |
 			 PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
@@ -292,6 +298,9 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
  	cdi->info.routes = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER |
 			   PJMEDIA_AUD_DEV_ROUTE_EARPIECE |
 			   PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH;
+#else
+        cdi->info.caps = PJMEDIA_AUD_DEV_CAP_EC;
+#endif
 
 	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
 		   i,
@@ -301,23 +310,30 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 		   cdi->info.default_samples_per_sec));
     }
 
-    /* Initialize the Audio Session */
-    ostatus = AudioSessionInitialize(NULL, NULL, interruptionListener, NULL);
-    if (ostatus != kAudioSessionNoError) {
-	PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot initialize audio session services (%i)",
-		   ostatus));
-    }
+#if USE_AUDIO_SESSION_API != 0
+    {
+        OSStatus ostatus;
 
-    /* Listen for audio routing change notifications. */
+        /* Initialize the Audio Session */
+        ostatus = AudioSessionInitialize(NULL, NULL, interruptionListener,
+                                         NULL);
+        if (ostatus != kAudioSessionNoError) {
+            PJ_LOG(4, (THIS_FILE,
+                       "Warning: cannot initialize audio session services (%i)",
+                       ostatus));
+        }
+
+        /* Listen for audio routing change notifications. */
 #if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
-    ostatus = AudioSessionAddPropertyListener(
-	          kAudioSessionProperty_AudioRouteChange,
-		  propListener, cf);
-    if (ostatus != kAudioSessionNoError) {
-	PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot listen for audio route change "
-		   "notifications (%i)", ostatus));
+        ostatus = AudioSessionAddPropertyListener(
+                      kAudioSessionProperty_AudioRouteChange,
+		      propListener, cf);
+        if (ostatus != kAudioSessionNoError) {
+            PJ_LOG(4, (THIS_FILE,
+                       "Warning: cannot listen for audio route change "
+                       "notifications (%i)", ostatus));
+        }
+#endif
     }
 #endif
 
@@ -340,7 +356,7 @@ static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f)
     pj_assert(pj_list_empty(&cf->streams));
 
 #if !COREAUDIO_MAC
-#if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
+#if USE_AUDIO_SESSION_API != 0 && USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
     AudioSessionRemovePropertyListenerWithUserData(
         kAudioSessionProperty_AudioRouteChange, propListener, cf);
 #endif
@@ -1058,7 +1074,7 @@ on_break:
     return -1;
 }
 
-#if !COREAUDIO_MAC
+#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
 static void propListener(void 			*inClientData,
 			 AudioSessionPropertyID	inID,
 			 UInt32                 inDataSize,
@@ -1223,7 +1239,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 				     AudioUnit *io_unit)
 {
     OSStatus ostatus;
-#if !COREAUDIO_MAC
+#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
     UInt32 audioCategory = kAudioSessionCategory_PlayAndRecord;
     /* We want to be able to open playback and recording streams */
     ostatus = AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
@@ -1699,7 +1715,7 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 		strm->param.input_latency_ms++;
 	    }
 	}
-#else
+#elif USE_AUDIO_SESSION_API != 0
 	Float32 latency, latency2;
 	UInt32 size = sizeof(Float32);
 
@@ -1747,7 +1763,7 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 		strm->param.output_latency_ms++;
 	    }
 	}
-#else
+#elif USE_AUDIO_SESSION_API != 0
 	Float32 latency, latency2;
 	UInt32 size = sizeof(Float32);
 
@@ -1765,6 +1781,7 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 #endif
 	*(unsigned*)pval = (++strm->param.output_latency_ms * 2);
 	return PJ_SUCCESS;
+#if COREAUDIO_MAC || USE_AUDIO_SESSION_API != 0
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
 	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
@@ -1783,7 +1800,7 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 	                                &size);
 	if (ostatus != noErr)
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
-#else
+#elif USE_AUDIO_SESSION_API != 0
 	ostatus = AudioSessionGetProperty(
 		  kAudioSessionProperty_CurrentHardwareOutputVolume,
 		  &size, &volume);
@@ -1794,7 +1811,10 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 
 	*(unsigned*)pval = (unsigned)(volume * 100);
 	return PJ_SUCCESS;
+#endif
+
 #if !COREAUDIO_MAC
+#if USE_AUDIO_SESSION_API != 0
     } else if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE &&
 	       (strm->param.dir & PJMEDIA_DIR_CAPTURE))
     {
@@ -1836,6 +1856,7 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 	CFRelease(route);
 
 	return PJ_SUCCESS;
+#endif
     } else if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
 	AudioComponentDescription desc;
 	OSStatus ostatus;
@@ -1887,8 +1908,35 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
     }
 
 #else
+    if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
+	AudioComponentDescription desc;
+	AudioComponent io_comp;
+        
+	desc.componentType = kAudioUnitType_Output;
+	desc.componentSubType = (*(pj_bool_t*)pval)?
+        kAudioUnitSubType_VoiceProcessingIO :
+        kAudioUnitSubType_RemoteIO;
+	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+	desc.componentFlags = 0;
+	desc.componentFlagsMask = 0;
+        
+	io_comp = AudioComponentFindNext(NULL, &desc);
+	if (io_comp == NULL)
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
+	strm->cf->io_comp = io_comp;
+	strm->param.ec_enabled = *(pj_bool_t*)pval;
+        
+        PJ_LOG(4, (THIS_FILE, "Using %s audio unit",
+                   (desc.componentSubType ==
+                    kAudioUnitSubType_RemoteIO? "RemoteIO":
+                    "VoiceProcessingIO")));
+        
+	return PJ_SUCCESS;
+    }
 
-    if ((cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+#if USE_AUDIO_SESSION_API != 0
+
+    else if ((cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
 	 (strm->param.dir & PJMEDIA_DIR_CAPTURE)) ||
 	(cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
 	 (strm->param.dir & PJMEDIA_DIR_PLAYBACK)))
@@ -1948,31 +1996,8 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
 	}
 	strm->param.output_route = *(pjmedia_aud_dev_route*)pval;
 	return PJ_SUCCESS;
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
-	AudioComponentDescription desc;
-	AudioComponent io_comp;
-
-	desc.componentType = kAudioUnitType_Output;
-	desc.componentSubType = (*(pj_bool_t*)pval)?
-				kAudioUnitSubType_VoiceProcessingIO :
-				kAudioUnitSubType_RemoteIO;
-	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
-	desc.componentFlags = 0;
-	desc.componentFlagsMask = 0;
-
-	io_comp = AudioComponentFindNext(NULL, &desc);
-	if (io_comp == NULL)
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
-	strm->cf->io_comp = io_comp;
-	strm->param.ec_enabled = *(pj_bool_t*)pval;
-
-        PJ_LOG(4, (THIS_FILE, "Using %s audio unit", 
-                              (desc.componentSubType ==
-                               kAudioUnitSubType_RemoteIO? "RemoteIO":
-                               "VoiceProcessingIO")));
-        
-	return PJ_SUCCESS;
     }
+#endif
 #endif
 
     return PJMEDIA_EAUD_INVCAP;
@@ -2000,7 +2025,7 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
-#if !COREAUDIO_MAC
+#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
     AudioSessionSetActive(true);
 #endif
     
@@ -2058,7 +2083,7 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
     }
     pj_mutex_unlock(stream->cf->mutex);
 
-#if !COREAUDIO_MAC
+#if !COREAUDIO_MAC && USE_AUDIO_SESSION_API != 0
     if (should_deactivate)
 	AudioSessionSetActive(false);
 #endif

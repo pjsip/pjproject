@@ -151,26 +151,20 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 }
 
 - (void)keepAlive {
-    int i, timeout = KEEP_ALIVE_INTERVAL;
+    int i;
     
     if (!pj_thread_is_registered())
     {
 	pj_thread_register("ipjsua", a_thread_desc, &a_thread);
     }
     
+    /* Since iOS requires that the minimum keep alive interval is 600s,
+     * application needs to make sure that the account's registration
+     * timeout is long enough.
+     */
     for (i = 0; i < (int)pjsua_acc_get_count(); ++i) {
         if (pjsua_acc_is_valid(i)) {
-            pjsua_acc_config acc_cfg;
-
-	    pjsua_acc_get_config(i, &acc_cfg);
-            if (!acc_cfg.reg_uri.slen)
-                continue;
-            if (acc_cfg.reg_timeout < timeout) {
-                acc_cfg.reg_timeout = timeout;
-                pjsua_acc_modify(i, &acc_cfg);
-            } else {
-                pjsua_acc_set_registration(i, PJ_TRUE);
-            }
+            pjsua_acc_set_registration(i, PJ_TRUE);
         }
     }
 }
