@@ -214,6 +214,7 @@ typedef struct pjsua_acc
     int		     index;	    /**< Index in accounts array.	*/
     pj_str_t	     display;	    /**< Display name, if any.		*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
+    pj_bool_t	     is_sips;	    /**< Local URI uses "sips"?		*/
     pj_str_t	     contact;	    /**< Our Contact header.		*/
     pj_str_t         reg_contact;   /**< Contact header for REGISTER.
 				         It may be different than acc

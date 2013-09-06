@@ -2534,16 +2534,6 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
- * This macro specifies the URI scheme to use in Contact header
- * when secure transport such as TLS is used. Application can specify
- * either "sip" or "sips".
- */
-#ifndef PJSUA_SECURE_SCHEME
-#   define PJSUA_SECURE_SCHEME		"sip"
-#endif
-
-
-/**
  * Maximum time to wait for unpublication transaction(s) to complete
  * during shutdown process, before sending unregistration. The library
  * tries to wait for the unpublication (un-PUBLISH) to complete before

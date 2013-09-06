@@ -201,6 +201,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	acc->srv_domain = sip_uri->host;
 	acc->srv_port = 0;
     }
+    acc->is_sips = PJSIP_URI_SCHEME_IS_SIPS(name_addr);
 
 
     /* Parse registrar URI, if any */
@@ -911,6 +912,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->user_part, &id_sip_uri->user);
 	pj_strdup_with_null(acc->pool, &acc->srv_domain, &id_sip_uri->host);
 	acc->srv_port = 0;
+	acc->is_sips = PJSIP_URI_SCHEME_IS_SIPS(id_name_addr);
 	update_reg = PJ_TRUE;
 	unreg_first = PJ_TRUE;
     }
@@ -1704,6 +1706,10 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	const char *beginquote, *endquote;
 	char transport_param[32];
 	int len;
+	pj_bool_t secure;
+
+	secure = pjsip_transport_get_flag_from_type(tp->key.type) &
+		 PJSIP_TRANSPORT_SECURE;
 
 	/* Enclose IPv6 address in square brackets */
 	if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
@@ -1727,7 +1733,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
-			       "<sip:%.*s%s%s%.*s%s:%d%s%.*s%s>%.*s",
+			       "<%s:%.*s%s%s%.*s%s:%d%s%.*s%s>%.*s",
+			       ((secure && acc->is_sips)? "sips" : "sip"),
 			       (int)acc->user_part.slen,
 			       acc->user_part.ptr,
 			       (acc->user_part.slen? "@" : ""),
@@ -3079,7 +3086,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?"\" " : ""),
-				     (secure ? PJSUA_SECURE_SCHEME : "sip"),
+				     ((secure && acc->is_sips)? "sips" : "sip"),
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
@@ -3250,7 +3257,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?"\" " : ""),
-				     (secure ? PJSUA_SECURE_SCHEME : "sip"),
+				     ((secure && acc->is_sips)? "sips" : "sip"),
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
 				     (acc->user_part.slen?"@":""),
