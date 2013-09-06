@@ -70,12 +70,18 @@ if test "$LDFLAGS" = ""; then
   LDFLAGS="-O2"
 fi
 
+# Test the toolchain directory
+TCPATH="${DEVPATH}/../../../Toolchains/XcodeDefault.xctoolchain"
+if test ! -d ${TCPATH}/usr/bin; then
+  TCPATH="${DEVPATH}"
+fi
+
 # Determine which gcc for this SDK. Binaries should have the
 # full path as it's not normally in user's PATH
 
 if test "${CC}" = ""; then
   # Try to use clang if available
-  ccpath="${DEVPATH}/../../../Toolchains/XcodeDefault.xctoolchain/usr/bin/clang"
+  ccpath="${TCPATH}/usr/bin/clang"
   # Next, try to use llvm-gcc
   gccpath="${DEVPATH}/usr/bin/llvm-gcc"
   if test -e ${ccpath}; then
@@ -118,7 +124,7 @@ fi
 #ARCH="-arch armv6"
 export CFLAGS="${CFLAGS} -DPJ_SDK_NAME=\"\\\"`basename $SDKPATH`\\\"\" ${ARCH} -isysroot ${SDKPATH}"
 export LDFLAGS="${LDFLAGS} ${ARCH} -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
-export AR="${DEVPATH}/usr/bin/libtool -static -o"
+export AR="${TCPATH}/usr/bin/libtool -static -o"
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
 # header files in standard /usr/include instead of in isysroot
