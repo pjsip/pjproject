@@ -463,9 +463,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 
     /* When profile-level-id is not specified, use default value "42000A" */
     if (h264_fmtp->profile_idc == 0) {
-	h264_fmtp->profile_idc = 0x42;
-	h264_fmtp->profile_iop = 0x00;
-	h264_fmtp->level = 0x0A;
+	const pj_str_t DEF_PROFILE = {"42000A", 6};
+
+	status = init_h264_profile(&DEF_PROFILE, h264_fmtp);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     return PJ_SUCCESS;
