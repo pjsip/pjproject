@@ -131,7 +131,7 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
 {
     Endpoint &ep = Endpoint::instance();
 
-    if (!ep.epCallback || !res)
+    if (!ep.epCallback)
 	return;
 
     TransportStateChangedParam prm;
@@ -168,9 +168,9 @@ void Endpoint::libInit( const EpConfig &prmEpConfig,
     pjsua_media_config med_cfg;
     pj_status_t status;
 
-    ua_cfg = prmEpConfig.uaConfig.toPjsip();
-    log_cfg = prmEpConfig.logConfig.toPjsip();
-    med_cfg = prmEpConfig.medConfig.toPjsip();
+    ua_cfg = prmEpConfig.uaConfig.toPj();
+    log_cfg = prmEpConfig.logConfig.toPj();
+    med_cfg = prmEpConfig.medConfig.toPj();
 
     /* Setup log callback */
     if (prmEpConfig.logConfig.writer) {
@@ -371,7 +371,7 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
     pjsua_transport_id tid;
     pj_status_t status;
 
-    tcfg = cfg.toPjsip();
+    tcfg = cfg.toPj();
     status = pjsua_transport_create(type, &tcfg, &tid);
     PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportCreate()", status);
 

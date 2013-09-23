@@ -118,7 +118,7 @@ pjsua_config UaConfig::toPj() const
     {
 	pua_cfg.stun_srv[i] = str2Pj(this->stunServer[i]);
     }
-    pua_cfg.stun_srv_count = i;
+    pua_cfg.stun_srv_cnt = i;
 
     pua_cfg.nat_type_in_sdp = this->natTypeInSdp;
     pua_cfg.enable_unsolicited_mwi = this->mwiUnsolicitedEnabled;
