@@ -18,6 +18,7 @@ export PJSIP_LIB:=../lib/libpjsip-$(TARGET_NAME)$(LIBEXT)
 export PJSIP_UA_LIB:=../lib/libpjsip-ua-$(TARGET_NAME)$(LIBEXT)
 export PJSIP_SIMPLE_LIB:=../lib/libpjsip-simple-$(TARGET_NAME)$(LIBEXT)
 export PJSUA_LIB_LIB=../lib/libpjsua-$(TARGET_NAME)$(LIBEXT)
+export PJSUA2_LIB_LIB=../lib/libpjsua2-$(TARGET_NAME)$(LIBEXT)
 
 
 ###############################################################################
@@ -84,6 +85,30 @@ export PJSUA_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 
 ###############################################################################
+# Defines for building pjsua2 library
+#
+export PJSUA2_LIB_SRCDIR = ../src/pjsua2
+export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			   endpoint.o types.o
+export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
+export PJSUA2_LIB_CXXFLAGS = $(PJSUA2_LIB_CFLAGS) 
+
+
+###############################################################################
+# Defines for building pjsua2-test application
+#
+export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
+export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			   main.o
+export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
+export PJSUA2_TEST_CXXFLAGS = $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_TEST_LDFLAGS += -lpjsua2-$(TARGET_NAME) $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+export PJSUA2_TEST_EXE := ../bin/pjsua2-test-$(TARGET_NAME)$(HOST_EXE)
+
+export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
+
+
+###############################################################################
 # Defines for building test application
 #
 export TEST_SRCDIR = ../src/test
@@ -104,7 +129,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 # Main entry
 #
 #
-TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsip-test
+TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsua2-lib pjsip-test pjsua2-test
 
 .PHONY: $(TARGETS)
 
@@ -124,7 +149,7 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend pjsip pjsip-ua pjsua-lib clean realclean distclean
+.PHONY: dep depend pjsip pjsip-ua pjsua-lib pjsua2-lib clean realclean distclean
 
 pjsip:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $(PJSIP_LIB)
@@ -138,8 +163,14 @@ pjsip-simple:
 pjsua-lib: 
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
 
+pjsua2-lib: 
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_LIB app=pjsua2-lib $(PJSUA2_LIB_LIB)
+
 pjsip-test: pjsip
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $(TEST_EXE)
+
+pjsua2-test:
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_TEST app=pjsua2-test $(PJSUA2_TEST_EXE)
 
 .PHONY: ../lib/pjsip.ko
 ../lib/pjsip.ko:
@@ -166,26 +197,35 @@ clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_LIB app=pjsua2-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_TEST app=pjsua2-test $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_LIB app=pjsua2-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
-	echo '$(TEST_EXE): $(PJMEDIA_LIB) $(PJSUA_LIB_LIB) $(PJSIP_SIMPLE_LIB) $(PJSIP_UA_LIB) $(PJSIP_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjsip-test-$(TARGET_NAME).depend
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_TEST app=pjsua2-test $@
+	echo '$(TEST_EXE): $(PJMEDIA_LIB)  $(PJSUA2_LIB_LIB) $(PJSUA_LIB_LIB) $(PJSIP_SIMPLE_LIB) $(PJSIP_UA_LIB) $(PJSIP_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjsip-test-$(TARGET_NAME).depend
+	echo '$(PJSUA2_TEST_EXE): $(PJSUA2_LIB_LIB)' >> .pjsua2-test-$(TARGET_NAME).depend
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-ua-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-simple-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsua-lib-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsua2-lib-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjsua2-test-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_LIB app=pjsua2-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_TEST app=pjsua2-test $@
 
 
 

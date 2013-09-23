@@ -56,12 +56,16 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 # Main entry
 #
 #
-TARGETS := pjsua pjsystest samples
+#TARGETS := swig pjsua pjsystest samples
+TARGETS := swig
 
 .PHONY: $(TARGETS)
 
 all: $(TARGETS)
 
+swig:
+	$(MAKE) -C ../src/swig
+	
 doc:
 
 dep: depend
