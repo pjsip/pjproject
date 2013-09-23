@@ -11,6 +11,7 @@
 %{
 #include "pjsua2/endpoint.hpp"
 using namespace std;
+using namespace pj;
 %}
 
 //
@@ -41,6 +42,7 @@ namespace std
 #define PJ_END_DECL
 #define PJ_DECL(type)		type
 #define PJ_INLINE(type)		type
+#define PJ_DECL_DATA(type)	extern type
 
 //
 // Start with ignoring everything
