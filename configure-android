@@ -95,7 +95,7 @@ if test "$1" = "--use-ndk-cflags"; then
 else
 
   ANDROID_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/toolchains/${TC_DIR}-* | sed 's/clang/0/' | sort -gr | head -1`
-  ANDROID_TC=`ls -d ${ANDROID_TC_VER}/prebuilt/*`
+  ANDROID_TC=`ls -d ${ANDROID_TC_VER}/prebuilt/* | grep -v gdbserver | head -1`
   if test ! -d ${ANDROID_TC}; then
     echo "$F error: unable to find directory ${ANDROID_TC} in Android NDK"
     exit 1
