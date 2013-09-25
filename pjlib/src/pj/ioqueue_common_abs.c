@@ -1016,7 +1016,6 @@ retry_on_restart:
 
                 return status;
             }
-	    status = status;
         }
     }
 
