@@ -80,7 +80,7 @@ enum timer_type
 };
 
 /* Candidate type preference */
-static pj_uint8_t cand_type_prefs[4] =
+static pj_uint8_t cand_type_prefs[PJ_ICE_CAND_TYPE_MAX] =
 {
 #if PJ_ICE_CAND_TYPE_PREF_BITS < 8
     /* Keep it to 2 bits */
@@ -545,9 +545,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
 {
     unsigned i;
     PJ_ASSERT_RETURN(ice && prefs, PJ_EINVAL);
-    ice->prefs = (pj_uint8_t*) pj_pool_calloc(ice->pool, PJ_ARRAY_SIZE(prefs),
+    ice->prefs = (pj_uint8_t*) pj_pool_calloc(ice->pool, PJ_ICE_CAND_TYPE_MAX,
 					      sizeof(pj_uint8_t));
-    for (i=0; i<4; ++i) {
+    for (i=0; i<PJ_ICE_CAND_TYPE_MAX; ++i) {
 #if PJ_ICE_CAND_TYPE_PREF_BITS < 8
 	pj_assert(prefs[i] < (2 << PJ_ICE_CAND_TYPE_PREF_BITS));
 #endif

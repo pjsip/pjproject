@@ -154,7 +154,12 @@ typedef enum pj_ice_cand_type
      * ICE relayed candidate, which represents the address allocated in
      * TURN server.
      */
-    PJ_ICE_CAND_TYPE_RELAYED
+    PJ_ICE_CAND_TYPE_RELAYED,
+
+    /**
+     * Number of defined ICE candidate types.
+     */
+    PJ_ICE_CAND_TYPE_MAX
 
 } pj_ice_cand_type;
 

@@ -65,7 +65,7 @@ enum tp_type
 
 
 /* The candidate type preference when STUN candidate is used */
-static pj_uint8_t srflx_pref_table[4] = 
+static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] = 
 {
 #if PJNATH_ICE_PRIO_STD
     100,    /**< PJ_ICE_HOST_PREF	    */
