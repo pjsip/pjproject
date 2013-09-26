@@ -1591,12 +1591,17 @@ static pj_status_t app_init()
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
+
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
@@ -1630,14 +1635,18 @@ static pj_status_t app_init()
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
-	    if (app_config.ipv6)
-		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
+	    acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
+
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
@@ -1664,12 +1673,17 @@ static pj_status_t app_init()
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
+
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
     }
@@ -1689,14 +1703,18 @@ static pj_status_t app_init()
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
-	    if (app_config.ipv6)
-		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
+	    acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
+
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
     }
@@ -1724,12 +1742,17 @@ static pj_status_t app_init()
 	
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(acc_id, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
 	    pjsua_acc_modify(acc_id, &acc_cfg);
 	}
+
 	pjsua_acc_set_online_status(acc_id, PJ_TRUE);
     }
 
@@ -1748,14 +1771,18 @@ static pj_status_t app_init()
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
-	if (PJMEDIA_HAS_VIDEO) {
+
+	/* Adjust local account config based on pjsua app config */
+	{
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, tmp_pool, &acc_cfg);
+
 	    app_config_init_video(&acc_cfg);
-	    if (app_config.ipv6)
-		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+	    acc_cfg.rtp_cfg = app_config.rtp_cfg;
+	    acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
+
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
     }
