@@ -128,8 +128,8 @@ export APP_LDLIBS := -lpjsua-$(TARGET_NAME)\
 	-lpjsip-$(TARGET_NAME)\
 	-lpjmedia-codec-$(TARGET_NAME)\
 	-lpjmedia-videodev-$(TARGET_NAME)\
-	-lpjmedia-$(TARGET_NAME)\
 	-lpjmedia-audiodev-$(TARGET_NAME)\
+	-lpjmedia-$(TARGET_NAME)\
 	-lpjnath-$(TARGET_NAME)\
 	-lpjlib-util-$(TARGET_NAME)\
 	$(APP_THIRD_PARTY_LIBS)\
