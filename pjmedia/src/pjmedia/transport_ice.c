@@ -283,6 +283,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp)
+{
+    PJ_ASSERT_RETURN(tp, NULL);
+    return pj_ice_strans_get_grp_lock(((struct transport_ice *)tp)->ice_st);
+}
+
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
 static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
 		       pj_status_t err)

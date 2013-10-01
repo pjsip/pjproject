@@ -265,6 +265,16 @@ PJ_DECL(void*) pj_turn_sock_get_user_data(pj_turn_sock *turn_sock);
 
 
 /**
+ * Get the group lock for this TURN transport.
+ *
+ * @param turn_sock	The TURN transport instance.
+ *
+ * @return	        The group lock.
+ */
+PJ_DECL(pj_grp_lock_t *) pj_turn_sock_get_grp_lock(pj_turn_sock *turn_sock);
+
+
+/**
  * Get the TURN transport info. The transport info contains, among other
  * things, the allocated relay address.
  *

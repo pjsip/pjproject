@@ -797,6 +797,15 @@ PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
     return PJ_SUCCESS;
 }
 
+/**
+ * Get the group lock for this ICE stream transport.
+ */
+PJ_DEF(pj_grp_lock_t *) pj_ice_strans_get_grp_lock(pj_ice_strans *ice_st)
+{
+    PJ_ASSERT_RETURN(ice_st, NULL);
+    return ice_st->grp_lock;
+}
+
 /*
  * Create ICE!
  */

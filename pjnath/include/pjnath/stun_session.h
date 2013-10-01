@@ -435,6 +435,15 @@ PJ_DECL(pj_status_t) pj_stun_session_set_user_data(pj_stun_session *sess,
 PJ_DECL(void*) pj_stun_session_get_user_data(pj_stun_session *sess);
 
 /**
+ * Get the group lock for this STUN session.
+ *
+ * @param sess	    The STUN session instance.
+ *
+ * @return	    The group lock.
+ */
+PJ_DECL(pj_grp_lock_t *) pj_stun_session_get_grp_lock(pj_stun_session *sess);
+
+/**
  * Set SOFTWARE name to be included in all requests and responses.
  *
  * @param sess	    The STUN session instance.

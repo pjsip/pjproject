@@ -221,6 +221,15 @@ PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 					 void *user_data,
 					 pjmedia_transport **p_tp);
 
+/**
+ * Get the group lock for the ICE media transport.
+ *
+ * @param tp	        The ICE media transport.
+ *
+ * @return		The group lock.
+ */
+PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
+
 PJ_END_DECL
 
 

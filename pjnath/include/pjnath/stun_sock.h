@@ -434,6 +434,16 @@ PJ_DECL(void*) pj_stun_sock_get_user_data(pj_stun_sock *stun_sock);
 
 
 /**
+ * Get the group lock for this STUN transport.
+ *
+ * @param stun_sock	The STUN transport instance.
+ *
+ * @return	        The group lock.
+ */
+PJ_DECL(pj_grp_lock_t *) pj_stun_sock_get_grp_lock(pj_stun_sock *stun_sock);
+
+
+/**
  * Get the STUN transport info. The transport info contains, among other
  * things, the allocated relay address.
  *

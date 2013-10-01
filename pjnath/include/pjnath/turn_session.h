@@ -513,6 +513,16 @@ PJ_DECL(void*) pj_turn_session_get_user_data(pj_turn_session *sess);
 
 
 /**
+ * Get the group lock for this TURN session.
+ *
+ * @param sess		The TURN client session.
+ *
+ * @return	        The group lock.
+ */
+PJ_DECL(pj_grp_lock_t *) pj_turn_session_get_grp_lock(pj_turn_session *sess);
+
+
+/**
  * Configure message logging. By default all flags are enabled.
  *
  * @param sess		The TURN client session.

@@ -324,6 +324,15 @@ PJ_DEF(void*) pj_turn_sock_get_user_data(pj_turn_sock *turn_sock)
     return turn_sock->user_data;
 }
 
+/*
+ * Get group lock.
+ */
+PJ_DEF(pj_grp_lock_t *) pj_turn_sock_get_grp_lock(pj_turn_sock *turn_sock)
+{
+    PJ_ASSERT_RETURN(turn_sock, NULL);
+    return turn_sock->grp_lock;
+}
+
 /**
  * Get info.
  */

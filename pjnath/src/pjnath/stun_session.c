@@ -621,6 +621,12 @@ PJ_DEF(void*) pj_stun_session_get_user_data(pj_stun_session *sess)
     return sess->user_data;
 }
 
+PJ_DEF(pj_grp_lock_t *) pj_stun_session_get_grp_lock(pj_stun_session *sess)
+{
+    PJ_ASSERT_RETURN(sess, NULL);
+    return sess->grp_lock;
+}
+
 PJ_DEF(pj_status_t) pj_stun_session_set_software_name(pj_stun_session *sess,
 						      const pj_str_t *sw)
 {
