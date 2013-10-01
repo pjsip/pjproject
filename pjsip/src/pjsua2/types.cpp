@@ -17,37 +17,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua2/types.hpp>
+#include "util.hpp"
 
 using namespace pj;
 using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
-inline pj_str_t str2Pj(const string &is)
-{
-    pj_str_t os;
-    os.ptr = (char*)is.c_str();
-    os.slen = is.size();
-    return os;
-}
-
-inline string pj2Str(const pj_str_t &is)
-{
-    return string(is.ptr, is.slen);
-}
-
-///////////////////////////////////////////////////////////////////////////////
 
 Error::Error()
-: status(PJ_SUCCESS)
+: status(PJ_SUCCESS), srcLine(0)
 {
 }
 
 Error::Error( pj_status_t prm_status,
-	      const string &prm_reason,
 	      const string &prm_title,
+	      const string &prm_reason,
 	      const string &prm_src_file,
 	      int prm_src_line)
-: status(prm_status), reason(prm_reason), title(prm_title),
+: status(prm_status), title(prm_title), reason(prm_reason),
   srcFile(prm_src_file), srcLine(prm_src_line)
 {
     if (this->status != PJ_SUCCESS && prm_reason.empty()) {
@@ -57,181 +44,6 @@ Error::Error( pj_status_t prm_status,
     }
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-AuthCredInfo::AuthCredInfo()
-: dataType(0)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-UaConfig::UaConfig()
-{
-    pjsua_config ua_cfg;
-
-    pjsua_config_default(&ua_cfg);
-    fromPj(ua_cfg);
-}
-
-void UaConfig::fromPj(const pjsua_config &ua_cfg)
-{
-    unsigned i;
-
-    this->maxCalls = ua_cfg.max_calls;
-    this->threadCnt = ua_cfg.thread_cnt;
-    this->userAgent = pj2Str(ua_cfg.user_agent);
-
-    for (i=0; i<ua_cfg.nameserver_count; ++i) {
-	this->nameserver.push_back(pj2Str(ua_cfg.nameserver[i]));
-    }
-
-    for (i=0; i<ua_cfg.stun_srv_cnt; ++i) {
-	this->stunServer.push_back(pj2Str(ua_cfg.stun_srv[i]));
-    }
-
-    this->stunIgnoreFailure = ua_cfg.stun_ignore_failure;
-    this->natTypeInSdp = ua_cfg.nat_type_in_sdp;
-    this->mwiUnsolicitedEnabled = ua_cfg.enable_unsolicited_mwi;
-}
-
-pjsua_config UaConfig::toPj() const
-{
-    unsigned i;
-    pjsua_config pua_cfg;
-
-    pjsua_config_default(&pua_cfg);
-
-    pua_cfg.max_calls = this->maxCalls;
-    pua_cfg.thread_cnt = this->threadCnt;
-    pua_cfg.user_agent = str2Pj(this->userAgent);
-
-    for (i=0; i<this->nameserver.size() && i<PJ_ARRAY_SIZE(pua_cfg.nameserver);
-	 ++i)
-    {
-	pua_cfg.nameserver[i] = str2Pj(this->nameserver[i]);
-    }
-    pua_cfg.nameserver_count = i;
-
-    for (i=0; i<this->stunServer.size() && i<PJ_ARRAY_SIZE(pua_cfg.stun_srv);
-	 ++i)
-    {
-	pua_cfg.stun_srv[i] = str2Pj(this->stunServer[i]);
-    }
-    pua_cfg.stun_srv_cnt = i;
-
-    pua_cfg.nat_type_in_sdp = this->natTypeInSdp;
-    pua_cfg.enable_unsolicited_mwi = this->mwiUnsolicitedEnabled;
-
-    return pua_cfg;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-LogConfig::LogConfig()
-{
-    pjsua_logging_config lc;
-
-    pjsua_logging_config_default(&lc);
-    fromPj(lc);
-}
-
-void LogConfig::fromPj(const pjsua_logging_config &lc)
-{
-    this->msgLogging = lc.msg_logging;
-    this->level = lc.level;
-    this->consoleLevel = lc.console_level;
-    this->decor = lc.decor;
-    this->filename = pj2Str(lc.log_filename);
-    this->fileFlags = lc.log_file_flags;
-    this->writer = NULL;
-}
-
-pjsua_logging_config LogConfig::toPj() const
-{
-    pjsua_logging_config lc;
-
-    pjsua_logging_config_default(&lc);
-
-    lc.msg_logging = this->msgLogging;
-    lc.level = this->level;
-    lc.console_level = this->consoleLevel;
-    lc.decor = this->decor;
-    lc.log_file_flags = this->fileFlags;
-    lc.log_filename = str2Pj(this->filename);
-
-    return lc;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-MediaConfig::MediaConfig()
-{
-    pjsua_media_config mc;
-
-    pjsua_media_config_default(&mc);
-    fromPj(mc);
-}
-
-void MediaConfig::fromPj(const pjsua_media_config &mc)
-{
-    this->clockRate = mc.clock_rate;
-    this->sndClockRate = mc.snd_clock_rate;
-    this->channelCount = mc.channel_count;
-    this->audioFramePtime = mc.audio_frame_ptime;
-    this->maxMediaPorts = mc.max_media_ports;
-    this->hasIoqueue = mc.has_ioqueue;
-    this->threadCnt = mc.thread_cnt;
-    this->quality = mc.quality;
-    this->ptime = mc.ptime;
-    this->noVad = mc.no_vad;
-    this->ilbcMode = mc.ilbc_mode;
-    this->txDropPct = mc.tx_drop_pct;
-    this->rxDropPct = mc.rx_drop_pct;
-    this->ecOptions = mc.ec_options;
-    this->ecTailLen = mc.ec_tail_len;
-    this->sndRecLatency = mc.snd_rec_latency;
-    this->sndPlayLatency = mc.snd_play_latency;
-    this->jbInit = mc.jb_init;
-    this->jbMinPre = mc.jb_min_pre;
-    this->jbMaxPre = mc.jb_max_pre;
-    this->jbMax = mc.jb_max;
-    this->sndAutoCloseTime = mc.snd_auto_close_time;
-    this->vidPreviewEnableNative = mc.vid_preview_enable_native;
-}
-
-pjsua_media_config MediaConfig::toPj() const
-{
-    pjsua_media_config mcfg;
-
-    pjsua_media_config_default(&mcfg);
-
-    mcfg.clock_rate = this->clockRate;
-    mcfg.snd_clock_rate = this->sndClockRate;
-    mcfg.channel_count = this->channelCount;
-    mcfg.audio_frame_ptime = this->audioFramePtime;
-    mcfg.max_media_ports = this->maxMediaPorts;
-    mcfg.has_ioqueue = this->hasIoqueue;
-    mcfg.thread_cnt = this->threadCnt;
-    mcfg.quality = this->quality;
-    mcfg.ptime = this->ptime;
-    mcfg.no_vad = this->noVad;
-    mcfg.ilbc_mode = this->ilbcMode;
-    mcfg.tx_drop_pct = this->txDropPct;
-    mcfg.rx_drop_pct = this->rxDropPct;
-    mcfg.ec_options = this->ecOptions;
-    mcfg.ec_tail_len = this->ecTailLen;
-    mcfg.snd_rec_latency = this->sndRecLatency;
-    mcfg.snd_play_latency = this->sndPlayLatency;
-    mcfg.jb_init = this->jbInit;
-    mcfg.jb_min_pre = this->jbMinPre;
-    mcfg.jb_max_pre = this->jbMaxPre;
-    mcfg.jb_max = this->jbMax;
-    mcfg.snd_auto_close_time = this->sndAutoCloseTime;
-    mcfg.vid_preview_enable_native = this->vidPreviewEnableNative;
-
-    return mcfg;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -298,6 +110,7 @@ TransportConfig::TransportConfig()
 void TransportConfig::fromPj(const pjsua_transport_config &prm)
 {
     this->port 		= prm.port;
+    this->portRange	= prm.port_range;
     this->publicAddress = pj2Str(prm.public_addr);
     this->boundAddress	= pj2Str(prm.bound_addr);
     this->tlsConfig.fromPj(prm.tls_setting);
@@ -310,6 +123,7 @@ pjsua_transport_config TransportConfig::toPj() const
     pjsua_transport_config tc;
 
     tc.port		= this->port;
+    tc.port_range	= this->portRange;
     tc.public_addr	= str2Pj(this->publicAddress);
     tc.bound_addr	= str2Pj(this->boundAddress);
     tc.tls_setting	= this->tlsConfig.toPj();
@@ -341,3 +155,38 @@ TransportInfo::TransportInfo(const pjsua_transport_info &info)
     this->usageCount = info.usage_count;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
+{
+    char buf[256];
+
+    int len = pjsip_hdr_print_on((void*)hdr, buf, sizeof(buf)-1);
+    if (len <= 0)
+	PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
+    buf[len] = '\0';
+
+    char *pos = strchr(buf, ':');
+    if (!pos)
+	PJSUA2_RAISE_ERROR(PJSIP_EINVALIDHDR);
+
+    // Trim white space after header name
+    char *end_name = pos;
+    while (end_name>buf && pj_isspace(*(end_name-1))) --end_name;
+
+    // Trim whitespaces after colon
+    char *start_val = pos+1;
+    while (*start_val && pj_isspace(*start_val)) ++start_val;
+
+    hName = string(buf, end_name);
+    hValue = string(start_val);
+}
+
+pjsip_generic_string_hdr &SipHeader::toPj() const
+{
+    pj_str_t hname  = str2Pj(hName);
+    pj_str_t hvalue = str2Pj(hValue);
+
+    pjsip_generic_string_hdr_init2(&pjHdr, &hname, &hvalue);
+    return pjHdr;
+}

@@ -25,6 +25,8 @@ namespace std
 	%template(StringVector) std::vector<std::string>;
 	%template(IntVector) std::vector<int>;
 	%template(AuthCredInfoVector) std::vector<AuthCredInfo>;
+	%template(SipMultipartPartVector) std::vector<SipMultipartPart>;
+	%template(SipHeaderVector) std::vector<SipHeader>;
 }
 
 //

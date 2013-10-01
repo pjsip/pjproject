@@ -24,6 +24,7 @@
  * @brief PJSUA2 Account operations
  */
 #include <pjsua-lib/pjsua.h>
+#include <pjsua2/types.hpp>
 
 /**
  * @defgroup PJSUA2_ACC Account
@@ -35,6 +36,12 @@
  * @ingroup PJSUA2_Ref
  * @{
  */
+
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+using std::string;
+using std::vector;
 
 /**
  * Account registration config. This will be specified in AccountConfig.
@@ -48,7 +55,7 @@ struct AccountRegConfig
      * This field should be specified if registration is desired. If the
      * value is empty, no account registration will be performed.
      */
-    String		registrarUri;
+    string		registrarUri;
 
     /**
      * Specify whether the account should register as soon as it is
@@ -63,7 +70,7 @@ struct AccountRegConfig
      * The optional custom SIP headers to be put in the registration
      * request.
      */
-    StringVector	headers;
+    SipHeaderVector	headers;
 
     /**
      * Optional interval for registration, in seconds. If the value is zero,
@@ -101,7 +108,7 @@ struct AccountRegConfig
      *
      * Default: PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH, 5 seconds
      */
-    unsigned		delayBeforeRefresh;
+    unsigned		delayBeforeRefreshSec;
 
     /**
      * Specify whether calls of the configured account should be dropped
@@ -121,11 +128,14 @@ struct AccountRegConfig
     unsigned		unregWaitSec;
 
     /**
-     * Specify whether REGISTER requests will use the proxy settings
-     * of this account. If zero, the REGISTER request will not have any
-     * Route headers.
+     * Specify how the registration uses the outbound and account proxy
+     * settings. This controls if and what Route headers will appear in
+     * the REGISTER request of this account. The value is bitmask combination
+     * of PJSUA_REG_USE_OUTBOUND_PROXY and PJSUA_REG_USE_ACC_PROXY bits.
+     * If the value is set to 0, the REGISTER request will not use any proxy
+     * (i.e. it will not have any Route headers).
      *
-     * Default: 1 (use account proxy)
+     * Default: 3 (PJSUA_REG_USE_OUTBOUND_PROXY | PJSUA_REG_USE_ACC_PROXY)
      */
     unsigned		proxyUse;
 };
@@ -240,6 +250,19 @@ struct AccountCallConfig
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
     pjsua_sip_timer_use	timerUse;
+
+    /**
+     * Specify minimum Session Timer expiration period, in seconds.
+     * Must not be lower than 90. Default is 90.
+     */
+    unsigned		timerMinSESec;
+
+    /**
+     * Specify Session Timer expiration period, in seconds.
+     * Must not be lower than timerMinSE. Default is 1800.
+     */
+    unsigned		timerSessExpiresSec;
+
 };
 
 /**
@@ -251,7 +274,7 @@ struct AccountPresConfig
      * The optional custom SIP headers to be put in the presence
      * subscription request.
      */
-    StringVector	subHeaders;
+    SipHeaderVector	headers;
 
     /**
      * If this flag is set, the presence information of this account will
@@ -391,6 +414,16 @@ struct AccountNatConfig
     bool		iceNoRtcp;
 
     /**
+     * Always send re-INVITE/UPDATE after ICE negotiation regardless of whether
+     * the default ICE transport address is changed or not. When this is set
+     * to False, re-INVITE/UPDATE will be sent only when the default ICE
+     * transport address is changed.
+     *
+     * Default: yes
+     */
+    bool		iceAlwaysUpdate;
+
+    /**
      * Enable TURN candidate in ICE.
      */
     bool		turnEnabled;
@@ -439,24 +472,17 @@ struct AccountNatConfig
      *
      * Default: TRUE
      */
-    bool		contactRewriteEnabled;
+    int			contactRewriteUse;
 
     /**
      * Specify how Contact update will be done with the registration, if
-     * contactRewriteEnabled is enabled.
+     * \a contactRewriteEnabled is enabled. The value is bitmask combination of
+     * \a pjsua_contact_rewrite_method. See also pjsua_contact_rewrite_method.
      *
-     * If set to 1, the Contact update will be done by sending unregistration
-     * to the currently registered Contact, while simultaneously sending new
-     * registration (with different Call-ID) for the updated Contact.
+     * Value PJSUA_CONTACT_REWRITE_UNREGISTER(1) is the legacy behavior.
      *
-     * If set to 2, the Contact update will be done in a single, current
-     * registration session, by removing the current binding (by setting its
-     * Contact's expires parameter to zero) and adding a new Contact binding,
-     * all done in a single request.
-     *
-     * Value 1 is the legacy behavior.
-     *
-     * Default value: PJSUA_CONTACT_REWRITE_METHOD (2)
+     * Default value: PJSUA_CONTACT_REWRITE_METHOD
+     *   (PJSUA_CONTACT_REWRITE_NO_UNREG | PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE)
      */
     int			contactRewriteMethod;
 
@@ -468,7 +494,19 @@ struct AccountNatConfig
      *
      * Default: TRUE
      */
-    bool		viaRewriteEnabled;
+    int			viaRewriteUse;
+
+    /**
+     * This option controls whether the IP address in SDP should be replaced
+     * with the IP address found in Via header of the REGISTER response, ONLY
+     * when STUN and ICE are not used. If the value is FALSE (the original
+     * behavior), then the local IP address will be used. If TRUE, and when
+     * STUN and ICE are disabled, then the IP address found in registration
+     * response will be used.
+     *
+     * Default: PJ_FALSE (no)
+     */
+    int			sdpNatRewriteUse;
 
     /**
      * Control the use of SIP outbound feature. SIP outbound is described in
@@ -483,7 +521,7 @@ struct AccountNatConfig
      *
      * Default: TRUE
      */
-    bool		sipOutboundEnabled;
+    int			sipOutboundUse;
 
     /**
      * Specify SIP outbound (RFC 5626) instance ID to be used by this
@@ -530,7 +568,7 @@ struct AccountNatConfig
 struct AccountMediaConfig
 {
     /**
-     * Media transport configuration.
+     * Media transport (RTP) configuration.
      */
     TransportConfig	transportConfig;
 
@@ -573,37 +611,11 @@ struct AccountMediaConfig
      * Default: #PJSUA_DEFAULT_SRTP_SECURE_SIGNALING
      */
     int			srtpSecureSignaling;
-};
-
-/**
- * Video stream rate control config. This will be specified in
- * AccountVideoConfig.
- */
-struct VidRateControlConfig
-{
-    /**
-     * Rate control method.
-     *
-     * Default: PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING.
-     */
-    pjmedia_vid_stream_rc_method    method;
 
     /**
-     * Upstream/outgoing bandwidth. If this is set to zero, the video stream
-     * will use codec maximum bitrate setting.
-     *
-     * Default: 0 (follow codec maximum bitrate).
+     * Specify whether IPv6 should be used on media. Default is not used.
      */
-    unsigned			    bandwidth;
-
-    /** Default constructor */
-    VidRateControlConfig();
-
-    /** Convert to pj */
-    pjmedia_vid_stream_rc_config toPj() const;
-
-    /** Convert from pj */
-    void fromPj(const pjmedia_vid_stream_rc_config &prm);
+    pjsua_ipv6_use	ipv6Use;
 };
 
 /**
@@ -625,7 +637,7 @@ struct AccountVideoConfig
      *
      * Default: False
      */
-    bool		autoShowIncoming;
+    bool			autoShowIncoming;
 
     /**
      * Specify whether outgoing video should be activated by default when
@@ -640,7 +652,7 @@ struct AccountVideoConfig
      *
      * Default: False
      */
-    bool		autoTransmitOutgoing;
+    bool			autoTransmitOutgoing;
 
     /**
      * Specify video window's flags. The value is a bitmask combination of
@@ -648,7 +660,7 @@ struct AccountVideoConfig
      *
      * Default: 0
      */
-    unsigned		windowFlags;
+    unsigned			windowFlags;
 
     /**
      * Specify the default capture device to be used by this account. If
@@ -657,19 +669,29 @@ struct AccountVideoConfig
      *
      * Default: PJMEDIA_VID_DEFAULT_CAPTURE_DEV
      */
-    pjmedia_vid_dev_index defaultCaptureDevice;
+    pjmedia_vid_dev_index 	defaultCaptureDevice;
 
     /**
      * Specify the default rendering device to be used by this account.
      *
      * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
      */
-    pjmedia_vid_dev_index defaultRenderDevice;
+    pjmedia_vid_dev_index 	defaultRenderDevice;
 
     /**
-     * Specify the send rate control for video stream.
+     * Rate control method.
+     *
+     * Default: PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING.
      */
-    VidRateControlConfig  rateControlConfig;
+    pjmedia_vid_stream_rc_method rateControlMethod;
+
+    /**
+     * Upstream/outgoing bandwidth. If this is set to zero, the video stream
+     * will use codec maximum bitrate setting.
+     *
+     * Default: 0 (follow codec maximum bitrate).
+     */
+    unsigned			rateControlBandwidth;
 };
 
 /**
@@ -691,7 +713,7 @@ struct AccountConfig
      *
      * This field is mandatory.
      */
-    String		uri;
+    string		idUri;
 
     /**
      * Registration settings.
@@ -733,20 +755,47 @@ struct AccountConfig
      */
     AccountVideoConfig	videoConfig;
 
+public:
     /**
      * Default constructor will initialize with default values.
      */
     AccountConfig();
 
     /**
-     * Convert to pjsip.
+     * This will return a temporary pjsua_acc_config instance, which contents
+     * are only valid as long as this AccountConfig structure remains valid
+     * AND no modifications are done to it AND no further toPj() function call
+     * is made. Any call to toPj() function will invalidate the content of
+     * temporary pjsua_acc_config that was returned by the previous call.
      */
     pjsua_acc_config toPj() const;
 
     /**
      * Initialize from pjsip.
      */
-    void fromPj(const pjsua_acc_config &prm);
+    void fromPj(const pjsua_acc_config &prm, const pjsua_media_config *mcfg);
+
+};
+
+/**
+ * This describes account presence status.
+ */
+struct AccountPresenceStatus
+{
+    /** Basic status. */
+    bool		isOnline;
+
+    /** Activity type. */
+    pjrpid_activity	activity;
+
+    /** Optional text describing the person/element. */
+    string		note;
+
+    /** Optional RPID ID string. */
+    string		rpidId;
+
+public:
+    AccountPresenceStatus();
 };
 
 /**
@@ -820,64 +869,216 @@ struct AccountInfo
 };
 
 /**
- * This structure contains parameters for onIncomingCall() callback.
+ * This structure contains parameters for onIncomingCall() account callback.
  */
-struct IncomingCallParam
+struct OnIncomingCallParam
 {
-    // rdata
+    /**
+     * The library call index allocated for the new call.
+     */
+    int			callIndex;
+
+    /**
+     * The incoming INVITE request.
+     */
+    SipRxData		rdata;
 };
 
 /**
- * This structure contains parameters for onRegState() callback.
+ * This structure contains parameters for onRegStarted() account callback.
  */
-struct RegStateParam
+struct OnRegStartedParam
 {
-    // reginfo
+    /**
+     * True for registration and False for unregistration.
+     */
+    bool renew;
+};
+
+/**
+ * This structure contains parameters for onRegState() account callback.
+ */
+struct OnRegStateParam
+{
+    /**
+     * Registration operation status.
+     */
+    pj_status_t		status;
+
+    /**
+     * SIP status code received.
+     */
+    int			code;
+
+    /**
+     * SIP reason phrase received.
+     */
+    pj_str_t		reason;
+
+    /**
+     * The incoming message.
+     */
+    SipRxData		rdata;
+
+    /**
+     * Next expiration interval.
+     */
+    int			expiration;
 };
 
 /**
  * This structure contains parameters for onIncomingSubscribe() callback.
  */
-struct IncomingSubscribeParam
+struct OnIncomingSubscribeParam
 {
-    /*
-    * @param srv_pres	    Server presence subscription instance. If
-    *			    application delays the acceptance of the request,
-    *			    it will need to specify this object when calling
-    *			    #pjsua_pres_notify().
-    * @param acc_id	    Account ID most appropriate for this request.
-    * @param buddy_id	    ID of the buddy matching the sender of the
-    *			    request, if any, or PJSUA_INVALID_ID if no
-    *			    matching buddy is found.
-    * @param from	    The From URI of the request.
-    * @param rdata	    The incoming request.
-    * @param code	    The status code to respond to the request. The
-    *			    default value is 200. Application may set this
-    *			    to other final status code to accept or reject
-    *			    the request.
-    * @param reason	    The reason phrase to respond to the request.
-    * @param msg_data	    If the application wants to send additional
-    *			    headers in the response, it can put it in this
-    *			    parameter.
-    */
+    /**
+     *  Sender URI.
+     */
+    string		fromUri;
 
-    //pjsua_srv_pres *srv_pres,
-    // pjsua_buddy_id buddy_id,
-    // const pj_str_t *from,
-    // pjsip_rx_data *rdata,
-    // pjsua_msg_data *msg_data
+    /**
+     * The incoming message.
+     */
+    SipRxData		rdata;
 
     /**
      * The status code to respond to the request. The default value is 200.
      * Application may set this to other final status code to accept or
      * reject the request.
      */
-    pjsip_status_code code;
+    pjsip_status_code	code;
 
     /**
      * The reason phrase to respond to the request.
      */
-    string reason;
+    string		reason;
+
+    /**
+     * Additional data to be sent with the response, if any.
+     */
+    SipTxOption		txOption;
+};
+
+/**
+ * Parameters for onInstantMessage() account callback.
+ */
+struct OnInstantMessageParam
+{
+    /**
+     * Sender From URI.
+     */
+    string		fromUri;
+
+    /**
+     * To URI of the request.
+     */
+    string		toUri;
+
+    /**
+     * Contact URI of the sender.
+     */
+    string		contactUri;
+
+    /**
+     * MIME type of the message body.
+     */
+    string		contentType;
+
+    /**
+     * The message body.
+     */
+    string		msgBody;
+
+    /**
+     * The whole message.
+     */
+    SipRxData		rdata;
+};
+
+/**
+ * Parameters for onInstantMessageStatus() account callback.
+ */
+struct OnInstantMessageStatusParam
+{
+    /**
+     * Token or a user data that was associated with the pager
+     * transmission.
+     */
+    Token		userData;
+
+    /**
+     * Destination URI.
+     */
+    string		toUri;
+
+    /**
+     * The message body.
+     */
+    string		msgBody;
+
+    /**
+     * The SIP status code of the transaction.
+     */
+    pjsip_status_code	status;
+
+    /**
+     * The reason phrase of the transaction.
+     */
+    string		reason;
+
+    /**
+     * The incoming response that causes this callback to be called.
+     * If the transaction fails because of time out or transport error,
+     * the content will be empty.
+     */
+    SipRxData		rdata;
+};
+
+/**
+ * Parameters for onTypingIndication() account callback.
+ */
+struct OnTypingIndicationParam
+{
+    /**
+     * Sender/From URI.
+     */
+    string		fromUri;
+
+    /**
+     * To URI.
+     */
+    string		toUri;
+
+    /**
+     * The Contact URI.
+     */
+    string		contactUri;
+
+    /**
+     * Boolean to indicate if sender is typing.
+     */
+    bool		isTyping;
+
+    /**
+     * The whole message buffer.
+     */
+    SipRxData		rdata;
+};
+
+/**
+ * Parameters for onMwiInfo() account callback.
+ */
+struct OnMwiInfoParam
+{
+    /**
+     * MWI subscription state.
+     */
+    pjsip_evsub_state	state;
+
+    /**
+     * The whole message buffer.
+     */
+    SipRxData		rdata;
 };
 
 /**
@@ -894,7 +1095,18 @@ public:
      *
      * @param prm	Callback parameter.
      */
-    virtual void onIncomingCall(IncomingCallParam &prm)
+    virtual void onIncomingCall(OnIncomingCallParam &prm)
+    {}
+
+    /**
+     * Notify application when registration or unregistration has been
+     * initiated. Note that this only notifies the initial registration
+     * and unregistration. Once registration session is active, subsequent
+     * refresh will not cause this callback to be called.
+     *
+     * @param prm	    Callback parameter.
+     */
+    virtual void onRegStarted(OnRegStartedParam &prm)
     {}
 
     /**
@@ -902,9 +1114,9 @@ public:
      * Application may then query the account info to get the
      * registration details.
      *
-     * @param acc_id	    The account ID.
+     * @param prm	    Callback parameter.
      */
-    virtual void onRegState(RegStateParam &prm)
+    virtual void onRegState(OnRegStateParam &prm)
     {}
 
     /**
@@ -936,10 +1148,48 @@ public:
      *
      * Application MUST return from this callback immediately (e.g. it must
      * not block in this callback while waiting for user confirmation).
+     *
+     * @param prm	    Callback parameter.
      */
-    virtual void onIncomingSubscribe(IncomingSubscribeParam &prm)
+    virtual void onIncomingSubscribe(OnIncomingSubscribeParam &prm)
     {}
 
+    /**
+     * Notify application on incoming instant message or pager (i.e. MESSAGE
+     * request) that was received outside call context.
+     *
+     * @param prm	    Callback parameter.
+     */
+    virtual void onInstantMessage(OnInstantMessageParam &prm)
+    {}
+
+    /**
+     * Notify application about the delivery status of outgoing pager/instant
+     * message (i.e. MESSAGE) request.
+     *
+     * @param prm	    Callback parameter.
+     */
+    virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
+    {}
+
+    /**
+     * Notify application about typing indication.
+     *
+     * @param prm	    Callback parameter.
+     */
+    virtual void onTypingIndication(OnTypingIndicationParam &prm)
+    {}
+
+    /**
+     * Notification about MWI (Message Waiting Indication) status change.
+     * This callback can be called upon the status change of the
+     * SUBSCRIBE request (for example, 202/Accepted to SUBSCRIBE is received)
+     * or when a NOTIFY reqeust is received.
+     *
+     * @param prm	    Callback parameter.
+     */
+    virtual void onMwiInfo(OnMwiInfoParam &prm)
+    {}
 };
 
 
@@ -959,13 +1209,111 @@ public:
 class Account
 {
 public:
-    void setTransport();
+    /**
+     * Check if this account is still valid.
+     *
+     * @return			True if it is.
+     */
+    bool isValid() const;
+
+    /**
+     * Set this as default account to be used when incoming and outgoing
+     * requests don't match any accounts.
+     *
+     * @return			PJ_SUCCESS on success.
+     */
+    void setDefault() throw(Error);
+
+    /**
+     * Check if this account is the default account. Default account will be
+     * used for incoming and outgoing requests that don't match any other
+     * accounts.
+     *
+     * @return			True if this is the default account.
+     */
+    bool isDefault() const;
+
+    /**
+     * Get PJSUA-LIB account ID or index associated with this account.
+     *
+     * @return			Integer greater than or equal to zero.
+     */
+    int getIndex() const;
+
+    /**
+     * Set arbitrary data to be associated with the account.
+     *
+     * @param user_data		User/application data.
+     */
+    void setUserData(Token user_data);
+
+    /**
+     * Get the user data that was associated with the account.
+     *
+     * @return			The user data.
+     */
+    Token getUserData() const;
+
+    /**
+     * Get account info.
+     *
+     * @return			Account info.
+     */
+    AccountInfo getInfo() const;
+
+    /**
+     * Modify the account to use the specified account configuration.
+     * Depending on the changes, this may cause unregistration or
+     * reregistration on the account.
+     *
+     * @param cfg 		New account config to be applied to the account.
+     */
+    void modify(const AccountConfig &acc) throw(Error);
+
+    /**
+     * Update registration or perform unregistration. Application normally
+     * only needs to call this function if it wants to manually update the
+     * registration or to unregister from the server.
+     *
+     * @param renew		If False, this will start unregistration
+     * 				process.
+     */
+    void setRegistration(bool renew) throw(Error);
+
+    /**
+     * Set or modify account's presence online status to be advertised to
+     * remote/presence subscribers. This would trigger the sending of
+     * outgoing NOTIFY request if there are server side presence subscription
+     * for this account, and/or outgoing PUBLISH if presence publication is
+     * enabled for this account.
+     *
+     * @param pres_st		Presence online status.
+     */
+    void setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error);
+
+    /**
+     * Lock/bind this account to a specific transport/listener. Normally
+     * application shouldn't need to do this, as transports will be selected
+     * automatically by the library according to the destination.
+     *
+     * When account is locked/bound to a specific transport, all outgoing
+     * requests from this account will use the specified transport (this
+     * includes SIP registration, dialog (call and event subscription), and
+     * out-of-dialog requests such as MESSAGE).
+     *
+     * Note that transport id may be specified in AccountConfig too.
+     *
+     * @param tp_id		The transport ID.
+     */
+    void setTransport(TransportId tp_id) throw(Error);
 
 protected:
     friend class Endpoint;
 
     Account();
 };
+
+} // namespace pj
 
 /**
  * @}  // PJSUA2_ACC

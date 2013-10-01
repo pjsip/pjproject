@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua2/endpoint.hpp>
+#include "util.hpp"
 
 using namespace pj;
 using namespace std;
@@ -28,9 +29,179 @@ using namespace std;
 struct UserTimer
 {
     pj_uint32_t		signature;
-    TimerCompleteParam	prm;
+    OnTimerParam	prm;
     pj_timer_entry	entry;
 };
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+UaConfig::UaConfig()
+{
+    pjsua_config ua_cfg;
+
+    pjsua_config_default(&ua_cfg);
+    fromPj(ua_cfg);
+}
+
+void UaConfig::fromPj(const pjsua_config &ua_cfg)
+{
+    unsigned i;
+
+    this->maxCalls = ua_cfg.max_calls;
+    this->threadCnt = ua_cfg.thread_cnt;
+    this->userAgent = pj2Str(ua_cfg.user_agent);
+
+    for (i=0; i<ua_cfg.nameserver_count; ++i) {
+	this->nameserver.push_back(pj2Str(ua_cfg.nameserver[i]));
+    }
+
+    for (i=0; i<ua_cfg.stun_srv_cnt; ++i) {
+	this->stunServer.push_back(pj2Str(ua_cfg.stun_srv[i]));
+    }
+
+    this->stunIgnoreFailure = ua_cfg.stun_ignore_failure;
+    this->natTypeInSdp = ua_cfg.nat_type_in_sdp;
+    this->mwiUnsolicitedEnabled = ua_cfg.enable_unsolicited_mwi;
+}
+
+pjsua_config UaConfig::toPj() const
+{
+    unsigned i;
+    pjsua_config pua_cfg;
+
+    pjsua_config_default(&pua_cfg);
+
+    pua_cfg.max_calls = this->maxCalls;
+    pua_cfg.thread_cnt = this->threadCnt;
+    pua_cfg.user_agent = str2Pj(this->userAgent);
+
+    for (i=0; i<this->nameserver.size() && i<PJ_ARRAY_SIZE(pua_cfg.nameserver);
+	 ++i)
+    {
+	pua_cfg.nameserver[i] = str2Pj(this->nameserver[i]);
+    }
+    pua_cfg.nameserver_count = i;
+
+    for (i=0; i<this->stunServer.size() && i<PJ_ARRAY_SIZE(pua_cfg.stun_srv);
+	 ++i)
+    {
+	pua_cfg.stun_srv[i] = str2Pj(this->stunServer[i]);
+    }
+    pua_cfg.stun_srv_cnt = i;
+
+    pua_cfg.nat_type_in_sdp = this->natTypeInSdp;
+    pua_cfg.enable_unsolicited_mwi = this->mwiUnsolicitedEnabled;
+
+    return pua_cfg;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+LogConfig::LogConfig()
+{
+    pjsua_logging_config lc;
+
+    pjsua_logging_config_default(&lc);
+    fromPj(lc);
+}
+
+void LogConfig::fromPj(const pjsua_logging_config &lc)
+{
+    this->msgLogging = lc.msg_logging;
+    this->level = lc.level;
+    this->consoleLevel = lc.console_level;
+    this->decor = lc.decor;
+    this->filename = pj2Str(lc.log_filename);
+    this->fileFlags = lc.log_file_flags;
+    this->writer = NULL;
+}
+
+pjsua_logging_config LogConfig::toPj() const
+{
+    pjsua_logging_config lc;
+
+    pjsua_logging_config_default(&lc);
+
+    lc.msg_logging = this->msgLogging;
+    lc.level = this->level;
+    lc.console_level = this->consoleLevel;
+    lc.decor = this->decor;
+    lc.log_file_flags = this->fileFlags;
+    lc.log_filename = str2Pj(this->filename);
+
+    return lc;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+MediaConfig::MediaConfig()
+{
+    pjsua_media_config mc;
+
+    pjsua_media_config_default(&mc);
+    fromPj(mc);
+}
+
+void MediaConfig::fromPj(const pjsua_media_config &mc)
+{
+    this->clockRate = mc.clock_rate;
+    this->sndClockRate = mc.snd_clock_rate;
+    this->channelCount = mc.channel_count;
+    this->audioFramePtime = mc.audio_frame_ptime;
+    this->maxMediaPorts = mc.max_media_ports;
+    this->hasIoqueue = mc.has_ioqueue;
+    this->threadCnt = mc.thread_cnt;
+    this->quality = mc.quality;
+    this->ptime = mc.ptime;
+    this->noVad = mc.no_vad;
+    this->ilbcMode = mc.ilbc_mode;
+    this->txDropPct = mc.tx_drop_pct;
+    this->rxDropPct = mc.rx_drop_pct;
+    this->ecOptions = mc.ec_options;
+    this->ecTailLen = mc.ec_tail_len;
+    this->sndRecLatency = mc.snd_rec_latency;
+    this->sndPlayLatency = mc.snd_play_latency;
+    this->jbInit = mc.jb_init;
+    this->jbMinPre = mc.jb_min_pre;
+    this->jbMaxPre = mc.jb_max_pre;
+    this->jbMax = mc.jb_max;
+    this->sndAutoCloseTime = mc.snd_auto_close_time;
+    this->vidPreviewEnableNative = mc.vid_preview_enable_native;
+}
+
+pjsua_media_config MediaConfig::toPj() const
+{
+    pjsua_media_config mcfg;
+
+    pjsua_media_config_default(&mcfg);
+
+    mcfg.clock_rate = this->clockRate;
+    mcfg.snd_clock_rate = this->sndClockRate;
+    mcfg.channel_count = this->channelCount;
+    mcfg.audio_frame_ptime = this->audioFramePtime;
+    mcfg.max_media_ports = this->maxMediaPorts;
+    mcfg.has_ioqueue = this->hasIoqueue;
+    mcfg.thread_cnt = this->threadCnt;
+    mcfg.quality = this->quality;
+    mcfg.ptime = this->ptime;
+    mcfg.no_vad = this->noVad;
+    mcfg.ilbc_mode = this->ilbcMode;
+    mcfg.tx_drop_pct = this->txDropPct;
+    mcfg.rx_drop_pct = this->rxDropPct;
+    mcfg.ec_options = this->ecOptions;
+    mcfg.ec_tail_len = this->ecTailLen;
+    mcfg.snd_rec_latency = this->sndRecLatency;
+    mcfg.snd_play_latency = this->sndPlayLatency;
+    mcfg.jb_init = this->jbInit;
+    mcfg.jb_min_pre = this->jbMinPre;
+    mcfg.jb_max_pre = this->jbMaxPre;
+    mcfg.jb_max = this->jbMax;
+    mcfg.snd_auto_close_time = this->sndAutoCloseTime;
+    mcfg.vid_preview_enable_native = this->vidPreviewEnableNative;
+
+    return mcfg;
+}
 
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,7 +221,7 @@ Endpoint& Endpoint::instance()
 
 void Endpoint::testException() throw(Error)
 {
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::testException()", PJ_EINVALIDOP);
+    PJSUA2_CHECK_RAISE_ERROR(PJ_EINVALIDOP);
 }
 
 
@@ -81,7 +252,7 @@ void Endpoint::stun_resolve_cb(const pj_stun_resolve_result *res)
     if (!ep.epCallback || !res)
 	return;
 
-    NatCheckStunServersCompleteParam prm;
+    OnNatCheckStunServersCompleteParam prm;
 
     prm.userData = res->token;
     prm.status = res->status;
@@ -105,7 +276,7 @@ void Endpoint::on_timer(pj_timer_heap_t *timer_heap,
     if (!ep.epCallback || ut->signature != TIMER_SIGNATURE)
 	return;
 
-    ep.epCallback->OnTimerComplete(ut->prm);
+    ep.epCallback->onTimer(ut->prm);
 }
 
 void Endpoint::on_nat_detect(const pj_stun_nat_detect_result *res)
@@ -115,7 +286,7 @@ void Endpoint::on_nat_detect(const pj_stun_nat_detect_result *res)
     if (!ep.epCallback || !res)
 	return;
 
-    NatDetectionCompleteParam prm;
+    OnNatDetectionCompleteParam prm;
 
     prm.status = res->status;
     prm.reason = res->status_text;
@@ -134,13 +305,13 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
     if (!ep.epCallback)
 	return;
 
-    TransportStateChangedParam prm;
+    OnTransportStateParam prm;
 
     prm.hnd = (TransportHandle)tp;
     prm.state = state;
     prm.lastError = info ? info->status : PJ_SUCCESS;
 
-    ep.epCallback->onTransportStateChanged(prm);
+    ep.epCallback->onTransportState(prm);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -152,7 +323,7 @@ void Endpoint::libCreate() throw(Error)
     pj_status_t status;
 
     status = pjsua_create();
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::libCreate()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 pjsua_state Endpoint::libGetState() const
@@ -185,7 +356,7 @@ void Endpoint::libInit( const EpConfig &prmEpConfig,
 
     /* Init! */
     status = pjsua_init(&ua_cfg, &log_cfg, &med_cfg);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::libInit()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 void Endpoint::libStart() throw(Error)
@@ -193,7 +364,7 @@ void Endpoint::libStart() throw(Error)
     pj_status_t status;
 
     status = pjsua_start();
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::libStart()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 void Endpoint::libDestroy(unsigned flags) throw(Error)
@@ -209,7 +380,7 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
 	pj_log_set_log_func(NULL);
     }
 
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::libDestroy()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 
@@ -270,7 +441,7 @@ Token Endpoint::utilTimerSchedule(unsigned prmMsecDelay,
     status = pjsua_schedule_timer(&ut->entry, &delay);
     if (status != PJ_SUCCESS) {
 	delete ut;
-	PJSUA2_CHECK_RAISE_ERROR("Endpoint::utilTimerSchedule()", status);
+	PJSUA2_CHECK_RAISE_ERROR(status);
     }
 
     return (Token)ut;
@@ -301,7 +472,7 @@ IntVector Endpoint::utilSslGetAvailableCiphers() throw (Error)
     pj_status_t status;
 
     status = pj_ssl_cipher_get_availables(ciphers, &count);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::utilSslGetAvailableCiphers()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 
     return IntVector(ciphers, ciphers + count);
 #else
@@ -318,7 +489,7 @@ void Endpoint::natDetectType(void) throw(Error)
     pj_status_t status;
 
     status = pjsua_detect_nat_type();
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::natDetectType()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 pj_stun_nat_type Endpoint::natGetType() throw(Error)
@@ -327,7 +498,7 @@ pj_stun_nat_type Endpoint::natGetType() throw(Error)
     pj_status_t status;
 
     status = pjsua_get_nat_type(&type);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::natGetType()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 
     return type;
 }
@@ -348,7 +519,7 @@ void Endpoint::natCheckStunServers(const StringVector &servers,
 
     status = pjsua_resolve_stun_servers(count, srv, wait, token,
     					&Endpoint::stun_resolve_cb);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::natCheckStunServers()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 void Endpoint::natCancelCheckStunServers(Token token,
@@ -357,7 +528,7 @@ void Endpoint::natCancelCheckStunServers(Token token,
     pj_status_t status;
 
     status = pjsua_cancel_stun_resolution(token, notify_cb);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::natCancelCheckStunServers()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -373,7 +544,7 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
 
     tcfg = cfg.toPj();
     status = pjsua_transport_create(type, &tcfg, &tid);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportCreate()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 
     return tid;
 }
@@ -385,7 +556,7 @@ IntVector Endpoint::transportEnum() throw(Error)
     pj_status_t status;
 
     status = pjsua_enum_transports(tids, &count);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportEnum()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 
     return IntVector(tids, tids+count);
 }
@@ -396,7 +567,7 @@ TransportInfo Endpoint::transportGetInfo(TransportId id) throw(Error)
     pj_status_t status;
 
     status = pjsua_transport_get_info(id, &tinfo);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportGetInfo()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 
     return TransportInfo(tinfo);
 }
@@ -406,7 +577,7 @@ void Endpoint::transportSetEnable(TransportId id, bool enabled) throw(Error)
     pj_status_t status;
 
     status = pjsua_transport_set_enable(id, enabled);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportSetEnable()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
 void Endpoint::transportClose(TransportId id) throw(Error)
@@ -414,6 +585,6 @@ void Endpoint::transportClose(TransportId id) throw(Error)
     pj_status_t status;
 
     status = pjsua_transport_close(id, PJ_FALSE);
-    PJSUA2_CHECK_RAISE_ERROR("Endpoint::transportClose()", status);
+    PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
