@@ -897,7 +897,8 @@ class AccountConfig:
         cfg.use_srtp = self.use_srtp
         cfg.srtp_secure_signaling = self.srtp_secure_signaling
 
-        cfg.rtp_transport_cfg = self.rtp_transport_cfg._cvt_to_pjsua()
+        if (self.rtp_transport_cfg is not None):
+            cfg.rtp_transport_cfg = self.rtp_transport_cfg._cvt_to_pjsua()
         
         return cfg
  
@@ -978,14 +979,30 @@ class AccountCallback:
     def on_incoming_call(self, call):
         """Notification about incoming call.
 
-        Unless this callback is implemented, the default behavior is to
-        reject the call with default status code.
+        Application should implement one of on_incoming_call() or
+	on_incoming_call2(), otherwise, the default behavior is to
+        reject the call with default status code. Note that if both are
+	implemented, only on_incoming_call2() will be called.
 
         Keyword arguments:
         call    -- the new incoming call
         """
         call.hangup()
 
+    def on_incoming_call2(self, call, rdata):
+        """Notification about incoming call, with received SIP message info.
+
+        Application should implement one of on_incoming_call() or
+	on_incoming_call2(), otherwise, the default behavior is to
+        reject the call with default status code. Note that if both are
+	implemented, only on_incoming_call2() will be called.
+
+        Keyword arguments:
+        call    -- the new incoming call
+        rdata   -- the received message
+        """
+        call.hangup()
+	
     def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres_obj):
         """Notification when incoming SUBSCRIBE request is received. 
         
@@ -2741,7 +2758,10 @@ class Lib:
     def _cb_on_incoming_call(self, acc_id, call_id, rdata):
         acc = self._lookup_account(acc_id)
         if acc:
-            acc._cb.on_incoming_call( Call(self, call_id) )
+            if 'on_incoming_call2' in acc._cb.__class__.__dict__:
+                acc._cb.on_incoming_call2( Call(self, call_id), rdata )
+            else:
+                acc._cb.on_incoming_call( Call(self, call_id) )
         else:
             _pjsua.call_hangup(call_id, 603, None, None)
 

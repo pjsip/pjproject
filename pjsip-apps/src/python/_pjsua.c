@@ -131,25 +131,26 @@ static void cb_on_call_state(pjsua_call_id call_id, pjsip_event *e)
  * declares method on_incoming_call for callback struct
  */
 static void cb_on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
-                                pjsip_rx_data *rdata)
+				pjsip_rx_data *rdata)
 {
-    PJ_UNUSED_ARG(rdata);
-
     if (PyCallable_Check(g_obj_callback->on_incoming_call)) {
-	PyObject *obj;
-
+	PyObj_pjsip_rx_data *obj;
+	
 	ENTER_PYTHON();
+	
+	obj = (PyObj_pjsip_rx_data*)
+	      PyObj_pjsip_rx_data_new(&PyTyp_pjsip_rx_data,
+				      NULL, NULL);
+	PyObj_pjsip_rx_data_import(obj, rdata);
 
-	obj = Py_BuildValue("");
-
-        PyObject_CallFunction(
-                g_obj_callback->on_incoming_call,
-		"iiO",
-		acc_id,
-                call_id,
-		obj,
-		NULL
-        );
+	PyObject_CallFunction(
+	    g_obj_callback->on_incoming_call,
+	    "iiO",
+	    acc_id,
+	    call_id,
+	    obj,
+	    NULL
+	);
 
 	Py_DECREF(obj);
 
@@ -4453,6 +4454,9 @@ init_pjsua(void)
     PyTyp_pjsip_cred_info.tp_new = PyType_GenericNew;
     if (PyType_Ready(&PyTyp_pjsip_cred_info) < 0)
         return;
+    PyTyp_pjsip_rx_data.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&PyTyp_pjsip_rx_data) < 0)
+        return;
 
     /* LIB TRANSPORT */
 
@@ -4535,6 +4539,11 @@ init_pjsua(void)
     Py_INCREF(&PyTyp_pjsip_cred_info);
     PyModule_AddObject(m, "Pjsip_Cred_Info",
         (PyObject *)&PyTyp_pjsip_cred_info
+    );
+
+    Py_INCREF(&PyTyp_pjsip_rx_data);
+    PyModule_AddObject(m, "Pjsip_Rx_Data",
+        (PyObject *)&PyTyp_pjsip_rx_data
     );
 
     /* LIB TRANSPORT */

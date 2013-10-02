@@ -1769,6 +1769,7 @@ static void PyObj_pjsua_acc_config_delete(PyObj_pjsua_acc_config* self)
 static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
 					  const pjsua_acc_config *cfg)
 {
+    PyObj_pjsua_transport_config *tconf;
     unsigned i;
 
     obj->priority   = cfg->priority;
@@ -1825,8 +1826,9 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->srtp_secure_signaling = cfg->srtp_secure_signaling;
 
     Py_XDECREF(obj->rtp_transport_cfg);
-    PyObj_pjsua_transport_config *tconf;
-    tconf = (PyObj_pjsua_transport_config*) PyObj_pjsua_transport_config_new(&PyTyp_pjsua_transport_config,NULL, NULL);
+    tconf = (PyObj_pjsua_transport_config*)
+	    PyObj_pjsua_transport_config_new(&PyTyp_pjsua_transport_config,
+					     NULL, NULL);
     PyObj_pjsua_transport_config_import(tconf, &cfg->rtp_cfg);
     obj->rtp_transport_cfg = (PyObject *) tconf;
 }
@@ -1834,6 +1836,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
 static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
 					  PyObj_pjsua_acc_config *obj)
 {
+    PyObj_pjsua_transport_config *tconf;
     unsigned i;
 
     cfg->priority   = obj->priority;
@@ -1880,9 +1883,8 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->use_srtp = obj->use_srtp;
     cfg->srtp_secure_signaling = obj->srtp_secure_signaling;
 
-    PyObj_pjsua_transport_config *tconf;
-	tconf = (PyObj_pjsua_transport_config*)	obj->rtp_transport_cfg;
-	PyObj_pjsua_transport_config_export(&cfg->rtp_cfg, tconf);
+    tconf = (PyObj_pjsua_transport_config*)obj->rtp_transport_cfg;
+    PyObj_pjsua_transport_config_export(&cfg->rtp_cfg, tconf);
 }
 
 
@@ -3580,6 +3582,131 @@ static PyTypeObject PyTyp_pjsua_call_info =
     0,                              /* tp_init */
     0,                              /* tp_alloc */
     call_info_new,		    /* tp_new */
+
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+/*
+ * PyObj_pjsip_rx_data
+ */
+typedef struct
+{
+    PyObject_HEAD
+
+    /* Type-specific fields go here. */
+    PyObject *msg_info_buffer;  // string
+    PyObject *msg_info_info;	// string
+
+} PyObj_pjsip_rx_data;
+
+/*
+ * PyObj_pjsip_rx_data_dealloc
+ * deletes rx_data from memory
+ */
+static void PyObj_pjsip_rx_data_delete(PyObj_pjsip_rx_data* self)
+{
+    Py_XDECREF(self->msg_info_buffer);
+    Py_XDECREF(self->msg_info_info);
+
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+static void PyObj_pjsip_rx_data_import(PyObj_pjsip_rx_data *obj, pjsip_rx_data *rx_data)
+{
+    Py_XDECREF(obj->msg_info_buffer);
+    obj->msg_info_buffer = PyString_FromString(rx_data->msg_info.msg_buf);
+    Py_XDECREF(obj->msg_info_info);
+    obj->msg_info_info = PyString_FromString(pjsip_rx_data_get_info(rx_data));
+}
+
+
+/*
+ * PyObj_pjsip_rx_data_new
+ * constructor for PyObj_pjsip_rx_data object
+ */
+static PyObject * PyObj_pjsip_rx_data_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	PyObj_pjsip_rx_data *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjsip_rx_data *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->msg_info_buffer = PyString_FromString("");
+        self->msg_info_info   = PyString_FromString("");
+    }
+
+    return (PyObject *)self;
+}
+
+
+
+/*
+ * PyObj_pjsip_rx_data_members
+ */
+static PyMemberDef PyObj_pjsip_rx_data_members[] =
+{
+    {
+        "msg_info_buffer", T_OBJECT_EX,
+        offsetof(PyObj_pjsip_rx_data, msg_info_buffer), 0,
+        "Entire SIP-Message"
+    },
+    {
+        "msg_info_info", T_OBJECT_EX,
+        offsetof(PyObj_pjsip_rx_data, msg_info_info), 0,
+        "Message Info"
+    },
+
+    {NULL}  /* Sentinel */
+};
+
+/*
+ * PyTyp_pjsip_rx_data
+ */
+static PyTypeObject PyTyp_pjsip_rx_data =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.Pjsip_Rx_Data",			/*tp_name*/
+    sizeof(PyObj_pjsip_rx_data),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)PyObj_pjsip_rx_data_delete,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "PJSIP request data information", /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    PyObj_pjsip_rx_data_members,  /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    PyObj_pjsip_rx_data_new,      /* tp_new */
 
 };
 
