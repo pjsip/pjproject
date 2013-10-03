@@ -309,10 +309,23 @@ PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
 
 PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
 {
+    const pj_sys_info *si = pj_get_sys_info();
+    pj_str_t dev_model = {"iPhone5", 7};
+    
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->clock_rate = PJSUA_DEFAULT_CLOCK_RATE;
-    cfg->snd_clock_rate = 0;
+    /* It is reported that there may be some media server resampling problem
+     * with iPhone 5 devices running iOS 7, so we set the sound device's
+     * clock rate to 44100 to avoid resampling.
+     */
+    if (pj_stristr(&si->machine, &dev_model) &&
+        ((si->os_ver & 0xFF000000) >> 24) >= 7)
+    {
+        cfg->snd_clock_rate = 44100;
+    } else {
+        cfg->snd_clock_rate = 0;
+    }
     cfg->channel_count = 1;
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;

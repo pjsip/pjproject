@@ -57,6 +57,8 @@
 
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
+#   include <sys/types.h>
+#   include <sys/sysctl.h>
     void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer);
 #endif
     
@@ -151,16 +153,20 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	(!defined TARGET_IPHONE_SIMULATOR || TARGET_IPHONE_SIMULATOR == 0)
     {
 	pj_str_t buf = {si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left, left};
-	pj_str_t machine = {"arm", 3};
+	pj_str_t machine = {"arm-", 4};
 	pj_str_t sdk_name = {"iOS-SDK", 7};
+        size_t size = PJ_SYS_INFO_BUFFER_SIZE - machine.slen;
 	char tmp[PJ_SYS_INFO_BUFFER_SIZE];
-	
+        int name[] = {CTL_HW,HW_MACHINE};
+
 	pj_iphone_os_get_sys_info(&si, &buf);
 	left -= si.os_name.slen + 1;
 
 	si.os_ver = parse_version(si.machine.ptr);
-	
-	si.machine = machine;
+
+	pj_memcpy(tmp, machine.ptr, machine.slen);
+        sysctl(name, 2, tmp+machine.slen, &size, NULL, 0);
+        ALLOC_CP_STR(tmp, machine);
 	si.sdk_name = sdk_name;
 
 	#ifdef PJ_SDK_NAME
