@@ -1383,7 +1383,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
          * by the last media transport to finish.
          */
         if (info->status != PJ_SUCCESS)
-            pj_memcpy(&call->med_ch_info, info, sizeof(info));
+            pj_memcpy(&call->med_ch_info, info, sizeof(*info));
 
         /* Check whether all the call's medias have finished calling their
          * callbacks.

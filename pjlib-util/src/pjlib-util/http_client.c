@@ -655,7 +655,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
         return PJLIB_UTIL_EHTTPINCHDR;
     *remainder = size - 1 - i;
 
-    pj_bzero(response, sizeof(response));
+    pj_bzero(response, sizeof(*response));
     response->content_length = -1;
 
     newdata = (char*) pj_pool_alloc(pool, i);
