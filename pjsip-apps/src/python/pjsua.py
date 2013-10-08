@@ -800,7 +800,7 @@ class AccountConfig:
         if domain!="":
             self.build_config(domain, username, password,
                               display, registrar, proxy)
-        self.rtp_transport_cfg = _pjsua.transport_config_default()
+        self.rtp_transport_cfg = TransportConfig()
 
     def build_config(self, domain, username, password, display="",
                      registrar="", proxy="", rtp_transport_cfg = None):
@@ -841,7 +841,7 @@ class AccountConfig:
         if (rtp_transport_cfg is not None):
             self.rtp_transport_cfg = rtp_transport_cfg
         else:
-            self.rtp_transport_cfg = _pjsua.Transport_Config()
+            self.rtp_transport_cfg = TransportConfig()
     
     def _cvt_from_pjsua(self, cfg):
         self.priority = cfg.priority
