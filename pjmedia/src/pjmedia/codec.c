@@ -636,8 +636,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param(
 
     /* Update codec param */
     p->param = pjmedia_codec_param_clone(pool, param);
-    if (!p->param)
+    if (!p->param) {
+	pj_mutex_unlock(mgr->mutex);
 	return PJ_EINVAL;
+    }
 
     pj_mutex_unlock(mgr->mutex);
 
