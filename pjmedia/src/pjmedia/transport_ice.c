@@ -349,7 +349,7 @@ static int print_sdp_cand_attr(char *buffer, int max_len,
 	len2 = -1;
 	break;
     }
-    if (len2 < 1 || len2 >= max_len)
+    if (len2 < 1 || len2 >= max_len-len)
 	return -1;
 
     return len+len2;
@@ -545,7 +545,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 			   comp+1, rem_addr,
 			   pj_sockaddr_get_port(&check->rcand->addr)
 			   );
-		if (len < 1 || len >= RATTR_BUF_LEN) {
+		if (len < 1 || len >= RATTR_BUF_LEN - rem_cand.slen) {
 		    pj_assert(!"Not enough buffer to print "
 			       "remote-candidates");
 		    return PJ_EBUG;

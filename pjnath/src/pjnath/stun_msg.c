@@ -2451,7 +2451,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 					     "%s in %s",
 					     err_msg1,
 					     pj_stun_get_attr_name(attr_type));
-
+		    if (e.slen < 1 || e.slen >= (int)sizeof(err_msg2))
+			e.slen = sizeof(err_msg2) - 1;
 		    pj_stun_msg_create_response(pool, msg,
 						PJ_STUN_SC_BAD_REQUEST,
 						&e, p_response);

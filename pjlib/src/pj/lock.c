@@ -683,7 +683,7 @@ PJ_DEF(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock)
 	int len;
 
 	len = pj_ansi_snprintf(start, max_len, "%s:%d ", ref->file, ref->line);
-	if (len < 1 || len > max_len) {
+	if (len < 1 || len >= max_len) {
 	    len = strlen(ref->file);
 	    if (len > max_len - 1)
 		len = max_len - 1;

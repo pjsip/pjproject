@@ -490,9 +490,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    pjmedia_codec_fmtp *dec_fmtp = &codec_param.setting.dec_fmtp;
 
 	    /* Print codec PT */
-	    buf_len += pj_ansi_snprintf(buf, 
-					MAX_FMTP_STR_LEN - buf_len, 
-					"%d", 
+	    buf_len += pj_ansi_snprintf(buf,
+					MAX_FMTP_STR_LEN - buf_len,
+					"%d",
 					codec_info->pt);
 
 	    for (i = 0; i < dec_fmtp->cnt; ++i) {
@@ -500,7 +500,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 
 		/* Check if buf still available */
 		test_len = dec_fmtp->param[i].val.slen + 
-			   dec_fmtp->param[i].name.slen;
+			   dec_fmtp->param[i].name.slen + 2;
 		if (test_len + buf_len >= MAX_FMTP_STR_LEN)
 		    return PJ_ETOOBIG;
 
@@ -686,7 +686,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 
 		/* Check if buf still available */
 		test_len = dec_fmtp->param[j].val.slen + 
-			   dec_fmtp->param[j].name.slen;
+			   dec_fmtp->param[j].name.slen + 2;
 		if (test_len + buf_len >= MAX_FMTP_STR_LEN)
 		    return PJ_ETOOBIG;
 

@@ -128,7 +128,7 @@ static unsigned dump_media_stat(const char *indent,
 	   ""
 	   );
 
-    if (len < 1 || len > end-p) {
+    if (len < 1 || len >= end-p) {
 	*p = '\0';
 	return (unsigned)(p-buf);
     }
@@ -186,7 +186,7 @@ static unsigned dump_media_stat(const char *indent,
 	   pj_math_stat_get_stddev(&stat->tx.jitter) / 1000.0
 	   );
 
-    if (len < 1 || len > end-p) {
+    if (len < 1 || len >= end-p) {
 	*p = '\0';
 	return (unsigned)(p-buf);
     }
@@ -201,7 +201,7 @@ static unsigned dump_media_stat(const char *indent,
 	   stat->rtt.last / 1000.0,
 	   pj_math_stat_get_stddev(&stat->rtt) / 1000.0
 	   );
-    if (len < 1 || len > end-p) {
+    if (len < 1 || len >= end-p) {
 	*p = '\0';
 	return (unsigned)(p-buf);
     }
@@ -259,7 +259,7 @@ static void dump_media_session(const char *indent,
 	    len = pj_ansi_snprintf(p, end-p,
 		      "%s  #%d %s deactivated\n",
 		      indent, i, media_type_str);
-	    if (len < 1 || len > end-p) {
+	    if (len < 1 || len >= end-p) {
 		*p = '\0';
 		return;
 	    }
@@ -363,7 +363,7 @@ static void dump_media_session(const char *indent,
 		  codec_info,
 		  dir_str,
 		  rem_addr);
-	if (len < 1 || len > end-p) {
+	if (len < 1 || len >= end-p) {
 	    *p = '\0';
 	    return;
 	}
@@ -470,7 +470,7 @@ static void dump_media_session(const char *indent,
 	    sprintf(s, "%d", v)
 
 #   define VALIDATE_PRINT_BUF() \
-	if (len < 1 || len > end-p) { *p = '\0'; return; } \
+	if (len < 1 || len >= end-p) { *p = '\0'; return; } \
 	p += len; *p++ = '\n'; *p = '\0'
 
 

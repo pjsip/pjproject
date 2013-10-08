@@ -1759,12 +1759,14 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 	if (status==PJ_SUCCESS) {
 	    if (param->base.clock_rate != pjsua_var.media_cfg.clock_rate) {
 		char tmp_buf[128];
-		int tmp_buf_len = sizeof(tmp_buf);
+		int tmp_buf_len;
 
-		tmp_buf_len = pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf)-1,
+		tmp_buf_len = pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf),
 					       "%s (%dKHz)",
 					       rec_info.name,
 					       param->base.clock_rate/1000);
+		if (tmp_buf_len < 1 || tmp_buf_len >= (int)sizeof(tmp_buf))
+		    tmp_buf_len = sizeof(tmp_buf) - 1;
 		pj_strset(&tmp, tmp_buf, tmp_buf_len);
 		pjmedia_conf_set_port0_name(pjsua_var.mconf, &tmp);
 	    } else {

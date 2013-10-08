@@ -1043,6 +1043,7 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
     int cs_idx = get_crypto_idx(&crypto->name);
     char b64_key[PJ_BASE256_TO_BASE64_LEN(MAX_KEY_LEN)+1];
     int b64_key_len = sizeof(b64_key);
+    int print_len;
 
     if (cs_idx == -1)
 	return PJMEDIA_SRTP_ENOTSUPCRYPTO;
@@ -1101,10 +1102,14 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 		     b64_key_len + 16), PJ_ETOOSMALL);
 
     /* Print the crypto attribute value. */
-    *buffer_len = pj_ansi_snprintf(buffer, *buffer_len, "%d %s inline:%s",
+    print_len = pj_ansi_snprintf(buffer, *buffer_len, "%d %s inline:%s",
 				   tag, 
 				   crypto_suites[cs_idx].name,
 				   b64_key);
+    if (print_len < 1 || print_len >= *buffer_len)
+	return PJ_ETOOSMALL;
+
+    *buffer_len = print_len;
 
     return PJ_SUCCESS;
 }

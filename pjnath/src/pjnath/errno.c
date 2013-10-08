@@ -133,8 +133,8 @@ static pj_str_t pjnath_strerror(pj_status_t statcode,
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
 				   "Unknown pjnath error %d",
 				   statcode);
-    if (errstr.slen < 0) errstr.slen = 0;
-    else if (errstr.slen > (int)bufsize) errstr.slen = bufsize;
+    if (errstr.slen < 1 || errstr.slen >= (int)bufsize)
+	errstr.slen = bufsize-1;
 
     return errstr;
 }
@@ -164,8 +164,8 @@ static pj_str_t pjnath_strerror2(pj_status_t statcode,
 	    buf[bufsize-1] = '\0';
     }
 
-    if (errstr.slen < 0) errstr.slen = 0;
-    else if (errstr.slen > (int)bufsize) errstr.slen = bufsize;
+    if (errstr.slen < 1 || errstr.slen >= (int)bufsize)
+	errstr.slen = bufsize-1;
 
     return errstr;
 }

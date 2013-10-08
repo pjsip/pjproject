@@ -517,7 +517,8 @@ static void icedemo_stop_session(void)
 #define PRINT(fmt, arg0, arg1, arg2, arg3, arg4, arg5)	    \
 	printed = pj_ansi_snprintf(p, maxlen - (p-buffer),  \
 				   fmt, arg0, arg1, arg2, arg3, arg4, arg5); \
-	if (printed <= 0) return -PJ_ETOOSMALL; \
+	if (printed <= 0 || printed >= (int)(maxlen - (p-buffer))) \
+	    return -PJ_ETOOSMALL; \
 	p += printed
 
 

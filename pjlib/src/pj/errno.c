@@ -91,6 +91,8 @@ static const struct
  */
 static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 {
+    int len;
+
 #if defined(PJ_HAS_ERROR_STRING) && PJ_HAS_ERROR_STRING!=0
     unsigned i;
 
@@ -105,7 +107,10 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
     }
 #endif
 
-    return pj_ansi_snprintf( buf, size, "Unknown pjlib error %d", code);
+    len = pj_ansi_snprintf( buf, size, "Unknown pjlib error %d", code);
+    if (len < 1 || len >= (int)size)
+	len = size - 1;
+    return len;
 }
 
 #define IN_RANGE(val,start,end)	    ((val)>=(start) && (val)<(end))
@@ -199,9 +204,9 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 	len = pj_ansi_snprintf( buf, bufsize, "Unknown error %d", statcode);
     }
 
-    if (len < 1) {
-        *buf = '\0';
-        len = 0;
+    if (len < 1 || len >= (int)bufsize) {
+	len = bufsize - 1;
+	buf[len] = '\0';
     }
 
     errstr.ptr = buf;

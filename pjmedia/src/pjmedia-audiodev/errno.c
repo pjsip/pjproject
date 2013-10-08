@@ -214,7 +214,8 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
 				   "Unknown pjmedia-audiodev error %d",
 				   statcode);
-
+    if (errstr.slen < 1 || errstr.slen >= (pj_ssize_t)bufsize)
+	errstr.slen = bufsize - 1;
     return errstr;
 }
 

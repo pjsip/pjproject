@@ -162,7 +162,7 @@ PJ_DEF(int) platform_strerror( pj_os_err_type os_errcode,
     }
 
     if (!len) {
-	len = pj_ansi_snprintf( buf, bufsize, "Symbian native error %d", 
+	len = pj_ansi_snprintf( buf, bufsize-1, "Symbian native error %d",
 				os_errcode);
 	buf[len] = '\0';
     }

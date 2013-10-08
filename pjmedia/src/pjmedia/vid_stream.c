@@ -1650,6 +1650,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 				   "Time, Operation, Size, Frame Count, "
 				   "Frame type, RTP Seq, RTP TS, RTP M, "
 				   "JB size, JB burst level, JB prefetch\n");
+	    if (len < 1 || len >= PJ_LOG_MAX_SIZE)
+		len = PJ_LOG_MAX_SIZE - 1;
 	    pj_file_write(stream->trace_jb_fd, stream->trace_jb_buf, &len);
 	    pj_file_flush(stream->trace_jb_fd);
 	}

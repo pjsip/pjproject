@@ -344,6 +344,9 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
 				 rseq, rdata->msg_info.cseq->cseq,
 				 (int)tsx->method.name.slen,
 				 tsx->method.name.ptr);
+    if (rack.slen < 1 || rack.slen >= (int)sizeof(rack_buf)) {
+	return PJ_ETOOSMALL;
+    }
     rack_hdr = pjsip_generic_string_hdr_create(tdata->pool, &RACK, &rack);
     pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) rack_hdr);
 

@@ -1358,6 +1358,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 
     if (chal->qop.slen == 0) {
 	const pj_str_t STR_MD5 = { "MD5", 3 };
+	int max_len;
 
 	/* Server doesn't require quality of protection. */
 	auth_create_digest_response(&digest_response, cred,
@@ -1365,8 +1366,9 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 				    &hreq->hurl.path, &chal->realm,
 				    &hreq->param.method);
 
+	max_len = len;
 	len = pj_ansi_snprintf(
-		phdr->value.ptr, len,
+		phdr->value.ptr, max_len,
 		"Digest username=\"%.*s\", "
 		"realm=\"%.*s\", "
 		"nonce=\"%.*s\", "
@@ -1379,7 +1381,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 		STR_PREC(hreq->hurl.path),
 		STR_PREC(STR_MD5),
 		STR_PREC(digest_response));
-	if (len < 0)
+	if (len < 0 || len >= max_len)
 	    return PJ_ETOOSMALL;
 	phdr->value.slen = len;
 
@@ -1391,13 +1393,15 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 	const pj_str_t qop = pj_str("auth");
 	const pj_str_t nc = pj_str("00000001");
 	const pj_str_t cnonce = pj_str("b39971");
+	int max_len;
 
 	auth_create_digest_response(&digest_response, cred,
 				    &chal->nonce, &nc, &cnonce, &qop,
 				    &hreq->hurl.path, &chal->realm,
 				    &hreq->param.method);
+	max_len = len;
 	len = pj_ansi_snprintf(
-		phdr->value.ptr, len,
+		phdr->value.ptr, max_len,
 		"Digest username=\"%.*s\", "
 		"realm=\"%.*s\", "
 		"nonce=\"%.*s\", "
@@ -1416,7 +1420,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 		STR_PREC(qop),
 		STR_PREC(nc),
 		STR_PREC(cnonce));
-	if (len < 0)
+	if (len < 0 || len >= max_len)
 	    return PJ_ETOOSMALL;
 	phdr->value.slen = len;
 
