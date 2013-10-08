@@ -211,7 +211,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (stun_sock->ka_interval == 0)
 	stun_sock->ka_interval = PJ_STUN_KEEP_ALIVE_SEC;
 
-    if (cfg && cfg->grp_lock) {
+    if (cfg->grp_lock) {
 	stun_sock->grp_lock = cfg->grp_lock;
     } else {
 	status = pj_grp_lock_create(pool, NULL, &stun_sock->grp_lock);
