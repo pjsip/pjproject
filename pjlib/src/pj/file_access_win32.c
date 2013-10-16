@@ -33,6 +33,22 @@
 #   define CONTROL_ACCESS   READ_CONTROL
 #endif
 
+static HANDLE WINAPI create_file(LPCTSTR filename, DWORD desired_access,
+				 DWORD share_mode, 
+				 LPSECURITY_ATTRIBUTES security_attributes,
+				 DWORD creation_disposition,
+				 DWORD flags_and_attributes,
+				 HANDLE template_file)
+{
+#ifdef PJ_WIN32_WINPHONE  
+    return CreateFile2(filename, desired_access, share_mode, 
+		       creation_disposition, NULL);
+#else
+    return CreateFile(filename, desired_access, share_mode, 
+		      security_attributes, creation_disposition, 
+		      flags_and_attributes, template_file);
+#endif
+}
 
 /*
  * pj_file_exists()
@@ -44,10 +60,12 @@ PJ_DEF(pj_bool_t) pj_file_exists(const char *filename)
 
     PJ_ASSERT_RETURN(filename != NULL, 0);
 
-    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename,sizeof(wfilename)), 
-		       CONTROL_ACCESS, 
-		       FILE_SHARE_READ, NULL,
-                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = create_file(PJ_STRING_TO_NATIVE(filename,
+					    wfilename,sizeof(wfilename)), 
+		        CONTROL_ACCESS, 
+		        FILE_SHARE_READ, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
     if (hFile == INVALID_HANDLE_VALUE)
         return 0;
 
@@ -68,10 +86,11 @@ PJ_DEF(pj_off_t) pj_file_size(const char *filename)
 
     PJ_ASSERT_RETURN(filename != NULL, -1);
 
-    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename, wfilename,sizeof(wfilename)), 
-		       CONTROL_ACCESS, 
-                       FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = create_file(PJ_STRING_TO_NATIVE(filename, 
+					    wfilename,sizeof(wfilename)), 
+		        CONTROL_ACCESS, 
+                        FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return -1;
 
@@ -177,10 +196,11 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
 
     PJ_ASSERT_RETURN(filename!=NULL && stat!=NULL, PJ_EINVAL);
 
-    hFile = CreateFile(PJ_STRING_TO_NATIVE(filename,wfilename,sizeof(wfilename)), 
-		       CONTROL_ACCESS, 
-		       FILE_SHARE_READ, NULL,
-                       OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    hFile = create_file(PJ_STRING_TO_NATIVE(filename,
+					    wfilename,sizeof(wfilename)), 
+		        CONTROL_ACCESS, 
+		        FILE_SHARE_READ, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return PJ_RETURN_OS_ERROR(GetLastError());
 

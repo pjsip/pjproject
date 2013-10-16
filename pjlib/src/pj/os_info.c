@@ -190,8 +190,12 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 
+#ifdef PJ_WIN32_WINPHONE
+	goto get_sdk_info;
+#else
 	if (GetVersionEx(&ovi) == FALSE)
 	    goto get_sdk_info;
+#endif
 
 	si.os_ver = (ovi.dwMajorVersion << 24) |
 		    (ovi.dwMinorVersion << 16);

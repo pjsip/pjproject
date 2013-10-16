@@ -38,6 +38,14 @@
 #  include <winsock2.h>
 #endif
 
+#if PJ_WIN32_WINPHONE
+#   include "../../third_party/threademulation/include/ThreadEmulation.h"
+#endif
+
+#if PJ_WIN32_WINNT >= 0x0602
+#  include <synchapi.h>
+#endif
+
 /* Activate mutex related logging if PJ_DEBUG_MUTEX is set, otherwise
  * use default level 6 logging.
  */
@@ -297,7 +305,12 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
  */
 PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 {
+#if PJ_WIN32_WINPHONE
+    PJ_UNUSED_ARG(thread);
+    return -1;
+#else
     return GetThreadPriority(thread->hthread);
+#endif
 }
 
 
@@ -506,9 +519,17 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     /* Create the thread. */
     rec->proc = proc;
     rec->arg = arg;
+
+#ifdef PJ_WIN32_WINPHONE
+    rec->hthread = CreateThread(NULL, stack_size, 
+				thread_main, rec,
+				dwflags, NULL);
+#else
     rec->hthread = CreateThread(NULL, stack_size, 
 				thread_main, rec,
 				dwflags, &rec->idthread);
+#endif
+
     if (rec->hthread == NULL)
 	return PJ_RETURN_OS_ERROR(GetLastError());
 
@@ -551,7 +572,7 @@ PJ_DEF(pj_status_t) pj_thread_resume(pj_thread_t *p)
  */
 PJ_DEF(pj_thread_t*) pj_thread_this(void)
 {
-    pj_thread_t *rec = pj_thread_local_get(thread_tls_id);
+    pj_thread_t *rec = (pj_thread_t *)pj_thread_local_get(thread_tls_id);
 
     if (rec == NULL) {
 	pj_assert(!"Calling pjlib from unknown/external thread. You must "
@@ -584,7 +605,11 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 
     PJ_LOG(6, (pj_thread_this()->obj_name, "Joining thread %s", p->obj_name));
 
+#if PJ_WIN32_WINPHONE
+    rc = WaitForSingleObjectEx(rec->hthread, INFINITE, FALSE);
+#else
     rc = WaitForSingleObject(rec->hthread, INFINITE);
+#endif
 
     if (rc==WAIT_OBJECT_0)
         return PJ_SUCCESS;
@@ -858,8 +883,10 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name)
 
     PJ_CHECK_STACK();
 
-#if PJ_WIN32_WINNT >= 0x0400
-    InitializeCriticalSection(&mutex->crit);
+#if PJ_WIN32_WINPHONE
+    InitializeCriticalSectionEx(&mutex->crit, 0, 0);
+#elif PJ_WIN32_WINNT >= 0x0400
+    InitializeCriticalSection(&mutex->crit);   
 #else
     mutex->hMutex = CreateMutex(NULL, FALSE, NULL);
     if (!mutex->hMutex) {
@@ -1111,8 +1138,14 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(pool && sem_ptr, PJ_EINVAL);
 
-    sem = pj_pool_alloc(pool, sizeof(*sem));    
+    sem = pj_pool_alloc(pool, sizeof(*sem)); 
+#if PJ_WIN32_WINPHONE
+    /** SEMAPHORE_ALL_ACCESS **/
+    sem->hSemaphore = CreateSemaphoreEx(NULL, initial, max, NULL, 0, 
+					SEMAPHORE_ALL_ACCESS);
+#else
     sem->hSemaphore = CreateSemaphore(NULL, initial, max, NULL);
+#endif
     if (!sem->hSemaphore)
 	return PJ_RETURN_OS_ERROR(GetLastError());
 
@@ -1143,7 +1176,12 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
     LOG_MUTEX((sem->obj_name, "Semaphore: thread %s is waiting", 
 			      pj_thread_this()->obj_name));
 
+#if PJ_WIN32_WINPHONE
+    result = WaitForSingleObjectEx(sem->hSemaphore, timeout, FALSE);
+#else
     result = WaitForSingleObject(sem->hSemaphore, timeout);
+#endif
+
     if (result == WAIT_OBJECT_0) {
 	LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
 				  pj_thread_this()->obj_name));
@@ -1240,8 +1278,14 @@ PJ_DEF(pj_status_t) pj_event_create( pj_pool_t *pool,
     if (!event)
         return PJ_ENOMEM;
 
+#if PJ_WIN32_WINPHONE
+    event->hEvent = CreateEventEx(NULL, NULL, 
+				  (manual_reset?0x1:0x0)|(initial?0x2:0x0), 
+				  EVENT_ALL_ACCESS);
+#else
     event->hEvent = CreateEvent(NULL, manual_reset?TRUE:FALSE, 
 				initial?TRUE:FALSE, NULL);
+#endif
 
     if (!event->hEvent)
 	return PJ_RETURN_OS_ERROR(GetLastError());
@@ -1273,7 +1317,11 @@ static pj_status_t pj_event_wait_for(pj_event_t *event, unsigned timeout)
     PJ_LOG(6, (event->obj_name, "Event: thread %s is waiting", 
 			        pj_thread_this()->obj_name));
 
+#if PJ_WIN32_WINPHONE
+    result = WaitForSingleObjectEx(event->hEvent, timeout, FALSE);
+#else
     result = WaitForSingleObject(event->hEvent, timeout);
+#endif
     if (result == WAIT_OBJECT_0) {
 	PJ_LOG(6, (event->obj_name, "Event: thread %s is released", 
 				    pj_thread_this()->obj_name));
@@ -1331,6 +1379,11 @@ PJ_DEF(pj_status_t) pj_event_set(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
 {
+#ifdef PJ_WIN32_WINPHONE
+    PJ_UNUSED_ARG(event);
+    pj_assert(!"pj_event_pulse() not supported!");
+    return PJ_ENOTSUP;
+#else
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(event, PJ_EINVAL);
 
@@ -1340,6 +1393,7 @@ PJ_DEF(pj_status_t) pj_event_pulse(pj_event_t *event)
         return PJ_SUCCESS;
     else
         return PJ_RETURN_OS_ERROR(GetLastError());
+#endif
 }
 
 /*

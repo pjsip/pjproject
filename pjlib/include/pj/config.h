@@ -76,6 +76,17 @@
     /* Also define Win32 */
 #   define PJ_WIN32 1
 
+#elif defined(PJ_WIN32_WINPHONE) || defined(_WIN32_WINPHONE)
+    /*
+     * Windows Phone
+     */
+#   undef PJ_WIN32_WINPHONE
+#   define PJ_WIN32_WINPHONE   1
+#   include <pj/compat/os_winphone.h>
+
+    /* Also define Win32 */
+#   define PJ_WIN32 1
+
 #elif defined(PJ_WIN32) || defined(_WIN32) || defined(__WIN32__) || \
 	defined(WIN32) || defined(PJ_WIN64) || defined(_WIN64) || \
 	defined(WIN64) || defined(__TOS_WIN__) 
@@ -235,18 +246,23 @@
 #   define PJ_IS_LITTLE_ENDIAN	0
 #   define PJ_IS_BIG_ENDIAN	1
 
-#elif defined (PJ_M_ARMV4) || defined(ARM) || defined(_ARM_) ||  \
-	defined(ARMV4) || defined(__arm__)
+#elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || defined(_M_ARM)
+#   define PJ_HAS_PENTIUM	0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
      */
-#   undef PJ_M_ARMV4
-#   define PJ_M_ARMV4		1
-#   define PJ_M_NAME		"armv4"
-#   define PJ_HAS_PENTIUM	0
 #   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
 #   	error Endianness must be declared for this processor
 #   endif
+#   if defined (PJ_M_ARMV7) || defined(ARMV7)
+#	undef PJ_M_ARMV7
+#	define PJ_M_ARM7		1
+#	define PJ_M_NAME		"armv7"
+#   elif defined (PJ_M_ARMV4) || defined(ARMV4)
+#	undef PJ_M_ARMV4
+#	define PJ_M_ARMV4		1
+#	define PJ_M_NAME		"armv4"
+#   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
 	defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || \

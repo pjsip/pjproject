@@ -88,9 +88,18 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-    hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,wpathname,sizeof(wpathname)), 
+#ifdef PJ_WIN32_WINPHONE  
+    hFile = CreateFile2(PJ_STRING_TO_NATIVE(pathname,
+					    wpathname,sizeof(wpathname)), 
+			dwDesiredAccess, dwShareMode, dwCreationDisposition, 
+			NULL);
+#else
+    hFile = CreateFile(PJ_STRING_TO_NATIVE(pathname,
+					   wpathname,sizeof(wpathname)), 
 		       dwDesiredAccess, dwShareMode, NULL,
                        dwCreationDisposition, dwFlagsAndAttributes, NULL);
+#endif
+
     if (hFile == INVALID_HANDLE_VALUE) {
         *fd = 0;
         return PJ_RETURN_OS_ERROR(GetLastError());
