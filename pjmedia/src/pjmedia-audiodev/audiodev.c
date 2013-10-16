@@ -114,6 +114,10 @@ pjmedia_aud_dev_factory* pjmedia_symb_mda_factory(pj_pool_factory *pf);
 pjmedia_aud_dev_factory* pjmedia_null_audio_factory(pj_pool_factory *pf);
 #endif
 
+#if PJMEDIA_AUDIO_DEV_HAS_WASAPI
+pjmedia_aud_dev_factory* pjmedia_wasapi_factory(pj_pool_factory *pf);
+#endif
+
 #define MAX_DRIVERS	16
 #define MAX_DEVS	64
 
@@ -435,6 +439,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 #endif
 #if PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_symb_mda_factory;
+#endif
+#if PJMEDIA_AUDIO_DEV_HAS_WASAPI
+    aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_wasapi_factory;
 #endif
 #if PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_null_audio_factory;

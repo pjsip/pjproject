@@ -1,0 +1,95 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{120382e1-5a20-461a-bca7-2d86b9c5d60c}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\common">
+      <UniqueIdentifier>{4023d1d3-94ec-4285-9b2e-a5dcc4e33f64}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\hostapi">
+      <UniqueIdentifier>{e1508672-8551-49cc-970a-dff0b3888e3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\hostapi\dsound">
+      <UniqueIdentifier>{03d0ec34-79c3-4bd7-953a-83c20f85a87c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\hostapi\wmme">
+      <UniqueIdentifier>{a503c2bb-6345-4851-bdd4-0e3c12884b33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\os">
+      <UniqueIdentifier>{d022819f-02c1-4d44-91be-b40d4297e1fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\os\win">
+      <UniqueIdentifier>{1c07fe76-8a50-450e-b13a-9ac3207f24fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{5cb95d29-a50f-4746-bcb8-bf5d91e123ac}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\portaudio\src\common\pa_allocation.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_converters.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_cpuload.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_debugprint.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_dither.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_front.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_process.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_skeleton.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\common\pa_stream.c">
+      <Filter>Source Files\common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\hostapi\dsound\pa_win_ds.c">
+      <Filter>Source Files\hostapi\dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\hostapi\dsound\pa_win_ds_dynlink.c">
+      <Filter>Source Files\hostapi\dsound</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\hostapi\wmme\pa_win_wmme.c">
+      <Filter>Source Files\hostapi\wmme</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_hostapis.c">
+      <Filter>Source Files\os\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_util.c">
+      <Filter>Source Files\os\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_win_waveformat.c">
+      <Filter>Source Files\os\win</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\portaudio\src\os\win\pa_x86_plain_converters.c">
+      <Filter>Source Files\os\win</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\portaudio\src\hostapi\dsound\pa_win_ds_dynlink.h">
+      <Filter>Source Files\hostapi\dsound</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\portaudio\src\os\win\pa_x86_plain_converters.h">
+      <Filter>Source Files\os\win</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\portaudio\include\pa_win_wmme.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\portaudio\include\portaudio.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

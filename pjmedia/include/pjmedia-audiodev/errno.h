@@ -117,7 +117,7 @@ PJ_BEGIN_DECL
 #define PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(err) \
 	    ((int)PJMEDIA_AUDIODEV_BDIMAD_ERROR_START+err)
 
-/************************************************************
+ /************************************************************
  * Audio Device API error codes
  ***********************************************************/
 /**
@@ -192,9 +192,15 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_EAUD_BADLATENCY	(PJMEDIA_AUDIODEV_ERRNO_START+12) /* 4200012 */
 
-
-
-
+ /************************************************************
+ * General audio device error code
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * General wasapi error
+ */
+#define PJMEDIA_EAUD_WASAPI_ERROR \
+				(PJMEDIA_AUDIODEV_ERRNO_START+13) /* 4200013 */
 
 /**
  * Get error message for the specified error code. Note that this

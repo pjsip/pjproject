@@ -1,0 +1,206 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="crypto">
+      <UniqueIdentifier>{484b4446-ac7f-4249-961b-1fce1360ea56}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\ae_xfm">
+      <UniqueIdentifier>{578698c8-1050-4bf6-b275-650a22858628}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\cipher">
+      <UniqueIdentifier>{3706ae01-e6a5-4364-8fca-33392e60ecdf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\hash">
+      <UniqueIdentifier>{0702d597-88d3-4ae0-8ae7-3061ce50b999}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\kernel">
+      <UniqueIdentifier>{568571d3-a015-4a1a-a728-2b1235e07633}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\math">
+      <UniqueIdentifier>{b981c261-87d5-42ad-9748-87dce9e3790d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\replay">
+      <UniqueIdentifier>{d685144d-90bd-4059-8701-d2eca603c03e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\include">
+      <UniqueIdentifier>{305c1a21-6ef8-46fb-838d-5a0b77e9e451}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="crypto\rng">
+      <UniqueIdentifier>{97c08266-c6fb-4b33-8099-af31a41c0be7}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\srtp\srtp\srtp.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\pjlib\srtp_err.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\ae_xfm\xfm.c">
+      <Filter>crypto\ae_xfm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\aes.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\aes_cbc.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\aes_icm.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\cipher.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\cipher\null_cipher.c">
+      <Filter>crypto\cipher</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\hash\auth.c">
+      <Filter>crypto\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\hash\hmac.c">
+      <Filter>crypto\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\hash\null_auth.c">
+      <Filter>crypto\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\hash\sha1.c">
+      <Filter>crypto\hash</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\kernel\alloc.c">
+      <Filter>crypto\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\kernel\crypto_kernel.c">
+      <Filter>crypto\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\kernel\key.c">
+      <Filter>crypto\kernel</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\math\datatypes.c">
+      <Filter>crypto\math</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\math\gf2_8.c">
+      <Filter>crypto\math</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\math\stat.c">
+      <Filter>crypto\math</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\replay\rdb.c">
+      <Filter>crypto\replay</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\replay\rdbx.c">
+      <Filter>crypto\replay</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\rng\ctr_prng.c">
+      <Filter>crypto\rng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\rng\prng.c">
+      <Filter>crypto\rng</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\srtp\crypto\rng\rand_source.c">
+      <Filter>crypto\rng</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\srtp\include\rtp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\include\srtp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="srtp_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\include\ut_sim.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\aes.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\aes_cbc.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\aes_icm.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\alloc.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\auth.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\cipher.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\crypto.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\crypto_kernel.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\crypto_math.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\crypto_types.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\cryptoalg.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\datatypes.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\err.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\gf2_8.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\hmac.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\integers.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\kernel_compat.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\key.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\null_auth.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\null_cipher.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\prng.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\rand_source.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\rdb.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\rdbx.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\sha1.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\stat.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\srtp\crypto\include\xfm.h">
+      <Filter>crypto\include</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

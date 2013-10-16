@@ -1,0 +1,443 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{b5821316-2bbe-4004-bff0-b9bf5b485038}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Other Targets">
+      <UniqueIdentifier>{678975a5-a447-478c-8fd8-7557bd388284}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{f4ad2fcf-091f-4e37-babc-c3ac61259cea}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Header Files\compat">
+      <UniqueIdentifier>{98ded4a6-be36-488e-9e3b-6d864383188d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inline Files">
+      <UniqueIdentifier>{04489adc-9776-472f-a2b4-48651dd139aa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\winrt">
+      <UniqueIdentifier>{d5a6f440-3390-45fb-b415-2ab9d8013d28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\winrt">
+      <UniqueIdentifier>{e7d9f9b3-b758-4bbb-ae53-f92b3da97c2f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\pj\activesock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\addr_resolv_sock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\array.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\config.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ctype.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\errno.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\except.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\fifobuf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\file_access_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\file_io_ansi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\file_io_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\guid.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\guid_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\hash.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ioqueue_common_abs.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ioqueue_select.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ioqueue_winnt.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\list.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\lock.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\log.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\log_writer_stdout.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_core_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_error_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_info.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_time_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_timestamp_common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_timestamp_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool_buf.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool_caching.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool_dbg.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool_policy_malloc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\rand.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\rbtree.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_bsd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_qos_bsd.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_qos_common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_qos_dummy.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_qos_wm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_select.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_dump.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_ossl.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\string.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\timer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\types.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\unicode_win32.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\addr_resolv_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\guid_simple.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ioqueue_dummy.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ioqueue_epoll.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\log_writer_printk.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_core_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_core_unix.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_error_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_error_unix.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_time_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_timestamp_linux.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\os_timestamp_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\pool_policy_kmalloc.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\sock_linux_kernel.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\symbols.c">
+      <Filter>Source Files\Other Targets</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_winphone.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\third_party\threademulation\src\ThreadEmulation.cpp">
+      <Filter>Source Files\winrt</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\activesock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\addr_resolv.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\assert.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\config_site.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\config_site_sample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\ctype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\doxygen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\equeue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\errno.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\except.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\fifobuf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\file_access.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\file_io.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\guid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\hash.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\ioqueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\ip_helper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\list.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\lock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\log.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\math.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\os.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjlib.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\pool_alt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\pool_buf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\rand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\rbtree.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\sock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\sock_qos.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\sock_select.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\ssl_sock.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\timer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\unicode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\assert.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\cc_gcc.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\cc_msvc.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\ctype.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\errno.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\high_precision.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\m_alpha.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\m_i386.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\m_m68k.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\m_sparc.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\malloc.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_linux.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_linux_kernel.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_palmos.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_sunos.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_win32.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_win32_wince.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\rand.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\setjmp.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\size_t.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\socket.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\stdarg.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\stdfileio.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\string.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\time.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\vsprintf.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\list_i.h">
+      <Filter>Inline Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\pool_i.h">
+      <Filter>Inline Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\string_i.h">
+      <Filter>Inline Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_winphone.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\third_party\threademulation\include\ThreadEmulation.h">
+      <Filter>Header Files\winrt</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

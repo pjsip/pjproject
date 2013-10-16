@@ -57,8 +57,8 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EAUD_INVOP,	    "Invalid or unsupported audio device operation" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_BADFORMAT,   "Bad or invalid audio device format" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_SAMPFORMAT,  "Invalid audio device sample format"),
-    PJ_BUILD_ERR( PJMEDIA_EAUD_BADLATENCY,  "Bad audio latency setting")
-
+    PJ_BUILD_ERR( PJMEDIA_EAUD_BADLATENCY,  "Bad audio latency setting"),
+    PJ_BUILD_ERR( PJMEDIA_EAUD_WASAPI_ERROR,  "Wasapi error, please see the log for more info")
 };
 
 #endif	/* PJ_HAS_ERROR_STRING */

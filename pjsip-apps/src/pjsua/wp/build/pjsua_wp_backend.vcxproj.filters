@@ -1,0 +1,63 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="pjsua">
+      <UniqueIdentifier>{2d7c3750-b3c5-4def-a47c-68ac54fe1cf7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pjsua\Source Files">
+      <UniqueIdentifier>{fdac54b1-561e-4971-8f44-6f6ce4195148}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pjsua\Header Files">
+      <UniqueIdentifier>{3f436d82-bb78-4a34-b828-b5e8ba7a343c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{a42b205c-281f-4093-a30d-2c6772c8a586}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{387373ca-cce2-4761-ab21-06145f823a47}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\pjsua_app.h">
+      <Filter>pjsua\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\pjsua_app_common.h">
+      <Filter>pjsua\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\pjsua_app_config.h">
+      <Filter>pjsua\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\backend\Globals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\backend\IPjsuaCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\backend\PjsuaCallback.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\pjsua_app.c">
+      <Filter>pjsua\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\pjsua_app_cli.c">
+      <Filter>pjsua\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\pjsua_app_common.c">
+      <Filter>pjsua\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\pjsua_app_config.c">
+      <Filter>pjsua\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\pjsua_app_legacy.c">
+      <Filter>pjsua\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\backend\Globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\backend\PjsuaCallback.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
