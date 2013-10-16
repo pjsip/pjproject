@@ -6,7 +6,7 @@ public class test {
 
   public static void main(String argv[]) {
 
-	CredInfo cred = new CredInfo();
+	AuthCredInfo cred = new AuthCredInfo();
 
 	cred.setRealm("Hello world");
     

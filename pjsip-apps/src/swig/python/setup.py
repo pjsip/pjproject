@@ -61,6 +61,10 @@ if pj_version_suffix:
 
 #print 'PJ_VERSION = "'+ pj_version + '"'
 
+# Get targetname
+f = os.popen("make --no-print-directory -f helper.mak target_name")
+pj_target_name = f.read().rstrip("\r\n")
+f.close()
 
 # Fill in pj_inc_dirs
 pj_inc_dirs = []
@@ -77,21 +81,22 @@ for line in f:
 f.close()
 
 # Fill in pj_libs
-pj_libs = ['pjsua2-x86_64-unknown-linux-gnu']                      ### <--- xxxx HARDCODED xxxx
+pj_libs = ['pjsua2-' + pj_target_name]
 f = os.popen("make --no-print-directory -f helper.mak libs")
 for line in f:
     pj_libs.append(line.rstrip("\r\n"))
 f.close()
 
-# Mac OS X depedencies
+# Fill in extra link args
+extra_link_args = ['-static-libstdc++']
 if platform.system() == 'Darwin':
-    extra_link_args = ["-framework", "CoreFoundation", 
-                       "-framework", "AudioToolbox"]
+    # Mac OS X depedencies
+    extra_link_args += ["-framework", "CoreFoundation", 
+                        "-framework", "AudioToolbox"]
     # OS X Lion support
     if platform.mac_ver()[0].startswith("10.7"):
         extra_link_args += ["-framework", "AudioUnit"]
-else:
-    extra_link_args = []
+
 
 setup(name="pjsua2", 
       version=pj_version,

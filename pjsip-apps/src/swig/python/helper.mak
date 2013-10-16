@@ -15,3 +15,6 @@ libs:
 		echo $$token | grep \\-l | sed 's/-l//'; \
 	done
 
+target_name:
+	$(TARGET_NAME)
+	
