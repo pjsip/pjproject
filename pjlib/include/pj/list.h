@@ -74,7 +74,7 @@ PJ_BEGIN_DECL
 struct pj_list
 {
     PJ_DECL_LIST_MEMBER(void);
-};
+} PJ_ATTR_MAY_ALIAS; /* may_alias avoids warning with gcc-4.4 -Wall -O2 */
 
 
 /**

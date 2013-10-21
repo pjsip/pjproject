@@ -43,6 +43,7 @@
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		
 #define PJ_ATTR_NORETURN	__attribute__ ((noreturn))
+#define PJ_ATTR_MAY_ALIAS	__attribute__ ((__may_alias__))
 
 #define PJ_HAS_INT64		1
 

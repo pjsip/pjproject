@@ -39,6 +39,7 @@
 #define PJ_THREAD_FUNC	
 #define PJ_NORETURN		
 #define PJ_ATTR_NORETURN	
+#define PJ_ATTR_MAY_ALIAS	
 
 #define PJ_HAS_INT64		1
 
