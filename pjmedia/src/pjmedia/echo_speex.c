@@ -109,6 +109,13 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 			 &enabled);
 #endif
 
+    /* Enable AGC */
+    {
+	spx_int32_t enabled = 1;
+	speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_AGC, 
+			     &enabled);
+    }
+
     /* Control echo cancellation in the preprocessor */
    speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_ECHO_STATE, 
 			echo->state);
@@ -188,5 +195,49 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
     return PJ_SUCCESS;
 
 }
+
+/*
+ * Let AEC know that a frame was queued to be played.
+ */
+PJ_DEF(pj_status_t) speex_aec_playback( void *state,
+					pj_int16_t *play_frm )
+{
+    speex_ec *echo = (speex_ec*) state;
+
+    /* Sanity checks */
+    PJ_ASSERT_RETURN(echo && play_frm, PJ_EINVAL);
+
+    speex_echo_playback(echo->state, (spx_int16_t*)play_frm);
+
+    return PJ_SUCCESS;
+
+}
+
+/*
+ * Perform echo cancellation to captured frame.
+ */
+PJ_DEF(pj_status_t) speex_aec_capture( void *state,
+				       pj_int16_t *rec_frm,
+				       unsigned options )
+{
+    speex_ec *echo = (speex_ec*) state;
+
+    /* Sanity checks */
+    PJ_ASSERT_RETURN(echo && rec_frm, PJ_EINVAL);
+
+    PJ_UNUSED_ARG(options);
+
+    /* Cancel echo */
+    pjmedia_copy_samples(echo->tmp_frame, rec_frm, echo->samples_per_frame);
+    speex_echo_capture(echo->state,
+		       (spx_int16_t*)echo->tmp_frame,
+		       (spx_int16_t*)rec_frm);
+
+    /* Apply preprocessing */
+    speex_preprocess_run(echo->preprocess, (spx_int16_t*)rec_frm);
+
+    return PJ_SUCCESS;
+}
+
 
 #endif

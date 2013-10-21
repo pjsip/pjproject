@@ -74,6 +74,11 @@ struct ec_operations
 			     const pj_int16_t *play_frm,
 			     unsigned options,
 			     void *reserved );
+    pj_status_t (*ec_playback)(void *state,
+			     pj_int16_t *play_frm );
+    pj_status_t (*ec_capture)(void *state,
+			     pj_int16_t *rec_frm,
+			     unsigned options );
 };
 
 
@@ -98,7 +103,9 @@ static struct ec_operations speex_aec_op =
     &speex_aec_create,
     &speex_aec_destroy,
     &speex_aec_reset,
-    &speex_aec_cancel_echo
+    &speex_aec_cancel_echo,
+    &speex_aec_playback,
+    &speex_aec_capture
 };
 #endif
 
@@ -182,6 +189,11 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 	ec->op = &echo_supp_op;
     }
 
+    /* Completeness check for EC operation playback and capture, they must
+     * be implemented both or none.
+     */
+    pj_assert(!ec->op->ec_capture == !ec->op->ec_playback);
+
     PJ_LOG(5,(ec->obj_name, "Creating %s", ec->op->name));
 
     /* Instantiate EC object */
@@ -193,35 +205,42 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 	return status;
     }
 
-    /* Create latency buffers */
-    ptime = samples_per_frame * 1000 / clock_rate;
-    if (latency_ms > ptime) {
-	/* Normalize latency with delaybuf/WSOLA latency */
-	latency_ms -= PJ_MIN(ptime, PJMEDIA_WSOLA_DELAY_MSEC);
-    }
-    if (latency_ms < ptime) {
-	/* Give at least one frame delay to simplify programming */
-	latency_ms = ptime;
-    }
-    lat_cnt = latency_ms / ptime;
-    while (lat_cnt--)  {
-	struct frame *frm;
+    /* If EC algo does not have playback and capture callbakcs,
+     * create latency buffer and delay buffer to handle drift.
+     */
+    if (ec->op->ec_playback && ec->op->ec_capture) {
+	latency_ms = 0;
+    } else {
+	/* Create latency buffers */
+	ptime = samples_per_frame * 1000 / clock_rate;
+	if (latency_ms > ptime) {
+	    /* Normalize latency with delaybuf/WSOLA latency */
+	    latency_ms -= PJ_MIN(ptime, PJMEDIA_WSOLA_DELAY_MSEC);
+	}
+	if (latency_ms < ptime) {
+	    /* Give at least one frame delay to simplify programming */
+	    latency_ms = ptime;
+	}
+	lat_cnt = latency_ms / ptime;
+	while (lat_cnt--)  {
+	    struct frame *frm;
 
-	frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
-						  sizeof(struct frame));
-	pj_list_push_back(&ec->lat_free, frm);
-    }
+	    frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
+						      sizeof(struct frame));
+	    pj_list_push_back(&ec->lat_free, frm);
+	}
 
-    /* Create delay buffer to compensate drifts */
-    if (options & PJMEDIA_ECHO_USE_SIMPLE_FIFO)
-        delay_buf_opt |= PJMEDIA_DELAY_BUF_SIMPLE_FIFO;
-    status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate, 
-				      samples_per_frame, channel_count,
-				      (PJMEDIA_SOUND_BUFFER_COUNT+1) * ptime,
-				      delay_buf_opt, &ec->delay_buf);
-    if (status != PJ_SUCCESS) {
-	pj_pool_release(pool);
-	return status;
+	/* Create delay buffer to compensate drifts */
+	if (options & PJMEDIA_ECHO_USE_SIMPLE_FIFO)
+	    delay_buf_opt |= PJMEDIA_DELAY_BUF_SIMPLE_FIFO;
+	status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate, 
+					  samples_per_frame, channel_count,
+					  (PJMEDIA_SOUND_BUFFER_COUNT+1) * ptime,
+					  delay_buf_opt, &ec->delay_buf);
+	if (status != PJ_SUCCESS) {
+	    pj_pool_release(pool);
+	    return status;
+	}
     }
 
     PJ_LOG(4,(ec->obj_name, 
@@ -267,7 +286,8 @@ PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
 	pj_list_push_back(&echo->lat_free, frm);
     }
     echo->lat_ready = PJ_FALSE;
-    pjmedia_delay_buf_reset(echo->delay_buf);
+    if (echo->delay_buf)
+	pjmedia_delay_buf_reset(echo->delay_buf);
     echo->op->ec_reset(echo->state);
     return PJ_SUCCESS;
 }
@@ -279,6 +299,11 @@ PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
 PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 					   pj_int16_t *play_frm )
 {
+    /* If EC algo has playback handler, just pass the frame. */
+    if (echo->op->ec_playback) {
+	return (*echo->op->ec_playback)(echo->state, play_frm);
+    }
+
     /* Playing frame should be stored, as it will be used by echo_capture() 
      * as reference frame, delay buffer is used for storing the playing frames
      * as in case there was clock drift between mic & speaker.
@@ -331,6 +356,11 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
 {
     struct frame *oldest_frm;
     pj_status_t status, rc;
+
+    /* If EC algo has capture handler, just pass the frame. */
+    if (echo->op->ec_capture) {
+	return (*echo->op->ec_capture)(echo->state, rec_frm, options);
+    }
 
     if (!echo->lat_ready) {
 	/* Prefetching to fill in the desired latency */
