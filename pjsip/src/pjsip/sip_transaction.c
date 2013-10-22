@@ -648,20 +648,25 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
     tsx = (pjsip_transaction*)
     	  pj_hash_get_lower( mod_tsx_layer.htable, key->ptr, 
 			     (unsigned)key->slen, &hval );
+    
+    /* Prevent the transaction to get deleted before we have chance to lock it.
+     */
+    if (tsx && lock)
+        pj_grp_lock_add_ref(tsx->grp_lock);
+    
     pj_mutex_unlock(mod_tsx_layer.mutex);
 
     TSX_TRACE_((THIS_FILE, 
 		"Finding tsx with hkey=0x%p and key=%.*s: found %p",
 		hval, key->slen, key->ptr, tsx));
 
-    /* Race condition!
-     * Transaction may gets deleted before we have chance to lock it.
-     */
-    PJ_TODO(FIX_RACE_CONDITION_HERE);
+    /* Simulate race condition! */
     PJ_RACE_ME(5);
 
-    if (tsx && lock)
+    if (tsx && lock) {
 	pj_grp_lock_acquire(tsx->grp_lock);
+        pj_grp_lock_dec_ref(tsx->grp_lock);
+    }
 
     return tsx;
 }
@@ -798,18 +803,21 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_FALSE;
     }
 
+    /* Prevent the transaction to get deleted before we have chance to lock it
+     * in pjsip_tsx_recv_msg().
+     */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+    
     /* Unlock hash table. */
     pj_mutex_unlock( mod_tsx_layer.mutex );
 
-    /* Race condition!
-     * Transaction may gets deleted before we have chance to lock it
-     * in pjsip_tsx_recv_msg().
-     */
-    PJ_TODO(FIX_RACE_CONDITION_HERE);
+    /* Simulate race condition! */
     PJ_RACE_ME(5);
 
     /* Pass the message to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata );
+    
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 
     return PJ_TRUE;
 }
@@ -849,18 +857,21 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
 	return PJ_FALSE;
     }
 
+    /* Prevent the transaction to get deleted before we have chance to lock it
+     * in pjsip_tsx_recv_msg().
+     */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+
     /* Unlock hash table. */
     pj_mutex_unlock( mod_tsx_layer.mutex );
 
-    /* Race condition!
-     * Transaction may gets deleted before we have chance to lock it
-     * in pjsip_tsx_recv_msg().
-     */
-    PJ_TODO(FIX_RACE_CONDITION_HERE);
+    /* Simulate race condition! */
     PJ_RACE_ME(5);
 
     /* Pass the message to the transaction. */
     pjsip_tsx_recv_msg(tsx, rdata );
+    
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 
     return PJ_TRUE;
 }
