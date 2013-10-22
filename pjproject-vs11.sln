@@ -2606,6 +2606,7 @@ Global
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Pocket PC 2003 (ARMV4).ActiveCfg = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Smartphone 2003 (ARMV4).ActiveCfg = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Win32.ActiveCfg = Debug|Win32
+		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Win32.Build.0 = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I).ActiveCfg = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I).ActiveCfg = Debug|Win32
 		{5E507EA2-CB39-47CA-BD39-49EB58D7A0BB}.Debug|Windows Mobile 6 Professional SDK (ARMV4I).ActiveCfg = Debug|Win32

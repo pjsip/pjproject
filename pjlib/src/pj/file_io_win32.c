@@ -184,13 +184,45 @@ PJ_DEF(pj_bool_t) pj_file_eof(pj_oshandle_t fd, enum pj_file_access access)
 }
 */
 
+static pj_status_t set_file_pointer(pj_oshandle_t fd,
+				    pj_off_t offset,
+				    pj_off_t* newPos,
+				    DWORD dwMoveMethod)
+{
+#ifdef PJ_WIN32_WINPHONE
+    LARGE_INTEGER liDistance, liNewPos;    
+
+    liDistance.QuadPart = offset;
+    if (!SetFilePointerEx(fd, liDistance, &liNewPos, dwMoveMethod)) {
+	return PJ_RETURN_OS_ERROR(GetLastError());
+    }
+    *newPos = liNewPos.QuadPart;
+#else
+    DWORD dwNewPos;
+    LONG  hi32;
+
+    hi32 = (LONG)(offset >> 32);
+
+    dwNewPos = SetFilePointer(fd, (long)offset, &hi32, dwMoveMethod);
+    if (dwNewPos == (DWORD)INVALID_SET_FILE_POINTER) {
+        DWORD dwStatus = GetLastError();
+        if (dwStatus != 0)
+            return PJ_RETURN_OS_ERROR(dwStatus);
+        /* dwNewPos actually is not an error. */
+    }
+    *newPos = hi32;
+    *newPos = (*newPos << 32) + dwNewPos;
+#endif
+
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
                                     pj_off_t offset,
                                     enum pj_file_seek_type whence)
 {
     DWORD dwMoveMethod;
-    DWORD dwNewPos;
-    LONG  hi32;
+    pj_off_t newPos;
 
     if (whence == PJ_SEEK_SET)
         dwMoveMethod = FILE_BEGIN;
@@ -201,15 +233,10 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
     else {
         pj_assert(!"Invalid whence in file_setpos");
         return PJ_EINVAL;
-    }
-
-    hi32 = (LONG)(offset >> 32);
-    dwNewPos = SetFilePointer(fd, (long)offset, &hi32, dwMoveMethod);
-    if (dwNewPos == (DWORD)INVALID_SET_FILE_POINTER) {
-        DWORD dwStatus = GetLastError();
-        if (dwStatus != 0)
-            return PJ_RETURN_OS_ERROR(dwStatus);
-        /* dwNewPos actually is not an error. */
+    }    
+    
+    if (set_file_pointer(fd, offset, &newPos, dwMoveMethod) != PJ_SUCCESS) {
+	return PJ_RETURN_OS_ERROR(GetLastError());
     }
 
     return PJ_SUCCESS;
@@ -218,18 +245,10 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
 PJ_DEF(pj_status_t) pj_file_getpos( pj_oshandle_t fd,
                                     pj_off_t *pos)
 {
-    LONG hi32 = 0;
-    DWORD lo32;
-
-    lo32 = SetFilePointer(fd, 0, &hi32, FILE_CURRENT);
-    if (lo32 == (DWORD)INVALID_SET_FILE_POINTER) {
-        DWORD dwStatus = GetLastError();
-        if (dwStatus != 0)
-            return PJ_RETURN_OS_ERROR(dwStatus);
+    if (set_file_pointer(fd, 0, pos, FILE_CURRENT) != PJ_SUCCESS) {
+	return PJ_RETURN_OS_ERROR(GetLastError());
     }
 
-    *pos = hi32;
-    *pos = (*pos << 32) + lo32;
     return PJ_SUCCESS;
 }
 

@@ -186,32 +186,39 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     #endif
 #elif defined(_MSC_VER)
     {
-	OSVERSIONINFO ovi;
-
-	ovi.dwOSVersionInfoSize = sizeof(ovi);
-
-#ifdef PJ_WIN32_WINPHONE
-	goto get_sdk_info;
-#else
-	if (GetVersionEx(&ovi) == FALSE)
-	    goto get_sdk_info;
-#endif
-
-	si.os_ver = (ovi.dwMajorVersion << 24) |
-		    (ovi.dwMinorVersion << 16);
-	#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
-	    si.os_name = pj_str("wince");
+	#ifdef PJ_WIN32_WINPHONE
+	    si.os_name = pj_str("winphone");
 	#else
-	    si.os_name = pj_str("win32");
+	    OSVERSIONINFO ovi;
+
+	    ovi.dwOSVersionInfoSize = sizeof(ovi);
+	    if (GetVersionEx(&ovi) == FALSE)
+		goto get_sdk_info;
+
+	    si.os_ver = (ovi.dwMajorVersion << 24) | 
+			(ovi.dwMinorVersion << 16);
+
+	    #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
+		si.os_name = pj_str("wince");
+	    #else
+		si.os_name = pj_str("win32");
+	    #endif
 	#endif
     }
 
     {
 	SYSTEM_INFO wsi;
 
+    #ifdef PJ_WIN32_WINPHONE
+	GetNativeSystemInfo(&wsi);
+    #else
 	GetSystemInfo(&wsi);
+    #endif
+
 	switch (wsi.wProcessorArchitecture) {
-    #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
+    #if (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE) || \
+	(defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE)
+
 	case PROCESSOR_ARCHITECTURE_ARM:
 	    si.machine = pj_str("arm");
 	    break;
@@ -228,8 +235,12 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	case PROCESSOR_ARCHITECTURE_INTEL:
 	    si.machine = pj_str("i386");
 	    break;
-    #endif	/* PJ_WIN32_WINCE */
+    #endif	/* PJ_WIN32_WINCE || PJ_WIN32_WINPHONE */
 	}
+    #ifdef PJ_WIN32_WINPHONE
+	/* Avoid compile warning. */
+	goto get_sdk_info;
+    #endif
     }
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     {
