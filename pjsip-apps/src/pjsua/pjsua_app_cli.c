@@ -1643,9 +1643,9 @@ static pj_status_t cmd_next_call(pj_bool_t next)
      * Cycle next/prev dialog.
      */
     if (next) {
-	find_next_call(current_call);
+	find_next_call();
     } else {
-	find_prev_call(current_call);
+	find_prev_call();
     }
 
     if (current_call != PJSUA_INVALID_ID) {	

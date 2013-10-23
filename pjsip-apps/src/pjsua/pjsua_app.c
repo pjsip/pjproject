@@ -325,8 +325,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 		  notif_st,
 		  call_info.remote_info.ptr,
 		  call_info.local_info.ptr,
-		  (app_config.use_cli?"c a":"a"),
-		  (app_config.use_cli?"c g":"h")));
+		  (app_config.use_cli?"ca a":"a"),
+		  (app_config.use_cli?"g":"h")));
     }
 }
 
@@ -847,7 +847,7 @@ static void on_mwi_info(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info)
 	return;
     }
 
-    body.ptr = mwi_info->rdata->msg_info.msg->body->data;
+    body.ptr = (char *)mwi_info->rdata->msg_info.msg->body->data;
     body.slen = mwi_info->rdata->msg_info.msg->body->len;
 
     PJ_LOG(3,(THIS_FILE, " Body:\n%.*s", (int)body.slen, body.ptr));
@@ -1077,33 +1077,35 @@ static void simple_registrar(pjsip_rx_data *rdata)
     pj_status_t status;
 
     status = pjsip_endpt_create_response(pjsua_get_pjsip_endpt(),
-				 rdata, 200, NULL, &tdata);
+					 rdata, 200, NULL, &tdata);
     if (status != PJ_SUCCESS)
     return;
 
-    exp = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
+    exp = (pjsip_expires_hdr *)pjsip_msg_find_hdr(rdata->msg_info.msg, 
+						  PJSIP_H_EXPIRES, NULL);
 
     h = rdata->msg_info.msg->hdr.next;
     while (h != &rdata->msg_info.msg->hdr) {
-    if (h->type == PJSIP_H_CONTACT) {
-    const pjsip_contact_hdr *c = (const pjsip_contact_hdr*)h;
-    int e = c->expires;
+	if (h->type == PJSIP_H_CONTACT) {
+	    const pjsip_contact_hdr *c = (const pjsip_contact_hdr*)h;
+	    int e = c->expires;
 
-    if (e < 0) {
-	if (exp)
-	    e = exp->ivalue;
-	else
-	    e = 3600;
-    }
+	    if (e < 0) {
+		if (exp)
+		    e = exp->ivalue;
+		else
+		    e = 3600;
+	    }
 
-    if (e > 0) {
-	pjsip_contact_hdr *nc = pjsip_hdr_clone(tdata->pool, h);
-	nc->expires = e;
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
-	++cnt;
-    }
-    }
-    h = h->next;
+	    if (e > 0) {
+		pjsip_contact_hdr *nc = (pjsip_contact_hdr *)pjsip_hdr_clone(
+								tdata->pool, h);
+		nc->expires = e;
+		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
+		++cnt;
+	    }
+	}
+	h = h->next;
     }
 
     srv = pjsip_generic_string_hdr_create(tdata->pool, NULL, NULL);
@@ -1164,8 +1166,8 @@ static pj_bool_t default_mod_on_rx_request(pjsip_rx_data *rdata)
 	cap_hdr = pjsip_endpt_get_capability(pjsua_get_pjsip_endpt(), 
 					     PJSIP_H_ALLOW, NULL);
 	if (cap_hdr) {
-	    pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, 
-							   cap_hdr));
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr *)pjsip_hdr_clone(
+							 tdata->pool, cap_hdr));
 	}
     }
 
