@@ -28,6 +28,7 @@ SAMPLES := auddemo \
 	   mix \
 	   pjsip-perf \
 	   pcaputil \
+	   pjsua2_demo \
 	   playfile \
 	   playsine \
 	   recfile \
@@ -45,16 +46,30 @@ SAMPLES := auddemo \
 	   tonegen \
 	   vid_streamutil
 
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+#
+# FIX THIS
+#
+# Only pjsua2_demo is built, and also -lstdc++ is added for all
+# samples
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+SAMPLES := pjsua2_demo
+
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)$(HOST_EXE))
 
 all: $(BINDIR) $(OBJDIR) $(EXES)
 
-$(BINDIR)/%$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(PJ_LIB_FILES)
+$(BINDIR)/%$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(PJ_LIB_FILES) 
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
 	    $(subst /,$(HOST_PSEP),$<) \
-	    $(_LDFLAGS)
+	     $(_LDFLAGS) -lstdc++
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
+	$(CC) $(_CFLAGS) \
+	  $(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
+	  $(subst /,$(HOST_PSEP),$<) 
+
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp
 	$(CC) $(_CFLAGS) \
 	  $(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 	  $(subst /,$(HOST_PSEP),$<) 

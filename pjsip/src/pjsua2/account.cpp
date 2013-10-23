@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjsua2/account.hpp>
+#include <pjsua2/endpoint.hpp>
 #include <pj/ctype.h>
 #include "util.hpp"
 
@@ -329,4 +330,114 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.rateControlBandwidth	= prm.vid_stream_rc_cfg.bandwidth;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountInfo::fromPj(const pjsua_acc_info &pai)
+{
+    id 			= pai.id;
+    isDefault 		= pai.is_default != 0;
+    uri			= pj2Str(pai.acc_uri);
+    regIsConfigured	= pai.has_registration != 0;
+    regIsActive		= pai.has_registration && pai.expires > 0 &&
+			    (pai.status / 100 == 2);
+    regExpiresSec	= pai.expires;
+    regStatus		= pai.status;
+    regStatusText	= pj2Str(pai.status_text);
+    regLastErr		= pai.reg_last_err;
+    onlineStatus	= pai.online_status != 0;
+    onlineStatusText	= pj2Str(pai.online_status_text);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+Account::Account(AccountCallback *param_cb, Token user_data)
+: id(PJSUA_INVALID_ID), cb(param_cb), userData(user_data)
+{
+    cb->setAccount(this);
+}
+
+Account::~Account()
+{
+    delete cb;
+}
+
+void Account::create(const AccountConfig &acc_cfg,
+                     bool make_default) throw(Error)
+{
+    pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
+
+    PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
+}
+
+void Account::modify(const AccountConfig &acc_cfg) throw(Error)
+{
+    pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
+
+    PJSUA2_CHECK_EXPR( pjsua_acc_modify(id, &pj_acc_cfg) );
+}
+
+bool Account::isValid() const
+{
+    return pjsua_acc_is_valid(id) != 0;
+}
+
+void Account::setDefault() throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_default(id) );
+}
+
+bool Account::isDefault() const
+{
+    return pjsua_acc_get_default() == id;
+}
+
+int Account::getIndex() const
+{
+    return id;
+}
+
+void Account::setUserData(Token user_data)
+{
+    userData = user_data;
+}
+
+Token Account::getUserData() const
+{
+    return userData;
+}
+
+AccountInfo Account::getInfo() const throw(Error)
+{
+    pjsua_acc_info pj_ai;
+    AccountInfo ai;
+
+    PJSUA2_CHECK_EXPR( pjsua_acc_get_info(id, &pj_ai) );
+    ai.fromPj(pj_ai);
+    return ai;
+}
+
+void Account::setRegistration(bool renew) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_registration(id, renew) );
+}
+
+void
+Account::setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error)
+{
+    pjrpid_element pj_rpid;
+
+    pj_bzero(&pj_rpid, sizeof(pj_rpid));
+    pj_rpid.type	= PJRPID_ELEMENT_TYPE_PERSON;
+    pj_rpid.activity	= pres_st.activity;
+    pj_rpid.id		= str2Pj(pres_st.rpidId);
+    pj_rpid.note	= str2Pj(pres_st.note);
+
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_online_status2(id, pres_st.isOnline,
+                                                    &pj_rpid) );
+}
+
+void Account::setTransport(TransportId tp_id) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_transport(id, tp_id) );
+}
 

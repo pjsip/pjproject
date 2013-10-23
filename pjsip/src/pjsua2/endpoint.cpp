@@ -383,7 +383,6 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
     PJSUA2_CHECK_RAISE_ERROR(status);
 }
 
-
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint Utilities
@@ -587,4 +586,6 @@ void Endpoint::transportClose(TransportId id) throw(Error)
     status = pjsua_transport_close(id, PJ_FALSE);
     PJSUA2_CHECK_RAISE_ERROR(status);
 }
+
+///////////////////////////////////////////////////////////////////////////////
 

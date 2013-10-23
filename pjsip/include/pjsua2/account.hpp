@@ -798,6 +798,7 @@ public:
     AccountPresenceStatus();
 };
 
+
 /**
  * Account information. Application can query the account information
  * by calling Account::getInfo().
@@ -823,30 +824,30 @@ struct AccountInfo
      * Flag to tell whether this account has registration setting
      * (reg_uri is not empty).
      */
-    bool		hasRegistration;
+    bool		regIsConfigured;
 
     /**
      * Flag to tell whether this account is currently registered
      * (has active registration session).
      */
-    bool		isRegistered;
+    bool		regIsActive;
 
     /**
      * An up to date expiration interval for account registration session.
      */
-    int			expiresSec;
+    int			regExpiresSec;
 
     /**
      * Last registration status code. If status code is zero, the account
      * is currently not registered. Any other value indicates the SIP
      * status code of the registration.
      */
-    pjsip_status_code	status;
+    pjsip_status_code	regStatus;
 
     /**
      * String describing the registration status.
      */
-    string		statusText;
+    string		regStatusText;
 
     /**
      * Last registration error code. When the status field contains a SIP
@@ -866,6 +867,8 @@ struct AccountInfo
      */
     string		onlineStatusText;
 
+public:
+    void fromPj(const pjsua_acc_info &pai);
 };
 
 /**
@@ -908,7 +911,7 @@ struct OnRegStateParam
     /**
      * SIP status code received.
      */
-    int			code;
+    pjsip_status_code	code;
 
     /**
      * SIP reason phrase received.
@@ -1091,6 +1094,12 @@ public:
     virtual ~AccountCallback() {}
 
     /**
+     * Get the account associated with this callback.
+     */
+    Account *account()
+    { return acc; }
+
+    /**
      * Notify application on incoming call.
      *
      * @param prm	Callback parameter.
@@ -1190,6 +1199,20 @@ public:
      */
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     {}
+
+protected:
+    AccountCallback()
+    : acc(NULL)
+    {}
+
+private:
+    Account *acc;
+
+    /** Set the account. Must only be called by Account class */
+    void setAccount(Account *the_acc)
+    { acc = the_acc; }
+
+    friend class Account;
 };
 
 
@@ -1209,6 +1232,34 @@ public:
 class Account
 {
 public:
+    /**
+     * Constructor.
+     */
+    Account(AccountCallback *cb, Token user_data);
+
+    /**
+     * Destructor.
+     */
+    ~Account();
+
+    /**
+     * Create the account.
+     *
+     * @param cfg		The account config.
+     * @param make_default	Make this the default account.
+     */
+    void create(const AccountConfig &cfg,
+                bool make_default=false) throw(Error);
+
+    /**
+     * Modify the account to use the specified account configuration.
+     * Depending on the changes, this may cause unregistration or
+     * reregistration on the account.
+     *
+     * @param cfg 		New account config to be applied to the account.
+     */
+    void modify(const AccountConfig &acc) throw(Error);
+
     /**
      * Check if this account is still valid.
      *
@@ -1259,16 +1310,7 @@ public:
      *
      * @return			Account info.
      */
-    AccountInfo getInfo() const;
-
-    /**
-     * Modify the account to use the specified account configuration.
-     * Depending on the changes, this may cause unregistration or
-     * reregistration on the account.
-     *
-     * @param cfg 		New account config to be applied to the account.
-     */
-    void modify(const AccountConfig &acc) throw(Error);
+    AccountInfo getInfo() const throw(Error);
 
     /**
      * Update registration or perform unregistration. Application normally
@@ -1310,7 +1352,10 @@ public:
 protected:
     friend class Endpoint;
 
-    Account();
+private:
+    pjsua_acc_id 	 id;
+    AccountCallback 	*cb;
+    Token		 userData;
 };
 
 } // namespace pj

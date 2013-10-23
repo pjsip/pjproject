@@ -69,6 +69,14 @@ typedef int TransportId;
  */
 typedef void *TransportHandle;
 
+/*
+ * Forward declaration of Account, AccountCallback, AccountConfig, to be used
+ * by Endpoint.
+ */
+class Account;
+class AccountCallback;
+class AccountConfig;
+
 
 /**
  * Constants
@@ -104,6 +112,9 @@ struct Error
 
     /** The line number of PJSUA source file that throws the error */
     int		srcLine;
+
+    /** Build error string. */
+    string	info(bool multi_line=false) const;
 
     /** Default constructor */
     Error();
@@ -155,6 +166,11 @@ struct Error
 #define PJSUA2_CHECK_RAISE_ERROR(status)	\
 	PJSUA2_CHECK_RAISE_ERROR2(status, "")
 
+#define PJSUA2_CHECK_EXPR(expr)			\
+	do { \
+	    pj_status_t the_status = expr; 	\
+	    PJSUA2_CHECK_RAISE_ERROR2(the_status, #expr); \
+	} while (0)
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -165,15 +181,15 @@ struct Error
 struct AuthCredInfo
 {
     /**
+     * The authentication scheme (e.g. "digest").
+     */
+    string	scheme;
+
+    /**
      * Realm on which this credential is to be used. Use "*" to make
      * a credential that can be used to authenticate against any challenges.
      */
     string	realm;
-
-    /**
-     * The authentication scheme (e.g. "digest").
-     */
-    string	scheme;
 
     /**
      * Authentication user name.
@@ -207,6 +223,15 @@ struct AuthCredInfo
     /** Authentication Management Field	*/
     string	akaAmf;
 
+    /** Default constructor */
+    AuthCredInfo();
+
+    /** Construct a credential with the specified parameters */
+    AuthCredInfo(const string &scheme,
+                 const string &realm,
+                 const string &user_name,
+                 const int data_type,
+                 const string data);
 };
 
 /** Array of SIP credentials */

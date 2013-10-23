@@ -44,6 +44,62 @@ Error::Error( pj_status_t prm_status,
     }
 }
 
+string Error::info(bool multi_line) const
+{
+    string output;
+
+    if (status==PJ_SUCCESS) {
+	output = "No error";
+    } else if (!multi_line) {
+	char temp[80];
+
+	if (!title.empty()) {
+	    output += title + " error: ";
+	}
+	snprintf(temp, sizeof(temp), " (status=%d)", status);
+	output += reason + temp;
+	if (!srcFile.empty()) {
+	    output += " [";
+	    output += srcFile;
+	    snprintf(temp, sizeof(temp), ":%d]", srcLine);
+	    output += temp;
+	}
+    } else {
+	char temp[80];
+
+	if (!title.empty()) {
+	    output += string("Title:       ") + title + "\n";
+	}
+
+	snprintf(temp, sizeof(temp), "%d\n", status);
+	output += string("Code:        ") + temp;
+	output += string("Description: ") + reason + "\n";
+	if (!srcFile.empty()) {
+	    snprintf(temp, sizeof(temp), ":%d\n", srcLine);
+	    output += string("Location:    ") + srcFile + temp;
+	}
+    }
+
+    return output;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+AuthCredInfo::AuthCredInfo()
+: dataType(0)
+{
+}
+
+AuthCredInfo::AuthCredInfo(const string &param_scheme,
+			   const string &param_realm,
+			   const string &param_user_name,
+			   const int param_data_type,
+			   const string param_data)
+: scheme(param_scheme), realm(param_realm), username(param_user_name),
+  dataType(param_data_type), data(param_data)
+{
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 

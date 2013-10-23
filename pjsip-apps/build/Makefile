@@ -56,8 +56,14 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 # Main entry
 #
 #
+
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+#
+#                FIX THIS
+#
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 #TARGETS := swig pjsua pjsystest samples
-TARGETS := swig
+TARGETS := swig samples
 
 .PHONY: $(TARGETS)
 
