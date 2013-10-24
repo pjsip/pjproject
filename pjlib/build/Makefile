@@ -30,6 +30,7 @@ export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	ssl_sock_common.o ssl_sock_ossl.o ssl_sock_dump.o \
 	string.o timer.o types.o
 export PJLIB_CFLAGS += $(_CFLAGS)
+export PJLIB_CXXFLAGS += $(_CXXFLAGS)
 
 ###############################################################################
 # Defines for building test application
@@ -44,6 +45,7 @@ export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \
 		    util.o
 export TEST_CFLAGS += $(_CFLAGS)
+export TEST_CXXFLAGS += $(_CXXFLAGS)
 export TEST_LDFLAGS += $(_LDFLAGS)
 export TEST_EXE := ../bin/pjlib-test-$(TARGET_NAME)$(HOST_EXE)
 

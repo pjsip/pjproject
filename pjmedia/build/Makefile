@@ -73,6 +73,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			wsola.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
+export PJMEDIA_CXXFLAGS += $(_CXXFLAGS)
 
 
 ###############################################################################
@@ -84,6 +85,7 @@ export PJMEDIA_AUDIODEV_OBJS +=  audiodev.o audiotest.o errno.o \
 				 alsa_dev.o bb10_dev.o bdimad_dev.o \
 				 android_jni_dev.o opensl_dev.o
 export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
+export PJMEDIA_AUDIODEV_CXXFLAGS += $(_CXXFLAGS)
 
 
 ###############################################################################
@@ -93,6 +95,7 @@ export PJMEDIA_VIDEODEV_SRCDIR = ../src/pjmedia-videodev
 export PJMEDIA_VIDEODEV_OBJS +=  errno.o videodev.o avi_dev.o ffmpeg_dev.o \
 				colorbar_dev.o v4l2_dev.o
 export PJMEDIA_VIDEODEV_CFLAGS += $(_CFLAGS)
+export PJMEDIA_VIDEODEV_CXXFLAGS += $(_CXXFLAGS)
 
 
 ###############################################################################
@@ -105,6 +108,7 @@ export PJSDP_SRCDIR = ../src/pjmedia
 export PJSDP_OBJS += 	$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			errno.o sdp.o sdp_cmp.o sdp_neg.o
 export PJSDP_CFLAGS += $(_CFLAGS)
+export PJSDP_CXXFLAGS += $(_CXXFLAGS)
 
 
 ###############################################################################
@@ -118,6 +122,8 @@ export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o \
                         g7221_sdp_match.o amr_sdp_match.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
+export PJMEDIA_CODEC_CXXFLAGS += $(_CXXFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
+			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
 
 
 ###############################################################################
@@ -129,6 +135,7 @@ export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o \
 			    rtp_test.o test.o
 export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
+export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(_LDFLAGS)
 export PJMEDIA_TEST_EXE:=../bin/pjmedia-test-$(TARGET_NAME)$(HOST_EXE)
 
