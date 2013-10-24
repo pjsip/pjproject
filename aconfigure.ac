@@ -565,6 +565,7 @@ fi
 if test "$enable_sound" = "no"; then
   true;
 else
+ AC_SUBST(ac_pjmedia_audiodev_objs)
  case $target in
   *android*)
 	LIBS="$LIBS -lOpenSLES"
@@ -572,10 +573,12 @@ else
 	;;
   arm-apple-darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
+	ac_pjmedia_audiodev_objs = "coreaudio_dev.o"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
 	;;
   *darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
+	ac_pjmedia_audiodev_objs = "coreaudio_dev.o"
 	if test "`uname -r`" = "6.8"; then
 		#ac_pa_cflags="$ac_pa_cflags -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS"
 		#AC_MSG_RESULT([Setting additional PortAudio CFLAGS.. -DPA_OLD_CORE_AUDIO -DMOSX_USE_NON_ATOMIC_FLAG_BITS])

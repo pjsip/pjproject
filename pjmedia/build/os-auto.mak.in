@@ -62,6 +62,8 @@ AC_NO_OPENCORE_AMRWB=@ac_no_opencore_amrwb@
 
 export CODEC_OBJS=
 
+export PJMEDIA_AUDIODEV_OBJS += @ac_pjmedia_audiodev_objs@ 
+
 ifeq ($(AC_NO_G711_CODEC),1)
 export CFLAGS += -DPJMEDIA_HAS_G711_CODEC=0
 else
