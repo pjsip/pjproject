@@ -213,6 +213,16 @@ TransportInfo::TransportInfo(const pjsua_transport_info &info)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SipRxData::fromPj(pjsip_rx_data &rdata)
+{
+    info	= pjsip_rx_data_get_info(&rdata);
+    wholeMsg	= string(rdata.msg_info.msg_buf, rdata.msg_info.len);
+    srcIp	= rdata.pkt_info.src_name;
+    srcPort	= rdata.pkt_info.src_port;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
 {
     char buf[256];

@@ -22,16 +22,15 @@
 
 using namespace pj;
 
-class MyAccountCallback : public AccountCallback
+class MyAccount : public Account
 {
 public:
-    MyAccountCallback()
-    : AccountCallback()
+    MyAccount()
     {}
 
     virtual void onRegState(OnRegStateParam &prm)
     {
-	AccountInfo ai = account()->getInfo();
+	AccountInfo ai = getInfo();
 	std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=")
 		  << prm.code << std::endl;
     }
@@ -39,13 +38,15 @@ public:
 
 static void mainProg() throw(Error)
 {
-    Endpoint & ep = Endpoint::instance();
+    Endpoint ep;
 
     // Create library
     ep.libCreate();
 
     // Init library
-    ep.libInit( EpConfig() );
+    EpConfig ep_cfg;
+    ep_cfg.logConfig.level = 4;
+    ep.libInit( ep_cfg );
 
     // Transport
     TransportConfig tcfg;
@@ -62,14 +63,13 @@ static void mainProg() throw(Error)
     acc_cfg.regConfig.registrarUri = "sip:pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
-    std::auto_ptr<Account> acc(new Account(new MyAccountCallback, NULL));
+    std::auto_ptr<Account> acc(new MyAccount);
     acc->create(acc_cfg);
 
     pj_thread_sleep(2000);
 
     // Destroy library
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
-    ep.libDestroy();
 }
 
 int main()
@@ -82,8 +82,6 @@ int main()
 	std::cout << "Exception: " << err.info() << std::endl;
 	ret = 1;
     }
-
-    Endpoint::instance().libDestroy();
 
     return ret;
 }

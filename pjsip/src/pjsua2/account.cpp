@@ -350,15 +350,20 @@ void AccountInfo::fromPj(const pjsua_acc_info &pai)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-Account::Account(AccountCallback *param_cb, Token user_data)
-: id(PJSUA_INVALID_ID), cb(param_cb), userData(user_data)
+Account::Account()
+: id(PJSUA_INVALID_ID)
 {
-    cb->setAccount(this);
 }
 
 Account::~Account()
 {
-    delete cb;
+    /* If this instance is deleted, also delete the corresponding account in
+     * PJSUA library.
+     */
+    if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
+	PJSUA2_CHECK_EXPR( pjsua_acc_set_user_data(id, NULL) );
+	PJSUA2_CHECK_EXPR( pjsua_acc_del(id) );
+    }
 }
 
 void Account::create(const AccountConfig &acc_cfg,
@@ -366,6 +371,7 @@ void Account::create(const AccountConfig &acc_cfg,
 {
     pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
 
+    pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
 }
 
@@ -391,19 +397,14 @@ bool Account::isDefault() const
     return pjsua_acc_get_default() == id;
 }
 
-int Account::getIndex() const
+int Account::getId() const
 {
     return id;
 }
 
-void Account::setUserData(Token user_data)
+Account *Account::lookup(int acc_id)
 {
-    userData = user_data;
-}
-
-Token Account::getUserData() const
-{
-    return userData;
+    return (Account*)pjsua_acc_get_user_data(acc_id);
 }
 
 AccountInfo Account::getInfo() const throw(Error)

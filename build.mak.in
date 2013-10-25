@@ -144,7 +144,8 @@ export APP_LDLIBS := \
 	$(APP_THIRD_PARTY_LIBS)\
 	$(APP_THIRD_PARTY_EXT)\
 	-lpj-$(TARGET_NAME)\
-	@LIBS@
+	@LIBS@ \
+	-lstdc++
 #  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 #
 # FIX THIS

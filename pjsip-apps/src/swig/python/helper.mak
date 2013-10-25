@@ -16,5 +16,5 @@ libs:
 	done
 
 target_name:
-	$(TARGET_NAME)
+	@echo $(TARGET_NAME)
 	

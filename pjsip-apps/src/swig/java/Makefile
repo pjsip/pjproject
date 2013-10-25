@@ -42,6 +42,8 @@ MY_JNI_CFLAGS	 := $(MY_JNI_CFLAGS) -I$(MY_JDK)/include -I$(MY_JDK)/include/win32
 MY_CFLAGS	 = $(PJ_CFLAGS) $(MY_JNI_CFLAGS)
 MY_LDFLAGS	 = $(PJ_LDFLAGS) -lpjsua2-$(TARGET_NAME) $(PJ_LDLIBS) $(MY_JNI_LDFLAGS) -static-libstdc++
 
+.PHONY: all java
+
 all: $(LIBPJSUA2_SO) java
 
 $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
@@ -56,8 +58,12 @@ $(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i $(SRCS)
 clean distclean realclean:
 	rm -rf $(OUT_DIR)/pjsua2_wrap.cpp $(OUT_DIR)/pjsua2_wrap.o $(LIBPJSUA2_SO) $(OUT_DIR)/*.java $(OUT_DIR)/*.class
 
-java:
+java: output/Error.class output/test.class
+
+output/Error.class: output/Error.java
 	$(MY_JAVAC) -d $(OUT_DIR) $(OUT_DIR)/*.java
+
+output/test.class: test.java
 	$(MY_JAVAC) -d $(OUT_DIR) -classpath "$(OUT_DIR)" test.java
 
 test:

@@ -877,9 +877,9 @@ public:
 struct OnIncomingCallParam
 {
     /**
-     * The library call index allocated for the new call.
+     * The library call ID allocated for the new call.
      */
-    int			callIndex;
+    int			callId;
 
     /**
      * The incoming INVITE request.
@@ -916,7 +916,7 @@ struct OnRegStateParam
     /**
      * SIP reason phrase received.
      */
-    pj_str_t		reason;
+    string		reason;
 
     /**
      * The incoming message.
@@ -1084,21 +1084,140 @@ struct OnMwiInfoParam
     SipRxData		rdata;
 };
 
+
 /**
- * Account callback
+ * @}  // PJSUA2_Acc_Data_Structure
  */
-class AccountCallback
+
+/**
+ * @addtogroup PJSUA2_ACC
+ * @{
+ */
+
+
+/**
+ * Account.
+ */
+class Account
 {
 public:
-    /** Virtual destructor */
-    virtual ~AccountCallback() {}
+    /**
+     * Constructor.
+     */
+    Account();
 
     /**
-     * Get the account associated with this callback.
+     * Destructor. Note that if the account is deleted, it will also delete
+     * the corresponding account in the PJSUA-LIB.
      */
-    Account *account()
-    { return acc; }
+    virtual ~Account();
 
+    /**
+     * Create the account.
+     *
+     * @param cfg		The account config.
+     * @param make_default	Make this the default account.
+     */
+    void create(const AccountConfig &cfg,
+                bool make_default=false) throw(Error);
+
+    /**
+     * Modify the account to use the specified account configuration.
+     * Depending on the changes, this may cause unregistration or
+     * reregistration on the account.
+     *
+     * @param cfg 		New account config to be applied to the account.
+     */
+    void modify(const AccountConfig &acc) throw(Error);
+
+    /**
+     * Check if this account is still valid.
+     *
+     * @return			True if it is.
+     */
+    bool isValid() const;
+
+    /**
+     * Set this as default account to be used when incoming and outgoing
+     * requests don't match any accounts.
+     *
+     * @return			PJ_SUCCESS on success.
+     */
+    void setDefault() throw(Error);
+
+    /**
+     * Check if this account is the default account. Default account will be
+     * used for incoming and outgoing requests that don't match any other
+     * accounts.
+     *
+     * @return			True if this is the default account.
+     */
+    bool isDefault() const;
+
+    /**
+     * Get PJSUA-LIB account ID or index associated with this account.
+     *
+     * @return			Integer greater than or equal to zero.
+     */
+    int getId() const;
+
+    /**
+     * Get the Account class for the specified account Id.
+     *
+     * @param acc_id		The account ID to lookup
+     *
+     * @return			The Account instance or NULL if not found.
+     */
+    static Account *lookup(int acc_id);
+
+    /**
+     * Get account info.
+     *
+     * @return			Account info.
+     */
+    AccountInfo getInfo() const throw(Error);
+
+    /**
+     * Update registration or perform unregistration. Application normally
+     * only needs to call this function if it wants to manually update the
+     * registration or to unregister from the server.
+     *
+     * @param renew		If False, this will start unregistration
+     * 				process.
+     */
+    void setRegistration(bool renew) throw(Error);
+
+    /**
+     * Set or modify account's presence online status to be advertised to
+     * remote/presence subscribers. This would trigger the sending of
+     * outgoing NOTIFY request if there are server side presence subscription
+     * for this account, and/or outgoing PUBLISH if presence publication is
+     * enabled for this account.
+     *
+     * @param pres_st		Presence online status.
+     */
+    void setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error);
+
+    /**
+     * Lock/bind this account to a specific transport/listener. Normally
+     * application shouldn't need to do this, as transports will be selected
+     * automatically by the library according to the destination.
+     *
+     * When account is locked/bound to a specific transport, all outgoing
+     * requests from this account will use the specified transport (this
+     * includes SIP registration, dialog (call and event subscription), and
+     * out-of-dialog requests such as MESSAGE).
+     *
+     * Note that transport id may be specified in AccountConfig too.
+     *
+     * @param tp_id		The transport ID.
+     */
+    void setTransport(TransportId tp_id) throw(Error);
+
+public:
+    /*
+     * Callbacks
+     */
     /**
      * Notify application on incoming call.
      *
@@ -1201,161 +1320,11 @@ public:
     {}
 
 protected:
-    AccountCallback()
-    : acc(NULL)
-    {}
-
-private:
-    Account *acc;
-
-    /** Set the account. Must only be called by Account class */
-    void setAccount(Account *the_acc)
-    { acc = the_acc; }
-
-    friend class Account;
-};
-
-
-/**
- * @}  // PJSUA2_Acc_Data_Structure
- */
-
-/**
- * @addtogroup PJSUA2_ACC
- * @{
- */
-
-
-/**
- * Account.
- */
-class Account
-{
-public:
-    /**
-     * Constructor.
-     */
-    Account(AccountCallback *cb, Token user_data);
-
-    /**
-     * Destructor.
-     */
-    ~Account();
-
-    /**
-     * Create the account.
-     *
-     * @param cfg		The account config.
-     * @param make_default	Make this the default account.
-     */
-    void create(const AccountConfig &cfg,
-                bool make_default=false) throw(Error);
-
-    /**
-     * Modify the account to use the specified account configuration.
-     * Depending on the changes, this may cause unregistration or
-     * reregistration on the account.
-     *
-     * @param cfg 		New account config to be applied to the account.
-     */
-    void modify(const AccountConfig &acc) throw(Error);
-
-    /**
-     * Check if this account is still valid.
-     *
-     * @return			True if it is.
-     */
-    bool isValid() const;
-
-    /**
-     * Set this as default account to be used when incoming and outgoing
-     * requests don't match any accounts.
-     *
-     * @return			PJ_SUCCESS on success.
-     */
-    void setDefault() throw(Error);
-
-    /**
-     * Check if this account is the default account. Default account will be
-     * used for incoming and outgoing requests that don't match any other
-     * accounts.
-     *
-     * @return			True if this is the default account.
-     */
-    bool isDefault() const;
-
-    /**
-     * Get PJSUA-LIB account ID or index associated with this account.
-     *
-     * @return			Integer greater than or equal to zero.
-     */
-    int getIndex() const;
-
-    /**
-     * Set arbitrary data to be associated with the account.
-     *
-     * @param user_data		User/application data.
-     */
-    void setUserData(Token user_data);
-
-    /**
-     * Get the user data that was associated with the account.
-     *
-     * @return			The user data.
-     */
-    Token getUserData() const;
-
-    /**
-     * Get account info.
-     *
-     * @return			Account info.
-     */
-    AccountInfo getInfo() const throw(Error);
-
-    /**
-     * Update registration or perform unregistration. Application normally
-     * only needs to call this function if it wants to manually update the
-     * registration or to unregister from the server.
-     *
-     * @param renew		If False, this will start unregistration
-     * 				process.
-     */
-    void setRegistration(bool renew) throw(Error);
-
-    /**
-     * Set or modify account's presence online status to be advertised to
-     * remote/presence subscribers. This would trigger the sending of
-     * outgoing NOTIFY request if there are server side presence subscription
-     * for this account, and/or outgoing PUBLISH if presence publication is
-     * enabled for this account.
-     *
-     * @param pres_st		Presence online status.
-     */
-    void setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error);
-
-    /**
-     * Lock/bind this account to a specific transport/listener. Normally
-     * application shouldn't need to do this, as transports will be selected
-     * automatically by the library according to the destination.
-     *
-     * When account is locked/bound to a specific transport, all outgoing
-     * requests from this account will use the specified transport (this
-     * includes SIP registration, dialog (call and event subscription), and
-     * out-of-dialog requests such as MESSAGE).
-     *
-     * Note that transport id may be specified in AccountConfig too.
-     *
-     * @param tp_id		The transport ID.
-     */
-    void setTransport(TransportId tp_id) throw(Error);
-
-protected:
     friend class Endpoint;
 
 private:
     pjsua_acc_id 	 id;
-    AccountCallback 	*cb;
-    Token		 userData;
+    string		 tmpReason;	// for saving response's reason
 };
 
 } // namespace pj

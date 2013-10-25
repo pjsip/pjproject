@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua2/endpoint.hpp>
+#include <pjsua2/account.hpp>
 #include "util.hpp"
 
 using namespace pj;
@@ -33,6 +34,7 @@ struct UserTimer
     pj_timer_entry	entry;
 };
 
+Endpoint *Endpoint::instance_;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -209,21 +211,33 @@ pjsua_media_config MediaConfig::toPj() const
  * Endpoint instance
  */
 Endpoint::Endpoint()
-: writer(NULL), epCallback(NULL)
+: writer(NULL)
 {
+    if (instance_) {
+	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
+    instance_ = this;
 }
 
-Endpoint& Endpoint::instance()
+Endpoint& Endpoint::instance() throw(Error)
 {
-    static Endpoint lib_;
-    return lib_;
+    if (!instance_) {
+	PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+    }
+    return *instance_;
 }
 
-void Endpoint::testException() throw(Error)
+Endpoint::~Endpoint()
 {
-    PJSUA2_CHECK_RAISE_ERROR(PJ_EINVALIDOP);
+    try {
+	libDestroy();
+    } catch (Error &err) {
+	// Ignore
+    }
+    delete writer;
+    instance_ = NULL;
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -249,7 +263,7 @@ void Endpoint::stun_resolve_cb(const pj_stun_resolve_result *res)
 {
     Endpoint &ep = Endpoint::instance();
 
-    if (!ep.epCallback || !res)
+    if (!res)
 	return;
 
     OnNatCheckStunServersCompleteParam prm;
@@ -264,7 +278,7 @@ void Endpoint::stun_resolve_cb(const pj_stun_resolve_result *res)
 	prm.addr = straddr;
     }
 
-    ep.epCallback->onNatCheckStunServersComplete(prm);
+    ep.onNatCheckStunServersComplete(prm);
 }
 
 void Endpoint::on_timer(pj_timer_heap_t *timer_heap,
@@ -273,17 +287,17 @@ void Endpoint::on_timer(pj_timer_heap_t *timer_heap,
     Endpoint &ep = Endpoint::instance();
     UserTimer *ut = (UserTimer*) entry->user_data;
 
-    if (!ep.epCallback || ut->signature != TIMER_SIGNATURE)
+    if (ut->signature != TIMER_SIGNATURE)
 	return;
 
-    ep.epCallback->onTimer(ut->prm);
+    ep.onTimer(ut->prm);
 }
 
 void Endpoint::on_nat_detect(const pj_stun_nat_detect_result *res)
 {
     Endpoint &ep = Endpoint::instance();
 
-    if (!ep.epCallback || !res)
+    if (!res)
 	return;
 
     OnNatDetectionCompleteParam prm;
@@ -293,7 +307,7 @@ void Endpoint::on_nat_detect(const pj_stun_nat_detect_result *res)
     prm.natType = res->nat_type;
     prm.natTypeName = res->nat_type_name;
 
-    ep.epCallback->onNatDetectionComplete(prm);
+    ep.onNatDetectionComplete(prm);
 }
 
 void Endpoint::on_transport_state( pjsip_transport *tp,
@@ -302,17 +316,229 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
 {
     Endpoint &ep = Endpoint::instance();
 
-    if (!ep.epCallback)
-	return;
-
     OnTransportStateParam prm;
 
     prm.hnd = (TransportHandle)tp;
     prm.state = state;
     prm.lastError = info ? info->status : PJ_SUCCESS;
 
-    ep.epCallback->onTransportState(prm);
+    ep.onTransportState(prm);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/*
+ * Account static callbacks
+ */
+
+Account *Endpoint::lookupAcc(int acc_id, const char *op)
+{
+    Account *acc = Account::lookup(acc_id);
+    if (!acc) {
+	PJ_LOG(1,(THIS_FILE,
+		  "Error: cannot find Account instance for account id %d in "
+		  "%s", acc_id, op));
+    }
+
+    return acc;
+}
+
+void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
+                                pjsip_rx_data *rdata)
+{
+    Account *acc = lookupAcc(acc_id, "on_incoming_call()");
+    if (!acc) {
+	pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
+	return;
+    }
+
+    /* call callback */
+    OnIncomingCallParam prm;
+    prm.callId = call_id;
+    prm.rdata.fromPj(*rdata);
+
+    acc->onIncomingCall(prm);
+
+    /* disconnect if callback doesn't handle the call */
+    pjsua_call_info ci;
+
+    pjsua_call_get_info(call_id, &ci);
+    if (!pjsua_call_get_user_data(call_id) &&
+	ci.state != PJSIP_INV_STATE_DISCONNECTED)
+    {
+	pjsua_call_hangup(call_id, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL);
+    }
+}
+
+void Endpoint::on_reg_started(pjsua_acc_id acc_id, pj_bool_t renew)
+{
+    Account *acc = lookupAcc(acc_id, "on_reg_started()");
+    if (!acc) {
+	return;
+    }
+
+    OnRegStartedParam prm;
+    prm.renew = renew;
+    acc->onRegStarted(prm);
+}
+
+void Endpoint::on_reg_state2(pjsua_acc_id acc_id, pjsua_reg_info *info)
+{
+    Account *acc = lookupAcc(acc_id, "on_reg_state2()");
+    if (!acc) {
+	return;
+    }
+
+    OnRegStateParam prm;
+    prm.status		= info->cbparam->status;
+    prm.code 		= (pjsip_status_code) info->cbparam->code;
+    prm.reason		= pj2Str(info->cbparam->reason);
+    if (info->cbparam->rdata)
+	prm.rdata.fromPj(*info->cbparam->rdata);
+    prm.expiration	= info->cbparam->expiration;
+
+    acc->onRegState(prm);
+}
+
+void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
+                                     pjsua_srv_pres *srv_pres,
+                                     pjsua_buddy_id buddy_id,
+                                     const pj_str_t *from,
+                                     pjsip_rx_data *rdata,
+                                     pjsip_status_code *code,
+                                     pj_str_t *reason,
+                                     pjsua_msg_data *msg_data)
+{
+    Account *acc = lookupAcc(acc_id, "on_incoming_subscribe()");
+    if (!acc) {
+	/* default behavior should apply */
+	return;
+    }
+
+    OnIncomingSubscribeParam prm;
+    prm.fromUri 	= pj2Str(*from);
+    prm.rdata.fromPj(*rdata);
+    prm.code		= *code;
+    prm.reason		= pj2Str(*reason);
+
+    acc->onIncomingSubscribe(prm);
+
+    *code = prm.code;
+    acc->tmpReason = prm.reason;
+    *reason = str2Pj(acc->tmpReason);
+    // TODO:
+    //	apply msg_data
+}
+
+void Endpoint::on_pager2(pjsua_call_id call_id,
+                         const pj_str_t *from,
+                         const pj_str_t *to,
+                         const pj_str_t *contact,
+                         const pj_str_t *mime_type,
+                         const pj_str_t *body,
+                         pjsip_rx_data *rdata,
+                         pjsua_acc_id acc_id)
+{
+    OnInstantMessageParam prm;
+    prm.fromUri		= pj2Str(*from);
+    prm.toUri		= pj2Str(*to);
+    prm.contactUri	= pj2Str(*contact);
+    prm.contentType	= pj2Str(*mime_type);
+    prm.msgBody		= pj2Str(*body);
+    prm.rdata.fromPj(*rdata);
+
+    if (call_id != PJSUA_INVALID_ID) {
+	// TODO:
+	//	handle call pager
+	return;
+    } else {
+	Account *acc = lookupAcc(acc_id, "on_pager2()");
+	if (!acc) {
+	    /* Ignored */
+	    return;
+	}
+
+	acc->onInstantMessage(prm);
+    }
+}
+
+void Endpoint::on_pager_status2( pjsua_call_id call_id,
+				 const pj_str_t *to,
+				 const pj_str_t *body,
+				 void *user_data,
+				 pjsip_status_code status,
+				 const pj_str_t *reason,
+				 pjsip_tx_data *tdata,
+				 pjsip_rx_data *rdata,
+				 pjsua_acc_id acc_id)
+{
+    OnInstantMessageStatusParam prm;
+    prm.userData	= user_data;
+    prm.toUri		= pj2Str(*to);
+    prm.msgBody		= pj2Str(*body);
+    prm.status		= status;
+    prm.reason		= pj2Str(*reason);
+    if (rdata)
+	prm.rdata.fromPj(*rdata);
+
+    if (call_id != PJSUA_INVALID_ID) {
+	// TODO:
+	//	handle call pager
+    } else {
+	Account *acc = lookupAcc(acc_id, "on_pager_status2()");
+	if (!acc) {
+	    /* Ignored */
+	    return;
+	}
+
+	acc->onInstantMessageStatus(prm);
+    }
+}
+
+void Endpoint::on_typing2( pjsua_call_id call_id,
+			   const pj_str_t *from,
+			   const pj_str_t *to,
+			   const pj_str_t *contact,
+			   pj_bool_t is_typing,
+			   pjsip_rx_data *rdata,
+			   pjsua_acc_id acc_id)
+{
+    OnTypingIndicationParam prm;
+    prm.fromUri		= pj2Str(*from);
+    prm.toUri		= pj2Str(*to);
+    prm.contactUri	= pj2Str(*contact);
+    prm.isTyping	= is_typing != 0;
+    prm.rdata.fromPj(*rdata);
+
+    if (call_id != PJSUA_INVALID_ID) {
+	// TODO:
+	//	handle call indication
+    } else {
+	Account *acc = lookupAcc(acc_id, "on_typing2()");
+	if (!acc) {
+	    /* Ignored */
+	    return;
+	}
+
+	acc->onTypingIndication(prm);
+    }
+}
+
+void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
+                           pjsua_mwi_info *mwi_info)
+{
+    OnMwiInfoParam prm;
+    prm.state	= pjsip_evsub_get_state(mwi_info->evsub);
+    prm.rdata.fromPj(*mwi_info->rdata);
+
+    Account *acc = lookupAcc(acc_id, "on_mwi_info()");
+    if (!acc) {
+	/* Ignored */
+	return;
+    }
+
+    acc->onMwiInfo(prm);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -320,10 +546,7 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
  */
 void Endpoint::libCreate() throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_create();
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_create() );
 }
 
 pjsua_state Endpoint::libGetState() const
@@ -331,13 +554,11 @@ pjsua_state Endpoint::libGetState() const
     return pjsua_get_state();
 }
 
-void Endpoint::libInit( const EpConfig &prmEpConfig,
-                        EpCallback *prmCb) throw(Error)
+void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
 {
     pjsua_config ua_cfg;
     pjsua_logging_config log_cfg;
     pjsua_media_config med_cfg;
-    pj_status_t status;
 
     ua_cfg = prmEpConfig.uaConfig.toPj();
     log_cfg = prmEpConfig.logConfig.toPj();
@@ -351,20 +572,25 @@ void Endpoint::libInit( const EpConfig &prmEpConfig,
 
     /* Setup UA callbacks */
     pj_bzero(&ua_cfg.cb, sizeof(ua_cfg.cb));
-    ua_cfg.cb.on_nat_detect = &Endpoint::on_nat_detect;
+    ua_cfg.cb.on_nat_detect 	= &Endpoint::on_nat_detect;
     ua_cfg.cb.on_transport_state = &Endpoint::on_transport_state;
 
+    ua_cfg.cb.on_incoming_call	= &Endpoint::on_incoming_call;
+    ua_cfg.cb.on_reg_started	= &Endpoint::on_reg_started;
+    ua_cfg.cb.on_reg_state2	= &Endpoint::on_reg_state2;
+    ua_cfg.cb.on_incoming_subscribe = &Endpoint::on_incoming_subscribe;
+    ua_cfg.cb.on_pager2		= &Endpoint::on_pager2;
+    ua_cfg.cb.on_pager_status2	= &Endpoint::on_pager_status2;
+    ua_cfg.cb.on_typing2	= &Endpoint::on_typing2;
+    ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
+
     /* Init! */
-    status = pjsua_init(&ua_cfg, &log_cfg, &med_cfg);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
 }
 
 void Endpoint::libStart() throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_start();
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR(pjsua_start());
 }
 
 void Endpoint::libDestroy(unsigned flags) throw(Error)
@@ -373,8 +599,8 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
 
     status = pjsua_destroy2(flags);
 
+    delete this->writer;
     this->writer = NULL;
-    this->epCallback = NULL;
 
     if (pj_log_get_log_func() == &Endpoint::logFunc) {
 	pj_log_set_log_func(NULL);
@@ -468,10 +694,8 @@ IntVector Endpoint::utilSslGetAvailableCiphers() throw (Error)
 #if PJ_HAS_SSL_SOCK
     pj_ssl_cipher ciphers[64];
     unsigned count = PJ_ARRAY_SIZE(ciphers);
-    pj_status_t status;
 
-    status = pj_ssl_cipher_get_availables(ciphers, &count);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pj_ssl_cipher_get_availables(ciphers, &count) );
 
     return IntVector(ciphers, ciphers + count);
 #else
@@ -485,19 +709,14 @@ IntVector Endpoint::utilSslGetAvailableCiphers() throw (Error)
  */
 void Endpoint::natDetectType(void) throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_detect_nat_type();
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_detect_nat_type() );
 }
 
 pj_stun_nat_type Endpoint::natGetType() throw(Error)
 {
     pj_stun_nat_type type;
-    pj_status_t status;
 
-    status = pjsua_get_nat_type(&type);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_get_nat_type(&type) );
 
     return type;
 }
@@ -508,7 +727,6 @@ void Endpoint::natCheckStunServers(const StringVector &servers,
 {
     pj_str_t srv[MAX_STUN_SERVERS];
     unsigned i, count = 0;
-    pj_status_t status;
 
     for (i=0; i<servers.size() && i<MAX_STUN_SERVERS; ++i) {
 	srv[count].ptr = (char*)servers[i].c_str();
@@ -516,18 +734,14 @@ void Endpoint::natCheckStunServers(const StringVector &servers,
 	++count;
     }
 
-    status = pjsua_resolve_stun_servers(count, srv, wait, token,
-    					&Endpoint::stun_resolve_cb);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR(pjsua_resolve_stun_servers(count, srv, wait, token,
+                                                 &Endpoint::stun_resolve_cb) );
 }
 
 void Endpoint::natCancelCheckStunServers(Token token,
                                          bool notify_cb) throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_cancel_stun_resolution(token, notify_cb);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_cancel_stun_resolution(token, notify_cb) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -539,11 +753,9 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
 {
     pjsua_transport_config tcfg;
     pjsua_transport_id tid;
-    pj_status_t status;
 
     tcfg = cfg.toPj();
-    status = pjsua_transport_create(type, &tcfg, &tid);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_transport_create(type, &tcfg, &tid) );
 
     return tid;
 }
@@ -552,10 +764,8 @@ IntVector Endpoint::transportEnum() throw(Error)
 {
     pjsua_transport_id tids[32];
     unsigned count = PJ_ARRAY_SIZE(tids);
-    pj_status_t status;
 
-    status = pjsua_enum_transports(tids, &count);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_enum_transports(tids, &count) );
 
     return IntVector(tids, tids+count);
 }
@@ -563,28 +773,20 @@ IntVector Endpoint::transportEnum() throw(Error)
 TransportInfo Endpoint::transportGetInfo(TransportId id) throw(Error)
 {
     pjsua_transport_info tinfo;
-    pj_status_t status;
 
-    status = pjsua_transport_get_info(id, &tinfo);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_transport_get_info(id, &tinfo) );
 
     return TransportInfo(tinfo);
 }
 
 void Endpoint::transportSetEnable(TransportId id, bool enabled) throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_transport_set_enable(id, enabled);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_transport_set_enable(id, enabled) );
 }
 
 void Endpoint::transportClose(TransportId id) throw(Error)
 {
-    pj_status_t status;
-
-    status = pjsua_transport_close(id, PJ_FALSE);
-    PJSUA2_CHECK_RAISE_ERROR(status);
+    PJSUA2_CHECK_EXPR( pjsua_transport_close(id, PJ_FALSE) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////

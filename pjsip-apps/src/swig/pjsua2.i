@@ -9,7 +9,7 @@
 // Header section
 //
 %{
-#include "pjsua2/endpoint.hpp"
+#include "pjsua2.hpp"
 using namespace std;
 using namespace pj;
 %}
@@ -166,6 +166,8 @@ namespace std
 %rename("%s") pjsua_call_hold_type;			// Unignore this
 %rename("%s", regexmatch$name="PJSUA_CALL_HOLD_TYPE_.*") "";// Unignore this
 %rename("%s") pjsua_acc_id;				// Unignore this
+%rename("%s") pjsua_destroy_flag;			// Unignore this
+%rename("%s", regexmatch$name="PJSUA_DESTROY_.*") "";	// Unignore this
 %include "pjsua-lib/pjsua.h"
 
 //
@@ -174,8 +176,15 @@ namespace std
 %rename("%s") "";
 
 //
+// Ignore stuffs in pjsua2 itself
+//
+%ignore fromPj;
+%ignore toPj;
+
+//
 // Now include the API itself.
 //
 %include "pjsua2/types.hpp"
 %include "pjsua2/endpoint.hpp"
+#include "pjsua2/account.hpp"
 

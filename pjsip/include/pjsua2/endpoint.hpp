@@ -42,7 +42,7 @@ using std::vector;
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Argument to EpCallback::onNatDetectionComplete() callback.
+ * Argument to Endpoint::onNatDetectionComplete() callback.
  */
 struct OnNatDetectionCompleteParam
 {
@@ -72,7 +72,7 @@ struct OnNatDetectionCompleteParam
 };
 
 /**
- * Argument to EpCallback::onNatCheckStunServersComplete() callback.
+ * Argument to Endpoint::onNatCheckStunServersComplete() callback.
  */
 struct OnNatCheckStunServersCompleteParam
 {
@@ -103,7 +103,7 @@ struct OnNatCheckStunServersCompleteParam
 };
 
 /**
- * Parameter of EpCallback::OnTimer() callback.
+ * Parameter of Endpoint::onTimer() callback.
  */
 struct OnTimerParam
 {
@@ -120,7 +120,7 @@ struct OnTimerParam
 };
 
 /**
- * Parameter of EpCallback::onTransportState() callback.
+ * Parameter of Endpoint::onTransportState() callback.
  */
 struct OnTransportStateParam
 {
@@ -141,7 +141,7 @@ struct OnTransportStateParam
 };
 
 /**
- * Parameter of EpCallback::onSelectAccount() callback.
+ * Parameter of Endpoint::onSelectAccount() callback.
  */
 struct OnSelectAccountParam
 {
@@ -158,77 +158,6 @@ struct OnSelectAccountParam
      */
     int			accountIndex;
 };
-
-//////////////////////////////////////////////////////////////////////////////
-
-/**
- * Interface for receiving callbacks from the library. Application inherits
- * this class and specify the instance when calling Endpoint::libInit().
- */
-class EpCallback
-{
-public:
-    /** Virtual destructor */
-    virtual ~EpCallback() {}
-
-    /**
-     * Callback when the Endpoint has finished performing NAT type
-     * detection that is initiated with Endpoint::natDetectType().
-     *
-     * @param prm	Callback parameters containing the detection
-     * 			result.
-     */
-    virtual void onNatDetectionComplete(
-			const OnNatDetectionCompleteParam &prm)
-    {}
-
-    /**
-     * Callback when the Endpoint has finished performing STUN server
-     * checking that is initiated with Endpoint::natCheckStunServers().
-     *
-     * @param prm	Callback parameters.
-     */
-    virtual void onNatCheckStunServersComplete(
-			const OnNatCheckStunServersCompleteParam &prm)
-    {}
-
-    /**
-     * This callback is called when transport state has changed.
-     *
-     * @param prm	Callback parameters.
-     */
-    virtual void onTransportState(
-			const OnTransportStateParam &prm)
-    {}
-
-    /**
-     * Callback when a timer has fired. The timer was scheduled by
-     * Endpoint::utilTimerSchedule().
-     *
-     * @param prm	Callback parameters.
-     */
-    virtual void onTimer(const OnTimerParam &prm)
-    {}
-
-    /**
-     * This callback can be used by application to override the account
-     * to be used to handle an incoming message. Initially, the account to
-     * be used will be calculated automatically by the library. This initial
-     * account will be used if application does not implement this callback,
-     * or application sets an invalid account upon returning from this
-     * callback.
-     *
-     * Note that currently the incoming messages requiring account assignment
-     * are INVITE, MESSAGE, SUBSCRIBE, and unsolicited NOTIFY. This callback
-     * may be called before the callback of the SIP event itself, i.e:
-     * incoming call, pager, subscription, or unsolicited-event.
-     *
-     * @param prm	Callback parameters.
-     */
-    virtual void onSelectAccount(OnSelectAccountParam &prm)
-    {}
-};
-
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -312,7 +241,7 @@ struct UaConfig
      * which are not requested by client with SUBSCRIBE request.
      *
      * If this is enabled, the library will respond 200/OK to the NOTIFY
-     * request and forward the request to EpCallback.onMwiInfo() callback.
+     * request and forward the request to Endpoint::onMwiInfo() callback.
      *
      * See also AccountMwiConfig.enabled.
      *
@@ -406,8 +335,8 @@ struct LogConfig
     unsigned		fileFlags;
 
     /**
-     * Custom log writer, if required. If specified, the instance of LogWriter
-     * must be kept alive througout the duration of the application.
+     * Custom log writer, if required. This instance will be destroyed
+     * by the endpoint when the endpoint is destroyed.
      */
     LogWriter		*writer;
 
@@ -654,10 +583,13 @@ class Endpoint
 {
 public:
     /** Retrieve the singleton instance of the endpoint */
-    static Endpoint &instance();
+    static Endpoint &instance() throw(Error);
 
-    /* For testing */
-    void testException() throw(Error);
+    /** Default constructor */
+    Endpoint();
+
+    /** Virtual destructor */
+    virtual ~Endpoint();
 
 
     /*************************************************************************
@@ -687,13 +619,8 @@ public:
      * Note that create() MUST be called before calling this function.
      *
      * @param prmEpConfig	Endpoint configurations
-     * @param prmCb		Optional callback to receive events from the
-     * 				library. If specified, this instance must be
-     * 				kept alive throughout the lifetime of the
-     * 				library.
      */
-    void libInit( const EpConfig &prmEpConfig,
-                  EpCallback *prmCb = NULL) throw(Error);
+    void libInit( const EpConfig &prmEpConfig) throw(Error);
 
     /**
      * Call this function after all initialization is done, so that the
@@ -769,7 +696,7 @@ public:
 
     /**
      * Schedule a timer with the specified interval and user data. When the
-     * interval elapsed, EpCallback::OnTimer() callback will be
+     * interval elapsed, Endpoint::onTimer() callback will be
      * called. Note that the callback may be executed by different thread,
      * depending on whether worker thread is enabled or not.
      *
@@ -802,7 +729,7 @@ public:
     /**
      * This is a utility function to detect NAT type in front of this endpoint.
      * Once invoked successfully, this function will complete asynchronously
-     * and report the result in EpCallback::onNatDetectionComplete().
+     * and report the result in Endpoint::onNatDetectionComplete().
      *
      * After NAT has been detected and the callback is called, application can
      * get the detected NAT type by calling #natGetType(). Application
@@ -816,7 +743,7 @@ public:
     /**
      * Get the NAT type as detected by #natDetectType() function. This
      * function will only return useful NAT type after #natDetectType()
-     * has completed successfully and EpCallback::onNatDetectionComplete()
+     * has completed successfully and Endpoint::onNatDetectionComplete()
      * callback has been called.
      *
      * Exception: if this function is called while detection is in progress,
@@ -925,19 +852,74 @@ public:
      */
     void transportClose(TransportId id) throw(Error);
 
-
-private:
-    /* Anybody else can't instantiate Endpoint */
-    Endpoint();
-
-private:
-    /* Custom writer, if any */
-    LogWriter	*writer;
-    EpCallback	*epCallback;
-
+public:
     /*
-     * Callbacks (static)
+     * Overrideables callbacks
      */
+
+    /**
+     * Callback when the Endpoint has finished performing NAT type
+     * detection that is initiated with Endpoint::natDetectType().
+     *
+     * @param prm	Callback parameters containing the detection
+     * 			result.
+     */
+    virtual void onNatDetectionComplete(
+			const OnNatDetectionCompleteParam &prm)
+    {}
+
+    /**
+     * Callback when the Endpoint has finished performing STUN server
+     * checking that is initiated with Endpoint::natCheckStunServers().
+     *
+     * @param prm	Callback parameters.
+     */
+    virtual void onNatCheckStunServersComplete(
+			const OnNatCheckStunServersCompleteParam &prm)
+    {}
+
+    /**
+     * This callback is called when transport state has changed.
+     *
+     * @param prm	Callback parameters.
+     */
+    virtual void onTransportState(
+			const OnTransportStateParam &prm)
+    {}
+
+    /**
+     * Callback when a timer has fired. The timer was scheduled by
+     * Endpoint::utilTimerSchedule().
+     *
+     * @param prm	Callback parameters.
+     */
+    virtual void onTimer(const OnTimerParam &prm)
+    {}
+
+    /**
+     * This callback can be used by application to override the account
+     * to be used to handle an incoming message. Initially, the account to
+     * be used will be calculated automatically by the library. This initial
+     * account will be used if application does not implement this callback,
+     * or application sets an invalid account upon returning from this
+     * callback.
+     *
+     * Note that currently the incoming messages requiring account assignment
+     * are INVITE, MESSAGE, SUBSCRIBE, and unsolicited NOTIFY. This callback
+     * may be called before the callback of the SIP event itself, i.e:
+     * incoming call, pager, subscription, or unsolicited-event.
+     *
+     * @param prm	Callback parameters.
+     */
+    virtual void onSelectAccount(OnSelectAccountParam &prm)
+    {}
+
+
+private:
+    static Endpoint	*instance_;	// static instance
+    LogWriter		*writer;	// Custom writer, if any
+
+    /* Endpoint static callbacks */
     static void logFunc(int level, const char *data, int len);
     static void stun_resolve_cb(const pj_stun_resolve_result *result);
     static void on_timer(pj_timer_heap_t *timer_heap,
@@ -946,6 +928,55 @@ private:
     static void on_transport_state(pjsip_transport *tp,
     				   pjsip_transport_state state,
     				   const pjsip_transport_state_info *info);
+
+private:
+    /*
+     * Account
+     */
+    static Account	*lookupAcc(int acc_id, const char *op);
+
+    /* static callbacks */
+    static void on_incoming_call(pjsua_acc_id acc_id,
+                                 pjsua_call_id call_id,
+                                 pjsip_rx_data *rdata);
+    static void on_reg_started(pjsua_acc_id acc_id,
+                               pj_bool_t renew);
+    static void on_reg_state2(pjsua_acc_id acc_id,
+                              pjsua_reg_info *info);
+    static void on_incoming_subscribe(pjsua_acc_id acc_id,
+				      pjsua_srv_pres *srv_pres,
+				      pjsua_buddy_id buddy_id,
+				      const pj_str_t *from,
+				      pjsip_rx_data *rdata,
+				      pjsip_status_code *code,
+				      pj_str_t *reason,
+				      pjsua_msg_data *msg_data);
+    static void on_pager2(pjsua_call_id call_id,
+                          const pj_str_t *from,
+                          const pj_str_t *to,
+                          const pj_str_t *contact,
+                          const pj_str_t *mime_type,
+                          const pj_str_t *body,
+                          pjsip_rx_data *rdata,
+                          pjsua_acc_id acc_id);
+    static void on_pager_status2(pjsua_call_id call_id,
+				 const pj_str_t *to,
+				 const pj_str_t *body,
+				 void *user_data,
+				 pjsip_status_code status,
+				 const pj_str_t *reason,
+				 pjsip_tx_data *tdata,
+				 pjsip_rx_data *rdata,
+				 pjsua_acc_id acc_id);
+    static void on_typing2(pjsua_call_id call_id,
+                           const pj_str_t *from,
+                           const pj_str_t *to,
+                           const pj_str_t *contact,
+                           pj_bool_t is_typing,
+                           pjsip_rx_data *rdata,
+                           pjsua_acc_id acc_id);
+    static void on_mwi_info(pjsua_acc_id acc_id,
+                            pjsua_mwi_info *mwi_info);
 };
 
 

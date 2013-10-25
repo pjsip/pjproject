@@ -70,11 +70,10 @@ typedef int TransportId;
 typedef void *TransportHandle;
 
 /*
- * Forward declaration of Account, AccountCallback, AccountConfig, to be used
+ * Forward declaration of Account, AccountConfig, to be used
  * by Endpoint.
  */
 class Account;
-class AccountCallback;
 class AccountConfig;
 
 
@@ -521,6 +520,11 @@ struct SipRxData
      * Source port number of the message.
      */
     unsigned		srcPort;
+
+    /**
+     * Construct from PJSIP's pjsip_rx_data
+     */
+    void fromPj(pjsip_rx_data &rdata);
 };
 
 
