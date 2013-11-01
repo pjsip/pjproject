@@ -597,6 +597,11 @@ public:
      */
 
     /**
+     * Get library version.
+     */
+    Version libVersion() const;
+
+    /**
      * Instantiate pjsua application. Application must call this function before
      * calling any other functions, to make sure that the underlying libraries
      * are properly initialized. Once this function has returned success,
@@ -630,6 +635,35 @@ public:
     void libStart() throw(Error);
 
     /**
+     * Register a thread to poll for events. This function should be
+     * called by an external worker thread, and it will block polling
+     * for events until the library is destroyed.
+     */
+    void libRegisterWorkerThread(const string &name) throw(Error);
+
+    /**
+     * Stop all worker threads.
+     */
+    void libStopWorkerThreads();
+
+    /**
+     * Poll pjsua for events, and if necessary block the caller thread for
+     * the specified maximum interval (in miliseconds).
+     *
+     * Application doesn't normally need to call this function if it has
+     * configured worker thread (\a thread_cnt field) in pjsua_config
+     * structure, because polling then will be done by these worker threads
+     * instead.
+     *
+     * @param msec_timeout Maximum time to wait, in miliseconds.
+     *
+     * @return		The number of events that have been handled during the
+     *	    		poll. Negative value indicates error, and application
+     *	    		can retrieve the error as (status = -return_value).
+     */
+    int libHandleEvents(unsigned msec_timeout);
+
+    /**
      * Destroy pjsua. Application is recommended to perform graceful shutdown
      * before calling this function (such as unregister the account from the
      * SIP server, terminate presense subscription, and hangup active calls),
@@ -640,7 +674,7 @@ public:
      * Application.may safely call this function more than once if it doesn't
      * keep track of it's state.
      *
-     * @param prmFlags		Combination of pjsua_destroy_flag enumeration.
+     * @param prmFlags	Combination of pjsua_destroy_flag enumeration.
      */
     void libDestroy(unsigned prmFlags=0) throw(Error);
 

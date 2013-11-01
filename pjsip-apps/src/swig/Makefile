@@ -8,7 +8,11 @@ export SWIG_FLAGS=-I../../../../pjlib/include \
 export SRC_DIR=../../../../pjsip/include
 export SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
 
-all clean dep depend distclean print realclean:
+.PHONY: all clean dep depend distclean print realclean install uninstall
+
+all: symbols.i
+
+all clean dep depend distclean print realclean install uninstall:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
@@ -16,3 +20,6 @@ all clean dep depend distclean print realclean:
 		    exit 1; \
 		fi; \
 	done
+
+symbols.i: symbols.lst
+	python importsym.py

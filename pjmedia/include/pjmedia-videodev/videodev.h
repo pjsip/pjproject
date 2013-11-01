@@ -131,7 +131,7 @@ typedef enum pjmedia_vid_dev_wnd_flag
 /**
  * Device index constants.
  */
-enum
+enum pjmedia_vid_dev_std_index
 {
     /**
      * Constant to denote default capture device

@@ -42,7 +42,7 @@ MY_JNI_CFLAGS	 := $(MY_JNI_CFLAGS) -I$(MY_JDK)/include -I$(MY_JDK)/include/win32
 MY_CFLAGS	 = $(PJ_CFLAGS) $(MY_JNI_CFLAGS)
 MY_LDFLAGS	 = $(PJ_LDFLAGS) -lpjsua2-$(TARGET_NAME) $(PJ_LDLIBS) $(MY_JNI_LDFLAGS) -static-libstdc++
 
-.PHONY: all java
+.PHONY: all java install uninstall
 
 all: $(LIBPJSUA2_SO) java
 
@@ -52,7 +52,7 @@ $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
 $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp Makefile
 	g++ -c $(OUT_DIR)/pjsua2_wrap.cpp -o $(OUT_DIR)/pjsua2_wrap.o $(MY_CFLAGS) $(MY_LDFLAGS)
 
-$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i $(SRCS)
+$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
 	swig $(SWIG_FLAGS) -java  -o $(OUT_DIR)/pjsua2_wrap.cpp ../pjsua2.i
 
 clean distclean realclean:
@@ -70,3 +70,7 @@ test:
 	@# Need to specify classpath and library path, alternatively, they can be set via
 	@# CLASSPATH and java.library.path env settings
 	$(MY_JAVA) -cp $(OUT_DIR) -Djava.library.path="$(OUT_DIR)" test
+
+install:
+uninstall:
+

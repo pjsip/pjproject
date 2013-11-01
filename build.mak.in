@@ -129,7 +129,7 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 # pjsua2 is c++ library hence maybe needs to be put in separate
 # variables. it will also require -lstdc++
 #  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
-export APP_LDLIBS := \ 
+export APP_LDLIBS := \
 	-lpjsua2-$(TARGET_NAME)\
 	-lpjsua-$(TARGET_NAME)\
 	-lpjsip-ua-$(TARGET_NAME)\
@@ -153,7 +153,7 @@ export APP_LDLIBS := \
 # pjsua2 is c++ library hence maybe needs to be put in separate
 # variables. it will also require -lstdc++
 #  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
-export APP_LIB_FILES = \ 
+export APP_LIB_FILES = \
 	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \

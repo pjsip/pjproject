@@ -332,6 +332,13 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 
 ///////////////////////////////////////////////////////////////////////////////
 
+AccountPresenceStatus::AccountPresenceStatus()
+: isOnline(false), activity(PJRPID_ACTIVITY_UNKNOWN)
+{
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void AccountInfo::fromPj(const pjsua_acc_info &pai)
 {
     id 			= pai.id;
@@ -378,7 +385,7 @@ void Account::create(const AccountConfig &acc_cfg,
 void Account::modify(const AccountConfig &acc_cfg) throw(Error)
 {
     pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
-
+    pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_modify(id, &pj_acc_cfg) );
 }
 

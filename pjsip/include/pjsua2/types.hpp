@@ -70,11 +70,10 @@ typedef int TransportId;
 typedef void *TransportHandle;
 
 /*
- * Forward declaration of Account, AccountConfig, to be used
+ * Forward declaration of Account to be used
  * by Endpoint.
  */
 class Account;
-class AccountConfig;
 
 
 /**
@@ -142,7 +141,11 @@ struct Error
 	PJSUA2_RAISE_ERROR3(status, op, string())
 
 #   define PJSUA2_RAISE_ERROR3(status,op,txt)	\
-	throw Error(status, op, txt, __FILE__, __LINE__)
+	do { \
+	    Error err_ = Error(status, op, txt, __FILE__, __LINE__); \
+	    PJ_LOG(1,(THIS_FILE, "%s", err_.info().c_str())); \
+	    throw err_; \
+	} while (0)
 
 #else
 #   define PJSUA2_RAISE_ERROR(status)		\
@@ -152,14 +155,19 @@ struct Error
 	PJSUA2_RAISE_ERROR3(status, op, string())
 
 #   define PJSUA2_RAISE_ERROR3(status,op,txt)	\
-	throw Error(status, op, txt, string(), 0)
+	do { \
+	    Error err_ = Error(status, op, txt, string(), 0); \
+	    PJ_LOG(1,(THIS_FILE, "%s", err_.info().c_str())); \
+	    throw err_; \
+	} while (0)
 
 #endif
 
 #define PJSUA2_CHECK_RAISE_ERROR2(status, op)	\
 	do { \
-	    if (status != PJ_SUCCESS) \
+	    if (status != PJ_SUCCESS) { \
 		PJSUA2_RAISE_ERROR2(status, op); \
+	    } \
 	} while (0)
 
 #define PJSUA2_CHECK_RAISE_ERROR(status)	\
@@ -170,6 +178,33 @@ struct Error
 	    pj_status_t the_status = expr; 	\
 	    PJSUA2_CHECK_RAISE_ERROR2(the_status, #expr); \
 	} while (0)
+
+//////////////////////////////////////////////////////////////////////////////
+
+struct Version
+{
+    /** Major number */
+    int		major;
+
+    /** Minor number */
+    int		minor;
+
+    /** Additional revision number */
+    int		rev;
+
+    /** Version suffix (e.g. "-svn") */
+    string	suffix;
+
+    /** The full version info (e.g. "2.1.0-svn") */
+    string	full;
+
+    /**
+     * PJLIB version number as three bytes with the following format:
+     * 0xMMIIRR00, where MM: major number, II: minor number, RR: revision
+     * number, 00: always zero for now.
+     */
+    unsigned	numeric;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -231,10 +266,9 @@ struct AuthCredInfo
                  const string &user_name,
                  const int data_type,
                  const string data);
+
 };
 
-/** Array of SIP credentials */
-typedef std::vector<AuthCredInfo> AuthCredInfoVector;
 
 //////////////////////////////////////////////////////////////////////////////
 

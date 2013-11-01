@@ -544,6 +544,18 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
 /*
  * Endpoint library operations
  */
+Version Endpoint::libVersion() const
+{
+    Version ver;
+    ver.major = PJ_VERSION_NUM_MAJOR;
+    ver.minor = PJ_VERSION_NUM_MINOR;
+    ver.rev = PJ_VERSION_NUM_REV;
+    ver.suffix = PJ_VERSION_NUM_EXTRA;
+    ver.full = pj_get_version();
+    ver.numeric = PJ_VERSION_NUM;
+    return ver;
+}
+
 void Endpoint::libCreate() throw(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_create() );
@@ -591,6 +603,21 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
 void Endpoint::libStart() throw(Error)
 {
     PJSUA2_CHECK_EXPR(pjsua_start());
+}
+
+void Endpoint::libRegisterWorkerThread(const string &name) throw(Error)
+{
+    PJSUA2_CHECK_EXPR(pjsua_register_worker_thread(name.c_str()));
+}
+
+void Endpoint::libStopWorkerThreads()
+{
+    pjsua_stop_worker_threads();
+}
+
+int Endpoint::libHandleEvents(unsigned msec_timeout)
+{
+    return pjsua_handle_events(msec_timeout);
 }
 
 void Endpoint::libDestroy(unsigned flags) throw(Error)

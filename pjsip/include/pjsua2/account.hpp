@@ -41,7 +41,6 @@
 namespace pj
 {
 using std::string;
-using std::vector;
 
 /**
  * Account registration config. This will be specified in AccountConfig.
@@ -140,6 +139,8 @@ struct AccountRegConfig
     unsigned		proxyUse;
 };
 
+/** Array of SIP credentials */
+typedef std::vector<AuthCredInfo> AuthCredInfoVector;
 
 /**
  * Various SIP settings for the account. This will be specified in

@@ -251,7 +251,10 @@ PJ_BEGIN_DECL
  */
 
 /** Constant to identify invalid ID for all sorts of IDs. */
-#define PJSUA_INVALID_ID	    (-1)
+enum pjsua_invalid_id_const_
+{
+    PJSUA_INVALID_ID = -1
+};
 
 /** Disabled features temporarily for media reorganization */
 #define DISABLED_FOR_TICKET_1185	0
@@ -1878,6 +1881,26 @@ PJ_DECL(pj_status_t) pjsua_destroy2(unsigned flags);
  */
 PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout);
 
+
+/**
+ * Register a thread to poll for events. This function should be
+ * called by an external worker thread, and it will block polling
+ * for events until the library is destroyed.
+ *
+ * @return 		PJ_SUCCESS if things are working correctly
+ * 			or an error polling cannot be done for some
+ * 			reason.
+ */
+PJ_DECL(pj_status_t) pjsua_register_worker_thread(const char *name);
+
+
+/**
+ * Signal all worker threads to quit. This will only wait until internal
+ * threads are done. For external threads, application must perform
+ * its own waiting for the external threads to quit from
+ * pjsua_register_worker_thread() function.
+ */
+PJ_DECL(void) pjsua_stop_worker_threads(void);
 
 /**
  * Create memory pool to be used by the application. Once application

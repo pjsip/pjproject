@@ -686,6 +686,50 @@ static int worker_thread(void *arg)
     return 0;
 }
 
+PJ_DEF(pj_status_t) pjsua_register_worker_thread(const char *name)
+{
+    pj_thread_desc desc;
+    pj_thread_t *thread;
+    pj_status_t status;
+
+    if (pjsua_var.thread_quit_flag)
+	return PJ_EGONE;
+
+    status = pj_thread_register(NULL, desc, &thread);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (name)
+	PJ_LOG(4,(THIS_FILE, "Worker thread %s started", name));
+
+    worker_thread(NULL);
+
+    if (name)
+	PJ_LOG(4,(THIS_FILE, "Worker thread %s stopped", name));
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(void) pjsua_stop_worker_threads(void)
+{
+    unsigned i;
+
+    pjsua_var.thread_quit_flag = 1;
+
+    /* Wait worker threads to quit: */
+    for (i=0; i<(int)pjsua_var.ua_cfg.thread_cnt; ++i) {
+    	if (pjsua_var.thread[i]) {
+    	    pj_status_t status;
+    	    status = pj_thread_join(pjsua_var.thread[i]);
+    	    if (status != PJ_SUCCESS) {
+    		PJ_PERROR(4,(THIS_FILE, status, "Error joining worker thread"));
+    		pj_thread_sleep(1000);
+    	    }
+    	    pj_thread_destroy(pjsua_var.thread[i]);
+    	    pjsua_var.thread[i] = NULL;
+    	}
+    }
+}
 
 /* Init random seed */
 static void init_random_seed(void)
@@ -1465,21 +1509,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
     }
 
     /* Signal threads to quit: */
-    pjsua_var.thread_quit_flag = 1;
-
-    /* Wait worker threads to quit: */
-    for (i=0; i<(int)pjsua_var.ua_cfg.thread_cnt; ++i) {
-	if (pjsua_var.thread[i]) {
-	    pj_status_t status;
-	    status = pj_thread_join(pjsua_var.thread[i]);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(4,(THIS_FILE, status, "Error joining worker thread"));
-		pj_thread_sleep(1000);
-	    }
-	    pj_thread_destroy(pjsua_var.thread[i]);
-	    pjsua_var.thread[i] = NULL;
-	}
-    }
+    pjsua_stop_worker_threads();
     
     if (pjsua_var.endpt) {
 	unsigned max_wait;

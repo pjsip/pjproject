@@ -22,6 +22,8 @@
 using namespace pj;
 using namespace std;
 
+#define THIS_FILE	"types.cpp"
+
 ///////////////////////////////////////////////////////////////////////////////
 
 Error::Error()
