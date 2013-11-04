@@ -83,6 +83,7 @@ static pjsip_uri *create_uri36( pj_pool_t *pool );
 static pjsip_uri *create_uri37( pj_pool_t *pool );
 static pjsip_uri *create_uri38( pj_pool_t *pool );
 static pjsip_uri *create_uri39( pj_pool_t *pool );
+static pjsip_uri *create_uri40( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
 
 #define ERR_NOT_EQUAL	-1001
@@ -357,6 +358,12 @@ struct uri_test
 	PJ_SUCCESS,
 	"\"User\\\\\" <sip:localhost>",
 	&create_uri39,
+    },
+    {
+	/* Quoted display name. */
+	PJ_SUCCESS,
+	"\"\\\"User\\\"\" <sip:localhost>",
+	&create_uri40,
     }
 
 };
@@ -777,6 +784,20 @@ static pjsip_uri *create_uri39(pj_pool_t *pool)
     name_addr->uri = (pjsip_uri*) url;
 
     pj_strdup2(pool, &name_addr->display, "User\\\\");
+    pj_strdup2(pool, &url->host, "localhost");
+    return (pjsip_uri*)name_addr;
+}
+
+/* "\"\\\"User\\\"\" <sip:localhost>" */
+static pjsip_uri *create_uri40(pj_pool_t *pool)
+{
+    pjsip_name_addr *name_addr = pjsip_name_addr_create(pool);
+    pjsip_sip_uri *url;
+
+    url = pjsip_sip_uri_create(pool, 0);
+    name_addr->uri = (pjsip_uri*) url;
+
+    pj_strdup2(pool, &name_addr->display, "\\\"User\\\"");
     pj_strdup2(pool, &url->host, "localhost");
     return (pjsip_uri*)name_addr;
 }

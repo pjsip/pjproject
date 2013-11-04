@@ -383,21 +383,17 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
 	/* check that no backslash character precedes the end_quote. */
 	if (*s == end_quote[qpair]) {
 	    if (*(s-1) == '\\') {
-		if (s-2 == scanner->begin) {
-		    break;
-		} else {
-		    char *q = s-2;
-		    char *r = s-2;
+		char *q = s-2;
+		char *r = s-2;
 
-		    while (r != scanner->begin && *r == '\\') {
-			--r;
-		    }
-		    /* break from main loop if we have odd number of backslashes */
-		    if (((unsigned)(q-r) & 0x01) == 1) {
-			break;
-		    }
-		    ++s;
+		while (r != scanner->begin && *r == '\\') {
+		    --r;
 		}
+		/* break from main loop if we have odd number of backslashes */
+		if (((unsigned)(q-r) & 0x01) == 1) {
+		    break;
+		}
+		++s;
 	    } else {
 		/* end_quote is not preceeded by backslash. break now. */
 		break;
