@@ -19,6 +19,7 @@
 #include <pjsua2.hpp>
 #include <iostream>
 #include <memory>
+#include <pj/file_access.h>
 
 using namespace pj;
 
@@ -36,7 +37,7 @@ public:
     }
 };
 
-static void mainProg() throw(Error)
+static void mainProg1() throw(Error)
 {
     Endpoint ep;
 
@@ -72,12 +73,124 @@ static void mainProg() throw(Error)
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
 }
 
+void mainProg2() throw(Error)
+{
+    Endpoint ep;
+
+    // Create library
+    ep.libCreate();
+
+    string json_str;
+
+    {
+	EpConfig epCfg;
+	JsonDocument jDoc;
+
+	epCfg.uaConfig.maxCalls = 61;
+	epCfg.uaConfig.userAgent = "Just JSON Test";
+	epCfg.uaConfig.stunServer.push_back("stun1.pjsip.org");
+	epCfg.uaConfig.stunServer.push_back("stun2.pjsip.org");
+	epCfg.logConfig.filename = "THE.LOG";
+
+	jDoc.writeObject(epCfg);
+	json_str = jDoc.saveString();
+	std::cout << json_str << std::endl << std::endl;
+    }
+
+    {
+	EpConfig epCfg;
+	JsonDocument rDoc;
+	string output;
+
+	rDoc.loadString(json_str);
+	rDoc.readObject(epCfg);
+
+	JsonDocument wDoc;
+
+	wDoc.writeObject(epCfg);
+	json_str = wDoc.saveString();
+	std::cout << json_str << std::endl << std::endl;
+
+	wDoc.saveFile("jsontest.js");
+    }
+
+    {
+	EpConfig epCfg;
+	JsonDocument rDoc;
+
+	rDoc.loadFile("jsontest.js");
+	rDoc.readObject(epCfg);
+	pj_file_delete("jsontest.js");
+    }
+
+    ep.libDestroy();
+}
+
+void mainProg() throw(Error)
+{
+    Endpoint ep;
+
+    // Create library
+    ep.libCreate();
+
+    string json_str;
+
+    {
+	JsonDocument jdoc;
+	AccountConfig accCfg;
+
+	accCfg.idUri = "\"Just Test\" <sip:test@pjsip.org>";
+	accCfg.regConfig.registrarUri = "sip:pjsip.org";
+	SipHeader h;
+	h.hName = "X-Header";
+	h.hValue = "User header";
+	accCfg.regConfig.headers.push_back(h);
+
+	accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tcp>");
+	accCfg.sipConfig.proxies.push_back("<sip:sip.pjsip.org;transport=tls>");
+
+	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(1);
+	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(2);
+	accCfg.mediaConfig.transportConfig.tlsConfig.ciphers.push_back(3);
+
+	AuthCredInfo aci;
+	aci.scheme = "digest";
+	aci.username = "test";
+	aci.data = "passwd";
+	aci.realm = "*";
+	accCfg.sipConfig.authCreds.push_back(aci);
+
+	jdoc.writeObject(accCfg);
+	json_str = jdoc.saveString();
+	std::cout << "Original:" << std::endl;
+	std::cout << json_str << std::endl << std::endl;
+    }
+
+    {
+	JsonDocument rdoc;
+
+	rdoc.loadString(json_str);
+	AccountConfig accCfg;
+	rdoc.readObject(accCfg);
+
+	JsonDocument wdoc;
+	wdoc.writeObject(accCfg);
+	json_str = wdoc.saveString();
+
+	std::cout << "Parsed:" << std::endl;
+	std::cout << json_str << std::endl << std::endl;
+    }
+
+    ep.libDestroy();
+}
+
 int main()
 {
     int ret = 0;
 
     try {
 	mainProg();
+	std::cout << "Success" << std::endl;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;
 	ret = 1;
