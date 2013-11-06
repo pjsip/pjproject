@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2008-2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,8 @@
  * @file pjsua2/ua.hpp
  * @brief PJSUA2 Base Agent Operation
  */
-#include <pjsua2/types.hpp>
+#include <pjsua2/persistent.hpp>
+#include <pjsua2/siptypes.hpp>
 
 /** PJSUA2 API is inside pj namespace */
 namespace pj
@@ -161,7 +162,7 @@ struct OnSelectAccountParam
 
 //////////////////////////////////////////////////////////////////////////////
 
-struct UaConfig
+struct UaConfig : public PersistentObject
 {
     /**
      * Maximum calls to support (default: 4). The value specified here
@@ -264,6 +265,21 @@ public:
      * Export to pjsua_config
      */
     pjsua_config toPj() const;
+
+    /**
+     * Read this object from a container.
+     *
+     * @param node		Container to write values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
+
 };
 
 
@@ -306,7 +322,7 @@ public:
  * Logging configuration, which can be (optionally) specified when calling
  * Lib::init().
  */
-struct LogConfig
+struct LogConfig : public PersistentObject
 {
     /** Log incoming and outgoing SIP message? Yes!  */
     unsigned		msgLogging;
@@ -349,6 +365,20 @@ public:
 
     /** Generate pjsua_logging_config. */
     pjsua_logging_config toPj() const;
+
+    /**
+     * Read this object from a container.
+     *
+     * @param node		Container to write values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 
@@ -356,7 +386,7 @@ public:
  * This structure describes media configuration, which will be specified
  * when calling Lib::init().
  */
-struct MediaConfig
+struct MediaConfig : public PersistentObject
 {
 public:
     /**
@@ -554,13 +584,27 @@ public:
 
     /** Export */
     pjsua_media_config toPj() const;
+
+    /**
+     * Read this object from a container.
+     *
+     * @param node		Container to write values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 
 /**
  * Endpoint configuration
  */
-struct EpConfig
+struct EpConfig : public PersistentObject
 {
     /** UA config */
     UaConfig		uaConfig;
@@ -570,6 +614,21 @@ struct EpConfig
 
     /** Media config */
     MediaConfig		medConfig;
+
+    /**
+     * Read this object from a container.
+     *
+     * @param node		Container to write values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
+
 };
 
 //////////////////////////////////////////////////////////////////////////////

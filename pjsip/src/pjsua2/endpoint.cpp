@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,6 +98,34 @@ pjsua_config UaConfig::toPj() const
     return pua_cfg;
 }
 
+void UaConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("UaConfig");
+
+    NODE_READ_UNSIGNED( this_node, maxCalls);
+    NODE_READ_UNSIGNED( this_node, threadCnt);
+    NODE_READ_STRINGV ( this_node, nameserver);
+    NODE_READ_STRING  ( this_node, userAgent);
+    NODE_READ_STRINGV ( this_node, stunServer);
+    NODE_READ_BOOL    ( this_node, stunIgnoreFailure);
+    NODE_READ_INT     ( this_node, natTypeInSdp);
+    NODE_READ_BOOL    ( this_node, mwiUnsolicitedEnabled);
+}
+
+void UaConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("UaConfig");
+
+    NODE_WRITE_UNSIGNED( this_node, maxCalls);
+    NODE_WRITE_UNSIGNED( this_node, threadCnt);
+    NODE_WRITE_STRINGV ( this_node, nameserver);
+    NODE_WRITE_STRING  ( this_node, userAgent);
+    NODE_WRITE_STRINGV ( this_node, stunServer);
+    NODE_WRITE_BOOL    ( this_node, stunIgnoreFailure);
+    NODE_WRITE_INT     ( this_node, natTypeInSdp);
+    NODE_WRITE_BOOL    ( this_node, mwiUnsolicitedEnabled);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 LogConfig::LogConfig()
@@ -133,6 +161,30 @@ pjsua_logging_config LogConfig::toPj() const
     lc.log_filename = str2Pj(this->filename);
 
     return lc;
+}
+
+void LogConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("LogConfig");
+
+    NODE_READ_UNSIGNED( this_node, msgLogging);
+    NODE_READ_UNSIGNED( this_node, level);
+    NODE_READ_UNSIGNED( this_node, consoleLevel);
+    NODE_READ_UNSIGNED( this_node, decor);
+    NODE_READ_STRING  ( this_node, filename);
+    NODE_READ_UNSIGNED( this_node, fileFlags);
+}
+
+void LogConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("LogConfig");
+
+    NODE_WRITE_UNSIGNED( this_node, msgLogging);
+    NODE_WRITE_UNSIGNED( this_node, level);
+    NODE_WRITE_UNSIGNED( this_node, consoleLevel);
+    NODE_WRITE_UNSIGNED( this_node, decor);
+    NODE_WRITE_STRING  ( this_node, filename);
+    NODE_WRITE_UNSIGNED( this_node, fileFlags);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -205,6 +257,81 @@ pjsua_media_config MediaConfig::toPj() const
     return mcfg;
 }
 
+void MediaConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("MediaConfig");
+
+    NODE_READ_UNSIGNED( this_node, clockRate);
+    NODE_READ_UNSIGNED( this_node, sndClockRate);
+    NODE_READ_UNSIGNED( this_node, channelCount);
+    NODE_READ_UNSIGNED( this_node, audioFramePtime);
+    NODE_READ_UNSIGNED( this_node, maxMediaPorts);
+    NODE_READ_BOOL    ( this_node, hasIoqueue);
+    NODE_READ_UNSIGNED( this_node, threadCnt);
+    NODE_READ_UNSIGNED( this_node, quality);
+    NODE_READ_UNSIGNED( this_node, ptime);
+    NODE_READ_BOOL    ( this_node, noVad);
+    NODE_READ_UNSIGNED( this_node, ilbcMode);
+    NODE_READ_UNSIGNED( this_node, txDropPct);
+    NODE_READ_UNSIGNED( this_node, rxDropPct);
+    NODE_READ_UNSIGNED( this_node, ecOptions);
+    NODE_READ_UNSIGNED( this_node, ecTailLen);
+    NODE_READ_UNSIGNED( this_node, sndRecLatency);
+    NODE_READ_UNSIGNED( this_node, sndPlayLatency);
+    NODE_READ_INT     ( this_node, jbInit);
+    NODE_READ_INT     ( this_node, jbMinPre);
+    NODE_READ_INT     ( this_node, jbMaxPre);
+    NODE_READ_INT     ( this_node, jbMax);
+    NODE_READ_INT     ( this_node, sndAutoCloseTime);
+    NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
+}
+
+void MediaConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("MediaConfig");
+
+    NODE_WRITE_UNSIGNED( this_node, clockRate);
+    NODE_WRITE_UNSIGNED( this_node, sndClockRate);
+    NODE_WRITE_UNSIGNED( this_node, channelCount);
+    NODE_WRITE_UNSIGNED( this_node, audioFramePtime);
+    NODE_WRITE_UNSIGNED( this_node, maxMediaPorts);
+    NODE_WRITE_BOOL    ( this_node, hasIoqueue);
+    NODE_WRITE_UNSIGNED( this_node, threadCnt);
+    NODE_WRITE_UNSIGNED( this_node, quality);
+    NODE_WRITE_UNSIGNED( this_node, ptime);
+    NODE_WRITE_BOOL    ( this_node, noVad);
+    NODE_WRITE_UNSIGNED( this_node, ilbcMode);
+    NODE_WRITE_UNSIGNED( this_node, txDropPct);
+    NODE_WRITE_UNSIGNED( this_node, rxDropPct);
+    NODE_WRITE_UNSIGNED( this_node, ecOptions);
+    NODE_WRITE_UNSIGNED( this_node, ecTailLen);
+    NODE_WRITE_UNSIGNED( this_node, sndRecLatency);
+    NODE_WRITE_UNSIGNED( this_node, sndPlayLatency);
+    NODE_WRITE_INT     ( this_node, jbInit);
+    NODE_WRITE_INT     ( this_node, jbMinPre);
+    NODE_WRITE_INT     ( this_node, jbMaxPre);
+    NODE_WRITE_INT     ( this_node, jbMax);
+    NODE_WRITE_INT     ( this_node, sndAutoCloseTime);
+    NODE_WRITE_BOOL    ( this_node, vidPreviewEnableNative);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void EpConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("EpConfig");
+    NODE_READ_OBJ( this_node, uaConfig);
+    NODE_READ_OBJ( this_node, logConfig);
+    NODE_READ_OBJ( this_node, medConfig);
+}
+
+void EpConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("EpConfig");
+    NODE_WRITE_OBJ( this_node, uaConfig);
+    NODE_WRITE_OBJ( this_node, logConfig);
+    NODE_WRITE_OBJ( this_node, medConfig);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -782,7 +909,8 @@ TransportId Endpoint::transportCreate(pjsip_transport_type_e type,
     pjsua_transport_id tid;
 
     tcfg = cfg.toPj();
-    PJSUA2_CHECK_EXPR( pjsua_transport_create(type, &tcfg, &tid) );
+    PJSUA2_CHECK_EXPR( pjsua_transport_create(type,
+                                              &tcfg, &tid) );
 
     return tid;
 }

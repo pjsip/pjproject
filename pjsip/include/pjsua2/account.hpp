@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2008-2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,8 @@
  * @brief PJSUA2 Account operations
  */
 #include <pjsua-lib/pjsua.h>
-#include <pjsua2/types.hpp>
+#include <pjsua2/persistent.hpp>
+#include <pjsua2/siptypes.hpp>
 
 /**
  * @defgroup PJSUA2_ACC Account
@@ -45,7 +46,7 @@ using std::string;
 /**
  * Account registration config. This will be specified in AccountConfig.
  */
-struct AccountRegConfig
+struct AccountRegConfig : public PersistentObject
 {
     /**
      * This is the URL to be put in the request URI for the registration,
@@ -137,6 +138,22 @@ struct AccountRegConfig
      * Default: 3 (PJSUA_REG_USE_OUTBOUND_PROXY | PJSUA_REG_USE_ACC_PROXY)
      */
     unsigned		proxyUse;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
+
 };
 
 /** Array of SIP credentials */
@@ -146,7 +163,7 @@ typedef std::vector<AuthCredInfo> AuthCredInfoVector;
  * Various SIP settings for the account. This will be specified in
  * AccountConfig.
  */
-struct AccountSipConfig
+struct AccountSipConfig : public PersistentObject
 {
     /**
      * Array of credentials. If registration is desired, normally there should
@@ -220,12 +237,27 @@ struct AccountSipConfig
      * @see Account::setTransport()
      */
     TransportId		transportId;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account's call settings. This will be specified in AccountConfig.
  */
-struct AccountCallConfig
+struct AccountCallConfig : public PersistentObject
 {
     /**
      * Specify how to offer call hold to remote peer. Please see the
@@ -264,12 +296,26 @@ struct AccountCallConfig
      */
     unsigned		timerSessExpiresSec;
 
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account presence config. This will be specified in AccountConfig.
  */
-struct AccountPresConfig
+struct AccountPresConfig : public PersistentObject
 {
     /**
      * The optional custom SIP headers to be put in the presence
@@ -316,13 +362,28 @@ struct AccountPresConfig
      * is not specified, a random string will be used.
      */
     string		pidfTupleId;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account MWI (Message Waiting Indication) settings. This will be specified
  * in AccountConfig.
  */
-struct AccountMwiConfig
+struct AccountMwiConfig : public PersistentObject
 {
     /**
      * Subscribe to message waiting indication events (RFC 3842).
@@ -341,13 +402,28 @@ struct AccountMwiConfig
      * Default: PJSIP_MWI_DEFAULT_EXPIRES (3600)
      */
     unsigned		expirationSec;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account's NAT (Network Address Translation) settings. This will be
  * specified in AccountConfig.
  */
-struct AccountNatConfig
+struct AccountNatConfig : public PersistentObject
 {
     /**
      * Control the use of STUN for the SIP signaling.
@@ -560,13 +636,28 @@ struct AccountNatConfig
      * Default: CR-LF
      */
     string		udpKaData;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account media config (applicable for both audio and video). This will be
  * specified in AccountConfig.
  */
-struct AccountMediaConfig
+struct AccountMediaConfig : public PersistentObject
 {
     /**
      * Media transport (RTP) configuration.
@@ -617,12 +708,27 @@ struct AccountMediaConfig
      * Specify whether IPv6 should be used on media. Default is not used.
      */
     pjsua_ipv6_use	ipv6Use;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account video config. This will be specified in AccountConfig.
  */
-struct AccountVideoConfig
+struct AccountVideoConfig : public PersistentObject
 {
     /**
      * Specify whether incoming video should be shown to screen by default.
@@ -693,12 +799,27 @@ struct AccountVideoConfig
      * Default: 0 (follow codec maximum bitrate).
      */
     unsigned			rateControlBandwidth;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**
  * Account configuration.
  */
-struct AccountConfig
+struct AccountConfig : public PersistentObject
 {
     /**
      * Account priority, which is used to control the order of matching
@@ -776,6 +897,19 @@ public:
      */
     void fromPj(const pjsua_acc_config &prm, const pjsua_media_config *mcfg);
 
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
 /**

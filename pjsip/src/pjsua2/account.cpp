@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2012 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,266 @@ using namespace std;
 
 #define THIS_FILE		"account.cpp"
 
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountRegConfig");
+
+    NODE_READ_STRING	(this_node, registrarUri);
+    NODE_READ_BOOL	(this_node, registerOnAdd);
+    NODE_READ_UNSIGNED	(this_node, timeoutSec);
+    NODE_READ_UNSIGNED	(this_node, retryIntervalSec);
+    NODE_READ_UNSIGNED	(this_node, firstRetryIntervalSec);
+    NODE_READ_UNSIGNED	(this_node, delayBeforeRefreshSec);
+    NODE_READ_BOOL	(this_node, dropCallsOnFail);
+    NODE_READ_UNSIGNED	(this_node, unregWaitSec);
+    NODE_READ_UNSIGNED	(this_node, proxyUse);
+
+    readSipHeaders(this_node, "headers", headers);
+}
+
+void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountRegConfig");
+
+    NODE_WRITE_STRING	(this_node, registrarUri);
+    NODE_WRITE_BOOL	(this_node, registerOnAdd);
+    NODE_WRITE_UNSIGNED	(this_node, timeoutSec);
+    NODE_WRITE_UNSIGNED	(this_node, retryIntervalSec);
+    NODE_WRITE_UNSIGNED	(this_node, firstRetryIntervalSec);
+    NODE_WRITE_UNSIGNED	(this_node, delayBeforeRefreshSec);
+    NODE_WRITE_BOOL	(this_node, dropCallsOnFail);
+    NODE_WRITE_UNSIGNED	(this_node, unregWaitSec);
+    NODE_WRITE_UNSIGNED	(this_node, proxyUse);
+
+    writeSipHeaders(this_node, "headers", headers);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountSipConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountSipConfig");
+
+    NODE_READ_STRINGV	(this_node, proxies);
+    NODE_READ_STRING	(this_node, contactForced);
+    NODE_READ_STRING	(this_node, contactParams);
+    NODE_READ_STRING	(this_node, contactUriParams);
+    NODE_READ_BOOL	(this_node, authInitialEmpty);
+    NODE_READ_STRING	(this_node, authInitialAlgorithm);
+    NODE_READ_INT	(this_node, transportId);
+
+    ContainerNode creds_node = this_node.readArray("authCreds");
+    authCreds.resize(0);
+    while (creds_node.hasUnread()) {
+	AuthCredInfo cred;
+	cred.readObject(creds_node);
+	authCreds.push_back(cred);
+    }
+}
+
+void AccountSipConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountSipConfig");
+
+    NODE_WRITE_STRINGV	(this_node, proxies);
+    NODE_WRITE_STRING	(this_node, contactForced);
+    NODE_WRITE_STRING	(this_node, contactParams);
+    NODE_WRITE_STRING	(this_node, contactUriParams);
+    NODE_WRITE_BOOL	(this_node, authInitialEmpty);
+    NODE_WRITE_STRING	(this_node, authInitialAlgorithm);
+    NODE_WRITE_INT	(this_node, transportId);
+
+    ContainerNode creds_node = this_node.writeNewArray("authCreds");
+    for (unsigned i=0; i<authCreds.size(); ++i) {
+	authCreds[i].writeObject(creds_node);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountCallConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountCallConfig");
+
+    NODE_READ_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
+    NODE_READ_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_READ_UNSIGNED( this_node, timerMinSESec);
+    NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
+}
+
+void AccountCallConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountCallConfig");
+
+    NODE_WRITE_NUM_T   ( this_node, pjsua_call_hold_type, holdType);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_100rel_use, prackUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_sip_timer_use, timerUse);
+    NODE_WRITE_UNSIGNED( this_node, timerMinSESec);
+    NODE_WRITE_UNSIGNED( this_node, timerSessExpiresSec);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountPresConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountPresConfig");
+
+    NODE_READ_BOOL    ( this_node, publishEnabled);
+    NODE_READ_BOOL    ( this_node, publishQueue);
+    NODE_READ_UNSIGNED( this_node, publishShutdownWaitMsec);
+    NODE_READ_STRING  ( this_node, pidfTupleId);
+
+    readSipHeaders(this_node, "headers", headers);
+}
+
+void AccountPresConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountPresConfig");
+
+    NODE_WRITE_BOOL    ( this_node, publishEnabled);
+    NODE_WRITE_BOOL    ( this_node, publishQueue);
+    NODE_WRITE_UNSIGNED( this_node, publishShutdownWaitMsec);
+    NODE_WRITE_STRING  ( this_node, pidfTupleId);
+
+    writeSipHeaders(this_node, "headers", headers);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountMwiConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountMwiConfig");
+
+    NODE_READ_BOOL    ( this_node, enabled);
+    NODE_READ_UNSIGNED( this_node, expirationSec);
+}
+
+void AccountMwiConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountMwiConfig");
+
+    NODE_WRITE_BOOL    ( this_node, enabled);
+    NODE_WRITE_UNSIGNED( this_node, expirationSec);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountNatConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountNatConfig");
+
+    NODE_READ_NUM_T   ( this_node, pjsua_stun_use, sipStunUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
+    NODE_READ_BOOL    ( this_node, iceEnabled);
+    NODE_READ_INT     ( this_node, iceMaxHostCands);
+    NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
+    NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
+    NODE_READ_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_READ_BOOL    ( this_node, iceNoRtcp);
+    NODE_READ_BOOL    ( this_node, iceAlwaysUpdate);
+    NODE_READ_BOOL    ( this_node, turnEnabled);
+    NODE_READ_STRING  ( this_node, turnServer);
+    NODE_READ_NUM_T   ( this_node, pj_turn_tp_type, turnConnType);
+    NODE_READ_STRING  ( this_node, turnUserName);
+    NODE_READ_INT     ( this_node, turnPasswordType);
+    NODE_READ_STRING  ( this_node, turnPassword);
+    NODE_READ_INT     ( this_node, contactRewriteUse);
+    NODE_READ_INT     ( this_node, contactRewriteMethod);
+    NODE_READ_INT     ( this_node, viaRewriteUse);
+    NODE_READ_INT     ( this_node, sdpNatRewriteUse);
+    NODE_READ_INT     ( this_node, sipOutboundUse);
+    NODE_READ_STRING  ( this_node, sipOutboundInstanceId);
+    NODE_READ_STRING  ( this_node, sipOutboundRegId);
+    NODE_READ_UNSIGNED( this_node, udpKaIntervalSec);
+    NODE_READ_STRING  ( this_node, udpKaData);
+}
+
+void AccountNatConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountNatConfig");
+
+    NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, sipStunUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
+    NODE_WRITE_BOOL    ( this_node, iceEnabled);
+    NODE_WRITE_INT     ( this_node, iceMaxHostCands);
+    NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
+    NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
+    NODE_WRITE_INT     ( this_node, iceWaitNominationTimeoutMsec);
+    NODE_WRITE_BOOL    ( this_node, iceNoRtcp);
+    NODE_WRITE_BOOL    ( this_node, iceAlwaysUpdate);
+    NODE_WRITE_BOOL    ( this_node, turnEnabled);
+    NODE_WRITE_STRING  ( this_node, turnServer);
+    NODE_WRITE_NUM_T   ( this_node, pj_turn_tp_type, turnConnType);
+    NODE_WRITE_STRING  ( this_node, turnUserName);
+    NODE_WRITE_INT     ( this_node, turnPasswordType);
+    NODE_WRITE_STRING  ( this_node, turnPassword);
+    NODE_WRITE_INT     ( this_node, contactRewriteUse);
+    NODE_WRITE_INT     ( this_node, contactRewriteMethod);
+    NODE_WRITE_INT     ( this_node, viaRewriteUse);
+    NODE_WRITE_INT     ( this_node, sdpNatRewriteUse);
+    NODE_WRITE_INT     ( this_node, sipOutboundUse);
+    NODE_WRITE_STRING  ( this_node, sipOutboundInstanceId);
+    NODE_WRITE_STRING  ( this_node, sipOutboundRegId);
+    NODE_WRITE_UNSIGNED( this_node, udpKaIntervalSec);
+    NODE_WRITE_STRING  ( this_node, udpKaData);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountMediaConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountMediaConfig");
+
+    NODE_READ_BOOL    ( this_node, lockCodecEnabled);
+    NODE_READ_BOOL    ( this_node, streamKaEnabled);
+    NODE_READ_NUM_T   ( this_node, pjmedia_srtp_use, srtpUse);
+    NODE_READ_INT     ( this_node, srtpSecureSignaling);
+    NODE_READ_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
+    NODE_READ_OBJ     ( this_node, transportConfig);
+}
+
+void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountMediaConfig");
+
+    NODE_WRITE_BOOL    ( this_node, lockCodecEnabled);
+    NODE_WRITE_BOOL    ( this_node, streamKaEnabled);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_srtp_use, srtpUse);
+    NODE_WRITE_INT     ( this_node, srtpSecureSignaling);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
+    NODE_WRITE_OBJ     ( this_node, transportConfig);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountVideoConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountVideoConfig");
+
+    NODE_READ_BOOL    ( this_node, autoShowIncoming);
+    NODE_READ_BOOL    ( this_node, autoTransmitOutgoing);
+    NODE_READ_UNSIGNED( this_node, windowFlags);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultCaptureDevice);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
+    NODE_READ_UNSIGNED( this_node, rateControlBandwidth);
+}
+
+void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountVideoConfig");
+
+    NODE_WRITE_BOOL    ( this_node, autoShowIncoming);
+    NODE_WRITE_BOOL    ( this_node, autoTransmitOutgoing);
+    NODE_WRITE_UNSIGNED( this_node, windowFlags);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultCaptureDevice);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
+    NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -329,6 +589,39 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.rateControlMethod	= prm.vid_stream_rc_cfg.method;
     videoConfig.rateControlBandwidth	= prm.vid_stream_rc_cfg.bandwidth;
 }
+
+void AccountConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountConfig");
+
+    NODE_READ_INT     ( this_node, priority);
+    NODE_READ_STRING  ( this_node, idUri);
+    NODE_READ_OBJ     ( this_node, regConfig);
+    NODE_READ_OBJ     ( this_node, sipConfig);
+    NODE_READ_OBJ     ( this_node, callConfig);
+    NODE_READ_OBJ     ( this_node, presConfig);
+    NODE_READ_OBJ     ( this_node, mwiConfig);
+    NODE_READ_OBJ     ( this_node, natConfig);
+    NODE_READ_OBJ     ( this_node, mediaConfig);
+    NODE_READ_OBJ     ( this_node, videoConfig);
+}
+
+void AccountConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountConfig");
+
+    NODE_WRITE_INT     ( this_node, priority);
+    NODE_WRITE_STRING  ( this_node, idUri);
+    NODE_WRITE_OBJ     ( this_node, regConfig);
+    NODE_WRITE_OBJ     ( this_node, sipConfig);
+    NODE_WRITE_OBJ     ( this_node, callConfig);
+    NODE_WRITE_OBJ     ( this_node, presConfig);
+    NODE_WRITE_OBJ     ( this_node, mwiConfig);
+    NODE_WRITE_OBJ     ( this_node, natConfig);
+    NODE_WRITE_OBJ     ( this_node, mediaConfig);
+    NODE_WRITE_OBJ     ( this_node, videoConfig);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
