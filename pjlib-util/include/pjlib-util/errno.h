@@ -117,6 +117,15 @@
 #define PJLIB_UTIL_EINXML	    (PJLIB_UTIL_ERRNO_START+20)	/* 320020 */
 
 
+/************************************************************
+ * JSON ERROR
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * General invalid JSON message.
+ */
+#define PJLIB_UTIL_EINJSON	    (PJLIB_UTIL_ERRNO_START+30)	/* 320030 */
+
 
 /************************************************************
  * DNS ERROR

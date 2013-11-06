@@ -51,6 +51,9 @@ static const struct
     /* XML errors */
     PJ_BUILD_ERR( PJLIB_UTIL_EINXML,		"Invalid XML message" ),
 
+    /* JSON errors */
+    PJ_BUILD_ERR( PJLIB_UTIL_EINJSON,		"Invalid JSON document" ),
+
     /* DNS errors */
     PJ_BUILD_ERR( PJLIB_UTIL_EDNSQRYTOOSMALL,	"DNS query packet buffer is too small"),
     PJ_BUILD_ERR( PJLIB_UTIL_EDNSINSIZE,	"Invalid DNS packet length"),

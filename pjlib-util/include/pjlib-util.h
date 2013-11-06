@@ -54,6 +54,9 @@
 /* XML */
 #include <pjlib-util/xml.h>
 
+/* JSON */
+#include <pjlib-util/json.h>
+
 /* Old STUN */
 #include <pjlib-util/stun_simple.h>
 
