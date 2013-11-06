@@ -58,6 +58,12 @@ using namespace pj;
 // Now include the API itself.
 //
 %include "pjsua2/types.hpp"
+
+%ignore container_node_op;
+%include "pjsua2/persistent.hpp"
+
+%include "pjsua2/siptypes.hpp"
+
 %template(SipHeaderVector)		std::vector<pj::SipHeader>;
 %template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
 %template(SipMultipartPartVector)	std::vector<pj::SipMultipartPart>;
@@ -65,3 +71,6 @@ using namespace pj;
 %include "pjsua2/endpoint.hpp"
 %include "pjsua2/account.hpp"
 
+%ignore JsonDocument::allocElement();
+%ignore JsonDocument::getPool();
+%include "pjsua2/json.hpp"
