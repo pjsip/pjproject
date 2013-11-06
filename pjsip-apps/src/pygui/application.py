@@ -35,80 +35,25 @@ import account
 import endpoint
 
 import os
-import pickle
 import traceback
 
-#----------------------------------------------------------
-# Unfortunately SWIG classes cannot be serialized directly
-# hence need to write these config classes
-#
-class AccountConfig:
-	"""
-	"Proxy" for the pj.AccountConfig class, serializable
-	"""
-	def __init__(self, acc_cfg = None):
-		if not acc_cfg:
-			acc_cfg = pj.AccountConfig()
-		self.priority 	= acc_cfg.priority
-		self.idUri 	= acc_cfg.idUri
-		self.regUri 	= acc_cfg.regConfig.registrarUri
-		self.registerOnAdd = acc_cfg.regConfig.registerOnAdd
-		self.proxies 	= [proxy for proxy in acc_cfg.sipConfig.proxies]
-		self.userName 	= ""
-		self.password 	= ""
-		if len(acc_cfg.sipConfig.authCreds):
-			self.userName = acc_cfg.sipConfig.authCreds[0].username
-			self.password = acc_cfg.sipConfig.authCreds[0].data
-
-	def getAccConfig(self, acc_cfg = None):
-		"""
-		Convert this class to pj.AccountConfig class
-		"""
-		if not acc_cfg:
-			acc_cfg  = pj.AccountConfig()
-		acc_cfg.priority = self.priority
-		acc_cfg.idUri	 = self.idUri
-		acc_cfg.regConfig.registrarUri = self.regUri
-		acc_cfg.regConfig.registerOnAdd = self.registerOnAdd
-		for proxy in self.proxies:
-			acc_cfg.sipConfig.proxies.append(proxy)
-		if self.userName:
-			cred = pj.AuthCredInfo()
-			cred.scheme	= "digest"
-			cred.realm	= "*"
-			cred.username	= self.userName
-			cred.data	= self.password
-			acc_cfg.sipConfig.authCreds.append(cred)
-		return acc_cfg
+class SipTransportConfig:
+	def __init__(self):
+		#pj.PersistentObject.__init__(self)
+		self.type = pj.PJSIP_TRANSPORT_UNSPECIFIED;
+		self.cfg = pj.TransportConfig()
 		
-class ApplicationConfig:
-	"""
-	Application config is serializable and contains all settings that application need.
-	"""
-	def __init__(self, ep_cfg = None, acc_cfgs = []):
-		if not ep_cfg:
-			ep_cfg = pj.EpConfig()
-		
-		self.logFile	= ep_cfg.logConfig.filename
-		self.logFlags	= ep_cfg.logConfig.fileFlags
-		self.logLevel	= ep_cfg.logConfig.consoleLevel
-		
-		self.accCfgs = []
-		for acc_cfg in acc_cfgs:
-			self.accCfgs.append( AccountConfig(acc_cfg) )
-		
-	def getEpConfig(self, ep_cfg = None):
-		if not ep_cfg:
-			ep_cfg = pj.EpConfig()
-		ep_cfg.logConfig.filename = self.logFile 
-		ep_cfg.logConfig.fileFlags = self.logFlags 
-		ep_cfg.logConfig.consoleLevel = self.logLevel
-		return ep_cfg
-
-		
-#----------------------------------------------------------
-
-		
+	def readObject(self, node):
+		child_node = node.readContainer("SipTransportConfig")
+		self.type = child_node.readInt("type")
+		self.cfg.readObject(child_node)
+	
+	def writeObject(self, node):
+		child_node = node.writeNewContainer("SipTransportConfig")
+		child_node.writeInt("type", self.type)
+		self.cfg.writeObject(child_node)
+	 
+	
 class Application(ttk.Frame):
 	"""
 	The Application main frame.
@@ -120,15 +65,6 @@ class Application(ttk.Frame):
 		
 		# Logger
 		self.logger = log.Logger()
-		
-		# Global config, fill with default
-		self.epCfg = pj.EpConfig()
-		self.epCfg.uaConfig.threadCnt = 0;
-		self.epCfg.logConfig.writer = self.logger
-		self.epCfg.logConfig.filename = "pygui.log"
-		self.epCfg.logConfig.fileFlags = pj.PJ_O_APPEND
-		self.epCfg.logConfig.level = 5
-		self.epCfg.logConfig.consoleLevel = 5
 		
 		# Accounts
 		self.accList = []
@@ -145,34 +81,84 @@ class Application(ttk.Frame):
 		self.logWindow = log.LogWindow(self)
 		self._onMenuShowHideLogWindow()
 		
-	def saveConfig(self, filename='pygui.dat'):
-		acc_cfgs = [acc.cfg for acc in self.accList]
-		app_cfg = ApplicationConfig(self.epCfg, acc_cfgs)
-		f = open(filename, 'wb')
-		pickle.dump(app_cfg, f, 0)
-		f.close()
+		# Instantiate endpoint
+		self.ep = endpoint.Endpoint()
+		self.ep.libCreate()
+		
+		# Default config
+		self.epCfg = pj.EpConfig()
+		self.epCfg.uaConfig.threadCnt = 0;
+		self.epCfg.logConfig.writer = self.logger
+		self.epCfg.logConfig.filename = "pygui.log"
+		self.epCfg.logConfig.fileFlags = pj.PJ_O_APPEND
+		self.epCfg.logConfig.level = 5
+		self.epCfg.logConfig.consoleLevel = 5
+		
+		self.transportCfgs = []
+		t = SipTransportConfig()
+		t.type = pj.PJSIP_TRANSPORT_UDP
+		t.cfg.port = 0
+		self.transportCfgs.append(t)
+		
 	
-	def start(self, cfg_file='pygui.dat'):
+	def saveConfig(self, filename='pygui.js'):
+		json = pj.JsonDocument()
+		
+		# Write endpoint config
+		json.writeObject(self.epCfg)
+		
+		# Write transport config
+		node = json.writeNewArray("transports")
+		for t in self.transportCfgs:
+			t.writeObject(node);
+		
+		# Write account configs
+		node = json.writeNewArray("accounts")
+		for acc in self.accList:
+			node.writeObject(acc.cfg);
+		json.saveFile(filename)
+	
+	def start(self, cfg_file='pygui.js'):
 		# Load config
 		acc_cfgs = []
 		if cfg_file and os.path.exists(cfg_file):
-			f = open(cfg_file, 'rb')
-			app_cfg = pickle.load(f)
-			app_cfg.getEpConfig(self.epCfg)
-			for c in app_cfg.accCfgs:
-				cfg = c.getAccConfig()
+			json = pj.JsonDocument()
+			json.loadFile(cfg_file)
+			
+			# Load endpoint config
+			json.readObject(self.epCfg)
+			
+			# Load transport configs
+			node = json.readArray("transports")
+			if node.hasUnread():
+				self.transportCfgs = []
+				while node.hasUnread():
+					t = SipTransportConfig()
+					t.readObject(node)
+					self.transportCfgs.append(t)
+			
+			# Load account configs
+			node = json.readArray("accounts")
+			while node.hasUnread():
+				cfg = pj.AccountConfig()
+				cfg.readObject(node)
 				acc_cfgs.append(cfg)
-			f.close()
 		
-		# Instantiate endpoint
-		self.ep = endpoint.Endpoint()
+		# Initialize library
 		self.epCfg.uaConfig.userAgent = "pygui-" + self.ep.libVersion().full;
-		self.ep.startLib(self.epCfg)
+		self.ep.libInit(self.epCfg)
 		self.master.title('pjsua2 Demo version ' + self.ep.libVersion().full)
 		
+		# Create transports
+		for t in self.transportCfgs:
+			self.ep.transportCreate(t.type, t.cfg)
+			
 		# Add accounts
 		for cfg in acc_cfgs:
 			self._createAcc(cfg)
+		
+		# Start library
+		self.ep.libStart()
 		
 		# Start polling
 		self._onTimer()
@@ -328,8 +314,9 @@ class Application(ttk.Frame):
 				self.master.after(50, self._onTimer)
 			
 	def _onClose(self):
+		self.saveConfig()
 		self.quitting = True
-		self.ep.stopLib()
+		self.ep.libDestroy()
 		self.ep = None
 		self.update()
 		self.quit()
@@ -390,7 +377,6 @@ def main():
 	app = Application()
 	app.start()
 	app.mainloop()
-	app.saveConfig()
 		
 if __name__ == '__main__':
 	main()

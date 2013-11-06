@@ -50,7 +50,9 @@ class Account(pj.Account):
 		status = '?'
 		if self.isValid():
 			ai = self.getInfo()
-			if ai.regIsActive:
+			if ai.regLastErr:
+				status = self.app.ep.utilStrError(ai.regLastErr)
+			elif ai.regIsActive:
 				if ai.onlineStatus:
 					if len(ai.onlineStatusText):
 						status = ai.onlineStatusText

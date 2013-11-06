@@ -120,7 +120,7 @@ class Logger(pj.LogWriter):
 		pj.LogWriter.__init__(self)
 		
 	def write(self, entry):
-		#print entry.msg,
+		print entry.msg,
 		writeLog(entry)
 
 if __name__ == '__main__':

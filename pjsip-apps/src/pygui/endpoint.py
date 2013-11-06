@@ -41,23 +41,6 @@ class Endpoint(pj.Endpoint):
 		pj.Endpoint.__init__(self)
 		Endpoint.instance = self
 	
-	def startLib(self, ep_cfg):
-		# Create lib
-		self.libCreate()
-		
-		# Init lib
-		self.libInit(ep_cfg)
-	
-		# Add transport
-		tcfg = pj.TransportConfig()
-		tcfg.port = 50060;
-		self.transportCreate(pj.PJSIP_TRANSPORT_UDP, tcfg)
-		
-		# Start!
-		self.libStart()
-		
-	def stopLib(self):
-		self.libDestroy()
 	
 def validateUri(uri):
 	return Endpoint.instance.utilVerifyUri(uri) == pj.PJ_SUCCESS
