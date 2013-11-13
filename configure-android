@@ -95,6 +95,8 @@ if test "$1" = "--use-ndk-cflags"; then
 
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
+  export AR=`echo ${NDK_CXX}|sed 's/-g++/-ar/'`;
+  export RANLIB=`echo ${NDK_CXX}|sed 's/-g++/-ranlib/'`;
 
   export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
   export LIBS="${LIBS} -lc -lgcc"
@@ -119,6 +121,8 @@ else
 
   export CC="${ANDROID_TC}/bin/${TARGET_HOST}-gcc"
   export CXX="${ANDROID_TC}/bin/${TARGET_HOST}-g++"
+  export AR="${ANDROID_TC}/bin/${TARGET_HOST}-ar"
+  export RANLIB="${ANDROID_TC}/bin/${TARGET_HOST}-ranlib"
 
   export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
   export LIBS="${LIBS} -lc -lgcc"
@@ -137,6 +141,8 @@ if test "1" = "1"; then
   echo " CXXFLAGS = ${CXXFLAGS}"
   echo " LDFLAGS = ${LDFLAGS}"
   echo " LIBS = ${LIBS}"
+  echo " AR = ${AR}"
+  echo " RANLIB = ${RANLIB}"
 fi
 
 ./configure --host=${TARGET_HOST} --disable-video $*
