@@ -387,8 +387,10 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
 	return PJ_SUCCESS;
     }
 
-    pj_timer_heap_cancel_if_active(tsx->timer_heap, &tsx->retransmit_timer,
-                                   TIMER_INACTIVE);
+    if (mod_count) {
+        pj_timer_heap_cancel_if_active(tsx->timer_heap, &tsx->retransmit_timer,
+                                       TIMER_INACTIVE);
+    }
 
     return tsx_transmit_msg(tsx, mod_count);
 }
