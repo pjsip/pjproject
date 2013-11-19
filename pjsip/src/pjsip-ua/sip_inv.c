@@ -263,6 +263,10 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	    pjsip_tx_data_dec_ref(inv->invite_req);
 	    inv->invite_req = NULL;
 	}
+	if (inv->pending_bye) {
+	    pjsip_tx_data_dec_ref(inv->pending_bye);
+	    inv->pending_bye = NULL;
+	}
 	pjsip_100rel_end_session(inv);
 	pjsip_timer_end_session(inv);
 	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
@@ -355,6 +359,26 @@ static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
     return sdp;
 }
 
+/* Process pending disconnection
+ *  http://trac.pjsip.org/repos/ticket/1712
+ */
+static void inv_perform_pending_bye(pjsip_inv_session *inv)
+{
+    if (inv->pending_bye) {
+	pjsip_tx_data *bye = inv->pending_bye;
+	pj_status_t status;
+
+	PJ_LOG(4,(inv->dlg->obj_name, "Sending pending BYE"));
+
+	inv->pending_bye = NULL;
+	status = pjsip_inv_send_msg(inv, bye);
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(inv->dlg->obj_name, status,
+			 "Failed sending pending BYE"));
+	}
+    }
+}
 
 /*
  * Send ACK for 2xx response.
@@ -528,6 +552,14 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 
 	    PJSIP_EVENT_INIT_RX_MSG(event, rdata);
 	    inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &event);
+
+	    /* Send pending BYE if any:
+	     *   http://trac.pjsip.org/repos/ticket/1712
+	     * Do this after setting the state to CONFIRMED, so that we
+	     * have consistent CONFIRMED state between caller and callee.
+	     */
+	    if (inv->pending_bye)
+		inv_perform_pending_bye(inv);
 	}
     }
 
@@ -2889,6 +2921,23 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	    goto on_error;
 	}
 
+	/* Don't send BYE before ACK is received
+	 * http://trac.pjsip.org/repos/ticket/1712
+	 */
+	if (tdata->msg->line.req.method.id == PJSIP_BYE_METHOD &&
+	    inv->role == PJSIP_ROLE_UAS &&
+	    inv->state == PJSIP_INV_STATE_CONNECTING)
+	{
+	    if (inv->pending_bye)
+		pjsip_tx_data_dec_ref(inv->pending_bye);
+
+	    inv->pending_bye = tdata;
+	    PJ_LOG(4, (inv->obj_name, "Delaying BYE request until "
+		       "ACK is received"));
+	    pjsip_dlg_dec_lock(inv->dlg);
+	    goto on_return;
+	}
+
 	/* Associate our data in outgoing invite transaction */
 	tsx_inv_data = PJ_POOL_ZALLOC_T(inv->pool, struct tsx_inv_data);
 	tsx_inv_data->inv = inv;
@@ -2924,6 +2973,7 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
     }
 
     /* Done */
+on_return:
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
@@ -4091,6 +4141,15 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 		}
 
 		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
+
+		/* Send pending BYE if any:
+		 *   http://trac.pjsip.org/repos/ticket/1712
+		 * Do this after setting the state to CONFIRMED, so that we
+		 * have consistent CONFIRMED state between caller and callee.
+		 */
+		if (inv->pending_bye)
+		    inv_perform_pending_bye(inv);
+
 	    }
 	    break;
 

@@ -393,6 +393,7 @@ struct pjsip_inv_session
     pjsip_inv_state	 state;			    /**< Invite sess state. */
     pj_bool_t		 cancelling;		    /**< CANCEL requested   */
     pj_bool_t		 pending_cancel;	    /**< Wait to send CANCEL*/
+    pjsip_tx_data	*pending_bye;               /**< BYE to send later  */
     pjsip_status_code	 cause;			    /**< Disconnect cause.  */
     pj_str_t		 cause_text;		    /**< Cause text.	    */
     pj_bool_t		 notify;		    /**< Internal.	    */
