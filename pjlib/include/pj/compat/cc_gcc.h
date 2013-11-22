@@ -61,7 +61,7 @@
 #endif
 
 #define PJ_INT64(val)		val##LL
-#define PJ_UINT64(val)		val##LLU
+#define PJ_UINT64(val)		val##ULL
 #define PJ_INT64_FMT		"L"
 
 
