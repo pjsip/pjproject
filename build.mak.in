@@ -12,22 +12,41 @@ export CROSS_COMPILE := @ac_cross_compile@
 export LINUX_POLL := @ac_linux_poll@ 
 export SHLIB_SUFFIX := @ac_shlib_suffix@
 
-export ac_prefix := @prefix@
+export prefix := @prefix@
+export exec_prefix := @exec_prefix@
+export includedir := @includedir@
+export libdir := @libdir@
 
 LIB_SUFFIX = $(TARGET_NAME).a
 
-# Determine which party libraries to use
-export APP_THIRD_PARTY_LIBS := -lmilenage-$(TARGET_NAME) -lsrtp-$(TARGET_NAME)
-export APP_THIRD_PARTY_EXT :=
-export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
+ifeq (@ac_shared_libraries@,1)
+export PJ_SHARED_LIBRARIES := 1
+endif
 
+# Determine which party libraries to use
+export APP_THIRD_PARTY_EXT :=
+export APP_THIRD_PARTY_LIBS :=
+export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lmilenage-$(TARGET_NAME) -lsrtp-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lmilenage -lsrtp
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libmilenage.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libmilenage.$(SHLIB_SUFFIX) \
+			     $(PJ_DIR)/third_party/lib/libsrtp.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libsrtp.$(SHLIB_SUFFIX)
+endif
+
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
 ifeq (@ac_resample_dll@,1)
 export PJ_RESAMPLE_DLL := 1
-export APP_THIRD_PARTY_LIBS := -lresample $(APP_THIRD_PARTY_LIBS)
-export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX) $(APP_THIRD_PARTY_LIB_FILES)
+APP_THIRD_PARTY_LIBS += -lresample
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX)
 else
-export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) $(APP_THIRD_PARTY_LIBS)
-export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX) $(APP_THIRD_PARTY_LIB_FILES)
+APP_THIRD_PARTY_LIBS += -lresample-$(TARGET_NAME)
+endif
+else
+APP_THIRD_PARTY_LIBS += -lresample
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX)
 endif
 
 ifneq (@ac_no_gsm_codec@,1)
@@ -35,8 +54,13 @@ ifeq (@ac_external_gsm@,1)
 # External GSM library
 APP_THIRD_PARTY_EXT += -lgsm
 else
-APP_THIRD_PARTY_LIBS += -lgsmcodec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libgsmcodec-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lgsmcodec-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lgsmcodec
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libgsmcodec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libgsmcodec.$(SHLIB_SUFFIX)
+endif
 endif
 endif
 
@@ -44,19 +68,34 @@ ifneq (@ac_no_speex_codec@,1)
 ifeq (@ac_external_speex@,1)
 APP_THIRD_PARTY_EXT += -lspeex -lspeexdsp
 else
-APP_THIRD_PARTY_LIBS += -lspeex-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libspeex-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lspeex-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lspeex
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libspeex.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libspeex.$(SHLIB_SUFFIX)
+endif
 endif
 endif
 
 ifneq (@ac_no_ilbc_codec@,1)
-APP_THIRD_PARTY_LIBS += -lilbccodec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libilbccodec-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lilbccodec-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lilbccodec
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libilbccodec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libilbccodec.$(SHLIB_SUFFIX)
+endif
 endif
 
 ifneq (@ac_no_g7221_codec@,1)
-APP_THIRD_PARTY_LIBS += -lg7221codec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lg7221codec-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lg7221codec
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libg7221codec.$(SHLIB_SUFFIX)
+endif
 endif
 
 ifneq ($(findstring pa,@ac_pjmedia_snd@),)
@@ -64,8 +103,13 @@ ifeq (@ac_external_pa@,1)
 # External PA
 APP_THIRD_PARTY_EXT += -lportaudio
 else
-APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lportaudio
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libportaudio.$(SHLIB_SUFFIX)
+endif
 endif
 endif
 
@@ -122,21 +166,6 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/third_party/lib\
 	$(PJ_VIDEO_LDFLAGS) \
 	@LDFLAGS@
-export APP_LDLIBS := -lpjsua-$(TARGET_NAME)\
-	-lpjsip-ua-$(TARGET_NAME)\
-	-lpjsip-simple-$(TARGET_NAME)\
-	-lpjsip-$(TARGET_NAME)\
-	-lpjmedia-codec-$(TARGET_NAME)\
-	-lpjmedia-videodev-$(TARGET_NAME)\
-	-lpjmedia-$(TARGET_NAME)\
-	-lpjmedia-audiodev-$(TARGET_NAME)\
-	-lpjmedia-$(TARGET_NAME)\
-	-lpjnath-$(TARGET_NAME)\
-	-lpjlib-util-$(TARGET_NAME)\
-	$(APP_THIRD_PARTY_LIBS)\
-	$(APP_THIRD_PARTY_EXT)\
-	-lpj-$(TARGET_NAME)\
-	@LIBS@
 export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
@@ -149,6 +178,59 @@ export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
 	$(APP_THIRD_PARTY_LIB_FILES) \
 	$(PJ_DIR)/pjlib/lib/libpj-$(LIB_SUFFIX)
+
+ifeq ($(PJ_SHARED_LIBRARIES),)
+export PJLIB_LDLIB := -lpj-$(TARGET_NAME)
+export PJLIB_UTIL_LDLIB := -lpjlib-util-$(TARGET_NAME)
+export PJNATH_LDLIB := -lpjnath-$(TARGET_NAME)
+export PJMEDIA_AUDIODEV_LDLIB := -lpjmedia-audiodev-$(TARGET_NAME)
+export PJMEDIA_VIDEODEV_LDLIB := -lpjmedia-videodev-$(TARGET_NAME)
+export PJMEDIA_LDLIB := -lpjmedia-$(TARGET_NAME)
+export PJMEDIA_CODEC_LDLIB := -lpjmedia-codec-$(TARGET_NAME)
+export PJSIP_LDLIB := -lpjsip-$(TARGET_NAME)
+export PJSIP_SIMPLE_LDLIB := -lpjsip-simple-$(TARGET_NAME)
+export PJSIP_UA_LDLIB := -lpjsip-ua-$(TARGET_NAME)
+export PJSUA_LIB_LDLIB := -lpjsua-$(TARGET_NAME)
+else
+export PJLIB_LDLIB := -lpj
+export PJLIB_UTIL_LDLIB := -lpjlib-util
+export PJNATH_LDLIB := -lpjnath
+export PJMEDIA_AUDIODEV_LDLIB := -lpjmedia-audiodev
+export PJMEDIA_VIDEODEV_LDLIB := -lpjmedia-videodev
+export PJMEDIA_LDLIB := -lpjmedia
+export PJMEDIA_CODEC_LDLIB := -lpjmedia-codec
+export PJSIP_LDLIB := -lpjsip
+export PJSIP_SIMPLE_LDLIB := -lpjsip-simple
+export PJSIP_UA_LDLIB := -lpjsip-ua
+export PJSUA_LIB_LDLIB := -lpjsua
+
+APP_LIB_FILES += $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-codec.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-videodev.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX) \
+	$(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX)
+endif
+
+export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
+	$(PJSIP_UA_LDLIB) \
+	$(PJSIP_SIMPLE_LDLIB) \
+	$(PJSIP_LDLIB) \
+	$(PJMEDIA_CODEC_LDLIB) \
+	$(PJMEDIA_LDLIB) \
+	$(PJMEDIA_VIDEODEV_LDLIB) \
+	$(PJMEDIA_AUDIODEV_LDLIB) \
+	$(PJNATH_LDLIB) \
+	$(PJLIB_UTIL_LDLIB) \
+	$(APP_THIRD_PARTY_LIBS)\
+	$(APP_THIRD_PARTY_EXT)\
+	$(PJLIB_LDLIB) \
+	@LIBS@
 
 # Here are the variabels to use if application is using the library
 # from within the source distribution
@@ -163,8 +245,8 @@ export PJ_LIB_FILES := $(APP_LIB_FILES)
 # And here are the variables to use if application is using the
 # library from the install location (i.e. --prefix)
 export PJ_INSTALL_DIR := @prefix@
-export PJ_INSTALL_INC_DIR := $(PJ_INSTALL_DIR)/include
-export PJ_INSTALL_LIB_DIR := $(PJ_INSTALL_DIR)/lib
+export PJ_INSTALL_INC_DIR := @includedir@
+export PJ_INSTALL_LIB_DIR := @libdir@
 export PJ_INSTALL_CFLAGS := -I$(PJ_INSTALL_INC_DIR) -DPJ_AUTOCONF=1	@CFLAGS@
 export PJ_INSTALL_CXXFLAGS := $(PJ_INSTALL_CFLAGS)
 export PJ_INSTALL_LDFLAGS := -L$(PJ_INSTALL_LIB_DIR) $(APP_LDLIBS)

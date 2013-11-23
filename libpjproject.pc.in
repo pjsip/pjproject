@@ -2,8 +2,8 @@
 
 prefix=@PREFIX@
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
-includedir=${prefix}/include
+libdir=@LIBDIR@
+includedir=@INCLUDEDIR@
 
 Name: libpjproject
 Description: Multimedia communication library

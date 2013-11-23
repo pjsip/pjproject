@@ -5,7 +5,13 @@ export LIBDIR := ../../lib
 
 RULES_MAK := $(PJDIR)/build/rules.mak
 
-export G7221_CODEC_LIB := ../../lib/libg7221codec-$(TARGET_NAME)$(LIBEXT)
+export G7221_CODEC_LIB := libg7221codec-$(TARGET_NAME)$(LIBEXT)
+
+ifeq ($(PJ_SHARED_LIBRARIES),)
+else
+export G7221_CODEC_SONAME := libg7221codec.$(SHLIB_SUFFIX)
+export G7221_CODEC_SHLIB := $(G7221_CODEC_SONAME).$(PJ_VERSION_MAJOR)
+endif
 
 ###############################################################################
 # Gather all flags.
@@ -34,7 +40,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := libg7221codec
+TARGETS := $(G7221_CODEC_LIB) $(G7221_CODEC_SONAME)
 
 all: $(TARGETS)
 
@@ -44,10 +50,14 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend libg7221codec clean realclean distclean
+.PHONY: all dep depend clean realclean distclean
+.PHONY: $(TARGETS)
+.PHONY: $(G7221_CODEC_LIB) $(G7221_CODEC_SONAME)
 
-libg7221codec:
-	$(MAKE) -f $(RULES_MAK) APP=G7221_CODEC app=libg7221codec $(G7221_CODEC_LIB)
+libg7221codec: $(G7221_CODEC_LIB)
+$(G7221_CODEC_SONAME): $(G7221_CODEC_LIB)
+$(G7221_CODEC_LIB) $(G7221_CODEC_SONAME):
+	$(MAKE) -f $(RULES_MAK) APP=G7221_CODEC app=libg7221codec $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 clean print_lib:
 	$(MAKE) -f $(RULES_MAK) APP=G7221_CODEC app=libg7221codec $@

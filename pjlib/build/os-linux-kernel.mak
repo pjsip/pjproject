@@ -42,6 +42,6 @@ export TEST_LDFLAGS += -lgcc
 # TARGETS are make targets in the Makefile, to be executed for this given
 # operating system.
 #
-export TARGETS :=	../lib/pjlib.ko ../lib/pjlib-test.ko
+export TARGETS :=	pjlib.ko pjlib-test.ko
 
 

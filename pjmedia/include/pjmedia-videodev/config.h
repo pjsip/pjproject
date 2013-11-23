@@ -52,6 +52,8 @@ PJ_BEGIN_DECL
 #endif
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
 /**
  * This setting controls whether SDL support should be included.
  *
@@ -143,6 +145,8 @@ PJ_BEGIN_DECL
 #ifndef PJMEDIA_SDL_LIB
 #   undef PJMEDIA_SDL_LIB
 #endif
+
+#endif /* defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) */
 
 /**
  * @}

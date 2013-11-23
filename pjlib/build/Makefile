@@ -2,10 +2,18 @@ include ../../build.mak
 include ../../version.mak
 include $(PJDIR)/build/common.mak
 
+export LIBDIR := ../lib
+export BINDIR := ../bin
+
 RULES_MAK := $(PJDIR)/build/rules.mak
 
+export PJLIB_LIB := libpj-$(TARGET_NAME)$(LIBEXT)
 
-export PJLIB_LIB := ../lib/libpj-$(TARGET_NAME)$(LIBEXT)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+else
+export PJLIB_SONAME := libpj.$(SHLIB_SUFFIX)
+export PJLIB_SHLIB := $(PJLIB_SONAME).$(PJ_VERSION_MAJOR)
+endif
 
 ###############################################################################
 # Gather all flags.
@@ -14,9 +22,9 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC)../include
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
-		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(LDFLAGS) 
+export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
+		   $(APP_LDFLAGS) $(LDFLAGS) 
+
 
 ###############################################################################
 # Defines for building PJLIB library
@@ -31,6 +39,7 @@ export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	string.o timer.o types.o
 export PJLIB_CFLAGS += $(_CFLAGS)
 export PJLIB_CXXFLAGS += $(_CXXFLAGS)
+export PJLIB_LDFLAGS += $(_LDFLAGS)
 
 ###############################################################################
 # Defines for building test application
@@ -46,10 +55,10 @@ export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 		    util.o
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
-export TEST_LDFLAGS += $(_LDFLAGS)
-export TEST_EXE := ../bin/pjlib-test-$(TARGET_NAME)$(HOST_EXE)
+export TEST_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
+export TEST_EXE := pjlib-test-$(TARGET_NAME)$(HOST_EXE)
 
-	
+
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
@@ -76,34 +85,38 @@ print:
 depend: ../include/pj/config_site.h
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib depend
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test depend
-	echo '$(TEST_EXE): $(PJLIB_LIB)' >> .pjlib-test-$(TARGET_NAME).depend
+	echo '$(BINDIR)/$(TEST_EXE): $(LIBDIR)/$(PJLIB_LIB)' >> .pjlib-test-$(TARGET_NAME).depend
 
 
-.PHONY: dep depend clean realclean distclean
+.PHONY: all dep depend clean realclean distclean
 .PHONY: $(TARGETS)
-.PHONY: $(PJLIB_LIB) $(TEST_EXE)
+.PHONY: $(PJLIB_LIB) $(PJLIB_SONAME)
+.PHONY: $(TEST_EXE)
 
 dep: depend
 
 pjlib: $(PJLIB_LIB)
 $(PJLIB_LIB): ../include/pj/config_site.h
-	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib $(PJLIB_LIB)
+
+$(PJLIB_SONAME): $(PJLIB_LIB)
+$(PJLIB_LIB) $(PJLIB_SONAME):
+	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 ../include/pj/config_site.h:
 	touch ../include/pj/config_site.h
 
 pjlib-test: $(TEST_EXE)
-$(TEST_EXE): $(PJLIB_LIB)
-	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $(TEST_EXE)
+$(TEST_EXE): $(PJLIB_LIB) $(PJLIB_SONAME)
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
 
-.PHONY: ../lib/pjlib.ko
-../lib/pjlib.ko:
+.PHONY: pjlib.ko
+pjlib.ko:
 	echo Making $@
-	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib $@
+	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
-.PHONY: ../lib/pjlib-test.ko
-../lib/pjlib-test.ko:
-	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $@
+.PHONY: pjlib-test.ko
+pjlib-test.ko:
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib clean

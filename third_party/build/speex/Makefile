@@ -5,7 +5,13 @@ export LIBDIR := ../../lib
 
 RULES_MAK := $(PJDIR)/build/rules.mak
 
-export SPEEX_LIB := ../../lib/libspeex-$(TARGET_NAME)$(LIBEXT)
+export SPEEX_LIB := libspeex-$(TARGET_NAME)$(LIBEXT)
+
+ifeq ($(PJ_SHARED_LIBRARIES),)
+else
+export SPEEX_SONAME := libspeex.$(SHLIB_SUFFIX)
+export SPEEX_SHLIB := $(SPEEX_SONAME).$(PJ_VERSION_MAJOR)
+endif
 
 ###############################################################################
 # Gather all flags.
@@ -44,7 +50,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := libspeex
+TARGETS := $(SPEEX_LIB) $(SPEEX_SONAME)
 
 all: $(TARGETS)
 
@@ -54,10 +60,14 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend libspeex clean realclean distclean
+.PHONY: all dep depend clean realclean distclean
+.PHONY: $(TARGETS)
+.PHONY: $(SPEEX_LIB) $(SPEEX_SONAME)
 
-libspeex:
-	$(MAKE) -f $(RULES_MAK) APP=SPEEX app=libspeex $(SPEEX_LIB)
+libspeex: $(SPEEX_LIB)
+$(SPEEX_SONAME): $(SPEEX_LIB)
+$(SPEEX_LIB) $(SPEEX_SONAME):
+	$(MAKE) -f $(RULES_MAK) APP=SPEEX app=libspeex $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 clean print_lib:
 	$(MAKE) -f $(RULES_MAK) APP=SPEEX app=libspeex $@

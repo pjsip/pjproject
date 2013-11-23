@@ -1,6 +1,8 @@
-
+include ../../build.mak
+include ../../version.mak
 include ../../build/common.mak
 
+RULES_MAK := $(PJDIR)/build/rules.mak
 
 ###############################################################################
 # Gather all flags.
@@ -16,7 +18,6 @@ BINDIR := ../bin/samples/$(TARGET_NAME)
 SAMPLES := auddemo \
 	   aviplay \
 	   aectest \
-	   aviplay \
 	   clidemo \
 	   confsample \
 	   encdec \
@@ -45,35 +46,22 @@ SAMPLES := auddemo \
 	   tonegen \
 	   vid_streamutil
 
-EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)$(HOST_EXE))
+EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
 
-all: $(BINDIR) $(OBJDIR) $(EXES)
+.PHONY: $(EXES)
 
-$(BINDIR)/%$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(PJ_LIB_FILES)
-	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
-	    $(subst /,$(HOST_PSEP),$<) \
-	    $(_LDFLAGS)
+all: $(EXES)
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
-	$(CC) $(_CFLAGS) \
-	  $(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
-	  $(subst /,$(HOST_PSEP),$<) 
-
-$(OBJDIR):
-	$(subst @@,$(subst /,$(HOST_PSEP),$@),$(HOST_MKDIR)) 
-
-$(BINDIR):
-	$(subst @@,$(subst /,$(HOST_PSEP),$@),$(HOST_MKDIR)) 
+$(EXES):
+	$(MAKE) --no-print-directory -f $(RULES_MAK) SAMPLE_SRCDIR=$(SRCDIR) SAMPLE_OBJS=$@.o SAMPLE_CFLAGS="$(_CFLAGS)" SAMPLE_LDFLAGS="$(_LDFLAGS)" SAMPLE_EXE=$@ APP=SAMPLE app=sample $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
 
 depend:
 
 clean:
-	$(subst @@,$(subst /,$(HOST_PSEP),$(OBJDIR)/*),$(HOST_RMR))
-	$(subst @@,$(subst /,$(HOST_PSEP),$(OBJDIR)),$(HOST_RMDIR))
+	$(MAKE) -f $(RULES_MAK) APP=SAMPLE app=sample $@
 	$(subst @@,$(EXES),$(HOST_RM))
-	rm -rf $(BINDIR)
+	$(subst @@,$(BINDIR),$(HOST_RMDIR))
 
 distclean realclean: clean
-#	$(subst @@,$(subst /,$(HOST_PSEP),$(EXES)) $(subst /,$(HOST_PSEP),$(EXES)),$(HOST_RM))
-#	$(subst @@,$(DEP_FILE),$(HOST_RM))
+	$(MAKE) -f $(RULES_MAK) APP=SAMPLE app=sample $@
 

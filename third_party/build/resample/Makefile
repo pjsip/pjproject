@@ -21,9 +21,13 @@ export RESAMPLE_SRCDIR = ../../resample/src
 export RESAMPLE_OBJS = resamplesubs.o
 export RESAMPLE_CFLAGS = $(_CFLAGS)
 
-SHLIB_NAME := libresample.$(SHLIB_SUFFIX)
-export RESAMPLE_SHLIB := ../../lib/$(SHLIB_NAME).$(PJ_VERSION_MAJOR)
-export RESAMPLE_LIB := ../../lib/libresample-$(TARGET_NAME)$(LIBEXT)
+export RESAMPLE_LIB := libresample-$(TARGET_NAME)$(LIBEXT)
+
+ifeq ($(PJ_SHARED_LIBRARIES),)
+else
+export RESAMPLE_SONAME := libresample.$(SHLIB_SUFFIX)
+export RESAMPLE_SHLIB := $(RESAMPLE_SONAME).$(PJ_VERSION_MAJOR)
+endif
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
@@ -31,17 +35,12 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-ifeq ($(PJ_RESAMPLE_DLL),1)
-TARGETS := ../../lib/$(SHLIB_NAME)
-ifeq ($(SHLIB_SUFFIX),so)
-SHLIB_OPT := -Wl,-soname,$(SHLIB_NAME).$(PJ_VERSION_MAJOR)
+TARGETS := $(RESAMPLE_LIB) $(RESAMPLE_SONAME)
+ifneq ($(PJ_SHARED_LIBRARIES),)
 else
-SHLIB_OPT := 
-endif
+ifneq ($(PJ_RESAMPLE_DLL),)
 export RESAMPLE_CFLAGS := -fPIC $(RESAMPLE_CFLAGS)
-export RESAMPLE_LDFLAGS := -shared $(SHLIB_OPT) $(RESAMPLE_LDFLAGS)
-else
-TARGETS := libresample
+endif
 endif
 
 all: $(TARGETS)
@@ -52,23 +51,21 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend libresample clean realclean distclean
+.PHONY: all dep depend clean realclean distclean
+.PHONY: $(TARGETS)
+.PHONY: $(RESAMPLE_LIB) $(RESAMPLE_SONAME)
 
-libresample:
-	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $(RESAMPLE_LIB)
+dep: depend
 
-../../lib/$(SHLIB_NAME): $(RESAMPLE_SHLIB)
-	ln -s $(SHLIB_NAME).$(PJ_VERSION_MAJOR) $@
+libresample: $(RESAMPLE_LIB)
+$(RESAMPLE_SONAME): $(RESAMPLE_LIB)
+$(RESAMPLE_LIB) $(RESAMPLE_SONAME):
+	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
-$(RESAMPLE_SHLIB):
-	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $(RESAMPLE_SHLIB)
-	
 clean print_lib:
 	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $@
 
 realclean:
-	$(subst @@,$(subst /,$(HOST_PSEP),../../lib/$(SHLIB_NAME)),$(HOST_RMR))
-	$(subst @@,$(subst /,$(HOST_PSEP),$(RESAMPLE_SHLIB)),$(HOST_RMR))
 	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $@
 
 depend:

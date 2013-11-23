@@ -29,5 +29,5 @@ export TEST_OBJS +=	main.o
 # TARGETS are make targets in the Makefile, to be executed for this given
 # operating system.
 #
-export TARGETS	    =	pjlib pjlib-test
+export TARGETS	    =	$(PJLIB_LIB) $(TEST_EXE)
 

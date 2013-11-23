@@ -6,7 +6,13 @@ export LIBDIR := ../../lib
 
 RULES_MAK := $(PJDIR)/build/rules.mak
 
-export PORTAUDIO_LIB:=../../lib/libportaudio-$(TARGET_NAME)$(LIBEXT)
+export PORTAUDIO_LIB:=libportaudio-$(TARGET_NAME)$(LIBEXT)
+
+ifeq ($(PJ_SHARED_LIBRARIES),)
+else
+export PORTAUDIO_SONAME := libportaudio.$(SHLIB_SUFFIX)
+export PORTAUDIO_SHLIB := $(PORTAUDIO_SONAME).$(PJ_VERSION_MAJOR)
+endif
 
 PORTAUDIO_OBJS += pa_allocation.o \
 		  pa_converters.o \
@@ -43,17 +49,21 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := libportaudio
+TARGETS := $(PORTAUDIO_LIB) $(PORTAUDIO_SONAME)
 
 all: $(TARGETS)
 
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend libportaudio clean realclean distclean
+.PHONY: all dep depend clean realclean distclean
+.PHONY: $(TARGETS)
+.PHONY: $(PORTAUDIO_LIB) $(PORTAUDIO_SONAME)
 
-libportaudio:
-	$(MAKE) -f $(RULES_MAK) APP=PORTAUDIO app=libportaudio $(PORTAUDIO_LIB)
+libportaudio: $(PORTAUDIO_LIB)
+$(PORTAUDIO_SONAME): $(PORTAUDIO_LIB)
+$(PORTAUDIO_LIB) $(PORTAUDIO_SONAME):
+	$(MAKE) -f $(RULES_MAK) APP=PORTAUDIO app=libportaudio $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PORTAUDIO app=libportaudio $@
