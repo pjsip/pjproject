@@ -331,6 +331,23 @@ void SipRxData::fromPj(pjsip_rx_data &rdata)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SipMediaType::fromPj(const pjsip_media_type &prm)
+{
+    type	= pj2Str(prm.type);
+    subType	= pj2Str(prm.subtype);
+}
+
+pjsip_media_type SipMediaType::toPj() const
+{
+    pjsip_media_type pj_mt;
+    pj_bzero(&pj_mt, sizeof(pj_mt));
+    pj_mt.type	    = str2Pj(type);
+    pj_mt.subtype   = str2Pj(subType);
+    return pj_mt;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
 {
     char buf[256];
@@ -363,4 +380,97 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
     pjsip_generic_string_hdr_init2(&pjHdr, &hname, &hvalue);
     return pjHdr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SipMultipartPart::fromPj(const pjsip_multipart_part &prm) throw(Error)
+{
+    headers.clear();
+    pjsip_hdr* pj_hdr = prm.hdr.next;
+    while (pj_hdr != &prm.hdr) {
+	SipHeader sh;
+	sh.fromPj(pj_hdr);
+	headers.push_back(sh);
+	pj_hdr = pj_hdr->next;
+    }
+
+    if (!prm.body)
+	PJSUA2_RAISE_ERROR(PJ_EINVAL);
+    
+    contentType.fromPj(prm.body->content_type);
+    body = string((char*)prm.body->data, prm.body->len);
+}
+
+pjsip_multipart_part& SipMultipartPart::toPj() const
+{
+    pj_list_init(&pjMpp.hdr);
+    for (unsigned i = 0; i < headers.size(); i++) {
+	pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+	pj_list_push_back(&pjMpp.hdr, &pj_hdr);
+    }
+
+    pj_bzero(&pjMsgBody, sizeof(pjMsgBody));
+    pjMsgBody.content_type  = contentType.toPj();
+    pjMsgBody.print_body    = &pjsip_print_text_body;
+    pjMsgBody.clone_data    = &pjsip_clone_text_data;
+    pjMsgBody.data	    = (void*)body.c_str();
+    pjMsgBody.len	    = body.size();
+    pjMpp.body = &pjMsgBody;
+
+    return pjMpp;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SipTxOption::fromPj(const pjsua_msg_data &prm) throw(Error)
+{
+    targetUri = pj2Str(prm.target_uri);
+
+    headers.clear();
+    pjsip_hdr* pj_hdr = prm.hdr_list.next;
+    while (pj_hdr != &prm.hdr_list) {
+	SipHeader sh;
+	sh.fromPj(pj_hdr);
+	headers.push_back(sh);
+	pj_hdr = pj_hdr->next;
+    }
+
+    contentType = pj2Str(prm.content_type);
+    msgBody = pj2Str(prm.msg_body);
+    multipartContentType.fromPj(prm.multipart_ctype);
+
+    multipartParts.clear();
+    pjsip_multipart_part* pj_mp = prm.multipart_parts.next;
+    while (pj_mp != &prm.multipart_parts) {
+	SipMultipartPart smp;
+	smp.fromPj(*pj_mp);
+	multipartParts.push_back(smp);
+	pj_mp = pj_mp->next;
+    }
+}
+
+void SipTxOption::toPj(pjsua_msg_data &msg_data) const
+{
+    unsigned i;
+
+    pjsua_msg_data_init(&msg_data);
+
+    msg_data.target_uri = str2Pj(targetUri);
+
+    pj_list_init(&msg_data.hdr_list);
+    for (i = 0; i < headers.size(); i++) {
+	pjsip_generic_string_hdr& pj_hdr = headers[i].toPj();
+	pj_list_push_back(&msg_data.hdr_list, &pj_hdr);
+    }
+
+    msg_data.content_type = str2Pj(contentType);
+    msg_data.msg_body = str2Pj(msgBody);
+    msg_data.multipart_ctype = multipartContentType.toPj();
+
+    pj_list_init(&msg_data.multipart_parts);
+    for (i = 0; i < multipartParts.size(); i++) {
+	pjsip_multipart_part& pj_part = multipartParts[i].toPj();
+	pj_list_push_back(&msg_data.multipart_parts, &pj_part);
+    }
 }

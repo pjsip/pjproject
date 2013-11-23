@@ -448,6 +448,16 @@ struct SipMediaType
 
     /** Media subtype. */
     string		subType;
+
+    /**
+     * Construct from PJSIP's pjsip_media_type
+     */
+    void fromPj(const pjsip_media_type &prm);
+
+    /**
+     * Convert to PJSIP's pjsip_media_type.
+     */
+    pjsip_media_type toPj() const;
 };
 
 /**
@@ -503,6 +513,21 @@ struct SipMultipartPart
      * The body part of tthis multipart part.
      */
     string		body;
+
+    /**
+     * Initiaize from PJSIP's pjsip_multipart_part.
+     */
+    void fromPj(const pjsip_multipart_part &prm) throw(Error);
+
+    /**
+     * Convert to PJSIP's pjsip_multipart_part.
+     */
+    pjsip_multipart_part& toPj() const;
+
+private:
+    /** Interal buffer for conversion to PJSIP pjsip_multipart_part */
+    mutable pjsip_multipart_part	pjMpp;
+    mutable pjsip_msg_body		pjMsgBody;
 };
 
 /** Array of multipart parts */
@@ -554,7 +579,17 @@ struct SipTxOption
      */
     SipMultipartPartVector	multipartParts;
 
+    /**
+     * Initiaize from PJSUA's pjsua_msg_data.
+     */
+    void fromPj(const pjsua_msg_data &prm) throw(Error);
+
+    /**
+     * Convert to PJSUA's pjsua_msg_data.
+     */
+    void toPj(pjsua_msg_data &msg_data) const;
 };
+
 
 /* Utilities */
 #ifndef SWIG
