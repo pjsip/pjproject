@@ -67,7 +67,6 @@ using namespace pj;
 %ignore container_node_internal_data;
 %include "pjsua2/persistent.hpp"
 
-%ignore pj::TransportInfo::TransportInfo(const pjsua_transport_info &info);
 %include "pjsua2/siptypes.hpp"
 
 %template(SipHeaderVector)		std::vector<pj::SipHeader>;

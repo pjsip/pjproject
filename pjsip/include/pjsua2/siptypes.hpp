@@ -393,9 +393,8 @@ struct TransportInfo
     /** Current number of objects currently referencing this transport. */
     unsigned		    usageCount;
 
-    /** Construct from pjsip */
-    TransportInfo(const pjsua_transport_info &info);
-
+    /** Construct from pjsua_transport_info */
+    void fromPj(const pjsua_transport_info &info);
 };
 
 //////////////////////////////////////////////////////////////////////////////

@@ -949,11 +949,13 @@ IntVector Endpoint::transportEnum() throw(Error)
 
 TransportInfo Endpoint::transportGetInfo(TransportId id) throw(Error)
 {
-    pjsua_transport_info tinfo;
+    pjsua_transport_info pj_tinfo;
+    TransportInfo tinfo;
 
-    PJSUA2_CHECK_EXPR( pjsua_transport_get_info(id, &tinfo) );
+    PJSUA2_CHECK_EXPR( pjsua_transport_get_info(id, &pj_tinfo) );
+    tinfo.fromPj(pj_tinfo);
 
-    return TransportInfo(tinfo);
+    return tinfo;
 }
 
 void Endpoint::transportSetEnable(TransportId id, bool enabled) throw(Error)

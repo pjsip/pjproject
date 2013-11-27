@@ -299,7 +299,7 @@ void TransportConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TransportInfo::TransportInfo(const pjsua_transport_info &info)
+void TransportInfo::fromPj(const pjsua_transport_info &info)
 {
     this->id = info.id;
     this->type = info.type;
