@@ -591,6 +591,52 @@ struct SipTxOption
 };
 
 
+/**
+ * This structure contains parameters for sending instance message methods,
+ * e.g: Buddy::sendInstantMessage(), Call:sendInstantMessage().
+ */
+struct SendInstantMessageParam
+{
+    /**
+     * MIME type. Default is "text/plain".
+     */
+    string contentType;
+    
+    /**
+     * The message content.
+     */
+    string content;
+    
+    /**
+     * List of headers etc to be included in outgoing request.
+     */
+    SipTxOption txOption;
+
+    /**
+     * User data, which will be given back when the IM callback is called.
+     */
+    Token userData;
+};
+
+
+/**
+ * This structure contains parameters for sending typing indication methods,
+ * e.g: Buddy::sendTypingIndication(), Call:sendTypingIndication().
+ */
+struct SendTypingIndicationParam
+{
+    /**
+     * True to indicate to remote that local person is currently typing an IM.
+     */
+    bool isTyping;
+    
+    /**
+     * List of headers etc to be included in outgoing request.
+     */
+    SipTxOption txOption;
+};
+
+
 /* Utilities */
 #ifndef SWIG
 void readIntVector( ContainerNode &node,

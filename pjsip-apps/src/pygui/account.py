@@ -45,6 +45,7 @@ class Account(pj.Account):
 		self.randId = random.randint(1, 9999)
 		self.cfg =  pj.AccountConfig()
 		self.cfgChanged = False
+		self.buddyList = []
 
 	def statusText(self):
 		status = '?'

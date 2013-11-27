@@ -84,7 +84,7 @@ void PersistentDocument::writeNumber(const string &name,
 void PersistentDocument::writeInt(const string &name,
 				  int num) throw(Error)
 {
-    getRootContainer().writeNumber(name, num);
+    getRootContainer().writeNumber(name, (float)num);
 }
 
 void PersistentDocument::writeBool(const string &name,
@@ -187,7 +187,7 @@ void ContainerNode::writeNumber(const string &name,
 void ContainerNode::writeInt(const string &name,
 			     int num) throw(Error)
 {
-    return op->writeNumber(this, name, num);
+    return op->writeNumber(this, name, (float)num);
 }
 
 void ContainerNode::writeBool(const string &name,

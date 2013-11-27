@@ -45,7 +45,7 @@ void writeIntVector(ContainerNode &node,
 {
     ContainerNode array_node = node.writeNewArray(array_name);
     for (unsigned i=0; i<v.size(); ++i) {
-	array_node.writeNumber("", v[i]);
+	array_node.writeNumber("", (float)v[i]);
     }
 }
 
@@ -189,13 +189,13 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(prm.ciphers[0]) == sizeof(int));
     this->ciphers 	= IntVector(prm.ciphers, prm.ciphers+prm.ciphers_num);
-    this->verifyServer 	= prm.verify_server;
-    this->verifyClient 	= prm.verify_client;
-    this->requireClientCert = prm.require_client_cert;
+    this->verifyServer 	= PJ2BOOL(prm.verify_server);
+    this->verifyClient 	= PJ2BOOL(prm.verify_client);
+    this->requireClientCert = PJ2BOOL(prm.require_client_cert);
     this->msecTimeout 	= PJ_TIME_VAL_MSEC(prm.timeout);
     this->qosType 	= prm.qos_type;
     this->qosParams 	= prm.qos_params;
-    this->qosIgnoreError = prm.qos_ignore_error;
+    this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
 }
 
 void TlsConfig::readObject(const ContainerNode &node) throw(Error)

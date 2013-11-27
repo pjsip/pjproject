@@ -40,6 +40,7 @@ class Dialog(tk.Toplevel):
 		tk.Toplevel.__init__(self, parent)
 		self.transient(parent)
 		self.parent = parent
+		self.geometry("+100+100")
 		self.title('Account settings')
 		
 		self.frm = ttk.Frame(self)

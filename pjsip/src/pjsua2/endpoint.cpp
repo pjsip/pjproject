@@ -18,6 +18,7 @@
  */
 #include <pjsua2/endpoint.hpp>
 #include <pjsua2/account.hpp>
+#include <pjsua2/presence.hpp>
 #include "util.hpp"
 
 using namespace pj;
@@ -62,9 +63,9 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
 	this->stunServer.push_back(pj2Str(ua_cfg.stun_srv[i]));
     }
 
-    this->stunIgnoreFailure = ua_cfg.stun_ignore_failure;
+    this->stunIgnoreFailure = PJ2BOOL(ua_cfg.stun_ignore_failure);
     this->natTypeInSdp = ua_cfg.nat_type_in_sdp;
-    this->mwiUnsolicitedEnabled = ua_cfg.enable_unsolicited_mwi;
+    this->mwiUnsolicitedEnabled = PJ2BOOL(ua_cfg.enable_unsolicited_mwi);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -204,11 +205,11 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
     this->channelCount = mc.channel_count;
     this->audioFramePtime = mc.audio_frame_ptime;
     this->maxMediaPorts = mc.max_media_ports;
-    this->hasIoqueue = mc.has_ioqueue;
+    this->hasIoqueue = PJ2BOOL(mc.has_ioqueue);
     this->threadCnt = mc.thread_cnt;
     this->quality = mc.quality;
     this->ptime = mc.ptime;
-    this->noVad = mc.no_vad;
+    this->noVad = PJ2BOOL(mc.no_vad);
     this->ilbcMode = mc.ilbc_mode;
     this->txDropPct = mc.tx_drop_pct;
     this->rxDropPct = mc.rx_drop_pct;
@@ -221,7 +222,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
     this->jbMaxPre = mc.jb_max_pre;
     this->jbMax = mc.jb_max;
     this->sndAutoCloseTime = mc.snd_auto_close_time;
-    this->vidPreviewEnableNative = mc.vid_preview_enable_native;
+    this->vidPreviewEnableNative = PJ2BOOL(mc.vid_preview_enable_native);
 }
 
 pjsua_media_config MediaConfig::toPj() const
@@ -361,6 +362,7 @@ Endpoint::~Endpoint()
 	libDestroy();
     } catch (Error &err) {
 	// Ignore
+	PJ_UNUSED_ARG(err);
     }
     delete writer;
     instance_ = NULL;
@@ -411,6 +413,8 @@ void Endpoint::stun_resolve_cb(const pj_stun_resolve_result *res)
 void Endpoint::on_timer(pj_timer_heap_t *timer_heap,
                         pj_timer_entry *entry)
 {
+    PJ_UNUSED_ARG(timer_heap);
+
     Endpoint &ep = Endpoint::instance();
     UserTimer *ut = (UserTimer*) entry->user_data;
 
@@ -504,7 +508,7 @@ void Endpoint::on_reg_started(pjsua_acc_id acc_id, pj_bool_t renew)
     }
 
     OnRegStartedParam prm;
-    prm.renew = renew;
+    prm.renew = PJ2BOOL(renew);
     acc->onRegStarted(prm);
 }
 
@@ -535,6 +539,9 @@ void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
                                      pj_str_t *reason,
                                      pjsua_msg_data *msg_data)
 {
+    PJ_UNUSED_ARG(buddy_id);
+    PJ_UNUSED_ARG(srv_pres);
+
     Account *acc = lookupAcc(acc_id, "on_incoming_subscribe()");
     if (!acc) {
 	/* default behavior should apply */
@@ -542,18 +549,19 @@ void Endpoint::on_incoming_subscribe(pjsua_acc_id acc_id,
     }
 
     OnIncomingSubscribeParam prm;
+    prm.srvPres		= srv_pres;
     prm.fromUri 	= pj2Str(*from);
     prm.rdata.fromPj(*rdata);
     prm.code		= *code;
     prm.reason		= pj2Str(*reason);
+    prm.txOption.fromPj(*msg_data);
 
     acc->onIncomingSubscribe(prm);
 
     *code = prm.code;
     acc->tmpReason = prm.reason;
     *reason = str2Pj(acc->tmpReason);
-    // TODO:
-    //	apply msg_data
+    prm.txOption.toPj(*msg_data);
 }
 
 void Endpoint::on_pager2(pjsua_call_id call_id,
@@ -598,6 +606,8 @@ void Endpoint::on_pager_status2( pjsua_call_id call_id,
 				 pjsip_rx_data *rdata,
 				 pjsua_acc_id acc_id)
 {
+    PJ_UNUSED_ARG(tdata);
+
     OnInstantMessageStatusParam prm;
     prm.userData	= user_data;
     prm.toUri		= pj2Str(*to);
@@ -666,6 +676,17 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
+{
+    Buddy *buddy = (Buddy*)pjsua_buddy_get_user_data(buddy_id);
+    if (!buddy || !buddy->isValid()) {
+	/* Ignored */
+	return;
+    }
+
+    buddy->onBuddyState();
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -722,6 +743,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_pager_status2	= &Endpoint::on_pager_status2;
     ua_cfg.cb.on_typing2	= &Endpoint::on_typing2;
     ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
+    ua_cfg.cb.on_buddy_state	= &Endpoint::on_buddy_state;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );

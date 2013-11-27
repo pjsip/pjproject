@@ -334,57 +334,12 @@ public:
 				      throw(Error);
 };
 
-/**
- * Pointer to actual ContainerNode implementation. See ContainerNode
- * implementation notes for more info.
- */
-struct container_node_op
-{
-    bool		(*hasUnread)(const ContainerNode*);
-    string		(*unreadName)(const ContainerNode*)
-				      throw(Error);
-    float		(*readNumber)(const ContainerNode*,
-				      const string&)
-				      throw(Error);
-    bool		(*readBool)(const ContainerNode*,
-				    const string&)
-				    throw(Error);
-    string		(*readString)(const ContainerNode*,
-				      const string&)
-				      throw(Error);
-    StringVector	(*readStringVector)(const ContainerNode*,
-					    const string&)
-					    throw(Error);
-    ContainerNode	(*readContainer)(const ContainerNode*,
-					 const string &)
-					 throw(Error);
-    ContainerNode	(*readArray)(const ContainerNode*,
-				     const string &)
-				     throw(Error);
-    void		(*writeNumber)(ContainerNode*,
-				       const string &name,
-        		               float num)
-        		               throw(Error);
-    void		(*writeBool)(ContainerNode*,
-				     const string &name,
-        			     bool value)
-        			     throw(Error);
-    void		(*writeString)(ContainerNode*,
-				       const string &name,
-        			       const string &value)
-        			       throw(Error);
-    void		(*writeStringVector)(ContainerNode*,
-					     const string &name,
-        				     const StringVector &value)
-					     throw(Error);
-    ContainerNode 	(*writeNewContainer)(ContainerNode*,
-					     const string &name)
-					     throw(Error);
-    ContainerNode 	(*writeNewArray)(ContainerNode*,
-				         const string &name)
-					 throw(Error);
 
-};
+/**
+ * Forward declaration of container_node_op.
+ */
+struct container_node_op;
+
 
 /**
  * Internal data for ContainerNode. See ContainerNode implementation notes
@@ -646,6 +601,60 @@ public:
     container_node_internal_data data;
 };
 
+
+/**
+ * Pointer to actual ContainerNode implementation. See ContainerNode
+ * implementation notes for more info.
+ */
+struct container_node_op
+{
+    bool		(*hasUnread)(const ContainerNode*);
+    string		(*unreadName)(const ContainerNode*)
+				      throw(Error);
+    float		(*readNumber)(const ContainerNode*,
+				      const string&)
+				      throw(Error);
+    bool		(*readBool)(const ContainerNode*,
+				    const string&)
+				    throw(Error);
+    string		(*readString)(const ContainerNode*,
+				      const string&)
+				      throw(Error);
+    StringVector	(*readStringVector)(const ContainerNode*,
+					    const string&)
+					    throw(Error);
+    ContainerNode	(*readContainer)(const ContainerNode*,
+					 const string &)
+					 throw(Error);
+    ContainerNode	(*readArray)(const ContainerNode*,
+				     const string &)
+				     throw(Error);
+    void		(*writeNumber)(ContainerNode*,
+				       const string &name,
+        		               float num)
+        		               throw(Error);
+    void		(*writeBool)(ContainerNode*,
+				     const string &name,
+        			     bool value)
+        			     throw(Error);
+    void		(*writeString)(ContainerNode*,
+				       const string &name,
+        			       const string &value)
+        			       throw(Error);
+    void		(*writeStringVector)(ContainerNode*,
+					     const string &name,
+        				     const StringVector &value)
+					     throw(Error);
+    ContainerNode 	(*writeNewContainer)(ContainerNode*,
+					     const string &name)
+					     throw(Error);
+    ContainerNode 	(*writeNewArray)(ContainerNode*,
+				         const string &name)
+					 throw(Error);
+
+};
+
+
 /*
  * Convenient macros.
  */
@@ -659,9 +668,9 @@ public:
 #define NODE_READ_OBJ(node,item)	node.readObject(item)
 
 #define NODE_WRITE_BOOL(node,item)	node.writeBool(#item, item)
-#define NODE_WRITE_UNSIGNED(node,item)	node.writeNumber(#item, item)
-#define NODE_WRITE_INT(node,item)	node.writeNumber(#item, item)
-#define NODE_WRITE_NUM_T(node,T,item)	node.writeNumber(#item, (int)item)
+#define NODE_WRITE_UNSIGNED(node,item)	node.writeNumber(#item, (float)item)
+#define NODE_WRITE_INT(node,item)	node.writeNumber(#item, (float)item)
+#define NODE_WRITE_NUM_T(node,T,item)	node.writeNumber(#item, (float)item)
 #define NODE_WRITE_FLOAT(node,item)	node.writeNumber(#item, item)
 #define NODE_WRITE_STRING(node,item)	node.writeString(#item, item)
 #define NODE_WRITE_STRINGV(node,item)	node.writeStringVector(#item, item)

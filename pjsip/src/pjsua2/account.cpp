@@ -18,6 +18,7 @@
  */
 #include <pjsua2/account.hpp>
 #include <pjsua2/endpoint.hpp>
+#include <pjsua2/presence.hpp>
 #include <pj/ctype.h>
 #include "util.hpp"
 
@@ -445,7 +446,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.retryIntervalSec	= prm.reg_retry_interval;
     regConfig.firstRetryIntervalSec = prm.reg_first_retry_interval;
     regConfig.delayBeforeRefreshSec = prm.reg_delay_before_refresh;
-    regConfig.dropCallsOnFail	= prm.drop_calls_on_reg_fail;
+    regConfig.dropCallsOnFail	= PJ2BOOL(prm.drop_calls_on_reg_fail);
     regConfig.unregWaitSec	= prm.unreg_timeout;
     regConfig.proxyUse		= prm.reg_use_proxy;
     regConfig.headers.clear();
@@ -483,7 +484,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     sipConfig.contactForced	= pj2Str(prm.force_contact);
     sipConfig.contactParams	= pj2Str(prm.contact_params);
     sipConfig.contactUriParams	= pj2Str(prm.contact_uri_params);
-    sipConfig.authInitialEmpty	= prm.auth_pref.initial_auth;
+    sipConfig.authInitialEmpty	= PJ2BOOL(prm.auth_pref.initial_auth);
     sipConfig.authInitialAlgorithm = pj2Str(prm.auth_pref.algorithm);
     sipConfig.transportId	= prm.transport_id;
 
@@ -503,43 +504,43 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 	presConfig.headers.push_back(new_hdr);
 	hdr = hdr->next;
     }
-    presConfig.publishEnabled	= prm.publish_enabled;
-    presConfig.publishQueue	= prm.publish_opt.queue_request;
+    presConfig.publishEnabled	= PJ2BOOL(prm.publish_enabled);
+    presConfig.publishQueue	= PJ2BOOL(prm.publish_opt.queue_request);
     presConfig.publishShutdownWaitMsec = prm.unpublish_max_wait_time_msec;
     presConfig.pidfTupleId	= pj2Str(prm.pidf_tuple_id);
 
     // AccountMwiConfig
-    mwiConfig.enabled		= prm.mwi_enabled;
+    mwiConfig.enabled		= PJ2BOOL(prm.mwi_enabled);
     mwiConfig.expirationSec	= prm.mwi_expires;
 
     // AccountNatConfig
     natConfig.sipStunUse	= prm.sip_stun_use;
     natConfig.mediaStunUse	= prm.media_stun_use;
     if (prm.ice_cfg_use == PJSUA_ICE_CONFIG_USE_CUSTOM) {
-	natConfig.iceEnabled = prm.ice_cfg.enable_ice;
+	natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
 	natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
-	natConfig.iceAggressiveNomination = prm.ice_cfg.ice_opt.aggressive;
+	natConfig.iceAggressiveNomination = PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
 	natConfig.iceNominatedCheckDelayMsec = prm.ice_cfg.ice_opt.nominated_check_delay;
 	natConfig.iceWaitNominationTimeoutMsec = prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
-	natConfig.iceNoRtcp	= prm.ice_cfg.ice_no_rtcp;
-	natConfig.iceAlwaysUpdate = prm.ice_cfg.ice_always_update;
+	natConfig.iceNoRtcp	= PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
+	natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
 	pjsua_media_config default_mcfg;
 	if (!mcfg) {
 	    pjsua_media_config_default(&default_mcfg);
 	    mcfg = &default_mcfg;
 	}
-	natConfig.iceEnabled	= mcfg->enable_ice;
+	natConfig.iceEnabled	= PJ2BOOL(mcfg->enable_ice);
 	natConfig.iceMaxHostCands= mcfg->ice_max_host_cands;
-	natConfig.iceAggressiveNomination = mcfg->ice_opt.aggressive;
+	natConfig.iceAggressiveNomination = PJ2BOOL(mcfg->ice_opt.aggressive);
 	natConfig.iceNominatedCheckDelayMsec = mcfg->ice_opt.nominated_check_delay;
 	natConfig.iceWaitNominationTimeoutMsec = mcfg->ice_opt.controlled_agent_want_nom_timeout;
-	natConfig.iceNoRtcp	= mcfg->ice_no_rtcp;
-	natConfig.iceAlwaysUpdate = mcfg->ice_always_update;
+	natConfig.iceNoRtcp	= PJ2BOOL(mcfg->ice_no_rtcp);
+	natConfig.iceAlwaysUpdate = PJ2BOOL(mcfg->ice_always_update);
     }
 
     if (prm.turn_cfg_use == PJSUA_TURN_CONFIG_USE_CUSTOM) {
-	natConfig.turnEnabled	= prm.turn_cfg.enable_turn;
+	natConfig.turnEnabled	= PJ2BOOL(prm.turn_cfg.enable_turn);
 	natConfig.turnServer	= pj2Str(prm.turn_cfg.turn_server);
 	natConfig.turnConnType	= prm.turn_cfg.turn_conn_type;
 	natConfig.turnUserName	= pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.username);
@@ -551,7 +552,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 	    pjsua_media_config_default(&default_mcfg);
 	    mcfg = &default_mcfg;
 	}
-	natConfig.turnEnabled	= mcfg->enable_turn;
+	natConfig.turnEnabled	= PJ2BOOL(mcfg->enable_turn);
 	natConfig.turnServer	= pj2Str(mcfg->turn_server);
 	natConfig.turnConnType	= mcfg->turn_conn_type;
 	natConfig.turnUserName	= pj2Str(mcfg->turn_auth_cred.data.static_cred.username);
@@ -570,9 +571,9 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 
     // AccountMediaConfig
     mediaConfig.transportConfig.fromPj(prm.rtp_cfg);
-    mediaConfig.lockCodecEnabled= prm.lock_codec;
+    mediaConfig.lockCodecEnabled= PJ2BOOL(prm.lock_codec);
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
-    mediaConfig.streamKaEnabled	= prm.use_stream_ka;
+    mediaConfig.streamKaEnabled	= PJ2BOOL(prm.use_stream_ka);
 #else
     mediaConfig.streamKaEnabled	= false;
 #endif
@@ -581,8 +582,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
 
     // AccountVideoConfig
-    videoConfig.autoShowIncoming 	= prm.vid_in_auto_show;
-    videoConfig.autoTransmitOutgoing	= prm.vid_out_auto_transmit;
+    videoConfig.autoShowIncoming 	= PJ2BOOL(prm.vid_in_auto_show);
+    videoConfig.autoTransmitOutgoing	= PJ2BOOL(prm.vid_out_auto_transmit);
     videoConfig.windowFlags		= prm.vid_wnd_flags;
     videoConfig.defaultCaptureDevice	= prm.vid_cap_dev;
     videoConfig.defaultRenderDevice	= prm.vid_rend_dev;
@@ -625,13 +626,6 @@ void AccountConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-AccountPresenceStatus::AccountPresenceStatus()
-: isOnline(false), activity(PJRPID_ACTIVITY_UNKNOWN)
-{
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 void AccountInfo::fromPj(const pjsua_acc_info &pai)
 {
     id 			= pai.id;
@@ -661,6 +655,12 @@ Account::~Account()
      * PJSUA library.
      */
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
+        // Cleanup buddies in the buddy list
+	while(buddyList.size() > 0) {
+	    Buddy *b = buddyList[0];
+	    delete b;
+	}
+
 	PJSUA2_CHECK_EXPR( pjsua_acc_set_user_data(id, NULL) );
 	PJSUA2_CHECK_EXPR( pjsua_acc_del(id) );
     }
@@ -723,7 +723,7 @@ void Account::setRegistration(bool renew) throw(Error)
 }
 
 void
-Account::setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error)
+Account::setOnlineStatus(const PresenceStatus &pres_st) throw(Error)
 {
     pjrpid_element pj_rpid;
 
@@ -733,8 +733,9 @@ Account::setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error)
     pj_rpid.id		= str2Pj(pres_st.rpidId);
     pj_rpid.note	= str2Pj(pres_st.note);
 
-    PJSUA2_CHECK_EXPR( pjsua_acc_set_online_status2(id, pres_st.isOnline,
-                                                    &pj_rpid) );
+    PJSUA2_CHECK_EXPR( pjsua_acc_set_online_status2(
+			    id, pres_st.status == PJSUA_BUDDY_STATUS_ONLINE,
+			    &pj_rpid) );
 }
 
 void Account::setTransport(TransportId tp_id) throw(Error)
@@ -742,3 +743,57 @@ void Account::setTransport(TransportId tp_id) throw(Error)
     PJSUA2_CHECK_EXPR( pjsua_acc_set_transport(id, tp_id) );
 }
 
+void Account::presNotify(const PresNotifyParam &prm) throw(Error)
+{
+    pj_str_t pj_state_str   = str2Pj(prm.stateStr);
+    pj_str_t pj_reason	    = str2Pj(prm.reason);
+    pjsua_msg_data msg_data;
+    prm.txOption.toPj(msg_data);
+
+    PJSUA2_CHECK_EXPR( pjsua_pres_notify(id, (pjsua_srv_pres*)prm.srvPres,
+					 prm.state, &pj_state_str,
+					 &pj_reason, prm.withBody,
+					 &msg_data) );
+}
+
+const BuddyVector& Account::enumBuddies() const throw(Error)
+{
+    return buddyList;
+}
+
+Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
+		throw(Error)
+{
+    if (!buddy_match) {
+	static FindBuddyMatch def_bm;
+	buddy_match = &def_bm;
+    }
+
+    for (unsigned i = 0; i < buddyList.size(); i++) {
+	if (buddy_match->match(uri, *buddyList[i]))
+	    return buddyList[i];
+    }
+    PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+}
+
+void Account::addBuddy(Buddy *buddy)
+{
+    pj_assert(buddy);
+
+    buddyList.push_back(buddy);
+}
+
+void Account::removeBuddy(Buddy *buddy)
+{
+    pj_assert(buddy);
+
+    BuddyVector::iterator it;
+    for (it = buddyList.begin(); it != buddyList.end(); it++) {
+	if (*it == buddy) {
+	    buddyList.erase(it);
+	    return;
+	}
+    }
+
+    pj_assert(!"Bug! Buddy to be removed is not in the buddy list!");
+}

@@ -25,6 +25,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua2/persistent.hpp>
+#include <pjsua2/presence.hpp>
 #include <pjsua2/siptypes.hpp>
 
 /**
@@ -912,27 +913,6 @@ public:
     virtual void writeObject(ContainerNode &node) const throw(Error);
 };
 
-/**
- * This describes account presence status.
- */
-struct AccountPresenceStatus
-{
-    /** Basic status. */
-    bool		isOnline;
-
-    /** Activity type. */
-    pjrpid_activity	activity;
-
-    /** Optional text describing the person/element. */
-    string		note;
-
-    /** Optional RPID ID string. */
-    string		rpidId;
-
-public:
-    AccountPresenceStatus();
-};
-
 
 /**
  * Account information. Application can query the account information
@@ -1069,6 +1049,13 @@ struct OnRegStateParam
  */
 struct OnIncomingSubscribeParam
 {
+    /**
+     * Server presence subscription instance. If application delays
+     * the acceptance of the request, it will need to specify this object
+     * when calling Account::presNotify().
+     */
+    void	       *srvPres;
+
     /**
      *  Sender URI.
      */
@@ -1219,6 +1206,72 @@ struct OnMwiInfoParam
     SipRxData		rdata;
 };
 
+/**
+ * Parameters for presNotify() account method.
+ */
+struct PresNotifyParam
+{
+    /**
+     * Server presence subscription instance.
+     */
+    void	       *srvPres;
+
+    /**
+     * Server presence subscription state to set.
+     */
+    pjsip_evsub_state	state;
+    
+    /**
+     * Optionally specify the state string name, if state is not "active",
+     * "pending", or "terminated".
+     */
+    string		stateStr;
+
+    /**
+     * If the new state is PJSIP_EVSUB_STATE_TERMINATED, optionally specify
+     * the termination reason.
+     */
+    string		reason;
+
+    /**
+     * If the new state is PJSIP_EVSUB_STATE_TERMINATED, this specifies
+     * whether the NOTIFY request should contain message body containing
+     * account's presence information.
+     */
+    bool		withBody;
+
+    /**
+     * Optional list of headers to be sent with the NOTIFY request.
+     */
+    SipTxOption		txOption;
+};
+
+
+/**
+ * Wrapper class for Buddy matching algo.
+ *
+ * Default algo is a simple substring lookup of search-token in the
+ * Buddy URIs, with case sensitive. Application can implement its own
+ * matching algo by overriding this class and specifying its instance
+ * in Account::findBuddy().
+ */
+class FindBuddyMatch
+{
+public:
+    /**
+     * Default algo implementation.
+     */
+    virtual bool match(const string &token, const Buddy &buddy)
+    {
+	BuddyInfo bi = buddy.getInfo();
+	return bi.uri.find(token) != string::npos;
+    }
+
+    /**
+     * Destructor.
+     */
+    virtual ~FindBuddyMatch() {}
+};
 
 /**
  * @}  // PJSUA2_Acc_Data_Structure
@@ -1331,7 +1384,7 @@ public:
      *
      * @param pres_st		Presence online status.
      */
-    void setOnlineStatus(const AccountPresenceStatus &pres_st) throw(Error);
+    void setOnlineStatus(const PresenceStatus &pres_st) throw(Error);
 
     /**
      * Lock/bind this account to a specific transport/listener. Normally
@@ -1349,6 +1402,48 @@ public:
      */
     void setTransport(TransportId tp_id) throw(Error);
 
+    /**
+     * Send NOTIFY to inform account presence status or to terminate server
+     * side presence subscription. If application wants to reject the incoming
+     * request, it should set the param \a PresNotifyParam.state to
+     * PJSIP_EVSUB_STATE_TERMINATED.
+     *
+     * @param prm		The sending NOTIFY parameter.
+     */
+    void presNotify(const PresNotifyParam &prm) throw(Error);
+    
+    /**
+     * Enumerate all buddies of the account.
+     *
+     * @return			The buddy list.
+     */
+    const BuddyVector& enumBuddies() const throw(Error);
+
+    /**
+     * Find a buddy in the buddy list with the specified URI. 
+     *
+     * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
+     *
+     * @param uri		The buddy URI.
+     * @param buddy_match	The buddy match algo.
+     *
+     * @return			The pointer to buddy.
+     */
+    Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
+		    throw(Error);
+
+    /**
+     * An internal function to add a Buddy to Account buddy list.
+     * This function must never be used by application.
+     */
+    void addBuddy(Buddy *buddy);
+
+    /**
+     * An internal function to remove a Buddy from Account buddy list.
+     * This function must never be used by application.
+     */
+    void removeBuddy(Buddy *buddy);
+
 public:
     /*
      * Callbacks
@@ -1359,7 +1454,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onIncomingCall(OnIncomingCallParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application when registration or unregistration has been
@@ -1370,7 +1465,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onRegStarted(OnRegStartedParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application when registration status has changed.
@@ -1380,7 +1475,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onRegState(OnRegStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notification when incoming SUBSCRIBE request is received. Application
@@ -1402,8 +1497,8 @@ public:
      *  - it may delay the processing of the request, for example to request
      *    user permission whether to accept or reject the request. In this
      *	  case, the application MUST set the IncomingSubscribeParam.code
-     *	  argument to 202, then IMMEDIATELY calls #pjsua_pres_notify() with
-     *	  state PJSIP_EVSUB_STATE_PENDING and later calls #pjsua_pres_notify()
+     *	  argument to 202, then IMMEDIATELY calls presNotify() with
+     *	  state PJSIP_EVSUB_STATE_PENDING and later calls presNotify()
      *    again to accept or reject the subscription request.
      *
      * Any IncomingSubscribeParam.code other than 200 and 202 will be treated
@@ -1415,7 +1510,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onIncomingSubscribe(OnIncomingSubscribeParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application on incoming instant message or pager (i.e. MESSAGE
@@ -1424,7 +1519,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onInstantMessage(OnInstantMessageParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application about the delivery status of outgoing pager/instant
@@ -1433,7 +1528,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notify application about typing indication.
@@ -1441,7 +1536,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onTypingIndication(OnTypingIndicationParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Notification about MWI (Message Waiting Indication) status change.
@@ -1452,7 +1547,7 @@ public:
      * @param prm	    Callback parameter.
      */
     virtual void onMwiInfo(OnMwiInfoParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
 protected:
     friend class Endpoint;
@@ -1460,6 +1555,7 @@ protected:
 private:
     pjsua_acc_id 	 id;
     string		 tmpReason;	// for saving response's reason
+    BuddyVector		 buddyList;
 };
 
 } // namespace pj

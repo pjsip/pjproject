@@ -58,7 +58,7 @@ typedef struct pjsip_evsub pjsip_evsub;
  * will be set to PJSIP_EVSUB_STATE_UNKNOWN, and the token will be kept
  * in state_str member of the susbcription structure.
  */
-enum pjsip_evsub_state
+typedef enum pjsip_evsub_state
 {
     PJSIP_EVSUB_STATE_NULL,	 /**< State is NULL.			    */
     PJSIP_EVSUB_STATE_SENT,	 /**< Client has sent SUBSCRIBE request.    */
@@ -70,12 +70,7 @@ enum pjsip_evsub_state
     PJSIP_EVSUB_STATE_UNKNOWN,	 /**< Subscription state can not be determined.
 				      Application can query the state by 
 				      calling #pjsip_evsub_get_state_name().*/
-};
-
-/**
- * @see pjsip_evsub_state
- */
-typedef enum pjsip_evsub_state pjsip_evsub_state;
+} pjsip_evsub_state;
 
 
 /**

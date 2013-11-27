@@ -29,6 +29,9 @@ def which(program):
 	def is_exe(fpath):
 		return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
 	
+	if sys.platform == 'win32' and not program.endswith(".exe"):
+		program += ".exe"
+
 	fpath, fname = os.path.split(program)
 	if fpath:
 		if is_exe(program):
@@ -65,7 +68,6 @@ if not os.path.exists(PYCPARSER_DIR + '/utils/fake_libc_include'):
 # Heading, to be placed before the source files
 C_HEADING_SECTION = """
 #define PJ_AUTOCONF		1
-#define CC_DUMMY
 #define jmp_buf			int
 #define __attribute__(x)
 """

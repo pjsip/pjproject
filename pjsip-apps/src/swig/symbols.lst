@@ -17,5 +17,6 @@ pjsip/sip_transport.h		pjsip_transport_type_e pjsip_transport_flags_e pjsip_tran
 pjsip/sip_transport_tls.h	pjsip_ssl_method
 
 pjsip-simple/rpid.h		pjrpid_activity
+pjsip-simple/evsub.h		pjsip_evsub_state
 
-pjsua-lib/pjsua.h		pjsua_invalid_id_const_ pjsua_state pjsua_stun_use pjsua_call_hold_type pjsua_acc_id pjsua_destroy_flag pjsua_100rel_use pjsua_sip_timer_use pjsua_ipv6_use
+pjsua-lib/pjsua.h		pjsua_invalid_id_const_ pjsua_state pjsua_stun_use pjsua_call_hold_type pjsua_acc_id pjsua_destroy_flag pjsua_100rel_use pjsua_sip_timer_use pjsua_ipv6_use pjsua_buddy_status

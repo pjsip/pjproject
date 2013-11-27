@@ -32,6 +32,7 @@ import pjsua2 as pj
 import log
 import accountsetting
 import account
+import buddy
 import endpoint
 
 import os
@@ -62,6 +63,7 @@ class Application(ttk.Frame):
 		ttk.Frame.__init__(self, name='application', width=300, height=500)
 		self.pack(expand='yes', fill='both')
 		self.master.title('pjsua2 Demo')
+		self.master.geometry('500x500+100+100')
 		
 		# Logger
 		self.logger = log.Logger()
@@ -71,7 +73,7 @@ class Application(ttk.Frame):
 		
 		# GUI variables
 		self.showLogWindow = tk.IntVar()
-		self.showLogWindow.set(1)
+		self.showLogWindow.set(0)
 		self.quitting = False 
 		
 		# Construct GUI
@@ -99,6 +101,10 @@ class Application(ttk.Frame):
 		t.type = pj.PJSIP_TRANSPORT_UDP
 		t.cfg.port = 0
 		self.transportCfgs.append(t)
+		t = SipTransportConfig()
+		t.type = pj.PJSIP_TRANSPORT_TCP
+		t.cfg.port = 0
+		self.transportCfgs.append(t)
 		
 	
 	def saveConfig(self, filename='pygui.js'):
@@ -115,7 +121,14 @@ class Application(ttk.Frame):
 		# Write account configs
 		node = json.writeNewArray("accounts")
 		for acc in self.accList:
-			node.writeObject(acc.cfg);
+			acc_node = node.writeNewContainer("Account")
+			acc_node.writeObject(acc.cfg);
+
+			# Write buddy configs
+			buddy_node = acc_node.writeNewArray("buddies")
+			for bud in acc.buddyList:
+				buddy_node.writeObject(bud.cfg)
+				
 		json.saveFile(filename)
 	
 	def start(self, cfg_file='pygui.js'):
@@ -140,10 +153,21 @@ class Application(ttk.Frame):
 			# Load account configs
 			node = json.readArray("accounts")
 			while node.hasUnread():
-				cfg = pj.AccountConfig()
-				cfg.readObject(node)
-				acc_cfgs.append(cfg)
+				acc_node = node.readContainer("Account")
+				acc_cfg = pj.AccountConfig()
+				acc_cfg.readObject(acc_node)
 		
+				# Load buddy configs
+				buddy_cfgs = []
+				buddy_node = acc_node.readArray("buddies")
+				while buddy_node.hasUnread():
+					buddy_cfg = pj.BuddyConfig()
+					buddy_cfg.readObject(buddy_node)
+					buddy_cfgs.append(buddy_cfg)
+
+				acc_cfgs.append((acc_cfg, buddy_cfgs))
+				
+				
 		# Initialize library
 		self.epCfg.uaConfig.userAgent = "pygui-" + self.ep.libVersion().full;
 		self.ep.libInit(self.epCfg)
@@ -154,9 +178,12 @@ class Application(ttk.Frame):
 			self.ep.transportCreate(t.type, t.cfg)
 			
 		# Add accounts
-		for cfg in acc_cfgs:
+		for cfg, buddy_cfgs in acc_cfgs:
 			self._createAcc(cfg)
-		
+			acc = self.accList[-1]
+			for buddy_cfg in buddy_cfgs:
+				self._createBuddy(acc, buddy_cfg)
+				
 		# Start library
 		self.ep.libStart()
 		
@@ -172,9 +199,18 @@ class Application(ttk.Frame):
 		if self.tv.exists(iid):
 			self.tv.item(iid, text=text, values=values)
 		else:
-			self.tv.insert('', 0,  iid, open=True, text=text, values=values)
-			self.tv.insert(iid, 0, '', open=True, text='Buddy 1', values=('Online',))
-			self.tv.insert(iid, 1, '', open=True, text='Buddy 2', values=('Online',))
+			self.tv.insert('', 'end',  iid, open=True, text=text, values=values)
+		
+	def updateBuddy(self, bud):
+		iid = 'buddy' + str(bud.randId)
+		text = bud.cfg.uri
+		status = bud.statusText()
+		
+		values = (status,)
+		if self.tv.exists(iid):
+			self.tv.item(iid, text=text, values=values)
+		else:
+			self.tv.insert(str(bud.account.randId), 'end',  iid, open=True, text=text, values=values)
 		
 	def _createAcc(self, acc_cfg):
 		acc = account.Account(self)
@@ -185,6 +221,14 @@ class Application(ttk.Frame):
 		acc.cfgChanged = False
 		self.updateAccount(acc)
 				
+	def _createBuddy(self, acc, buddy_cfg):
+		bud = buddy.Buddy(self)
+		bud.cfg = buddy_cfg
+		bud.account = acc
+		bud.create(acc, bud.cfg)
+		self.updateBuddy(bud)
+		acc.buddyList.append(bud)
+
 	def _createWidgets(self):
 		self._createAppMenu()
 		
@@ -221,15 +265,34 @@ class Application(ttk.Frame):
 		
 	def _createContextMenu(self):
 		top = self.winfo_toplevel()
+
+		# Create Account context menu
 		self.accMenu = tk.Menu(top, tearoff=False)
 		# Labels, must match with _onAccContextMenu()
-		labels = ['Unregister', 'Reregister', '-', 'Online', 'Invisible', 'Away', 'Busy', '-', 'Settings...', '-', 'Delete...']
+		labels = ['Unregister', 'Reregister', 'Add buddy...', '-',
+			  'Online', 'Invisible', 'Away', 'Busy', '-',
+			  'Settings...', '-',
+			  'Delete...']
 		for label in labels:
 			if label=='-':
 				self.accMenu.add_separator()
 			else:
 				cmd = lambda arg=label: self._onAccContextMenu(arg)
 				self.accMenu.add_command(label=label, command=cmd)
+		
+		# Create Buddy context menu
+		# Labels, must match with _onAccContextMenu()
+		self.buddyMenu = tk.Menu(top, tearoff=False)
+		labels = ['Video call', 'Audio call', 'Send instant message', '-',
+			  'Settings...', '-',
+			  'Delete...']
+		
+		for label in labels:
+			if label=='-':
+				self.buddyMenu.add_separator()
+			else:
+				cmd = lambda arg=label: self._onBuddyContextMenu(arg)
+				self.buddyMenu.add_command(label=label, command=cmd)
 		
 		if (top.tk.call('tk', 'windowingsystem')=='aqua'):
 			self.tv.bind('<2>', self._onTvRightClick)
@@ -250,16 +313,37 @@ class Application(ttk.Frame):
 			return None
 		return accs[0]
 	
+	def _getSelectedBuddy(self):
+		items = self.tv.selection()
+		if not items:
+			return None
+		try:
+			iid = int(items[0][5:])
+			iid_parent = int(self.tv.parent(items[0]))
+		except:
+			return None
+			
+		accs = [acc for acc in self.accList if acc.randId==iid_parent]
+		if not accs:
+			return None
+			
+		buds = [b for b in accs[0].buddyList if b.randId==iid]
+		if not buds:
+			return None
+			
+		return buds[0]
+	
 	def _onTvRightClick(self, event):
-		iid = self.tv.identify('item', event.x, event.y)
+		iid = self.tv.identify_row(event.y)
+		#iid = self.tv.identify('item', event.x, event.y)
 		if iid:
-			self.tv.selection_add( (iid,) )
+			self.tv.selection_set( (iid,) )
 			acc = self._getSelectedAccount()
 			if acc:
 				self.accMenu.post(event.x_root, event.y_root)
 			else:
 				# A buddy is selected
-				pass
+				self.buddyMenu.post(event.x_root, event.y_root)
 	
 	def _onAccContextMenu(self, label):
 		acc = self._getSelectedAccount()
@@ -271,21 +355,21 @@ class Application(ttk.Frame):
 		elif label=='Reregister':
 			acc.setRegistration(True)
 		elif label=='Online':
-			ps = pj.AccountPresenceStatus()
+			ps = pj.PresenceStatus()
 			ps.isOnline = True
 			acc.setOnlineStatus(ps)
 		elif label=='Invisible':
-			ps = pj.AccountPresenceStatus()
+			ps = pj.PresenceStatus()
 			ps.isOnline = False
 			acc.setOnlineStatus(ps)
 		elif label=='Away':
-			ps = pj.AccountPresenceStatus()
+			ps = pj.PresenceStatus()
 			ps.isOnline = True
 			ps.activity = pj.PJRPID_ACTIVITY_AWAY
 			ps.note = "Away"
 			acc.setOnlineStatus(ps)
 		elif label=='Busy':
-			ps = pj.AccountPresenceStatus()
+			ps = pj.PresenceStatus()
 			ps.isOnline = True
 			ps.activity = pj.PJRPID_ACTIVITY_BUSY
 			ps.note = "Busy"
@@ -304,9 +388,56 @@ class Application(ttk.Frame):
 			self.accList.remove(acc)
 			del acc
 			self.tv.delete( (iid,) )
+		elif label=='Add buddy...':
+			cfg = pj.BuddyConfig()
+			dlg = buddy.SettingDialog(self.master, cfg)
+			if dlg.doModal():
+				self._createBuddy(acc, cfg)
 		else:
 			assert not ("Unknown menu " + label)
 	
+	def _onBuddyContextMenu(self, label):
+		bud = self._getSelectedBuddy()
+		if not bud:
+			return
+		acc = bud.account
+			
+		if label=='Video call':
+			pass
+		elif label=='Audio call':
+			pass
+		elif label=='Send instant message':
+			pass
+		elif label=='Settings...':
+			subs = bud.cfg.subscribe
+			uri  = bud.cfg.uri
+			dlg = buddy.SettingDialog(self.master, bud.cfg)
+			if dlg.doModal():
+				self.updateBuddy(bud)
+				# URI updated?
+				if uri != bud.cfg.uri:
+					cfg = bud.cfg
+					# del old
+					iid = 'buddy' + str(bud.randId)
+					acc.buddyList.remove(bud)
+					del bud
+					self.tv.delete( (iid,) )
+					# add new
+					self._createBuddy(acc, cfg)
+				# presence subscribe setting updated
+				elif subs != bud.cfg.subscribe:
+					bud.subscribePresence(bud.cfg.subscribe)
+		elif label=='Delete...':
+			msg = "Do you really want to delete buddy '%s'?" % bud.cfg.uri
+			if msgbox.askquestion('Delete buddy?', msg, default=msgbox.NO) != u'yes':
+				return
+			iid = 'buddy' + str(bud.randId)
+			acc.buddyList.remove(bud)
+			del bud
+			self.tv.delete( (iid,) )
+		else:
+			assert not ("Unknown menu " + label)
+			
 	def _onTimer(self):
 		if not self.quitting:
 			self.ep.libHandleEvents(10)

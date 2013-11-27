@@ -36,6 +36,8 @@ using namespace pj;
 %feature("director") LogWriter;
 %feature("director") Endpoint; 
 %feature("director") Account;
+%feature("director") Buddy;
+%feature("director") FindBuddyMatch;
 
 
 //
@@ -59,18 +61,24 @@ using namespace pj;
 //
 %include "pjsua2/types.hpp"
 
+%ignore pj::ContainerNode::op;
+%ignore pj::ContainerNode::data;
 %ignore container_node_op;
+%ignore container_node_internal_data;
 %include "pjsua2/persistent.hpp"
 
+%ignore pj::TransportInfo::TransportInfo(const pjsua_transport_info &info);
 %include "pjsua2/siptypes.hpp"
 
 %template(SipHeaderVector)		std::vector<pj::SipHeader>;
 %template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
 %template(SipMultipartPartVector)	std::vector<pj::SipMultipartPart>;
+%template(BuddyVector)			std::vector<pj::Buddy*>;
 
 %include "pjsua2/endpoint.hpp"
+%include "pjsua2/presence.hpp"
 %include "pjsua2/account.hpp"
 
-%ignore JsonDocument::allocElement();
-%ignore JsonDocument::getPool();
+%ignore pj::JsonDocument::allocElement;
+%ignore pj::JsonDocument::getPool;
 %include "pjsua2/json.hpp"

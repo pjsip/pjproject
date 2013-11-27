@@ -123,7 +123,7 @@ void JsonDocument::loadFile(const string &filename) throw(Error)
     if (!pj_file_exists(filename.c_str()))
 	PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 
-    pj_ssize_t size = pj_file_size(filename.c_str());
+    pj_ssize_t size = (pj_ssize_t)pj_file_size(filename.c_str());
     pj_status_t status;
 
     char *buffer = (char*)pj_pool_alloc(pool, size+1);
@@ -358,7 +358,7 @@ static bool jsonNode_readBool(const ContainerNode *node,
     json_node_data *jdat = (json_node_data*)&node->data;
     json_verify(jdat, "readBool()", name, PJ_JSON_VAL_BOOL);
     jdat->childPtr = jdat->childPtr->next;
-    return jdat->childPtr->prev->value.is_true;
+    return PJ2BOOL(jdat->childPtr->prev->value.is_true);
 }
 
 static string jsonNode_readString(const ContainerNode *node,

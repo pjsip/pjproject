@@ -20,6 +20,8 @@
 #include <pjsua2/types.hpp>
 #include <string>
 
+#define PJ2BOOL(var) ((var) != PJ_FALSE)
+
 namespace pj
 {
 using std::string;

@@ -959,7 +959,7 @@ public:
      */
     virtual void onNatDetectionComplete(
 			const OnNatDetectionCompleteParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Callback when the Endpoint has finished performing STUN server
@@ -969,7 +969,7 @@ public:
      */
     virtual void onNatCheckStunServersComplete(
 			const OnNatCheckStunServersCompleteParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * This callback is called when transport state has changed.
@@ -978,7 +978,7 @@ public:
      */
     virtual void onTransportState(
 			const OnTransportStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * Callback when a timer has fired. The timer was scheduled by
@@ -987,7 +987,7 @@ public:
      * @param prm	Callback parameters.
      */
     virtual void onTimer(const OnTimerParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
     /**
      * This callback can be used by application to override the account
@@ -1005,7 +1005,7 @@ public:
      * @param prm	Callback parameters.
      */
     virtual void onSelectAccount(OnSelectAccountParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
 
 private:
@@ -1070,6 +1070,8 @@ private:
                            pjsua_acc_id acc_id);
     static void on_mwi_info(pjsua_acc_id acc_id,
                             pjsua_mwi_info *mwi_info);
+    static void on_buddy_state(pjsua_buddy_id buddy_id);
+
 };
 
 

@@ -19,6 +19,10 @@
 #ifndef __PJSUA2_TYPES_HPP__
 #define __PJSUA2_TYPES_HPP__
 
+#ifdef _MSC_VER
+#   pragma warning( disable : 4290 ) // exception spec ignored
+#endif
+
 /**
  * @file pjsua2/types.hpp
  * @brief PJSUA2 Base Types
