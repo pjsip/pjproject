@@ -612,7 +612,7 @@ void Endpoint::on_pager_status2( pjsua_call_id call_id,
     prm.userData	= user_data;
     prm.toUri		= pj2Str(*to);
     prm.msgBody		= pj2Str(*body);
-    prm.status		= status;
+    prm.code		= status;
     prm.reason		= pj2Str(*reason);
     if (rdata)
 	prm.rdata.fromPj(*rdata);

@@ -1144,7 +1144,7 @@ struct OnInstantMessageStatusParam
     /**
      * The SIP status code of the transaction.
      */
-    pjsip_status_code	status;
+    pjsip_status_code	code;
 
     /**
      * The reason phrase of the transaction.

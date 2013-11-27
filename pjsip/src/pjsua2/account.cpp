@@ -661,8 +661,8 @@ Account::~Account()
 	    delete b;
 	}
 
-	PJSUA2_CHECK_EXPR( pjsua_acc_set_user_data(id, NULL) );
-	PJSUA2_CHECK_EXPR( pjsua_acc_del(id) );
+	pjsua_acc_set_user_data(id, NULL);
+	pjsua_acc_del(id);
     }
 }
 
