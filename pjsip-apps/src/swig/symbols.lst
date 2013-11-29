@@ -1,22 +1,25 @@
-pj/types.h			pj_status_t pj_constants_ pj_uint8_t pj_int32_t		
+pj/types.h			pj_status_t pj_constants_ pj_uint8_t pj_int32_t         
 pj/file_io.h			pj_file_access
 pj/log.h			pj_log_decoration
 pj/sock_qos.h			pj_qos_type pj_qos_flag pj_qos_wmm_prio pj_qos_params
 pj/ssl_sock.h			pj_ssl_cipher
 
-pjnath/nat_detect.h		pj_stun_nat_type
-pjnath/turn_session.h		pj_turn_tp_type
+pjnath/nat_detect.h          	pj_stun_nat_type
+pjnath/turn_session.h          	pj_turn_tp_type
 
-pjmedia/transport_srtp.h	pjmedia_srtp_use
-pjmedia/vid_stream.h		pjmedia_vid_stream_rc_method
-pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index
+pjmedia/transport_srtp.h     	pjmedia_srtp_use
+pjmedia/vid_stream.h          	pjmedia_vid_stream_rc_method
+pjmedia-videodev/videodev.h     pjmedia_vid_dev_index pjmedia_vid_dev_std_index
+pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
+pjmedia/types.h                 pjmedia_type
+pjmedia/format.h		pjmedia_format_id
 
-pjsip/sip_auth.h		pjsip_cred_data_type
-pjsip/sip_msg.h			pjsip_status_code
-pjsip/sip_transport.h		pjsip_transport_type_e pjsip_transport_flags_e pjsip_transport_state
-pjsip/sip_transport_tls.h	pjsip_ssl_method
+pjsip/sip_auth.h          	pjsip_cred_data_type
+pjsip/sip_msg.h               	pjsip_status_code
+pjsip/sip_transport.h          	pjsip_transport_type_e pjsip_transport_flags_e pjsip_transport_state
+pjsip/sip_transport_tls.h     	pjsip_ssl_method
 
-pjsip-simple/rpid.h		pjrpid_activity
+pjsip-simple/rpid.h          	pjrpid_activity
 pjsip-simple/evsub.h		pjsip_evsub_state
 
 pjsua-lib/pjsua.h		pjsua_invalid_id_const_ pjsua_state pjsua_stun_use pjsua_call_hold_type pjsua_acc_id pjsua_destroy_flag pjsua_100rel_use pjsua_sip_timer_use pjsua_ipv6_use pjsua_buddy_status

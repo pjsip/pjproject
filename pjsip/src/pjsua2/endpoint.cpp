@@ -19,6 +19,7 @@
 #include <pjsua2/endpoint.hpp>
 #include <pjsua2/account.hpp>
 #include <pjsua2/presence.hpp>
+#include <algorithm>
 #include "util.hpp"
 
 using namespace pj;
@@ -365,6 +366,12 @@ Endpoint::~Endpoint()
 	PJ_UNUSED_ARG(err);
     }
     delete writer;
+    
+    while(mediaList.size() > 0) {
+	AudioMedia *cur_media = mediaList[0];
+	delete cur_media;
+    }
+
     instance_ = NULL;
 }
 
@@ -970,3 +977,48 @@ void Endpoint::transportClose(TransportId id) throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/*
+ * Media API
+ */
+unsigned Endpoint::mediaMaxPorts() const
+{
+    return pjsua_conf_get_max_ports();
+}
+
+unsigned Endpoint::mediaActivePorts() const
+{
+    return pjsua_conf_get_active_ports();
+}
+
+const AudioMediaVector &Endpoint::mediaEnumPorts() const throw(Error)
+{
+    return mediaList;
+}
+
+void Endpoint::addMedia(AudioMedia &media)
+{
+    if (mediaExists(media))
+	return;
+
+    mediaList.push_back(&media);
+}
+
+void Endpoint::removeMedia(AudioMedia &media)
+{
+    AudioMediaVector::iterator it = std::find(mediaList.begin(),
+					      mediaList.end(),
+					      &media);
+
+    if (it != mediaList.end())
+	mediaList.erase(it);
+
+}
+
+bool Endpoint::mediaExists(const AudioMedia &media) const
+{
+    AudioMediaVector::const_iterator it = std::find(mediaList.begin(),
+						    mediaList.end(),
+						    &media);
+
+    return (it != mediaList.end());
+}

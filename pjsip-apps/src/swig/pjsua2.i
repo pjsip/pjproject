@@ -39,13 +39,11 @@ using namespace pj;
 %feature("director") Buddy;
 %feature("director") FindBuddyMatch;
 
-
 //
 // STL stuff.
 //
 %include "std_string.i"
 %include "std_vector.i"
-
 
 %template(StringVector)			std::vector<std::string>;
 %template(IntVector) 			std::vector<int>;
@@ -73,7 +71,10 @@ using namespace pj;
 %template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
 %template(SipMultipartPartVector)	std::vector<pj::SipMultipartPart>;
 %template(BuddyVector)			std::vector<pj::Buddy*>;
+%template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
+%template(MediaFormatVector)		std::vector<pj::MediaFormat*>;
 
+%include "pjsua2/media.hpp"
 %include "pjsua2/endpoint.hpp"
 %include "pjsua2/presence.hpp"
 %include "pjsua2/account.hpp"

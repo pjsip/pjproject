@@ -24,6 +24,7 @@
  * @brief PJSUA2 Base Agent Operation
  */
 #include <pjsua2/persistent.hpp>
+#include <pjsua2/media.hpp>
 #include <pjsua2/siptypes.hpp>
 
 /** PJSUA2 API is inside pj namespace */
@@ -945,6 +946,54 @@ public:
      */
     void transportClose(TransportId id) throw(Error);
 
+    /*************************************************************************
+     * Media operations
+     */
+
+    /**
+     * Add media to the media list.
+     *
+     * @param media	media to be added.
+     */
+    void addMedia(AudioMedia &media);
+
+    /**
+     * Remove media from the media list.
+     *
+     * @param media	media to be removed.
+     */
+    void removeMedia(AudioMedia &media);
+
+    /**
+     * Check if media has been added to the media list.
+     *
+     * @param media	media to be check.
+     *
+     * @return 		True if media has been added, false otherwise.
+     */
+    bool mediaExists(const AudioMedia &media) const;
+
+    /**
+     * Get maximum number of media port.
+     *
+     * @return		Maximum number of media port in the conference bridge.
+     */
+    unsigned mediaMaxPorts() const;
+
+    /**
+     * Get current number of active media port in the bridge.
+     *
+     * @return		The number of active media port.
+     */
+    unsigned mediaActivePorts() const;
+
+    /**
+     * Enumerate all media port.
+     *
+     * @return		The list of media port.
+     */
+    const AudioMediaVector &mediaEnumPorts() const throw(Error);
+
 public:
     /*
      * Overrideables callbacks
@@ -1009,8 +1058,9 @@ public:
 
 
 private:
-    static Endpoint	*instance_;	// static instance
-    LogWriter		*writer;	// Custom writer, if any
+    static Endpoint		*instance_;	// static instance
+    LogWriter			*writer;	// Custom writer, if any
+    AudioMediaVector 	 	 mediaList;
 
     /* Endpoint static callbacks */
     static void logFunc(int level, const char *data, int len);
@@ -1070,8 +1120,8 @@ private:
                            pjsua_acc_id acc_id);
     static void on_mwi_info(pjsua_acc_id acc_id,
                             pjsua_mwi_info *mwi_info);
-    static void on_buddy_state(pjsua_buddy_id buddy_id);
 
+    static void on_buddy_state(pjsua_buddy_id buddy_id);
 };
 
 
