@@ -183,7 +183,7 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     if (tls->close_reason == PJ_SUCCESS)
 	tls->close_reason = status;
 
-    if (tls->base.is_shutdown)
+    if (tls->base.is_shutdown || tls->base.is_destroying)
 	return;
 
     /* Prevent immediate transport destroy by application, as transport
@@ -213,6 +213,10 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
 
 	(*state_cb)(&tls->base, PJSIP_TP_STATE_DISCONNECTED, &state_info);
     }
+
+    /* check again */
+    if (tls->base.is_shutdown || tls->base.is_destroying)
+	return;
 
     /* We can not destroy the transport since high level objects may
      * still keep reference to this transport. So we can only 
