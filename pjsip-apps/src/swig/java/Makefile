@@ -44,7 +44,7 @@ endif
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		 = swig
 MY_JDK		 = $(JAVA_HOME)
-ifneq ($(findstring $(JAVA_BIN), bin),)
+ifneq ($(findstring bin,$(JAVA_BIN)),)
   MY_JAVA	 = $(MY_JDK)/bin/java
   MY_JAVAC	 = $(MY_JDK)/bin/javac
 else

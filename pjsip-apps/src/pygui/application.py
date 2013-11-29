@@ -72,8 +72,7 @@ class Application(ttk.Frame):
 		self.accList = []
 		
 		# GUI variables
-		self.showLogWindow = tk.IntVar()
-		self.showLogWindow.set(0)
+		self.showLogWindow = tk.IntVar(value=1)
 		self.quitting = False 
 		
 		# Construct GUI
@@ -368,21 +367,21 @@ class Application(ttk.Frame):
 			acc.setRegistration(True)
 		elif label=='Online':
 			ps = pj.PresenceStatus()
-			ps.isOnline = True
+			ps.status = pj.PJSUA_BUDDY_STATUS_ONLINE
 			acc.setOnlineStatus(ps)
 		elif label=='Invisible':
 			ps = pj.PresenceStatus()
-			ps.isOnline = False
+			ps.status = pj.PJSUA_BUDDY_STATUS_OFFLINE
 			acc.setOnlineStatus(ps)
 		elif label=='Away':
 			ps = pj.PresenceStatus()
-			ps.isOnline = True
+			ps.status = pj.PJSUA_BUDDY_STATUS_ONLINE
 			ps.activity = pj.PJRPID_ACTIVITY_AWAY
 			ps.note = "Away"
 			acc.setOnlineStatus(ps)
 		elif label=='Busy':
 			ps = pj.PresenceStatus()
-			ps.isOnline = True
+			ps.status = pj.PJSUA_BUDDY_STATUS_ONLINE
 			ps.activity = pj.PJRPID_ACTIVITY_BUSY
 			ps.note = "Busy"
 			acc.setOnlineStatus(ps)
