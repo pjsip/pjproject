@@ -34,26 +34,11 @@ import accountsetting
 import account
 import buddy
 import endpoint
+import settings
 
 import os
 import traceback
 
-class SipTransportConfig:
-	def __init__(self):
-		#pj.PersistentObject.__init__(self)
-		self.type = pj.PJSIP_TRANSPORT_UNSPECIFIED;
-		self.cfg = pj.TransportConfig()
-		
-	def readObject(self, node):
-		child_node = node.readContainer("SipTransportConfig")
-		self.type = child_node.readInt("type")
-		self.cfg.readObject(child_node)
-	
-	def writeObject(self, node):
-		child_node = node.writeNewContainer("SipTransportConfig")
-		child_node.writeInt("type", self.type)
-		self.cfg.writeObject(child_node)
-	 
 	
 class Application(ttk.Frame):
 	"""
@@ -87,101 +72,63 @@ class Application(ttk.Frame):
 		self.ep.libCreate()
 		
 		# Default config
-		self.epCfg = pj.EpConfig()
-		self.epCfg.uaConfig.threadCnt = 0;
-		self.epCfg.logConfig.writer = self.logger
-		self.epCfg.logConfig.filename = "pygui.log"
-		self.epCfg.logConfig.fileFlags = pj.PJ_O_APPEND
-		self.epCfg.logConfig.level = 5
-		self.epCfg.logConfig.consoleLevel = 5
+		self.appConfig = settings.AppConfig()
+		self.appConfig.epConfig.uaConfig.threadCnt = 0;
+		self.appConfig.epConfig.logConfig.writer = self.logger
+		self.appConfig.epConfig.logConfig.filename = "pygui.log"
+		self.appConfig.epConfig.logConfig.fileFlags = pj.PJ_O_APPEND
+		self.appConfig.epConfig.logConfig.level = 5
+		self.appConfig.epConfig.logConfig.consoleLevel = 5
 		
-		self.transportCfgs = []
-		t = SipTransportConfig()
-		t.type = pj.PJSIP_TRANSPORT_UDP
-		t.cfg.port = 0
-		self.transportCfgs.append(t)
-		t = SipTransportConfig()
-		t.type = pj.PJSIP_TRANSPORT_TCP
-		t.cfg.port = 0
-		self.transportCfgs.append(t)
-		
-	
 	def saveConfig(self, filename='pygui.js'):
-		json = pj.JsonDocument()
+		# Save disabled accounts since they are not listed in self.accList
+		disabled_accs = [ac for ac in self.appConfig.accounts if not ac.enabled]
+		self.appConfig.accounts = []
 		
-		# Write endpoint config
-		json.writeObject(self.epCfg)
-		
-		# Write transport config
-		node = json.writeNewArray("transports")
-		for t in self.transportCfgs:
-			t.writeObject(node);
-		
-		# Write account configs
-		node = json.writeNewArray("accounts")
+		# Get account configs from active accounts
 		for acc in self.accList:
-			acc_node = node.writeNewContainer("Account")
-			acc_node.writeObject(acc.cfg);
-
-			# Write buddy configs
-			buddy_node = acc_node.writeNewArray("buddies")
+			acfg = settings.AccConfig()
+			acfg.enabled = True
+			acfg.config = acc.cfg
 			for bud in acc.buddyList:
-				buddy_node.writeObject(bud.cfg)
-				
-		json.saveFile(filename)
+				acfg.buddyConfigs.append(bud.cfg)
+			self.appConfig.accounts.append(acfg)
+		
+		# Put back disabled accounts
+		self.appConfig.accounts.extend(disabled_accs)
+		# Save
+		self.appConfig.saveFile(filename)
 	
 	def start(self, cfg_file='pygui.js'):
 		# Load config
-		acc_cfgs = []
 		if cfg_file and os.path.exists(cfg_file):
-			json = pj.JsonDocument()
-			json.loadFile(cfg_file)
-			
-			# Load endpoint config
-			json.readObject(self.epCfg)
-			
-			# Load transport configs
-			node = json.readArray("transports")
-			if node.hasUnread():
-				self.transportCfgs = []
-				while node.hasUnread():
-					t = SipTransportConfig()
-					t.readObject(node)
-					self.transportCfgs.append(t)
-			
-			# Load account configs
-			node = json.readArray("accounts")
-			while node.hasUnread():
-				acc_node = node.readContainer("Account")
-				acc_cfg = pj.AccountConfig()
-				acc_cfg.readObject(acc_node)
-		
-				# Load buddy configs
-				buddy_cfgs = []
-				buddy_node = acc_node.readArray("buddies")
-				while buddy_node.hasUnread():
-					buddy_cfg = pj.BuddyConfig()
-					buddy_cfg.readObject(buddy_node)
-					buddy_cfgs.append(buddy_cfg)
+			self.appConfig.loadFile(cfg_file)
 
-				acc_cfgs.append((acc_cfg, buddy_cfgs))
-				
+		self.appConfig.epConfig.uaConfig.threadCnt = 0;
+		self.appConfig.epConfig.logConfig.writer = self.logger
+		self.appConfig.epConfig.logConfig.level = 5
+		self.appConfig.epConfig.logConfig.consoleLevel = 5
 				
 		# Initialize library
-		self.epCfg.uaConfig.userAgent = "pygui-" + self.ep.libVersion().full;
-		self.ep.libInit(self.epCfg)
+		self.appConfig.epConfig.uaConfig.userAgent = "pygui-" + self.ep.libVersion().full;
+		self.ep.libInit(self.appConfig.epConfig)
 		self.master.title('pjsua2 Demo version ' + self.ep.libVersion().full)
 		
 		# Create transports
-		for t in self.transportCfgs:
-			self.ep.transportCreate(t.type, t.cfg)
+		if self.appConfig.udp.enabled:
+			self.ep.transportCreate(self.appConfig.udp.type, self.appConfig.udp.config)
+		if self.appConfig.tcp.enabled:
+			self.ep.transportCreate(self.appConfig.tcp.type, self.appConfig.tcp.config)
+		if self.appConfig.tls.enabled:
+			self.ep.transportCreate(self.appConfig.tls.type, self.appConfig.tls.config)
 			
 		# Add accounts
-		for cfg, buddy_cfgs in acc_cfgs:
-			self._createAcc(cfg)
-			acc = self.accList[-1]
-			for buddy_cfg in buddy_cfgs:
-				self._createBuddy(acc, buddy_cfg)
+		for cfg in self.appConfig.accounts:
+			if cfg.enabled:
+				self._createAcc(cfg.config)
+				acc = self.accList[-1]
+				for buddy_cfg in cfg.buddyConfigs:
+					self._createBuddy(acc, buddy_cfg)
 				
 		# Start library
 		self.ep.libStart()
@@ -293,6 +240,7 @@ class Application(ttk.Frame):
 		# Labels, must match with _onAccContextMenu()
 		self.buddyMenu = tk.Menu(top, tearoff=False)
 		labels = ['Video call', 'Audio call', 'Send instant message', '-',
+			  'Subscribe', 'Unsubscribe', '-',
 			  'Settings...', '-',
 			  'Delete...']
 		
@@ -419,6 +367,10 @@ class Application(ttk.Frame):
 			pass
 		elif label=='Send instant message':
 			pass
+		elif label=='Subscribe':
+			bud.subscribePresence(True)
+		elif label=='Unsubscribe':
+			bud.subscribePresence(False)
 		elif label=='Settings...':
 			subs = bud.cfg.subscribe
 			uri  = bud.cfg.uri
@@ -476,7 +428,9 @@ class Application(ttk.Frame):
 			self.logWindow.withdraw()
 	
 	def _onMenuSettings(self):
-		msgbox.showinfo(self.master.title(), 'Settings')
+		dlg = settings.Dialog(self, self.appConfig)
+		if dlg.doModal():
+			msgbox.showinfo(self.master.title(), 'You need to restart for new settings to take effect')
 	
 	def _onMenuSaveSettings(self):
 		self.saveConfig()
