@@ -190,6 +190,16 @@ class Application(ttk.Frame):
 		# Start polling
 		self._onTimer()
 
+        def updateCall(self, acc):
+                iid = str(acc.randId)
+                for call in acc.callList:
+                        calliid = str(call.randId)
+                        uri, status = call.statusText()
+                        if self.tv.exists(calliid):
+                                self.tv.item(call.iid, text=uri, values=(status,))
+                        else:
+                                call.iid = self.tv.insert(iid, 0, calliid, open=True, text=uri, values=(status,))
+
 	def updateAccount(self, acc):
 		iid = str(acc.randId)
 		text = acc.cfg.idUri
@@ -269,7 +279,7 @@ class Application(ttk.Frame):
 		# Create Account context menu
 		self.accMenu = tk.Menu(top, tearoff=False)
 		# Labels, must match with _onAccContextMenu()
-		labels = ['Unregister', 'Reregister', 'Add buddy...', '-',
+		labels = ['Call', '-', 'Unregister', 'Reregister', 'Add buddy...', '-',
 			  'Online', 'Invisible', 'Away', 'Busy', '-',
 			  'Settings...', '-',
 			  'Delete...']
@@ -350,7 +360,9 @@ class Application(ttk.Frame):
 		if not acc:
 			return
 		
-		if label=='Unregister':
+                if label=='Call':
+                        acc.makeCall()
+		elif label=='Unregister':
 			acc.setRegistration(False)
 		elif label=='Reregister':
 			acc.setRegistration(True)

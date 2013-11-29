@@ -323,10 +323,13 @@ void TransportInfo::fromPj(const pjsua_transport_info &info)
 
 void SipRxData::fromPj(pjsip_rx_data &rdata)
 {
+    char straddr[PJ_INET6_ADDRSTRLEN+10];
+
     info	= pjsip_rx_data_get_info(&rdata);
     wholeMsg	= string(rdata.msg_info.msg_buf, rdata.msg_info.len);
-    srcIp	= rdata.pkt_info.src_name;
-    srcPort	= rdata.pkt_info.src_port;
+    pj_sockaddr_print(&rdata.pkt_info.src_addr, straddr, sizeof(straddr), 3);
+    srcAddress  = straddr;
+    pjRxData    = (void *)&rdata;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -423,6 +426,68 @@ pjsip_multipart_part& SipMultipartPart::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SipEvent::fromPj(const pjsip_event &ev)
+{
+    type = ev.type;
+    if (type == PJSIP_EVENT_TIMER) {
+        body.timer.entry = ev.body.timer.entry;
+    } else if (type == PJSIP_EVENT_TSX_STATE) {
+        body.tsxState.prevState = (pjsip_tsx_state_e)
+        ev.body.tsx_state.prev_state;
+        body.tsxState.tsx.fromPj(*ev.body.tsx_state.tsx);
+        if (body.tsxState.type == PJSIP_EVENT_TX_MSG) {
+            body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
+        } else if (body.tsxState.type == PJSIP_EVENT_RX_MSG) {
+            body.tsxState.src.rdata.fromPj(*ev.body.tsx_state.src.rdata);
+        } else if (body.tsxState.type == PJSIP_EVENT_TRANSPORT_ERROR) {
+            body.tsxState.src.status = ev.body.tsx_state.src.status;
+        } else if (body.tsxState.type == PJSIP_EVENT_TIMER) {
+            body.tsxState.src.timer = ev.body.tsx_state.src.timer;
+        } else if (body.tsxState.type == PJSIP_EVENT_USER) {
+            body.tsxState.src.data = ev.body.tsx_state.src.data;
+        }
+    } else if (type == PJSIP_EVENT_TX_MSG) {
+        body.txMsg.tdata.fromPj(*ev.body.tx_msg.tdata);
+    } else if (type == PJSIP_EVENT_RX_MSG) {
+        body.rxMsg.rdata.fromPj(*ev.body.rx_msg.rdata);
+    } else if (type == PJSIP_EVENT_TRANSPORT_ERROR) {
+        body.txError.tdata.fromPj(*ev.body.tx_error.tdata);
+        body.txError.tsx.fromPj(*ev.body.tx_error.tsx);
+    } else if (type == PJSIP_EVENT_USER) {
+        body.user.user1 = ev.body.user.user1;
+    }
+    pjEvent = (void *)&ev;
+}
+
+void SipTxData::fromPj(pjsip_tx_data &tdata)
+{
+    char straddr[PJ_INET6_ADDRSTRLEN+10];
+    
+    info	= pjsip_tx_data_get_info(&tdata);
+    pjsip_tx_data_encode(&tdata);
+    wholeMsg	= string(tdata.buf.start, tdata.buf.end - tdata.buf.start);
+    pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
+    dstAddress  = straddr;
+    pjTxData    = (void *)&tdata;
+}
+
+void SipTransaction::fromPj(pjsip_transaction &tsx)
+{
+    this->role          = tsx.role;
+    this->method        = pj2Str(tsx.method.name);
+    this->statusCode    = tsx.status_code;
+    this->statusText    = pj2Str(tsx.status_text);
+    this->lastTx.fromPj(*tsx.last_tx);
+    this->pjTransaction = (void *)&tsx;
+}
+
+bool SipTxOption::isEmpty() const
+{
+    return (targetUri == "" && headers.size() == 0 && contentType == "" &&
+            msgBody == "" && multipartContentType.type == "" &&
+            multipartContentType.subType == "" && multipartParts.size() == 0);
+}
+
 void SipTxOption::fromPj(const pjsua_msg_data &prm) throw(Error)
 {
     targetUri = pj2Str(prm.target_uri);
@@ -473,4 +538,16 @@ void SipTxOption::toPj(pjsua_msg_data &msg_data) const
 	pjsip_multipart_part& pj_part = multipartParts[i].toPj();
 	pj_list_push_back(&msg_data.multipart_parts, &pj_part);
     }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+
+SendInstantMessageParam::SendInstantMessageParam()
+: contentType("text/plain"), content(""), userData(NULL)
+{
+}
+
+SendTypingIndicationParam::SendTypingIndicationParam()
+: isTyping(false)
+{
 }

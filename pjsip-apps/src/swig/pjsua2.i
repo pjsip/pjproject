@@ -36,6 +36,7 @@ using namespace pj;
 %feature("director") LogWriter;
 %feature("director") Endpoint; 
 %feature("director") Account;
+%feature("director") Call;
 %feature("director") Buddy;
 %feature("director") FindBuddyMatch;
 
@@ -78,6 +79,9 @@ using namespace pj;
 %include "pjsua2/endpoint.hpp"
 %include "pjsua2/presence.hpp"
 %include "pjsua2/account.hpp"
+%include "pjsua2/call.hpp"
+
+%template(CallMediaInfoVector)          std::vector<pj::CallMediaInfo>;
 
 %ignore pj::JsonDocument::allocElement;
 %ignore pj::JsonDocument::getPool;

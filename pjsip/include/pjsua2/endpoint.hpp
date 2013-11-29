@@ -947,6 +947,16 @@ public:
     void transportClose(TransportId id) throw(Error);
 
     /*************************************************************************
+     * Call operations
+     */
+    
+    /**
+     * Terminate all calls. This will initiate call hangup for all
+     * currently active calls.
+     */
+    void hangupAllCalls(void);
+    
+    /*************************************************************************
      * Media operations
      */
 
@@ -1122,6 +1132,66 @@ private:
                             pjsua_mwi_info *mwi_info);
 
     static void on_buddy_state(pjsua_buddy_id buddy_id);
+    // Call callbacks
+    static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
+    static void on_call_tsx_state(pjsua_call_id call_id,
+                                  pjsip_transaction *tsx,
+                                  pjsip_event *e);
+    static void on_call_media_state(pjsua_call_id call_id);
+    static void on_call_sdp_created(pjsua_call_id call_id,
+                                    pjmedia_sdp_session *sdp,
+                                    pj_pool_t *pool,
+                                    const pjmedia_sdp_session *rem_sdp);
+    static void on_stream_created(pjsua_call_id call_id,
+                                  pjmedia_stream *strm,
+                                  unsigned stream_idx,
+                                  pjmedia_port **p_port);
+    static void on_stream_destroyed(pjsua_call_id call_id,
+                                    pjmedia_stream *strm,
+                                    unsigned stream_idx);
+    static void on_dtmf_digit(pjsua_call_id call_id, int digit);
+    static void on_call_transfer_request(pjsua_call_id call_id,
+                                         const pj_str_t *dst,
+                                         pjsip_status_code *code);
+    static void on_call_transfer_request2(pjsua_call_id call_id,
+                                          const pj_str_t *dst,
+                                          pjsip_status_code *code,
+                                          pjsua_call_setting *opt);
+    static void on_call_transfer_status(pjsua_call_id call_id,
+                                        int st_code,
+                                        const pj_str_t *st_text,
+                                        pj_bool_t final,
+                                        pj_bool_t *p_cont);
+    static void on_call_replace_request(pjsua_call_id call_id,
+                                        pjsip_rx_data *rdata,
+                                        int *st_code,
+                                        pj_str_t *st_text);
+    static void on_call_replace_request2(pjsua_call_id call_id,
+                                         pjsip_rx_data *rdata,
+                                         int *st_code,
+                                         pj_str_t *st_text,
+                                         pjsua_call_setting *opt);
+    static void on_call_replaced(pjsua_call_id old_call_id,
+                                 pjsua_call_id new_call_id);
+    static void on_call_rx_offer(pjsua_call_id call_id,
+                                 const pjmedia_sdp_session *offer,
+                                 void *reserved,
+                                 pjsip_status_code *code,
+                                 pjsua_call_setting *opt);
+    static pjsip_redirect_op on_call_redirected(pjsua_call_id call_id,
+                                                const pjsip_uri *target,
+                                                const pjsip_event *e);
+    static pj_status_t
+    on_call_media_transport_state(pjsua_call_id call_id,
+                                  const pjsua_med_tp_state_info *info);
+    static void on_call_media_event(pjsua_call_id call_id,
+                                    unsigned med_idx,
+                                    pjmedia_event *event);
+    static pjmedia_transport*
+    on_create_media_transport(pjsua_call_id call_id,
+                              unsigned media_idx,
+                              pjmedia_transport *base_tp,
+                              unsigned flags);
 };
 
 

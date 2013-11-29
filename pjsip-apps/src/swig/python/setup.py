@@ -92,7 +92,8 @@ extra_link_args = ['-static-libstdc++']
 if platform.system() == 'Darwin':
     # Mac OS X depedencies
     extra_link_args += ["-framework", "CoreFoundation", 
-                        "-framework", "AudioToolbox"]
+                        "-framework", "AudioToolbox",
+			"-framework", "QTKit"]
     # OS X Lion support
     if platform.mac_ver()[0].startswith("10.7"):
         extra_link_args += ["-framework", "AudioUnit"]

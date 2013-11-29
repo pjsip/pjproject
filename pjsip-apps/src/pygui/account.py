@@ -33,6 +33,7 @@ import pjsua2 as pj
 import _pjsua2
 import accountsetting
 import application
+import call
 
 # Account class
 class Account(pj.Account):
@@ -46,6 +47,7 @@ class Account(pj.Account):
 		self.cfg =  pj.AccountConfig()
 		self.cfgChanged = False
 		self.buddyList = []
+                self.callList = []
 
 	def statusText(self):
 		status = '?'
@@ -72,9 +74,30 @@ class Account(pj.Account):
 		else:
 			status = '- not created -'
 		return status
+        
+        def makeCall(self):
+                mycall = call.Call(self.app, self, pj.PJSUA_INVALID_ID)
+                callPrm = pj.CallOpParam()
+                callPrm.opt.audioCount = 1
+                callPrm.opt.videoCount = 0
+                mycall.uri = "sip:test1@pjsip.org"
+                self.callList.append(mycall)
+                mycall.makeCall(mycall.uri, callPrm)
 	
 	def onRegState(self, prm):
 		self.app.updateAccount(self)
+
+        def onIncomingCall(self, prm):
+                mycall = call.Call(self.app, self, prm.callId)
+                self.callList.append(mycall)
+                self.app.updateCall(self)
+                callPrm = pj.CallOpParam()
+                msg = "Incoming call for account '%s'" % self.cfg.idUri
+		if msgbox.askquestion(msg, 'Accept call?', default=msgbox.YES) == u'yes':
+                        callPrm.statusCode = 200
+                        mycall.answer(callPrm)
+                else:
+                        mycall.hangup(callPrm)
 
 
 # Account frame, to list accounts

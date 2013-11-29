@@ -393,6 +393,7 @@ struct TransportInfo
     /** Current number of objects currently referencing this transport. */
     unsigned		    usageCount;
 
+public:
     /** Construct from pjsua_transport_info */
     void fromPj(const pjsua_transport_info &info);
 };
@@ -418,21 +419,215 @@ struct SipRxData
     string		wholeMsg;
 
     /**
-     * Source IP address of the message.
+     * Source address of the message.
      */
-    string		srcIp;
+    SocketAddress       srcAddress;
 
     /**
-     * Source port number of the message.
+     * Pointer to original pjsip_rx_data. Only valid when the struct
+     * is constructed from PJSIP's pjsip_rx_data.
      */
-    unsigned		srcPort;
+    void               *pjRxData;
 
+public:
     /**
      * Construct from PJSIP's pjsip_rx_data
      */
     void fromPj(pjsip_rx_data &rdata);
 };
 
+/**
+ * This structure describes an outgoing SIP message. It corresponds to the
+ * pjsip_tx_data structure in PJSIP library.
+ */
+struct SipTxData
+{
+    /**
+     * A short info string describing the request, which normally contains
+     * the request method and its CSeq.
+     */
+    string		info;
+    
+    /**
+     * The whole message data as a string, containing both the header section
+     * and message body section.
+     */
+    string		wholeMsg;
+    
+    /**
+     * Destination address of the message.
+     */
+    SocketAddress	dstAddress;
+    
+    /**
+     * Pointer to original pjsip_tx_data. Only valid when the struct
+     * is constructed from PJSIP's pjsip_tx_data.
+     */
+    void               *pjTxData;
+    
+public:
+    /**
+     * Construct from PJSIP's pjsip_tx_data
+     */
+    void fromPj(pjsip_tx_data &tdata);
+};
+
+/**
+ * This structure describes SIP transaction object. It corresponds to the
+ * pjsip_transaction structure in PJSIP library.
+ */
+struct SipTransaction
+{
+    /* Transaction identification. */
+    pjsip_role_e        role;           /**< Role (UAS or UAC)      */
+    string              method;         /**< The method.            */
+    
+    /* State and status. */
+    int			statusCode;     /**< Last status code seen. */
+    string		statusText;     /**< Last reason phrase.    */
+    pjsip_tsx_state_e	state;          /**< State.                 */
+    
+    /* Messages and timer. */
+    SipTxData           lastTx;         /**< Msg kept for retrans.  */
+    
+    /* Original pjsip_transaction. */
+    void               *pjTransaction;  /**< pjsip_transaction.     */
+    
+public:
+    /**
+     * Construct from PJSIP's pjsip_transaction
+     */
+    void fromPj(pjsip_transaction &tsx);
+};
+
+/**
+ * This structure describes timer event.
+ */
+struct TimerEvent
+{
+    TimerEntry          entry;          /**< The timer entry.           */
+};
+
+/**
+ * This structure describes transaction state changed event.
+ */
+struct TsxStateEvent
+{
+    struct
+    {
+        SipRxData       rdata;          /**< The incoming message.      */
+        SipTxData       tdata;          /**< The outgoing message.      */
+        TimerEntry      timer;          /**< The timer.                 */
+        pj_status_t     status;         /**< Transport error status.    */
+        GenericData     data;           /**< Generic data.              */
+    } src;                              /**< Event source.              */
+    SipTransaction      tsx;            /**< The transaction.           */
+    pjsip_tsx_state_e   prevState;      /**< Previous state.            */
+    pjsip_event_id_e    type;           /**< Type of event source:
+                                         *     - PJSIP_EVENT_TX_MSG
+                                         *     - PJSIP_EVENT_RX_MSG,
+                                         *     - PJSIP_EVENT_TRANSPORT_ERROR
+                                         *     - PJSIP_EVENT_TIMER
+                                         *     - PJSIP_EVENT_USER
+                                         */
+};
+
+/**
+ * This structure describes message transmission event.
+ */
+struct TxMsgEvent
+{
+    SipTxData           tdata;          /**< The transmit data buffer.  */
+};
+
+/**
+ * This structure describes transmission error event.
+ */
+struct TxErrorEvent
+{
+    SipTxData           tdata;          /**< The transmit data.         */
+    SipTransaction      tsx;            /**< The transaction.           */
+};
+
+/**
+ * This structure describes message arrival event.
+ */
+struct RxMsgEvent
+{
+    SipRxData           rdata;          /**< The receive data buffer.   */
+};
+
+/**
+ * This structure describes user event.
+ */
+struct UserEvent
+{
+    GenericData         user1;          /**< User data 1.               */
+    GenericData         user2;          /**< User data 2.               */
+    GenericData         user3;          /**< User data 3.               */
+    GenericData         user4;          /**< User data 4.               */
+};
+
+/**
+ * This structure describe event descriptor to fully identify a SIP event. It
+ * corresponds to the pjsip_event structure in PJSIP library.
+ */
+struct SipEvent
+{
+    /**
+     * The event type, can be any value of \b pjsip_event_id_e.
+     */
+    pjsip_event_id_e    type;
+    
+    /**
+     * The event body, which fields depends on the event type.
+     */
+    struct
+    {
+        /**
+         * Timer event.
+         */
+        TimerEvent      timer;
+        
+        /**
+         * Transaction state has changed event.
+         */
+        TsxStateEvent   tsxState;
+        
+        /**
+         * Message transmission event.
+         */
+        TxMsgEvent      txMsg;
+        
+        /**
+         * Transmission error event.
+         */
+        TxErrorEvent    txError;
+        
+        /**
+         * Message arrival event.
+         */
+        RxMsgEvent      rxMsg;
+        
+        /**
+         * User event.
+         */
+        UserEvent       user;
+        
+    } body;
+    
+    /**
+     * Pointer to its original pjsip_event. Only valid when the struct is
+     * constructed from PJSIP's pjsip_event.
+     */
+    void               *pjEvent;
+    
+public:
+    /**
+     * Construct from PJSIP's pjsip_event
+     */
+    void fromPj(const pjsip_event &ev);
+};
 
 //////////////////////////////////////////////////////////////////////////////
 
@@ -448,6 +643,7 @@ struct SipMediaType
     /** Media subtype. */
     string		subType;
 
+public:
     /**
      * Construct from PJSIP's pjsip_media_type
      */
@@ -474,6 +670,7 @@ struct SipHeader
      */
     string		hValue;
 
+public:
     /**
      * Initiaize from PJSIP header.
      */
@@ -513,6 +710,7 @@ struct SipMultipartPart
      */
     string		body;
 
+public:
     /**
      * Initiaize from PJSIP's pjsip_multipart_part.
      */
@@ -539,28 +737,28 @@ typedef std::vector<SipMultipartPart> SipMultipartPartVector;
 struct SipTxOption
 {
     /**
-     * Optional remote target URI (i.e. Target header). If NULL, the target
-     * will be set to the remote URI (To header). At the moment this field
-     * is only used when sending initial INVITE and MESSAGE requests.
+     * Optional remote target URI (i.e. Target header). If empty (""), the
+     * target will be set to the remote URI (To header). At the moment this
+     * field is only used when sending initial INVITE and MESSAGE requests.
      */
-    string		targetUri;
+    string                  targetUri;
 
     /**
      * Additional message headers to be included in the outgoing message.
      */
-    SipHeaderVector	headers;
+    SipHeaderVector         headers;
 
     /**
      * MIME type of the message body, if application specifies the messageBody
      * in this structure.
      */
-    string		contentType;
+    string                  contentType;
 
     /**
      * Optional message body to be added to the message, only when the
      * message doesn't have a body.
      */
-    string		msgBody;
+    string                  msgBody;
 
     /**
      * Content type of the multipart body. If application wants to send
@@ -568,7 +766,7 @@ struct SipTxOption
      * the content type in multipartContentType. If the message already
      * contains a body, the body will be added to the multipart bodies.
      */
-    SipMediaType	multipartContentType;
+    SipMediaType            multipartContentType;
 
     /**
      * Array of multipart parts. If application wants to send multipart
@@ -576,8 +774,18 @@ struct SipTxOption
      * type in \a multipart_ctype. If the message already contains a body,
      * the body will be added to the multipart bodies.
      */
-    SipMultipartPartVector	multipartParts;
+    SipMultipartPartVector  multipartParts;
 
+public:
+    /**
+     * Check if the options are empty. If the options are set with empty
+     * values, there will be no additional information sent with outgoing
+     * SIP message.
+     *
+     * @return              True if the options are empty.
+     */
+    bool isEmpty() const;
+    
     /**
      * Initiaize from PJSUA's pjsua_msg_data.
      */
@@ -589,6 +797,7 @@ struct SipTxOption
     void toPj(pjsua_msg_data &msg_data) const;
 };
 
+//////////////////////////////////////////////////////////////////////////////
 
 /**
  * This structure contains parameters for sending instance message methods,
@@ -599,22 +808,28 @@ struct SendInstantMessageParam
     /**
      * MIME type. Default is "text/plain".
      */
-    string contentType;
+    string      contentType;
     
     /**
      * The message content.
      */
-    string content;
+    string      content;
     
     /**
      * List of headers etc to be included in outgoing request.
      */
     SipTxOption txOption;
-
+    
     /**
      * User data, which will be given back when the IM callback is called.
      */
-    Token userData;
+    Token       userData;
+    
+public:
+    /**
+     * Default constructor initializes with zero/empty values.
+     */
+    SendInstantMessageParam();
 };
 
 
@@ -627,12 +842,18 @@ struct SendTypingIndicationParam
     /**
      * True to indicate to remote that local person is currently typing an IM.
      */
-    bool isTyping;
+    bool         isTyping;
     
     /**
      * List of headers etc to be included in outgoing request.
      */
-    SipTxOption txOption;
+    SipTxOption  txOption;
+    
+public:
+    /**
+     * Default constructor initializes with zero/empty values.
+     */
+    SendTypingIndicationParam();
 };
 
 

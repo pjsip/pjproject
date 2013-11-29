@@ -125,7 +125,10 @@ public:
 
 };
 
-typedef void* MediaPort;
+/**
+ * Media port, corresponds to pjmedia_port
+ */
+typedef void *MediaPort;
 
 /**
  * Media.

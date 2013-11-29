@@ -1,10 +1,18 @@
 include ../../../../build.mak
 
+ifneq ($(findstring "$(TARGET_NAME)","darwin"),"")
+  OS=darwin
+endif
+
 OUT_DIR=output
 ifeq ($(OS),Windows_NT)
 LIBPJSUA2_SO=$(OUT_DIR)/pjsua2.dll
 else
-LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.so
+  ifeq ($(OS),darwin)
+    LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.jnilib
+  else
+    LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.so
+  endif
 endif
 
 # Get JDK location
@@ -22,19 +30,27 @@ endif
 
 # OS specific
 ifeq ($(OS),Windows_NT)
-MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,--kill-at
-MY_JNI_LIB       = $(OUT_DIR)/pjsua2.dll
+  MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,--kill-at
+  MY_JNI_LIB       = $(OUT_DIR)/pjsua2.dll
 else
-MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib -Wl,-soname,pjsua2.so
-MY_JNI_LIB       = $(OUT_DIR)/libpjsua2.so
-MY_JNI_CFLAGS	 := -fPIC
+  MY_JNI_LDFLAGS	 = -L$(MY_JDK)/lib
+  ifneq ($(OS),darwin)
+    MY_JNI_LDFLAGS := $(MY_JNI_LDFLAGS) -Wl,-soname,pjsua2.so
+  endif
+  MY_JNI_LIB       = $(OUT_DIR)/libpjsua2.so
+  MY_JNI_CFLAGS	 := -fPIC $(MY_JNI_CFLAGS)
 endif
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		 = swig
 MY_JDK		 = $(JAVA_HOME)
-MY_JAVA		 = $(MY_JDK)/bin/java
-MY_JAVAC	 = $(MY_JDK)/bin/javac
+ifneq ($(findstring $(JAVA_BIN), bin),)
+  MY_JAVA	 = $(MY_JDK)/bin/java
+  MY_JAVAC	 = $(MY_JDK)/bin/javac
+else
+  MY_JAVA	 = $(MY_JDK)/java
+  MY_JAVAC	 = $(MY_JDK)/javac
+endif
 MY_JNI_CFLAGS	 := $(MY_JNI_CFLAGS) -I$(MY_JDK)/include -I$(MY_JDK)/include/win32 \
 		   -I$(MY_JDK)/include/linux -I.
 

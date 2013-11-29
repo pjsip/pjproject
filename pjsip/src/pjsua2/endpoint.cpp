@@ -25,6 +25,9 @@
 using namespace pj;
 using namespace std;
 
+#include <pjsua2/account.hpp>
+#include <pjsua2/call.hpp>
+
 #define THIS_FILE		"endpoint.cpp"
 #define MAX_STUN_SERVERS	32
 #define TIMER_SIGNATURE		0x600D878A
@@ -694,6 +697,312 @@ void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
     buddy->onBuddyState();
 }
 
+// Call callbacks
+void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallStateParam prm;
+    prm.e.fromPj(*e);
+    
+    call->onCallState(prm);
+    /* If the state is DISCONNECTED, call may have already been deleted
+     * by the application in the callback, so do not access it anymore here.
+     */
+}
+
+void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
+                                 pjsip_transaction *tsx,
+                                 pjsip_event *e)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallTsxStateParam prm;
+    prm.e.fromPj(*e);
+    
+    call->onCallTsxState(prm);
+}
+
+void Endpoint::on_call_media_state(pjsua_call_id call_id)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallMediaStateParam prm;
+    call->onCallMediaState(prm);
+}
+
+void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
+                                   pjmedia_sdp_session *sdp,
+                                   pj_pool_t *pool,
+                                   const pjmedia_sdp_session *rem_sdp)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallSdpCreatedParam prm;
+    string orig_sdp;
+    
+    prm.sdp.fromPj(*sdp);
+    orig_sdp = prm.sdp.wholeSdp;
+    if (rem_sdp)
+        prm.remSdp.fromPj(*rem_sdp);
+    
+    call->onCallSdpCreated(prm);
+    
+    /* Check if application modifies the SDP */
+    if (orig_sdp != prm.sdp.wholeSdp) {
+        pjmedia_sdp_parse(pool, (char*)prm.sdp.wholeSdp.c_str(),
+                          prm.sdp.wholeSdp.size(), &sdp);
+    }
+}
+
+void Endpoint::on_stream_created(pjsua_call_id call_id,
+                                 pjmedia_stream *strm,
+                                 unsigned stream_idx,
+                                 pjmedia_port **p_port)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnStreamCreatedParam prm;
+    prm.stream = strm;
+    prm.streamIdx = stream_idx;
+    prm.pPort = (void *)*p_port;
+    
+    call->onStreamCreated(prm);
+    
+    if (prm.pPort != (void *)*p_port)
+        *p_port = (pjmedia_port *)prm.pPort;
+}
+
+void Endpoint::on_stream_destroyed(pjsua_call_id call_id,
+                                   pjmedia_stream *strm,
+                                   unsigned stream_idx)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnStreamDestroyedParam prm;
+    prm.stream = strm;
+    prm.streamIdx = stream_idx;
+    
+    call->onStreamDestroyed(prm);
+}
+
+void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnDtmfDigitParam prm;
+    char buf[10];
+    pj_ansi_sprintf(buf, "%c", digit);
+    prm.digit = (string)buf;
+    
+    call->onDtmfDigit(prm);
+}
+
+void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
+                                         const pj_str_t *dst,
+                                         pjsip_status_code *code,
+                                         pjsua_call_setting *opt)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallTransferRequestParam prm;
+    prm.dstUri = pj2Str(*dst);
+    prm.statusCode = *code;
+    prm.opt.fromPj(*opt);
+    
+    call->onCallTransferRequest(prm);
+    
+    *code = prm.statusCode;
+    *opt = prm.opt.toPj();
+}
+
+void Endpoint::on_call_transfer_status(pjsua_call_id call_id,
+                                       int st_code,
+                                       const pj_str_t *st_text,
+                                       pj_bool_t final,
+                                       pj_bool_t *p_cont)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallTransferStatusParam prm;
+    prm.statusCode = (pjsip_status_code)st_code;
+    prm.reason = pj2Str(*st_text);
+    prm.finalNotify = final;
+    prm.cont = *p_cont;
+    
+    call->onCallTransferStatus(prm);
+    
+    *p_cont = prm.cont;
+}
+
+void Endpoint::on_call_replace_request2(pjsua_call_id call_id,
+                                        pjsip_rx_data *rdata,
+                                        int *st_code,
+                                        pj_str_t *st_text,
+                                        pjsua_call_setting *opt)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallReplaceRequestParam prm;
+    prm.rdata.fromPj(*rdata);
+    prm.statusCode = (pjsip_status_code)*st_code;
+    prm.reason = pj2Str(*st_text);
+    prm.opt.fromPj(*opt);
+    
+    call->onCallReplaceRequest(prm);
+    
+    *st_code = prm.statusCode;
+    *st_text = str2Pj(prm.reason);
+    *opt = prm.opt.toPj();
+}
+
+void Endpoint::on_call_replaced(pjsua_call_id old_call_id,
+                                pjsua_call_id new_call_id)
+{
+    Call *call = Call::lookup(old_call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallReplacedParam prm;
+    prm.newCallId = new_call_id;
+    
+    call->onCallReplaced(prm);
+}
+
+void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
+                                const pjmedia_sdp_session *offer,
+                                void *reserved,
+                                pjsip_status_code *code,
+                                pjsua_call_setting *opt)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallRxOfferParam prm;
+    prm.offer.fromPj(*offer);
+    prm.statusCode = *code;
+    prm.opt.fromPj(*opt);
+    
+    call->onCallRxOffer(prm);
+    
+    *code = prm.statusCode;
+    *opt = prm.opt.toPj();
+}
+
+pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
+                                               const pjsip_uri *target,
+                                               const pjsip_event *e)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return PJSIP_REDIRECT_STOP;
+    }
+    
+    OnCallRedirectedParam prm;
+    char uristr[PJSIP_MAX_URL_SIZE];
+    int len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr,
+                              sizeof(uristr));
+    if (len < 1) {
+        pj_ansi_strcpy(uristr, "--URI too long--");
+    }
+    prm.targetUri = string(uristr);
+    if (e)
+        prm.e.fromPj(*e);
+    else
+        prm.e.type = PJSIP_EVENT_UNKNOWN;
+    
+    return call->onCallRedirected(prm);
+}
+
+pj_status_t
+Endpoint::on_call_media_transport_state(pjsua_call_id call_id,
+                                        const pjsua_med_tp_state_info *info)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return PJ_SUCCESS;
+    }
+    
+    OnCallMediaTransportStateParam prm;
+    prm.medIdx = info->med_idx;
+    prm.state = info->state;
+    prm.status = info->status;
+    prm.sipErrorCode = info->sip_err_code;
+    
+    call->onCallMediaTransportState(prm);
+    
+    return PJ_SUCCESS;
+}
+
+void Endpoint::on_call_media_event(pjsua_call_id call_id,
+                                   unsigned med_idx,
+                                   pjmedia_event *event)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallMediaEventParam prm;
+    prm.medIdx = med_idx;
+    prm.ev.fromPj(*event);
+    
+    call->onCallMediaEvent(prm);
+}
+
+pjmedia_transport*
+Endpoint::on_create_media_transport(pjsua_call_id call_id,
+                                    unsigned media_idx,
+                                    pjmedia_transport *base_tp,
+                                    unsigned flags)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return base_tp;
+    }
+    
+    OnCreateMediaTransportParam prm;
+    prm.mediaIdx = media_idx;
+    prm.mediaTp = base_tp;
+    prm.flags = flags;
+    
+    call->onCreateMediaTransport(prm);
+    
+    return (pjmedia_transport *)prm.mediaTp;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -751,6 +1060,25 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_typing2	= &Endpoint::on_typing2;
     ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state	= &Endpoint::on_buddy_state;
+
+    /* Call callbacks */
+    ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
+    ua_cfg.cb.on_call_tsx_state         = &Endpoint::on_call_tsx_state;
+    ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
+    ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
+    ua_cfg.cb.on_stream_created         = &Endpoint::on_stream_created;
+    ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
+    ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
+    ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
+    ua_cfg.cb.on_call_transfer_status   = &Endpoint::on_call_transfer_status;
+    ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;
+    ua_cfg.cb.on_call_replaced          = &Endpoint::on_call_replaced;
+    ua_cfg.cb.on_call_rx_offer          = &Endpoint::on_call_rx_offer;
+    ua_cfg.cb.on_call_redirected        = &Endpoint::on_call_redirected;
+    ua_cfg.cb.on_call_media_transport_state =
+        &Endpoint::on_call_media_transport_state;
+    ua_cfg.cb.on_call_media_event       = &Endpoint::on_call_media_event;
+    ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
@@ -976,7 +1304,16 @@ void Endpoint::transportClose(TransportId id) throw(Error)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/*
+ * Call operations
+ */
 
+void Endpoint::hangupAllCalls(void)
+{
+    pjsua_call_hangup_all();
+}
+
+///////////////////////////////////////////////////////////////////////////////
 /*
  * Media API
  */

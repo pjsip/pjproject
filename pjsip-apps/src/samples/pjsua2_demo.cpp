@@ -23,11 +23,49 @@
 
 using namespace pj;
 
+class MyAccount;
+
+class MyCall : public Call
+{
+private:
+    MyAccount *myAcc;
+
+public:
+    MyCall(Account &acc, int call_id = PJSUA_INVALID_ID)
+    : Call(acc, call_id)
+    {
+        myAcc = (MyAccount *)&acc;
+    }
+    
+    virtual void onCallState(OnCallStateParam &prm);
+};
+
 class MyAccount : public Account
 {
 public:
+    std::vector<Call *> calls;
+    
+public:
     MyAccount()
     {}
+
+    ~MyAccount()
+    {
+        std::cout << "*** Account is being deleted: No of calls="
+                  << calls.size() << std::endl;
+    }
+    
+    void removeCall(Call *call)
+    {
+        for (std::vector<Call *>::iterator it = calls.begin();
+             it != calls.end(); ++it)
+        {
+            if (*it == call) {
+                calls.erase(it);
+                break;
+            }
+        }
+    }
 
     virtual void onRegState(OnRegStateParam &prm)
     {
@@ -35,7 +73,34 @@ public:
 	std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=")
 		  << prm.code << std::endl;
     }
+    
+    virtual void onIncomingCall(OnIncomingCallParam &iprm)
+    {
+        Call *call = new MyCall(*this, iprm.callId);
+        CallInfo ci = call->getInfo();
+        CallOpParam prm;
+        
+        std::cout << "*** Incoming Call: " <<  ci.remoteURI << " ["
+                  << ci.stateText << "]" << std::endl;
+        
+        calls.push_back(call);
+        prm.statusCode = (pjsip_status_code)200;
+        call->answer(prm);
+    }
 };
+
+void MyCall::onCallState(OnCallStateParam &prm)
+{
+    CallInfo ci = getInfo();
+    std::cout << "*** Call: " <<  ci.remoteURI << " [" << ci.stateText
+              << "]" << std::endl;
+    
+    if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
+        myAcc->removeCall(this);
+        /* Delete the call */
+        delete this;
+    }
+}
 
 static void mainProg1() throw(Error)
 {
@@ -64,11 +129,24 @@ static void mainProg1() throw(Error)
     acc_cfg.regConfig.registrarUri = "sip:pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
-    std::auto_ptr<Account> acc(new MyAccount);
+    std::auto_ptr<MyAccount> acc(new MyAccount);
     acc->create(acc_cfg);
-
+    
     pj_thread_sleep(2000);
-
+    
+    // Make outgoing call
+    Call *call = new MyCall(*acc);
+    acc->calls.push_back(call);
+    CallOpParam prm(true);
+    prm.opt.audioCount = 1;
+    prm.opt.videoCount = 0;
+    call->makeCall("sip:test1@pjsip.org", prm);
+    
+    // Hangup all calls
+    pj_thread_sleep(8000);
+    ep.hangupAllCalls();
+    pj_thread_sleep(4000);
+    
     // Destroy library
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
 }
@@ -189,7 +267,7 @@ int main()
     int ret = 0;
 
     try {
-	mainProg();
+	mainProg1();
 	std::cout << "Success" << std::endl;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;

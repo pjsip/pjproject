@@ -73,6 +73,16 @@ typedef int TransportId;
  */
 typedef void *TransportHandle;
 
+/**
+ * Timer entry, corresponds to pj_timer_entry
+ */
+typedef void *TimerEntry;
+
+/**
+ * Generic data
+ */
+typedef void *GenericData;
+
 /*
  * Forward declaration of Account to be used
  * by Endpoint.
@@ -210,6 +220,29 @@ struct Version
     unsigned	numeric;
 };
 
+//////////////////////////////////////////////////////////////////////////////
+
+/**
+ * Representation of time value.
+ */
+struct TimeValue
+{
+    /**
+     * The seconds part of the time.
+     */
+    long sec;
+    
+    /**
+     * The miliseconds fraction of the time.
+     */
+    long msec;
+    
+public:
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pj_time_val &prm);
+};
 
 } // namespace pj
 
