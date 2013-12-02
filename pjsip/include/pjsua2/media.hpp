@@ -141,11 +141,24 @@ public:
      */
     virtual ~Media();
 
+    /**
+     * Get type of the media.
+     *
+     * @return          The media type.
+     */
+    pjmedia_type getType() const;
+
 protected:
     /**
      * Constructor.
      */
-    Media();
+    Media(pjmedia_type med_type);
+
+private:
+    /**
+     * Media type.
+     */
+    pjmedia_type        type;
 };
 
 /**

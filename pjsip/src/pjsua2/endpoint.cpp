@@ -708,7 +708,7 @@ void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
     OnCallStateParam prm;
     prm.e.fromPj(*e);
     
-    call->onCallState(prm);
+    call->processStateChange(prm);
     /* If the state is DISCONNECTED, call may have already been deleted
      * by the application in the callback, so do not access it anymore here.
      */
@@ -735,9 +735,9 @@ void Endpoint::on_call_media_state(pjsua_call_id call_id)
     if (!call) {
 	return;
     }
-    
+
     OnCallMediaStateParam prm;
-    call->onCallMediaState(prm);
+    call->processMediaUpdate(prm);
 }
 
 void Endpoint::on_call_sdp_created(pjsua_call_id call_id,

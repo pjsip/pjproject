@@ -18,6 +18,7 @@
  */
 #include <pjsua2/account.hpp>
 #include <pjsua2/call.hpp>
+#include <pjsua2/endpoint.hpp>
 #include <pj/ctype.h>
 #include "util.hpp"
 
@@ -138,6 +139,23 @@ void MediaTransportInfo::fromPj(const pjmedia_transport_info &info)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+
+/* Call Audio Media. */
+class CallAudioMedia : public AudioMedia
+{
+public:
+    /*
+     * Set the conference port identification associated with the
+     * call audio media.
+     */
+    void setPortId(int id);
+};
+
+
+void CallAudioMedia::setPortId(int id)
+{
+    this->id = id;
+}
 
 CallOpParam::CallOpParam(bool useDefaultCallSetting)
 : statusCode(pjsip_status_code(0)), reason(""), options(0)
@@ -408,6 +426,19 @@ bool Call::hasMedia() const
     return (pjsua_call_has_media(id) != 0);
 }
 
+Media *Call::getMedia(unsigned med_idx) const
+{
+    /* Check if the media index is valid and if the media has a valid port ID */
+    if (med_idx >= medias.size() ||
+        (medias[med_idx] && medias[med_idx]->getType() == PJMEDIA_TYPE_AUDIO &&
+         ((AudioMedia *)medias[med_idx])->getPortId() == PJSUA_INVALID_ID))
+    {
+        return NULL;
+    }
+    
+    return medias[med_idx];
+}
+
 pjsip_dialog_cap_status Call::remoteHasCap(int htype,
                                            const string &hname,
                                            const string &token) const
@@ -562,23 +593,35 @@ string Call::dump(bool with_media, const string indent) throw(Error)
 
 int Call::vidGetStreamIdx() const
 {
+#if PJSUA_HAS_VIDEO
     return pjsua_call_get_vid_stream_idx(id);
+#else
+    return PJSUA_INVALID_ID;
+#endif
 }
 
 bool Call::vidStreamIsRunning(int med_idx, pjmedia_dir dir) const
 {
+#if PJSUA_HAS_VIDEO
     return pjsua_call_vid_stream_is_running(id, med_idx, dir);
+#else
+    return false;
+#endif
 }
 
 void Call::vidSetStream(pjsua_call_vid_strm_op op,
                         const CallVidSetStreamParam &param) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     pjsua_call_vid_strm_op_param prm;
     
     prm.med_idx = param.medIdx;
     prm.dir = param.dir;
     prm.cap_dev = param.capDev;
     PJSUA2_CHECK_EXPR( pjsua_call_set_vid_strm(id, op, &prm) );
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVOP);
+#endif
 }
 
 StreamInfo Call::getStreamInfo(unsigned med_idx) const throw(Error)
@@ -611,4 +654,60 @@ MediaTransportInfo Call::getMedTransportInfo(unsigned med_idx) const
                                                          &pj_mti) );
     mti.fromPj(pj_mti);
     return mti;
+}
+
+void Call::processMediaUpdate(OnCallMediaStateParam &prm)
+{
+    pjsua_call_info pj_ci;
+    unsigned mi;
+    
+    if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS) {
+        for (mi = 0; mi < pj_ci.media_cnt; mi++) {
+            if (mi >= medias.size()) {
+                if (pj_ci.media[mi].type == PJMEDIA_TYPE_AUDIO) {
+                    medias.push_back(new CallAudioMedia);
+                } else {
+                    medias.push_back(NULL);
+                }
+            }
+            
+            if (pj_ci.media[mi].type == PJMEDIA_TYPE_AUDIO) {
+                CallAudioMedia *aud_med = (CallAudioMedia *)medias[mi];
+                
+                aud_med->setPortId(pj_ci.media[mi].stream.aud.conf_slot);
+                /* Add media if the conference slot ID is valid. */
+                if (pj_ci.media[mi].stream.aud.conf_slot != PJSUA_INVALID_ID)
+                {
+                    Endpoint::instance().addMedia((AudioMedia &)*aud_med);
+                } else {
+                    Endpoint::instance().removeMedia((AudioMedia &)*aud_med);
+                }
+            }
+        }
+    }
+    
+    /* Call media state callback. */
+    onCallMediaState(prm);
+}
+
+void Call::processStateChange(OnCallStateParam &prm)
+{
+    pjsua_call_info pj_ci;
+    unsigned mi;
+    
+    if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS &&
+        pj_ci.state == PJSIP_INV_STATE_DISCONNECTED)
+    {
+        /* Clear medias. */
+        for (mi = 0; mi < medias.size(); mi++) {
+            if (medias[mi])
+                delete medias[mi];
+        }
+        medias.clear();
+    }
+    
+    onCallState(prm);
+    /* If the state is DISCONNECTED, this call may have already been deleted
+     * by the application in the callback, so do not access it anymore here.
+     */
 }

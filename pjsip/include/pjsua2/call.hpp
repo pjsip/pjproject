@@ -1088,6 +1088,15 @@ public:
      * @return              True if yes.
      */
     bool hasMedia() const;
+    
+    /**
+     * Get media for the specified media index.
+     *
+     * @psaram med_idx      Media index.
+     *
+     * @return              The media or NULL if invalid or inactive.
+     */
+    Media *getMedia(unsigned med_idx) const;
 
     /**
      * Check if remote peer support the specified capability.
@@ -1419,6 +1428,17 @@ public:
      */
     MediaTransportInfo getMedTransportInfo(unsigned med_idx) const throw(Error);
 
+    /**
+     * Internal function (callled by Endpoint( to process update to call
+     * medias when call media state changes.
+     */
+    void processMediaUpdate(OnCallMediaStateParam &prm);
+
+    /**
+     * Internal function (called by Endpoint) to process call state change.
+     */
+    void processStateChange(OnCallStateParam &prm);
+    
 public:
     /*
      * Callbacks
@@ -1664,13 +1684,11 @@ public:
     onCreateMediaTransport(OnCreateMediaTransportParam &prm)
     {}
 
-protected:
-    friend class Endpoint;
-    
 private:
     Account             &acc;
     pjsua_call_id 	 id;
     Token                userData;
+    std::vector<Media *> medias;
 };
 
 } // namespace pj

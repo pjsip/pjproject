@@ -55,7 +55,8 @@ void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
     }
 }
 ///////////////////////////////////////////////////////////////////////////////
-Media::Media()
+Media::Media(pjmedia_type med_type)
+: type(med_type)
 {
 
 }
@@ -65,9 +66,14 @@ Media::~Media()
 
 }
 
+pjmedia_type Media::getType() const
+{
+    return type;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 AudioMedia::AudioMedia() 
-: id(PJSUA_INVALID_ID), mediaPool(NULL)
+: Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaPool(NULL)
 {
 
 }
