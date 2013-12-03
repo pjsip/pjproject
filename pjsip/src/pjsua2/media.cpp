@@ -385,15 +385,17 @@ const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
     pjmedia_aud_dev_info pj_info[MAX_DEV_COUNT];
     unsigned count;
 
-    clearAudioDevList();
-
     PJSUA2_CHECK_EXPR( pjsua_enum_aud_devs(pj_info, &count) );
 
+    clearAudioDevList();
+
+    pj_enter_critical_section();
     for (unsigned i = 0; (i<count && i<MAX_DEV_COUNT) ;++i) {
 	AudioDevInfo *dev_info = new AudioDevInfo;
 	dev_info->fromPj(pj_info[i]);
 	audioDevList.push_back(dev_info);
     }
+    pj_leave_critical_section();
     return audioDevList;
 }
 
@@ -690,10 +692,12 @@ AudDevManager::~AudDevManager()
 
 void AudDevManager::clearAudioDevList()
 {
+    pj_enter_critical_section();
     for(unsigned i=0;i<audioDevList.size();++i) {
 	delete audioDevList[i];
     }
     audioDevList.clear();
+    pj_leave_critical_section();
 }
 
 int AudDevManager::getActiveDev(bool is_capture) const throw(Error)
@@ -702,4 +706,12 @@ int AudDevManager::getActiveDev(bool is_capture) const throw(Error)
     PJSUA2_CHECK_EXPR( pjsua_get_snd_dev(&capture_dev, &playback_dev) );
 
     return is_capture?capture_dev:playback_dev;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+void CodecInfo::fromPj(const pjsua_codec_info &codec_info)
+{
+    codecId = pj2Str(codec_info.codec_id);
+    priority = codec_info.priority;
+    desc = pj2Str(codec_info.desc);
 }

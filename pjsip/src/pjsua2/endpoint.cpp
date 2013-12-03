@@ -31,6 +31,7 @@ using namespace std;
 #define THIS_FILE		"endpoint.cpp"
 #define MAX_STUN_SERVERS	32
 #define TIMER_SIGNATURE		0x600D878A
+#define MAX_CODEC_NUM 		64
 
 struct UserTimer
 {
@@ -374,6 +375,8 @@ Endpoint::~Endpoint()
 	AudioMedia *cur_media = mediaList[0];
 	delete cur_media;
     }
+
+    clearCodecInfoList();
 
     instance_ = NULL;
 }
@@ -1363,4 +1366,63 @@ bool Endpoint::mediaExists(const AudioMedia &media) const
 AudDevManager &Endpoint::audDevManager()
 {
     return audioDevMgr;
+}
+
+/*
+ * Codec operations.
+ */
+const CodecInfoVector &Endpoint::codecEnum() throw(Error)
+{
+    pjsua_codec_info pj_codec[MAX_CODEC_NUM];
+    unsigned count = 0;
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_codecs(pj_codec, &count) );
+
+    clearCodecInfoList();
+
+    pj_enter_critical_section();
+    for (unsigned i=0;(i<count && i<MAX_CODEC_NUM);++i) {
+	CodecInfo *codec_info = new CodecInfo;
+
+	codec_info->fromPj(pj_codec[i]);
+	codecInfoList.push_back(codec_info);
+    }
+    pj_leave_critical_section();
+    return codecInfoList;
+}
+
+void Endpoint::codecSetPriority(const string &codec_id,
+			        pj_uint8_t priority) throw(Error)
+{
+    pj_str_t codec_str = str2Pj(codec_id);
+    PJSUA2_CHECK_EXPR( pjsua_codec_set_priority(&codec_str, priority) );
+}
+
+CodecParam Endpoint::codecGetParam(const string &codec_id) const throw(Error)
+{
+    pjmedia_codec_param *pj_param = NULL;
+    pj_str_t codec_str = str2Pj(codec_id);
+
+    PJSUA2_CHECK_EXPR( pjsua_codec_get_param(&codec_str, pj_param) );
+
+    return pj_param;
+}
+
+void Endpoint::codecSetParam(const string &codec_id,
+			     const CodecParam param) throw(Error)
+{
+    pj_str_t codec_str = str2Pj(codec_id);
+    pjmedia_codec_param *pj_param = (pjmedia_codec_param*)param;
+
+    PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, pj_param) );
+}
+
+void Endpoint::clearCodecInfoList()
+{
+    pj_enter_critical_section();
+    for (unsigned i=0;i<codecInfoList.size();++i) {
+	delete codecInfoList[i];
+    }
+    codecInfoList.clear();
+    pj_leave_critical_section();
 }

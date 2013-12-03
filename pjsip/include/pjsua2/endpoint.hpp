@@ -1006,6 +1006,52 @@ public:
 
     AudDevManager &audDevManager();
 
+    /*************************************************************************
+     * Codec management operations
+     */
+
+    /**
+     * Enum all supported codecs in the system.
+     *
+     * @return		Array of codec info.
+     */
+    const CodecInfoVector &codecEnum() throw(Error);
+
+    /**
+     * Change codec priority.
+     *
+     * @param codec_id	Codec ID, which is a string that uniquely identify
+     *			the codec (such as "speex/8000").
+     * @param priority	Codec priority, 0-255, where zero means to disable
+     *			the codec.
+     *
+     */
+    void codecSetPriority(const string &codec_id,
+			  pj_uint8_t priority) throw(Error);
+
+    /**
+     * Get codec parameters.
+     *
+     * @param codec_id		Codec ID.
+     *
+     * @return			Codec parameters. If codec is not found, Error
+     * 				will be thrown.
+     *
+     */
+    CodecParam codecGetParam(const string &codec_id) const throw(Error);
+
+    /**
+     * Set codec parameters.
+     *
+     * @param codec_id	Codec ID.
+     * @param param	Codec parameter to set. Set to NULL to reset
+     *			codec parameter to library default settings.
+     *
+     */
+    void codecSetParam(const string &codec_id,
+		       const CodecParam param) throw(Error);
+
+
 public:
     /*
      * Overrideables callbacks
@@ -1074,6 +1120,7 @@ private:
     LogWriter			*writer;	// Custom writer, if any
     AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
+    CodecInfoVector		 codecInfoList;
 
     /* Endpoint static callbacks */
     static void logFunc(int level, const char *data, int len);
@@ -1195,6 +1242,9 @@ private:
                               unsigned media_idx,
                               pjmedia_transport *base_tp,
                               unsigned flags);
+
+private:
+    void clearCodecInfoList();
 
 };
 

@@ -275,7 +275,7 @@ protected:
      * This method needs to be called by descendants of this class to remove
      * the media port from the conference bridge and Endpoint's media list.
      * Descendant should only call this method if it has registered the media
-     * with the previous call to #registerMediaPort().
+     * with the previous call to registerMediaPort().
      */
     void unregisterMediaPort();
 
@@ -431,13 +431,13 @@ struct AudioDevInfo
     string driver;
 
     /**
-     * Device capabilities, as bitmask combination of #pjmedia_aud_dev_cap.
+     * Device capabilities, as bitmask combination of pjmedia_aud_dev_cap.
      */
     unsigned caps;
 
     /**
      * Supported audio device routes, as bitmask combination of
-     * #pjmedia_aud_dev_route. The value may be zero if the device
+     * pjmedia_aud_dev_route. The value may be zero if the device
      * does not support audio routing.
      */
     unsigned routes;
@@ -561,9 +561,9 @@ public:
     /**
      * Check whether the sound device is currently active. The sound device
      * may be inactive if the application has set the auto close feature to
-     * non-zero (the sndAutoCloseTime setting in #MediaConfig), or
+     * non-zero (the sndAutoCloseTime setting in MediaConfig), or
      * if null sound device or no sound device has been configured via the
-     * #setNoDev() function.
+     * setNoDev() function.
      */
     bool sndIsActive() const;
 
@@ -1052,6 +1052,45 @@ private:
 
     friend class Endpoint;
 };
+
+/*************************************************************************
+* Codec management
+*/
+
+/**
+ * This structure describes codec information.
+ */
+struct CodecInfo
+{
+    /**
+     * Codec unique identification.
+     */
+    string		codecId;
+
+    /**
+     * Codec priority (integer 0-255).
+     */
+    pj_uint8_t		priority;
+
+    /**
+     * Codec description.
+     */
+    string		desc;
+
+    /**
+     * Construct from pjsua_codec_info.
+     */
+    void fromPj(const pjsua_codec_info &codec_info);
+};
+
+/** Array of codec info */
+typedef std::vector<CodecInfo*> CodecInfoVector;
+
+/**
+ * Codec parameters, corresponds to pjmedia_codec_param or
+ * pjmedia_vid_codec_param.
+ */
+typedef void *CodecParam;
 
 } // namespace pj
 
