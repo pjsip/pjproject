@@ -71,6 +71,16 @@ struct MediaFormatAudio : public MediaFormat
     unsigned	bitsPerSample;	/**< Number of bits per sample.		*/
     pj_uint32_t	avgBps;		/**< Average bitrate			*/
     pj_uint32_t	maxBps;		/**< Maximum bitrate			*/
+
+    /**
+     * Construct from pjmedia_format.
+     */
+    void fromPj(const pjmedia_format &format);
+
+    /**
+     * Export to pjmedia_format.
+     */
+    pjmedia_format toPj() const;
 };
 
 /**
@@ -88,7 +98,6 @@ struct MediaFormatVideo : public MediaFormat
 
 /** Array of MediaFormat */
 typedef std::vector<MediaFormat*> MediaFormatVector;
-
 
 /**
  * This structure descibes information about a particular media port that
@@ -381,6 +390,667 @@ private:
      * Recorder Id.
      */
     int	recorderId;
+};
+
+/*************************************************************************
+* Sound device management
+*/
+
+/**
+ * Audio device information structure.
+ */
+struct AudioDevInfo
+{
+    /**
+     * The device name
+     */
+    string name;
+
+    /**
+     * Maximum number of input channels supported by this device. If the
+     * value is zero, the device does not support input operation (i.e.
+     * it is a playback only device).
+     */
+    unsigned inputCount;
+
+    /**
+     * Maximum number of output channels supported by this device. If the
+     * value is zero, the device does not support output operation (i.e.
+     * it is an input only device).
+     */
+    unsigned outputCount;
+
+    /**
+     * Default sampling rate.
+     */
+    unsigned defaultSamplesPerSec;
+
+    /**
+     * The underlying driver name
+     */
+    string driver;
+
+    /**
+     * Device capabilities, as bitmask combination of #pjmedia_aud_dev_cap.
+     */
+    unsigned caps;
+
+    /**
+     * Supported audio device routes, as bitmask combination of
+     * #pjmedia_aud_dev_route. The value may be zero if the device
+     * does not support audio routing.
+     */
+    unsigned routes;
+
+    /**
+     * Array of supported extended audio formats
+     */
+    MediaFormatVector extFmt;
+
+    /**
+     * Construct from pjmedia_aud_dev_info.
+     */
+    void fromPj(const pjmedia_aud_dev_info &dev_info);
+
+    /**
+     * Destructor.
+     */
+    ~AudioDevInfo();
+};
+
+/** Array of audio device info */
+typedef std::vector<AudioDevInfo*> AudioDevInfoVector;
+
+/**
+ * Audio device manager.
+ */
+class AudDevManager
+{
+public:
+    /**
+     * Get currently active capture sound devices. If sound devices has not been
+     * created, it is possible that the function returns -1 as device IDs.
+     *
+     * @return 	Device ID of the capture device.
+     */
+    int getCaptureDev() const throw(Error);
+
+    /**
+     * Get currently active playback sound devices. If sound devices has not
+     * been created, it is possible that the function returns -1 as device IDs.
+     *
+     * @return 	Device ID of the playback device.
+     */
+    int getPlaybackDev() const throw(Error);
+
+    /**
+     * Select or change capture sound device. Application may call this
+     * function at any time to replace current sound device.
+     *
+     * @param capture dev   	Device ID of the capture device.
+     */
+    void setCaptureDev(int capture_dev) const throw(Error);
+
+    /**
+     * Select or change playback sound device. Application may call this
+     * function at any time to replace current sound device.
+     *
+     * @param playback_dev   	Device ID of the playback device.
+     */
+    void setPlaybackDev(int playback_dev) const throw(Error);
+
+    /**
+     * Enum all audio devices installed in the system.
+     *
+     * @return		The list of audio device info.
+     */
+    const AudioDevInfoVector &enumDev() throw(Error);
+
+    /**
+     * Set pjsua to use null sound device. The null sound device only provides
+     * the timing needed by the conference bridge, and will not interract with
+     * any hardware.
+     *
+     */
+    void setNullDev() throw(Error);
+
+    /**
+     * Disconnect the main conference bridge from any sound devices, and let
+     * application connect the bridge to it's own sound device/master port.
+     *
+     * @return		The port interface of the conference bridge,
+     *			so that application can connect this to it's own
+     *			sound device or master port.
+     */
+    MediaPort *setNoDev();
+
+    /**
+     * Change the echo cancellation settings.
+     *
+     * The behavior of this function depends on whether the sound device is
+     * currently active, and if it is, whether device or software AEC is
+     * being used.
+     *
+     * If the sound device is currently active, and if the device supports AEC,
+     * this function will forward the change request to the device and it will
+     * be up to the device on whether support the request. If software AEC is
+     * being used (the software EC will be used if the device does not support
+     * AEC), this function will change the software EC settings. In all cases,
+     * the setting will be saved for future opening of the sound device.
+     *
+     * If the sound device is not currently active, this will only change the
+     * default AEC settings and the setting will be applied next time the
+     * sound device is opened.
+     *
+     * @param tail_msec		The tail length, in miliseconds. Set to zero to
+     *				disable AEC.
+     * @param options		Options to be passed to pjmedia_echo_create().
+     *				Normally the value should be zero.
+     *
+     */
+    void setEcOptions(unsigned tail_msec, unsigned options) throw(Error);
+
+    /**
+     * Get current echo canceller tail length.
+     *
+     * @return		The EC tail length in milliseconds,
+     *			If AEC is disabled, the value will be zero.
+     */
+    unsigned getEcTail() const throw(Error);
+
+    /**
+     * Check whether the sound device is currently active. The sound device
+     * may be inactive if the application has set the auto close feature to
+     * non-zero (the sndAutoCloseTime setting in #MediaConfig), or
+     * if null sound device or no sound device has been configured via the
+     * #setNoDev() function.
+     */
+    bool sndIsActive() const;
+
+    /**
+     * Refresh the list of sound devices installed in the system. This method
+     * will only refresh the list of audio device so all active audio streams
+     * will be unaffected. After refreshing the device list, application MUST
+     * make sure to update all index references to audio devices before calling
+     * any method that accepts audio device index as its parameter.
+     *
+     */
+    void refreshDevs() throw(Error);
+
+    /**
+     * Get the number of sound devices installed in the system.
+     *
+     * @return 	The number of sound devices installed in the system.
+     *
+     */
+    unsigned getDevCount() const;
+
+    /**
+     * Get device information.
+     *
+     * @param id		The audio device ID.
+     *
+     * @return			The device information which will be filled in
+     * 				by this method once it returns successfully.
+     */
+    AudioDevInfo getDevInfo(int id) const throw(Error);
+
+    /**
+     * Lookup device index based on the driver and device name.
+     *
+     * @param drv_name	The driver name.
+     * @param dev_name	The device name.
+     *
+     * @return		The device ID. If the device is not found, Error will be
+     * 			thrown.
+     *
+     */
+    int lookupDev(const string &drv_name,
+		  const string &dev_name) const throw(Error);
+
+    /**
+     * Get string info for the specified capability.
+     *
+     * @param cap		The capability ID.
+     *
+     * @return			Capability name.
+     */
+    string capName(pjmedia_aud_dev_cap cap) const;
+
+    /**
+     * This will configure audio format capability (other than PCM) to the
+     * sound device being used. If sound device is currently active, the method
+     * will forward the setting to the sound device instance to be applied
+     * immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_EXT_FORMAT capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param format	The audio format.
+     * @param keep	Specify whether the setting is to be kept for
+     * 			future use.
+     *
+     */
+    void
+    setExtFormat(const MediaFormatAudio &format, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio format capability (other than PCM) of the sound device
+     * being used. If sound device is currently active, the method will forward
+     * the request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_EXT_FORMAT capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @return	    The audio format.
+     *
+     */
+    MediaFormatAudio getExtFormat() const throw(Error);
+
+    /**
+     * This will configure audio input latency control or query capability to
+     * the sound device being used. If sound device is currently active,
+     * the method will forward the setting to the sound device instance to be
+     * applied immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param latency_msec	    The input latency.
+     * @param keep		    Specify whether the setting is to be kept
+     *				    for future use.
+     *
+     */
+    void
+    setInputLatency(unsigned latency_msec, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio input latency control or query capability of the sound
+     * device being used. If sound device is currently active, the method will
+     * forward the request to the sound device. If sound device is currently
+     * inactive, and if application had previously set the setting and mark the
+     * setting as kept, then that setting will be returned. Otherwise, this
+     * method will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @return	    The audio input latency.
+     *
+     */
+    unsigned getInputLatency() const throw(Error);
+
+    /**
+     * This will configure audio output latency control or query capability to
+     * the sound device being used. If sound device is currently active,
+     * the method will forward the setting to the sound device instance to be
+     * applied immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param latency_msec    	The output latency.
+     * @param keep		Specify whether the setting is to be kept
+     * 				for future use.
+     *
+     */
+    void
+    setOutputLatency(unsigned latency_msec, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio output latency control or query capability of the sound
+     * device being used. If sound device is currently active, the method will
+     * forward the request to the sound device. If sound device is currently
+     * inactive, and if application had previously set the setting and mark the
+     * setting as kept, then that setting will be returned. Otherwise, this
+     * method will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY capability in AudioDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @return	    The audio output latency.
+     *
+     */
+    unsigned getOutputLatency() const throw(Error);
+
+    /**
+     * This will configure audio input volume level capability to the
+     * sound device being used.
+     * If sound device is currently active, the method will forward the
+     * setting to the sound device instance to be applied immediately,
+     * if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param volume	The input volume level, in percent.
+     * @param keep	Specify whether the setting is to be kept for future
+     * 			use.
+     *
+     */
+    void setInputVolume(unsigned volume, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio input volume level capability of the sound device being
+     * used. If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.     *
+
+     * @return	    The audio input volume level, in percent.
+     *
+     */
+    unsigned getInputVolume() const throw(Error);
+
+    /**
+     * This will configure audio output volume level capability to the sound
+     * device being used. If sound device is currently active, the method will
+     * forward the setting to the sound device instance to be applied
+     * immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param volume	The output volume level, in percent.
+     * @param keep	Specify whether the setting is to be kept
+     * 			for future use.
+     *
+     */
+    void setOutputVolume(unsigned volume, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio output volume level capability of the sound device being
+     * used. If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio output volume level, in percent.
+     *
+     */
+    unsigned getOutputVolume() const throw(Error);
+
+    /**
+     * Get the audio input signal level capability of the sound device being
+     * used. If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_METER capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio input signal level, in percent.
+     *
+     */
+    unsigned getInputSignal() const throw(Error);
+
+    /**
+     * Get the audio output signal level capability of the sound device being
+     * used. If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_METER capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio output signal level, in percent.
+     *
+     */
+    unsigned getOutputSignal() const throw(Error);
+
+    /**
+     * This will configure audio input route capability to the sound device
+     * being used. If sound device is currently active, the method will
+     * forward the setting to the sound device instance to be applied
+     * immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param route	The audio input route.
+     * @param keep	Specify whether the setting is to be kept
+     * 			for future use.
+     *
+     */
+    void
+    setInputRoute(pjmedia_aud_dev_route route, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio input route capability of the sound device being used.
+     * If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio input route.
+     *
+     */
+    pjmedia_aud_dev_route getInputRoute() const throw(Error);
+
+    /**
+     * This will configure audio output route capability to the sound device
+     * being used. If sound device is currently active, the method will
+     * forward the setting to the sound device instance to be applied
+     * immediately, if it supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param route	The audio output route.
+     * @param keep	Specify whether the setting is to be kept
+     * 			for future use.
+     *
+     */
+    void
+    setOutputRoute(pjmedia_aud_dev_route route, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio output route capability of the sound device being used.
+     * If sound device is currently active, the method will forward the
+     * request to the sound device. If sound device is currently inactive,
+     * and if application had previously set the setting and mark the setting
+     * as kept, then that setting will be returned. Otherwise, this method
+     * will raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE capability in AudioDevInfo.caps
+     * flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio output route.
+     *
+     */
+    pjmedia_aud_dev_route getOutputRoute() const throw(Error);
+
+    /**
+     * This will configure audio voice activity detection capability to
+     * the sound device being used. If sound device is currently active,
+     * the method will forward the setting to the sound device instance
+     * to be applied immediately, if it supports it.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_VAD
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param enable		Enable/disable voice activity detection
+     *				feature. Set true to enable.
+     * @param keep		Specify whether the setting is to be kept for
+     *				future use.
+     *
+     */
+    void setVad(bool enable, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio voice activity detection capability of the sound device
+     * being used. If sound device is currently active, the method will
+     * forward the request to the sound device. If sound device is currently
+     * inactive, and if application had previously set the setting and mark
+     * the setting as kept, then that setting will be returned. Otherwise,
+     * this method will raise error.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_VAD
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio voice activity detection feature.
+     *
+     */
+    bool getVad() const throw(Error);
+
+    /**
+     * This will configure audio comfort noise generation capability to
+     * the sound device being used. If sound device is currently active,
+     * the method will forward the setting to the sound device instance
+     * to be applied immediately, if it supports it.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_CNG
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param enable		Enable/disable comfort noise generation
+     *				feature. Set true to enable.
+     * @param keep		Specify whether the setting is to be kept for
+     *				future use.
+     *
+     */
+    void setCng(bool enable, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio comfort noise generation capability of the sound device
+     * being used. If sound device is currently active, the method will
+     * forward the request to the sound device. If sound device is currently
+     * inactive, and if application had previously set the setting and mark
+     * the setting as kept, then that setting will be returned. Otherwise,
+     * this method will raise error.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_CNG
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio comfort noise generation feature.
+     *
+     */
+    bool getCng() const throw(Error);
+
+    /**
+     * This will configure audio packet loss concealment capability to
+     * the sound device being used. If sound device is currently active,
+     * the method will forward the setting to the sound device instance
+     * to be applied immediately, if it supports it.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_PLC
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the sound device to be
+     * used.
+     *
+     * @param enable		Enable/disable packet loss concealment
+     *				feature. Set true to enable.
+     * @param keep		Specify whether the setting is to be kept for
+     *				future use.
+     *
+     */
+    void setPlc(bool enable, bool keep=true) throw(Error);
+
+    /**
+     * Get the audio packet loss concealment capability of the sound device
+     * being used. If sound device is currently active, the method will
+     * forward the request to the sound device. If sound device is currently
+     * inactive, and if application had previously set the setting and mark
+     * the setting as kept, then that setting will be returned. Otherwise,
+     * this method will raise error.
+     *
+     * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_PLC
+     * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
+     *
+     * @return	    The audio packet loss concealment feature.
+     *
+     */
+    bool getPlc() const throw(Error);
+
+private:
+    AudioDevInfoVector		 audioDevList;
+
+    /**
+     * Constructor.
+     */
+    AudDevManager();
+
+    /**
+     * Destructor.
+     */
+    ~AudDevManager();
+
+    void clearAudioDevList();
+    int getActiveDev(bool is_capture) const throw(Error);
+
+    friend class Endpoint;
 };
 
 } // namespace pj

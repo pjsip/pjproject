@@ -74,6 +74,7 @@ using namespace pj;
 %template(BuddyVector)			std::vector<pj::Buddy*>;
 %template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
 %template(MediaFormatVector)		std::vector<pj::MediaFormat*>;
+%template(AudioDevInfoVector)	std::vector<AudioDevInfo*>;
 
 %include "pjsua2/media.hpp"
 %include "pjsua2/endpoint.hpp"

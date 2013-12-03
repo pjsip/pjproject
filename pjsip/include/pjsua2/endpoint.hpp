@@ -1004,6 +1004,8 @@ public:
      */
     const AudioMediaVector &mediaEnumPorts() const throw(Error);
 
+    AudDevManager &audDevManager();
+
 public:
     /*
      * Overrideables callbacks
@@ -1071,6 +1073,7 @@ private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
     AudioMediaVector 	 	 mediaList;
+    AudDevManager		 audioDevMgr;
 
     /* Endpoint static callbacks */
     static void logFunc(int level, const char *data, int len);
@@ -1192,6 +1195,7 @@ private:
                               unsigned media_idx,
                               pjmedia_transport *base_tp,
                               unsigned flags);
+
 };
 
 

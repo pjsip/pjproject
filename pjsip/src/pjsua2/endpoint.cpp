@@ -1359,3 +1359,8 @@ bool Endpoint::mediaExists(const AudioMedia &media) const
 
     return (it != mediaList.end());
 }
+
+AudDevManager &Endpoint::audDevManager()
+{
+    return audioDevMgr;
+}

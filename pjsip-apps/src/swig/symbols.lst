@@ -11,6 +11,7 @@ pjmedia/event.h                 pjmedia_event_type
 pjmedia/transport_srtp.h	pjmedia_srtp_use
 pjmedia/vid_stream.h		pjmedia_vid_stream_rc_method
 pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index
+pjmedia-audiodev/audiodev.h 	pjmedia_aud_dev_route pjmedia_aud_dev_cap
 pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
 pjmedia/types.h                 pjmedia_type pjmedia_dir pjmedia_tp_proto
 pjmedia/format.h		pjmedia_format_id

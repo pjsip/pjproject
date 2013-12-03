@@ -27,6 +27,47 @@ using namespace std;
 
 #define THIS_FILE		"media.cpp"
 #define MAX_FILE_NAMES 		64
+#define MAX_DEV_COUNT		64
+
+///////////////////////////////////////////////////////////////////////////////
+void MediaFormatAudio::fromPj(const pjmedia_format &format)
+{
+    if ((format.type != PJMEDIA_TYPE_AUDIO) &&
+	(format.detail_type != PJMEDIA_FORMAT_DETAIL_AUDIO))
+    {
+	type = PJMEDIA_TYPE_UNKNOWN;
+	return;
+    }
+
+    id = format.id;
+    type = format.type;
+
+    /* Detail. */
+    clockRate = format.det.aud.clock_rate;
+    channelCount = format.det.aud.channel_count;
+    frameTimeUsec = format.det.aud.frame_time_usec;
+    bitsPerSample = format.det.aud.bits_per_sample;
+    avgBps = format.det.aud.avg_bps;
+    maxBps = format.det.aud.max_bps;
+}
+
+pjmedia_format MediaFormatAudio::toPj() const
+{
+    pjmedia_format pj_format;
+
+    pj_format.id = id;
+    pj_format.type = type;
+
+    pj_format.detail_type = PJMEDIA_FORMAT_DETAIL_AUDIO;
+    pj_format.det.aud.clock_rate = clockRate;
+    pj_format.det.aud.channel_count = channelCount;
+    pj_format.det.aud.frame_time_usec = frameTimeUsec;
+    pj_format.det.aud.bits_per_sample = bitsPerSample;
+    pj_format.det.aud.avg_bps = avgBps;
+    pj_format.det.aud.max_bps = maxBps;
+
+    return pj_format;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /* Audio Media operations. */
@@ -253,7 +294,6 @@ void AudioMediaPlayer::setPos(pj_uint32_t samples) throw(Error)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
 AudioMediaRecorder::AudioMediaRecorder()
 : recorderId(PJSUA_INVALID_ID)
 {
@@ -286,4 +326,380 @@ void AudioMediaRecorder::createRecorder(const string &file_name,
 
     registerMediaPort(NULL);
 }
+///////////////////////////////////////////////////////////////////////////////
+void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
+{
+    name = dev_info.name;
+    inputCount = dev_info.input_count;
+    outputCount = dev_info.output_count;
+    defaultSamplesPerSec = dev_info.default_samples_per_sec;
+    driver = dev_info.driver;
+    caps = dev_info.caps;
+    routes = dev_info.routes;
 
+    for (unsigned i=0; i<dev_info.ext_fmt_cnt;++i) {
+	MediaFormatAudio *format = new MediaFormatAudio;
+
+	format->fromPj(dev_info.ext_fmt[i]);
+	if (format->type == PJMEDIA_TYPE_AUDIO)
+	    extFmt.push_back(format);
+    }
+}
+
+AudioDevInfo::~AudioDevInfo()
+{
+    for(unsigned i=0;i<extFmt.size();++i) {
+	delete extFmt[i];
+    }
+    extFmt.clear();
+}
+///////////////////////////////////////////////////////////////////////////////
+/* Audio device operations. */
+
+int AudDevManager::getCaptureDev() const throw(Error)
+{
+    return getActiveDev(true);
+}
+
+int AudDevManager::getPlaybackDev() const throw(Error)
+{
+    return getActiveDev(false);
+}
+
+void AudDevManager::setCaptureDev(int capture_dev) const throw(Error)
+{
+    int playback_dev = getPlaybackDev();
+
+    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev(capture_dev, playback_dev) );
+}
+
+void AudDevManager::setPlaybackDev(int playback_dev) const throw(Error)
+{
+    int capture_dev = getCaptureDev();
+
+    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev(capture_dev, playback_dev) );
+}
+
+const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
+{
+    pjmedia_aud_dev_info pj_info[MAX_DEV_COUNT];
+    unsigned count;
+
+    clearAudioDevList();
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_aud_devs(pj_info, &count) );
+
+    for (unsigned i = 0; (i<count && i<MAX_DEV_COUNT) ;++i) {
+	AudioDevInfo *dev_info = new AudioDevInfo;
+	dev_info->fromPj(pj_info[i]);
+	audioDevList.push_back(dev_info);
+    }
+    return audioDevList;
+}
+
+void AudDevManager::setNullDev() throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_set_null_snd_dev() );
+}
+
+MediaPort *AudDevManager::setNoDev()
+{
+    return (MediaPort*)pjsua_set_no_snd_dev();
+}
+
+void AudDevManager::setEcOptions(unsigned tail_msec,
+				 unsigned options) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_set_ec(tail_msec, options) );
+}
+
+unsigned AudDevManager::getEcTail() const throw(Error)
+{
+    unsigned tail_msec = 0;
+
+    PJSUA2_CHECK_EXPR( pjsua_get_ec_tail(&tail_msec) );
+
+    return tail_msec;
+}
+
+bool AudDevManager::sndIsActive() const
+{
+    return pjsua_snd_is_active();
+}
+
+void AudDevManager::refreshDevs() throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjmedia_aud_dev_refresh() );
+}
+
+unsigned AudDevManager::getDevCount() const
+{
+    return pjmedia_aud_dev_count();
+}
+
+AudioDevInfo
+AudDevManager::getDevInfo(int id) const throw(Error)
+{
+    AudioDevInfo dev_info;
+    pjmedia_aud_dev_info pj_info;
+
+    PJSUA2_CHECK_EXPR( pjmedia_aud_dev_get_info(id, &pj_info) );
+
+    dev_info.fromPj(pj_info);
+    return dev_info;
+}
+
+int AudDevManager::lookupDev(const string &drv_name,
+			     const string &dev_name) const throw(Error)
+{
+    pjmedia_aud_dev_index pj_idx = 0;
+
+    PJSUA2_CHECK_EXPR( pjmedia_aud_dev_lookup(drv_name.c_str(),
+					      dev_name.c_str(),
+					      &pj_idx) );
+
+    return pj_idx;
+}
+
+
+string AudDevManager::capName(pjmedia_aud_dev_cap cap) const
+{
+    return pjmedia_aud_dev_cap_name(cap, NULL);
+}
+
+void
+AudDevManager::setExtFormat(const MediaFormatAudio &format,
+			    bool keep) throw(Error)
+{
+    pjmedia_format pj_format = format.toPj();
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_EXT_FORMAT,
+					     &pj_format,
+					     keep) );
+}
+
+MediaFormatAudio AudDevManager::getExtFormat() const throw(Error)
+{
+    pjmedia_format pj_format;
+    MediaFormatAudio format;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_EXT_FORMAT,
+					     &pj_format) );
+
+    format.fromPj(pj_format);
+
+    return format;
+}
+
+void AudDevManager::setInputLatency(unsigned latency_msec,
+				    bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY,
+					     &latency_msec,
+					     keep) );
+}
+
+unsigned AudDevManager::getInputLatency() const throw(Error)
+{
+    unsigned latency_msec = 0;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY,
+					     &latency_msec) );
+
+    return latency_msec;
+}
+
+void
+AudDevManager::setOutputLatency(unsigned latency_msec,
+				bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY,
+					     &latency_msec,
+					     keep) );
+}
+
+unsigned AudDevManager::getOutputLatency() const throw(Error)
+{
+    unsigned latency_msec = 0;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY,
+					     &latency_msec) );
+
+    return latency_msec;
+}
+
+void AudDevManager::setInputVolume(unsigned volume, bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
+				  &volume,
+				  keep) );
+}
+
+unsigned AudDevManager::getInputVolume() const throw(Error)
+{
+    unsigned volume = 0;
+
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
+				  &volume) );
+
+    return volume;
+}
+
+void AudDevManager::setOutputVolume(unsigned volume, bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+				  &volume,
+				  keep) );
+}
+
+unsigned AudDevManager::getOutputVolume() const throw(Error)
+{
+    unsigned volume = 0;
+
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+				  &volume) );
+
+    return volume;
+}
+
+unsigned AudDevManager::getInputSignal() const throw(Error)
+{
+    unsigned signal = 0;
+
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_METER,
+				  &signal) );
+
+    return signal;
+}
+
+unsigned AudDevManager::getOutputSignal() const throw(Error)
+{
+    unsigned signal = 0;
+
+    PJSUA2_CHECK_EXPR(
+	    pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_METER,
+				  &signal) );
+
+    return signal;
+}
+
+void
+AudDevManager::setInputRoute(pjmedia_aud_dev_route route,
+			     bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE,
+					     &route,
+					     keep) );
+}
+
+pjmedia_aud_dev_route AudDevManager::getInputRoute() const throw(Error)
+{
+    pjmedia_aud_dev_route route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE,
+					     &route) );
+
+    return route;
+}
+
+void
+AudDevManager::setOutputRoute(pjmedia_aud_dev_route route,
+			      bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					     &route,
+					     keep) );
+}
+
+pjmedia_aud_dev_route AudDevManager::getOutputRoute() const throw(Error)
+{
+    pjmedia_aud_dev_route route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					     &route) );
+
+    return route;
+}
+
+void AudDevManager::setVad(bool enable, bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_VAD,
+					     &enable,
+					     keep) );
+}
+
+bool AudDevManager::getVad() const throw(Error)
+{
+    bool enable = false;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_VAD,
+					     &enable) );
+
+    return enable;
+}
+
+void AudDevManager::setCng(bool enable, bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_CNG,
+					     &enable,
+					     keep) );
+}
+
+bool AudDevManager::getCng() const throw(Error)
+{
+    bool enable = false;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_CNG,
+					     &enable) );
+
+    return enable;
+}
+
+void AudDevManager::setPlc(bool enable, bool keep) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_PLC,
+					     &enable,
+					     keep) );
+}
+
+bool AudDevManager::getPlc() const throw(Error)
+{
+    bool enable = false;
+
+    PJSUA2_CHECK_EXPR( pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_PLC,
+					     &enable) );
+
+    return enable;
+}
+
+AudDevManager::AudDevManager()
+{
+
+
+}
+
+AudDevManager::~AudDevManager()
+{
+    clearAudioDevList();
+}
+
+void AudDevManager::clearAudioDevList()
+{
+    for(unsigned i=0;i<audioDevList.size();++i) {
+	delete audioDevList[i];
+    }
+    audioDevList.clear();
+}
+
+int AudDevManager::getActiveDev(bool is_capture) const throw(Error)
+{
+    int capture_dev = 0, playback_dev = 0;
+    PJSUA2_CHECK_EXPR( pjsua_get_snd_dev(&capture_dev, &playback_dev) );
+
+    return is_capture?capture_dev:playback_dev;
+}
