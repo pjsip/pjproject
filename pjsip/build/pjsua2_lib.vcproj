@@ -3129,11 +3129,19 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjsua2\call.cpp"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjsua2\endpoint.cpp"
 				>
 			</File>
 			<File
 				RelativePath="..\src\pjsua2\json.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjsua2\media.cpp"
 				>
 			</File>
 			<File
@@ -3166,6 +3174,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjsua2\call.hpp"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjsua2\config.hpp"
 				>
 			</File>
@@ -3179,6 +3191,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjsua2\json.hpp"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjsua2\media.hpp"
 				>
 			</File>
 			<File

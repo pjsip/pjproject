@@ -444,7 +444,7 @@ struct CallInfo
     /**
      * Local URI
      */
-    string		localURI;
+    string		localUri;
     
     /**
      * Local Contact
@@ -454,7 +454,7 @@ struct CallInfo
     /**
      * Remote URI
      */
-    string		remoteURI;
+    string		remoteUri;
     
     /**
      * Remote contact
@@ -1451,7 +1451,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallState(OnCallStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * This is a general notification callback which is called whenever
@@ -1463,7 +1463,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallTsxState(OnCallTsxStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application when media state in the call has changed.
@@ -1475,7 +1475,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallMediaState(OnCallMediaStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application when a call has just created a local SDP (for
@@ -1487,7 +1487,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application when media session is created and before it is
@@ -1498,7 +1498,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onStreamCreated(OnStreamCreatedParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application when media session has been unregistered from the
@@ -1507,7 +1507,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onStreamDestroyed(OnStreamDestroyedParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application upon incoming DTMF digits.
@@ -1515,7 +1515,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onDtmfDigit(OnDtmfDigitParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application on call being transfered (i.e. REFER is received).
@@ -1527,7 +1527,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application of the status of previously sent call
@@ -1538,7 +1538,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallTransferStatus(OnCallTransferStatusParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application about incoming INVITE with Replaces header.
@@ -1547,7 +1547,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application that an existing call has been replaced with
@@ -1560,7 +1560,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallReplaced(OnCallReplacedParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application when call has received new offer from remote
@@ -1574,7 +1574,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallRxOffer(OnCallRxOfferParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application on incoming MESSAGE request.
@@ -1582,7 +1582,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onInstantMessage(OnInstantMessageParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application about the delivery status of outgoing MESSAGE
@@ -1591,7 +1591,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onInstantMessageStatus(OnInstantMessageStatusParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notify application about typing indication.
@@ -1599,7 +1599,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onTypingIndication(OnTypingIndicationParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * This callback is called when the call is about to resend the
@@ -1644,6 +1644,7 @@ public:
      */
     virtual pjsip_redirect_op onCallRedirected(OnCallRedirectedParam &prm)
     {
+	PJ_UNUSED_ARG(prm);
         return PJSIP_REDIRECT_STOP;
     }
     
@@ -1653,7 +1654,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallMediaTransportState(OnCallMediaTransportStateParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * Notification about media events such as video notifications. This
@@ -1666,7 +1667,7 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallMediaEvent(OnCallMediaEventParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
     
     /**
      * This callback can be used by application to implement custom media
@@ -1682,7 +1683,7 @@ public:
      */
     virtual void
     onCreateMediaTransport(OnCreateMediaTransportParam &prm)
-    {}
+    { PJ_UNUSED_ARG(prm); }
 
 private:
     Account             &acc;

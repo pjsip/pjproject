@@ -18,6 +18,7 @@
  */
 #include <pjsua2/endpoint.hpp>
 #include <pjsua2/account.hpp>
+#include <pjsua2/call.hpp>
 #include <pjsua2/presence.hpp>
 #include <algorithm>
 #include "util.hpp"
@@ -486,6 +487,18 @@ Account *Endpoint::lookupAcc(int acc_id, const char *op)
     return acc;
 }
 
+Call *Endpoint::lookupCall(int call_id, const char *op)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	PJ_LOG(1,(THIS_FILE,
+		  "Error: cannot find Call instance for call id %d in "
+		  "%s", call_id, op));
+    }
+
+    return call;
+}
+
 void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
                                 pjsip_rx_data *rdata)
 {
@@ -595,9 +608,13 @@ void Endpoint::on_pager2(pjsua_call_id call_id,
     prm.rdata.fromPj(*rdata);
 
     if (call_id != PJSUA_INVALID_ID) {
-	// TODO:
-	//	handle call pager
-	return;
+	Call *call = lookupCall(call_id, "on_pager2()");
+	if (!call) {
+	    /* Ignored */
+	    return;
+	}
+
+	call->onInstantMessage(prm);
     } else {
 	Account *acc = lookupAcc(acc_id, "on_pager2()");
 	if (!acc) {
@@ -631,8 +648,13 @@ void Endpoint::on_pager_status2( pjsua_call_id call_id,
 	prm.rdata.fromPj(*rdata);
 
     if (call_id != PJSUA_INVALID_ID) {
-	// TODO:
-	//	handle call pager
+	Call *call = lookupCall(call_id, "on_pager_status2()");
+	if (!call) {
+	    /* Ignored */
+	    return;
+	}
+
+	call->onInstantMessageStatus(prm);
     } else {
 	Account *acc = lookupAcc(acc_id, "on_pager_status2()");
 	if (!acc) {
@@ -660,8 +682,13 @@ void Endpoint::on_typing2( pjsua_call_id call_id,
     prm.rdata.fromPj(*rdata);
 
     if (call_id != PJSUA_INVALID_ID) {
-	// TODO:
-	//	handle call indication
+	Call *call = lookupCall(call_id, "on_typing2()");
+	if (!call) {
+	    /* Ignored */
+	    return;
+	}
+
+	call->onTypingIndication(prm);
     } else {
 	Account *acc = lookupAcc(acc_id, "on_typing2()");
 	if (!acc) {
@@ -721,6 +748,8 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
                                  pjsip_transaction *tsx,
                                  pjsip_event *e)
 {
+    PJ_UNUSED_ARG(tsx);
+
     Call *call = Call::lookup(call_id);
     if (!call) {
 	return;
@@ -857,8 +886,8 @@ void Endpoint::on_call_transfer_status(pjsua_call_id call_id,
     OnCallTransferStatusParam prm;
     prm.statusCode = (pjsip_status_code)st_code;
     prm.reason = pj2Str(*st_text);
-    prm.finalNotify = final;
-    prm.cont = *p_cont;
+    prm.finalNotify = PJ2BOOL(final);
+    prm.cont = PJ2BOOL(*p_cont);
     
     call->onCallTransferStatus(prm);
     
@@ -909,6 +938,8 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
                                 pjsip_status_code *code,
                                 pjsua_call_setting *opt)
 {
+    PJ_UNUSED_ARG(reserved);
+
     Call *call = Call::lookup(call_id);
     if (!call) {
 	return;

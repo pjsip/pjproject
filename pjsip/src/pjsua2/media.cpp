@@ -312,6 +312,8 @@ void AudioMediaRecorder::createRecorder(const string &file_name,
 				        unsigned options)
 				        throw(Error)
 {
+    PJ_UNUSED_ARG(max_size);
+
     pj_str_t pj_name = str2Pj(file_name);
 
     PJSUA2_CHECK_EXPR( pjsua_recorder_create(&pj_name,
@@ -426,7 +428,7 @@ unsigned AudDevManager::getEcTail() const throw(Error)
 
 bool AudDevManager::sndIsActive() const
 {
-    return pjsua_snd_is_active();
+    return PJ2BOOL(pjsua_snd_is_active());
 }
 
 void AudDevManager::refreshDevs() throw(Error)

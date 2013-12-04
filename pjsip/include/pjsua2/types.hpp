@@ -21,6 +21,7 @@
 
 #ifdef _MSC_VER
 #   pragma warning( disable : 4290 ) // exception spec ignored
+#   pragma warning( disable : 4512 ) // can't generate assignment op
 #endif
 
 /**
@@ -84,10 +85,11 @@ typedef void *TimerEntry;
 typedef void *GenericData;
 
 /*
- * Forward declaration of Account to be used
+ * Forward declaration of Account and Call to be used
  * by Endpoint.
  */
 class Account;
+class Call;
 
 
 /**

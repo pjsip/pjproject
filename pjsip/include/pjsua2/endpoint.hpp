@@ -1134,9 +1134,10 @@ private:
 
 private:
     /*
-     * Account
+     * Account & Call lookups
      */
     static Account	*lookupAcc(int acc_id, const char *op);
+    static Call		*lookupCall(int call_id, const char *op);
 
     /* static callbacks */
     static void on_incoming_call(pjsua_acc_id acc_id,

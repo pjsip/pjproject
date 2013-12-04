@@ -26,6 +26,13 @@ ifeq ("$(JAVA_HOME)","")
   JAVAC_PATH := $(realpath $(JAVAC_PATH))
   JAVA_BIN := $(dir $(JAVAC_PATH))
   JAVA_HOME := $(patsubst %/bin/,%,$(JAVA_BIN))
+else
+  ifeq (exists, $(shell test -d $(JAVA_HOME)/bin && echo exists ))
+    JAVA_BIN := $(JAVA_HOME)/bin
+  else
+    JAVA_BIN := $(JAVA_HOME)
+  endif
+  #$(error $(JAVA_BIN))
 endif
 
 # OS specific

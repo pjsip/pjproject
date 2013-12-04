@@ -171,12 +171,14 @@ CallSendRequestParam::CallSendRequestParam()
 
 CallVidSetStreamParam::CallVidSetStreamParam()
 {
+#if PJSUA_HAS_VIDEO
     pjsua_call_vid_strm_op_param prm;
     
     pjsua_call_vid_strm_op_param_default(&prm);
     this->medIdx = prm.med_idx;
     this->dir    = prm.dir;
     this->capDev = prm.cap_dev;
+#endif
 }
 
 CallSetting::CallSetting(pj_bool_t useDefaultValues)
@@ -241,14 +243,14 @@ void CallMediaInfo::fromPj(const pjsua_call_media_info &prm)
 
 void CallInfo::fromPj(const pjsua_call_info &pci)
 {
-    int mi;
+    unsigned mi;
     
     id 			= pci.id;
     role                = pci.role;
     accId               = pci.acc_id;
-    localURI            = pj2Str(pci.local_info);
+    localUri            = pj2Str(pci.local_info);
     localContact        = pj2Str(pci.local_contact);
-    remoteURI           = pj2Str(pci.remote_info);
+    remoteUri           = pj2Str(pci.remote_info);
     remoteContact       = pj2Str(pci.remote_contact);
     callIdString        = pj2Str(pci.call_id);
     setting.fromPj(pci.setting);
@@ -258,7 +260,7 @@ void CallInfo::fromPj(const pjsua_call_info &pci)
     lastReason          = pj2Str(pci.last_status_text);
     connectDuration.fromPj(pci.connect_duration);
     totalDuration.fromPj(pci.total_duration);
-    remOfferer          = pci.rem_offerer;
+    remOfferer          = PJ2BOOL(pci.rem_offerer);
     remAudioCount       = pci.rem_aud_cnt;
     remVideoCount       = pci.rem_vid_cnt;
     
@@ -605,6 +607,8 @@ bool Call::vidStreamIsRunning(int med_idx, pjmedia_dir dir) const
 #if PJSUA_HAS_VIDEO
     return pjsua_call_vid_stream_is_running(id, med_idx, dir);
 #else
+    PJ_UNUSED_ARG(med_idx);
+    PJ_UNUSED_ARG(dir);
     return false;
 #endif
 }
@@ -620,7 +624,9 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
     prm.cap_dev = param.capDev;
     PJSUA2_CHECK_EXPR( pjsua_call_set_vid_strm(id, op, &prm) );
 #else
-    PJSUA2_RAISE_ERROR(PJ_EINVOP);
+    PJ_UNUSED_ARG(op);
+    PJ_UNUSED_ARG(param);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
 }
 
