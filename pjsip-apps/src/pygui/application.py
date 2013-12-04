@@ -137,6 +137,8 @@ class Application(ttk.Frame):
 		self._onTimer()
 
 	def updateAccount(self, acc):
+		if acc.deleting:
+			return	# ignore
 		iid = str(acc.randId)
 		text = acc.cfg.idUri
 		status = acc.statusText()
@@ -353,6 +355,8 @@ class Application(ttk.Frame):
 				return
 			iid = str(acc.randId)
 			self.accList.remove(acc)
+			acc.setRegistration(False)
+			acc.deleting = True
 			del acc
 			self.tv.delete( (iid,) )
 		elif label=='Add buddy...':

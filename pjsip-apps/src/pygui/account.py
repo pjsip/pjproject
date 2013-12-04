@@ -49,6 +49,7 @@ class Account(pj.Account):
 		self.cfgChanged = False
 		self.buddyList = []
 		self.chatList = []
+		self.deleting = False
 
 	def findBuddy(self, uri):
 		# TODO: proper URI comparison
