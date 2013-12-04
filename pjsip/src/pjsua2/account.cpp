@@ -658,7 +658,7 @@ Account::~Account()
         // Cleanup buddies in the buddy list
 	while(buddyList.size() > 0) {
 	    Buddy *b = buddyList[0];
-	    delete b;
+	    delete b; /* this will remove itself from the list */
 	}
 
 	pjsua_acc_set_user_data(id, NULL);

@@ -374,7 +374,7 @@ Endpoint::~Endpoint()
     
     while(mediaList.size() > 0) {
 	AudioMedia *cur_media = mediaList[0];
-	delete cur_media;
+	delete cur_media; /* this will remove itself from the list */
     }
 
     clearCodecInfoList();
