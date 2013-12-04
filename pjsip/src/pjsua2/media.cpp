@@ -355,17 +355,55 @@ AudioDevInfo::~AudioDevInfo()
     }
     extFmt.clear();
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/*
+ * Simple AudioMedia class for sound device.
+ */
+class DevAudioMedia : public AudioMedia
+{
+public:
+    DevAudioMedia();
+};
+
+DevAudioMedia::DevAudioMedia()
+{
+    this->id = 0;
+    registerMediaPort(NULL);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /* Audio device operations. */
+
+AudDevManager::AudDevManager()
+{
+    devMedia = new DevAudioMedia;
+}
+
+AudDevManager::~AudDevManager()
+{
+    delete devMedia;
+    clearAudioDevList();
+}
 
 int AudDevManager::getCaptureDev() const throw(Error)
 {
     return getActiveDev(true);
 }
 
+AudioMedia &AudDevManager::getCaptureDevMedia() throw(Error)
+{
+    return *devMedia;
+}
+
 int AudDevManager::getPlaybackDev() const throw(Error)
 {
     return getActiveDev(false);
+}
+
+AudioMedia &AudDevManager::getPlaybackDevMedia() throw(Error)
+{
+    return *devMedia;
 }
 
 void AudDevManager::setCaptureDev(int capture_dev) const throw(Error)
@@ -679,17 +717,6 @@ bool AudDevManager::getPlc() const throw(Error)
 					     &enable) );
 
     return enable;
-}
-
-AudDevManager::AudDevManager()
-{
-
-
-}
-
-AudDevManager::~AudDevManager()
-{
-    clearAudioDevList();
 }
 
 void AudDevManager::clearAudioDevList()

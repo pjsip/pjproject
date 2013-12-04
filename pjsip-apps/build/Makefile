@@ -63,7 +63,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 #  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 #TARGETS := swig pjsua pjsystest samples
-TARGETS := swig samples
+TARGETS := swig pjsua pjsystest samples
 
 .PHONY: $(TARGETS)
 

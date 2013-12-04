@@ -472,17 +472,31 @@ public:
      * Get currently active capture sound devices. If sound devices has not been
      * created, it is possible that the function returns -1 as device IDs.
      *
-     * @return 	Device ID of the capture device.
+     * @return 			Device ID of the capture device.
      */
     int getCaptureDev() const throw(Error);
+
+    /**
+     * Get the AudioMedia of the capture audio device.
+     *
+     * @return			Audio media for the capture device.
+     */
+    AudioMedia &getCaptureDevMedia() throw(Error);
 
     /**
      * Get currently active playback sound devices. If sound devices has not
      * been created, it is possible that the function returns -1 as device IDs.
      *
-     * @return 	Device ID of the playback device.
+     * @return 			Device ID of the playback device.
      */
     int getPlaybackDev() const throw(Error);
+
+    /**
+     * Get the AudioMedia of the speaker/playback audio device.
+     *
+     * @return			Audio media for the speaker/playback device.
+     */
+    AudioMedia &getPlaybackDevMedia() throw(Error);
 
     /**
      * Select or change capture sound device. Application may call this
@@ -503,7 +517,7 @@ public:
     /**
      * Enum all audio devices installed in the system.
      *
-     * @return		The list of audio device info.
+     * @return			The list of audio device info.
      */
     const AudioDevInfoVector &enumDev() throw(Error);
 
@@ -519,9 +533,9 @@ public:
      * Disconnect the main conference bridge from any sound devices, and let
      * application connect the bridge to it's own sound device/master port.
      *
-     * @return		The port interface of the conference bridge,
-     *			so that application can connect this to it's own
-     *			sound device or master port.
+     * @return			The port interface of the conference bridge,
+     *				so that application can connect this to it's
+     *				own sound device or master port.
      */
     MediaPort *setNoDev();
 
@@ -554,8 +568,8 @@ public:
     /**
      * Get current echo canceller tail length.
      *
-     * @return		The EC tail length in milliseconds,
-     *			If AEC is disabled, the value will be zero.
+     * @return			The EC tail length in milliseconds,
+     *				If AEC is disabled, the value will be zero.
      */
     unsigned getEcTail() const throw(Error);
 
@@ -581,7 +595,8 @@ public:
     /**
      * Get the number of sound devices installed in the system.
      *
-     * @return 	The number of sound devices installed in the system.
+     * @return 			The number of sound devices installed in the
+     * 				system.
      *
      */
     unsigned getDevCount() const;
@@ -599,12 +614,11 @@ public:
     /**
      * Lookup device index based on the driver and device name.
      *
-     * @param drv_name	The driver name.
-     * @param dev_name	The device name.
+     * @param drv_name		The driver name.
+     * @param dev_name		The device name.
      *
-     * @return		The device ID. If the device is not found, Error will be
-     * 			thrown.
-     *
+     * @return			The device ID. If the device is not found,
+     * 				Error will be thrown.
      */
     int lookupDev(const string &drv_name,
 		  const string &dev_name) const throw(Error);
@@ -632,9 +646,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param format	The audio format.
-     * @param keep	Specify whether the setting is to be kept for
-     * 			future use.
+     * @param format		The audio format.
+     * @param keep		Specify whether the setting is to be kept for
+     * 				future use.
      *
      */
     void
@@ -652,7 +666,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_EXT_FORMAT capability in AudioDevInfo.caps flags,
      * otherwise Error will be thrown.
      *
-     * @return	    The audio format.
+     * @return	    		The audio format.
      *
      */
     MediaFormatAudio getExtFormat() const throw(Error);
@@ -671,10 +685,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param latency_msec	    The input latency.
-     * @param keep		    Specify whether the setting is to be kept
-     *				    for future use.
-     *
+     * @param latency_msec	The input latency.
+     * @param keep		Specify whether the setting is to be kept
+     *				for future use.
      */
     void
     setInputLatency(unsigned latency_msec, bool keep=true) throw(Error);
@@ -691,7 +704,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY capability in AudioDevInfo.caps flags,
      * otherwise Error will be thrown.
      *
-     * @return	    The audio input latency.
+     * @return	    		The audio input latency.
      *
      */
     unsigned getInputLatency() const throw(Error);
@@ -730,7 +743,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY capability in AudioDevInfo.caps flags,
      * otherwise Error will be thrown.
      *
-     * @return	    The audio output latency.
+     * @return	    		The audio output latency.
      *
      */
     unsigned getOutputLatency() const throw(Error);
@@ -750,9 +763,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param volume	The input volume level, in percent.
-     * @param keep	Specify whether the setting is to be kept for future
-     * 			use.
+     * @param volume		The input volume level, in percent.
+     * @param keep		Specify whether the setting is to be kept for
+     * 				future use.
      *
      */
     void setInputVolume(unsigned volume, bool keep=true) throw(Error);
@@ -769,7 +782,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.     *
 
-     * @return	    The audio input volume level, in percent.
+     * @return	    		The audio input volume level, in percent.
      *
      */
     unsigned getInputVolume() const throw(Error);
@@ -788,9 +801,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param volume	The output volume level, in percent.
-     * @param keep	Specify whether the setting is to be kept
-     * 			for future use.
+     * @param volume		The output volume level, in percent.
+     * @param keep		Specify whether the setting is to be kept
+     * 				for future use.
      *
      */
     void setOutputVolume(unsigned volume, bool keep=true) throw(Error);
@@ -807,7 +820,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
-     * @return	    The audio output volume level, in percent.
+     * @return	    		The audio output volume level, in percent.
      *
      */
     unsigned getOutputVolume() const throw(Error);
@@ -824,7 +837,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_METER capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
-     * @return	    The audio input signal level, in percent.
+     * @return	    		The audio input signal level, in percent.
      *
      */
     unsigned getInputSignal() const throw(Error);
@@ -841,7 +854,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_METER capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
-     * @return	    The audio output signal level, in percent.
+     * @return	    		The audio output signal level, in percent.
      *
      */
     unsigned getOutputSignal() const throw(Error);
@@ -860,9 +873,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param route	The audio input route.
-     * @param keep	Specify whether the setting is to be kept
-     * 			for future use.
+     * @param route		The audio input route.
+     * @param keep		Specify whether the setting is to be kept
+     * 				for future use.
      *
      */
     void
@@ -880,7 +893,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
-     * @return	    The audio input route.
+     * @return	    		The audio input route.
      *
      */
     pjmedia_aud_dev_route getInputRoute() const throw(Error);
@@ -899,9 +912,9 @@ public:
      * to any devices, even when application has changed the sound device to be
      * used.
      *
-     * @param route	The audio output route.
-     * @param keep	Specify whether the setting is to be kept
-     * 			for future use.
+     * @param route		The audio output route.
+     * @param keep		Specify whether the setting is to be kept
+     * 				for future use.
      *
      */
     void
@@ -919,7 +932,7 @@ public:
      * PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE capability in AudioDevInfo.caps
      * flags, otherwise Error will be thrown.
      *
-     * @return	    The audio output route.
+     * @return	    		The audio output route.
      *
      */
     pjmedia_aud_dev_route getOutputRoute() const throw(Error);
@@ -956,7 +969,7 @@ public:
      * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_VAD
      * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
      *
-     * @return	    The audio voice activity detection feature.
+     * @return	    		The audio voice activity detection feature.
      *
      */
     bool getVad() const throw(Error);
@@ -993,7 +1006,7 @@ public:
      * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_CNG
      * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
      *
-     * @return	    The audio comfort noise generation feature.
+     * @return	    		The audio comfort noise generation feature.
      *
      */
     bool getCng() const throw(Error);
@@ -1030,13 +1043,14 @@ public:
      * This method is only valid if the device has PJMEDIA_AUD_DEV_CAP_PLC
      * capability in AudioDevInfo.caps flags, otherwise Error will be thrown.
      *
-     * @return	    The audio packet loss concealment feature.
+     * @return	    		The audio packet loss concealment feature.
      *
      */
     bool getPlc() const throw(Error);
 
 private:
     AudioDevInfoVector		 audioDevList;
+    AudioMedia			*devMedia;
 
     /**
      * Constructor.
