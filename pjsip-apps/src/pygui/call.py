@@ -50,6 +50,15 @@ class Call(pj.Call):
 		if self.chat:
 			self.chat.updateCallState(self, ci)
 			
+	def onCallMediaState(self, prm):
+		ci = self.getInfo()
+		for mi in ci.media:
+			if mi.type == pj.PJMEDIA_TYPE_AUDIO and \
+			  (mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE or \
+			   mi.status == pj.PJSUA_CALL_MEDIA_REMOTE_HOLD):
+				m = self.getMedia(mi.index)
+				print m
+			
 	def onInstantMessage(self, prm):
 		# chat instance should have been initalized
 		if not self.chat: return

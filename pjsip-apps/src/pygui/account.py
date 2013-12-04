@@ -68,7 +68,7 @@ class Account(pj.Account):
 		return None
 	
 	def newChat(self, buddy):
-		chat = ch.Chat(self, buddy)
+		chat = ch.Chat(self.app, self, buddy)
 		self.chatList.append(chat)
 		return chat
 	
@@ -108,29 +108,34 @@ class Account(pj.Account):
 		c.answer(call_prm)
 		ci = c.getInfo()
 		msg = "Incoming call for account '%s'" % self.cfg.idUri
-		if msgbox.askquestion(msg, "Accept call from '%s'?" % (ci.remoteURI), default=msgbox.YES) == u'yes':
+		if msgbox.askquestion(msg, "Accept call from '%s'?" % (ci.remoteUri), default=msgbox.YES) == u'yes':
 			call_prm.statusCode = 200
 			c.answer(call_prm)
 			
 			# create chat instance
-			bud = self.findBuddy(ci.remoteURI)
-			if not bud: return
+			bud = self.findBuddy(ci.remoteUri)
+			if not bud:
+				print "=== Incoming call from '%s': cannot find buddy" % ci.remoteUri
+				return
 			chat = self.findChat(bud)
-			if not chat: chat = self.newChat(bud, c)
+			if not chat: chat = self.newChat(bud)
 			
-			chat.registerCall(bud, c)
 			chat.showWindow()
+			chat.registerCall(bud, c)
+			chat.updateCallState(c, ci)
 		else:
 			c.hangup(call_prm)
 			
 	def onInstantMessage(self, prm):
 		bud = self.findBuddy(prm.fromUri)
-		if not bud: return
+		if not bud:
+			print "=== Incoming IM from '%s': cannot find buddy" % prm.fromUri
+			return
 		chat = self.findChat(bud)
 		if not chat: chat = self.newChat(bud)
 			
-		chat.addMessage(bud.cfg.uri, prm.msgBody)
 		chat.showWindow()
+		chat.addMessage(bud.cfg.uri, prm.msgBody)
 		
 	def onInstantMessageStatus(self, prm):
 		if prm.code/100 == 2: return
@@ -144,7 +149,9 @@ class Account(pj.Account):
 		
 	def onTypingIndication(self, prm):
 		bud = self.findBuddy(prm.fromUri)
-		if not bud: return
+		if not bud:
+			print "=== Incoming typing indication from '%s': cannot find buddy" % prm.fromUri
+			return
 		chat = self.findChat(bud)
 		if not chat: return
 		

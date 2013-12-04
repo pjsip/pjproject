@@ -73,7 +73,7 @@ class TextFrame(ttk.Frame):
 		self.columnconfigure(0, weight=1)
 		self.columnconfigure(1, weight=0)
 		
-		self._text = tk.Text(self, font=("Arial", "10"))
+		self._text = tk.Text(self, width=50, height=30, font=("Arial", "10"))
 		self._text.grid(row=0, column=0, sticky='nswe')
 		self._text.config(state=tk.DISABLED)
 		self._text.tag_config("info", foreground="darkgray", font=("Arial", "9", "italic"))
@@ -82,7 +82,7 @@ class TextFrame(ttk.Frame):
 		self._text.config(yscrollcommand=scrl.set)
 		scrl.grid(row=0, column=1, sticky='nsw')
 		
-		self._typingBox = tk.Text(self, height=1, font=("Arial", "10"))
+		self._typingBox = tk.Text(self, width=50, height=1, font=("Arial", "10"))
 		self._typingBox.grid(row=1, columnspan=2, sticky='we', pady=0)
 		
 		self._statusBar = tk.Label(self, anchor='w', font=("Arial", "8", "italic"))
@@ -111,11 +111,11 @@ class AudioState:
 	NULL, INITIALIZING, CONNECTED, DISCONNECTED, FAILED = range(5)
 			
 class AudioObserver:
-	def onRetry(self, peer_uri):
-		pass
-	def onKick(self, peer_uri):
+	def onHangup(self, peer_uri):
 		pass
 	def onHold(self, peer_uri):
+		pass
+	def onUnhold(self, peer_uri):
 		pass
 	def onRxMute(self, peer_uri, is_muted):
 		pass
@@ -134,8 +134,6 @@ class AudioFrame(ttk.Labelframe):
 		self._callFrame = None
 		self._rxMute = False
 		self._txMute = False
-
-		# internal state: 0:init - 1:established - 2:failure/rejected 3:normal cleared
 		self._state = AudioState.NULL
 		
 		self._createInitWidgets()
@@ -148,7 +146,6 @@ class AudioFrame(ttk.Labelframe):
 		if state == AudioState.INITIALIZING:
 			self._callFrame.pack_forget()
 			self._initFrame.pack(fill=tk.BOTH)
-			self._btnRetry.pack_forget()
 			self._btnCancel.pack(side=tk.TOP)
 			self._lblInitState['text'] = 'Intializing..'
 
@@ -160,31 +157,30 @@ class AudioFrame(ttk.Labelframe):
 			self._initFrame.pack(fill=tk.BOTH)
 			if state == AudioState.FAILED:
 				self._lblInitState['text'] = 'Failed'
-				self._btnRetry.pack()
 			else:
 				self._lblInitState['text'] = 'Normal cleared'
 				self._btnCancel.pack_forget()
+			
+			self._btnHold['text'] = 'Hold'
+			self._btnHold.config(state=tk.NORMAL)
 		
 		# save last state
 		self._state = state
 		
-	def _onRetry(self):
-		self._btnRetry.pack_forget()
-		self._state = 0
-		# notify app
-		self._observer.onRetry(self.peerUri)
-
-	def _onKick(self):
-		# notify app
-		self._observer.onKick(self.peerUri)
-		
 	def _onHold(self):
+		self._btnHold.config(state=tk.DISABLED)
 		# notify app
-		self._observer.onHold(self.peerUri)
+		if self._btnHold['text'] == 'Hold':
+			self._observer.onHold(self.peerUri)
+			self._btnHold['text'] = 'Unhold'
+		else:
+			self._observer.onUnhold(self.peerUri)
+			self._btnHold['text'] = 'Hold'
+		self._btnHold.config(state=tk.NORMAL)
 
 	def _onHangup(self):
 		# notify app
-		self._observer.onKick(self.peerUri)
+		self._observer.onHangup(self.peerUri)
 
 	def _onRxMute(self):
 		# notify app
@@ -209,10 +205,8 @@ class AudioFrame(ttk.Labelframe):
 		self._lblInitState = tk.Label(self._initFrame, font=("Arial", "12"), text='')
 		self._lblInitState.pack(side=tk.TOP, fill=tk.X, expand=1)
 		
-		# Operation: retry, cancel/kick
-		self._btnRetry = ttk.Button(self._initFrame, text = 'Retry', command=self._onRetry)
-		self._btnRetry.pack(side=tk.TOP)
-		self._btnCancel = ttk.Button(self._initFrame, text = 'Cancel', command=self._onKick)
+		# Operation: cancel/kick
+		self._btnCancel = ttk.Button(self._initFrame, text = 'Cancel', command=self._onHangup)
 		self._btnCancel.pack(side=tk.TOP)
 				
 	def _createWidgets(self):
@@ -382,6 +376,10 @@ class ChatFrame(tk.Toplevel):
 			if participant_uri == aud_frm.peerUri:
 				aud_frm.updateState(state)
 				break
+		if state >= AudioState.DISCONNECTED and len(self._audioFrames) == 1:
+			self.enableAudio(False)
+		else:
+			self.enableAudio(True)
 						
 if __name__ == '__main__':
 	root = tk.Tk()

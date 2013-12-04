@@ -57,7 +57,7 @@ class Application(ttk.Frame):
 		self.accList = []
 		
 		# GUI variables
-		self.showLogWindow = tk.IntVar(value=1)
+		self.showLogWindow = tk.IntVar(value=0)
 		self.quitting = False 
 		
 		# Construct GUI
@@ -377,7 +377,7 @@ class Application(ttk.Frame):
 			chat = acc.findChat(bud)
 			if not chat: chat = acc.newChat(bud)
 			chat.showWindow()
-			chat.startAudio()
+			chat.startCall()
 		elif label=='Send instant message':
 			chat = acc.findChat(bud)
 			if not chat: chat = acc.newChat(bud)
