@@ -80,7 +80,7 @@ public:
         CallInfo ci = call->getInfo();
         CallOpParam prm;
         
-        std::cout << "*** Incoming Call: " <<  ci.remoteURI << " ["
+        std::cout << "*** Incoming Call: " <<  ci.remoteUri << " ["
                   << ci.stateText << "]" << std::endl;
         
         calls.push_back(call);
@@ -92,7 +92,7 @@ public:
 void MyCall::onCallState(OnCallStateParam &prm)
 {
     CallInfo ci = getInfo();
-    std::cout << "*** Call: " <<  ci.remoteURI << " [" << ci.stateText
+    std::cout << "*** Call: " <<  ci.remoteUri << " [" << ci.stateText
               << "]" << std::endl;
     
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
