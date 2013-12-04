@@ -34,6 +34,7 @@ import _pjsua2
 import accountsetting
 import application
 import call
+import chat as ch
 
 # Account class
 class Account(pj.Account):
@@ -47,8 +48,29 @@ class Account(pj.Account):
 		self.cfg =  pj.AccountConfig()
 		self.cfgChanged = False
 		self.buddyList = []
-                self.callList = []
+		self.chatList = []
 
+	def findBuddy(self, uri):
+		# TODO: proper URI comparison
+		for bud in self.buddyList:
+			if bud.cfg.uri in uri or uri in bud.cfg.uri:
+				return bud
+		return None
+		
+	def findChat(self, buddy, call_inst = None):
+		for chat in self.chatList:
+			if chat.isBuddyParticipant(buddy):
+				if call_inst and chat.isCallRegistered(call_inst):
+					return chat
+				elif not call_inst and chat.isPrivate():
+					return chat
+		return None
+	
+	def newChat(self, buddy):
+		chat = ch.Chat(self, buddy)
+		self.chatList.append(chat)
+		return chat
+	
 	def statusText(self):
 		status = '?'
 		if self.isValid():
@@ -74,32 +96,60 @@ class Account(pj.Account):
 		else:
 			status = '- not created -'
 		return status
-        
-        def makeCall(self):
-                mycall = call.Call(self.app, self, pj.PJSUA_INVALID_ID)
-                callPrm = pj.CallOpParam()
-                callPrm.opt.audioCount = 1
-                callPrm.opt.videoCount = 0
-                mycall.uri = "sip:test1@pjsip.org"
-                self.callList.append(mycall)
-                mycall.makeCall(mycall.uri, callPrm)
-	
+        	
 	def onRegState(self, prm):
 		self.app.updateAccount(self)
 
         def onIncomingCall(self, prm):
-                mycall = call.Call(self.app, self, prm.callId)
-                self.callList.append(mycall)
-                self.app.updateCall(self)
-                callPrm = pj.CallOpParam()
-                msg = "Incoming call for account '%s'" % self.cfg.idUri
-		if msgbox.askquestion(msg, 'Accept call?', default=msgbox.YES) == u'yes':
-                        callPrm.statusCode = 200
-                        mycall.answer(callPrm)
-                else:
-                        mycall.hangup(callPrm)
+		c = call.Call(self, call_id=prm.callId)
+                call_prm = pj.CallOpParam()
+		call_prm.statusCode = 180
+		c.answer(call_prm)
+		ci = c.getInfo()
+		msg = "Incoming call for account '%s'" % self.cfg.idUri
+		if msgbox.askquestion(msg, "Accept call from '%s'?" % (ci.remoteURI), default=msgbox.YES) == u'yes':
+			call_prm.statusCode = 200
+			c.answer(call_prm)
+			
+			# create chat instance
+			bud = self.findBuddy(ci.remoteURI)
+			if not bud: return
+			chat = self.findChat(bud)
+			if not chat: chat = self.newChat(bud, c)
+			
+			chat.registerCall(bud, c)
+			chat.showWindow()
+		else:
+			c.hangup(call_prm)
+			
+	def onInstantMessage(self, prm):
+		bud = self.findBuddy(prm.fromUri)
+		if not bud: return
+		chat = self.findChat(bud)
+		if not chat: chat = self.newChat(bud)
+			
+		chat.addMessage(bud.cfg.uri, prm.msgBody)
+		chat.showWindow()
+		
+	def onInstantMessageStatus(self, prm):
+		if prm.code/100 == 2: return
+		
+		bud = self.findBuddy(prm.toUri)
+		if not bud: return
+		chat = self.findChat(bud)
+		if not chat: return
+		
+		chat.addMessage(None, "Failed sending message to '%s': %s" % (bud.cfg.uri, prm.reason))
+		
+	def onTypingIndication(self, prm):
+		bud = self.findBuddy(prm.fromUri)
+		if not bud: return
+		chat = self.findChat(bud)
+		if not chat: return
+		
+		chat.setTypingIndication(bud.cfg.uri, prm.isTyping)
 
-
+		
 # Account frame, to list accounts
 class AccountListFrame(ttk.Frame):
 	"""

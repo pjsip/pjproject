@@ -37,33 +37,38 @@ class Call(pj.Call):
 	"""
 	High level Python Call object, derived from pjsua2's Call object.
 	"""
-	def __init__(self, app, acc, callId):
-		pj.Call.__init__(self, acc, callId)
-		self.app = app
+	def __init__(self, acc, peer_uri='', chat=None, call_id = pj.PJSUA_INVALID_ID):
+		pj.Call.__init__(self, acc, call_id)
                 self.acc = acc
-                self.uri = ''
-                self.randId = random.randint(1, 9999)
+		self.peerUri = peer_uri
+		self.chat = chat
+		self.connected = False
 
-	def statusText(self):
-                uri = ''
-		status = '?'
-		if self.isActive():
-			ci = self.getInfo()
-                        status = ci.stateText
-                        uri = ci.remoteURI
-		else:
-			status = '- not established -'
-		return uri, status
-	
 	def onCallState(self, prm):
-                ci = self.getInfo()
-                if ci.state == pj.PJSIP_INV_STATE_DISCONNECTED:
-                        iid = str(self.randId)
-			self.acc.callList.remove(self)
-			self.app.tv.delete( (iid,) )
-                        del self
-                else:
-                        self.app.updateCall(self.acc)
-
+		ci = self.getInfo()
+		self.connected = ci.state == pj.PJSIP_INV_STATE_CONFIRMED			
+		if self.chat:
+			self.chat.updateCallState(self, ci)
+			
+	def onInstantMessage(self, prm):
+		# chat instance should have been initalized
+		if not self.chat: return
+			
+		self.chat.addMessage(self.peerUri, prm.msgBody)
+		self.chat.showWindow()
+			
+	def onInstantMessageStatus(self, prm):
+		if prm.code/100 == 2: return
+		# chat instance should have been initalized
+		if not self.chat: return
+		
+		self.chat.addMessage(None, "Failed sending message to '%s' (%d): %s" % (self.peerUri, prm.code, prm.reason))
+		
+	def onTypingIndication(self, prm):
+		# chat instance should have been initalized
+		if not self.chat: return
+		
+		self.chat.setTypingIndication(self.peerUri, prm.isTyping)
+			
 if __name__ == '__main__':
 	application.main()

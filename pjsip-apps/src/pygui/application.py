@@ -51,7 +51,7 @@ class Application(ttk.Frame):
 		self.master.geometry('500x500+100+100')
 		
 		# Logger
-		self.logger = log.Logger()
+		self.logger = None #log.Logger()
 		
 		# Accounts
 		self.accList = []
@@ -136,16 +136,6 @@ class Application(ttk.Frame):
 		# Start polling
 		self._onTimer()
 
-        def updateCall(self, acc):
-                iid = str(acc.randId)
-                for call in acc.callList:
-                        calliid = str(call.randId)
-                        uri, status = call.statusText()
-                        if self.tv.exists(calliid):
-                                self.tv.item(call.iid, text=uri, values=(status,))
-                        else:
-                                call.iid = self.tv.insert(iid, 0, calliid, open=True, text=uri, values=(status,))
-
 	def updateAccount(self, acc):
 		iid = str(acc.randId)
 		text = acc.cfg.idUri
@@ -225,7 +215,7 @@ class Application(ttk.Frame):
 		# Create Account context menu
 		self.accMenu = tk.Menu(top, tearoff=False)
 		# Labels, must match with _onAccContextMenu()
-		labels = ['Call', '-', 'Unregister', 'Reregister', 'Add buddy...', '-',
+		labels = ['Unregister', 'Reregister', 'Add buddy...', '-',
 			  'Online', 'Invisible', 'Away', 'Busy', '-',
 			  'Settings...', '-',
 			  'Delete...']
@@ -237,9 +227,9 @@ class Application(ttk.Frame):
 				self.accMenu.add_command(label=label, command=cmd)
 		
 		# Create Buddy context menu
-		# Labels, must match with _onAccContextMenu()
+		# Labels, must match with _onBuddyContextMenu()
 		self.buddyMenu = tk.Menu(top, tearoff=False)
-		labels = ['Video call', 'Audio call', 'Send instant message', '-',
+		labels = ['Audio call', 'Send instant message', '-',
 			  'Subscribe', 'Unsubscribe', '-',
 			  'Settings...', '-',
 			  'Delete...']
@@ -256,6 +246,7 @@ class Application(ttk.Frame):
 			self.tv.bind('<Control-1>', self._onTvRightClick)
 		else:
 			self.tv.bind('<3>', self._onTvRightClick)
+		self.tv.bind('<Double-Button-1>', self._onTvDoubleClick)
 
 	def _getSelectedAccount(self):
 		items = self.tv.selection()
@@ -302,14 +293,31 @@ class Application(ttk.Frame):
 				# A buddy is selected
 				self.buddyMenu.post(event.x_root, event.y_root)
 	
+	def _onTvDoubleClick(self, event):
+		iid = self.tv.identify_row(event.y)
+		if iid:
+			self.tv.selection_set( (iid,) )
+			acc = self._getSelectedAccount()
+			if acc:
+				self.cfgChanged = False
+				dlg = accountsetting.Dialog(self.master, acc.cfg)
+				if dlg.doModal():
+					self.updateAccount(acc)
+					acc.modify(acc.cfg)
+			else:
+				bud = self._getSelectedBuddy()
+				acc = bud.account
+				chat = acc.findChat(bud)
+				if not chat:
+					chat = acc.newChat(bud)
+				chat.showWindow()
+	
 	def _onAccContextMenu(self, label):
 		acc = self._getSelectedAccount()
 		if not acc:
 			return
 		
-                if label=='Call':
-                        acc.makeCall()
-		elif label=='Unregister':
+		if label=='Unregister':
 			acc.setRegistration(False)
 		elif label=='Reregister':
 			acc.setRegistration(True)
@@ -361,12 +369,15 @@ class Application(ttk.Frame):
 			return
 		acc = bud.account
 			
-		if label=='Video call':
-			pass
-		elif label=='Audio call':
-			pass
+		if label=='Audio call':
+			chat = acc.findChat(bud)
+			if not chat: chat = acc.newChat(bud)
+			chat.showWindow()
+			chat.startAudio()
 		elif label=='Send instant message':
-			pass
+			chat = acc.findChat(bud)
+			if not chat: chat = acc.newChat(bud)
+			chat.showWindow()
 		elif label=='Subscribe':
 			bud.subscribePresence(True)
 		elif label=='Unsubscribe':
@@ -475,4 +486,5 @@ def main():
 	app.mainloop()
 		
 if __name__ == '__main__':
+	print pj
 	main()
