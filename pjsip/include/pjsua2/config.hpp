@@ -20,14 +20,14 @@
 #define __PJSUA2_CONFIG_HPP__
 
 /**
- * @file pjsua2/ua.hpp
+ * @file pjsua2/config.hpp
  * @brief PJSUA2 Base Agent Operation
  */
 #include <pjsua-lib/pjsua.h>
 
 /**
  * @defgroup PJSUA2_CFG_Compile Compile time settings
- * @ingroup PJSUA2_Ref
+ * @ingroup PJSUA2_DS
  * @{
  */
 

@@ -26,15 +26,16 @@
 #include <pjsua2/persistent.hpp>
 #include <pjsua2/siptypes.hpp>
 
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+
 /**
  * @defgroup PJSUA2_PRES Presence
  * @ingroup PJSUA2_Ref
  * @{
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 using std::vector;
 
@@ -169,6 +170,7 @@ struct BuddyInfo
     PresenceStatus	 presStatus;
     
 public:
+    /** Import from pjsip structure */
     void fromPj(const pjsua_buddy_info &pbi);
 };
 
@@ -285,10 +287,10 @@ private:
 typedef std::vector<Buddy*> BuddyVector;
 
 
-} // namespace pj
-
 /**
  * @}  // PJSUA2_PRES
  */
+
+} // namespace pj
 
 #endif	/* __PJSUA2_PRESENCE_HPP__ */

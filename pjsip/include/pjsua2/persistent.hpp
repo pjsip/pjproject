@@ -28,6 +28,10 @@
 #include <string>
 #include <vector>
 
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+
 /**
  * @defgroup PJSUA2_PERSISTENT Persistent API
  * @ingroup PJSUA2_Ref
@@ -40,9 +44,6 @@
  * support other document formats.
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 using std::vector;
 
@@ -261,7 +262,7 @@ public:
      * Write a number value to the container.
      *
      * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param num	The value to be written.
      */
     void		writeNumber(const string &name,
         		            float num) throw(Error);
@@ -270,7 +271,7 @@ public:
      * Write a number value to the container.
      *
      * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param num	The value to be written.
      */
     void		writeInt(const string &name,
         		         int num) throw(Error);
@@ -297,10 +298,10 @@ public:
      * Write string vector to the container.
      *
      * @param name	The name for the value in the container.
-     * @param array	The vector to be written.
+     * @param arr	The vector to be written.
      */
     void		writeStringVector(const string &name,
-        		                  const StringVector &value)
+        		                  const StringVector &arr)
 					  throw(Error);
 
     /**
@@ -347,9 +348,9 @@ struct container_node_op;
  */
 struct container_node_internal_data
 {
-    void	*doc;
-    void	*data1;
-    void	*data2;
+    void	*doc;		/**< The document.	*/
+    void	*data1;		/**< Internal data 1	*/
+    void	*data2;		/**< Internal data 2	*/
 };
 
 /**
@@ -523,7 +524,7 @@ public:
      * Write a number value to the container.
      *
      * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param num	The value to be written.
      */
     void		writeNumber(const string &name,
         		            float num) throw(Error);
@@ -532,7 +533,7 @@ public:
      * Write a number value to the container.
      *
      * @param name	The name for the value in the container.
-     * @param value	The value to be written.
+     * @param num	The value to be written.
      */
     void		writeInt(const string &name,
         		         int num) throw(Error);
@@ -559,10 +560,10 @@ public:
      * Write string vector to the container.
      *
      * @param name	The name for the value in the container.
-     * @param array	The vector to be written.
+     * @param arr	The vector to be written.
      */
     void		writeStringVector(const string &name,
-        		                  const StringVector &value)
+        		                  const StringVector &arr)
 					  throw(Error);
 
     /**
@@ -597,8 +598,8 @@ public:
 
 public:
     /* internal data */
-    container_node_op *op;
-    container_node_internal_data data;
+    container_node_op *op;		/**< Method table.	*/
+    container_node_internal_data data;	/**< Internal data	*/
 };
 
 
@@ -606,6 +607,7 @@ public:
  * Pointer to actual ContainerNode implementation. See ContainerNode
  * implementation notes for more info.
  */
+//! @cond Doxygen_Suppress
 struct container_node_op
 {
     bool		(*hasUnread)(const ContainerNode*);
@@ -651,9 +653,7 @@ struct container_node_op
     ContainerNode 	(*writeNewArray)(ContainerNode*,
 				         const string &name)
 					 throw(Error);
-
 };
-
 
 /*
  * Convenient macros.
@@ -676,12 +676,13 @@ struct container_node_op
 #define NODE_WRITE_STRINGV(node,item)	node.writeStringVector(#item, item)
 #define NODE_WRITE_OBJ(node,item)	node.writeObject(item)
 
-
-} // namespace pj
+//! @endcond
 
 /**
  * @}  PJSUA2
  */
+
+} // namespace pj
 
 
 

@@ -33,15 +33,16 @@
 #include <string>
 #include <vector>
 
-/**
- * @defgroup PJSUA2_TYPES Data structure
- * @ingroup PJSUA2_Ref
- * @{
- */
-
 /** PJSUA2 API is inside pj namespace */
 namespace pj
 {
+
+/**
+ * @defgroup PJSUA2_TYPES General Data Structure
+ * @ingroup PJSUA2_DS
+ * @{
+ */
+
 using std::string;
 using std::vector;
 
@@ -164,12 +165,15 @@ struct Error
 	} while (0)
 
 #else
+    /** Raise Error exception */
 #   define PJSUA2_RAISE_ERROR(status)		\
 	PJSUA2_RAISE_ERROR2(status, string())
 
+/** Raise Error exception */
 #   define PJSUA2_RAISE_ERROR2(status,op)	\
 	PJSUA2_RAISE_ERROR3(status, op, string())
 
+/** Raise Error exception */
 #   define PJSUA2_RAISE_ERROR3(status,op,txt)	\
 	do { \
 	    Error err_ = Error(status, op, txt, string(), 0); \
@@ -179,6 +183,7 @@ struct Error
 
 #endif
 
+/** Raise Error exception if the expression fails */
 #define PJSUA2_CHECK_RAISE_ERROR2(status, op)	\
 	do { \
 	    if (status != PJ_SUCCESS) { \
@@ -186,9 +191,11 @@ struct Error
 	    } \
 	} while (0)
 
+/** Raise Error exception if the status fails */
 #define PJSUA2_CHECK_RAISE_ERROR(status)	\
 	PJSUA2_CHECK_RAISE_ERROR2(status, "")
 
+/** Raise Error exception if the expression fails */
 #define PJSUA2_CHECK_EXPR(expr)			\
 	do { \
 	    pj_status_t the_status = expr; 	\
@@ -196,7 +203,9 @@ struct Error
 	} while (0)
 
 //////////////////////////////////////////////////////////////////////////////
-
+/**
+ * Version information.
+ */
 struct Version
 {
     /** Major number */
@@ -246,11 +255,11 @@ public:
     void fromPj(const pj_time_val &prm);
 };
 
-} // namespace pj
-
 /**
  * @}  PJSUA2
  */
+
+} // namespace pj
 
 
 

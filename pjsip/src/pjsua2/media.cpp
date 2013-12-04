@@ -145,7 +145,7 @@ void AudioMedia::registerMediaPort(MediaPort port) throw(Error)
 					       &id) );
     }
 
-    Endpoint::instance().addMedia(*this);
+    Endpoint::instance().mediaAdd(*this);
 }
 
 void AudioMedia::unregisterMediaPort()
@@ -161,7 +161,7 @@ void AudioMedia::unregisterMediaPort()
 
     id = PJSUA_INVALID_ID;
 
-    Endpoint::instance().removeMedia(*this);
+    Endpoint::instance().mediaRemove(*this);
 }
 
 AudioMedia::~AudioMedia() 

@@ -29,15 +29,15 @@
 #include <string>
 #include <vector>
 
-/**
- * @defgroup PJSUA2_TYPES Data structure
- * @ingroup PJSUA2_Ref
- * @{
- */
-
 /** PJSUA2 API is inside pj namespace */
 namespace pj
 {
+
+/**
+ * @defgroup PJSUA2_SIP_Types SIP Types
+ * @ingroup PJSUA2_DS
+ * @{
+ */
 
 /**
  * Credential information. Credential contains information to authenticate
@@ -74,9 +74,9 @@ struct AuthCredInfo : public PersistentObject
 
     /*
      * Digest AKA credential information. Note that when AKA credential
-     * is being used, the \a data field of this #pjsip_cred_info is
+     * is being used, the \a data field of this pjsip_cred_info is
      * not used, but it still must be initialized to an empty string.
-     * Please see \ref PJSIP_AUTH_AKA_API for more information.
+     * Please see PJSIP_AUTH_AKA_API for more information.
      */
 
     /** Permanent subscriber key. */
@@ -145,7 +145,7 @@ struct TlsConfig : public PersistentObject
     string		password;
 
     /**
-     * TLS protocol method from #pjsip_ssl_method.
+     * TLS protocol method from pjsip_ssl_method.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
      * use PJSIP_SSL_DEFAULT_METHOD, which default value is
@@ -165,14 +165,14 @@ struct TlsConfig : public PersistentObject
      * Specifies TLS transport behavior on the server TLS certificate
      * verification result:
      * - If \a verifyServer is disabled, TLS transport will just notify
-     *   the application via #pjsip_tp_state_callback with state
+     *   the application via pjsip_tp_state_callback with state
      *   PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
      * - If \a verifyServer is enabled, TLS transport will be shutdown
      *   and application will be notified with state
      *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
      *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
      *
-     * In any cases, application can inspect #pjsip_tls_state_info in the
+     * In any cases, application can inspect pjsip_tls_state_info in the
      * callback to see the verification detail.
      *
      * Default value is false.
@@ -183,14 +183,14 @@ struct TlsConfig : public PersistentObject
      * Specifies TLS transport behavior on the client TLS certificate
      * verification result:
      * - If \a verifyClient is disabled, TLS transport will just notify
-     *   the application via #pjsip_tp_state_callback with state
+     *   the application via pjsip_tp_state_callback with state
      *   PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
      * - If \a verifyClient is enabled, TLS transport will be shutdown
      *   and application will be notified with state
      *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
      *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
      *
-     * In any cases, application can inspect #pjsip_tls_state_info in the
+     * In any cases, application can inspect pjsip_tls_state_info in the
      * callback to see the verification detail.
      *
      * Default value is PJ_FALSE.
@@ -381,7 +381,7 @@ struct TransportInfo
     /** Transport string info/description. */
     string		    info;
 
-    /** Transport flags (see #pjsip_transport_flags_e). */
+    /** Transport flags (see pjsip_transport_flags_e). */
     unsigned		    flags;
 
     /** Local/bound address. */
@@ -859,6 +859,7 @@ public:
 
 /* Utilities */
 #ifndef SWIG
+//! @cond Doxygen_Suppress
 void readIntVector( ContainerNode &node,
                     const string &array_name,
                     IntVector &v) throw(Error);
@@ -875,13 +876,14 @@ void readSipHeaders( const ContainerNode &node,
 void writeSipHeaders(ContainerNode &node,
                      const string &array_name,
                      const SipHeaderVector &headers) throw(Error);
+//! @endcond
 #endif // SWIG
-
-} // namespace pj
 
 /**
  * @}  PJSUA2
  */
+
+} // namespace pj
 
 
 

@@ -20,7 +20,7 @@
 #define __PJSUA2_UA_HPP__
 
 /**
- * @file pjsua2/ua.hpp
+ * @file pjsua2/endpoint.hpp
  * @brief PJSUA2 Base Agent Operation
  */
 #include <pjsua2/persistent.hpp>
@@ -32,7 +32,7 @@ namespace pj
 {
 
 /**
- * @defgroup PJSUA2_UA Base Endpoint Operations
+ * @defgroup PJSUA2_UA Endpoint
  * @ingroup PJSUA2_Ref
  * @{
  */
@@ -162,7 +162,9 @@ struct OnSelectAccountParam
 };
 
 //////////////////////////////////////////////////////////////////////////////
-
+/**
+ * SIP User Agent related settings.
+ */
 struct UaConfig : public PersistentObject
 {
     /**
@@ -212,7 +214,7 @@ struct UaConfig : public PersistentObject
      * in case the DNS SRV resolution should fallback to a non-standard port.
      *
      * When nameserver is not configured, entries will be resolved with
-     * #pj_gethostbyname() if it's not an IP address. Port number may be
+     * pj_gethostbyname() if it's not an IP address. Port number may be
      * specified if the server is not listening in standard STUN port.
      */
     StringVector	stunServer;
@@ -342,7 +344,7 @@ struct LogConfig : public PersistentObject
     string		filename;
 
     /**
-     * Additional flags to be given to #pj_file_open() when opening
+     * Additional flags to be given to pj_file_open() when opening
      * the log file. By default, the flag is PJ_O_WRONLY. Application
      * may set PJ_O_APPEND here so that logs are appended to existing
      * file instead of overwriting it.
@@ -498,7 +500,7 @@ public:
     unsigned		rxDropPct;
 
     /**
-     * Echo canceller options (see #pjmedia_echo_create())
+     * Echo canceller options (see pjmedia_echo_create())
      *
      * Default: 0.
      */
@@ -790,7 +792,7 @@ public:
 
     /**
      * Schedule a timer with the specified interval and user data. When the
-     * interval elapsed, Endpoint::onTimer() callback will be
+     * interval elapsed, onTimer() callback will be
      * called. Note that the callback may be executed by different thread,
      * depending on whether worker thread is enabled or not.
      *
@@ -810,7 +812,7 @@ public:
      * @param prmToken		The timer token, which was returned from
      * 				previous utilTimerSchedule() call.
      */
-    void utilTimerCancel(Token prmTimerToken);
+    void utilTimerCancel(Token prmToken);
 
     /**
      * Get cipher list supported by SSL/TLS backend.
@@ -823,11 +825,11 @@ public:
     /**
      * This is a utility function to detect NAT type in front of this endpoint.
      * Once invoked successfully, this function will complete asynchronously
-     * and report the result in Endpoint::onNatDetectionComplete().
+     * and report the result in onNatDetectionComplete().
      *
      * After NAT has been detected and the callback is called, application can
-     * get the detected NAT type by calling #natGetType(). Application
-     * can also perform NAT detection by calling #natDetectType()
+     * get the detected NAT type by calling natGetType(). Application
+     * can also perform NAT detection by calling natDetectType()
      * again at later time.
      *
      * Note that STUN must be enabled to run this function successfully.
@@ -835,9 +837,9 @@ public:
     void natDetectType(void) throw(Error);
 
     /**
-     * Get the NAT type as detected by #natDetectType() function. This
-     * function will only return useful NAT type after #natDetectType()
-     * has completed successfully and Endpoint::onNatDetectionComplete()
+     * Get the NAT type as detected by natDetectType() function. This
+     * function will only return useful NAT type after natDetectType()
+     * has completed successfully and onNatDetectionComplete()
      * callback has been called.
      *
      * Exception: if this function is called while detection is in progress,
@@ -847,7 +849,7 @@ public:
 
     /**
      * Auxiliary function to resolve and contact each of the STUN server
-     * entries (sequentially) to find which is usable. The #pjsua_init() must
+     * entries (sequentially) to find which is usable. The libInit() must
      * have been called before calling this function.
      *
      * @param prmServers	Array of STUN servers to try. The endpoint
@@ -965,14 +967,14 @@ public:
      *
      * @param media	media to be added.
      */
-    void addMedia(AudioMedia &media);
+    void mediaAdd(AudioMedia &media);
 
     /**
      * Remove media from the media list.
      *
      * @param media	media to be removed.
      */
-    void removeMedia(AudioMedia &media);
+    void mediaRemove(AudioMedia &media);
 
     /**
      * Check if media has been added to the media list.
@@ -1004,6 +1006,11 @@ public:
      */
     const AudioMediaVector &mediaEnumPorts() const throw(Error);
 
+    /**
+     * Get the instance of Audio Device Manager.
+     *
+     * @return		The Audio Device Manager.
+     */
     AudDevManager &audDevManager();
 
     /*************************************************************************
@@ -1059,7 +1066,7 @@ public:
 
     /**
      * Callback when the Endpoint has finished performing NAT type
-     * detection that is initiated with Endpoint::natDetectType().
+     * detection that is initiated with natDetectType().
      *
      * @param prm	Callback parameters containing the detection
      * 			result.
@@ -1070,7 +1077,7 @@ public:
 
     /**
      * Callback when the Endpoint has finished performing STUN server
-     * checking that is initiated with Endpoint::natCheckStunServers().
+     * checking that is initiated with natCheckStunServers().
      *
      * @param prm	Callback parameters.
      */
@@ -1089,7 +1096,7 @@ public:
 
     /**
      * Callback when a timer has fired. The timer was scheduled by
-     * Endpoint::utilTimerSchedule().
+     * utilTimerSchedule().
      *
      * @param prm	Callback parameters.
      */

@@ -25,26 +25,24 @@
  */
 
 /**
- * @defgroup PJSUA2 PJSUA2: High Level Object Oriented PJSUA API
- * @{
- * The PJSUA2 API is a new, high-level, object-oriented API that is built
- * on top of PJSUA-LIB API. The PJSUA2 API is implemented with C++ and
- * can be used from other high level languages such as Java and Python.
- * Thanks to <A HREF="http://www.swig.org">SWIG</A>, the API can potentially
- * be used in other high level or scripting languages where SWIG binding is
- * available, such as C#, Perl, PHP, Ruby, and Tcl.
- *
- * This page mostly contains the reference documentation of the API. For
- * more guide on the API, please see the PJSUA2 wiki page:
- * http://trac.pjsip.org/repos/wiki/pjsua2_API
- * @}
+@mainpage pjsua2 API
+
+This documentation contains the API Reference for pjsua2. Please
+go to <b>Modules</b> section above for navigation.
+
+For more info regarding pjsua2, including some tutorials, please
+see The PJSIP Book.
+*/
+
+
+/**
+ * @defgroup PJSUA2_Ref pjsua2 API Reference
  */
 
 /**
- * @defgroup PJSUA2_Ref API Reference
- * @ingroup PJSUA2
+ * @defgroup PJSUA2_DS Data Structure
+ * @ingroup PJSUA2_Ref
  */
-
 
 
 /**

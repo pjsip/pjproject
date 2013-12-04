@@ -684,9 +684,9 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
                 /* Add media if the conference slot ID is valid. */
                 if (pj_ci.media[mi].stream.aud.conf_slot != PJSUA_INVALID_ID)
                 {
-                    Endpoint::instance().addMedia((AudioMedia &)*aud_med);
+                    Endpoint::instance().mediaAdd((AudioMedia &)*aud_med);
                 } else {
-                    Endpoint::instance().removeMedia((AudioMedia &)*aud_med);
+                    Endpoint::instance().mediaRemove((AudioMedia &)*aud_med);
                 }
             }
         }

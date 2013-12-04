@@ -27,15 +27,16 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua2/types.hpp>
 
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+
 /**
  * @defgroup PJSUA2_MED Media
  * @ingroup PJSUA2_Ref
  * @{
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 using std::vector;
 
@@ -487,7 +488,7 @@ public:
      * Select or change capture sound device. Application may call this
      * function at any time to replace current sound device.
      *
-     * @param capture dev   	Device ID of the capture device.
+     * @param capture_dev   	Device ID of the capture device.
      */
     void setCaptureDev(int capture_dev) const throw(Error);
 
@@ -1092,10 +1093,11 @@ typedef std::vector<CodecInfo*> CodecInfoVector;
  */
 typedef void *CodecParam;
 
-} // namespace pj
 
 /**
  * @}  // PJSUA2_MED
  */
+
+} // namespace pj
 
 #endif	/* __PJSUA2_MEDIA_HPP__ */

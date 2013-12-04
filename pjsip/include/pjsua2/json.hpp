@@ -28,6 +28,10 @@
 #include <pj/pool.h>
 #include <string>
 
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+
 /**
  * @defgroup PJSUA2_JSON JSON Persistent Support
  * @ingroup PJSUA2_PERSISTENT
@@ -35,12 +39,11 @@
  * Provides object serialization and deserialization to/from JSON document.
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 
-
+/**
+ * Persistent document (file) with JSON format.
+ */
 class JsonDocument : public PersistentDocument
 {
 public:
@@ -103,12 +106,11 @@ private:
 
 
 
-} // namespace pj
-
 /**
  * @}  PJSUA2
  */
 
+} // namespace pj
 
 
 #endif	/* __PJSUA2_JSON_HPP__ */

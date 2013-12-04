@@ -1366,7 +1366,7 @@ const AudioMediaVector &Endpoint::mediaEnumPorts() const throw(Error)
     return mediaList;
 }
 
-void Endpoint::addMedia(AudioMedia &media)
+void Endpoint::mediaAdd(AudioMedia &media)
 {
     if (mediaExists(media))
 	return;
@@ -1374,7 +1374,7 @@ void Endpoint::addMedia(AudioMedia &media)
     mediaList.push_back(&media);
 }
 
-void Endpoint::removeMedia(AudioMedia &media)
+void Endpoint::mediaRemove(AudioMedia &media)
 {
     AudioMediaVector::iterator it = std::find(mediaList.begin(),
 					      mediaList.end(),

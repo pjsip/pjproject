@@ -28,20 +28,16 @@
 #include <pjsua2/presence.hpp>
 #include <pjsua2/siptypes.hpp>
 
-/**
- * @defgroup PJSUA2_ACC Account
- * @ingroup PJSUA2_Ref
- */
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
 
 /**
- * @defgroup PJSUA2_Acc_Data_Structure Data Structure
+ * @defgroup PJSUA2_ACC Account
  * @ingroup PJSUA2_Ref
  * @{
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 
 /**
@@ -90,7 +86,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * See also \a firstRetryIntervalSec setting.
      *
-     * Default: #PJSUA_REG_RETRY_INTERVAL
+     * Default: PJSUA_REG_RETRY_INTERVAL
      */
     unsigned		retryIntervalSec;
 
@@ -262,7 +258,7 @@ struct AccountCallConfig : public PersistentObject
 {
     /**
      * Specify how to offer call hold to remote peer. Please see the
-     * documentation on #pjsua_call_hold_type for more info.
+     * documentation on pjsua_call_hold_type for more info.
      *
      * Default: PJSUA_CALL_HOLD_TYPE_DEFAULT
      */
@@ -279,7 +275,7 @@ struct AccountCallConfig : public PersistentObject
 
     /**
      * Specify the usage of Session Timers for all sessions. See the
-     * #pjsua_sip_timer_use for possible values.
+     * pjsua_sip_timer_use for possible values.
      *
      * Default: PJSUA_SIP_TIMER_OPTIONAL
      */
@@ -676,7 +672,7 @@ struct AccountMediaConfig : public PersistentObject
 
     /**
      * Specify whether stream keep-alive and NAT hole punching with
-     * non-codec-VAD mechanism (see @ref PJMEDIA_STREAM_ENABLE_KA) is enabled
+     * non-codec-VAD mechanism (see PJMEDIA_STREAM_ENABLE_KA) is enabled
      * for this account.
      *
      * Default: False
@@ -688,7 +684,7 @@ struct AccountMediaConfig : public PersistentObject
      * Valid values are PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, and
      * PJMEDIA_SRTP_MANDATORY.
      *
-     * Default: #PJSUA_DEFAULT_USE_SRTP
+     * Default: PJSUA_DEFAULT_USE_SRTP
      */
     pjmedia_srtp_use	srtpUse;
 
@@ -701,7 +697,7 @@ struct AccountMediaConfig : public PersistentObject
      *	1: SRTP requires secure transport such as TLS
      *	2: SRTP requires secure end-to-end transport (SIPS)
      *
-     * Default: #PJSUA_DEFAULT_SRTP_SECURE_SIGNALING
+     * Default: PJSUA_DEFAULT_SRTP_SECURE_SIGNALING
      */
     int			srtpSecureSignaling;
 
@@ -738,10 +734,10 @@ struct AccountVideoConfig : public PersistentObject
      *
      * Regardless of this setting, application can detect incoming video
      * by implementing \a on_call_media_state() callback and enumerating
-     * the media stream(s) with #pjsua_call_get_info(). Once incoming
+     * the media stream(s) with pjsua_call_get_info(). Once incoming
      * video is recognised, application may retrieve the window associated
      * with the incoming video and show or hide it with
-     * #pjsua_vid_win_set_show().
+     * pjsua_vid_win_set_show().
      *
      * Default: False
      */
@@ -756,7 +752,7 @@ struct AccountVideoConfig : public PersistentObject
      * is sent (or received).
      *
      * Regardless of the value of this setting, application can start and
-     * stop outgoing video transmission with #pjsua_call_set_vid_strm().
+     * stop outgoing video transmission with pjsua_call_set_vid_strm().
      *
      * Default: False
      */
@@ -764,7 +760,7 @@ struct AccountVideoConfig : public PersistentObject
 
     /**
      * Specify video window's flags. The value is a bitmask combination of
-     * #pjmedia_vid_dev_wnd_flag.
+     * pjmedia_vid_dev_wnd_flag.
      *
      * Default: 0
      */
@@ -983,6 +979,7 @@ struct AccountInfo
     string		onlineStatusText;
 
 public:
+    /** Import from pjsip data */
     void fromPj(const pjsua_acc_info &pai);
 };
 
@@ -1273,15 +1270,6 @@ public:
     virtual ~FindBuddyMatch() {}
 };
 
-/**
- * @}  // PJSUA2_Acc_Data_Structure
- */
-
-/**
- * @addtogroup PJSUA2_ACC
- * @{
- */
-
 
 /**
  * Account.
@@ -1314,9 +1302,10 @@ public:
      * Depending on the changes, this may cause unregistration or
      * reregistration on the account.
      *
-     * @param cfg 		New account config to be applied to the account.
+     * @param cfg 		New account config to be applied to the
+     * 				account.
      */
-    void modify(const AccountConfig &acc) throw(Error);
+    void modify(const AccountConfig &cfg) throw(Error);
 
     /**
      * Check if this account is still valid.
@@ -1494,7 +1483,7 @@ public:
      *	  application doesn't set any value to the IncomingSubscribeParam.code
      *	  parameter. In this case, the library will automatically send NOTIFY
      *	  request upon returning from this callback.
-     *  - it may delay the processing of the request, for example to request
+     *	- it may delay the processing of the request, for example to request
      *    user permission whether to accept or reject the request. In this
      *	  case, the application MUST set the IncomingSubscribeParam.code
      *	  argument to 202, then IMMEDIATELY calls presNotify() with
@@ -1558,11 +1547,11 @@ private:
     BuddyVector		 buddyList;
 };
 
-} // namespace pj
-
 /**
  * @}  // PJSUA2_ACC
  */
+
+} // namespace pj
 
 #endif	/* __PJSUA2_ACCOUNT_HPP__ */
 

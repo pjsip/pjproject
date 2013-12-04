@@ -26,20 +26,21 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua2/media.hpp>
 
+/** PJSUA2 API is inside pj namespace */
+namespace pj
+{
+
 /**
  * @defgroup PJSUA2_CALL Call
  * @ingroup PJSUA2_Ref
  */
 
 /**
- * @defgroup PJSUA2_Call_Data_Structure Data Structure
- * @ingroup PJSUA2_Ref
+ * @defgroup PJSUA2_Call_Data_Structure Call Related Types
+ * @ingroup PJSUA2_DS
  * @{
  */
 
-/** PJSUA2 API is inside pj namespace */
-namespace pj
-{
 using std::string;
 using std::vector;
 
@@ -307,7 +308,7 @@ public:
 struct CallSetting
 {
     /**
-     * Bitmask of #pjsua_call_flag constants.
+     * Bitmask of pjsua_call_flag constants.
      *
      * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
      */
@@ -315,7 +316,7 @@ struct CallSetting
     
     /**
      * This flag controls what methods to request keyframe are allowed on
-     * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
+     * the call. Value is bitmask of pjsua_vid_req_keyframe_method.
      *
      * Default: PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
      *          PJSUA_VID_REQ_KEYFRAME_RTCP_PLI
@@ -621,7 +622,7 @@ public:
 };
 
 /**
- * This structure contains parameters for onCallState() callback.
+ * This structure contains parameters for Call::onCallState() callback.
  */
 struct OnCallStateParam
 {
@@ -632,7 +633,7 @@ struct OnCallStateParam
 };
 
 /**
- * This structure contains parameters for onCallTsxState() callback.
+ * This structure contains parameters for Call::onCallTsxState() callback.
  */
 struct OnCallTsxStateParam
 {
@@ -643,14 +644,14 @@ struct OnCallTsxStateParam
 };
 
 /**
- * This structure contains parameters for onCallMediaState() callback.
+ * This structure contains parameters for Call::onCallMediaState() callback.
  */
 struct OnCallMediaStateParam
 {
 };
 
 /**
- * This structure contains parameters for onCallSdpCreated() callback.
+ * This structure contains parameters for Call::onCallSdpCreated() callback.
  */
 struct OnCallSdpCreatedParam
 {
@@ -666,7 +667,8 @@ struct OnCallSdpCreatedParam
 };
 
 /**
- * This structure contains parameters for onStreamCreated() callback.
+ * This structure contains parameters for Call::onStreamCreated()
+ * callback.
  */
 struct OnStreamCreatedParam
 {
@@ -689,7 +691,8 @@ struct OnStreamCreatedParam
 };
 
 /**
- * This structure contains parameters for onStreamDestroyed() callback.
+ * This structure contains parameters for Call::onStreamDestroyed()
+ * callback.
  */
 struct OnStreamDestroyedParam
 {
@@ -705,7 +708,8 @@ struct OnStreamDestroyedParam
 };
 
 /**
- * This structure contains parameters for onDtmfDigit() callback.
+ * This structure contains parameters for Call::onDtmfDigit()
+ * callback.
  */
 struct OnDtmfDigitParam
 {
@@ -716,7 +720,8 @@ struct OnDtmfDigitParam
 };
 
 /**
- * This structure contains parameters for onCallTransferRequest() callback.
+ * This structure contains parameters for Call::onCallTransferRequest()
+ * callback.
  */
 struct OnCallTransferRequestParam
 {
@@ -739,7 +744,8 @@ struct OnCallTransferRequestParam
 };
 
 /**
- * This structure contains parameters for onCallTransferStatus() callback.
+ * This structure contains parameters for Call::onCallTransferStatus()
+ * callback.
  */
 struct OnCallTransferStatusParam
 {
@@ -768,7 +774,8 @@ struct OnCallTransferStatusParam
 };
 
 /**
- * This structure contains parameters for onCallReplaceRequest() callback.
+ * This structure contains parameters for Call::onCallReplaceRequest()
+ * callback.
  */
 struct OnCallReplaceRequestParam
 {
@@ -796,7 +803,7 @@ struct OnCallReplaceRequestParam
 };
 
 /**
- * This structure contains parameters for onCallReplaced() callback.
+ * This structure contains parameters for Call::onCallReplaced() callback.
  */
 struct OnCallReplacedParam
 {
@@ -807,7 +814,7 @@ struct OnCallReplacedParam
 };
 
 /**
- * This structure contains parameters for onCallRxOffer() callback.
+ * This structure contains parameters for Call::onCallRxOffer() callback.
  */
 struct OnCallRxOfferParam
 {
@@ -830,6 +837,9 @@ struct OnCallRxOfferParam
     CallSetting         opt;
 };
 
+/**
+ * This structure contains parameters for Call::onCallRedirected() callback.
+ */
 struct OnCallRedirectedParam
 {
     /**
@@ -842,14 +852,14 @@ struct OnCallRedirectedParam
      * This could be the receipt of 3xx response, or 4xx/5xx response
      * received for the INVITE sent to subsequent targets, or empty
      * (e.type == PJSIP_EVENT_UNKNOWN)
-     * if this callback is called from within #Call::processRedirect()
+     * if this callback is called from within Call::processRedirect()
      * context.
      */
     SipEvent        e;
 };
 
 /**
- * This structure contains parameters for onCallMediaEvent() callback.
+ * This structure contains parameters for Call::onCallMediaEvent() callback.
  */
 struct OnCallMediaEventParam
 {
@@ -865,7 +875,8 @@ struct OnCallMediaEventParam
 };
 
 /**
- * This structure contains parameters for onCallMediaTransportState() callback.
+ * This structure contains parameters for Call::onCallMediaTransportState()
+ * callback.
  */
 struct OnCallMediaTransportStateParam
 {
@@ -891,7 +902,8 @@ struct OnCallMediaTransportStateParam
 };
 
 /**
- * This structure contains parameters for onCreateMediaTransport() callback.
+ * This structure contains parameters for Call::onCreateMediaTransport()
+ * callback.
  */
 struct OnCreateMediaTransportParam
 {
@@ -1092,7 +1104,7 @@ public:
     /**
      * Get media for the specified media index.
      *
-     * @psaram med_idx      Media index.
+     * @param med_idx       Media index.
      *
      * @return              The media or NULL if invalid or inactive.
      */
@@ -1117,7 +1129,7 @@ public:
      *
      * @return              PJSIP_DIALOG_CAP_SUPPORTED if the specified
      *                      capability is explicitly supported, see
-     *                      @pjsip_dialog_cap_status for more info.
+     *                      pjsip_dialog_cap_status for more info.
      */
     pjsip_dialog_cap_status remoteHasCap(int htype,
                                          const string &hname,
@@ -1125,7 +1137,7 @@ public:
     
     /**
      * Attach application specific data to the call. Application can then
-     * inspect this data by calling #Call::getUserData().
+     * inspect this data by calling getUserData().
      *
      * @param user_data     Arbitrary data to be attached to the call.
      */
@@ -1133,7 +1145,7 @@ public:
     
     /**
      * Get user data attached to the call, which has been previously set with
-     * #Call::setUserData().
+     * setUserData().
      *
      * @return              The user data.
      */
@@ -1142,7 +1154,7 @@ public:
     /**
      * Get the NAT type of remote's endpoint. This is a proprietary feature
      * of PJSUA-LIB which sends its NAT type in the SDP when \a natTypeInSdp
-     * is set in #UaConfig.
+     * is set in UaConfig.
      *
      * This function can only be called after SDP has been received from remote,
      * which means for incoming call, this function can be called as soon as
@@ -1179,11 +1191,10 @@ public:
      *    from the user.
      *  - if no call setting is supplied when SDP has to be sent, i.e: answer
      *    with status code 183 or 2xx, the default call setting will be used,
-     *    check #CallSetting for its default values.
+     *    check CallSetting for its default values.
      *
      * @param prm.opt       Optional call setting.
-     * @param prm.statusCode    
-     *                      Status code, (100-699).
+     * @param prm.statusCode   Status code, (100-699).
      * @param prm.reason    Optional reason phrase. If empty, default text
      *                      will be used.
      * @param prm.txOption  Optional list of headers etc to be added to outgoing
@@ -1196,9 +1207,9 @@ public:
     /**
      * Hangup call by using method that is appropriate according to the
      * call state. This function is different than answering the call with
-     * 3xx-6xx response (with #Call::answer()), in that this function
+     * 3xx-6xx response (with answer()), in that this function
      * will hangup the call regardless of the state and role of the call,
-     * while #Call::answer() only works with incoming calls on EARLY
+     * while answer() only works with incoming calls on EARLY
      * state.
      *
      * @param prm.statusCode
@@ -1394,9 +1405,9 @@ public:
      * for the call.
      *
      * @param op            The video stream operation to be performed,
-     *                      possible values are #pjsua_call_vid_strm_op.
+     *                      possible values are pjsua_call_vid_strm_op.
      * @param param         The parameters for the video stream operation
-     *                      (see #CallVidSetStreamParam).
+     *                      (see CallVidSetStreamParam).
      */
     void vidSetStream(pjsua_call_vid_strm_op op,
                       const CallVidSetStreamParam &param) throw(Error);
@@ -1446,7 +1457,7 @@ public:
     /**
      * Notify application when call state has changed.
      * Application may then query the call info to get the
-     * detail call states by calling Call::getInfo() function.
+     * detail call states by calling getInfo() function.
      *
      * @param prm	Callback parameter.
      */
@@ -1638,7 +1649,7 @@ public:
      *			- PJSIP_REDIRECT_PENDING: set to this value if
      *			  no decision can be made immediately (for example
      *			  to request confirmation from user). Application
-     *			  then MUST call #Call::processRedirect()
+     *			  then MUST call processRedirect()
      *			  to either accept or reject the redirection upon
      *			  getting user decision.
      */
@@ -1692,11 +1703,11 @@ private:
     std::vector<Media *> medias;
 };
 
-} // namespace pj
-
 /**
  * @}  // PJSUA2_CALL
  */
+
+} // namespace pj
 
 #endif	/* __PJSUA2_CALL_HPP__ */
 
