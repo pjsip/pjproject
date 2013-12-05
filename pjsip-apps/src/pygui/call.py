@@ -78,6 +78,15 @@ class Call(pj.Call):
 		if not self.chat: return
 		
 		self.chat.setTypingIndication(self.peerUri, prm.isTyping)
-			
+	
+	def onDtmfDigit(self, prm):
+		#msgbox.showinfo("pygui", 'Got DTMF:' + prm.digit)
+		pass
+		
+	def onCallMediaTransportState(self, prm):
+		#msgbox.showinfo("pygui", "Media transport state")
+		pass
+		
+		
 if __name__ == '__main__':
 	application.main()

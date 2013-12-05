@@ -256,9 +256,9 @@ class Dialog(tk.Toplevel):
 		ttk.Radiobutton(frm, text='Disable', value=pj.PJSUA_STUN_USE_DISABLED, variable=self.cfgMediaUseStun).grid(row=row, column=1, sticky=tk.W, padx=6)
 		row += 1
 		ttk.Label(frm, text='ICE:').grid(row=row, column=0, sticky=tk.E, pady=2)
-		ttk.Checkbutton(frm, text='Enable', variable=self.cfgPublish).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
+		ttk.Checkbutton(frm, text='Enable', variable=self.cfgIceEnabled).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
 		row += 1
-		ttk.Checkbutton(frm, text='Use aggresive nomination', variable=self.cfgIceNoHostCands).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
+		ttk.Checkbutton(frm, text='Use aggresive nomination', variable=self.cfgIceAggressive).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
 		row += 1
 		ttk.Checkbutton(frm, text='Always re-INVITE after negotiation', variable=self.cfgAlwaysUpdate).grid(row=row, column=1, sticky=tk.W, padx=6, pady=2)
 		row += 1

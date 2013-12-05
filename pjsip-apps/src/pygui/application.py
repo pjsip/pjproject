@@ -51,7 +51,7 @@ class Application(ttk.Frame):
 		self.master.geometry('500x500+100+100')
 		
 		# Logger
-		self.logger = None #log.Logger()
+		self.logger = log.Logger()
 		
 		# Accounts
 		self.accList = []
@@ -74,6 +74,7 @@ class Application(ttk.Frame):
 		# Default config
 		self.appConfig = settings.AppConfig()
 		self.appConfig.epConfig.uaConfig.threadCnt = 0;
+		self.appConfig.epConfig.uaConfig.mainThreadOnly = True
 		self.appConfig.epConfig.logConfig.writer = self.logger
 		self.appConfig.epConfig.logConfig.filename = "pygui.log"
 		self.appConfig.epConfig.logConfig.fileFlags = pj.PJ_O_APPEND
@@ -105,6 +106,7 @@ class Application(ttk.Frame):
 			self.appConfig.loadFile(cfg_file)
 
 		self.appConfig.epConfig.uaConfig.threadCnt = 0;
+		self.appConfig.epConfig.uaConfig.mainThreadOnly = True
 		self.appConfig.epConfig.logConfig.writer = self.logger
 		self.appConfig.epConfig.logConfig.level = 5
 		self.appConfig.epConfig.logConfig.consoleLevel = 5
