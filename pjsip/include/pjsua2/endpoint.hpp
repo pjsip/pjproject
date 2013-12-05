@@ -26,6 +26,7 @@
 #include <pjsua2/persistent.hpp>
 #include <pjsua2/media.hpp>
 #include <pjsua2/siptypes.hpp>
+#include <list>
 
 /** PJSUA2 API is inside pj namespace */
 namespace pj
@@ -183,6 +184,19 @@ struct UaConfig : public PersistentObject
      * zero.
      */
     unsigned		threadCnt;
+
+    /**
+     * When this flag is non-zero, all callbacks that come from thread
+     * other than main thread will be posted to the main thread and
+     * to be executed by Endpoint::libHandleEvents() function. This
+     * includes the logging callback. Note that this will only work if
+     * threadCnt is set to zero and Endpoint::libHandleEvents() is
+     * performed by main thread. By default, the main thread is set
+     * from the thread that invoke Endpoint::libCreate()
+     *
+     * Default: false
+     */
+    bool		mainThreadOnly;
 
     /**
      * Array of nameservers to be used by the SIP resolver subsystem.
@@ -634,6 +648,16 @@ struct EpConfig : public PersistentObject
 
 };
 
+/* This represents posted job */
+struct PendingJob
+{
+    /** Perform the job */
+    virtual void execute(bool is_pending) = 0;
+
+    /** Virtual destructor */
+    virtual ~PendingJob() {}
+};
+
 //////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -717,6 +741,11 @@ public:
      * structure, because polling then will be done by these worker threads
      * instead.
      *
+     * If EpConfig::UaConfig::mainThreadOnly is enabled and this function
+     * is called from the main thread (by default the main thread is thread
+     * that calls libCreate()), this function will also scan and run any
+     * pending jobs in the list.
+     *
      * @param msec_timeout Maximum time to wait, in miliseconds.
      *
      * @return		The number of events that have been handled during the
@@ -762,6 +791,13 @@ public:
     void utilLogWrite(int prmLevel,
                       const string &prmSender,
                       const string &prmMsg);
+
+    /**
+     * Write a log entry.
+     *
+     * @param e			The log entry.
+     */
+    void utilLogWrite(LogEntry &e);
 
     /**
      * This is a utility function to verify that valid SIP url is given. If the
@@ -813,6 +849,15 @@ public:
      * 				previous utilTimerSchedule() call.
      */
     void utilTimerCancel(Token prmToken);
+
+    /**
+     * Utility to register a pending job to be executed by main thread.
+     * If EpConfig::UaConfig::mainThreadOnly is false, the job will be
+     * executed immediately.
+     *
+     * @param job		The job class.
+     */
+    void utilAddPendingJob(PendingJob *job);
 
     /**
      * Get cipher list supported by SSL/TLS backend.
@@ -1121,13 +1166,20 @@ public:
     virtual void onSelectAccount(OnSelectAccountParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-
 private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
     AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
     CodecInfoVector		 codecInfoList;
+
+    /* Pending logging */
+    bool			 mainThreadOnly;
+    void			*mainThread;
+    unsigned			 pendingJobSize;
+    std::list<PendingJob*>	 pendingJobs;
+
+    void performPendingJobs();
 
     /* Endpoint static callbacks */
     static void logFunc(int level, const char *data, int len);

@@ -376,8 +376,8 @@ DevAudioMedia::DevAudioMedia()
 /* Audio device operations. */
 
 AudDevManager::AudDevManager()
+: devMedia(NULL)
 {
-    devMedia = new DevAudioMedia;
 }
 
 AudDevManager::~AudDevManager()
@@ -393,6 +393,8 @@ int AudDevManager::getCaptureDev() const throw(Error)
 
 AudioMedia &AudDevManager::getCaptureDevMedia() throw(Error)
 {
+    if (!devMedia)
+	devMedia = new DevAudioMedia;
     return *devMedia;
 }
 
@@ -403,6 +405,8 @@ int AudDevManager::getPlaybackDev() const throw(Error)
 
 AudioMedia &AudDevManager::getPlaybackDevMedia() throw(Error)
 {
+    if (!devMedia)
+    	devMedia = new DevAudioMedia;
     return *devMedia;
 }
 

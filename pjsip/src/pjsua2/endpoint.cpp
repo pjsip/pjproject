@@ -111,6 +111,7 @@ void UaConfig::readObject(const ContainerNode &node) throw(Error)
 
     NODE_READ_UNSIGNED( this_node, maxCalls);
     NODE_READ_UNSIGNED( this_node, threadCnt);
+    NODE_READ_BOOL    ( this_node, mainThreadOnly);
     NODE_READ_STRINGV ( this_node, nameserver);
     NODE_READ_STRING  ( this_node, userAgent);
     NODE_READ_STRINGV ( this_node, stunServer);
@@ -125,6 +126,7 @@ void UaConfig::writeObject(ContainerNode &node) const throw(Error)
 
     NODE_WRITE_UNSIGNED( this_node, maxCalls);
     NODE_WRITE_UNSIGNED( this_node, threadCnt);
+    NODE_WRITE_BOOL    ( this_node, mainThreadOnly);
     NODE_WRITE_STRINGV ( this_node, nameserver);
     NODE_WRITE_STRING  ( this_node, userAgent);
     NODE_WRITE_STRINGV ( this_node, stunServer);
@@ -341,11 +343,23 @@ void EpConfig::writeObject(ContainerNode &node) const throw(Error)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/* Class to post log to main thread */
+struct PendingLog : public PendingJob
+{
+    LogEntry entry;
+    virtual void execute(bool is_pending)
+    {
+	PJ_UNUSED_ARG(is_pending);
+	Endpoint::instance().utilLogWrite(entry);
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint instance
  */
 Endpoint::Endpoint()
-: writer(NULL)
+: writer(NULL), mainThreadOnly(false), mainThread(NULL), pendingJobSize(0)
 {
     if (instance_) {
 	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -364,6 +378,11 @@ Endpoint& Endpoint::instance() throw(Error)
 
 Endpoint::~Endpoint()
 {
+    while (!pendingJobs.empty()) {
+	delete pendingJobs.front();
+	pendingJobs.pop_front();
+    }
+
     try {
 	libDestroy();
     } catch (Error &err) {
@@ -380,6 +399,81 @@ Endpoint::~Endpoint()
     clearCodecInfoList();
 
     instance_ = NULL;
+}
+
+void Endpoint::utilAddPendingJob(PendingJob *job)
+{
+    enum {
+	MAX_PENDING_JOBS = 1024
+    };
+
+    /* See if we can execute immediately */
+    if (!mainThreadOnly || pj_thread_this()==mainThread) {
+	job->execute(false);
+	delete job;
+	return;
+    }
+
+    if (pendingJobSize > MAX_PENDING_JOBS) {
+	enum { NUMBER_TO_DISCARD = 5 };
+
+	pj_enter_critical_section();
+	for (unsigned i=0; i<NUMBER_TO_DISCARD; ++i) {
+	    delete pendingJobs.back();
+	    pendingJobs.pop_back();
+	}
+
+	pendingJobSize -= NUMBER_TO_DISCARD;
+	pj_leave_critical_section();
+
+	utilLogWrite(1, THIS_FILE,
+	             "*** ERROR: Job queue full!! Jobs discarded!!! ***");
+    }
+
+    pj_enter_critical_section();
+    pendingJobs.push_back(job);
+    pendingJobSize++;
+    pj_leave_critical_section();
+}
+
+/* Handle log callback */
+void Endpoint::utilLogWrite(LogEntry &entry)
+{
+    if (mainThreadOnly && pj_thread_this() != mainThread) {
+	PendingLog *job = new PendingLog;
+	job->entry = entry;
+	utilAddPendingJob(job);
+    } else {
+	writer->write(entry);
+    }
+}
+
+/* Run pending jobs only in main thread */
+void Endpoint::performPendingJobs()
+{
+    if (pj_thread_this() != mainThread)
+	return;
+
+    if (pendingJobSize == 0)
+	return;
+
+    for (;;) {
+	PendingJob *job = NULL;
+
+	pj_enter_critical_section();
+	if (pendingJobSize != 0) {
+	    job = pendingJobs.front();
+	    pendingJobs.pop_front();
+	    pendingJobSize--;
+	}
+	pj_leave_critical_section();
+
+	if (job) {
+	    job->execute(true);
+	    delete job;
+	} else
+	    break;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -399,7 +493,7 @@ void Endpoint::logFunc(int level, const char *data, int len)
     entry.threadId = (long)pj_thread_this();
     entry.threadName = string(pj_thread_get_name(pj_thread_this()));
 
-    ep.writer->write(entry);
+    ep.utilLogWrite(entry);
 }
 
 void Endpoint::stun_resolve_cb(const pj_stun_resolve_result *res)
@@ -836,6 +930,23 @@ void Endpoint::on_stream_destroyed(pjsua_call_id call_id,
     call->onStreamDestroyed(prm);
 }
 
+struct PendingOnDtmfDigitCallback : public PendingJob
+{
+    int call_id;
+    OnDtmfDigitParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+	PJ_UNUSED_ARG(is_pending);
+
+	Call *call = Call::lookup(call_id);
+	if (!call)
+	    return;
+
+	call->onDtmfDigit(prm);
+    }
+};
+
 void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
 {
     Call *call = Call::lookup(call_id);
@@ -843,12 +954,13 @@ void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
 	return;
     }
     
-    OnDtmfDigitParam prm;
+    PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
+    job->call_id = call_id;
     char buf[10];
     pj_ansi_sprintf(buf, "%c", digit);
-    prm.digit = (string)buf;
+    job->prm.digit = (string)buf;
     
-    call->onDtmfDigit(prm);
+    Endpoint::instance().utilAddPendingJob(job);
 }
 
 void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
@@ -981,6 +1093,24 @@ pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
     return call->onCallRedirected(prm);
 }
 
+
+struct PendingOnMediaTransportCallback : public PendingJob
+{
+    int call_id;
+    OnCallMediaTransportStateParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+	PJ_UNUSED_ARG(is_pending);
+
+	Call *call = Call::lookup(call_id);
+	if (!call)
+	    return;
+
+	call->onCallMediaTransportState(prm);
+    }
+};
+
 pj_status_t
 Endpoint::on_call_media_transport_state(pjsua_call_id call_id,
                                         const pjsua_med_tp_state_info *info)
@@ -989,17 +1119,39 @@ Endpoint::on_call_media_transport_state(pjsua_call_id call_id,
     if (!call) {
 	return PJ_SUCCESS;
     }
+
+    PendingOnMediaTransportCallback *job = new PendingOnMediaTransportCallback;
     
-    OnCallMediaTransportStateParam prm;
-    prm.medIdx = info->med_idx;
-    prm.state = info->state;
-    prm.status = info->status;
-    prm.sipErrorCode = info->sip_err_code;
+    job->call_id = call_id;
+    job->prm.medIdx = info->med_idx;
+    job->prm.state = info->state;
+    job->prm.status = info->status;
+    job->prm.sipErrorCode = info->sip_err_code;
     
-    call->onCallMediaTransportState(prm);
-    
+    Endpoint::instance().utilAddPendingJob(job);
+
     return PJ_SUCCESS;
 }
+
+struct PendingOnMediaEventCallback : public PendingJob
+{
+    int call_id;
+    OnCallMediaEventParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+	Call *call = Call::lookup(call_id);
+	if (!call)
+	    return;
+
+	if (is_pending) {
+	    /* Can't do this anymore, pointer is invalid */
+	    prm.ev.pjMediaEvent = NULL;
+	}
+
+	call->onCallMediaEvent(prm);
+    }
+};
 
 void Endpoint::on_call_media_event(pjsua_call_id call_id,
                                    unsigned med_idx,
@@ -1010,11 +1162,13 @@ void Endpoint::on_call_media_event(pjsua_call_id call_id,
 	return;
     }
     
-    OnCallMediaEventParam prm;
-    prm.medIdx = med_idx;
-    prm.ev.fromPj(*event);
+    PendingOnMediaEventCallback *job = new PendingOnMediaEventCallback;
+
+    job->call_id = call_id;
+    job->prm.medIdx = med_idx;
+    job->prm.ev.fromPj(*event);
     
-    call->onCallMediaEvent(prm);
+    Endpoint::instance().utilAddPendingJob(job);
 }
 
 pjmedia_transport*
@@ -1057,6 +1211,7 @@ Version Endpoint::libVersion() const
 void Endpoint::libCreate() throw(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_create() );
+    mainThread = pj_thread_this();
 }
 
 pjsua_state Endpoint::libGetState() const
@@ -1079,6 +1234,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
 	this->writer = prmEpConfig.logConfig.writer;
 	log_cfg.cb = &Endpoint::logFunc;
     }
+    mainThreadOnly = prmEpConfig.uaConfig.mainThreadOnly;
 
     /* Setup UA callbacks */
     pj_bzero(&ua_cfg.cb, sizeof(ua_cfg.cb));
@@ -1135,6 +1291,7 @@ void Endpoint::libStopWorkerThreads()
 
 int Endpoint::libHandleEvents(unsigned msec_timeout)
 {
+    performPendingJobs();
     return pjsua_handle_events(msec_timeout);
 }
 
