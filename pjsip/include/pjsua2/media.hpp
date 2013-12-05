@@ -261,6 +261,16 @@ public:
     unsigned getTxLevel() const throw(Error);
 
     /**
+     * Typecast from base class Media. This is useful for application written
+     * in language that does not support downcasting such as Python.
+     *
+     * @param media		The object to be downcasted
+     *
+     * @return			The object as AudioMedia instance
+     */
+    static AudioMedia* typecastFromMedia(Media *media);
+
+    /**
      * Virtual Destructor
      */
     virtual ~AudioMedia();
@@ -352,6 +362,16 @@ public:
     void setPos(pj_uint32_t samples) throw(Error);
 
     /**
+     * Typecast from base class AudioMedia. This is useful for application
+     * written in language that does not support downcasting such as Python.
+     *
+     * @param media		The object to be downcasted
+     *
+     * @return			The object as AudioMediaPlayer instance
+     */
+    static AudioMediaPlayer* typecastFromAudioMedia(AudioMedia *media);
+
+    /**
      * Virtual destructor.
      */
     virtual ~AudioMediaPlayer();
@@ -395,6 +415,16 @@ public:
 			unsigned enc_type=0,
 			pj_ssize_t max_size=0,
 			unsigned options=PJMEDIA_FILE_WRITE_PCM) throw(Error);
+
+    /**
+     * Typecast from base class AudioMedia. This is useful for application
+     * written in language that does not support downcasting such as Python.
+     *
+     * @param media		The object to be downcasted
+     *
+     * @return			The object as AudioMediaRecorder instance
+     */
+    static AudioMediaRecorder* typecastFromAudioMedia(AudioMedia *media);
 
     /**
      * Virtual destructor.

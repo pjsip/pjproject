@@ -232,6 +232,11 @@ unsigned AudioMedia::getSignalLevel(bool is_rx) const throw(Error)
     return is_rx?rx_level:tx_level;
 }
 
+AudioMedia* AudioMedia::typecastFromMedia(Media *media)
+{
+    return static_cast<AudioMedia*>(media);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 AudioMediaPlayer::AudioMediaPlayer()
@@ -297,6 +302,12 @@ void AudioMediaPlayer::setPos(pj_uint32_t samples) throw(Error)
     PJSUA2_CHECK_EXPR( pjsua_player_set_pos(playerId, samples) );
 }
 
+AudioMediaPlayer* AudioMediaPlayer::typecastFromAudioMedia(
+						AudioMedia *media)
+{
+    return static_cast<AudioMediaPlayer*>(media);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 AudioMediaRecorder::AudioMediaRecorder()
 : recorderId(PJSUA_INVALID_ID)
@@ -332,6 +343,13 @@ void AudioMediaRecorder::createRecorder(const string &file_name,
 
     registerMediaPort(NULL);
 }
+
+AudioMediaRecorder* AudioMediaRecorder::typecastFromAudioMedia(
+						AudioMedia *media)
+{
+    return static_cast<AudioMediaRecorder*>(media);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
 {
