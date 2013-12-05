@@ -490,8 +490,12 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
     info	= pjsip_tx_data_get_info(&tdata);
     pjsip_tx_data_encode(&tdata);
     wholeMsg	= string(tdata.buf.start, tdata.buf.end - tdata.buf.start);
-    pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
-    dstAddress  = straddr;
+    if (pj_sockaddr_has_addr(&tdata.tp_info.dst_addr)) {
+	pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
+	dstAddress  = straddr;
+    } else {
+	dstAddress = "";
+    }
     pjTxData    = (void *)&tdata;
 }
 
