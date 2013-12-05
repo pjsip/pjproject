@@ -741,7 +741,7 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
     pj_bzero(info, sizeof(*info));
     info->slot_id = id;
     info->name = cinfo.name;
-    info->format = cinfo.format;
+    pjmedia_format_copy(&info->format, &cinfo.format);
     info->clock_rate = cinfo.clock_rate;
     info->channel_count = cinfo.channel_count;
     info->samples_per_frame = cinfo.samples_per_frame;
