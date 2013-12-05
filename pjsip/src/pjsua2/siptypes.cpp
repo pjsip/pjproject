@@ -477,7 +477,10 @@ void SipTransaction::fromPj(pjsip_transaction &tsx)
     this->method        = pj2Str(tsx.method.name);
     this->statusCode    = tsx.status_code;
     this->statusText    = pj2Str(tsx.status_text);
-    this->lastTx.fromPj(*tsx.last_tx);
+    if (tsx.last_tx)
+	this->lastTx.fromPj(*tsx.last_tx);
+    else
+	this->lastTx.pjTxData = NULL;
     this->pjTransaction = (void *)&tsx;
 }
 
