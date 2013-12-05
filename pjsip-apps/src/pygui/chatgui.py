@@ -163,9 +163,20 @@ class AudioFrame(ttk.Labelframe):
 			
 			self._btnHold['text'] = 'Hold'
 			self._btnHold.config(state=tk.NORMAL)
+			self._rxMute = False
+			self._txMute = False
+			self.btnRxMute['text'] = 'Mute'
+			self.btnTxMute['text'] = 'Mute'
+			self.rxVol.set(5.0)
 		
 		# save last state
 		self._state = state
+		
+	def setStatsText(self, stats_str):
+		self.stat.config(state=tk.NORMAL)
+		self.stat.delete("0.0", tk.END)
+		self.stat.insert(tk.END, stats_str)
+		self.stat.config(state=tk.DISABLED)
 		
 	def _onHold(self):
 		self._btnHold.config(state=tk.DISABLED)
@@ -186,16 +197,18 @@ class AudioFrame(ttk.Labelframe):
 		# notify app
 		self._rxMute = not self._rxMute
 		self._observer.onRxMute(self.peerUri, self._rxMute)
+		self.btnRxMute['text'] = 'Unmute' if self._rxMute else 'Mute'
 		
 	def _onRxVol(self, event):
 		# notify app
 		vol = self.rxVol.get()
-		self._observer.onRxVol(self.peerUri, vol)
+		self._observer.onRxVol(self.peerUri, vol*10.0)
 
 	def _onTxMute(self):
 		# notify app
 		self._txMute = not self._txMute
 		self._observer.onTxMute(self.peerUri, self._txMute)
+		self.btnTxMute['text'] = 'Unmute' if self._txMute else 'Mute'
 
 	def _createInitWidgets(self):
 		self._initFrame = ttk.Frame(self)
@@ -230,7 +243,7 @@ class AudioFrame(ttk.Labelframe):
 		self.rxVolFrm = ttk.Labelframe(vol_frm, text='RX volume')
 		self.rxVolFrm.pack(side=tk.LEFT, fill=tk.Y)
 		
-		self.btnRxMute = ttk.Button(self.rxVolFrm, width=5, text='Mute', command=self._onRxMute)
+		self.btnRxMute = ttk.Button(self.rxVolFrm, width=8, text='Mute', command=self._onRxMute)
 		self.btnRxMute.pack(side=tk.LEFT)
 		self.rxVol = tk.Scale(self.rxVolFrm, orient=tk.HORIZONTAL, from_=0.0, to=10.0, showvalue=0) #, tickinterval=10.0, showvalue=1)
 		self.rxVol.set(5.0)
@@ -240,11 +253,11 @@ class AudioFrame(ttk.Labelframe):
 		self.txVolFrm = ttk.Labelframe(vol_frm, text='TX volume')
 		self.txVolFrm.pack(side=tk.RIGHT, fill=tk.Y)
 		
-		self.btnTxMute = ttk.Button(self.txVolFrm, width=5, text='Mute', command=self._onTxMute)
+		self.btnTxMute = ttk.Button(self.txVolFrm, width=8, text='Mute', command=self._onTxMute)
 		self.btnTxMute.pack(side=tk.LEFT)
 		
 		# stat
-		self.stat = tk.Text(self._callFrame, width=20, height=5, font=("Arial", "10"))
+		self.stat = tk.Text(self._callFrame, width=10, height=2, bg='lightgray', relief=tk.FLAT, font=("Arial", "9"))
 		self.stat.insert(tk.END, 'stat here')
 		self.stat.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=1)
 
@@ -256,6 +269,8 @@ class ChatObserver(TextObserver, AudioObserver):
 		pass
 	def onStopAudio(self):
 		pass
+	def onCloseWindow(self):
+		pass
 		
 class ChatFrame(tk.Toplevel):
 	"""
@@ -263,7 +278,7 @@ class ChatFrame(tk.Toplevel):
 	"""
 	def __init__(self, observer):
 		tk.Toplevel.__init__(self)
-		self.protocol("WM_DELETE_WINDOW", lambda: self.withdraw())
+		self.protocol("WM_DELETE_WINDOW", self._onClose)
 		self._observer = observer
 
 		self._text = None
@@ -330,6 +345,9 @@ class ChatFrame(tk.Toplevel):
 		else:
 			self._observer.onStopAudio()
 		self.enableAudio(self._audioEnabled)
+		
+	def _onClose(self):
+		self._observer.onCloseWindow()
 			
 	# APIs
 	
@@ -380,7 +398,13 @@ class ChatFrame(tk.Toplevel):
 			self.enableAudio(False)
 		else:
 			self.enableAudio(True)
-						
+			
+	def audioSetStatsText(self, participant_uri, stats_str):
+		for aud_frm in self._audioFrames:
+			if participant_uri == aud_frm.peerUri:
+				aud_frm.setStatsText(stats_str)
+				break
+				
 if __name__ == '__main__':
 	root = tk.Tk()
 	root.title("Chat")

@@ -31,6 +31,7 @@ else:
 import random
 import pjsua2 as pj
 import application
+import endpoint as ep
 
 # Call class
 class Call(pj.Call):
@@ -43,6 +44,7 @@ class Call(pj.Call):
 		self.peerUri = peer_uri
 		self.chat = chat
 		self.connected = False
+		self.onhold = False
 
 	def onCallState(self, prm):
 		ci = self.getInfo()
@@ -57,7 +59,17 @@ class Call(pj.Call):
 			  (mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE or \
 			   mi.status == pj.PJSUA_CALL_MEDIA_REMOTE_HOLD):
 				m = self.getMedia(mi.index)
-				print m
+				am = pj.AudioMedia.typecastFromMedia(m)
+				# connect ports
+				ep.Endpoint.instance.audDevManager().getCaptureDevMedia().startTransmit(am)
+				am.startTransmit(ep.Endpoint.instance.audDevManager().getPlaybackDevMedia())
+
+				if mi.status == pj.PJSUA_CALL_MEDIA_REMOTE_HOLD and not self.onhold:
+					self.chat.addMessage(None, "'%s' sets call onhold" % (self.peerUri))
+					self.onhold = True
+				elif mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE and self.onhold:
+					self.chat.addMessage(None, "'%s' sets call active" % (self.peerUri))
+					self.onhold = False
 			
 	def onInstantMessage(self, prm):
 		# chat instance should have been initalized

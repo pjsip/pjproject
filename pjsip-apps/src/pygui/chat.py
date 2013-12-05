@@ -26,77 +26,151 @@ else:
 	import Tkinter as tk
 	import ttk
 
+import buddy
 import call
 import chatgui as gui
+import endpoint as ep
 import pjsua2 as pj
+import re
+
+SipUriRegex = re.compile('(sip|sips):([^:;>\@]*)@?([^:;>]*):?([^:;>]*)')
+ConfIdx = 1
+
+# Simple SIP uri parser, input URI must have been validated
+def ParseSipUri(sip_uri_str):
+	m = SipUriRegex.search(sip_uri_str)
+	if not m:
+		assert(0)
+		return None
+	
+	scheme = m.group(1)
+	user = m.group(2)
+	host = m.group(3)
+	port = m.group(4)
+	if host == '':
+		host = user
+		user = ''
+		
+	return SipUri(scheme.lower(), user, host.lower(), port)
+	
+class SipUri:
+	def __init__(self, scheme, user, host, port):
+		self.scheme = scheme
+		self.user = user
+		self.host = host
+		self.port = port
+		
+	def __cmp__(self, sip_uri):
+		if self.scheme == sip_uri.scheme and self.user == sip_uri.user and self.host == sip_uri.host:
+			# don't check port, at least for now
+			return 0
+		return -1
+	
+	def __str__(self):
+		s = self.scheme + ':'
+		if self.user: s += self.user + '@'
+		s += self.host
+		if self.port: s+= ':' + self.port
+		return s
 	
 class Chat(gui.ChatObserver):
-	def __init__(self, app, acc, bud, call_inst=None):
+	def __init__(self, app, acc, uri, call_inst=None):
 		self._app = app
 		self._acc = acc
-		self._participantList = []
-		self._callList = []
+		self.title = ''
+		
+		global ConfIdx
+		self.confIdx = ConfIdx
+		ConfIdx += 1
+		
+		# each participant call/buddy instances are stored in call list
+		# and buddy list with same index as in particpant list
+		self._participantList = []	# list of SipUri
+		self._callList = []		# list of Call
+		self._buddyList = []		# list of Buddy
+		
 		self._gui = gui.ChatFrame(self)
-		self.addParticipant(bud, call_inst)
+		self.addParticipant(uri, call_inst)
 	
 	def _updateGui(self):
 		if self.isPrivate():
-			bud = self._participantList[0]
-			self._gui.title(bud.cfg.uri)
+			self.title = str(self._participantList[0])
 		else:
-			self._gui.title('Conference (%d participants)' % (len(self._participantList)))
-
-	def _getCallFromBuddy(self, bud):
-		try:
-			idx = self._participantList.index(bud)
-			the_call = self._callList[idx]
-		except:
+			self.title = 'Conference #%d (%d participants)' % (self.confIdx, len(self._participantList))
+		self._gui.title(self.title)
+		self._app.updateWindowMenu()
+		
+	def _getCallFromUriStr(self, uri_str, op = ''):
+		uri = ParseSipUri(uri_str)
+		if uri not in self._participantList:
+			print "=== %s cannot find participant with URI '%s'" % (op, uri_str)
 			return None
-		return the_call
-		
-	def _getBuddyFromUri(self, uri):
-		for bud in self._participantList:
-			if uri == bud.cfg.uri:
-				return bud
+		idx = self._participantList.index(uri)
+		if idx < len(self._callList):
+			return self._callList[idx]
 		return None
+	
+	def _getActiveMediaIdx(self, thecall):
+		ci = thecall.getInfo()
+		for mi in ci.media:
+			if mi.type == pj.PJMEDIA_TYPE_AUDIO and \
+			  (mi.status != pj.PJSUA_CALL_MEDIA_NONE and \
+			   mi.status != pj.PJSUA_CALL_MEDIA_ERROR):
+				return mi.index
+		return -1
 		
-	def _getCallFromUri(self, uri, op = ''):
-		for idx, bud in enumerate(self._participantList):
-			if uri == bud.cfg.uri:
-				if idx < len(self._callList):
-					return self._callList[idx]
-				return None
-		print "=== %s cannot find buddy URI '%s'" % (op, uri)
-		return None
+	def _getAudioMediaFromUriStr(self, uri_str):
+		c = self._getCallFromUriStr(uri_str)
+		if not c: return None
+
+		idx = self._getActiveMediaIdx(c)
+		if idx < 0: return None
+
+		m = c.getMedia(idx)
+		am = pj.AudioMedia.typecastFromMedia(m)
+		return am
 		
-	def _sendTypingIndication(self, is_typing):
+	def _sendTypingIndication(self, is_typing, sender_uri_str=''):
+		sender_uri = ParseSipUri(sender_uri_str) if sender_uri_str else None
 		type_ind_param = pj.SendTypingIndicationParam()
 		type_ind_param.isTyping = is_typing
-		for bud in self._participantList:
-			c = self._getCallFromBuddy(bud)
-			try:
-				if c and c.connected:
-					c.sendTypingIndication(type_ind_param)
-				else:
-					bud.sendTypingIndication(type_ind_param)
-			except:
-				pass
-
-	def _sendInstantMessage(self, msg, sender_uri=''):
-		send_im_param = pj.SendInstantMessageParam()
-		send_im_param.content = str(msg)
-		for bud in self._participantList:
+		for idx, p in enumerate(self._participantList):
 			# don't echo back to the original sender
-			if sender_uri and bud.cfg.uri == sender_uri:
+			if sender_uri and p == sender_uri:
 				continue
 				
 			# send via call, if any, or buddy
-			c = self._getCallFromBuddy(bud)
+			sender = None
+			if self._callList[idx] and self._callList[idx].connected:
+				sender = self._callList[idx]
+			else:
+				sender = self._buddyList[idx]
+			assert(sender)
+				
 			try:
-				if c and c.connected:
-					c.sendInstantMessage(send_im_param)
-				else:
-					bud.sendInstantMessage(send_im_param)
+				sender.sendTypingIndication(type_ind_param)
+			except:
+				pass
+
+	def _sendInstantMessage(self, msg, sender_uri_str=''):
+		sender_uri = ParseSipUri(sender_uri_str) if sender_uri_str else None
+		send_im_param = pj.SendInstantMessageParam()
+		send_im_param.content = str(msg)
+		for idx, p in enumerate(self._participantList):
+			# don't echo back to the original sender
+			if sender_uri and p == sender_uri:
+				continue
+				
+			# send via call, if any, or buddy
+			sender = None
+			if self._callList[idx] and self._callList[idx].connected:
+				sender = self._callList[idx]
+			else:
+				sender = self._buddyList[idx]
+			assert(sender)
+			
+			try:
+				sender.sendInstantMessage(send_im_param)
 			except:
 				# error will be handled via Account::onInstantMessageStatus()
 				pass
@@ -104,24 +178,22 @@ class Chat(gui.ChatObserver):
 	def isPrivate(self):
 		return len(self._participantList) <= 1
 		
-	def isBuddyParticipant(self, bud):
-		return bud in self._participantList
+	def isUriParticipant(self, uri):
+		return uri in self._participantList
 		
 	def isCallRegistered(self, call_inst):
 		return call_inst in self._callList
 		
-	def registerCall(self, bud, call_inst):
+	def registerCall(self, uri_str, call_inst):
+		uri = ParseSipUri(uri_str)
 		try:
-			idx = self._participantList.index(bud)
-			if len(self._callList) < idx+1:
-				self._callList.append(call_inst)
-			else:
-				self._callList[idx] = call_inst
-
+			idx = self._participantList.index(uri)
+			bud = self._buddyList[idx]
+			self._callList[idx] = call_inst
 			call_inst.chat = self
 			call_inst.peerUri = bud.cfg.uri
 		except:
-			pass
+			assert(0) # idx must be found!
 		
 	def showWindow(self):
 		self._gui.bringToFront()
@@ -132,89 +204,115 @@ class Chat(gui.ChatObserver):
 		for b in self._participantList:
 			print b.cfg.uri
 		
-	def addParticipant(self, bud, call_inst=None):
+	def addParticipant(self, uri, call_inst=None):
 		# avoid duplication
-		if self.isBuddyParticipant(bud): return
-		for b in self._participantList:
-			if bud.cfg.uri == b.cfg.uri: return
+		if self.isUriParticipant(uri): return
+		
+		uri_str = str(uri)
+		
+		# find buddy, create one if not found (e.g: for IM/typing ind),
+		# it is a temporary one and not really registered to acc
+		bud = None
+		try:
+			bud = self._acc.findBuddy(uri_str)
+		except:
+			bud = buddy.Buddy(None)
+			bud_cfg = pj.BuddyConfig()
+			bud_cfg.uri = uri_str
+			bud_cfg.subscribe = False
+			bud.create(self._acc, bud_cfg)
+			bud.cfg = bud_cfg
+			bud.account = self._acc
 			
+		# update URI from buddy URI
+		uri = ParseSipUri(bud.cfg.uri)
+		
 		# add it
-		self._participantList.append(bud)
-		if call_inst:
-			self._callList.append(call_inst)
-		self._gui.addParticipant(bud.cfg.uri)
-
+		self._participantList.append(uri)
+		self._callList.append(call_inst)
+		self._buddyList.append(bud)
+		self._gui.addParticipant(str(uri))
 		self._updateGui()
 	
-	def kickParticipant(self, bud):
-		if bud in self._participantList:
-			idx = self._participantList.index(bud)
-			self._participantList.remove(bud)
-			self._gui.delParticipant(bud.cfg.uri)
-			
-			# also clear call, if any
-			if self._callList: del self._callList[idx]
-			
+	def kickParticipant(self, uri):
+		if (not uri) or (uri not in self._participantList):
+			assert(0)
+			return
+		
+		idx = self._participantList.index(uri)
+		del self._participantList[idx]
+		del self._callList[idx]
+		del self._buddyList[idx]
+		self._gui.delParticipant(str(uri))
+		
 		if self._participantList:
 			self._updateGui()
 		else:
-			# will remove entry from list eventually destroy this chat?
-			self._acc.chatList.remove(self)
+			self.onCloseWindow()
 			
-			# let's destroy GUI manually
-			self._gui.destroy()
-			#self.destroy()
-			
-	def addMessage(self, from_uri, msg):
-		if from_uri:
-			msg = from_uri + ': ' + msg
+	def addMessage(self, from_uri_str, msg):
+		if from_uri_str:
+			# print message on GUI
+			msg = from_uri_str + ': ' + msg
 			self._gui.textAddMessage(msg)
-			self._sendInstantMessage(msg, from_uri)
+			# now relay to all participants
+			self._sendInstantMessage(msg, from_uri_str)
 		else:
 			self._gui.textAddMessage(msg, False)
 			
-	def setTypingIndication(self, from_uri, is_typing):
-		self._gui.textSetTypingIndication(from_uri, is_typing)
+	def setTypingIndication(self, from_uri_str, is_typing):
+			# notify GUI
+			self._gui.textSetTypingIndication(from_uri_str, is_typing)
+			# now relay to all participants
+			self._sendTypingIndication(is_typing, from_uri_str)
 		
 	def startCall(self):
 		self._gui.enableAudio()
 		call_param = pj.CallOpParam()
 		call_param.opt.audioCount = 1
 		call_param.opt.videoCount = 0
-		for idx, bud in enumerate(self._participantList):
+		for idx, p in enumerate(self._participantList):
 			# just skip if call is instantiated
 			if len(self._callList)>=idx+1 and self._callList[idx]:
 				continue
-				
-			c = call.Call(self._acc, bud.cfg.uri, self)
-			if len(self._callList) < idx+1:
-				self._callList.append(c)
-			else:
-				self._callList[idx] = c
-
-			self._gui.audioUpdateState(bud.cfg.uri, gui.AudioState.INITIALIZING)
+			
+			uri_str = str(p)
+			c = call.Call(self._acc, uri_str, self)
+			self._callList[idx] = c
+			self._gui.audioUpdateState(uri_str, gui.AudioState.INITIALIZING)
 			
 			try:
-				c.makeCall(bud.cfg.uri, call_param)
+				c.makeCall(uri_str, call_param)
 			except:
-				#self._callList[idx] = None
-				#self._gui.audioUpdateState(bud.cfg.uri, gui.AudioState.FAILED)
-				self.kickParticipant(bud)
+				self._callList[idx] = None
+				self._gui.audioUpdateState(bud.cfg.uri, gui.AudioState.FAILED)
+				
+				# kick the disconnected participant, but the last (avoid zombie chat)
+				if not self.isPrivate():
+					self.kickParticipant(p)
 			
 	def stopCall(self):
-		for bud in self._participantList:
-			self._gui.audioUpdateState(bud.cfg.uri, gui.AudioState.DISCONNECTED)
+		for p in self._participantList:
+			self._gui.audioUpdateState(str(p), gui.AudioState.DISCONNECTED)
+			if True or not self.isPrivate():
+				self.kickParticipant(p)
 		
 		# clear call list, calls should be auto-destroyed by GC (and hungup by destructor)
-		del self._callList[:]
+		#for idx, c in enumerate(self._callList):
+		#	self._callList[idx] = None
 		
 	def updateCallState(self, thecall, info = None):
 		# info is optional here, just to avoid calling getInfo() twice (in the caller and here)
 		if not info: info = thecall.getInfo()
+		
 		if info.state < pj.PJSIP_INV_STATE_CONFIRMED:
 			self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.INITIALIZING)
 		elif info.state == pj.PJSIP_INV_STATE_CONFIRMED:
 			self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.CONNECTED)
+			med_idx = self._getActiveMediaIdx(thecall)
+			si = thecall.getStreamInfo(med_idx)
+			stats_str = "Audio codec: %s/%s\n..." % (si.codecName, si.codecClockRate)
+			self._gui.audioSetStatsText(thecall.peerUri, stats_str)
 		elif info.state == pj.PJSIP_INV_STATE_DISCONNECTED:
 			if info.lastStatusCode/100 != 2:
 				self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.FAILED)
@@ -232,8 +330,7 @@ class Chat(gui.ChatObserver):
 			
 			# kick the disconnected participant, but the last (avoid zombie chat)
 			if not self.isPrivate():
-				bud = self._getBuddyFromUri(thecall.peerUri)
-				if bud: self.kickParticipant(bud)
+				self.kickParticipant(ParseSipUri(thecall.peerUri))
 
 			
 	# ** callbacks from GUI (ChatObserver implementation) **
@@ -249,30 +346,54 @@ class Chat(gui.ChatObserver):
 		self._sendTypingIndication(False)
 		
 	# Audio
-	def onHangup(self, peer_uri):
-		c = self._getCallFromUri(peer_uri, "onHangup()")
+	def onHangup(self, peer_uri_str):
+		c = self._getCallFromUriStr(peer_uri_str, "onHangup()")
 		if not c: return
 		call_param = pj.CallOpParam()
 		c.hangup(call_param)
 
-	def onHold(self, peer_uri):
-		c = self._getCallFromUri(peer_uri, "onHold()")
+	def onHold(self, peer_uri_str):
+		c = self._getCallFromUriStr(peer_uri_str, "onHold()")
 		if not c: return
 		call_param = pj.CallOpParam()
 		c.setHold(call_param)
 
-	def onUnhold(self, peer_uri):
-		c = self._getCallFromUri(peer_uri, "onUnhold()")
+	def onUnhold(self, peer_uri_str):
+		c = self._getCallFromUriStr(peer_uri_str, "onUnhold()")
 		if not c: return
+		
 		call_param = pj.CallOpParam()
+		call_param.opt.audioCount = 1
+		call_param.opt.videoCount = 0
+		call_param.opt.flag |= pj.PJSUA_CALL_UNHOLD
 		c.reinvite(call_param)
 		
-	def onRxMute(self, peer_uri, is_muted):
-		pass
-	def onRxVol(self, peer_uri, vol_pct):
-		pass
-	def onTxMute(self, peer_uri, is_muted):
-		pass
+	def onRxMute(self, peer_uri_str, mute):
+		am = self._getAudioMediaFromUriStr(peer_uri_str)
+		if not am: return
+		if mute:
+			am.stopTransmit(ep.Endpoint.instance.audDevManager().getPlaybackDevMedia())
+			self.addMessage(None, "Muted audio from '%s'" % (peer_uri_str))
+		else:
+			am.startTransmit(ep.Endpoint.instance.audDevManager().getPlaybackDevMedia())
+			self.addMessage(None, "Unmuted audio from '%s'" % (peer_uri_str))
+		
+	def onRxVol(self, peer_uri_str, vol_pct):
+		am = self._getAudioMediaFromUriStr(peer_uri_str)
+		if not am: return
+		# pjsua volume range = 0:mute, 1:no adjustment, 2:100% louder
+		am.adjustRxLevel(vol_pct/50.0)
+		self.addMessage(None, "Adjusted volume level audio from '%s'" % (peer_uri_str))
+			
+	def onTxMute(self, peer_uri_str, mute):
+		am = self._getAudioMediaFromUriStr(peer_uri_str)
+		if not am: return
+		if mute:
+			ep.Endpoint.instance.audDevManager().getCaptureDevMedia().stopTransmit(am)
+			self.addMessage(None, "Muted audio to '%s'" % (peer_uri_str))
+		else:
+			ep.Endpoint.instance.audDevManager().getCaptureDevMedia().startTransmit(am)
+			self.addMessage(None, "Unmuted audio to '%s'" % (peer_uri_str))
 
 	# Chat room
 	def onAddParticipant(self):
@@ -280,14 +401,24 @@ class Chat(gui.ChatObserver):
 		dlg = AddParticipantDlg(None, self._app, buds)
 		if dlg.doModal():
 			for bud in buds:
-				self.addParticipant(bud)
-			self.startCall()
+				uri = ParseSipUri(bud.cfg.uri)
+				self.addParticipant(uri)
+			if not self.isPrivate():
+				self.startCall()
 				
 	def onStartAudio(self):
 		self.startCall()
 
 	def onStopAudio(self):
 		self.stopCall()
+		
+	def onCloseWindow(self):
+		self.stopCall()
+		# will remove entry from list eventually destroy this chat?
+		if self in self._acc.chatList: self._acc.chatList.remove(self)
+		self._app.updateWindowMenu()
+		# destroy GUI
+		self._gui.destroy()
 
 
 class AddParticipantDlg(tk.Toplevel):

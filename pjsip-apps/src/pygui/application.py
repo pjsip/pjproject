@@ -208,10 +208,25 @@ class Application(ttk.Frame):
 		file_menu.add_separator()
 		file_menu.add_command(label="Quit", command=self._onMenuQuit)
 
+		# Window menu
+		self.window_menu = tk.Menu(self.menubar, tearoff=False)
+		self.menubar.add_cascade(label="Window", menu=self.window_menu)
+		
 		# Help menu
 		help_menu = tk.Menu(self.menubar, tearoff=False)
 		self.menubar.add_cascade(label="Help", menu=help_menu)
 		help_menu.add_command(label="About", underline=2, command=self._onMenuAbout)
+	
+	def _showChatWindow(self, chat_inst):
+		chat_inst.showWindow()
+		
+	def updateWindowMenu(self):
+		# Chat windows
+		self.window_menu.delete(0, tk.END)
+		for acc in self.accList:
+			for c in acc.chatList:
+				cmd = lambda arg=c: self._showChatWindow(arg)
+				self.window_menu.add_command(label=c.title, command=cmd)
 		
 	def _createContextMenu(self):
 		top = self.winfo_toplevel()
@@ -311,9 +326,9 @@ class Application(ttk.Frame):
 			else:
 				bud = self._getSelectedBuddy()
 				acc = bud.account
-				chat = acc.findChat(bud)
+				chat = acc.findChat(bud.cfg.uri)
 				if not chat:
-					chat = acc.newChat(bud)
+					chat = acc.newChat(bud.cfg.uri)
 				chat.showWindow()
 	
 	def _onAccContextMenu(self, label):
@@ -376,13 +391,13 @@ class Application(ttk.Frame):
 		acc = bud.account
 			
 		if label=='Audio call':
-			chat = acc.findChat(bud)
-			if not chat: chat = acc.newChat(bud)
+			chat = acc.findChat(bud.cfg.uri)
+			if not chat: chat = acc.newChat(bud.cfg.uri)
 			chat.showWindow()
 			chat.startCall()
 		elif label=='Send instant message':
-			chat = acc.findChat(bud)
-			if not chat: chat = acc.newChat(bud)
+			chat = acc.findChat(bud.cfg.uri)
+			if not chat: chat = acc.newChat(bud.cfg.uri)
 			chat.showWindow()
 		elif label=='Subscribe':
 			bud.subscribePresence(True)
@@ -492,5 +507,4 @@ def main():
 	app.mainloop()
 		
 if __name__ == '__main__':
-	print pj
 	main()
