@@ -122,6 +122,18 @@ struct ConfPortInfo
     MediaFormatAudio	format;
 
     /**
+     * Tx level adjustment. Value 1.0 means no adjustment, value 0 means
+     * the port is muted, value 2.0 means the level is amplified two times.
+     */
+    float		txLevelAdj;
+
+    /**
+     * Rx level adjustment. Value 1.0 means no adjustment, value 0 means
+     * the port is muted, value 2.0 means the level is amplified two times.
+     */
+    float		rxLevelAdj;
+
+    /**
      * Array of listeners (in other words, ports where this port is
      * transmitting to.
      */
@@ -132,7 +144,6 @@ public:
      * Construct from pjsua_conf_port_info.
      */
     void fromPj(const pjsua_conf_port_info &port_info);
-
 };
 
 /**
@@ -237,11 +248,15 @@ public:
 
     /**
      * Get the last received signal level.
+     *
+     * @return			Signal level in percent.
      */
     unsigned getRxLevel() const throw(Error);
 
     /**
      * Get the last transmitted signal level.
+     *
+     * @return			Signal level in percent.
      */
     unsigned getTxLevel() const throw(Error);
 

@@ -75,7 +75,11 @@ void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
 {
     portId = port_info.slot_id;
     name = pj2Str(port_info.name);
+    format.fromPj(port_info.format);
+    txLevelAdj = port_info.tx_level_adj;
+    rxLevelAdj = port_info.rx_level_adj;
 
+    /*
     format.id = PJMEDIA_FORMAT_PCM;
     format.type = PJMEDIA_TYPE_AUDIO;
     format.clockRate = port_info.clock_rate;
@@ -89,7 +93,7 @@ void ConfPortInfo::fromPj(const pjsua_conf_port_info &port_info)
     format.avgBps = format.maxBps = port_info.clock_rate *
 				    port_info.channel_count *
 				    port_info.bits_per_sample;
-
+    */
     listeners.clear();
     for (unsigned i=0; i<port_info.listener_cnt; ++i) {
 	listeners.push_back(port_info.listeners[i]);

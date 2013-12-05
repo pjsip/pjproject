@@ -5799,6 +5799,9 @@ typedef struct pjsua_conf_port_info
     /** Port name. */
     pj_str_t		name;
 
+    /** Format. */
+    pjmedia_format	format;
+
     /** Clock rate. */
     unsigned		clock_rate;
 
@@ -5810,6 +5813,12 @@ typedef struct pjsua_conf_port_info
 
     /** Bits per sample */
     unsigned		bits_per_sample;
+
+    /** Tx level adjustment. */
+    float		tx_level_adj;
+
+    /** Rx level adjustment. */
+    float		rx_level_adj;
 
     /** Number of listeners in the array. */
     unsigned		listener_cnt;
