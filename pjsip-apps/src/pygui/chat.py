@@ -195,8 +195,10 @@ class Chat(gui.ChatObserver):
 		except:
 			assert(0) # idx must be found!
 		
-	def showWindow(self):
+	def showWindow(self, show_text_chat = False):
 		self._gui.bringToFront()
+		if show_text_chat:
+			self._gui.textShowHide(True)
 
 	# helper
 	def dumpParticipantList(self):
@@ -292,14 +294,14 @@ class Chat(gui.ChatObserver):
 					self.kickParticipant(p)
 			
 	def stopCall(self):
-		for p in self._participantList:
+		for idx, p in enumerate(self._participantList):
 			self._gui.audioUpdateState(str(p), gui.AudioState.DISCONNECTED)
-			if True or not self.isPrivate():
+			c = self._callList[idx]
+			if c:
+				c.hangup(pj.CallOpParam())
+
+			if not self.isPrivate():
 				self.kickParticipant(p)
-		
-		# clear call list, calls should be auto-destroyed by GC (and hungup by destructor)
-		#for idx, c in enumerate(self._callList):
-		#	self._callList[idx] = None
 		
 	def updateCallState(self, thecall, info = None):
 		# info is optional here, just to avoid calling getInfo() twice (in the caller and here)

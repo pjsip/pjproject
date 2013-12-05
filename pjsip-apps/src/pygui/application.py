@@ -398,7 +398,7 @@ class Application(ttk.Frame):
 		elif label=='Send instant message':
 			chat = acc.findChat(bud.cfg.uri)
 			if not chat: chat = acc.newChat(bud.cfg.uri)
-			chat.showWindow()
+			chat.showWindow(True)
 		elif label=='Subscribe':
 			bud.subscribePresence(True)
 		elif label=='Unsubscribe':
