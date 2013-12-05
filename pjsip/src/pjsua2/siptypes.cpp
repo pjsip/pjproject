@@ -321,6 +321,11 @@ void TransportInfo::fromPj(const pjsua_transport_info &info)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipRxData::SipRxData()
+: pjRxData(NULL)
+{
+}
+
 void SipRxData::fromPj(pjsip_rx_data &rdata)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
@@ -426,6 +431,11 @@ pjsip_multipart_part& SipMultipartPart::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
+SipEvent::SipEvent()
+: type(PJSIP_EVENT_UNKNOWN), pjEvent(NULL)
+{
+}
+
 void SipEvent::fromPj(const pjsip_event &ev)
 {
     type = ev.type;
@@ -436,9 +446,11 @@ void SipEvent::fromPj(const pjsip_event &ev)
         ev.body.tsx_state.prev_state;
         body.tsxState.tsx.fromPj(*ev.body.tsx_state.tsx);
         if (body.tsxState.type == PJSIP_EVENT_TX_MSG) {
-            body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
+            if (ev.body.tsx_state.src.tdata)
+        	body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
         } else if (body.tsxState.type == PJSIP_EVENT_RX_MSG) {
-            body.tsxState.src.rdata.fromPj(*ev.body.tsx_state.src.rdata);
+            if (ev.body.tsx_state.src.rdata)
+        	body.tsxState.src.rdata.fromPj(*ev.body.tsx_state.src.rdata);
         } else if (body.tsxState.type == PJSIP_EVENT_TRANSPORT_ERROR) {
             body.tsxState.src.status = ev.body.tsx_state.src.status;
         } else if (body.tsxState.type == PJSIP_EVENT_TIMER) {
@@ -447,16 +459,28 @@ void SipEvent::fromPj(const pjsip_event &ev)
             body.tsxState.src.data = ev.body.tsx_state.src.data;
         }
     } else if (type == PJSIP_EVENT_TX_MSG) {
-        body.txMsg.tdata.fromPj(*ev.body.tx_msg.tdata);
+	if (ev.body.tx_msg.tdata)
+	    body.txMsg.tdata.fromPj(*ev.body.tx_msg.tdata);
     } else if (type == PJSIP_EVENT_RX_MSG) {
-        body.rxMsg.rdata.fromPj(*ev.body.rx_msg.rdata);
+	if (ev.body.rx_msg.rdata)
+	    body.rxMsg.rdata.fromPj(*ev.body.rx_msg.rdata);
     } else if (type == PJSIP_EVENT_TRANSPORT_ERROR) {
-        body.txError.tdata.fromPj(*ev.body.tx_error.tdata);
-        body.txError.tsx.fromPj(*ev.body.tx_error.tsx);
+	if (ev.body.tx_error.tdata)
+	    body.txError.tdata.fromPj(*ev.body.tx_error.tdata);
+	if (ev.body.tx_error.tsx)
+	    body.txError.tsx.fromPj(*ev.body.tx_error.tsx);
     } else if (type == PJSIP_EVENT_USER) {
         body.user.user1 = ev.body.user.user1;
+        body.user.user2 = ev.body.user.user2;
+        body.user.user3 = ev.body.user.user3;
+        body.user.user4 = ev.body.user.user4;
     }
     pjEvent = (void *)&ev;
+}
+
+SipTxData::SipTxData()
+: pjTxData(NULL)
+{
 }
 
 void SipTxData::fromPj(pjsip_tx_data &tdata)
@@ -469,6 +493,11 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
     pj_sockaddr_print(&tdata.tp_info.dst_addr, straddr, sizeof(straddr), 3);
     dstAddress  = straddr;
     pjTxData    = (void *)&tdata;
+}
+
+SipTransaction::SipTransaction()
+: role(PJSIP_ROLE_UAC), statusCode(0), pjTransaction(NULL)
+{
 }
 
 void SipTransaction::fromPj(pjsip_transaction &tsx)

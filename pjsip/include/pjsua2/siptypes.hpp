@@ -431,6 +431,11 @@ struct SipRxData
 
 public:
     /**
+     * Default constructor.
+     */
+    SipRxData();
+
+    /**
      * Construct from PJSIP's pjsip_rx_data
      */
     void fromPj(pjsip_rx_data &rdata);
@@ -467,6 +472,11 @@ struct SipTxData
     
 public:
     /**
+     * Default constructor.
+     */
+    SipTxData();
+
+    /**
      * Construct from PJSIP's pjsip_tx_data
      */
     void fromPj(pjsip_tx_data &tdata);
@@ -494,6 +504,11 @@ struct SipTransaction
     void               *pjTransaction;  /**< pjsip_transaction.     */
     
 public:
+    /**
+     * Default constructor.
+     */
+    SipTransaction();
+
     /**
      * Construct from PJSIP's pjsip_transaction
      */
@@ -623,6 +638,11 @@ struct SipEvent
     void               *pjEvent;
     
 public:
+    /**
+     * Default constructor.
+     */
+    SipEvent();
+
     /**
      * Construct from PJSIP's pjsip_event
      */
