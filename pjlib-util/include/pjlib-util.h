@@ -48,8 +48,9 @@
 /* Simple DNS server */
 #include <pjlib-util/dns_server.h>
 
-/* Text scanner */
+/* Text scanner and utilities */
 #include <pjlib-util/scanner.h>
+#include <pjlib-util/string.h>
 
 /* XML */
 #include <pjlib-util/xml.h>
@@ -69,3 +70,4 @@
 #include <pjlib-util/cli_telnet.h>
 
 #endif	/* __PJLIB_UTIL_H__ */
+
