@@ -1,3 +1,5 @@
+import org.pjsip.pjsua2.*;
+
 public class test {
   static {
     System.loadLibrary("pjsua2");

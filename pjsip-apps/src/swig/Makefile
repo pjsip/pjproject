@@ -1,4 +1,11 @@
-DIRS = python java
+include ../../../build.mak
+
+ifneq ($(findstring android,$(TARGET_NAME)),)
+  # no python for android
+  DIRS = java
+else
+  DIRS = python java
+endif
 
 export SWIG_FLAGS=-I../../../../pjlib/include \
 		   -I../../../../pjlib-util/include \

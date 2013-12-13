@@ -96,6 +96,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSYSTEST app=pjsystest $@
 	$(MAKE) -f Samples.mak $@
+	$(MAKE) -C ../src/swig $@
 	@if test "$@" = "depend"; then \
 	  echo '$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
 	  echo '$(PJSYSTEST_EXE): $(APP_LIB_FILES)' >> .pjsystest-$(TARGET_NAME).depend; \

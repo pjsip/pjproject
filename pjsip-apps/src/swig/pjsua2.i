@@ -26,6 +26,27 @@ using namespace pj;
   }
 #endif
 
+// Allow C++ exceptions to be handled in Java
+#ifdef SWIGJAVA
+  %typemap(throws, throws="java.lang.Exception") pj::Error {
+  jclass excep = jenv->FindClass("java/lang/Exception");
+  if (excep)
+    jenv->ThrowNew(excep, $1.info(true).c_str());
+  return $null;
+}
+
+  // Force the Error Java class to extend java.lang.Exception
+  %typemap(javabase) pj::Error "java.lang.Exception";
+
+  // Override getMessage()
+  %typemap(javacode) pj::Error %{
+  public String getMessage() {
+    return getTitle();
+  }
+%}
+#endif
+
+
 // Constants from PJSIP libraries
 %include "symbols.i"
 
@@ -74,7 +95,7 @@ using namespace pj;
 %template(BuddyVector)			std::vector<pj::Buddy*>;
 %template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
 %template(MediaFormatVector)		std::vector<pj::MediaFormat*>;
-%template(AudioDevInfoVector)		std::vector<AudioDevInfo*>;
+%template(AudioDevInfoVector)		std::vector<pj::AudioDevInfo*>;
 %template(CodecInfoVector)		std::vector<pj::CodecInfo*>;
 
 %include "pjsua2/media.hpp"
