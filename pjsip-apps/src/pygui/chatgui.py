@@ -245,7 +245,7 @@ class AudioFrame(ttk.Labelframe):
 		
 		self.btnRxMute = ttk.Button(self.rxVolFrm, width=8, text='Mute', command=self._onRxMute)
 		self.btnRxMute.pack(side=tk.LEFT)
-		self.rxVol = tk.Scale(self.rxVolFrm, orient=tk.HORIZONTAL, from_=0.0, to=10.0, showvalue=0) #, tickinterval=10.0, showvalue=1)
+		self.rxVol = tk.Scale(self.rxVolFrm, orient=tk.HORIZONTAL, from_=0.0, to=10.0, showvalue=1) #, tickinterval=10.0, showvalue=1)
 		self.rxVol.set(5.0)
 		self.rxVol.bind("<ButtonRelease-1>", self._onRxVol)
 		self.rxVol.pack(side=tk.LEFT)

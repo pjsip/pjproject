@@ -51,25 +51,13 @@ class Account(pj.Account):
 		self.chatList = []
 		self.deleting = False
 
-	"""
-	def findBuddy2(self, uri):
-		# TODO: proper URI comparison
-		for bud in self.buddyList:
-			if bud.cfg.uri in uri or uri in bud.cfg.uri:
-				return bud
-		return None
-	"""
-	
-	def findChat(self, uri_str, call_inst = None):
+	def findChat(self, uri_str):
 		uri = ch.ParseSipUri(uri_str)
 		if not uri: return None
 			
 		for chat in self.chatList:
-			if chat.isUriParticipant(uri):
-				if call_inst and chat.isCallRegistered(call_inst):
-					return chat
-				elif not call_inst and chat.isPrivate():
-					return chat
+			if chat.isUriParticipant(uri) and chat.isPrivate():
+				return chat
 		return None
 	
 	def newChat(self, uri_str):

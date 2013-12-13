@@ -181,9 +181,6 @@ class Chat(gui.ChatObserver):
 	def isUriParticipant(self, uri):
 		return uri in self._participantList
 		
-	def isCallRegistered(self, call_inst):
-		return call_inst in self._callList
-		
 	def registerCall(self, uri_str, call_inst):
 		uri = ParseSipUri(uri_str)
 		try:
@@ -199,12 +196,6 @@ class Chat(gui.ChatObserver):
 		self._gui.bringToFront()
 		if show_text_chat:
 			self._gui.textShowHide(True)
-
-	# helper
-	def dumpParticipantList(self):
-		print "Number of participants: %d" % (len(self._participantList))
-		for b in self._participantList:
-			print b.cfg.uri
 		
 	def addParticipant(self, uri, call_inst=None):
 		# avoid duplication
@@ -263,19 +254,20 @@ class Chat(gui.ChatObserver):
 			self._gui.textAddMessage(msg, False)
 			
 	def setTypingIndication(self, from_uri_str, is_typing):
-			# notify GUI
-			self._gui.textSetTypingIndication(from_uri_str, is_typing)
-			# now relay to all participants
-			self._sendTypingIndication(is_typing, from_uri_str)
+		# notify GUI
+		self._gui.textSetTypingIndication(from_uri_str, is_typing)
+		# now relay to all participants
+		self._sendTypingIndication(is_typing, from_uri_str)
 		
 	def startCall(self):
 		self._gui.enableAudio()
 		call_param = pj.CallOpParam()
 		call_param.opt.audioCount = 1
 		call_param.opt.videoCount = 0
+		fails = []
 		for idx, p in enumerate(self._participantList):
 			# just skip if call is instantiated
-			if len(self._callList)>=idx+1 and self._callList[idx]:
+			if self._callList[idx]:
 				continue
 			
 			uri_str = str(p)
@@ -287,11 +279,13 @@ class Chat(gui.ChatObserver):
 				c.makeCall(uri_str, call_param)
 			except:
 				self._callList[idx] = None
-				self._gui.audioUpdateState(bud.cfg.uri, gui.AudioState.FAILED)
+				self._gui.audioUpdateState(uri_str, gui.AudioState.FAILED)
+				fails.append(p)
 				
-				# kick the disconnected participant, but the last (avoid zombie chat)
-				if not self.isPrivate():
-					self.kickParticipant(p)
+		for p in fails:
+			# kick participants with call failure, but spare the last (avoid zombie chat)
+			if not self.isPrivate():
+				self.kickParticipant(p)
 			
 	def stopCall(self):
 		for idx, p in enumerate(self._participantList):
@@ -300,9 +294,6 @@ class Chat(gui.ChatObserver):
 			if c:
 				c.hangup(pj.CallOpParam())
 
-			if not self.isPrivate():
-				self.kickParticipant(p)
-		
 	def updateCallState(self, thecall, info = None):
 		# info is optional here, just to avoid calling getInfo() twice (in the caller and here)
 		if not info: info = thecall.getInfo()
