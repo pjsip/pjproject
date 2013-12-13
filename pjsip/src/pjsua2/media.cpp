@@ -453,9 +453,8 @@ const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_aud_devs(pj_info, &count) );
 
-    clearAudioDevList();
-
     pj_enter_critical_section();
+    clearAudioDevList();
     for (unsigned i = 0; (i<count && i<MAX_DEV_COUNT) ;++i) {
 	AudioDevInfo *dev_info = new AudioDevInfo;
 	dev_info->fromPj(pj_info[i]);
@@ -747,12 +746,10 @@ bool AudDevManager::getPlc() const throw(Error)
 
 void AudDevManager::clearAudioDevList()
 {
-    pj_enter_critical_section();
     for(unsigned i=0;i<audioDevList.size();++i) {
 	delete audioDevList[i];
     }
     audioDevList.clear();
-    pj_leave_critical_section();
 }
 
 int AudDevManager::getActiveDev(bool is_capture) const throw(Error)

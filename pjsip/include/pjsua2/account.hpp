@@ -887,7 +887,7 @@ public:
      * is made. Any call to toPj() function will invalidate the content of
      * temporary pjsua_acc_config that was returned by the previous call.
      */
-    pjsua_acc_config toPj() const;
+    void toPj(pjsua_acc_config &cfg) const;
 
     /**
      * Initialize from pjsip.

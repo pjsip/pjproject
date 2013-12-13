@@ -266,6 +266,16 @@ int main()
 {
     int ret = 0;
 
+    /* Test endpoint instantiation and destruction without libCreate(),
+     * libInit() etc.
+     */
+    {
+	Endpoint ep;
+	ep.natDetectType();
+	{
+	}
+    }
+
     try {
 	mainProg1();
 	std::cout << "Success" << std::endl;

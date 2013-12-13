@@ -47,17 +47,18 @@ def ua_data_test():
 #
 def ua_run_test_exception():
 	print "Exception test.."
-	ep = pj.Endpoint.instance()
+	ep = pj.Endpoint()
+	ep.libCreate()
 	got_exception = False
 	try:
-		ep.testException()
+		ep.natDetectType()
 	except pj.Error, e:
 		got_exception = True
 		print "  Got exception: status=%u, reason=%s,\n  title=%s,\n  srcFile=%s, srcLine=%d" % \
 			(e.status, e.reason, e.title, e.srcFile, e.srcLine)
-		assert e.status == 70013
-		assert e.reason == "Invalid operation (PJ_EINVALIDOP)"
-		#assert e.title == "Endpoint::testException()"
+		assert e.status == 370050
+		assert e.reason.find("PJNATH_ESTUNINSERVER") >= 0
+		assert e.title == "pjsua_detect_nat_type()"
 	assert got_exception
 
 #
@@ -78,7 +79,7 @@ def ua_run_log_test():
 	ep_cfg.logConfig.writer = lw
 	ep_cfg.logConfig.decor = ep_cfg.logConfig.decor & ~(pj.PJ_LOG_HAS_CR | pj.PJ_LOG_HAS_NEWLINE) 
 	
-	ep = pj.Endpoint.instance()
+	ep = pj.Endpoint()
 	ep.libCreate()
 	ep.libInit(ep_cfg)
 	ep.libDestroy()
@@ -90,7 +91,7 @@ def ua_run_ua_test():
 	print "UA test run.."
 	ep_cfg = pj.EpConfig()
 	
-	ep = pj.Endpoint.instance()
+	ep = pj.Endpoint()
 	ep.libCreate()
 	ep.libInit(ep_cfg)
 	ep.libStart()

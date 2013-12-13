@@ -189,7 +189,7 @@ PJ_DEF(float) pj_strtof(const pj_str_t *str)
     part.slen = pdot ? pdot - str->ptr : str->slen;
 
     if (part.slen)
-	val = pj_strtol(&part);
+	val = (float)pj_strtol(&part);
     else
 	val = 0;
 
@@ -199,8 +199,8 @@ PJ_DEF(float) pj_strtof(const pj_str_t *str)
 	if (part.slen) {
 	    pj_str_t endptr;
 	    float fpart, fdiv;
-	    unsigned i;
-	    fpart = pj_strtoul2(&part, &endptr, 10);
+	    int i;
+	    fpart = (float)pj_strtoul2(&part, &endptr, 10);
 	    fdiv = 1.0;
 	    for (i=0; i<(part.slen - endptr.slen); ++i)
 		    fdiv = fdiv * 10;

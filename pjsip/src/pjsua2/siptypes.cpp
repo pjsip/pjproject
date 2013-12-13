@@ -166,7 +166,8 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.ciphers_num	= this->ciphers.size();
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
-    ts.ciphers		= (pj_ssl_cipher*)&this->ciphers[0];
+    ts.ciphers		= ts.ciphers_num? 
+			    (pj_ssl_cipher*)&this->ciphers[0] : NULL;
     ts.verify_server	= this->verifyServer;
     ts.verify_client	= this->verifyClient;
     ts.require_client_cert = this->requireClientCert;

@@ -383,12 +383,6 @@ Endpoint::~Endpoint()
 	pendingJobs.pop_front();
     }
 
-    try {
-	libDestroy();
-    } catch (Error &err) {
-	// Ignore
-	PJ_UNUSED_ARG(err);
-    }
     delete writer;
     
     while(mediaList.size() > 0) {
@@ -397,6 +391,13 @@ Endpoint::~Endpoint()
     }
 
     clearCodecInfoList();
+
+    try {
+	libDestroy();
+    } catch (Error &err) {
+	// Ignore
+	PJ_UNUSED_ARG(err);
+    }
 
     instance_ = NULL;
 }
@@ -1566,9 +1567,8 @@ const CodecInfoVector &Endpoint::codecEnum() throw(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_codecs(pj_codec, &count) );
 
-    clearCodecInfoList();
-
     pj_enter_critical_section();
+    clearCodecInfoList();
     for (unsigned i=0;(i<count && i<MAX_CODEC_NUM);++i) {
 	CodecInfo *codec_info = new CodecInfo;
 
@@ -1607,10 +1607,8 @@ void Endpoint::codecSetParam(const string &codec_id,
 
 void Endpoint::clearCodecInfoList()
 {
-    pj_enter_critical_section();
     for (unsigned i=0;i<codecInfoList.size();++i) {
 	delete codecInfoList[i];
     }
     codecInfoList.clear();
-    pj_leave_critical_section();
 }

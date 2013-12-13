@@ -300,9 +300,8 @@ AccountConfig::AccountConfig()
 }
 
 /* Convert to pjsip. */
-pjsua_acc_config AccountConfig::toPj() const
+void AccountConfig::toPj(pjsua_acc_config &ret) const
 {
-    pjsua_acc_config ret;
     unsigned i;
 
     pjsua_acc_config_default(&ret);
@@ -424,8 +423,6 @@ pjsua_acc_config AccountConfig::toPj() const
     ret.vid_rend_dev		= videoConfig.defaultRenderDevice;
     ret.vid_stream_rc_cfg.method= videoConfig.rateControlMethod;
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
-
-    return ret;
 }
 
 /* Initialize from pjsip. */
@@ -669,15 +666,18 @@ Account::~Account()
 void Account::create(const AccountConfig &acc_cfg,
                      bool make_default) throw(Error)
 {
-    pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
-
+    pjsua_acc_config pj_acc_cfg;
+    
+    acc_cfg.toPj(pj_acc_cfg);
     pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
 }
 
 void Account::modify(const AccountConfig &acc_cfg) throw(Error)
 {
-    pjsua_acc_config pj_acc_cfg = acc_cfg.toPj();
+    pjsua_acc_config pj_acc_cfg;
+    
+    acc_cfg.toPj(pj_acc_cfg);
     pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_modify(id, &pj_acc_cfg) );
 }
