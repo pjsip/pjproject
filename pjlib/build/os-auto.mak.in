@@ -23,7 +23,8 @@ export TEST_OBJS +=	@ac_main_obj@
 #
 # Additional LDFLAGS for pjlib-test
 #
-export TEST_LDFLAGS += @LDFLAGS@ @LIBS@
+# Disabled, as this causes duplicated LDFLAGS, which may raise linking errors
+#export TEST_LDFLAGS += @LDFLAGS@ @LIBS@
 
 #
 # TARGETS are make targets in the Makefile, to be executed for this given
