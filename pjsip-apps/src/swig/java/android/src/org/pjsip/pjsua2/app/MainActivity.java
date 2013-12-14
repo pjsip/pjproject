@@ -43,7 +43,7 @@ import java.util.Map;
 import org.pjsip.pjsua2.*;
 
 public class MainActivity extends Activity implements Handler.Callback, MyAppObserver {
-	public static MyApp app = new MyApp();
+	public static MyApp app = null;
 	public static MyCall currentCall = null;
 	public static MyAccount account = null;
 	public static AccountConfig accCfg = null;
@@ -80,7 +80,11 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
-	    app.init(this, getFilesDir().getAbsolutePath());
+		if (app == null) {
+			app = new MyApp();
+		    app.init(this, getFilesDir().getAbsolutePath());
+		}
+		
 	    if (app.accList.size() == 0) {
 	    	accCfg = new AccountConfig();
 	    	accCfg.setIdUri("sip:localhost");
@@ -176,6 +180,9 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 				//buddyListView.setSelection(buddyListSelectedIdx);
 				//buddyListView.performItemClick(buddyListView, buddyListSelectedIdx,
 				//							   buddyListView.getItemIdAtPosition(buddyListSelectedIdx));
+				
+				/* Return back Call activity */
+				notifyCallState(currentCall);
 			}
 			
 		} else if (m.what == MSG_TYPE.REG_STATE) {

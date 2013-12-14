@@ -23,18 +23,17 @@ import android.os.Handler;
 import android.os.Message;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 
 import org.pjsip.pjsua2.*;
 
 public class CallActivity extends Activity implements Handler.Callback {
 	
-	public final Handler handler = new Handler(this);
 	public static Handler handler_;
+
+	private final Handler handler = new Handler(this);
+	private static CallInfo lastCallInfo;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -42,31 +41,16 @@ public class CallActivity extends Activity implements Handler.Callback {
 		setContentView(R.layout.activity_call);
 		
 		handler_ = handler;
-		MyCall call = MainActivity.currentCall;
-		
-		final TextView tvPeer  = (TextView) findViewById(R.id.textViewPeer);
-		final TextView tvState = (TextView) findViewById(R.id.textViewCallState);
-		final Button buttonAccept = (Button) findViewById(R.id.buttonAccept);
-		final Button buttonHangup = (Button) findViewById(R.id.buttonHangup);
-
-		String remote_uri = "Somebody";
-		String call_state = "";
-		try {
-			CallInfo ci = call.getInfo();
-			remote_uri = ci.getRemoteUri();
-			if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAS) {
-				call_state = "Incoming call..";
-			} else {
-				buttonAccept.setVisibility(View.GONE);
-				buttonHangup.setText("Cancel");
-				call_state = ci.getStateText();
+		if (MainActivity.currentCall != null) {
+			try {
+				lastCallInfo = MainActivity.currentCall.getInfo();
+				updateCallState(lastCallInfo);
+			} catch (Exception e) {
+				System.out.println(e);
 			}
-		} catch (Exception e) {
-			System.out.println(e);
+		} else {
+			updateCallState(lastCallInfo);
 		}
-		
-		tvPeer.setText(remote_uri);
-		tvState.setText(call_state);		
 	}
 
     @Override
@@ -109,29 +93,8 @@ public class CallActivity extends Activity implements Handler.Callback {
 		
 		if (m.what == MainActivity.MSG_TYPE.CALL_STATE) {
 			
-			TextView tvState = (TextView) findViewById(R.id.textViewCallState);
-			Button buttonHangup = (Button) findViewById(R.id.buttonHangup);
-			Button buttonAccept = (Button) findViewById(R.id.buttonAccept);
-			
-			CallInfo ci = (CallInfo) m.obj;
-			String call_state = "";
-			if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC ||
-				ci.getState().swigValue() >= pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue())
-			{
-				call_state = ci.getStateText();
-				tvState.setText(call_state);
-			}
-			
-			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
-				buttonHangup.setText("Hangup");
-			}
-			
-			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
-				buttonHangup.setText("OK");
-				buttonAccept.setVisibility(View.GONE);
-				tvState.setText("Call disconnected: " + ci.getLastReason());
-				MainActivity.currentCall = null;
-			}
+			lastCallInfo = (CallInfo) m.obj;
+			updateCallState(lastCallInfo);
 			
 		} else {
 			
@@ -143,5 +106,41 @@ public class CallActivity extends Activity implements Handler.Callback {
 		return true;
 	}
 	
-	
+	private void updateCallState(CallInfo ci) {
+		TextView tvPeer  = (TextView) findViewById(R.id.textViewPeer);
+		TextView tvState = (TextView) findViewById(R.id.textViewCallState);
+		Button buttonHangup = (Button) findViewById(R.id.buttonHangup);
+		Button buttonAccept = (Button) findViewById(R.id.buttonAccept);
+		String call_state = "";
+		
+		if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC) {
+			buttonAccept.setVisibility(View.GONE);
+		}
+				
+		if (ci.getState().swigValue() < pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue())
+		{
+			if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAS) {
+				call_state = "Incoming call..";
+				/* Default button texts are already 'Accept' & 'Reject' */
+			} else {
+				buttonHangup.setText("Cancel");
+				call_state = ci.getStateText();
+			}
+		}
+		else if (ci.getState().swigValue() >= pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED.swigValue())
+		{
+			buttonAccept.setVisibility(View.GONE);
+			call_state = ci.getStateText();
+			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_CONFIRMED) {
+				buttonHangup.setText("Hangup");
+			} else if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+				buttonHangup.setText("OK");
+				call_state = "Call disconnected: " + ci.getLastReason();
+				MainActivity.currentCall = null;
+			}
+		}
+		
+		tvPeer.setText(ci.getRemoteUri());
+		tvState.setText(call_state);
+	}
 }
