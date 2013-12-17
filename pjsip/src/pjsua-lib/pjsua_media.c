@@ -179,7 +179,7 @@ pj_status_t pjsua_media_subsys_start(void)
  */
 pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 {
-    unsigned i;
+    PJ_UNUSED_ARG(flags);
 
     PJ_LOG(4,(THIS_FILE, "Shutting down media.."));
     pj_log_push_indent();
@@ -191,6 +191,8 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 	pjsua_aud_subsys_destroy();
     }
 
+#if 0
+    // This part has been moved out to pjsua_destroy() (see also #1717).
     /* Close media transports */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
         /* TODO: check if we're not allowed to send to network in the
@@ -199,6 +201,7 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 	PJ_UNUSED_ARG(flags);
 	pjsua_media_channel_deinit(i);
     }
+#endif
 
     /* Destroy media endpoint. */
     if (pjsua_var.med_endpt) {

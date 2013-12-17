@@ -1504,6 +1504,14 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    pjsua_call_hangup_all();
 	}
 
+	/* Deinit media channel of all calls (see #1717) */
+	for (i=0; i<(int)pjsua_var.ua_cfg.max_calls; ++i) {
+	    /* TODO: check if we're not allowed to send to network in the
+	     *       "flags", and if so do not do TURN allocation...
+	     */
+	    pjsua_media_channel_deinit(i);
+	}
+
 	/* Set all accounts to offline */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (!pjsua_var.acc[i].valid)
@@ -1514,9 +1522,6 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
 	/* Terminate all presence subscriptions. */
 	pjsua_pres_shutdown(flags);
-
-	/* Destroy media (to shutdown media transports etc) */
-	pjsua_media_subsys_destroy(flags);
 
 	/* Wait for sometime until all publish client sessions are done
 	 * (ticket #364)
@@ -1620,6 +1625,9 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	}
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
+
+	/* Destroy media (to shutdown media endpoint, etc) */
+	pjsua_media_subsys_destroy(flags);
 
 	/* Must destroy endpoint first before destroying pools in
 	 * buddies or accounts, since shutting down transaction layer
