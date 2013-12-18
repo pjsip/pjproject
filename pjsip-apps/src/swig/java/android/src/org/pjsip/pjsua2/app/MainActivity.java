@@ -25,6 +25,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -82,6 +83,13 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		
 		if (app == null) {
 			app = new MyApp();
+			/* Wait for GDB to init */
+			if ((getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+				try {
+					Thread.sleep(5000);
+				} catch (InterruptedException e) {}
+			}
+			
 		    app.init(this, getFilesDir().getAbsolutePath());
 		}
 		
@@ -127,7 +135,6 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		CharSequence str = item.getTitle();
 		switch (item.getItemId()) {
 		case R.id.action_acc_config:
 			dlgAccountSetting();
@@ -367,7 +374,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 						buddyListAdapter.notifyDataSetChanged();
 						buddyListSelectedIdx = -1;
 			    	} else {
-			    		if (old_cfg.getUri() != cfg.getUri()) {
+			    		if (!old_cfg.getUri().equals(cfg.getUri())) {
 			    			account.delBuddy(buddyListSelectedIdx);
 			    			account.addBuddy(cfg);
 							buddyList.remove(buddyListSelectedIdx);

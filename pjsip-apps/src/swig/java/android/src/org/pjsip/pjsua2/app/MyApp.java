@@ -167,7 +167,7 @@ class MyBuddy extends Buddy {
 		if (bi.getSubState() == pjsip_evsub_state.PJSIP_EVSUB_STATE_ACTIVE) {
 			if (bi.getPresStatus().getStatus() == pjsua_buddy_status.PJSUA_BUDDY_STATUS_ONLINE) {
 				status = bi.getPresStatus().getStatusText();
-				if (status == null || status == "") {
+				if (status == null || status.isEmpty()) {
 					status = "Online";
 				}
 			} else if (bi.getPresStatus().getStatus() == pjsua_buddy_status.PJSUA_BUDDY_STATUS_OFFLINE) {
@@ -339,7 +339,6 @@ class MyApp {
 	
 	public void delAcc(MyAccount acc) {
 		accList.remove(acc);
-		/* GC will delete the acc soon? */
 	}
 	
 	private void loadConfig(String filename) {
@@ -368,6 +367,11 @@ class MyApp {
 		} catch (Exception e) {
 			System.out.println(e);
 		}
+		
+		/* Suggest to delete, as we found this causes crash when the Java
+		 * deletes it later after lib has been destroyed.
+		 */
+		json.delete();
 	}
 
 	private void buildAccConfigs() {
@@ -409,11 +413,22 @@ class MyApp {
 			/* Save file */
 			json.saveFile(filename);
 		} catch (Exception e) {}
+
+		/* Suggest to delete, as we found this causes crash when the Java
+		 * deletes it later after lib has been destroyed.
+		 */
+		json.delete();
 	}
 	
 	public void deinit() {
 		String configPath = appDir + "/" + configName;
 		saveConfig(configPath);
+		
+		/* Try force GC to avoid late destroy of PJ objects as they should be
+		 * deleted before lib is destroyed.
+		 */
+		System.gc();
+		
 		try {
 			ep.libDestroy();
 		} catch (Exception e) {}

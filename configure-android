@@ -86,9 +86,9 @@ if test "$1" = "--use-ndk-cflags"; then
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
 
-  export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/ -L${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/libs/armeabi"
-  export LIBS="${LIBS} -lgnustl_static -lc -lgcc ${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o"
-  export CFLAGS="${CFLAGS} ${NDK_CFLAGS} -I${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/include -I${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/libs/armeabi/include"
+  export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
+  export LIBS="${LIBS} -lc -lgcc"
+  export CFLAGS="${CFLAGS} ${NDK_CFLAGS}"
   export CPPFLAGS="${CFLAGS} -fexceptions -frtti"
   export CXXFLAGS="${NDK_CXXFLAGS} -fexceptions -frtti"
 
@@ -110,13 +110,31 @@ else
   export CC="${ANDROID_TC}/bin/${TARGET_HOST}-gcc"
   export CXX="${ANDROID_TC}/bin/${TARGET_HOST}-g++"
 
-  export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/ -L${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/libs/armeabi"
-  export LIBS="${LIBS} -lgnustl_static -lc -lgcc ${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o"
-  export CFLAGS="${CFLAGS} -I${ANDROID_SYSROOT}/usr/include -I${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/include -I${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/4.7/libs/armeabi/include"
+  export LDFLAGS="${LDFLAGS} -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
+  export LIBS="${LIBS} -lc -lgcc"
+  export CFLAGS="${CFLAGS} -I${ANDROID_SYSROOT}/usr/include"
   export CPPFLAGS="${CFLAGS} -fexceptions -frtti"
   export CXXFLAGS="${CXXFLAGS} -shared --sysroot=${ANDROID_SYSROOT} -fexceptions -frtti"
 
 fi
+
+# C++ STL
+# Note: STL for pjsua2 sample app is specified in pjsip-apps/src/swig/java/android/jni/Application.mk
+
+# gnustl
+STDCPP_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/[0-9]* | sort -gr | head -1`
+STDCPP_CFLAGS="-I${STDCPP_TC_VER}/include -I${STDCPP_TC_VER}/libs/armeabi/include"
+STDCPP_LIBS="${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o -lgnustl_static"
+STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/armeabi"
+
+# stlport
+#STDCPP_CFLAGS="-I${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport"
+#STDCPP_LIBS="${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o -lstlport_static -ldl"
+#STDCPP_LDFLAGS="-L${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/libs/armeabi"
+
+export CFLAGS="${CFLAGS} ${STDCPP_CFLAGS}"
+export LIBS="${STDCPP_LIBS} ${LIBS}"
+export LDFLAGS="${LDFLAGS} ${STDCPP_LDFLAGS}"
 
 # Print settings
 if test "1" = "1"; then
