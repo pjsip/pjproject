@@ -238,6 +238,10 @@ class MyApp {
 	private final int LOG_LEVEL = 4;
 	
 	public void init(MyAppObserver obs, String app_dir) {
+		init(obs, app_dir, false);
+	}
+	
+	public void init(MyAppObserver obs, String app_dir, boolean own_worker_thread) {
 		observer = obs;
 		appDir = app_dir;
 		
@@ -273,6 +277,10 @@ class MyApp {
 		/* Set ua config. */
 		UaConfig ua_cfg = epConfig.getUaConfig();
 		ua_cfg.setUserAgent("Pjsua2And" + ep.libVersion().getFull());
+		if (own_worker_thread) {
+			ua_cfg.setThreadCnt(0);
+			ua_cfg.setMainThreadOnly(true);
+		}
 		
 		/* Init endpoint */
 		try {

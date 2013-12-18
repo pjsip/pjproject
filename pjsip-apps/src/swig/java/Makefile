@@ -79,6 +79,8 @@ else
   MY_PACKAGE_PATH  = $(OUT_DIR)/$(subst .,/,$(MY_PACKAGE_NAME))
 endif
 
+MY_APP_JAVA = android/src/$(subst .,/,$(MY_PACKAGE_NAME))/app/MyApp.java
+
 .PHONY: all java install uninstall
 
 all: $(LIBPJSUA2_SO) java
@@ -96,18 +98,26 @@ $(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
 clean distclean realclean:
 	rm -rf $(LIBPJSUA2_SO) $(OUT_DIR)/* $(MY_PACKAGE_PATH)/*.java $(MY_PACKAGE_PATH)/*.class
 
-java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class
+java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class $(MY_PACKAGE_PATH)/sample.class
 
 $(MY_PACKAGE_PATH)/Error.class: $(MY_PACKAGE_PATH)/Error.java
-	$(MY_JAVAC) -d $(OUT_DIR) $(MY_PACKAGE_PATH)/*.java
+	$(MY_JAVAC) -d $(OUT_DIR) $(MY_PACKAGE_PATH)/*.java $(MY_APP_JAVA)
 
 $(MY_PACKAGE_PATH)/test.class: test.java
 	$(MY_JAVAC) -d $(OUT_DIR) -classpath "$(OUT_DIR)" test.java
+	
+$(MY_PACKAGE_PATH)/sample.class: sample.java
+	$(MY_JAVAC) -d $(OUT_DIR) -classpath "$(OUT_DIR)" sample.java
 
 test:
 	@# Need to specify classpath and library path, alternatively, they can be set via
 	@# CLASSPATH and java.library.path env settings
-	$(MY_JAVA) -cp "$(OUT_DIR);$(MY_PACKAGE_PATH)" -Djava.library.path="$(OUT_DIR)" test
+	$(MY_JAVA) -cp "$(OUT_DIR)" -Djava.library.path="$(OUT_DIR)" test
+	
+sample:
+	@# Need to specify classpath and library path, alternatively, they can be set via
+	@# CLASSPATH and java.library.path env settings
+	$(MY_JAVA) -cp "$(OUT_DIR)" -Djava.library.path="$(OUT_DIR)" org.pjsip.pjsua2.app.sample	
 
 install:
 uninstall:
