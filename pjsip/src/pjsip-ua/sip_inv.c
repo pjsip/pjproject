@@ -3685,7 +3685,9 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
 	 * Resend the request with requested session timer setting.
 	 */
 	status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
-				       PJ_TRUE);
+				       PJ_FALSE);
+	if (status != PJ_SUCCESS)
+	    goto terminate_session;
 
     } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 600)) {
 	/* Global error */
