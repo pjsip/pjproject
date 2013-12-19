@@ -232,6 +232,9 @@ class MyApp {
 	private EpConfig epConfig = new EpConfig();
 	private TransportConfig sipTpConfig = new TransportConfig();
 	private String appDir;
+	
+	/* Maintain reference to log writer to avoid premature cleanup by GC */
+	private MyLogWriter logWriter;
 
 	private final String configName = "pjsua2.json";
 	private final int SIP_PORT  = 6000;
@@ -269,7 +272,8 @@ class MyApp {
 		
 		/* Set log config. */
 		LogConfig log_cfg = epConfig.getLogConfig();
-		log_cfg.setWriter(new MyLogWriter());
+		logWriter = new MyLogWriter();
+		log_cfg.setWriter(logWriter);
 		log_cfg.setDecor(log_cfg.getDecor() & 
 						 ~(pj_log_decoration.PJ_LOG_HAS_CR.swigValue() | 
 						   pj_log_decoration.PJ_LOG_HAS_NEWLINE.swigValue()));
@@ -368,8 +372,8 @@ class MyApp {
 			System.out.println(e);
 		}
 		
-		/* Suggest to delete, as we found this causes crash when the Java
-		 * deletes it later after lib has been destroyed.
+		/* Force delete json now, as I found that Java somehow destroys it
+		 * after lib has been destroyed and from non-registered thread.
 		 */
 		json.delete();
 	}
@@ -414,8 +418,8 @@ class MyApp {
 			json.saveFile(filename);
 		} catch (Exception e) {}
 
-		/* Suggest to delete, as we found this causes crash when the Java
-		 * deletes it later after lib has been destroyed.
+		/* Force delete json now, as I found that Java somehow destroys it
+		 * after lib has been destroyed and from non-registered thread.
 		 */
 		json.delete();
 	}
@@ -427,11 +431,19 @@ class MyApp {
 		/* Try force GC to avoid late destroy of PJ objects as they should be
 		 * deleted before lib is destroyed.
 		 */
-		System.gc();
+		Runtime.getRuntime().gc();
 		
+		/* Shutdown pjsua. Note that Endpoint destructor will also invoke
+		 * libDestroy(), so this will be a test of double libDestroy().
+		 */
 		try {
 			ep.libDestroy();
 		} catch (Exception e) {}
+		
+		/* Force delete Endpoint here, to avoid deletion from a non-
+		 * registered thread (by GC?). 
+		 */
+		ep.delete();
 		ep = null;
 	} 
 }

@@ -159,7 +159,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 			
 			app.deinit();
 			finish();
-			System.gc();
+			Runtime.getRuntime().gc();
 			android.os.Process.killProcess(android.os.Process.myPid());
 			
 		} else if (m.what == MSG_TYPE.CALL_STATE) {
