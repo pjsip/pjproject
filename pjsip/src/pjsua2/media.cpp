@@ -154,16 +154,16 @@ void AudioMedia::registerMediaPort(MediaPort port) throw(Error)
 
 void AudioMedia::unregisterMediaPort()
 {
-    if (id != PJSUA_INVALID_ID)
+    if (id != PJSUA_INVALID_ID) {
 	pjsua_conf_remove_port(id);
+	id = PJSUA_INVALID_ID;
+    }
 
     if (mediaPool) {
 	pj_pool_release(mediaPool);
 	mediaPool = NULL;
 	pj_caching_pool_destroy(&mediaCachingPool);
     }
-
-    id = PJSUA_INVALID_ID;
 
     Endpoint::instance().mediaRemove(*this);
 }
@@ -386,12 +386,19 @@ class DevAudioMedia : public AudioMedia
 {
 public:
     DevAudioMedia();
+    ~DevAudioMedia();
 };
 
 DevAudioMedia::DevAudioMedia()
 {
     this->id = 0;
     registerMediaPort(NULL);
+}
+
+DevAudioMedia::~DevAudioMedia()
+{
+    /* Avoid removing this port (conf port id=0) from conference */
+    this->id = PJSUA_INVALID_ID;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -404,7 +411,10 @@ AudDevManager::AudDevManager()
 
 AudDevManager::~AudDevManager()
 {
-    delete devMedia;
+    // At this point, devMedia should have been cleaned up by Endpoint,
+    // as AudDevManager destructor is called after Endpoint destructor.
+    //delete devMedia;
+    
     clearAudioDevList();
 }
 

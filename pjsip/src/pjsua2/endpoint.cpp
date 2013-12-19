@@ -383,8 +383,6 @@ Endpoint::~Endpoint()
 	pendingJobs.pop_front();
     }
 
-    delete writer;
-    
     while(mediaList.size() > 0) {
 	AudioMedia *cur_media = mediaList[0];
 	delete cur_media; /* this will remove itself from the list */
@@ -1302,7 +1300,6 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
 
     status = pjsua_destroy2(flags);
 
-    delete this->writer;
     this->writer = NULL;
 
     if (pj_log_get_log_func() == &Endpoint::logFunc) {
