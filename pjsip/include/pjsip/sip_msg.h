@@ -1061,12 +1061,14 @@ PJ_DECL(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *h,
 /* **************************************************************************/
 
 /**
- * Generic SIP header, which contains hname and a string hvalue.
+ * Generic SIP header, which contains hname and an integer ivalue.
  */
 typedef struct pjsip_generic_int_hdr
 {
-    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_int_hdr); /**< Standard header field. */
-    pj_int32_t ivalue;				    /**< ivalue */
+    /** Standard header field. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_int_hdr);
+    /** ivalue */
+    pj_int32_t ivalue;
 } pjsip_generic_int_hdr;
 
 
