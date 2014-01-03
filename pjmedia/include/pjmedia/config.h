@@ -914,6 +914,19 @@
 
 
 /**
+ * Let the library handle libsrtp initialization and deinitialization.
+ * Application may want to disable this and manually perform libsrtp
+ * initialization and deinitialization when it needs to use libsrtp
+ * before the library is initialized or after the library is shutdown.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT
+#   define PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT	    1
+#endif
+
+
+/**
  * Enable support to handle codecs with inconsistent clock rate
  * between clock rate in SDP/RTP & the clock rate that is actually used.
  * This happens for example with G.722 and MPEG audio codecs.

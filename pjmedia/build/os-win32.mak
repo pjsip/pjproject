@@ -74,6 +74,42 @@ export CODEC_OBJS += g7221.o
 export G7221_CFLAGS += -I$(THIRD_PARTY)
 endif
 
+#
+# Resample
+#
+AC_PJMEDIA_RESAMPLE=libresample
+
+ifeq ($(AC_PJMEDIA_RESAMPLE),none)
+# No resample support
+export CFLAGS += -DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_NONE
+endif
+
+ifeq ($(AC_PJMEDIA_RESAMPLE),libresample)
+export CFLAGS += -DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_LIBRESAMPLE
+endif
+
+ifeq ($(AC_PJMEDIA_RESAMPLE),libsamplerate)
+export CFLAGS += -DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_LIBSAMPLERATE
+endif
+
+ifeq ($(AC_PJMEDIA_RESAMPLE),speex)
+export CFLAGS += -DPJMEDIA_RESAMPLE_IMP=PJMEDIA_RESAMPLE_SPEEX
+endif
+
+#
+# SRTP
+#
+#ifeq (@ac_external_srtp@,1)
+ifeq (0,1)
+# External SRTP
+export CFLAGS += -DPJMEDIA_EXTERNAL_SRTP=1
+else
+# Our SRTP in third_party
+export CFLAGS += -I$(THIRD_PARTY)/build/srtp \
+	 -I$(THIRD_PARTY)/srtp/crypto/include \
+	 -I$(THIRD_PARTY)/srtp/include
+
+endif
 
 #
 # PortAudio

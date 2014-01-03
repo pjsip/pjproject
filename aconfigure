@@ -650,6 +650,8 @@ ac_pjmedia_audiodev_objs
 ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
+ac_pjmedia_resample
+ac_external_srtp
 ac_external_gsm
 ac_external_speex
 ac_shared_libraries
@@ -742,6 +744,8 @@ enable_epoll
 enable_shared
 with_external_speex
 with_external_gsm
+with_external_srtp
+enable_resample
 enable_sound
 with_external_pa
 enable_oss
@@ -1409,6 +1413,7 @@ Optional Features:
                           Disable floating point where possible
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --enable-shared         Build shared libraries
+  --disable-resample      Disable resampling implementations
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-oss           Disable OSS audio (default: not disabled)
   --disable-video         Disable video feature
@@ -1423,8 +1428,7 @@ Optional Features:
   --disable-g7221-codec   Exclude G.7221 codec in the build
   --disable-speex-codec   Exclude Speex codecs in the build
   --disable-ilbc-codec    Exclude iLBC codec in the build
-  --enable-libsamplerate  Link with libsamplerate when available. Note that
-                          PJMEDIA_RESAMPLE_IMP must also be configured
+  --enable-libsamplerate  Link with libsamplerate when available.
   --enable-resample-dll   Build libresample as shared library
   --disable-sdl           Disable SDL (default: not disabled)
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
@@ -1455,6 +1459,11 @@ Optional Packages:
                           make sure that the GSM include/lib files are
                           accessible to use (hint: use CFLAGS and LDFLAGS env
                           var to set the include/lib paths)
+  --with-external-srtp    Use external SRTP development files, not the one in
+                          "third_party" directory. When this option is set,
+                          make sure that SRTP is accessible to use (hint: use
+                          CFLAGS and LDFLAGS env var to set the include/lib
+                          paths)
   --with-external-pa      Use external PortAudio development files, not the
                           one in "third_party" directory. When this option is
                           set, make sure that PortAudio is accessible to use
@@ -5788,6 +5797,56 @@ fi
 
 
 
+ac_external_srtp=0
+
+
+# Check whether --with-external-srtp was given.
+if test "${with_external_srtp+set}" = set; then :
+  withval=$with_external_srtp;
+	if test "x$with_external_srtp" != "xno"; then
+		# Test SRTP installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external SRTP devkit is installed" >&5
+$as_echo_n "checking if external SRTP devkit is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <srtp/srtp.h>
+
+int
+main ()
+{
+srtp_init();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_srtp="1"
+
+else
+  as_fn_error $? "Unable to use SRTP. If SRTP development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
+ac_pjmedia_resample=libresample
+
+# Check whether --enable-resample was given.
+if test "${enable_resample+set}" = set; then :
+  enableval=$enable_resample; if test "$enable_resample" = "no"; then
+		ac_pjmedia_resample=none
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if resampling is disabled...yes" >&5
+$as_echo "Checking if resampling is disabled...yes" >&6; }
+	       fi
+
+fi
+
 
 
 # Check whether --enable-sound was given.
@@ -6257,6 +6316,7 @@ _ACEOF
 
 fi
 
+	      ac_pjmedia_resample=libsamplerate
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Skipping libsamplerate detection" >&5
 $as_echo "Skipping libsamplerate detection" >&6; }
@@ -7454,20 +7514,20 @@ $as_echo "OpenCORE AMR-NB library found, AMR-NB support enabled" >&6; }
 
 
 		ac_fn_c_check_header_mongrel "$LINENO" "vo-amrwbenc/enc_if.h" "ac_cv_header_vo_amrwbenc_enc_if_h" "$ac_includes_default"
-if test "x$ac_cv_header_vo_amrwbenc_enc_if_h" = xyes; then :
+if test "x$ac_cv_header_vo_amrwbenc_enc_if_h" = x""yes; then :
   opencore_amrwb_enc_h_present=1
 fi
 
 
 		ac_fn_c_check_header_mongrel "$LINENO" "opencore-amrwb/dec_if.h" "ac_cv_header_opencore_amrwb_dec_if_h" "$ac_includes_default"
-if test "x$ac_cv_header_opencore_amrwb_dec_if_h" = xyes; then :
+if test "x$ac_cv_header_opencore_amrwb_dec_if_h" = x""yes; then :
   opencore_amrwb_dec_h_present=1
 fi
 
 
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for D_IF_init in -lopencore-amrwb" >&5
 $as_echo_n "checking for D_IF_init in -lopencore-amrwb... " >&6; }
-if ${ac_cv_lib_opencore_amrwb_D_IF_init+:} false; then :
+if test "${ac_cv_lib_opencore_amrwb_D_IF_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -7501,13 +7561,13 @@ LIBS=$ac_check_lib_save_LIBS
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opencore_amrwb_D_IF_init" >&5
 $as_echo "$ac_cv_lib_opencore_amrwb_D_IF_init" >&6; }
-if test "x$ac_cv_lib_opencore_amrwb_D_IF_init" = xyes; then :
+if test "x$ac_cv_lib_opencore_amrwb_D_IF_init" = x""yes; then :
   opencore_amrwb_dec_present=1 && LIBS="$LIBS -lopencore-amrwb"
 fi
 
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for E_IF_init in -lvo-amrwbenc" >&5
 $as_echo_n "checking for E_IF_init in -lvo-amrwbenc... " >&6; }
-if ${ac_cv_lib_vo_amrwbenc_E_IF_init+:} false; then :
+if test "${ac_cv_lib_vo_amrwbenc_E_IF_init+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -7541,7 +7601,7 @@ LIBS=$ac_check_lib_save_LIBS
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_vo_amrwbenc_E_IF_init" >&5
 $as_echo "$ac_cv_lib_vo_amrwbenc_E_IF_init" >&6; }
-if test "x$ac_cv_lib_vo_amrwbenc_E_IF_init" = xyes; then :
+if test "x$ac_cv_lib_vo_amrwbenc_E_IF_init" = x""yes; then :
   opencore_amrwb_enc_present=1 && LIBS="$LIBS -lvo-amrwbenc"
 fi
 
@@ -7600,14 +7660,14 @@ $as_echo "Using SILK prefix... $with_silk" >&6; }
 
 
 		ac_fn_c_check_header_mongrel "$LINENO" "SKP_Silk_SDK_API.h" "ac_cv_header_SKP_Silk_SDK_API_h" "$ac_includes_default"
-if test "x$ac_cv_header_SKP_Silk_SDK_API_h" = xyes; then :
+if test "x$ac_cv_header_SKP_Silk_SDK_API_h" = x""yes; then :
   silk_h_present=1
 fi
 
 
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SKP_Silk_SDK_get_version in -lSKP_SILK_SDK" >&5
 $as_echo_n "checking for SKP_Silk_SDK_get_version in -lSKP_SILK_SDK... " >&6; }
-if ${ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version+:} false; then :
+if test "${ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version+set}" = set; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -7641,7 +7701,7 @@ LIBS=$ac_check_lib_save_LIBS
 fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" >&5
 $as_echo "$ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" >&6; }
-if test "x$ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" = xyes; then :
+if test "x$ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" = x""yes; then :
   silk_present=1 && LIBS="$LIBS -lSKP_SILK_SDK"
 fi
 

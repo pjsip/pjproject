@@ -31,3 +31,12 @@ DIRS += portaudio
 endif
 endif
 
+ifeq (@ac_external_srtp@,1)
+# External SRTP
+else
+DIRS += srtp
+endif
+
+ifeq (@ac_pjmedia_resample@,libresample)
+DIRS += resample
+endif

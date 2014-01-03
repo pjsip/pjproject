@@ -528,6 +528,37 @@ AC_ARG_WITH(external-gsm,
     )
 
 
+dnl # Use external SRTP installation
+AC_SUBST(ac_external_srtp,0)
+AC_ARG_WITH(external-srtp,
+    AC_HELP_STRING([--with-external-srtp],
+		   [Use external SRTP development files, not the one in "third_party" directory. When this option is set, make sure that SRTP is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+    [
+	if test "x$with_external_srtp" != "xno"; then
+		# Test SRTP installation
+		AC_MSG_CHECKING([if external SRTP devkit is installed])
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <srtp/srtp.h>
+						     ]],
+						  [srtp_init();])],
+				  [AC_MSG_RESULT(yes!!)
+				   ac_external_srtp="1"
+				   ],
+				  [AC_MSG_ERROR([Unable to use SRTP. If SRTP development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
+	fi
+    ]
+    )
+
+
+dnl # Resample implementation
+AC_SUBST(ac_pjmedia_resample,libresample)
+AC_ARG_ENABLE(resample,
+	      AC_HELP_STRING([--disable-resample],
+			     [Disable resampling implementations]),
+	      [if test "$enable_resample" = "no"; then
+		[ac_pjmedia_resample=none]
+		AC_MSG_RESULT([Checking if resampling is disabled...yes])
+	       fi]
+	      )
 
 dnl # Sound device backend selection
 AC_SUBST(ac_pjmedia_snd)
@@ -831,8 +862,9 @@ AC_ARG_ENABLE(ilbc-codec,
 dnl # Include libsamplerate
 AC_ARG_ENABLE(libsamplerate,
 	      AC_HELP_STRING([--enable-libsamplerate],
-			     [Link with libsamplerate when available. Note that PJMEDIA_RESAMPLE_IMP must also be configured]),
-	      [ AC_CHECK_LIB(samplerate,src_new) ],
+			     [Link with libsamplerate when available.]),
+	      [ AC_CHECK_LIB(samplerate,src_new) ]
+	      [ac_pjmedia_resample=libsamplerate],
 	      AC_MSG_RESULT([Skipping libsamplerate detection])
 	     )
 

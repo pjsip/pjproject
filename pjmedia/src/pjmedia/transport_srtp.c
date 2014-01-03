@@ -30,7 +30,11 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
-#include <srtp.h>
+#if defined(PJMEDIA_EXTERNAL_SRTP) && (PJMEDIA_EXTERNAL_SRTP != 0)
+#  include <srtp/srtp.h>
+#else
+#  include <srtp.h>
+#endif
 
 #define THIS_FILE   "transport_srtp.c"
 
@@ -276,6 +280,7 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt);
 
 PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
 {
+#if PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT
     if (libsrtp_initialized == PJ_FALSE) {
 	err_status_t err;
 
@@ -298,6 +303,9 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
 
 	libsrtp_initialized = PJ_TRUE;
     }
+#else
+    PJ_UNUSED_ARG(endpt);
+#endif
     
     return PJ_SUCCESS;
 }
