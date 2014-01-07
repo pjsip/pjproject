@@ -655,6 +655,19 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     /* Call state handler for the invite session. */
     (*inv_state_handler[inv->state])(inv, e);
 
+    /* Clear invite transaction when tsx is terminated. 
+     * Necessary for app that wants to send a new re-INVITE request immediately
+     * after the transaction is terminated. 
+     */
+    if (tsx->state==PJSIP_TSX_STATE_TERMINATED  && tsx == inv->invite_tsx) {
+	inv->invite_tsx = NULL;    
+
+	if (inv->last_answer) {
+		pjsip_tx_data_dec_ref(inv->last_answer);
+		inv->last_answer = NULL;
+	}
+    }
+
     /* Call on_tsx_state. CANCEL request is a special case and has been
      * reported earlier in inv_respond_incoming_cancel()
      */
@@ -670,8 +683,9 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
      * terminated, but this didn't work when ACK has the same Via branch
      * value as the INVITE (see http://www.pjsip.org/trac/ticket/113)
      */
-    if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx) {
-        inv->invite_tsx = NULL;
+    if (tsx->state>=PJSIP_TSX_STATE_CONFIRMED && tsx == inv->invite_tsx) {	
+	inv->invite_tsx = NULL;
+
 	if (inv->last_answer) {
 		pjsip_tx_data_dec_ref(inv->last_answer);
 		inv->last_answer = NULL;
