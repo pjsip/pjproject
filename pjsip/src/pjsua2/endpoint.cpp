@@ -1300,6 +1300,7 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
 
     status = pjsua_destroy2(flags);
 
+    delete this->writer;
     this->writer = NULL;
 
     if (pj_log_get_log_func() == &Endpoint::logFunc) {

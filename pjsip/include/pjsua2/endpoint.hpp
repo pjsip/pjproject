@@ -368,7 +368,8 @@ struct LogConfig : public PersistentObject
     unsigned		fileFlags;
 
     /**
-     * Custom log writer, if required.
+     * Custom log writer, if required. This instance will be destroyed
+     * by the endpoint when the endpoint is destroyed.
      */
     LogWriter		*writer;
 
