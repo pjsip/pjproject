@@ -172,6 +172,13 @@ export APP_CFLAGS := -DPJ_AUTOCONF=1\
 	-I$(PJDIR)/pjmedia/include\
 	-I$(PJDIR)/pjsip/include
 export APP_CXXFLAGS := $(APP_CFLAGS)
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+#
+# FIX THIS
+#
+# pjsua2 is c++ library hence maybe needs to be put in separate
+# variables. it will also require -lstdc++ or -static-libstdc++
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjlib-util/lib\
 	-L$(PJDIR)/pjnath/lib\
@@ -179,8 +186,19 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjsip/lib\
 	-L$(PJDIR)/third_party/lib\
 	$(PJ_VIDEO_LDFLAGS) \
+	-static-libstdc++ \
 	@LDFLAGS@
-export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
+
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+#
+# FIX THIS
+#
+# pjsua2 is c++ library hence maybe needs to be put in separate
+# variables. it will also require -lstdc++
+#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
+export APP_LIB_FILES = \
+	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
+	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-$(LIB_SUFFIX) \

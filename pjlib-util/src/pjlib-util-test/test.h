@@ -20,12 +20,14 @@
 #include <pj/types.h>
 
 #define INCLUDE_XML_TEST	    1
+#define INCLUDE_JSON_TEST	    1
 #define INCLUDE_ENCRYPTION_TEST	    1
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_RESOLVER_TEST	    1
 #define INCLUDE_HTTP_CLIENT_TEST    1
 
 extern int xml_test(void);
+extern int json_test(void);
 extern int encryption_test();
 extern int encryption_benchmark();
 extern int stun_test();

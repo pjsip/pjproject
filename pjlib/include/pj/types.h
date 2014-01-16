@@ -86,15 +86,18 @@ typedef int		pj_bool_t;
 #   define PJ_T(literal_str)	literal_str
 #endif
 
+/** Some constants */
+enum pj_constants_
+{
+    /** Status is OK. */
+    PJ_SUCCESS=0,
 
-/** Status is OK. */
-#define PJ_SUCCESS  0
+    /** True value. */
+    PJ_TRUE=1,
 
-/** True value. */
-#define PJ_TRUE	    1
-
-/** False value. */
-#define PJ_FALSE    0
+    /** False value. */
+    PJ_FALSE=0
+};
 
 /**
  * File offset type.

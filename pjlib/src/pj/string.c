@@ -175,6 +175,44 @@ PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
     return value;
 }
 
+PJ_DEF(float) pj_strtof(const pj_str_t *str)
+{
+    pj_str_t part;
+    char *pdot;
+    float val;
+
+    if (str->slen == 0)
+	return 0;
+
+    pdot = (char*)pj_memchr(str->ptr, '.', str->slen);
+    part.ptr = str->ptr;
+    part.slen = pdot ? pdot - str->ptr : str->slen;
+
+    if (part.slen)
+	val = (float)pj_strtol(&part);
+    else
+	val = 0;
+
+    if (pdot) {
+	part.ptr = pdot + 1;
+	part.slen = (str->ptr + str->slen - pdot - 1);
+	if (part.slen) {
+	    pj_str_t endptr;
+	    float fpart, fdiv;
+	    int i;
+	    fpart = (float)pj_strtoul2(&part, &endptr, 10);
+	    fdiv = 1.0;
+	    for (i=0; i<(part.slen - endptr.slen); ++i)
+		    fdiv = fdiv * 10;
+	    if (val >= 0)
+		val += (fpart / fdiv);
+	    else
+		val -= (fpart / fdiv);
+	}
+    }
+    return val;
+}
+
 PJ_DEF(int) pj_utoa(unsigned long val, char *buf)
 {
     return pj_utoa_pad(val, buf, 0, 0);

@@ -72,6 +72,10 @@ static int test_inner(void)
     DO_TEST(xml_test());
 #endif
 
+#if INCLUDE_JSON_TEST
+    DO_TEST(json_test());
+#endif
+
 #if INCLUDE_ENCRYPTION_TEST
     DO_TEST(encryption_test());
     DO_TEST(encryption_benchmark());

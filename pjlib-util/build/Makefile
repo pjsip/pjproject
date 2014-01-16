@@ -38,7 +38,7 @@ export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		base64.o cli.o cli_console.o cli_telnet.o crc32.o errno.o dns.o \
 		dns_dump.o dns_server.o getopt.o hmac_md5.o hmac_sha1.o \
-		http_client.o md5.o pcap.o resolver.o scanner.o sha1.o \
+		http_client.o json.o md5.o pcap.o resolver.o scanner.o sha1.o \
 		srv_resolver.o string.o stun_simple.o \
 		stun_simple_client.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
@@ -50,7 +50,7 @@ export PJLIB_UTIL_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
 #
 export UTIL_TEST_SRCDIR = ../src/pjlib-util-test
 export UTIL_TEST_OBJS += xml.o encryption.o stun.o resolver_test.o test.o \
-		http_client.o
+		json_test.o http_client.o
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_CXXFLAGS += $(_CXXFLAGS)
 export UTIL_TEST_LDFLAGS += $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)

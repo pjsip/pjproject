@@ -121,4 +121,5 @@ int main(int argc, char *argv[])
 	    pj_thread_join(sig_thread);
 	}
     }
+    return 0;
 }

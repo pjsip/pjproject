@@ -575,6 +575,15 @@ PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
 				   unsigned base);
 
 /**
+ * Convert string to float.
+ *
+ * @param str	the string.
+ *
+ * @return the value.
+ */
+PJ_DECL(float) pj_strtof(const pj_str_t *str);
+
+/**
  * Utility to convert unsigned integer to string. Note that the
  * string will be NULL terminated.
  *

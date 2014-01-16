@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:padding = "20dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/textViewInfo"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+    	android:paddingBottom="20dp"
+        android:textColor="#b0b0b0" >
+    </TextView>
+    
+	<TableRow>
+        <TextView android:text="ID">
+        </TextView>  
+
+	    <EditText
+	        android:id="@+id/editTextId"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:inputType="textUri" >
+
+	        <requestFocus />
+	    </EditText>
+    </TableRow>
+	<TableRow>
+        <TextView android:text="Registrar">
+        </TextView>  
+	    <EditText
+	        android:id="@+id/editTextRegistrar"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:inputType="textUri" >
+	    </EditText>
+    </TableRow>
+	<TableRow>
+        <TextView android:text="Proxy">
+        </TextView>  
+	    <EditText
+	        android:id="@+id/editTextProxy"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:inputType="textUri" >
+	    </EditText>
+    </TableRow>
+	<TableRow>
+        <TextView android:text="Username">
+        </TextView>  
+
+	    <EditText
+	        android:id="@+id/editTextUsername"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:inputType="text" >
+
+	    </EditText>
+    </TableRow>
+	<TableRow>
+        <TextView android:text="Password">
+        </TextView>  
+
+	    <EditText
+	        android:id="@+id/editTextPassword"
+	        android:layout_width="match_parent"
+	        android:layout_height="wrap_content"
+	        android:layout_weight="1"
+	        android:inputType="textPassword" >
+
+	    </EditText>
+    </TableRow>
+</TableLayout>

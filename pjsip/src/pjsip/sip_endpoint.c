@@ -923,6 +923,8 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     pjsip_process_rdata_param proc_prm;
     pj_bool_t handled = PJ_FALSE;
 
+    PJ_UNUSED_ARG(msg);
+
     if (status != PJ_SUCCESS) {
 	char info[30];
 	char errmsg[PJ_ERR_MSG_SIZE];
