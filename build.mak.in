@@ -223,6 +223,7 @@ export PJSIP_LDLIB := -lpjsip-$(TARGET_NAME)
 export PJSIP_SIMPLE_LDLIB := -lpjsip-simple-$(TARGET_NAME)
 export PJSIP_UA_LDLIB := -lpjsip-ua-$(TARGET_NAME)
 export PJSUA_LIB_LDLIB := -lpjsua-$(TARGET_NAME)
+export PJSUA2_LIB_LDLIB := -lpjsua2-$(TARGET_NAME)
 else
 export PJLIB_LDLIB := -lpj
 export PJLIB_UTIL_LDLIB := -lpjlib-util
@@ -235,6 +236,7 @@ export PJSIP_LDLIB := -lpjsip
 export PJSIP_SIMPLE_LDLIB := -lpjsip-simple
 export PJSIP_UA_LDLIB := -lpjsip-ua
 export PJSUA_LIB_LDLIB := -lpjsua
+export PJSUA2_LIB_LDLIB := -lpjsua2
 
 APP_LIB_FILES += $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX) \
@@ -249,7 +251,8 @@ APP_LIB_FILES += $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR
 	$(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX)
 endif
 
-export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
+export APP_LDLIBS := $(PJSUA2_LIB_LDLIB) \
+	$(PJSUA_LIB_LDLIB) \
 	$(PJSIP_UA_LDLIB) \
 	$(PJSIP_SIMPLE_LDLIB) \
 	$(PJSIP_LDLIB) \
