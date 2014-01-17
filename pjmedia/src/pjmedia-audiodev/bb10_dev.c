@@ -657,6 +657,7 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
     }
 
     if (ret != 0) {
+        TRACE_((THIS_FILE, "audio_manager_set_handle_type error ret = %d",ret));
         return PJMEDIA_EAUD_SYSERR;
     }else{
         return PJ_SUCCESS;
