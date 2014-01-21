@@ -91,6 +91,8 @@ public:
 
 void MyCall::onCallState(OnCallStateParam &prm)
 {
+    PJ_UNUSED_ARG(prm);
+
     CallInfo ci = getInfo();
     std::cout << "*** Call: " <<  ci.remoteUri << " [" << ci.stateText
               << "]" << std::endl;
@@ -204,6 +206,40 @@ void mainProg2() throw(Error)
     ep.libDestroy();
 }
 
+
+void mainProg3() throw(Error)
+{
+    Endpoint ep;
+
+    // Create library
+    ep.libCreate();
+
+    // Init library
+    EpConfig ep_cfg;
+    ep.libInit( ep_cfg );
+
+    // Start library
+    ep.libStart();
+    std::cout << "*** PJSUA2 STARTED ***" << std::endl;
+
+    // Create player and recorder
+    {
+	AudioMediaPlayer amp;
+	amp.createPlayer("../../tests/pjsua/wavs/input.16.wav");
+
+	AudioMediaRecorder amr;
+	amr.createRecorder("recorder_test_output.wav");
+
+	amp.startTransmit(ep.audDevManager().getPlaybackDevMedia());
+	amp.startTransmit(amr);
+
+	pj_thread_sleep(5000);
+    }
+
+    ep.libDestroy();
+}
+
+
 void mainProg() throw(Error)
 {
     Endpoint ep;
@@ -271,13 +307,10 @@ int main()
      */
     {
 	Endpoint ep;
-	ep.natDetectType();
-	{
-	}
     }
 
     try {
-	mainProg1();
+	mainProg3();
 	std::cout << "Success" << std::endl;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;

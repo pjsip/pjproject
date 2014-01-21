@@ -247,14 +247,20 @@ AudioMediaPlayer::AudioMediaPlayer()
 
 AudioMediaPlayer::~AudioMediaPlayer()
 {
-    if (playerId != PJSUA_INVALID_ID)
+    if (playerId != PJSUA_INVALID_ID) {
+	unregisterMediaPort();
 	pjsua_player_destroy(playerId);
+    }
 }
 
 void AudioMediaPlayer::createPlayer(const string &file_name,
 				    unsigned options)
 				    throw(Error)
 {
+    if (playerId != PJSUA_INVALID_ID) {
+	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
     pj_str_t pj_name = str2Pj(file_name);
 
     PJSUA2_CHECK_EXPR( pjsua_player_create(&pj_name,
@@ -272,6 +278,10 @@ void AudioMediaPlayer::createPlaylist(const StringVector &file_names,
 				      unsigned options)
 				      throw(Error)
 {
+    if (playerId != PJSUA_INVALID_ID) {
+	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
     pj_str_t pj_files[MAX_FILE_NAMES];
     unsigned i, count = 0;
     pj_str_t pj_lbl = str2Pj(label);
@@ -317,8 +327,10 @@ AudioMediaRecorder::AudioMediaRecorder()
 
 AudioMediaRecorder::~AudioMediaRecorder()
 {
-    if (recorderId != PJSUA_INVALID_ID)
+    if (recorderId != PJSUA_INVALID_ID) {
+	unregisterMediaPort();
 	pjsua_recorder_destroy(recorderId);
+    }
 }
 
 void AudioMediaRecorder::createRecorder(const string &file_name,
@@ -328,6 +340,10 @@ void AudioMediaRecorder::createRecorder(const string &file_name,
 				        throw(Error)
 {
     PJ_UNUSED_ARG(max_size);
+
+    if (recorderId != PJSUA_INVALID_ID) {
+	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
 
     pj_str_t pj_name = str2Pj(file_name);
 
