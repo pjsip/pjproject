@@ -85,6 +85,7 @@
 #define CMD_MEDIA_CONF_DISCONNECT   ((CMD_MEDIA*10)+3)
 #define CMD_MEDIA_ADJUST_VOL	    ((CMD_MEDIA*10)+4)
 #define CMD_MEDIA_CODEC_PRIO	    ((CMD_MEDIA*10)+5)
+#define CMD_MEDIA_SPEAKER_TOGGLE    ((CMD_MEDIA*10)+6)
 
 /* status & config level 2 command */
 #define CMD_CONFIG_DUMP_STAT	    ((CMD_CONFIG*10)+1)
@@ -1341,6 +1342,31 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 	break;
     case CMD_MEDIA_CODEC_PRIO:
 	status = cmd_set_codec_prio(cval);	
+	break;
+    case CMD_MEDIA_SPEAKER_TOGGLE:
+	{
+	    static int route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+	    status = pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					   &route);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(2, (THIS_FILE, status,
+			      "Warning: unable to retrieve route setting"));
+	    }
+
+	    if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
+		route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
+	    else
+		route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
+
+	    PJ_LOG(4,(THIS_FILE, "Setting output route to %s %s",
+		      (route==PJMEDIA_AUD_DEV_ROUTE_DEFAULT?
+				      "default" : "loudspeaker"),
+		      (status? "anyway" : "")));
+
+	    status = pjsua_snd_set_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					   &route, PJ_TRUE);
+	    PJ_PERROR(4,(THIS_FILE, status, "Result"));
+	}
 	break;
     }    
 
@@ -2830,6 +2856,7 @@ static pj_status_t add_media_command(pj_cli_t *cli)
 	"    <ARG name='mic_level' type='int' desc='Mic Level'/>"
 	"    <ARG name='speaker_port' type='int' desc='Speaker Level'/>"
 	"  </CMD>"
+	"  <CMD name='speakertog' id='4006' desc='Toggle audio output route' />"
 	"  <CMD name='codec_prio' id='4005' sc='Cp' "
 	"   desc='Arrange codec priorities'>"
 	"    <ARG name='codec_id' type='choice' id='9904' desc='Codec Id'/>"
