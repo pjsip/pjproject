@@ -1137,7 +1137,7 @@ static void ui_call_transfer_replaces(pj_bool_t no_refersub)
 	    pjsua_call_info call_info;
 
 	    if (ids[i] == call)
-		return;
+		continue;
 
 	    pjsua_call_get_info(ids[i], &call_info);
 	    printf("%d  %.*s [%.*s]\n",
