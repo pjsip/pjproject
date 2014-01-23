@@ -2571,7 +2571,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
                      dest, PJ_EINVAL);
     
-    PJ_LOG(4,(THIS_FILE, "Transfering call %d to %.*s", call_id,
+    PJ_LOG(4,(THIS_FILE, "Transferring call %d to %.*s", call_id,
 			 (int)dest->slen, dest->ptr));
     pj_log_push_indent();
 
@@ -2652,7 +2652,7 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
 		      dest_call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
     
-    PJ_LOG(4,(THIS_FILE, "Transfering call %d replacing with call %d",
+    PJ_LOG(4,(THIS_FILE, "Transferring call %d replacing with call %d",
 			 call_id, dest_call_id));
     pj_log_push_indent();
 

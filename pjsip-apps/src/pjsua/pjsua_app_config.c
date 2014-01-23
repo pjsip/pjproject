@@ -194,7 +194,7 @@ static void usage(void)
     puts  ("  --max-calls=N       Maximum number of concurrent calls (default:4, max:255)");
     puts  ("  --thread-cnt=N      Number of worker threads (default:1)");
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
-    puts  ("  --norefersub        Suppress event subscription when transfering calls");
+    puts  ("  --norefersub        Suppress event subscription when transferring calls");
     puts  ("  --use-compact-form  Minimize SIP message size");
     puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");

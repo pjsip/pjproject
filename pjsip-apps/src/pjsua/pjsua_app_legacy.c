@@ -1068,7 +1068,7 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 	pjsua_msg_data msg_data;
 
 	pjsua_call_get_info(current_call, &ci);
-	printf("Transfering current call [%d] %.*s\n", current_call,
+	printf("Transferring current call [%d] %.*s\n", current_call,
 	       (int)ci.remote_info.slen, ci.remote_info.ptr);
 
 	ui_input_url("Transfer to URL", buf, sizeof(buf), &result);

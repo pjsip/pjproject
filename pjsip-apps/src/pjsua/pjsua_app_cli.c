@@ -1711,7 +1711,7 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
 	pjsua_call_get_info(current_call, &ci);
 	pj_ansi_snprintf(out_str, 
 			 sizeof(out_str), 
-			 "Transfering current call [%d] %.*s\n",
+			 "Transferring current call [%d] %.*s\n",
 			 current_call,
 			 (int)ci.remote_info.slen, 
 			 ci.remote_info.ptr);

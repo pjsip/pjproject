@@ -411,7 +411,7 @@ def xfer_call():
 	else:
 		call = g_current_call		
 		ci = py_pjsua.call_get_info(g_current_call)
-		print "Transfering current call ["+ `g_current_call` + "] " + ci.remote_info
+		print "Transferring current call ["+ `g_current_call` + "] " + ci.remote_info
 		print "Enter sip url : "
 		url = sys.stdin.readline()
 		if url == "\n": 
