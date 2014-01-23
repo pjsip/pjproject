@@ -126,9 +126,7 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 	}
 
 	if (out_frame.size) {
-	    pj_size_t cnt;
-
-	    cnt = fwrite(out_frame.buf, out_frame.size, 1, output);
+	    fwrite(out_frame.buf, out_frame.size, 1, output);
 
 	    if (encoded_frame_len == 0)
 		encoded_frame_len = out_frame.size;

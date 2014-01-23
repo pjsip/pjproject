@@ -274,7 +274,6 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t from, to;
     pjsip_accept_hdr *accept_hdr;
     pjsip_msg *msg;
-    pj_status_t status;
 
     msg = rdata->msg_info.msg;
 
@@ -306,8 +305,8 @@ static pj_bool_t im_on_rx_request(pjsip_rx_data *rdata)
     /* Respond with 200 first, so that remote doesn't retransmit in case
      * the UI takes too long to process the message. 
      */
-    status = pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
-				  NULL, NULL, NULL);
+    pjsip_endpt_respond( pjsua_var.endpt, NULL, rdata, 200, NULL,
+			 NULL, NULL, NULL);
 
     /* For the source URI, we use Contact header if present, since
      * Contact header contains the port number information. If this is

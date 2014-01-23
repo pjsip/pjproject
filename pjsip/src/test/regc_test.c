@@ -545,7 +545,7 @@ static int update_test(const pj_str_t *registrar_uri)
 
     pjsip_regc *regc;
     pjsip_contact_hdr *h1, *h2;
-    pjsip_sip_uri *u1, *u2;
+    pjsip_sip_uri *u1;
     unsigned i;
     pj_status_t status;
     pjsip_tx_data *tdata = NULL;
@@ -602,7 +602,6 @@ static int update_test(const pj_str_t *registrar_uri)
     }
 
     u1 = (pjsip_sip_uri*) pjsip_uri_get_uri(h1->uri);
-    u2 = (pjsip_sip_uri*) pjsip_uri_get_uri(h2->uri);
 
     if (*u1->host.ptr == 'a') {
 	if (h1->expires != 0) {

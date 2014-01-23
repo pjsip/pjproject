@@ -2300,7 +2300,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 {
     
     pj_stun_msg *msg;
-    unsigned uattr_cnt;
     const pj_uint8_t *start_pdu = pdu;
     pj_bool_t has_msg_int = PJ_FALSE;
     pj_bool_t has_fingerprint = PJ_FALSE;
@@ -2339,7 +2338,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	p_response = NULL;
 
     /* Parse attributes */
-    uattr_cnt = 0;
     while (pdu_len >= 4) {
 	unsigned attr_type, attr_val_len;
 	const struct attr_desc *adesc;

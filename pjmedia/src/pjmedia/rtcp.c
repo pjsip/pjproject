@@ -287,7 +287,6 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     pj_uint32_t arrival;
     pj_int32_t transit;
     pjmedia_rtp_status seq_st;
-    unsigned last_seq;
 
 #if !defined(PJMEDIA_HAS_RTCP_XR) || (PJMEDIA_HAS_RTCP_XR == 0)
     PJ_UNUSED_ARG(discarded);
@@ -302,7 +301,6 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
     sess->stat.rx.bytes += payload;
 
     /* Process the RTP packet. */
-    last_seq = sess->seq_ctrl.max_seq;
     pjmedia_rtp_seq_update(&sess->seq_ctrl, (pj_uint16_t)seq, &seq_st);
 
     if (seq_st.status.flag.restart) {
@@ -807,7 +805,6 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 				     void **ret_p_pkt, int *len)
 {
     pj_uint32_t expected, expected_interval, received_interval, lost_interval;
-    pjmedia_rtcp_common *common;
     pjmedia_rtcp_sr *sr;
     pjmedia_rtcp_rr *rr;
     pj_timestamp ts_now;
@@ -828,7 +825,6 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	/* So we should send RTCP SR */
 	*ret_p_pkt = (void*) &sess->rtcp_sr_pkt;
 	*len = sizeof(pjmedia_rtcp_sr_pkt);
-	common = &sess->rtcp_sr_pkt.common;
 	rr = &sess->rtcp_sr_pkt.rr;
 	sr = &sess->rtcp_sr_pkt.sr;
 
@@ -859,7 +855,6 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	/* We should send RTCP RR then */
 	*ret_p_pkt = (void*) &sess->rtcp_rr_pkt;
 	*len = sizeof(pjmedia_rtcp_rr_pkt);
-	common = &sess->rtcp_rr_pkt.common;
 	rr = &sess->rtcp_rr_pkt.rr;
 	sr = NULL;
     }

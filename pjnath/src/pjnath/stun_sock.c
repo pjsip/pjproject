@@ -954,10 +954,8 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
 
 process_app_data:
     if (stun_sock->cb.on_rx_data) {
-	pj_bool_t ret;
-
-	ret = (*stun_sock->cb.on_rx_data)(stun_sock, data, (unsigned)size,
-					  src_addr, addr_len);
+	(*stun_sock->cb.on_rx_data)(stun_sock, data, (unsigned)size,
+				    src_addr, addr_len);
 	status = pj_grp_lock_release(stun_sock->grp_lock);
 	return status!=PJ_EGONE ? PJ_TRUE : PJ_FALSE;
     }

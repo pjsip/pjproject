@@ -215,10 +215,9 @@ on_return:
 
 int test_main(void)
 {
-    int i;
     PJ_USE_EXCEPTION;
 
-    i = pj_AF_INET();
+    pj_AF_INET();
 
     PJ_TRY {
         return test_inner();

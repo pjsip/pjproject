@@ -4497,12 +4497,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	 * Incoming MESSAGE request!
 	 */
 	pjsip_rx_data *rdata;
-	pjsip_msg *msg;
 	pjsip_accept_hdr *accept_hdr;
-	pj_status_t status;
 
 	rdata = e->body.tsx_state.src.rdata;
-	msg = rdata->msg_info.msg;
 
 	/* Request MUST have message body, with Content-Type equal to
 	 * "text/plain".
@@ -4522,7 +4519,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	/* Respond with 200 first, so that remote doesn't retransmit in case
 	 * the UI takes too long to process the message. 
 	 */
-	status = pjsip_dlg_respond( inv->dlg, rdata, 200, NULL, NULL, NULL);
+	pjsip_dlg_respond( inv->dlg, rdata, 200, NULL, NULL, NULL);
 
 	/* Process MESSAGE request */
 	pjsua_im_process_pager(call->index, &inv->dlg->remote.info_str,

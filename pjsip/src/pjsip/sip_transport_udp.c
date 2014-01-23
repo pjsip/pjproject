@@ -620,11 +620,8 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
 /* Start ioqueue asynchronous reading to all rdata */
 static pj_status_t start_async_read(struct udp_transport *tp)
 {
-    pj_ioqueue_t *ioqueue;
     int i;
     pj_status_t status;
-
-    ioqueue = pjsip_endpt_get_ioqueue(tp->base.endpt);
 
     /* Start reading the ioqueue. */
     for (i=0; i<tp->rdata_cnt; ++i) {
