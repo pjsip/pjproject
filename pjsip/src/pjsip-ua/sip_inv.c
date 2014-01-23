@@ -192,8 +192,8 @@ static pj_status_t mod_inv_unload(void)
 /*
  * Set session state.
  */
-void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
-		   pjsip_event *e)
+static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
+			  pjsip_event *e)
 {
     pjsip_inv_state prev_state = inv->state;
     pj_bool_t dont_notify = PJ_FALSE;
@@ -283,8 +283,8 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 /*
  * Set cause code.
  */
-void inv_set_cause(pjsip_inv_session *inv, int cause_code,
-		   const pj_str_t *cause_text)
+static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
+			  const pj_str_t *cause_text)
 {
     if (cause_code > inv->cause) {
 	inv->cause = (pjsip_status_code) cause_code;

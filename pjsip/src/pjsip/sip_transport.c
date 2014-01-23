@@ -130,7 +130,7 @@ typedef struct transport_data
 /*
  * Transport names.
  */
-struct transport_names_t
+static struct transport_names_t
 {
     pjsip_transport_type_e type;	    /* Transport type	    */
     pj_uint16_t		   port;	    /* Default port number  */
@@ -217,7 +217,7 @@ static void tp_state_callback(pjsip_transport *tp,
 			      const pjsip_transport_state_info *info);
 
 
-struct transport_names_t *get_tpname(pjsip_transport_type_e type)
+static struct transport_names_t *get_tpname(pjsip_transport_type_e type)
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(transport_names); ++i) {

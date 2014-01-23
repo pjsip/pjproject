@@ -50,9 +50,9 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
 			  struct pj_timer_entry *entry);
 
 
-const pj_str_t tag_100rel = { "100rel", 6 };
-const pj_str_t RSEQ = { "RSeq", 4 };
-const pj_str_t RACK = { "RAck", 4 };
+static const pj_str_t tag_100rel = { "100rel", 6 };
+static const pj_str_t RSEQ = { "RSeq", 4 };
+static const pj_str_t RACK = { "RAck", 4 };
 
 
 /* 100rel module */

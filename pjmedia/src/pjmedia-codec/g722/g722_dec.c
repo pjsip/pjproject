@@ -450,7 +450,7 @@ static int block5h (int dh, int sh)
     return (rh) ;
 }
 
-void rx_qmf(g722_dec_t *dec, int rl, int rh, int *xout1, int *xout2)
+static void rx_qmf(g722_dec_t *dec, int rl, int rh, int *xout1, int *xout2)
 {
     int i;
 

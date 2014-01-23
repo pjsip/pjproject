@@ -74,10 +74,10 @@ struct buddy_lock
 };
 
 /* Acquire lock to the specified buddy_id */
-pj_status_t lock_buddy(const char *title,
-		       pjsua_buddy_id buddy_id,
-		       struct buddy_lock *lck,
-		       unsigned _unused_)
+static pj_status_t lock_buddy(const char *title,
+			      pjsua_buddy_id buddy_id,
+			      struct buddy_lock *lck,
+			      unsigned _unused_)
 {
     enum { MAX_RETRY=50 };
     pj_bool_t has_pjsua_lock = PJ_FALSE;

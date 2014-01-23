@@ -21,7 +21,7 @@
 #include <pj/assert.h>
 #include <pj/os.h>
 
-struct pj_pool_factory stack_based_factory;
+static struct pj_pool_factory stack_based_factory;
 
 struct creation_param
 {

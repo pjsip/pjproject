@@ -130,13 +130,13 @@ static pjsip_evsub_user pres_user =
 /*
  * Some static constants.
  */
-const pj_str_t STR_EVENT	    = { "Event", 5 };
-const pj_str_t STR_PRESENCE	    = { "presence", 8 };
-const pj_str_t STR_APPLICATION	    = { "application", 11 };
-const pj_str_t STR_PIDF_XML	    = { "pidf+xml", 8};
-const pj_str_t STR_XPIDF_XML	    = { "xpidf+xml", 9};
-const pj_str_t STR_APP_PIDF_XML	    = { "application/pidf+xml", 20 };
-const pj_str_t STR_APP_XPIDF_XML    = { "application/xpidf+xml", 21 };
+static const pj_str_t STR_EVENT	    = { "Event", 5 };
+static const pj_str_t STR_PRESENCE	    = { "presence", 8 };
+static const pj_str_t STR_APPLICATION	    = { "application", 11 };
+static const pj_str_t STR_PIDF_XML	    = { "pidf+xml", 8};
+static const pj_str_t STR_XPIDF_XML	    = { "xpidf+xml", 9};
+static const pj_str_t STR_APP_PIDF_XML	    = { "application/pidf+xml", 20 };
+static const pj_str_t STR_APP_XPIDF_XML    = { "application/xpidf+xml", 21 };
 
 
 /*

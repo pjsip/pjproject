@@ -111,7 +111,7 @@ int pj_optind = 1;
    causes problems with re-calling pj_getopt as programs generally don't
    know that. */
 
-int __getopt_initialized = 0;
+static int __getopt_initialized = 0;
 
 /* The next char to be scanned in the option-element
    in which the last option character we returned was found.

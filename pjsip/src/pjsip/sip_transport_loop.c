@@ -67,8 +67,8 @@ struct loop_transport
 
 
 /* Helper function to create "incoming" packet */
-struct recv_list *create_incoming_packet( struct loop_transport *loop,
-					  pjsip_tx_data *tdata )
+static struct recv_list *create_incoming_packet( struct loop_transport *loop,
+						 pjsip_tx_data *tdata )
 {
     pj_pool_t *pool;
     struct recv_list *pkt;

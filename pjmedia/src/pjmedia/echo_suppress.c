@@ -125,7 +125,7 @@ typedef enum talk_state
     ST_REM_TALK
 } talk_state_t;
 
-const char *state_names[] = 
+static const char *state_names[] = 
 {
     "Null",
     "local talking",

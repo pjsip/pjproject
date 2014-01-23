@@ -76,10 +76,10 @@ PJ_DEF(const pjsip_method*) pjsip_get_refer_method()
 /*
  * String constants
  */
-const pj_str_t STR_REFER = { "refer", 5 };
-const pj_str_t STR_MESSAGE = { "message", 7 };
-const pj_str_t STR_SIPFRAG = { "sipfrag", 7 };
-const pj_str_t STR_SIPFRAG_VERSION = {";version=2.0", 12 };
+static const pj_str_t STR_REFER = { "refer", 5 };
+static const pj_str_t STR_MESSAGE = { "message", 7 };
+static const pj_str_t STR_SIPFRAG = { "sipfrag", 7 };
+static const pj_str_t STR_SIPFRAG_VERSION = {";version=2.0", 12 };
 
 
 /*

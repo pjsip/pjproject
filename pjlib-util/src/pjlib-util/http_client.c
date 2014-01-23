@@ -1496,8 +1496,8 @@ on_error:
 /* snprintf() to a pj_str_t struct with an option to append the 
  * result at the back of the string.
  */
-void str_snprintf(pj_str_t *s, size_t size, 
-                  pj_bool_t append, const char *format, ...)
+static void str_snprintf(pj_str_t *s, size_t size, 
+			 pj_bool_t append, const char *format, ...)
 {
     va_list arg;
     int retval;

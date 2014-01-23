@@ -1986,8 +1986,8 @@ static void periodic_timer(pj_timer_heap_t *th,
 
 
 /* Utility: find string in string array */
-const pj_str_t *find_str(const pj_str_t *strlist[], unsigned count,
-			 const pj_str_t *str)
+static const pj_str_t *find_str(const pj_str_t *strlist[], unsigned count,
+				const pj_str_t *str)
 {
     unsigned i;
     for (i=0; i<count; ++i) {

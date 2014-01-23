@@ -1787,7 +1787,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 }
 
 /* Check and update Service-Route header */
-void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
+static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 {
     pjsip_generic_string_hdr *hsr = NULL;
     pjsip_route_hdr *hr, *h;

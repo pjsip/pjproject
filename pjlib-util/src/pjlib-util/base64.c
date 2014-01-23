@@ -24,7 +24,7 @@
 #define INV	    -1
 #define PADDING	    '='
 
-const char base64_char[] = {
+static const char base64_char[] = {
     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J',
     'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
     'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c', 'd',
