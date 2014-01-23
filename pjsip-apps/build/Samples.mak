@@ -10,6 +10,7 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS)
 export _CXXFLAGS:= $(PJ_CXXFLAGS)
 export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+export _LDXXFLAGS := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
 
 SRCDIR := ../src/samples
 OBJDIR := ./output/samples-$(TARGET_NAME)
@@ -29,7 +30,6 @@ SAMPLES := auddemo \
 	   mix \
 	   pjsip-perf \
 	   pcaputil \
-	   pjsua2_demo \
 	   playfile \
 	   playsine \
 	   recfile \
@@ -47,14 +47,21 @@ SAMPLES := auddemo \
 	   tonegen \
 	   vid_streamutil
 
+PJSUA2_SAMPLES := pjsua2_demo
+
 EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
+PJSUA2_EXES := $(foreach file, $(PJSUA2_SAMPLES), $(file)$(HOST_EXE))
 
 .PHONY: $(EXES)
+.PHONY: $(PJSUA2_EXES)
 
-all: $(EXES)
+all: $(EXES) $(PJSUA2_EXES)
 
 $(EXES):
-	$(MAKE) --no-print-directory -f $(RULES_MAK) SAMPLE_SRCDIR=$(SRCDIR) SAMPLE_OBJS=$@.o SAMPLE_CFLAGS="$(_CFLAGS)" SAMPLE_CXXFLAGS="$(_CXXFLAGS)" SAMPLE_LDFLAGS="$(_LDFLAGS) -lstdc++" SAMPLE_EXE=$@ APP=SAMPLE app=sample $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
+	$(MAKE) --no-print-directory -f $(RULES_MAK) SAMPLE_SRCDIR=$(SRCDIR) SAMPLE_OBJS=$@.o SAMPLE_CFLAGS="$(_CFLAGS)" SAMPLE_CXXFLAGS="$(_CXXFLAGS)" SAMPLE_LDFLAGS="$(_LDFLAGS)" SAMPLE_EXE=$@ APP=SAMPLE app=sample $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
+
+$(PJSUA2_EXES):
+	$(MAKE) --no-print-directory -f $(RULES_MAK) PJSUA2_SAMPLE_SRCDIR=$(SRCDIR) PJSUA2_SAMPLE_OBJS=$@.o PJSUA2_SAMPLE_CFLAGS="$(_CFLAGS)" PJSUA2_SAMPLE_CXXFLAGS="$(_CXXFLAGS)" PJSUA2_SAMPLE_LDFLAGS="$(_LDXXFLAGS)" PJSUA2_SAMPLE_EXE=$@ APP=PJSUA2_SAMPLE app=pjsua2_sample $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
 
 depend:
 

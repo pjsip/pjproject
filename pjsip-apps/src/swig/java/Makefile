@@ -1,4 +1,5 @@
 include ../../../../build.mak
+include ../../../../build/common.mak
 
 ifneq ($(findstring android,$(TARGET_NAME)),)
  OS=android
@@ -48,9 +49,6 @@ ifeq ($(OS),Windows_NT)
 else
   MY_JNI_CFLAGS	 	= -fPIC
   MY_JNI_LDFLAGS	= -L$(MY_JDK)/lib
-  ifeq ($(OS),darwin)
-    MY_JNI_LDFLAGS 	:= $(MY_JNI_LDFLAGS) -Wl,-soname,pjsua2.so
-  endif
   ifeq ($(OS),android)
     MY_JNI_CFLAGS	:= $(MY_JNI_CFLAGS) -D__ANDROID__
   endif
@@ -67,11 +65,11 @@ else
   MY_JAVAC	 = $(MY_JDK)/javac
 endif
 MY_JNI_CFLAGS	 := $(MY_JNI_CFLAGS) -I$(MY_JDK)/include -I$(MY_JDK)/include/win32 \
-		    -I$(MY_JDK)/include/linux -I.
+		    -I$(MY_JDK)/include/linux -I$(MY_JDK)/include/darwin -I.
 
 # Build settings
-MY_CFLAGS	 = $(PJ_CFLAGS) $(MY_JNI_CFLAGS)
-MY_LDFLAGS	 = $(PJ_LDFLAGS) -lpjsua2-$(TARGET_NAME) $(PJ_LDLIBS) $(MY_JNI_LDFLAGS)
+MY_CFLAGS	 = $(PJ_CXXFLAGS) $(MY_JNI_CFLAGS) $(CFLAGS)
+MY_LDFLAGS	 = $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
 MY_PACKAGE_NAME	 = org.pjsip.pjsua2
 ifeq ($(OS),android)
   MY_PACKAGE_PATH  = android/src/$(subst .,/,$(MY_PACKAGE_NAME))

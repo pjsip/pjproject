@@ -172,13 +172,6 @@ export APP_CFLAGS := -DPJ_AUTOCONF=1\
 	-I$(PJDIR)/pjmedia/include\
 	-I$(PJDIR)/pjsip/include
 export APP_CXXFLAGS := $(APP_CFLAGS)
-#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
-#
-# FIX THIS
-#
-# pjsua2 is c++ library hence maybe needs to be put in separate
-# variables. it will also require -lstdc++ or -static-libstdc++
-#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjlib-util/lib\
 	-L$(PJDIR)/pjnath/lib\
@@ -186,18 +179,11 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjsip/lib\
 	-L$(PJDIR)/third_party/lib\
 	$(PJ_VIDEO_LDFLAGS) \
-	-static-libstdc++ \
 	@LDFLAGS@
+export APP_LDXXFLAGS := $(APP_LDFLAGS) \
+	-static-libstdc++
 
-#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
-#
-# FIX THIS
-#
-# pjsua2 is c++ library hence maybe needs to be put in separate
-# variables. it will also require -lstdc++
-#  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x  x   x  x  x  x  x
 export APP_LIB_FILES = \
-	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
@@ -210,6 +196,9 @@ export APP_LIB_FILES = \
 	$(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
 	$(APP_THIRD_PARTY_LIB_FILES) \
 	$(PJ_DIR)/pjlib/lib/libpj-$(LIB_SUFFIX)
+export APP_LIBXX_FILES = \
+	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
+	$(APP_LIB_FILES)
 
 ifeq ($(PJ_SHARED_LIBRARIES),)
 export PJLIB_LDLIB := -lpj-$(TARGET_NAME)
@@ -238,7 +227,7 @@ export PJSIP_UA_LDLIB := -lpjsip-ua
 export PJSUA_LIB_LDLIB := -lpjsua
 export PJSUA2_LIB_LDLIB := -lpjsua2
 
-APP_LIB_FILES += $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX) \
+export ADD_LIB_FILES := $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-ua.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip-simple.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsip.$(SHLIB_SUFFIX) \
@@ -249,10 +238,14 @@ APP_LIB_FILES += $(PJ_DIR)/pjsip/lib/libpjsua.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR
 	$(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjnath/lib/libpjnath.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib-util/lib/libpjlib-util.$(SHLIB_SUFFIX) \
 	$(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjlib/lib/libpj.$(SHLIB_SUFFIX)
+
+APP_LIB_FILES += $(ADD_LIB_FILES)
+
+APP_LIBXX_FILES += $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX) \
+	$(ADD_LIB_FILES)
 endif
 
-export APP_LDLIBS := $(PJSUA2_LIB_LDLIB) \
-	$(PJSUA_LIB_LDLIB) \
+export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
 	$(PJSIP_UA_LDLIB) \
 	$(PJSIP_SIMPLE_LDLIB) \
 	$(PJSIP_LDLIB) \
@@ -266,6 +259,9 @@ export APP_LDLIBS := $(PJSUA2_LIB_LDLIB) \
 	$(APP_THIRD_PARTY_EXT)\
 	$(PJLIB_LDLIB) \
 	@LIBS@
+export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
+	-lstdc++ \
+	$(APP_LDLIBS)
 
 # Here are the variabels to use if application is using the library
 # from within the source distribution
@@ -274,8 +270,11 @@ export PJ_CXX := $(APP_CXX)
 export PJ_CFLAGS := $(APP_CFLAGS)
 export PJ_CXXFLAGS := $(APP_CXXFLAGS)
 export PJ_LDFLAGS := $(APP_LDFLAGS)
+export PJ_LDXXFLAGS := $(APP_LDXXFLAGS)
 export PJ_LDLIBS := $(APP_LDLIBS)
+export PJ_LDXXLIBS := $(APP_LDXXLIBS)
 export PJ_LIB_FILES := $(APP_LIB_FILES)
+export PJ_LIBXX_FILES := $(APP_LIBXX_FILES)
 
 # And here are the variables to use if application is using the
 # library from the install location (i.e. --prefix)
