@@ -398,6 +398,11 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
 	return PJ_EBUG;
     }
 
+    /* Note that with https://trac.pjsip.org/repos/ticket/1725, this
+     * function can be called to send ACK for previous INVITE 200/OK
+     * retransmission
+     */
+
     PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
 	      pjsip_rx_data_get_info(rdata)));
 
@@ -618,15 +623,23 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
      * If it is, we need to send ACK.
      */
     if (msg->type == PJSIP_RESPONSE_MSG && msg->line.status.code/100==2 &&
-	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
-	inv->invite_tsx == NULL) 
+	rdata->msg_info.cseq->method.id == PJSIP_INVITE_METHOD)
     {
-	pjsip_event e;
+	/* The code inside "if" is called the second time 200/OK
+	 * retransmission is received. Also handle the situation
+	 * when we have another re-INVITE on going and 200/OK
+	 * retransmission is received. See:
+	 * https://trac.pjsip.org/repos/ticket/1725
+	 */
+	if (inv->invite_tsx == NULL ||
+	    (inv->last_ack && inv->last_ack_cseq==rdata->msg_info.cseq->cseq))
+	{
+	    pjsip_event e;
 
-	PJSIP_EVENT_INIT_RX_MSG(e, rdata);
-	inv_send_ack(inv, &e);
-	return PJ_TRUE;
-
+	    PJSIP_EVENT_INIT_RX_MSG(e, rdata);
+	    inv_send_ack(inv, &e);
+	    return PJ_TRUE;
+	}
     }
 
     /* No other processing needs to be done here. */
