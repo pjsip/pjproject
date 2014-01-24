@@ -19,6 +19,8 @@
 #include <pjsip-ua/sip_timer.h>
 #include <pjsip/print_util.h>
 #include <pjsip/sip_endpoint.h>
+#include <pjsip/sip_event.h>
+#include <pjsip/sip_transaction.h>
 #include <pj/log.h>
 #include <pj/math.h>
 #include <pj/os.h>
@@ -28,8 +30,8 @@
 
 
 /* Constant of Session Timers */
-#define ABS_MIN_SE		90	/* Absolute Min-SE, in seconds	    */
-
+#define ABS_MIN_SE		    90	/* Absolute Min-SE, in seconds	    */
+#define REFRESHER_EXPIRE_TIMER_ID   2	/* Refresher expire timer id	    */ 
 
 /* String definitions */
 static const pj_str_t STR_SE		= {"Session-Expires", 15};
@@ -61,8 +63,11 @@ struct pjsip_timer
 						     refresh the session    */
     pj_bool_t		  	 with_sdp;	/**< SDP in UPDATE?	    */
     pjsip_role_e		 role;		/**< Role in last INVITE/
-						     UPDATE transaction.    */
-
+						     UPDATE transaction.    */    
+    void			*refresh_tdata; /**< The tdata of refresh 
+						     request		    */
+    pj_timer_entry		 expire_timer;	/**< Timer entry for expire 
+						     refresher		    */
 };
 
 /* External global vars */
@@ -331,8 +336,6 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     pj_assert(inv);
 
-    inv->timer->timer.id = 0;
-
     PJ_UNUSED_ARG(timer_heap);
 
     /* Lock dialog. */
@@ -341,18 +344,27 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
     /* Check our role */
     as_refresher =
 	(inv->timer->refresher == TR_UAC && inv->timer->role == PJSIP_ROLE_UAC) ||
-	(inv->timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS);
+	(inv->timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS);    
 
-    /* Do action based on role, refresher or refreshee */
-    if (as_refresher) {
+    /* Do action based on role(refresher or refreshee). 
+     * As refresher:
+     * - send refresh, or  
+     * - end session if there is no response to the refresh request.
+     * As refreshee:
+     * - end session if there is no refresh request received.
+     */
+    if (as_refresher && (entry->id != REFRESHER_EXPIRE_TIMER_ID)) {
 	pj_time_val now;
 
 	/* As refresher, reshedule the refresh request on the following:
-	 *  - msut not send re-INVITE if another INVITE or SDP negotiation
+	 *  - must not send re-INVITE if another INVITE or SDP negotiation
 	 *    is in progress.
 	 *  - must not send UPDATE with SDP if SDP negotiation is in progress
 	 */
 	pjmedia_sdp_neg_state neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+
+	inv->timer->timer.id = 0;
+
 	if ( (!inv->timer->use_update && (
 			inv->invite_tsx != NULL ||
 			neg_state != PJMEDIA_SDP_NEG_STATE_DONE)
@@ -410,16 +422,23 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 	
 	pj_time_val now;
 
-	/* Refreshee, terminate the session */
+	if (as_refresher)
+	    inv->timer->expire_timer.id = 0;
+	else
+	    inv->timer->timer.id = 0;
+
+	/* Terminate the session */
 	status = pjsip_inv_end_session(inv, PJSIP_SC_REQUEST_TIMEOUT, 
 				       NULL, &tdata);
 
 	pj_gettimeofday(&now);
 	PJ_LOG(3, (inv->pool->obj_name, 
-		   "No session refresh received after %ds "
+		   "No session %s received after %ds "
 		   "(expiration period=%ds), stopping session now!",
+		   (as_refresher?"refresh response":"refresh"),
 		   (now.sec-inv->timer->last_refresh.sec),
 		   inv->timer->setting.sess_expires));
+
     }
 
     /* Unlock dialog. */
@@ -427,14 +446,17 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     /* Send message, if any */
     if (tdata && status == PJ_SUCCESS) {
-	status = pjsip_inv_send_msg(inv, tdata);
+	inv->timer->refresh_tdata = tdata;
+
+	status = pjsip_inv_send_msg(inv, tdata);	
     }
 
     /* Print error message, if any */
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(2, (inv->pool->obj_name, status,
-		      "Error in %s session timer",
-		      (as_refresher? "refreshing" : "terminating")));
+		     "Error in %s session timer",
+		     ((as_refresher && entry->id != REFRESHER_EXPIRE_TIMER_ID)? 
+		       "refreshing" : "terminating")));
     }
 }
 
@@ -466,6 +488,17 @@ static void start_timer(pjsip_inv_session *inv)
     if ((timer->refresher == TR_UAC && inv->timer->role == PJSIP_ROLE_UAC) ||
 	(timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS))
     {
+	/* Add refresher expire timer */
+	pj_timer_entry_init(&timer->expire_timer,
+			    REFRESHER_EXPIRE_TIMER_ID,	    /* id */
+			    inv,			    /* user data */
+			    timer_cb);			    /* callback */
+
+	delay.sec = timer->setting.sess_expires;
+	/* Schedule the timer */
+	pjsip_endpt_schedule_timer(inv->dlg->endpt, &timer->expire_timer, 
+				   &delay);
+
 	/* Next refresh, the delay is half of session expire */
 	delay.sec = timer->setting.sess_expires / 2;
     } else {
@@ -490,7 +523,12 @@ static void stop_timer(pjsip_inv_session *inv)
 {
     if (inv->timer->timer.id != 0) {
 	pjsip_endpt_cancel_timer(inv->dlg->endpt, &inv->timer->timer);
-	inv->timer->timer.id = 0;
+	inv->timer->timer.id = 0;	
+    }
+
+    if (inv->timer->expire_timer.id != 0) {
+	pjsip_endpt_cancel_timer(inv->dlg->endpt, &inv->timer->expire_timer);
+	inv->timer->expire_timer.id = 0;
     }
 }
 
@@ -709,7 +747,7 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
     {
 	return PJ_SUCCESS;
     }
-
+    
     if (msg->line.status.code == PJSIP_SC_SESSION_TIMER_TOO_SMALL) {
 	/* Our Session-Expires is too small, let's update it based on
 	 * Min-SE header in the response.
@@ -886,6 +924,59 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	{
 	    inv->timer->with_sdp = PJ_TRUE;
 	    timer_cb(NULL, &inv->timer->timer);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t)  pjsip_timer_handle_refresh_error(
+					    pjsip_inv_session *inv,
+					    pjsip_event *event)
+{    
+    PJ_ASSERT_RETURN(inv && event, PJ_EINVAL);
+
+    /* Check if Session Timers is supported */
+    if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0)
+	return PJ_SUCCESS;    
+
+    pj_assert(is_initialized);
+
+    if (inv->timer && inv->timer->active) {
+	pj_bool_t as_refresher;
+
+	/* Check our role */
+	as_refresher = ((inv->timer->refresher == TR_UAC) && 
+			(inv->timer->role == PJSIP_ROLE_UAC)) ||
+		       ((inv->timer->refresher == TR_UAS) && 
+			(inv->timer->role == PJSIP_ROLE_UAS));
+
+
+	if ((as_refresher) && (event->type == PJSIP_EVENT_TSX_STATE) && 
+	    (inv->timer->refresh_tdata == event->body.tsx_state.tsx->last_tx)) 
+	{
+	    pjsip_status_code st_code;
+	    pjsip_tx_data *bye;
+	    pj_status_t status;
+
+	    st_code = 
+		    (pjsip_status_code)event->body.tsx_state.tsx->status_code;
+
+	    PJ_LOG(3, (inv->pool->obj_name, 
+			"Receive error %d for refresh request %.*s/cseq=%d, "
+			"stopping session now", st_code, 
+			event->body.tsx_state.tsx->method.name.slen,
+			event->body.tsx_state.tsx->method.name.ptr,
+			event->body.tsx_state.tsx->cseq));
+
+	    status = pjsip_inv_end_session(inv, 
+				    event->body.tsx_state.tsx->status_code, 
+				    pjsip_get_status_text(st_code), 
+				    &bye);
+
+	    if (status == PJ_SUCCESS && bye)
+		status = pjsip_inv_send_msg(inv, bye);
+
 	}
     }
 

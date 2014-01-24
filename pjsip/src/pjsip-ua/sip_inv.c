@@ -3334,6 +3334,15 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 					     e->body.tsx_state.src.rdata);
 	handled = PJ_TRUE;
     }
+
+    /* Process 502/503 error */
+    else if ((tsx->state == PJSIP_TSX_STATE_TERMINATED) &&
+	     (tsx->status_code == 503 || tsx->status_code == 502))
+    {
+	status = pjsip_timer_handle_refresh_error(inv, e);
+
+	handled = PJ_TRUE;
+    }
     
     /* Get/attach invite session's transaction data */
     else 
@@ -3606,7 +3615,16 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 
 	return PJ_TRUE;	/* Handled */
 
-    } else {
+    } 
+    /* Process 502/503 error */
+    else if ((tsx->state == PJSIP_TSX_STATE_TERMINATED) &&
+	     (tsx->status_code == 503 || tsx->status_code == 502))
+    {
+	pjsip_timer_handle_refresh_error(inv, e);
+
+	return PJ_TRUE;
+    }    
+    else {
 	return PJ_FALSE; /* Unhandled */
     }
 }

@@ -200,6 +200,19 @@ PJ_DECL(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 					      const pjsip_rx_data *rdata,
 					      pjsip_status_code *st_code);
 
+/**
+ * Process Session Timers refresh error, this function will process
+ * error from refresh request. The error will be handle according the
+ * error code, i.e : BYE will be sent after error 503 (Transport Error).
+ *
+ * @param inv		 The invite session.
+ * @param event		 The event that trigger the error.
+ *
+ * @return		 PJ_SUCCESS on successful.
+ */
+PJ_DECL(pj_status_t)  pjsip_timer_handle_refresh_error(
+					    pjsip_inv_session *inv,
+					    pjsip_event *event);
 
 /**
  * Process Session Timers headers in incoming request, this function
