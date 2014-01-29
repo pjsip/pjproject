@@ -23,8 +23,10 @@
 #include <pj/rand.h>
 
 
-#if defined(PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC) && \
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC) && \
     PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC != 0
+    
 
 
 #define THIS_FILE		"colorbar_dev.c"

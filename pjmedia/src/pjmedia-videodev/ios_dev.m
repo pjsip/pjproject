@@ -21,7 +21,9 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_IOS && PJMEDIA_HAS_VIDEO
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_VIDEO_DEV_HAS_IOS) && PJMEDIA_VIDEO_DEV_HAS_IOS != 0
+
 #include "Availability.h"
 #ifdef __IPHONE_4_0
 

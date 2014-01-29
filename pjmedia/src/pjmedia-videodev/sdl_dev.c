@@ -21,7 +21,9 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
-#if defined(PJMEDIA_VIDEO_DEV_HAS_SDL) && PJMEDIA_VIDEO_DEV_HAS_SDL != 0
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_VIDEO_DEV_HAS_SDL) && PJMEDIA_VIDEO_DEV_HAS_SDL != 0
+
 #include <SDL.h>
 #include <SDL_syswm.h>
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL

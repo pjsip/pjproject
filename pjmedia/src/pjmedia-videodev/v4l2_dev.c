@@ -25,7 +25,8 @@
 #include <pj/os.h>
 #include <pj/rand.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_V4L2
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_VIDEO_DEV_HAS_V4L2) && PJMEDIA_VIDEO_DEV_HAS_V4L2 != 0
 
 #include <linux/videodev2.h>
 #include <libv4l2.h>

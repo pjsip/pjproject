@@ -21,7 +21,8 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_QT
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_VIDEO_DEV_HAS_QT) && PJMEDIA_VIDEO_DEV_HAS_QT != 0
 
 #include <Foundation/NSAutoreleasePool.h>
 #include <QTKit/QTKit.h>
