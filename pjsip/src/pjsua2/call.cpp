@@ -605,7 +605,7 @@ int Call::vidGetStreamIdx() const
 bool Call::vidStreamIsRunning(int med_idx, pjmedia_dir dir) const
 {
 #if PJSUA_HAS_VIDEO
-    return pjsua_call_vid_stream_is_running(id, med_idx, dir);
+    return (pjsua_call_vid_stream_is_running(id, med_idx, dir) == PJ_TRUE);
 #else
     PJ_UNUSED_ARG(med_idx);
     PJ_UNUSED_ARG(dir);
