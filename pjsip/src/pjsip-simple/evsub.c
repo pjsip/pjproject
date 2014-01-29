@@ -593,6 +593,9 @@ static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
     if (state == PJSIP_EVSUB_STATE_TERMINATED &&
 	prev_state != PJSIP_EVSUB_STATE_TERMINATED) 
     {
+	/* Kill any timer. */
+	set_timer(sub, TIMER_TYPE_NONE, 0);
+
 	if (sub->pending_tsx == 0) {
 	    evsub_destroy(sub);
 	}
@@ -1147,6 +1150,14 @@ PJ_DEF(pj_status_t) pjsip_evsub_accept( pjsip_evsub *sub,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    /* Set UAS timeout timer, when status code is 2xx and state is not
+     * terminated.
+     */
+    if (st_code/100 == 2 && sub->state != PJSIP_EVSUB_STATE_TERMINATED) {
+	PJ_LOG(5,(sub->obj_name, "UAS timeout in %d seconds",
+		  sub->expires->ivalue));
+	set_timer(sub, TIMER_TYPE_UAS_TIMEOUT, sub->expires->ivalue);
+    }
 
 on_return:
 
@@ -1801,9 +1812,6 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    if (tsx->status_code == PJSIP_SC_REQUEST_UPDATED) {
 		return;
 	    }
-
-	    /* Kill any timer. */
-	    set_timer(sub, TIMER_TYPE_NONE, 0);
 
 	    /* Set state to TERMINATED */
 	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, 
