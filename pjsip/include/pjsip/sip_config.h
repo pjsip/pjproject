@@ -942,6 +942,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Specify support for IMS/3GPP digest AKA authentication version 1 and 2
  * (AKAv1-MD5 and AKAv2-MD5 respectively).
  *
+ * Note that if this is enabled, application would need to link with
+ * <b>libmilenage</b> library from \a third_party directory.
+ *
  * Default: 0 (for now)
  */
 #ifndef PJSIP_HAS_DIGEST_AKA_AUTH

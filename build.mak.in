@@ -26,13 +26,7 @@ endif
 # Determine which party libraries to use
 export APP_THIRD_PARTY_EXT :=
 export APP_THIRD_PARTY_LIBS :=
-export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX)
-ifeq ($(PJ_SHARED_LIBRARIES),)
-APP_THIRD_PARTY_LIBS += -lmilenage-$(TARGET_NAME)
-else
-APP_THIRD_PARTY_LIBS += -lmilenage
-APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libmilenage.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libmilenage.$(SHLIB_SUFFIX)
-endif
+export APP_THIRD_PARTY_LIB_FILES :=
 
 ifeq (@ac_external_srtp@,1)
 # External SRTP library
