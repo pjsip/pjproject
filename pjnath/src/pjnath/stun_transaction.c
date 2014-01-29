@@ -201,7 +201,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tsx->retransmit_timer.id == TIMER_INACTIVE ||
-		     !tsx->require_retransmit, PJ_EBUSY);
+		     !tsx->require_retransmit || !mod_count, PJ_EBUSY);
 
     if (tsx->require_retransmit && mod_count) {
 	/* Calculate retransmit/timeout delay */
