@@ -323,7 +323,19 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 
     PJ_UNUSED_ARG(endpt);
 
+#if defined(PJMEDIA_EXTERNAL_SRTP) && (PJMEDIA_EXTERNAL_SRTP != 0)
+
+# if defined(PJMEDIA_SRTP_HAS_DEINIT) && PJMEDIA_SRTP_HAS_DEINIT!=0
     err = srtp_deinit();
+# elif defined(PJMEDIA_SRTP_HAS_SHUTDOWN) && PJMEDIA_SRTP_HAS_SHUTDOWN!=0
+    err = srtp_shutdown();
+# else
+    err = err_status_ok;
+# endif
+
+#else
+    err = srtp_deinit();
+#endif
     if (err != err_status_ok) {
 	PJ_LOG(4, (THIS_FILE, "Failed to deinitialize libsrtp: %s", 
 		   get_libsrtp_errstr(err)));

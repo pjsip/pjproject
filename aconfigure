@@ -651,6 +651,8 @@ ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
 ac_pjmedia_resample
+ac_srtp_shutdown_present
+ac_srtp_deinit_present
 ac_external_srtp
 ac_external_gsm
 ac_external_speex
@@ -5845,6 +5847,94 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 
 
+if test "x$ac_external_srtp" = "x1"; then
+	ac_srtp_deinit_present=0
+
+	ac_srtp_shutdown_present=0
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_deinit in -lsrtp" >&5
+$as_echo_n "checking for srtp_deinit in -lsrtp... " >&6; }
+if ${ac_cv_lib_srtp_srtp_deinit+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsrtp  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char srtp_deinit ();
+int
+main ()
+{
+return srtp_deinit ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_srtp_srtp_deinit=yes
+else
+  ac_cv_lib_srtp_srtp_deinit=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_srtp_srtp_deinit" >&5
+$as_echo "$ac_cv_lib_srtp_srtp_deinit" >&6; }
+if test "x$ac_cv_lib_srtp_srtp_deinit" = xyes; then :
+  ac_srtp_deinit_present=1
+fi
+
+	if test "x$ac_srtp_deinit_present" != "x1"; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_shutdown in -lsrtp" >&5
+$as_echo_n "checking for srtp_shutdown in -lsrtp... " >&6; }
+if ${ac_cv_lib_srtp_srtp_shutdown+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lsrtp  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char srtp_shutdown ();
+int
+main ()
+{
+return srtp_shutdown ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_srtp_srtp_shutdown=yes
+else
+  ac_cv_lib_srtp_srtp_shutdown=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_srtp_srtp_shutdown" >&5
+$as_echo "$ac_cv_lib_srtp_srtp_shutdown" >&6; }
+if test "x$ac_cv_lib_srtp_srtp_shutdown" = xyes; then :
+  ac_srtp_shutdown_present=1
+fi
+
+	fi
+fi
 
 ac_pjmedia_resample=libresample
 

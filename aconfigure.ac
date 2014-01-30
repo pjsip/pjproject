@@ -548,6 +548,15 @@ AC_ARG_WITH(external-srtp,
     ]
     )
 
+dnl # For external SRTP, check availability of srtp_deinit() or srtp_shutdown()
+if test "x$ac_external_srtp" = "x1"; then
+	AC_SUBST(ac_srtp_deinit_present,0)
+	AC_SUBST(ac_srtp_shutdown_present,0)
+	AC_CHECK_LIB(srtp,srtp_deinit,[ac_srtp_deinit_present=1])
+	if test "x$ac_srtp_deinit_present" != "x1"; then
+		AC_CHECK_LIB(srtp,srtp_shutdown,[ac_srtp_shutdown_present=1])
+	fi
+fi
 
 dnl # Resample implementation
 AC_SUBST(ac_pjmedia_resample,libresample)
