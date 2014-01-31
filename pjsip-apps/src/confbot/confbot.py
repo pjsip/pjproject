@@ -197,7 +197,7 @@ class Member:
 		self.bot.broadcast_pager(None, msg)
 
 	def on_call_transfer_request(self, call, dst, code):
-		msg = "%(uri)s is transfering the call to %(dst)s" % \
+		msg = "%(uri)s is transferring the call to %(dst)s" % \
 			  {'uri': self.uri, 'dst': dst}
 		self.bot.broadcast_pager(None, msg)
 		return 202

@@ -782,7 +782,7 @@ static void on_call_transfer_status(pjsua_call_id call_id,
 
     if (status_code/100 == 2) {
 	PJ_LOG(3,(THIS_FILE, 
-	          "Call %d: call transfered successfully, disconnecting call",
+	          "Call %d: call transferred successfully, disconnecting call",
 		  call_id));
 	pjsua_call_hangup(call_id, PJSIP_SC_GONE, NULL, NULL);
 	*p_cont = PJ_FALSE;

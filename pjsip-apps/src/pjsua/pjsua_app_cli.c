@@ -1799,7 +1799,7 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	if (dst_call == call) {
 	    static pj_str_t err_same_num = 
 				    {"Destination call number must not be the "
-				     "same as the call being transfered\n", 74};
+				     "same as the call being transferred\n", 74};
 
 	    pj_cli_sess_write_msg(cval->sess, err_same_num.ptr, 
 				  err_same_num.slen);

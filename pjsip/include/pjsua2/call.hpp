@@ -726,7 +726,7 @@ struct OnDtmfDigitParam
 struct OnCallTransferRequestParam
 {
     /**
-     * The destination where the call will be transfered to.
+     * The destination where the call will be transferred to.
      */
     string              dstUri;
     
@@ -738,7 +738,7 @@ struct OnCallTransferRequestParam
     
     /**
      * The current call setting, application can update this setting
-     * for the call being transfered.
+     * for the call being transferred.
      */
     CallSetting         opt;
 };
@@ -1529,7 +1529,7 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
-     * Notify application on call being transfered (i.e. REFER is received).
+     * Notify application on call being transferred (i.e. REFER is received).
      * Application can decide to accept/reject transfer request
      * by setting the code (default is 202). When this callback
      * is not implemented, the default behavior is to accept the

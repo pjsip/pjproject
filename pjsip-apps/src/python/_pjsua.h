@@ -332,7 +332,7 @@ static PyMemberDef PyObj_pjsua_callback_members[] =
     {
         "on_call_transfer_request", T_OBJECT_EX,
         offsetof(PyObj_pjsua_callback, on_call_transfer_request), 0,
-        "Notify application on call being transfered. "
+        "Notify application on call being transferred. "
 	"Application can decide to accept/reject transfer request "
 	"by setting the code (default is 200). When this callback "
 	"is not defined, the default behavior is to accept the "

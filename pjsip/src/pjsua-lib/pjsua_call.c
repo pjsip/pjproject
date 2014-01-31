@@ -4031,7 +4031,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	/* Check if subscription is suppressed */
 	if (refer_sub && pj_stricmp2(&refer_sub->hvalue, "false")==0) {
 	    /* Since no subscription is desired, assume that call has been
-	     * transfered successfully.
+	     * transferred successfully.
 	     */
 	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
 		const pj_str_t ACCEPTED = { "Accepted", 8 };
@@ -4202,7 +4202,7 @@ on_return:
 /*
  * Follow transfer (REFER) request.
  */
-static void on_call_transfered( pjsip_inv_session *inv,
+static void on_call_transferred( pjsip_inv_session *inv,
 			        pjsip_rx_data *rdata )
 {
     pj_status_t status;
@@ -4280,7 +4280,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	goto on_return;
     }
 
-    PJ_LOG(3,(THIS_FILE, "Call to %.*s is being transfered to %.*s",
+    PJ_LOG(3,(THIS_FILE, "Call to %.*s is being transferred to %.*s",
 	      (int)inv->dlg->remote.info_str.slen,
 	      inv->dlg->remote.info_str.ptr,
 	      (int)refer_to->hvalue.slen, 
@@ -4486,7 +4486,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	/*
 	 * Incoming REFER request.
 	 */
-	on_call_transfered(call->inv, e->body.tsx_state.src.rdata);
+	on_call_transferred(call->inv, e->body.tsx_state.src.rdata);
 
     }
     else if (tsx->role==PJSIP_ROLE_UAS &&

@@ -157,7 +157,7 @@ def on_call_transfer_status(call_id,status_code,status_text,final,p_cont):
 	write_log(3, "Call " + `call_id` + ": transfer status= " + `status_code` + " " + status_text+ " " + strfinal)
 	      
 	if status_code/100 == 2:
-		write_log(3, "Call " + `call_id` + " : call transfered successfully, disconnecting call")
+		write_log(3, "Call " + `call_id` + " : call transferred successfully, disconnecting call")
 		status = py_pjsua.call_hangup(call_id, 410, None, None)
 		p_cont = 0
 
@@ -423,9 +423,9 @@ def xfer_call():
 		msg_data = py_pjsua.msg_data_init()
 		status = py_pjsua.call_xfer(g_current_call, url, msg_data);
 		if status != 0:
-			py_pjsua.perror(THIS_FILE, "Error transfering call ", status)
+			py_pjsua.perror(THIS_FILE, "Error transferring call ", status)
 		else:		
-			write_log(3, "Call transfered to " + url)
+			write_log(3, "Call transferred to " + url)
 		
 def xfer_call_replaces():
 	if g_current_call == -1:
@@ -458,7 +458,7 @@ def xfer_call_replaces():
 			return		
 		
 		if dst_call == call:
-			print "Destination call number must not be the same as the call being transfered"
+			print "Destination call number must not be the same as the call being transferred"
 			return
 		
 		if dst_call >= py_pjsua.PJSUA_MAX_CALLS:

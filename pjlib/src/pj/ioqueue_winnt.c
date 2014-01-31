@@ -633,19 +633,19 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 
 /*
  * Poll the I/O Completion Port, execute callback, 
- * and return the key and bytes transfered of the last operation.
+ * and return the key and bytes transferred of the last operation.
  */
 static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout, 
 			    pj_ssize_t *p_bytes, pj_ioqueue_key_t **p_key )
 {
-    DWORD dwBytesTransfered, dwKey;
+    DWORD dwBytesTransferred, dwKey;
     generic_overlapped *pOv;
     pj_ioqueue_key_t *key;
     pj_ssize_t size_status = -1;
     BOOL rcGetQueued;
 
     /* Poll for completion status. */
-    rcGetQueued = GetQueuedCompletionStatus(hIocp, &dwBytesTransfered,
+    rcGetQueued = GetQueuedCompletionStatus(hIocp, &dwBytesTransferred,
 					    &dwKey, (OVERLAPPED**)&pOv, 
 					    dwTimeout);
 
@@ -659,7 +659,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 
 	/* Event was dequeued for either successfull or failed I/O */
 	key = (pj_ioqueue_key_t*)dwKey;
-	size_status = dwBytesTransfered;
+	size_status = dwBytesTransferred;
 
 	/* Report to caller regardless */
 	if (p_bytes)
@@ -1381,10 +1381,10 @@ PJ_DEF(pj_bool_t) pj_ioqueue_is_pending( pj_ioqueue_key_t *key,
                                          pj_ioqueue_op_key_t *op_key )
 {
     BOOL rc;
-    DWORD bytesTransfered;
+    DWORD bytesTransferred;
 
     rc = GetOverlappedResult( key->hnd, (LPOVERLAPPED)op_key,
-                              &bytesTransfered, FALSE );
+                              &bytesTransferred, FALSE );
 
     if (rc == FALSE) {
         return GetLastError()==ERROR_IO_INCOMPLETE;

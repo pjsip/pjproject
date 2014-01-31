@@ -1163,7 +1163,7 @@ static void ui_call_transfer_replaces(pj_bool_t no_refersub)
 	/* Check that destination call is valid. */
 	if (dst_call == call) {
 	    puts("Destination call number must not be the same "
-		"as the call being transfered");
+		"as the call being transferred");
 	    return;
 	}
 	if (dst_call >= PJSUA_MAX_CALLS) {

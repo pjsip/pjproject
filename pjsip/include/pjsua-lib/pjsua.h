@@ -756,7 +756,7 @@ typedef struct pjsua_callback
     void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
 
     /**
-     * Notify application on call being transfered (i.e. REFER is received).
+     * Notify application on call being transferred (i.e. REFER is received).
      * Application can decide to accept/reject transfer request
      * by setting the code (default is 202). When this callback
      * is not defined, the default behavior is to accept the
@@ -765,7 +765,7 @@ typedef struct pjsua_callback
      *
      * @param call_id	The call index.
      * @param dst	The destination where the call will be 
-     *			transfered to.
+     *			transferred to.
      * @param code	Status code to be returned for the call transfer
      *			request. On input, it contains status code 200.
      */
@@ -774,7 +774,7 @@ typedef struct pjsua_callback
 				     pjsip_status_code *code);
 
     /**
-     * Notify application on call being transfered (i.e. REFER is received).
+     * Notify application on call being transferred (i.e. REFER is received).
      * Application can decide to accept/reject transfer request
      * by setting the code (default is 202). When this callback
      * is not defined, the default behavior is to accept the
@@ -782,11 +782,11 @@ typedef struct pjsua_callback
      *
      * @param call_id	The call index.
      * @param dst	The destination where the call will be 
-     *			transfered to.
+     *			transferred to.
      * @param code	Status code to be returned for the call transfer
      *			request. On input, it contains status code 200.
      * @param opt	The current call setting, application can update
-     *			this setting for the call being transfered.
+     *			this setting for the call being transferred.
      */
     void (*on_call_transfer_request2)(pjsua_call_id call_id,
 				      const pj_str_t *dst,
@@ -4651,7 +4651,7 @@ PJ_DECL(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
  * \a on_call_transfer_status() callback which will report the progress
  * of the call transfer request.
  *
- * @param call_id	The call id to be transfered.
+ * @param call_id	The call id to be transferred.
  * @param dest		URI of new target to be contacted. The URI may be
  * 			in name address or addr-spec format.
  * @param msg_data	Optional message components to be sent with
@@ -4676,7 +4676,7 @@ PJ_DECL(pj_status_t) pjsua_call_xfer(pjsua_call_id call_id,
  * of \a dest_call_id. The party at \a dest_call_id then should "replace"
  * the call with us with the new call from the REFER recipient.
  *
- * @param call_id	The call id to be transfered.
+ * @param call_id	The call id to be transferred.
  * @param dest_call_id	The call id to be replaced.
  * @param options	Application may specify PJSUA_XFER_NO_REQUIRE_REPLACES
  *			to suppress the inclusion of "Require: replaces" in

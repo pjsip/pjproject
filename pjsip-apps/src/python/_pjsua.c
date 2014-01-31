@@ -208,7 +208,7 @@ static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 
 
 /*
- * Notify application on call being transfered.
+ * Notify application on call being transferred.
  * !modified @061206
  */
 static void cb_on_call_transfer_request(pjsua_call_id call_id,

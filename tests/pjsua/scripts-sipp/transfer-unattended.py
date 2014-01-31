@@ -25,6 +25,6 @@ PJSUA_EXPECTS = [
 		 [2, "", "200"],
 		 [0, const.MEDIA_ACTIVE, ""],
 		 [2, const.MEDIA_ACTIVE, ""],
-		 [1, "call transfered successfully", ""],
+		 [1, "call transferred successfully", ""],
 		 [1, const.STATE_DISCONNECTED, ""]
 		]

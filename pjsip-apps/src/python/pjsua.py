@@ -1386,7 +1386,7 @@ class CallCallback:
         pass
 
     def on_transfer_request(self, dst, code):
-        """Notification that call is being transfered by remote party. 
+        """Notification that call is being transferred by remote party. 
 
         Application can decide to accept/reject transfer request by returning
         code greater than or equal to 500. The default behavior is to accept 
