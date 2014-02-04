@@ -45,13 +45,13 @@ struct cli_console_fe
     pj_cli_sess        *sess;
     pj_thread_t        *input_thread;
     pj_bool_t           thread_quit;
-    pj_sem_t           *thread_sem;   
-    pj_cli_console_cfg  cfg;    
+    pj_sem_t           *thread_sem;
+    pj_cli_console_cfg  cfg;
 
     struct async_input_t
-    {        
+    {
         char       *buf;
-        unsigned    maxlen;	
+        unsigned    maxlen;
         pj_sem_t   *sem;
     } input;
 };
@@ -126,7 +126,7 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
                           NULL);
     if (!pool)
         return PJ_ENOMEM;
-	
+
     sess = PJ_POOL_ZALLOC_T(pool, pj_cli_sess);
     fe = PJ_POOL_ZALLOC_T(pool, struct cli_console_fe);
 
@@ -135,7 +135,7 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
         param = &cfg;
     }
     sess->fe = &fe->base;
-    sess->log_level = param->log_level;    
+    sess->log_level = param->log_level;
     sess->op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_sess_op);
     fe->base.op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_front_end_op);
     fe->base.cli = cli;
@@ -154,16 +154,16 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
 	return status;
 
     pj_cli_register_front_end(cli, &fe->base);
-    if (param->prompt_str.slen == 0) {	
+    if (param->prompt_str.slen == 0) {
 	pj_str_t prompt_sign = pj_str(">>> ");
 	fe->cfg.prompt_str.ptr = pj_pool_alloc(fe->pool, prompt_sign.slen+1);
-	pj_strcpy(&fe->cfg.prompt_str, &prompt_sign);	
+	pj_strcpy(&fe->cfg.prompt_str, &prompt_sign);
     } else {
-	fe->cfg.prompt_str.ptr = pj_pool_alloc(fe->pool, 
+	fe->cfg.prompt_str.ptr = pj_pool_alloc(fe->pool,
 					       param->prompt_str.slen+1);
 	pj_strcpy(&fe->cfg.prompt_str, &param->prompt_str);
-    }    
-    fe->cfg.prompt_str.ptr[fe->cfg.prompt_str.slen] = 0; 
+    }
+    fe->cfg.prompt_str.ptr[fe->cfg.prompt_str.slen] = 0;
 
     if (param->quit_command.slen)
 	pj_strdup(fe->pool, &fe->cfg.quit_command, &param->quit_command);
@@ -183,15 +183,15 @@ static void send_prompt_str(pj_cli_sess *sess)
 
     send_data.ptr = data_str;
     send_data.slen = 0;
-    
+
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     send_data.ptr[send_data.slen] = 0;
 
     printf("%s", send_data.ptr);
 }
 
-static void send_err_arg(pj_cli_sess *sess, 
-			 const pj_cli_exec_info *info, 
+static void send_err_arg(pj_cli_sess *sess,
+			 const pj_cli_exec_info *info,
 			 const pj_str_t *msg,
 			 pj_bool_t with_return)
 {
@@ -218,10 +218,10 @@ static void send_err_arg(pj_cli_sess *sess,
     pj_strcat(&send_data, &fe->cfg.prompt_str);
 
     send_data.ptr[send_data.slen] = 0;
-    printf("%s", send_data.ptr);    
+    printf("%s", send_data.ptr);
 }
 
-static void send_inv_arg(pj_cli_sess *sess, 
+static void send_inv_arg(pj_cli_sess *sess,
 			 const pj_cli_exec_info *info,
 			 pj_bool_t with_return)
 {
@@ -229,7 +229,7 @@ static void send_inv_arg(pj_cli_sess *sess,
     send_err_arg(sess, info, &ERR_MSG, with_return);
 }
 
-static void send_too_many_arg(pj_cli_sess *sess, 
+static void send_too_many_arg(pj_cli_sess *sess,
 			      const pj_cli_exec_info *info,
 			      pj_bool_t with_return)
 {
@@ -237,7 +237,7 @@ static void send_too_many_arg(pj_cli_sess *sess,
     send_err_arg(sess, info, &ERR_MSG, with_return);
 }
 
-static void send_hint_arg(pj_str_t *send_data, 
+static void send_hint_arg(pj_str_t *send_data,
 			  const pj_str_t *desc,
 			  pj_ssize_t cmd_len,
 			  pj_ssize_t max_len)
@@ -256,7 +256,7 @@ static void send_hint_arg(pj_str_t *send_data,
     }
 }
 
-static void send_ambi_arg(pj_cli_sess *sess, 
+static void send_ambi_arg(pj_cli_sess *sess,
 			  const pj_cli_exec_info *info,
 			  pj_bool_t with_return)
 {
@@ -269,12 +269,11 @@ static void send_ambi_arg(pj_cli_sess *sess,
     out_parse_state parse_state = OP_NORMAL;
     pj_ssize_t max_length = 0;
     pj_ssize_t cmd_length = 0;
-    const pj_str_t *cmd_desc = 0;
     static const pj_str_t sc_type = {"sc", 2};
     static const pj_str_t choice_type = {"choice", 6};
     send_data.ptr = data;
     send_data.slen = 0;
-    
+
     if (with_return)
 	pj_strcat2(&send_data, "\r\n");
 
@@ -283,20 +282,20 @@ static void send_ambi_arg(pj_cli_sess *sess,
     for (i=0;i<len;++i) {
 	pj_strcat2(&send_data, " ");
     }
-    pj_strcat2(&send_data, "^");        
+    pj_strcat2(&send_data, "^");
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
-	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {		
+	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
+	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
 		    cmd_length += (hint[i].name.slen + 3);
 		} else {
 		    cmd_length = hint[i].name.slen;
-		}		
+		}
 	    } else {
 		cmd_length = hint[i].name.slen;
 	    }
-	} else {	    	    
+	} else {
 	    cmd_length = hint[i].name.slen;
 	}
 
@@ -307,7 +306,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
 
     cmd_length = 0;
     for (i=0;i<info->hint_cnt;++i) {
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
+	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		parse_state = OP_SHORTCUT;
 	    } else if (pj_stricmp(&hint[i].type, &choice_type) == 0) {
@@ -315,7 +314,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
 	    } else {
 		parse_state = OP_TYPE;
 	    }
-	} else {	    	    
+	} else {
 	    parse_state = OP_NORMAL;
 	}
 
@@ -323,58 +322,57 @@ static void send_ambi_arg(pj_cli_sess *sess,
 	    pj_strcat2(&send_data, "\r\n  ");
 	    cmd_length = hint[i].name.slen;
 	}
-    
+
 	switch (parse_state) {
 	case OP_CHOICE:
 	    pj_strcat2(&send_data, "[");
 	    pj_strcat(&send_data, &hint[i].name);
-	    pj_strcat2(&send_data, "]");	
+	    pj_strcat2(&send_data, "]");
 	    break;
 	case OP_TYPE:
 	    pj_strcat2(&send_data, "<");
 	    pj_strcat(&send_data, &hint[i].type);
-	    pj_strcat2(&send_data, ">");	
+	    pj_strcat2(&send_data, ">");
 	    break;
 	case OP_SHORTCUT:
 	    /* Format : "Command | sc |  description" */
-	    {		
+	    {
 		cmd_length += hint[i].name.slen;
 		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
 		    pj_strcat2(&send_data, " | ");
-		    cmd_length += 3;		    
+		    cmd_length += 3;
 		} else {
 		    pj_strcat2(&send_data, "\r\n  ");
 		}
-		pj_strcat(&send_data, &hint[i].name);	
+		pj_strcat(&send_data, &hint[i].name);
 	    }
 	    break;
 	default:
 	    pj_strcat(&send_data, &hint[i].name);
-	    cmd_desc = &hint[i].desc;
 	    break;
 	}
-    	
-	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) || 
+
+	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) ||
 	    ((i+1) >= info->hint_cnt) ||
-	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen))) 
+	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen)))
 	{
 	    /* Add description info */
 	    send_hint_arg(&send_data, &hint[i].desc, cmd_length, max_length);
 
 	    cmd_length = 0;
 	}
-    }  
+    }
     pj_strcat2(&send_data, "\r\n");
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     send_data.ptr[send_data.slen] = 0;
-    printf("%s", send_data.ptr);    
+    printf("%s", send_data.ptr);
 }
 
 static pj_bool_t handle_hint(pj_cli_sess *sess)
 {
     pj_status_t status;
     pj_bool_t retval = PJ_TRUE;
-    
+
     pj_pool_t *pool;
     pj_cli_cmd_val *cmd_val;
     pj_cli_exec_info info;
@@ -387,13 +385,13 @@ static pj_bool_t handle_hint(pj_cli_sess *sess)
                           NULL);
 
     cmd_val = PJ_POOL_ZALLOC_T(pool, pj_cli_cmd_val);
-    
-    status = pj_cli_sess_parse(sess, recv_buf, cmd_val, 
+
+    status = pj_cli_sess_parse(sess, recv_buf, cmd_val,
 			       pool, &info);
 
     switch (status) {
     case PJ_CLI_EINVARG:
-	send_inv_arg(sess, &info, PJ_TRUE);		
+	send_inv_arg(sess, &info, PJ_TRUE);
 	break;
     case PJ_CLI_ETOOMANYARGS:
 	send_too_many_arg(sess, &info, PJ_TRUE);
@@ -402,43 +400,43 @@ static pj_bool_t handle_hint(pj_cli_sess *sess)
     case PJ_CLI_EAMBIGUOUS:
 	send_ambi_arg(sess, &info, PJ_TRUE);
 	break;
-    case PJ_SUCCESS:	
-	if (info.hint_cnt > 0) {	
-	    /* Compelete command */	    
-	    send_ambi_arg(sess, &info, PJ_TRUE);	    		
+    case PJ_SUCCESS:
+	if (info.hint_cnt > 0) {
+	    /* Compelete command */
+	    send_ambi_arg(sess, &info, PJ_TRUE);
 	} else {
 	    retval = PJ_FALSE;
-	}	
+	}
 	break;
     }
 
-    pj_pool_release(pool);	
-    return retval; 
+    pj_pool_release(pool);
+    return retval;
 }
 
 static pj_bool_t handle_exec(pj_cli_sess *sess)
 {
     pj_status_t status;
     pj_bool_t retval = PJ_TRUE;
-    
-    pj_pool_t *pool;    
+
+    pj_pool_t *pool;
     pj_cli_exec_info info;
     pj_cli_t *cli = sess->fe->cli;
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
     char *recv_buf = fe->input.buf;
-        
+
     printf("\r\n");
 
     pool = pj_pool_create(pj_cli_get_param(cli)->pf, "handle_exec",
 			  PJ_CLI_CONSOLE_POOL_SIZE, PJ_CLI_CONSOLE_POOL_INC,
-			  NULL);    
-    
-    status = pj_cli_sess_exec(sess, recv_buf, 
+			  NULL);
+
+    status = pj_cli_sess_exec(sess, recv_buf,
 			      pool, &info);
 
     switch (status) {
     case PJ_CLI_EINVARG:
-	send_inv_arg(sess, &info, PJ_FALSE);	
+	send_inv_arg(sess, &info, PJ_FALSE);
 	break;
     case PJ_CLI_ETOOMANYARGS:
 	send_too_many_arg(sess, &info, PJ_FALSE);
@@ -451,16 +449,16 @@ static pj_bool_t handle_exec(pj_cli_sess *sess)
 	retval = PJ_FALSE;
 	break;
     case PJ_SUCCESS:
-	send_prompt_str(sess);	
+	send_prompt_str(sess);
 	break;
-    }    
+    }
 
-    pj_pool_release(pool);	
-    return retval; 
+    pj_pool_release(pool);
+    return retval;
 }
 
 static int readline_thread(void * p)
-{    
+{
     struct cli_console_fe * fe = (struct cli_console_fe *)p;
 
     printf("%s", fe->cfg.prompt_str.ptr);
@@ -472,7 +470,7 @@ static int readline_thread(void * p)
 	pj_bool_t is_valid = PJ_TRUE;
 
 	if (fgets(recv_buf, fe->input.maxlen, stdin) == NULL) {
-	    /* 
+	    /*
 	     * Be friendly to users who redirect commands into
 	     * program, when file ends, resume with kbd.
 	     * If exit is desired end script with q for quit
@@ -487,10 +485,10 @@ static int readline_thread(void * p)
 #endif
 		puts("Cannot switch back to console from file redirection");
 		if (fe->cfg.quit_command.slen) {
-		    pj_memcpy(recv_buf, fe->cfg.quit_command.ptr, 
+		    pj_memcpy(recv_buf, fe->cfg.quit_command.ptr,
 			      fe->input.maxlen);
 		}
-		recv_buf[fe->cfg.quit_command.slen] = '\0';		
+		recv_buf[fe->cfg.quit_command.slen] = '\0';
 	    } else {
 		puts("Switched back to console from file redirection");
 		continue;
@@ -505,7 +503,7 @@ static int readline_thread(void * p)
 	if (fe->thread_quit) {
 	    break;
 	}
-	input_len = pj_ansi_strlen(fe->input.buf);	
+	input_len = pj_ansi_strlen(fe->input.buf);
 	if ((input_len > 1) && (fe->input.buf[input_len-2] == '?')) {
 	    fe->input.buf[input_len-1] = 0;
 	    is_valid = handle_hint(fe->sess);
@@ -515,14 +513,14 @@ static int readline_thread(void * p)
 	    is_valid = handle_exec(fe->sess);
 	}
 
-        pj_sem_post(fe->input.sem);        
+        pj_sem_post(fe->input.sem);
         pj_sem_wait(fe->thread_sem);
-    }    
+    }
 
     return 0;
 }
 
-PJ_DEF(pj_status_t) pj_cli_console_process(pj_cli_sess *sess, 
+PJ_DEF(pj_status_t) pj_cli_console_process(pj_cli_sess *sess,
 					   char *buf,
 					   unsigned maxlen)
 {

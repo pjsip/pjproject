@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjnath/ice_strans.h>
 #include <pjnath/errno.h>
@@ -65,7 +65,7 @@ enum tp_type
 
 
 /* The candidate type preference when STUN candidate is used */
-static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] = 
+static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] =
 {
 #if PJNATH_ICE_PRIO_STD
     100,    /**< PJ_ICE_HOST_PREF	    */
@@ -84,14 +84,14 @@ static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] =
 
 /* ICE callbacks */
 static void	   on_ice_complete(pj_ice_sess *ice, pj_status_t status);
-static pj_status_t ice_tx_pkt(pj_ice_sess *ice, 
+static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 			      unsigned comp_id,
 			      unsigned transport_id,
 			      const void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *dst_addr,
 			      unsigned dst_addr_len);
-static void	   ice_rx_data(pj_ice_sess *ice, 
-			       unsigned comp_id, 
+static void	   ice_rx_data(pj_ice_sess *ice,
+			       unsigned comp_id,
 			       unsigned transport_id,
 			       void *pkt, pj_size_t size,
 			       const pj_sockaddr_t *src_addr,
@@ -110,7 +110,7 @@ static pj_bool_t stun_on_data_sent(pj_stun_sock *stun_sock,
 				   pj_ioqueue_op_key_t *send_key,
 				   pj_ssize_t sent);
 /* Notification when the status of the STUN transport has changed. */
-static pj_bool_t stun_on_status(pj_stun_sock *stun_sock, 
+static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 				pj_stun_sock_op op,
 				pj_status_t status);
 
@@ -136,7 +136,7 @@ static void sess_init_update(pj_ice_strans *ice_st);
  * This structure describes an ICE stream transport component. A component
  * in ICE stream transport typically corresponds to a single socket created
  * for this component, and bound to a specific transport address. This
- * component may have multiple alias addresses, for example one alias 
+ * component may have multiple alias addresses, for example one alias
  * address for each interfaces in multi-homed host, another for server
  * reflexive alias, and another for relayed alias. For each transport
  * address alias, an ICE stream transport candidate (#pj_ice_sess_cand) will
@@ -298,11 +298,11 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 
     /* Override with component specific socket buffer size settings, if any */
     if (ice_st->cfg.comp[comp->comp_id-1].so_rcvbuf_size > 0) {
-	ice_st->cfg.turn.cfg.so_rcvbuf_size = 
+	ice_st->cfg.turn.cfg.so_rcvbuf_size =
 	    ice_st->cfg.comp[comp->comp_id-1].so_rcvbuf_size;
     }
     if (ice_st->cfg.comp[comp->comp_id-1].so_sndbuf_size > 0) {
-	ice_st->cfg.turn.cfg.so_sndbuf_size = 
+	ice_st->cfg.turn.cfg.so_sndbuf_size =
 	    ice_st->cfg.comp[comp->comp_id-1].so_sndbuf_size;
     }
 
@@ -381,10 +381,10 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	stun_sock_cb.on_rx_data = &stun_on_rx_data;
 	stun_sock_cb.on_status = &stun_on_status;
 	stun_sock_cb.on_data_sent = &stun_on_data_sent;
-	
+
 	/* Override component specific QoS settings, if any */
 	if (ice_st->cfg.comp[comp_id-1].qos_type) {
-	    ice_st->cfg.stun.cfg.qos_type = 
+	    ice_st->cfg.stun.cfg.qos_type =
 		ice_st->cfg.comp[comp_id-1].qos_type;
 	}
 	if (ice_st->cfg.comp[comp_id-1].qos_params.flags) {
@@ -395,11 +395,11 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
 	/* Override component specific socket buffer size settings, if any */
 	if (ice_st->cfg.comp[comp_id-1].so_rcvbuf_size > 0) {
-	    ice_st->cfg.stun.cfg.so_rcvbuf_size = 
+	    ice_st->cfg.stun.cfg.so_rcvbuf_size =
 		ice_st->cfg.comp[comp_id-1].so_rcvbuf_size;
 	}
 	if (ice_st->cfg.comp[comp_id-1].so_sndbuf_size > 0) {
-	    ice_st->cfg.stun.cfg.so_sndbuf_size = 
+	    ice_st->cfg.stun.cfg.so_sndbuf_size =
 		ice_st->cfg.comp[comp_id-1].so_sndbuf_size;
 	}
 
@@ -411,8 +411,8 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	/* Start STUN Binding resolution and add srflx candidate 
-	 * only if server is set 
+	/* Start STUN Binding resolution and add srflx candidate
+	 * only if server is set
 	 */
 	if (ice_st->cfg.stun.server.slen) {
 	    pj_stun_sock_info stun_sock_info;
@@ -420,16 +420,16 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    /* Add pending job */
 	    ///sess_add_ref(ice_st);
 
-	    PJ_LOG(4,(ice_st->obj_name, 
+	    PJ_LOG(4,(ice_st->obj_name,
 		      "Comp %d: srflx candidate starts Binding discovery",
 		      comp_id));
 
 	    pj_log_push_indent();
 
 	    /* Start Binding resolution */
-	    status = pj_stun_sock_start(comp->stun_sock, 
+	    status = pj_stun_sock_start(comp->stun_sock,
 					&ice_st->cfg.stun.server,
-					ice_st->cfg.stun.port, 
+					ice_st->cfg.stun.port,
 					ice_st->cfg.resolver);
 	    if (status != PJ_SUCCESS) {
 		///sess_dec_ref(ice_st);
@@ -475,8 +475,8 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    if (status != PJ_SUCCESS)
 		return status;
 
-	    for (i=0; i<stun_sock_info.alias_cnt && 
-		      i<ice_st->cfg.stun.max_host_cands; ++i) 
+	    for (i=0; i<stun_sock_info.alias_cnt &&
+		      i<ice_st->cfg.stun.max_host_cands; ++i)
 	    {
 		char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 		const pj_sockaddr *addr = &stun_sock_info.aliases[i];
@@ -487,8 +487,8 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 		    break;
 		}
 
-		/* Ignore loopback addresses unless cfg->stun.loop_addr 
-		 * is set 
+		/* Ignore loopback addresses unless cfg->stun.loop_addr
+		 * is set
 		 */
 		if ((pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127) {
 		    if (ice_st->cfg.stun.loop_addr==PJ_FALSE)
@@ -508,7 +508,7 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 		pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
 				       cand->type, &cand->base_addr);
 
-		PJ_LOG(4,(ice_st->obj_name, 
+		PJ_LOG(4,(ice_st->obj_name,
 			  "Comp %d: host candidate %s added",
 			  comp_id, pj_sockaddr_print(&cand->addr, addrinfo,
 						     sizeof(addrinfo), 3)));
@@ -532,8 +532,8 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 }
 
 
-/* 
- * Create ICE stream transport 
+/*
+ * Create ICE stream transport
  */
 PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
 					  const pj_ice_strans_cfg *cfg,
@@ -564,7 +564,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->obj_name = pool->obj_name;
     ice_st->user_data = user_data;
 
-    PJ_LOG(4,(ice_st->obj_name, 
+    PJ_LOG(4,(ice_st->obj_name,
 	      "Creating ICE stream transport with %d component(s)",
 	      comp_cnt));
     pj_log_push_indent();
@@ -586,13 +586,13 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     pj_memcpy(&ice_st->cb, cb, sizeof(*cb));
 
     ice_st->comp_cnt = comp_cnt;
-    ice_st->comp = (pj_ice_strans_comp**) 
+    ice_st->comp = (pj_ice_strans_comp**)
 		   pj_pool_calloc(pool, comp_cnt, sizeof(pj_ice_strans_comp*));
 
     /* Move state to candidate gathering */
     ice_st->state = PJ_ICE_STRANS_STATE_INIT;
 
-    /* Acquire initialization mutex to prevent callback to be 
+    /* Acquire initialization mutex to prevent callback to be
      * called before we finish initialization.
      */
     pj_grp_lock_acquire(ice_st->grp_lock);
@@ -749,7 +749,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
     ice_st->cb_called = PJ_TRUE;
     ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
-	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT, 
+	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT,
 				      PJ_SUCCESS);
 }
 
@@ -785,7 +785,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_options( pj_ice_strans *ice_st,
 }
 
 /*
- * Specify various options for this ICE stream transport. 
+ * Specify various options for this ICE stream transport.
  */
 PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
 					      const pj_ice_sess_options *opt)
@@ -834,7 +834,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
     /* Create! */
     status = pj_ice_sess_create(&ice_st->cfg.stun_cfg, ice_st->obj_name, role,
-			        ice_st->comp_cnt, &ice_cb, 
+			        ice_st->comp_cnt, &ice_cb,
 			        local_ufrag, local_passwd,
 			        ice_st->grp_lock,
 			        &ice_st->ice);
@@ -852,7 +852,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
      * checked first.
      */
     if (ice_st->comp[0]->default_cand >= 0 &&
-	ice_st->comp[0]->cand_list[ice_st->comp[0]->default_cand].type 
+	ice_st->comp[0]->cand_list[ice_st->comp[0]->default_cand].type
 	    == PJ_ICE_CAND_TYPE_SRFLX)
     {
 	pj_ice_sess_set_prefs(ice_st->ice, srflx_pref_table);
@@ -865,7 +865,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
 	/* Re-enable logging for Send/Data indications */
 	if (comp->turn_sock) {
-	    PJ_LOG(5,(ice_st->obj_name, 
+	    PJ_LOG(5,(ice_st->obj_name,
 		      "Disabling STUN Indication logging for "
 		      "component %d", i+1));
 	    pj_turn_sock_set_log(comp->turn_sock, 0xFFFF);
@@ -878,7 +878,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
 	    /* Skip if candidate is not ready */
 	    if (cand->status != PJ_SUCCESS) {
-		PJ_LOG(5,(ice_st->obj_name, 
+		PJ_LOG(5,(ice_st->obj_name,
 			  "Candidate %d of comp %d is not added (pending)",
 			  j, i));
 		continue;
@@ -888,10 +888,10 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 	    pj_assert(pj_sockaddr_has_addr(&cand->addr));
 
 	    /* Add the candidate */
-	    status = pj_ice_sess_add_cand(ice_st->ice, comp->comp_id, 
-					  cand->transport_id, cand->type, 
-					  cand->local_pref, 
-					  &cand->foundation, &cand->addr, 
+	    status = pj_ice_sess_add_cand(ice_st->ice, comp->comp_id,
+					  cand->transport_id, cand->type,
+					  cand->local_pref,
+					  &cand->foundation, &cand->addr,
 					  &cand->base_addr,  &cand->rel_addr,
 					  pj_sockaddr_get_len(&cand->addr),
 					  (unsigned*)&ice_cand_id);
@@ -911,7 +911,7 @@ on_error:
 }
 
 /*
- * Check if the ICE stream transport has the ICE session created. 
+ * Check if the ICE stream transport has the ICE session created.
  */
 PJ_DEF(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st)
 {
@@ -984,7 +984,7 @@ PJ_DEF(unsigned) pj_ice_strans_get_cands_count(pj_ice_strans *ice_st,
 {
     unsigned i, cnt;
 
-    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id && 
+    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id &&
 		     comp_id <= ice_st->comp_cnt, 0);
 
     cnt = 0;
@@ -1007,7 +1007,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
 {
     unsigned i, cnt;
 
-    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id && 
+    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id &&
 		     comp_id <= ice_st->comp_cnt && count && cand, PJ_EINVAL);
 
     cnt = 0;
@@ -1041,7 +1041,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_def_cand( pj_ice_strans *ice_st,
     } else {
 	pj_ice_strans_comp *comp = ice_st->comp[comp_id - 1];
 	pj_assert(comp->default_cand>=0 && comp->default_cand<comp->cand_cnt);
-	pj_memcpy(cand, &comp->cand_list[comp->default_cand], 
+	pj_memcpy(cand, &comp->cand_list[comp->default_cand],
 		  sizeof(pj_ice_sess_cand));
     }
     return PJ_SUCCESS;
@@ -1107,7 +1107,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	    }
 
 	    if (count) {
-		status = pj_turn_sock_set_perm(comp->turn_sock, count, 
+		status = pj_turn_sock_set_perm(comp->turn_sock, count,
 					       addrs, 0);
 		if (status != PJ_SUCCESS) {
 		    pj_ice_strans_stop_ice(ice_st);
@@ -1131,16 +1131,16 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 /*
  * Get valid pair.
  */
-PJ_DEF(const pj_ice_sess_check*) 
+PJ_DEF(const pj_ice_sess_check*)
 pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
 			     unsigned comp_id)
 {
     PJ_ASSERT_RETURN(ice_st && comp_id && comp_id <= ice_st->comp_cnt,
 		     NULL);
-    
+
     if (ice_st->ice == NULL)
 	return NULL;
-    
+
     return ice_st->ice->comp[comp_id-1].valid_check;
 }
 
@@ -1170,7 +1170,6 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 					  const pj_sockaddr_t *dst_addr,
 					  int dst_addr_len)
 {
-    pj_ssize_t pkt_size;
     pj_ice_strans_comp *comp;
     unsigned def_cand;
     pj_status_t status;
@@ -1219,25 +1218,24 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 
 	    if (!comp->turn_log_off) {
 		/* Disable logging for Send/Data indications */
-		PJ_LOG(5,(ice_st->obj_name, 
+		PJ_LOG(5,(ice_st->obj_name,
 			  "Disabling STUN Indication logging for "
 			  "component %d", comp->comp_id));
 		pj_turn_sock_set_log(comp->turn_sock, msg_disable_ind);
 		comp->turn_log_off = PJ_TRUE;
 	    }
 
-	    status = pj_turn_sock_sendto(comp->turn_sock, 
-					 (const pj_uint8_t*)data, 
+	    status = pj_turn_sock_sendto(comp->turn_sock,
+					 (const pj_uint8_t*)data,
 					 (unsigned)data_len,
 					 dst_addr, dst_addr_len);
-	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? 
+	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ?
 		    PJ_SUCCESS : status;
 	} else {
-	    pkt_size = data_len;
-	    status = pj_stun_sock_sendto(comp->stun_sock, NULL, data, 
-					 (unsigned)data_len, 0, dst_addr, 
+	    status = pj_stun_sock_sendto(comp->stun_sock, NULL, data,
+					 (unsigned)data_len, 0, dst_addr,
 					 dst_addr_len);
-	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? 
+	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ?
 		    PJ_SUCCESS : status;
 	}
 
@@ -1265,8 +1263,8 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(ice_st->obj_name, 
-		      "ICE negotiation failed after %ds:%03d: %s", 
+	    PJ_LOG(4,(ice_st->obj_name,
+		      "ICE negotiation failed after %ds:%03d: %s",
 		      msec/1000, msec%1000, errmsg));
 	} else {
 	    unsigned i;
@@ -1276,7 +1274,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 				    PJ_STUN_SESS_LOG_RX_IND)
 	    };
 
-	    PJ_LOG(4,(ice_st->obj_name, 
+	    PJ_LOG(4,(ice_st->obj_name,
 		      "ICE negotiation success after %ds:%03d",
 		      msec/1000, msec%1000));
 
@@ -1288,9 +1286,9 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 		    char lip[PJ_INET6_ADDRSTRLEN+10];
 		    char rip[PJ_INET6_ADDRSTRLEN+10];
 
-		    pj_sockaddr_print(&check->lcand->addr, lip, 
+		    pj_sockaddr_print(&check->lcand->addr, lip,
 				      sizeof(lip), 3);
-		    pj_sockaddr_print(&check->rcand->addr, rip, 
+		    pj_sockaddr_print(&check->rcand->addr, rip,
 				      sizeof(rip), 3);
 
 		    if (check->lcand->transport_id == TP_TURN) {
@@ -1303,7 +1301,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 					sizeof(check->rcand->addr));
 
 			/* Disable logging for Send/Data indications */
-			PJ_LOG(5,(ice_st->obj_name, 
+			PJ_LOG(5,(ice_st->obj_name,
 				  "Disabling STUN Indication logging for "
 				  "component %d", i+1));
 			pj_turn_sock_set_log(ice_st->comp[i]->turn_sock,
@@ -1314,14 +1312,14 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 		    PJ_LOG(4,(ice_st->obj_name, " Comp %d: "
 			      "sending from %s candidate %s to "
 			      "%s candidate %s",
-			      i+1, 
+			      i+1,
 			      pj_ice_get_cand_type_name(check->lcand->type),
 			      lip,
 			      pj_ice_get_cand_type_name(check->rcand->type),
 			      rip));
-			      
+
 		} else {
-		    PJ_LOG(4,(ice_st->obj_name, 
+		    PJ_LOG(4,(ice_st->obj_name,
 			      "Comp %d: disabled", i+1));
 		}
 	    }
@@ -1331,10 +1329,10 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 					       PJ_ICE_STRANS_STATE_FAILED;
 
 	pj_log_push_indent();
-	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_NEGOTIATION, 
+	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_NEGOTIATION,
 				      status);
 	pj_log_pop_indent();
-	
+
     }
 
     pj_grp_lock_dec_ref(ice_st->grp_lock);
@@ -1343,8 +1341,8 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 /*
  * Callback called by ICE session when it wants to send outgoing packet.
  */
-static pj_status_t ice_tx_pkt(pj_ice_sess *ice, 
-			      unsigned comp_id, 
+static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
+			      unsigned comp_id,
 			      unsigned transport_id,
 			      const void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *dst_addr,
@@ -1361,39 +1359,39 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 
     comp = ice_st->comp[comp_id-1];
 
-    TRACE_PKT((comp->ice_st->obj_name, 
+    TRACE_PKT((comp->ice_st->obj_name,
 	       "Component %d TX packet to %s:%d with transport %d",
-	       comp_id, 
+	       comp_id,
 	       pj_sockaddr_print(dst_addr, daddr, sizeof(addr), 0),
 	       pj_sockaddr_get_port(dst_addr),
 	       transport_id));
 
     if (transport_id == TP_TURN) {
 	if (comp->turn_sock) {
-	    status = pj_turn_sock_sendto(comp->turn_sock, 
-					 (const pj_uint8_t*)pkt, 
+	    status = pj_turn_sock_sendto(comp->turn_sock,
+					 (const pj_uint8_t*)pkt,
 					 (unsigned)size,
 					 dst_addr, dst_addr_len);
 	} else {
 	    status = PJ_EINVALIDOP;
 	}
     } else if (transport_id == TP_STUN) {
-	status = pj_stun_sock_sendto(comp->stun_sock, NULL, 
+	status = pj_stun_sock_sendto(comp->stun_sock, NULL,
 				     pkt, (unsigned)size, 0,
 				     dst_addr, dst_addr_len);
     } else {
 	pj_assert(!"Invalid transport ID");
 	status = PJ_EINVALIDOP;
     }
-    
+
     return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
 }
 
 /*
  * Callback called by ICE session when it receives application data.
  */
-static void ice_rx_data(pj_ice_sess *ice, 
-		        unsigned comp_id, 
+static void ice_rx_data(pj_ice_sess *ice,
+		        unsigned comp_id,
 			unsigned transport_id,
 		        void *pkt, pj_size_t size,
 		        const pj_sockaddr_t *src_addr,
@@ -1404,13 +1402,13 @@ static void ice_rx_data(pj_ice_sess *ice,
     PJ_UNUSED_ARG(transport_id);
 
     if (ice_st->cb.on_rx_data) {
-	(*ice_st->cb.on_rx_data)(ice_st, comp_id, pkt, size, 
+	(*ice_st->cb.on_rx_data)(ice_st, comp_id, pkt, size,
 				 src_addr, src_addr_len);
     }
 }
 
 /* Notification when incoming packet has been received from
- * the STUN socket. 
+ * the STUN socket.
  */
 static pj_bool_t stun_on_rx_data(pj_stun_sock *stun_sock,
 				 void *pkt,
@@ -1438,19 +1436,19 @@ static pj_bool_t stun_on_rx_data(pj_stun_sock *stun_sock,
 	 * report this to application.
 	 */
 	if (ice_st->cb.on_rx_data) {
-	    (*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, pkt, pkt_len, 
+	    (*ice_st->cb.on_rx_data)(ice_st, comp->comp_id, pkt, pkt_len,
 				     src_addr, addr_len);
 	}
 
     } else {
 
 	/* Hand over the packet to ICE session */
-	status = pj_ice_sess_on_rx_pkt(comp->ice_st->ice, comp->comp_id, 
+	status = pj_ice_sess_on_rx_pkt(comp->ice_st->ice, comp->comp_id,
 				       TP_STUN, pkt, pkt_len,
 				       src_addr, addr_len);
 
 	if (status != PJ_SUCCESS) {
-	    ice_st_perror(comp->ice_st, "Error processing packet", 
+	    ice_st_perror(comp->ice_st, "Error processing packet",
 			  status);
 	}
     }
@@ -1459,7 +1457,7 @@ static pj_bool_t stun_on_rx_data(pj_stun_sock *stun_sock,
 }
 
 /* Notifification when asynchronous send operation to the STUN socket
- * has completed. 
+ * has completed.
  */
 static pj_bool_t stun_on_data_sent(pj_stun_sock *stun_sock,
 				   pj_ioqueue_op_key_t *send_key,
@@ -1472,7 +1470,7 @@ static pj_bool_t stun_on_data_sent(pj_stun_sock *stun_sock,
 }
 
 /* Notification when the status of the STUN transport has changed. */
-static pj_bool_t stun_on_status(pj_stun_sock *stun_sock, 
+static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 				pj_stun_sock_op op,
 				pj_status_t status)
 {
@@ -1572,11 +1570,11 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    cand->status = PJ_SUCCESS;
 		}
 
-		PJ_LOG(4,(comp->ice_st->obj_name, 
+		PJ_LOG(4,(comp->ice_st->obj_name,
 			  "Comp %d: %s, "
 			  "srflx address is %s",
-			  comp->comp_id, op_name, 
-			  pj_sockaddr_print(&info.mapped_addr, ipaddr, 
+			  comp->comp_id, op_name,
+			  pj_sockaddr_print(&info.mapped_addr, ipaddr,
 					     sizeof(ipaddr), 3)));
 
 		sess_init_update(ice_st);
@@ -1662,8 +1660,8 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
 				       peer_addr, addr_len);
 
 	if (status != PJ_SUCCESS) {
-	    ice_st_perror(comp->ice_st, 
-			  "Error processing packet from TURN relay", 
+	    ice_st_perror(comp->ice_st,
+			  "Error processing packet from TURN relay",
 			  status);
 	}
     }
@@ -1721,18 +1719,18 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	pj_sockaddr_cp(&cand->addr, &rel_info.relay_addr);
 	pj_sockaddr_cp(&cand->base_addr, &rel_info.relay_addr);
 	pj_sockaddr_cp(&cand->rel_addr, &rel_info.mapped_addr);
-	pj_ice_calc_foundation(comp->ice_st->pool, &cand->foundation, 
-			       PJ_ICE_CAND_TYPE_RELAYED, 
+	pj_ice_calc_foundation(comp->ice_st->pool, &cand->foundation,
+			       PJ_ICE_CAND_TYPE_RELAYED,
 			       &rel_info.relay_addr);
 	cand->status = PJ_SUCCESS;
 
 	/* Set default candidate to relay */
 	comp->default_cand = (unsigned)(cand - comp->cand_list);
 
-	PJ_LOG(4,(comp->ice_st->obj_name, 
+	PJ_LOG(4,(comp->ice_st->obj_name,
 		  "Comp %d: TURN allocation complete, relay address is %s",
-		  comp->comp_id, 
-		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr, 
+		  comp->comp_id,
+		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
 
 	sess_init_update(comp->ice_st);

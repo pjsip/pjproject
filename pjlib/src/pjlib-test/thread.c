@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 
@@ -30,7 +30,7 @@
  *  - whether multithreading works.
  *  - whether thread timeslicing works, and threads have equal
  *    time-slice proportion.
- * 
+ *
  * APIs tested:
  *  - pj_thread_create()
  *  - pj_thread_register()
@@ -77,6 +77,7 @@ static void* thread_proc(pj_uint32_t *pcounter)
     pj_status_t rc;
 
     id = *pcounter;
+    PJ_UNUSED_ARG(id); /* Warning about unused var if TRACE__ is disabled */
     TRACE__((THIS_FILE, "     thread %d running..", id));
 
     pj_bzero(desc, sizeof(desc));
@@ -120,9 +121,9 @@ static int simple_thread(const char *title, unsigned flags)
     pj_thread_t *thread;
     pj_status_t rc;
     pj_uint32_t counter = 0;
- 
+
     PJ_LOG(3,(THIS_FILE, "..%s", title));
-    
+
     pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
     if (!pool)
 	return -1000;
@@ -152,14 +153,14 @@ static int simple_thread(const char *title, unsigned flags)
 	    PJ_LOG(3,(THIS_FILE, "...error: thread is not suspended"));
 	    return -1015;
 	}
-	
+
 	rc = pj_thread_resume(thread);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("...error: resume thread error", rc);
 	    return -1020;
 	}
     }
-    
+
     PJ_LOG(3,(THIS_FILE, "..waiting for thread to quit.."));
 
     pj_thread_sleep(1500);
@@ -173,7 +174,7 @@ static int simple_thread(const char *title, unsigned flags)
 	PJ_LOG(3,(THIS_FILE, "...error: thread is not running"));
 	return -1025;
     }
-    
+
     PJ_LOG(3,(THIS_FILE, "...%s success", title));
     return PJ_SUCCESS;
 }
@@ -202,10 +203,10 @@ static int timeslice_test(void)
     /* Create all threads in suspended mode. */
     for (i=0; i<NUM_THREADS; ++i) {
         counter[i] = i;
-        rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc, 
-			      &counter[i], 
-                              PJ_THREAD_DEFAULT_STACK_SIZE, 
-                              PJ_THREAD_SUSPENDED, 
+        rc = pj_thread_create(pool, "thread", (pj_thread_proc*)&thread_proc,
+			      &counter[i],
+                              PJ_THREAD_DEFAULT_STACK_SIZE,
+                              PJ_THREAD_SUSPENDED,
                               &thread[i]);
         if (rc!=PJ_SUCCESS) {
             app_perror("...ERROR in pj_thread_create()", rc);
@@ -223,7 +224,7 @@ static int timeslice_test(void)
     /* Check that all counters are still zero. */
     for (i=0; i<NUM_THREADS; ++i) {
         if (counter[i] > i) {
-            PJ_LOG(3,(THIS_FILE, "....ERROR! Thread %d-th is not suspended!", 
+            PJ_LOG(3,(THIS_FILE, "....ERROR! Thread %d-th is not suspended!",
 		      i));
             return -30;
         }
@@ -239,7 +240,7 @@ static int timeslice_test(void)
         }
     }
 
-    /* Main thread sleeps for some time to allow threads to run. 
+    /* Main thread sleeps for some time to allow threads to run.
      * The longer we sleep, the more accurate the calculation will be,
      * but it'll make user waits for longer for the test to finish.
      */
@@ -252,7 +253,7 @@ static int timeslice_test(void)
 
     /* Wait until all threads quit, then destroy. */
     for (i=0; i<NUM_THREADS; ++i) {
-	TRACE__((THIS_FILE, "    Main thread joining thread %d [%p]..", 
+	TRACE__((THIS_FILE, "    Main thread joining thread %d [%p]..",
 			    i, thread[i]));
         rc = pj_thread_join(thread[i]);
         if (rc != PJ_SUCCESS) {
@@ -291,14 +292,14 @@ static int timeslice_test(void)
      */
     diff = (highest-lowest)*100 / ((highest+lowest)/2);
     if ( diff >= 50) {
-        PJ_LOG(3,(THIS_FILE, 
+        PJ_LOG(3,(THIS_FILE,
 		  "...ERROR: thread didn't have equal timeslice!"));
-        PJ_LOG(3,(THIS_FILE, 
+        PJ_LOG(3,(THIS_FILE,
 		  ".....lowest counter=%u, highest counter=%u, diff=%u%%",
                   lowest, highest, diff));
         return -80;
     } else {
-        PJ_LOG(3,(THIS_FILE, 
+        PJ_LOG(3,(THIS_FILE,
                   "...info: timeslice diff between lowest & highest=%u%%",
                   diff));
     }
@@ -314,11 +315,11 @@ int thread_test(void)
     rc = simple_thread("simple thread test", 0);
     if (rc != PJ_SUCCESS)
 	return rc;
-    
+
     rc = simple_thread("suspended thread test", PJ_THREAD_SUSPENDED);
     if (rc != PJ_SUCCESS)
 	return rc;
-    
+
     rc = timeslice_test();
     if (rc != PJ_SUCCESS)
 	return rc;
@@ -328,7 +329,7 @@ int thread_test(void)
 
 #else
 /* To prevent warning about "translation unit is empty"
- * when this test is disabled. 
+ * when this test is disabled.
  */
 int dummy_thread_test;
 #endif	/* INCLUDE_THREAD_TEST */

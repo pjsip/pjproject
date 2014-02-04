@@ -36,7 +36,7 @@
     (defined(PJ_WIN64) && PJ_WIN64!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
 
-#define EADDRINUSE WSAEADDRINUSE 
+#define EADDRINUSE WSAEADDRINUSE
 
 #endif
 
@@ -66,13 +66,13 @@
 /**
  * This specify the state for the telnet option negotiation.
  */
-enum cli_telnet_option_states 
-{    
+enum cli_telnet_option_states
+{
     OPT_DISABLE,		/* Option disable */
     OPT_ENABLE,			/* Option enable */
     OPT_EXPECT_DISABLE,		/* Already send disable req, expecting resp */
     OPT_EXPECT_ENABLE,		/* Already send enable req, expecting resp */
-    OPT_EXPECT_DISABLE_REV,	/* Already send disable req, expecting resp, 
+    OPT_EXPECT_DISABLE_REV,	/* Already send disable req, expecting resp,
 				 * need to send enable req */
     OPT_EXPECT_ENABLE_REV	/* Already send enable req, expecting resp,
 				 * need to send disable req */
@@ -198,7 +198,7 @@ enum cli_telnet_options
     EXT_OPTIONS		= 255	/* Extended-Options-List */
 };
 
-enum terminal_cmd 
+enum terminal_cmd
 {
     TC_ESC		= 27,
     TC_UP		= 65,
@@ -206,7 +206,7 @@ enum terminal_cmd
     TC_RIGHT		= 67,
     TC_LEFT		= 68,
     TC_END		= 70,
-    TC_HOME		= 72,    
+    TC_HOME		= 72,
     TC_CTRL_C		= 3,
     TC_CR		= 13,
     TC_BS		= 8,
@@ -228,8 +228,8 @@ typedef enum out_parse_state
 } out_parse_state;
 
 /**
- * This structure contains the command line shown to the user. 
- * The telnet also needs to maintain and manage command cursor position. 
+ * This structure contains the command line shown to the user.
+ * The telnet also needs to maintain and manage command cursor position.
  * Due to that reason, the insert/delete character process from buffer will
  * consider its current cursor position.
  */
@@ -251,7 +251,7 @@ typedef struct telnet_recv_buf {
 } telnet_recv_buf;
 
 /**
- * This structure contains the command history executed by user. 
+ * This structure contains the command history executed by user.
  * Besides storing the command history, it is necessary to be able
  * to browse it.
  */
@@ -290,7 +290,7 @@ typedef struct cli_telnet_fe
     pj_activesock_t	   *asock;
     pj_thread_t            *worker_thread;
     pj_bool_t               is_quitting;
-    pj_mutex_t             *mutex;    
+    pj_mutex_t             *mutex;
 } cli_telnet_fe;
 
 /* Forward Declaration */
@@ -304,7 +304,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe);
 static pj_status_t telnet_restart(cli_telnet_fe *tfe);
 
 /**
- * Return the number of characters between the current cursor position 
+ * Return the number of characters between the current cursor position
  * to the end of line.
  */
 static unsigned recv_buf_right_len(telnet_recv_buf *recv_buf)
@@ -313,27 +313,27 @@ static unsigned recv_buf_right_len(telnet_recv_buf *recv_buf)
 }
 
 /**
- * Insert character to the receive buffer. 
+ * Insert character to the receive buffer.
  */
-static pj_bool_t recv_buf_insert(telnet_recv_buf *recv_buf, 
-				 unsigned char *data) 
-{    
+static pj_bool_t recv_buf_insert(telnet_recv_buf *recv_buf,
+				 unsigned char *data)
+{
     if (recv_buf->len+1 >= PJ_CLI_MAX_CMDBUF) {
 	return PJ_FALSE;
-    } else {	
+    } else {
 	if (*data == '\t' || *data == '?' || *data == '\r') {
 	    /* Always insert to the end of line */
 	    recv_buf->rbuf[recv_buf->len] = *data;
 	} else {
 	    /* Insert based on the current cursor pos */
 	    unsigned cur_pos = recv_buf->cur_pos;
-	    unsigned rlen = recv_buf_right_len(recv_buf);	    
-	    if (rlen > 0) {		    
+	    unsigned rlen = recv_buf_right_len(recv_buf);
+	    if (rlen > 0) {
 		/* Shift right characters */
-		pj_memmove(&recv_buf->rbuf[cur_pos+1], 
-			   &recv_buf->rbuf[cur_pos], 
+		pj_memmove(&recv_buf->rbuf[cur_pos+1],
+			   &recv_buf->rbuf[cur_pos],
 			   rlen+1);
-	    } 
+	    }
 	    recv_buf->rbuf[cur_pos] = *data;
 	}
 	++recv_buf->cur_pos;
@@ -355,13 +355,13 @@ static pj_bool_t recv_buf_backspace(telnet_recv_buf *recv_buf)
 	if (rlen) {
 	    unsigned cur_pos = recv_buf->cur_pos;
 	    /* Shift left characters */
-	    pj_memmove(&recv_buf->rbuf[cur_pos-1], &recv_buf->rbuf[cur_pos], 
+	    pj_memmove(&recv_buf->rbuf[cur_pos-1], &recv_buf->rbuf[cur_pos],
 		       rlen);
 	}
 	--recv_buf->cur_pos;
 	--recv_buf->len;
 	recv_buf->rbuf[recv_buf->len] = 0;
-    }    
+    }
     return PJ_TRUE;
 }
 
@@ -372,11 +372,11 @@ static int compare_str(void *value, const pj_list_type *nd)
 }
 
 /**
- * Insert the command to history. If the entered command is not on the list, 
- * a new entry will be created. All entered command will be moved to 
- * the first entry of the history. 
+ * Insert the command to history. If the entered command is not on the list,
+ * a new entry will be created. All entered command will be moved to
+ * the first entry of the history.
  */
-static pj_status_t insert_history(cli_telnet_sess *sess, 				 
+static pj_status_t insert_history(cli_telnet_sess *sess,
 				  char *cmd_val)
 {
     cmd_history *in_history;
@@ -392,18 +392,18 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
     /* Find matching history */
     in_history = pj_list_search(sess->history, (void*)&cmd, compare_str);
     if (!in_history) {
-	if (pj_list_size(sess->history) < PJ_CLI_MAX_CMD_HISTORY) {	    
+	if (pj_list_size(sess->history) < PJ_CLI_MAX_CMD_HISTORY) {
 	    char *data_history;
 	    in_history = PJ_POOL_ZALLOC_T(sess->pool, cmd_history);
 	    pj_list_init(in_history);
-	    data_history = (char *)pj_pool_calloc(sess->pool, 
+	    data_history = (char *)pj_pool_calloc(sess->pool,
 			   sizeof(char), PJ_CLI_MAX_CMDBUF);
 	    in_history->command.ptr = data_history;
 	    in_history->command.slen = 0;
 	} else {
 	    /* Get the oldest history */
 	    in_history = sess->history->prev;
-	}	    
+	}
     } else {
 	pj_list_insert_nodes_after(in_history->prev, in_history->next);
     }
@@ -415,7 +415,7 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 }
 
 /**
- * Get the next or previous history of the shown/active history. 
+ * Get the next or previous history of the shown/active history.
  */
 static pj_str_t* get_prev_history(cli_telnet_sess *sess, pj_bool_t is_forward)
 {
@@ -433,10 +433,10 @@ static pj_str_t* get_prev_history(cli_telnet_sess *sess, pj_bool_t is_forward)
     if (history_size == 0) {
 	return NULL;
     } else {
-	if (is_forward) {	    
-	    node = (node->next==root)?node->next->next:node->next;	    
+	if (is_forward) {
+	    node = (node->next==root)?node->next->next:node->next;
 	} else {
-	    node = (node->prev==root)?node->prev->prev:node->prev;	    
+	    node = (node->prev==root)?node->prev->prev:node->prev;
 	}
 	retval = &node->command;
 	sess->active_history = node;
@@ -450,10 +450,10 @@ static pj_str_t* get_prev_history(cli_telnet_sess *sess, pj_bool_t is_forward)
  * three byte sequences, the third byte being the code for the option
  * referenced - (RFC-854).
  */
-static pj_bool_t send_telnet_cmd(cli_telnet_sess *sess, 
-				 cli_telnet_command cmd, 
+static pj_bool_t send_telnet_cmd(cli_telnet_sess *sess,
+				 cli_telnet_command cmd,
 				 unsigned char option)
-{       
+{
     unsigned char buf[3];
     PJ_ASSERT_RETURN(sess, PJ_FALSE);
 
@@ -469,11 +469,11 @@ static pj_bool_t send_telnet_cmd(cli_telnet_sess *sess,
  * This method will handle sending telnet's ENABLE option negotiation.
  * For local option: send WILL.
  * For remote option: send DO.
- * This method also handle the state transition of the ENABLE 
+ * This method also handle the state transition of the ENABLE
  * negotiation process.
  */
-static pj_bool_t send_enable_option(cli_telnet_sess *sess, 
-				    pj_bool_t is_local, 
+static pj_bool_t send_enable_option(cli_telnet_sess *sess,
+				    pj_bool_t is_local,
 				    unsigned char option)
 {
     cli_telnet_sess_option *sess_option;
@@ -499,7 +499,7 @@ static pj_bool_t send_enable_option(cli_telnet_sess *sess,
 	case OPT_EXPECT_ENABLE_REV:
 	    *state = OPT_EXPECT_ENABLE;
 	    break;
-	case OPT_EXPECT_DISABLE_REV:	    
+	case OPT_EXPECT_DISABLE_REV:
 	    *state = OPT_DISABLE;
 	    break;
 	default:
@@ -508,13 +508,13 @@ static pj_bool_t send_enable_option(cli_telnet_sess *sess,
     return PJ_TRUE;
 }
 
-static pj_bool_t send_cmd_do(cli_telnet_sess *sess, 
+static pj_bool_t send_cmd_do(cli_telnet_sess *sess,
 			     unsigned char option)
 {
     return send_enable_option(sess, PJ_FALSE, option);
 }
 
-static pj_bool_t send_cmd_will(cli_telnet_sess *sess, 
+static pj_bool_t send_cmd_will(cli_telnet_sess *sess,
 			       unsigned char option)
 {
     return send_enable_option(sess, PJ_TRUE, option);
@@ -522,11 +522,11 @@ static pj_bool_t send_cmd_will(cli_telnet_sess *sess,
 
 /**
  * This method will handle receiving telnet's ENABLE option negotiation.
- * This method also handle the state transition of the ENABLE 
- * negotiation process. 
+ * This method also handle the state transition of the ENABLE
+ * negotiation process.
  */
-static pj_bool_t receive_enable_option(cli_telnet_sess *sess, 
-				       pj_bool_t is_local, 
+static pj_bool_t receive_enable_option(cli_telnet_sess *sess,
+				       pj_bool_t is_local,
 				       unsigned char option)
 {
     cli_telnet_sess_option *sess_opt;
@@ -549,15 +549,15 @@ static pj_bool_t receive_enable_option(cli_telnet_sess *sess,
 		send_telnet_cmd(sess, is_local?WONT:DONT, option);
 	    }
 	    break;
-	case OPT_EXPECT_ENABLE:	    
+	case OPT_EXPECT_ENABLE:
 	    *state = OPT_ENABLE;
 	    break;
-	case OPT_EXPECT_DISABLE:	    
+	case OPT_EXPECT_DISABLE:
 	    *state = OPT_DISABLE;
 	    break;
 	case OPT_EXPECT_ENABLE_REV:
 	    *state = OPT_EXPECT_DISABLE;
-	    send_telnet_cmd(sess, is_local?WONT:DONT, option);	    
+	    send_telnet_cmd(sess, is_local?WONT:DONT, option);
 	    break;
 	case OPT_EXPECT_DISABLE_REV:
 	    *state = OPT_EXPECT_DISABLE;
@@ -565,16 +565,16 @@ static pj_bool_t receive_enable_option(cli_telnet_sess *sess,
 	default:
 	    return PJ_FALSE;
     }
-    return PJ_TRUE;        
+    return PJ_TRUE;
 }
 
 /**
  * This method will handle receiving telnet's DISABLE option negotiation.
- * This method also handle the state transition of the DISABLE 
- * negotiation process. 
+ * This method also handle the state transition of the DISABLE
+ * negotiation process.
  */
-static pj_bool_t receive_disable_option(cli_telnet_sess *sess, 
-					pj_bool_t is_local, 
+static pj_bool_t receive_disable_option(cli_telnet_sess *sess,
+					pj_bool_t is_local,
 					unsigned char option)
 {
     cli_telnet_sess_option *sess_opt;
@@ -584,7 +584,7 @@ static pj_bool_t receive_disable_option(cli_telnet_sess *sess,
 
     sess_opt = &sess->telnet_option[option];
     state = is_local?(&sess_opt->local_state):(&sess_opt->peer_state);
-    
+
     switch (*state) {
 	case OPT_ENABLE:
 	    /* Disabling option always need to be accepted */
@@ -594,13 +594,13 @@ static pj_bool_t receive_disable_option(cli_telnet_sess *sess,
 	case OPT_DISABLE:
 	    /* Ignore if already enabled */
 	    break;
-	case OPT_EXPECT_ENABLE:	    
+	case OPT_EXPECT_ENABLE:
 	case OPT_EXPECT_DISABLE:
 	    *state = OPT_DISABLE;
 	    break;
 	case OPT_EXPECT_ENABLE_REV:
 	    *state = OPT_DISABLE;
-	    send_telnet_cmd(sess, is_local?WONT:DONT, option);	    
+	    send_telnet_cmd(sess, is_local?WONT:DONT, option);
 	    break;
 	case OPT_EXPECT_DISABLE_REV:
 	    *state = OPT_EXPECT_ENABLE;
@@ -609,7 +609,7 @@ static pj_bool_t receive_disable_option(cli_telnet_sess *sess,
 	default:
 	    return PJ_FALSE;
     }
-    return PJ_TRUE;       
+    return PJ_TRUE;
 }
 
 static pj_bool_t receive_do(cli_telnet_sess *sess, unsigned char option)
@@ -632,28 +632,28 @@ static pj_bool_t receive_wont(cli_telnet_sess *sess, unsigned char option)
     return receive_disable_option(sess, PJ_FALSE, option);
 }
 
-static void set_local_option(cli_telnet_sess *sess, 
-			     unsigned char option, 
-			     pj_bool_t enable) 
+static void set_local_option(cli_telnet_sess *sess,
+			     unsigned char option,
+			     pj_bool_t enable)
 {
     sess->telnet_option[option].local_is_enable = enable;
 }
 
-static void set_peer_option(cli_telnet_sess *sess, 
-			    unsigned char option, 
-			    pj_bool_t enable) 
+static void set_peer_option(cli_telnet_sess *sess,
+			    unsigned char option,
+			    pj_bool_t enable)
 {
     sess->telnet_option[option].peer_is_enable = enable;
 }
 
-static pj_bool_t is_local_option_state_ena(cli_telnet_sess *sess, 
+static pj_bool_t is_local_option_state_ena(cli_telnet_sess *sess,
 					   unsigned char option)
-{    
+{
     return (sess->telnet_option[option].local_state == OPT_ENABLE);
 }
 
-static void send_return_key(cli_telnet_sess *sess) 
-{    
+static void send_return_key(cli_telnet_sess *sess)
+{
     telnet_sess_send2(sess, (unsigned char*)"\r\n", 2);
 }
 
@@ -670,7 +670,7 @@ static void send_prompt_str(cli_telnet_sess *sess)
 
     send_data.ptr = data_str;
     send_data.slen = 0;
-    
+
     pj_strcat(&send_data, &fe->cfg.prompt_str);
 
     telnet_sess_send(sess, &send_data);
@@ -680,8 +680,8 @@ static void send_prompt_str(cli_telnet_sess *sess)
  * This method is used to send error message to client, including
  * the error position of the source command.
  */
-static void send_err_arg(cli_telnet_sess *sess, 
-			 const pj_cli_exec_info *info, 
+static void send_err_arg(cli_telnet_sess *sess,
+			 const pj_cli_exec_info *info,
 			 const pj_str_t *msg,
 			 pj_bool_t with_return,
 			 pj_bool_t with_last_cmd)
@@ -714,7 +714,7 @@ static void send_err_arg(cli_telnet_sess *sess,
     telnet_sess_send(sess, &send_data);
 }
 
-static void send_inv_arg(cli_telnet_sess *sess, 
+static void send_inv_arg(cli_telnet_sess *sess,
 			 const pj_cli_exec_info *info,
 			 pj_bool_t with_return,
 			 pj_bool_t with_last_cmd)
@@ -723,7 +723,7 @@ static void send_inv_arg(cli_telnet_sess *sess,
     send_err_arg(sess, info, &ERR_MSG, with_return, with_last_cmd);
 }
 
-static void send_too_many_arg(cli_telnet_sess *sess, 
+static void send_too_many_arg(cli_telnet_sess *sess,
 			      const pj_cli_exec_info *info,
 			      pj_bool_t with_return,
 			      pj_bool_t with_last_cmd)
@@ -732,8 +732,8 @@ static void send_too_many_arg(cli_telnet_sess *sess,
     send_err_arg(sess, info, &ERR_MSG, with_return, with_last_cmd);
 }
 
-static void send_hint_arg(cli_telnet_sess *sess, 
-			  pj_str_t *send_data, 
+static void send_hint_arg(cli_telnet_sess *sess,
+			  pj_str_t *send_data,
 			  const pj_str_t *desc,
 			  pj_ssize_t cmd_len,
 			  pj_ssize_t max_len)
@@ -755,7 +755,7 @@ static void send_hint_arg(cli_telnet_sess *sess,
  * This method is used to notify to the client that the entered command
  * is ambiguous. It will show the matching command as the hint information.
  */
-static void send_ambi_arg(cli_telnet_sess *sess, 
+static void send_ambi_arg(cli_telnet_sess *sess,
 			  const pj_cli_exec_info *info,
 			  pj_bool_t with_return,
 			  pj_bool_t with_last_cmd)
@@ -769,12 +769,11 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     out_parse_state parse_state = OP_NORMAL;
     pj_ssize_t max_length = 0;
     pj_ssize_t cmd_length = 0;
-    const pj_str_t *cmd_desc = 0;
     static const pj_str_t sc_type = {"sc", 2};
     static const pj_str_t choice_type = {"choice", 6};
     send_data.ptr = data;
     send_data.slen = 0;
-    
+
     if (with_return)
 	pj_strcat2(&send_data, "\r\n");
 
@@ -786,17 +785,17 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     pj_strcat2(&send_data, "^");
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
-	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {		
+	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
+	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
 		    cmd_length += (hint[i].name.slen + 3);
 		} else {
 		    cmd_length = hint[i].name.slen;
-		}		
+		}
 	    } else {
 		cmd_length = hint[i].name.slen;
 	    }
-	} else {	    	    
+	} else {
 	    cmd_length = hint[i].name.slen;
 	}
 
@@ -804,11 +803,11 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 	    max_length = cmd_length;
 	}
     }
-    
+
     cmd_length = 0;
     /* Build hint information */
-    for (i=0;i<info->hint_cnt;++i) {			
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
+    for (i=0;i<info->hint_cnt;++i) {
+	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		parse_state = OP_SHORTCUT;
 	    } else if (pj_stricmp(&hint[i].type, &choice_type) == 0) {
@@ -816,72 +815,71 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 	    } else {
 		parse_state = OP_TYPE;
 	    }
-	} else {	    	    
+	} else {
 	    parse_state = OP_NORMAL;
 	}
-	
+
 	if (parse_state != OP_SHORTCUT) {
 	    pj_strcat2(&send_data, "\r\n  ");
 	    cmd_length = hint[i].name.slen;
-	}	    
-	
+	}
+
 	switch (parse_state) {
 	case OP_CHOICE:
-	    /* Format : "[Choice Value]  description" */	    
+	    /* Format : "[Choice Value]  description" */
 	    pj_strcat2(&send_data, "[");
 	    pj_strcat(&send_data, &hint[i].name);
-	    pj_strcat2(&send_data, "]");	
+	    pj_strcat2(&send_data, "]");
 	    break;
 	case OP_TYPE:
 	    /* Format : "<Argument Type>  description" */
 	    pj_strcat2(&send_data, "<");
 	    pj_strcat(&send_data, &hint[i].name);
-	    pj_strcat2(&send_data, ">");	
+	    pj_strcat2(&send_data, ">");
 	    break;
 	case OP_SHORTCUT:
 	    /* Format : "Command | sc |  description" */
-	    {		
+	    {
 		cmd_length += hint[i].name.slen;
 		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
 		    pj_strcat2(&send_data, " | ");
-		    cmd_length += 3;		    
+		    cmd_length += 3;
 		} else {
 		    pj_strcat2(&send_data, "\r\n  ");
 		}
-		pj_strcat(&send_data, &hint[i].name);	
+		pj_strcat(&send_data, &hint[i].name);
 	    }
 	    break;
 	default:
 	    /* Command */
 	    pj_strcat(&send_data, &hint[i].name);
-	    cmd_desc = &hint[i].desc;	    
 	    break;
 	}
-    	
-	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) || 
+
+	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) ||
 	    ((i+1) >= info->hint_cnt) ||
-	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen))) 
+	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen)))
 	{
 	    /* Add description info */
-	    send_hint_arg(sess, &send_data, 
-			  &hint[i].desc, cmd_length, 
+	    send_hint_arg(sess, &send_data,
+			  &hint[i].desc, cmd_length,
 			  max_length);
 
 	    cmd_length = 0;
-	}	
-    }  
-    pj_strcat2(&send_data, "\r\n");       
+	}
+    }
+    pj_strcat2(&send_data, "\r\n");
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     if (with_last_cmd)
 	pj_strcat2(&send_data, (char *)sess->rcmd->rbuf);
 
-    telnet_sess_send(sess, &send_data);    
+    telnet_sess_send(sess, &send_data);
 }
 
 /*
  * This method is to send command completion of the entered command.
  */
-static void send_comp_arg(cli_telnet_sess *sess, 
+static void send_comp_arg(cli_telnet_sess *sess,
 			  pj_cli_exec_info *info)
 {
     pj_str_t send_data;
@@ -892,7 +890,7 @@ static void send_comp_arg(cli_telnet_sess *sess,
     send_data.ptr = data;
     send_data.slen = 0;
 
-    pj_strcat(&send_data, &info->hint[0].name);        
+    pj_strcat(&send_data, &info->hint[0].name);
 
     telnet_sess_send(sess, &send_data);
 }
@@ -901,10 +899,10 @@ static void send_comp_arg(cli_telnet_sess *sess,
  * This method is to process the alfa numeric character sent by client.
  */
 static pj_bool_t handle_alfa_num(cli_telnet_sess *sess, unsigned char *data)
-{        
+{
     if (is_local_option_state_ena(sess, TERM_ECHO)) {
 	if (recv_buf_right_len(sess->rcmd) > 0) {
-	    /* Cursor is not at EOL, insert character */	    
+	    /* Cursor is not at EOL, insert character */
 	    unsigned char echo[5] = {0x1b, 0x5b, 0x31, 0x40, 0x00};
 	    echo[4] = *data;
 	    telnet_sess_send2(sess, echo, 5);
@@ -913,7 +911,7 @@ static pj_bool_t handle_alfa_num(cli_telnet_sess *sess, unsigned char *data)
 	    telnet_sess_send2(sess, data, 1);
 	}
 	return PJ_TRUE;
-    } 
+    }
     return PJ_FALSE;
 }
 
@@ -925,15 +923,15 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
     unsigned rlen = recv_buf_right_len(sess->rcmd);
     if (recv_buf_backspace(sess->rcmd)) {
 	if (rlen) {
-	    /* 
-	     * Cursor is not at the end of line, move the characters 
+	    /*
+	     * Cursor is not at the end of line, move the characters
 	     * after the cursor to left
 	     */
 	    unsigned char echo[5] = {0x00, 0x1b, 0x5b, 0x31, 0x50};
 	    echo[0] = *data;
 	    telnet_sess_send2(sess, echo, 5);
 	} else {
-	    const static unsigned char echo[3] = {0x08, 0x20, 0x08};	    
+	    const static unsigned char echo[3] = {0x08, 0x20, 0x08};
 	    telnet_sess_send2(sess, echo, 3);
 	}
 	return PJ_TRUE;
@@ -941,8 +939,8 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
     return PJ_FALSE;
 }
 
-/* 
- * Syntax error handler for parser. 
+/*
+ * Syntax error handler for parser.
  */
 static void on_syntax_error(pj_scanner *scanner)
 {
@@ -957,7 +955,7 @@ static pj_status_t get_last_token(pj_str_t *cmd, pj_str_t *str)
 {
     pj_scanner scanner;
     PJ_USE_EXCEPTION;
-    pj_scan_init(&scanner, cmd->ptr, cmd->slen, PJ_SCAN_AUTOSKIP_WS, 
+    pj_scan_init(&scanner, cmd->ptr, cmd->slen, PJ_SCAN_AUTOSKIP_WS,
 		 &on_syntax_error);
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {
@@ -965,7 +963,7 @@ static pj_status_t get_last_token(pj_str_t *cmd, pj_str_t *str)
 	}
     }
     PJ_CATCH_ANY {
-	pj_scan_fini(&scanner);	
+	pj_scan_fini(&scanner);
 	return PJ_GET_EXCEPTION();
     }
     PJ_END;
@@ -980,7 +978,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
     pj_status_t status;
     pj_bool_t retval = PJ_TRUE;
     unsigned len;
-    
+
     pj_pool_t *pool;
     pj_cli_cmd_val *cmd_val;
     pj_cli_exec_info info;
@@ -989,15 +987,15 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 			  NULL);
 
     cmd_val = PJ_POOL_ZALLOC_T(pool, pj_cli_cmd_val);
-    
-    status = pj_cli_sess_parse(&sess->base, (char *)&sess->rcmd->rbuf, cmd_val, 
-			       pool, &info);    
+
+    status = pj_cli_sess_parse(&sess->base, (char *)&sess->rcmd->rbuf, cmd_val,
+			       pool, &info);
 
     len = (unsigned)pj_ansi_strlen((char *)sess->rcmd->rbuf);
 
     switch (status) {
     case PJ_CLI_EINVARG:
-	send_inv_arg(sess, &info, PJ_TRUE, PJ_TRUE);		
+	send_inv_arg(sess, &info, PJ_TRUE, PJ_TRUE);
 	break;
     case PJ_CLI_ETOOMANYARGS:
 	send_too_many_arg(sess, &info, PJ_TRUE, PJ_TRUE);
@@ -1014,7 +1012,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 	    unsigned char *data_sent = &sess->rcmd->rbuf[sess->rcmd->cur_pos-1];
 	    telnet_sess_send2(sess, data_sent, rlen);
 	}
-	if (info.hint_cnt > 0) {	
+	if (info.hint_cnt > 0) {
 	    /* Complete command */
 	    pj_str_t cmd = pj_str((char *)sess->rcmd->rbuf);
 	    pj_str_t last_token;
@@ -1025,17 +1023,17 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 		pj_strtrim(&last_token);
 		if (hint_info->slen >= last_token.slen) {
 		    hint_info->slen -= last_token.slen;
-		    pj_memmove(hint_info->ptr, 
-			       &hint_info->ptr[last_token.slen], 
-			       hint_info->slen);		    
-		} 
+		    pj_memmove(hint_info->ptr,
+			       &hint_info->ptr[last_token.slen],
+			       hint_info->slen);
+		}
 		send_comp_arg(sess, &info);
 
-		pj_memcpy(&sess->rcmd->rbuf[len], info.hint[0].name.ptr, 
+		pj_memcpy(&sess->rcmd->rbuf[len], info.hint[0].name.ptr,
 			  info.hint[0].name.slen);
 
 		len += (unsigned)info.hint[0].name.slen;
-		sess->rcmd->rbuf[len] = 0;		    
+		sess->rcmd->rbuf[len] = 0;
 	    }
 	} else {
 	    retval = PJ_FALSE;
@@ -1045,8 +1043,8 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
     sess->rcmd->len = len;
     sess->rcmd->cur_pos = sess->rcmd->len;
 
-    pj_pool_release(pool);	
-    return retval; 
+    pj_pool_release(pool);
+    return retval;
 }
 
 /*
@@ -1056,23 +1054,23 @@ static pj_bool_t handle_return(cli_telnet_sess *sess)
 {
     pj_status_t status;
     pj_bool_t retval = PJ_TRUE;
-    
-    pj_pool_t *pool;    
-    pj_cli_exec_info info;    
-    
+
+    pj_pool_t *pool;
+    pj_cli_exec_info info;
+
     send_return_key(sess);
     insert_history(sess, (char *)&sess->rcmd->rbuf);
 
     pool = pj_pool_create(sess->pool->factory, "handle_return",
 			  PJ_CLI_TELNET_POOL_SIZE, PJ_CLI_TELNET_POOL_INC,
-			  NULL);    
-    
-    status = pj_cli_sess_exec(&sess->base, (char *)&sess->rcmd->rbuf, 
+			  NULL);
+
+    status = pj_cli_sess_exec(&sess->base, (char *)&sess->rcmd->rbuf,
 			      pool, &info);
 
     switch (status) {
     case PJ_CLI_EINVARG:
-	send_inv_arg(sess, &info, PJ_FALSE, PJ_FALSE);	
+	send_inv_arg(sess, &info, PJ_FALSE, PJ_FALSE);
 	break;
     case PJ_CLI_ETOOMANYARGS:
 	send_too_many_arg(sess, &info, PJ_FALSE, PJ_FALSE);
@@ -1087,15 +1085,15 @@ static pj_bool_t handle_return(cli_telnet_sess *sess)
     case PJ_SUCCESS:
 	send_prompt_str(sess);
 	break;
-    }    
+    }
     if (retval) {
 	sess->rcmd->rbuf[0] = 0;
 	sess->rcmd->len = 0;
 	sess->rcmd->cur_pos = sess->rcmd->len;
     }
 
-    pj_pool_release(pool);	
-    return retval; 
+    pj_pool_release(pool);
+    return retval;
 }
 
 /*
@@ -1105,7 +1103,7 @@ static pj_bool_t handle_right_key(cli_telnet_sess *sess)
 {
     if (recv_buf_right_len(sess->rcmd)) {
 	unsigned char *data = &sess->rcmd->rbuf[sess->rcmd->cur_pos++];
-	telnet_sess_send2(sess, data, 1);		
+	telnet_sess_send2(sess, data, 1);
 	return PJ_TRUE;
     }
     return PJ_FALSE;
@@ -1115,7 +1113,7 @@ static pj_bool_t handle_right_key(cli_telnet_sess *sess)
  * This method is to process the left key character sent by client.
  */
 static pj_bool_t handle_left_key(cli_telnet_sess *sess)
-{    
+{
     static const unsigned char move_cursor_left = 0x08;
     if (sess->rcmd->cur_pos) {
 	telnet_sess_send2(sess, &move_cursor_left, 1);
@@ -1150,7 +1148,7 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
 	    pj_memset(send_data.ptr, MOVE_CURSOR_LEFT, sess->rcmd->cur_pos);
 	    send_data.slen = sess->rcmd->cur_pos;
 	}
-	
+
 	if (sess->rcmd->len > (unsigned)history->slen) {
 	    /* Clear the command currently shown*/
 	    unsigned buf_len = sess->rcmd->len;
@@ -1158,10 +1156,10 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
 	    send_data.slen += buf_len;
 
 	    /* Move cursor position to the beginning of line */
-	    pj_memset(&send_data.ptr[send_data.slen], MOVE_CURSOR_LEFT, 
+	    pj_memset(&send_data.ptr[send_data.slen], MOVE_CURSOR_LEFT,
 		      buf_len);
 	    send_data.slen += buf_len;
-	} 
+	}
 	/* Send data */
 	pj_strcat(&send_data, history);
 	telnet_sess_send(sess, &send_data);
@@ -1174,9 +1172,9 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
     return PJ_FALSE;
 }
 
-static pj_status_t process_vt100_cmd(cli_telnet_sess *sess, 
+static pj_status_t process_vt100_cmd(cli_telnet_sess *sess,
 				     unsigned char *cmd)
-{    
+{
     pj_status_t status = PJ_TRUE;
     switch (*cmd) {
 	case TC_ESC:
@@ -1224,8 +1222,8 @@ PJ_DEF(void) pj_cli_telnet_cfg_default(pj_cli_telnet_cfg *param)
     param->log_level = PJ_CLI_TELNET_LOG_LEVEL;
 }
 
-/* 
- * Send a message to a telnet session 
+/*
+ * Send a message to a telnet session
  */
 static pj_status_t telnet_sess_send(cli_telnet_sess *sess,
 				    const pj_str_t *str)
@@ -1240,12 +1238,12 @@ static pj_status_t telnet_sess_send(cli_telnet_sess *sess,
     pj_mutex_lock(sess->smutex);
 
     if (sess->buf_len == 0)
-        status = pj_activesock_send(sess->asock, &sess->op_key, 
+        status = pj_activesock_send(sess->asock, &sess->op_key,
                                     str->ptr, &sz, 0);
-    /* If we cannot send now, append it at the end of the buffer 
+    /* If we cannot send now, append it at the end of the buffer
      * to be sent later.
      */
-    if (sess->buf_len > 0 || 
+    if (sess->buf_len > 0 ||
         (status != PJ_SUCCESS && status != PJ_EPENDING))
     {
         int clen = (int)sz;
@@ -1272,8 +1270,8 @@ static pj_status_t telnet_sess_send(cli_telnet_sess *sess,
     return PJ_SUCCESS;
 }
 
-/* 
- * Send a message to a telnet session with formatted text 
+/*
+ * Send a message to a telnet session with formatted text
  * (add single linefeed character with carriage return)
  */
 static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
@@ -1287,20 +1285,20 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
 
     PJ_USE_EXCEPTION;
 
-    pj_scan_init(&scanner, str->ptr, str->slen, 
+    pj_scan_init(&scanner, str->ptr, str->slen,
 	         PJ_SCAN_AUTOSKIP_WS, &on_syntax_error);
-    
+
     str_begin = scanner.begin;
 
     PJ_TRY {
-	while (!pj_scan_is_eof(&scanner)) {	    	    
-	    pj_scan_get_until_ch(&scanner, '\n', &out_str);	    
+	while (!pj_scan_is_eof(&scanner)) {
+	    pj_scan_get_until_ch(&scanner, '\n', &out_str);
 	    str_len = (int)(scanner.curptr - str_begin);
-	    if (*scanner.curptr == '\n') {		
-		if ((str_len > 1) && (out_str.ptr[str_len-2] == '\r')) 
-		{	    		    
+	    if (*scanner.curptr == '\n') {
+		if ((str_len > 1) && (out_str.ptr[str_len-2] == '\r'))
+		{
 		    continue;
-		} else {		    
+		} else {
 		    int str_pos = (int)(str_begin - scanner.begin);
 
 		    if (str_len > 0) {
@@ -1313,7 +1311,7 @@ static pj_status_t telnet_sess_send_with_format(cli_telnet_sess *sess,
 		    if (!pj_scan_is_eof(&scanner)) {
 			pj_scan_advance_n(&scanner, 1, PJ_TRUE);
 			str_begin = scanner.curptr;
-		    }		    
+		    }
 		}
 	    } else {
 		pj_str_t s;
@@ -1354,7 +1352,7 @@ static void telnet_sess_destroy(pj_cli_sess *sess)
     pj_mutex_lock(tsess->smutex);
     pj_mutex_unlock(tsess->smutex);
     pj_activesock_close(tsess->asock);
-    pj_mutex_destroy(tsess->smutex);    
+    pj_mutex_destroy(tsess->smutex);
     pj_pool_release(tsess->pool);
 }
 
@@ -1362,7 +1360,7 @@ static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
 		                const char *data, pj_size_t len)
 {
     cli_telnet_fe *tfe = (cli_telnet_fe *)fe;
-    pj_cli_sess *sess;    
+    pj_cli_sess *sess;
 
     pj_mutex_lock(tfe->mutex);
 
@@ -1370,7 +1368,7 @@ static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
     while (sess != &tfe->sess_head) {
         cli_telnet_sess *tsess = (cli_telnet_sess *)sess;
 
-        sess = sess->next;        
+        sess = sess->next;
 	if (tsess->base.log_level > level) {
 	    pj_str_t s;
 
@@ -1378,7 +1376,7 @@ static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
 	    telnet_sess_send_with_format(tsess, &s);
 	}
     }
-    
+
     pj_mutex_unlock(tfe->mutex);
 }
 
@@ -1435,7 +1433,7 @@ static pj_bool_t telnet_sess_on_data_sent(pj_activesock_t *asock,
     cli_telnet_sess *sess = (cli_telnet_sess *)
 			    pj_activesock_get_user_data(asock);
 
-    PJ_UNUSED_ARG(op_key);    
+    PJ_UNUSED_ARG(op_key);
 
     if (sent <= 0) {
 	TRACE_((THIS_FILE, "Error On data send"));
@@ -1470,7 +1468,7 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     cli_telnet_sess *sess = (cli_telnet_sess *)
                             pj_activesock_get_user_data(asock);
     cli_telnet_fe *tfe = (cli_telnet_fe *)sess->base.fe;
-    unsigned char *cdata = (unsigned char*)data;    
+    unsigned char *cdata = (unsigned char*)data;
     pj_status_t is_valid = PJ_TRUE;
 
     PJ_UNUSED_ARG(size);
@@ -1482,28 +1480,28 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	TRACE_((THIS_FILE, "Error on data read %d", status));
         return PJ_FALSE;
-    }    
+    }
 
     pj_mutex_lock(sess->smutex);
 
     switch (sess->parse_state) {
 	case ST_CR:
 	    sess->parse_state = ST_NORMAL;
-	    if (*cdata == 0 || *cdata == '\n')				
+	    if (*cdata == 0 || *cdata == '\n')
 		pj_mutex_unlock(sess->smutex);
 		is_valid = handle_return(sess);
-		if (!is_valid)		    
+		if (!is_valid)
 		    return PJ_FALSE;
-		pj_mutex_lock(sess->smutex);	
+		pj_mutex_lock(sess->smutex);
 		break;
 	case ST_NORMAL:
 	    if (*cdata == IAC) {
 		sess->parse_state = ST_IAC;
 	    } else if (*cdata == 127) {
 		is_valid = handle_backspace(sess, cdata);
-	    } else if (*cdata == 27) {		    
+	    } else if (*cdata == 27) {
 		sess->parse_state = ST_ESC;
-	    } else { 
+	    } else {
 		if (recv_buf_insert(sess->rcmd, cdata)) {
 		    if (*cdata == '\r') {
 			sess->parse_state = ST_CR;
@@ -1518,7 +1516,7 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
 	    }
 	    break;
 	case ST_ESC:
-	    if (*cdata == 91) {		
+	    if (*cdata == 91) {
 		sess->parse_state = ST_VT100;
 	    } else {
 		sess->parse_state = ST_NORMAL;
@@ -1597,18 +1595,18 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	TRACE_((THIS_FILE, "Error on data accept %d", status));
-	if (status == PJ_ESOCKETSTOP) 
-	    telnet_restart(fe);	    
-	
+	if (status == PJ_ESOCKETSTOP)
+	    telnet_restart(fe);
+
         return PJ_FALSE;
-    }    
+    }
 
     /* An incoming connection is accepted, create a new session */
     pool = pj_pool_create(fe->pool->factory, "telnet_sess",
                           PJ_CLI_TELNET_POOL_SIZE, PJ_CLI_TELNET_POOL_INC,
                           NULL);
     if (!pool) {
-        TRACE_((THIS_FILE, 
+        TRACE_((THIS_FILE,
                 "Not enough memory to create a new telnet session"));
         return PJ_TRUE;
     }
@@ -1631,7 +1629,7 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
                                         &sess->smutex);
     if (sstatus != PJ_SUCCESS)
         goto on_exit;
-    
+
     sstatus = pj_activesock_create(pool, newsock, pj_SOCK_STREAM(),
                                    NULL, fe->cfg.ioqueue,
 			           &asock_cb, sess, &sess->asock);
@@ -1656,7 +1654,7 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
 
     send_cmd_do(sess, SUPPRESS_GA);
     send_cmd_will(sess, TERM_ECHO);
-    send_cmd_will(sess, STATUS);   
+    send_cmd_will(sess, STATUS);
     send_cmd_will(sess, SUPPRESS_GA);
 
     /* Send prompt string */
@@ -1681,7 +1679,7 @@ on_exit:
         pj_activesock_close(sess->asock);
     else
         pj_sock_close(newsock);
-    
+
     if (sess->smutex)
         pj_mutex_destroy(sess->smutex);
 
@@ -1696,7 +1694,7 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
 {
     cli_telnet_fe *fe;
     pj_pool_t *pool;
-    pj_status_t status;   
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(cli, PJ_EINVAL);
 
@@ -1706,14 +1704,14 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     fe = PJ_POOL_ZALLOC_T(pool, cli_telnet_fe);
     if (!fe)
         return PJ_ENOMEM;
-	
+
     fe->base.op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_front_end_op);
 
     if (!param)
         pj_cli_telnet_cfg_default(&fe->cfg);
     else
         pj_memcpy(&fe->cfg, param, sizeof(*param));
-	
+
     pj_list_init(&fe->sess_head);
     fe->base.cli = cli;
     fe->base.type = PJ_CLI_TELNET_FRONT_END;
@@ -1721,7 +1719,7 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     fe->base.op->on_destroy = &telnet_fe_destroy;
     fe->pool = pool;
 
-    if (!fe->cfg.ioqueue) {	
+    if (!fe->cfg.ioqueue) {
         /* Create own ioqueue if application doesn't supply one */
         status = pj_ioqueue_create(pool, 8, &fe->cfg.ioqueue);
         if (status != PJ_SUCCESS)
@@ -1761,7 +1759,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
     pj_sock_t sock = PJ_INVALID_SOCKET;
     pj_activesock_cb asock_cb;
     pj_sockaddr_in addr;
-    pj_status_t status;   
+    pj_status_t status;
     int val;
     int restart_retry;
     unsigned msec;
@@ -1793,26 +1791,26 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
 	    break;
 	PJ_LOG(4,(THIS_FILE, "Address is still in use, retrying.."));
 	pj_thread_sleep(msec);
-    }    
-    
-    if (status == PJ_SUCCESS) {	
-	int addr_len = sizeof(addr);	
+    }
+
+    if (status == PJ_SUCCESS) {
+	int addr_len = sizeof(addr);
 
 	status = pj_sock_getsockname(sock, &addr, &addr_len);
 	if (status != PJ_SUCCESS)
 	    goto on_exit;
-	    
-        fe->cfg.port = pj_sockaddr_in_get_port(&addr);	
+
+        fe->cfg.port = pj_sockaddr_in_get_port(&addr);
 
 	if (fe->cfg.prompt_str.slen == 0) {
 	    pj_str_t prompt_sign = {"> ", 2};
-	    char *prompt_data = pj_pool_alloc(fe->pool, 
+	    char *prompt_data = pj_pool_alloc(fe->pool,
 					      pj_gethostname()->slen+2);
 	    fe->cfg.prompt_str.ptr = prompt_data;
 
 	    pj_strcpy(&fe->cfg.prompt_str, pj_gethostname());
 	    pj_strcat(&fe->cfg.prompt_str, &prompt_sign);
-	}	
+	}
     } else {
         PJ_LOG(3, (THIS_FILE, "Failed binding the socket"));
         goto on_exit;
@@ -1868,10 +1866,10 @@ on_exit:
 static pj_status_t telnet_restart(cli_telnet_fe *fe)
 {
     pj_status_t status;
-    pj_cli_sess *sess;      
+    pj_cli_sess *sess;
 
     fe->is_quitting = PJ_TRUE;
-    if (fe->worker_thread) {	
+    if (fe->worker_thread) {
 	pj_thread_join(fe->worker_thread);
     }
 
@@ -1910,14 +1908,14 @@ on_exit:
     return status;
 }
 
-PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe, 
+PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
 					   pj_cli_telnet_info *info)
 {
     pj_sockaddr hostip;
     pj_status_t status;
-    cli_telnet_fe *tfe = (cli_telnet_fe*) fe; 
+    cli_telnet_fe *tfe = (cli_telnet_fe*) fe;
 
-    PJ_ASSERT_RETURN(fe && (fe->type == PJ_CLI_TELNET_FRONT_END) && info, 
+    PJ_ASSERT_RETURN(fe && (fe->type == PJ_CLI_TELNET_FRONT_END) && info,
 		     PJ_EINVAL);
 
     pj_strset(&info->ip_address, info->buf_, 0);

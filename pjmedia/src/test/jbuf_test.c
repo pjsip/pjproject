@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <stdio.h>
 #include <ctype.h>
@@ -47,7 +47,7 @@ typedef struct test_cond_t {
     int delay_min;  /**< Minimum delay, in frames.	    */
 } test_cond_t;
 
-static pj_bool_t parse_test_headers(char *line, test_param_t *param, 
+static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 			       test_cond_t *cond)
 {
     char *p = line;
@@ -56,7 +56,7 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 	/* Test params. */
 	char mode_st[16];
 
-	sscanf(p+1, "%s %u %u %u", mode_st, &param->init_prefetch, 
+	sscanf(p+1, "%s %u %u %u", mode_st, &param->init_prefetch,
 	       &param->min_prefetch, &param->max_prefetch);
 	param->adaptive = (pj_ansi_stricmp(mode_st, "adaptive") == 0);
 
@@ -102,7 +102,7 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
     return PJ_TRUE;
 }
 
-static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb, 
+static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
 				   pj_uint16_t *seq, pj_uint16_t *last_seq)
 {
     char frame[1];
@@ -155,9 +155,11 @@ static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
 	pjmedia_jb_state state;
 
 	pjmedia_jbuf_get_state(jb, &state);
-	printf("seq=%d\t%c\tsize=%d\tprefetch=%d\n", 
+	printf("seq=%d\t%c\tsize=%d\tprefetch=%d\n",
 	       *last_seq, toupper(data), state.size, state.prefetch);
     }
+#else
+    PJ_UNUSED_ARG(print_state); /* Warning about variable set but unused */
 #endif
 
     return PJ_TRUE;
@@ -170,7 +172,7 @@ int jbuf_main(void)
     int old_log_level;
     int rc = 0;
     const char* input_filename = "Jbtest.dat";
-    const char* input_search_path[] = { 
+    const char* input_search_path[] = {
 	"../build",
 	"pjmedia/build",
 	"build"
@@ -191,7 +193,7 @@ int jbuf_main(void)
 	    input = fopen(input_path, "rt");
 	}
     }
-    
+
     /* Failed to open test data file. */
     if (input == NULL) {
 	printf("Failed to open test data file, Jbtest.dat\n");
@@ -244,8 +246,8 @@ int jbuf_main(void)
 	pjmedia_jbuf_reset(jb);
 
 	if (param.adaptive) {
-	    pjmedia_jbuf_set_adaptive(jb, 
-				      param.init_prefetch, 
+	    pjmedia_jbuf_set_adaptive(jb,
+				      param.init_prefetch,
 				      param.min_prefetch,
 				      param.max_prefetch);
 	} else {
@@ -254,8 +256,8 @@ int jbuf_main(void)
 
 #ifdef REPORT
 	pjmedia_jbuf_get_state(jb, &state);
-	printf("Initial\tsize=%d\tprefetch=%d\tmin.pftch=%d\tmax.pftch=%d\n", 
-	       state.size, state.prefetch, state.min_prefetch, 
+	printf("Initial\tsize=%d\tprefetch=%d\tmin.pftch=%d\tmax.pftch=%d\n",
+	       state.size, state.prefetch, state.min_prefetch,
 	       state.max_prefetch);
 #endif
 
@@ -263,7 +265,7 @@ int jbuf_main(void)
 	/* Test session start */
 	while (1) {
 	    char c;
-	    
+
 	    /* Get next line of test data */
 	    if (!p || *p == 0) {
 		p = fgets(line, sizeof(line), input);
@@ -301,24 +303,24 @@ int jbuf_main(void)
 	printf("Summary:\n");
 	printf("  size=%d prefetch=%d\n", state.size, state.prefetch);
 	printf("  delay (min/max/avg/dev)=%d/%d/%d/%d ms\n",
-	       state.min_delay, state.max_delay, state.avg_delay, 
+	       state.min_delay, state.max_delay, state.avg_delay,
 	       state.dev_delay);
-	printf("  lost=%d discard=%d empty=%d burst(avg)=%d\n", 
+	printf("  lost=%d discard=%d empty=%d burst(avg)=%d\n",
 	       state.lost, state.discard, state.empty, state.avg_burst);
 
 	/* Evaluate test session */
 	if (cond.burst >= 0 && (int)state.avg_burst > cond.burst) {
-	    printf("! 'Burst' should be %d, it is %d\n", 
+	    printf("! 'Burst' should be %d, it is %d\n",
 		   cond.burst, state.avg_burst);
 	    rc |= 1;
 	}
 	if (cond.delay >= 0 && (int)state.avg_delay/JB_PTIME > cond.delay) {
-	    printf("! 'Delay' should be %d, it is %d\n", 
+	    printf("! 'Delay' should be %d, it is %d\n",
 		   cond.delay, state.avg_delay/JB_PTIME);
 	    rc |= 2;
 	}
 	if (cond.delay_min >= 0 && (int)state.min_delay/JB_PTIME > cond.delay_min) {
-	    printf("! 'Minimum delay' should be %d, it is %d\n", 
+	    printf("! 'Minimum delay' should be %d, it is %d\n",
 		   cond.delay_min, state.min_delay/JB_PTIME);
 	    rc |= 32;
 	}
@@ -328,12 +330,12 @@ int jbuf_main(void)
 	    rc |= 4;
 	}
 	if (cond.empty >= 0 && (int)state.empty > cond.empty) {
-	    printf("! 'Empty' should be %d, it is %d\n", 
+	    printf("! 'Empty' should be %d, it is %d\n",
 		   cond.empty, state.empty);
 	    rc |= 8;
 	}
 	if (cond.lost >= 0 && (int)state.lost > cond.lost) {
-	    printf("! 'Lost' should be %d, it is %d\n", 
+	    printf("! 'Lost' should be %d, it is %d\n",
 		   cond.lost, state.lost);
 	    rc |= 16;
 	}

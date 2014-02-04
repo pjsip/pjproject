@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include <pjlib.h>
@@ -108,12 +108,12 @@ void capture_pjlib_state(pj_stun_config *cfg, struct pjlib_state *st)
     pj_caching_pool *cp;
 
     st->timer_cnt = (unsigned)pj_timer_heap_count(cfg->timer_heap);
-    
+
     cp = (pj_caching_pool*)cfg->pf;
     st->pool_used_cnt = (unsigned)cp->used_count;
 }
 
-int check_pjlib_state(pj_stun_config *cfg, 
+int check_pjlib_state(pj_stun_config *cfg,
 		      const struct pjlib_state *initial_st)
 {
     struct pjlib_state current_state;
@@ -153,7 +153,7 @@ int check_pjlib_state(pj_stun_config *cfg,
 
 pj_pool_factory *mem;
 
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
 		      PJ_LOG_HAS_MICRO_SEC;
 
 pj_log_func *orig_log_func;
@@ -178,6 +178,7 @@ static int test_inner(void)
 #if 1
     pj_log_set_level(3);
     pj_log_set_decor(param_log_decor);
+    PJ_UNUSED_ARG(test_log_func);
 #elif 1
     log_file = fopen("pjnath-test.log", "wt");
     pj_log_set_level(5);
@@ -190,7 +191,7 @@ static int test_inner(void)
 	app_perror("pj_init() error!!", rc);
 	return rc;
     }
-    
+
     pj_dump_config();
     pj_caching_pool_init( &caching_pool, &pj_pool_factory_default_policy, 0 );
 
@@ -233,7 +234,7 @@ int test_main(void)
     }
     PJ_CATCH_ANY {
         int id = PJ_GET_EXCEPTION();
-        PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)", 
+        PJ_LOG(3,("test", "FATAL: unhandled exception id %d (%s)",
                   id, pj_exception_id_name(id)));
     }
     PJ_END;

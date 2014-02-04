@@ -500,7 +500,7 @@ static int pb_thread_func (void *arg)
             		  status.status));
 		if (status.status == SND_PCM_STATUS_READY ||
 		    status.status == SND_PCM_STATUS_UNDERRUN ||
-		    status.status == SND_PCM_STATUS_ERROR ) 
+		    status.status == SND_PCM_STATUS_ERROR )
 		{
 		    if (snd_pcm_plugin_prepare (stream->pb_pcm,
 						SND_PCM_CHANNEL_PLAYBACK) < 0)
@@ -777,7 +777,7 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
 
     TRACE_((THIS_FILE, "bb10_open_playback: pb_frames = %d clock = %d",
                        stream->pb_frames, param->clock_rate));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -863,6 +863,7 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     }
 
     frame_size = setup.buf.block.frag_size;
+    PJ_UNUSED_ARG(frame_size); /* Warning about unused var */
 
     /* Set clock rate */
     rate = param->clock_rate;
@@ -961,7 +962,7 @@ static pj_status_t bb10_factory_create_stream(pjmedia_aud_dev_factory *f,
 }
 
 
-/* 
+/*
  * API: get running parameter
  * based on ALSA template
  */
@@ -980,7 +981,7 @@ static pj_status_t bb10_stream_get_param(pjmedia_aud_stream *s,
 
 /*
  * API: get capability
- * based on ALSA template 
+ * based on ALSA template
 */
 static pj_status_t bb10_stream_get_cap(pjmedia_aud_stream *s,
                                        pjmedia_aud_dev_cap cap,
@@ -1042,7 +1043,7 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
     	if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER) {
             ret = bb10_initialize_playback_ctrl(stream,true);
         } else {
-            ret = bb10_initialize_playback_ctrl(stream,false);        	
+            ret = bb10_initialize_playback_ctrl(stream,false);
         }
     	return ret;
 

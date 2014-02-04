@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/types.h>
 #include <pjmedia/alaw_ulaw.h>
@@ -77,6 +77,16 @@
 
 #if 0
 #   define TRACE_(expr)	PJ_LOG(5,expr)
+
+static const char *state_names[] =
+{
+    "Null",
+    "local talking",
+    "remote silent",
+    "doubletalk",
+    "remote talking"
+};
+
 #else
 #   define TRACE_(expr)
 #endif
@@ -125,23 +135,14 @@ typedef enum talk_state
     ST_REM_TALK
 } talk_state_t;
 
-static const char *state_names[] = 
-{
-    "Null",
-    "local talking",
-    "remote silent",
-    "doubletalk",
-    "remote talking"
-};
-
 
 /* Description:
 
    The echo suppressor tries to find the position of echoed signal by looking
-   at the correlation between signal played to the speaker (played signal) 
+   at the correlation between signal played to the speaker (played signal)
    and the signal captured from the microphone (recorded signal).
 
-   To do this, it first divides the frames (from mic and speaker) into 
+   To do this, it first divides the frames (from mic and speaker) into
    segments, calculate the audio level of the segment, and save the level
    information in the playback and record history (play_hist and rec_hist
    respectively).
@@ -150,7 +151,7 @@ static const char *state_names[] =
    is put in the last position of the array.
 
    The record history size is as large as the template size (tmpl_cnt), since
-   we will use the record history as the template to find the best matching 
+   we will use the record history as the template to find the best matching
    position in the playback history.
 
    Here is the record history buffer:
@@ -187,7 +188,7 @@ static const char *state_names[] =
       to the mic signal. The lower the correlation value the better (i.e. more
       similar) the signal is. The correlation value is done over the template
       duration.
-    - the gain scaling factor, that is the ratio between mic signal and 
+    - the gain scaling factor, that is the ratio between mic signal and
       speaker signal. The ES calculates both the minimum and average ratios.
 
    The ES calculates both the values above for every tail position in the
@@ -209,7 +210,7 @@ static const char *state_names[] =
 
    Processing:
 
-   Once learning is done, the ES will change the level of the mic signal 
+   Once learning is done, the ES will change the level of the mic signal
    depending on the state of the conversation and according to the ratio that
    has been found in the learning phase above.
 
@@ -263,7 +264,7 @@ typedef struct echo_supp
 
 
 /*
- * Create. 
+ * Create.
  */
 PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 				      unsigned clock_rate,
@@ -292,32 +293,32 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
     ec->tail_cnt = (pj_uint16_t)(tail_ms / SEGMENT_PTIME);
     ec->play_hist_cnt = (pj_uint16_t)(ec->tail_cnt+ec->templ_cnt);
 
-    ec->max_calc = (pj_uint16_t)(MAX_CALC_DURATION_SEC * clock_rate / 
+    ec->max_calc = (pj_uint16_t)(MAX_CALC_DURATION_SEC * clock_rate /
 				 ec->samples_per_segment);
 
-    ec->rec_hist = (pj_uint16_t*) 
+    ec->rec_hist = (pj_uint16_t*)
 		    pj_pool_alloc(pool, ec->templ_cnt *
 					sizeof(ec->rec_hist[0]));
 
     /* Note: play history has twice number of elements */
-    ec->play_hist = (pj_uint16_t*) 
+    ec->play_hist = (pj_uint16_t*)
 		     pj_pool_alloc(pool, ec->play_hist_cnt *
 					 sizeof(ec->play_hist[0]));
 
     ec->corr_sum = (float*)
-		   pj_pool_alloc(pool, ec->tail_cnt * 
+		   pj_pool_alloc(pool, ec->tail_cnt *
 				       sizeof(ec->corr_sum[0]));
     ec->tmp_corr = (float*)
-		   pj_pool_alloc(pool, ec->tail_cnt * 
+		   pj_pool_alloc(pool, ec->tail_cnt *
 				       sizeof(ec->tmp_corr[0]));
     ec->min_factor = (float*)
-		     pj_pool_alloc(pool, ec->tail_cnt * 
+		     pj_pool_alloc(pool, ec->tail_cnt *
 				         sizeof(ec->min_factor[0]));
     ec->avg_factor = (float*)
-		     pj_pool_alloc(pool, ec->tail_cnt * 
+		     pj_pool_alloc(pool, ec->tail_cnt *
 				         sizeof(ec->avg_factor[0]));
     ec->tmp_factor = (float*)
-		     pj_pool_alloc(pool, ec->tail_cnt * 
+		     pj_pool_alloc(pool, ec->tail_cnt *
 				         sizeof(ec->tmp_factor[0]));
     echo_supp_reset(ec);
 
@@ -327,7 +328,7 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 
 
 /*
- * Destroy. 
+ * Destroy.
  */
 PJ_DEF(pj_status_t) echo_supp_destroy(void *state)
 {
@@ -393,14 +394,14 @@ PJ_DEF(void) echo_supp_soft_reset(void *state)
 
 
 /* Set state */
-static void echo_supp_set_state(echo_supp *ec, talk_state_t state, 
+static void echo_supp_set_state(echo_supp *ec, talk_state_t state,
 				unsigned level)
 {
     PJ_UNUSED_ARG(level);
 
     if (state != ec->talk_state) {
-	TRACE_((THIS_FILE, "[%03d.%03d] %s --> %s, level=%u", 
-			   (ec->update_cnt * SEGMENT_PTIME / 1000), 
+	TRACE_((THIS_FILE, "[%03d.%03d] %s --> %s, level=%u",
+			   (ec->update_cnt * SEGMENT_PTIME / 1000),
 			   ((ec->update_cnt * SEGMENT_PTIME) % 1000),
 			   state_names[ec->talk_state],
 			   state_names[state], level));
@@ -469,9 +470,9 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	ec->sum_rec_level += ec->rec_hist[i];
     } else {
 	/* Update from previous calculation */
-	ec->sum_rec_level = ec->sum_rec_level - old_rec_frm_level + 
+	ec->sum_rec_level = ec->sum_rec_level - old_rec_frm_level +
 			    ec->rec_hist[ec->templ_cnt-1];
-	ec->rec_corr = ec->rec_corr - ((float)ec->rec_hist[0] / 
+	ec->rec_corr = ec->rec_corr - ((float)ec->rec_hist[0] /
 					      old_rec_frm_level) +
 		       ((float)ec->rec_hist[ec->templ_cnt-1] /
 			       ec->rec_hist[ec->templ_cnt-2]);
@@ -482,8 +483,8 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
      * array since we may bail out early if the conversation state is not good
      * to detect echo.
      */
-    /* 
-     * First phase: do full calculation for the first position 
+    /*
+     * First phase: do full calculation for the first position
      */
     if (ec->sum_play_level0 == 0) {
 	/* Buffer has just been filled up, do full calculation */
@@ -500,9 +501,9 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	ec->play_corr0 = play_corr;
     } else {
 	/* Update from previous calculation */
-	ec->sum_play_level0 = ec->sum_play_level0 - old_play_frm_level + 
+	ec->sum_play_level0 = ec->sum_play_level0 - old_play_frm_level +
 			      ec->play_hist[ec->templ_cnt-1];
-	ec->play_corr0 = ec->play_corr0 - ((float)ec->play_hist[0] / 
+	ec->play_corr0 = ec->play_corr0 - ((float)ec->play_hist[0] /
 					          old_play_frm_level) +
 		         ((float)ec->play_hist[ec->templ_cnt-1] /
 			         ec->play_hist[ec->templ_cnt-2]);
@@ -584,7 +585,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	/* Update the min and avg gain factor for this tail position */
 	if (ec->tmp_factor[i] < ec->min_factor[i])
 	    ec->min_factor[i] = ec->tmp_factor[i];
-	ec->avg_factor[i] = ((ec->avg_factor[i] * ec->tail_cnt) + 
+	ec->avg_factor[i] = ((ec->avg_factor[i] * ec->tail_cnt) +
 				    ec->tmp_factor[i]) /
 			    (ec->tail_cnt + 1);
 
@@ -609,7 +610,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	imin = (int)(ec->min_factor[ec->tail_index] * 1000);
 	iavg = (int)(ec->avg_factor[ec->tail_index] * 1000);
 
-	PJ_LOG(4,(THIS_FILE, 
+	PJ_LOG(4,(THIS_FILE,
 		  "Echo suppressor updated at t=%03d.%03ds, echo tail=%d msec"
 		  ", factor min/avg=%d.%03d/%d.%03d",
 		  (duration/1000), (duration%1000),
@@ -633,7 +634,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	imin = (int)(ec->min_factor[ec->tail_index] * 1000);
 	iavg = (int)(ec->avg_factor[ec->tail_index] * 1000);
 
-	PJ_LOG(4,(THIS_FILE, 
+	PJ_LOG(4,(THIS_FILE,
 	          "Echo suppressor learning done at t=%03d.%03ds, tail=%d ms"
 		  ", factor min/avg=%d.%03d/%d.%03d",
 		  (duration/1000), (duration%1000),
@@ -646,7 +647,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 
 
 /* Amplify frame */
-static void amplify_frame(pj_int16_t *frm, unsigned length, 
+static void amplify_frame(pj_int16_t *frm, unsigned length,
 			  pj_ufloat_t factor)
 {
     unsigned i;
@@ -656,7 +657,7 @@ static void amplify_frame(pj_int16_t *frm, unsigned length,
     }
 }
 
-/* 
+/*
  * Perform echo cancellation.
  */
 PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
@@ -709,8 +710,8 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 	/* Lookup in playback history to get max speaker level, to see
 	 * if remote user is currently talking
 	 */
-	for (i=ec->play_hist_cnt -lookup_cnt -tail_cnt; 
-	     i<ec->play_hist_cnt-tail_cnt; ++i) 
+	for (i=ec->play_hist_cnt -lookup_cnt -tail_cnt;
+	     i<ec->play_hist_cnt-tail_cnt; ++i)
 	{
 	    if (ec->play_hist[i] > play_level)
 		play_level = ec->play_hist[i];
@@ -732,7 +733,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 		echo_supp_set_state(ec, ST_DOUBLETALK, rec_level);
 	    } else {
 		/* Speaker is active, but we've picked up large signal in
-		 * the microphone. Assume that this is an echo, so bring 
+		 * the microphone. Assume that this is an echo, so bring
 		 * the level down to minimum too.
 		 */
 		factor = ec->min_factor[ec->tail_index] / 2;
@@ -762,7 +763,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 	    factor = (factor + ec->last_factor*19) / 20;
 
 	/* Amplify frame */
-	amplify_frame(rec_frm, ec->samples_per_frame, 
+	amplify_frame(rec_frm, ec->samples_per_frame,
 		      pj_ufloat_from_float(factor));
 	ec->last_factor = factor;
 
@@ -774,7 +775,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 	    level = pjmedia_linear2ulaw(level) ^ 0xFF;
 
 	    /* Accumulate average echo residue to see the ES effectiveness */
-	    ec->residue = ((ec->residue * ec->running_cnt) + level) / 
+	    ec->residue = ((ec->residue * ec->running_cnt) + level) /
 			  (ec->running_cnt + 1);
 
 	    ++ec->running_cnt;

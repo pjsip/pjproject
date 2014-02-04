@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "systest.h"
 #include "gui.h"
@@ -56,34 +56,34 @@ static gui_menu menu_sndaec = { "AEC/AES Test", &systest_aec_test };
 static gui_menu menu_listdev = { "View Devices", &systest_list_audio_devs };
 static gui_menu menu_getsets = { "View Settings", &systest_display_settings };
 
-static gui_menu menu_tests = { 
-    "Tests", NULL, 
-    10, 
+static gui_menu menu_tests = {
+    "Tests", NULL,
+    10,
     {
 	&menu_wizard,
-	&menu_audtest, 
+	&menu_audtest,
 	&menu_playtn,
 	&menu_playwv1,
 	&menu_playwv2,
 	&menu_recaud,
 	&menu_calclat,
 	&menu_sndaec,
-	NULL, 
+	NULL,
 	&menu_exit
     }
 };
 
-static gui_menu menu_options = { 
-    "Options", NULL, 
-    2, 
+static gui_menu menu_options = {
+    "Options", NULL,
+    2,
     {
 	&menu_listdev,
 	&menu_getsets,
     }
 };
 
-static gui_menu root_menu = { 
-    "Root", NULL, 2, {&menu_tests, &menu_options} 
+static gui_menu root_menu = {
+    "Root", NULL, 2, {&menu_tests, &menu_options}
 };
 
 /*****************************************************************/
@@ -133,7 +133,7 @@ static void systest_perror(const char *title, pj_status_t status)
 	pj_strerror(status, errmsg, sizeof(errmsg));
     else
 	errmsg[0] = '\0';
-    
+
     strcpy(themsg, title);
     strncat(themsg, errmsg, sizeof(themsg)-1);
     themsg[sizeof(themsg)-1] = '\0';
@@ -158,7 +158,7 @@ test_item_t *systest_alloc_test_item(const char *title)
 }
 
 /*****************************************************************************
- * test: play simple ringback tone and hear it 
+ * test: play simple ringback tone and hear it
  */
 static void systest_play_tone(void)
 {
@@ -201,17 +201,17 @@ static void systest_play_tone(void)
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     pool = pjsua_pool_create("ringback", 512, 512);
-    samples_per_frame = systest.media_cfg.audio_frame_ptime * 
+    samples_per_frame = systest.media_cfg.audio_frame_ptime *
 			systest.media_cfg.clock_rate *
 			systest.media_cfg.channel_count / 1000;
 
     /* Ringback tone (call is ringing) */
     name = pj_str("ringback");
-    status = pjmedia_tonegen_create2(pool, &name, 
+    status = pjmedia_tonegen_create2(pool, &name,
 				     systest.media_cfg.clock_rate,
-				     systest.media_cfg.channel_count, 
+				     systest.media_cfg.channel_count,
 				     samples_per_frame,
-				     16, PJMEDIA_TONEGEN_LOOP, 
+				     16, PJMEDIA_TONEGEN_LOOP,
 				     &ringback_port);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -269,7 +269,7 @@ on_return:
 /* Util: create file player, each time trying different paths until we get
  * the file.
  */
-static pj_status_t create_player(unsigned path_cnt, const char *paths[], 
+static pj_status_t create_player(unsigned path_cnt, const char *paths[],
 				 pjsua_player_id *p_id)
 {
     pj_str_t name;
@@ -364,7 +364,7 @@ static void systest_play_wav2(void)
 
 
 /*****************************************************************************
- * test: record audio 
+ * test: record audio
  */
 static void systest_rec_audio(void)
 {
@@ -387,7 +387,7 @@ static void systest_rec_audio(void)
 		     "This test will allow you to record audio "
 		     "from the microphone, and playback the "
 		     "audio to the speaker. Press OK to start recording, "
-		     "CANCEL to skip.", 
+		     "CANCEL to skip.",
 		     WITH_OKCANCEL);
     if (key != KEY_OK) {
 	ti->skipped = PJ_TRUE;
@@ -432,7 +432,7 @@ static void systest_rec_audio(void)
 		     "Recording has been stopped. "
 		     "The recorded audio is being played now to "
 		     "the speaker device, in a loop. Listen for "
-		     "any audio impairments. Press OK to stop.", 
+		     "any audio impairments. Press OK to stop.",
 		     WITH_OK);
 
 on_return:
@@ -525,11 +525,11 @@ static void systest_audio_test(void)
     param.play_id = systest.play_id;
     param.clock_rate = systest.media_cfg.snd_clock_rate;
     param.channel_count = systest.media_cfg.channel_count;
-    param.samples_per_frame = param.clock_rate * param.channel_count * 
+    param.samples_per_frame = param.clock_rate * param.channel_count *
 			      systest.media_cfg.audio_frame_ptime / 1000;
 
     /* Latency settings */
-    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
 		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
     param.input_latency_ms = systest.media_cfg.snd_rec_latency;
     param.output_latency_ms = systest.media_cfg.snd_play_latency;
@@ -553,11 +553,11 @@ static void systest_audio_test(void)
     textbufpos = strlen(textbuf);
 
     if (result.rec.frame_cnt==0) {
-	problems[problem_count++] = 
+	problems[problem_count++] =
 	    "No audio frames were captured from the microphone. "
 	    "This means the audio device is not working properly.";
     } else {
-	pj_ansi_snprintf(textbuf+textbufpos, 
+	pj_ansi_snprintf(textbuf+textbufpos,
 			 sizeof(textbuf)-textbufpos,
 			 "Rec : interval (min/max/avg/dev)=\r\n"
 			 "         %u/%u/%u/%u (ms)\r\n"
@@ -570,17 +570,17 @@ static void systest_audio_test(void)
 	textbufpos = strlen(textbuf);
 
 	if (result.rec.max_burst > GOOD_MAX_INTERVAL) {
-	    problems[problem_count++] = 
+	    problems[problem_count++] =
 		"Recording max burst is quite high";
 	}
     }
 
     if (result.play.frame_cnt==0) {
-	problems[problem_count++] = 
+	problems[problem_count++] =
 	    "No audio frames were played to the speaker. "
 	    "This means the audio device is not working properly.";
     } else {
-	pj_ansi_snprintf(textbuf+textbufpos, 
+	pj_ansi_snprintf(textbuf+textbufpos,
 			 sizeof(textbuf)-textbufpos,
 			 "Play: interval (min/max/avg/dev)=\r\n"
 			 "         %u/%u/%u/%u (ms)\r\n"
@@ -593,14 +593,14 @@ static void systest_audio_test(void)
 	textbufpos = strlen(textbuf);
 
 	if (result.play.max_burst > GOOD_MAX_INTERVAL) {
-	    problems[problem_count++] = 
+	    problems[problem_count++] =
 		"Playback max burst is quite high";
 	}
     }
 
     if (result.rec_drift_per_sec) {
 	const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";
-	unsigned drift = result.rec_drift_per_sec>=0 ? 
+	unsigned drift = result.rec_drift_per_sec>=0 ?
 			    result.rec_drift_per_sec :
 			    -result.rec_drift_per_sec;
 
@@ -613,7 +613,7 @@ static void systest_audio_test(void)
     }
 
     if (problem_count == 0) {
-	pj_ansi_snprintf(textbuf+textbufpos, 
+	pj_ansi_snprintf(textbuf+textbufpos,
 			 sizeof(textbuf)-textbufpos,
 			 "\r\nThe sound device seems to be okay!");
 	textbufpos = strlen(textbuf);
@@ -623,7 +623,7 @@ static void systest_audio_test(void)
 	unsigned i;
 
 	pj_ansi_snprintf(textbuf+textbufpos,
-			 sizeof(textbuf)-textbufpos, 
+			 sizeof(textbuf)-textbufpos,
 			 "There could be %d problem(s) with the "
 			 "sound device:\r\n",
 			 problem_count);
@@ -631,7 +631,7 @@ static void systest_audio_test(void)
 
 	for (i=0; i<problem_count; ++i) {
 	    pj_ansi_snprintf(textbuf+textbufpos,
-			     sizeof(textbuf)-textbufpos, 
+			     sizeof(textbuf)-textbufpos,
 			     " %d: %s\r\n", i+1, problems[i]);
 	    textbufpos = strlen(textbuf);
 	}
@@ -649,7 +649,7 @@ static void systest_audio_test(void)
  * sound latency test
  */
 static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
-			     unsigned *lat_sum, unsigned *lat_cnt, 
+			     unsigned *lat_sum, unsigned *lat_cnt,
 			     unsigned *lat_min, unsigned *lat_max)
 {
     pjmedia_frame frm;
@@ -688,7 +688,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	return -1;
     }
 
-    /* Zero the first 500ms to remove loud click noises 
+    /* Zero the first 500ms to remove loud click noises
      * (keypad press, etc.)
      */
     pjmedia_zero_samples(buf, clock_rate / 2);
@@ -783,7 +783,7 @@ static void systest_latency_test(void)
 	ti->skipped = PJ_TRUE;
 	return;
     }
-    key = gui_msgbox(title, 
+    key = gui_msgbox(title,
 		     "For this test to work, we must be able to capture "
 		     "the audio played in the speaker (the echo), and only"
 		     " that audio (i.e. you must be in relatively quiet "
@@ -797,7 +797,7 @@ static void systest_latency_test(void)
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
-    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths, 
+    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths,
 			   &play_id);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -816,7 +816,7 @@ static void systest_latency_test(void)
     status = pjsua_conf_connect(play_slot, 0);
     status = pjsua_conf_connect(0, rec_slot);
     status = pjsua_conf_connect(play_slot, rec_slot);
-    
+
 
     /* We're running */
     PJ_LOG(3,(THIS_FILE, "Please wait while test is running (~10 sec)"));
@@ -869,7 +869,7 @@ static void systest_latency_test(void)
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    status = calculate_latency(pool, wav_port, &lat_sum, &lat_cnt, 
+    status = calculate_latency(pool, wav_port, &lat_sum, &lat_cnt,
 			       &lat_min, &lat_max);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -912,7 +912,7 @@ on_return:
 			     "The latency is quite high\r\n");
 	    msglen = strlen(msg);
 	}
-	
+
 	key = gui_msgbox(title, msg, WITH_OK);
 
 	ti->success = PJ_TRUE;
@@ -964,7 +964,7 @@ static void systest_aec_test(void)
     /*
      * Create player and recorder
      */
-    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths, 
+    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths,
 			   &player_id);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s",
@@ -1017,7 +1017,7 @@ static void systest_aec_test(void)
     /* Wait user signal */
     gui_msgbox(title, "We are now playing the captured audio from the mic. "
 		      "Check if echo (of the audio played back previously) is "
-		      "present in the audio. The recording is stored in " 
+		      "present in the audio. The recording is stored in "
 		      AEC_REC_PATH " for offline analysis. "
 		      "Press OK to stop.",
 		      WITH_OK);
@@ -1073,7 +1073,7 @@ static void systest_list_audio_devs()
     test_item_t *ti;
     enum gui_key key;
     const char *title = "Audio Device List";
-    
+
     ti = systest_alloc_test_item(title);
     if (!ti)
 	return;
@@ -1082,7 +1082,7 @@ static void systest_list_audio_devs()
 
     dev_count = pjmedia_aud_dev_count();
     if (dev_count == 0) {
-	key = gui_msgbox(title, 
+	key = gui_msgbox(title,
 			 "No audio devices are found", WITH_OK);
 	ti->success = PJ_FALSE;
 	pj_ansi_strcpy(ti->reason, "No device found");
@@ -1106,13 +1106,14 @@ static void systest_list_audio_devs()
 
 	pj_ansi_snprintf(ti->reason+len, sizeof(ti->reason)-len,
 			 " %2d: %s [%s] (%d/%d)\r\n",
-		          i, info.driver, info.name, 
+		          i, info.driver, info.name,
 			  info.input_count, info.output_count);
 	len = strlen(ti->reason);
     }
 
     ti->reason[len] = '\0';
     key = gui_msgbox(title, ti->reason, WITH_OK);
+    PJ_UNUSED_ARG(key);
 
     ti->success = PJ_TRUE;
 }
@@ -1204,7 +1205,7 @@ static void systest_display_settings(void)
     pj_ansi_strncpy(ti->reason, textbuf, sizeof(ti->reason));
     ti->reason[sizeof(ti->reason)-1] = '\0';
     key = gui_msgbox(title, textbuf, WITH_OK);
-
+    PJ_UNUSED_ARG(key); /* Warning about unused var */
 }
 
 /*****************************************************************/
@@ -1242,7 +1243,7 @@ int systest_init(void)
 #if defined(OVERRIDE_AUDDEV_REC_LAT) && OVERRIDE_AUDDEV_REC_LAT!=0
     systest.media_cfg.snd_rec_latency = OVERRIDE_AUDDEV_REC_LAT;
 #endif
-	
+
     status = pjsua_init(&systest.ua_cfg, &log_cfg, &systest.media_cfg);
     if (status != PJ_SUCCESS) {
 	pjsua_destroy();

@@ -6,28 +6,28 @@
  * SOFTWARE FOR SAMPLING-RATE CONVERSION AND FIR DIGITAL FILTER DESIGN
  *
  * Snippet from the resample.1 man page:
- * 
+ *
  * HISTORY
  *
  * The first version of this software was written by Julius O. Smith III
  * <jos@ccrma.stanford.edu> at CCRMA <http://www-ccrma.stanford.edu> in
  * 1981.  It was called SRCONV and was written in SAIL for PDP-10
  * compatible machines.  The algorithm was first published in
- * 
+ *
  * Smith, Julius O. and Phil Gossett. ``A Flexible Sampling-Rate
  * Conversion Method,'' Proceedings (2): 19.4.1-19.4.4, IEEE Conference
  * on Acoustics, Speech, and Signal Processing, San Diego, March 1984.
- * 
+ *
  * An expanded tutorial based on this paper is available at the Digital
  * Audio Resampling Home Page given above.
- * 
+ *
  * Circa 1988, the SRCONV program was translated from SAIL to C by
  * Christopher Lee Fraley working with Roger Dannenberg at CMU.
- * 
+ *
  * Since then, the C version has been maintained by jos.
- * 
+ *
  * Sndlib support was added 6/99 by John Gibson <jgg9c@virginia.edu>.
- * 
+ *
  * The resample program is free software distributed in accordance
  * with the Lesser GNU Public License (LGPL).  There is NO warranty; not
  * even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
@@ -77,7 +77,7 @@
 
 #undef INLINE
 #define INLINE
-#define HAVE_FILTER 0    
+#define HAVE_FILTER 0
 
 #ifndef NULL
 #   define NULL	0
@@ -94,14 +94,14 @@ static INLINE RES_HWORD WordToHword(RES_WORD v, int scl)
 	v = MAX_HWORD;
     } else if (v < MIN_HWORD) {
 	v = MIN_HWORD;
-    }	
+    }
     out = (RES_HWORD) v;
     return out;
 }
 
 /* Sampling rate conversion using linear interpolation for maximum speed.
  */
-static int 
+static int
   SrcLinear(const RES_HWORD X[], RES_HWORD Y[], double pFactor, RES_UHWORD nx)
 {
     RES_HWORD iconst;
@@ -109,19 +109,19 @@ static int
     const RES_HWORD *xp;
     RES_HWORD *Ystart, *Yend;
     RES_WORD v,x1,x2;
-    
-    double dt;                  /* Step through input signal */ 
+
+    double dt;                  /* Step through input signal */
     RES_UWORD dtb;                  /* Fixed-point version of Dt */
-    RES_UWORD endTime;              /* When time reaches EndTime, return to user */
-    
+    //RES_UWORD endTime;              /* When time reaches EndTime, return to user */
+
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
-    
+
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
-    endTime = time + (1<<Np)*(RES_WORD)nx;
-    
-    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    //endTime = time + (1<<Np)*(RES_WORD)nx;
+
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0),
     // so it may cause resample write pass the output buffer (Y >= Yend).
     // while (time < endTime)
     while (Y < Yend)
@@ -139,7 +139,7 @@ static int
     return (Y - Ystart);            /* Return number of output samples */
 }
 
-static RES_WORD FilterUp(const RES_HWORD Imp[], const RES_HWORD ImpD[], 
+static RES_WORD FilterUp(const RES_HWORD Imp[], const RES_HWORD ImpD[],
 		     RES_UHWORD Nwing, RES_BOOL Interp,
 		     const RES_HWORD *Xp, RES_HWORD Ph, RES_HWORD Inc)
 {
@@ -148,7 +148,7 @@ static RES_WORD FilterUp(const RES_HWORD Imp[], const RES_HWORD ImpD[],
     const RES_HWORD *End;
     RES_HWORD a = 0;
     RES_WORD v, t;
-    
+
     v=0;
     Hp = &Imp[Ph>>Na];
     End = &Imp[Nwing];
@@ -178,8 +178,8 @@ static RES_WORD FilterUp(const RES_HWORD Imp[], const RES_HWORD ImpD[],
 	  Hp += Npc;		/* Filter coeff step */
 
 	  Xp += Inc;		/* Input signal step. NO CHECK ON BOUNDS */
-      } 
-    else 
+      }
+    else
       while (Hp < End) {
 	  t = *Hp;		/* Get filter coeff */
 	  t *= *Xp;		/* Mult coeff by input sample */
@@ -202,7 +202,7 @@ static RES_WORD FilterUD(const RES_HWORD Imp[], const RES_HWORD ImpD[],
     const RES_HWORD *Hp, *Hdp, *End;
     RES_WORD v, t;
     RES_UWORD Ho;
-    
+
     v=0;
     Ho = (Ph*(RES_UWORD)dhb)>>Np;
     End = &Imp[Nwing];
@@ -227,7 +227,7 @@ static RES_WORD FilterUD(const RES_HWORD Imp[], const RES_HWORD ImpD[],
 	  Ho += dhb;		/* IR step */
 	  Xp += Inc;		/* Input signal step. NO CHECK ON BOUNDS */
       }
-    else 
+    else
       while ((Hp = &Imp[Ho>>Na]) < End) {
 	  t = *Hp;		/* Get IR sample */
 	  t *= *Xp;		/* Mult coeff by input sample */
@@ -244,27 +244,27 @@ static RES_WORD FilterUD(const RES_HWORD Imp[], const RES_HWORD ImpD[],
 /* Sampling rate up-conversion only subroutine;
  * Slightly faster than down-conversion;
  */
-static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 		 RES_UHWORD nx, RES_UHWORD pNwing, RES_UHWORD pLpScl,
 		 const RES_HWORD pImp[], const RES_HWORD pImpD[], RES_BOOL Interp)
 {
     const RES_HWORD *xp;
     RES_HWORD *Ystart, *Yend;
     RES_WORD v;
-    
-    double dt;                  /* Step through input signal */ 
+
+    double dt;                  /* Step through input signal */
     RES_UWORD dtb;                  /* Fixed-point version of Dt */
     RES_UWORD time = 0;
-    RES_UWORD endTime;              /* When time reaches EndTime, return to user */
-    
+    //RES_UWORD endTime;              /* When time reaches EndTime, return to user */
+
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
-    
+
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
-    endTime = time + (1<<Np)*(RES_WORD)nx;
+    //endTime = time + (1<<Np)*(RES_WORD)nx;
 
-    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0),
     // so it may cause resample write pass the output buffer (Y >= Yend).
     // while (time < endTime)
     while (Y < Yend)
@@ -288,31 +288,31 @@ static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 
 /* Sampling rate conversion subroutine */
 
-static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 		 RES_UHWORD nx, RES_UHWORD pNwing, RES_UHWORD pLpScl,
 		 const RES_HWORD pImp[], const RES_HWORD pImpD[], RES_BOOL Interp)
 {
     const RES_HWORD *xp;
     RES_HWORD *Ystart, *Yend;
     RES_WORD v;
-    
+
     double dh;                  /* Step through filter impulse response */
     double dt;                  /* Step through input signal */
     RES_UWORD time = 0;
-    RES_UWORD endTime;          /* When time reaches EndTime, return to user */
+    //RES_UWORD endTime;          /* When time reaches EndTime, return to user */
     RES_UWORD dhb, dtb;         /* Fixed-point versions of Dh,Dt */
-    
+
     dt = 1.0/pFactor;            /* Output sampling period */
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
-    
+
     dh = MIN(Npc, pFactor*Npc);  /* Filter sampling period */
     dhb = dh*(1<<Na) + 0.5;     /* Fixed-point representation */
-    
+
     Ystart = Y;
     Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
-    endTime = time + (1<<Np)*(RES_WORD)nx;
+    //endTime = time + (1<<Np)*(RES_WORD)nx;
 
-    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0),
     // so it may cause resample write pass the output buffer (Y >= Yend).
     // while (time < endTime)
     while (Y < Yend)
@@ -331,13 +331,13 @@ static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 }
 
 
-DECL(int) res_SrcLinear(const RES_HWORD X[], RES_HWORD Y[], 
+DECL(int) res_SrcLinear(const RES_HWORD X[], RES_HWORD Y[],
 		        double pFactor, RES_UHWORD nx)
 {
     return SrcLinear(X, Y, pFactor, nx);
 }
 
-DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
+DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 		       RES_UHWORD nx, RES_BOOL LargeF, RES_BOOL Interp)
 {
     if (pFactor >= 1) {
@@ -354,11 +354,11 @@ DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     } else {
 
 	if (LargeF)
-	    return SrcUD(X, Y, pFactor, nx, 
+	    return SrcUD(X, Y, pFactor, nx,
 			 LARGE_FILTER_NWING, LARGE_FILTER_SCALE * pFactor + 0.5,
 			 LARGE_FILTER_IMP, LARGE_FILTER_IMPD, Interp);
 	else
-	    return SrcUD(X, Y, pFactor, nx, 
+	    return SrcUD(X, Y, pFactor, nx,
 			 SMALL_FILTER_NWING, SMALL_FILTER_SCALE * pFactor + 0.5,
 			 SMALL_FILTER_IMP, SMALL_FILTER_IMPD, Interp);
 
@@ -368,10 +368,10 @@ DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
 DECL(int) res_GetXOFF(double pFactor, RES_BOOL LargeF)
 {
     if (LargeF)
-	return (LARGE_FILTER_NMULT + 1) / 2.0  *  
+	return (LARGE_FILTER_NMULT + 1) / 2.0  *
 	        MAX(1.0, 1.0/pFactor);
     else
-	return (SMALL_FILTER_NMULT + 1) / 2.0  *  
+	return (SMALL_FILTER_NMULT + 1) / 2.0  *
 		MAX(1.0, 1.0/pFactor);
 }
 

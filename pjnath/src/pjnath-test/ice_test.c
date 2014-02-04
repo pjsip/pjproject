@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "test.h"
 #include "server.h"
@@ -112,11 +112,11 @@ struct test_sess
 
 
 static void ice_on_rx_data(pj_ice_strans *ice_st,
-			   unsigned comp_id, 
+			   unsigned comp_id,
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len);
-static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_ice_strans_op op,
 			        pj_status_t status);
 static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
@@ -201,7 +201,7 @@ static int create_ice_strans(struct test_sess *test_sess,
     *p_ice = ice;
     return PJ_SUCCESS;
 }
-			     
+
 /* Create test session */
 static int create_sess(pj_stun_config *stun_cfg,
 		       unsigned server_flag,
@@ -238,7 +238,7 @@ static int create_sess(pj_stun_config *stun_cfg,
 	destroy_sess(sess, 500);
 	return -10;
     }
-    sess->server->turn_respond_allocate = 
+    sess->server->turn_respond_allocate =
 	sess->server->turn_respond_refresh = PJ_TRUE;
 
     /* Create resolver */
@@ -318,7 +318,7 @@ static void destroy_sess(struct test_sess *sess, unsigned wait_msec)
 }
 
 static void ice_on_rx_data(pj_ice_strans *ice_st,
-			   unsigned comp_id, 
+			   unsigned comp_id,
 			   void *pkt, pj_size_t size,
 			   const pj_sockaddr_t *src_addr,
 			   unsigned src_addr_len)
@@ -335,7 +335,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st,
 }
 
 
-static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_ice_strans_op op,
 			        pj_status_t status)
 {
@@ -436,14 +436,14 @@ static int check_pair(const struct ice_ept *ept1, const struct ice_ept *ept2,
     /* Extra components must not have valid pair */
     for (; i<max_cnt; ++i) {
 	if (ept1->cfg.comp_cnt>i &&
-	    pj_ice_strans_get_valid_pair(ept1->ice, i+1) != NULL) 
+	    pj_ice_strans_get_valid_pair(ept1->ice, i+1) != NULL)
 	{
 	    PJ_LOG(3,(THIS_FILE, INDENT "err: ice1 shouldn't have valid pair "
 		          "for component %d", i+1));
 	    return start_err - 8;
 	}
 	if (ept2->cfg.comp_cnt>i &&
-	    pj_ice_strans_get_valid_pair(ept2->ice, i+1) != NULL) 
+	    pj_ice_strans_get_valid_pair(ept2->ice, i+1) != NULL)
 	{
 	    PJ_LOG(3,(THIS_FILE, INDENT "err: ice2 shouldn't have valid pair "
 		          "for component %d", i+1));
@@ -463,7 +463,7 @@ static int check_pair(const struct ice_ept *ept1, const struct ice_ept *ept2,
 				    poll_events(stun_cfg, 10, PJ_FALSE); \
 				    pj_gettimeofday(&t); \
 				    if (expr) { \
-					rc = PJ_SUCCESS; \
+					RC = PJ_SUCCESS; \
 					break; \
 				    } \
 				    PJ_TIME_VAL_SUB(t, t0); \
@@ -477,13 +477,13 @@ int worker_thread_proc(void *data)
     pj_status_t rc;
     struct test_sess *sess = (struct test_sess *) data;
     pj_stun_config *stun_cfg = sess->stun_cfg;
-    
+
     /* Wait until negotiation is complete on both endpoints */
 #define ALL_DONE    (sess->param->worker_quit || \
 			(sess->caller.result.nego_status!=PJ_EPENDING && \
 			 sess->callee.result.nego_status!=PJ_EPENDING))
     WAIT_UNTIL(sess->param->worker_timeout, ALL_DONE, rc);
-    
+    PJ_UNUSED_ARG(rc);
     return 0;
 }
 
@@ -538,7 +538,7 @@ static int perform_test2(const char *title,
 	goto on_return;
     }
     /* Init ICE on caller */
-    rc = pj_ice_strans_init_ice(sess->caller.ice, sess->caller.cfg.role, 
+    rc = pj_ice_strans_init_ice(sess->caller.ice, sess->caller.cfg.role,
 				&sess->caller.ufrag, &sess->caller.pass);
     if (rc != PJ_SUCCESS) {
 	app_perror(INDENT "err: caller pj_ice_strans_init_ice()", rc);
@@ -547,7 +547,7 @@ static int perform_test2(const char *title,
     }
 
     /* Init ICE on callee */
-    rc = pj_ice_strans_init_ice(sess->callee.ice, sess->callee.cfg.role, 
+    rc = pj_ice_strans_init_ice(sess->callee.ice, sess->callee.cfg.role,
 				&sess->callee.ufrag, &sess->callee.pass);
     if (rc != PJ_SUCCESS) {
 	app_perror(INDENT "err: callee pj_ice_strans_init_ice()", rc);
@@ -596,7 +596,7 @@ static int perform_test2(const char *title,
 	}
 	goto on_destroy;
     }
-    
+
     WAIT_UNTIL(30000, ALL_DONE, rc);
     if (!ALL_DONE) {
 	PJ_LOG(3,(THIS_FILE, INDENT "err: negotiation timed-out"));
@@ -690,7 +690,7 @@ int ice_test(void)
 	unsigned	 server_flag;
 	struct test_cfg	 ua1;
 	struct test_cfg	 ua2;
-    } sess_cfg[] = 
+    } sess_cfg[] =
     {
 	/*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
 	{
@@ -740,7 +740,7 @@ int ice_test(void)
 
     /* Simple test first with host candidate */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "Basic with host candidates",
 	    0x0,
@@ -749,23 +749,23 @@ int ice_test(void)
 	    {ROLE2,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
-	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
 
 	cfg.ua1.comp_cnt = 2;
 	cfg.ua2.comp_cnt = 2;
-	rc = perform_test("Basic with host candidates, 2 components", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("Basic with host candidates, 2 components",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
     }
-    
+
     /* Simple test first with srflx candidate */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "Basic with srflx candidates",
 	    0xFFFF,
@@ -774,7 +774,7 @@ int ice_test(void)
 	    {ROLE2,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
-	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -782,8 +782,8 @@ int ice_test(void)
 	cfg.ua1.comp_cnt = 2;
 	cfg.ua2.comp_cnt = 2;
 
-	rc = perform_test("Basic with srflx candidates, 2 components", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("Basic with srflx candidates, 2 components",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -791,7 +791,7 @@ int ice_test(void)
 
     /* Simple test with relay candidate */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "Basic with relay candidates",
 	    0xFFFF,
@@ -800,7 +800,7 @@ int ice_test(void)
 	    {ROLE2,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
-	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -808,8 +808,8 @@ int ice_test(void)
 	cfg.ua1.comp_cnt = 2;
 	cfg.ua2.comp_cnt = 2;
 
-	rc = perform_test("Basic with relay candidates, 2 components", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("Basic with relay candidates, 2 components",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -817,7 +817,7 @@ int ice_test(void)
 
     /* Failure test with STUN resolution */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "STUN resolution failure",
 	    0x0,
@@ -834,8 +834,8 @@ int ice_test(void)
 	cfg.ua1.client_flag |= DEL_ON_ERR;
 	cfg.ua2.client_flag |= DEL_ON_ERR;
 
-	rc = perform_test("STUN resolution failure with destroy on callback", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("STUN resolution failure with destroy on callback",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -843,7 +843,7 @@ int ice_test(void)
 
     /* Failure test with TURN resolution */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "TURN allocation failure",
 	    0xFFFF,
@@ -852,7 +852,7 @@ int ice_test(void)
 	    {ROLE2,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}}
 	};
 
-	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -860,8 +860,8 @@ int ice_test(void)
 	cfg.ua1.client_flag |= DEL_ON_ERR;
 	cfg.ua2.client_flag |= DEL_ON_ERR;
 
-	rc = perform_test("TURN allocation failure with destroy on callback", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("TURN allocation failure with destroy on callback",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -870,7 +870,7 @@ int ice_test(void)
 
     /* STUN failure, testing TURN deallocation */
     if (1) {
-	struct sess_cfg_t cfg = 
+	struct sess_cfg_t cfg =
 	{
 	    "STUN failure, testing TURN deallocation",
 	    0xFFFF & (~(CREATE_STUN_SERVER)),
@@ -887,8 +887,8 @@ int ice_test(void)
 	cfg.ua1.client_flag |= DEL_ON_ERR;
 	cfg.ua2.client_flag |= DEL_ON_ERR;
 
-	rc = perform_test("STUN failure, testing TURN deallocation (cb)", 
-			  &stun_cfg, cfg.server_flag, 
+	rc = perform_test("STUN failure, testing TURN deallocation (cb)",
+			  &stun_cfg, cfg.server_flag,
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
 	    goto on_return;
@@ -908,7 +908,7 @@ int ice_test(void)
 	    struct role_t {
 		pj_ice_sess_role	ua1;
 		pj_ice_sess_role	ua2;
-	    } role[] = 
+	    } role[] =
 	    {
 		{ ROLE1, ROLE2},
 		{ ROLE2, ROLE1},
@@ -936,14 +936,14 @@ int ice_test(void)
 		    for (k2=1; k2<=2; ++k2) {
 			char title[120];
 
-			sprintf(title, 
-				"%s/%s, %dms answer delay, %d vs %d components", 
+			sprintf(title,
+				"%s/%s, %dms answer delay, %d vs %d components",
 				pj_ice_sess_role_name(role[j].ua1),
 				pj_ice_sess_role_name(role[j].ua2),
 				delay[d], k1, k2);
 
 			cfg->ua2.comp_cnt = k2;
-			rc = perform_test(title, &stun_cfg, cfg->server_flag, 
+			rc = perform_test(title, &stun_cfg, cfg->server_flag,
 					  &cfg->ua1, &cfg->ua2);
 			if (rc != 0)
 			    goto on_return;
@@ -1021,14 +1021,14 @@ int ice_conc_test(void)
     pj_stun_config stun_cfg;
     unsigned i;
     int rc;
-    
+
     pool = pj_pool_create(mem, NULL, 512, 512, NULL);
     rc = create_stun_config(pool, &stun_cfg);
     if (rc != PJ_SUCCESS) {
 	pj_pool_release(pool);
 	return -7;
     }
-    
+
     for (i = 0; i < LOOP; i++) {
 	PJ_LOG(3,(THIS_FILE, INDENT "Test %d of %d", i+1, LOOP));
 	rc = ice_one_conc_test(&stun_cfg, PJ_TRUE);
@@ -1038,7 +1038,7 @@ int ice_conc_test(void)
 
     /* Avoid compiler warning */
     goto on_return;
-    
+
 on_return:
     destroy_stun_config(&stun_cfg);
     pj_pool_release(pool);
