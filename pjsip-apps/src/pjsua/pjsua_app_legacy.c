@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include <pjsua-lib/pjsua.h>
@@ -47,10 +47,10 @@ static void print_buddy_list()
 	    if (pjsua_buddy_get_info(ids[i], &info) != PJ_SUCCESS)
 		continue;
 
-	    printf(" [%2d] <%.*s>  %.*s\n", 
-		    ids[i]+1, 
+	    printf(" [%2d] <%.*s>  %.*s\n",
+		    ids[i]+1,
 		    (int)info.status_text.slen,
-		    info.status_text.ptr, 
+		    info.status_text.ptr,
 		    (int)info.uri.slen,
 		    info.uri.ptr);
 	}
@@ -61,7 +61,7 @@ static void print_buddy_list()
 /*
  * Input URL.
  */
-static void ui_input_url(const char *title, char *buf, pj_size_t len, 
+static void ui_input_url(const char *title, char *buf, pj_size_t len,
 			 input_result *result)
 {
     result->nb_result = PJSUA_APP_NO_NB;
@@ -97,9 +97,9 @@ static void ui_input_url(const char *title, char *buf, pj_size_t len,
 	return;
 
     if (pj_isdigit(*buf) || *buf=='-') {
-	
+
 	unsigned i;
-	
+
 	if (*buf=='-')
 	    i = 1;
 	else
@@ -114,8 +114,8 @@ static void ui_input_url(const char *title, char *buf, pj_size_t len,
 
 	result->nb_result = my_atoi(buf);
 
-	if (result->nb_result >= 0 && 
-	    result->nb_result <= (int)pjsua_get_buddy_count()) 
+	if (result->nb_result >= 0 &&
+	    result->nb_result <= (int)pjsua_get_buddy_count())
 	{
 	    return;
 	}
@@ -154,7 +154,7 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
 
     if (!*buf)
 	return PJ_FALSE;
-    
+
     return PJ_TRUE;
 }
 
@@ -169,7 +169,7 @@ static void print_acc_status(int acc_id)
     pjsua_acc_get_info(acc_id, &info);
 
     if (!info.has_registration) {
-	pj_ansi_snprintf(buf, sizeof(buf), "%.*s", 
+	pj_ansi_snprintf(buf, sizeof(buf), "%.*s",
 			 (int)info.status_text.slen,
 			 info.status_text.ptr);
 
@@ -185,7 +185,7 @@ static void print_acc_status(int acc_id)
 
     printf(" %c[%2d] %.*s: %s\n", (acc_id==current_acc?'*':' '),
 	   acc_id,  (int)info.acc_uri.slen, info.acc_uri.ptr, buf);
-    printf("       Online status: %.*s\n", 
+    printf("       Online status: %.*s\n",
 	(int)info.online_status_text.slen,
 	info.online_status_text.ptr);
 }
@@ -208,7 +208,7 @@ static void keystroke_help()
 	print_acc_status(acc_ids[i]);
 
     print_buddy_list();
-    
+
     //puts("Commands:");
     puts("+=============================================================================+");
     puts("|       Call Commands:         |   Buddy, IM & Presence:  |     Account:      |");
@@ -385,7 +385,7 @@ static void vid_handle_menu(char *menuin)
 	    status = pjsua_call_set_vid_strm(current_call,
 	                                     PJSUA_CALL_VID_STRM_ADD, NULL);
 	}
-	else if (argc >= 3 && 
+	else if (argc >= 3 &&
 		 (strcmp(argv[2], "disable")==0 || strcmp(argv[2], "enable")==0))
 	{
 	    pj_bool_t enable = (strcmp(argv[2], "enable") == 0);
@@ -513,7 +513,7 @@ static void vid_handle_menu(char *menuin)
 
 		    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
 								 PJ_TRUE);
-		    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f  %4d/%4d  %dx%d", 
+		    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f  %4d/%4d  %dx%d",
 			      (int)ci[i].codec_id.slen, ci[i].codec_id.ptr,
 			      13-(int)ci[i].codec_id.slen, "                ",
 			      ci[i].priority,
@@ -590,14 +590,14 @@ on_error:
 
 /** UI Command **/
 static void ui_make_new_call()
-{    
+{
     char buf[128];
     pjsua_msg_data msg_data;
     input_result result;
     pj_str_t tmp;
 
     printf("(You currently have %d calls)\n", pjsua_call_get_count());
-    
+
     ui_input_url("Make call", buf, sizeof(buf), &result);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
@@ -619,7 +619,7 @@ static void ui_make_new_call()
 
     pjsua_msg_data_init(&msg_data);
     TEST_MULTIPART(&msg_data);
-    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL, 
+    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
 			 &msg_data, &current_call);
 }
 
@@ -753,7 +753,7 @@ static void ui_answer_call()
 	call_info.state = PJSIP_INV_STATE_DISCONNECTED;
     }
 
-    if (current_call == -1 || 
+    if (current_call == -1 ||
 	call_info.role != PJSIP_ROLE_UAS ||
 	call_info.state >= PJSIP_INV_STATE_CONNECTING)
     {
@@ -778,7 +778,7 @@ static void ui_answer_call()
 	pjsua_msg_data_init(&msg_data);
 
 	if (st_code/100 == 3) {
-	    if (!simple_input("Enter URL to be put in Contact", 
+	    if (!simple_input("Enter URL to be put in Contact",
 		contact, sizeof(contact)))
 		return;
 	    hvalue = pj_str(contact);
@@ -789,7 +789,7 @@ static void ui_answer_call()
 
 	/*
 	* Must check again!
-	* Call may have been disconnected while we're waiting for 
+	* Call may have been disconnected while we're waiting for
 	* keyboard input.
 	*/
 	if (current_call == -1) {
@@ -799,7 +799,7 @@ static void ui_answer_call()
 	}
 
 	pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data);
-    }    
+    }
 }
 
 static void ui_hangup_call(char menuin[])
@@ -831,8 +831,8 @@ static void ui_cycle_dialog(char menuin[])
 	pjsua_call_info call_info;
 
 	pjsua_call_get_info(current_call, &call_info);
-	PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s", 
-	    (int)call_info.remote_info.slen, 
+	PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s",
+	    (int)call_info.remote_info.slen,
 	    call_info.remote_info.ptr));
 
     } else {
@@ -911,7 +911,7 @@ static void ui_add_account(pjsua_transport_config *rtp_cfg)
     acc_cfg.cred_info[0].data_type = 0;
     acc_cfg.cred_info[0].data = pj_str(passwd);
 
-    acc_cfg.rtp_cfg = *rtp_cfg;    
+    acc_cfg.rtp_cfg = *rtp_cfg;
     app_config_init_video(&acc_cfg);
 
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
@@ -958,7 +958,7 @@ static void ui_delete_account()
 
 static void ui_call_hold()
 {
-    if (current_call != -1) {		
+    if (current_call != -1) {
 	pjsua_call_set_hold(current_call, NULL);
     } else {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -973,7 +973,7 @@ static void ui_call_reinvite()
 
 static void ui_send_update()
 {
-    if (current_call != -1) {		
+    if (current_call != -1) {
 	pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -1036,16 +1036,16 @@ static void ui_manage_codec_prio()
     }
 
     new_prio = atoi(prio);
-    if (new_prio < 0) 
+    if (new_prio < 0)
 	new_prio = 0;
-    else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST) 
+    else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST)
 	new_prio = PJMEDIA_CODEC_PRIO_HIGHEST;
 
-    status = pjsua_codec_set_priority(pj_cstr(&id, codec), 
+    status = pjsua_codec_set_priority(pj_cstr(&id, codec),
 				      (pj_uint8_t)new_prio);
 #if PJSUA_HAS_VIDEO
     if (status != PJ_SUCCESS) {
-	status = pjsua_vid_codec_set_priority(pj_cstr(&id, codec), 
+	status = pjsua_vid_codec_set_priority(pj_cstr(&id, codec),
 					      (pj_uint8_t)new_prio);
     }
 #endif
@@ -1105,7 +1105,7 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 }
 
 static void ui_call_transfer_replaces(pj_bool_t no_refersub)
-{        
+{
     if (current_call == -1) {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
     } else {
@@ -1178,13 +1178,13 @@ static void ui_call_transfer_replaces(pj_bool_t no_refersub)
 	pjsua_msg_data_init(&msg_data);
 	if (no_refersub) {
 	    /* Add Refer-Sub: false in outgoing REFER request */
-	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB, 
+	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
 					   &STR_FALSE);
 	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 	}
 
-	pjsua_call_xfer_replaces(call, dst_call, 
-				 PJSUA_XFER_NO_REQUIRE_REPLACES, 
+	pjsua_call_xfer_replaces(call, dst_call,
+				 PJSUA_XFER_NO_REQUIRE_REPLACES,
 				 &msg_data);
     }
 }
@@ -1201,7 +1201,7 @@ static void ui_send_dtmf_2833()
 	pj_status_t status;
 	char buf[128];
 
-	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf, 
+	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
 	    sizeof(buf)))
 	{
 	    return;
@@ -1234,7 +1234,7 @@ static void ui_send_dtmf_info()
 	pj_status_t status;
 	char buf[128];
 
-	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf, 
+	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
 	    sizeof(buf)))
 	{
 	    return;
@@ -1259,7 +1259,7 @@ static void ui_send_dtmf_info()
 		buf[i]);
 	    msg_data.msg_body = pj_str(body);
 
-	    status = pjsua_call_send_request(current_call, &SIP_INFO, 
+	    status = pjsua_call_send_request(current_call, &SIP_INFO,
 		&msg_data);
 	    if (status != PJ_SUCCESS) {
 		return;
@@ -1301,7 +1301,7 @@ static void ui_send_arbitrary_request()
 		puts("No current call");
 		return;
 	    }
-	} else {	    
+	} else {
 	    pjsua_buddy_info binfo;
 	    pjsua_buddy_get_info(result.nb_result-1, &binfo);
 	    tmp.ptr = buf;
@@ -1326,7 +1326,7 @@ static void ui_send_arbitrary_request()
 	*/
 	pj_str_t method = pj_str(text);
 	pjsua_call_send_request(current_call, &method, NULL);
-    }	    
+    }
 }
 
 static void ui_echo(char menuin[])
@@ -1361,7 +1361,7 @@ static void ui_sleep(char menuin[])
 
 	delay = pj_strtoul(&tmp);
 	if (delay < 0) delay = 0;
-	pj_thread_sleep(delay);		
+	pj_thread_sleep(delay);
     }
 }
 
@@ -1428,7 +1428,8 @@ static void ui_change_online_status()
     char menuin[32];
     pj_bool_t online_status;
     pjrpid_element elem;
-    int i, choice;
+    int choice;
+    unsigned i;
 
     enum {
 	AVAILABLE, BUSY, OTP, IDLE, AWAY, BRB, OFFLINE, OPT_MAX
@@ -1449,7 +1450,7 @@ static void ui_change_online_status()
 
     printf("\n"
 	   "Choices:\n");
-    for (i=0; i<PJ_ARRAY_SIZE(opts); ++i) {
+    for (i=0; i<(unsigned)PJ_ARRAY_SIZE(opts); ++i) {
 	printf("  %d  %s\n", opts[i].id+1, opts[i].name);
     }
 
@@ -1524,12 +1525,12 @@ static void ui_conf_list()
 	    pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
 	    pj_ansi_strcat(txlist, s);
 	}
-	printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n", 
-	       info.slot_id, 
+	printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n",
+	       info.slot_id,
 	       info.clock_rate/1000,
 	       info.samples_per_frame*1000/info.channel_count/info.clock_rate,
 	       info.channel_count,
-	       (int)info.name.slen, 
+	       (int)info.name.slen,
 	       info.name.ptr,
 	       txlist);
 
@@ -1608,8 +1609,8 @@ static void ui_dump_configuration()
     if (len < 1)
 	PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else
-	PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",	
-		  len, settings));	
+	PJ_LOG(3,(THIS_FILE, "Dumping configuration (%d bytes):\n%s\n",
+		  len, settings));
 }
 
 static void ui_write_settings()
@@ -1654,10 +1655,10 @@ static void ui_call_redirect(char menuin[])
 	if (!pjsua_call_is_active(current_call)) {
 	    PJ_LOG(1,(THIS_FILE, "Call %d has gone", current_call));
 	} else if (menuin[1] == 'a') {
-	    pjsua_call_process_redirect(current_call, 
+	    pjsua_call_process_redirect(current_call,
 		PJSIP_REDIRECT_ACCEPT_REPLACE);
 	} else if (menuin[1] == 'A') {
-	    pjsua_call_process_redirect(current_call, 
+	    pjsua_call_process_redirect(current_call,
 		PJSIP_REDIRECT_ACCEPT);
 	} else if (menuin[1] == 'r') {
 	    pjsua_call_process_redirect(current_call,
@@ -1673,9 +1674,9 @@ static void ui_call_redirect(char menuin[])
  * Main "user interface" loop.
  */
 void legacy_main()
-{    
-    char menuin[80];    
-    char buf[128];    
+{
+    char menuin[80];
+    char buf[128];
 
     keystroke_help();
 
@@ -1685,7 +1686,7 @@ void legacy_main()
 	fflush(stdout);
 
 	if (fgets(menuin, sizeof(menuin), stdin) == NULL) {
-	    /* 
+	    /*
 	     * Be friendly to users who redirect commands into
 	     * program, when file ends, resume with kbd.
 	     * If exit is desired end script with q for quit
@@ -1785,7 +1786,7 @@ void legacy_main()
 	    ui_call_hold();
 	    break;
 
-	case 'v':	    
+	case 'v':
 #if PJSUA_HAS_VIDEO
 	    if (menuin[1]=='i' && menuin[2]=='d' && menuin[3]==' ') {
 		vid_handle_menu(menuin);
@@ -1868,7 +1869,7 @@ void legacy_main()
 	case 'r':
 	    ui_register(menuin);
 	    break;
-	    
+
 	case 't':
 	    ui_toggle_state();
 	    break;
@@ -1890,23 +1891,23 @@ void legacy_main()
 	    break;
 
 	case 'V':
-	    /* Adjust audio volume */	    
+	    /* Adjust audio volume */
 	    ui_adjust_volume();
 	    break;
 
 	case 'd':
 	    if (menuin[1] == 'c') {
-		ui_dump_configuration();	
+		ui_dump_configuration();
 	    } else if (menuin[1] == 'q') {
 		ui_dump_call_quality();
-	    } else {		
+	    } else {
 		ui_app_dump(menuin[1]=='d');
 	    }
 	    break;
 
 	case 'f':
 	    if (simple_input("Enter output filename", buf, sizeof(buf))) {
-		ui_write_settings();		
+		ui_write_settings();
 	    }
 	    break;
 
@@ -1915,7 +1916,7 @@ void legacy_main()
 	    legacy_on_stopped(menuin[0]=='L');
 	    goto on_exit;
 
-	case 'R':	    
+	case 'R':
 	    ui_call_redirect(menuin);
 	    break;
 

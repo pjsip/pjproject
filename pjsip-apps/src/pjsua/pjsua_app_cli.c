@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "pjsua_app_common.h"
@@ -155,14 +155,14 @@ static pj_cli_front_end	   *telnet_front_end = NULL;
 pj_status_t cli_setup_command(pj_cli_t *cli);
 void cli_destroy();
 
-PJ_DEF(void) cli_get_info(char *info, pj_size_t size) 
+PJ_DEF(void) cli_get_info(char *info, pj_size_t size)
 {
     pj_cli_telnet_info telnet_info;
     pj_cli_telnet_get_info(telnet_front_end, &telnet_info);
 
     pj_ansi_snprintf(info, size, "Telnet to %.*s:%d",
-		     (int)telnet_info.ip_address.slen, 
-		     telnet_info.ip_address.ptr, 
+		     (int)telnet_info.ip_address.slen,
+		     telnet_info.ip_address.ptr,
 		     telnet_info.port);
 }
 
@@ -220,7 +220,7 @@ pj_status_t cli_init()
     /* Init console frontend */
     if (app_config.cli_cfg.cli_fe & CLI_FE_CONSOLE) {
 	pj_cli_console_cfg *fe_cfg = &app_config.cli_cfg.console_cfg;
-	
+
 	fe_cfg->quit_command = pj_str("shutdown");
 	status = pj_cli_console_create(cli, fe_cfg,
 				       &cli_cons_sess, NULL);
@@ -261,7 +261,7 @@ pj_status_t cli_main(pj_bool_t wait_telnet_cli)
 void cli_destroy()
 {
     /* Destroy CLI, it will automatically destroy any FEs */
-    if (cli) {		
+    if (cli) {
 	pj_cli_destroy(cli);
 	cli = NULL;
     }
@@ -280,7 +280,7 @@ void cli_destroy()
 }
 
 /* Get input URL */
-static void get_input_url(char *buf, 
+static void get_input_url(char *buf,
 			  pj_size_t len,
 			  pj_cli_cmd_val *cval,
 			  struct input_result *result)
@@ -315,7 +315,7 @@ static void get_input_url(char *buf,
 
 	for (; i<len; ++i) {
 	    if (!pj_isdigit(buf[i])) {
-		pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr, 
+		pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr,
 				      (int)err_invalid_input.slen);
 		return;
 	    }
@@ -323,15 +323,15 @@ static void get_input_url(char *buf,
 
 	result->nb_result = my_atoi(buf);
 
-	if (result->nb_result >= 0 && 
-	    result->nb_result <= (int)pjsua_get_buddy_count()) 
+	if (result->nb_result >= 0 &&
+	    result->nb_result <= (int)pjsua_get_buddy_count())
 	{
 	    return;
 	}
 	if (result->nb_result == -1)
 	    return;
 
-	pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr, 
+	pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr,
 			      (int)err_invalid_input.slen);
 	result->nb_result = PJSUA_APP_NO_NB;
 	return;
@@ -352,14 +352,14 @@ static void get_input_url(char *buf,
 /* Get buddy id */
 static void get_buddy_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	pjsua_buddy_id ids[64];
 	int i = 0;
 	unsigned count = PJ_ARRAY_SIZE(ids);
 	char data_out[64];
 
 	pjsua_enum_buddies(ids, &count);
-	
+
 	if (count > 0) {
 	    for (i=0; i<(int)count; ++i) {
 		pjsua_buddy_info info;
@@ -371,19 +371,19 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 		pj_ansi_snprintf(data_out, sizeof(data_out), "%d", ids[i]+1);
 		pj_strdup2(param->pool, &param->choice[i].value, data_out);
 		pj_bzero(data_out, PJ_ARRAY_SIZE(data_out));
-    	    
+
 		/* Format & fill description */
-		pj_ansi_snprintf(data_out, 
+		pj_ansi_snprintf(data_out,
 				sizeof(data_out),
-				"<%.*s>  %.*s", 		    
+				"<%.*s>  %.*s",
 				(int)info.status_text.slen,
-				info.status_text.ptr, 
+				info.status_text.ptr,
 				(int)info.uri.slen,
 				info.uri.ptr);
 
-		pj_strdup2(param->pool, &param->choice[i].desc, data_out);		
+		pj_strdup2(param->pool, &param->choice[i].desc, data_out);
 		if (++param->cnt >= (param->max_cnt-1))
-		    break;	
+		    break;
 	    }
 	}
 	if (param->arg_id == DYN_CHOICE_BUDDY_ID) {
@@ -399,27 +399,27 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 
 static void get_account_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	char buf[8];
 	char buf_out[80];
 	pjsua_acc_info info;
 
 	pjsua_acc_id acc_ids[16];
 	unsigned count = PJ_ARRAY_SIZE(acc_ids);
-	int i;    
+	int i;
 
 	pjsua_enum_accs(acc_ids, &count);
-        
-	for (i=0; i<(int)count; ++i) {	
+
+	for (i=0; i<(int)count; ++i) {
 	    pj_bzero(&buf_out[0], PJ_ARRAY_SIZE(buf_out));
 
 	    pjsua_acc_get_info(acc_ids[i], &info);
 
-	    pj_ansi_snprintf(buf_out, 
+	    pj_ansi_snprintf(buf_out,
 			     sizeof(buf_out),
-			     "%c%.*s", 
+			     "%c%.*s",
 			     (acc_ids[i]==current_acc?'*':' '),
-			     (int)info.acc_uri.slen, 
+			     (int)info.acc_uri.slen,
 			     info.acc_uri.ptr);
 
 	    pj_bzero(buf, sizeof(buf));
@@ -427,7 +427,7 @@ static void get_account_id(pj_cli_dyn_choice_param *param)
 	    pj_strdup2(param->pool, &param->choice[i].value, buf);
 	    pj_strdup2(param->pool, &param->choice[i].desc, buf_out);
 	    if (++param->cnt >= param->max_cnt)
-		break;	
+		break;
 	}
     }
 }
@@ -449,7 +449,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 
 	pjsua_conf_get_port_info(id[i], &info);
 
-	pj_ansi_snprintf(slot_id, sizeof(slot_id), 
+	pj_ansi_snprintf(slot_id, sizeof(slot_id),
 			 "%d", info.slot_id);
 	pj_strdup2(param->pool, &param->choice[i].value, slot_id);
 
@@ -458,58 +458,58 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	    char s[10];
 	    pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
 	    pj_ansi_strcat(txlist, s);
-	}	
+	}
 
-	pj_ansi_snprintf(desc,  
+	pj_ansi_snprintf(desc,
 	       sizeof(desc),
-	       "[%2dKHz/%dms/%d] %20.*s  transmitting to: %s", 	       
+	       "[%2dKHz/%dms/%d] %20.*s  transmitting to: %s",
 	       info.clock_rate/1000,
 	       info.samples_per_frame*1000/info.channel_count/info.clock_rate,
 	       info.channel_count,
-	       (int)info.name.slen, 
+	       (int)info.name.slen,
 	       info.name.ptr,
 	       txlist);
 
-	pj_strdup2(param->pool, &param->choice[i].desc, desc);	
+	pj_strdup2(param->pool, &param->choice[i].desc, desc);
 	if (++param->cnt >= param->max_cnt)
-	    break;	
+	    break;
     }
 }
 
 static void get_audio_codec_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	pjsua_codec_info c[32];
 	unsigned i, count = PJ_ARRAY_SIZE(c);
 	char codec_id[64];
 	char desc[128];
-        
+
 	pjsua_enum_codecs(c, &count);
-	for (i=0; i<count; ++i) {	
-	    pj_ansi_snprintf(codec_id, sizeof(codec_id), 
-			     "%.*s", (int)c[i].codec_id.slen, 
+	for (i=0; i<count; ++i) {
+	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
+			     "%.*s", (int)c[i].codec_id.slen,
 			     c[i].codec_id.ptr);
 
 	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
 
-	    pj_ansi_snprintf(desc, sizeof(desc), 
-			     "Audio, prio: %d%s%.*s", 
-			     c[i].priority, 
+	    pj_ansi_snprintf(desc, sizeof(desc),
+			     "Audio, prio: %d%s%.*s",
+			     c[i].priority,
 			     c[i].desc.slen? " - ":"",
 			     (int)c[i].desc.slen,
 			     c[i].desc.ptr);
 
 	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
-		break;	
+		break;
 	}
     }
 }
 
-#if PJSUA_HAS_VIDEO  
+#if PJSUA_HAS_VIDEO
 static void get_video_stream_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	pjsua_call_info call_info;
 
 	if (current_call != PJSUA_INVALID_ID) {
@@ -518,70 +518,70 @@ static void get_video_stream_id(pj_cli_dyn_choice_param *param)
 	    for (i=0; i<call_info.media_cnt; ++i) {
 		if (call_info.media[i].type == PJMEDIA_TYPE_VIDEO) {
 		    char med_idx[8];
-		    pj_ansi_snprintf(med_idx, sizeof(med_idx), "%d", 
+		    pj_ansi_snprintf(med_idx, sizeof(med_idx), "%d",
 				     call_info.media[i].index);
 		    pj_strdup2(param->pool, &param->choice[i].value, med_idx);
 
-		    switch (call_info.media[i].status) {		    
+		    switch (call_info.media[i].status) {
 		    case PJSUA_CALL_MEDIA_NONE:
-			pj_strdup2(param->pool, &param->choice[i].desc, 
+			pj_strdup2(param->pool, &param->choice[i].desc,
 				   "Status:None");
 			break;
 		    case PJSUA_CALL_MEDIA_ACTIVE:
-			pj_strdup2(param->pool, &param->choice[i].desc, 
+			pj_strdup2(param->pool, &param->choice[i].desc,
 				   "Status:Active");
 			break;
 		    case PJSUA_CALL_MEDIA_LOCAL_HOLD:
-			pj_strdup2(param->pool, &param->choice[i].desc, 
+			pj_strdup2(param->pool, &param->choice[i].desc,
 				   "Status:Local Hold");
 			break;
 		    case PJSUA_CALL_MEDIA_REMOTE_HOLD:
-			pj_strdup2(param->pool, &param->choice[i].desc, 
+			pj_strdup2(param->pool, &param->choice[i].desc,
 				   "Status:Remote Hold");
 			break;
 		    case PJSUA_CALL_MEDIA_ERROR:
-			pj_strdup2(param->pool, &param->choice[i].desc, 
+			pj_strdup2(param->pool, &param->choice[i].desc,
 				   "Status:Media Error");
 			break;
 		    }
 		    if (++param->cnt >= param->max_cnt)
-			break;	
+			break;
 		}
 	    }
 	}
     }
 }
-  
-static void get_video_dev_hint(pj_cli_dyn_choice_param *param, 
+
+static void get_video_dev_hint(pj_cli_dyn_choice_param *param,
 			       pjmedia_vid_dev_info *vdi,
-			       unsigned vid_dev_id) 
+			       unsigned vid_dev_id)
 {
     char desc[128];
     char dev_id[8];
     pj_ansi_snprintf(dev_id, sizeof(dev_id),
 	"%d", vid_dev_id);
-    pj_ansi_snprintf(desc, sizeof(desc), "%s [%s]", 
+    pj_ansi_snprintf(desc, sizeof(desc), "%s [%s]",
 	vdi->name, vdi->driver);
 
-    pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+    pj_strdup2(param->pool, &param->choice[param->cnt].value,
 	       dev_id);
-    pj_strdup2(param->pool, &param->choice[param->cnt].desc, 
-	       desc);    
+    pj_strdup2(param->pool, &param->choice[param->cnt].desc,
+	       desc);
 }
 
-static void get_video_dev_id(pj_cli_dyn_choice_param *param, 
+static void get_video_dev_id(pj_cli_dyn_choice_param *param,
 			     pj_bool_t all,
 			     pj_bool_t capture)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	unsigned i, count;
 	pjmedia_vid_dev_info vdi;
 	pj_status_t status;
 
 	count = pjsua_vid_dev_count();
-	if (count == 0) {	
+	if (count == 0) {
 	    return;
-	} 
+	}
 
 	for (i=0; i<count; ++i) {
 	    status = pjsua_vid_dev_get_info(i, &vdi);
@@ -589,19 +589,19 @@ static void get_video_dev_id(pj_cli_dyn_choice_param *param,
 		if ((all) ||
 		    ((capture) && (vdi.dir == PJMEDIA_DIR_CAPTURE)) ||
 		    ((!capture) && (vdi.dir == PJMEDIA_DIR_RENDER)))
-		{		
+		{
 		    get_video_dev_hint(param, &vdi, i);
 		    if (++param->cnt >= param->max_cnt)
-			break;	
-		} 
+			break;
+		}
 	    }
 	}
     }
 }
 
 static void get_video_codec_id(pj_cli_dyn_choice_param *param)
-{    
-    if (param->cnt < param->max_cnt) {	
+{
+    if (param->cnt < param->max_cnt) {
 	pjsua_codec_info ci[32];
 	unsigned i, count = PJ_ARRAY_SIZE(ci);
 	char codec_id[64];
@@ -619,29 +619,29 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
 
 	    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
-	    pj_ansi_snprintf(codec_id, sizeof(codec_id), 
-			     "%.*s", (int)ci[i].codec_id.slen, 
+	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
+			     "%.*s", (int)ci[i].codec_id.slen,
 			     ci[i].codec_id.ptr);
 
 	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
 
-	    pj_ansi_snprintf(desc, sizeof(desc), 
-	    		     "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]", 
-	    		     ci[i].priority, 
+	    pj_ansi_snprintf(desc, sizeof(desc),
+	    		     "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]",
+	    		     ci[i].priority,
 			     (vfd->fps.num*1.0/vfd->fps.denum),
 			     vfd->avg_bps/1000, vfd->max_bps/1000,
 			     vfd->size.w, vfd->size.h);
 
-	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);	
+	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
-		break;	
+		break;
 	}
     }
 }
 
 static void get_video_window_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	pjsua_vid_win_id wids[PJSUA_MAX_VID_WINS];
 	unsigned i, cnt = PJ_ARRAY_SIZE(wids);
 	char win_id[64];
@@ -656,21 +656,21 @@ static void get_video_window_id(pj_cli_dyn_choice_param *param)
 	    pj_ansi_snprintf(win_id, sizeof(win_id), "%d", wids[i]);
 	    pj_strdup2(param->pool, &param->choice[i].value, win_id);
 
-	    pj_ansi_snprintf(desc, sizeof(desc), 
-			     "Show:%c Pos(%d,%d)  Size(%dx%d)", 
+	    pj_ansi_snprintf(desc, sizeof(desc),
+			     "Show:%c Pos(%d,%d)  Size(%dx%d)",
 			     (wi.show?'Y':'N'), wi.pos.x, wi.pos.y,
 			     wi.size.w, wi.size.h);
 
-	    pj_strdup2(param->pool, &param->choice[i].desc, desc);	
+	    pj_strdup2(param->pool, &param->choice[i].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
-		break;	
+		break;
 	}
     }
 }
 
 static void get_call_id(pj_cli_dyn_choice_param *param)
 {
-    if (param->cnt < param->max_cnt) {	
+    if (param->cnt < param->max_cnt) {
 	char call_id[64];
 	char desc[128];
 	unsigned i, count;
@@ -690,14 +690,14 @@ static void get_call_id(pj_cli_dyn_choice_param *param)
 		pjsua_call_get_info(ids[i], &call_info);
 		pj_ansi_snprintf(call_id, sizeof(call_id), "%d", ids[i]);
 		pj_strdup2(param->pool, &param->choice[i].value, call_id);
-		pj_ansi_snprintf(desc, sizeof(desc), "%.*s [%.*s]", 
+		pj_ansi_snprintf(desc, sizeof(desc), "%.*s [%.*s]",
 		    (int)call_info.remote_info.slen,
 		    call_info.remote_info.ptr,
 		    (int)call_info.state_text.slen,
 		    call_info.state_text.ptr);
 		pj_strdup2(param->pool, &param->choice[i].desc, desc);
 		if (++param->cnt >= param->max_cnt)
-		    break;	
+		    break;
 
 	    }
 	}
@@ -722,11 +722,11 @@ static void get_choice_value(pj_cli_dyn_choice_param *param)
     case DYN_CHOICE_AUDIO_CODEC_ID:
 	get_audio_codec_id(param);
 	break;
-#if PJSUA_HAS_VIDEO    
-    case DYN_CHOICE_CAP_DEV_ID:	
+#if PJSUA_HAS_VIDEO
+    case DYN_CHOICE_CAP_DEV_ID:
     case DYN_CHOICE_REN_DEV_ID:
     case DYN_CHOICE_VID_DEV_ID:
-	get_video_dev_id(param, 
+	get_video_dev_id(param,
 			 (param->arg_id==DYN_CHOICE_VID_DEV_ID),
 			 (param->arg_id==DYN_CHOICE_CAP_DEV_ID));
 	break;
@@ -749,7 +749,7 @@ static void get_choice_value(pj_cli_dyn_choice_param *param)
     }
 }
 
-/* 
+/*
  * CLI command handler
  */
 
@@ -776,7 +776,7 @@ static pj_status_t cmd_add_account(pj_cli_cmd_val *cval)
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error adding new account", status);
     }
-    
+
     return status;
 }
 
@@ -789,7 +789,7 @@ static pj_status_t cmd_del_account(pj_cli_cmd_val *cval)
     int i = my_atoi(cval->argv[1].ptr);
 
     if (!pjsua_acc_is_valid(i)) {
-	pj_ansi_snprintf(out_str, sizeof(out_str), 
+	pj_ansi_snprintf(out_str, sizeof(out_str),
 		        "Invalid account id %d\n", i);
 	str_len = (unsigned)pj_ansi_strlen(out_str);
 	pj_cli_sess_write_msg(cval->sess, out_str, str_len);
@@ -812,14 +812,14 @@ static pj_status_t cmd_mod_account(pj_cli_cmd_val *cval)
 
 /* Register account */
 static pj_status_t cmd_reg_account()
-{    
+{
     pjsua_acc_set_registration(current_acc, PJ_TRUE);
     return PJ_SUCCESS;
 }
 
 /* Unregister account */
 static pj_status_t cmd_unreg_account()
-{    
+{
     pjsua_acc_set_registration(current_acc, PJ_FALSE);
     return PJ_SUCCESS;
 }
@@ -833,7 +833,7 @@ static pj_status_t cmd_next_account(pj_cli_cmd_val *cval)
 	PJ_LOG(3,(THIS_FILE, "Current account changed to %d", i));
     } else {
 	PJ_LOG(3,(THIS_FILE, "Invalid account id %d", i));
-    }    
+    }
     return PJ_SUCCESS;
 }
 
@@ -843,7 +843,7 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
     pjsua_acc_id acc_ids[16];
     unsigned count = PJ_ARRAY_SIZE(acc_ids);
     int i;
-    static const pj_str_t header = {"Account list:\n", 15};    
+    static const pj_str_t header = {"Account list:\n", 15};
 
     pjsua_enum_accs(acc_ids, &count);
 
@@ -856,7 +856,7 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
 	pjsua_acc_get_info(acc_ids[i], &info);
 
 	if (!info.has_registration) {
-	    pj_ansi_snprintf(acc_info, sizeof(acc_info), "%.*s", 
+	    pj_ansi_snprintf(acc_info, sizeof(acc_info), "%.*s",
 			     (int)info.status_text.slen,
 			     info.status_text.ptr);
 
@@ -870,16 +870,16 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
 
 	}
 
-	pj_ansi_snprintf(out_str, sizeof(out_str), 
-			 " %c[%2d] %.*s: %s\n", 
-			 (acc_ids[i]==current_acc?'*':' '), acc_ids[i],  
-			 (int)info.acc_uri.slen, info.acc_uri.ptr, 
+	pj_ansi_snprintf(out_str, sizeof(out_str),
+			 " %c[%2d] %.*s: %s\n",
+			 (acc_ids[i]==current_acc?'*':' '), acc_ids[i],
+			 (int)info.acc_uri.slen, info.acc_uri.ptr,
 			 acc_info);
 	pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
 
 	pj_bzero(out_str, sizeof(out_str));
 	pj_ansi_snprintf(out_str, sizeof(out_str),
-			 "       Online status: %.*s\n", 
+			 "       Online status: %.*s\n",
 			 (int)info.online_status_text.slen,
 			 info.online_status_text.ptr);
 
@@ -891,7 +891,7 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
 
 /* Account command handler */
 pj_status_t cmd_account_handler(pj_cli_cmd_val *cval)
-{    
+{
     pj_status_t status = PJ_SUCCESS;
 
     CHECK_PJSUA_RUNNING();
@@ -912,20 +912,20 @@ pj_status_t cmd_account_handler(pj_cli_cmd_val *cval)
     case CMD_ACCOUNT_UNREG:
 	status = cmd_unreg_account();
 	break;
-    case CMD_ACCOUNT_NEXT:	
+    case CMD_ACCOUNT_NEXT:
     case CMD_ACCOUNT_PREV:
-	status = cmd_next_account(cval);	
+	status = cmd_next_account(cval);
 	break;
     case CMD_ACCOUNT_SHOW:
 	status = cmd_show_account(cval);
 	break;
-    }    
+    }
     return status;
 }
 
 /* Add buddy */
 static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
-{    
+{
     char out_str[80];
     pjsua_buddy_config buddy_cfg;
     pjsua_buddy_id buddy_id;
@@ -933,7 +933,7 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
     cval->argv[1].ptr[cval->argv[1].slen] = 0;
 
     if (pjsua_verify_url(cval->argv[1].ptr) != PJ_SUCCESS) {
-	pj_ansi_snprintf(out_str, sizeof(out_str), 
+	pj_ansi_snprintf(out_str, sizeof(out_str),
 			 "Invalid URI '%s'\n", cval->argv[1].ptr);
     } else {
 	pj_bzero(&buddy_cfg, sizeof(pjsua_buddy_config));
@@ -943,10 +943,10 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
 
 	status = pjsua_buddy_add(&buddy_cfg, &buddy_id);
 	if (status == PJ_SUCCESS) {
-	    pj_ansi_snprintf(out_str, sizeof(out_str), 
+	    pj_ansi_snprintf(out_str, sizeof(out_str),
 			      "New buddy '%s' added at index %d\n",
 			      cval->argv[1].ptr, buddy_id+1);
-	}   
+	}
     }
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
     return status;
@@ -954,17 +954,17 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
 
 /* Delete buddy */
 static pj_status_t cmd_del_buddy(pj_cli_cmd_val *cval)
-{    
+{
     int i = my_atoi(cval->argv[1].ptr) - 1;
     char out_str[80];
 
     if (!pjsua_buddy_is_valid(i)) {
-	pj_ansi_snprintf(out_str, sizeof(out_str), 
-			 "Invalid buddy id %d\n", i);	
+	pj_ansi_snprintf(out_str, sizeof(out_str),
+			 "Invalid buddy id %d\n", i);
     } else {
 	pjsua_buddy_del(i);
-	pj_ansi_snprintf(out_str, sizeof(out_str), 
-			 "Buddy %d deleted\n", i);		
+	pj_ansi_snprintf(out_str, sizeof(out_str),
+			 "Buddy %d deleted\n", i);
     }
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
     return PJ_SUCCESS;
@@ -972,31 +972,31 @@ static pj_status_t cmd_del_buddy(pj_cli_cmd_val *cval)
 
 /* Send IM */
 static pj_status_t cmd_send_im(pj_cli_cmd_val *cval)
-{    
-    int i = -1;    
+{
+    int i = -1;
     struct input_result result;
     char dest[64];
-    pj_str_t tmp = pj_str(dest);    
+    pj_str_t tmp = pj_str(dest);
 
     /* make compiler happy. */
     char *uri = NULL;
 
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
-    
+
     /* input destination. */
     get_input_url(tmp.ptr, tmp.slen, cval, &result);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 
-	if (result.nb_result == -1) {	    
+	if (result.nb_result == -1) {
 	    static const pj_str_t err_msg = {"you can't send broadcast im "
-					     "like that!\n", 40 };	    
+					     "like that!\n", 40 };
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	    return PJ_SUCCESS;
 	} else if (result.nb_result == 0) {
 	    i = current_call;
 	} else {
 	    pjsua_buddy_info binfo;
-	    pjsua_buddy_get_info(result.nb_result-1, &binfo);	    
+	    pjsua_buddy_get_info(result.nb_result-1, &binfo);
 	    pj_strncpy_with_null(&tmp, &binfo.uri, sizeof(dest));
 	    uri = tmp.ptr;
 	}
@@ -1025,13 +1025,13 @@ static pj_status_t cmd_send_im(pj_cli_cmd_val *cval)
 
 /* Subscribe/unsubscribe presence */
 static pj_status_t cmd_subs_pres(pj_cli_cmd_val *cval, pj_bool_t subscribe)
-{   
-    struct input_result result;    
+{
+    struct input_result result;
     char dest[64] = {0};
     pj_str_t tmp = pj_str(dest);
-    
+
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
-    get_input_url(tmp.ptr, tmp.slen, cval, &result);    
+    get_input_url(tmp.ptr, tmp.slen, cval, &result);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 	if (result.nb_result == -1) {
 	    int i, count;
@@ -1058,14 +1058,14 @@ static pj_status_t cmd_subs_pres(pj_cli_cmd_val *cval, pj_bool_t subscribe)
 
 /* Toggle online state */
 static pj_status_t cmd_toggle_state(pj_cli_cmd_val *cval)
-{    
+{
     char out_str[128];
     pjsua_acc_info acc_info;
 
     pjsua_acc_get_info(current_acc, &acc_info);
     acc_info.online_status = !acc_info.online_status;
     pjsua_acc_set_online_status(current_acc, acc_info.online_status);
-    pj_ansi_snprintf(out_str, sizeof(out_str), 
+    pj_ansi_snprintf(out_str, sizeof(out_str),
 		     "Setting %s online status to %s\n",
 		     acc_info.acc_uri.ptr,
 		    (acc_info.online_status?"online":"offline"));
@@ -1075,7 +1075,7 @@ static pj_status_t cmd_toggle_state(pj_cli_cmd_val *cval)
 
 /* Set presence text */
 static pj_status_t cmd_set_presence_text(pj_cli_cmd_val *cval)
-{    
+{
     pjrpid_element elem;
     int choice;
     pj_bool_t online_status;
@@ -1124,11 +1124,11 @@ static pj_status_t cmd_set_presence_text(pj_cli_cmd_val *cval)
 
 /* Show buddy list */
 static pj_status_t cmd_show_buddy(pj_cli_cmd_val *cval)
-{        
+{
     pjsua_buddy_id ids[64];
     int i;
     unsigned count = PJ_ARRAY_SIZE(ids);
-    static const pj_str_t header = {"Buddy list:\n", 13};    
+    static const pj_str_t header = {"Buddy list:\n", 13};
     char out_str[64];
 
     pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
@@ -1139,30 +1139,30 @@ static pj_status_t cmd_show_buddy(pj_cli_cmd_val *cval)
 	pj_ansi_snprintf(out_str, sizeof(out_str), " -none-\n");
 	pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
     } else {
-	for (i=0; i<(int)count; ++i) {	    
+	for (i=0; i<(int)count; ++i) {
 	    pjsua_buddy_info info;
 	    pj_bzero(out_str, sizeof(out_str));
 
 	    if (pjsua_buddy_get_info(ids[i], &info) != PJ_SUCCESS)
 		continue;
 
-	    pj_ansi_snprintf(out_str, sizeof(out_str), 
-		    " [%2d] <%.*s>  %.*s\n", 
-		    ids[i]+1, 
+	    pj_ansi_snprintf(out_str, sizeof(out_str),
+		    " [%2d] <%.*s>  %.*s\n",
+		    ids[i]+1,
 		    (int)info.status_text.slen,
-		    info.status_text.ptr, 
+		    info.status_text.ptr,
 		    (int)info.uri.slen,
 		    info.uri.ptr);
 
 	    pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
 	}
-    }        
+    }
     return PJ_SUCCESS;
 }
 
 /* Presence/buddy command handler */
 pj_status_t cmd_presence_handler(pj_cli_cmd_val *cval)
-{    
+{
     pj_status_t status = PJ_SUCCESS;
 
     CHECK_PJSUA_RUNNING();
@@ -1177,10 +1177,10 @@ pj_status_t cmd_presence_handler(pj_cli_cmd_val *cval)
     case CMD_PRESENCE_SEND_IM:
 	status = cmd_send_im(cval);
 	break;
-    case CMD_PRESENCE_SUB:	
+    case CMD_PRESENCE_SUB:
     case CMD_PRESENCE_UNSUB:
-	status = cmd_subs_pres(cval, 
-		               pj_cli_get_cmd_id(cval->cmd)==CMD_PRESENCE_SUB);	
+	status = cmd_subs_pres(cval,
+		               pj_cli_get_cmd_id(cval->cmd)==CMD_PRESENCE_SUB);
 	break;
     case CMD_PRESENCE_TOG_STATE:
 	status = cmd_toggle_state(cval);
@@ -1191,7 +1191,7 @@ pj_status_t cmd_presence_handler(pj_cli_cmd_val *cval)
     case CMD_PRESENCE_LIST:
 	status = cmd_show_buddy(cval);
 	break;
-    }    
+    }
 
     return status;
 }
@@ -1203,7 +1203,7 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
     pjsua_conf_port_id id[PJSUA_MAX_CONF_PORTS];
     static const pj_str_t header = {"Conference ports:\n", 19};
 
-    pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);    
+    pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
 
     count = PJ_ARRAY_SIZE(id);
     pjsua_enum_conf_ports(id, &count);
@@ -1222,18 +1222,18 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
 	    pj_ansi_snprintf(s, sizeof(s), "#%d ", info.listeners[j]);
 	    pj_ansi_strcat(txlist, s);
 	}
-	pj_ansi_snprintf(out_str, 
+	pj_ansi_snprintf(out_str,
 	       sizeof(out_str),
-	       "Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n", 
-	       info.slot_id, 
+	       "Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n",
+	       info.slot_id,
 	       info.clock_rate/1000,
 	       info.samples_per_frame*1000/info.channel_count/info.clock_rate,
 	       info.channel_count,
-	       (int)info.name.slen, 
+	       (int)info.name.slen,
 	       info.name.ptr,
 	       txlist);
-	pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));    
-    }    
+	pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
+    }
     return PJ_SUCCESS;
 }
 
@@ -1241,17 +1241,17 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
 static pj_status_t cmd_media_connect(pj_cli_cmd_val *cval, pj_bool_t connect)
 {
     pj_status_t status;
-    
+
     if (connect)
-	status = pjsua_conf_connect(pj_strtol(&cval->argv[1]), 
+	status = pjsua_conf_connect(pj_strtol(&cval->argv[1]),
 				    pj_strtol(&cval->argv[2]));
     else
-	status = pjsua_conf_disconnect(pj_strtol(&cval->argv[1]), 
+	status = pjsua_conf_disconnect(pj_strtol(&cval->argv[1]),
 				       pj_strtol(&cval->argv[2]));
 
     if (status == PJ_SUCCESS) {
 	static const pj_str_t success_msg = {"Success\n", 9};
-	pj_cli_sess_write_msg(cval->sess, success_msg.ptr, success_msg.slen);	
+	pj_cli_sess_write_msg(cval->sess, success_msg.ptr, success_msg.slen);
     } else {
 	static const pj_str_t err_msg = {"ERROR!!\n", 9};
 	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
@@ -1269,25 +1269,25 @@ static pj_status_t cmd_adjust_vol(pj_cli_cmd_val *cval)
     pj_str_t tmp = pj_str(level_val);
 
     /* Adjust mic level */
-    orig_level = app_config.mic_level;    
+    orig_level = app_config.mic_level;
     pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(level_val));
     app_config.mic_level = (float)strtod(level_val, &err);
     pjsua_conf_adjust_rx_level(0, app_config.mic_level);
 
     pj_ansi_snprintf(buf, sizeof(buf),
-		     "Adjust mic level: [%4.1fx] -> [%4.1fx]\n", 
+		     "Adjust mic level: [%4.1fx] -> [%4.1fx]\n",
 		     orig_level, app_config.mic_level);
 
     pj_cli_sess_write_msg(cval->sess, buf, pj_ansi_strlen(buf));
 
     /* Adjust speaker level */
-    orig_level = app_config.speaker_level;        
+    orig_level = app_config.speaker_level;
     pj_strncpy_with_null(&tmp, &cval->argv[2], sizeof(level_val));
     app_config.speaker_level = (float)strtod(level_val, &err);
     pjsua_conf_adjust_tx_level(0, app_config.speaker_level);
 
     pj_ansi_snprintf(buf, sizeof(buf),
-		      "Adjust speaker level: [%4.1fx] -> [%4.1fx]\n", 
+		      "Adjust speaker level: [%4.1fx] -> [%4.1fx]\n",
 		      orig_level, app_config.speaker_level);
 
     pj_cli_sess_write_msg(cval->sess, buf, pj_ansi_strlen(buf));
@@ -1297,21 +1297,21 @@ static pj_status_t cmd_adjust_vol(pj_cli_cmd_val *cval)
 
 /* Set codec priority */
 static pj_status_t cmd_set_codec_prio(pj_cli_cmd_val *cval)
-{        
-    int new_prio;    
-    pj_status_t status;    
+{
+    int new_prio;
+    pj_status_t status;
 
     new_prio = pj_strtol(&cval->argv[2]);
-    if (new_prio < 0) 
+    if (new_prio < 0)
 	new_prio = 0;
-    else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST) 
+    else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST)
 	new_prio = PJMEDIA_CODEC_PRIO_HIGHEST;
 
-    status = pjsua_codec_set_priority(&cval->argv[1], 
+    status = pjsua_codec_set_priority(&cval->argv[1],
 				      (pj_uint8_t)new_prio);
 #if PJSUA_HAS_VIDEO
     if (status != PJ_SUCCESS) {
-	status = pjsua_vid_codec_set_priority(&cval->argv[1], 
+	status = pjsua_vid_codec_set_priority(&cval->argv[1],
 					      (pj_uint8_t)new_prio);
     }
 #endif
@@ -1334,14 +1334,14 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 	break;
     case CMD_MEDIA_CONF_CONNECT:
     case CMD_MEDIA_CONF_DISCONNECT:
-	status = cmd_media_connect(cval, 
-		          pj_cli_get_cmd_id(cval->cmd)==CMD_MEDIA_CONF_CONNECT);	
+	status = cmd_media_connect(cval,
+		          pj_cli_get_cmd_id(cval->cmd)==CMD_MEDIA_CONF_CONNECT);
 	break;
-    case CMD_MEDIA_ADJUST_VOL:	
+    case CMD_MEDIA_ADJUST_VOL:
 	status = cmd_adjust_vol(cval);
 	break;
     case CMD_MEDIA_CODEC_PRIO:
-	status = cmd_set_codec_prio(cval);	
+	status = cmd_set_codec_prio(cval);
 	break;
     case CMD_MEDIA_SPEAKER_TOGGLE:
 	{
@@ -1368,7 +1368,7 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 	    PJ_PERROR(4,(THIS_FILE, status, "Result"));
 	}
 	break;
-    }    
+    }
 
     return status;
 }
@@ -1389,7 +1389,7 @@ static pj_status_t cmd_show_config()
     if (len < 1)
 	PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
     else
-	PJ_LOG(3,(THIS_FILE, 
+	PJ_LOG(3,(THIS_FILE,
 		  "Dumping configuration (%d bytes):\n%s\n",
 		  len, settings));
 
@@ -1403,7 +1403,7 @@ static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
     int len;
     pj_str_t tmp = pj_str(buf);
 
-    pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));    
+    pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));
 
     len = write_settings(&app_config, settings, sizeof(settings));
     if (len < 1)
@@ -1446,12 +1446,12 @@ pj_status_t cmd_config_handler(pj_cli_cmd_val *cval)
 	status = cmd_stat_dump(PJ_TRUE);
 	break;
     case CMD_CONFIG_DUMP_CONF:
-	status = cmd_show_config();	
+	status = cmd_show_config();
 	break;
-    case CMD_CONFIG_WRITE_SETTING:	
+    case CMD_CONFIG_WRITE_SETTING:
 	status = cmd_write_config(cval);
 	break;
-    }    
+    }
 
     return status;
 }
@@ -1462,28 +1462,28 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
     struct input_result result;
     char dest[64] = {0};
     char out_str[128];
-    pj_str_t tmp = pj_str(dest);      
+    pj_str_t tmp = pj_str(dest);
 
-    pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));    
+    pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
 
-    pj_ansi_snprintf(out_str, 
-		     sizeof(out_str), 
+    pj_ansi_snprintf(out_str,
+		     sizeof(out_str),
 		     "(You currently have %d calls)\n",
 		     pjsua_call_get_count());
 
     pj_cli_sess_write_msg(cval->sess, out_str, pj_ansi_strlen(out_str));
-    
+
     /* input destination. */
-    get_input_url(tmp.ptr, tmp.slen, cval, &result);    
+    get_input_url(tmp.ptr, tmp.slen, cval, &result);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 	pjsua_buddy_info binfo;
 	if (result.nb_result == -1 || result.nb_result == 0) {
-	    static const pj_str_t err_msg = 
+	    static const pj_str_t err_msg =
 		    {"You can't do that with make call!\n", 35};
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	    return PJ_SUCCESS;
-	} 	
-	pjsua_buddy_get_info(result.nb_result-1, &binfo);	    
+	}
+	pjsua_buddy_get_info(result.nb_result-1, &binfo);
 	pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
     } else if (result.uri_result) {
 	tmp = pj_str(result.uri_result);
@@ -1493,7 +1493,7 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 
     pjsua_msg_data_init(&msg_data);
     TEST_MULTIPART(&msg_data);
-    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL, 
+    pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
 			 &msg_data, &current_call);
     return PJ_SUCCESS;
 }
@@ -1502,37 +1502,37 @@ static pj_status_t cmd_make_single_call(pj_cli_cmd_val *cval)
 static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
 {
     struct input_result result;
-    char dest[64] = {0};    
+    char dest[64] = {0};
     char out_str[128];
     int i, count;
     pj_str_t tmp = pj_str(dest);
 
-    pj_ansi_snprintf(out_str, 
-		     sizeof(out_str), 
+    pj_ansi_snprintf(out_str,
+		     sizeof(out_str),
 		     "(You currently have %d calls)\n",
 		     pjsua_call_get_count());
-    
+
     count = pj_strtol(&cval->argv[1]);
     if (count < 1)
 	return PJ_SUCCESS;
-    
+
     pj_strncpy_with_null(&tmp, &cval->argv[2], sizeof(dest));
-    
+
     /* input destination. */
-    get_input_url(tmp.ptr, tmp.slen, cval, &result);    
+    get_input_url(tmp.ptr, tmp.slen, cval, &result);
     if (result.nb_result != PJSUA_APP_NO_NB) {
 	pjsua_buddy_info binfo;
 	if (result.nb_result == -1 || result.nb_result == 0) {
-	    static const pj_str_t err_msg = 
+	    static const pj_str_t err_msg =
 			    {"You can't do that with make call!\n", 35};
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	    return PJ_SUCCESS;
-	} 	
-	pjsua_buddy_get_info(result.nb_result-1, &binfo);	    
-	pj_strncpy(&tmp, &binfo.uri, sizeof(dest));	
+	}
+	pjsua_buddy_get_info(result.nb_result-1, &binfo);
+	pj_strncpy(&tmp, &binfo.uri, sizeof(dest));
     } else {
 	tmp = pj_str(result.uri_result);
-    } 
+    }
 
     for (i=0; i<count; ++i) {
 	pj_status_t status;
@@ -1558,19 +1558,19 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 	call_info.state = PJSIP_INV_STATE_DISCONNECTED;
     }
 
-    if (current_call == PJSUA_INVALID_ID || 
+    if (current_call == PJSUA_INVALID_ID ||
 	call_info.role != PJSIP_ROLE_UAS ||
 	call_info.state >= PJSIP_INV_STATE_CONNECTING)
-    {	
-	static const pj_str_t err_msg = {"No pending incoming call\n", 26};	  
+    {
+	static const pj_str_t err_msg = {"No pending incoming call\n", 26};
 	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 
     } else {
 	int st_code;
 	char contact[120];
 	pj_str_t hname = { "Contact", 7 };
-	pj_str_t hvalue;	
-	pjsip_generic_string_hdr hcontact;	
+	pj_str_t hvalue;
+	pjsip_generic_string_hdr hcontact;
 
 	st_code = pj_strtol(&cval->argv[1]);
 	if ((st_code < 100) || (st_code > 699))
@@ -1582,7 +1582,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 	    if (cval->argc < 3) {
 		static const pj_str_t err_msg = {"Enter URL to be put "
 						 "in Contact\n",  32};
-		pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);		
+		pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 		return PJ_SUCCESS;
 	    }
 
@@ -1594,12 +1594,12 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 
 	/*
 	* Must check again!
-	* Call may have been disconnected while we're waiting for 
+	* Call may have been disconnected while we're waiting for
 	* keyboard input.
 	*/
 	if (current_call == PJSUA_INVALID_ID) {
-	    static const pj_str_t err_msg = {"Call has been disconnected\n", 
-					     28};	    
+	    static const pj_str_t err_msg = {"Call has been disconnected\n",
+					     28};
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	}
 
@@ -1616,7 +1616,7 @@ static pj_status_t cmd_hangup_call(pj_cli_cmd_val *cval, pj_bool_t all)
 	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
 	if (all)
-	    pjsua_call_hangup_all();	    
+	    pjsua_call_hangup_all();
 	else
 	    pjsua_call_hangup(current_call, 0, NULL, NULL);
     }
@@ -1626,7 +1626,7 @@ static pj_status_t cmd_hangup_call(pj_cli_cmd_val *cval, pj_bool_t all)
 /* Hold call */
 static pj_status_t cmd_hold_call()
 {
-    if (current_call != PJSUA_INVALID_ID) {	
+    if (current_call != PJSUA_INVALID_ID) {
 	pjsua_call_set_hold(current_call, NULL);
 
     } else {
@@ -1674,12 +1674,12 @@ static pj_status_t cmd_next_call(pj_bool_t next)
 	find_prev_call();
     }
 
-    if (current_call != PJSUA_INVALID_ID) {	
+    if (current_call != PJSUA_INVALID_ID) {
 	pjsua_call_info call_info;
 
 	pjsua_call_get_info(current_call, &call_info);
-	PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s", 
-		  (int)call_info.remote_info.slen, 
+	PJ_LOG(3,(THIS_FILE,"Current dialog: %.*s",
+		  (int)call_info.remote_info.slen,
 		  call_info.remote_info.ptr));
 
     } else {
@@ -1705,15 +1705,15 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
 	pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 	pj_str_t STR_FALSE = { "false", 5 };
 	pjsua_call_info ci;
-	
-	pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));	
+
+	pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(dest));
 
 	pjsua_call_get_info(current_call, &ci);
-	pj_ansi_snprintf(out_str, 
-			 sizeof(out_str), 
+	pj_ansi_snprintf(out_str,
+			 sizeof(out_str),
 			 "Transferring current call [%d] %.*s\n",
 			 current_call,
-			 (int)ci.remote_info.slen, 
+			 (int)ci.remote_info.slen,
 			 ci.remote_info.ptr);
 
 	get_input_url(tmp.ptr, tmp.slen, cval, &result);
@@ -1748,13 +1748,13 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
 	    tmp = pj_str(result.uri_result);
 	    pjsua_call_xfer( current_call, &tmp, &msg_data);
 	}
-    }	    
+    }
     return PJ_SUCCESS;
 }
 
 /* Transfer call */
 static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
-{    
+{
     if (current_call == -1) {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
     } else {
@@ -1763,21 +1763,21 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	pjsip_generic_string_hdr refer_sub;
 	pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 	pj_str_t STR_FALSE = { "false", 5 };
-	pjsua_call_id ids[PJSUA_MAX_CALLS];	
+	pjsua_call_id ids[PJSUA_MAX_CALLS];
 	pjsua_msg_data msg_data;
-	char buf[8] = {0};	
+	char buf[8] = {0};
 	pj_str_t tmp = pj_str(buf);
-	unsigned count;	
-	static const pj_str_t err_invalid_num = 
+	unsigned count;
+	static const pj_str_t err_invalid_num =
 				    {"Invalid destination call number\n", 32 };
 	count = PJ_ARRAY_SIZE(ids);
 	pjsua_enum_calls(ids, &count);
 
-	if (count <= 1) {	    
-	    static const pj_str_t err_no_other_call = 
+	if (count <= 1) {
+	    static const pj_str_t err_no_other_call =
 				    {"There are no other calls\n", 25};
 
-	    pj_cli_sess_write_msg(cval->sess, err_no_other_call.ptr, 
+	    pj_cli_sess_write_msg(cval->sess, err_no_other_call.ptr,
 				  err_no_other_call.slen);
 	    return PJ_SUCCESS;
 	}
@@ -1786,34 +1786,34 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	dst_call = my_atoi(tmp.ptr);
 
 	/* Check if call is still there. */
-	if (call != current_call) {	    
-	    static pj_str_t err_call_dc = 
+	if (call != current_call) {
+	    static pj_str_t err_call_dc =
 				    {"Call has been disconnected\n", 27};
 
-	    pj_cli_sess_write_msg(cval->sess, err_call_dc.ptr, 
+	    pj_cli_sess_write_msg(cval->sess, err_call_dc.ptr,
 				  err_call_dc.slen);
 	    return PJ_SUCCESS;
 	}
 
 	/* Check that destination call is valid. */
 	if (dst_call == call) {
-	    static pj_str_t err_same_num = 
+	    static pj_str_t err_same_num =
 				    {"Destination call number must not be the "
 				     "same as the call being transferred\n", 74};
 
-	    pj_cli_sess_write_msg(cval->sess, err_same_num.ptr, 
+	    pj_cli_sess_write_msg(cval->sess, err_same_num.ptr,
 				  err_same_num.slen);
 	    return PJ_SUCCESS;
 	}
 
 	if (dst_call >= PJSUA_MAX_CALLS) {
-	    pj_cli_sess_write_msg(cval->sess, err_invalid_num.ptr, 
+	    pj_cli_sess_write_msg(cval->sess, err_invalid_num.ptr,
 				  err_invalid_num.slen);
 	    return PJ_SUCCESS;
 	}
 
 	if (!pjsua_call_is_active(dst_call)) {
-	    pj_cli_sess_write_msg(cval->sess, err_invalid_num.ptr, 
+	    pj_cli_sess_write_msg(cval->sess, err_invalid_num.ptr,
 				  err_invalid_num.slen);
 	    return PJ_SUCCESS;
 	}
@@ -1821,27 +1821,27 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	pjsua_msg_data_init(&msg_data);
 	if (app_config.no_refersub) {
 	    /* Add Refer-Sub: false in outgoing REFER request */
-	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB, 
+	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
 					   &STR_FALSE);
 	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 	}
 
-	pjsua_call_xfer_replaces(call, dst_call, 
-				 PJSUA_XFER_NO_REQUIRE_REPLACES, 
+	pjsua_call_xfer_replaces(call, dst_call,
+				 PJSUA_XFER_NO_REQUIRE_REPLACES,
 				 &msg_data);
     }
     return PJ_SUCCESS;
 }
 
 static pj_status_t cmd_redirect_call(pj_cli_cmd_val *cval)
-{  
+{
     if (current_call == PJSUA_INVALID_ID) {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
 	return PJ_SUCCESS;
     }
     if (!pjsua_call_is_active(current_call)) {
 	PJ_LOG(1,(THIS_FILE, "Call %d has gone", current_call));
-    } else {	
+    } else {
 	enum {
 	    ACCEPT_REPLACE, ACCEPT, REJECT, STOP
 	};
@@ -1849,8 +1849,8 @@ static pj_status_t cmd_redirect_call(pj_cli_cmd_val *cval)
 
 	switch (choice) {
 	case ACCEPT_REPLACE:
-	    pjsua_call_process_redirect(current_call, 
-	    				PJSIP_REDIRECT_ACCEPT_REPLACE);	    
+	    pjsua_call_process_redirect(current_call,
+	    				PJSIP_REDIRECT_ACCEPT_REPLACE);
 	    break;
 	case ACCEPT:
 	    pjsua_call_process_redirect(current_call, PJSIP_REDIRECT_ACCEPT);
@@ -1861,7 +1861,7 @@ static pj_status_t cmd_redirect_call(pj_cli_cmd_val *cval)
 	default:
 	    pjsua_call_process_redirect(current_call, PJSIP_REDIRECT_STOP);
 	    break;
-	}	
+	}
     }
     return PJ_SUCCESS;
 }
@@ -1877,7 +1877,7 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
 
 	PJ_LOG(3,(THIS_FILE, "Media is not established yet!"));
 
-    } else {	
+    } else {
 	int call = current_call;
 	pj_status_t status;
 
@@ -1887,7 +1887,7 @@ static pj_status_t cmd_dtmf_2833(pj_cli_cmd_val *cval)
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	    return PJ_SUCCESS;;
 	}
-	
+
 	status = pjsua_call_dial_dtmf(current_call, &cval->argv[1]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send DTMF", status);
@@ -1908,7 +1908,7 @@ static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
 	PJ_LOG(3,(THIS_FILE, "No current call"));
 
     } else {
-	const pj_str_t SIP_INFO = pj_str("INFO");	
+	const pj_str_t SIP_INFO = pj_str("INFO");
 	int call = current_call;
 	int i;
 	pj_status_t status;
@@ -1919,14 +1919,14 @@ static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
 	    pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
 	    return PJ_SUCCESS;;
 	}
-	
+
 	for (i=0; i<cval->argv[1].slen; ++i) {
 	    char body[64];
 
 	    pjsua_msg_data_init(&msg_data);
 	    msg_data.content_type = pj_str("application/dtmf-relay");
 
-	    pj_ansi_snprintf(body, 
+	    pj_ansi_snprintf(body,
 			     sizeof(body),
 			     "Signal=%c\n"
 			     "Duration=160",
@@ -1934,7 +1934,7 @@ static pj_status_t cmd_call_info(pj_cli_cmd_val *cval)
 
 	    msg_data.msg_body = pj_str(body);
 
-	    status = pjsua_call_send_request(current_call, &SIP_INFO, 
+	    status = pjsua_call_send_request(current_call, &SIP_INFO,
 		&msg_data);
 	    if (status != PJ_SUCCESS) {
 		break;
@@ -1961,23 +1961,23 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
     if (pjsua_acc_get_count() == 0) {
 	static const pj_str_t err_msg = {"Sorry, need at least one "
 					 "account configured\n", 45};
-	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);	
+	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
     } else {
 	char *uri;
 	char dest[64] = {0};
-	pj_str_t tmp = pj_str(dest);	
+	pj_str_t tmp = pj_str(dest);
 	struct input_result result;
 	static const pj_str_t header = {"Send arbitrary request to "
 					"remote host\n", 39};
-	
-	pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);	
-	
-	pj_strncpy_with_null(&tmp, &cval->argv[2], sizeof(dest));	
+
+	pj_cli_sess_write_msg(cval->sess, header.ptr, header.slen);
+
+	pj_strncpy_with_null(&tmp, &cval->argv[2], sizeof(dest));
 	/* Input destination URI */
 	uri = NULL;
 	get_input_url(tmp.ptr, tmp.slen, cval, &result);
 	if (result.nb_result != PJSUA_APP_NO_NB) {
-	    if (result.nb_result == -1) {		
+	    if (result.nb_result == -1) {
 		static const pj_str_t err_msg = {"Sorry you can't do that!\n",
 						 26};
 		pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
@@ -1994,7 +1994,7 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 		}
 	    } else {
 		pjsua_buddy_info binfo;
-		pjsua_buddy_get_info(result.nb_result-1, &binfo);		
+		pjsua_buddy_get_info(result.nb_result-1, &binfo);
 		pj_strncpy_with_null(&tmp, &binfo.uri, sizeof(dest));
 		uri = tmp.ptr;
 	    }
@@ -2006,7 +2006,7 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 
 	if (uri) {
 	    char method[64] = {0};
-	    pj_str_t tmp_method = pj_str(method);	    
+	    pj_str_t tmp_method = pj_str(method);
 	    pj_strncpy_with_null(&tmp_method, &cval->argv[1], sizeof(method));
 	    tmp = pj_str(uri);
 	    send_request(method, &tmp);
@@ -2015,9 +2015,9 @@ static pj_status_t cmd_send_arbitrary(pj_cli_cmd_val *cval)
 	    * (such requests includes BYE, CANCEL, etc.), it will
 	    * not go well with the call state, so don't do it
 	    * unless it's for testing.
-	    */	    
+	    */
 	    pjsua_call_send_request(current_call, &cval->argv[1], NULL);
-	}    
+	}
     }
     return PJ_SUCCESS;
 }
@@ -2029,27 +2029,27 @@ static pj_status_t cmd_show_current_call(pj_cli_cmd_val *cval)
     pj_ansi_snprintf(out_str, sizeof(out_str),
 		     "You have %d active call%s\n", i, (i>1?"s":""));
 
-    pj_cli_sess_write_msg(cval->sess, out_str, 
+    pj_cli_sess_write_msg(cval->sess, out_str,
 	pj_ansi_strlen(out_str));
 
     if (current_call != PJSUA_INVALID_ID) {
 	pjsua_call_info ci;
-	if (pjsua_call_get_info(current_call, &ci)==PJ_SUCCESS) {	    
-	    pj_ansi_snprintf(out_str, sizeof(out_str), 
+	if (pjsua_call_get_info(current_call, &ci)==PJ_SUCCESS) {
+	    pj_ansi_snprintf(out_str, sizeof(out_str),
 		   "Current call id=%d to %.*s [%.*s]\n", current_call,
 		   (int)ci.remote_info.slen, ci.remote_info.ptr,
 		   (int)ci.state_text.slen, ci.state_text.ptr);
 
-	    pj_cli_sess_write_msg(cval->sess, out_str, 
+	    pj_cli_sess_write_msg(cval->sess, out_str,
 				  pj_ansi_strlen(out_str));
 	}
-    } 
+    }
     return PJ_SUCCESS;
 }
 
 /* Call handler */
 pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
-{    
+{
     pj_status_t status = PJ_SUCCESS;
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
 
@@ -2063,57 +2063,57 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
 	status = cmd_make_multi_call(cval);
 	break;
     case CMD_CALL_ANSWER:
-	status = cmd_answer_call(cval);	
+	status = cmd_answer_call(cval);
 	break;
-    case CMD_CALL_HANGUP:	
-    case CMD_CALL_HANGUP_ALL:	
+    case CMD_CALL_HANGUP:
+    case CMD_CALL_HANGUP_ALL:
 	status = cmd_hangup_call(cval, (cmd_id==CMD_CALL_HANGUP_ALL));
 	break;
-    case CMD_CALL_HOLD:	
+    case CMD_CALL_HOLD:
 	status = cmd_hold_call();
 	break;
-    case CMD_CALL_REINVITE:	
+    case CMD_CALL_REINVITE:
 	status = cmd_call_reinvite();
 	break;
-    case CMD_CALL_UPDATE:	
+    case CMD_CALL_UPDATE:
 	status = cmd_call_update();
 	break;
-    case CMD_CALL_NEXT:			
-    case CMD_CALL_PREVIOUS:	
-	status = cmd_next_call(cmd_id==CMD_CALL_NEXT);	
+    case CMD_CALL_NEXT:
+    case CMD_CALL_PREVIOUS:
+	status = cmd_next_call(cmd_id==CMD_CALL_NEXT);
 	break;
-    case CMD_CALL_TRANSFER:	
+    case CMD_CALL_TRANSFER:
 	status = cmd_transfer_call(cval);
 	break;
-    case CMD_CALL_TRANSFER_REPLACE:	
+    case CMD_CALL_TRANSFER_REPLACE:
 	status = cmd_transfer_replace_call(cval);
 	break;
     case CMD_CALL_REDIRECT:
 	status = cmd_redirect_call(cval);
 	break;
-    case CMD_CALL_D2833:	
+    case CMD_CALL_D2833:
 	status = cmd_dtmf_2833(cval);
 	break;
-    case CMD_CALL_INFO:	
+    case CMD_CALL_INFO:
 	status = cmd_call_info(cval);
 	break;
-    case CMD_CALL_DUMP_Q:	
+    case CMD_CALL_DUMP_Q:
 	status = cmd_call_quality();
 	break;
-    case CMD_CALL_SEND_ARB:	
+    case CMD_CALL_SEND_ARB:
 	status = cmd_send_arbitrary(cval);
 	break;
     case CMD_CALL_LIST:
 	status = cmd_show_current_call(cval);
 	break;
-    }    
+    }
 
     return status;
 }
 
-#if PJSUA_HAS_VIDEO 
+#if PJSUA_HAS_VIDEO
 static pj_status_t cmd_set_video_enable(pj_bool_t enabled)
-{    
+{
     app_config.vid.vid_cnt = (enabled ? 1 : 0);
     PJ_LOG(3,(THIS_FILE, "Video will be %s in next offer/answer",
 	(enabled?"enabled":"disabled")));
@@ -2135,7 +2135,7 @@ static pj_status_t cmd_show_account_video()
 {
     pjsua_acc_config acc_cfg;
     pj_pool_t *pool = pjsua_pool_create("tmp-pjsua", 1000, 1000);
-    
+
     pjsua_acc_get_config(current_acc, pool, &acc_cfg);
     app_config_show_video(current_acc, &acc_cfg);
     pj_pool_release(pool);
@@ -2153,27 +2153,27 @@ static pj_status_t cmd_video_acc_handler(pj_cli_cmd_val *cval)
     pjsua_acc_get_config(current_acc, pool, &acc_cfg);
 
     switch(cmd_id) {
-    case CMD_VIDEO_ACC_AUTORX:	
-    case CMD_VIDEO_ACC_AUTOTX:	
+    case CMD_VIDEO_ACC_AUTORX:
+    case CMD_VIDEO_ACC_AUTOTX:
 	{
 	    int on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2)==0);
-       	
+
 	    if (cmd_id == CMD_VIDEO_ACC_AUTORX)
 		acc_cfg.vid_in_auto_show = on;
 	    else
 		acc_cfg.vid_out_auto_transmit = on;
 	}
 	break;
-    case CMD_VIDEO_ACC_CAP_ID:		
+    case CMD_VIDEO_ACC_CAP_ID:
     case CMD_VIDEO_ACC_REN_ID:
 	{
-	    int dev = pj_strtol(&cval->argv[1]);	    	    
+	    int dev = pj_strtol(&cval->argv[1]);
 
 	    if (cmd_id == CMD_VIDEO_ACC_CAP_ID)
 		acc_cfg.vid_cap_dev = dev;
-	    else 
-		acc_cfg.vid_rend_dev = dev;		
-	}	
+	    else
+		acc_cfg.vid_rend_dev = dev;
+	}
 	break;
     }
     modify_video_account(&acc_cfg);
@@ -2189,14 +2189,14 @@ static pj_status_t cmd_add_vid_strm()
 
 static pj_status_t cmd_enable_vid_rx(pj_cli_cmd_val *cval)
 {
-    pjsua_call_vid_strm_op_param param;    
-    pjsua_stream_info si;    
+    pjsua_call_vid_strm_op_param param;
+    pjsua_stream_info si;
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2) == 0);
 
-    pjsua_call_vid_strm_op_param_default(&param);    
+    pjsua_call_vid_strm_op_param_default(&param);
 
-    param.med_idx = pj_strtol(&cval->argv[2]); 
+    param.med_idx = pj_strtol(&cval->argv[2]);
     if (pjsua_call_get_stream_info(current_call, param.med_idx, &si) ||
 	si.type != PJMEDIA_TYPE_VIDEO)
     {
@@ -2215,25 +2215,25 @@ static pj_status_t cmd_enable_vid_rx(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_enable_vid_tx(pj_cli_cmd_val *cval)
 {
-    pjsua_call_vid_strm_op_param param;    
+    pjsua_call_vid_strm_op_param param;
     pj_status_t status = PJ_SUCCESS;
-    pj_bool_t on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2) == 0);    
-    
+    pj_bool_t on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2) == 0);
+
     pjsua_call_vid_strm_op op = on? PJSUA_CALL_VID_STRM_START_TRANSMIT :
 				PJSUA_CALL_VID_STRM_STOP_TRANSMIT;
 
     pjsua_call_vid_strm_op_param_default(&param);
-    
+
     param.med_idx = pj_strtol(&cval->argv[2]);
 
-    status = pjsua_call_set_vid_strm(current_call, op, &param);    
+    status = pjsua_call_set_vid_strm(current_call, op, &param);
     return status;
 }
 
-static pj_status_t cmd_enable_vid_stream(pj_cli_cmd_val *cval, 
+static pj_status_t cmd_enable_vid_stream(pj_cli_cmd_val *cval,
 					   pj_bool_t enable)
-{    
-    pjsua_call_vid_strm_op_param param;    
+{
+    pjsua_call_vid_strm_op_param param;
     pjsua_call_vid_strm_op op = enable? PJSUA_CALL_VID_STRM_CHANGE_DIR :
 				PJSUA_CALL_VID_STRM_REMOVE;
 
@@ -2241,7 +2241,7 @@ static pj_status_t cmd_enable_vid_stream(pj_cli_cmd_val *cval,
 
     param.med_idx = cval->argc > 1 ? pj_strtol(&cval->argv[1]) : -1;
     param.dir = PJMEDIA_DIR_ENCODING_DECODING;
-    return pjsua_call_set_vid_strm(current_call, op, &param);    
+    return pjsua_call_set_vid_strm(current_call, op, &param);
 }
 
 static pj_status_t cmd_set_cap_dev_id(pj_cli_cmd_val *cval)
@@ -2250,7 +2250,7 @@ static pj_status_t cmd_set_cap_dev_id(pj_cli_cmd_val *cval)
 
     pjsua_call_vid_strm_op_param_default(&param);
     param.med_idx = cval->argc > 1? pj_strtol(&cval->argv[1]) : -1;
-    param.cap_dev = cval->argc > 2? pj_strtol(&cval->argv[2]) : 
+    param.cap_dev = cval->argc > 2? pj_strtol(&cval->argv[2]) :
 				    PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 
     return pjsua_call_set_vid_strm(current_call,
@@ -2271,9 +2271,9 @@ static pj_status_t cmd_vid_device_refresh()
 }
 
 static pj_status_t cmd_vid_device_preview(pj_cli_cmd_val *cval)
-{        
-    int dev_id = pj_strtol(&cval->argv[2]);    
-    pj_bool_t on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2) == 0);          
+{
+    int dev_id = pj_strtol(&cval->argv[2]);
+    pj_bool_t on = (pj_ansi_strnicmp(cval->argv[1].ptr, "On", 2) == 0);
 
     if (on) {
 	pjsua_vid_preview_param param;
@@ -2292,12 +2292,12 @@ static pj_status_t cmd_vid_device_preview(pj_cli_cmd_val *cval)
 	    pjsua_vid_win_set_show(wid, PJ_FALSE);
 	    pjsua_vid_preview_stop(dev_id);
 	}
-    }    
+    }
     return PJ_SUCCESS;
 }
 
 static pj_status_t cmd_vid_codec_list()
-{    
+{
     pjsua_codec_info ci[PJMEDIA_CODEC_MGR_MAX_CODECS];
     unsigned count = PJ_ARRAY_SIZE(ci);
     pj_status_t status = pjsua_vid_enum_codecs(ci, &count);
@@ -2318,7 +2318,7 @@ static pj_status_t cmd_vid_codec_list()
 
 	    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
 		PJ_TRUE);
-	    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f  %4d/%4d  %dx%d", 
+	    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f  %4d/%4d  %dx%d",
 		(int)ci[i].codec_id.slen, ci[i].codec_id.ptr,
 		13-(int)ci[i].codec_id.slen, "                ",
 		ci[i].priority,
@@ -2331,10 +2331,10 @@ static pj_status_t cmd_vid_codec_list()
 }
 
 static pj_status_t cmd_set_vid_codec_prio(pj_cli_cmd_val *cval)
-{    
+{
     int prio = pj_strtol(&cval->argv[2]);
     pj_status_t status;
-        
+
     status = pjsua_vid_codec_set_priority(&cval->argv[1], (pj_uint8_t)prio);
     if (status != PJ_SUCCESS)
 	PJ_PERROR(1,(THIS_FILE, status, "Set codec priority error"));
@@ -2343,9 +2343,9 @@ static pj_status_t cmd_set_vid_codec_prio(pj_cli_cmd_val *cval)
 }
 
 static pj_status_t cmd_set_vid_codec_fps(pj_cli_cmd_val *cval)
-{    
+{
     pjmedia_vid_codec_param cp;
-    int M, N;    
+    int M, N;
     pj_status_t status;
 
     M = pj_strtol(&cval->argv[2]);
@@ -2363,8 +2363,8 @@ static pj_status_t cmd_set_vid_codec_fps(pj_cli_cmd_val *cval)
 }
 
 static pj_status_t cmd_set_vid_codec_bitrate(pj_cli_cmd_val *cval)
-{    
-    pjmedia_vid_codec_param cp;    
+{
+    pjmedia_vid_codec_param cp;
     int M, N;
     pj_status_t status;
 
@@ -2384,7 +2384,7 @@ static pj_status_t cmd_set_vid_codec_bitrate(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_set_vid_codec_size(pj_cli_cmd_val *cval)
 {
-    pjmedia_vid_codec_param cp;    
+    pjmedia_vid_codec_param cp;
     int M, N;
     pj_status_t status;
 
@@ -2429,7 +2429,7 @@ static pj_status_t cmd_arrange_vid_win()
 }
 
 static pj_status_t cmd_show_vid_win(pj_cli_cmd_val *cval, pj_bool_t show)
-{            
+{
     pjsua_vid_win_id wid = pj_strtol(&cval->argv[1]);
     return pjsua_vid_win_set_show(wid, show);
 }
@@ -2456,9 +2456,9 @@ static pj_status_t cmd_resize_vid_win(pj_cli_cmd_val *cval)
 
 /* Video handler */
 static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
-{    
+{
     pj_status_t status = PJ_SUCCESS;
-    pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);    
+    pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
 
     CHECK_PJSUA_RUNNING();
 
@@ -2524,7 +2524,7 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
     case CMD_VIDEO_WIN_ARRANGE:
 	status = cmd_arrange_vid_win();
 	break;
-    case CMD_VIDEO_WIN_SHOW:	
+    case CMD_VIDEO_WIN_SHOW:
     case CMD_VIDEO_WIN_HIDE:
 	status = cmd_show_vid_win(cval, (cmd_id==CMD_VIDEO_WIN_SHOW));
 	break;
@@ -2534,7 +2534,7 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
     case CMD_VIDEO_WIN_RESIZE:
 	status = cmd_resize_vid_win(cval);
 	break;
-    }    
+    }
 
     return status;
 }
@@ -2542,12 +2542,12 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
 
 /* Other command handler */
 static pj_status_t cmd_sleep_handler(pj_cli_cmd_val *cval)
-{    
+{
     int delay;
 
     delay = pj_strtoul(&cval->argv[1]);
     if (delay < 0) delay = 0;
-    pj_thread_sleep(delay);    
+    pj_thread_sleep(delay);
 
     return PJ_SUCCESS;
 }
@@ -2558,7 +2558,7 @@ static pj_status_t cmd_network_handler(pj_cli_cmd_val *cval)
     PJ_UNUSED_ARG(cval);
 
     CHECK_PJSUA_RUNNING();
-    
+
     status = pjsua_detect_nat_type();
     if (status != PJ_SUCCESS)
 	pjsua_perror(THIS_FILE, "Error", status);
@@ -2577,8 +2577,8 @@ static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
-/* 
- * Syntax error handler for parser. 
+/*
+ * Syntax error handler for parser.
  */
 static void on_syntax_error(pj_scanner *scanner)
 {
@@ -2586,9 +2586,9 @@ static void on_syntax_error(pj_scanner *scanner)
     PJ_THROW(PJ_EINVAL);
 }
 
-/* 
+/*
  * This method will parse buffer string info array of argument string
- * @argc On input, maximum array size of argument. On output, number of argument 
+ * @argc On input, maximum array size of argument. On output, number of argument
  * parsed
  * @argv Array of argument string
  */
@@ -2597,26 +2597,26 @@ static pj_status_t get_options(pj_str_t *options, unsigned *argc,
 {
     pj_scanner scanner;
     unsigned max_argc = *argc;
-    
+
     PJ_USE_EXCEPTION;
 
     if (!options)
 	return PJ_SUCCESS;
 
-    pj_scan_init(&scanner, options->ptr, options->slen, PJ_SCAN_AUTOSKIP_WS, 
+    pj_scan_init(&scanner, options->ptr, options->slen, PJ_SCAN_AUTOSKIP_WS,
 		 &on_syntax_error);
     PJ_TRY {
 	*argc = 0;
 	while (!pj_scan_is_eof(&scanner) && (max_argc > *argc)) {
 	    pj_str_t str;
-	    
+
 	    pj_scan_get_until_chr(&scanner, " \t\r\n", &str);
 	    argv[*argc] = str;
 	    ++(*argc);
 	}
     }
     PJ_CATCH_ANY {
-	pj_scan_fini(&scanner);	
+	pj_scan_fini(&scanner);
 	return PJ_GET_EXCEPTION();
     }
     PJ_END;
@@ -2635,7 +2635,7 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
     PJ_LOG(3,(THIS_FILE, "Restarting app.."));
     pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);
 
-    /** Get the pjsua option **/       
+    /** Get the pjsua option **/
     for (i=1; i < cval->argc; i++) {
 	pj_str_t argvst[MAX_ARGC];
 	unsigned j, ac;
@@ -2658,8 +2658,8 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
 }
 
 static pj_status_t add_call_command(pj_cli_t *cli)
-{  
-    char* call_command = 
+{
+    char* call_command =
 	"<CMD name='call' id='100' desc='Call related commands'>"
 	"  <CMD name='new' id='1001' desc='Make a new call/INVITE'>"
 	"    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
@@ -2698,7 +2698,7 @@ static pj_status_t add_call_command(pj_cli_t *cli)
 	"  </CMD>"
 	"  <CMD name='transfer_replaces' id='1012' sc='X' "
 	"   desc='Transfer replace call'>"
-	"    <ARG name='call_id' type='choice' id='9911' desc='Call Id'/>"	
+	"    <ARG name='call_id' type='choice' id='9911' desc='Call Id'/>"
 	"  </CMD>"
 	"  <CMD name='redirect' id='1013' sc='R' desc='Redirect call'>"
 	"    <ARG name='redirect_option' type='choice' desc='Redirect option'>"
@@ -2729,7 +2729,7 @@ static pj_status_t add_call_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(call_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
 				   &xml, cmd_call_handler,
 				   NULL, get_choice_value);
 }
@@ -2785,14 +2785,14 @@ static pj_status_t add_presence_command(pj_cli_t *cli)
 
     pj_str_t xml = pj_str(presence_command);
 
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
-				   &xml, cmd_presence_handler, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
+				   &xml, cmd_presence_handler,
 				   NULL, get_choice_value);
 }
 
 static pj_status_t add_account_command(pj_cli_t *cli)
 {
-    char* account_command = 
+    char* account_command =
 	"<CMD name='acc' id='300' desc='Account commands'>"
 	"  <CMD name='add' id='3001' sc='+a' desc='Add new account'>"
 	"    <ARG name='sip_url' type='string' desc='Your SIP URL'/>"
@@ -2830,14 +2830,14 @@ static pj_status_t add_account_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(account_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
-				   &xml, cmd_account_handler, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
+				   &xml, cmd_account_handler,
 				   NULL, get_choice_value);
 }
 
 static pj_status_t add_media_command(pj_cli_t *cli)
 {
-    char* media_command = 
+    char* media_command =
 	"<CMD name='audio' id='400' desc='Conference and Media commands'>"
 	"  <CMD name='list' id='4001' sc='cl' desc='Show conference list'/>"
 	"  <CMD name='conf_con' id='4002' sc='cc' desc='Conference connect'>"
@@ -2865,14 +2865,14 @@ static pj_status_t add_media_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(media_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
-				   &xml, cmd_media_handler, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
+				   &xml, cmd_media_handler,
 				   NULL, get_choice_value);
 }
 
 static pj_status_t add_config_command(pj_cli_t *cli)
 {
-    char* config_command = 
+    char* config_command =
 	"<CMD name='stat' id='500' desc='Status and config commands'>"
 	"  <CMD name='dump_stat' id='5001' sc='ds' desc='Dump status'/>"
 	"  <CMD name='dump_detail' id='5002' sc='dd' "
@@ -2886,12 +2886,12 @@ static pj_status_t add_config_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(config_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
 				   &xml, cmd_config_handler,
 				   NULL, get_choice_value);
 }
 
-#if PJSUA_HAS_VIDEO    
+#if PJSUA_HAS_VIDEO
 static pj_status_t add_video_command(pj_cli_t *cli)
 {
     char* video_command =
@@ -3031,8 +3031,8 @@ static pj_status_t add_video_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(video_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL, 
-				   &xml, cmd_video_handler, 
+    return pj_cli_add_cmd_from_xml(cli, NULL,
+				   &xml, cmd_video_handler,
 				   NULL, get_choice_value);
 }
 #endif
@@ -3059,32 +3059,32 @@ static pj_status_t add_other_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_status_t status;
-    pj_str_t sleep_xml = pj_str(sleep_command);    
+    pj_str_t sleep_xml = pj_str(sleep_command);
     pj_str_t network_xml = pj_str(network_command);
     pj_str_t shutdown_xml = pj_str(shutdown_command);
     pj_str_t restart_xml = pj_str(restart_command);
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL, 
-				     &sleep_xml, cmd_sleep_handler, 
+    status = pj_cli_add_cmd_from_xml(cli, NULL,
+				     &sleep_xml, cmd_sleep_handler,
 				     NULL, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL, 
-				     &network_xml, cmd_network_handler, 
+    status = pj_cli_add_cmd_from_xml(cli, NULL,
+				     &network_xml, cmd_network_handler,
 				     NULL, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL, 
-				     &shutdown_xml, cmd_quit_handler, 
+    status = pj_cli_add_cmd_from_xml(cli, NULL,
+				     &shutdown_xml, cmd_quit_handler,
 				     NULL, NULL);
 
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL, 
-				     &restart_xml, cmd_restart_handler, 
+    status = pj_cli_add_cmd_from_xml(cli, NULL,
+				     &restart_xml, cmd_restart_handler,
 				     NULL, NULL);
 
     return status;
@@ -3114,7 +3114,7 @@ pj_status_t cli_setup_command(pj_cli_t *cli)
     if (status != PJ_SUCCESS)
 	return status;
 
-#if PJSUA_HAS_VIDEO    
+#if PJSUA_HAS_VIDEO
     status = add_video_command(cli);
     if (status != PJ_SUCCESS)
 	return status;

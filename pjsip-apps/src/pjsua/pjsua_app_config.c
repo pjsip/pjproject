@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "pjsua_app_common.h"
 
@@ -218,7 +218,7 @@ static void usage(void)
 /*
  * Read command arguments from config file.
  */
-static int read_config_file(pj_pool_t *pool, const char *filename, 
+static int read_config_file(pj_pool_t *pool, const char *filename,
 			    int *app_argc, char ***app_argv)
 {
     int i;
@@ -248,10 +248,10 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 	char  cDelimiter;
 	pj_size_t   len;
 	int token_len;
-	
+
 	pj_bzero(line, sizeof(line));
 	if (fgets(line, sizeof(line), fhnd) == NULL) break;
-	
+
 	// Trim ending newlines
 	len = strlen(line);
 	if (line[len-1]=='\n')
@@ -267,36 +267,36 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 
 	    if (*p == '\0')		    // are we done yet?
 		break;
-	    
+
 	    if (*p == '"' || *p == '\'') {    // is token a quoted string
 		cDelimiter = *p++;	    // save quote delimiter
 		token = p;
-		
+
 		while (*p != '\0' && *p != cDelimiter) p++;
-		
+
 		if (*p == '\0')		// found end of the line, but,
 		    cDelimiter = '\0';	// didn't find a matching quote
 
 	    } else {			// token's not a quoted string
 		token = p;
-		
+
 		while (*p != '\0' && strchr(whitespace, *p) == NULL) p++;
-		
+
 		cDelimiter = *p;
 	    }
-	    
+
 	    *p = '\0';
 	    token_len = (int)(p-token);
-	    
+
 	    if (token_len > 0) {
 		if (*token == '#')
 		    break;  // ignore remainder of line
-		
+
 		argv[argc] = pj_pool_alloc(pool, token_len + 1);
 		pj_memcpy(argv[argc], token, token_len + 1);
 		++argc;
 	    }
-	    
+
 	    *p = cDelimiter;
 	}
     }
@@ -306,7 +306,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 	argv[argc++] = (*app_argv)[i];
 
     if (argc == MAX_ARGS && (i!=*app_argc || !feof(fhnd))) {
-	PJ_LOG(1,(THIS_FILE, 
+	PJ_LOG(1,(THIS_FILE,
 		  "Too many arguments specified in cmd line/config file"));
 	fflush(stdout);
 	fclose(fhnd);
@@ -322,16 +322,16 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 }
 
 /* Parse arguments. */
-static pj_status_t parse_args(int argc, char *argv[], 			      
+static pj_status_t parse_args(int argc, char *argv[],
 			      pj_str_t *uri_to_call)
 {
     int c;
     int option_index;
     pjsua_app_config *cfg = &app_config;
-    enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
+    enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL,
 	   OPT_LOG_APPEND, OPT_COLOR, OPT_NO_COLOR, OPT_LIGHT_BG, OPT_NO_STDERR,
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
-	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
+	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY,
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
@@ -341,13 +341,13 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
-	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
+	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV,
 	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD,
-	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
+	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL, OPT_EC_OPT,
-	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
+	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS,
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
 	   OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
@@ -457,9 +457,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "duration",	1, 0, OPT_DURATION},
 	{ "thread-cnt",	1, 0, OPT_THREAD_CNT},
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
-	{ "use-tls",	0, 0, OPT_USE_TLS}, 
+	{ "use-tls",	0, 0, OPT_USE_TLS},
 	{ "tls-ca-file",1, 0, OPT_TLS_CA_FILE},
-	{ "tls-cert-file",1,0, OPT_TLS_CERT_FILE}, 
+	{ "tls-cert-file",1,0, OPT_TLS_CERT_FILE},
 	{ "tls-privkey-file",1,0, OPT_TLS_PRIV_FILE},
 	{ "tls-password",1,0, OPT_TLS_PASSWORD},
 	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
@@ -503,10 +503,10 @@ static pj_status_t parse_args(int argc, char *argv[],
     char *config_file = NULL;
     unsigned i;
 
-    /* Run pj_getopt once to see if user specifies config file to read. */ 
+    /* Run pj_getopt once to see if user specifies config file to read. */
     pj_optind = 0;
-    while ((c=pj_getopt_long(argc, argv, "", long_options, 
-			     &option_index)) != -1) 
+    while ((c=pj_getopt_long(argc, argv, "", long_options,
+			     &option_index)) != -1)
     {
 	switch (c) {
 	case OPT_CONFIG_FILE:
@@ -540,7 +540,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_CONFIG_FILE:
 	    /* Ignore as this has been processed before */
 	    break;
-	
+
 	case OPT_LOG_FILE:
 	    cfg->log_cfg.log_filename = pj_str(pj_optarg);
 	    break;
@@ -548,7 +548,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_LOG_LEVEL:
 	    c = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (c < 0 || c > 6) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: expecting integer value 0-6 "
 			  "for --log-level"));
 		return PJ_EINVAL;
@@ -559,8 +559,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_APP_LOG_LEVEL:
 	    cfg->log_cfg.console_level = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (cfg->log_cfg.console_level < 0 || cfg->log_cfg.console_level > 6) {
-		PJ_LOG(1,(THIS_FILE, 
+	    if (cfg->log_cfg.console_level > 6) {
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: expecting integer value 0-6 "
 			  "for --app-log-level"));
 		return PJ_EINVAL;
@@ -613,7 +613,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 				     "8000-192000 for conference clock rate"));
 		return PJ_EINVAL;
 	    }
-	    cfg->media_cfg.clock_rate = lval; 
+	    cfg->media_cfg.clock_rate = lval;
 	    break;
 
 	case OPT_SND_CLOCK_RATE:
@@ -623,7 +623,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 				     "8000-192000 for sound device clock rate"));
 		return PJ_EINVAL;
 	    }
-	    cfg->media_cfg.snd_clock_rate = lval; 
+	    cfg->media_cfg.snd_clock_rate = lval;
 	    break;
 
 	case OPT_STEREO:
@@ -633,7 +633,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_LOCAL_PORT:   /* local-port */
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 0 || lval > 65535) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: expecting integer value for "
 			  "--local-port"));
 		return PJ_EINVAL;
@@ -675,7 +675,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_PROXY:   /* proxy */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid SIP URL '%s' "
 			  "in proxy argument", pj_optarg));
 		return PJ_EINVAL;
@@ -685,7 +685,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_OUTBOUND_PROXY:   /* outbound proxy */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid SIP URL '%s' "
 			  "in outbound proxy argument", pj_optarg));
 		return PJ_EINVAL;
@@ -695,7 +695,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_REGISTRAR:   /* registrar */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid SIP URL '%s' in "
 			  "registrar argument", pj_optarg));
 		return PJ_EINVAL;
@@ -706,7 +706,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_REG_TIMEOUT:   /* reg-timeout */
 	    cur_acc->reg_timeout = pj_strtoul(pj_cstr(&tmp,pj_optarg));
 	    if (cur_acc->reg_timeout < 1 || cur_acc->reg_timeout > 3600) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid value for --reg-timeout "
 			  "(expecting 1-3600)"));
 		return PJ_EINVAL;
@@ -729,7 +729,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_TIMER: /** session timer */
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 0 || lval > 3) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: expecting integer value 0-3 for --use-timer"));
 		return PJ_EINVAL;
 	    }
@@ -740,7 +740,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_TIMER_SE: /** session timer session expiration */
 	    cur_acc->timer_setting.sess_expires = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (cur_acc->timer_setting.sess_expires < 90) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid value for --timer-se "
 			  "(expecting higher than 90)"));
 		return PJ_EINVAL;
@@ -751,7 +751,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_TIMER_MIN_SE: /** session timer minimum session expiration */
 	    cur_acc->timer_setting.min_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (cur_acc->timer_setting.min_se < 90) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid value for --timer-min-se "
 			  "(expecting higher than 90)"));
 		return PJ_EINVAL;
@@ -769,7 +769,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_ID:   /* id */
 	    if (pjsua_verify_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid SIP URL '%s' "
 			  "in local id argument", pj_optarg));
 		return PJ_EINVAL;
@@ -779,7 +779,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_CONTACT:   /* contact */
 	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid SIP URL '%s' "
 			  "in contact argument", pj_optarg));
 		return PJ_EINVAL;
@@ -821,8 +821,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_ACCEPT_REDIRECT:
 	    cfg->redir_op = my_atoi(pj_optarg);
-	    if (cfg->redir_op<0 || cfg->redir_op>PJSIP_REDIRECT_STOP) {
-		PJ_LOG(1,(THIS_FILE, 
+	    if (cfg->redir_op>PJSIP_REDIRECT_STOP) {
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: accept-redirect value '%s' ", pj_optarg));
 		return PJ_EINVAL;
 	    }
@@ -892,13 +892,13 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
 	    if (pjsua_verify_url(pj_optarg) != 0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid URL '%s' in "
 			  "--add-buddy option", pj_optarg));
 		return -1;
 	    }
 	    if (cfg->buddy_cnt == PJ_ARRAY_SIZE(cfg->buddy_cfg)) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: too many buddies in buddy list."));
 		return -1;
 	    }
@@ -1021,8 +1021,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 	case OPT_SRTP_SECURE:
 	    app_config.cfg.srtp_secure_signaling = my_atoi(pj_optarg);
-	    if (!pj_isdigit(*pj_optarg) || 
-		app_config.cfg.srtp_secure_signaling > 2) 
+	    if (!pj_isdigit(*pj_optarg) ||
+		app_config.cfg.srtp_secure_signaling > 2)
 	    {
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --srtp-secure option"));
 		return -1;
@@ -1038,7 +1038,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		unsigned range;
 
 		range = (65535-START_PORT-PJSUA_MAX_CALLS*2);
-		cfg->rtp_cfg.port = START_PORT + 
+		cfg->rtp_cfg.port = START_PORT +
 				    ((pj_rand() % range) & 0xFFFE);
 	    }
 
@@ -1111,7 +1111,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_QUALITY:
 	    cfg->media_cfg.quality = my_atoi(pj_optarg);
-	    if (cfg->media_cfg.quality < 0 || cfg->media_cfg.quality > 10) {
+	    if (cfg->media_cfg.quality > 10) {
 		PJ_LOG(1,(THIS_FILE,
 			  "Error: invalid --quality (expecting 0-10"));
 		return -1;
@@ -1135,7 +1135,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return -1;
 	    }
 	    break;
-	    
+
 	case OPT_TX_DROP_PCT:
 	    cfg->media_cfg.tx_drop_pct = my_atoi(pj_optarg);
 	    if (cfg->media_cfg.tx_drop_pct > 100) {
@@ -1169,15 +1169,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_USE_TLS:
 	    cfg->use_tls = PJ_TRUE;
 	    break;
-	    
+
 	case OPT_TLS_CA_FILE:
 	    cfg->udp_cfg.tls_setting.ca_list_file = pj_str(pj_optarg);
 	    break;
-	    
+
 	case OPT_TLS_CERT_FILE:
 	    cfg->udp_cfg.tls_setting.cert_file = pj_str(pj_optarg);
 	    break;
-	    
+
 	case OPT_TLS_PRIV_FILE:
 	    cfg->udp_cfg.tls_setting.privkey_file = pj_str(pj_optarg);
 	    break;
@@ -1221,7 +1221,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 		    ciphers_cnt = PJ_ARRAY_SIZE(ciphers);
 		    pj_ssl_cipher_get_availables(ciphers, &ciphers_cnt);
-		    
+
 		    PJ_LOG(1,(THIS_FILE, "Cipher \"%s\" is not supported by "
 					 "TLS/SSL backend.", pj_optarg));
 		    printf("Available TLS/SSL ciphers (%d):\n", ciphers_cnt);
@@ -1285,7 +1285,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    /* Set RTP traffic type to Voice */
 	    cfg->rtp_cfg.qos_type = PJ_QOS_TYPE_VOICE;
 	    /* Directly apply DSCP value to SIP traffic. Say lets
-	     * set it to CS3 (DSCP 011000). Note that this will not 
+	     * set it to CS3 (DSCP 011000). Note that this will not
 	     * work on all platforms.
 	     */
 	    cfg->udp_cfg.qos_params.flags = PJ_QOS_PARAM_HAS_DSCP;
@@ -1336,7 +1336,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	default:
-	    PJ_LOG(1,(THIS_FILE, 
+	    PJ_LOG(1,(THIS_FILE,
 		      "Argument \"%s\" is not valid. Use --help to see help",
 		      argv[pj_optind-1]));
 	    return -1;
@@ -1401,14 +1401,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 	if (acfg->auth_pref.initial_auth && acfg->cred_count) {
 	    /* Realm must point to the real domain */
 	    if (*acfg->cred_info[0].realm.ptr=='*') {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: cannot use '*' as realm with IMS"));
 		return PJ_EINVAL;
 	    }
 
 	    /* Username for authentication must be in a@b format */
 	    if (strchr(acfg->cred_info[0].username.ptr, '@')==0) {
-		PJ_LOG(1,(THIS_FILE, 
+		PJ_LOG(1,(THIS_FILE,
 			  "Error: Username for authentication must "
 			  "be in user@domain format with IMS"));
 		return PJ_EINVAL;
@@ -1455,7 +1455,7 @@ static void default_config()
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
 	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
-    
+
     cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     cfg->aud_cnt = 1;
@@ -1499,7 +1499,7 @@ pj_status_t load_config(int argc,
     if (status != PJ_SUCCESS)
 	return status;
 
-    if (app_running) {    
+    if (app_running) {
 	app_config.use_cli = use_cli;
 	app_config.cli_cfg.cli_fe = cli_fe;
 	app_config.cli_cfg.telnet_cfg.port = cli_telnet_port;
