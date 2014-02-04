@@ -215,8 +215,10 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     }
 
     /* check again */
-    if (tls->base.is_shutdown || tls->base.is_destroying)
+    if (tls->base.is_shutdown || tls->base.is_destroying) {
+        pjsip_transport_dec_ref(&tls->base);
 	return;
+    }
 
     /* We can not destroy the transport since high level objects may
      * still keep reference to this transport. So we can only 
