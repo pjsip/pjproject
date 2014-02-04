@@ -60,12 +60,12 @@ export UTIL_TEST_EXE:=pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
-#
-# $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
-#
-TARGETS := $(PJLIB_UTIL_LIB) $(PJLIB_UTIL_SONAME) $(UTIL_TEST_EXE)
+TARGETS := $(PJLIB_UTIL_LIB) $(PJLIB_UTIL_SONAME)
+TARGETS_EXE := $(UTIL_TEST_EXE)
 
-all: $(TARGETS)
+all: $(TARGETS) $(TARGETS_EXE)
+
+lib: $(TARGETS)
 
 doc:
 	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg

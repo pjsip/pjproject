@@ -12,5 +12,14 @@ all clean dep depend distclean realclean:
 		fi; \
 	done
 
+lib:
+	for dir in $(DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir all; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done
+
 doc:
 	

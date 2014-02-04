@@ -194,11 +194,12 @@ TARGETS := $(PJSIP_LIB) $(PJSIP_SONAME) \
 	   $(PJSIP_SIMPLE_LIB) $(PJSIP_SIMPLE_SONAME) \
 	   $(PJSIP_UA_LIB) $(PJSIP_UA_SONAME) \
 	   $(PJSUA_LIB_LIB) $(PJSUA_LIB_SONAME) \
-	   $(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME) \
-	   $(TEST_EXE) \
-	   $(PJSUA2_TEST_EXE)
+	   $(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME)
+TARGETS_EXE := $(TEST_EXE) $(PJSUA2_TEST_EXE)
 
-all: $(TARGETS)
+all: $(TARGETS) $(TARGETS_EXE)
+
+lib: $(TARGETS)
 
 doc:
 	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg

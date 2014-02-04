@@ -30,7 +30,7 @@ export TEST_OBJS +=	@ac_main_obj@
 # TARGETS are make targets in the Makefile, to be executed for this given
 # operating system.
 #
-export TARGETS	    =	$(PJLIB_LIB) $(PJLIB_SONAME) $(TEST_EXE)
-
+export TARGETS	    =	$(PJLIB_LIB) $(PJLIB_SONAME)
+export TARGETS_EXE  =   $(TEST_EXE)
 
 

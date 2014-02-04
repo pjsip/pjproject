@@ -21,7 +21,7 @@ all clean dep depend distclean print realclean:
 
 lib:
 	for dir in $(LIB_DIRS); do \
-		if $(MAKE) $(MAKE_FLAGS) -C $$dir all; then \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir lib; then \
 		    true; \
 		else \
 		    exit 1; \
