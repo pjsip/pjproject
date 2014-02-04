@@ -196,8 +196,10 @@ static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
     }
 
     /* check again */
-    if (tcp->base.is_shutdown || tcp->base.is_destroying)
+    if (tcp->base.is_shutdown || tcp->base.is_destroying) {
+        pjsip_transport_dec_ref(&tcp->base);
 	return;
+    }
 
     /* We can not destroy the transport since high level objects may
      * still keep reference to this transport. So we can only 
