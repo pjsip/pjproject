@@ -691,7 +691,7 @@ AC_ARG_ENABLE(video,
 
 case $target in
  *android*)
-	LIBS="$LIBS -llog -lgcc"
+	LIBS="$LIBS -llog"
 	;;
  arm-apple-darwin*)
  	LIBS="$LIBS -framework UIKit"
