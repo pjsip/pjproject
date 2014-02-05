@@ -226,6 +226,7 @@ void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
 	pj_bzero(stream->rec_thread_desc, sizeof(pj_thread_desc));
 	status = pj_thread_register("opensl_rec", stream->rec_thread_desc,
 				    &stream->rec_thread);
+	PJ_UNUSED_ARG(status);  /* Unused for now.. */
 	stream->rec_thread_initialized = 1;
 	PJ_LOG(5, (THIS_FILE, "Recorder thread started")); 
     }
