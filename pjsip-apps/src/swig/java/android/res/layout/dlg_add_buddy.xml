@@ -7,11 +7,12 @@
 	<TableRow>
         <TextView android:text="Buddy URI">
         </TextView>  
-
+
 	    <EditText
 	        android:id="@+id/editTextUri"
 	        android:layout_weight="1"
-	        android:inputType="textUri" >
+	        android:inputType="textUri|textEmailAddress" >
+
 	        <requestFocus />
 	    </EditText>
     </TableRow>

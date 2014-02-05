@@ -280,7 +280,10 @@ class MyApp {
 		
 		/* Set ua config. */
 		UaConfig ua_cfg = epConfig.getUaConfig();
-		ua_cfg.setUserAgent("Pjsua2And" + ep.libVersion().getFull());
+		ua_cfg.setUserAgent("Pjsua2 Android " + ep.libVersion().getFull());
+		StringVector stun_servers = new StringVector();
+		stun_servers.add("stun.pjsip.org");
+		ua_cfg.setStunServer(stun_servers);
 		if (own_worker_thread) {
 			ua_cfg.setThreadCnt(0);
 			ua_cfg.setMainThreadOnly(true);
