@@ -1238,12 +1238,13 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 		  (int)sess->srv[sess->idx].slen,
 		  sess->srv[sess->idx].ptr, errmsg));
 
-	sess->status = status;
-
 	pj_stun_sock_destroy(stun_sock);
 	sess->stun_sock = NULL;
 
 	++sess->idx;
+	if (sess->idx >= sess->count)
+            sess->status = status;
+
 	resolve_stun_entry(sess);
 
 	return PJ_FALSE;
@@ -1273,6 +1274,8 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
  */
 static void resolve_stun_entry(pjsua_stun_resolve *sess)
 {
+    pj_status_t status = PJ_EUNKNOWN;
+
     stun_resolve_add_ref(sess);
 
     /* Loop while we have entry to try */
@@ -1290,10 +1293,10 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 			 sess->srv[sess->idx].ptr);
 
 	/* Parse the server entry into host:port */
-	sess->status = pj_sockaddr_parse2(af, 0, &sess->srv[sess->idx],
+	status = pj_sockaddr_parse2(af, 0, &sess->srv[sess->idx],
 					  &hostpart, &port, NULL);
-	if (sess->status != PJ_SUCCESS) {
-	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %s", target));
+	if (status != PJ_SUCCESS) {
+    	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %s", target));
 	    continue;
 	}
 	
@@ -1309,12 +1312,12 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	/* Use STUN_sock to test this entry */
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
 	stun_sock_cb.on_status = &test_stun_on_status;
-	sess->status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
+	status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
 					   pj_AF_INET(), &stun_sock_cb,
 					   NULL, sess, &sess->stun_sock);
-	if (sess->status != PJ_SUCCESS) {
+	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(sess->status, errmsg, sizeof(errmsg));
+	    pj_strerror(status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, 
 		     "Error creating STUN socket for %s: %s",
 		     target, errmsg));
@@ -1322,11 +1325,11 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	    continue;
 	}
 
-	sess->status = pj_stun_sock_start(sess->stun_sock, &hostpart,
+	status = pj_stun_sock_start(sess->stun_sock, &hostpart,
 					  port, pjsua_var.resolver);
-	if (sess->status != PJ_SUCCESS) {
+	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(sess->status, errmsg, sizeof(errmsg));
+	    pj_strerror(status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, 
 		     "Error starting STUN socket for %s: %s",
 		     target, errmsg));
@@ -1346,8 +1349,9 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 
     if (sess->idx >= sess->count) {
 	/* No more entries to try */
-	PJ_ASSERT_ON_FAIL(sess->status != PJ_SUCCESS, 
-			  sess->status = PJ_EUNKNOWN);
+	pj_assert(status != PJ_SUCCESS || sess->status != PJ_EPENDING);
+        if (sess->status == PJ_EPENDING)
+            sess->status = status;
 	stun_resolve_complete(sess);
     }
 
@@ -1398,7 +1402,18 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
 	return PJ_SUCCESS;
 
     while (sess->status == PJ_EPENDING) {
-	pjsua_handle_events(50);
+        /* If there is no worker thread or
+         * the function is called from the only worker thread,
+         * we have to handle the events here.
+         */
+        if (pjsua_var.thread[0] == NULL ||
+            (pj_thread_this() == pjsua_var.thread[0] &&
+             pjsua_var.ua_cfg.thread_cnt == 1))
+            {
+            pjsua_handle_events(50);
+        } else {
+            pj_thread_sleep(20);
+        }
     }
 
     status = sess->status;
@@ -1484,10 +1499,18 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 	 */
 	if (wait) {
 	    while (pjsua_var.stun_status == PJ_EPENDING) {
-		if (pjsua_var.thread[0] == NULL)
+                /* If there is no worker thread or
+                 * the function is called from the only worker thread,
+                 * we have to handle the events here.
+                 */
+		if (pjsua_var.thread[0] == NULL ||
+                    (pj_thread_this() == pjsua_var.thread[0] &&
+                     pjsua_var.ua_cfg.thread_cnt == 1))
+                {
 		    pjsua_handle_events(10);
-		else
+                } else {
 		    pj_thread_sleep(10);
+                }
 	    }
 	}
     }
