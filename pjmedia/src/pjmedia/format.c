@@ -321,7 +321,6 @@ pjmedia_get_video_format_info(pjmedia_video_format_mgr *mgr,
 			      pj_uint32_t id)
 {
     pjmedia_video_format_info **first;
-    int		 comp;
     unsigned	 n;
 
     if (!mgr)
@@ -330,7 +329,6 @@ pjmedia_get_video_format_info(pjmedia_video_format_mgr *mgr,
     PJ_ASSERT_RETURN(mgr != NULL, NULL);
 
     /* Binary search for the appropriate format id */
-    comp = -1;
     first = &mgr->infos[0];
     n = mgr->info_cnt;
     for (; n > 0; ) {

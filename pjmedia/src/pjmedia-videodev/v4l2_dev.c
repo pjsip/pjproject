@@ -557,6 +557,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 
     vdi = &cf->dev_info[param->cap_id];
     vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
+    PJ_UNUSED_ARG(vfd); /* Unused for now */
 
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(cf->pf, vdi->info.name, 512, 512, NULL);
