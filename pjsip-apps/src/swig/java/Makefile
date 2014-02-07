@@ -3,8 +3,10 @@ include ../../../../build/common.mak
 
 ifneq ($(findstring android,$(TARGET_NAME)),)
  OS=android
- # Set dummy JAVA_HOME as JNI is bundled in Android NDK, only need javac here
- JAVA_HOME := $(dir $(shell which javac))
+ ifeq ("$(JAVA_HOME)","")
+   # Set dummy JAVA_HOME as JNI is bundled in Android NDK, only need javac here
+   JAVA_HOME := $(dir $(shell which javac))
+ endif
 else
  ifneq ($(findstring darwin,$(TARGET_NAME)),)
   OS=darwin
