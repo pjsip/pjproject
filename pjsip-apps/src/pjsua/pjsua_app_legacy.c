@@ -1201,7 +1201,7 @@ static void ui_send_dtmf_2833()
 	pj_status_t status;
 	char buf[128];
 
-	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
+	if (!simple_input("DTMF strings to send (0-9*R#A-B)", buf,
 	    sizeof(buf)))
 	{
 	    return;

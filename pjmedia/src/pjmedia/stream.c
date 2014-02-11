@@ -230,10 +230,11 @@ struct pjmedia_stream
 
 
 /* RFC 2833 digit */
-static const char digitmap[16] = { '0', '1', '2', '3',
+static const char digitmap[17] = { '0', '1', '2', '3',
 				   '4', '5', '6', '7',
 				   '8', '9', '*', '#',
-				   'A', 'B', 'C', 'D'};
+				   'A', 'B', 'C', 'D', 
+				   'R'};
 
 /* Zero audio frame samples */
 static pj_int16_t zero_frame[2 * 30 * 16000 / 1000];
@@ -1568,7 +1569,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     }
 
     /* Ignore unknown event. */
-    if (event->event > 15) {
+    if (event->event > 16) {
 	PJ_LOG(5,(stream->port.info.name.ptr,
 		  "Ignored RTP pkt with bad DTMF event %d",
     		  event->event));
@@ -2753,6 +2754,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    else if (dig == '#')
 	    {
 		pt = 11;
+	    }
+	    else if (dig == 'r')
+	    {
+		pt = 16;
 	    }
 	    else
 	    {

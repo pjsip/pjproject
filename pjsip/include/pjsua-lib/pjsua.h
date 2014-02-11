@@ -4693,10 +4693,12 @@ PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id,
 					      const pjsua_msg_data *msg_data);
 
 /**
- * Send DTMF digits to remote using RFC 2833 payload formats.
+ * Send DTMF digits to remote using RFC 2833 payload formats. 
  *
  * @param call_id	Call identification.
- * @param digits	DTMF string digits to be sent.
+ * @param digits	DTMF string digits to be sent as described on RFC 2833 
+ *			section 3.10. Character 'R' is used to represent the 
+ *			event type 16 (flash) as stated in RFC 4730.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */

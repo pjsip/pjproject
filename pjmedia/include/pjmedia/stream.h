@@ -341,7 +341,10 @@ PJ_DECL(pj_status_t) pjmedia_stream_resume(pjmedia_stream *stream,
  * only valid for audio stream.
  *
  * @param stream	The media stream.
- * @param ascii_digit	String containing digits to be sent to remote.
+ * @param ascii_digit	String containing digits to be sent to remote as 
+ *			described on RFC 2833 section 3.10. Character 'R' is 
+ *			used to represent the event type 16 (flash) as stated 
+ *			in RFC 4730.
  *			Currently the maximum number of digits are 32.
  *
  * @return		PJ_SUCCESS on success.
