@@ -88,7 +88,7 @@ for line in f:
 f.close()
 
 # Fill in extra link args
-extra_link_args = ['-static-libstdc++']
+extra_link_args = []
 if platform.system() == 'Darwin':
     # Mac OS X depedencies
     extra_link_args += ["-framework", "CoreFoundation", 
