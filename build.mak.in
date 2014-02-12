@@ -174,8 +174,7 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/third_party/lib\
 	$(PJ_VIDEO_LDFLAGS) \
 	@LDFLAGS@
-export APP_LDXXFLAGS := $(APP_LDFLAGS) \
-	-static-libstdc++
+export APP_LDXXFLAGS := $(APP_LDFLAGS)
 
 export APP_LIB_FILES = \
 	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
