@@ -90,7 +90,7 @@ public:
  */
 struct RtcpStreamStat
 {
-    TimeValue	    update;	/**< Time of last update.		    */
+    TimeVal	    update;	/**< Time of last update.		    */
     unsigned	    updateCount;/**< Number of updates (to calculate avg)   */
     unsigned	    pkt;	/**< Total number of packets		    */
     unsigned	    bytes;	/**< Total number of payload/bytes	    */
@@ -140,7 +140,7 @@ public:
  */
 struct RtcpStat
 {
-    TimeValue           start;          /**< Time when session was created  */
+    TimeVal		start;          /**< Time when session was created  */
     
     RtcpStreamStat      txStat;         /**< Encoder stream statistics.	    */
     RtcpStreamStat      rxStat;         /**< Decoder stream statistics.	    */
@@ -508,12 +508,12 @@ struct CallInfo
      * Up-to-date call connected duration (zero when call is not
      * established)
      */
-    TimeValue		connectDuration;
+    TimeVal		connectDuration;
     
     /**
      * Total call duration, including set-up time
      */
-    TimeValue		totalDuration;
+    TimeVal		totalDuration;
     
     /**
      * Flag if remote was SDP offerer

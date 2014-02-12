@@ -236,7 +236,7 @@ struct Version
 /**
  * Representation of time value.
  */
-struct TimeValue
+struct TimeVal
 {
     /**
      * The seconds part of the time.

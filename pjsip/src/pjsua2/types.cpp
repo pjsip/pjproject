@@ -87,7 +87,7 @@ string Error::info(bool multi_line) const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void TimeValue::fromPj(const pj_time_val &prm)
+void TimeVal::fromPj(const pj_time_val &prm)
 {
     this->sec  = prm.sec;
     this->msec = prm.msec;
