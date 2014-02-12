@@ -339,7 +339,7 @@ public:
      *			 PJMEDIA_FILE_NO_LOOP to prevent playback loop.
      */
     void createPlayer(const string &file_name,
-		      unsigned options=PJMEDIA_FILE_NO_LOOP) throw(Error);
+		      unsigned options=0) throw(Error);
 
     /**
      * Create a file playlist media port, and automatically add the port
@@ -354,10 +354,12 @@ public:
      */
     void createPlaylist(const StringVector &file_names,
 			const string &label="",
-			unsigned options=PJMEDIA_FILE_NO_LOOP) throw(Error);
+			unsigned options=0) throw(Error);
 
     /**
      * Set playback position. This operation is not valid for playlist.
+     *
+     * @param samples	   The desired playback position, in samples.
      */
     void setPos(pj_uint32_t samples) throw(Error);
 
@@ -409,12 +411,16 @@ public:
      *			 encodings. This value must be zero for now.
      * @param max_size	 Maximum file size. Specify zero or -1 to remove size
      *			 limitation. This value must be zero or -1 for now.
-     * @param options	 Optional options.
+     * @param options	 Optional options, which can be used to specify the
+     * 			 recording file format. Supported options are
+     * 			 PJMEDIA_FILE_WRITE_PCM, PJMEDIA_FILE_WRITE_ALAW,
+     * 			 and PJMEDIA_FILE_WRITE_ULAW. Default is zero or
+     * 			 PJMEDIA_FILE_WRITE_PCM.
      */
     void createRecorder(const string &file_name,
 			unsigned enc_type=0,
 			pj_ssize_t max_size=0,
-			unsigned options=PJMEDIA_FILE_WRITE_PCM) throw(Error);
+			unsigned options=0) throw(Error);
 
     /**
      * Typecast from base class AudioMedia. This is useful for application
