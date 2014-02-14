@@ -2,12 +2,12 @@ include ../../../../build.mak
 
 lib_dir:
 	@for token in `echo $(APP_LDFLAGS)`; do \
-		echo $$token | grep L | sed 's/-L//'; \
+		echo $$token | grep \\-L | sed 's/-L//'; \
 	done
 
 inc_dir:
 	@for token in `echo $(APP_CFLAGS)`; do \
-		echo $$token | grep I | sed 's/-I//'; \
+		echo $$token | grep \\-I | sed 's/-I//'; \
 	done
 
 libs:

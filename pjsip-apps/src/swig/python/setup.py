@@ -98,6 +98,10 @@ if platform.system() == 'Darwin':
     if platform.mac_ver()[0].startswith("10.7"):
         extra_link_args += ["-framework", "AudioUnit"]
 
+# MinGW specific action: put current working dir to PATH, so Python distutils
+# will invoke our dummy gcc/g++ instead, which is in the current working dir.
+if platform.system()=='Windows' and os.environ["MSYSTEM"].find('MINGW')!=-1:
+    os.environ["PATH"] = "." + os.pathsep + os.environ["PATH"]
 
 setup(name="pjsua2", 
       version=pj_version,
