@@ -49,7 +49,7 @@ const char* find_gcc(const char *gcc_exe)
 
 	/* Skip current dir */
 	if (strcmp(p, ".") == 0) {
-	    p = strtok(NULL, ":");
+	    p = strtok(NULL, ";");
 	    continue;
 	}
 
