@@ -29,4 +29,8 @@ all clean dep depend distclean print realclean install uninstall:
 	done
 
 symbols.i: symbols.lst
+	@echo ** Warning **: file symbols.i is out of date. Run 'make symbol'.
+
+symbol symbols:
 	python importsym.py
+
