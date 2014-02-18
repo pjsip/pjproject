@@ -252,7 +252,7 @@ struct dlgsub
 
 /* Static vars. */
 static const pj_str_t STR_EVENT	     = { "Event", 5 };
-static const pj_str_t STR_EVENT_S    = { "Event", 5 };
+static const pj_str_t STR_EVENT_S    = { "o", 1 };
 static const pj_str_t STR_SUB_STATE  = { "Subscription-State", 18 };
 static const pj_str_t STR_TERMINATED = { "terminated", 10 };
 static const pj_str_t STR_ACTIVE     = { "active", 6 };
