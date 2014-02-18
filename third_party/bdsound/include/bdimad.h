@@ -51,7 +51,7 @@
  *
  *    - <b>Usage</b>
  *    \n There are only a couple of things the customer have to pay attention on
- *    §when using bdIMAD library.
+ *    ï¿½when using bdIMAD library.
  *
  *       - <b>Initialization</b>
  *       \n Since the bdIMAD library provide itself the echo cancellation
@@ -340,6 +340,22 @@ typedef struct bdIMADpj_libVersion_t{
     char    *buildDate;                           /**< build date. */
 } bdIMADpj_libVersion_t;
 
+
+/**
+ * @brief Audio output routing setting to pass to set and get route output device functions.
+ */
+typedef enum bdIMADpj_out_dev_route{
+    /** Default route. */
+    BD_AUD_DEV_ROUTE_DEFAULT = 0,
+
+    /** Route to loudspeaker */
+    BD_AUD_DEV_ROUTE_LOUDSPEAKER = 1,
+
+    /** Route to earpiece */
+    BD_AUD_DEV_ROUTE_EARPIECE = 2
+}bdIMADpj_out_dev_route;
+
+
 /**
  * @}
  */
@@ -408,7 +424,7 @@ BDIMADPJ_API bdIMADpj_Status bdIMADpj_FreeStructures(
  *                                     \n Note, the <code>pBdIMADInstance</code>
  *                                     is modified with the applied settings.
  * @param[out] **ppWarningMessages     Pointer to pointer to a
- * 				       ::bdIMADpj_Warnings_t sructure,
+ * 				       ::bdIMADpj_Warnings_t structure,
  * 				       which reports the warnings after the
  * 				       initialization.
  * @return                             ::BD_PJ_OK if the function has been
@@ -513,7 +529,7 @@ BDIMADPJ_API bdIMADpj_Status bdIMADpj_ClearAllWarnings(
  * @return                             ::BD_PJ_OK if the function has been
  * 				       performed successfully, otherwise
  * 				       return an error (refer to
- * 				       §::bdIMADpj_Status).
+ * 				       ï¿½::bdIMADpj_Status).
  */
 BDIMADPJ_API bdIMADpj_Status bdIMADpj_setParameter(bdIMADpj bdIMADInstance,
 				bdIMADpj_Parameter parameterName, void *pValue);
@@ -536,6 +552,31 @@ BDIMADPJ_API bdIMADpj_Status bdIMADpj_setParameter(bdIMADpj bdIMADInstance,
 BDIMADPJ_API bdIMADpj_Status bdIMADpj_getParameter(bdIMADpj bdIMADInstance,
 				bdIMADpj_Parameter parameterName, void *pValue);
 
+/**
+ * @brief Is used to set the route of the output device of the bdIMAD object pointed by the
+ * <code>pBdIMADInstance</code>.
+ * @param[in] bdIMADInstance           bdIMAD object.
+ * @param[in] outputRoute	       Indicate the route of the output device to set.
+ * @param[out] **ppWarningMessages     Pointer to pointer to a
+ * 				       ::bdIMADpj_Warnings_t structure,
+ * 				       which reports the warnings after the
+ * 				       set function.
+ * @return                             ::BD_PJ_OK if the function has been
+ * 				       performed successfully, otherwise return
+ * 				       an error (refer to ::bdIMADpj_Status).
+ */
+BDIMADPJ_API bdIMADpj_Status bdIMADpj_setRouteOutputDevice(bdIMADpj bdIMADInstance, bdIMADpj_out_dev_route outputRoute, bdIMADpj_Warnings_t **ppWarningMessages);
+
+/**
+ * @brief Is used to get the route of the output device of the bdIMAD object pointed by the
+ * <code>pBdIMADInstance</code>.
+ * @param[in] bdIMADInstance           bdIMAD object.
+ * @param[out] *outputRoute            Is a pointer to the route of the output device currently setted.
+ * @return                             ::BD_PJ_OK if the function has been
+ * 				       performed successfully, otherwise return
+ * 				       an error (refer to ::bdIMADpj_Status).
+ */
+BDIMADPJ_API bdIMADpj_Status bdIMADpj_getRouteOutputDevice(bdIMADpj bdIMADInstance, bdIMADpj_out_dev_route *outputRoute);
 
 #ifdef __cplusplus
 }

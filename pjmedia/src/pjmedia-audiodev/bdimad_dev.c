@@ -318,7 +318,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     for(i=0;i<playbackDeviceCount;i++) {
         wf->dev_info[captureDeviceCount+i].deviceId = captureDeviceCount+i;
         wf->dev_info[captureDeviceCount+i].info.caps = 
-				PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+				PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING | PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
         wf->dev_info[captureDeviceCount+i].info.default_samples_per_sec = 
 				BD_IMAD_DEFAULT_FREQ;
         strcpy(wf->dev_info[captureDeviceCount+i].info.driver, "BD_IMAD");
@@ -423,6 +423,10 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 
     if(di->info.caps & PJMEDIA_AUD_DEV_CAP_EC) {
         param->ec_enabled = PJ_TRUE;
+    }
+
+	if(di->info.caps & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
+		param->output_route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
     }
 
     return PJ_SUCCESS;
@@ -927,6 +931,18 @@ static pj_status_t stream_set_capBDIMAD(pjmedia_aud_stream *s,
         }
     }
 
+	if(cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
+		pjmedia_aud_dev_route outputRoute = *(pjmedia_aud_dev_route*)pval;
+		if(strm->param.output_route!=outputRoute)
+			res = bdIMADpj_setRouteOutputDevice(strm->bdIMADpjInstance, (bdIMADpj_out_dev_route) outputRoute, &strm->bdIMADpjWarningPtr);
+		if(res == BD_PJ_OK) {
+			strm->param.output_route = outputRoute;
+            return PJ_SUCCESS;
+        } else {
+            return PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(res);
+        }
+	}
+
     return PJMEDIA_EAUD_INVCAP;
 }
 
@@ -1011,6 +1027,12 @@ static pj_status_t factory_create_streamBDIMAD(pjmedia_aud_dev_factory *f,
 			     &param->ec_enabled);
     }
 
+    if(param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
+		stream_set_capBDIMAD(&strm->base,
+				PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+				 &param->output_route);
+	}
+
     strm->base.op = &stream_op;
     *p_aud_strm = &strm->base;
 
@@ -1059,6 +1081,17 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_EC, &pi->ec_enabled) == PJ_SUCCESS)
     {
         pi->flags |= PJMEDIA_AUD_DEV_CAP_EC;
+    }
+	if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_EC, &pi->ec_enabled) == PJ_SUCCESS)
+    {
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_EC;
+    }
+    
+
+    // Get the Route Output Device setting
+    if(stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE, &pi->output_route) == PJ_SUCCESS)
+    {
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
     }
 
     return PJ_SUCCESS;
@@ -1113,6 +1146,16 @@ static pj_status_t stream_get_capBDIMAD(pjmedia_aud_stream *s,
         } else {
             return PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(res);
         }
+    }
+    else if(cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
+    		pjmedia_aud_dev_route routeOutDev;
+    		res = bdIMADpj_getRouteOutputDevice(strm->bdIMADpjInstance,(bdIMADpj_out_dev_route*)&routeOutDev);
+            if(res == BD_PJ_OK) {
+                *(pjmedia_aud_dev_route*)pval = routeOutDev;
+                return PJ_SUCCESS;
+            } else {
+                return PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(res);
+            }
     } else {
         return PJMEDIA_EAUD_INVCAP;
     }
@@ -1176,8 +1219,13 @@ static pj_status_t stream_start(pjmedia_aud_stream *s)
 }
 
 #if defined (_MSC_VER)
+#ifdef _DEBUG
+#pragma comment ( lib, "bdClientValidationd.lib" )
+#pragma comment ( lib, "bdIMADpjd.lib" )
+#else
 #pragma comment ( lib, "bdClientValidation.lib" )
 #pragma comment ( lib, "bdIMADpj.lib" )
+#endif
 #endif
 
 
