@@ -829,10 +829,23 @@ static pj_status_t create_ice_media_transport(
     /* Wait until transport is initialized, or time out */
     if (!async) {
 	pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
+	pjsip_dialog *dlg = call_med->call->inv ?
+				call_med->call->inv->dlg : NULL;
         if (has_pjsua_lock)
 	    PJSUA_UNLOCK();
+        if (dlg) {
+            /* Don't lock otherwise deadlock:
+             * https://trac.pjsip.org/repos/ticket/1737
+             */
+            ++dlg->sess_count;
+            pjsip_dlg_dec_lock(dlg);
+        }
         while (call_med->tp_ready == PJ_EPENDING) {
 	    pjsua_handle_events(100);
+        }
+        if (dlg) {
+            pjsip_dlg_inc_lock(dlg);
+            --dlg->sess_count;
         }
 	if (has_pjsua_lock)
 	    PJSUA_LOCK();
