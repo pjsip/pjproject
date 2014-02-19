@@ -1304,6 +1304,20 @@ on_return:
     return status;
 }
 
+/* Determine if call's media is being changed, for example when video is being
+ * added. Then we can reject incoming re-INVITE, for example. This is the
+ * solution for https://trac.pjsip.org/repos/ticket/1738
+ */
+pj_bool_t  pjsua_call_media_is_changing(pjsua_call *call)
+{
+    /* The problem in #1738 occurs because we do handle_events() loop while
+     * adding media, which could cause incoming re-INVITE to be processed and
+     * cause havoc. Since the handle_events() loop only happens while adding
+     * media, it is sufficient to only check if "prov > cnt" for now.
+     */
+    return call->med_prov_cnt > call->med_cnt;
+}
+
 /* Initialize the media line */
 pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pjmedia_type type,

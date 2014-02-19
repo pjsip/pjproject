@@ -635,6 +635,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
 
+/*
+ * Error message when media operation is requested while another is in progress
+ */
+#define ERR_MEDIA_CHANGING  " because another media operation is in progress"
+
+pj_bool_t   pjsua_call_media_is_changing(pjsua_call *call);
 pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pjmedia_type type,
 				  const pjsua_transport_config *tcfg,

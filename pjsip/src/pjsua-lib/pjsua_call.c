@@ -34,7 +34,6 @@
  */
 #define LOCK_CODEC_MAX_RETRY	     5
 
-
 /*
  * The INFO method.
  */
@@ -2392,6 +2391,12 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    if (pjsua_call_media_is_changing(call)) {
+	PJ_LOG(1,(THIS_FILE, "Unable to reinvite" ERR_MEDIA_CHANGING));
+	status = PJ_EINVALIDOP;
+	goto on_return;
+    }
+
     if (call->inv->state != PJSIP_INV_STATE_CONFIRMED) {
 	PJ_LOG(3,(THIS_FILE, "Can not re-INVITE call that is not confirmed"));
 	status = PJSIP_ESESSIONSTATE;
@@ -2498,6 +2503,12 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_update2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    if (pjsua_call_media_is_changing(call)) {
+	PJ_LOG(1,(THIS_FILE, "Unable to send UPDATE" ERR_MEDIA_CHANGING));
+	status = PJ_EINVALIDOP;
+	goto on_return;
+    }
 
     status = apply_call_setting(call, opt, NULL);
     if (status != PJ_SUCCESS) {
@@ -3878,7 +3889,13 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     /* Supply candidate answer */
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 	      call->index));
+
     pj_log_push_indent();
+
+    if (pjsua_call_media_is_changing(call)) {
+	PJ_LOG(1,(THIS_FILE, "Unable to process offer" ERR_MEDIA_CHANGING));
+	goto on_return;
+    }
 
     if (pjsua_var.ua_cfg.cb.on_call_rx_offer) {
 	pjsip_status_code code = PJSIP_SC_OK;
@@ -3969,6 +3986,11 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     pj_log_push_indent();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (pjsua_call_media_is_changing(call)) {
+	*offer = NULL;
+	PJ_LOG(1,(THIS_FILE, "Unable to create offer" ERR_MEDIA_CHANGING));
+	goto on_return;
+    }
 
     /* See if we've put call on hold. */
     if (call->local_hold) {

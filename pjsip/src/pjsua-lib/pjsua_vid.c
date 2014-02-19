@@ -1535,6 +1535,11 @@ static pj_status_t call_add_video(pjsua_call *call,
     if (call->med_cnt == PJSUA_MAX_CALL_MEDIA)
 	return PJ_ETOOMANY;
 
+    if (pjsua_call_media_is_changing(call)) {
+	PJ_LOG(1,(THIS_FILE, "Unable to add video" ERR_MEDIA_CHANGING));
+	return PJ_EINVALIDOP;
+    }
+
     /* Get active local SDP and clone it */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &current_sdp);
     if (status != PJ_SUCCESS)
@@ -1635,6 +1640,11 @@ static pj_status_t call_modify_video(pjsua_call *call,
     const pjmedia_sdp_session *current_sdp;
     pjmedia_sdp_session *sdp;
     pj_status_t status;
+
+    if (pjsua_call_media_is_changing(call)) {
+	PJ_LOG(1,(THIS_FILE, "Unable to modify video" ERR_MEDIA_CHANGING));
+	return PJ_EINVALIDOP;
+    }
 
     /* Verify and normalize media index */
     if (med_idx == -1) {
