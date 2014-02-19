@@ -1127,7 +1127,7 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
 {
     struct stream_list *it, *itBegin;
     pj_status_t status;
-    pj_thread_desc thread_desc;
+    static pj_thread_desc thread_desc;
     pj_thread_t *thread;
     
     /* Register the thread with PJLIB, this is must for any external threads
