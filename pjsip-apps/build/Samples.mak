@@ -8,7 +8,7 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 # Gather all flags.
 #
 export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS)
-export _CXXFLAGS:= $(PJ_CXXFLAGS)
+export _CXXFLAGS:= $(PJ_CXXFLAGS) $(CFLAGS)
 export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
 export _LDXXFLAGS := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
 

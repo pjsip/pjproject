@@ -66,37 +66,19 @@ f = os.popen("make --no-print-directory -f helper.mak target_name")
 pj_target_name = f.read().rstrip("\r\n")
 f.close()
 
-# Fill in pj_inc_dirs
-pj_inc_dirs = []
-f = os.popen("make --no-print-directory -f helper.mak inc_dir")
+# Fill in extra_compile_args
+extra_compile_args = []
+f = os.popen("make --no-print-directory -f helper.mak cflags")
 for line in f:
-    pj_inc_dirs.append(line.rstrip("\r\n"))
+    extra_compile_args.append(line.rstrip("\r\n"))
 f.close()
 
-# Fill in pj_lib_dirs
-pj_lib_dirs = []
-f = os.popen("make --no-print-directory -f helper.mak lib_dir")
-for line in f:
-    pj_lib_dirs.append(line.rstrip("\r\n"))
-f.close()
-
-# Fill in pj_libs
-pj_libs = ['pjsua2-' + pj_target_name]
-f = os.popen("make --no-print-directory -f helper.mak libs")
-for line in f:
-    pj_libs.append(line.rstrip("\r\n"))
-f.close()
-
-# Fill in extra link args
+# Fill in extra_link_args
 extra_link_args = []
-if platform.system() == 'Darwin':
-    # Mac OS X depedencies
-    extra_link_args += ["-framework", "CoreFoundation", 
-                        "-framework", "AudioToolbox",
-			"-framework", "QTKit"]
-    # OS X Lion support
-    if platform.mac_ver()[0].startswith("10.7"):
-        extra_link_args += ["-framework", "AudioUnit"]
+f = os.popen("make --no-print-directory -f helper.mak ldflags")
+for line in f:
+    extra_link_args.append(line.rstrip("\r\n"))
+f.close()
 
 # MinGW specific action: put current working dir to PATH, so Python distutils
 # will invoke our dummy gcc/g++ instead, which is in the current working dir.
@@ -109,10 +91,7 @@ setup(name="pjsua2",
       url='http://www.pjsip.org',
       ext_modules = [Extension("_pjsua2", 
                                ["pjsua2_wrap.cpp"], 
-                               define_macros=[('PJ_AUTOCONF', '1'),],
-                               include_dirs=pj_inc_dirs, 
-                               library_dirs=pj_lib_dirs, 
-                               libraries=pj_libs,
+                               extra_compile_args=extra_compile_args,
                                extra_link_args=extra_link_args
                               )
                     ],
