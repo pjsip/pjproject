@@ -5,6 +5,9 @@ ldflags:
 	@for token in `echo $(PJ_LDXXFLAGS) $(LDFLAGS)`; do \
 		echo $$token; \
 	done
+	@for token in `echo $(PJ_LDXXLIBS) $(LIBS)`; do \
+		echo $$token | grep -v \\-l; \
+	done
 
 libs:
 	@for token in `echo $(PJ_LDXXLIBS) $(LIBS)`; do \
