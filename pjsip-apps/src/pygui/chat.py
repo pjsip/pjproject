@@ -140,15 +140,15 @@ class Chat(gui.ChatObserver):
 				continue
 				
 			# send via call, if any, or buddy
-			sender = None
+			target = None
 			if self._callList[idx] and self._callList[idx].connected:
-				sender = self._callList[idx]
+				target = self._callList[idx]
 			else:
-				sender = self._buddyList[idx]
-			assert(sender)
+				target = self._buddyList[idx]
+			assert(target)
 				
 			try:
-				sender.sendTypingIndication(type_ind_param)
+				target.sendTypingIndication(type_ind_param)
 			except:
 				pass
 
@@ -162,15 +162,15 @@ class Chat(gui.ChatObserver):
 				continue
 				
 			# send via call, if any, or buddy
-			sender = None
+			target = None
 			if self._callList[idx] and self._callList[idx].connected:
-				sender = self._callList[idx]
+				target = self._callList[idx]
 			else:
-				sender = self._buddyList[idx]
-			assert(sender)
+				target = self._buddyList[idx]
+			assert(target)
 			
 			try:
-				sender.sendInstantMessage(send_im_param)
+				target.sendInstantMessage(send_im_param)
 			except:
 				# error will be handled via Account::onInstantMessageStatus()
 				pass
@@ -302,10 +302,26 @@ class Chat(gui.ChatObserver):
 			self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.INITIALIZING)
 		elif info.state == pj.PJSIP_INV_STATE_CONFIRMED:
 			self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.CONNECTED)
-			med_idx = self._getActiveMediaIdx(thecall)
-			si = thecall.getStreamInfo(med_idx)
-			stats_str = "Audio codec: %s/%s\n..." % (si.codecName, si.codecClockRate)
-			self._gui.audioSetStatsText(thecall.peerUri, stats_str)
+			if not self.isPrivate():
+				# inform peer about conference participants
+				conf_welcome_str  = '\n---\n'
+				conf_welcome_str += 'Welcome to the conference, participants:\n'
+				conf_welcome_str += '%s (host)\n' % (self._acc.cfg.idUri)
+				for p in self._participantList:
+					conf_welcome_str += '%s\n' % (str(p))
+				conf_welcome_str += '---\n'
+				send_im_param = pj.SendInstantMessageParam()
+				send_im_param.content = conf_welcome_str
+				try:
+					thecall.sendInstantMessage(send_im_param)
+				except:
+					pass
+					
+				# inform others, including self
+				msg = "[Conf manager] %s has joined" % (thecall.peerUri)
+				self.addMessage(None, msg)
+				self._sendInstantMessage(msg, thecall.peerUri)
+				
 		elif info.state == pj.PJSIP_INV_STATE_DISCONNECTED:
 			if info.lastStatusCode/100 != 2:
 				self._gui.audioUpdateState(thecall.peerUri, gui.AudioState.FAILED)
@@ -324,6 +340,45 @@ class Chat(gui.ChatObserver):
 			# kick the disconnected participant, but the last (avoid zombie chat)
 			if not self.isPrivate():
 				self.kickParticipant(ParseSipUri(thecall.peerUri))
+				
+				# inform others, including self
+				msg = "[Conf manager] %s has left" % (thecall.peerUri)
+				self.addMessage(None, msg)
+				self._sendInstantMessage(msg, thecall.peerUri)
+
+	def updateCallMediaState(self, thecall, info = None):
+		# info is optional here, just to avoid calling getInfo() twice (in the caller and here)
+		if not info: info = thecall.getInfo()
+		
+		med_idx = self._getActiveMediaIdx(thecall)
+		if (med_idx < 0):
+			self._gui.audioSetStatsText(thecall.peerUri, 'No active media')
+			return
+
+		si = thecall.getStreamInfo(med_idx)
+		dir_str = ''
+		if si.dir == 0:
+			dir_str = 'inactive'
+		else:
+			if si.dir & pj.PJMEDIA_DIR_ENCODING:
+				dir_str += 'send '
+			if si.dir & pj.PJMEDIA_DIR_DECODING:
+				dir_str += 'receive '
+		stats_str  = "Direction   : %s\n" % (dir_str)
+		stats_str += "Audio codec : %s (%sHz)" % (si.codecName, si.codecClockRate)
+		self._gui.audioSetStatsText(thecall.peerUri, stats_str)
+		m = pj.AudioMedia.typecastFromMedia(thecall.getMedia(med_idx))
+		
+		# make conference
+		for c in self._callList:
+			if c == thecall:
+				continue
+			med_idx = self._getActiveMediaIdx(c)
+			if med_idx < 0:
+				continue
+			mm = pj.AudioMedia.typecastFromMedia(c.getMedia(med_idx))
+			m.startTransmit(mm)
+			mm.startTransmit(m)
 
 			
 	# ** callbacks from GUI (ChatObserver implementation) **

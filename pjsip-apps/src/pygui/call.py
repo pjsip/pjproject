@@ -70,6 +70,8 @@ class Call(pj.Call):
 				elif mi.status == pj.PJSUA_CALL_MEDIA_ACTIVE and self.onhold:
 					self.chat.addMessage(None, "'%s' sets call active" % (self.peerUri))
 					self.onhold = False
+		if self.chat:
+			self.chat.updateCallMediaState(self, ci)
 			
 	def onInstantMessage(self, prm):
 		# chat instance should have been initalized
