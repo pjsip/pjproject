@@ -73,6 +73,13 @@ for line in f:
     extra_compile_args.append(line.rstrip("\r\n"))
 f.close()
 
+# Fill in libraries
+libraries = []
+f = os.popen("make --no-print-directory -f helper.mak libs")
+for line in f:
+    libraries.append(line.rstrip("\r\n"))
+f.close()
+
 # Fill in extra_link_args
 extra_link_args = []
 f = os.popen("make --no-print-directory -f helper.mak ldflags")
@@ -90,7 +97,8 @@ setup(name="pjsua2",
       description='SIP User Agent Library based on PJSIP',
       url='http://www.pjsip.org',
       ext_modules = [Extension("_pjsua2", 
-                               ["pjsua2_wrap.cpp"], 
+                               ["pjsua2_wrap.cpp"],
+                               libraries=libraries,
                                extra_compile_args=extra_compile_args,
                                extra_link_args=extra_link_args
                               )

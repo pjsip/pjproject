@@ -2,8 +2,13 @@ include ../../../../build.mak
 include $(PJDIR)/build/common.mak
 
 ldflags:
-	@for token in `echo $(PJ_LDXXLIBS) $(PJ_LDXXFLAGS) $(LDFLAGS)`; do \
+	@for token in `echo $(PJ_LDXXFLAGS) $(LDFLAGS)`; do \
 		echo $$token; \
+	done
+
+libs:
+	@for token in `echo $(PJ_LDXXLIBS) $(LIBS)`; do \
+		echo $$token | grep \\-l | sed 's/-l//'; \
 	done
 
 cflags:
