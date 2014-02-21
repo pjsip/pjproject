@@ -114,7 +114,7 @@ else
 
   JAVA_INC := $(JAVA_HOME)/include
   JAVA_LIB := $(JAVA_HOME)/lib
-  ifeq (exists,$(shell test -d $(JAVA_HOME)/bin && echo exists))
+  ifeq (exists,$(shell test -d "$(JAVA_HOME)/bin" && echo exists))
     JAVA_BIN := $(JAVA_HOME)/bin
   else
     JAVA_BIN := $(JAVA_HOME)
@@ -124,11 +124,11 @@ endif
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		 := swig
-MY_JAVA	 	 := $(JAVA_BIN)/java
-MY_JAVAC	 := $(JAVA_BIN)/javac
-MY_JNI_CFLAGS	 := -I$(JAVA_INC) -I$(JAVA_INC)/win32 \
-		    -I$(JAVA_INC)/linux -I$(JAVA_INC)/darwin -I.
-MY_JNI_LDFLAGS	 := -L$(JAVA_LIB)
+MY_JAVA	 	 := "$(JAVA_BIN)/java"
+MY_JAVAC	 := "$(JAVA_BIN)/javac"
+MY_JNI_CFLAGS	 := -I"$(JAVA_INC)" -I"$(JAVA_INC)/win32" \
+		    -I"$(JAVA_INC)/linux" -I"$(JAVA_INC)/darwin" -I.
+MY_JNI_LDFLAGS	 := -L"$(JAVA_LIB)"
 
 # OS specific
 ifeq ($(OS),Windows_NT)
