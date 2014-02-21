@@ -2953,7 +2953,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	 */
 	if (tdata->msg->line.req.method.id == PJSIP_BYE_METHOD &&
 	    inv->role == PJSIP_ROLE_UAS &&
-	    inv->state == PJSIP_INV_STATE_CONNECTING)
+	    inv->state == PJSIP_INV_STATE_CONNECTING &&
+	    inv->cause != PJSIP_SC_REQUEST_TIMEOUT &&
+	    inv->cause != PJSIP_SC_TSX_TRANSPORT_ERROR)
 	{
 	    if (inv->pending_bye)
 		pjsip_tx_data_dec_ref(inv->pending_bye);
@@ -4212,6 +4214,8 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 		} else {
 		    pjsip_tx_data *bye;
 		    pj_status_t status;
+
+		    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
 
 		    /* Send BYE */
 		    status = pjsip_dlg_create_request(inv->dlg,
