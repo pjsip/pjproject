@@ -1,43 +1,108 @@
 
-
 Buddy (Presence)
 ================
-This class represents a remote buddy (a person, or a SIP endpoint).
-To use the Buddy class, application DOES NOT need to subclass it unless application wants to get the notifications on buddy state change.
+Presence feature in PJSUA2 centers around Buddy class. This class represents a remote buddy (a person, or a SIP endpoint).
 
-Subscribe to Buddy's Presence Status
----------------------------------------------------------
-To subscribe to buddy's presence status, you need to add a buddy object, install callback to handle buddy's event, and start subscribing to buddy's presence status. The snippet below shows a sample code to achieve these::
+Subclassing the Buddy class
+----------------------------
+To use the Buddy class, normally application SHOULD create its own subclass, such as:
 
-  class MyBuddyCallback(pjsua.BuddyCallback):
-    def __init__(self, buddy=None):
-        pjsua.BuddyCallback.__init__(self, buddy)
+.. code-block:: c++
 
-    def on_state(self):
-        print "Buddy", self.buddy.info().uri, "is",
-        print self.buddy.info().online_text
+    class MyBuddy : public Buddy
+    {
+    public:
+        MyBuddy() {}
+        ~MyBuddy() {}
 
-  try:
-    uri = '"Alice" <sip:alice@example.com>'
-    buddy = acc.add_buddy(uri, cb=MyBuddyCallback())
-    buddy.subscribe()
+        virtual void onBuddyState();
+    };
 
-  except pjsua.Error, err:
-    print 'Error adding buddy:', err
+In its subclass, application can implement the buddy callback to get the notifications on buddy state change.
 
-For more information please see ​Buddy class and ​BuddyCallback class reference documentation.
+Subscribing to Buddy's Presence Status
+---------------------------------------
+To subscribe to buddy's presence status, you need to add a buddy object and subscribe to buddy's presence status. The snippet below shows a sample code to achieve these:
+
+.. code-block:: c++
+
+    BuddyConfig cfg;
+    cfg.uri = "sip:alice@example.com";
+    MyBuddy buddy;
+    try {
+        buddy.create(*acc, cfg);
+        buddy.subscribePresence(true);
+    } catch(Error& err) {
+    }
+
+Then you can get the buddy's presence state change inside the onBuddyState() callback:
+
+.. code-block:: c++
+
+    void MyBuddy::onBuddyState()
+    {
+        BuddyInfo bi = getInfo();
+        cout << "Buddy " << bi.uri << " is " << bi.presStatus.statusText << endl;
+    }
+
+For more information, please see Buddy class reference documentation.
 
 Responding to Presence Subscription Request
-
+-------------------------------------------
 By default, incoming presence subscription to an account will be accepted automatically. You will probably want to change this behavior, for example only to automatically accept subscription if it comes from one of the buddy in the buddy list, and for anything else prompt the user if he/she wants to accept the request.
 
-This can be done by implementing the ​on_incoming_subscribe() method of the ​AccountCallback class.
+This can be done by overriding the onIncomingSubscribe() method of the Account class. Please see the documentation of this method for more info.
 
 Changing Account's Presence Status
+----------------------------------
+To change account's presence status, you can use the function Account.setOnlineStatus() to set basic account's presence status (i.e. available or not available) and optionally, some extended information (e.g. busy, away, on the phone, etc), such as:
 
-The ​Account class provides two methods to change account's presence status:
+.. code-block:: c++
 
-​set_basic_status() can be used to set basic account's presence status (i.e. available or not available).
-​set_presence_status() can be used to set both the basic presence status and some extended information (e.g. busy, away, on the phone, etc.).
-When the presence status is changed, the account will publish the new status to all of its presence subscriber, either with PUBLISH request or SUBSCRIBE request, or both, depending on account configuration.
+    try {
+        PresenceStatus ps;
+        ps.status = PJSUA_BUDDY_STATUS_ONLINE;
+        // Optional, set the activity and some note
+        ps.activity = PJRPID_ACTIVITY_BUSY;
+        ps.note = "On the phone";
+        acc->setOnlineStatus(ps);
+    } catch(Error& err) {
+    }
+
+When the presence status is changed, the account will publish the new status to all of its presence subscriber, either with PUBLISH request or NOTIFY request, or both, depending on account configuration.
+
+Instant Messaging(IM)
+---------------------
+You can send IM using Buddy.sendInstantMessage(). The transmission status of outgoing instant messages is reported in Account.onInstantMessageStatus() callback method of Account class.
+
+In addition to sending instant messages, you can also send typing indication to remote buddy using Buddy.sendTypingIndication().
+
+Incoming IM and typing indication received not within the scope of a call will be reported in the callback functions Account.onInstantMessage() and Account.onTypingIndication().
+
+Alternatively, you can send IM and typing indication within a call by using Call.sendInstantMessage() and Call.sendTypingIndication(). For more information, please see Call documentation.
+
+
+Class Reference
+---------------
+Buddy
++++++
+.. doxygenclass:: pj::Buddy
+        :path: xml
+        :members:
+
+Status
+++++++
+.. doxygenstruct:: pj::PresenceStatus
+        :path: xml
+        
+Info
+++++
+.. doxygenstruct:: pj::BuddyInfo
+        :path: xml
+
+Config
+++++++
+.. doxygenstruct:: pj::BuddyConfig
+        :path: xml
+
 

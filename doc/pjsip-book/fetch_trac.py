@@ -1,12 +1,16 @@
 import urllib2
 import sys
+import unicodedata
 
 def fetch_rst(url):
 	print 'Fetching %s..' % url
 	req = urllib2.Request(url)
 		
 	fd = urllib2.urlopen(req, timeout=30)
-	body = fd.read()		
+	body = fd.read()
+	body = body.replace("\r\n", "\n")
+
+	body = body.decode('utf8', 'ignore').encode('ascii', 'ignore')
 
 	pos = body.find("{{{")
 	if pos >= 0:
@@ -78,6 +82,8 @@ if __name__ == '__main__':
 	
 	pages = process_index('index')
 	for page in pages:
+		#if not 'endpoint' in page:
+		#	continue
 		url = url_format % (page)
 		fetch_rst(url)
 		

@@ -45,7 +45,7 @@ clean:
 	-rm -rf xml
 	-rm -rf html
 
-xml:	Doxyfile
+xml:	Doxyfile ../../pjsip/include/pjsua2
 	doxygen
 
 html: xml

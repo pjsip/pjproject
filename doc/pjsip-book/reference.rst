@@ -1,5 +1,4 @@
 
-
 PJSUA2 API Reference Manuals
 ****************************
 

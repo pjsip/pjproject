@@ -1,15 +1,42 @@
 
 
+Development Guidelines and Considerations
+*****************************************
 
-Development Considerations
-**************************
+Development Guidelines
+======================
 
-Let's review various aspects that you need to consider when developing your application.
+Preparation
+------------
+* **Essential:** Familiarise yourself with SIP. You don't need to be an expert, but SIP knowledge is essential. 
+* Check out our features in `Datasheet <http://trac.pjsip.org/repos/wiki/PJSIP-Datasheet>`_. Other features may be provided by our `community <http://trac.pjsip.org/repos/wiki/Projects_Using_PJSIP>`_.
+* All PJSIP documentation is indexed in our `Trac site <http://trac.pjsip.org/repos>`_.
 
 
-Target Platforms
-================
-Platform selection will affect all aspects of development, and here we will cover  considerations for each platforms that we support.
+Development
+-------------
+* **Essential:** Interactive debugging capability is essential during development
+* Start with default settings in `<pj/config_site_sample.h>`.
+
+Coding Style
+-------------
+**Essential:** set your editor to use 8 characters tab size in order to see PJSIP source correctly.
+
+These below are PJSIP coding style. You don't need to follow it unless you are submitting patches to PJSIP:
+
+* indentation uses tabs and spaces. Tab size is 8 characters, indentation 4.
+* all public API in header file must be documented in Doxygen format.
+* other than that, we mostly just use `K & R style <http://en.wikipedia.org/wiki/1_true_brace_style#K.26R_style>`_, which is the only correct style anyway.
+
+
+Deployment
+-----------
+* **Essential:** Logging is essential when troubleshooting any problems. The application MUST be equipped with logging capability. Enable PJSIP log at level 5.
+
+
+Platform Consideration
+========================
+Platform selection is usually driven by business motives. The selection will affect all aspects of development, and here we will cover  considerations for each platforms that we support.
 
 Windows Desktop
 ---------------
