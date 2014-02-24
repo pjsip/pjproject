@@ -284,7 +284,8 @@ static void resume_logging(int *saved_level)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	pj_thread_local_set(thread_suspended_tls_id, (void*)PJ_FALSE);
+	pj_thread_local_set(thread_suspended_tls_id,
+			    (void*)(pj_size_t)PJ_FALSE);
     }
     else
 #endif

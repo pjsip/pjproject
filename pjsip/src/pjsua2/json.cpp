@@ -180,7 +180,7 @@ void JsonDocument::loadString(const string &input) throw(Error)
 	PJSUA2_RAISE_ERROR3(PJ_EINVALIDOP, "JsonDocument.loadString()",
 	                    "Document already initialized");
 
-    unsigned size = input.size();
+    unsigned size = (unsigned)input.size();
     char *buffer = (char*)pj_pool_alloc(pool, size+1);
     unsigned parse_size = (unsigned)size;
     pj_json_err_info err_info;

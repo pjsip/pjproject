@@ -163,7 +163,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.privkey_file	= str2Pj(this->privKeyFile);
     ts.password		= str2Pj(this->password);
     ts.method		= this->method;
-    ts.ciphers_num	= this->ciphers.size();
+    ts.ciphers_num	= (unsigned)this->ciphers.size();
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
     ts.ciphers		= ts.ciphers_num? 
@@ -424,7 +424,7 @@ pjsip_multipart_part& SipMultipartPart::toPj() const
     pjMsgBody.print_body    = &pjsip_print_text_body;
     pjMsgBody.clone_data    = &pjsip_clone_text_data;
     pjMsgBody.data	    = (void*)body.c_str();
-    pjMsgBody.len	    = body.size();
+    pjMsgBody.len	    = (unsigned)body.size();
     pjMpp.body = &pjMsgBody;
 
     return pjMpp;

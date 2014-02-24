@@ -63,14 +63,14 @@ static int json_verify_1()
 
     pool = pj_pool_create(mem, "json", 1000, 1000, NULL);
 
-    size = strlen(json_doc1);
+    size = (unsigned)strlen(json_doc1);
     elem = pj_json_parse(pool, json_doc1, &size, &err);
     if (!elem) {
 	PJ_LOG(1, (THIS_FILE, "  Error: json_verify_1() parse error"));
 	goto on_error;
     }
 
-    size = strlen(json_doc1) * 2;
+    size = (unsigned)strlen(json_doc1) * 2;
     out_buf = pj_pool_alloc(pool, size);
 
     if (pj_json_write(elem, out_buf, &size)) {

@@ -195,7 +195,7 @@ static unsigned parse_quoted_string(struct parse_state *st,
 
 on_error:
     output->slen = op - output->ptr;
-    return ip - token.ptr;
+    return (unsigned)(ip - token.ptr);
 }
 
 static pj_json_elem* parse_elem_throw(struct parse_state *st,
@@ -334,7 +334,7 @@ PJ_DEF(pj_json_elem*) pj_json_parse(pj_pool_t *pool,
 	err_info->err_char = *st.scanner.curptr;
     }
 
-    *size = (buffer + *size) - st.scanner.curptr;
+    *size = (unsigned)((buffer + *size) - st.scanner.curptr);
 
     pj_scan_fini(&st.scanner);
 
@@ -471,7 +471,7 @@ static pj_status_t write_string_escaped(const pj_str_t *value,
 	    }
 	}
 
-	CHECK( st->writer( buf, op-buf, st->user_data) );
+	CHECK( st->writer( buf, (unsigned)(op-buf), st->user_data) );
 	op = buf;
     }
 
@@ -549,7 +549,8 @@ static pj_status_t elem_write(const pj_json_elem *elem,
 		elem->type != PJ_JSON_VAL_ARRAY*/)
 	    {
 		CHECK( st->writer( st->space,
-		                   PJ_JSON_NAME_MIN_LEN - elem->name.slen,
+		                   (unsigned)(PJ_JSON_NAME_MIN_LEN -
+					      elem->name.slen),
 				   st->user_data) );
 	    }
 	}

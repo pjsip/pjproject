@@ -109,7 +109,7 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 
     len = pj_ansi_snprintf( buf, size, "Unknown pjlib error %d", code);
     if (len < 1 || len >= (int)size)
-	len = size - 1;
+	len = (int)(size - 1);
     return len;
 }
 
@@ -205,7 +205,7 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
     }
 
     if (len < 1 || len >= (int)bufsize) {
-	len = bufsize - 1;
+	len = (int)(bufsize - 1);
 	buf[len] = '\0';
     }
 
