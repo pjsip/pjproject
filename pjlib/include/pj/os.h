@@ -1439,7 +1439,9 @@ PJ_DECL(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
  * @{
  */
 
-/* Type for main function. */
+/**
+ * Type for application main function.
+ */
 typedef int (*pj_main_func_ptr)(int argc, char *argv[]);
 
 /**
@@ -1456,8 +1458,8 @@ typedef int (*pj_main_func_ptr)(int argc, char *argv[]);
  *
  * @return          main_func()'s return value.
  */
-int pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
-	       unsigned flags);
+PJ_DECL(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
+			unsigned flags);
 
 /** @} */
 
