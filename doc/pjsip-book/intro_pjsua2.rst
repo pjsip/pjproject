@@ -51,6 +51,9 @@ Threading
 ----------
 For platforms that require polling, the PJSUA2 module provides its own worker thread to poll PJSIP, so it is not necessary to instantiate own your polling thread. Having said that the application should be prepared to have the callbacks called by different thread than the main thread. The PJSUA2 module itself is thread safe.
 
+Often though, especially if you use PJSUA2 with high level languages such as Python, it is required to disable PJSUA2 internal worker threads by setting EpConfig.uaConfig.threadCnt to 0, because the high level environment doesn't like to be called by external thread (such as PJSIP's worker thread).
+
+
 Problems with Garbage Collection
 --------------------------------
 Garbage collection (GC) exists in Java and Python (and other languages, but we don't support those for now), and there are some problems with it when it comes to PJSUA2 usage:
@@ -96,7 +99,7 @@ To load from the file:
 
 Building PJSUA2
 ======================
-The PJSUA2 C++ library will be built by default by PJSIP build system.
+The PJSUA2 C++ library will be built by default by PJSIP build system. Standard C++ library is required.
 
 Building Python and Java SWIG Modules
 ======================================
@@ -105,6 +108,7 @@ The SWIG modules for Python and Java are built by invoking ``make`` and ``make i
 Requirements
 ------------
 
+#. `SWIG <http://www.swig.org>`_
 #. ``JDK``.
 #. ``Python``, version 2.7 or above is required.
    For **Linux/UNIX**, you will also need ``Python developent package`` (called ``python-devel`` (e.g. on Fedora) or ``python2.7-dev`` (e.g. on Ubuntu)). For **Windows**, you will need MinGW and ``Python SDK`` such as `ActivePython-2.7.5`_ from `ActiveState`_.

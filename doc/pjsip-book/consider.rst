@@ -1,5 +1,4 @@
 
-
 Development Guidelines and Considerations
 *****************************************
 
@@ -15,8 +14,9 @@ Preparation
 
 Development
 -------------
+* **Essential:** Follow the `Getting Started <http://trac.pjsip.org/repos/wiki/Getting-Started>`_ instructions to build PJSIP for your platform.
 * **Essential:** Interactive debugging capability is essential during development
-* Start with default settings in `<pj/config_site_sample.h>`.
+* Start with default settings in `<pj/config_site_sample.h>`. The default settings should be good to get you started. You can always optimize later after things are running okay.
 
 Coding Style
 -------------
@@ -72,7 +72,7 @@ Android
 -------
 All features except video are expected to work (video is coming soon!). Considerations for Android:
 
-#. You can only use pjsua2 Java binding for this target.
+#. You can only use PJSUA2 Java binding for this target.
 #. It has been reported that Android audio device is not so good in general, so some audio tuning may be needed. Echo cancellation also needs to be checked.
 #. This is also a new platform for us. 
 
@@ -103,7 +103,7 @@ Other considerations for Windows Mobile platform are:
 
 Windows Phone 8
 ---------------
-Windows Phone 8 (WP8) support is being added to PJSIP version 2.2 and is still under development. Specific considerations for this platform are:
+Windows Phone 8 (WP8) support is being added and is still under development on `projects/winphone` branch. Specific considerations for this platform are:
 
 #. WP8 governs specific interaction with WP8 GUI and framework that needs to be followed by application in order to make VoIP call work seamlessly on the device. Some lightweight process will be created by WP8 framework in order for background call to work and PJSIP needs to put its background processing in this process' context. Currently this feature is under development.
 
@@ -155,7 +155,7 @@ Motivations for using PJSUA-LIB library includes:
 #. Better efficiency than higher level API
 
 
-pjsua2 C++ API
+PJSUA2 C++ API
 --------------
 pjsua2 is a new, objected oriented, C++ API created on top of PJSUA-LIB. The API is different than PJSUA-LIB, but it should be even easier to use and it should have better documentation too (such as this book). The pjsua2 API removes most cruxes typically associated with PJSIP, such as the pool and pj_str_t, and add new features such as object persistence so you can save your configs to a file, for example. All data structures are rewritten for more clarity. 
 
@@ -169,16 +169,17 @@ Benefits of using pjsua2 C++ API include:
 #. The ability to access PJSUA-LIB and lower level libraries when needed (including the ability to extend the libraries, for example creating custom PJSIP module, pjmedia_port, pjmedia_transport, etc.)
 
 
-Some considerations on pjsua2 C++ API are:
+Some considerations on PJSUA2 C++ API are:
+
 #. Instead of returning error, the API uses exception for error reporting
-#. pjsua2 uses standard C++ library
+#. It uses standard C++ library (STL)
 #. The performance penalty due to the API abstraction should be negligible on typical modern device
 
 
 
-pjsua2 API for Java, Python, and Others
+PJSUA2 API for Java, Python, and Others
 ---------------------------------------
-The pjsua2 API is also available for non-native code via SWIG binding. Configurations for Java and Python are provided with the distribution. Thanks to SWIG, other language bindings may be generated relatively easily.
+The PJSUA2 API is also available for non-native code via SWIG binding. Configurations for Java and Python are provided with the distribution. Thanks to SWIG, other language bindings may be generated relatively easily.
  
 The pjsua2 API for non-native code is effectively the same as pjsua2 C++ API. However, unlike C++, you cannot access PJSUA-LIB and the underlying C libraries from the scripting language, hence you are limited to what pjsua2 provides.
 
@@ -192,7 +193,7 @@ Network and Infrastructure Considerations
 
 NAT Issues
 ----------
-
+TBD.
 
 TCP Requirement
 ---------------
@@ -204,11 +205,11 @@ Sound Device
 
 Latency
 -------
-
+TBD.
 
 Echo Cancellation
 -----------------
-
+TBD.
 
 
 
