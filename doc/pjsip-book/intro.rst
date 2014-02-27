@@ -1,9 +1,9 @@
 
-Introduction to PJSUA2
+Introduction
 *******************************
 This documentation is intended for developers looking to develop Session Initiation Protocol (SIP) based client application. Some knowledge on SIP is definitely required, and of course some programming experience. Prior knowledge of PJSUA C API is not needed, although it will probably help.
 
-This PJSUA2 module provides very high level C++ API to do SIP calls, presence, and instant messaging, as well as handling media and NAT traversal. Knowledge of SIP protocol details (such as the grammar, transaction, dialog, and whatnot) are not required, however you should know how SIP works in general and particularly how to configure SIP clients to, e.g. register to a SIP provider, specify SIP URI to make call to, and so on, to use the module.
+PJSIP libraries provide multi-level APIs to do SIP calls, presence, and instant messaging, as well as handling media and NAT traversal. Knowledge of SIP protocol details (such as the grammar, transaction, dialog, and whatnot) are not required (but it will help a lot!), however you should know how SIP works in general and particularly how to configure SIP clients to, e.g. register to a SIP provider, specify SIP URI to make call to, and so on, to use the module.
 
 Getting Started with PJSIP
 ==============================
@@ -11,7 +11,7 @@ Check `PJSIP's Features List`_ to make sure that it has the features that you re
 
 .. _`PJSIP's Features List`: http://trac.pjsip.org/repos/wiki/PJSIP-Datasheet
 
-Then to begin using PJSIP, the `Getting Started Guide`_ contains instructions to acquire and build PJSIP on various platforms that we support.
+To start using PJSIP, the `Getting Started Guide`_ contains instructions to acquire and build PJSIP on various platforms that we support.
 
 .. _`Getting Started Guide`: http://trac.pjsip.org/repos/wiki/Getting-Started 
 
@@ -27,11 +27,5 @@ To get other relevant info and documentations about PJSIP, you can visit:
 .. _`PJSIP FAQ`: http://trac.pjsip.org/repos/wiki/FAQ
 .. _`PJSIP Reference Manual`: http://trac.pjsip.org/repos/wiki
 
-Building PJSUA2
-=================
-PJSUA2 API declaration can be found in ``pjsip/include/pjsua2`` while the source codes are located in ``pjsip/src/pjsua2``. It will be automatically built when you compile PJSIP.
 
-PJSUA2 Language Binding Support
-===================================
-The PJSUA2 API is also available for other programming languages via SWIG binding, such as Java and Python.
 
