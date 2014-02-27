@@ -802,6 +802,7 @@ on_missing_hdr:
 
 /* Fill-up destination information from a target URI */
 static pj_status_t get_dest_info(const pjsip_uri *target_uri, 
+				 const pjsip_uri *request_uri, 
 				 pj_pool_t *pool,
 				 pjsip_host_info *dest_info)
 {
@@ -810,10 +811,21 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
      */
     pj_bzero(dest_info, sizeof(*dest_info));
 
-    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
+    /* When request URI uses sips scheme, TLS must always be used regardless
+     * of the target scheme or transport type (see ticket #1740).
+     */
+    if (PJSIP_URI_SCHEME_IS_SIPS(target_uri) || 
+	(pjsip_cfg()->endpt.disable_tls_switch == 0 && request_uri &&
+	 PJSIP_URI_SCHEME_IS_SIPS(request_uri)))
+    {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
 	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 	unsigned flag;
+
+	if (!PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
+	    PJ_LOG(4,(THIS_FILE, "Automatic switch to TLS transport as "
+				 "request-URI uses ""sips"" scheme."));
+	}
 
 	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
 	if (url->maddr_param.slen)
@@ -895,7 +907,8 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 	target_uri = tdata->msg->line.req.uri;
     }
 
-    return get_dest_info(target_uri, (pj_pool_t*)tdata->pool, dest_info);
+    return get_dest_info(target_uri, tdata->msg->line.req.uri,
+			 (pj_pool_t*)tdata->pool, dest_info);
 }
 
 
@@ -998,7 +1011,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     }
 
     /* Fill up the destination host/port from the URI. */
-    status = get_dest_info(target_uri, tdata->pool, dest_info);
+    status = get_dest_info(target_uri, new_request_uri, tdata->pool,
+			   dest_info);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1495,7 +1509,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
     }
 
     /* Build destination info. */
-    status = get_dest_info(uri, tdata->pool, &dest_info);
+    status = get_dest_info(uri, NULL, tdata->pool, &dest_info);
     if (status != PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);
 	return status;

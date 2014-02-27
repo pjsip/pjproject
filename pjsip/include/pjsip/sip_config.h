@@ -112,6 +112,15 @@ typedef struct pjsip_cfg_t
 	pj_bool_t disable_tcp_switch;
 
 	/**
+	 * Disable automatic switching to TLS if target-URI does not use
+	 * "sips" scheme nor TLS transport, even when request-URI uses
+	 * "sips" scheme.
+	 *
+	 * Default is PJSIP_DONT_SWITCH_TO_TLS.
+	 */
+	pj_bool_t disable_tls_switch;
+
+	/**
 	 * Enable call media session to always be updated to the latest
 	 * received early media SDP when receiving forked early media
 	 * (multiple 183 responses with different To tag).
@@ -305,6 +314,24 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_DONT_SWITCH_TO_TCP
 #   define PJSIP_DONT_SWITCH_TO_TCP	0
+#endif
+
+
+/**
+ * As specified RFC 3261 section 8.1.2, when request-URI uses "sips" scheme,
+ * TLS must always be used regardless of the target-URI scheme or transport
+ * type.
+ *
+ * This option will specify whether the behavior of automatic switching to TLS
+ * should be disabled, i.e: regard the target-URI scheme or transport type.
+ *
+ * This option can also be controlled at run-time by the \a disable_tls_switch
+ * setting in pjsip_cfg_t.
+ *
+ * Default is 0 (no).
+ */
+#ifndef PJSIP_DONT_SWITCH_TO_TLS
+#   define PJSIP_DONT_SWITCH_TO_TLS	0
 #endif
 
 
