@@ -308,9 +308,6 @@ protected:
 private:
     pj_caching_pool 	 mediaCachingPool;
     pj_pool_t 		*mediaPool;
-
-private:
-    unsigned getSignalLevel(bool is_rx = true) const throw(Error);
 };
 
 /** Array of Audio Media */

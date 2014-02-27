@@ -205,31 +205,26 @@ void AudioMedia::stopTransmit(const AudioMedia &sink) const throw(Error)
 
 void AudioMedia::adjustRxLevel(float level) throw(Error)
 {
-    PJSUA2_CHECK_EXPR( pjsua_conf_adjust_rx_level(id, level) );
+    PJSUA2_CHECK_EXPR( pjsua_conf_adjust_tx_level(id, level) );
 }
 
 void AudioMedia::adjustTxLevel(float level) throw(Error)
 {
-    PJSUA2_CHECK_EXPR( pjsua_conf_adjust_tx_level(id, level) );
+    PJSUA2_CHECK_EXPR( pjsua_conf_adjust_rx_level(id, level) );
 }
 
 unsigned AudioMedia::getRxLevel() const throw(Error)
 {
-    return getSignalLevel(true);
+    unsigned level;
+    PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, &level, NULL) );
+    return level;
 }
 
 unsigned AudioMedia::getTxLevel() const throw(Error)
 {
-    return getSignalLevel(false);
-}
-
-unsigned AudioMedia::getSignalLevel(bool is_rx) const throw(Error)
-{    
-    unsigned rx_level;
-    unsigned tx_level;
-    
-    PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, &tx_level, &rx_level) );
-    return is_rx?rx_level:tx_level;
+    unsigned level;
+    PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, NULL, &level) );
+    return level;
 }
 
 AudioMedia* AudioMedia::typecastFromMedia(Media *media)
