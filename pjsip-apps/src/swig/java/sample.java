@@ -97,14 +97,14 @@ public class sample {
 			accCfg.setIdUri("sip:localhost");
 			account = app.addAcc(accCfg);
 
-			accCfg.setIdUri("sip:301@pjsip.org");
+			accCfg.setIdUri("sip:test@pjsip.org");
 			AccountSipConfig sipCfg = accCfg.getSipConfig();		
 			AuthCredInfoVector ciVec = sipCfg.getAuthCreds();
 			ciVec.add(new AuthCredInfo("Digest", 
 					"*",
-					"301",
+					"test",
 					0,
-					"pw301"));
+					"passwd"));
 
 			StringVector proxy = sipCfg.getProxies();
 			proxy.add("sip:pjsip.org;transport=tcp");							
