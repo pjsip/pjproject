@@ -29,7 +29,7 @@ lib:
 	done; \
 
 
-.PHONY: lib 
+.PHONY: lib doc
 
 doc:
 	@if test \( ! "$(WWWDIR)" == "" \) -a \( ! -d $(WWWDIR)/pjlib/docs/html \) ; then \
