@@ -254,10 +254,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
     }
 
     /* Second pass:
-     *	pick one host among hosts with the same priority, according
-     *	to its weight. The idea is when one server fails, client should
-     *	contact the next server with higher priority rather than contacting
-     *	server with the same priority as the failed one.
+     *	Order the entry in a list.
      *
      *  The algorithm for selecting server among servers with the same
      *  priority is described in RFC 2782.
@@ -298,12 +295,15 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	    SWAP(struct srv_target, &query_job->srv[i], &query_job->srv[j]);
 
 	    /* Remove all other entries (of the same priority) */
+	    /* Don't need to do this.
+	     * See https://trac.pjsip.org/repos/ticket/1719
 	    while (count > 1) {
 		pj_array_erase(query_job->srv, sizeof(struct srv_target), 
 			       query_job->srv_cnt, i+1);
 		--count;
 		--query_job->srv_cnt;
 	    }
+	    */
 	}
     }
 
