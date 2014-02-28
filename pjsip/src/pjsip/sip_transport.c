@@ -1091,6 +1091,7 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
 {
     pjsip_tpmgr *mgr;
     pj_status_t status;
+    pjsip_tp_state_callback state_cb;
 
     TRACE_((THIS_FILE, "Transport %s shutting down", tp->obj_name));
 
@@ -1111,7 +1112,17 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
     /* Instruct transport to shutdown itself */
     if (tp->do_shutdown)
 	status = tp->do_shutdown(tp);
-    
+
+    /* Notify application of transport shutdown */
+    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+
+	pj_bzero(&state_info, sizeof(state_info));
+	state_info.status = status;
+        (*state_cb)(tp, PJSIP_TP_STATE_SHUTDOWN, &state_info);
+    }
+
     if (status == PJ_SUCCESS)
 	tp->is_shutdown = PJ_TRUE;
 
@@ -1133,8 +1144,19 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
  */
 PJ_DEF(pj_status_t) pjsip_transport_destroy( pjsip_transport *tp)
 {
+    pjsip_tp_state_callback state_cb;
+
     /* Must have no user. */
     PJ_ASSERT_RETURN(pj_atomic_get(tp->ref_cnt) == 0, PJSIP_EBUSY);
+
+    /* Notify application of transport destroy */
+    state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+
+	pj_bzero(&state_info, sizeof(state_info));
+        (*state_cb)(tp, PJSIP_TP_STATE_DESTROY, &state_info);
+    }
 
     /* Destroy. */
     return destroy_transport(tp->tpmgr, tp);

@@ -1388,9 +1388,15 @@ typedef enum pjsip_transport_state
     PJSIP_TP_STATE_CONNECTED,	    /**< Transport connected, applicable only
 					 to connection-oriented transports
 					 such as TCP and TLS.		    */
-    PJSIP_TP_STATE_DISCONNECTED	    /**< Transport disconnected, applicable
+    PJSIP_TP_STATE_DISCONNECTED,    /**< Transport disconnected, applicable
 					 only to connection-oriented 
 					 transports such as TCP and TLS.    */
+    PJSIP_TP_STATE_SHUTDOWN,        /**< Transport shutdown, either
+                                         due to TCP/TLS disconnect error
+                                         from the network, or when shutdown
+                                         is initiated by PJSIP itself.      */
+    PJSIP_TP_STATE_DESTROY,         /**< Transport destroy, when transport
+                                         is about to be destroyed.          */
 } pjsip_transport_state;
 
 
