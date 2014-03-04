@@ -1561,13 +1561,13 @@ AudDevManager &Endpoint::audDevManager()
 const CodecInfoVector &Endpoint::codecEnum() throw(Error)
 {
     pjsua_codec_info pj_codec[MAX_CODEC_NUM];
-    unsigned count = 0;
+    unsigned count = MAX_CODEC_NUM;
 
     PJSUA2_CHECK_EXPR( pjsua_enum_codecs(pj_codec, &count) );
 
     pj_enter_critical_section();
     clearCodecInfoList();
-    for (unsigned i=0;(i<count && i<MAX_CODEC_NUM);++i) {
+    for (unsigned i=0; i<count; ++i) {
 	CodecInfo *codec_info = new CodecInfo;
 
 	codec_info->fromPj(pj_codec[i]);

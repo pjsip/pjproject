@@ -470,13 +470,13 @@ void AudDevManager::setPlaybackDev(int playback_dev) const throw(Error)
 const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
 {
     pjmedia_aud_dev_info pj_info[MAX_DEV_COUNT];
-    unsigned count;
+    unsigned count = MAX_DEV_COUNT;
 
     PJSUA2_CHECK_EXPR( pjsua_enum_aud_devs(pj_info, &count) );
 
     pj_enter_critical_section();
     clearAudioDevList();
-    for (unsigned i = 0; (i<count && i<MAX_DEV_COUNT) ;++i) {
+    for (unsigned i = 0; i<count ;++i) {
 	AudioDevInfo *dev_info = new AudioDevInfo;
 	dev_info->fromPj(pj_info[i]);
 	audioDevList.push_back(dev_info);
