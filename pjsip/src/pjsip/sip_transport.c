@@ -1610,6 +1610,9 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 
     current_pkt = rdata->pkt_info.packet;
     remaining_len = rdata->pkt_info.len;
+
+    tr->last_recv_len = rdata->pkt_info.len;
+    pj_get_timestamp(&tr->last_recv_ts);
     
     /* Must NULL terminate buffer. This is the requirement of the 
      * parser etc. 

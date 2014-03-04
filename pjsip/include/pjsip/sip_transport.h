@@ -801,6 +801,9 @@ struct pjsip_transport
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
 
+    pj_timestamp	    last_recv_ts;   /**< Last time receiving data.  */
+    pj_size_t		    last_recv_len;  /**< Last received data length. */
+
     void		   *data;	    /**< Internal transport data.   */
 
     /**
