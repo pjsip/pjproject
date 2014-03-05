@@ -499,7 +499,8 @@ static int pb_thread_func (void *arg)
             		  status.status));
 		if (status.status == SND_PCM_STATUS_READY ||
 		    status.status == SND_PCM_STATUS_UNDERRUN ||
-		    status.status == SND_PCM_STATUS_ERROR )
+		    status.status == SND_PCM_STATUS_ERROR ||
+		    status.status == SND_PCM_STATUS_CHANGE)
 		{
 		    if (snd_pcm_plugin_prepare (stream->pb_pcm,
 						SND_PCM_CHANNEL_PLAYBACK) < 0)
@@ -583,7 +584,8 @@ static int ca_thread_func (void *arg)
         	 * after */
         	if (status.status == SND_PCM_STATUS_READY ||
         		status.status == SND_PCM_STATUS_OVERRUN ||
-        		status.status == SND_PCM_STATUS_ERROR)
+        		status.status == SND_PCM_STATUS_ERROR ||
+        		status.status == SND_PCM_STATUS_CHANGE)
         	{
         	    if (snd_pcm_plugin_prepare (stream->ca_pcm,
         	                                SND_PCM_CHANNEL_CAPTURE) < 0)
@@ -1034,6 +1036,11 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
 	PJ_ASSERT_RETURN(value, PJ_EINVAL);
 
 	/* OS 10.2.1 requires pausing audio stream */
+	/* No longer necessary!
+	 * See https://trac.pjsip.org/repos/ticket/1743
+	 */
+	need_restart = PJ_FALSE;
+	/*
 	need_restart = (stream->pb_thread != NULL);
 	if (need_restart) {
 	    PJ_LOG(4,(THIS_FILE, "pausing audio stream.."));
@@ -1043,6 +1050,7 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
 		return ret;
 	    }
 	}
+	*/
 
     	route = *((pjmedia_aud_dev_route*)value);
     	PJ_LOG(4,(THIS_FILE, "setting audio route to %d..", route));
