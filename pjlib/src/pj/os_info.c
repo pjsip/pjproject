@@ -186,7 +186,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     #endif
 #elif defined(_MSC_VER)
     {
-	#ifdef PJ_WIN32_WINPHONE
+	#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
 	    si.os_name = pj_str("winphone");
 	#else
 	    OSVERSIONINFO ovi;
@@ -209,7 +209,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     {
 	SYSTEM_INFO wsi;
 
-    #ifdef PJ_WIN32_WINPHONE
+    #if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
 	GetNativeSystemInfo(&wsi);
     #else
 	GetSystemInfo(&wsi);
@@ -237,7 +237,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	    break;
     #endif	/* PJ_WIN32_WINCE || PJ_WIN32_WINPHONE */
 	}
-    #ifdef PJ_WIN32_WINPHONE
+    #if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
 	/* Avoid compile warning. */
 	goto get_sdk_info;
     #endif

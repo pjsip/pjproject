@@ -5,7 +5,6 @@
 //
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
-//#include "ThreadEmulation.h"
 #include "../include/ThreadEmulation.h"
 
 #include <assert.h>
@@ -19,11 +18,8 @@ using namespace Platform;
 using namespace Windows::Foundation;
 using namespace Windows::System::Threading;
 
-
-#ifdef __cplusplus
-namespace ThreadEmulation
-{
-#endif
+//namespace ThreadEmulation
+//{
     // Stored data for CREATE_SUSPENDED and ResumeThread.
     struct PendingThreadInfo
     {
@@ -83,7 +79,8 @@ namespace ThreadEmulation
         ThreadPool::RunAsync(workItemHandler, GetWorkItemPriority(nPriority), WorkItemOptions::TimeSliced);
     }
 
-    _Use_decl_annotations_ HANDLE WINAPI CreateThread(LPSECURITY_ATTRIBUTES unusedThreadAttributes, SIZE_T unusedStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD unusedThreadId)
+
+    _Use_decl_annotations_ HANDLE WINAPI CreateThreadRT(LPSECURITY_ATTRIBUTES unusedThreadAttributes, SIZE_T unusedStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD unusedThreadId)
     {
         // Validate parameters.
         assert(unusedThreadAttributes == nullptr);
@@ -142,7 +139,8 @@ namespace ThreadEmulation
         }
     }
 
-    _Use_decl_annotations_ DWORD WINAPI ResumeThread(HANDLE hThread)
+
+    _Use_decl_annotations_ DWORD WINAPI ResumeThreadRT(HANDLE hThread)
     {
         lock_guard<mutex> lock(pendingThreadsLock);
 
@@ -175,7 +173,7 @@ namespace ThreadEmulation
     }
 
 
-    _Use_decl_annotations_ BOOL WINAPI SetThreadPriority(HANDLE hThread, int nPriority)
+    _Use_decl_annotations_ BOOL WINAPI SetThreadPriorityRT(HANDLE hThread, int nPriority)
     {
         lock_guard<mutex> lock(pendingThreadsLock);
 
@@ -196,7 +194,7 @@ namespace ThreadEmulation
     }
 
 
-    _Use_decl_annotations_ VOID WINAPI Sleep(DWORD dwMilliseconds)
+    _Use_decl_annotations_ VOID WINAPI SleepRT(DWORD dwMilliseconds)
     {
         static HANDLE singletonEvent = nullptr;
 
@@ -225,7 +223,7 @@ namespace ThreadEmulation
     }
 
 
-    DWORD WINAPI TlsAlloc()
+    DWORD WINAPI TlsAllocRT()
     {
         lock_guard<mutex> lock(tlsAllocationLock);
         
@@ -242,7 +240,7 @@ namespace ThreadEmulation
     }
 
 
-    _Use_decl_annotations_ BOOL WINAPI TlsFree(DWORD dwTlsIndex)
+    _Use_decl_annotations_ BOOL WINAPI TlsFreeRT(DWORD dwTlsIndex)
     {
         lock_guard<mutex> lock(tlsAllocationLock);
 
@@ -272,7 +270,7 @@ namespace ThreadEmulation
     }
 
 
-    _Use_decl_annotations_ LPVOID WINAPI TlsGetValue(DWORD dwTlsIndex)
+    _Use_decl_annotations_ LPVOID WINAPI TlsGetValueRT(DWORD dwTlsIndex)
     {
         ThreadLocalData* threadData = currentThreadData;
 
@@ -289,7 +287,7 @@ namespace ThreadEmulation
     }
 
 
-    _Use_decl_annotations_ BOOL WINAPI TlsSetValue(DWORD dwTlsIndex, LPVOID lpTlsValue)
+    _Use_decl_annotations_ BOOL WINAPI TlsSetValueRT(DWORD dwTlsIndex, LPVOID lpTlsValue)
     {
         ThreadLocalData* threadData = currentThreadData;
 
@@ -354,6 +352,4 @@ namespace ThreadEmulation
             delete threadData;
         }
     }
-#ifdef __cplusplus
-}
-#endif
+//}

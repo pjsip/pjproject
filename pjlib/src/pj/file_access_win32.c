@@ -35,13 +35,13 @@
 
 static pj_status_t get_file_size(HANDLE hFile, pj_off_t *size)
 {
-#ifdef PJ_WIN32_WINPHONE  
-    FILE_STANDARD_INFO fileInfo;
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE  
+    FILE_COMPRESSION_INFO fileInfo;
 
-    if (GetFileInformationByHandleEx(hFile, FileStandardInfo, &fileInfo,
-				     sizeof(FILE_STANDARD_INFO))) 
+    if (GetFileInformationByHandleEx(hFile, FileCompressionInfo, &fileInfo,
+				     sizeof(FILE_COMPRESSION_INFO))) 
     {
-	*size = fileInfo.AllocationSize.QuadPart;	
+	*size = fileInfo.CompressedFileSize.QuadPart;	
     } else {	
 	*size = -1;
 	return PJ_RETURN_OS_ERROR(GetLastError());
@@ -70,7 +70,7 @@ static HANDLE WINAPI create_file(LPCTSTR filename, DWORD desired_access,
 				 DWORD flags_and_attributes,
 				 HANDLE template_file)
 {
-#ifdef PJ_WIN32_WINPHONE
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
     PJ_UNUSED_ARG(security_attributes);
     PJ_UNUSED_ARG(flags_and_attributes);
     PJ_UNUSED_ARG(template_file);
@@ -215,7 +215,7 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
     PJ_DECL_UNICODE_TEMP_BUF(wfilename,256)
     HANDLE hFile;
     FILETIME creationTime, accessTime, writeTime;
-#ifdef PJ_WIN32_WINPHONE
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
     FILE_BASIC_INFO fileInfo;
 #endif
 
@@ -233,7 +233,7 @@ PJ_DEF(pj_status_t) pj_file_getstat(const char *filename, pj_file_stat *stat)
 	CloseHandle(hFile);
 	return PJ_RETURN_OS_ERROR(GetLastError());
     }
-#ifdef PJ_WIN32_WINPHONE
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
     if (GetFileInformationByHandleEx(hFile, FileBasicInfo, &fileInfo,
 				     sizeof(FILE_BASIC_INFO))) 
     {

@@ -88,7 +88,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     dwShareMode = FILE_SHARE_READ | FILE_SHARE_WRITE;
     dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
 
-#ifdef PJ_WIN32_WINPHONE  
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE  
     hFile = CreateFile2(PJ_STRING_TO_NATIVE(pathname,
 					    wpathname,sizeof(wpathname)), 
 			dwDesiredAccess, dwShareMode, dwCreationDisposition, 
@@ -189,7 +189,7 @@ static pj_status_t set_file_pointer(pj_oshandle_t fd,
 				    pj_off_t* newPos,
 				    DWORD dwMoveMethod)
 {
-#ifdef PJ_WIN32_WINPHONE
+#if defined(PJ_WIN32_WINPHONE) && PJ_WIN32_WINPHONE
     LARGE_INTEGER liDistance, liNewPos;    
 
     liDistance.QuadPart = offset;
