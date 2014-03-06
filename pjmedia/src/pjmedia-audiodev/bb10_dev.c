@@ -644,7 +644,7 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
 	ret = audio_manager_set_handle_type(
 		stream->pb_ctrl_audio_manager_handle,
 		AUDIO_TYPE_VIDEO_CHAT,
-		AUDIO_DEVICE_DEFAULT,
+		AUDIO_DEVICE_SPEAKER,
 		AUDIO_DEVICE_DEFAULT);
     } else {
 	ret = audio_manager_set_handle_type(
@@ -652,6 +652,15 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
 		AUDIO_TYPE_VOICE,
 		AUDIO_DEVICE_DEFAULT,
 		AUDIO_DEVICE_DEFAULT);
+    }
+
+    /* Make the routing selection stick even when earpeace is plugged in.
+     * But this doesn't seem to work (tested on Q10 10.2.10
+     */
+    if (ret == 0) {
+	ret = audio_manager_set_handle_routing_conditions(
+		stream->pb_ctrl_audio_manager_handle,
+		SETTINGS_NEVER_RESET);
     }
 
     if (ret != 0) {
