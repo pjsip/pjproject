@@ -21,7 +21,7 @@ export PJSIP_LIB:=libpjsip-$(TARGET_NAME)$(LIBEXT)
 export PJSIP_UA_LIB:=libpjsip-ua-$(TARGET_NAME)$(LIBEXT)
 export PJSIP_SIMPLE_LIB:=libpjsip-simple-$(TARGET_NAME)$(LIBEXT)
 export PJSUA_LIB_LIB:=libpjsua-$(TARGET_NAME)$(LIBEXT)
-export PJSUA2_LIB_LIB=../lib/libpjsua2-$(TARGET_NAME)$(LIBEXT)
+export PJSUA2_LIB_LIB=libpjsua2-$(TARGET_NAME)$(LIBEXT)
 
 ifeq ($(PJ_SHARED_LIBRARIES),)
 else
@@ -33,7 +33,7 @@ export PJSIP_SIMPLE_SONAME := libpjsip-simple.$(SHLIB_SUFFIX)
 export PJSIP_SIMPLE_SHLIB := $(PJSIP_SIMPLE_SONAME).$(PJ_VERSION_MAJOR)
 export PJSUA_LIB_SONAME := libpjsua.$(SHLIB_SUFFIX)
 export PJSUA_LIB_SHLIB := $(PJSUA_LIB_SONAME).$(PJ_VERSION_MAJOR)
-export PJSUA2_LIB_SONAME := ../lib/libpjsua2.$(SHLIB_SUFFIX)
+export PJSUA2_LIB_SONAME := libpjsua2.$(SHLIB_SUFFIX)
 export PJSUA2_LIB_SHLIB := $(PJSUA2_LIB_SONAME).$(PJ_VERSION_MAJOR)
 endif
 

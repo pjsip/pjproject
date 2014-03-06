@@ -9,5 +9,5 @@ Name: libpjproject
 Description: Multimedia communication library
 URL: http://www.pjsip.org
 Version: @PJ_VERSION@
-Libs: -L${libdir} @PJ_LDLIBS@
-Cflags: -I${includedir} @PJ_INSTALL_CFLAGS@
+Libs: -L${libdir} @PJ_LDXXLIBS@
+Cflags: -I${includedir} @PJ_INSTALL_CXXFLAGS@
