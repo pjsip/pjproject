@@ -420,7 +420,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 
     /* Create the INVITE session: */
     options |= PJSIP_INV_SUPPORT_100REL;
-    if (acc->cfg.require_100rel)
+    if (acc->cfg.require_100rel == PJSUA_100REL_MANDATORY)
 	options |= PJSIP_INV_REQUIRE_100REL;
     if (acc->cfg.use_timer != PJSUA_SIP_TIMER_INACTIVE) {
 	options |= PJSIP_INV_SUPPORT_TIMER;

@@ -1645,7 +1645,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     }
 
     /* 100rel extension */
-    if (acc_cfg->require_100rel) {
+    if (acc_cfg->require_100rel == PJSUA_100REL_MANDATORY) {
 	pj_strcat2(result, "--use-100rel\n");
     }
 
@@ -2155,7 +2155,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     /* SIP extensions. */
     pj_strcat2(&cfg, "\n#\n# SIP extensions:\n#\n");
     /* 100rel extension */
-    if (config->cfg.require_100rel) {
+    if (config->cfg.require_100rel == PJSUA_100REL_MANDATORY) {
 	pj_strcat2(&cfg, "--use-100rel\n");
     }
     /* Session Timer extension */
