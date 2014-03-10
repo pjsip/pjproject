@@ -16,6 +16,8 @@ ifeq ($(SHLIB_SUFFIX),so)
 SHLIB_OPT := -shared -Wl,-soname,$(SHLIB)
 else ifeq ($(SHLIB_SUFFIX),dylib)
 SHLIB_OPT := -dynamiclib -undefined dynamic_lookup -flat_namespace
+else ifeq ($(SHLIB_SUFFIX),dll)
+SHLIB_OPT := -shared -Wl,-soname,$(SHLIB)
 else
 SHLIB_OPT := 
 endif

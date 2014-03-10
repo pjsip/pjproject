@@ -141,6 +141,19 @@ export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   siptypes.o call.o presence.o media.o
 export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_LIB_CXXFLAGS = $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
+			     $(PJSIP_UA_LDLIB) \
+			     $(PJSIP_SIMPLE_LDLIB) \
+			     $(PJSIP_LDLIB) \
+			     $(PJMEDIA_AUDIODEV_LDLIB) \
+			     $(PJMEDIA_VIDEODEV_LDLIB) \
+			     $(PJMEDIA_CODEC_LDLIB) \
+			     $(PJMEDIA_LDLIB) \
+			     $(PJNATH_LDLIB) \
+			     $(PJLIB_UTIL_LDLIB) \
+			     $(PJLIB_LDLIB) \
+			     $(_LDFLAGS) \
+			     -lstdc++
 
 
 ###############################################################################

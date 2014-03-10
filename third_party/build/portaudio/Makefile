@@ -42,6 +42,7 @@ export _LDFLAGS += $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 export PORTAUDIO_SRCDIR = src
 export PORTAUDIO_OBJS += 
 export PORTAUDIO_CFLAGS += $(_CFLAGS)
+export PORTAUDIO_LDFLAGS += $(_LDFLAGS)
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################

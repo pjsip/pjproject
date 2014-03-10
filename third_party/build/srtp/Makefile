@@ -24,7 +24,7 @@ export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../srtp/crypto/include \
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(LDFLAGS) 
+		   $(APP_LDFLAGS) $(LDFLAGS) 
 
 # libcrypt.a (the crypto engine) 
 ciphers = crypto/cipher/cipher.o crypto/cipher/null_cipher.o      \
@@ -55,6 +55,7 @@ cryptobj =  $(ciphers) $(hashes) $(math) $(stat) $(kernel) $(replay)
 export SRTP_SRCDIR = ../../srtp
 export SRTP_OBJS = $(cryptobj) $(srtpobj)
 export SRTP_CFLAGS = -DHAVE_CONFIG_H $(_CFLAGS)
+export SRTP_LDFLAGS = $(PJLIB_LDLIB) $(_LDFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
