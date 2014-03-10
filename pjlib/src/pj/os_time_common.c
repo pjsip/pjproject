@@ -24,6 +24,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#if !defined(PJ_WIN32) || PJ_WIN32==0
+
 PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 {
     struct tm *local_time;
@@ -64,6 +66,9 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
 
     return PJ_SUCCESS;
 }
+
+#endif /* !PJ_WIN32 */
+
 
 /**
  * Convert local time to GMT.
