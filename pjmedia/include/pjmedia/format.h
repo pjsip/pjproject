@@ -581,14 +581,32 @@ PJ_INLINE(unsigned) PJMEDIA_AFD_MAX_FSZ(const pjmedia_audio_format_detail *afd)
  * @param avg_bps		Average bitrate.
  * @param max_bps		Maximum bitrate.
  */
-PJ_DECL(void) pjmedia_format_init_audio(pjmedia_format *fmt,
-				        pj_uint32_t fmt_id,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned bits_per_sample,
-					unsigned frame_time_usec,
-					pj_uint32_t avg_bps,
-					pj_uint32_t max_bps);
+PJ_INLINE(void) pjmedia_format_init_audio(pjmedia_format *fmt,
+				          pj_uint32_t fmt_id,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned bits_per_sample,
+					  unsigned frame_time_usec,
+					  pj_uint32_t avg_bps,
+					  pj_uint32_t max_bps)
+{
+    /* This function is inlined to avoid build problem due to circular
+     * dependency, i.e: this function is part of pjmedia and is needed
+     * by pjmedia-audiodev, while pjmedia depends on pjmedia-audiodev.
+     */
+
+    fmt->id = fmt_id;
+    fmt->type = PJMEDIA_TYPE_AUDIO;
+    fmt->detail_type = PJMEDIA_FORMAT_DETAIL_AUDIO;
+
+    fmt->det.aud.clock_rate = clock_rate;
+    fmt->det.aud.channel_count = channel_count;
+    fmt->det.aud.bits_per_sample = bits_per_sample;
+    fmt->det.aud.frame_time_usec = frame_time_usec;
+    fmt->det.aud.avg_bps = avg_bps;
+    fmt->det.aud.max_bps = max_bps;
+}
+
 
 /**
  * Initialize the format as video format with the specified parameters.

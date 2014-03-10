@@ -24,28 +24,6 @@
 #include <pj/string.h>
 
 
-PJ_DEF(void) pjmedia_format_init_audio( pjmedia_format *fmt,
-				        pj_uint32_t fmt_id,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned bits_per_sample,
-					unsigned frame_time_usec,
-					pj_uint32_t avg_bps,
-					pj_uint32_t max_bps)
-{
-    fmt->id = fmt_id;
-    fmt->type = PJMEDIA_TYPE_AUDIO;
-    fmt->detail_type = PJMEDIA_FORMAT_DETAIL_AUDIO;
-
-    fmt->det.aud.clock_rate = clock_rate;
-    fmt->det.aud.channel_count = channel_count;
-    fmt->det.aud.bits_per_sample = bits_per_sample;
-    fmt->det.aud.frame_time_usec = frame_time_usec;
-    fmt->det.aud.avg_bps = avg_bps;
-    fmt->det.aud.max_bps = max_bps;
-}
-
-
 PJ_DEF(pjmedia_audio_format_detail*)
 pjmedia_format_get_audio_format_detail(const pjmedia_format *fmt,
 				       pj_bool_t assert_valid)
