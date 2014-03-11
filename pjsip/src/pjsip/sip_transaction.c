@@ -3242,16 +3242,22 @@ static pj_status_t tsx_on_state_confirmed( pjsip_transaction *tsx,
 		  msg->line.req.method.id == PJSIP_INVITE_METHOD);
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
-	/* Must be from timeout_timer_. */
-	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
+	/* Ignore overlapped retransmit timer.
+	 * https://trac.pjsip.org/repos/ticket/1746
+	 */
+	if (event->body.timer.entry == &tsx->retransmit_timer) {
+	    /* Ignore */
+	} else {
+	    /* Must be from timeout_timer_. */
+	    pj_assert(event->body.timer.entry == &tsx->timeout_timer);
 
-	/* Move to Terminated state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-                       PJSIP_EVENT_TIMER, &tsx->timeout_timer );
+	    /* Move to Terminated state. */
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+			   PJSIP_EVENT_TIMER, &tsx->timeout_timer );
 
-	/* Transaction has been destroyed. */
-	//return PJSIP_ETSXDESTROYED;
-
+	    /* Transaction has been destroyed. */
+	    //return PJSIP_ETSXDESTROYED;
+	}
     } else {
 	pj_assert(!"Unexpected event");
         return PJ_EBUG;
