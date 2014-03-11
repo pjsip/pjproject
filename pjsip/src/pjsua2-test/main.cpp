@@ -22,7 +22,7 @@ using namespace pj;
 
 int main(int argc, char *argv[])
 {
-    Endpoint &ep = Endpoint::instance();
+    Endpoint ep;
 
     EpConfig epCfg;
 
