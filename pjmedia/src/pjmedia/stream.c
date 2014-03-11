@@ -2004,8 +2004,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
     stream->own_pool = own_pool;
     pj_memcpy(&stream->si, info, sizeof(*info));
-    stream->si.param = pjmedia_codec_param_clone(pool, info->param);
     pj_strdup(pool, &stream->si.fmt.encoding_name, &info->fmt.encoding_name);
+    if (info->param)
+	stream->si.param = pjmedia_codec_param_clone(pool, info->param);
 
     /* Init stream/port name */
     name.ptr = (char*) pj_pool_alloc(pool, M);
