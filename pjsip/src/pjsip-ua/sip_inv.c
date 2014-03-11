@@ -3340,13 +3340,23 @@ static pj_bool_t inv_handle_update_response( pjsip_inv_session *inv,
 
     /* Process 2xx response */
     else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
-	tsx->status_code/100 == 2 &&
-	e->body.tsx_state.src.rdata->msg_info.msg->body)
+	tsx->status_code/100 == 2)
     {
-	status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
-				       PJ_FALSE);
-	status = inv_check_sdp_in_incoming_msg(inv, tsx, 
-					     e->body.tsx_state.src.rdata);
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	status = handle_timer_response(inv, rdata, PJ_FALSE);
+
+	if (rdata->msg_info.msg->body) {
+	    /* Only process remote SDP if we have sent local offer */
+	    if (inv->neg && pjmedia_sdp_neg_get_state(inv->neg) == 
+					PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+	    {
+		status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
+	    } else {
+		PJ_LOG(5,(THIS_FILE, "Ignored message body in %s as no local "
+				     "offer was sent",
+				     pjsip_rx_data_get_info(rdata)));
+	    }
+	}
 	handled = PJ_TRUE;
     }
 
