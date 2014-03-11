@@ -21,6 +21,8 @@
 #include <memory>
 #include <pj/file_access.h>
 
+#define THIS_FILE 	"pjsua2_demo.cpp"
+
 using namespace pj;
 
 class MyAccount;
@@ -104,13 +106,8 @@ void MyCall::onCallState(OnCallStateParam &prm)
     }
 }
 
-static void mainProg1() throw(Error)
+static void mainProg1(Endpoint &ep) throw(Error)
 {
-    Endpoint ep;
-
-    // Create library
-    ep.libCreate();
-
     // Init library
     EpConfig ep_cfg;
     ep_cfg.logConfig.level = 4;
@@ -153,15 +150,9 @@ static void mainProg1() throw(Error)
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
 }
 
-void mainProg2() throw(Error)
+static void mainProg2() throw(Error)
 {
-    Endpoint ep;
-
-    // Create library
-    ep.libCreate();
-
     string json_str;
-
     {
 	EpConfig epCfg;
 	JsonDocument jDoc;
@@ -202,21 +193,32 @@ void mainProg2() throw(Error)
 	rDoc.readObject(epCfg);
 	pj_file_delete("jsontest.js");
     }
-
-    ep.libDestroy();
 }
 
 
-void mainProg3() throw(Error)
+static void mainProg3(Endpoint &ep) throw(Error)
 {
-    Endpoint ep;
-
-    // Create library
-    ep.libCreate();
+    const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
+			    "../../tests/pjsua/wavs/input.16.wav",
+			    "input.16.wav"};
+    unsigned i;
+    const char *filename = NULL;
 
     // Init library
     EpConfig ep_cfg;
     ep.libInit( ep_cfg );
+
+    for (i=0; i<PJ_ARRAY_SIZE(paths); ++i) {
+       if (pj_file_exists(paths[i])) {
+          filename = paths[i];
+          break;
+       }
+    }
+
+    if (!filename) {
+	PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "mainProg3()",
+			   "Could not locate input.16.wav");
+    }
 
     // Start library
     ep.libStart();
@@ -225,7 +227,7 @@ void mainProg3() throw(Error)
     // Create player and recorder
     {
 	AudioMediaPlayer amp;
-	amp.createPlayer("../../tests/pjsua/wavs/input.16.wav");
+	amp.createPlayer(filename);
 
 	AudioMediaRecorder amr;
 	amr.createRecorder("recorder_test_output.wav");
@@ -235,18 +237,11 @@ void mainProg3() throw(Error)
 
 	pj_thread_sleep(5000);
     }
-
-    ep.libDestroy();
 }
 
 
-void mainProg() throw(Error)
+static void mainProg() throw(Error)
 {
-    Endpoint ep;
-
-    // Create library
-    ep.libCreate();
-
     string json_str;
 
     {
@@ -294,27 +289,34 @@ void mainProg() throw(Error)
 	std::cout << "Parsed:" << std::endl;
 	std::cout << json_str << std::endl << std::endl;
     }
-
-    ep.libDestroy();
 }
 
 int main()
 {
     int ret = 0;
-
-    /* Test endpoint instantiation and destruction without libCreate(),
-     * libInit() etc.
-     */
-    {
-	Endpoint ep;
-    }
+    Endpoint ep;
 
     try {
-	mainProg3();
-	std::cout << "Success" << std::endl;
+	ep.libCreate();
+
+	mainProg3(ep);
+	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;
 	ret = 1;
+    }
+
+    try {
+	ep.libDestroy();
+    } catch(Error &err) {
+	std::cout << "Exception: " << err.info() << std::endl;
+	ret = 1;
+    }
+
+    if (ret == PJ_SUCCESS) {
+	std::cout << "Success" << std::endl;
+    } else {
+	std::cout << "Error Found" << std::endl;
     }
 
     return ret;
