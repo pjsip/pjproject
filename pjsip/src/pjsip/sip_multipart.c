@@ -182,6 +182,7 @@ static void* multipart_clone_data(pj_pool_t *pool, const void *data,
 
     src = (const struct multipart_data*) data;
     dst = PJ_POOL_ALLOC_T(pool, struct multipart_data);
+    pj_list_init(&dst->part_head);
 
     pj_strdup(pool, &dst->boundary, &src->boundary);
 
