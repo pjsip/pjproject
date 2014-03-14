@@ -6,7 +6,7 @@ ldflags:
 		echo $$token; \
 	done
 	@for token in `echo $(PJ_LDXXLIBS) $(LIBS)`; do \
-		echo $$token | grep -v \\-l; \
+		echo $$token | grep -v \\-l; true; \
 	done
 
 libs:
