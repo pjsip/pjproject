@@ -314,6 +314,33 @@ private:
 typedef std::vector<AudioMedia*> AudioMediaVector;
 
 /**
+ * This structure contains additional info about AudioMediaPlayer.
+ */
+struct AudioMediaPlayerInfo
+{
+    /**
+     * Format ID of the payload.
+     */
+    pjmedia_format_id	formatId;
+
+    /**
+     * The number of bits per sample of the file payload. For example,
+     * the value is 16 for PCM WAV and 8 for Alaw/Ulas WAV files.
+     */
+    unsigned		payloadBitsPerSample;
+
+    /**
+     * The WAV payload size in bytes.
+     */
+    pj_uint32_t		sizeBytes;
+
+    /**
+     * The WAV payload size in samples.
+     */
+    pj_uint32_t		sizeSamples;
+};
+
+/**
  * Audio Media Player.
  */
 class AudioMediaPlayer : public AudioMedia
@@ -354,7 +381,24 @@ public:
 			unsigned options=0) throw(Error);
 
     /**
-     * Set playback position. This operation is not valid for playlist.
+     * Get additional info about the player. This operation is only valid
+     * for player. For playlist, Error will be thrown.
+     *
+     * @return		the info.
+     */
+    AudioMediaPlayerInfo getInfo() const throw(Error);
+
+    /**
+     * Get current playback position in samples. This operation is not valid
+     * for playlist.
+     *
+     * @return		   Current playback position, in samples.
+     */
+    pj_uint32_t getPos() const throw(Error);
+
+    /**
+     * Set playback position in samples. This operation is not valid for
+     * playlist.
      *
      * @param samples	   The desired playback position, in samples.
      */
@@ -371,9 +415,30 @@ public:
     static AudioMediaPlayer* typecastFromAudioMedia(AudioMedia *media);
 
     /**
-     * Virtual destructor.
+     * Destructor.
      */
     virtual ~AudioMediaPlayer();
+
+public:
+    /*
+     * Callbacks
+     */
+
+    /**
+     * Register a callback to be called when the file player reading has
+     * reached the end of file, or when the file reading has reached the
+     * end of file of the last file for a playlist. If the file or playlist
+     * is set to play repeatedly, then the callback will be called multiple
+     * times.
+     *
+     * @return			If the callback returns false, the playback
+     * 				will stop. Note that if application destroys
+     * 				the player in the callback, it must return
+     * 				false here.
+     */
+    virtual bool onEof()
+    { return true; }
+
 
 private:
     /**
@@ -381,6 +446,11 @@ private:
      */
     int	playerId;
 
+    /**
+     *  Low level PJMEDIA callback
+     */
+    static pj_status_t eof_cb(pjmedia_port *port,
+                              void *usr_data);
 };
 
 /**
@@ -430,7 +500,7 @@ public:
     static AudioMediaRecorder* typecastFromAudioMedia(AudioMedia *media);
 
     /**
-     * Virtual destructor.
+     * Destructor.
      */
     virtual ~AudioMediaRecorder();
 

@@ -6071,6 +6071,29 @@ PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_player_id id,
 					   pjmedia_port **p_port);
 
 /**
+ * Get additional info about the file player. This operation is not valid
+ * for playlist.
+ *
+ * @param port		The file player ID.
+ * @param info		The info.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_player_get_info(pjsua_player_id id,
+                                           pjmedia_wav_player_info *info);
+
+
+/**
+ * Get playback position. This operation is not valid for playlist.
+ *
+ * @param id		The file player ID.
+ *
+ * @return		The current playback position, in samples. On error,
+ * 			return the error code as negative value.
+ */
+PJ_DECL(pj_ssize_t) pjsua_player_get_pos(pjsua_player_id id);
+
+/**
  * Set playback position. This operation is not valid for playlist.
  *
  * @param id		The file player ID.
@@ -6081,7 +6104,6 @@ PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_player_id id,
  */
 PJ_DECL(pj_status_t) pjsua_player_set_pos(pjsua_player_id id,
 					  pj_uint32_t samples);
-
 
 /**
  * Close the file of playlist, remove the player from the bridge, and free

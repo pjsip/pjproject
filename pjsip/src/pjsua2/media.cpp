@@ -262,6 +262,21 @@ void AudioMediaPlayer::createPlayer(const string &file_name,
 					   options, 
 					   &playerId) );
 
+    /* Register EOF callback */
+    pjmedia_port *port;
+    pj_status_t status;
+
+    status = pjsua_player_get_port(playerId, &port);
+    if (status != PJ_SUCCESS) {
+	pjsua_player_destroy(playerId);
+	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlayer()");
+    }
+    status = pjmedia_wav_player_set_eof_cb(port, this, &eof_cb);
+    if (status != PJ_SUCCESS) {
+	pjsua_player_destroy(playerId);
+	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlayer()");
+    }
+
     /* Get media port id. */
     id = pjsua_player_get_conf_port(playerId);
 
@@ -280,6 +295,7 @@ void AudioMediaPlayer::createPlaylist(const StringVector &file_names,
     pj_str_t pj_files[MAX_FILE_NAMES];
     unsigned i, count = 0;
     pj_str_t pj_lbl = str2Pj(label);
+    pj_status_t status;
 
     count = PJ_ARRAY_SIZE(pj_files);
 
@@ -296,10 +312,48 @@ void AudioMediaPlayer::createPlaylist(const StringVector &file_names,
 					     options, 
 					     &playerId) );
 
+    /* Register EOF callback */
+    pjmedia_port *port;
+    status = pjsua_player_get_port(playerId, &port);
+    if (status != PJ_SUCCESS) {
+	pjsua_player_destroy(playerId);
+	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlaylist()");
+    }
+    status = pjmedia_wav_playlist_set_eof_cb(port, this, &eof_cb);
+    if (status != PJ_SUCCESS) {
+	pjsua_player_destroy(playerId);
+	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlaylist()");
+    }
+
     /* Get media port id. */
     id = pjsua_player_get_conf_port(playerId);
 
     registerMediaPort(NULL);
+}
+
+AudioMediaPlayerInfo AudioMediaPlayer::getInfo() const throw(Error)
+{
+    AudioMediaPlayerInfo info;
+    pjmedia_wav_player_info pj_info;
+
+    PJSUA2_CHECK_EXPR( pjsua_player_get_info(playerId, &pj_info) );
+
+    pj_bzero(&info, sizeof(info));
+    info.formatId 		= pj_info.fmt_id;
+    info.payloadBitsPerSample	= pj_info.payload_bits_per_sample;
+    info.sizeBytes		= pj_info.size_bytes;
+    info.sizeSamples		= pj_info.size_samples;
+
+    return info;
+}
+
+pj_uint32_t AudioMediaPlayer::getPos() const throw(Error)
+{
+    pj_ssize_t pos = pjsua_player_get_pos(playerId);
+    if (pos < 0) {
+	PJSUA2_RAISE_ERROR2(-pos, "AudioMediaPlayer::getPos()");
+    }
+    return (pj_uint32_t)pos;
 }
 
 void AudioMediaPlayer::setPos(pj_uint32_t samples) throw(Error)
@@ -311,6 +365,13 @@ AudioMediaPlayer* AudioMediaPlayer::typecastFromAudioMedia(
 						AudioMedia *media)
 {
     return static_cast<AudioMediaPlayer*>(media);
+}
+
+pj_status_t AudioMediaPlayer::eof_cb(pjmedia_port *port,
+                                     void *usr_data)
+{
+    AudioMediaPlayer *player = (AudioMediaPlayer*)usr_data;
+    return player->onEof() ? PJ_SUCCESS : PJ_EEOF;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

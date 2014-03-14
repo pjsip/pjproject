@@ -496,6 +496,21 @@ PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_player_id id,
     return PJ_ENOTSUP;
 }
 
+/* Get number of bits per sample of the WAV payload */
+PJ_DEF(pj_status_t) pjsua_player_get_info(pjsua_player_id id,
+                                          pjmedia_wav_player_info *info)
+{
+    UNIMPLEMENTED(pjsua_player_get_info)
+    return PJ_ENOTSUP;
+}
+
+/* Get position in samples */
+PJ_DEF(pj_ssize_t) pjsua_player_get_pos(pjsua_player_id id)
+{
+    UNIMPLEMENTED(pjsua_player_get_pos)
+    return -PJ_ENOTSUP;
+}
+
 /* Set playback position. */
 PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
 					  pj_uint32_t samples)

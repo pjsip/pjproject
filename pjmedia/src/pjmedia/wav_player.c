@@ -425,6 +425,44 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
 
 /*
+ * Get additional info about the file player.
+ */
+PJ_DEF(pj_status_t) pjmedia_wav_player_get_info(
+					pjmedia_port *port,
+					pjmedia_wav_player_info *info)
+{
+    struct file_reader_port *fport;
+    PJ_ASSERT_RETURN(port && info, PJ_EINVAL);
+
+    pj_bzero(info, sizeof(*info));
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+    fport = (struct file_reader_port*) port;
+
+    if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM) {
+	info->fmt_id = PJMEDIA_FORMAT_PCM;
+	info->payload_bits_per_sample = 16;
+    } else if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
+	info->fmt_id = PJMEDIA_FORMAT_ULAW;
+	info->payload_bits_per_sample = 8;
+    } else if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW) {
+	info->fmt_id = PJMEDIA_FORMAT_ALAW;
+	info->payload_bits_per_sample = 8;
+    } else {
+	pj_assert(!"Unsupported format");
+	return PJ_ENOTSUP;
+    }
+
+    info->size_bytes = pjmedia_wav_player_get_len(port);
+    info->size_samples = info->size_bytes /
+			 (info->payload_bits_per_sample / 8);
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Get the data length, in bytes.
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port)
@@ -484,7 +522,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
 
 
 /*
- * Get the file play position of WAV player.
+ * Get the file play position of WAV player (in bytes).
  */
 PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
 {

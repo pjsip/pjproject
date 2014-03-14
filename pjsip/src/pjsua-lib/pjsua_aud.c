@@ -1192,7 +1192,7 @@ on_error:
  */
 PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 {
-    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
 
     return pjsua_var.player[id].slot;
@@ -1204,7 +1204,7 @@ PJ_DEF(pjsua_conf_port_id) pjsua_player_get_conf_port(pjsua_player_id id)
 PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_player_id id,
 					   pjmedia_port **p_port)
 {
-    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(p_port != NULL, PJ_EINVAL);
 
@@ -1214,16 +1214,65 @@ PJ_DEF(pj_status_t) pjsua_player_get_port( pjsua_player_id id,
 }
 
 /*
+ * Get player info.
+ */
+PJ_DEF(pj_status_t) pjsua_player_get_info(pjsua_player_id id,
+                                          pjmedia_wav_player_info *info)
+{
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),
+                     -PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.player[id].type == 0, PJ_EINVAL);
+
+    return pjmedia_wav_player_get_info(pjsua_var.player[id].port, info);
+}
+
+/*
+ * Get playback position.
+ */
+PJ_DEF(pj_ssize_t) pjsua_player_get_pos( pjsua_player_id id )
+{
+    pj_ssize_t pos_bytes;
+    pjmedia_wav_player_info info;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),
+                     -PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, -PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.player[id].type == 0, -PJ_EINVAL);
+
+    pos_bytes = pjmedia_wav_player_port_get_pos(pjsua_var.player[id].port);
+    if (pos_bytes < 0)
+	return pos_bytes;
+
+    status = pjmedia_wav_player_get_info(pjsua_var.player[id].port, &info);
+    if (status != PJ_SUCCESS)
+	return -status;
+
+    return pos_bytes / (info.payload_bits_per_sample / 8);
+}
+
+/*
  * Set playback position.
  */
 PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
 					  pj_uint32_t samples)
 {
-    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    pjmedia_wav_player_info info;
+    pj_uint32_t pos_bytes;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].type == 0, PJ_EINVAL);
 
-    return pjmedia_wav_player_port_set_pos(pjsua_var.player[id].port, samples);
+    status = pjmedia_wav_player_get_info(pjsua_var.player[id].port, &info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pos_bytes = samples * (info.payload_bits_per_sample / 8);
+    return pjmedia_wav_player_port_set_pos(pjsua_var.player[id].port,
+                                           pos_bytes);
 }
 
 
@@ -1233,7 +1282,7 @@ PJ_DEF(pj_status_t) pjsua_player_set_pos( pjsua_player_id id,
  */
 PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
 {
-    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player), PJ_EINVAL);
+    PJ_ASSERT_RETURN(id>=0&&id<(int)PJ_ARRAY_SIZE(pjsua_var.player),PJ_EINVAL);
     PJ_ASSERT_RETURN(pjsua_var.player[id].port != NULL, PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Destroying player %d..", id));

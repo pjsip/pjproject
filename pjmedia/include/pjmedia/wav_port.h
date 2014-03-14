@@ -52,6 +52,35 @@ enum pjmedia_file_player_option
 
 
 /**
+ * Additional information about the WAV player.
+ */
+typedef struct pjmedia_wav_player_info
+{
+    /**
+     * Format ID of the payload.
+     */
+    pjmedia_format_id	fmt_id;
+
+    /**
+     * The number of bits per sample of the file payload. For example,
+     * the value is 16 for PCM WAV and 8 for Alaw/Ulas WAV files.
+     */
+    unsigned		payload_bits_per_sample;
+
+    /**
+     * The WAV payload size in bytes.
+     */
+    pj_uint32_t		size_bytes;
+
+    /**
+     * The WAV payload size in samples.
+     */
+    pj_uint32_t		size_samples;
+
+} pjmedia_wav_player_info;
+
+
+/**
  * Create a media port to play streams from a WAV file. WAV player port
  * supports for reading WAV file with uncompressed 16 bit PCM format or 
  * compressed G.711 A-law/U-law format.
@@ -76,14 +105,24 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 						     pj_ssize_t buff_size,
 						     pjmedia_port **p_port );
 
+/**
+ * Get additional info about the file player.
+ *
+ * @param port		The file port.
+ * @param i		The info.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_wav_player_get_info(pjmedia_port *port,
+                                                 pjmedia_wav_player_info *i);
 
 /**
  * Get the data length, in bytes.
  *
  * @param port		The file player port.
  *
- * @return		The length of the data, in bytes. Upon error it will
- *			return negative value.
+ * @return		The length of the data, in bytes. On error, the
+ * 			error code is given as negative value.
  */
 PJ_DECL(pj_ssize_t) pjmedia_wav_player_get_len(pjmedia_port *port);
 
@@ -102,11 +141,12 @@ PJ_DECL(pj_status_t) pjmedia_wav_player_port_set_pos( pjmedia_port *port,
 
 
 /**
- * Get the file play position of WAV player.
+ * Get the file play position of WAV player, in bytes.
  *
  * @param port		The file player port.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		The current play position, in bytes. On error, the
+ * 			error code is given as negative value.
  */
 PJ_DECL(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port );
 
