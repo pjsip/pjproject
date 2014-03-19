@@ -39,12 +39,18 @@ import settings
 import os
 import traceback
 
+# You may try to enable pjsua worker thread by setting USE_THREADS below to True *and*
+# recreate the swig module with adding -threads option to swig (uncomment USE_THREADS 
+# in swig/python/Makefile). In my experiment this would crash Python as reported in:
+# http://lists.pjsip.org/pipermail/pjsip_lists.pjsip.org/2014-March/017223.html
+USE_THREADS = False
 	
 class Application(ttk.Frame):
 	"""
 	The Application main frame.
 	"""
 	def __init__(self):
+		global USE_THREADS
 		ttk.Frame.__init__(self, name='application', width=300, height=500)
 		self.pack(expand='yes', fill='both')
 		self.master.title('pjsua2 Demo')
@@ -73,8 +79,12 @@ class Application(ttk.Frame):
 		
 		# Default config
 		self.appConfig = settings.AppConfig()
-		self.appConfig.epConfig.uaConfig.threadCnt = 0;
-		self.appConfig.epConfig.uaConfig.mainThreadOnly = True
+		if USE_THREADS:
+			self.appConfig.epConfig.uaConfig.threadCnt = 1
+			self.appConfig.epConfig.uaConfig.mainThreadOnly = False
+		else:
+			self.appConfig.epConfig.uaConfig.threadCnt = 0
+			self.appConfig.epConfig.uaConfig.mainThreadOnly = True
 		self.appConfig.epConfig.logConfig.writer = self.logger
 		self.appConfig.epConfig.logConfig.filename = "pygui.log"
 		self.appConfig.epConfig.logConfig.fileFlags = pj.PJ_O_APPEND
@@ -101,11 +111,18 @@ class Application(ttk.Frame):
 		self.appConfig.saveFile(filename)
 	
 	def start(self, cfg_file='pygui.js'):
+		global USE_THREADS
 		# Load config
 		if cfg_file and os.path.exists(cfg_file):
 			self.appConfig.loadFile(cfg_file)
 
-		self.appConfig.epConfig.uaConfig.threadCnt = 0;
+		if USE_THREADS:
+			self.appConfig.epConfig.uaConfig.threadCnt = 1
+			self.appConfig.epConfig.uaConfig.mainThreadOnly = False
+		else:
+			self.appConfig.epConfig.uaConfig.threadCnt = 0
+			self.appConfig.epConfig.uaConfig.mainThreadOnly = True
+		self.appConfig.epConfig.uaConfig.threadCnt = 0
 		self.appConfig.epConfig.uaConfig.mainThreadOnly = True
 		self.appConfig.epConfig.logConfig.writer = self.logger
 		self.appConfig.epConfig.logConfig.level = 5
@@ -136,7 +153,8 @@ class Application(ttk.Frame):
 		self.ep.libStart()
 		
 		# Start polling
-		self._onTimer()
+		if not USE_THREADS:
+			self._onTimer()
 
 	def updateAccount(self, acc):
 		if acc.deleting:
