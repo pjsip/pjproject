@@ -870,12 +870,17 @@ AC_ARG_ENABLE(ilbc-codec,
 
 dnl # Include libsamplerate
 AC_ARG_ENABLE(libsamplerate,
-	      AC_HELP_STRING([--enable-libsamplerate],
-			     [Link with libsamplerate when available.]),
-	      [ AC_CHECK_LIB(samplerate,src_new) ]
-	      [ac_pjmedia_resample=libsamplerate],
-	      AC_MSG_RESULT([Skipping libsamplerate detection])
-	     )
+           AC_HELP_STRING([--enable-libsamplerate],
+                    [Link with libsamplerate when available.]),
+           [
+           if test "$enable_libsamplerate" = "yes"; then
+             AC_MSG_RESULT([Checking if libsamplerate is enabled...yes])
+             AC_CHECK_LIB(samplerate,src_new)
+             [ac_pjmedia_resample=libsamplerate]
+           else
+             AC_MSG_RESULT([Checking if libsamplerate is enabled...no])
+           fi
+           ], AC_MSG_RESULT([Checking if libsamplerate is enabled...no]))
 
 AC_SUBST(ac_resample_dll)
 AC_ARG_ENABLE(resample_dll,
