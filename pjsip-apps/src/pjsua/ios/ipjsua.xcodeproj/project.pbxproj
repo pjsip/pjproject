@@ -43,7 +43,6 @@
 		3AF0585516F058290046B835 /* libg7221codec-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0584E16F058290046B835 /* libg7221codec-arm-apple-darwin9.a */; };
 		3AF0585616F058290046B835 /* libgsmcodec-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0584F16F058290046B835 /* libgsmcodec-arm-apple-darwin9.a */; };
 		3AF0585716F058290046B835 /* libilbccodec-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585016F058290046B835 /* libilbccodec-arm-apple-darwin9.a */; };
-		3AF0585816F058290046B835 /* libmilenage-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585116F058290046B835 /* libmilenage-arm-apple-darwin9.a */; };
 		3AF0585916F058290046B835 /* libresample-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585216F058290046B835 /* libresample-arm-apple-darwin9.a */; };
 		3AF0585A16F058290046B835 /* libspeex-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585316F058290046B835 /* libspeex-arm-apple-darwin9.a */; };
 		3AF0585B16F058290046B835 /* libsrtp-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585416F058290046B835 /* libsrtp-arm-apple-darwin9.a */; };
@@ -91,7 +90,6 @@
 		3AF0584E16F058290046B835 /* libg7221codec-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libg7221codec-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libg7221codec-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0584F16F058290046B835 /* libgsmcodec-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libgsmcodec-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libgsmcodec-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585016F058290046B835 /* libilbccodec-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libilbccodec-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libilbccodec-arm-apple-darwin9.a"; sourceTree = "<group>"; };
-		3AF0585116F058290046B835 /* libmilenage-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libmilenage-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libmilenage-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585216F058290046B835 /* libresample-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libresample-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libresample-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585316F058290046B835 /* libspeex-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libspeex-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libspeex-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585416F058290046B835 /* libsrtp-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libsrtp-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libsrtp-arm-apple-darwin9.a"; sourceTree = "<group>"; };
@@ -123,7 +121,6 @@
 				3AF0585516F058290046B835 /* libg7221codec-arm-apple-darwin9.a in Frameworks */,
 				3AF0585616F058290046B835 /* libgsmcodec-arm-apple-darwin9.a in Frameworks */,
 				3AF0585716F058290046B835 /* libilbccodec-arm-apple-darwin9.a in Frameworks */,
-				3AF0585816F058290046B835 /* libmilenage-arm-apple-darwin9.a in Frameworks */,
 				3AF0585916F058290046B835 /* libresample-arm-apple-darwin9.a in Frameworks */,
 				3AF0585A16F058290046B835 /* libspeex-arm-apple-darwin9.a in Frameworks */,
 				3AF0585B16F058290046B835 /* libsrtp-arm-apple-darwin9.a in Frameworks */,
@@ -212,7 +209,6 @@
 				3AF0584E16F058290046B835 /* libg7221codec-arm-apple-darwin9.a */,
 				3AF0584F16F058290046B835 /* libgsmcodec-arm-apple-darwin9.a */,
 				3AF0585016F058290046B835 /* libilbccodec-arm-apple-darwin9.a */,
-				3AF0585116F058290046B835 /* libmilenage-arm-apple-darwin9.a */,
 				3AF0585216F058290046B835 /* libresample-arm-apple-darwin9.a */,
 				3AF0585316F058290046B835 /* libspeex-arm-apple-darwin9.a */,
 				3AF0585416F058290046B835 /* libsrtp-arm-apple-darwin9.a */,
