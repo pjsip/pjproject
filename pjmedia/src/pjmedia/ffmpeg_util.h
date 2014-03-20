@@ -37,6 +37,10 @@
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 
+#ifndef CodecID
+  #define CodecID AVCodecID
+#endif
+
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 
