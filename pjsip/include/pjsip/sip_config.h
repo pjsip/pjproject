@@ -137,6 +137,14 @@ typedef struct pjsip_cfg_t
 	 */
 	pj_bool_t req_has_via_alias;
 
+	/**
+	 * Resolve hostname when trying to get the network interface to be put 
+	 * in Via or Contact header.
+	 *
+	 * Default is PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE.
+	 */
+	pj_bool_t resolve_hostname_to_get_interface;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -363,6 +371,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_REQ_HAS_VIA_ALIAS		    PJ_TRUE
 #endif
 
+/**
+ * Resolve hostname when trying to get the network interface to be put in Via 
+ * or Contact header.
+ *
+ * This option can also be controlled at run-time by the
+ * \a resolve_hostname_to_get_interface setting in pjsip_cfg_t.
+ *
+ * Default is PJ_FALSE.
+ */
+#ifndef PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE
+#   define PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE  PJ_FALSE
+#endif
 
 /**
  * Accept call replace in early state when invite is not initiated

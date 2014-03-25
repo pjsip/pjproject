@@ -32,7 +32,8 @@ pjsip_cfg_t pjsip_sip_cfg_var =
        PJSIP_DONT_SWITCH_TO_TCP,
        PJSIP_DONT_SWITCH_TO_TLS,
        PJSIP_FOLLOW_EARLY_MEDIA_FORK,
-       PJSIP_REQ_HAS_VIA_ALIAS
+       PJSIP_REQ_HAS_VIA_ALIAS,
+       PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE
     },
 
     /* Transaction settings */
