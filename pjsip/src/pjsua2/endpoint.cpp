@@ -797,7 +797,13 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
                            pjsua_mwi_info *mwi_info)
 {
     OnMwiInfoParam prm;
-    prm.state	= pjsip_evsub_get_state(mwi_info->evsub);
+
+    if (mwi_info->evsub) {
+	prm.state	= pjsip_evsub_get_state(mwi_info->evsub);
+    } else {
+	/* Unsolicited MWI */
+	prm.state	= PJSIP_EVSUB_STATE_NULL;
+    }
     prm.rdata.fromPj(*mwi_info->rdata);
 
     Account *acc = lookupAcc(acc_id, "on_mwi_info()");
