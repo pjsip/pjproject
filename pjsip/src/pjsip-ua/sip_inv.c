@@ -629,9 +629,12 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	 * retransmission is received. Also handle the situation
 	 * when we have another re-INVITE on going and 200/OK
 	 * retransmission is received. See:
-	 * https://trac.pjsip.org/repos/ticket/1725
+	 * https://trac.pjsip.org/repos/ticket/1725.
+	 * Also send ACK for 200/OK of pending re-INVITE after call is
+	 * disconnected (see https://trac.pjsip.org/repos/ticket/1755).
 	 */
 	if (inv->invite_tsx == NULL ||
+	    inv->state == PJSIP_INV_STATE_DISCONNECTED ||
 	    (inv->last_ack && inv->last_ack_cseq==rdata->msg_info.cseq->cseq))
 	{
 	    pjsip_event e;
