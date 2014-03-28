@@ -880,29 +880,34 @@ static pj_status_t put_frame(pjmedia_port *port,
 	    return status;
 	}
 
-	// Copy RTP header to the beginning of packet
-	pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
+	/* When the payload length is zero, we should not send anything,
+	 * but proceed the rest normally.
+	 */
+	if (frame_out.size != 0) {
+	    // Copy RTP header to the beginning of packet
+	    pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
 
-	// Send the RTP packet to the transport.
-	status = pjmedia_transport_send_rtp(stream->transport,
-	                                    (char*)channel->buf,
-	                                    frame_out.size +
-						sizeof(pjmedia_rtp_hdr));
-	if (status != PJ_SUCCESS) {
-	    enum { COUNT_TO_REPORT = 20 };
-	    if (stream->send_err_cnt++ == 0) {
-		LOGERR_((channel->port.info.name.ptr,
-			 "Transport send_rtp() error",
-			 status));
+	    // Send the RTP packet to the transport.
+	    status = pjmedia_transport_send_rtp(stream->transport,
+						(char*)channel->buf,
+						frame_out.size +
+						    sizeof(pjmedia_rtp_hdr));
+	    if (status != PJ_SUCCESS) {
+		enum { COUNT_TO_REPORT = 20 };
+		if (stream->send_err_cnt++ == 0) {
+		    LOGERR_((channel->port.info.name.ptr,
+			     "Transport send_rtp() error",
+			     status));
+		}
+		if (stream->send_err_cnt > COUNT_TO_REPORT)
+		    stream->send_err_cnt = 0;
+		/* Ignore this error */
 	    }
-	    if (stream->send_err_cnt > COUNT_TO_REPORT)
-		stream->send_err_cnt = 0;
-	    /* Ignore this error */
-	}
 
-	pjmedia_rtcp_tx_rtp(&stream->rtcp, (unsigned)frame_out.size);
-	total_sent += frame_out.size;
-	pkt_cnt++;
+	    pjmedia_rtcp_tx_rtp(&stream->rtcp, (unsigned)frame_out.size);
+	    total_sent += frame_out.size;
+	    pkt_cnt++;
+	}
 
 	if (!has_more_data)
 	    break;
