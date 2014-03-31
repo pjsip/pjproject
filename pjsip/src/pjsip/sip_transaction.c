@@ -1610,14 +1610,14 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    if (tsx->state >= PJSIP_TSX_STATE_TERMINATED)
-	return PJ_SUCCESS;
-
     pj_log_push_indent();
 
     pj_grp_lock_acquire(tsx->grp_lock);
-    tsx_set_status_code(tsx, code, NULL);
-    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER, NULL);
+
+    if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
+        tsx_set_status_code(tsx, code, NULL);
+        tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER, NULL);
+    }
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();
