@@ -26,13 +26,16 @@
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
 
-#define MAKE_VER(mj,mn,mi)	((mj << 16) | (mn << 8) | (mi << 0))
-#define VER_AT_LEAST(mj,mn,mi)	(MAKE_VER(LIBAVUTIL_VERSION_MAJOR, \
-                              	          LIBAVUTIL_VERSION_MINOR, \
-                              	          LIBAVUTIL_VERSION_MICRO) >= \
-                              	 MAKE_VER(mj,mn,mi))
-
-
+/* PIX_FMT_GBR24P hassle:
+ * - PIX_FMT_GBR24P is introduced (perhaps in avutil 51.20.1)
+ * - suddenly PIX_FMT_GBR24P is replaced by PIX_FMT_GBRP, no alias defined,
+ *   so PIX_FMT_GBR24P is just gone! (perhaps in avutil 51.42.0)
+ * - then lately PIX_FMT_GBR24P is defined as PIX_FMT_GBRP
+ */
+#if !defined(PIX_FMT_GBR24P) && \
+    LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51,42,0)
+#  define PIX_FMT_GBR24P PIX_FMT_GBRP
+#endif
 
 /* Conversion table between pjmedia_format_id and PixelFormat */
 static const struct ffmpeg_fmt_table_t
@@ -44,7 +47,7 @@ static const struct ffmpeg_fmt_table_t
     { PJMEDIA_FORMAT_RGBA, PIX_FMT_RGBA},
     { PJMEDIA_FORMAT_RGB24,PIX_FMT_BGR24},
     { PJMEDIA_FORMAT_BGRA, PIX_FMT_BGRA},
-#if VER_AT_LEAST(51,20,1)
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 20, 1)
     { PJMEDIA_FORMAT_GBRP, PIX_FMT_GBR24P},
 #endif
 
@@ -62,7 +65,7 @@ static const struct ffmpeg_fmt_table_t
 static const struct ffmpeg_codec_table_t
 {
     pjmedia_format_id	id;
-    enum CodecID	codec_id;
+    unsigned		codec_id;
 } ffmpeg_codec_table[] =
 {
     {PJMEDIA_FORMAT_H261,	CODEC_ID_H261},
@@ -167,7 +170,7 @@ pj_status_t PixelFormat_to_pjmedia_format_id(enum PixelFormat pf,
 }
 
 pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
-					 enum CodecID *codec_id)
+					 unsigned *codec_id)
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
@@ -178,17 +181,17 @@ pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
 	}
     }
 
-    *codec_id = PIX_FMT_NONE;
+    *codec_id = (unsigned)PIX_FMT_NONE;
     return PJ_ENOTFOUND;
 }
 
-pj_status_t CodecID_to_pjmedia_format_id(enum CodecID codec_id,
+pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
 					 pjmedia_format_id *fmt_id)
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
 	const struct ffmpeg_codec_table_t *t = &ffmpeg_codec_table[i];
-	if (t->codec_id == codec_id) {
+	if ((unsigned)t->codec_id == codec_id) {
 	    if (fmt_id) *fmt_id = t->id;
 	    return PJ_SUCCESS;
 	}
