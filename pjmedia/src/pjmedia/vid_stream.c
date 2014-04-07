@@ -884,10 +884,10 @@ static pj_status_t put_frame(pjmedia_port *port,
 	 * but proceed the rest normally.
 	 */
 	if (frame_out.size != 0) {
-	    // Copy RTP header to the beginning of packet
+	    /* Copy RTP header to the beginning of packet */
 	    pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
 
-	    // Send the RTP packet to the transport.
+	    /* Send the RTP packet to the transport. */
 	    status = pjmedia_transport_send_rtp(stream->transport,
 						(char*)channel->buf,
 						frame_out.size +
