@@ -775,6 +775,7 @@ class AccountConfig:
     use_srtp = 0
     srtp_secure_signaling = 1
     rtp_transport_cfg = None
+    mwi_enabled = False
 
     def __init__(self, domain="", username="", password="", 
                  display="", registrar="", proxy=""):
@@ -865,6 +866,7 @@ class AccountConfig:
         self.ka_data = cfg.ka_data
         self.use_srtp = cfg.use_srtp
         self.srtp_secure_signaling = cfg.srtp_secure_signaling
+        self.mwi_enabled = cfg.mwi_enabled
         if (self.rtp_transport_cfg is not None):
             self.rtp_transport_cfg._cvt_from_pjsua(cfg.rtp_transport_cfg)
 
@@ -896,6 +898,7 @@ class AccountConfig:
         cfg.ka_data = self.ka_data
         cfg.use_srtp = self.use_srtp
         cfg.srtp_secure_signaling = self.srtp_secure_signaling
+        cfg.mwi_enabled = self.mwi_enabled
 
         if (self.rtp_transport_cfg is not None):
             cfg.rtp_transport_cfg = self.rtp_transport_cfg._cvt_to_pjsua()
@@ -2336,6 +2339,18 @@ class Lib:
         err, acc_id = _pjsua.acc_add_local(transport._id, set_default)
         self._err_check("create_account_for_transport()", self, err)
         return Account(self, acc_id, cb)
+
+    def modify_account(self, acc_id, acc_config):
+        """Modify configuration of a pjsua account.
+
+        Keyword arguments:
+        acc_id      -- ID of the account to be modified.
+        acc_config  -- New account configuration.
+
+        """
+        lck = self.auto_lock()
+        err = _pjsua.acc_modify(acc_id, acc_config._cvt_to_pjsua())
+        self._err_check("modify_account()", self, err)
 
     def hangup_all(self):
         """Hangup all calls.
