@@ -553,9 +553,8 @@ struct pjmedia_transport_info
  */
 PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
 {
-    pj_bzero(&info->sock_info, sizeof(pjmedia_sock_info));
+    pj_bzero(info, sizeof(pjmedia_transport_info));
     info->sock_info.rtp_sock = info->sock_info.rtcp_sock = PJ_INVALID_SOCKET;
-    info->specific_info_cnt = 0;
 }
 
 
