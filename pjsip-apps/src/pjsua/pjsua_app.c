@@ -551,6 +551,9 @@ static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
 	return;
 
     arrange_window(ci->media[mi].stream.vid.win_in);
+#ifdef USE_GUI
+    displayWindow(ci->media[mi].stream.vid.win_in);
+#endif
 
     PJ_UNUSED_ARG(has_error);
 }
