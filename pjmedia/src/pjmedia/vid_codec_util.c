@@ -631,7 +631,7 @@ static pj_status_t find_highest_res(pjmedia_vid_codec_h264_fmtp *fmtp,
     }
 
     /* Calculate maximum size (in macroblocks) */
-    max_fs = fmtp->max_mbps * fps->denum / fps->num;
+    max_fs = fmtp->max_mbps * the_fps.denum / the_fps.num;
     max_fs = PJ_MIN(max_fs, fmtp->max_fs);
 
     /* Check if the specified ratio is using big numbers

@@ -500,6 +500,12 @@ static int main_func(int argc, char *argv[])
         goto on_return;
     }
     
+#if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+    status = pjmedia_codec_openh264_vid_init(NULL, &cp.factory);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+#endif
+
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     status = pjmedia_codec_ffmpeg_vid_init(NULL, &cp.factory);
     if (status != PJ_SUCCESS)
@@ -520,6 +526,9 @@ static int main_func(int argc, char *argv[])
 on_return:    
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     pjmedia_codec_ffmpeg_vid_deinit();
+#endif
+#if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+    pjmedia_codec_openh264_vid_deinit();
 #endif
     pjmedia_aud_subsys_shutdown();
     pjmedia_vid_dev_subsys_shutdown();

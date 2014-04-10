@@ -240,6 +240,11 @@ typedef pj_status_t pjmedia_event_cb(pjmedia_event *event,
 typedef enum pjmedia_event_publish_flag
 {
     /**
+     * Default flag.
+     */
+    PJMEDIA_EVENT_PUBLISH_DEFAULT,
+
+    /**
      * Publisher will only post the event to the event manager. It is the
      * event manager that will later notify all the publisher's subscribers.
      */

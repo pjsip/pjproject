@@ -35,6 +35,7 @@
 #include <pjmedia-codec/g7221.h>
 #include <pjmedia-codec/ipp_codecs.h>
 #include <pjmedia-codec/opencore_amr.h>
+#include <pjmedia-codec/openh264.h>
 #include <pjmedia-codec/passthrough.h>
 #include <pjmedia-codec/silk.h>
 

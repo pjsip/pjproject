@@ -121,6 +121,11 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(status);
 
+#if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+    status = pjmedia_codec_openh264_vid_init(NULL, pf);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
+
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     status = pjmedia_codec_ffmpeg_vid_init(NULL, pf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -137,6 +142,11 @@ static void deinit_codecs()
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     pjmedia_codec_ffmpeg_vid_deinit();
 #endif
+
+#if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+    pjmedia_codec_openh264_vid_deinit();
+#endif
+
 }
 
 static pj_status_t create_file_player( pj_pool_t *pool,

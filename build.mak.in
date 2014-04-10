@@ -133,13 +133,17 @@ endif
 SDL_CFLAGS = @ac_sdl_cflags@
 SDL_LDFLAGS = @ac_sdl_ldflags@
 
-# FFMPEG dlags
+# FFMPEG flags
 FFMPEG_CFLAGS = @ac_ffmpeg_cflags@ 
 FFMPEG_LDFLAGS =  @ac_ffmpeg_ldflags@
 
 # Video4Linux2
 V4L2_CFLAGS = @ac_v4l2_cflags@
 V4L2_LDFLAGS = @ac_v4l2_ldflags@
+
+# OPENH264 flags
+OPENH264_CFLAGS = @ac_openh264_cflags@ 
+OPENH264_LDFLAGS =  @ac_openh264_ldflags@
 
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
@@ -150,8 +154,9 @@ IOS_CFLAGS = @ac_ios_cflags@
 
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(IOS_CFLAGS)
-PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS)
+		   $(OPENH264_CFLAGS) $(IOS_CFLAGS)
+PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
+                   $(OPENH264_LDFLAGS)
 
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications

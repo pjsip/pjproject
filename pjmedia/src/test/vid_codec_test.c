@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-#include <pjmedia-codec/ffmpeg_vid_codecs.h>
+#include <pjmedia-codec.h>
 #include <pjmedia-videodev/videodev.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/port.h>
@@ -297,6 +297,9 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 
         codec_param.packing = packing;
 
+        /* Don't apply SDP fmtp */
+        codec_param.ignore_fmtp = PJ_TRUE;
+
         /* Open codec */
         status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
                                                    &codec);
@@ -453,6 +456,13 @@ int vid_codec_test(void)
     if (status != PJ_SUCCESS)
         return -10;
 
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_OPENH264_CODEC
+    status = pjmedia_codec_openh264_vid_init(NULL, mem);
+    if (status != PJ_SUCCESS) {
+	return -22;
+    }
+#endif
+
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     status = pjmedia_codec_ffmpeg_vid_init(NULL, mem);
     if (status != PJ_SUCCESS)
@@ -463,6 +473,7 @@ int vid_codec_test(void)
     if (rc != 0)
 	goto on_return;
 
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
     rc = encode_decode_test(pool, "h263-1998", PJMEDIA_VID_PACKING_WHOLE);
     if (rc != 0)
 	goto on_return;
@@ -470,10 +481,25 @@ int vid_codec_test(void)
     rc = encode_decode_test(pool, "h263-1998", PJMEDIA_VID_PACKING_PACKETS);
     if (rc != 0)
 	goto on_return;
+#endif
+
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC || PJMEDIA_HAS_OPENH264_CODEC
+    rc = encode_decode_test(pool, "h264", PJMEDIA_VID_PACKING_WHOLE);
+    if (rc != 0)
+	goto on_return;
+
+    rc = encode_decode_test(pool, "h264", PJMEDIA_VID_PACKING_PACKETS);
+    if (rc != 0)
+	goto on_return;
+#endif
+
 
 on_return:
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     pjmedia_codec_ffmpeg_vid_deinit();
+#endif
+#if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+    pjmedia_codec_openh264_vid_deinit();
 #endif
     pjmedia_vid_dev_subsys_shutdown();
     pj_pool_release(pool);
