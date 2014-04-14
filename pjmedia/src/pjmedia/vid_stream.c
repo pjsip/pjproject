@@ -987,8 +987,12 @@ static pj_status_t put_frame(pjmedia_port *port,
     }
 
     /* Update stat */
-    stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
-    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
+    if (pkt_cnt) {
+	stream->rtcp.stat.rtp_tx_last_ts =
+		pj_ntohl(stream->enc->rtp.out_hdr.ts);
+	stream->rtcp.stat.rtp_tx_last_seq =
+		pj_ntohs(stream->enc->rtp.out_hdr.seq);
+    }
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     /* Update timestamp of last sending packet. */

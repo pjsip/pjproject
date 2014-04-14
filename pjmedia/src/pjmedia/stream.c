@@ -1389,6 +1389,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(4,(stream->port.info.name.ptr, status,
 		     "Error sending RTP"));
+	return PJ_SUCCESS;
     }
 
     /* Update stat */
