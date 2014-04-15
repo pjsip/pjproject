@@ -1478,5 +1478,14 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 }
 
 
+PJ_DEF(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport)
+{
+    struct tcp_transport *tcp = (struct tcp_transport*)transport;
+
+    PJ_ASSERT_RETURN(transport, PJ_INVALID_SOCKET);
+    return tcp->sock;
+}
+
+
 #endif	/* PJ_HAS_TCP */
 

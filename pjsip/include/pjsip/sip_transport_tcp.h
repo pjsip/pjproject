@@ -204,6 +204,18 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_start3(
 					pjsip_tpfactory **p_factory
 					);
 
+/**
+ * Retrieve the internal socket handle used by the TCP transport. Note
+ * that this socket normally is registered to ioqueue, so application
+ * needs to take care not to perform operation that disrupts ioqueue
+ * operation.
+ *
+ * @param transport	The TCP transport.
+ *
+ * @return		The socket handle, or PJ_INVALID_SOCKET if no socket
+ *			is currently being used.
+ */
+PJ_DECL(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport);
 
 PJ_END_DECL
 
