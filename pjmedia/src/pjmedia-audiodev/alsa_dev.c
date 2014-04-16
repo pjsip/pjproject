@@ -43,7 +43,7 @@
 #define ALSASOUND_CAPTURE  		2
 #define MAX_SOUND_CARDS 		5
 #define MAX_SOUND_DEVICES_PER_CARD 	5
-#define MAX_DEVICES			16
+#define MAX_DEVICES			32
 
 /* Set to 1 to enable tracing */
 #if 0
