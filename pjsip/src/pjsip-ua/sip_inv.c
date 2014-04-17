@@ -28,6 +28,7 @@
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/errno.h>
+#include <pj/array.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -1672,8 +1673,26 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     /* Add Supported header */
     hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_SUPPORTED, NULL);
     if (hdr) {
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
-			  pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	pjsip_supported_hdr *h_sup;
+
+	h_sup = (pjsip_supported_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
+	/* Remove "timer" from Supported header if Session-Timers is
+	 * disabled (https://trac.pjsip.org/repos/ticket/1761)
+	 */
+	if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0) {
+	    unsigned i;
+	    const pj_str_t STR_TIMER = { "timer", 5 };
+	    for (i=0; i<h_sup->count; ++i) {
+		if (pj_stricmp(&h_sup->values[i], &STR_TIMER)==0) {
+		    pj_array_erase(h_sup->values, sizeof(h_sup->values[0]),
+		                   h_sup->count, i);
+		    --h_sup->count;
+		    break;
+		}
+	    }
+	}
+
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h_sup);
     }
 
     /* Add Require header. */
@@ -2845,8 +2864,26 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
      */
     hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_SUPPORTED, NULL);
     if (hdr) {
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
-			  pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	pjsip_supported_hdr *h_sup;
+
+	h_sup = (pjsip_supported_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
+	/* Remove "timer" from Supported header if Session-Timers is
+	 * disabled (https://trac.pjsip.org/repos/ticket/1761)
+	 */
+	if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0) {
+	    unsigned i;
+	    const pj_str_t STR_TIMER = { "timer", 5 };
+	    for (i=0; i<h_sup->count; ++i) {
+		if (pj_stricmp(&h_sup->values[i], &STR_TIMER)==0) {
+		    pj_array_erase(h_sup->values, sizeof(h_sup->values[0]),
+		                   h_sup->count, i);
+		    --h_sup->count;
+		    break;
+		}
+	    }
+	}
+
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h_sup);
     }
 
     status = pjsip_timer_update_req(inv, tdata);
