@@ -851,7 +851,15 @@ static pj_status_t create_ice_media_transport(
 	    PJSUA_LOCK();
     }
 
-    if (async && call_med->tp_ready == PJ_EPENDING) {
+    if (!call_med->tp) {
+	/* Call has been disconnected, and media transports have been cleared
+	 * (see ticket #1759).
+	 */
+	PJ_LOG(4,(THIS_FILE, "Media transport initialization cancelled "
+		             "because call has been disconnected"));
+	status = PJ_ECANCELLED;
+	goto on_error;
+    } else if (async && call_med->tp_ready == PJ_EPENDING) {
         return PJ_EPENDING;
     } else if (call_med->tp_ready != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing ICE media transport",
