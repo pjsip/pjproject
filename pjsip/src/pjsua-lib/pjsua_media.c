@@ -1379,6 +1379,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	}
 
         if (status != PJ_SUCCESS) {
+	    call_med->tp_ready = status;
+	    pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
 	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
 	    return status;
 	}
