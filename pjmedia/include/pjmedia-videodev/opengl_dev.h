@@ -21,9 +21,13 @@
 
 #include <pjmedia-videodev/videodev_imp.h>
 
-/* OpenGL implementation on each platform needs to implement this and
- * stream operations.
+/* OpenGL implementation on each platform needs to implement these functions
+ * and stream operations.
  */
+/* Get capabilities of the implementation */
+int pjmedia_vid_dev_opengl_imp_get_cap(void);
+
+/* Create OpenGL stream */
 pj_status_t
 pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
                                          pjmedia_vid_dev_param *param,
@@ -31,6 +35,7 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
                                          void *user_data,
                                          pjmedia_vid_dev_stream **p_vid_strm);
 
+/****************************************************************************/
 /* OpenGL buffers opaque structure. */
 typedef struct gl_buffers gl_buffers;
 

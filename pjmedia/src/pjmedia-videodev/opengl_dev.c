@@ -336,7 +336,7 @@ static pj_status_t opengl_factory_init(pjmedia_vid_dev_factory *f)
 {
     struct opengl_factory *qf = (struct opengl_factory*)f;
     struct opengl_dev_info *qdi;
-    unsigned i, l;
+    unsigned l;
     
     /* Initialize input and output devices here */
     qf->dev_info = (struct opengl_dev_info*)
@@ -349,25 +349,17 @@ static pj_status_t opengl_factory_init(pjmedia_vid_dev_factory *f)
     strcpy(qdi->info.driver, "OpenGL");
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
-    qdi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
-
-    for (i = 0; i < qf->dev_count; i++) {
-	qdi = &qf->dev_info[i];
-	qdi->info.fmt_cnt = PJ_ARRAY_SIZE(opengl_fmts);
-	qdi->info.caps |= PJMEDIA_VID_DEV_CAP_FORMAT;
+    qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+    qdi->info.fmt_cnt = PJ_ARRAY_SIZE(opengl_fmts);
+    qdi->info.caps |= pjmedia_vid_dev_opengl_imp_get_cap();
 	
-	for (l = 0; l < PJ_ARRAY_SIZE(opengl_fmts); l++) {
-	    pjmedia_format *fmt = &qdi->info.fmt[l];
-	    pjmedia_format_init_video(fmt,
-				      opengl_fmts[l],
-				      DEFAULT_WIDTH,
-				      DEFAULT_HEIGHT,
-				      DEFAULT_FPS, 1);
-	}
+    for (l = 0; l < PJ_ARRAY_SIZE(opengl_fmts); l++) {
+        pjmedia_format *fmt = &qdi->info.fmt[l];
+        pjmedia_format_init_video(fmt, opengl_fmts[l], DEFAULT_WIDTH,
+                                  DEFAULT_HEIGHT, DEFAULT_FPS, 1);
     }
     
-    PJ_LOG(4, (THIS_FILE, "OpenGL initialized with %d devices",
-	       qf->dev_count));
+    PJ_LOG(4, (THIS_FILE, "OpenGL device initialized"));
     
     return PJ_SUCCESS;
 }
