@@ -46,6 +46,11 @@
 static void stereo_demo();
 #endif
 
+#ifdef USE_GUI
+pj_bool_t showNotification(pjsua_call_id call_id);
+void displayWindow(pjsua_vid_win_id wid);
+#endif
+
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
