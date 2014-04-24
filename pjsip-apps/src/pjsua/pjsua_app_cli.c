@@ -369,7 +369,8 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 
 		/* Fill buddy id */
 		pj_ansi_snprintf(data_out, sizeof(data_out), "%d", ids[i]+1);
-		pj_strdup2(param->pool, &param->choice[i].value, data_out);
+		pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+			   data_out);
 		pj_bzero(data_out, PJ_ARRAY_SIZE(data_out));
 
 		/* Format & fill description */
@@ -381,7 +382,8 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 				(int)info.uri.slen,
 				info.uri.ptr);
 
-		pj_strdup2(param->pool, &param->choice[i].desc, data_out);
+		pj_strdup2(param->pool, &param->choice[param->cnt].desc, 
+			   data_out);
 		if (++param->cnt >= (param->max_cnt-1))
 		    break;
 	    }
@@ -389,9 +391,9 @@ static void get_buddy_id(pj_cli_dyn_choice_param *param)
 	if (param->arg_id == DYN_CHOICE_BUDDY_ID) {
 	    /* Add URL input option */
 	    pj_ansi_snprintf(data_out, sizeof(data_out), "URL");
-	    pj_strdup2(param->pool, &param->choice[i].value, data_out);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value, data_out);
 	    pj_ansi_snprintf(data_out, sizeof(data_out), "An URL");
-	    pj_strdup2(param->pool, &param->choice[i].desc, data_out);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, data_out);
 	    ++param->cnt;
 	}
     }
@@ -424,8 +426,8 @@ static void get_account_id(pj_cli_dyn_choice_param *param)
 
 	    pj_bzero(buf, sizeof(buf));
 	    pj_ansi_snprintf(buf, sizeof(buf), "%d", acc_ids[i]);
-	    pj_strdup2(param->pool, &param->choice[i].value, buf);
-	    pj_strdup2(param->pool, &param->choice[i].desc, buf_out);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value, buf);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, buf_out);
 	    if (++param->cnt >= param->max_cnt)
 		break;
 	}
@@ -451,7 +453,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 
 	pj_ansi_snprintf(slot_id, sizeof(slot_id),
 			 "%d", info.slot_id);
-	pj_strdup2(param->pool, &param->choice[i].value, slot_id);
+	pj_strdup2(param->pool, &param->choice[param->cnt].value, slot_id);
 
 	txlist[0] = '\0';
 	for (j=0; j<info.listener_cnt; ++j) {
@@ -470,7 +472,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	       info.name.ptr,
 	       txlist);
 
-	pj_strdup2(param->pool, &param->choice[i].desc, desc);
+	pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	if (++param->cnt >= param->max_cnt)
 	    break;
     }
@@ -520,27 +522,28 @@ static void get_video_stream_id(pj_cli_dyn_choice_param *param)
 		    char med_idx[8];
 		    pj_ansi_snprintf(med_idx, sizeof(med_idx), "%d",
 				     call_info.media[i].index);
-		    pj_strdup2(param->pool, &param->choice[i].value, med_idx);
+		    pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+			       med_idx);
 
 		    switch (call_info.media[i].status) {
 		    case PJSUA_CALL_MEDIA_NONE:
-			pj_strdup2(param->pool, &param->choice[i].desc,
+			pj_strdup2(param->pool, &param->choice[param->cnt].desc,
 				   "Status:None");
 			break;
 		    case PJSUA_CALL_MEDIA_ACTIVE:
-			pj_strdup2(param->pool, &param->choice[i].desc,
+			pj_strdup2(param->pool, &param->choice[param->cnt].desc,
 				   "Status:Active");
 			break;
 		    case PJSUA_CALL_MEDIA_LOCAL_HOLD:
-			pj_strdup2(param->pool, &param->choice[i].desc,
+			pj_strdup2(param->pool, &param->choice[param->cnt].desc,
 				   "Status:Local Hold");
 			break;
 		    case PJSUA_CALL_MEDIA_REMOTE_HOLD:
-			pj_strdup2(param->pool, &param->choice[i].desc,
+			pj_strdup2(param->pool, &param->choice[param->cnt].desc,
 				   "Status:Remote Hold");
 			break;
 		    case PJSUA_CALL_MEDIA_ERROR:
-			pj_strdup2(param->pool, &param->choice[i].desc,
+			pj_strdup2(param->pool, &param->choice[param->cnt].desc,
 				   "Status:Media Error");
 			break;
 		    }
@@ -654,14 +657,14 @@ static void get_video_window_id(pj_cli_dyn_choice_param *param)
 
 	    pjsua_vid_win_get_info(wids[i], &wi);
 	    pj_ansi_snprintf(win_id, sizeof(win_id), "%d", wids[i]);
-	    pj_strdup2(param->pool, &param->choice[i].value, win_id);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value, win_id);
 
 	    pj_ansi_snprintf(desc, sizeof(desc),
 			     "Show:%c Pos(%d,%d)  Size(%dx%d)",
 			     (wi.show?'Y':'N'), wi.pos.x, wi.pos.y,
 			     wi.size.w, wi.size.h);
 
-	    pj_strdup2(param->pool, &param->choice[i].desc, desc);
+	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
 		break;
 	}
@@ -689,13 +692,14 @@ static void get_call_id(pj_cli_dyn_choice_param *param)
 
 		pjsua_call_get_info(ids[i], &call_info);
 		pj_ansi_snprintf(call_id, sizeof(call_id), "%d", ids[i]);
-		pj_strdup2(param->pool, &param->choice[i].value, call_id);
+		pj_strdup2(param->pool, &param->choice[param->cnt].value, 
+			   call_id);
 		pj_ansi_snprintf(desc, sizeof(desc), "%.*s [%.*s]",
 		    (int)call_info.remote_info.slen,
 		    call_info.remote_info.ptr,
 		    (int)call_info.state_text.slen,
 		    call_info.state_text.ptr);
-		pj_strdup2(param->pool, &param->choice[i].desc, desc);
+		pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 		if (++param->cnt >= param->max_cnt)
 		    break;
 
