@@ -1138,9 +1138,6 @@ static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd,
     pj_status_t status;
     PJ_ASSERT_RETURN(cmd && pool && info && cmd_val, PJ_EINVAL);   
 
-    if (p_cmd)
-	*p_cmd = cmd;
-
     /* Get matching command */
     if (cmd->sub_cmd) {
 	pj_cli_cmd_spec *child_cmd = cmd->sub_cmd->next;
@@ -1319,8 +1316,8 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
 
 		if (status != PJ_SUCCESS)
 		    return status;
-	    }
-
+	    } 
+	    
 	    status = get_pattern_match_cmds(cmd, prefix, pool, p_cmd, 
 					    parse_mode, info);
 	}
