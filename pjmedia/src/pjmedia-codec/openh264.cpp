@@ -333,14 +333,14 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     codec->codec_data = oh264_data;
 
     /* encoder allocation */
-    rc = CreateSVCEncoder(&oh264_data->enc);
+    rc = WelsCreateSVCEncoder(&oh264_data->enc);
     if (rc != 0)
 	goto on_error;
 
     oh264_data->esrc_pic = PJ_POOL_ZALLOC_T(pool, SSourcePicture);
 
     /* decoder allocation */
-    rc = CreateDecoder(&oh264_data->dec);
+    rc = WelsCreateDecoder(&oh264_data->dec);
     if (rc != 0)
 	goto on_error;
 
@@ -361,12 +361,12 @@ static pj_status_t oh264_dealloc_codec(pjmedia_vid_codec_factory *factory,
 
     oh264_data = (oh264_codec_data*) codec->codec_data;
     if (oh264_data->enc) {
-	DestroySVCEncoder(oh264_data->enc);
+	WelsDestroySVCEncoder(oh264_data->enc);
 	oh264_data->enc = NULL;
     }
     if (oh264_data->dec) {
 	oh264_data->dec->Uninitialize();
-    	DestroyDecoder(oh264_data->dec);
+    	WelsDestroyDecoder(oh264_data->dec);
     	oh264_data->dec = NULL;
     }
     pj_pool_release(oh264_data->pool);
@@ -454,7 +454,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     /* Init encoder parameters */
     pj_bzero(&eprm, sizeof(eprm));
     eprm.iInputCsp			= videoFormatI420;
-    eprm.sSpatialLayers[0].uiProfileIdc	= 66;	// PRO_BASELINE
+    eprm.sSpatialLayers[0].uiProfileIdc	= PRO_BASELINE;
     eprm.iPicWidth			= param->enc_fmt.det.vid.size.w;
     eprm.iPicHeight			= param->enc_fmt.det.vid.size.h;
     eprm.fMaxFrameRate			= (param->enc_fmt.det.vid.fps.num * 1.0 /
@@ -468,7 +468,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     eprm.iLoopFilterAlphaC0Offset	= 0;
     eprm.iLoopFilterBetaOffset		= 0;
     eprm.iMultipleThreadIdc		= 1;
-    eprm.bEnableRc			= 1;
+    //eprm.bEnableRc			= 1;
     eprm.iTargetBitrate			= param->enc_fmt.det.vid.avg_bps;
     eprm.bEnableFrameSkip		= 1;
     eprm.bEnableDenoise			= 0;
@@ -542,7 +542,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     //TODO:
     // Apply "sprop-parameter-sets" here
 
-    rc = CreateDecoder(&oh264_data->dec);
+    rc = WelsCreateDecoder(&oh264_data->dec);
     if (rc) {
 	PJ_LOG(4,(THIS_FILE, "Unable to create OpenH264 decoder"));
 	return PJMEDIA_CODEC_EFAILED;

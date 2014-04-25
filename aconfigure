@@ -7113,7 +7113,7 @@ $as_echo_n "checking OpenH264 availability... " >&6; }
 int
 main ()
 {
-int main() { CreateSVCEncoder(0); return 0; }
+WelsCreateSVCEncoder(0);
 
   ;
   return 0;
