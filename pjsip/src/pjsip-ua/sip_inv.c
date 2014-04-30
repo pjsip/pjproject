@@ -1830,6 +1830,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	/* Allow final/early response after SDP has been negotiated in early
 	 * media, IF this response is a final/early response with different
 	 * tag.
+         * See ticket #1644 and #1764 for forked early media case.
 	 */
 	if (tsx->role == PJSIP_ROLE_UAC &&
 	    (st_code/100 == 2 ||
