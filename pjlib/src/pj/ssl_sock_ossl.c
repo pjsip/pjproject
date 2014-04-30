@@ -1888,6 +1888,24 @@ PJ_DEF(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher)
     return NULL;
 }
 
+/* Get cipher identifier */
+PJ_DEF(pj_ssl_cipher) pj_ssl_cipher_id(const char *cipher_name)
+{
+    unsigned i;
+
+    if (openssl_cipher_num == 0) {
+        init_openssl();
+        shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_cipher_num; ++i) {
+        if (!pj_ansi_stricmp(openssl_ciphers[i].name, cipher_name))
+            return openssl_ciphers[i].id;
+    }
+
+    return PJ_TLS_UNKNOWN_CIPHER;
+}
+
 /* Check if the specified cipher is supported by SSL/TLS backend. */
 PJ_DEF(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher)
 {

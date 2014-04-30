@@ -243,6 +243,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
  */
 typedef enum pj_ssl_cipher {
 
+    /* Unsupported cipher */
+    PJ_TLS_UNKNOWN_CIPHER                       = -1,
+
     /* NULL */
     PJ_TLS_NULL_WITH_NULL_NULL               	= 0x00000000,
 
@@ -353,7 +356,9 @@ PJ_DECL(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher);
 
 
 /**
- * Get cipher ID from cipher name string.
+ * Get cipher ID from cipher name string. Note that on different backends
+ * (e.g. OpenSSL or Symbian implementation), cipher names may not be
+ * equivalent for the same cipher ID.
  *
  * @param cipher_name	The cipher name string.
  *
