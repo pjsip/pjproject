@@ -487,6 +487,10 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock);
 /* Create and initialize new SSL context and instance */
 static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 {
+    BIO *bio;
+    DH *dh;
+    long options;
+    EC_KEY *ecdh;
     SSL_METHOD *ssl_method;
     SSL_CTX *ctx;
     pj_ssl_cert_t *cert;
@@ -582,6 +586,42 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 		SSL_CTX_free(ctx);
 		return status;
 	    }
+
+	    bio = BIO_new_file(cert->privkey_file.ptr, "r");
+	    if (bio != NULL) {
+		dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+		if (dh != NULL) {
+		   if (SSL_CTX_set_tmp_dh(ctx, dh)) {
+			options = SSL_OP_CIPHER_SERVER_PREFERENCE |
+                                  SSL_OP_SINGLE_DH_USE;
+			options = SSL_CTX_set_options(ctx, options);
+			PJ_LOG(4,(ssock->pool->obj_name, "SSL DH "
+				  "initialized, PFS cipher-suites enabled"));
+		   }
+		   DH_free(dh);
+		}
+		BIO_free(bio);
+	    }
+	}
+    }
+
+    #ifndef SSL_CTRL_SET_ECDH_AUTO
+	#define SSL_CTRL_SET_ECDH_AUTO 94
+    #endif
+    
+    /* SSL_CTX_set_ecdh_auto(ctx, on); requires OpenSSL 1.0.2 which wraps: */
+    if (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL)) {
+	PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized (automatic), "
+		  "faster PFS ciphers enabled"));
+    } else {
+	/* enables AES-128 ciphers, to get AES-256 use NID_secp384r1 */
+	ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	if (ecdh != NULL) {
+	    if (SSL_CTX_set_tmp_ecdh(ctx, ecdh)) {
+		PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized "
+			  "(secp256r1), faster PFS cipher-suites enabled"));
+	    }
+	    EC_KEY_free(ecdh);
 	}
     }
 
