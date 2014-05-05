@@ -252,7 +252,11 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     for (i = 0; i < qf->dev_count; i++) {
 	qdi = &qf->dev_info[i];
 	qdi->info.fmt_cnt = PJ_ARRAY_SIZE(ios_fmts);	    
-	qdi->info.caps |= PJMEDIA_VID_DEV_CAP_FORMAT;
+	qdi->info.caps |= PJMEDIA_VID_DEV_CAP_FORMAT |
+                          PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE |
+                          PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION |
+                          PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
+                          PJMEDIA_VID_DEV_CAP_ORIENTATION;
 	
 	for (l = 0; l < PJ_ARRAY_SIZE(ios_fmts); l++) {
 	    pjmedia_format *fmt = &qdi->info.fmt[l];
@@ -574,26 +578,9 @@ static pj_status_t ios_factory_create_stream(
 			  kCVPixelBufferPixelFormatTypeKey, nil];
         
         /* Native preview */
-        if ((param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) &&
-            param->native_preview)
-        {
-            /* Preview layer instantiation should be in main thread! */
-            dispatch_async(dispatch_get_main_queue(), ^{
-                /* Create view */
-                ios_init_view(strm);
-
-                /* Create preview layer */
-                AVCaptureVideoPreviewLayer *previewLayer =
-                    [AVCaptureVideoPreviewLayer layerWithSession: strm->cap_session];
-
-                /* Attach preview layer to a UIView */
-                CGRect r = strm->render_view.bounds;
-                previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-                previewLayer.frame = r;
-                [[strm->render_view layer] addSublayer:previewLayer];
-
-                NSLog(@"Native preview initialized.");
-            });
+        if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) {
+            ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
+                               &param->native_preview);
         }
         
     } else if (param->dir & PJMEDIA_DIR_RENDER) {
@@ -676,6 +663,37 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     switch (cap) {
+        /* Native preview */
+        case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
+        {
+            pj_bool_t native_preview = *((pj_bool_t *)pval);
+            
+            if (!strm->cap_session) return PJ_EINVAL;
+            
+            if (!native_preview || strm->render_view)
+                return PJ_SUCCESS;
+            
+            /* Create view */
+            ios_init_view(strm);
+            
+            /* Preview layer instantiation should be in main thread! */
+            dispatch_async(dispatch_get_main_queue(), ^{
+                /* Create preview layer */
+                AVCaptureVideoPreviewLayer *previewLayer =
+                [AVCaptureVideoPreviewLayer layerWithSession:strm->cap_session];
+                
+                /* Attach preview layer to a UIView */
+                CGRect r = strm->render_view.bounds;
+                previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+                previewLayer.frame = r;
+                [[strm->render_view layer] addSublayer:previewLayer];
+            });
+            
+            NSLog(@"Native preview initialized.");
+            
+            return PJ_SUCCESS;
+        }
+
         /* Fast switch */
         case PJMEDIA_VID_DEV_CAP_SWITCH:
         {
@@ -906,10 +924,11 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
     }
 
     if (stream->render_view) {
+        UIView *view = stream->render_view;
         dispatch_async(dispatch_get_main_queue(),
           ^{
-              [stream->render_view removeFromSuperview];
-              [stream->render_view release];
+              [view removeFromSuperview];
+              [view release];
            });
         stream->render_view = NULL;
     }
