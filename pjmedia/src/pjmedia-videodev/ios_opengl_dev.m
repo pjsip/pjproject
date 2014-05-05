@@ -162,6 +162,11 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
 
 - (void)render
 {
+    /* Don't make OpenGLES calls while in the background */
+    if ([UIApplication sharedApplication].applicationState ==
+        UIApplicationStateBackground)
+        return;
+    
     if (![EAGLContext setCurrentContext:stream->ogl_context]) {
         /* Failed to set context */
         return;
