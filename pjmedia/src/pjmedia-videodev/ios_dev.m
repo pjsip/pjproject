@@ -45,7 +45,8 @@ typedef struct ios_fmt_info
 
 static ios_fmt_info ios_fmts[] =
 {
-    { PJMEDIA_FORMAT_BGRA, kCVPixelFormatType_32BGRA }
+    { PJMEDIA_FORMAT_BGRA, kCVPixelFormatType_32BGRA },
+    { PJMEDIA_FORMAT_I420, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange }
 };
 
 /* qt device info */
@@ -86,14 +87,15 @@ struct ios_stream
     void		   *user_data;          /**< Application data  */
 
     pjmedia_rect_size	    size;
-    pj_uint8_t		    bpp;
     unsigned		    bytes_per_row;
-    unsigned		    frame_size;
+    unsigned		    frame_size;         /**< Frame size (bytes)*/
+    pj_bool_t               is_planar;
     
     AVCaptureSession		*cap_session;
     AVCaptureDeviceInput	*dev_input;
     AVCaptureVideoDataOutput	*video_output;
     VOutDelegate		*vout_delegate;
+    void                        *capture_buf;
     
     void		*render_buf;
     pj_size_t		 render_buf_size;
@@ -209,7 +211,6 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
-    qdi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     
     /* Init input device */
     first_idx = qf->dev_count;
@@ -229,14 +230,13 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
 
             qdi = &qf->dev_info[qf->dev_count++];
             pj_bzero(qdi, sizeof(*qdi));
-            pj_ansi_strncpy(qdi->info.name, [[device localizedName] UTF8String],
+            pj_ansi_strncpy(qdi->info.name, [device.localizedName UTF8String],
                             sizeof(qdi->info.name));
             pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_TRUE;
             qdi->info.caps = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW |
-		    	     PJMEDIA_VID_DEV_CAP_SWITCH |
-                             PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+		    	     PJMEDIA_VID_DEV_CAP_SWITCH;
             qdi->dev = device;
         }
     }
@@ -251,15 +251,24 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     /* Set supported formats */
     for (i = 0; i < qf->dev_count; i++) {
 	qdi = &qf->dev_info[i];
-	qdi->info.fmt_cnt = PJ_ARRAY_SIZE(ios_fmts);	    
 	qdi->info.caps |= PJMEDIA_VID_DEV_CAP_FORMAT |
+                          PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
                           PJMEDIA_VID_DEV_CAP_ORIENTATION;
 	
 	for (l = 0; l < PJ_ARRAY_SIZE(ios_fmts); l++) {
-	    pjmedia_format *fmt = &qdi->info.fmt[l];
+            pjmedia_format *fmt;
+            
+            /* Simple renderer UIView only supports BGRA */
+            if (qdi->info.dir == PJMEDIA_DIR_RENDER &&
+                ios_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
+            {
+                continue;
+            }
+                
+	    fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
 	    pjmedia_format_init_video(fmt,
 				      ios_fmts[l].pjmedia_format,
 				      DEFAULT_WIDTH,
@@ -377,23 +386,48 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 		      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 		      fromConnection:(AVCaptureConnection *)connection
 {
-    pjmedia_frame frame;
-    CVImageBufferRef imageBuffer;
+    pjmedia_frame frame = {0};
+    CVImageBufferRef img;
 
     if (!sampleBuffer)
 	return;
     
     /* Get a CMSampleBuffer's Core Video image buffer for the media data */
-    imageBuffer = CMSampleBufferGetImageBuffer(sampleBuffer); 
+    img = CMSampleBufferGetImageBuffer(sampleBuffer);
     
     /* Lock the base address of the pixel buffer */
-    CVPixelBufferLockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
     
     frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
-    frame.buf = CVPixelBufferGetBaseAddress(imageBuffer);
     frame.size = stream->frame_size;
-    frame.bit_info = 0;
     frame.timestamp.u64 = stream->frame_ts.u64;
+
+    if (stream->is_planar && stream->capture_buf) {
+        if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
+            /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
+            pj_uint8_t *p, *p_end, *Y, *U, *V;
+            pj_size_t p_len;
+            
+            p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
+            p_len = stream->size.w * stream->size.h;
+            Y = (pj_uint8_t*)stream->capture_buf;
+            U = Y + p_len;
+            V = U + p_len/4;
+            pj_memcpy(Y, p, p_len);
+            
+            p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 1);
+            p_len >>= 1;
+            p_end = p + p_len;
+            while (p < p_end) {
+                *U++ = *p++;
+                *V++ = *p++;
+            }
+
+            frame.buf = stream->capture_buf;
+        }
+    } else {
+        frame.buf = CVPixelBufferGetBaseAddress(img);
+    }
     
     if (stream->vid_cb.capture_cb) {
         if (stream->thread_initialized == 0 || !pj_thread_is_registered())
@@ -410,7 +444,7 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     stream->frame_ts.u64 += stream->ts_inc;
     
     /* Unlock the pixel buffer */
-    CVPixelBufferUnlockBaseAddress(imageBuffer, kCVPixelBufferLock_ReadOnly);
+    CVPixelBufferUnlockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 }
 @end
 
@@ -507,10 +541,10 @@ static pj_status_t ios_factory_create_stream(
     
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
     pj_memcpy(&strm->size, &vfd->size, sizeof(vfd->size));
-    strm->bpp = vfi->bpp;
-    strm->bytes_per_row = strm->size.w * strm->bpp / 8;
+    strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
     strm->frame_size = strm->bytes_per_row * strm->size.h;
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
+    strm->is_planar = vfi->plane_cnt > 1;
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
         /* Create capture stream here */
@@ -525,7 +559,7 @@ static pj_status_t ios_factory_create_stream(
         vfd->size.w = 352;
         vfd->size.h = 288;
         strm->size = vfd->size;
-        strm->bytes_per_row = strm->size.w * strm->bpp / 8;
+        strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
         strm->frame_size = strm->bytes_per_row * strm->size.h;
         
         /* Update param as output */
@@ -576,6 +610,10 @@ static pj_status_t ios_factory_create_stream(
 	    [NSDictionary dictionaryWithObjectsAndKeys:
 			  [NSNumber numberWithInt:ifi->ios_format],
 			  kCVPixelBufferPixelFormatTypeKey, nil];
+        
+        /* Prepare capture buffer if it's planar format */
+        if (strm->is_planar)
+            strm->capture_buf = pj_pool_alloc(strm->pool, strm->frame_size);
         
         /* Native preview */
         if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) {
@@ -676,20 +714,22 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             /* Create view */
             ios_init_view(strm);
             
+            CALayer *view_layer = strm->render_view.layer;
+            CGRect r = strm->render_view.bounds;
+            
             /* Preview layer instantiation should be in main thread! */
             dispatch_async(dispatch_get_main_queue(), ^{
                 /* Create preview layer */
-                AVCaptureVideoPreviewLayer *previewLayer =
-                [AVCaptureVideoPreviewLayer layerWithSession:strm->cap_session];
+                AVCaptureVideoPreviewLayer *prev_layer =
+                            [AVCaptureVideoPreviewLayer
+                             layerWithSession:strm->cap_session];
                 
                 /* Attach preview layer to a UIView */
-                CGRect r = strm->render_view.bounds;
-                previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-                previewLayer.frame = r;
-                [[strm->render_view layer] addSublayer:previewLayer];
+                prev_layer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+                prev_layer.frame = r;
+                [view_layer addSublayer:prev_layer];
+                PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
             });
-            
-            NSLog(@"Native preview initialized.");
             
             return PJ_SUCCESS;
         }
@@ -720,9 +760,6 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             
             /* Ok, let's do the switch */
             AVCaptureDeviceInput *cur_dev_input = strm->dev_input;
-                    //[AVCaptureDeviceInput
-                    // deviceInputWithDevice:di[strm->param.cap_id].dev
-                    // error:&error];
             AVCaptureDeviceInput *new_dev_input =
                     [AVCaptureDeviceInput
                      deviceInputWithDevice:di[p->target_id].dev
@@ -749,8 +786,9 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!(ifi = get_ios_format_info(fmt->id)))
                 return PJMEDIA_EVID_BADFORMAT;
         
-            vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
-                                                fmt->id);
+            vfi = pjmedia_get_video_format_info(
+                                        pjmedia_video_format_mgr_instance(),
+                                        fmt->id);
             if (!vfi)
                 return PJMEDIA_EVID_BADFORMAT;
         
@@ -758,14 +796,16 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
         
             vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
 	    pj_memcpy(&strm->size, &vfd->size, sizeof(vfd->size));
-	    strm->bytes_per_row = strm->size.w * strm->bpp / 8;
+	    strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
 	    strm->frame_size = strm->bytes_per_row * strm->size.h;
 	    if (strm->render_buf_size < strm->frame_size) {
+                /* Realloc only when needed */
           	strm->render_buf = pj_pool_alloc(strm->pool, strm->frame_size);
 	      	strm->render_buf_size = strm->frame_size;
 		CGDataProviderRelease(strm->render_data_provider);
 	        strm->render_data_provider = CGDataProviderCreateWithData(NULL,
-	                                                strm->render_buf, strm->frame_size,
+	                                                strm->render_buf,
+	                                                strm->frame_size,
 	                                                NULL);
 	    }
 	    
@@ -776,8 +816,9 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
         {
             UIView *view = (UIView *)pval;
             strm->param.window.info.ios.window = (void *)pval;
-            dispatch_async(dispatch_get_main_queue(),
-                           ^{[view addSubview:strm->render_view];});
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [view addSubview:strm->render_view];
+            });
             return PJ_SUCCESS;
         }
             
