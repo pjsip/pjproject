@@ -548,6 +548,18 @@ static pj_status_t ios_factory_create_stream(
     strm->is_planar = vfi->plane_cnt > 1;
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
+        NSString *size_preset_str[] = {
+            AVCaptureSessionPreset352x288,
+            AVCaptureSessionPreset640x480,
+            AVCaptureSessionPreset1280x720,
+            AVCaptureSessionPreset1920x1080
+        };
+        pj_size_t supported_size_w[] = { 352, 640, 1280, 1920 };
+        pj_size_t supported_size_h[] = { 288, 480,  720, 1080 };
+        pj_size_t supported_size[] = { 352*288, 640*480, 1280*720, 1920*1080 };
+        pj_size_t requested_size = strm->size.w * strm->size.h;
+        int i;
+        
         /* Create capture stream here */
 	strm->cap_session = [[AVCaptureSession alloc] init];
 	if (!strm->cap_session) {
@@ -555,10 +567,14 @@ static pj_status_t ios_factory_create_stream(
 	    goto on_error;
 	}
         
-	/* Just hardcode to always capture 352x288 for now */
-        strm->cap_session.sessionPreset = AVCaptureSessionPreset352x288;
-        vfd->size.w = 352;
-        vfd->size.h = 288;
+	/* Find the closest supported size */
+        for(i = 0; i < PJ_ARRAY_SIZE(supported_size)-1; ++i) {
+            if (supported_size[i] >= requested_size)
+                break;
+        }
+        strm->cap_session.sessionPreset = size_preset_str[i];
+        vfd->size.w = supported_size_w[i];
+        vfd->size.h = supported_size_h[i];
         strm->size = vfd->size;
         strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
         strm->frame_size = strm->bytes_per_row * strm->size.h;
