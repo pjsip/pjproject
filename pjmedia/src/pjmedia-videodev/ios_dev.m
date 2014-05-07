@@ -96,6 +96,7 @@ struct ios_stream
     AVCaptureVideoDataOutput	*video_output;
     VOutDelegate		*vout_delegate;
     void                        *capture_buf;
+    AVCaptureVideoPreviewLayer  *prev_layer;
     
     void		*render_buf;
     pj_size_t		 render_buf_size;
@@ -714,9 +715,6 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             /* Create view */
             ios_init_view(strm);
             
-            CALayer *view_layer = strm->render_view.layer;
-            CGRect r = strm->render_view.bounds;
-            
             /* Preview layer instantiation should be in main thread! */
             dispatch_async(dispatch_get_main_queue(), ^{
                 /* Create preview layer */
@@ -725,9 +723,10 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
                              layerWithSession:strm->cap_session];
                 
                 /* Attach preview layer to a UIView */
-                prev_layer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-                prev_layer.frame = r;
-                [view_layer addSublayer:prev_layer];
+                prev_layer.videoGravity = AVLayerVideoGravityResize;
+                prev_layer.frame = strm->render_view.bounds;
+                [strm->render_view.layer addSublayer:prev_layer];
+                strm->prev_layer = prev_layer;
                 PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
             });
             
@@ -831,6 +830,8 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
                                 strm->param.disp_size.h);
             dispatch_async(dispatch_get_main_queue(), ^{
 		strm->render_view.bounds = r;
+                if (strm->prev_layer)
+                    strm->prev_layer.frame = r;
             });
             return PJ_SUCCESS;
         }
@@ -890,7 +891,13 @@ static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Starting iOS video stream"));
 
     if (stream->cap_session) {
-	[stream->cap_session startRunning];
+        if ([NSThread isMainThread]) {
+            [stream->cap_session startRunning];
+        } else {
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [stream->cap_session startRunning];
+            });
+        }
     
 	if (![stream->cap_session isRunning])
 	    return PJ_EUNKNOWN;
@@ -905,7 +912,6 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
 					const pjmedia_frame *frame)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
-    //NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
@@ -913,10 +919,9 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
         pj_memcpy(stream->render_buf, frame->buf, stream->frame_size);
     
     /* Perform video display in a background thread */
-    dispatch_async(dispatch_get_main_queue(),
-                   ^{[stream->vout_delegate update_image];});
-
-    //[pool release];
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [stream->vout_delegate update_image];
+    });
     
     return PJ_SUCCESS;
 }
@@ -930,8 +935,15 @@ static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
 
     PJ_LOG(4, (THIS_FILE, "Stopping iOS video stream"));
 
-    if (stream->cap_session && [stream->cap_session isRunning])
-	[stream->cap_session stopRunning];
+    if (stream->cap_session && [stream->cap_session isRunning]) {
+        if ([NSThread isMainThread]) {
+            [stream->cap_session stopRunning];
+        } else {
+            dispatch_sync(dispatch_get_main_queue(), ^{
+                [stream->cap_session stopRunning];
+            });
+        }
+    }
     
     return PJ_SUCCESS;
 }
@@ -964,19 +976,27 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
         stream->video_output = nil;
     }
 
+    if (stream->prev_layer) {
+        CALayer *prev_layer = stream->prev_layer;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [prev_layer removeFromSuperlayer];
+            [prev_layer release];
+        });
+        stream->prev_layer = nil;
+    }
+    
     if (stream->render_view) {
         UIView *view = stream->render_view;
-        dispatch_async(dispatch_get_main_queue(),
-          ^{
-              [view removeFromSuperview];
-              [view release];
-           });
-        stream->render_view = NULL;
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [view removeFromSuperview];
+            [view release];
+        });
+        stream->render_view = nil;
     }
     
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
-        stream->render_data_provider = NULL;
+        stream->render_data_provider = nil;
     }
 
     pj_pool_release(stream->pool);
