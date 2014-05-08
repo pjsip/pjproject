@@ -3173,8 +3173,11 @@ static pj_status_t tsx_on_state_completed_uac( pjsip_transaction *tsx,
     pj_assert(tsx->state == PJSIP_TSX_STATE_COMPLETED);
 
     if (event->type == PJSIP_EVENT_TIMER) {
-	/* Must be the timeout timer. */
-	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
+	/* Ignore stray retransmit event
+	 *  https://trac.pjsip.org/repos/ticket/1766
+	 */
+	if (event->body.timer.entry != &tsx->timeout_timer)
+	    return PJ_SUCCESS;
 
 	/* Move to Terminated state. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
