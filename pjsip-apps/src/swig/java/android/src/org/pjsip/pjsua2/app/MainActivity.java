@@ -207,10 +207,14 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 			
 			/* Only one call at anytime */
 			if (currentCall != null) {
+				/*
 				prm.setStatusCode(pjsip_status_code.PJSIP_SC_BUSY_HERE);
 				try {
 					call.hangup(prm);
 				} catch (Exception e) {}
+				*/
+				// TODO: set status code
+				call.delete();
 				return true;
 			}
 
