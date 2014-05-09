@@ -48,6 +48,15 @@ class MyCall extends Call {
 	@Override
 	public void onCallState(OnCallStateParam prm) {
 		MyApp.observer.notifyCallState(this);
+		try {
+			CallInfo ci = getInfo();
+			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
+				this.delete();
+				MainActivity.currentCall = null;
+			}
+		} catch (Exception e) {
+			return;
+		}
 	}
 	
 	@Override
@@ -100,6 +109,7 @@ class MyAccount extends Account {
 		try {
 			bud.create(this, bud_cfg);
 		} catch (Exception e) {
+			bud.delete();
 			bud = null;
 		}
 		
@@ -116,10 +126,13 @@ class MyAccount extends Account {
 	
 	public void delBuddy(MyBuddy buddy) {
 		buddyList.remove(buddy);
+		buddy.delete();
 	}
 	
 	public void delBuddy(int index) {
+		MyBuddy bud = buddyList.get(index);
 		buddyList.remove(index);
+		bud.delete();
 	}
 	
 	@Override

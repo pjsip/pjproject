@@ -83,8 +83,6 @@ public class CallActivity extends Activity implements Handler.Callback {
 			} catch (Exception e) {
 				System.out.println(e);
 			}
-
-			MainActivity.currentCall = null;
 		}
 	}
 	
@@ -136,7 +134,6 @@ public class CallActivity extends Activity implements Handler.Callback {
 			} else if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
 				buttonHangup.setText("OK");
 				call_state = "Call disconnected: " + ci.getLastReason();
-				MainActivity.currentCall = null;
 			}
 		}
 		

@@ -173,9 +173,6 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 				m2.sendToTarget();
 			}
 			
-			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
-				currentCall = null;
-			
 		} else if (m.what == MSG_TYPE.BUDDY_STATE) {
 			
 			MyBuddy buddy = (MyBuddy) m.obj;
@@ -339,7 +336,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		try {
 			call.makeCall(buddy_uri, prm);
 		} catch (Exception e) {
-			currentCall = null;
+			call.delete();
 			return;
 		}
 		
