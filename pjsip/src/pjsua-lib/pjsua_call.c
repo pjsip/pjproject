@@ -516,7 +516,13 @@ on_error:
     if (inv == NULL && call_id != -1 && !cb_called &&
 	pjsua_var.ua_cfg.cb.on_call_state)
     {
-        (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, NULL);
+	/* Use user event rather than NULL to avoid crash in
+	 * unsuspecting app.
+	 */
+	pjsip_event user_event;
+	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
+
+        (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, &user_event);
     }
 
     if (dlg) {
