@@ -1,5 +1,6 @@
 import pjsua2 as pj
 import sys
+import time
 
 #
 # Basic data structure test, to make sure basic struct
@@ -100,6 +101,61 @@ def ua_run_ua_test():
 	ep.libDestroy()
 
 #
+# Tone generator
+#
+def ua_tonegen_test():
+        print "UA tonegen test.."
+        ep_cfg = pj.EpConfig()
+
+        ep = pj.Endpoint()
+        ep.libCreate()
+        ep.libInit(ep_cfg)
+        ep.libStart()
+        
+        tonegen = pj.ToneGenerator()
+        tonegen.createToneGenerator()
+
+        tone = pj.ToneDesc()
+        tone.freq1 = 400
+        tone.freq2 = 600
+        tone.on_msec = 1000
+        tone.off_msec = 1000
+        tones = pj.ToneDescVector()
+        tones.append(tone)
+
+        digit = pj.ToneDigit()
+        digit.digit = '0'
+        digit.on_msec = 1000
+        digit.off_msec = 1000
+        digits = pj.ToneDigitVector()
+        digits.append(digit)
+
+        adm = ep.audDevManager()
+        spk = adm.getPlaybackDevMedia()
+
+        tonegen.play(tones, True)
+        tonegen.startTransmit(spk)
+        time.sleep(5)
+
+	tonegen.stop()
+        tonegen.playDigits(digits, True)
+        time.sleep(5)
+
+	dm = tonegen.getDigitMap()
+	print dm[0].digit
+	dm[0].freq1 = 400
+	dm[0].freq2 = 600
+	tonegen.setDigitMap(dm)
+	
+	tonegen.stop()
+        tonegen.playDigits(digits, True)
+        time.sleep(5)
+	
+        tonegen = None
+
+        ep.libDestroy()
+
+#
 # main()
 #
 if __name__ == "__main__":
@@ -107,6 +163,7 @@ if __name__ == "__main__":
 	ua_run_test_exception()
 	ua_run_log_test()
 	ua_run_ua_test()
+	ua_tonegen_test()
 	sys.exit(0)
 
 	

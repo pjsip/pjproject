@@ -511,6 +511,145 @@ private:
     int	recorderId;
 };
 
+/**
+ * Tone descriptor (abstraction for pjmedia_tone_desc)
+ */
+class ToneDesc : public pjmedia_tone_desc
+{
+public:
+    ToneDesc()
+    {
+	pj_bzero(this, sizeof(*this));
+    }
+    ~ToneDesc() {}
+};
+
+/**
+ * Array of tone descriptor.
+ */
+typedef std::vector<ToneDesc> ToneDescVector;
+
+/**
+ * Tone digit (abstraction for pjmedia_tone_digit)
+ */
+class ToneDigit : public pjmedia_tone_digit
+{
+public:
+    ToneDigit()
+    {
+	pj_bzero(this, sizeof(*this));
+    }
+    ~ToneDigit() {}
+};
+
+/**
+ * Array of tone digits.
+ */
+typedef std::vector<ToneDigit> ToneDigitVector;
+
+/**
+ * A digit in tone digit map
+ */
+struct ToneDigitMapDigit
+{
+public:
+    string	digit;
+    int		freq1;
+    int		freq2;
+};
+
+/**
+ * Tone digit map
+ */
+typedef std::vector<ToneDigitMapDigit> ToneDigitMapVector;
+
+/**
+ * Tone generator.
+ */
+class ToneGenerator : public AudioMedia
+{
+public:
+    /**
+     * Constructor.
+     */
+    ToneGenerator();
+
+    /**
+     * Destructor.
+     */
+    ~ToneGenerator();
+
+    /**
+     * Create tone generator.
+     */
+    void createToneGenerator(unsigned clock_rate = 16000,
+			     unsigned channel_count = 1) throw(Error);
+
+    /**
+     * Check if the tone generator is still busy producing some tones.
+     * @return		    Non-zero if busy.
+     */
+    bool isBusy() const;
+
+    /**
+     * Instruct the tone generator to stop current processing.
+     */
+    void stop() throw(Error);
+
+    /**
+     * Rewind the playback. This will start the playback to the first
+     * tone in the playback list.
+     */
+    void rewind() throw(Error);
+
+    /**
+     * Instruct the tone generator to play single or dual frequency tones
+     * with the specified duration. The new tones will be appended to
+     * currently playing tones, unless stop() is called before calling this
+     * function. The playback will begin as soon as the tone generator is
+     * connected to other media.
+     *
+     * @param tones	    Array of tones to be played.
+     * @param loop	    Play the tone in a loop.
+     */
+    void play(const ToneDescVector &tones,
+              bool loop=false) throw(Error);
+
+    /**
+     * Instruct the tone generator to play multiple MF digits with each of
+     * the digits having individual ON/OFF duration. Each of the digit in the
+     * digit array must have the corresponding descriptor in the digit map.
+     * The new tones will be appended to currently playing tones, unless
+     * stop() is called before calling this function. The playback will begin
+     * as soon as the tone generator is connected to a sink media.
+     *
+     * @param digits	    Array of MF digits.
+     * @param loop	    Play the tone in a loop.
+     */
+    void playDigits(const ToneDigitVector &digits,
+                    bool loop=false) throw(Error);
+
+    /**
+     * Get the digit-map currently used by this tone generator.
+     *
+     * @return		    The digitmap currently used by the tone generator
+     */
+    ToneDigitMapVector getDigitMap() const throw(Error);
+
+    /**
+     * Set digit map to be used by the tone generator.
+     *
+     * @param digit_map	    Digitmap to be used by the tone generator.
+     */
+    void setDigitMap(const ToneDigitMapVector &digit_map) throw(Error);
+
+private:
+    pj_pool_t *pool;
+    pjmedia_port *tonegen;
+    pjmedia_tone_digit_map digitMap;
+};
+
+
 /*************************************************************************
 * Sound device management
 */

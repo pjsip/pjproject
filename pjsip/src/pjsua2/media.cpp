@@ -423,6 +423,169 @@ AudioMediaRecorder* AudioMediaRecorder::typecastFromAudioMedia(
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+ToneGenerator::ToneGenerator()
+: pool(NULL), tonegen(NULL)
+{
+}
+
+ToneGenerator::~ToneGenerator()
+{
+    if (tonegen) {
+	unregisterMediaPort();
+	pjmedia_port_destroy(tonegen);
+	tonegen = NULL;
+    }
+    if (pool) {
+	pj_pool_release(pool);
+	pool = NULL;
+    }
+}
+
+void ToneGenerator::createToneGenerator(unsigned clock_rate,
+					unsigned channel_count) throw(Error)
+{
+    pj_status_t status;
+
+    if (pool) {
+	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
+    }
+
+    pool = pjsua_pool_create( "tonegen%p", 512, 512);
+    if (!pool) {
+	PJSUA2_RAISE_ERROR(PJ_ENOMEM);
+    }
+
+    status = pjmedia_tonegen_create( pool, clock_rate, channel_count,
+				     clock_rate * 20 / 1000, 16,
+				     0, &tonegen);
+    if (status != PJ_SUCCESS) {
+	PJSUA2_RAISE_ERROR(status);
+    }
+
+    registerMediaPort(tonegen);
+}
+
+bool ToneGenerator::isBusy() const
+{
+    return tonegen && pjmedia_tonegen_is_busy(tonegen) != 0;
+}
+
+void ToneGenerator::stop() throw(Error)
+{
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+
+    status = pjmedia_tonegen_stop(tonegen);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::stop()");
+}
+
+void ToneGenerator::rewind() throw(Error)
+{
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+
+    status = pjmedia_tonegen_rewind(tonegen);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::rewind()");
+}
+
+void ToneGenerator::play(const ToneDescVector &tones,
+                         bool loop) throw(Error)
+{
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+    if (tones.size() == 0) {
+	PJSUA2_RAISE_ERROR(PJ_EINVAL);
+    }
+
+    status = pjmedia_tonegen_play(tonegen, tones.size(), &tones[0],
+				  loop? PJMEDIA_TONEGEN_LOOP : 0);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::play()");
+}
+
+void ToneGenerator::playDigits(const ToneDigitVector &digits,
+                               bool loop) throw(Error)
+{
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+    if (digits.size() == 0) {
+	PJSUA2_RAISE_ERROR(PJ_EINVAL);
+    }
+
+    status = pjmedia_tonegen_play_digits(tonegen, digits.size(), &digits[0],
+					 loop? PJMEDIA_TONEGEN_LOOP : 0);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::playDigits()");
+}
+
+ToneDigitMapVector ToneGenerator::getDigitMap() const throw(Error)
+{
+    const pjmedia_tone_digit_map *pdm;
+    ToneDigitMapVector tdm;
+    unsigned i;
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+
+    status = pjmedia_tonegen_get_digit_map(tonegen, &pdm);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::getDigitMap()");
+
+    for (i=0; i<pdm->count; ++i) {
+	ToneDigitMapDigit d;
+	char str_digit[2];
+
+	str_digit[0] = pdm->digits[i].digit;
+	str_digit[1] = '\0';
+
+	d.digit = str_digit;
+	d.freq1 = pdm->digits[i].freq1;
+	d.freq2 = pdm->digits[i].freq2;
+
+	tdm.push_back(d);
+    }
+
+    return tdm;
+}
+
+void ToneGenerator::setDigitMap(const ToneDigitMapVector &digit_map)
+				throw(Error)
+{
+    unsigned i;
+    pj_status_t status;
+
+    if (!tonegen) {
+	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+    }
+
+    digitMap.count = digit_map.size();
+    if (digitMap.count > PJ_ARRAY_SIZE(digitMap.digits))
+	digitMap.count = PJ_ARRAY_SIZE(digitMap.digits);
+
+    for (i=0; i<digitMap.count; ++i) {
+	digitMap.digits[i].digit = digit_map[i].digit.c_str()[0];
+	digitMap.digits[i].freq1 = digit_map[i].freq1;
+	digitMap.digits[i].freq2 = digit_map[i].freq2;
+    }
+
+    status = pjmedia_tonegen_set_digit_map(tonegen, &digitMap);
+    PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::setDigitMap()");
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
 void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
 {
     name = dev_info.name;
