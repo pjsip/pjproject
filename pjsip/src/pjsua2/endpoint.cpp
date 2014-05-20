@@ -1309,9 +1309,11 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
     delete this->writer;
     this->writer = NULL;
 
+#if PJ_LOG_MAX_LEVEL >= 1
     if (pj_log_get_log_func() == &Endpoint::logFunc) {
 	pj_log_set_log_func(NULL);
     }
+#endif
 
     PJSUA2_CHECK_RAISE_ERROR(status);
 }
@@ -1330,10 +1332,12 @@ string Endpoint::utilStrError(pj_status_t prmErr)
 static void ept_log_write(int level, const char *sender,
                           const char *format, ...)
 {
+#if PJ_LOG_MAX_LEVEL >= 1
     va_list arg;
     va_start(arg, format);
     pj_log(sender, level, format, arg );
     va_end(arg);
+#endif
 }
 
 void Endpoint::utilLogWrite(int prmLevel,
