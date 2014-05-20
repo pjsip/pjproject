@@ -7095,7 +7095,7 @@ $as_echo "Using OpenH264 prefix... $with_openh264" >&6; }
 		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking OpenH264 availability" >&5
 $as_echo_n "checking OpenH264 availability... " >&6; }
 
-		  OPENH264_LIBS="-lwels"
+		  OPENH264_LIBS="-lopenh264"
 
 		  SAVED_LIBS="$LIBS"
 		  SAVED_LDFLAGS="$LDFLAGS"
