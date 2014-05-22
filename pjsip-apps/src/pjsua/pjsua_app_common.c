@@ -28,6 +28,10 @@
 #   define SOME_BUF_SIZE	(1024 * 3)
 #endif
 
+#ifdef USE_GUI
+void displayWindow(pjsua_vid_win_id wid);
+#endif
+
 static char some_buf[SOME_BUF_SIZE];
 
 /** Variable definition **/
@@ -251,6 +255,11 @@ void arrange_window(pjsua_vid_win_id wid)
 
     if (wid != PJSUA_INVALID_ID)
 	pjsua_vid_win_set_pos(wid, &pos);
+
+#ifdef USE_GUI
+    displayWindow(wid);
+#endif
+
 #else
     PJ_UNUSED_ARG(wid);
 #endif

@@ -48,7 +48,6 @@ static void stereo_demo();
 
 #ifdef USE_GUI
 pj_bool_t showNotification(pjsua_call_id call_id);
-void displayWindow(pjsua_vid_win_id wid);
 #endif
 
 static void ringback_start(pjsua_call_id call_id);
@@ -556,9 +555,6 @@ static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
 	return;
 
     arrange_window(ci->media[mi].stream.vid.win_in);
-#ifdef USE_GUI
-    displayWindow(ci->media[mi].stream.vid.win_in);
-#endif
 
     PJ_UNUSED_ARG(has_error);
 }

@@ -225,23 +225,39 @@ pj_bool_t showNotification(pjsua_call_id call_id)
 void displayWindow(pjsua_vid_win_id wid)
 {
 #if PJSUA_HAS_VIDEO
-    pjsua_vid_win_info wi;
+    int i, last;
     
-    if (wid != PJSUA_INVALID_ID &&
-        pjsua_vid_win_get_info(wid, &wi) == PJ_SUCCESS)
-    {
-        UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
-        if (view) {
-            dispatch_async(dispatch_get_main_queue(), ^{
-                UIView *parent = app.viewController.view;
-                /* Add the video window as subview */
-                [parent addSubview:view];
-                /* Center it */
-                view.center = CGPointMake(parent.bounds.size.width/2.0,
-                                          parent.bounds.size.height/2.0);
-            });
+    i = (wid == PJSUA_INVALID_ID) ? 0 : wid;
+    last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid+1;
+    
+    for (;i < last; ++i) {
+	pjsua_vid_win_info wi;
+        
+        if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
+            UIView *parent = app.viewController.view;
+            UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
+            
+            if (view && ![view isDescendantOfView:parent]) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    /* Add the video window as subview */
+                    [parent addSubview:view];
+                    
+                    if (!wi.is_native) {
+                        /* Center it horizontally */
+                        view.center = CGPointMake(parent.bounds.size.width/2.0,
+                                              view.bounds.size.height/2.0);
+                    } else {
+                        /* Preview window, move it to the bottom */
+                        view.center = CGPointMake(parent.bounds.size.width/2.0,
+                                                  parent.bounds.size.height-
+                                                  view.bounds.size.height/2.0);
+                    }
+                });
+            }
         }
     }
+
+    
 #endif
 }
 
