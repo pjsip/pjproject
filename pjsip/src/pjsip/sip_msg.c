@@ -195,7 +195,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[481], "Call/Transaction Does Not Exist");
     pj_strset2( &status_phrase[482], "Loop Detected");
     pj_strset2( &status_phrase[483], "Too Many Hops");
-    pj_strset2( &status_phrase[484], "Address Incompleted");
+    pj_strset2( &status_phrase[484], "Address Incomplete");
     pj_strset2( &status_phrase[485], "Ambiguous");
     pj_strset2( &status_phrase[486], "Busy Here");
     pj_strset2( &status_phrase[487], "Request Terminated");
