@@ -128,7 +128,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
                      (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
 
     PJ_SOCKADDR_RESET_LEN(addr);
-    addr->sin_family = AF_INET;
+    addr->sin_family = PJ_AF_INET;
     pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
 
     if (str_addr && str_addr->slen) {
