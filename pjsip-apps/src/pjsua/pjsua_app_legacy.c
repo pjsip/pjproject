@@ -1613,11 +1613,10 @@ static void ui_dump_configuration()
 		  len, settings));
 }
 
-static void ui_write_settings()
+static void ui_write_settings(const char *filename)
 {
     char settings[2000];
     int len;
-    char buf[128];
 
     len = write_settings(&app_config, settings, sizeof(settings));
     if (len < 1)
@@ -1626,7 +1625,7 @@ static void ui_write_settings()
 	pj_oshandle_t fd;
 	pj_status_t status;
 
-	status = pj_file_open(app_config.pool, buf, PJ_O_WRONLY, &fd);
+	status = pj_file_open(app_config.pool, filename, PJ_O_WRONLY, &fd);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to open file", status);
 	} else {
@@ -1634,7 +1633,7 @@ static void ui_write_settings()
 	    pj_file_write(fd, settings, &size);
 	    pj_file_close(fd);
 
-	    printf("Settings successfully written to '%s'\n", buf);
+	    printf("Settings successfully written to '%s'\n", filename);
 	}
     }
 }
@@ -1907,7 +1906,7 @@ void legacy_main()
 
 	case 'f':
 	    if (simple_input("Enter output filename", buf, sizeof(buf))) {
-		ui_write_settings();
+		ui_write_settings(buf);
 	    }
 	    break;
 
