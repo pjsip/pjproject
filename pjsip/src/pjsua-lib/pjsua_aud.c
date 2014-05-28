@@ -1919,6 +1919,15 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
     PJSUA_LOCK();
 
+    if (pjsua_var.cap_dev == capture_dev &&
+	pjsua_var.play_dev == playback_dev)
+    {
+	PJ_LOG(4, (THIS_FILE, "No changes in capture and playback devices"));
+        PJSUA_UNLOCK();
+        pj_log_pop_indent();
+	return PJ_SUCCESS;
+    }
+    
     /* Null-sound */
     if (capture_dev==NULL_SND_DEV_ID && playback_dev==NULL_SND_DEV_ID) {
 	PJSUA_UNLOCK();
