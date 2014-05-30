@@ -723,13 +723,34 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
         {
             pj_bool_t native_preview = *((pj_bool_t *)pval);
             
-            if (!strm->cap_session) return PJ_EINVAL;
-            
-            if (!native_preview || strm->render_view)
+	    /* Disable native preview */
+            if (!native_preview) {
+		if (strm->prev_layer) {
+		    CALayer *prev_layer = strm->prev_layer;
+		    dispatch_async(dispatch_get_main_queue(), ^{
+		        [prev_layer removeFromSuperlayer];
+		        [prev_layer release];
+		    });
+		    strm->prev_layer = nil;
+	            PJ_LOG(4, (THIS_FILE, "Native preview deinitialized"));
+		}
                 return PJ_SUCCESS;
+            }
             
-            /* Create view */
-            ios_init_view(strm);
+	    /* Enable native preview */
+
+	    /* Verify if it is already enabled */
+	    if (strm->prev_layer)
+	        return PJ_SUCCESS;
+	    
+	    /* Verify capture session instance availability */
+            if (!strm->cap_session)
+		return PJ_EINVALIDOP;
+            
+            /* Create view, if none */
+	    if (!strm->render_view)
+	        ios_init_view(strm);
+	    
             
             /* Preview layer instantiation should be in main thread! */
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -743,8 +764,8 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
                 prev_layer.frame = strm->render_view.bounds;
                 [strm->render_view.layer addSublayer:prev_layer];
                 strm->prev_layer = prev_layer;
-                PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
             });
+            PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
             
             return PJ_SUCCESS;
         }
