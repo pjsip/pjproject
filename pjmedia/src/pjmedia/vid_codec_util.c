@@ -600,7 +600,8 @@ static unsigned gcd (unsigned a, unsigned b) {
 static pj_status_t find_highest_res(pjmedia_vid_codec_h264_fmtp *fmtp,
 				    const pjmedia_ratio *fps,
 				    const pjmedia_ratio *ratio,
-				    pjmedia_rect_size *size)
+				    pjmedia_rect_size *size,
+				    pj_bool_t is_decoding)
 {
     pjmedia_ratio def_ratio = { DEFAULT_H264_RATIO_NUM,
 			        DEFAULT_H264_RATIO_DENUM };
@@ -647,6 +648,17 @@ static pj_status_t find_highest_res(pjmedia_vid_codec_h264_fmtp *fmtp,
     size->w = asp_ratio.num   * scale * 16;
     size->h = asp_ratio.denum * scale * 16;
 
+    /* #1769: for decoding, size is usually used for allocating buffer,
+     * so we need to make sure that frame size is not less than max_fs.
+     */
+    if (is_decoding && ((size->w * size->h) >> 8) < max_fs) {
+	/* Size is less than max_fs, recalculate using ratio 1:1 and
+	 * round up the scale.
+	 */
+	scale = pj_isqrt(max_fs) + 1;
+	size->w = size->h = scale * 16;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -686,14 +698,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 		pjmedia_ratio r;
 		r.num = vfd->size.w;
 		r.denum = vfd->size.h;
-		find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size);
+		find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size, PJ_FALSE);
 	    }
 	} else {
 	    /* When not specified, just use the highest res possible*/
 	    pjmedia_ratio r;
 	    r.num = vfd->size.w;
 	    r.denum = vfd->size.h;
-	    find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size);
+	    find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size, PJ_FALSE);
 	}
 
 	/* Encoding bitrate must not be higher than H264 level spec */
@@ -732,7 +744,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 	 */
 	r.num = vfd->size.w;
 	r.denum = vfd->size.h;
-	find_highest_res(&fmtp, &vfd->fps, &r, &highest_size);
+	find_highest_res(&fmtp, &vfd->fps, &r, &highest_size, PJ_TRUE);
 	if (vfd->size.w * vfd->size.h < highest_size.w * highest_size.h)
 	    vfd->size = highest_size;
 
