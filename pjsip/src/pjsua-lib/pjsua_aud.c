@@ -1920,7 +1920,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     PJSUA_LOCK();
 
     if (pjsua_var.cap_dev == capture_dev &&
-	pjsua_var.play_dev == playback_dev)
+	pjsua_var.play_dev == playback_dev &&
+	pjsua_var.snd_is_on)
     {
 	PJ_LOG(4, (THIS_FILE, "No changes in capture and playback devices"));
         PJSUA_UNLOCK();
