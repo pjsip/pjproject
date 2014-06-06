@@ -1496,7 +1496,7 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 
 	    } else {
 
-		int err = SSL_get_error(ssock->ossl_ssl, (int)size);
+		int err = SSL_get_error(ssock->ossl_ssl, size_);
 		
 		/* SSL might just return SSL_ERROR_WANT_READ in 
 		 * re-negotiation.
