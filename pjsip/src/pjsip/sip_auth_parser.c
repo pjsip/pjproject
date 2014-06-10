@@ -137,22 +137,29 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool,
     pj_list_init(&chal->other_param);
 
     for (;;) {
-	pj_str_t name, value;
+	pj_str_t name, value, unquoted_value;
 
-	pjsip_parse_param_imp(scanner, pool, &name, &value,
-			      PJSIP_PARSE_REMOVE_QUOTE);
+	pjsip_parse_param_imp(scanner, pool, &name, &value, 0);
+
+        if (value.ptr && (value.ptr[0] == '"')) {
+	    unquoted_value.ptr = value.ptr + 1;
+	    unquoted_value.slen = value.slen - 2;
+	} else {
+	    unquoted_value.ptr = value.ptr;
+	    unquoted_value.slen = value.slen;
+	}
 
 	if (!pj_stricmp(&name, &pjsip_REALM_STR)) {
-	    chal->realm = value;
+	    chal->realm = unquoted_value;
 
 	} else if (!pj_stricmp(&name, &pjsip_DOMAIN_STR)) {
-	    chal->domain = value;
+	    chal->domain = unquoted_value;
 
 	} else if (!pj_stricmp(&name, &pjsip_NONCE_STR)) {
-	    chal->nonce = value;
+	    chal->nonce = unquoted_value;
 
 	} else if (!pj_stricmp(&name, &pjsip_OPAQUE_STR)) {
-	    chal->opaque = value;
+	    chal->opaque = unquoted_value;
 
 	} else if (!pj_stricmp(&name, &pjsip_STALE_STR)) {
 	    if (!pj_stricmp(&value, &pjsip_TRUE_STR) || 
@@ -162,11 +169,11 @@ static void parse_digest_challenge( pj_scanner *scanner, pj_pool_t *pool,
             }
 
 	} else if (!pj_stricmp(&name, &pjsip_ALGORITHM_STR)) {
-	    chal->algorithm = value;
+	    chal->algorithm = unquoted_value;
 
 
 	} else if (!pj_stricmp(&name, &pjsip_QOP_STR)) {
-	    chal->qop = value;
+	    chal->qop = unquoted_value;
 
 	} else {
 	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
