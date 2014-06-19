@@ -552,6 +552,11 @@ typedef struct pj_ssl_sock_info
      */
     unsigned long	last_native_err;
 
+    /**
+     * Group lock assigned to the ioqueue key.
+     */
+    pj_grp_lock_t *grp_lock;
+
 } pj_ssl_sock_info;
 
 
@@ -560,6 +565,17 @@ typedef struct pj_ssl_sock_info
  */
 typedef struct pj_ssl_sock_param
 {
+    /**
+     * Optional group lock to be assigned to the ioqueue key.
+     *
+     * Note that when a secure socket listener is configured with a group
+     * lock, any new secure socket of an accepted incoming connection
+     * will have its own group lock created automatically by the library,
+     * this group lock can be queried via pj_ssl_sock_get_info() in the info
+     * field pj_ssl_sock_info::grp_lock.
+     */
+    pj_grp_lock_t *grp_lock;
+
     /**
      * Specifies socket address family, either pj_AF_INET() and pj_AF_INET6().
      *

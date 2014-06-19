@@ -76,6 +76,9 @@ struct udp_transport
     pjsip_rx_data     **rdata;
     int			is_closing;
     pj_bool_t		is_paused;
+
+    /* Group lock to be used by UDP transport and ioqueue key */
+    pj_grp_lock_t      *grp_lock;
 };
 
 
@@ -345,6 +348,31 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
     return status;
 }
 
+
+/* Clean up UDP resources */
+static void udp_on_destroy(void *arg)
+{
+    struct udp_transport *tp = (struct udp_transport*)arg;
+    int i;
+
+    /* Destroy rdata */
+    for (i=0; i<tp->rdata_cnt; ++i) {
+	pj_pool_release(tp->rdata[i]->tp_info.pool);
+    }
+
+    /* Destroy reference counter. */
+    if (tp->base.ref_cnt)
+	pj_atomic_destroy(tp->base.ref_cnt);
+
+    /* Destroy lock */
+    if (tp->base.lock)
+	pj_lock_destroy(tp->base.lock);
+
+    /* Destroy pool. */
+    pjsip_endpt_release_pool(tp->base.endpt, tp->base.pool);
+}
+
+
 /*
  * udp_destroy()
  *
@@ -397,21 +425,14 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
 	    break;
     }
 
-    /* Destroy rdata */
-    for (i=0; i<tp->rdata_cnt; ++i) {
-	pj_pool_release(tp->rdata[i]->tp_info.pool);
+    if (tp->grp_lock) {
+	pj_grp_lock_t *grp_lock = tp->grp_lock;
+	tp->grp_lock = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+	/* Transport may have been deleted at this point */
+    } else {
+	udp_on_destroy(tp);
     }
-
-    /* Destroy reference counter. */
-    if (tp->base.ref_cnt)
-	pj_atomic_destroy(tp->base.ref_cnt);
-
-    /* Destroy lock */
-    if (tp->base.lock)
-	pj_lock_destroy(tp->base.lock);
-
-    /* Destroy pool. */
-    pjsip_endpt_release_pool(tp->base.endpt, tp->base.pool);
 
     return PJ_SUCCESS;
 }
@@ -602,10 +623,19 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
 {
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback ioqueue_cb;
+    pj_status_t status;
 
     /* Ignore if already registered */
     if (tp->key != NULL)
     	return PJ_SUCCESS;
+
+    /* Create group lock */
+    status = pj_grp_lock_create(tp->base.pool, NULL, &tp->grp_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_grp_lock_add_ref(tp->grp_lock);
+    pj_grp_lock_add_handler(tp->grp_lock, tp->base.pool, tp, &udp_on_destroy);
     
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(tp->base.endpt);
@@ -613,8 +643,8 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
     ioqueue_cb.on_read_complete = &udp_on_read_complete;
     ioqueue_cb.on_write_complete = &udp_on_write_complete;
 
-    return pj_ioqueue_register_sock(tp->base.pool, ioqueue, tp->sock, tp,
-				    &ioqueue_cb, &tp->key);
+    return pj_ioqueue_register_sock2(tp->base.pool, ioqueue, tp->sock,
+				     tp->grp_lock, tp, &ioqueue_cb, &tp->key);
 }
 
 /* Start ioqueue asynchronous reading to all rdata */

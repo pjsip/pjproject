@@ -58,6 +58,9 @@ struct tls_listener
     pj_sockaddr		     bound_addr;
     pj_ssl_cert_t	    *cert;
     pjsip_tls_setting	     tls_setting;
+
+    /* Group lock to be used by TLS transport and ioqueue key */
+    pj_grp_lock_t	    *grp_lock;
 };
 
 
@@ -106,6 +109,9 @@ struct tls_transport
 
     /* Pending transmission list. */
     struct delayed_tdata     delayed_list;
+
+    /* Group lock to be used by TLS transport and ioqueue key */
+    pj_grp_lock_t	    *grp_lock;
 };
 
 
@@ -133,6 +139,9 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory);
+
+/* Clean up listener resources (group lock handler) */
+static void lis_on_destroy(void *arg);
 
 /* This callback is called by transport manager to create transport */
 static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
@@ -376,6 +385,18 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	break;
     }
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &listener->grp_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Setup group lock handler */
+    pj_grp_lock_add_ref(listener->grp_lock);
+    pj_grp_lock_add_handler(listener->grp_lock, pool, listener,
+			    &lis_on_destroy);
+
+    ssock_param.grp_lock = listener->grp_lock;
+
     /* Create SSL socket */
     status = pj_ssl_sock_create(pool, &ssock_param, &listener->ssock);
     if (status != PJ_SUCCESS)
@@ -509,6 +530,27 @@ on_error:
 }
 
 
+/* Clean up listener resources */
+static void lis_on_destroy(void *arg)
+{
+    struct tls_listener *listener = (struct tls_listener*)arg;
+
+    if (listener->factory.lock) {
+	pj_lock_destroy(listener->factory.lock);
+	listener->factory.lock = NULL;
+    }
+
+    if (listener->factory.pool) {
+	pj_pool_t *pool = listener->factory.pool;
+
+	PJ_LOG(4,(listener->factory.obj_name,  "SIP TLS listener destroyed"));
+
+	listener->factory.pool = NULL;
+	pj_pool_release(pool);
+    }
+}
+
+
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 {
@@ -524,18 +566,13 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 	listener->ssock = NULL;
     }
 
-    if (listener->factory.lock) {
-	pj_lock_destroy(listener->factory.lock);
-	listener->factory.lock = NULL;
-    }
-
-    if (listener->factory.pool) {
-	pj_pool_t *pool = listener->factory.pool;
-
-	PJ_LOG(4,(listener->factory.obj_name,  "SIP TLS listener destroyed"));
-
-	listener->factory.pool = NULL;
-	pj_pool_release(pool);
+    if (listener->grp_lock) {
+	pj_grp_lock_t *grp_lock = listener->grp_lock;
+	listener->grp_lock = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+	/* Listener may have been deleted at this point */
+    } else {
+	lis_on_destroy(listener);
     }
 
     return PJ_SUCCESS;
@@ -752,6 +789,50 @@ static pj_status_t tls_destroy_transport(pjsip_transport *transport)
 }
 
 
+/* Clean up TLS resources */
+static void tls_on_destroy(void *arg)
+{
+    struct tls_transport *tls = (struct tls_transport*)arg;
+
+    if (tls->rdata.tp_info.pool) {
+	pj_pool_release(tls->rdata.tp_info.pool);
+	tls->rdata.tp_info.pool = NULL;
+    }
+
+    if (tls->base.lock) {
+	pj_lock_destroy(tls->base.lock);
+	tls->base.lock = NULL;
+    }
+
+    if (tls->base.ref_cnt) {
+	pj_atomic_destroy(tls->base.ref_cnt);
+	tls->base.ref_cnt = NULL;
+    }
+
+    if (tls->base.pool) {
+	pj_pool_t *pool;
+
+	if (tls->close_reason != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+
+	    pj_strerror(tls->close_reason, errmsg, sizeof(errmsg));
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "TLS transport destroyed with reason %d: %s", 
+		      tls->close_reason, errmsg));
+
+	} else {
+
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "TLS transport destroyed normally"));
+
+	}
+
+	pool = tls->base.pool;
+	tls->base.pool = NULL;
+	pj_pool_release(pool);
+    }
+}
+
 /* Destroy TLS transport */
 static pj_status_t tls_destroy(pjsip_transport *transport, 
 			       pj_status_t reason)
@@ -793,46 +874,18 @@ static pj_status_t tls_destroy(pjsip_transport *transport,
 	on_data_sent(tls->ssock, op_key, -reason);
     }
 
-    if (tls->rdata.tp_info.pool) {
-	pj_pool_release(tls->rdata.tp_info.pool);
-	tls->rdata.tp_info.pool = NULL;
-    }
-
     if (tls->ssock) {
 	pj_ssl_sock_close(tls->ssock);
 	tls->ssock = NULL;
     }
-    if (tls->base.lock) {
-	pj_lock_destroy(tls->base.lock);
-	tls->base.lock = NULL;
-    }
 
-    if (tls->base.ref_cnt) {
-	pj_atomic_destroy(tls->base.ref_cnt);
-	tls->base.ref_cnt = NULL;
-    }
-
-    if (tls->base.pool) {
-	pj_pool_t *pool;
-
-	if (reason != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
-	    pj_strerror(reason, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(tls->base.obj_name, 
-		      "TLS transport destroyed with reason %d: %s", 
-		      reason, errmsg));
-
-	} else {
-
-	    PJ_LOG(4,(tls->base.obj_name, 
-		      "TLS transport destroyed normally"));
-
-	}
-
-	pool = tls->base.pool;
-	tls->base.pool = NULL;
-	pj_pool_release(pool);
+    if (tls->grp_lock) {
+	pj_grp_lock_t *grp_lock = tls->grp_lock;
+	tls->grp_lock = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+	/* Transport may have been deleted at this point */
+    } else {
+	tls_on_destroy(tls);
     }
 
     return PJ_SUCCESS;
@@ -906,6 +959,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     struct tls_listener *listener;
     struct tls_transport *tls;
     pj_pool_t *pool;
+    pj_grp_lock_t *glock;
     pj_ssl_sock_t *ssock;
     pj_ssl_sock_param ssock_param;
     pj_sockaddr local_addr;
@@ -985,15 +1039,25 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	break;
     }
 
-    status = pj_ssl_sock_create(pool, &ssock_param, &ssock);
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &glock);
     if (status != PJ_SUCCESS)
 	return status;
+
+    ssock_param.grp_lock = glock;
+    status = pj_ssl_sock_create(pool, &ssock_param, &ssock);
+    if (status != PJ_SUCCESS) {
+	pj_grp_lock_destroy(glock);
+	return status;
+    }
 
     /* Apply SSL certificate */
     if (listener->cert) {
 	status = pj_ssl_sock_set_certificate(ssock, pool, listener->cert);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    pj_grp_lock_destroy(glock);
 	    return status;
+	}
     }
 
     /* Initially set bind address to listener's bind address */
@@ -1004,11 +1068,18 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
 			rem_addr, &remote_name, &tls);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_grp_lock_destroy(glock);
 	return status;
+    }
 
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(tls->ssock, tls);
+
+    /* Set up the group lock */
+    tls->grp_lock = glock;
+    pj_grp_lock_add_ref(tls->grp_lock);
+    pj_grp_lock_add_handler(tls->grp_lock, pool, tls, &tls_on_destroy);
 
     /* Start asynchronous connect() operation */
     tls->has_pending_connect = PJ_TRUE;
@@ -1129,6 +1200,14 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(new_ssock, tls);
+
+    /* Set up the group lock */
+    if (ssl_info.grp_lock) {
+	tls->grp_lock = ssl_info.grp_lock;
+	pj_grp_lock_add_ref(tls->grp_lock);
+	pj_grp_lock_add_handler(tls->grp_lock, tls->base.pool, tls,
+				&tls_on_destroy);
+    }
 
     /* Prevent immediate transport destroy as application may access it 
      * (getting info, etc) in transport state notification callback.

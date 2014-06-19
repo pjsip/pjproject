@@ -1693,6 +1693,24 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
     asock_cfg.whole_data = PJ_TRUE;
+    
+    /* If listener socket has group lock, automatically create group lock
+     * for the new socket.
+     */
+    if (ssock_parent->param.grp_lock) {
+	pj_grp_lock_t *glock;
+
+	status = pj_grp_lock_create(ssock->pool, NULL, &glock);
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+
+	/* Temporarily add ref the group lock until active socket creation,
+	 * to make sure that group lock is destroyed if the active socket
+	 * creation fails.
+	 */
+	pj_grp_lock_add_ref(glock);
+	asock_cfg.grp_lock = ssock->param.grp_lock = glock;
+    }
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
     asock_cb.on_data_read = asock_on_data_read;
@@ -1706,6 +1724,11 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
 				  &asock_cb,
 				  ssock,
 				  &ssock->asock);
+
+    /* This will destroy the group lock if active socket creation fails */
+    if (asock_cfg.grp_lock) {
+	pj_grp_lock_dec_ref(asock_cfg.grp_lock);
+    }
 
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -2122,6 +2145,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     /* Last known OpenSSL error code */
     info->last_native_err = ssock->last_err;
 
+    /* Group lock */
+    info->grp_lock = ssock->param.grp_lock;
+
     return PJ_SUCCESS;
 }
 
@@ -2488,6 +2514,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
     asock_cfg.whole_data = PJ_TRUE;
+    asock_cfg.grp_lock = ssock->param.grp_lock;
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
     asock_cb.on_accept_complete = asock_on_accept_complete;
@@ -2574,6 +2601,7 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
     asock_cfg.whole_data = PJ_TRUE;
+    asock_cfg.grp_lock = ssock->param.grp_lock;
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
     asock_cb.on_connect_complete = asock_on_connect_complete;

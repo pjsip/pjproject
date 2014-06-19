@@ -61,6 +61,9 @@ struct tcp_listener
     pj_qos_type		     qos_type;
     pj_qos_params	     qos_params;
     pj_sockopt_params	     sockopt_params;
+
+    /* Group lock to be used by TCP listener and ioqueue key */
+    pj_grp_lock_t	    *grp_lock;
 };
 
 
@@ -115,6 +118,9 @@ struct tcp_transport
 
     /* Pending transmission list. */
     struct delayed_tdata     delayed_list;
+
+    /* Group lock to be used by TCP transport and ioqueue key */
+    pj_grp_lock_t	    *grp_lock;
 };
 
 
@@ -130,6 +136,9 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory);
+
+/* Clean up listener resources (group lock handler) */
+static void lis_on_destroy(void *arg);
 
 /* This callback is called by transport manager to create transport */
 static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
@@ -399,6 +408,17 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     else
 	asock_cfg.async_cnt = cfg->async_cnt;
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &listener->grp_lock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_grp_lock_add_ref(listener->grp_lock);
+    pj_grp_lock_add_handler(listener->grp_lock, pool, listener,
+			    &lis_on_destroy);
+
+    asock_cfg.grp_lock = listener->grp_lock;
+
     pj_bzero(&listener_cb, sizeof(listener_cb));
     listener_cb.on_accept_complete = &on_accept_complete;
     status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), &asock_cfg,
@@ -485,6 +505,27 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start( pjsip_endpoint *endpt,
 }
 
 
+/* Clean up listener resources */
+static void lis_on_destroy(void *arg)
+{
+    struct tcp_listener *listener = (struct tcp_listener *)arg;
+
+    if (listener->factory.lock) {
+	pj_lock_destroy(listener->factory.lock);
+	listener->factory.lock = NULL;
+    }
+
+    if (listener->factory.pool) {
+	pj_pool_t *pool = listener->factory.pool;
+
+	PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP listener destroyed"));
+
+	listener->factory.pool = NULL;
+	pj_pool_release(pool);
+    }
+}
+
+
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 {
@@ -500,18 +541,13 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 	listener->asock = NULL;
     }
 
-    if (listener->factory.lock) {
-	pj_lock_destroy(listener->factory.lock);
-	listener->factory.lock = NULL;
-    }
-
-    if (listener->factory.pool) {
-	pj_pool_t *pool = listener->factory.pool;
-
-	PJ_LOG(4,(listener->factory.obj_name,  "SIP TCP listener destroyed"));
-
-	listener->factory.pool = NULL;
-	pj_pool_release(pool);
+    if (listener->grp_lock) {
+	pj_grp_lock_t *grp_lock = listener->grp_lock;
+	listener->grp_lock = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+	/* Listener may have been deleted at this point */
+    } else {
+	lis_on_destroy(listener);
     }
 
     return PJ_SUCCESS;
@@ -562,6 +598,9 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 
 /* TCP keep-alive timer callback */
 static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
+
+/* Clean up TCP resources */
+static void tcp_on_destroy(void *arg);
 
 /*
  * Common function to create TCP transport, called when pending accept() and
@@ -640,9 +679,18 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.do_shutdown = &tcp_shutdown;
     tcp->base.destroy = &tcp_destroy_transport;
 
+    /* Create group lock */
+    status = pj_grp_lock_create(pool, NULL, &tcp->grp_lock);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    pj_grp_lock_add_ref(tcp->grp_lock);
+    pj_grp_lock_add_handler(tcp->grp_lock, pool, tcp, &tcp_on_destroy);
+
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
     asock_cfg.async_cnt = 1;
+    asock_cfg.grp_lock = tcp->grp_lock;
 
     pj_bzero(&tcp_callback, sizeof(tcp_callback));
     tcp_callback.on_data_read = &on_data_read;
@@ -780,11 +828,6 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	on_data_sent(tcp->asock, op_key, -reason);
     }
 
-    if (tcp->rdata.tp_info.pool) {
-	pj_pool_release(tcp->rdata.tp_info.pool);
-	tcp->rdata.tp_info.pool = NULL;
-    }
-
     if (tcp->asock) {
 	pj_activesock_close(tcp->asock);
 	tcp->asock = NULL;
@@ -793,6 +836,23 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	pj_sock_close(tcp->sock);
 	tcp->sock = PJ_INVALID_SOCKET;
     }
+
+    if (tcp->grp_lock) {
+	pj_grp_lock_t *grp_lock = tcp->grp_lock;
+	tcp->grp_lock = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+	/* Transport may have been deleted at this point */
+    } else {
+	tcp_on_destroy(tcp);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Clean up TCP resources */
+static void tcp_on_destroy(void *arg)
+{
+    struct tcp_transport *tcp = (struct tcp_transport*)arg;
 
     if (tcp->base.lock) {
 	pj_lock_destroy(tcp->base.lock);
@@ -804,16 +864,21 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	tcp->base.ref_cnt = NULL;
     }
 
+    if (tcp->rdata.tp_info.pool) {
+	pj_pool_release(tcp->rdata.tp_info.pool);
+	tcp->rdata.tp_info.pool = NULL;
+    }
+
     if (tcp->base.pool) {
 	pj_pool_t *pool;
 
-	if (reason != PJ_SUCCESS) {
+	if (tcp->close_reason != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
-	    pj_strerror(reason, errmsg, sizeof(errmsg));
+	    pj_strerror(tcp->close_reason, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(tcp->base.obj_name, 
 		      "TCP transport destroyed with reason %d: %s", 
-		      reason, errmsg));
+		      tcp->close_reason, errmsg));
 
 	} else {
 
@@ -826,10 +891,7 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	tcp->base.pool = NULL;
 	pj_pool_release(pool);
     }
-
-    return PJ_SUCCESS;
 }
-
 
 /*
  * This utility function creates receive data buffers and start
