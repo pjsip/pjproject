@@ -104,6 +104,14 @@ typedef struct pjsip_tcp_transport_cfg
      */
     pj_qos_params	qos_params;
 
+    /**
+     * Specify options to be set on the transport. 
+     *
+     * By default there is no options.
+     * 
+     */
+    pj_sockopt_params	sockopt_params;
+
 } pjsip_tcp_transport_cfg;
 
 

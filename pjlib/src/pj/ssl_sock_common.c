@@ -41,6 +41,8 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
     param->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     param->qos_ignore_error = PJ_TRUE;
 
+    param->sockopt_ignore_error = PJ_TRUE;
+
     /* Security config */
     param->proto = PJ_SSL_SOCK_PROTO_DEFAULT;
 }

@@ -205,6 +205,23 @@ typedef struct pjsip_tls_setting
      */
     pj_bool_t qos_ignore_error;
 
+    /**
+     * Specify options to be set on the transport. 
+     *
+     * By default there is no options.
+     * 
+     */
+    pj_sockopt_params sockopt_params;
+
+    /**
+     * Specify if the transport should ignore any errors when setting the 
+     * sockopt parameters.
+     *
+     * Default: PJ_TRUE
+     * 
+     */
+    pj_bool_t sockopt_ignore_error;
+
 } pjsip_tls_setting;
 
 
@@ -234,6 +251,7 @@ PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
     tls_opt->reuse_addr = PJSIP_TLS_TRANSPORT_REUSEADDR;
     tls_opt->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     tls_opt->qos_ignore_error = PJ_TRUE;
+    tls_opt->sockopt_ignore_error = PJ_TRUE;
 }
 
 

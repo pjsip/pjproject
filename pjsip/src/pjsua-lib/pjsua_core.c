@@ -1964,6 +1964,10 @@ static pj_status_t create_sip_udp_sock(int af,
 				&cfg->qos_params, 
 				2, THIS_FILE, "SIP UDP socket");
 
+    /* Apply sockopt, if specified */
+    if (cfg->sockopt_params.cnt)
+	status = pj_sock_setsockopt_params(sock, &cfg->sockopt_params);
+
     /* Bind socket */
     status = pj_sock_bind(sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
     if (status != PJ_SUCCESS) {
@@ -2186,6 +2190,10 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pj_memcpy(&tcp_cfg.qos_params, &cfg->qos_params, 
 		  sizeof(cfg->qos_params));
 
+	/* Copy the sockopt */
+	pj_memcpy(&tcp_cfg.sockopt_params, &cfg->sockopt_params,
+		  sizeof(tcp_cfg.sockopt_params));
+	
 	/* Create the TCP transport */
 	status = pjsip_tcp_transport_start3(pjsua_var.endpt, &tcp_cfg, &tcp);
 

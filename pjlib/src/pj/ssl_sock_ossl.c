@@ -1650,6 +1650,14 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
 	goto on_return;
 
+    /* Apply socket options, if specified */
+    if (ssock->param.sockopt_params.cnt) {
+	status = pj_sock_setsockopt_params(ssock->sock, 
+					   &ssock->param.sockopt_params);
+	if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
+	    goto on_return;
+    }
+
     /* Update local address */
     ssock->addr_len = src_addr_len;
     status = pj_sock_getsockname(ssock->sock, &ssock->local_addr, 
@@ -2452,8 +2460,18 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
     status = pj_sock_apply_qos2(ssock->sock, ssock->param.qos_type,
 				&ssock->param.qos_params, 2, 
 				ssock->pool->obj_name, NULL);
+
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
 	goto on_error;
+
+    /* Apply socket options, if specified */
+    if (ssock->param.sockopt_params.cnt) {
+	status = pj_sock_setsockopt_params(ssock->sock, 
+					   &ssock->param.sockopt_params);
+
+	if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
+	    goto on_error;
+    }
 
     /* Bind socket */
     status = pj_sock_bind(ssock->sock, localaddr, addr_len);
@@ -2536,6 +2554,15 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
 				ssock->pool->obj_name, NULL);
     if (status != PJ_SUCCESS && !ssock->param.qos_ignore_error)
 	goto on_error;
+
+    /* Apply socket options, if specified */
+    if (ssock->param.sockopt_params.cnt) {
+	status = pj_sock_setsockopt_params(ssock->sock, 
+					   &ssock->param.sockopt_params);
+
+	if (status != PJ_SUCCESS && !ssock->param.sockopt_ignore_error)
+	    goto on_error;
+    }
 
     /* Bind socket */
     status = pj_sock_bind(ssock->sock, localaddr, addr_len);

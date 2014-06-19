@@ -2296,6 +2296,14 @@ typedef struct pjsua_transport_config
      */
     pj_qos_params	qos_params;
 
+    /**
+     * Specify options to be set on the transport. 
+     *
+     * By default there is no options.
+     * 
+     */
+    pj_sockopt_params	sockopt_params;
+
 } pjsua_transport_config;
 
 

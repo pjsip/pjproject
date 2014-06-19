@@ -349,6 +349,13 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
 	      sizeof(ssock_param.qos_params));
 
+    ssock_param.sockopt_ignore_error = 
+				     listener->tls_setting.sockopt_ignore_error;
+    /* Copy the sockopt */
+    pj_memcpy(&ssock_param.sockopt_params, 
+	      &listener->tls_setting.sockopt_params,
+	      sizeof(listener->tls_setting.sockopt_params));
+
     has_listener = PJ_FALSE;
 
     switch(listener->tls_setting.method) {
@@ -952,6 +959,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
 	      sizeof(ssock_param.qos_params));
+
+    ssock_param.sockopt_ignore_error = 
+				     listener->tls_setting.sockopt_ignore_error;
+    /* Copy the sockopt */
+    pj_memcpy(&ssock_param.sockopt_params, 
+	      &listener->tls_setting.sockopt_params,
+	      sizeof(listener->tls_setting.sockopt_params));
 
     switch(listener->tls_setting.method) {
     case PJSIP_TLSV1_METHOD:

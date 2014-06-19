@@ -26,6 +26,8 @@
 #include <pj/errno.h>
 #include <pj/unicode.h>
 
+#define THIS_FILE	"sock_bsd.c"
+
 /*
  * Address families conversion.
  * The values here are indexed based on pj_addr_family.
@@ -765,11 +767,51 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt( pj_sock_t sock,
 					const void *optval,
 					int optlen)
 {
+    int status;
     PJ_CHECK_STACK();
-    if (setsockopt(sock, level, optname, (const char*)optval, optlen) != 0)
+    
+#if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_SUNOS) && PJ_SUNOS)
+    /* Some opt may still need int value (e.g:SO_EXCLUSIVEADDRUSE in win32). */
+    status = setsockopt(sock, 
+		     level, 
+		     ((optname&0xff00)==0xff00)?(int)optname|0xffff0000:optname, 		     
+		     (const char*)optval, optlen);
+#else
+    status = setsockopt(sock, level, optname, (const char*)optval, optlen);
+#endif
+
+    if (status != 0)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else
 	return PJ_SUCCESS;
+}
+
+/*
+ * Set socket option.
+ */
+PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
+					       const pj_sockopt_params *params)
+{
+    unsigned int i = 0;
+    pj_status_t retval = PJ_SUCCESS;
+    PJ_CHECK_STACK();
+    PJ_ASSERT_RETURN(params, PJ_EINVAL);
+    
+    for (;i<params->cnt && i<PJ_MAX_SOCKOPT_PARAMS;++i) {
+	pj_status_t status = pj_sock_setsockopt(sockfd, 
+					(pj_uint16_t)params->options[i].level,
+					(pj_uint16_t)params->options[i].optname,
+					params->options[i].optval, 
+					params->options[i].optlen);
+	if (status != PJ_SUCCESS) {
+	    retval = status;
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: error applying sock opt %d",
+			 params->options[i].optname));
+	}
+    }
+
+    return retval;
 }
 
 /*

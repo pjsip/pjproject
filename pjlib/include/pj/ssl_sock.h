@@ -749,6 +749,22 @@ typedef struct pj_ssl_sock_param
      */
     pj_bool_t qos_ignore_error;
 
+    /**
+     * Specify options to be set on the transport. 
+     *
+     * By default there is no options.
+     * 
+     */
+    pj_sockopt_params sockopt_params;
+
+    /**
+     * Specify if the transport should ignore any errors when setting the 
+     * sockopt parameters.
+     *
+     * Default: PJ_TRUE
+     * 
+     */
+    pj_bool_t sockopt_ignore_error;
 
 } pj_ssl_sock_param;
 

@@ -298,6 +298,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 				    &cfg->qos_params,
 				    2, THIS_FILE, "RTP socket");
 
+	/* Apply sockopt, if specified */
+	if (cfg->sockopt_params.cnt)
+	    status = pj_sock_setsockopt_params(sock[0], &cfg->sockopt_params);
+
 	/* Bind RTP socket */
 	pj_sockaddr_set_port(&bound_addr, acc->next_rtp_port);
 	status=pj_sock_bind(sock[0], &bound_addr,
@@ -320,6 +324,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	status = pj_sock_apply_qos2(sock[1], cfg->qos_type,
 				    &cfg->qos_params,
 				    2, THIS_FILE, "RTCP socket");
+
+	/* Apply sockopt, if specified */
+	if (cfg->sockopt_params.cnt)
+	    status = pj_sock_setsockopt_params(sock[1], &cfg->sockopt_params);
 
 	/* Bind RTCP socket */
 	pj_sockaddr_set_port(&bound_addr, (pj_uint16_t)(acc->next_rtp_port+1));

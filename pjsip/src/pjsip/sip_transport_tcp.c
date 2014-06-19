@@ -60,6 +60,7 @@ struct tcp_listener
     pj_sockaddr		     bound_addr;
     pj_qos_type		     qos_type;
     pj_qos_params	     qos_params;
+    pj_sockopt_params	     sockopt_params;
 };
 
 
@@ -284,6 +285,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     listener->qos_type = cfg->qos_type;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
 	      sizeof(cfg->qos_params));
+    pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
+	      sizeof(cfg->sockopt_params));
 
     pj_ansi_strcpy(listener->factory.obj_name, "tcplis");
     if (listener->factory.type==PJSIP_TRANSPORT_TCP6)
@@ -315,6 +318,10 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
 		         "Warning: error applying SO_REUSEADDR"));
 	}
     }
+
+    /* Apply socket options, if specified */
+    if (cfg->sockopt_params.cnt)
+	status = pj_sock_setsockopt_params(sock, &cfg->sockopt_params);
 
     /* Bind address may be different than factory.local_addr because
      * factory.local_addr will be resolved below.
@@ -918,6 +925,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 				2, listener->factory.obj_name, 
 				"outgoing SIP TCP socket");
 
+    /* Apply socket options, if specified */
+    if (listener->sockopt_params.cnt)
+	status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
+
+
     /* Bind to listener's address and any port */
     pj_bzero(&local_addr, sizeof(local_addr));
     pj_sockaddr_cp(&local_addr, &listener->bound_addr);
@@ -1035,6 +1047,10 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 				&listener->qos_params, 
 				2, listener->factory.obj_name, 
 				"incoming SIP TCP socket");
+
+    /* Apply socket options, if specified */
+    if (listener->sockopt_params.cnt)
+	status = pj_sock_setsockopt_params(sock, &listener->sockopt_params);
 
     /* tcp_create() expect pj_sockaddr, so copy src_addr to temporary var,
      * just in case.

@@ -616,6 +616,32 @@ typedef struct pj_ip_mreq {
     pj_in_addr imr_interface;	/**< local IP address of interface. */
 } pj_ip_mreq;
 
+/* Maximum number of socket options. */
+#define PJ_MAX_SOCKOPT_PARAMS 4
+
+/**
+ * Options to be set for the socket. 
+ */
+typedef struct pj_sockopt_params
+{
+    /* The number of options to be applied. */
+    unsigned cnt;
+
+    /* Array of options to be applied. */
+    struct {
+	/* The level at which the option is defined. */
+	int level;
+
+	/* Option name. */
+	int optname;
+
+	/* Pointer to the buffer in which the option is specified. */
+	void *optval;
+
+	/* Buffer size of the buffer pointed by optval. */
+	int optlen;
+    } options[PJ_MAX_SOCKOPT_PARAMS];
+} pj_sockopt_params;
 
 /*****************************************************************************
  *
@@ -1305,6 +1331,17 @@ PJ_DECL(pj_status_t) pj_sock_setsockopt( pj_sock_t sockfd,
 					 const void *optval,
 					 int optlen);
 
+/**
+ * Set socket options associated with a socket. This method will apply all the 
+ * options specified, and ignore any errors that might be raised.
+ *
+ * @param sockfd	The socket descriptor.
+ * @param params	The socket options.
+ *
+ * @return		PJ_SUCCESS or the last error code. 
+ */
+PJ_DECL(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
+					       const pj_sockopt_params *params);					       
 
 /**
  * Helper function to set socket buffer size using #pj_sock_setsockopt()
