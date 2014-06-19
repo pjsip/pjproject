@@ -797,11 +797,21 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 
     /* Init PJLIB-UTIL: */
     status = pjlib_util_init();
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	pjsua_perror(THIS_FILE, "Failed in initializing pjlib-util", status);
+	pj_shutdown();
+	return status;
+    }
 
     /* Init PJNATH */
     status = pjnath_init();
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	pjsua_perror(THIS_FILE, "Failed in initializing pjnath", status);
+	pj_shutdown();
+	return status;
+    }
 
     /* Set default sound device ID */
     pjsua_var.cap_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
@@ -816,15 +826,21 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 
     /* Create memory pool for application. */
     pjsua_var.pool = pjsua_pool_create("pjsua", 1000, 1000);
+    if (pjsua_var.pool == NULL) {
+	pj_log_pop_indent();
+	status = PJ_ENOMEM;
+	pjsua_perror(THIS_FILE, "Unable to create pjsua pool", status);
+	pj_shutdown();
+	return status;
+    }
     
-    PJ_ASSERT_RETURN(pjsua_var.pool, PJ_ENOMEM);
-
     /* Create mutex */
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua", 
 				       &pjsua_var.mutex);
     if (status != PJ_SUCCESS) {
 	pj_log_pop_indent();
 	pjsua_perror(THIS_FILE, "Unable to create mutex", status);
+	pjsua_destroy();
 	return status;
     }
 
@@ -834,7 +850,12 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     status = pjsip_endpt_create(&pjsua_var.cp.factory, 
 				pj_gethostname()->ptr, 
 				&pjsua_var.endpt);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	pjsua_perror(THIS_FILE, "Unable to create endpoint", status);
+	pjsua_destroy();
+	return status;
+    }
 
     /* Init timer entry list */
     pj_list_init(&pjsua_var.timer_list);
@@ -845,6 +866,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     if (status != PJ_SUCCESS) {
 	pj_log_pop_indent();
 	pjsua_perror(THIS_FILE, "Unable to create mutex", status);
+	pjsua_destroy();
 	return status;
     }
 
@@ -1125,7 +1147,6 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     return PJ_SUCCESS;
 
 on_error:
-    pjsua_destroy();
     pj_log_pop_indent();
     return status;
 }
