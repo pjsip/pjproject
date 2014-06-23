@@ -479,6 +479,9 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     eprm.iLtrMarkPeriod			= 30;
     eprm.bPrefixNalAddingCtrl		= false;
     eprm.iSpatialLayerNum		= 1;
+    if (!oh264_data->whole) {
+	eprm.uiMaxNalSize			= param->enc_mtu;
+    }
 
     pj_bzero(&elayer_ctx, sizeof (SLayerPEncCtx));
     elayer_ctx.iDLayerQp		= 24;
@@ -659,13 +662,13 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 
 	/* Find which layer with biggest payload */
 	oh264_data->ilayer = 0;
-	payload_size = oh264_data->bsi.sLayerInfo[0].iNalLengthInByte[0];
+	payload_size = oh264_data->bsi.sLayerInfo[0].pNalLengthInByte[0];
 	for (i=0; i < (unsigned)oh264_data->bsi.iLayerNum; ++i) {
 	    unsigned j;
 	    pLayerBsInfo = &oh264_data->bsi.sLayerInfo[i];
 	    for (j=0; j < (unsigned)pLayerBsInfo->iNalCount; ++j) {
-		if (pLayerBsInfo->iNalLengthInByte[j] > (int)payload_size) {
-		    payload_size = pLayerBsInfo->iNalLengthInByte[j];
+		if (pLayerBsInfo->pNalLengthInByte[j] > (int)payload_size) {
+		    payload_size = pLayerBsInfo->pNalLengthInByte[j];
 		    oh264_data->ilayer = i;
 		}
 	    }
@@ -681,7 +684,7 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 	payload = pLayerBsInfo->pBsBuf;
 	payload_size = 0;
 	for (int inal = pLayerBsInfo->iNalCount - 1; inal >= 0; --inal) {
-	    payload_size += pLayerBsInfo->iNalLengthInByte[inal];
+	    payload_size += pLayerBsInfo->pNalLengthInByte[inal];
 	}
 
 	if (payload_size > out_size)
@@ -760,7 +763,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
 
     oh264_data->enc_frame_size = 0;
     for (int inal = pLayerBsInfo->iNalCount - 1; inal >= 0; --inal) {
-	oh264_data->enc_frame_size += pLayerBsInfo->iNalLengthInByte[inal];
+	oh264_data->enc_frame_size += pLayerBsInfo->pNalLengthInByte[inal];
     }
 
     oh264_data->enc_frame_whole = pLayerBsInfo->pBsBuf;
@@ -858,7 +861,7 @@ static int write_yuv(pj_uint8_t *buf,
 
 static pj_status_t oh264_got_decoded_frame(pjmedia_vid_codec *codec,
 					   struct oh264_codec_data *oh264_data,
-					   void *pData[3],
+					   unsigned char *pData[3],
 					   SBufferInfo *sDstBufInfo,
 					   pj_timestamp *timestamp,
 					   unsigned out_size,
@@ -931,7 +934,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
                                       pjmedia_frame *output)
 {
     struct oh264_codec_data *oh264_data;
-    void* pData[3] = {NULL};
+    unsigned char* pData[3] = {NULL};
     const pj_uint8_t nal_start[] = { 0, 0, 1 };
     SBufferInfo sDstBufInfo;
     pj_bool_t has_frame = PJ_FALSE;
