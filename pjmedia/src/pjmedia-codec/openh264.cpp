@@ -26,6 +26,11 @@
             PJMEDIA_HAS_OPENH264_CODEC != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
+#ifdef _MSC_VER
+#   include <stdint.h>
+#   pragma comment( lib, "openh264.lib")
+#endif
+
 /* OpenH264: */
 #include <wels/codec_api.h>
 #include <wels/codec_app_def.h>
