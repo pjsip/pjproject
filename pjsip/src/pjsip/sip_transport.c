@@ -77,6 +77,13 @@ static pjsip_module mod_msg_print =
     NULL,				/* on_tsx_state()		    */
 };
 
+/* Transport list item */
+typedef struct transport
+{
+    PJ_DECL_LIST_MEMBER(struct transport);
+    pjsip_transport *tp;
+} transport;
+
 /*
  * Transport manager.
  */
@@ -97,6 +104,12 @@ struct pjsip_tpmgr
      * is destroyed.
      */
     pjsip_tx_data    tdata_list;
+    
+    /* List of transports which are NOT stored in the hash table, so
+     * that it can be properly cleaned up when transport manager
+     * is destroyed.
+     */
+    transport        tp_list;
 };
 
 
@@ -1027,8 +1040,19 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     /* If entry already occupied, unregister previous entry */
     hval = 0;
     entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
-    if (entry != NULL)
+    if (entry != NULL) {
+        transport *tp_ref;
+        
+        tp_ref = PJ_POOL_ZALLOC_T(((pjsip_transport *)entry)->pool, transport);
+        
+        /*
+         * Add transport to the list before removing it from the hash table.
+         * See ticket #1774 for more details.
+         */
+        tp_ref->tp = (pjsip_transport *)entry;
+        pj_list_push_back(&mgr->tp_list, tp_ref);
 	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
+    }
 
     /* Register new entry */
     pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, hval, tp);
@@ -1074,8 +1098,19 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     key_len = sizeof(tp->key.type) + tp->addr_len;
     hval = 0;
     entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
-    if (entry == (void*)tp)
+    if (entry == (void*)tp) {
 	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
+    } else {
+        /* If not found in hash table, remove from the tranport list. */
+        transport *tp_iter = mgr->tp_list.next;
+        while (tp_iter != &mgr->tp_list) {
+            if (tp_iter->tp == tp) {
+                pj_list_erase(tp_iter);
+                break;
+            }
+            tp_iter = tp_iter->next;
+        }
+    }
 
     pj_lock_release(mgr->lock);
 
@@ -1258,6 +1293,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     mgr->on_tx_msg = tx_cb;
     pj_list_init(&mgr->factory_list);
     pj_list_init(&mgr->tdata_list);
+    pj_list_init(&mgr->tp_list);
 
     mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
     if (!mgr->table)
@@ -1526,7 +1562,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     pj_lock_acquire(mgr->lock);
 
     /*
-     * Destroy all transports.
+     * Destroy all transports in the hash table.
      */
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr != NULL) {
@@ -1542,6 +1578,18 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 	itr = next;
     }
 
+    /*
+     * Destroy transports in the list.
+     */
+    if (!pj_list_empty(&mgr->tp_list)) {
+        transport *tp_iter = mgr->tp_list.next;
+        while (tp_iter != &mgr->tp_list) {
+	    transport *next = tp_iter->next;
+	    destroy_transport(mgr, tp_iter->tp);
+	    tp_iter = next;
+        }
+    }
+    
     /*
      * Destroy all factories/listeners.
      */
