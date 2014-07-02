@@ -562,7 +562,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
 	return PJMEDIA_CODEC_EFAILED;
     }
 
-    int32_t color_fmt = videoFormatI420;
+    pj_int32_t color_fmt = videoFormatI420;
     rc = oh264_data->dec->SetOption (DECODER_OPTION_DATAFORMAT,  &color_fmt);
     if (rc) {
 	PJ_LOG(4,(THIS_FILE,
@@ -647,7 +647,7 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 	return PJMEDIA_CODEC_EFAILED;
     }
 
-    if (oh264_data->bsi.eOutputFrameType == videoFrameTypeSkip) {
+    if (oh264_data->bsi.eFrameType == videoFrameTypeSkip) {
 	output->size = 0;
 	output->type = PJMEDIA_FRAME_TYPE_NONE;
 	output->timestamp = input->timestamp;
@@ -746,7 +746,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
         pj_memcpy(output->buf, payload, payload_len);
         output->size = payload_len;
 
-        if (oh264_data->bsi.eOutputFrameType == videoFrameTypeIDR) {
+        if (oh264_data->bsi.eFrameType == videoFrameTypeIDR) {
 	    output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
         }
 
@@ -795,7 +795,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
     pj_memcpy(output->buf, payload, payload_len);
     output->size = payload_len;
 
-    if (oh264_data->bsi.eOutputFrameType == videoFrameTypeIDR) {
+    if (oh264_data->bsi.eFrameType == videoFrameTypeIDR) {
 	output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
 
@@ -1044,8 +1044,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     }
 
     /* Signal that we have no more frames */
-    int32_t iEndOfStreamFlag;
-    iEndOfStreamFlag = true;
+    pj_int32_t iEndOfStreamFlag = true;
     oh264_data->dec->SetOption( DECODER_OPTION_END_OF_STREAM,
                                 (void*)&iEndOfStreamFlag);
 
