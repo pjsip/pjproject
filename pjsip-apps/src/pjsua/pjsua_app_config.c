@@ -118,7 +118,6 @@ static void usage(void)
     puts  ("  --tls-verify-server Verify server's certificate (default=no)");
     puts  ("  --tls-verify-client Verify client's certificate (default=no)");
     puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
-    puts  ("  --tls-srv-name      Specify TLS server name for multihosting server");
     puts  ("  --tls-cipher        Specify prefered TLS cipher (optional).");
     puts  ("                      May be specified multiple times");
 #endif
