@@ -52,7 +52,6 @@ class MyCall extends Call {
 			CallInfo ci = getInfo();
 			if (ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED) {
 				this.delete();
-				MainActivity.currentCall = null;
 			}
 		} catch (Exception e) {
 			return;

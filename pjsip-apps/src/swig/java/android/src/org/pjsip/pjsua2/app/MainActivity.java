@@ -494,6 +494,12 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		}
 		Message m = Message.obtain(handler, MSG_TYPE.CALL_STATE, ci);
 		m.sendToTarget();
+		
+		if (ci != null &&
+			ci.getState() == pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
+		{
+			currentCall = null;
+		}
 	}
 	
 	public void notifyBuddyState(MyBuddy buddy) {
