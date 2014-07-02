@@ -274,7 +274,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 {
     pj_pool_t *pool;
     pj_bool_t is_ipv6;
-    int af;
+    int af, sip_ssl_method;
     struct tls_listener *listener;
     pj_ssl_sock_param ssock_param;
     pj_sockaddr *listener_addr;
@@ -367,7 +367,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 
     has_listener = PJ_FALSE;
 
-    switch(listener->tls_setting.method) {
+    sip_ssl_method = listener->tls_setting.method;
+    if (sip_ssl_method==PJSIP_SSL_UNSPECIFIED_METHOD)
+	sip_ssl_method = PJSIP_SSL_DEFAULT_METHOD;
+
+    switch(sip_ssl_method) {
     case PJSIP_TLSV1_METHOD:
 	ssock_param.proto = PJ_SSL_SOCK_PROTO_TLS1;
 	break;
@@ -958,6 +962,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 {
     struct tls_listener *listener;
     struct tls_transport *tls;
+    int sip_ssl_method;
     pj_pool_t *pool;
     pj_grp_lock_t *glock;
     pj_ssl_sock_t *ssock;
@@ -1021,7 +1026,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	      &listener->tls_setting.sockopt_params,
 	      sizeof(listener->tls_setting.sockopt_params));
 
-    switch(listener->tls_setting.method) {
+    sip_ssl_method = listener->tls_setting.method;
+    if (sip_ssl_method==PJSIP_SSL_UNSPECIFIED_METHOD)
+	sip_ssl_method = PJSIP_SSL_DEFAULT_METHOD;
+
+    switch(sip_ssl_method) {
     case PJSIP_TLSV1_METHOD:
 	ssock_param.proto = PJ_SSL_SOCK_PROTO_TLS1;
 	break;

@@ -506,7 +506,6 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 
     /* Determine SSL method to use */
     switch (ssock->param.proto) {
-    case PJ_SSL_SOCK_PROTO_DEFAULT:
     case PJ_SSL_SOCK_PROTO_TLS1:
 	ssl_method = (SSL_METHOD*)TLSv1_method();
 	break;
@@ -518,6 +517,7 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     case PJ_SSL_SOCK_PROTO_SSL3:
 	ssl_method = (SSL_METHOD*)SSLv3_method();
 	break;
+    case PJ_SSL_SOCK_PROTO_DEFAULT:
     case PJ_SSL_SOCK_PROTO_SSL23:
 	ssl_method = (SSL_METHOD*)SSLv23_method();
 	break;
