@@ -179,7 +179,7 @@ class MyBuddy extends Buddy {
 		if (bi.getSubState() == pjsip_evsub_state.PJSIP_EVSUB_STATE_ACTIVE) {
 			if (bi.getPresStatus().getStatus() == pjsua_buddy_status.PJSUA_BUDDY_STATUS_ONLINE) {
 				status = bi.getPresStatus().getStatusText();
-				if (status == null || status.isEmpty()) {
+				if (status == null || status.length()==0) {
 					status = "Online";
 				}
 			} else if (bi.getPresStatus().getStatus() == pjsua_buddy_status.PJSUA_BUDDY_STATUS_OFFLINE) {

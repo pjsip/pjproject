@@ -243,7 +243,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		LayoutInflater li = LayoutInflater.from(this);
 		View view = li.inflate(R.layout.dlg_account_config, null);
 		
-		if (!lastRegStatus.isEmpty()) {
+		if (lastRegStatus.length()!=0) {
 			TextView tvInfo = (TextView)view.findViewById(R.id.textViewInfo);
 			tvInfo.setText("Last status: " + lastRegStatus);
 		}
@@ -288,12 +288,12 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 			    	accCfg.getRegConfig().setRegistrarUri(registrar);
 					AuthCredInfoVector creds = accCfg.getSipConfig().getAuthCreds();
 					creds.clear();
-					if (!username.isEmpty()) {
+					if (username.length() != 0) {
 						creds.add(new AuthCredInfo("Digest", "*", username, 0, password));
 					}
 					StringVector proxies = accCfg.getSipConfig().getProxies();
 					proxies.clear();
-					if (!proxy.isEmpty()) {
+					if (proxy.length() != 0) {
 						proxies.add(proxy);
 					}
 					
