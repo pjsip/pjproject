@@ -502,6 +502,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
     if (local) {
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
 	if (neg->initial_sdp) {
+	    /* Retain initial_sdp value. */
+	    neg->initial_sdp = pjmedia_sdp_session_clone(pool,
+							 neg->initial_sdp);
+        
 	    /* I don't think there is anything in RFC 3264 that mandates
 	     * answerer to place the same origin (and increment version)
 	     * in the answer, but probably it won't hurt either.
