@@ -10,7 +10,7 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
-all clean dep depend distclean print realclean:
+all clean dep depend print:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
@@ -18,6 +18,17 @@ all clean dep depend distclean print realclean:
 		    exit 1; \
 		fi; \
 	done
+
+distclean realclean:
+	for dir in $(DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done
+	$(HOST_RM) config.log
+	$(HOST_RM) config.status
 
 lib:
 	for dir in $(LIB_DIRS); do \
