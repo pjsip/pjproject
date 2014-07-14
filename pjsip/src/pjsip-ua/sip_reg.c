@@ -1362,7 +1362,12 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 	return PJSIP_EBUSY;
     }
 
-    pj_assert(regc->current_op == REGC_IDLE);
+    /* Just regc->has_tsx check above should be enough. This assertion check
+     * may cause problem, e.g: when regc_tsx_callback() invokes callback,
+     * lock is released and 'has_tsx' is set to FALSE and 'current_op' has
+     * not been updated to REGC_IDLE yet.
+     */
+    //pj_assert(regc->current_op == REGC_IDLE);
 
     /* Invalidate message buffer. */
     pjsip_tx_data_invalidate_msg(tdata);
