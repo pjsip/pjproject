@@ -1281,6 +1281,14 @@
 #   endif
 #endif
 
+/**
+ * Specify if libyuv is available.
+ *
+ * Default: 0 (disable)
+ */
+#ifndef PJMEDIA_HAS_LIBYUV
+#   define PJMEDIA_HAS_LIBYUV				0
+#endif
 
 /**
  * @}

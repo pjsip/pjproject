@@ -152,12 +152,15 @@ QT_CFLAGS = @ac_qt_cflags@
 # iOS
 IOS_CFLAGS = @ac_ios_cflags@
 
+# libyuv
+LIBYUV_CFLAGS = @ac_libyuv_cflags@ 
+LIBYUV_LDFLAGS =  @ac_libyuv_ldflags@
+
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(IOS_CFLAGS)
+		   $(OPENH264_CFLAGS) $(IOS_CFLAGS) $(LIBYUV_CFLAGS)
 PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
-                   $(OPENH264_LDFLAGS)
-
+                   $(OPENH264_LDFLAGS) $(LIBYUV_LDFLAGS)
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export APP_CC := @CC@

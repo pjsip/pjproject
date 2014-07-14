@@ -3803,6 +3803,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\converter_libyuv.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\delaybuf.c"
 				>
 			</File>

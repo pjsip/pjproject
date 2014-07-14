@@ -618,6 +618,8 @@ libcrypto_present
 libssl_present
 openssl_h_present
 ac_no_ssl
+ac_libyuv_ldflags
+ac_libyuv_cflags
 ac_openh264_ldflags
 ac_openh264_cflags
 ac_v4l2_ldflags
@@ -774,6 +776,8 @@ enable_ffmpeg
 enable_v4l2
 with_openh264
 enable_openh264
+with_libyuv
+enable_libyuv
 enable_ipp
 with_ipp
 with_ipp_samples
@@ -1440,6 +1444,7 @@ Optional Features:
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
+  --disable-libyuv        Exclude libyuv in the build
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
@@ -1479,6 +1484,7 @@ Optional Packages:
   --with-sdl=DIR          Specify alternate libSDL prefix
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
+  --with-libyuv=DIR       Specify alternate libyuv prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -7140,6 +7146,122 @@ rm -f core conftest.err conftest.$ac_objext \
 
 fi
 
+
+
+# Check whether --with-libyuv was given.
+if test "${with_libyuv+set}" = set; then :
+  withval=$with_libyuv;
+else
+  with_libyuv=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_libyuv" = "xno"; then
+    enable_libyuv=no
+fi
+
+
+
+# Check whether --enable-libyuv was given.
+if test "${enable_libyuv+set}" = set; then :
+  enableval=$enable_libyuv; if test "$enable_libyuv" = "no"; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...yes" >&5
+$as_echo "Checking if libyuv is disabled...yes" >&6; }
+	       fi
+else
+
+		  if test "x$with_libyuv" != "xno" -a "x$with_libyuv" != "x"; then
+		        LIBYUV_PREFIX=$with_libyuv
+		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
+
+			case $target in
+			    arm-apple-darwin*)
+				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
+				case $ARCH in
+				    *armv7*)
+				    LIBYUV_LIBS="-lyuv_neon"
+				    ;;
+				*)
+				    ;;
+				esac
+				;;
+			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
+				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out/Release"
+				;;
+			    *)
+				LIBYUV_CFLAGS=""
+				LIBYUV_LDFLAGS=""
+				;;
+			esac
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using libyuv prefix... $with_libyuv" >&5
+$as_echo "Using libyuv prefix... $with_libyuv" >&6; }
+		  else
+		  	LIBYUV_CFLAGS=""
+			LIBYUV_LDFLAGS=""
+		  fi
+
+		  LIBYUV_LIBS="$LIBYUV_LIBS -lyuv"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$LIBYUV_LIBS $LIBS"
+		  LDFLAGS="$LIBYUV_LDFLAGS $LDFLAGS"
+		  CFLAGS="$LIBYUV_CFLAGS $CFLAGS"
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for I420Scale in -lyuv" >&5
+$as_echo_n "checking for I420Scale in -lyuv... " >&6; }
+if ${ac_cv_lib_yuv_I420Scale+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lyuv
+			        $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char I420Scale ();
+int
+main ()
+{
+return I420Scale ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_yuv_I420Scale=yes
+else
+  ac_cv_lib_yuv_I420Scale=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_yuv_I420Scale" >&5
+$as_echo "$ac_cv_lib_yuv_I420Scale" >&6; }
+if test "x$ac_cv_lib_yuv_I420Scale" = xyes; then :
+   ac_libyuv_cflags="-DPJMEDIA_HAS_LIBYUV=1 $LIBYUV_CFLAGS"
+		  		 ac_libyuv_ldflags="$LIBYUV_LDFLAGS $LIBYUV_LIBS"
+
+else
+   LIBS="$SAVED_LIBS"
+				 LDFLAGS="$SAVED_LDFLAGS"
+				 CFLAGS="$SAVED_CFLAGS"
+
+fi
+
+
+fi
 
 
 

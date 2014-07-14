@@ -1160,6 +1160,81 @@ AC_ARG_ENABLE(openh264,
 
 	      ])
 
+dnl # libyuv alt prefix
+AC_ARG_WITH(libyuv,
+            AC_HELP_STRING([--with-libyuv=DIR],
+		           [Specify alternate libyuv prefix]),
+            [],
+            [with_libyuv=no]
+            )
+
+dnl # Do not use default libyuv installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_libyuv" = "xno"; then
+    enable_libyuv=no
+fi	      
+	      
+dnl # Include libyuv
+AC_SUBST(ac_libyuv_cflags)
+AC_SUBST(ac_libyuv_ldflags)
+AC_ARG_ENABLE(libyuv,
+	      AC_HELP_STRING([--disable-libyuv],
+			     [Exclude libyuv in the build]),
+	      [if test "$enable_libyuv" = "no"; then
+		AC_MSG_RESULT([Checking if libyuv is disabled...yes])
+	       fi],
+	      [
+		  if test "x$with_libyuv" != "xno" -a "x$with_libyuv" != "x"; then
+		        LIBYUV_PREFIX=$with_libyuv
+		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
+		  	
+			case $target in
+			    arm-apple-darwin*)
+				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
+				case $ARCH in
+				    *armv7*)
+				    LIBYUV_LIBS="-lyuv_neon"
+				    ;;
+				*)
+				    ;;
+				esac
+				;;			
+			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
+				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out/Release"
+				;;
+			    *)
+				LIBYUV_CFLAGS=""
+				LIBYUV_LDFLAGS=""
+				;;
+			esac		  	
+		  	
+			AC_MSG_RESULT([Using libyuv prefix... $with_libyuv])
+		  else
+		  	LIBYUV_CFLAGS=""
+			LIBYUV_LDFLAGS="" 
+		  fi
+		  		  
+		  LIBYUV_LIBS="$LIBYUV_LIBS -lyuv"
+		  
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+		  
+		  LIBS="$LIBYUV_LIBS $LIBS"
+		  LDFLAGS="$LIBYUV_LDFLAGS $LDFLAGS"
+		  CFLAGS="$LIBYUV_CFLAGS $CFLAGS"
+		  
+		  AC_CHECK_LIB(yuv,
+			       I420Scale,
+			       [ ac_libyuv_cflags="-DPJMEDIA_HAS_LIBYUV=1 $LIBYUV_CFLAGS"
+		  		 ac_libyuv_ldflags="$LIBYUV_LDFLAGS $LIBYUV_LIBS"
+			       ],
+			       [ LIBS="$SAVED_LIBS"
+				 LDFLAGS="$SAVED_LDFLAGS"
+				 CFLAGS="$SAVED_CFLAGS"
+			       ],
+			       []
+			       )
+	      ])
 
 
 dnl ########################################################
