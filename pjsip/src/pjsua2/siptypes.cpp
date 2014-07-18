@@ -157,6 +157,7 @@ TlsConfig::TlsConfig()
 pjsip_tls_setting TlsConfig::toPj() const
 {
     pjsip_tls_setting ts;
+    pjsip_tls_setting_default(&ts);
 
     ts.ca_list_file	= str2Pj(this->CaListFile);
     ts.cert_file	= str2Pj(this->certFile);
@@ -260,6 +261,7 @@ void TransportConfig::fromPj(const pjsua_transport_config &prm)
 pjsua_transport_config TransportConfig::toPj() const
 {
     pjsua_transport_config tc;
+    pjsua_transport_config_default(&tc);
 
     tc.port		= this->port;
     tc.port_range	= this->portRange;
