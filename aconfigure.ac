@@ -714,8 +714,8 @@ else
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_ios=yes],[ac_pjmedia_video_has_ios=no])
 	LIBS="$SAVED_LIBS"
 	if test "$ac_pjmedia_video_has_ios" = "yes"; then
-	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
-	  LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1 -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
+	  LIBS="$LIBS -framework OpenGLES -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
 	else
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
@@ -1139,7 +1139,7 @@ AC_ARG_ENABLE(openh264,
 		  SAVED_CFLAGS="$CFLAGS"
 		  
 		  LIBS="$OPENH264_LIBS $LIBS"
-		  LDFLAGS="$OPENH264_LDFLAGS $LDFLAGS"
+		  LDFLAGS="$OPENH264_LDFLAGS $LDFLAGS -lstdc++"
 		  CFLAGS="$OPENH264_CFLAGS $CFLAGS"
 		  
 		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <wels/codec_api.h>
