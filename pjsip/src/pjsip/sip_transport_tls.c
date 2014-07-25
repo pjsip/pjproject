@@ -1640,8 +1640,14 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	    matched = !pj_stricmp(remote_name, &serv_cert->subject.cn);
 	}
 
-	if (!matched)
+	if (!matched) {
+	    if (pj_strnicmp2(&serv_cert->subject.cn, "*.", 2) == 0) {
+		PJ_LOG(1,(tls->base.obj_name,
+		    "RFC 5922 (section 7.2) does not allow TLS wildcard "
+			"certificates. Advise your SIP provider, please!"));
+	    }
 	    ssl_info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
+	}
     }
 
     /* Prevent immediate transport destroy as application may access it 
