@@ -433,10 +433,9 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	       dev_count));
 
     /* Get all the audio device IDs */
-    dev_ids = (AudioDeviceID *)pj_pool_calloc(cf->pool, dev_size, size);
+    dev_ids = (AudioDeviceID *)pj_pool_calloc(cf->pool, dev_count, size);
     if (!dev_ids)
 	return PJ_ENOMEM;
-    pj_bzero(dev_ids, dev_count);
     ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &addr,
 					 0, NULL,
 				         &dev_size, (void *)dev_ids);
@@ -463,7 +462,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	if (ostatus == noErr && dev_id != dev_ids[idx]) {
 	    AudioDeviceID temp_id = dev_ids[idx];
 	    
-	    for (i = idx + 1; i < dev_size; i++) {
+	    for (i = idx + 1; i < dev_count; i++) {
 		if (dev_ids[i] == dev_id) {
 		    dev_ids[idx++] = dev_id;
 		    dev_ids[i] = temp_id;
@@ -480,7 +479,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	if (ostatus == noErr && dev_id != dev_ids[idx]) {
 	    AudioDeviceID temp_id = dev_ids[idx];
 	    
-	    for (i = idx + 1; i < dev_size; i++) {
+	    for (i = idx + 1; i < dev_count; i++) {
 		if (dev_ids[i] == dev_id) {
 		    dev_ids[idx] = dev_id;
 		    dev_ids[i] = temp_id;
