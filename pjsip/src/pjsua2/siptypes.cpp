@@ -448,6 +448,7 @@ void SipEvent::fromPj(const pjsip_event &ev)
         body.tsxState.prevState = (pjsip_tsx_state_e)
         ev.body.tsx_state.prev_state;
         body.tsxState.tsx.fromPj(*ev.body.tsx_state.tsx);
+        body.tsxState.type = ev.body.tsx_state.type;
         if (body.tsxState.type == PJSIP_EVENT_TX_MSG) {
             if (ev.body.tsx_state.src.tdata)
         	body.tsxState.src.tdata.fromPj(*ev.body.tsx_state.src.tdata);
