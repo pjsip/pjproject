@@ -379,16 +379,17 @@ Call::Call(Account& account, int call_id)
 
 Call::~Call()
 {
-    /**
+    /* Remove reference to this instance from PJSUA library */
+    if (id != PJSUA_INVALID_ID)
+	pjsua_call_set_user_data(id, NULL);
+
+    /*
      * If this instance is deleted, also hangup the corresponding call in
      * PJSUA library.
      */
-    if (id != PJSUA_INVALID_ID && pjsua_get_state() < PJSUA_STATE_CLOSING) {
-	pjsua_call_set_user_data(id, NULL);
-        if (isActive()) {
-            CallOpParam prm;
-            hangup(prm);
-        }
+    if (pjsua_get_state() < PJSUA_STATE_CLOSING && isActive()) {
+        CallOpParam prm;
+        hangup(prm);
     }
 }
 
