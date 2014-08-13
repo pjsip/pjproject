@@ -1883,24 +1883,11 @@ PJ_DECL(int) pjsua_handle_events(unsigned msec_timeout);
 
 
 /**
- * Register a thread to poll for events. This function should be
- * called by an external worker thread, and it will block polling
- * for events until the library is destroyed.
- *
- * @return 		PJ_SUCCESS if things are working correctly
- * 			or an error polling cannot be done for some
- * 			reason.
- */
-PJ_DECL(pj_status_t) pjsua_register_worker_thread(const char *name);
-
-
-/**
  * Signal all worker threads to quit. This will only wait until internal
- * threads are done. For external threads, application must perform
- * its own waiting for the external threads to quit from
- * pjsua_register_worker_thread() function.
+ * threads are done.
  */
 PJ_DECL(void) pjsua_stop_worker_threads(void);
+
 
 /**
  * Create memory pool to be used by the application. Once application

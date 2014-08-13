@@ -699,29 +699,6 @@ static int worker_thread(void *arg)
     return 0;
 }
 
-PJ_DEF(pj_status_t) pjsua_register_worker_thread(const char *name)
-{
-    pj_thread_desc desc;
-    pj_thread_t *thread;
-    pj_status_t status;
-
-    if (pjsua_var.thread_quit_flag)
-	return PJ_EGONE;
-
-    status = pj_thread_register(NULL, desc, &thread);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    if (name)
-	PJ_LOG(4,(THIS_FILE, "Worker thread %s started", name));
-
-    worker_thread(NULL);
-
-    if (name)
-	PJ_LOG(4,(THIS_FILE, "Worker thread %s stopped", name));
-
-    return PJ_SUCCESS;
-}
 
 PJ_DEF(void) pjsua_stop_worker_threads(void)
 {

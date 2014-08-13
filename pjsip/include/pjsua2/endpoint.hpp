@@ -27,6 +27,7 @@
 #include <pjsua2/media.hpp>
 #include <pjsua2/siptypes.hpp>
 #include <list>
+#include <map>
 
 /** PJSUA2 API is inside pj namespace */
 namespace pj
@@ -721,11 +722,21 @@ public:
     void libStart() throw(Error);
 
     /**
-     * Register a thread to poll for events. This function should be
-     * called by an external worker thread, and it will block polling
-     * for events until the library is destroyed.
+     * Register a thread that was created by external or native API to the
+     * library. Note that each time this function is called, it will allocate
+     * some memory to store the thread description, which will only be freed
+     * when the library is destroyed.
+     *
+     * @param name	The optional name to be assigned to the thread.
      */
-    void libRegisterWorkerThread(const string &name) throw(Error);
+    void libRegisterThread(const string &name) throw(Error);
+
+    /**
+     * Check if this thread has been registered to the library. Note that
+     * this function is only applicable for library main & worker threads and
+     * external/native threads registered using libRegisterThread().
+     */
+    bool libIsThreadRegistered();
 
     /**
      * Stop all worker threads.
@@ -1172,6 +1183,7 @@ private:
     AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
     CodecInfoVector		 codecInfoList;
+    std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
 
     /* Pending logging */
     bool			 mainThreadOnly;

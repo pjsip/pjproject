@@ -26,8 +26,7 @@
 using namespace pj;
 using namespace std;
 
-#include <pjsua2/account.hpp>
-#include <pjsua2/call.hpp>
+#include <pjsua-lib/pjsua_internal.h>   /* For retrieving pjsua threads */
 
 #define THIS_FILE		"endpoint.cpp"
 #define MAX_STUN_SERVERS	32
@@ -1217,6 +1216,9 @@ void Endpoint::libCreate() throw(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_create() );
     mainThread = pj_thread_this();
+    
+    /* Register library main thread */
+    threadDescMap[pj_thread_this()] = NULL;
 }
 
 pjsua_state Endpoint::libGetState() const
@@ -1277,6 +1279,23 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
+
+    /* Register worker threads */
+    int i = pjsua_var.ua_cfg.thread_cnt;
+    while (i) {
+	pj_thread_t *t = pjsua_var.thread[--i];
+	if (t)
+	    threadDescMap[t] = NULL;
+    }
+
+    /* Register media endpoint worker thread */
+    pjmedia_endpt *medept = pjsua_get_pjmedia_endpt();
+    i = pjmedia_endpt_get_thread_count(medept);
+    while (i) {
+	pj_thread_t *t = pjmedia_endpt_get_thread(medept, --i);
+	if (t)
+	    threadDescMap[t] = NULL;
+    }
 }
 
 void Endpoint::libStart() throw(Error)
@@ -1284,9 +1303,30 @@ void Endpoint::libStart() throw(Error)
     PJSUA2_CHECK_EXPR(pjsua_start());
 }
 
-void Endpoint::libRegisterWorkerThread(const string &name) throw(Error)
+void Endpoint::libRegisterThread(const string &name) throw(Error)
 {
-    PJSUA2_CHECK_EXPR(pjsua_register_worker_thread(name.c_str()));
+    pj_thread_t *thread;
+    pj_thread_desc *desc;
+    pj_status_t status;
+
+    desc = (pj_thread_desc*)malloc(sizeof(pj_thread_desc));
+    status = pj_thread_register(name.c_str(), *desc, &thread);
+    if (status == PJ_SUCCESS) {
+	threadDescMap[thread] = desc;
+    } else {
+	free(desc);
+	PJSUA2_RAISE_ERROR(status);
+    }
+}
+
+bool Endpoint::libIsThreadRegistered()
+{
+    if (pj_thread_is_registered()) {
+	/* Recheck again if it exists in the thread description map */
+	return (threadDescMap.find(pj_thread_this()) != threadDescMap.end());
+    }
+
+    return false;
 }
 
 void Endpoint::libStopWorkerThreads()
@@ -1314,6 +1354,15 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
 	pj_log_set_log_func(NULL);
     }
 #endif
+
+    /* Clean up thread descriptors */
+    std::map<pj_thread_t*, pj_thread_desc*>::iterator i;
+    for (i = threadDescMap.begin(); i != threadDescMap.end(); ++i) {
+	pj_thread_desc* d = (*i).second;
+	if (d != NULL)
+	    free(d);
+    }
+    threadDescMap.clear();
 
     PJSUA2_CHECK_RAISE_ERROR(status);
 }
