@@ -309,7 +309,7 @@ static pj_status_t parse_amr(codec_private_t *codec_data, void *pkt,
     return PJ_SUCCESS;
 }
 
-#endif /* PJMEDIA_HAS_PASSTROUGH_CODEC_AMR */
+#endif /* PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR */
 
 
 /*
@@ -350,7 +350,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt )
     }
 
     /* Register format match callback. */
-#if PJMEDIA_HAS_PASSTROUGH_CODEC_AMR
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     pj_cstr(&codec_name, "AMR");
     status = pjmedia_sdp_neg_register_fmt_match_cb(
 					&codec_name,
