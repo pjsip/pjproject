@@ -3065,7 +3065,7 @@ typedef struct pjsua_acc_config
      *
      * Default: PJ_TRUE (yes).
      */
-    pj_bool_t	     contact_rewrite_use_src_port;
+    pj_bool_t	     contact_use_src_port;
 
     /**
      * This option is used to overwrite the "sent-by" field of the Via header

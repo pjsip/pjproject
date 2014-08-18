@@ -3043,7 +3043,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     addr->port = tfla2_prm.ret_port;
 
     /* For TCP/TLS, acc may request to specify source port */
-    if (acc->cfg.contact_rewrite_use_src_port) {
+    if (acc->cfg.contact_use_src_port) {
 	pjsip_host_info dinfo;
 	pjsip_transport *tp = NULL;
 	pj_addrinfo ai;
