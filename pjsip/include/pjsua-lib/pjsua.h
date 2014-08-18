@@ -3055,6 +3055,19 @@ typedef struct pjsua_acc_config
     int		     contact_rewrite_method;
 
     /**
+     * Specify if source TCP port should be used as the initial Contact
+     * address if TCP/TLS transport is used. Note that this feature will
+     * be automatically turned off when nameserver is configured because
+     * it may yield different destination address due to DNS SRV resolution.
+     * Also some platforms are unable to report the local address of the
+     * TCP socket when it is still connecting. In these cases, this
+     * feature will also be turned off.
+     *
+     * Default: PJ_TRUE (yes).
+     */
+    pj_bool_t	     contact_rewrite_use_src_port;
+
+    /**
      * This option is used to overwrite the "sent-by" field of the Via header
      * for outgoing messages with the same interface address as the one in
      * the REGISTER request, as long as the request uses the same transport

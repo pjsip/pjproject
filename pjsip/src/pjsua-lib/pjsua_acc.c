@@ -2933,6 +2933,28 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
+/*
+ * Internal:
+ *  determine if an address is a valid IP address, and if it is,
+ *  return the IP version (4 or 6).
+ */
+static int get_ip_addr_ver(const pj_str_t *host)
+{
+    pj_in_addr dummy;
+    pj_in6_addr dummy6;
+
+    /* First check with inet_aton() */
+    if (pj_inet_aton(host, &dummy) > 0)
+	return 4;
+
+    /* Then check if this is an IPv6 address */
+    if (pj_inet_pton(pj_AF_INET6(), host, &dummy6) == PJ_SUCCESS)
+	return 6;
+
+    /* Not an IP address */
+    return 0;
+}
+
 /* Get local transport address suitable to be used for Via or Contact address
  * to send request to the specified destination URI.
  */
@@ -3014,8 +3036,103 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Set this as default return value. This may be changed below
+     * for TCP/TLS
+     */
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
+
+    /* For TCP/TLS, acc may request to specify source port */
+    if (acc->cfg.contact_rewrite_use_src_port) {
+	pjsip_host_info dinfo;
+	pjsip_transport *tp = NULL;
+	pj_addrinfo ai;
+	pj_bool_t log_written = PJ_FALSE;
+
+	status = pjsip_get_dest_info((pjsip_uri*)sip_uri, NULL,
+				     pool, &dinfo);
+
+	if (status==PJ_SUCCESS && (dinfo.flag & PJSIP_TRANSPORT_RELIABLE)==0) {
+	    /* Not TCP or TLS. No need to do this */
+	    status = PJ_EINVALIDOP;
+	    log_written = PJ_TRUE;
+	}
+
+	if (status==PJ_SUCCESS &&
+	    get_ip_addr_ver(&dinfo.addr.host)==0 &&
+	    pjsua_var.ua_cfg.nameserver_count)
+	{
+	    /* If nameserver is configured, PJSIP will resolve destinations
+	     * by their DNS SRV record first. On the other hand, we will
+	     * resolve destination with DNS A record via pj_getaddrinfo().
+	     * They may yield different IP addresses, hence causing different
+	     * TCP/TLS connection to be created and hence different source
+	     * address.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "Warning: cannot use source TCP/TLS socket"
+		      " address for Contact when nameserver is configured."));
+	    status = PJ_ENOTSUP;
+	    log_written = PJ_TRUE;
+	}
+
+	if (status == PJ_SUCCESS) {
+	    unsigned cnt=1;
+	    int af;
+
+	    af = (dinfo.type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
+	    status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai);
+	}
+
+	if (status == PJ_SUCCESS) {
+	    int addr_len = pj_sockaddr_get_len(&ai.ai_addr);
+	    pj_uint16_t port = dinfo.addr.port;
+
+	    if (port==0) {
+		port = (dinfo.flag & PJSIP_TRANSPORT_SECURE) ? 5061 : 5060;
+	    }
+	    pj_sockaddr_set_port(&ai.ai_addr, port);
+	    status = pjsip_endpt_acquire_transport(pjsua_var.endpt,
+						   dinfo.type,
+						   &ai.ai_addr,
+						   addr_len,
+						   &tp_sel, &tp);
+	}
+
+	if (status == PJ_SUCCESS && (tp->local_name.port == 0 ||
+				     tp->local_name.host.slen==0 ||
+				     *tp->local_name.host.ptr=='0'))
+	{
+	    /* Trap zero port or "0.0.0.0" address. */
+	    /* The TCP/TLS transport is still connecting and unfortunately
+	     * this OS doesn't report the bound local address in this state.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "Unable to get transport local port "
+		      "for Contact address (OS doesn't support)"));
+	    status = PJ_ENOTSUP;
+	    log_written = PJ_TRUE;
+	}
+
+	if (status == PJ_SUCCESS) {
+	    /* Got the local transport address */
+	    pj_strdup(pool, &addr->host, &tp->local_name.host);
+	    addr->port = tp->local_name.port;
+	}
+
+	if (tp) {
+	    /* Here the transport's ref counter WILL reach zero. But the
+	     * transport will NOT get destroyed because it should have an
+	     * idle timer.
+	     */
+	    pjsip_transport_dec_ref(tp);
+	    tp = NULL;
+	}
+
+	if (status != PJ_SUCCESS && !log_written) {
+	    PJ_PERROR(4,(THIS_FILE, status, "Unable to use source local "
+		         "TCP socket address for Contact"));
+	}
+	status = PJ_SUCCESS;
+    }
 
     if (p_tp_type)
 	*p_tp_type = tp_type;

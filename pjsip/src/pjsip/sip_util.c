@@ -801,10 +801,10 @@ on_missing_hdr:
 
 
 /* Fill-up destination information from a target URI */
-static pj_status_t get_dest_info(const pjsip_uri *target_uri, 
-				 const pjsip_uri *request_uri, 
-				 pj_pool_t *pool,
-				 pjsip_host_info *dest_info)
+PJ_DEF(pj_status_t) pjsip_get_dest_info(const pjsip_uri *target_uri,
+				 	const pjsip_uri *request_uri,
+				 	pj_pool_t *pool,
+				 	pjsip_host_info *dest_info)
 {
     /* The target URI must be a SIP/SIPS URL so we can resolve it's address.
      * Otherwise we're in trouble (i.e. there's no host part in tel: URL).
@@ -907,8 +907,8 @@ PJ_DEF(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 	target_uri = tdata->msg->line.req.uri;
     }
 
-    return get_dest_info(target_uri, tdata->msg->line.req.uri,
-			 (pj_pool_t*)tdata->pool, dest_info);
+    return pjsip_get_dest_info(target_uri, tdata->msg->line.req.uri,
+			       (pj_pool_t*)tdata->pool, dest_info);
 }
 
 
@@ -1011,8 +1011,8 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     }
 
     /* Fill up the destination host/port from the URI. */
-    status = get_dest_info(target_uri, new_request_uri, tdata->pool,
-			   dest_info);
+    status = pjsip_get_dest_info(target_uri, new_request_uri, tdata->pool,
+			   	 dest_info);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1509,7 +1509,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
     }
 
     /* Build destination info. */
-    status = get_dest_info(uri, NULL, tdata->pool, &dest_info);
+    status = pjsip_get_dest_info(uri, NULL, tdata->pool, &dest_info);
     if (status != PJ_SUCCESS) {
 	pjsip_tx_data_dec_ref(tdata);
 	return status;
