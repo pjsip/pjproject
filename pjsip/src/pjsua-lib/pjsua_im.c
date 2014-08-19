@@ -68,14 +68,14 @@ static pjsip_module mod_pjsua_im =
 /* MIME constants. */
 static const pj_str_t STR_MIME_APP	   = { "application", 11 };
 static const pj_str_t STR_MIME_ISCOMPOSING = { "im-iscomposing+xml", 18 };
-static const pj_str_t STR_MIME_TEXT	   = { "text", 4 };
-static const pj_str_t STR_MIME_PLAIN	   = { "plain", 5 };
 
 
 /* Check if content type is acceptable */
 #if 0
 static pj_bool_t acceptable_message(const pjsip_media_type *mime)
 {
+    const pj_str_t STR_MIME_TEXT	   = { "text", 4 };
+    const pj_str_t STR_MIME_PLAIN	   = { "plain", 5 };
     return (pj_stricmp(&mime->type, &STR_MIME_TEXT)==0 &&
 	    pj_stricmp(&mime->subtype, &STR_MIME_PLAIN)==0)
 	    ||

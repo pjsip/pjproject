@@ -34,8 +34,6 @@
 
 #define THIS_FILE   "endpoint.c"
 
-static const pj_str_t STR_AUDIO = { "audio", 5};
-static const pj_str_t STR_VIDEO = { "video", 5};
 static const pj_str_t STR_IN = { "IN", 2 };
 static const pj_str_t STR_IP4 = { "IP4", 3};
 static const pj_str_t STR_IP6 = { "IP6", 3};

@@ -120,7 +120,7 @@ static int test(void)
      * No exception situation.
      */
     PJ_TRY {
-        rc = rc;
+        PJ_UNUSED_ARG(rc);
     }
     PJ_CATCH_ANY {
         rc = -3;

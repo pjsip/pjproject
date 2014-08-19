@@ -143,7 +143,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
     pj_assert(p != NULL);
 #if PJ_DEBUG
     if (p == NULL) {
-	p = p;
+	PJ_UNUSED_ARG(p);
     }
 #endif
     return p;

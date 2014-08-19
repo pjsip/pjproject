@@ -149,10 +149,10 @@ PJ_DEF(void) pj_stun_create_key(pj_pool_t *pool,
 }
 
 
-PJ_INLINE(pj_uint16_t) GET_VAL16(const pj_uint8_t *pdu, unsigned pos)
+/*unused PJ_INLINE(pj_uint16_t) GET_VAL16(const pj_uint8_t *pdu, unsigned pos)
 {
     return (pj_uint16_t) ((pdu[pos] << 8) + pdu[pos+1]);
-}
+}*/
 
 
 PJ_INLINE(void) PUT_VAL16(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)

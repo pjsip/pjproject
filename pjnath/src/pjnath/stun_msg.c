@@ -752,10 +752,10 @@ static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 			  (buf[pos + 1] << 0));
 }
 
-PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
+/*unused PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
 {
     return pj_htons(GETVAL16H(buf,pos));
-}
+}*/
 
 static void PUTVAL16H(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)
 {
@@ -771,10 +771,10 @@ PJ_INLINE(pj_uint32_t) GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 			  (buf[pos + 3] <<  0UL));
 }
 
-PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
+/*unused PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
 {
     return pj_htonl(GETVAL32H(buf,pos));
-}
+}*/
 
 static void PUTVAL32H(pj_uint8_t *buf, unsigned pos, pj_uint32_t hval)
 {
