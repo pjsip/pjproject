@@ -567,9 +567,13 @@ static pj_status_t ios_factory_create_stream(
 	    goto on_error;
 	}
         
+        AVCaptureDevice *dev = qf->dev_info[param->cap_id].dev;
+        
 	/* Find the closest supported size */
-        for(i = 0; i < PJ_ARRAY_SIZE(supported_size)-1; ++i) {
-            if (supported_size[i] >= requested_size)
+        for(i = PJ_ARRAY_SIZE(supported_size)-1; i > 0; --i) {
+            if (![dev supportsAVCaptureSessionPreset: size_preset_str[i]])
+                continue;
+            if (supported_size[i-1] < requested_size)
                 break;
         }
         strm->cap_session.sessionPreset = size_preset_str[i];
@@ -583,7 +587,6 @@ static pj_status_t ios_factory_create_stream(
         param->fmt = strm->param.fmt;
 
         /* Set frame rate, this may only work on iOS 7 or later */
-        AVCaptureDevice *dev = qf->dev_info[param->cap_id].dev;
         if ([dev respondsToSelector:@selector(activeVideoMinFrameDuration)] &&
             [dev lockForConfiguration:NULL])
         {
