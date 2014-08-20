@@ -261,7 +261,6 @@ static int AndroidRecorderCallback(void *userData)
         PJ_LOG(3, (THIS_FILE, "Unable to allocate input buffer"));
         goto on_return;
     }
-    buf = (*jni_env)->GetByteArrayElements(jni_env, inputBuffer, 0);
     
     /* Start recording
      * setpriority(PRIO_PROCESS, 0, -19); //ANDROID_PRIORITY_AUDIO
@@ -296,6 +295,7 @@ static int AndroidRecorderCallback(void *userData)
             continue;
         }
 
+        buf = (*jni_env)->GetByteArrayElements(jni_env, inputBuffer, 0);
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.size =  size;
         frame.bit_info = 0;
@@ -303,12 +303,13 @@ static int AndroidRecorderCallback(void *userData)
         frame.timestamp.u64 = stream->rec_timestamp.u64;
 
         status = (*stream->rec_cb)(stream->user_data, &frame);
+        (*jni_env)->ReleaseByteArrayElements(jni_env, inputBuffer, buf,
+        				     JNI_ABORT);
 
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;
     }
 
-    (*jni_env)->ReleaseByteArrayElements(jni_env, inputBuffer, buf, 0);
     (*jni_env)->DeleteLocalRef(jni_env, inputBuffer);
     
 on_return:
@@ -390,6 +391,9 @@ static int AndroidTrackCallback(void *userData)
         if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(frame.buf, frame.size);
         
+        (*jni_env)->ReleaseByteArrayElements(jni_env, outputBuffer, buf,
+        				     JNI_COMMIT);
+
         /* Write to the device output. */
         bytesWritten = (*jni_env)->CallIntMethod(jni_env, stream->track,
                                                  write_method, outputBuffer,
