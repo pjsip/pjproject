@@ -370,6 +370,7 @@ AudioMediaPlayer* AudioMediaPlayer::typecastFromAudioMedia(
 pj_status_t AudioMediaPlayer::eof_cb(pjmedia_port *port,
                                      void *usr_data)
 {
+    PJ_UNUSED_ARG(port);
     AudioMediaPlayer *player = (AudioMediaPlayer*)usr_data;
     return player->onEof() ? PJ_SUCCESS : PJ_EEOF;
 }
@@ -576,8 +577,8 @@ void ToneGenerator::setDigitMap(const ToneDigitMapVector &digit_map)
 
     for (i=0; i<digitMap.count; ++i) {
 	digitMap.digits[i].digit = digit_map[i].digit.c_str()[0];
-	digitMap.digits[i].freq1 = digit_map[i].freq1;
-	digitMap.digits[i].freq2 = digit_map[i].freq2;
+	digitMap.digits[i].freq1 = (short)digit_map[i].freq1;
+	digitMap.digits[i].freq2 = (short)digit_map[i].freq2;
     }
 
     status = pjmedia_tonegen_set_digit_map(tonegen, &digitMap);

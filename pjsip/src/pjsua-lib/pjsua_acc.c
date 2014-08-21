@@ -3085,7 +3085,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
 	if (status == PJ_SUCCESS) {
 	    int addr_len = pj_sockaddr_get_len(&ai.ai_addr);
-	    pj_uint16_t port = dinfo.addr.port;
+	    pj_uint16_t port = (pj_uint16_t)dinfo.addr.port;
 
 	    if (port==0) {
 		port = (dinfo.flag & PJSIP_TRANSPORT_SECURE) ? 5061 : 5060;
