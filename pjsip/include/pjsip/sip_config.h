@@ -145,6 +145,18 @@ typedef struct pjsip_cfg_t
 	 */
 	pj_bool_t resolve_hostname_to_get_interface;
 
+	/**
+	 * Disable security check on incoming messages in a secure dialog.
+	 * A secure dialog is created when the request that creates the dialog
+	 * uses "sips" scheme in its request URI. Contact URI should use "sips"
+	 * scheme and the top-most Record-Route URI, if any, should use either
+	 * "sips" scheme or "transport=tls" param. See also
+	 * https://trac.pjsip.org/repos/ticket/1735.
+	 *
+	 * Default is PJ_FALSE.
+	 */
+	pj_bool_t disable_secure_dlg_check;
+
     } endpt;
 
     /** Transaction layer settings. */
