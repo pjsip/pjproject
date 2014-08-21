@@ -252,7 +252,7 @@ static int stun_destroy_test(void)
     pj_timer_heap_set_lock(test_sess.stun_cfg.timer_heap, test_sess.lock, PJ_TRUE);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pj_ioqueue_create(pool, 512, &test_sess.stun_cfg.ioqueue);
+    status = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &test_sess.stun_cfg.ioqueue);
     pj_assert(status == PJ_SUCCESS);
 
     pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &test_sess.server_sock);

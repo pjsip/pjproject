@@ -360,7 +360,7 @@ on_return:
     destroy_server(srv);
     destroy_client(client);
     for (i=0; i<7; ++i)
-	handle_events(cfg, 50);
+	handle_events(cfg, 100);
     return ret;
 }
 
@@ -429,7 +429,7 @@ on_return:
     destroy_server(srv);
     destroy_client(client);
     for (i=0; i<7; ++i)
-	handle_events(cfg, 50);
+	handle_events(cfg, 100);
     return ret;
 }
 
@@ -796,7 +796,7 @@ on_return:
     destroy_server(srv);
     destroy_client(client);
     for (i=0; i<7; ++i)
-	handle_events(cfg, 50);
+	handle_events(cfg, 100);
     return ret;
 }
 
