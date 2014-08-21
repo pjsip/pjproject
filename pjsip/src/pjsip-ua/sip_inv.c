@@ -997,7 +997,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 
     /* Ticket #1735: Check Contact/Record-Route header in a secure dialog. */
     if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
-	msg && c_hdr && c_hdr->uri)
+	msg && PJSIP_URI_SCHEME_IS_SIPS(msg->line.req.uri))
     {
 	/* Check Contact header */
 	if (!PJSIP_URI_SCHEME_IS_SIPS(c_hdr->uri))
