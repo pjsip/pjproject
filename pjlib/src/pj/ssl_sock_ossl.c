@@ -57,6 +57,15 @@
 #endif
 
 
+/* Suppress compile warning of OpenSSL deprecation (OpenSSL is deprecated
+ * since MacOSX 10.7).
+ */
+#if defined(PJ_DARWINOS) && PJ_DARWINOS==1
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
+
 /*
  * SSL/TLS state enumeration.
  */
@@ -2697,6 +2706,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
 
     return status;
 }
+
+
+/* Put back deprecation warning setting */
+#if defined(PJ_DARWINOS) && PJ_DARWINOS==1
+#  pragma GCC diagnostic pop
+#endif
+
 
 #endif  /* PJ_HAS_SSL_SOCK */
 
