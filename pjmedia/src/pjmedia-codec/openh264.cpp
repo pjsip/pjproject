@@ -39,8 +39,15 @@
  * Constants
  */
 #define THIS_FILE		"openh264.cpp"
-#define DEFAULT_WIDTH		720
-#define DEFAULT_HEIGHT		480
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
+#  define DEFAULT_WIDTH		352
+#  define DEFAULT_HEIGHT	288
+#else
+#  define DEFAULT_WIDTH		720
+#  define DEFAULT_HEIGHT	480
+#endif
+
 #define DEFAULT_FPS		15
 #define DEFAULT_AVG_BITRATE	256000
 #define DEFAULT_MAX_BITRATE	256000
