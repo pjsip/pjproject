@@ -1929,7 +1929,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    if (w->vp_rend) {
+    if (new_w->vp_rend) {
 	/* Start renderer */
 	status = pjmedia_vid_port_start(new_w->vp_rend);
 	if (status != PJ_SUCCESS)
