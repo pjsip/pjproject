@@ -759,8 +759,8 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             dispatch_async(dispatch_get_main_queue(), ^{
                 /* Create preview layer */
                 AVCaptureVideoPreviewLayer *prev_layer =
-                            [AVCaptureVideoPreviewLayer
-                             layerWithSession:strm->cap_session];
+                            [[AVCaptureVideoPreviewLayer alloc]
+                             initWithSession:strm->cap_session];
                 
                 /* Attach preview layer to a UIView */
                 prev_layer.videoGravity = AVLayerVideoGravityResize;
