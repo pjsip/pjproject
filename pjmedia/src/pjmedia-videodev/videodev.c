@@ -381,11 +381,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 #if PJMEDIA_VIDEO_DEV_HAS_QT
     vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_qt_factory;
 #endif
-#if PJMEDIA_VIDEO_DEV_HAS_IOS
-    vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_ios_factory;
-#endif
 #if PJMEDIA_VIDEO_DEV_HAS_OPENGL
     vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_opengl_factory;
+#endif
+#if PJMEDIA_VIDEO_DEV_HAS_IOS
+    vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_ios_factory;
 #endif
 #if PJMEDIA_VIDEO_DEV_HAS_DSHOW
     vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_dshow_factory;
