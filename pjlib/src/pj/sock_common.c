@@ -802,7 +802,6 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     }
 #else
     PJ_UNUSED_ARG(ai);
-    PJ_UNUSED_ARG(count);
 #endif
 
     /* Get default interface (interface for default route) */
@@ -830,7 +829,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     /* Enumerate IP interfaces */
     if (cand_cnt < PJ_ARRAY_SIZE(cand_addr)) {
 	unsigned start_if = cand_cnt;
-	unsigned count = PJ_ARRAY_SIZE(cand_addr) - start_if;
+	count = PJ_ARRAY_SIZE(cand_addr) - start_if;
 
 	status = pj_enum_ip_interface(af, &count, &cand_addr[start_if]);
 	if (status == PJ_SUCCESS && count) {
