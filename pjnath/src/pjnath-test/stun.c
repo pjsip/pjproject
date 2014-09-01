@@ -925,7 +925,7 @@ static int handle_unknown_non_mandatory(void)
 	unsigned i;
 	puts("");
 	printf("{ ");
-	for (i=0; i<len; ++i) printf("0x%02x, ", packet[i]);
+	for (i=0; i<len; ++i) printf("0x%02x, ", packet[i] & 0xFF);
 	puts(" }");
     }
 #endif
