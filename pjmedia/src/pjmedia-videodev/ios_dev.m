@@ -402,26 +402,53 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame.size = stream->frame_size;
     frame.timestamp.u64 = stream->frame_ts.u64;
-
+    
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
             /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
             pj_uint8_t *p, *p_end, *Y, *U, *V;
             pj_size_t p_len;
+            /* Image stride is not always equal to the image width. I.e on Ipad
+             * air, at 352*288 the image stride is 384.
+             */
+            pj_size_t stride = CVPixelBufferGetBytesPerRowOfPlane(img, 0);
+            pj_bool_t need_clip = (stride != stream->size.w);
             
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
             p_len = stream->size.w * stream->size.h;
             Y = (pj_uint8_t*)stream->capture_buf;
             U = Y + p_len;
             V = U + p_len/4;
-            pj_memcpy(Y, p, p_len);
-            
+
+            if (!need_clip) {
+                pj_memcpy(Y, p, p_len);
+            } else {
+                int i = 0;
+                for (;i<stream->size.h;++i) {
+                    pj_memcpy(Y+(i*stream->size.w), p+(i*stride),
+                              stream->size.w);
+                }
+            }
+
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 1);
-            p_len >>= 1;
-            p_end = p + p_len;
-            while (p < p_end) {
-                *U++ = *p++;
-                *V++ = *p++;
+            if (!need_clip) {
+                p_len >>= 1;
+                p_end = p + p_len;
+                
+                while (p < p_end) {
+                    *U++ = *p++;
+                    *V++ = *p++;
+                }
+            } else {
+                int i = 0;
+                for (;i<(stream->size.h)/2;++i) {
+                    int y=0;
+                    for (;y<(stream->size.w)/2;++y) {
+                        *U++ = *p++;
+                        *V++ = *p++;
+                    }
+                    p += (stride - stream->size.w);
+                }
             }
 
             frame.buf = stream->capture_buf;
