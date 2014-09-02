@@ -1689,12 +1689,17 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
     const pjsip_hdr *hdr, *end_hdr;
     //pj_int32_t msg_cseq;
     const pjsip_msg *msg;
+    const pjsip_method update = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
 
     msg = rdata->msg_info.msg;
     //msg_cseq = rdata->msg_info.cseq->cseq;
 
     /* Ignore if route set has been frozen */
     if (dlg->route_set_frozen)
+	return;
+
+    /* Ignore if the message is an UPDATE response (see ticket #1781) */
+    if (pjsip_method_cmp(&rdata->msg_info.cseq->method, &update) == 0)
 	return;
 
     /* Only update route set if this message belongs to the same
