@@ -7,13 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3A7E649018E9A60700C00CB6 /* libswscale.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E648B18E9A60700C00CB6 /* libswscale.a */; };
-		3A7E649118E9A60700C00CB6 /* libavformat.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E648C18E9A60700C00CB6 /* libavformat.a */; };
-		3A7E649218E9A60700C00CB6 /* libavresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E648D18E9A60700C00CB6 /* libavresample.a */; };
-		3A7E649318E9A60700C00CB6 /* libavfilter.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E648E18E9A60700C00CB6 /* libavfilter.a */; };
-		3A7E649618E9A91400C00CB6 /* libavutil.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E649518E9A91400C00CB6 /* libavutil.a */; };
-		3A7E649A18E9A94100C00CB6 /* libavcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E649918E9A94100C00CB6 /* libavcodec.a */; };
-		3A7E649C18E9A95500C00CB6 /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A7E649B18E9A95500C00CB6 /* libz.dylib */; };
 		3AA31FF618F3FB4C00112C3D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */; };
 		3AA31FF718F3FB4C00112C3D /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */; };
 		3AA31FF818F3FB4C00112C3D /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FEB18F3FB4C00112C3D /* CFNetwork.framework */; };
@@ -60,17 +53,10 @@
 		3AF0585916F058290046B835 /* libresample-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585216F058290046B835 /* libresample-arm-apple-darwin9.a */; };
 		3AF0585A16F058290046B835 /* libspeex-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585316F058290046B835 /* libspeex-arm-apple-darwin9.a */; };
 		3AF0585B16F058290046B835 /* libsrtp-arm-apple-darwin9.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0585416F058290046B835 /* libsrtp-arm-apple-darwin9.a */; };
+		3AFFF4DA19BD59AB0067F226 /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AFFF4D919BD59AB0067F226 /* libstdc++.dylib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3A7E648B18E9A60700C00CB6 /* libswscale.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libswscale.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libswscale.a"; sourceTree = "<group>"; };
-		3A7E648C18E9A60700C00CB6 /* libavformat.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavformat.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavformat.a"; sourceTree = "<group>"; };
-		3A7E648D18E9A60700C00CB6 /* libavresample.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavresample.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavresample.a"; sourceTree = "<group>"; };
-		3A7E648E18E9A60700C00CB6 /* libavfilter.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavfilter.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavfilter.a"; sourceTree = "<group>"; };
-		3A7E648F18E9A60700C00CB6 /* libavdevice.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavdevice.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavdevice.a"; sourceTree = "<group>"; };
-		3A7E649518E9A91400C00CB6 /* libavutil.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavutil.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavutil.a"; sourceTree = "<group>"; };
-		3A7E649918E9A94100C00CB6 /* libavcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libavcodec.a; path = "../../../../../video/ffmpeg-iphone/build/built/armv7/lib/libavcodec.a"; sourceTree = "<group>"; };
-		3A7E649B18E9A95500C00CB6 /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
 		3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		3AA31FEB18F3FB4C00112C3D /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
@@ -122,6 +108,7 @@
 		3AF0585216F058290046B835 /* libresample-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libresample-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libresample-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585316F058290046B835 /* libspeex-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libspeex-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libspeex-arm-apple-darwin9.a"; sourceTree = "<group>"; };
 		3AF0585416F058290046B835 /* libsrtp-arm-apple-darwin9.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libsrtp-arm-apple-darwin9.a"; path = "../../../../third_party/lib/libsrtp-arm-apple-darwin9.a"; sourceTree = "<group>"; };
+		3AFFF4D919BD59AB0067F226 /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,8 +116,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3A7E649318E9A60700C00CB6 /* libavfilter.a in Frameworks */,
-				3A7E649118E9A60700C00CB6 /* libavformat.a in Frameworks */,
+				3AFFF4DA19BD59AB0067F226 /* libstdc++.dylib in Frameworks */,
 				3AA31FF818F3FB4C00112C3D /* CFNetwork.framework in Frameworks */,
 				3AF0583716F057740046B835 /* libpj-arm-apple-darwin9.a in Frameworks */,
 				3AF0583916F057890046B835 /* libpjlib-util-arm-apple-darwin9.a in Frameworks */,
@@ -138,16 +124,13 @@
 				3AA31FFB18F3FB4C00112C3D /* CoreImage.framework in Frameworks */,
 				3AA31FF618F3FB4C00112C3D /* AudioToolbox.framework in Frameworks */,
 				3AF0584016F057B30046B835 /* libpjmedia-audiodev-arm-apple-darwin9.a in Frameworks */,
-				3A7E649218E9A60700C00CB6 /* libavresample.a in Frameworks */,
 				3AF0584116F057B30046B835 /* libpjmedia-codec-arm-apple-darwin9.a in Frameworks */,
 				3AF0584216F057B30046B835 /* libpjmedia-videodev-arm-apple-darwin9.a in Frameworks */,
 				3AF0584316F057B30046B835 /* libpjsdp-arm-apple-darwin9.a in Frameworks */,
 				3AA31FF718F3FB4C00112C3D /* AVFoundation.framework in Frameworks */,
 				3AF0584516F057D30046B835 /* libpjnath-arm-apple-darwin9.a in Frameworks */,
 				3AA31FFE18F3FB4C00112C3D /* OpenGLES.framework in Frameworks */,
-				3A7E649618E9A91400C00CB6 /* libavutil.a in Frameworks */,
 				3AF0584A16F057F70046B835 /* libpjsip-arm-apple-darwin9.a in Frameworks */,
-				3A7E649C18E9A95500C00CB6 /* libz.dylib in Frameworks */,
 				3AA3200018F3FB4C00112C3D /* Foundation.framework in Frameworks */,
 				3AA3200118F3FB4C00112C3D /* CoreGraphics.framework in Frameworks */,
 				3AF0584B16F057F70046B835 /* libpjsip-simple-arm-apple-darwin9.a in Frameworks */,
@@ -157,9 +140,7 @@
 				3AA3200218F3FB4C00112C3D /* UIKit.framework in Frameworks */,
 				3AA31FFA18F3FB4C00112C3D /* CoreFoundation.framework in Frameworks */,
 				3AF0584D16F057F70046B835 /* libpjsua-arm-apple-darwin9.a in Frameworks */,
-				3A7E649018E9A60700C00CB6 /* libswscale.a in Frameworks */,
 				3AA31FFC18F3FB4C00112C3D /* CoreMedia.framework in Frameworks */,
-				3A7E649A18E9A94100C00CB6 /* libavcodec.a in Frameworks */,
 				3AF0585516F058290046B835 /* libg7221codec-arm-apple-darwin9.a in Frameworks */,
 				3AF0585616F058290046B835 /* libgsmcodec-arm-apple-darwin9.a in Frameworks */,
 				3AA31FFF18F3FB4C00112C3D /* QuartzCore.framework in Frameworks */,
@@ -256,14 +237,7 @@
 		3AF0583516F056CC0046B835 /* Libraries */ = {
 			isa = PBXGroup;
 			children = (
-				3A7E649B18E9A95500C00CB6 /* libz.dylib */,
-				3A7E649918E9A94100C00CB6 /* libavcodec.a */,
-				3A7E649518E9A91400C00CB6 /* libavutil.a */,
-				3A7E648B18E9A60700C00CB6 /* libswscale.a */,
-				3A7E648C18E9A60700C00CB6 /* libavformat.a */,
-				3A7E648D18E9A60700C00CB6 /* libavresample.a */,
-				3A7E648E18E9A60700C00CB6 /* libavfilter.a */,
-				3A7E648F18E9A60700C00CB6 /* libavdevice.a */,
+				3AFFF4D919BD59AB0067F226 /* libstdc++.dylib */,
 				3AF0584E16F058290046B835 /* libg7221codec-arm-apple-darwin9.a */,
 				3AF0584F16F058290046B835 /* libgsmcodec-arm-apple-darwin9.a */,
 				3AF0585016F058290046B835 /* libilbccodec-arm-apple-darwin9.a */,
@@ -476,6 +450,8 @@
 					"\"$(SRCROOT)/../../../../pjsip/lib\"",
 					"\"$(SRCROOT)/../../../../third_party/lib\"",
 					"../../../../../video/ffmpeg-iphone/build/built/armv7/lib",
+					"/Users/ming/teluu/video/openh264-openh264v1.0",
+					"/Users/ming/teluu/video/libyuv-iphone/trunk/out_ios/Debug-iphoneos",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -512,6 +488,8 @@
 					"\"$(SRCROOT)/../../../../pjsip/lib\"",
 					"\"$(SRCROOT)/../../../../third_party/lib\"",
 					"../../../../../video/ffmpeg-iphone/build/built/armv7/lib",
+					"/Users/ming/teluu/video/openh264-openh264v1.0",
+					"/Users/ming/teluu/video/libyuv-iphone/trunk/out_ios/Debug-iphoneos",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
