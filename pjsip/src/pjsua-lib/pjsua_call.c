@@ -363,7 +363,7 @@ static pj_status_t
 on_make_call_med_tp_complete(pjsua_call_id call_id,
                              const pjsua_med_tp_state_info *info)
 {
-    pjmedia_sdp_session *offer;
+    pjmedia_sdp_session *offer = NULL;
     pjsip_inv_session *inv = NULL;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
@@ -411,11 +411,13 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     }
 
     /* Create offer */
-    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
-					    &offer, NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	goto on_error;
+    if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
+        status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
+                                                &offer, NULL);
+        if (status != PJ_SUCCESS) {
+            pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+            goto on_error;
+        }
     }
 
     /* Create the INVITE session: */
@@ -581,8 +583,13 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 
     call->opt = *opt;
 
-    /* If call is established, reinit media channel */
-    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+    /* If call is established or media channel hasn't been initialized,
+     * reinit media channel.
+     */
+    if ((call->inv && call->inv->state == PJSIP_INV_STATE_CONNECTING &&
+         call->med_cnt == 0) ||
+        (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED))
+    {
 	pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
 	pj_status_t status;
 
@@ -618,7 +625,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     int call_id = -1;
     pj_str_t contact;
     pj_status_t status;
-
 
     /* Check that account is valid */
     PJ_ASSERT_RETURN(acc_id>=0 || acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -679,7 +685,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
 	goto on_error;
     }
-
+    
     /* Create temporary pool */
     tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
 
@@ -765,11 +771,13 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
 
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-				      call->secure_level, dlg->pool,
-				      NULL, NULL, PJ_TRUE,
-                                      &on_make_call_med_tp_complete);
+    if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
+        /* Init media channel */
+        status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
+                                          call->secure_level, dlg->pool,
+                                          NULL, NULL, PJ_TRUE,
+                                          &on_make_call_med_tp_complete);
+    }
     if (status == PJ_SUCCESS) {
         status = on_make_call_med_tp_complete(call->index, NULL);
         if (status != PJ_SUCCESS)
@@ -2383,7 +2391,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
                                          const pjsua_call_setting *opt,
 					 const pjsua_msg_data *msg_data)
 {
-    pjmedia_sdp_session *sdp;
+    pjmedia_sdp_session *sdp = NULL;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
     pjsua_call *call;
@@ -2422,7 +2430,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     /* Create SDP */
     if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
 	status = create_sdp_of_call_hold(call, &sdp);
-    } else {
+    } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
 						NULL, &sdp, NULL);
@@ -2497,7 +2505,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
 				       const pjsua_call_setting *opt,
 				       const pjsua_msg_data *msg_data)
 {
-    pjmedia_sdp_session *sdp;
+    pjmedia_sdp_session *sdp = NULL;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
     pjsua_call *call;
@@ -2529,7 +2537,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     /* Create SDP */
     if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
 	status = create_sdp_of_call_hold(call, &sdp);
-    } else {
+    } else if ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0) {
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
 						NULL, &sdp, NULL);

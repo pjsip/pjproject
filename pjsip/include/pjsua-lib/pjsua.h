@@ -870,7 +870,9 @@ typedef struct pjsua_callback
 
     /**
      * Notify application when call has received new offer from remote
-     * (i.e. re-INVITE/UPDATE with SDP is received). Application can
+     * (i.e. re-INVITE/UPDATE with SDP is received, or from the
+     * INVITE response in the case that the initial outgoing INVITE
+     * has no SDP). Application can
      * decide to accept/reject the offer by setting the code (default
      * is 200). If the offer is accepted, application can update the 
      * call setting to be applied in the answer. When this callback is
@@ -4105,7 +4107,15 @@ typedef enum pjsua_call_flag
      * (i.e when aud_cnt or vid_cnt is set to zero). This flag is only valid
      * for #pjsua_call_make_call().
      */
-    PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4
+    PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4,
+    
+    /**
+     * Do not send SDP when sending INVITE or UPDATE. This flag is only valid
+     * for #pjsua_call_make_call(), #pjsua_call_reinvite()/reinvite2(), or
+     * #pjsua_call_update()/update2(). For re-invite/update, specifying
+     * PJSUA_CALL_UNHOLD will take precedence over this flag.
+     */
+    PJSUA_CALL_NO_SDP_OFFER = 8
 
 } pjsua_call_flag;
 
