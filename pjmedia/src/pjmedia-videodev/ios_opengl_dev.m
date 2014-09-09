@@ -25,6 +25,8 @@
     PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL != 0
 
 #include <pjmedia-videodev/opengl_dev.h>
+#include <OpenGLES/ES2/gl.h>
+#include <OpenGLES/ES2/glext.h>
 #import <UIKit/UIKit.h>
 
 #define THIS_FILE		"ios_opengl_dev.c"
