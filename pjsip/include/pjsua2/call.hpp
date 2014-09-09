@@ -86,6 +86,15 @@ public:
 };
 
 /**
+ * Types of loss detected.
+ */
+struct LossType
+{
+    unsigned        burst;	/**< Burst/sequential packet lost detected  */
+    unsigned        random;	/**< Random packet lost detected.	    */
+};
+
+/**
  * Unidirectional RTP stream statistics.
  */
 struct RtcpStreamStat
@@ -101,9 +110,7 @@ struct RtcpStreamStat
     
     MathStat        lossPeriodUsec; /**< Loss period statistics 	    */
 
-                                /**< Types of loss detected.                */
-    unsigned        burst;	/**< Burst/sequential packet lost detected  */
-    unsigned        random;	/**< Random packet lost detected.	    */
+    LossType        lossType;   /**< Types of loss detected.                */
     
     MathStat        jitterUsec;	/**< Jitter statistics                      */
     
