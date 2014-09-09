@@ -101,10 +101,9 @@ struct RtcpStreamStat
     
     MathStat        lossPeriodUsec; /**< Loss period statistics 	    */
 
-    struct {
-        unsigned    burst;	/**< Burst/sequential packet lost detected  */
-        unsigned    random;	/**< Random packet lost detected.	    */
-    } lossType;                 /**< Types of loss detected.                */
+                                /**< Types of loss detected.                */
+    unsigned        burst;	/**< Burst/sequential packet lost detected  */
+    unsigned        random;	/**< Random packet lost detected.	    */
     
     MathStat        jitterUsec;	/**< Jitter statistics                      */
     
@@ -237,6 +236,23 @@ struct MediaFmtChangedEvent
 };
 
 /**
+ * Media event data.
+ */
+typedef union MediaEventData {
+    /**
+     * Media format changed event data.
+     */
+    MediaFmtChangedEvent    fmtChanged;
+    
+    /**
+     * Pointer to storage to user event data, if it's outside
+     * this struct
+     */
+    GenericData		ptr;
+
+} MediaEventData;
+
+/**
  * This structure describes a media event. It corresponds to the
  * pjmedia_event structure.
  */
@@ -251,18 +267,7 @@ struct MediaEvent
      * Additional data/parameters about the event. The type of data
      * will be specific to the event type being reported.
      */
-    union {
-	/**
-         * Media format changed event data.
-         */
-	MediaFmtChangedEvent    fmtChanged;
-        
-	/**
-         * Pointer to storage to user event data, if it's outside
-	 * this struct
-	 */
-	GenericData		ptr;
-    } data;
+    MediaEventData              data;
     
     /**
      * Pointer to original pjmedia_event. Only valid when the struct

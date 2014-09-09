@@ -524,18 +524,23 @@ struct TimerEvent
 };
 
 /**
+ * This structure describes transaction state event source.
+ */
+struct TsxStateEventSrc
+{
+    SipRxData       rdata;          /**< The incoming message.      */
+    SipTxData       tdata;          /**< The outgoing message.      */
+    TimerEntry      timer;          /**< The timer.                 */
+    pj_status_t     status;         /**< Transport error status.    */
+    GenericData     data;           /**< Generic data.              */
+};
+
+/**
  * This structure describes transaction state changed event.
  */
 struct TsxStateEvent
 {
-    struct
-    {
-        SipRxData       rdata;          /**< The incoming message.      */
-        SipTxData       tdata;          /**< The outgoing message.      */
-        TimerEntry      timer;          /**< The timer.                 */
-        pj_status_t     status;         /**< Transport error status.    */
-        GenericData     data;           /**< Generic data.              */
-    } src;                              /**< Event source.              */
+    TsxStateEventSrc    src;            /**< Event source.              */
     SipTransaction      tsx;            /**< The transaction.           */
     pjsip_tsx_state_e   prevState;      /**< Previous state.            */
     pjsip_event_id_e    type;           /**< Type of event source:
@@ -584,6 +589,43 @@ struct UserEvent
 };
 
 /**
+ * The event body.
+ */
+struct SipEventBody
+{
+    /**
+     * Timer event.
+     */
+    TimerEvent      timer;
+    
+    /**
+     * Transaction state has changed event.
+     */
+    TsxStateEvent   tsxState;
+    
+    /**
+     * Message transmission event.
+     */
+    TxMsgEvent      txMsg;
+    
+    /**
+     * Transmission error event.
+     */
+    TxErrorEvent    txError;
+    
+    /**
+     * Message arrival event.
+     */
+    RxMsgEvent      rxMsg;
+    
+    /**
+     * User event.
+     */
+    UserEvent       user;
+    
+};
+
+/**
  * This structure describe event descriptor to fully identify a SIP event. It
  * corresponds to the pjsip_event structure in PJSIP library.
  */
@@ -597,39 +639,7 @@ struct SipEvent
     /**
      * The event body, which fields depends on the event type.
      */
-    struct
-    {
-        /**
-         * Timer event.
-         */
-        TimerEvent      timer;
-        
-        /**
-         * Transaction state has changed event.
-         */
-        TsxStateEvent   tsxState;
-        
-        /**
-         * Message transmission event.
-         */
-        TxMsgEvent      txMsg;
-        
-        /**
-         * Transmission error event.
-         */
-        TxErrorEvent    txError;
-        
-        /**
-         * Message arrival event.
-         */
-        RxMsgEvent      rxMsg;
-        
-        /**
-         * User event.
-         */
-        UserEvent       user;
-        
-    } body;
+    SipEventBody        body;
     
     /**
      * Pointer to its original pjsip_event. Only valid when the struct is
