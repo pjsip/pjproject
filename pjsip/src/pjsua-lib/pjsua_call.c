@@ -34,6 +34,11 @@
  */
 #define LOCK_CODEC_MAX_RETRY	     5
 
+/* Determine whether we should restart ICE upon receiving a re-INVITE
+ * with no SDP.
+ */
+#define RESTART_ICE_ON_REINVITE      1
+
 /*
  * The INFO method.
  */
@@ -4000,6 +4005,7 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 {
     pjsua_call *call;
     pj_status_t status;
+    unsigned mi;
 
     pj_log_push_indent();
 
@@ -4009,6 +4015,39 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	PJ_LOG(1,(THIS_FILE, "Unable to create offer" ERR_MEDIA_CHANGING));
 	goto on_return;
     }
+    
+#if RESTART_ICE_ON_REINVITE
+
+    /* Ticket #1783, RFC 5245 section 12.5:
+     * If an agent receives a mid-dialog re-INVITE that contains no offer,
+     * it MUST restart ICE for each media stream and go through the process
+     * of gathering new candidates.
+     */
+    for (mi=0; mi<call->med_cnt; ++mi) {
+	pjsua_call_media *call_med = &call->media[mi];
+	pjmedia_transport_info tpinfo;
+	pjmedia_ice_transport_info *ice_info;
+
+        /* Check if the media is using ICE */
+        pjmedia_transport_info_init(&tpinfo);
+	pjmedia_transport_get_info(call_med->tp, &tpinfo);
+	ice_info = (pjmedia_ice_transport_info*)
+                    pjmedia_transport_info_get_spc_info(
+                        &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
+        if (!ice_info)
+	    continue;
+
+        /* Stop and re-init ICE stream transport.
+         * According to RFC 5245 section 9.1.1.1, during ICE restart,
+         * media can continue to be sent to the previously validated pair.
+         */
+        pjmedia_transport_media_stop(call_med->tp);
+        pjmedia_transport_media_create(call_med->tp, call->inv->pool_prov,
+                                       0, NULL, mi);
+
+        PJ_LOG(4, (THIS_FILE, "Restarting ICE for media %d", mi));
+    }
+#endif
 
     /* See if we've put call on hold. */
     if (call->local_hold) {
