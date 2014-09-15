@@ -271,11 +271,14 @@ static void enum_dev_cap(IBaseFilter *filter,
 			 pjmedia_dir dir,
 			 const GUID *dshow_fmt,
 			 AM_MEDIA_TYPE **pMediatype,
+                         int width,
+                         int height,
 			 IPin **pSrcpin,
-			 pj_bool_t *sup_fmt)
+			 pjmedia_vid_dev_info *vdi)
 {
     IEnumPins *pEnum;
     AM_MEDIA_TYPE *mediatype = NULL;
+    pj_bool_t match_wh = PJ_FALSE;
     HRESULT hr;
 
     if (pSrcpin)
@@ -333,17 +336,43 @@ static void enum_dev_cap(IBaseFilter *filter,
 					    &rpcstatus2) == 0 &&
 				rpcstatus2 == RPC_S_OK)
 			    {
+                                VIDEOINFOHEADER *vi;
+
+                                vi = (VIDEOINFOHEADER *)mediatype->pbFormat;
                                 if (!dshow_fmt)
                                     dshow_fmts[j].enabled = PJ_TRUE;
-				if (sup_fmt)
-				    sup_fmt[j] = PJ_TRUE;
-				if (pSrcpin) {
+
+				if (vdi && vdi->fmt_cnt <
+                                    PJMEDIA_VID_DEV_INFO_FMT_CNT)
+                                {
+                                    unsigned fps_num=DEFAULT_FPS, fps_denum=1;
+                                    
+                                    if (vi->AvgTimePerFrame != 0) {
+                                        fps_num = 10000000;
+                                        fps_denum=(unsigned)vi->AvgTimePerFrame;
+                                    }
+                                        
+                                    pjmedia_format_init_video(
+                                        &vdi->fmt[vdi->fmt_cnt++],
+                                        dshow_fmts[j].pjmedia_format,
+                                        vi->bmiHeader.biWidth,
+                                        vi->bmiHeader.biHeight,
+                                        fps_num, fps_denum);
+                                }
+				
+                                if (pSrcpin) {
+                                    if ((width == 0 && height == 0 ) ||
+                                        (vi->bmiHeader.biWidth == width &&
+                                         vi->bmiHeader.biHeight == height))
+                                    {
+                                        match_wh = PJ_TRUE;
+                                    }
 				    *pSrcpin = pPin;
 				    *pMediatype = mediatype;
 				}
 			    }
 			}
-			if (pSrcpin && *pSrcpin)
+			if (pSrcpin && *pSrcpin && match_wh)
 			    break;
                     }
                     IAMStreamConfig_Release(streamcaps);
@@ -377,6 +406,10 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
         df->dev_pool = NULL;
     }
 
+    for (c = 0; c < sizeof(dshow_fmts) / sizeof(dshow_fmts[0]); c++) {
+        dshow_fmts[c].enabled = PJ_FALSE;
+    }
+    
     df->dev_count = 0;
     df->dev_pool = pj_pool_create(df->pf, "dshow video", 500, 500, NULL);
 
@@ -446,25 +479,9 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 
 		    hr = get_cap_device(df, df->dev_count-1, &filter);
 		    if (SUCCEEDED(hr)) {
-			unsigned j;
-			pj_bool_t sup_fmt[sizeof(dshow_fmts)/sizeof(dshow_fmts[0])];
-
-			pj_bzero(sup_fmt, sizeof(sup_fmt));
-			enum_dev_cap(filter, ddi->info.dir, NULL, NULL, NULL, sup_fmt);
-
 			ddi->info.fmt_cnt = 0;
-			for (j = 0;
-			     j < sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
-			     j++)
-			{
-			    if (!sup_fmt[j])
-				continue;
-			    pjmedia_format_init_video(
-				&ddi->info.fmt[ddi->info.fmt_cnt++],
-				dshow_fmts[j].pjmedia_format, 
-				DEFAULT_WIDTH, DEFAULT_HEIGHT, 
-				DEFAULT_FPS, 1);
-			}
+			enum_dev_cap(filter, ddi->info.dir, NULL, NULL,
+                                     0, 0, NULL, &ddi->info);
 		    }
                 }
                 VariantClear(&var_name);
@@ -735,7 +752,8 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
 
     enum_dev_cap(graph->source_filter, dir,
 		 get_dshow_format_info(strm->param.fmt.id)->dshow_format,
-		 &mediatype, &srcpin, NULL);
+		 &mediatype, (use_def_size? 0: vfd->size.w),
+                 (use_def_size? 0: vfd->size.h), &srcpin, NULL);
     graph->mediatype = mediatype;
 
     if (srcpin && dir == PJMEDIA_DIR_RENDER) {
