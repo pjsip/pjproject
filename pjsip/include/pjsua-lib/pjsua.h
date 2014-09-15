@@ -6564,6 +6564,12 @@ typedef struct pjsua_vid_preview_param
      * Default: 0.
      */
     unsigned			wnd_flags;
+    
+    /**
+     * Media format. Initialize this with #pjmedia_format_init_video().
+     * If left unitialized, this parameter will not be used.
+     */
+    pjmedia_format              format;
 
 } pjsua_vid_preview_param;
 

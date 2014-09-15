@@ -187,6 +187,7 @@ PJ_DEF(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p)
     p->rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     p->show = PJ_TRUE;
     p->wnd_flags = 0;
+    pj_bzero(&p->format, sizeof(p->format));
 }
 
 
@@ -1066,6 +1067,7 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
     pjsua_vid_win *w;
     pjmedia_vid_dev_index rend_id;
     pjsua_vid_preview_param default_param;
+    const pjmedia_format *fmt = NULL;
     pj_status_t status;
 
     if (!prm) {
@@ -1081,7 +1083,9 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 
     rend_id = prm->rend_id;
 
-    status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, NULL, rend_id, id,
+    if (prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
+	fmt = &prm->format;
+    status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, fmt, rend_id, id,
 			    prm->show, prm->wnd_flags, &wid);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
