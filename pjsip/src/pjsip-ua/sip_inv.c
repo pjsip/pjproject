@@ -4737,36 +4737,53 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
             }
 
 	    if (status != PJ_SUCCESS) {
+		pj_bool_t reject_message = PJ_TRUE;
 
-		/* Not Acceptable */
-		const pjsip_hdr *accept;
-
-		/* The incoming SDP is unacceptable. If the SDP negotiator
-		 * state has just been changed, i.e: DONE -> REMOTE_OFFER,
-		 * revert it back.
-		 */
-		if (pjmedia_sdp_neg_get_state(inv->neg) ==
-		    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+		if (status == PJMEDIA_SDP_EINSDP)
 		{
-		    pjmedia_sdp_neg_cancel_offer(inv->neg);
+		    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+		    if (sdp_info->body.ptr == NULL && 
+			PJSIP_INV_ACCEPT_UNKNOWN_BODY) 
+		    {
+			/* Message body is not "application/sdp" */
+			reject_message = PJ_FALSE;
+		    }		    
 		}
 
-		status = pjsip_dlg_create_response(inv->dlg, rdata, 
-						   488, NULL, &tdata);
-		if (status != PJ_SUCCESS)
+		if (reject_message) {
+		    /* Not Acceptable */
+		    const pjsip_hdr *accept;
+
+		    /* The incoming SDP is unacceptable. If the SDP negotiator
+		     * state has just been changed, i.e: DONE -> REMOTE_OFFER,
+		     * revert it back.
+		     */
+		    if (pjmedia_sdp_neg_get_state(inv->neg) ==
+			PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+		    {
+			pjmedia_sdp_neg_cancel_offer(inv->neg);
+		    }
+
+		    status = pjsip_dlg_create_response(inv->dlg, rdata, 
+					 (status == PJMEDIA_SDP_EINSDP)?415:488,
+					  NULL, &tdata);
+
+		    if (status != PJ_SUCCESS)
+			return;
+
+
+		    accept = pjsip_endpt_get_capability(dlg->endpt, 
+							PJSIP_H_ACCEPT,
+							NULL);
+		    if (accept) {
+			pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+					  pjsip_hdr_clone(tdata->pool, accept));
+		    }
+
+		    status = pjsip_dlg_send_response(dlg, tsx, tdata);
+
 		    return;
-
-
-		accept = pjsip_endpt_get_capability(dlg->endpt, PJSIP_H_ACCEPT,
-						    NULL);
-		if (accept) {
-		    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
-				      pjsip_hdr_clone(tdata->pool, accept));
 		}
-
-		status = pjsip_dlg_send_response(dlg, tsx, tdata);
-
-		return;
 	    }
 
 	    /* Create 2xx ANSWER */

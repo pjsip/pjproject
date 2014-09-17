@@ -1208,6 +1208,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_HAS_TX_DATA_LIST		0
 #endif
 
+/** 
+ * Specify whether to accept INVITE/re-INVITE with unknown content type,
+ * by default the stack will reject this type of message as specified in 
+ * RFC3261 section 8.2.3.
+ * Application that wishes to process the body could set this to PJ_TRUE,
+ * be informed that SDP offer/answer will still be present.
+ *
+ * Default: PJ_FALSE
+ */
+#ifndef PJSIP_INV_ACCEPT_UNKNOWN_BODY
+#   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
+#endif
 
 PJ_END_DECL
 

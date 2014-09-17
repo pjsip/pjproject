@@ -1199,32 +1199,61 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	offer = sdp_info->sdp;
 
 	status = sdp_info->sdp_err;
-	if (status==PJ_SUCCESS && sdp_info->sdp==NULL)
-	    status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+	if (status==PJ_SUCCESS && sdp_info->sdp==NULL && 
+	    !PJSIP_INV_ACCEPT_UNKNOWN_BODY)
+	{
+	    if (sdp_info->body.ptr == NULL) {
+		status = PJSIP_ERRNO_FROM_SIP_STATUS(
+					       PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	    } else {
+		status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+	    }
+	}
 
 	if (status != PJ_SUCCESS) {
-	    const pj_str_t reason = pj_str("Bad SDP");
 	    pjsip_hdr hdr_list;
-	    pjsip_warning_hdr *w;
 
-	    pjsua_perror(THIS_FILE, "Bad SDP in incoming INVITE",
-			 status);
+	    /* Check if body really contains SDP. */
+	    if (sdp_info->body.ptr == NULL) {
+		/* Couldn't find "application/sdp" */
+		pjsip_accept_hdr *acc;		
 
-	    w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool,
-					     pjsip_endpt_name(pjsua_var.endpt),
-					     status);
-	    pj_list_init(&hdr_list);
-	    pj_list_push_back(&hdr_list, w);
+		pjsua_perror(THIS_FILE, "Unknown Content-Type in incoming "\
+		             "INVITE", status);
 
-	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400,
-				&reason, &hdr_list, NULL, NULL);
+		/* Add Accept header to response */
+		acc = pjsip_accept_hdr_create(rdata->tp_info.pool);
+		PJ_ASSERT_RETURN(acc, PJ_ENOMEM);
+		acc->values[acc->count++] = pj_str("application/sdp");
+		pj_list_init(&hdr_list);
+		pj_list_push_back(&hdr_list, acc);
+
+		pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 
+				    PJSIP_SC_UNSUPPORTED_MEDIA_TYPE,
+				    NULL, &hdr_list, NULL, NULL);
+	    } else {
+		const pj_str_t reason = pj_str("Bad SDP");
+		pjsip_warning_hdr *w;
+
+		pjsua_perror(THIS_FILE, "Bad SDP in incoming INVITE",
+			     status);
+
+		w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool,
+					      pjsip_endpt_name(pjsua_var.endpt),
+					      status);
+		pj_list_init(&hdr_list);
+		pj_list_push_back(&hdr_list, w);
+
+		pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400,
+				    &reason, &hdr_list, NULL, NULL);
+	    }
 	    goto on_return;
 	}
 
 	/* Do quick checks on SDP before passing it to transports. More elabore
 	 * checks will be done in pjsip_inv_verify_request2() below.
 	 */
-	if (offer->media_count==0) {
+	if ((offer) && (offer->media_count==0)) {
 	    const pj_str_t reason = pj_str("Missing media in SDP");
 	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, &reason,
 				NULL, NULL, NULL);
