@@ -1400,7 +1400,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
     neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
     neg->has_remote_answer = PJ_FALSE;
 
-    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+	neg->active_local_sdp) 
+    {
 	/* Increment next version number. This happens if for example
 	 * the reinvite offer is rejected by 488. If we don't increment
 	 * the version here, the next offer will have the same version.
