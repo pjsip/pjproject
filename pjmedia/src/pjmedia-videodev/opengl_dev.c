@@ -26,8 +26,14 @@
 
 #include <pjmedia-videodev/opengl_dev.h>
 #ifdef PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES
-#   include <OpenGLES/ES2/gl.h>
-#   include <OpenGLES/ES2/glext.h>
+#   if PJ_ANDROID
+#       include <GLES2/gl2.h>
+#       include <GLES2/gl2ext.h>
+#	define GL_BGRA GL_RGBA
+#   else
+#       include <OpenGLES/ES2/gl.h>
+#       include <OpenGLES/ES2/glext.h>
+#   endif
 #else
 #   include <GL/gl.h>
 #   include <GL/glext.h>
@@ -39,7 +45,11 @@
 #define DEFAULT_HEIGHT		360
 #define DEFAULT_FPS		15
 
-#define LOG(a)
+#if PJ_ANDROID
+#    define LOG(a) PJ_LOG(3, (THIS_FILE, a))
+#else
+#    define LOG(a)
+#endif
 
 enum {
     ATTRIB_VERTEX,
@@ -69,12 +79,14 @@ void main() \
 
 /* OpenGL buffers structure. */
 struct gl_buffers {
-    GLuint  frameBuf;
-    GLuint  rendBuf;
-    GLuint  directProg;
+    GLuint 	frameBuf;
+    GLuint  	rendBuf;
+    GLuint  	rendTex;
+    GLuint  	directProg;
     
-    int     rendBufW;
-    int     rendBufH;
+    int     	rendBufW;
+    int     	rendBufH;
+    pj_bool_t 	direct;
 };
 
 /* Supported formats */
@@ -200,18 +212,23 @@ GLint create_program(const GLchar *vertSource, const GLchar *fragSource,
     return status;
 }
 
-void pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, gl_buffers **glb)
+void pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, pj_bool_t direct,
+					   gl_buffers **glb)
 {
     gl_buffers *glbuf = PJ_POOL_ZALLOC_T(pool, gl_buffers);
     
     *glb = glbuf;
     glDisable(GL_DEPTH_TEST);
     
-    glGenFramebuffers(1, &glbuf->frameBuf);
-    glBindFramebuffer(GL_FRAMEBUFFER, glbuf->frameBuf);
+    if (!(glbuf->direct = direct)) {
+    	glGenFramebuffers(1, &glbuf->frameBuf);
+    	glBindFramebuffer(GL_FRAMEBUFFER, glbuf->frameBuf);
     
-    glGenRenderbuffers(1, &glbuf->rendBuf);
-    glBindRenderbuffer(GL_RENDERBUFFER, glbuf->rendBuf);
+    	glGenRenderbuffers(1, &glbuf->rendBuf);
+    	glBindRenderbuffer(GL_RENDERBUFFER, glbuf->rendBuf);
+    }
+    
+    glGenTextures(1, &glbuf->rendTex);
 }
 
 pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb)
@@ -221,16 +238,18 @@ pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb)
         ATTRIB_TEXTUREPOSITON };
     GLchar *attribName[NUM_ATTRIBUTES] = { "position", "texCoord" };
     
-    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,
-                                 &glb->rendBufW);
-    glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT,
-                                 &glb->rendBufH);
+    if (!glb->direct ) {
+    	glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_WIDTH,
+                                     &glb->rendBufW);
+    	glGetRenderbufferParameteriv(GL_RENDERBUFFER, GL_RENDERBUFFER_HEIGHT,
+                                     &glb->rendBufH);
     
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                              GL_RENDERBUFFER, glb->rendBuf);
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        LOG("Unable to create frame buffer");
-        return -1;
+    	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                  GL_RENDERBUFFER, glb->rendBuf);
+    	if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            LOG("Unable to create frame buffer");
+            return -1;
+        }
     }
     
     create_program(vertSrc, fragSrc, NUM_ATTRIBUTES,
@@ -245,8 +264,8 @@ pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb)
     return PJ_SUCCESS;
 }
 
-pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int texture,
-                                        unsigned int name)
+pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int width,
+                                        unsigned int height, void *pixels)
 {
     static const GLfloat squareVertices[] = {
         -1.0f, -1.0f,
@@ -257,10 +276,8 @@ pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int texture,
     GLfloat textureVertices[] = {
         0, 1, 1, 1, 0, 0, 1, 0
     };
-    GLenum tex = (GLenum) texture;
-    GLuint nam = (GLuint) name;
 
-    glBindTexture(tex, nam);
+    glBindTexture(GL_TEXTURE_2D, glb->rendTex);
     
     /* Set texture parameters */
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -268,10 +285,17 @@ pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int texture,
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
-    glBindFramebuffer(GL_FRAMEBUFFER, glb->frameBuf);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, (GLsizei)width, (GLsizei)height,
+    		 0, GL_BGRA, GL_UNSIGNED_BYTE, (GLvoid *)pixels);
+    
+    glFlush();
+    
+    /* Do we render directly to the screen? */
+    glBindFramebuffer(GL_FRAMEBUFFER, (glb->direct? 0: glb->frameBuf));
     
     /* Set the view port to the entire view */
-    glViewport(0, 0, glb->rendBufW, glb->rendBufH);
+    glViewport(0, 0, (glb->direct? width: glb->rendBufW),
+               (glb->direct? height: glb->rendBufH));
     
     /* Draw the texture on the screen with OpenGL ES 2 */
     /* Use program */
@@ -288,7 +312,8 @@ pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb, unsigned int texture,
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
     
     /* Present */
-    glBindRenderbuffer(GL_RENDERBUFFER, glb->rendBuf);
+    if (!glb->direct)
+        glBindRenderbuffer(GL_RENDERBUFFER, glb->rendBuf);
     
     return PJ_SUCCESS;
 }
@@ -303,6 +328,11 @@ void pjmedia_vid_dev_opengl_destroy_buffers(gl_buffers *glb)
     if (glb->rendBuf) {
         glDeleteRenderbuffers(1, &glb->rendBuf);
         glb->rendBuf = 0;
+    }
+    
+    if (glb->rendTex) {
+        glDeleteTextures(1, &glb->rendTex);
+        glb->rendTex = 0;
     }
     
     if (glb->directProg) {

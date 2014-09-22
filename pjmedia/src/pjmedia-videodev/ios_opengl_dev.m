@@ -34,13 +34,12 @@
 typedef struct iosgl_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
-    UInt32		iosgl_format;
 } iosgl_fmt_info;
 
 /* Supported formats */
 static iosgl_fmt_info iosgl_fmts[] =
 {
-    {PJMEDIA_FORMAT_BGRA, kCVPixelFormatType_32BGRA} ,
+    {PJMEDIA_FORMAT_BGRA} ,
 };
 
 @interface GLView : UIView
@@ -65,14 +64,11 @@ struct iosgl_stream
     pj_timestamp            frame_ts;
     unsigned                ts_inc;
     pjmedia_rect_size       vid_size;
+    const pjmedia_frame    *frame;
     
     gl_buffers                  *gl_buf;
     GLView                      *gl_view;
     EAGLContext                 *ogl_context;
-    CVOpenGLESTextureCacheRef    vid_texture;
-    CVImageBufferRef             pb;
-    void                        *pb_addr;
-    CVOpenGLESTextureRef         texture;
 };
 
 
@@ -153,7 +149,8 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
     }
     
     /* Create GL buffers */
-    pjmedia_vid_dev_opengl_create_buffers(stream->pool, &stream->gl_buf);
+    pjmedia_vid_dev_opengl_create_buffers(stream->pool, PJ_FALSE,
+                                          &stream->gl_buf);
     
     [stream->ogl_context renderbufferStorage:GL_RENDERBUFFER
                          fromDrawable:(CAEAGLLayer *)[stream->gl_view layer]];
@@ -174,9 +171,8 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
         return;
     }
     
-    pjmedia_vid_dev_opengl_draw(stream->gl_buf,
-        (unsigned int)CVOpenGLESTextureGetTarget(stream->texture),
-        (unsigned int)CVOpenGLESTextureGetName(stream->texture));
+    pjmedia_vid_dev_opengl_draw(stream->gl_buf, stream->vid_size.w, stream->vid_size.h,
+                                stream->frame->buf);
 }
 
 @end
@@ -193,7 +189,6 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     const pjmedia_video_format_detail *vfd;
     pj_status_t status = PJ_SUCCESS;
     CGRect rect;
-    CVReturn err;
     
     strm = PJ_POOL_ZALLOC_T(pool, struct iosgl_stream);
     pj_memcpy(&strm->param, param, sizeof(*param));
@@ -227,17 +222,6 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
                                     withObject:nil waitUntilDone:YES];
     if ((status = strm->status) != PJ_SUCCESS) {
         PJ_LOG(3, (THIS_FILE, "Unable to create and init OpenGL buffers"));
-        goto on_error;
-    }
-    
-    /*  Create a new CVOpenGLESTexture cache */
-    err = CVOpenGLESTextureCacheCreate(kCFAllocatorDefault, NULL,
-                                       strm->ogl_context, NULL,
-                                       &strm->vid_texture);
-    if (err) {
-        PJ_LOG(3, (THIS_FILE, "Unable to create OpenGL texture cache %d",
-                   err));
-        status = PJMEDIA_EVID_SYSERR;
         goto on_error;
     }
     
@@ -343,13 +327,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         pj_memcpy(&strm->vid_size, &vfd->size, sizeof(vfd->size));
         if (strm->param.disp_size.w == 0 || strm->param.disp_size.h == 0)
             pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
-        
-        /* Invalidate the buffer */
-        if (strm->pb) {
-            CVPixelBufferRelease(strm->pb);
-            strm->pb = NULL;
-        }
-        
+
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         UIView *view = (UIView *)pval;
@@ -410,45 +388,8 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                           const pjmedia_frame *frame)
 {
     struct iosgl_stream *stream = (struct iosgl_stream*)strm;
-    CVReturn err;
-
-    /* Pixel buffer will only create a wrapper for the frame's buffer,
-     * so if the frame buffer changes, we have to recreate pb
-     */
-    if (!stream->pb || (frame->buf && stream->pb_addr != frame->buf)) {
-        if (stream->pb) {
-            CVPixelBufferRelease(stream->pb);
-            stream->pb = NULL;
-        }
-        err = CVPixelBufferCreateWithBytes(kCFAllocatorDefault,
-                                           stream->vid_size.w,
-                                           stream->vid_size.h,
-                                           kCVPixelFormatType_32BGRA,
-                                           frame->buf,
-                                           stream->vid_size.w * 4,
-                                           NULL, NULL, NULL, &stream->pb);
-        if (err) {
-            PJ_LOG(3, (THIS_FILE, "Unable to create pixel buffer %d", err));
-            return PJMEDIA_EVID_SYSERR;
-        }
-        stream->pb_addr = frame->buf;
-    }
-
-    /* Create a CVOpenGLESTexture from the CVImageBuffer */
-    err=CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault,
-                                                     stream->vid_texture,
-                                                     stream->pb, NULL,
-                                                     GL_TEXTURE_2D, GL_RGBA,
-                                                     stream->vid_size.w,
-                                                     stream->vid_size.h,
-                                                     GL_BGRA,
-                                                     GL_UNSIGNED_BYTE,
-                                                     0, &stream->texture);
-    if (!stream->texture || err) {
-        PJ_LOG(3, (THIS_FILE, "Unable to create OpenGL texture %d", err));
-        return PJMEDIA_EVID_SYSERR;
-    }
     
+    stream->frame = frame;
     /* Perform OpenGL drawing in the main thread. */
     [stream->gl_view performSelectorOnMainThread:@selector(render)
                            withObject:nil waitUntilDone:YES];
@@ -456,10 +397,6 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     //                   ^{[stream->gl_view render];});
     
     [stream->ogl_context presentRenderbuffer:GL_RENDERBUFFER];
- 
-    /* Flush the CVOpenGLESTexture cache and release the texture */
-    CVOpenGLESTextureCacheFlush(stream->vid_texture, 0);
-    CFRelease(stream->texture);
     
     return PJ_SUCCESS;
 }
@@ -486,16 +423,6 @@ static pj_status_t iosgl_stream_destroy(pjmedia_vid_dev_stream *strm)
     
     iosgl_stream_stop(strm);
     
-    if (stream->pb) {
-        CVPixelBufferRelease(stream->pb);
-        stream->pb = NULL;
-    }
-    
-    if (stream->vid_texture) {
-        CFRelease(stream->vid_texture);
-        stream->vid_texture = NULL;
-    }
-
     if ([EAGLContext currentContext] == stream->ogl_context)
         [EAGLContext setCurrentContext:nil];
     

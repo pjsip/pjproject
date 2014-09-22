@@ -58,7 +58,17 @@ typedef enum pjmedia_vid_dev_hwnd_type
     /**
      * Native window handle on Windows.
      */
-    PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS
+    PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS,
+
+    /**
+     * Native view on iOS.
+     */
+    PJMEDIA_VID_DEV_HWND_TYPE_IOS,
+
+    /**
+     * Native window handle on Android.
+     */
+    PJMEDIA_VID_DEV_HWND_TYPE_ANDROID
 
 } pjmedia_vid_dev_hwnd_type;
 
@@ -90,6 +100,9 @@ typedef struct pjmedia_vid_dev_hwnd
 	struct {
 	    void    *window;    /**< Window	*/
 	} ios;
+	struct {
+	    void    *window;    /**< Native window */
+	} android;
 	void 	    *window;
     } info;
 

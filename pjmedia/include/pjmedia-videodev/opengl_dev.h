@@ -40,14 +40,13 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
 typedef struct gl_buffers gl_buffers;
 
 /* Create OpenGL buffers. */
-void        pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool,
+void        pjmedia_vid_dev_opengl_create_buffers(pj_pool_t *pool, pj_bool_t direct,
                                                   gl_buffers **glb);
 /* Initialize OpenGL buffers. */
 pj_status_t pjmedia_vid_dev_opengl_init_buffers(gl_buffers *glb);
 /* Render a texture. */
-pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb,
-                                        unsigned int texture,
-                                        unsigned int name);
+pj_status_t pjmedia_vid_dev_opengl_draw(gl_buffers *glb,unsigned int width,
+                                        unsigned int height, void *pixels);
 /* Destroy OpenGL buffers. */
 void        pjmedia_vid_dev_opengl_destroy_buffers(gl_buffers *glb);
 
