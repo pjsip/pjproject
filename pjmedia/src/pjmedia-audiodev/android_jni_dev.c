@@ -141,21 +141,14 @@ static pjmedia_aud_stream_op android_strm_op =
     &strm_destroy
 };
 
-JavaVM *android_jvm;
-
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
-{
-    android_jvm = vm;
-    
-    return JNI_VERSION_1_4;
-}
+extern JavaVM *pj_jni_jvm;
 
 static pj_bool_t attach_jvm(JNIEnv **jni_env)
 {
-    if ((*android_jvm)->GetEnv(android_jvm, (void **)jni_env,
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
                                JNI_VERSION_1_4) < 0)
     {
-        if ((*android_jvm)->AttachCurrentThread(android_jvm, jni_env, NULL) < 0)
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
         {
             jni_env = NULL;
             return PJ_FALSE;
@@ -168,7 +161,7 @@ static pj_bool_t attach_jvm(JNIEnv **jni_env)
 
 #define detach_jvm(attached) \
     if (attached) \
-        (*android_jvm)->DetachCurrentThread(android_jvm);
+        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
 
 /* Thread priority utils */
 /* TODO : port it to pj_thread functions */

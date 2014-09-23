@@ -49,6 +49,24 @@
 #define SIGNATURE1  0xDEAFBEEF
 #define SIGNATURE2  0xDEADC0DE
 
+#ifndef PJ_JNI_HAS_JNI_ONLOAD
+#  define PJ_JNI_HAS_JNI_ONLOAD    PJ_ANDROID
+#endif
+
+#if defined(PJ_JNI_HAS_JNI_ONLOAD) && PJ_JNI_HAS_JNI_ONLOAD != 0
+
+#include <jni.h>
+
+JavaVM *pj_jni_jvm = NULL;
+
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
+{
+    pj_jni_jvm = vm;
+    
+    return JNI_VERSION_1_4;
+}
+#endif
+
 struct pj_thread_t
 {
     char	    obj_name[PJ_MAX_OBJ_NAME];
