@@ -375,11 +375,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
 						 unsigned bitrate, 
 						 pj_bool_t enabled)
 {
+    pjmedia_codec_mgr *codec_mgr;
     unsigned i;
 
     /* Validate mode */
     if (!validate_mode(sample_rate, bitrate))
 	return PJMEDIA_CODEC_EINMODE;
+
+    /* Get codec manager */
+    codec_mgr = pjmedia_endpt_get_codec_mgr(codec_factory.endpt);
+    if (!codec_mgr)
+	return PJMEDIA_CODEC_EFAILED;
 
     /* Look up in factory modes table */
     for (i = 0; i < codec_factory.mode_count; ++i) {
@@ -387,6 +393,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
 	    codec_factory.modes[i].bitrate == bitrate)
 	{
 	    codec_factory.modes[i].enabled = enabled;
+
+	    /* Re-register G722.1 codec factory to update codec list */
+	    pjmedia_codec_mgr_unregister_factory(codec_mgr,
+						 &codec_factory.base);
+	    pjmedia_codec_mgr_register_factory(codec_mgr,
+					       &codec_factory.base);
 	    return PJ_SUCCESS;
 	}
     }
@@ -412,6 +424,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
 	    mode->sample_rate = sample_rate;
 	    mode->bitrate = bitrate;
 	    pj_utoa(mode->bitrate, mode->bitrate_str);
+
+	    /* Re-register G722.1 codec factory to update codec list */
+	    pjmedia_codec_mgr_unregister_factory(codec_mgr,
+						 &codec_factory.base);
+	    pjmedia_codec_mgr_register_factory(codec_mgr,
+					       &codec_factory.base);
 
 	    return PJ_SUCCESS;
 	}
