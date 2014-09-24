@@ -705,6 +705,22 @@ if test "$enable_video" = "no"; then
   true;
 else
  case $target in
+  *android*)
+	ac_pjmedia_video=android_os
+	AC_SUBST(ac_pjmedia_video_has_android)
+	AC_SUBST(ac_android_cflags)
+	SAVED_LIBS="$LIBS"
+	LIBS="-lGLESv2 -lEGL -landroid"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_android=yes],[ac_pjmedia_video_has_android=no])
+	LIBS="$SAVED_LIBS"
+	if test "$ac_pjmedia_video_has_android" = "yes"; then
+	  ac_android_cflags="-DPJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL=1"
+	  LIBS="$LIBS -lGLESv2 -lEGL -landroid"
+	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... yes])
+	else
+	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... no])
+	fi
+	;;
   arm-apple-darwin*)
 	ac_pjmedia_video=iphone_os
 	AC_SUBST(ac_pjmedia_video_has_ios)

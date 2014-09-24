@@ -667,6 +667,8 @@ ac_qt_cflags
 ac_pjmedia_video_has_qt
 ac_ios_cflags
 ac_pjmedia_video_has_ios
+ac_android_cflags
+ac_pjmedia_video_has_android
 ac_pjmedia_video
 ac_pa_use_oss
 ac_pa_use_alsa
@@ -6159,6 +6161,41 @@ if test "$enable_video" = "no"; then
   true;
 else
  case $target in
+  *android*)
+	ac_pjmedia_video=android_os
+
+
+	SAVED_LIBS="$LIBS"
+	LIBS="-lGLESv2 -lEGL -landroid"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_pjmedia_video_has_android=yes
+else
+  ac_pjmedia_video_has_android=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	LIBS="$SAVED_LIBS"
+	if test "$ac_pjmedia_video_has_android" = "yes"; then
+	  ac_android_cflags="-DPJMEDIA_VIDEO_DEV_HAS_ANDROID_OPENGL=1"
+	  LIBS="$LIBS -lGLESv2 -lEGL -landroid"
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenGL ES 2 is available... yes" >&5
+$as_echo "Checking if OpenGL ES 2 is available... yes" >&6; }
+	else
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenGL ES 2 is available... no" >&5
+$as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
+	fi
+	;;
   arm-apple-darwin*)
 	ac_pjmedia_video=iphone_os
 

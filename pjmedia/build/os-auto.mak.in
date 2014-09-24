@@ -25,6 +25,9 @@ QT_CFLAGS = @ac_qt_cflags@
 # iOS
 IOS_CFLAGS = @ac_ios_cflags@
 
+# Android
+ANDROID_CFLAGS = @ac_android_cflags@
+
 # libyuv
 LIBYUV_CFLAGS = @ac_libyuv_cflags@
 LIBYUV_LDFLAGS = @ac_libyuv_ldflags@
@@ -33,7 +36,7 @@ LIBYUV_LDFLAGS = @ac_libyuv_ldflags@
 # PJMEDIA features exclusion
 export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
 		 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		 $(IOS_CFLAGS) $(LIBYUV_CFLAGS)
+		 $(IOS_CFLAGS) $(ANDROID_CFLAGS) $(LIBYUV_CFLAGS)
 export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
 		  $(LIBYUV_LDFLAGS)
 
