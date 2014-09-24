@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia/stream.h>
+#include <pjmedia/sdp_neg.h>
 #include <pjmedia/stream_common.h>
 #include <pj/ctype.h>
 #include <pj/rand.h>
@@ -188,28 +189,13 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	 */
 	si->tx_pt = 0xFFFF;
 	for (i=0; i<rem_m->desc.fmt_count; ++i) {
-	    unsigned rpt;
-	    pjmedia_sdp_attr *r_attr;
-	    pjmedia_sdp_rtpmap r_rtpmap;
-
-	    rpt = pj_strtoul(&rem_m->desc.fmt[i]);
-	    if (rpt < 96)
-		continue;
-
-	    r_attr = pjmedia_sdp_media_find_attr(rem_m, &ID_RTPMAP,
-						 &rem_m->desc.fmt[i]);
-	    if (!r_attr)
-		continue;
-
-	    if (pjmedia_sdp_attr_get_rtpmap(r_attr, &r_rtpmap) != PJ_SUCCESS)
-		continue;
-
-	    if (!pj_stricmp(&rtpmap->enc_name, &r_rtpmap.enc_name) &&
-		rtpmap->clock_rate == r_rtpmap.clock_rate)
+	    if (pjmedia_sdp_neg_fmt_match(pool,
+					  (pjmedia_sdp_media*)local_m, fmti,
+					  (pjmedia_sdp_media*)rem_m, i, 0) ==
+		PJ_SUCCESS)
 	    {
 		/* Found matched codec. */
-		si->tx_pt = rpt;
-
+		si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
 		break;
 	    }
 	}
