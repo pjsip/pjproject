@@ -612,13 +612,15 @@ typedef struct pjsua_call_setting
     /**
      * Bitmask of #pjsua_call_flag constants.
      *
-     * Default: 0
+     * Default: PJSUA_CALL_INCLUDE_DISABLED_MEDIA
      */
     unsigned	     flag;
 
     /**
      * This flag controls what methods to request keyframe are allowed on
      * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
+     *
+     * Default: PJSUA_VID_REQ_KEYFRAME_SIP_INFO
      */
     unsigned	     req_keyframe_method;
 
@@ -4085,9 +4087,10 @@ typedef enum pjsua_call_flag
 {
     /**
      * When the call is being put on hold, specify this flag to unhold it.
-     * This flag is only valid for #pjsua_call_reinvite(). Note: for
-     * compatibility reason, this flag must have value of 1 because
-     * previously the unhold option is specified as boolean value.
+     * This flag is only valid for #pjsua_call_reinvite() and
+     * #pjsua_call_update(). Note: for compatibility reason, this flag must
+     * have value of 1 because previously the unhold option is specified as
+     * boolean value.
      */
     PJSUA_CALL_UNHOLD = 1,
 
@@ -4105,7 +4108,11 @@ typedef enum pjsua_call_flag
     /**
      * Include SDP "m=" line with port set to zero for each disabled media
      * (i.e when aud_cnt or vid_cnt is set to zero). This flag is only valid
-     * for #pjsua_call_make_call().
+     * for #pjsua_call_make_call(), #pjsua_call_reinvite(), and
+     * #pjsua_call_update(). Note that even this flag is applicable in
+     * #pjsua_call_reinvite() and #pjsua_call_update(), it will only take
+     * effect when the re-INVITE/UPDATE operation regenerates SDP offer,
+     * such as changing audio or video count in the call setting.
      */
     PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4,
     
@@ -4590,7 +4597,7 @@ PJ_DECL(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
 					  const pjsua_msg_data *msg_data);
 
 /**
- * Send re-INVITE to release hold.
+ * Send re-INVITE request or release hold.
  * The final status of the request itself will be reported on the
  * \a on_call_media_state() callback, which inform the application that
  * the media state of the call has changed.
@@ -4610,14 +4617,18 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 
 
 /**
- * Send re-INVITE to release hold.
+ * Send re-INVITE request or release hold.
  * The final status of the request itself will be reported on the
  * \a on_call_media_state() callback, which inform the application that
  * the media state of the call has changed.
  *
  * @param call_id	Call identification.
  * @param opt		Optional call setting, if NULL, the current call
- *			setting will remain unchanged.
+ *			setting will be used. Note that to release hold
+ *			or update contact or omit SDP offer, this parameter
+ *			cannot be NULL and it must specify appropriate flags,
+ *			e.g: PJSUA_CALL_UNHOLD, PJSUA_CALL_UPDATE_CONTACT,
+ *			PJSUA_CALL_NO_SDP_OFFER.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
@@ -4648,7 +4659,11 @@ PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
  *
  * @param call_id	Call identification.
  * @param opt		Optional call setting, if NULL, the current call
- *			setting will remain unchanged.
+ *			setting will be used. Note that to release hold
+ *			or update contact or omit SDP offer, this parameter
+ *			cannot be NULL and it must specify appropriate flags,
+ *			e.g: PJSUA_CALL_UNHOLD, PJSUA_CALL_UPDATE_CONTACT,
+ *			PJSUA_CALL_NO_SDP_OFFER.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *

@@ -556,6 +556,18 @@ on_error:
 
 
 /*
+ * Cleanup call setting flag to avoid one time flags, such as
+ * PJSUA_CALL_UNHOLD, PJSUA_CALL_UPDATE_CONTACT, or
+ * PJSUA_CALL_NO_SDP_OFFER, to be sticky (ticket #1793).
+ */
+static void cleanup_call_setting_flag(pjsua_call_setting *opt)
+{
+    opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
+		   PJSUA_CALL_NO_SDP_OFFER);
+}
+
+
+/*
  * Initialize call settings based on account ID.
  */
 PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
@@ -579,8 +591,10 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 {
     pj_assert(call);
 
-    if (!opt)
+    if (!opt) {
+	cleanup_call_setting_flag(&call->opt);
 	return PJ_SUCCESS;
+    }
 
 #if !PJMEDIA_HAS_VIDEO
     pj_assert(opt->vid_cnt == 0);
@@ -1145,6 +1159,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	/* Copy call setting from the replaced call */
 	call->opt = replaced_call->opt;
+	cleanup_call_setting_flag(&call->opt);
 
 	/* Notify application */
 	if (pjsua_var.ua_cfg.cb.on_call_replace_request) {
@@ -2410,7 +2425,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (options != call->opt.flag)
 	call->opt.flag = options;
 
-    status = pjsua_call_reinvite2(call_id, NULL, msg_data);
+    status = pjsua_call_reinvite2(call_id, &call->opt, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -2524,7 +2539,7 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     if (options != call->opt.flag)
 	call->opt.flag = options;
 
-    status = pjsua_call_update2(call_id, NULL, msg_data);
+    status = pjsua_call_update2(call_id, &call->opt, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -3951,7 +3966,10 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     if (pjsua_var.ua_cfg.cb.on_call_rx_offer) {
 	pjsip_status_code code = PJSIP_SC_OK;
-	pjsua_call_setting opt = call->opt;
+	pjsua_call_setting opt;
+
+	cleanup_call_setting_flag(&call->opt);
+	opt = call->opt;
 
 	(*pjsua_var.ua_cfg.cb.on_call_rx_offer)(call->index, offer, NULL,
 						&code, &opt);
@@ -4373,6 +4391,7 @@ static void on_call_transferred( pjsip_inv_session *inv,
 							&code);
     }
 
+    cleanup_call_setting_flag(&existing_call->opt);
     call_opt = existing_call->opt;
     if (pjsua_var.ua_cfg.cb.on_call_transfer_request2) {
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request2)(existing_call->index,
@@ -4676,7 +4695,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             (tsx->status_code!=401 && tsx->status_code!=407))
         {
             /* Call unhold failed */
-            call->opt.flag &= ~PJSUA_CALL_UNHOLD;
             call->local_hold = PJ_TRUE;
 	    PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d (reason=%d)",
 		      call->index, tsx->status_code));
