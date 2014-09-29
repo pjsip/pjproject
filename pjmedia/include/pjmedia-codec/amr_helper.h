@@ -1147,7 +1147,11 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
 	Q = (pj_uint8_t)(TOC & 1);
 
 	if (FT > SID_FT && FT < 14) {
-	    pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
+	    /* Discard the whole packet (RFC4867 4.3.2) */
+	    //pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
+	    cnt = 0;
+	    PJ_LOG(4, ("AMR parser", "Invalid AMR frametype, stream may be "
+		       "corrupted!"));
 	    break;
 	}
 
