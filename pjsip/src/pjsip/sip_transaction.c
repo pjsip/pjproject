@@ -2165,6 +2165,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
 
     pj_grp_lock_acquire(tsx->grp_lock);
     if (tdata == NULL) {
+        pjsip_tx_data_add_ref(tdata);
 	tdata = tsx->last_tx;
     }
     status = tsx_send_msg(tsx, tdata);
