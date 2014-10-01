@@ -375,6 +375,19 @@ PJ_DEF(pj_status_t) pjsip_100rel_send_prack( pjsip_inv_session *inv,
 }
 
 
+/* Clear all responses in the transmission list */
+static void clear_all_responses(dlg_data *dd)
+{
+    tx_data_list_t *tl;
+
+    tl = dd->uas_state->tx_data_list.next;
+    while (tl != &dd->uas_state->tx_data_list) {
+	pjsip_tx_data_dec_ref(tl->tdata);
+	tl = tl->next;
+    }
+    pj_list_init(&dd->uas_state->tx_data_list);
+}
+
 /*
  * Notify 100rel module that the invite session has been disconnected.
  */
@@ -388,8 +401,16 @@ PJ_DEF(pj_status_t) pjsip_100rel_end_session(pjsip_inv_session *inv)
 
     /* Make sure we don't have pending transmission */
     if (dd->uas_state) {
-	pj_assert(!dd->uas_state->retransmit_timer.id);
-	pj_assert(pj_list_empty(&dd->uas_state->tx_data_list));
+       /* Cancel the retransmit timer */
+    	if (dd->uas_state->retransmit_timer.id) {
+	    pjsip_endpt_cancel_timer(dd->inv->dlg->endpt,
+				     &dd->uas_state->retransmit_timer);
+	    dd->uas_state->retransmit_timer.id = PJ_FALSE;
+	}
+	if (!pj_list_empty(&dd->uas_state->tx_data_list)) {
+	    /* Clear all pending responses (drop 'em) */
+	    clear_all_responses(dd);
+	}
     }
 
     return PJ_SUCCESS;
@@ -424,19 +445,6 @@ static void parse_rack(const pj_str_t *rack,
 	p_method->ptr = NULL;
 	p_method->slen = 0;
     }
-}
-
-/* Clear all responses in the transmission list */
-static void clear_all_responses(dlg_data *dd)
-{
-    tx_data_list_t *tl;
-
-    tl = dd->uas_state->tx_data_list.next;
-    while (tl != &dd->uas_state->tx_data_list) {
-	pjsip_tx_data_dec_ref(tl->tdata);
-	tl = tl->next;
-    }
-    pj_list_init(&dd->uas_state->tx_data_list);
 }
 
 
