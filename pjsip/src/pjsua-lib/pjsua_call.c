@@ -3365,10 +3365,16 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 		    m->desc.fmt[m->desc.fmt_count++] = *fmt;
 		    a = pjmedia_sdp_attr_find2(ref_m->attr_count, ref_m->attr,
 					       "rtpmap", fmt);
-		    if (a) pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+		    if (a) {
+		        pjmedia_sdp_attr_add(&m->attr_count, m->attr,
+		    			     pjmedia_sdp_attr_clone(pool, a));
+		    }
 		    a = pjmedia_sdp_attr_find2(ref_m->attr_count, ref_m->attr,
 					       "fmtp", fmt);
-		    if (a) pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+		    if (a) {
+		        pjmedia_sdp_attr_add(&m->attr_count, m->attr,
+		        		     pjmedia_sdp_attr_clone(pool, a));
+		    }
 		}
 	    }
 	}
