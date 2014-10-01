@@ -1282,8 +1282,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pjsua_transport_config_dup(acc->pool, &acc->cfg.rtp_cfg,
 				   &cfg->rtp_cfg);
     } else {
+    	pj_str_t p_addr = acc->cfg.rtp_cfg.public_addr;
+    	pj_str_t b_addr = acc->cfg.rtp_cfg.bound_addr;
+    	
 	/* ..to save memory by not using the pool */
 	acc->cfg.rtp_cfg =  cfg->rtp_cfg;
+	acc->cfg.rtp_cfg.public_addr = p_addr;
+	acc->cfg.rtp_cfg.bound_addr = b_addr;
     }
 
     acc->cfg.ipv6_media_use = cfg->ipv6_media_use;
