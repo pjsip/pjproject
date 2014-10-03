@@ -1338,7 +1338,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Unregister first */
     if (unreg_first) {
-	pjsua_acc_set_registration(acc->index, PJ_FALSE);
+        if (acc->cfg.reg_uri.slen)
+	    pjsua_acc_set_registration(acc->index, PJ_FALSE);
 	if (acc->regc != NULL) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
