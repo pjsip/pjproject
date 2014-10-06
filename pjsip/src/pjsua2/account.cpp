@@ -40,7 +40,7 @@ void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_UNSIGNED	(this_node, firstRetryIntervalSec);
     NODE_READ_UNSIGNED	(this_node, delayBeforeRefreshSec);
     NODE_READ_BOOL	(this_node, dropCallsOnFail);
-    NODE_READ_UNSIGNED	(this_node, unregWaitSec);
+    NODE_READ_UNSIGNED	(this_node, unregWaitMsec);
     NODE_READ_UNSIGNED	(this_node, proxyUse);
 
     readSipHeaders(this_node, "headers", headers);
@@ -57,7 +57,7 @@ void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_UNSIGNED	(this_node, firstRetryIntervalSec);
     NODE_WRITE_UNSIGNED	(this_node, delayBeforeRefreshSec);
     NODE_WRITE_BOOL	(this_node, dropCallsOnFail);
-    NODE_WRITE_UNSIGNED	(this_node, unregWaitSec);
+    NODE_WRITE_UNSIGNED	(this_node, unregWaitMsec);
     NODE_WRITE_UNSIGNED	(this_node, proxyUse);
 
     writeSipHeaders(this_node, "headers", headers);
@@ -320,7 +320,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.reg_first_retry_interval= regConfig.firstRetryIntervalSec;
     ret.reg_delay_before_refresh= regConfig.delayBeforeRefreshSec;
     ret.drop_calls_on_reg_fail	= regConfig.dropCallsOnFail;
-    ret.unreg_timeout		= regConfig.unregWaitSec;
+    ret.unreg_timeout		= regConfig.unregWaitMsec;
     ret.reg_use_proxy		= regConfig.proxyUse;
     for (i=0; i<regConfig.headers.size(); ++i) {
 	pj_list_push_back(&ret.reg_hdr_list, &regConfig.headers[i].toPj());
@@ -447,7 +447,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.firstRetryIntervalSec = prm.reg_first_retry_interval;
     regConfig.delayBeforeRefreshSec = prm.reg_delay_before_refresh;
     regConfig.dropCallsOnFail	= PJ2BOOL(prm.drop_calls_on_reg_fail);
-    regConfig.unregWaitSec	= prm.unreg_timeout;
+    regConfig.unregWaitMsec	= prm.unreg_timeout;
     regConfig.proxyUse		= prm.reg_use_proxy;
     regConfig.headers.clear();
     hdr = prm.reg_hdr_list.next;

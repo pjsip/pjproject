@@ -122,7 +122,7 @@ struct AccountRegConfig : public PersistentObject
      *
      * Default: PJSUA_UNREG_TIMEOUT
      */
-    unsigned		unregWaitSec;
+    unsigned		unregWaitMsec;
 
     /**
      * Specify how the registration uses the outbound and account proxy
