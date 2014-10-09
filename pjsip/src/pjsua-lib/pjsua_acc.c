@@ -1961,8 +1961,10 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
 	acc->ka_timer.id = PJ_FALSE;
 
-	pjsip_transport_dec_ref(acc->ka_transport);
-	acc->ka_transport = NULL;
+	if (acc->ka_transport) {
+	    pjsip_transport_dec_ref(acc->ka_transport);
+	    acc->ka_transport = NULL;
+	}
     }
 
     if (start) {
