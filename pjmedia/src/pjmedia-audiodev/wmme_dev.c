@@ -276,8 +276,11 @@ static void get_dev_names(pjmedia_aud_dev_factory *f)
 
 	for (i = 0; i < wf->dev_count; ++i) {
 	    if (0 == wcscmp(wf->dev_info[i].endpointId, pwszID)) {
-		wcstombs(wf->dev_info[i].info.name, varName.pwszVal,
-			 sizeof(wf->dev_info[i].info.name));
+		pj_unicode_to_ansi(varName.pwszVal, 
+				   wcslen(varName.pwszVal), 
+				   wf->dev_info[i].info.name, 
+				   sizeof(wf->dev_info[i].info.name);
+
 		break;
 	    }
 	}
