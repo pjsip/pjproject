@@ -279,7 +279,7 @@ static void get_dev_names(pjmedia_aud_dev_factory *f)
 		pj_unicode_to_ansi(varName.pwszVal, 
 				   wcslen(varName.pwszVal), 
 				   wf->dev_info[i].info.name, 
-				   sizeof(wf->dev_info[i].info.name);
+				   sizeof(wf->dev_info[i].info.name));
 
 		break;
 	    }
