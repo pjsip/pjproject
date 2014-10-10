@@ -2092,7 +2092,12 @@ static void regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param)
 
     pj_log_push_indent();
 
-    if ((acc->cfg.contact_rewrite_method &
+    /* Check if we should do NAT bound address check for contact rewrite.
+     * Note that '!contact_rewritten' check here is to avoid overriding
+     * the current contact generated from last 2xx.
+     */
+    if (!acc->contact_rewritten &&
+	(acc->cfg.contact_rewrite_method &
          PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE) ==
         PJSUA_CONTACT_REWRITE_ALWAYS_UPDATE &&
         param->cbparam.code >= 400 &&
@@ -2103,6 +2108,10 @@ static void regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param)
         {
             param->contact_cnt = 1;
             param->contact[0] = acc->reg_contact;
+
+	    /* Don't set 'contact_rewritten' to PJ_TRUE here to allow
+	     * further check of NAT bound address in 2xx response.
+	     */
         }
     }
 
@@ -2177,12 +2186,16 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	     */
 	    update_rfc5626_status(acc, param->rdata);
 
-	    /* Check NAT bound address */
-            if (acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
+	    /* Check NAT bound address if it hasn't been done before */
+            if (!acc->contact_rewritten &&
+		acc_check_nat_addr(acc, (acc->cfg.contact_rewrite_method & 3),
                                    param))
             {
 		PJSUA_UNLOCK();
 		pj_log_pop_indent();
+
+		/* Avoid another check of NAT bound address */
+		acc->contact_rewritten = PJ_TRUE;
 		return;
 	    }
 
@@ -2215,6 +2228,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     acc->reg_last_err = param->status;
     acc->reg_last_code = param->code;
+
+    /* Reaching this point means no contact rewrite, so reset the flag */
+    acc->contact_rewritten = PJ_FALSE;
 
     /* Check if we need to auto retry registration. Basically, registration
      * failure codes triggering auto-retry are those of temporal failures

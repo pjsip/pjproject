@@ -219,6 +219,8 @@ typedef struct pjsua_acc
     pj_str_t         reg_contact;   /**< Contact header for REGISTER.
 				         It may be different than acc
 				         contact if outbound is used    */
+    pj_bool_t	     contact_rewritten;
+				    /**< Contact rewrite has been done? */
     pjsip_host_port  via_addr;      /**< Address for Via header         */
     pjsip_transport *via_tp;        /**< Transport associated with
                                          the Via address                */
