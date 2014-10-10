@@ -1460,7 +1460,7 @@ PJ_DEF(pj_status_t) pjsua_cancel_stun_resolution( void *token,
 static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
 {
     pjsua_var.stun_status = result->status;
-    if (result->status == PJ_SUCCESS) {
+    if ((result->status == PJ_SUCCESS) && (pjsua_var.ua_cfg.stun_srv_cnt>0)) {
 	pj_memcpy(&pjsua_var.stun_srv, &result->addr, sizeof(result->addr));
     }
 }
