@@ -39,8 +39,11 @@
 #endif
 
 #ifndef PJMEDIA_WMME_DEV_USE_MMDEVICE_API
-#   define PJMEDIA_WMME_DEV_USE_MMDEVICE_API \
-	   (defined(_WIN32_WINNT) && (_WIN32_WINNT>=0x0600))
+#   if defined(_WIN32_WINNT) && (_WIN32_WINNT>=0x0600)
+#      define PJMEDIA_WMME_DEV_USE_MMDEVICE_API 1
+#   else
+#      define PJMEDIA_WMME_DEV_USE_MMDEVICE_API 0
+#   endif
 #endif
 
 #if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
