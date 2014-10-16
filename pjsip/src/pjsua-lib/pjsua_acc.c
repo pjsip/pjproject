@@ -1249,12 +1249,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    pj_strdup_with_null(acc->pool, &acc->cfg.reg_uri, &cfg->reg_uri);
 	    if (reg_sip_uri)
 		acc->srv_port = reg_sip_uri->port;
-	} else {
-	    /* Unregister if registration was set */
-	    if (acc->cfg.reg_uri.slen)
-		pjsua_acc_set_registration(acc->index, PJ_FALSE);
-	    pj_bzero(&acc->cfg.reg_uri, sizeof(acc->cfg.reg_uri));
-	}
+	} 
 	update_reg = PJ_TRUE;
 	unreg_first = PJ_TRUE;
     }
@@ -1338,13 +1333,17 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Unregister first */
     if (unreg_first) {
-        if (acc->cfg.reg_uri.slen)
-	    pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	pjsua_acc_set_registration(acc->index, PJ_FALSE);
 	if (acc->regc != NULL) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
+	}
+	
+	if (!cfg->reg_uri.slen) {
+	    /* Reg URI still needed, delay unset after sending unregister. */
+	    pj_bzero(&acc->cfg.reg_uri, sizeof(acc->cfg.reg_uri));
 	}
     }
 
