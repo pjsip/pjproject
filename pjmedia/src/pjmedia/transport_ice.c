@@ -572,8 +572,8 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	}
 
     } else if (pj_ice_strans_has_sess(tp_ice->ice_st) &&
-	       pj_ice_strans_get_state(tp_ice->ice_st) !=
-		        PJ_ICE_STRANS_STATE_FAILED)
+	       (restart_session || pj_ice_strans_get_state(tp_ice->ice_st) !=
+		PJ_ICE_STRANS_STATE_FAILED))
     {
 	/* Encode all candidates to SDP media */
 	char *attr_buf;
