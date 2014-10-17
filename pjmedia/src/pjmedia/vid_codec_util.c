@@ -39,12 +39,12 @@
 #define H264_STRICT_SDP_NEGO	    0
 
 /* Default frame rate, if not specified */
-#define DEFAULT_H264_FPS_NUM	    15
+#define DEFAULT_H264_FPS_NUM	    10
 #define DEFAULT_H264_FPS_DENUM	    1
 
 /* Default aspect ratio, if not specified */
-#define DEFAULT_H264_RATIO_NUM	    16
-#define DEFAULT_H264_RATIO_DENUM    9
+#define DEFAULT_H264_RATIO_NUM	    4
+#define DEFAULT_H264_RATIO_DENUM    3
 
 
 /* ITU resolution definition */
@@ -636,10 +636,14 @@ static pj_status_t find_highest_res(pjmedia_vid_codec_h264_fmtp *fmtp,
     max_fs = PJ_MIN(max_fs, fmtp->max_fs);
 
     /* Check if the specified ratio is using big numbers
-     * (not normalizable), override it with default ratio!
+     * (not normalizable), override it!
      */
-    if ((int)max_fs < asp_ratio.num * asp_ratio.denum)
-	asp_ratio = def_ratio;
+    if ((int)max_fs < asp_ratio.num * asp_ratio.denum) {
+        if ((int)max_fs >= def_ratio.num * def_ratio.denum)
+	    asp_ratio = def_ratio;
+	else
+	    asp_ratio.num = asp_ratio.denum = 1;
+    }
 
     /* Calculate the scale factor for size */
     scale = pj_isqrt(max_fs / asp_ratio.denum / asp_ratio.num);
