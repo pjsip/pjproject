@@ -217,14 +217,14 @@ unsigned AudioMedia::getRxLevel() const throw(Error)
 {
     unsigned level;
     PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, &level, NULL) );
-    return level;
+    return level * 100 / 255;
 }
 
 unsigned AudioMedia::getTxLevel() const throw(Error)
 {
     unsigned level;
     PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, NULL, &level) );
-    return level;
+    return level * 100 / 255;
 }
 
 AudioMedia* AudioMedia::typecastFromMedia(Media *media)
