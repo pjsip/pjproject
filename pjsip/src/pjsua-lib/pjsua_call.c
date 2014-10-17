@@ -48,6 +48,12 @@ const pjsip_method pjsip_info_method =
     { "INFO", 4 }
 };
 
+/* UPDATE method */
+static const pjsip_method pjsip_update_method =
+{
+    PJSIP_OTHER_METHOD,
+    { "UPDATE", 6 }
+};
 
 /* This callback receives notification from invite session when the
  * session state has changed.
@@ -2508,6 +2514,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
+    call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
@@ -2616,6 +2623,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     pjsua_process_msg_data( tdata, msg_data);
 
     /* Send the request */
+    call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
@@ -3814,6 +3822,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	goto on_return;
     }
 
+    call->med_update_success = (status == PJ_SUCCESS);
+
     /* Update remote's NAT type */
     if (pjsua_var.ua_cfg.nat_type_in_sdp) {
 	update_remote_nat_type(call, remote_sdp);
@@ -4681,29 +4691,51 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    }
 	}
     } else if (tsx->role == PJSIP_ROLE_UAC &&
-	       tsx->last_tx == (pjsip_tx_data*)call->hold_msg &&
-	       tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+               pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0 &&
+               tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+               (tsx->status_code!=401 && tsx->status_code!=407))
     {
-	/* Monitor the status of call hold request */
-	call->hold_msg = NULL;
-	if (tsx->status_code/100 != 2) {
-	    /* Outgoing call hold failed */
-	    call->local_hold = PJ_FALSE;
-	    PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold (reason=%d)",
-		      call->index, tsx->status_code));
-	}
-    } else if (tsx->role == PJSIP_ROLE_UAC &&
-               (call->opt.flag & PJSUA_CALL_UNHOLD) &&
-               tsx->state >= PJSIP_TSX_STATE_COMPLETED)
-    {
-        /* Monitor the status of call unhold request */
-        if (tsx->status_code/100 != 2 &&
-            (tsx->status_code!=401 && tsx->status_code!=407))
+        if (tsx->status_code/100 != 2) {
+            /* Monitor the status of call hold/unhold request */
+            if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
+	        /* Outgoing call hold failed */
+	        call->local_hold = PJ_FALSE;
+	        PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold "
+	        	  "(reason=%d)", call->index, tsx->status_code));
+            } else if (call->opt.flag & PJSUA_CALL_UNHOLD) {
+	        /* Call unhold failed */
+            	call->local_hold = PJ_TRUE;
+	    	PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d "
+	    		  "(reason=%d)", call->index, tsx->status_code));
+	    }   
+        }
+        
+        if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
+            call->hold_msg = NULL;
+        }
+        
+        if (tsx->status_code/100 != 2 ||
+            ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
+             !call->med_update_success))
         {
-            /* Call unhold failed */
-            call->local_hold = PJ_TRUE;
-	    PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d (reason=%d)",
-		      call->index, tsx->status_code));
+            /* Either we get non-2xx or media update failed,
+             * clean up provisional media.
+             */
+	    pjsua_media_prov_clean_up(call->index);
+        }
+    } else if (tsx->role == PJSIP_ROLE_UAC &&
+               pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
+               tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+               (tsx->status_code!=401 && tsx->status_code!=407))
+    {
+        if (tsx->status_code/100 != 2 ||
+            ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
+             !call->med_update_success))
+        {
+            /* Either we get non-2xx or media update failed,
+             * clean up provisional media.
+             */
+	    pjsua_media_prov_clean_up(call->index);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
 	tsx->state==PJSIP_TSX_STATE_TRYING &&

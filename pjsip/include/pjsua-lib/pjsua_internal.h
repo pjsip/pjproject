@@ -142,6 +142,8 @@ struct pjsua_call
     unsigned		 med_prov_cnt;/**< Number of provisional media.	    */
     pjsua_call_media	 media_prov[PJSUA_MAX_CALL_MEDIA];
 				    /**< Array of provisional media.	    */
+    pj_bool_t		 med_update_success;
+    				    /**< Is media update successful?	    */
 
     int			 audio_idx; /**< First active audio media.	    */
     pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */

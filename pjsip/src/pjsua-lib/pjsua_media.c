@@ -1529,6 +1529,12 @@ static void media_prov_clean_up(pjsua_call_id call_id, int idx)
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned i;
 
+    if (call->med_prov_cnt > call->med_cnt) {
+        PJ_LOG(4,(THIS_FILE, "Call %d: cleaning up provisional media, "
+        		     "prov_med_cnt=%d, med_cnt=%d",
+			     call_id, call->med_prov_cnt, call->med_cnt));
+    }
+
     for (i = idx; i < call->med_prov_cnt; ++i) {
 	pjsua_call_media *call_med = &call->media_prov[i];
 	unsigned j;
@@ -1554,6 +1560,8 @@ static void media_prov_clean_up(pjsua_call_id call_id, int idx)
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
     }
+    
+    call->med_prov_cnt = 0;
 }
 
 void pjsua_media_prov_clean_up(pjsua_call_id call_id)
