@@ -685,7 +685,9 @@ AC_ARG_ENABLE(video,
                 AC_MSG_RESULT([Video is disabled]) 
                 enable_sdl="no"
                 enable_ffmpeg="no"
-		enable_v4l2="no"
+                enable_v4l2="no"
+                enable_openh264="no"
+                enable_libyuv="no"
                fi],
 	      [])
 

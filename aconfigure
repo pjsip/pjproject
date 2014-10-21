@@ -6140,7 +6140,9 @@ if test "${enable_video+set}" = set; then :
 $as_echo "Video is disabled" >&6; }
                 enable_sdl="no"
                 enable_ffmpeg="no"
-		enable_v4l2="no"
+                enable_v4l2="no"
+                enable_openh264="no"
+                enable_libyuv="no"
                fi
 fi
 
