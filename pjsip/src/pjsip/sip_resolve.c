@@ -453,7 +453,9 @@ static void dns_a_callback(void *user_data,
 
     /* Build server addresses and call callback */
     srv.count = 0;
-    for (i=0; i<rec.addr_count; ++i) {
+    for (i = 0; i < rec.addr_count &&
+		srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++i)
+    {
 	srv.entry[srv.count].type = query->naptr[0].type;
 	srv.entry[srv.count].priority = 0;
 	srv.entry[srv.count].weight = 0;
@@ -498,7 +500,9 @@ static void srv_resolver_cb(void *user_data,
     for (i=0; i<rec->count; ++i) {
 	unsigned j;
 
-	for (j=0; j<rec->entry[i].server.addr_count; ++j) {
+	for (j = 0; j < rec->entry[i].server.addr_count &&
+		    srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
+	{
 	    srv.entry[srv.count].type = query->naptr[0].type;
 	    srv.entry[srv.count].priority = rec->entry[i].priority;
 	    srv.entry[srv.count].weight = rec->entry[i].weight;
