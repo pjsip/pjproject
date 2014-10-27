@@ -1333,7 +1333,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Unregister first */
     if (unreg_first) {
-	pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	status = pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Ignored failure in unregistering the "
+			 "old account setting in modifying account", status);
+	    /* Not really sure if we should return error */
+	    status = PJ_SUCCESS;
+	}
 	if (acc->regc != NULL) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
@@ -1350,13 +1356,23 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Update registration */
     if (update_reg) {
 	/* If accounts has registration enabled, start registration */
-	if (acc->cfg.reg_uri.slen)
-	    pjsua_acc_set_registration(acc->index, PJ_TRUE);
+	if (acc->cfg.reg_uri.slen) {
+	    status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Failed to register with new account "
+			     "setting in modifying account", status);
+		goto on_return;
+	    }
+	}
     }
 
     /* Update MWI subscription */
     if (update_mwi) {
-	pjsua_start_mwi(acc_id, PJ_TRUE);
+	status = pjsua_start_mwi(acc_id, PJ_TRUE);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Failed in starting MWI subscription for "
+			 "new account setting in modifying account", status);
+	}
     }
 
 on_return:

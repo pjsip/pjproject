@@ -3644,8 +3644,21 @@ PJ_DECL(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
 
 
 /**
- * Modify account information.
+ * Modify account configuration setting. This function may trigger
+ * unregistration (of old account setting) and re-registration (of the new
+ * account setting), e.g: changing account ID, credential, registar, or
+ * proxy setting.
  *
+ * Note:
+ * - when the new config triggers unregistration, the pjsua callback
+ *   on_reg_state()/on_reg_state2() for the unregistration will not be called
+ *   and any failure in the unregistration will be ignored, so if application
+ *   needs to be sure about the unregistration status, it should unregister
+ *   manually and wait for the callback before calling this function
+ * - when the new config triggers re-registration and the re-registration
+ *   fails, the account setting will not be reverted back to the old setting
+ *   and the account will be in unregistered state.
+ * 
  * @param acc_id	Id of the account to be modified.
  * @param acc_cfg	New account configuration.
  *
