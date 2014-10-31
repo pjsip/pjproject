@@ -4693,6 +4693,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     } else if (tsx->role == PJSIP_ROLE_UAC &&
                pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+	       e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
                (tsx->status_code!=401 && tsx->status_code!=407))
     {
         if (tsx->status_code/100 != 2) {
@@ -4726,6 +4727,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     } else if (tsx->role == PJSIP_ROLE_UAC &&
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
+	       e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
                (tsx->status_code!=401 && tsx->status_code!=407))
     {
         if (tsx->status_code/100 != 2 ||
