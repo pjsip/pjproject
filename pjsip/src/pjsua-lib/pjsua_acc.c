@@ -1204,6 +1204,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.allow_contact_rewrite = cfg->allow_contact_rewrite;
     acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
     acc->cfg.reg_first_retry_interval = cfg->reg_first_retry_interval;
+    acc->cfg.reg_retry_random_interval = cfg->reg_retry_random_interval;    
     acc->cfg.drop_calls_on_reg_fail = cfg->drop_calls_on_reg_fail;
     acc->cfg.register_on_acc_add = cfg->register_on_acc_add;
     if (acc->cfg.reg_delay_before_refresh != cfg->reg_delay_before_refresh) {
@@ -3539,12 +3540,15 @@ static void schedule_reregistration(pjsua_acc *acc)
 					     acc->cfg.reg_first_retry_interval;
     delay.msec = 0;
 
-    /* Randomize interval by +/- 10 secs */
-    if (delay.sec >= 10) {
-	delay.msec = -10000 + (pj_rand() % 20000);
-    } else {
-	delay.sec = 0;
-	delay.msec = (pj_rand() % 10000);
+    /* Randomize interval by +/- reg_retry_random_interval, if configured */
+    if (acc->cfg.reg_retry_random_interval) {
+	long rand_ms = acc->cfg.reg_retry_random_interval * 1000;
+	if (delay.sec >= (long)acc->cfg.reg_retry_random_interval) {
+	    delay.msec = -rand_ms + (pj_rand() % (rand_ms * 2));
+	} else {
+	    delay.sec = 0;
+	    delay.msec = (pj_rand() % (delay.sec * 1000 + rand_ms));
+	}
     }
     pj_time_val_normalize(&delay);
 

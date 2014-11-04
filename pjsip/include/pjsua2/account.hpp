@@ -81,10 +81,12 @@ struct AccountRegConfig : public PersistentObject
      * disable auto re-registration. Note that if the registration retry
      * occurs because of transport failure, the first retry will be done
      * after \a firstRetryIntervalSec seconds instead. Also note that
-     * the interval will be randomized slightly by approximately +/- ten
-     * seconds to avoid all clients re-registering at the same time.
+     * the interval will be randomized slightly by some seconds (specified
+     * in \a reg_retry_random_interval) to avoid all clients re-registering
+     * at the same time.
      *
-     * See also \a firstRetryIntervalSec setting.
+     * See also \a firstRetryIntervalSec and \a randomRetryIntervalSec
+     * settings.
      *
      * Default: PJSUA_REG_RETRY_INTERVAL
      */
@@ -93,11 +95,30 @@ struct AccountRegConfig : public PersistentObject
     /**
      * This specifies the interval for the first registration retry. The
      * registration retry is explained in \a retryIntervalSec. Note that
-     * the value here will also be randomized by +/- ten seconds.
+     * the value here will also be randomized by some seconds (specified
+     * in \a reg_retry_random_interval) to avoid all clients re-registering
+     * at the same time.
+     *
+     * See also \a retryIntervalSec and \a randomRetryIntervalSec settings.
      *
      * Default: 0
      */
     unsigned		firstRetryIntervalSec;
+
+    /**
+     * This specifies maximum randomized value to be added/substracted
+     * to/from the registration retry interval specified in \a
+     * reg_retry_interval and \a reg_first_retry_interval, in second.
+     * This is useful to avoid all clients re-registering at the same time.
+     * For example, if the registration retry interval is set to 100 seconds
+     * and this is set to 10 seconds, the actual registration retry interval
+     * will be in the range of 90 to 110 seconds.
+     *
+     * See also \a retryIntervalSec and \a firstRetryIntervalSec settings.
+     *
+     * Default: 10
+     */
+    unsigned		randomRetryIntervalSec;
 
     /**
      * Specify the number of seconds to refresh the client registration

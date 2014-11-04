@@ -38,6 +38,7 @@ void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_UNSIGNED	(this_node, timeoutSec);
     NODE_READ_UNSIGNED	(this_node, retryIntervalSec);
     NODE_READ_UNSIGNED	(this_node, firstRetryIntervalSec);
+    NODE_READ_UNSIGNED	(this_node, randomRetryIntervalSec);
     NODE_READ_UNSIGNED	(this_node, delayBeforeRefreshSec);
     NODE_READ_BOOL	(this_node, dropCallsOnFail);
     NODE_READ_UNSIGNED	(this_node, unregWaitMsec);
@@ -55,6 +56,7 @@ void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_UNSIGNED	(this_node, timeoutSec);
     NODE_WRITE_UNSIGNED	(this_node, retryIntervalSec);
     NODE_WRITE_UNSIGNED	(this_node, firstRetryIntervalSec);
+    NODE_WRITE_UNSIGNED	(this_node, randomRetryIntervalSec);
     NODE_WRITE_UNSIGNED	(this_node, delayBeforeRefreshSec);
     NODE_WRITE_BOOL	(this_node, dropCallsOnFail);
     NODE_WRITE_UNSIGNED	(this_node, unregWaitMsec);
@@ -318,6 +320,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.reg_timeout		= regConfig.timeoutSec;
     ret.reg_retry_interval	= regConfig.retryIntervalSec;
     ret.reg_first_retry_interval= regConfig.firstRetryIntervalSec;
+    ret.reg_retry_random_interval= regConfig.randomRetryIntervalSec;
     ret.reg_delay_before_refresh= regConfig.delayBeforeRefreshSec;
     ret.drop_calls_on_reg_fail	= regConfig.dropCallsOnFail;
     ret.unreg_timeout		= regConfig.unregWaitMsec;
@@ -445,6 +448,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.timeoutSec	= prm.reg_timeout;
     regConfig.retryIntervalSec	= prm.reg_retry_interval;
     regConfig.firstRetryIntervalSec = prm.reg_first_retry_interval;
+    regConfig.randomRetryIntervalSec = prm.reg_retry_random_interval;
     regConfig.delayBeforeRefreshSec = prm.reg_delay_before_refresh;
     regConfig.dropCallsOnFail	= PJ2BOOL(prm.drop_calls_on_reg_fail);
     regConfig.unregWaitMsec	= prm.unreg_timeout;

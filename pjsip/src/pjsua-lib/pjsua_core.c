@@ -288,6 +288,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
     cfg->srtp_optional_dup_offer = pjsua_var.ua_cfg.srtp_optional_dup_offer;
     cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
+    cfg->reg_retry_random_interval = 10;
     cfg->contact_rewrite_method = PJSUA_CONTACT_REWRITE_METHOD;
     cfg->contact_use_src_port = PJ_TRUE;
     cfg->use_rfc5626 = PJ_TRUE;
