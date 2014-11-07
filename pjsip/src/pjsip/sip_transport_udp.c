@@ -368,6 +368,8 @@ static void udp_on_destroy(void *arg)
     if (tp->base.lock)
 	pj_lock_destroy(tp->base.lock);
 
+    PJ_LOG(4,(tp->base.obj_name, "SIP UDP transport destroyed"));
+
     /* Destroy pool. */
     pjsip_endpt_release_pool(tp->base.endpt, tp->base.pool);
 }
