@@ -674,7 +674,11 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
         }
         
         if (mic_source == 0) {
-            char sdk_version[PROP_VALUE_MAX];
+            /* Android-L (android-21) removes __system_property_get
+             * from the NDK.
+	     */
+	    /*           
+	    char sdk_version[PROP_VALUE_MAX];
             pj_str_t pj_sdk_version;
             int sdk_v;
 
@@ -682,7 +686,8 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
             pj_sdk_version = pj_str(sdk_version);
             sdk_v = pj_strtoul(&pj_sdk_version);
             if (sdk_v > 10)
-                mic_source = 7; /* VOICE_COMMUNICATION */
+            */
+            mic_source = 7; /* VOICE_COMMUNICATION */
         }
         PJ_LOG(4, (THIS_FILE, "Using audio input source : %d", mic_source));
         

@@ -646,6 +646,12 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         if (result == SL_RESULT_SUCCESS) {
             SLint32 streamType = SL_ANDROID_RECORDING_PRESET_GENERIC;
 #if __ANDROID_API__ >= 14
+	    streamType = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
+#endif
+#if 0
+            /* Android-L (android-21) removes __system_property_get
+             * from the NDK.
+	     */
             char sdk_version[PROP_VALUE_MAX];
             pj_str_t pj_sdk_version;
             int sdk_v;
