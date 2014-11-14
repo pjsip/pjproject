@@ -19,6 +19,7 @@
  */
 #include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
+#include <pj/compat/socket.h> 
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -152,7 +153,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 	}
     }
 #else
-    nfds = PJ_IOQUEUE_MAX_HANDLES-1;
+    nfds = FD_SETSIZE-1;
 #endif
 
     /* Main retransmission loop. */
