@@ -772,8 +772,23 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     pjsip_dlg_inc_lock(dlg);
 
-    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+   	/* Choose local interface to use in Via if acc is not using
+   	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+   	 */
+   	pjsip_host_port via_addr;
+   	const void *via_tp;
+
+   	if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &acc->cfg.id,
+   				   &via_addr, NULL, NULL,
+   				   &via_tp) == PJ_SUCCESS)
+   	{
+   	    pjsip_dlg_set_via_sent_by(dlg, &via_addr,
+   	                              (pjsip_transport*)via_tp);
+   	}
+    }
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
@@ -1349,6 +1364,28 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     {
         pjsip_dlg_set_via_sent_by(dlg, &pjsua_var.acc[acc_id].via_addr,
                                   pjsua_var.acc[acc_id].via_tp);
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+	/* Choose local interface to use in Via if acc is not using
+	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+	 */
+	char target_buf[PJSIP_MAX_URL_SIZE];
+	pj_str_t target;
+	pjsip_host_port via_addr;
+	const void *via_tp;
+
+	target.ptr = target_buf;
+	target.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+	                              dlg->target,
+	                              target_buf, sizeof(target_buf));
+	if (target.slen < 0) target.slen = 0;
+
+	if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &target,
+				   &via_addr, NULL, NULL,
+				   &via_tp) == PJ_SUCCESS)
+	{
+	    pjsip_dlg_set_via_sent_by(dlg, &via_addr,
+				      (pjsip_transport*)via_tp);
+	}
     }
 
     /* Set credentials */
