@@ -3105,7 +3105,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    /* Timer I is T4 timer for unreliable transports, and
 	     * zero seconds for reliable transports.
 	     */
-	    if (!tsx->is_reliable) {
+	    if (tsx->is_reliable) {
 		timeout.sec = 0; 
 		timeout.msec = 0;
 	    } else {
