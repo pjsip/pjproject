@@ -363,6 +363,8 @@ static pj_status_t initialize_acc(unsigned acc_id)
 		             acc_cfg->rfc5626_reg_id.ptr);
 	    acc->rfc5626_regprm.slen = len;
 	}
+
+	acc->rfc5626_status = OUTBOUND_WANTED;
     }
 
     /* Mark account as valid */
@@ -652,6 +654,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     acc->valid = PJ_FALSE;
     acc->contact.slen = 0;
     acc->reg_mapped_addr.slen = 0;
+    acc->rfc5626_status = OUTBOUND_UNKNOWN;
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
     acc->next_rtp_port = 0;
@@ -1346,6 +1349,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    acc->regc = NULL;
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
+	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
 	}
 	
 	if (!cfg->reg_uri.slen) {
@@ -2163,6 +2167,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	acc->regc = NULL;
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
+	acc->rfc5626_status = OUTBOUND_UNKNOWN;
 	
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2175,6 +2180,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	acc->regc = NULL;
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
+	acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2190,6 +2196,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->regc = NULL;
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
+	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2305,6 +2312,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	acc->regc = NULL;
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
+	acc->rfc5626_status = OUTBOUND_UNKNOWN;
     }
 
     /* initialize SIP registration if registrar is configured */
@@ -2354,6 +2362,8 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	acc->regc = NULL;
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
+	acc->rfc5626_status = OUTBOUND_UNKNOWN;
+
 	return status;
     }
 
@@ -2436,7 +2446,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
     }
 
     /* If SIP outbound is used, add "Supported: outbound, path header" */
-    if (acc->rfc5626_status == OUTBOUND_WANTED) {
+    if (acc->rfc5626_status == OUTBOUND_WANTED ||
+	acc->rfc5626_status == OUTBOUND_ACTIVE)
+    {
 	pjsip_hdr hdr_list;
 	pjsip_supported_hdr *hsup;
 
