@@ -1088,10 +1088,29 @@ PJ_DEF(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
 	    /* Update refresher role */
 	    inv->timer->refresher = as_refresher? TR_UAS : TR_UAC;
 	} else {
-	    /* If UAC support timer (currently check the existance of 
-	     * Session-Expires header in the request), set UAC as refresher.
+	    /* If UAC supports timer and Session-Expires header is present
+             * in the request, set UAC as refresher.
+	     * If UAC doesn't support timer and a proxy inserts a
+	     * Session-Expires header, then UAS has to be the
+	     * refresher (according to RFC 4028 Section 9).
 	     */
-	    inv->timer->refresher = se_hdr? TR_UAC : TR_UAS;
+	    pj_bool_t uac_supports_timer = PJ_FALSE;
+            pjsip_supported_hdr *sup_hdr;
+            
+            sup_hdr = (pjsip_supported_hdr*)
+                      pjsip_msg_find_hdr(msg, PJSIP_H_SUPPORTED, NULL);
+            if (sup_hdr) {
+                unsigned i;
+                
+                for (i = 0; i < sup_hdr->count; i++) {
+                    if (pj_stricmp(&sup_hdr->values[i], &STR_TIMER) == 0) {
+                        uac_supports_timer = PJ_TRUE;
+                        break;
+                    }
+                }
+            }
+            inv->timer->refresher = (uac_supports_timer && se_hdr)? TR_UAC:
+            			    TR_UAS;
 	}
     }
 
