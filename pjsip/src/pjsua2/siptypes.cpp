@@ -165,6 +165,7 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.password		= str2Pj(this->password);
     ts.method		= this->method;
     ts.ciphers_num	= (unsigned)this->ciphers.size();
+    ts.proto		= this->proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(ts.ciphers[0]) == sizeof(int));
     ts.ciphers		= ts.ciphers_num? 
@@ -188,6 +189,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->privKeyFile 	= pj2Str(prm.privkey_file);
     this->password 	= pj2Str(prm.password);
     this->method 	= (pjsip_ssl_method)prm.method;
+    this->proto 	= prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
     pj_assert(sizeof(prm.ciphers[0]) == sizeof(int));
     this->ciphers 	= IntVector(prm.ciphers, prm.ciphers+prm.ciphers_num);

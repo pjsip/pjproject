@@ -487,16 +487,51 @@ typedef struct pj_ssl_sock_cb
 
 /** 
  * Enumeration of secure socket protocol types.
+ * This can be combined using bitwise OR operation.
  */
 typedef enum pj_ssl_sock_proto
 {
-    PJ_SSL_SOCK_PROTO_DEFAULT,	    /**< Default protocol of backend.	*/
-    PJ_SSL_SOCK_PROTO_TLS1,	    /**< TLSv1.0 protocol.		*/
-    PJ_SSL_SOCK_PROTO_SSL3,	    /**< SSLv3.0 protocol.		*/
-    PJ_SSL_SOCK_PROTO_SSL23,	    /**< SSLv3.0 but can roll back to 
-					 SSLv2.0.			*/
-    PJ_SSL_SOCK_PROTO_SSL2,	    /**< SSLv2.0 protocol.		*/
-    PJ_SSL_SOCK_PROTO_DTLS1	    /**< DTLSv1.0 protocol.		*/
+    /**
+     * Default protocol of backend. 
+     */   
+    PJ_SSL_SOCK_PROTO_DEFAULT = 0,
+
+    /** 
+     * SSLv2.0 protocol.	  
+     */
+    PJ_SSL_SOCK_PROTO_SSL2    = (1 << 0),
+
+    /** 
+     * SSLv3.0 protocol.	  
+     */
+    PJ_SSL_SOCK_PROTO_SSL3    = (1 << 1),
+
+    /**
+     * TLSv1.0 protocol.	  
+     */
+    PJ_SSL_SOCK_PROTO_TLS1    = (1 << 2),
+
+    /** 
+     * TLSv1.1 protocol.
+     */
+    PJ_SSL_SOCK_PROTO_TLS1_1  = (1 << 3),
+
+    /**
+     * TLSv1.2 protocol.
+     */
+    PJ_SSL_SOCK_PROTO_TLS1_2  = (1 << 4),
+
+    /** 
+     * Certain backend implementation e.g:OpenSSL, has feature to enable all
+     * protocol. 
+     */
+    PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
+
+    /**
+     * DTLSv1.0 protocol.	  
+     */
+    PJ_SSL_SOCK_PROTO_DTLS1   = (1 << 16),
+
 } pj_ssl_sock_proto;
 
 
@@ -512,9 +547,10 @@ typedef struct pj_ssl_sock_info
     pj_bool_t established;
 
     /**
-     * Describes secure socket protocol being used.
+     * Describes secure socket protocol being used, see #pj_ssl_sock_proto. 
+     * Use bitwise OR operation to combine the protocol type.
      */
-    pj_ssl_sock_proto proto;
+    pj_uint32_t proto;
 
     /**
      * Describes cipher suite being used, this will only be set when connection
@@ -614,11 +650,12 @@ typedef struct pj_ssl_sock_param
     void *user_data;
 
     /**
-     * Specify security protocol to use, see #pj_ssl_sock_proto.
+     * Specify security protocol to use, see #pj_ssl_sock_proto. Use bitwise OR 
+     * operation to combine the protocol type.
      *
      * Default is PJ_SSL_SOCK_PROTO_DEFAULT.
      */
-    pj_ssl_sock_proto proto;
+    pj_uint32_t proto;
 
     /**
      * Number of concurrent asynchronous operations that is to be supported

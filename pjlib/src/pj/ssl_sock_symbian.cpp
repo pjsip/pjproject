@@ -1383,14 +1383,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
 	ssock->proto = PJ_SSL_SOCK_PROTO_TLS1;
 
     /* CSecureSocket only support TLS1.0 and SSL3.0 */
-    switch(ssock->proto) {
-    case PJ_SSL_SOCK_PROTO_TLS1:
+    if (ssock->proto & PJ_SSL_SOCK_PROTO_TLS1==PJ_SSL_SOCK_PROTO_TLS1) {
 	proto.Set((const TUint8*)"TLS1.0", 6);
-	break;
-    case PJ_SSL_SOCK_PROTO_SSL3:
+    } else if (ssock->proto & PJ_SSL_SOCK_PROTO_SSL3==PJ_SSL_SOCK_PROTO_SSL3) {
 	proto.Set((const TUint8*)"SSL3.0", 6);
-	break;
-    default:
+    } else {
 	return PJ_ENOTSUP;
     }
 

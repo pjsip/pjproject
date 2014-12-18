@@ -502,8 +502,9 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
     EC_KEY *ecdh;
 #endif
-    SSL_METHOD *ssl_method;
+    SSL_METHOD *ssl_method = NULL;
     SSL_CTX *ctx;
+    pj_uint32_t ssl_opt = 0;
     pj_ssl_cert_t *cert;
     int mode, rc;
     pj_status_t status;
@@ -514,6 +515,9 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 
     /* Make sure OpenSSL library has been initialized */
     init_openssl();
+
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
     switch (ssock->param.proto) {
@@ -528,15 +532,42 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     case PJ_SSL_SOCK_PROTO_SSL3:
 	ssl_method = (SSL_METHOD*)SSLv3_method();
 	break;
-    case PJ_SSL_SOCK_PROTO_DEFAULT:
-    case PJ_SSL_SOCK_PROTO_SSL23:
+    }
+
+    if (!ssl_method) {
 	ssl_method = (SSL_METHOD*)SSLv23_method();
-	break;
-    //case PJ_SSL_SOCK_PROTO_DTLS1:
-	//ssl_method = (SSL_METHOD*)DTLSv1_method();
-	//break;
-    default:
-	return PJ_EINVAL;
+
+#ifdef SSL_OP_NO_SSLv2
+	/** Check if SSLv2 is enabled */
+	ssl_opt |= ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2)==0)?
+		    SSL_OP_NO_SSLv2:0;
+#endif
+
+#ifdef SSL_OP_NO_SSLv3
+	/** Check if SSLv3 is enabled */
+	ssl_opt |= ((ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3)==0)?
+		    SSL_OP_NO_SSLv3:0;
+#endif
+
+#ifdef SSL_OP_NO_TLSv1
+	/** Check if TLSv1 is enabled */
+	ssl_opt |= ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1)==0)?
+		    SSL_OP_NO_TLSv1:0;
+#endif
+
+#ifdef SSL_OP_NO_TLSv1_1
+	/** Check if TLSv1_1 is enabled */
+	ssl_opt |= ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1)==0)?
+		    SSL_OP_NO_TLSv1_1:0;
+#endif
+
+#ifdef SSL_OP_NO_TLSv1_2
+	/** Check if TLSv1_2 is enabled */
+	ssl_opt |= ((ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2)==0)?
+		    SSL_OP_NO_TLSv1_2:0;
+
+#endif
+
     }
 
     /* Create SSL context */
@@ -544,6 +575,8 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ssock);
     }
+    if (ssl_opt)
+	SSL_CTX_set_options(ctx, ssl_opt);
 
     /* Apply credentials */
     if (cert) {

@@ -145,13 +145,23 @@ struct TlsConfig : public PersistentObject
     string		password;
 
     /**
-     * TLS protocol method from pjsip_ssl_method.
+     * TLS protocol method from #pjsip_ssl_method. In the future, this field
+     * might be deprecated in favor of <b>proto</b> field. For now, this field 
+     * is only applicable only when <b>proto</b> field is set to zero.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
-     * use PJSIP_SSL_DEFAULT_METHOD, which default value is
-     * PJSIP_TLSV1_METHOD.
+     * use PJSIP_SSL_DEFAULT_METHOD, which default value is PJSIP_TLSV1_METHOD.
      */
     pjsip_ssl_method	method;
+
+    /**
+     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
+     * specific protocol type. Use bitwise OR operation to combine the protocol 
+     * type.
+     *
+     * Default is PJSIP_SSL_DEFAULT_PROTO.
+     */
+    unsigned		proto;
 
     /**
      * Ciphers and order preference. The Endpoint::utilSslGetAvailableCiphers()

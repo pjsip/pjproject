@@ -51,18 +51,28 @@ PJ_BEGIN_DECL
 #   define PJSIP_SSL_DEFAULT_METHOD	PJSIP_TLSV1_METHOD
 #endif
 
+
 /** SSL protocol method constants. */
 typedef enum pjsip_ssl_method
 {
-    PJSIP_SSL_UNSPECIFIED_METHOD= 0,	/**< Default protocol method.	*/
-    PJSIP_TLSV1_METHOD		= 31,	/**< Use SSLv1 method.		*/
-    PJSIP_SSLV2_METHOD		= 20,	/**< Use SSLv2 method.		*/
-    PJSIP_SSLV3_METHOD		= 30,	/**< Use SSLv3 method.		*/
-    PJSIP_SSLV23_METHOD		= 23	/**< Use SSLv23 method.		*/
+    PJSIP_SSL_UNSPECIFIED_METHOD = 0,	/**< Default protocol method.	*/    
+    PJSIP_SSLV2_METHOD		 = 20,	/**< Use SSLv2 method.		*/
+    PJSIP_SSLV3_METHOD		 = 30,	/**< Use SSLv3 method.		*/
+    PJSIP_TLSV1_METHOD		 = 31,	/**< Use TLSv1 method.		*/
+    PJSIP_TLSV1_1_METHOD	 = 32,	/**< Use TLSv1_1 method.	*/
+    PJSIP_TLSV1_2_METHOD	 = 33,	/**< Use TLSv1_2 method.	*/
+    PJSIP_SSLV23_METHOD		 = 23,	/**< Use SSLv23 method.		*/
 } pjsip_ssl_method;
 
-
-
+/**
+ * The default enabled SSL proto to be used.
+ * Default is all protocol above TLSv1 (TLSv1 & TLS v1.1 & TLS v1.2).
+ */
+#ifndef PJSIP_SSL_DEFAULT_PROTO
+#   define PJSIP_SSL_DEFAULT_PROTO  (PJ_SSL_SOCK_PROTO_TLS1 | \
+				     PJ_SSL_SOCK_PROTO_TLS1_1 | \
+				     PJ_SSL_SOCK_PROTO_TLS1_2)
+#endif
 
 /**
  * TLS transport settings.
@@ -92,19 +102,23 @@ typedef struct pjsip_tls_setting
     pj_str_t	password;
 
     /**
-     * TLS protocol method from #pjsip_ssl_method, which can be:
-     *	- PJSIP_SSL_UNSPECIFIED_METHOD(0): default (which will use 
-     *                                     PJSIP_SSL_DEFAULT_METHOD)
-     *	- PJSIP_TLSV1_METHOD(1):	   TLSv1
-     *	- PJSIP_SSLV2_METHOD(2):	   SSLv2
-     *	- PJSIP_SSLV3_METHOD(3):	   SSL3
-     *	- PJSIP_SSLV23_METHOD(23):	   SSL23
+     * TLS protocol method from #pjsip_ssl_method. In the future, this field
+     * might be deprecated in favor of <b>proto</b> field. For now, this field 
+     * is only applicable only when <b>proto</b> field is set to zero.
      *
      * Default is PJSIP_SSL_UNSPECIFIED_METHOD (0), which in turn will
-     * use PJSIP_SSL_DEFAULT_METHOD, which default value is 
-     * PJSIP_TLSV1_METHOD.
+     * use PJSIP_SSL_DEFAULT_METHOD, which default value is PJSIP_TLSV1_METHOD.
      */
-    int		method;
+    pjsip_ssl_method	method;
+
+    /**
+     * TLS protocol type from #pj_ssl_sock_proto. Use this field to enable 
+     * specific protocol type. Use bitwise OR operation to combine the protocol 
+     * type.
+     *
+     * Default is PJSIP_SSL_DEFAULT_PROTO.
+     */
+    pj_uint32_t	proto;
 
     /**
      * Number of ciphers contained in the specified cipher preference. 
@@ -252,6 +266,7 @@ PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
     tls_opt->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     tls_opt->qos_ignore_error = PJ_TRUE;
     tls_opt->sockopt_ignore_error = PJ_TRUE;
+    tls_opt->proto = PJSIP_SSL_DEFAULT_PROTO;
 }
 
 
