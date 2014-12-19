@@ -234,6 +234,7 @@ struct pjsip_evsub
     pj_timer_entry	  timer;	/**< Internal timer.		    */
     int			  pending_tsx;	/**< Number of pending transactions.*/
     pjsip_transaction	 *pending_sub;	/**< Pending UAC SUBSCRIBE tsx.	    */
+    pj_timer_entry	 *pending_sub_timer; /**< Stop pending sub timer.   */
 
     void		 *mod_data[PJSIP_MAX_MODULE];	/**< Module data.   */
 };
@@ -534,6 +535,13 @@ static void evsub_destroy( pjsip_evsub *sub )
 
     /* Kill timer */
     set_timer(sub, TIMER_TYPE_NONE, 0);
+
+    /* Kill timer for stopping pending sub (see ticket #1807) */
+    if (sub->pending_sub_timer && sub->pending_sub_timer->id == 1) {
+	pjsip_endpt_cancel_timer(sub->endpt, sub->pending_sub_timer);
+	sub->pending_sub_timer->id = 0;
+	sub->pending_sub_timer = NULL;
+    }
 
     /* Remove this session from dialog's list of subscription */
     dlgsub_head = (struct dlgsub *) sub->dlg->mod_data[mod_evsub.mod.id];
@@ -1349,6 +1357,9 @@ static void terminate_timer_cb(pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
+    /* Clear timer ID */
+    entry->id = 0;
+
     key = (pj_str_t*)entry->user_data;
     tsx = pjsip_tsx_layer_find_tsx(key, PJ_FALSE);
     /* Chance of race condition here */
@@ -1570,6 +1581,8 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	    pj_strdup(dlg->pool, key, &sub->pending_sub->transaction_key);
 	    timer->cb = &terminate_timer_cb;
 	    timer->user_data = key;
+	    timer->id = 1;
+	    sub->pending_sub_timer = timer;
 
 	    pjsip_endpt_schedule_timer(dlg->endpt, timer, &timeout);
 	}
