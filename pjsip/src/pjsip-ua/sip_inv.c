@@ -1579,7 +1579,10 @@ PJ_DEF(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
 
     /* Forcefully terminate the session if state is not DISCONNECTED */
     if (inv->state != PJSIP_INV_STATE_DISCONNECTED) {
-	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, NULL);
+	pjsip_event usr_event;
+
+	PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, &usr_event);
     }
 
     /* Done.
