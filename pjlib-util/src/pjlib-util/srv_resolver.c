@@ -405,7 +405,7 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 /* Start DNS A record queries for all SRV records in the query_job structure */
 static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 {
-    unsigned i;
+    unsigned i, err_cnt = 0;
     pj_status_t err=PJ_SUCCESS, status;
 
     query_job->dns_state = PJ_DNS_TYPE_A;
@@ -420,6 +420,11 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 	srv->common.type = PJ_DNS_TYPE_A;
 	srv->parent = query_job;
 
+	/* See also #1809: dns_callback() will be invoked synchronously when response
+	 * is available in the cache, and var 'query_job->host_resolved' will get
+	 * incremented within the dns_callback(), which will cause this function
+	 * returning false error, so don't use that variable for counting errors.
+	 */
 	status = pj_dns_resolver_start_query(query_job->resolver,
 					     &srv->target_name,
 					     PJ_DNS_TYPE_A, 0,
@@ -427,11 +432,12 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 					     srv, &srv->q_a);
 	if (status != PJ_SUCCESS) {
 	    query_job->host_resolved++;
+	    err_cnt++;
 	    err = status;
 	}
     }
     
-    return (query_job->host_resolved == query_job->srv_cnt) ? err : PJ_SUCCESS;
+    return (err_cnt == query_job->srv_cnt) ? err : PJ_SUCCESS;
 }
 
 /* 
