@@ -2217,7 +2217,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read (pj_ssl_sock_t *ssock,
     unsigned i;
 
     PJ_ASSERT_RETURN(ssock && pool && buff_size, PJ_EINVAL);
-    PJ_ASSERT_RETURN(ssock->ssl_state==SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
+
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+	return PJ_EINVALIDOP;
 
     readbuf = (void**) pj_pool_calloc(pool, ssock->param.async_cnt, 
 				      sizeof(void*));
@@ -2245,7 +2247,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
     unsigned i;
 
     PJ_ASSERT_RETURN(ssock && pool && buff_size && readbuf, PJ_EINVAL);
-    PJ_ASSERT_RETURN(ssock->ssl_state==SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
+
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+	return PJ_EINVALIDOP;
 
     /* Create SSL socket read buffer */
     ssock->ssock_rbuf = (read_data_t*)pj_pool_calloc(pool, 
@@ -2450,7 +2454,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ssock && data && size && (*size>0), PJ_EINVAL);
-    PJ_ASSERT_RETURN(ssock->ssl_state==SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
+
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+	return PJ_EINVALIDOP;
 
     // Ticket #1573: Don't hold mutex while calling PJLIB socket send().
     //pj_lock_acquire(ssock->write_mutex);
@@ -2725,7 +2731,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
     int ret;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ssock->ssl_state == SSL_STATE_ESTABLISHED, PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
+
+    if (ssock->ssl_state != SSL_STATE_ESTABLISHED) 
+	return PJ_EINVALIDOP;
 
     if (SSL_renegotiate_pending(ssock->ossl_ssl))
 	return PJ_EPENDING;
