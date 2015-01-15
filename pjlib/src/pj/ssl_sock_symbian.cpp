@@ -859,8 +859,21 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
                                         	const pj_str_t *privkey_pass,
                                         	pj_ssl_cert_t **p_cert)
 {
+    return pj_ssl_cert_load_from_files2(pool, CA_file, NULL, cert_file,
+					privkey_file, privkey_pass, p_cert);
+}
+
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
+                                        	 const pj_str_t *CA_file,
+                                        	 const pj_str_t *CA_path,
+                                        	 const pj_str_t *cert_file,
+                                        	 const pj_str_t *privkey_file,
+                                        	 const pj_str_t *privkey_pass,
+                                        	 pj_ssl_cert_t **p_cert)
+{
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(CA_file);
+    PJ_UNUSED_ARG(CA_path);
     PJ_UNUSED_ARG(cert_file);
     PJ_UNUSED_ARG(privkey_file);
     PJ_UNUSED_ARG(privkey_pass);

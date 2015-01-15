@@ -189,6 +189,7 @@ struct pj_ssl_sock_t
 struct pj_ssl_cert_t
 {
     pj_str_t CA_file;
+    pj_str_t CA_path;
     pj_str_t cert_file;
     pj_str_t privkey_file;
     pj_str_t privkey_pass;
@@ -581,14 +582,25 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     /* Apply credentials */
     if (cert) {
 	/* Load CA list if one is specified. */
-	if (cert->CA_file.slen) {
+	if (cert->CA_file.slen || cert->CA_path.slen) {
 
-	    rc = SSL_CTX_load_verify_locations(ctx, cert->CA_file.ptr, NULL);
+	    rc = SSL_CTX_load_verify_locations(
+			ctx,
+			cert->CA_file.slen == 0 ? NULL : cert->CA_file.ptr,
+			cert->CA_path.slen == 0 ? NULL : cert->CA_path.ptr);
 
 	    if (rc != 1) {
 		status = GET_SSL_STATUS(ssock);
-		PJ_LOG(1,(ssock->pool->obj_name, "Error loading CA list file "
-			  "'%s'", cert->CA_file.ptr));
+		if (cert->CA_file.slen) {
+		    PJ_LOG(1,(ssock->pool->obj_name,
+			      "Error loading CA list file '%s'",
+			      cert->CA_file.ptr));
+		}
+		if (cert->CA_path.slen) {
+		    PJ_LOG(1,(ssock->pool->obj_name,
+			      "Error loading CA path '%s'",
+			      cert->CA_path.ptr));
+		}
 		SSL_CTX_free(ctx);
 		return status;
 	    }
@@ -1928,12 +1940,31 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files (pj_pool_t *pool,
 						 const pj_str_t *privkey_pass,
 						 pj_ssl_cert_t **p_cert)
 {
+    return pj_ssl_cert_load_from_files2(pool, CA_file, NULL, cert_file,
+					privkey_file, privkey_pass, p_cert);
+}
+
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
+						 const pj_str_t *CA_file,
+						 const pj_str_t *CA_path,
+						 const pj_str_t *cert_file,
+						 const pj_str_t *privkey_file,
+						 const pj_str_t *privkey_pass,
+						 pj_ssl_cert_t **p_cert)
+{
     pj_ssl_cert_t *cert;
 
-    PJ_ASSERT_RETURN(pool && CA_file && cert_file && privkey_file, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && (CA_file || CA_path) && cert_file &&
+		     privkey_file,
+		     PJ_EINVAL);
 
     cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
-    pj_strdup_with_null(pool, &cert->CA_file, CA_file);
+    if (CA_file) {
+    	pj_strdup_with_null(pool, &cert->CA_file, CA_file);
+    }
+    if (CA_path) {
+    	pj_strdup_with_null(pool, &cert->CA_path, CA_path);
+    }
     pj_strdup_with_null(pool, &cert->cert_file, cert_file);
     pj_strdup_with_null(pool, &cert->privkey_file, privkey_file);
     pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
@@ -1957,6 +1988,7 @@ PJ_DECL(pj_status_t) pj_ssl_sock_set_certificate(
     cert_ = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
     pj_memcpy(cert_, cert, sizeof(cert));
     pj_strdup_with_null(pool, &cert_->CA_file, &cert->CA_file);
+    pj_strdup_with_null(pool, &cert_->CA_path, &cert->CA_path);
     pj_strdup_with_null(pool, &cert_->cert_file, &cert->cert_file);
     pj_strdup_with_null(pool, &cert_->privkey_file, &cert->privkey_file);
     pj_strdup_with_null(pool, &cert_->privkey_pass, &cert->privkey_pass);

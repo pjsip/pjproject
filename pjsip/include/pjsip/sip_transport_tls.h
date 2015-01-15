@@ -85,6 +85,11 @@ typedef struct pjsip_tls_setting
     pj_str_t	ca_list_file;
 
     /**
+     * Certificate of Authority (CA) list directory path.
+     */
+    pj_str_t	ca_list_path;
+
+    /**
      * Public endpoint certificate file, which will be used as client-
      * side  certificate for outgoing TLS connection, and server-side
      * certificate for incoming TLS connection.

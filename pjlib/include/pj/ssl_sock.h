@@ -202,6 +202,31 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
 						 const pj_str_t *privkey_pass,
 						 pj_ssl_cert_t **p_cert);
 
+/**
+ * Create credential from files.
+ *
+ * This is the same as pj_ssl_cert_load_from_files() but also
+ * accepts an additional param CA_path to load CA certificates from
+ * a directory.
+ *
+ * @param CA_file	The file of trusted CA list.
+ * @param CA_path	The path to a directory of trusted CA list.
+ * @param cert_file	The file of certificate.
+ * @param privkey_file	The file of private key.
+ * @param privkey_pass	The password of private key, if any.
+ * @param p_cert	Pointer to credential instance to be created.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
+						pj_pool_t *pool,
+						const pj_str_t *CA_file,
+						const pj_str_t *CA_path,
+						const pj_str_t *cert_file,
+						const pj_str_t *privkey_file,
+						const pj_str_t *privkey_pass,
+						pj_ssl_cert_t **p_cert);
+
 
 /**
  * Dump SSL certificate info.

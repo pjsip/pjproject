@@ -441,10 +441,12 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 
     /* Check if certificate/CA list for SSL socket is set */
     if (listener->tls_setting.cert_file.slen ||
-	listener->tls_setting.ca_list_file.slen) 
+	listener->tls_setting.ca_list_file.slen ||
+	listener->tls_setting.ca_list_path.slen) 
     {
-	status = pj_ssl_cert_load_from_files(pool,
+	status = pj_ssl_cert_load_from_files2(pool,
 			&listener->tls_setting.ca_list_file,
+			&listener->tls_setting.ca_list_path,
 			&listener->tls_setting.cert_file,
 			&listener->tls_setting.privkey_file,
 			&listener->tls_setting.password,
