@@ -3136,18 +3136,24 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 	}
 
 	if (status == PJ_SUCCESS) {
+	    pjsip_tx_data tdata;
 	    int addr_len = pj_sockaddr_get_len(&ai.ai_addr);
 	    pj_uint16_t port = (pj_uint16_t)dinfo.addr.port;
+
+	    /* Create a dummy tdata to inform remote host name to transport */
+	    pj_bzero(&tdata, sizeof(tdata));
+	    pj_strdup(pool, &tdata.dest_info.name, &dinfo.addr.host);
 
 	    if (port==0) {
 		port = (dinfo.flag & PJSIP_TRANSPORT_SECURE) ? 5061 : 5060;
 	    }
 	    pj_sockaddr_set_port(&ai.ai_addr, port);
-	    status = pjsip_endpt_acquire_transport(pjsua_var.endpt,
-						   dinfo.type,
-						   &ai.ai_addr,
-						   addr_len,
-						   &tp_sel, &tp);
+	    status = pjsip_endpt_acquire_transport2(pjsua_var.endpt,
+						    dinfo.type,
+						    &ai.ai_addr,
+						    addr_len,
+						    &tp_sel,
+						    &tdata, &tp);
 	}
 
 	if (status == PJ_SUCCESS && (tp->local_name.port == 0 ||
