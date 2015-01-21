@@ -2103,7 +2103,7 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 
 
      /* If SDP negotiator is ready, start negotiation. */
-    if (st_code/100==2 || (st_code/10==18 && st_code!=180)) {
+    if (st_code/100==2 || (st_code/10==18 && st_code!=180 && st_code!=181)) {
 
 	pjmedia_sdp_neg_state neg_state;
 
@@ -2135,8 +2135,8 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 	}
     }
 
-    /* Include SDP when it's available for 2xx and 18x (but not 180) response.
-     * Subsequent response will include this SDP.
+    /* Include SDP when it's available for 2xx and 18x (but not 180 and 181)
+     * response. Subsequent response will include this SDP.
      *
      * Note note:
      *	- When offer/answer has been completed in reliable 183, we MUST NOT
