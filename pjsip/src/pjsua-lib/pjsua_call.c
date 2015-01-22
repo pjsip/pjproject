@@ -4731,7 +4731,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
 	       e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (tsx->status_code!=401 && tsx->status_code!=407))
+               (tsx->status_code!=401 && tsx->status_code!=407 &&
+                tsx->status_code!=422))
     {
         if (tsx->status_code/100 != 2) {
             /* Monitor the status of call hold/unhold request */
@@ -4765,7 +4766,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
 	       e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
-               (tsx->status_code!=401 && tsx->status_code!=407))
+               (tsx->status_code!=401 && tsx->status_code!=407 &&
+                tsx->status_code!=422))
     {
         if (tsx->status_code/100 != 2 ||
             ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
