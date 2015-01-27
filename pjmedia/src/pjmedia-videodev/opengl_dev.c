@@ -29,7 +29,9 @@
 #   if PJ_ANDROID
 #       include <GLES2/gl2.h>
 #       include <GLES2/gl2ext.h>
-#	define GL_BGRA GL_RGBA
+#	undef GL_RGBA
+#	define GL_RGBA GL_BGRA_EXT
+#	define GL_BGRA GL_BGRA_EXT
 #   else
 #       include <OpenGLES/ES2/gl.h>
 #       include <OpenGLES/ES2/glext.h>
