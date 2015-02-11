@@ -636,6 +636,27 @@
 
 
 /**
+ * Specify whether Automatic Gain Control (AGC) should also be enabled in
+ * Speex AEC.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_SPEEX_AEC_USE_AGC
+#   define PJMEDIA_SPEEX_AEC_USE_AGC		1
+#endif
+
+
+/**
+ * Specify whether denoise should also be enabled in Speex AEC.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_SPEEX_AEC_USE_DENOISE
+#   define PJMEDIA_SPEEX_AEC_USE_DENOISE	1
+#endif
+
+
+/**
  * Maximum number of parameters in SDP fmtp attribute.
  *
  * Default: 16

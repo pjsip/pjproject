@@ -109,10 +109,16 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 			 &enabled);
 #endif
 
-    /* Enable AGC */
+    /* Enable/disable AGC & denoise */
     {
-	spx_int32_t enabled = 1;
+	spx_int32_t enabled;
+
+	enabled = PJMEDIA_SPEEX_AEC_USE_AGC;
 	speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_AGC, 
+			     &enabled);
+
+	enabled = PJMEDIA_SPEEX_AEC_USE_DENOISE;
+	speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, 
 			     &enabled);
     }
 
