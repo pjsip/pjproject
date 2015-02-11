@@ -1360,6 +1360,12 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
      *   the unused transport of a disabled media.
      */
     if (call_med->tp == NULL) {
+        /* Initializations. If media transport creation completes immediately, 
+         * we don't need to call the callbacks.
+         */
+        call_med->med_init_cb = NULL;
+        call_med->med_create_cb = NULL;
+
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	/* While in initial call, set default video devices */
 	if (type == PJMEDIA_TYPE_VIDEO) {
@@ -1392,11 +1398,6 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
 	    return status;
 	}
-
-        /* Media transport creation completed immediately, so 
-         * we don't need to call the callback.
-         */
-        call_med->med_init_cb = NULL;
 
     } else if (call_med->tp_st == PJSUA_MED_TP_DISABLED) {
 	/* Media is being reenabled. */
