@@ -96,6 +96,38 @@ typedef struct pjmedia_snd_port_param
      */
     unsigned ec_options;
 
+    /**
+     * Arbitrary user data for playback and record preview callbacks below.
+     */
+    void *user_data;
+
+    /**
+     * Optional callback for audio frame preview right before queued to
+     * the speaker.
+     * Notes:
+     * - application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread
+     * - when using software echo cancellation, application MUST NOT modify
+     *   the audio data from within the callback, otherwise the echo canceller
+     *   will not work properly.
+     * - the return value of the callback will be ignored
+     */
+    pjmedia_aud_play_cb on_play_frame;
+
+    /**
+     * Optional callback for audio frame preview recorded from the microphone
+     * before being processed by any media component such as software echo
+     * canceller.
+     * Notes:
+     * - application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread
+     * - when using software echo cancellation, application MUST NOT modify
+     *   the audio data from within the callback, otherwise the echo canceller
+     *   will not work properly.
+     * - the return value of the callback will be ignored
+     */
+    pjmedia_aud_rec_cb on_rec_frame;
+
 } pjmedia_snd_port_param;
 
 /**

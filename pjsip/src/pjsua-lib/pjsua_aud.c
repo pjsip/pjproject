@@ -1677,6 +1677,20 @@ static const char *get_fmt_name(pj_uint32_t id)
     return name;
 }
 
+static pj_status_t on_aud_prev_play_frame(void *user_data, pjmedia_frame *frame)
+{
+    PJ_UNUSED_ARG(user_data);
+    (*pjsua_var.media_cfg.on_aud_prev_play_frame)(frame);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t on_aud_prev_rec_frame(void *user_data, pjmedia_frame *frame)
+{
+    PJ_UNUSED_ARG(user_data);
+    (*pjsua_var.media_cfg.on_aud_prev_rec_frame)(frame);
+    return PJ_SUCCESS;
+}
+
 /* Open sound device with the setting. */
 static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 {
@@ -1704,6 +1718,11 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
     PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
 
+    /* Setup preview callbacks, if configured */
+    if (pjsua_var.media_cfg.on_aud_prev_play_frame)
+	param->on_play_frame = &on_aud_prev_play_frame;
+    if (pjsua_var.media_cfg.on_aud_prev_rec_frame)
+	param->on_rec_frame = &on_aud_prev_rec_frame;
 
     PJ_LOG(4,(THIS_FILE, "Opening sound device %s@%d/%d/%dms",
 	      get_fmt_name(param->base.ext_fmt.id),

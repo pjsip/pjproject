@@ -5811,6 +5811,31 @@ struct pjsua_media_config
      * Default: PJ_FALSE
      */
     pj_bool_t no_rtcp_sdes_bye;
+
+    /**
+     * Optional callback for audio frame preview right before queued to
+     * the speaker.
+     * Notes:
+     * - application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread
+     * - when using software echo cancellation, application MUST NOT modify
+     *   the audio data from within the callback, otherwise the echo canceller
+     *   will not work properly.
+     */
+    void (*on_aud_prev_play_frame)(pjmedia_frame *frame);
+
+    /**
+     * Optional callback for audio frame preview recorded from the microphone
+     * before being processed by any media component such as software echo
+     * canceller.
+     * Notes:
+     * - application MUST NOT block or perform long operation in the callback
+     *   as the callback may be executed in sound device thread
+     * - when using software echo cancellation, application MUST NOT modify
+     *   the audio data from within the callback, otherwise the echo canceller
+     *   will not work properly.
+     */
+    void (*on_aud_prev_rec_frame)(pjmedia_frame *frame);
 };
 
 

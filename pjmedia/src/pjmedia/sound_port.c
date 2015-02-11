@@ -61,6 +61,11 @@ struct pjmedia_snd_port
     pj_bool_t		 ec_suspended;
     unsigned		 ec_suspend_count;
     unsigned		 ec_suspend_limit;
+
+    /* audio frame preview callbacks */
+    void		*user_data;
+    pjmedia_aud_play_cb  on_play_frame;
+    pjmedia_aud_rec_cb   on_rec_frame;
 };
 
 /*
@@ -100,6 +105,9 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
 	pjmedia_echo_playback(snd_port->ec_state, (pj_int16_t*)frame->buf);
     }
 
+    /* Invoke preview callback */
+    if (snd_port->on_play_frame)
+	(*snd_port->on_play_frame)(snd_port->user_data, frame);
 
     return PJ_SUCCESS;
 
@@ -120,6 +128,10 @@ no_frame:
 	}
     }
 
+    /* Invoke preview callback */
+    if (snd_port->on_play_frame)
+	(*snd_port->on_play_frame)(snd_port->user_data, frame);
+
     return PJ_SUCCESS;
 }
 
@@ -134,6 +146,10 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_port *port;
 
     pjmedia_clock_src_update(&snd_port->cap_clocksrc, &frame->timestamp);
+
+    /* Invoke preview callback */
+    if (snd_port->on_rec_frame)
+	(*snd_port->on_rec_frame)(snd_port->user_data, frame);
 
     port = snd_port->port;
     if (port == NULL)
@@ -166,6 +182,10 @@ static pj_status_t play_cb_ext(void *user_data, pjmedia_frame *frame)
 
     pjmedia_port_get_frame(port, frame);
 
+    /* Invoke preview callback */
+    if (snd_port->on_play_frame)
+	(*snd_port->on_play_frame)(snd_port->user_data, frame);
+
     return PJ_SUCCESS;
 }
 
@@ -178,6 +198,10 @@ static pj_status_t rec_cb_ext(void *user_data, pjmedia_frame *frame)
 {
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
+
+    /* Invoke preview callback */
+    if (snd_port->on_rec_frame)
+	(*snd_port->on_rec_frame)(snd_port->user_data, frame);
 
     port = snd_port->port;
     if (port == NULL)
@@ -464,6 +488,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     pj_memcpy(&snd_port->aud_param, &prm->base, sizeof(snd_port->aud_param));
     snd_port->options = prm->options;
     snd_port->prm_ec_options = prm->ec_options;
+    snd_port->user_data = prm->user_data;
+    snd_port->on_play_frame = prm->on_play_frame;
+    snd_port->on_rec_frame = prm->on_rec_frame;
 
     ptime_usec = prm->base.samples_per_frame * 1000 / prm->base.channel_count /
                  prm->base.clock_rate * 1000;
