@@ -162,6 +162,17 @@ pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
 
 
 /**
+ * Destroy the STUN transaction immediately after the transaction is complete.
+ * Application normally calls this function in the on_complete() callback.
+ *
+ * @param tsx		The STUN transaction.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
+
+
+/**
  * Stop the client transaction.
  *
  * @param tsx		The STUN transaction.

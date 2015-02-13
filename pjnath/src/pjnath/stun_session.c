@@ -149,9 +149,15 @@ static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx)
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
     pj_stun_client_tsx_stop(tsx);
     if (tdata) {
-	tsx_erase(tdata->sess, tdata);
+        pj_stun_session *sess = tdata->sess;
+        
+        pj_grp_lock_acquire(sess->grp_lock);
+	tsx_erase(sess, tdata);
 	pj_pool_release(tdata->pool);
+	pj_grp_lock_release(sess->grp_lock);
     }
+
+    pj_stun_client_tsx_destroy(tsx);
 
     TRACE_((THIS_FILE, "STUN transaction %p destroyed", tsx));
 }
