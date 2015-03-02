@@ -1894,6 +1894,9 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
     }
 
+    /* Initialize info that we are following forked media */
+    inv->following_fork = PJ_FALSE;
+
     /* MUST NOT do multiple SDP offer/answer in a single transaction,
      * EXCEPT if:
      *	- this is an initial UAC INVITE transaction (i.e. not re-INVITE), and
@@ -1946,6 +1949,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 			  "forked 2xx/18x response (err=%d)", status));
 		return status;
 	    }
+
+	    inv->following_fork = PJ_TRUE;
 
 	} else {
 

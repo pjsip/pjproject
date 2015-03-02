@@ -410,6 +410,8 @@ struct pjsip_inv_session
     pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
     void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
     struct pjsip_timer	*timer;			    /**< Session Timers.    */
+    pj_bool_t		 following_fork;	    /**< Internal, following
+							 forked media?	    */
 };
 
 

@@ -2691,6 +2691,34 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		pjmedia_transport_info tp_info;
 		pjmedia_srtp_info *srtp_info;
 
+		if (call->inv->following_fork) {
+		    /* Normally media transport will automatically restart
+		     * itself (if needed, based on info from the SDP) in
+		     * pjmedia_transport_media_start(), however in "following
+		     * forked media" case (see #1644), we need to explicitly
+		     * restart it as it cannot detect fork scenario from
+		     * the SDP only.
+		     */
+		    status = pjmedia_transport_media_stop(call_med->tp);
+		    if (status != PJ_SUCCESS) {
+			PJ_PERROR(1,(THIS_FILE, status,
+				     "pjmedia_transport_media_stop() failed "
+				     "for call_id %d media %d",
+				     call_id, mi));
+			continue;
+		    }
+		    status = pjmedia_transport_media_create(call_med->tp,
+							    tmp_pool,
+							    0, NULL, mi);
+		    if (status != PJ_SUCCESS) {
+			PJ_PERROR(1,(THIS_FILE, status,
+				     "pjmedia_transport_media_create() failed "
+				     "for call_id %d media %d",
+				     call_id, mi));
+			continue;
+		    }
+		}
+
 		/* Start/restart media transport based on info in SDP */
 		status = pjmedia_transport_media_start(call_med->tp,
 						       tmp_pool, local_sdp,
