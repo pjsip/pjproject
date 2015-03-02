@@ -144,6 +144,7 @@ struct pjsua_call
 				    /**< Array of provisional media.	    */
     pj_bool_t		 med_update_success;
     				    /**< Is media update successful?	    */
+    pj_bool_t		 hanging_up;/**< Is call in the process of hangup?  */
 
     int			 audio_idx; /**< First active audio media.	    */
     pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */

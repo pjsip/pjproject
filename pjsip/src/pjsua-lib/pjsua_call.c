@@ -2279,6 +2279,8 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    call->hanging_up = PJ_TRUE;
+
     /* If media transport creation is not yet completed, we will hangup
      * the call in the media transport creation callback instead.
      */
@@ -2312,6 +2314,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE,
 		     "Failed to create end session message",
 		     status);
+	call->hanging_up = PJ_FALSE;
 	goto on_return;
     }
 
@@ -2331,6 +2334,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE,
 		     "Failed to send end session message",
 		     status);
+	call->hanging_up = PJ_FALSE;
 	goto on_return;
     }
 
@@ -3812,6 +3816,9 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
+    if (call->hanging_up)
+        goto on_return;
+
     if (status != PJ_SUCCESS) {
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
@@ -4734,7 +4741,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                (tsx->status_code!=401 && tsx->status_code!=407 &&
                 tsx->status_code!=422))
     {
-        if (tsx->status_code/100 != 2) {
+        if (tsx->status_code/100 == 2) {
+            /* If we have sent CANCEL and the original INVITE returns a 2xx,
+             * we then send BYE.
+             */
+            if (call->hanging_up) {
+                PJ_LOG(3,(THIS_FILE, "Unsuccessful in cancelling the original "
+	        	  "INVITE for call %d due to %d response, sending BYE "
+	        	  "instead", call->index, tsx->status_code));
+		call_disconnect(call->inv, PJSIP_SC_OK);
+            }
+        } else {
             /* Monitor the status of call hold/unhold request */
             if (tsx->last_tx == (pjsip_tx_data*)call->hold_msg) {
 	        /* Outgoing call hold failed */
