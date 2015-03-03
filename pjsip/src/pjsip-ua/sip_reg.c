@@ -88,6 +88,7 @@ struct pjsip_regc
     pjsip_contact_hdr		 removed_contact_hdr_list;
     pjsip_expires_hdr		*expires_hdr;
     pj_uint32_t			 expires;
+    pj_uint32_t			 expires_requested;
     pj_uint32_t			 delay_before_refresh;
     pjsip_route_hdr		 route_set;
     pjsip_hdr			 hdr_list;
@@ -213,7 +214,7 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 	info->next_reg = 0;
     else if (regc->auto_reg == 0)
 	info->next_reg = 0;
-    else if (regc->expires < 0)
+    else if (regc->expires == PJSIP_REGC_EXPIRATION_NOT_SPECIFIED)
 	info->next_reg = regc->expires;
     else {
 	pj_time_val now, next_reg;
@@ -550,6 +551,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
     pj_lock_acquire(regc->lock);
+    
+    regc->expires_requested = 1;
 
     status = create_request(regc, &tdata);
     if (status != PJ_SUCCESS) {
@@ -620,6 +623,8 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	regc->timer.id = 0;
     }
+
+    regc->expires_requested = 0;
 
     status = create_request(regc, &tdata);
     if (status != PJ_SUCCESS) {
@@ -742,7 +747,8 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
     cbparam->reason = *reason;
     cbparam->rdata = rdata;
     cbparam->contact_cnt = contact_cnt;
-    cbparam->expiration = expiration;
+    cbparam->expiration = (expiration >= 0? expiration:
+          		   regc->expires_requested);
     if (contact_cnt) {
 	pj_memcpy( cbparam->contact, contact, 
 		   contact_cnt*sizeof(pjsip_contact_hdr*));
@@ -1392,6 +1398,9 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
 	regc->current_op = REGC_UNREGISTERING;
     else
 	regc->current_op = REGC_REGISTERING;
+    
+    if (expires_hdr && expires_hdr->ivalue)
+	regc->expires_requested = expires_hdr->ivalue;
 
     /* Prevent deletion of tdata, e.g: when something wrong in sending,
      * we need tdata to retrieve the transport.
