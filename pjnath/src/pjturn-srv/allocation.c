@@ -1282,7 +1282,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	p2->channel = PJ_STUN_GET_CH_NB(ch_attr->value);
 
 	/* Register to hash table */
-	pj_assert(sizeof(p2->channel==2));
+	pj_assert(sizeof(p2->channel)==2);
 	pj_hash_set(alloc->pool, alloc->ch_table, &p2->channel,
 		    sizeof(p2->channel), 0, p2);
 

@@ -880,7 +880,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_deinit(void)
 						      &ffmpeg_factory.base);
 
     /* Destroy mutex. */
+    pj_mutex_unlock(ffmpeg_factory.mutex);
     pj_mutex_destroy(ffmpeg_factory.mutex);
+    ffmpeg_factory.mutex = NULL;
 
     /* Destroy pool. */
     pj_pool_release(ffmpeg_factory.pool);

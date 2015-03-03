@@ -366,6 +366,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_deinit(void)
     silk_factory.endpt = NULL;
 
     /* Destroy mutex. */
+    pj_mutex_unlock(silk_factory.mutex);
     pj_mutex_destroy(silk_factory.mutex);
     silk_factory.mutex = NULL;
 
