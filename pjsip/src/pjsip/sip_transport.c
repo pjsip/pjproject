@@ -1113,6 +1113,7 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     }
 
     pj_lock_release(mgr->lock);
+    pj_lock_release(tp->lock);
 
     /* Destroy. */
     return tp->destroy(tp);
@@ -1137,8 +1138,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
 
     /* Do nothing if transport is being shutdown already */
     if (tp->is_shutdown) {
-	pj_lock_release(tp->lock);
 	pj_lock_release(mgr->lock);
+	pj_lock_release(tp->lock);
 	return PJ_SUCCESS;
     }
 
@@ -1167,8 +1168,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
 	pjsip_transport_dec_ref(tp);
     }
 
-    pj_lock_release(tp->lock);
     pj_lock_release(mgr->lock);
+    pj_lock_release(tp->lock);
 
     return status;
 }
