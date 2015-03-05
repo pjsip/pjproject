@@ -1170,6 +1170,7 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
     /* Set owner. */
     mutex->nesting_level = 0;
     mutex->owner = NULL;
+    mutex->owner_name[0] = '\0';
 #endif
 
     /* Set name. */
