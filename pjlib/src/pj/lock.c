@@ -335,6 +335,31 @@ static pj_status_t grp_lock_release(LOCK_OBJ *p)
     return pj_grp_lock_dec_ref(glock);
 }
 
+static pj_status_t grp_lock_add_handler( pj_grp_lock_t *glock,
+                             		 pj_pool_t *pool,
+                             		 void *comp,
+                             		 void (*destroy)(void *comp),
+                             		 pj_bool_t acquire_lock)
+{
+    grp_destroy_callback *cb;
+
+    if (acquire_lock)
+        grp_lock_acquire(glock);
+
+    if (pool == NULL)
+	pool = glock->pool;
+
+    cb = PJ_POOL_ZALLOC_T(pool, grp_destroy_callback);
+    cb->comp = comp;
+    cb->handler = destroy;
+    pj_list_push_back(&glock->destroy_list, cb);
+
+    if (acquire_lock)
+        grp_lock_release(glock);
+
+    return PJ_SUCCESS;
+}
+
 static pj_status_t grp_lock_destroy(LOCK_OBJ *p)
 {
     pj_grp_lock_t *glock = (pj_grp_lock_t*)p;
@@ -427,6 +452,22 @@ on_error:
     return status;
 }
 
+PJ_DEF(pj_status_t) pj_grp_lock_create_w_handler( pj_pool_t *pool,
+                                        	  const pj_grp_lock_config *cfg,
+                                        	  void *member,
+                                                  void (*handler)(void *member),
+                                        	  pj_grp_lock_t **p_grp_lock)
+{
+    pj_status_t status;
+
+    status = pj_grp_lock_create(pool, cfg, p_grp_lock);
+    if (status == PJ_SUCCESS) {
+        grp_lock_add_handler(*p_grp_lock, pool, member, handler, PJ_FALSE);
+    }
+    
+    return status;
+}
+
 PJ_DEF(pj_status_t) pj_grp_lock_destroy( pj_grp_lock_t *grp_lock)
 {
     return grp_lock_destroy(grp_lock);
@@ -476,20 +517,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_add_handler( pj_grp_lock_t *glock,
                                              void *comp,
                                              void (*destroy)(void *comp))
 {
-    grp_destroy_callback *cb;
-
-    grp_lock_acquire(glock);
-
-    if (pool == NULL)
-	pool = glock->pool;
-
-    cb = PJ_POOL_ZALLOC_T(pool, grp_destroy_callback);
-    cb->comp = comp;
-    cb->handler = destroy;
-    pj_list_push_back(&glock->destroy_list, cb);
-
-    grp_lock_release(glock);
-    return PJ_SUCCESS;
+    return grp_lock_add_handler(glock, pool, comp, destroy, PJ_TRUE);
 }
 
 PJ_DEF(pj_status_t) pj_grp_lock_del_handler( pj_grp_lock_t *glock,

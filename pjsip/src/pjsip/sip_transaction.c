@@ -1007,16 +1007,19 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     
     if (grp_lock) {
 	tsx->grp_lock = grp_lock;
+        
+        pj_grp_lock_add_ref(tsx->grp_lock);
+        pj_grp_lock_add_handler(tsx->grp_lock, tsx->pool, tsx, &tsx_on_destroy);
     } else {
-	status = pj_grp_lock_create(pool, NULL, &tsx->grp_lock);
+	status = pj_grp_lock_create_w_handler(pool, NULL, tsx, &tsx_on_destroy,
+					      &tsx->grp_lock);
 	if (status != PJ_SUCCESS) {
 	    pjsip_endpt_release_pool(mod_tsx_layer.endpt, pool);
 	    return status;
 	}
+	
+	pj_grp_lock_add_ref(tsx->grp_lock);
     }
-
-    pj_grp_lock_add_ref(tsx->grp_lock);
-    pj_grp_lock_add_handler(tsx->grp_lock, tsx->pool, tsx, &tsx_on_destroy);
 
     status = pj_mutex_create_simple(pool, tsx->obj_name, &tsx->mutex_b);
     if (status != PJ_SUCCESS) {
@@ -1308,8 +1311,12 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac2(pjsip_module *tsx_user,
 	return status;
 
 
-    /* Lock transaction. */
-    pj_grp_lock_acquire(tsx->grp_lock);
+    /* Lock transaction.
+     * We don't need to lock the group lock if none was supplied, while the
+     * newly created group lock has not been exposed.
+     */
+    if (grp_lock)
+        pj_grp_lock_acquire(tsx->grp_lock);
 
     /* Role is UAC. */
     tsx->role = PJSIP_ROLE_UAC;
@@ -1375,7 +1382,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac2(pjsip_module *tsx_user,
      */
     status = pjsip_get_request_dest(tdata, &dst_info);
     if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(tsx->grp_lock);
+	if (grp_lock)
+	    pj_grp_lock_release(tsx->grp_lock);
 	tsx_shutdown(tsx);
 	return status;
     }
@@ -1387,14 +1395,16 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac2(pjsip_module *tsx_user,
 	/* The assertion is removed by #1090:
 	pj_assert(!"Bug in branch_param generator (i.e. not unique)");
 	*/
-	pj_grp_lock_release(tsx->grp_lock);
+	if (grp_lock)
+	    pj_grp_lock_release(tsx->grp_lock);
 	tsx_shutdown(tsx);
 	return status;
     }
 
 
     /* Unlock transaction and return. */
-    pj_grp_lock_release(tsx->grp_lock);
+    if (grp_lock)
+        pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_push_indent();
     PJ_LOG(5,(tsx->obj_name, "Transaction created for %s",

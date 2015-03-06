@@ -218,6 +218,27 @@ PJ_DECL(pj_status_t) pj_grp_lock_create(pj_pool_t *pool,
                                         pj_grp_lock_t **p_grp_lock);
 
 /**
+ * Create a group lock object, with the specified destructor handler, to be
+ * called by the group lock when it is about to be destroyed. Initially the
+ * group lock will have reference counter of one.
+ *
+ * @param pool		The group lock only uses the pool parameter to get
+ * 			the pool factory, from which it will create its own
+ * 			pool.
+ * @param cfg		Optional configuration.
+ * @param member	A pointer to be passed to the handler.
+ * @param handler	The destroy handler.
+ * @param p_grp_lock	Pointer to receive the newly created group lock.
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_grp_lock_create_w_handler(pj_pool_t *pool,
+                                        	  const pj_grp_lock_config *cfg,
+                                        	  void *member,
+                                                  void (*handler)(void *member),
+                                        	  pj_grp_lock_t **p_grp_lock);
+
+/**
  * Forcibly destroy the group lock, ignoring the reference counter value.
  *
  * @param grp_lock	The group lock.
