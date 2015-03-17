@@ -6639,6 +6639,14 @@ typedef struct pjsua_vid_preview_param
      * If left unitialized, this parameter will not be used.
      */
     pjmedia_format              format;
+    
+    /**
+     * Optional output window to be used to display the video preview.
+     * This parameter will only be used if the video device supports
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW capability and the capability
+     * is not read-only.
+     */    
+    pjmedia_vid_dev_hwnd	wnd;
 
 } pjsua_vid_preview_param;
 

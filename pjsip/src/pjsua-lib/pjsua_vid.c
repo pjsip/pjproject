@@ -188,6 +188,7 @@ PJ_DEF(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p)
     p->show = PJ_TRUE;
     p->wnd_flags = 0;
     pj_bzero(&p->format, sizeof(p->format));
+    pj_bzero(&p->wnd, sizeof(p->wnd));
 }
 
 
@@ -438,6 +439,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 				  pjmedia_vid_dev_index cap_id,
 				  pj_bool_t show,
                                   unsigned wnd_flags,
+                                  const pjmedia_vid_dev_hwnd *wnd,
 				  pjsua_vid_win_id *id)
 {
     pj_bool_t enable_native_preview;
@@ -606,6 +608,10 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	vp_param.vidparam.window_hide = !show;
         vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
         vp_param.vidparam.window_flags = wnd_flags;
+        if (wnd) {
+            vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+            vp_param.vidparam.window = *wnd;
+        }
 
 	status = pjmedia_vid_port_create(w->pool, &vp_param, &w->vp_rend);
 	if (status != PJ_SUCCESS)
@@ -846,6 +852,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 				    PJSUA_INVALID_ID,
 				    acc->cfg.vid_in_auto_show,
                                     acc->cfg.vid_wnd_flags,
+                                    NULL,
 				    &wid);
 	    if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
@@ -916,6 +923,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 					//acc->cfg.vid_cap_dev,
 					PJSUA_HIDE_WINDOW,
                                         acc->cfg.vid_wnd_flags,
+                                        NULL,
 					&wid);
 		if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
@@ -1086,7 +1094,8 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
     if (prm->format.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO)
 	fmt = &prm->format;
     status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, fmt, rend_id, id,
-			    prm->show, prm->wnd_flags, &wid);
+			    prm->show, prm->wnd_flags,
+			    (prm->wnd.info.window? &prm->wnd: NULL), &wid);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pj_log_pop_indent();
@@ -1920,6 +1929,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 				cap_dev,
 				PJSUA_HIDE_WINDOW,
 				acc->cfg.vid_wnd_flags,
+				NULL,
                                 &new_wid);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
