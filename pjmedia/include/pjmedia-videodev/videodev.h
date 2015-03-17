@@ -232,7 +232,7 @@ typedef enum pjmedia_vid_dev_cap
      * show or hide a preview window showing video directly from the camera
      * by setting this capability to PJ_TRUE or PJ_FALSE. Once the preview
      * is started, application may use PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW
-     * capability to query the vidow window.
+     * capability to query the video window.
      *
      * The value of this capability is a pj_bool_t containing boolean
      * PJ_TRUE or PJ_FALSE.

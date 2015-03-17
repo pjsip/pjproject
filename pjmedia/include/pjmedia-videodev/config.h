@@ -45,10 +45,10 @@ PJ_BEGIN_DECL
  * This setting controls the maximum number of formats that can be
  * supported by a video device.
  *
- * Default: 16
+ * Default: 64
  */
 #ifndef PJMEDIA_VID_DEV_INFO_FMT_CNT
-#   define PJMEDIA_VID_DEV_INFO_FMT_CNT 16
+#   define PJMEDIA_VID_DEV_INFO_FMT_CNT 64
 #endif
 
 
@@ -191,6 +191,17 @@ PJ_BEGIN_DECL
 #ifndef PJMEDIA_VIDEO_DEV_HAS_AVI
 #   define PJMEDIA_VIDEO_DEV_HAS_AVI		1
 #endif
+
+
+/**
+ * This setting controls whether Android support should be included.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID
+#   define PJMEDIA_VIDEO_DEV_HAS_ANDROID	0
+#endif
+
 
 /**
  * Specify the SDL library name to be linked with Visual Studio project. 

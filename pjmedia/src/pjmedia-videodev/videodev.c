@@ -101,6 +101,10 @@ pjmedia_vid_dev_factory* pjmedia_ios_factory(pj_pool_factory *pf);
 pjmedia_vid_dev_factory* pjmedia_opengl_factory(pj_pool_factory *pf);
 #endif
 
+#if PJMEDIA_VIDEO_DEV_HAS_ANDROID
+pjmedia_vid_dev_factory* pjmedia_and_factory(pj_pool_factory *pf);
+#endif
+
 #define MAX_DRIVERS	16
 #define MAX_DEVS	64
 
@@ -393,11 +397,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 #if PJMEDIA_VIDEO_DEV_HAS_FFMPEG
     vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_ffmpeg_factory;
 #endif
-#if PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC
-    vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_cbar_factory;
-#endif
 #if PJMEDIA_VIDEO_DEV_HAS_SDL
     vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_sdl_factory;
+#endif
+#if PJMEDIA_VIDEO_DEV_HAS_ANDROID
+    vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_and_factory;
+#endif
+#if PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC
+    /* Better put colorbar at the last, so the default capturer will be
+     * a real capturer, if any.
+     */
+    vid_subsys.drv[vid_subsys.drv_cnt++].create = &pjmedia_cbar_factory;
 #endif
 
     /* Initialize each factory and build the device ID list */
