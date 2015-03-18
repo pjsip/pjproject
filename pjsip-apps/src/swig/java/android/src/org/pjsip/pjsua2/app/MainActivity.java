@@ -61,6 +61,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		public final static int CALL_STATE = 2;
 		public final static int REG_STATE = 3;
 		public final static int BUDDY_STATE = 4;
+		public final static int CALL_MEDIA_STATE = 5;
 	}
 
 	private HashMap<String, String> putData(String uri, String status) {
@@ -170,6 +171,14 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 			/* Forward the message to CallActivity */
 			if (CallActivity.handler_ != null) {
 				Message m2 = Message.obtain(CallActivity.handler_, MSG_TYPE.CALL_STATE, ci);
+				m2.sendToTarget();
+			}
+			
+		} else if (m.what == MSG_TYPE.CALL_MEDIA_STATE) {
+			
+			/* Forward the message to CallActivity */
+			if (CallActivity.handler_ != null) {
+				Message m2 = Message.obtain(CallActivity.handler_, MSG_TYPE.CALL_MEDIA_STATE, null);
 				m2.sendToTarget();
 			}
 			
@@ -332,10 +341,7 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		String buddy_uri = item.get("uri");
 		
 		MyCall call = new MyCall(account, -1);
-		CallOpParam prm = new CallOpParam();
-		CallSetting opt = prm.getOpt();
-		opt.setAudioCount(1);
-		opt.setVideoCount(0);
+		CallOpParam prm = new CallOpParam(true);
 
 		try {
 			call.makeCall(buddy_uri, prm);
@@ -500,6 +506,11 @@ public class MainActivity extends Activity implements Handler.Callback, MyAppObs
 		{
 			currentCall = null;
 		}
+	}
+	
+	public void notifyCallMediaState(MyCall call) {
+		Message m = Message.obtain(handler, MSG_TYPE.CALL_MEDIA_STATE, null);
+		m.sendToTarget();
 	}
 	
 	public void notifyBuddyState(MyBuddy buddy) {

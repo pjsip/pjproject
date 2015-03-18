@@ -38,4 +38,9 @@
         android:onClick="hangupCall"
         android:text="Reject" />
 
+    <SurfaceView
+        android:id="@+id/surfaceIncomingVideo"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
 </LinearLayout>

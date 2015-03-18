@@ -44,6 +44,9 @@ class MyObserver implements MyAppObserver {
 	}
 	
 	@Override
+	public void notifyCallMediaState(MyCall call) {
+	}
+
 	public void notifyCallState(MyCall call) {
 		if (currentCall == null || call.getId() != currentCall.getId())
 			return;

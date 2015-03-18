@@ -28,6 +28,7 @@ interface MyAppObserver {
 	abstract void notifyRegState(pjsip_status_code code, String reason, int expiration);
 	abstract void notifyIncomingCall(MyCall call);
 	abstract void notifyCallState(MyCall call);
+	abstract void notifyCallMediaState(MyCall call);
 	abstract void notifyBuddyState(MyBuddy buddy);
 }
 
@@ -41,8 +42,11 @@ class MyLogWriter extends LogWriter {
 
 
 class MyCall extends Call {
+	public VideoWindow vidWin;
+	
 	MyCall(MyAccount acc, int call_id) {
 		super(acc, call_id);
+		vidWin = null;
 	}
 
 	@Override
@@ -86,8 +90,15 @@ class MyCall extends Call {
 				} catch (Exception e) {
 					continue;
 				}
+			} else if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
+				       cmi.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE &&
+				       cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
+			{
+				vidWin = cmi.getVideoWindow();
 			}
 		}
+		
+		MyApp.observer.notifyCallMediaState(this);
 	}
 }
 

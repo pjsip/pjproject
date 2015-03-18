@@ -21,6 +21,8 @@ package org.pjsip.pjsua2.app;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -28,7 +30,9 @@ import android.app.Activity;
 
 import org.pjsip.pjsua2.*;
 
-public class CallActivity extends Activity implements Handler.Callback {
+public class CallActivity extends Activity
+	implements Handler.Callback, SurfaceHolder.Callback
+{
 	
 	public static Handler handler_;
 
@@ -39,6 +43,14 @@ public class CallActivity extends Activity implements Handler.Callback {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_call);
+		
+		SurfaceView surfaceView = (SurfaceView)findViewById(R.id.surfaceIncomingVideo);
+		if (MainActivity.currentCall == null ||
+			MainActivity.currentCall.vidWin == null)
+		{
+			surfaceView.setVisibility(View.GONE);
+		}
+		surfaceView.getHolder().addCallback(this);
 		
 		handler_ = handler;
 		if (MainActivity.currentCall != null) {
@@ -58,7 +70,33 @@ public class CallActivity extends Activity implements Handler.Callback {
     	super.onDestroy();
     	handler_ = null;
     }
-	
+
+    private void updateVideoWindow(SurfaceHolder holder) {
+		if (MainActivity.currentCall != null &&
+			MainActivity.currentCall.vidWin != null)
+		{
+			VideoWindowHandle vidWH = new VideoWindowHandle();
+			if (holder == null)
+				vidWH.getHandle().setWindow(null);
+			else
+				vidWH.getHandle().setWindow(pjsua2.android_opengl_get_surface(holder.getSurface()));
+			try {
+				MainActivity.currentCall.vidWin.setWindow(vidWH);
+			} catch (Exception e) {}
+		}
+    }
+    
+	public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+		updateVideoWindow(holder);
+    }
+
+    public void surfaceCreated(SurfaceHolder holder) {
+    }
+
+    public void surfaceDestroyed(SurfaceHolder holder) {
+    	updateVideoWindow(null);
+    }
+    
 	public void acceptCall(View view) {
 		CallOpParam prm = new CallOpParam();
 		prm.setStatusCode(pjsip_status_code.PJSIP_SC_OK);
@@ -86,6 +124,14 @@ public class CallActivity extends Activity implements Handler.Callback {
 		}
 	}
 	
+	private void setupVideoSurface() {
+
+		SurfaceView surfaceView = (SurfaceView)findViewById(R.id.surfaceIncomingVideo);
+		surfaceView.setVisibility(View.VISIBLE);
+		updateVideoWindow(surfaceView.getHolder());
+		
+	}
+	
 	@Override
 	public boolean handleMessage(Message m) {
 		
@@ -94,6 +140,13 @@ public class CallActivity extends Activity implements Handler.Callback {
 			lastCallInfo = (CallInfo) m.obj;
 			updateCallState(lastCallInfo);
 			
+		} else if (m.what == MainActivity.MSG_TYPE.CALL_MEDIA_STATE) {
+			
+			if (MainActivity.currentCall.vidWin != null) {
+				/* If there's incoming video, display it. */
+				setupVideoSurface();
+			}
+
 		} else {
 			
 			/* Message not handled */
