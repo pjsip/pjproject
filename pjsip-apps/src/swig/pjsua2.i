@@ -102,6 +102,15 @@ using namespace pj;
 %template(CodecInfoVector)		std::vector<pj::CodecInfo*>;
 
 %include "pjsua2/media.hpp"
+// Create an interface for android_opengl_get_surface()
+#if defined(SWIGJAVA) && defined(__ANDROID__)
+%inline %{
+extern "C" {
+    void* android_opengl_get_surface(jobject surface);
+}
+%}
+#endif
+
 %include "pjsua2/presence.hpp"
 %include "pjsua2/account.hpp"
 %include "pjsua2/call.hpp"

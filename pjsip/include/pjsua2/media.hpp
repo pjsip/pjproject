@@ -1325,6 +1325,169 @@ private:
     friend class Endpoint;
 };
 
+
+/*************************************************************************
+* Video media
+*/
+
+/**
+ * Representation of media coordinate.
+ */
+struct MediaCoordinate
+{
+    int		x;	    /**< X position of the coordinate */
+    int		y;	    /**< Y position of the coordinate */
+};
+
+/**
+ * Representation of media size.
+ */
+struct MediaSize
+{
+    unsigned	w;	    /**< The width.		*/
+    unsigned 	h;	    /**< The height.	*/
+};
+
+/**
+ * Window handle.
+ */
+typedef struct WindowHandle {
+    void    	*window;    /**< Window		*/
+    void    	*display;   /**< Display	*/
+} WindowHandle;
+
+/**
+ * Video window handle.
+ */
+struct VideoWindowHandle
+{
+    /**
+     * The window handle type.
+     */
+    pjmedia_vid_dev_hwnd_type 	type;
+
+    /**
+     * The window handle.
+     */
+    WindowHandle 		handle;
+};
+
+/**
+ * This structure describes video window info.
+ */
+typedef struct VideoWindowInfo
+{
+    /**
+     * Flag to indicate whether this window is a native window,
+     * such as created by built-in preview device. If this field is
+     * true, only the video window handle field of this
+     * structure is valid.
+     */
+    bool 		isNative;
+
+    /**
+     * Video window handle.
+     */
+    VideoWindowHandle 	winHandle;
+
+    /**
+     * Renderer device ID.
+     */
+    int 		renderDeviceId;
+
+    /**
+     * Window show status. The window is hidden if false.
+     */
+    bool		show;
+
+    /**
+     * Window position.
+     */
+    MediaCoordinate 	pos;
+
+    /**
+     * Window size.
+     */
+    MediaSize 		size;
+
+} VideoWindowInfo;
+
+/**
+ * Video window.
+ */
+class VideoWindow
+{
+public:
+    /**
+     * Constructor
+     */
+    VideoWindow(int win_id);
+
+    /**
+     * Get window info.
+     *
+     * @return			video window info.
+     */
+    VideoWindowInfo getInfo() const throw(Error);
+    
+    /**
+     * Show or hide window. This operation is not valid for native windows
+     * (VideoWindowInfo.isNative=true), on which native windowing API
+     * must be used instead.
+     *
+     * @param show		Set to true to show the window, false to
+     * 				hide the window.
+     *
+     */
+    void Show(bool show) throw(Error);
+    
+    /**
+     * Set video window position. This operation is not valid for native windows
+     * (VideoWindowInfo.isNative=true), on which native windowing API
+     * must be used instead.
+     *
+     * @param pos		The window position.
+     *
+     */
+    void setPos(const MediaCoordinate &pos) throw(Error);
+    
+    /**
+     * Resize window. This operation is not valid for native windows
+     * (VideoWindowInfo.isNative=true), on which native windowing API
+     * must be used instead.
+     *
+     * @param size		The new window size.
+     *
+     */
+    void setSize(const MediaSize &size) throw(Error);
+    
+    /**
+     * Rotate the video window. This function will change the video orientation
+     * and also possibly the video window size (width and height get swapped).
+     * This operation is not valid for native windows (VideoWindowInfo.isNative
+     * =true), on which native windowing API must be used instead.
+     *
+     * @param angle		The rotation angle in degrees, must be
+     *				multiple of 90.
+     *				Specify positive value for clockwise rotation or
+     *				negative value for counter-clockwise rotation.
+     */
+    void rotate(int angle) throw(Error);
+
+    /**
+     * Set output window. This operation is valid only when the underlying
+     * video device supports PJMEDIA_VIDEO_DEV_CAP_OUTPUT_WINDOW capability AND
+     * allows the output window to be changed on-the-fly, otherwise Error will
+     * be thrown. Currently it is only supported on Android.
+     *
+     * @param win		The new output window.
+     */
+    void setWindow(const VideoWindowHandle &win) throw(Error);
+    
+private:
+    pjsua_vid_win_id		winId;
+};
+
 /*************************************************************************
 * Codec management
 */

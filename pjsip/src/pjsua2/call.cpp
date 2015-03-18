@@ -224,6 +224,7 @@ pjsua_call_setting CallSetting::toPj() const
 
 
 CallMediaInfo::CallMediaInfo()
+: videoWindow(PJSUA_INVALID_ID)
 {
 }
 
@@ -237,6 +238,7 @@ void CallMediaInfo::fromPj(const pjsua_call_media_info &prm)
         this->audioConfSlot         = (int)prm.stream.aud.conf_slot;
     } else if (this->type == PJMEDIA_TYPE_VIDEO) {
         this->videoIncomingWindowId = prm.stream.vid.win_in;
+        this->videoWindow           = VideoWindow(prm.stream.vid.win_in);
         this->videoCapDev           = prm.stream.vid.cap_dev;
     }
 }

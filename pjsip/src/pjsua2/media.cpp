@@ -1007,6 +1007,68 @@ int AudDevManager::getActiveDev(bool is_capture) const throw(Error)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+VideoWindow::VideoWindow(pjsua_vid_win_id win_id)
+: winId(win_id)
+{
+}
+
+VideoWindowInfo VideoWindow::getInfo() const throw(Error)
+{
+    VideoWindowInfo vwi;
+    pjsua_vid_win_info pj_vwi;
+    
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_get_info(winId, &pj_vwi) );
+    vwi.isNative = pj_vwi.is_native;
+    vwi.winHandle.type = pj_vwi.hwnd.type;
+    vwi.winHandle.handle.window = pj_vwi.hwnd.info.window;
+    vwi.renderDeviceId = pj_vwi.rdr_dev;
+    vwi.show = pj_vwi.show;
+    vwi.pos.x = pj_vwi.pos.x;
+    vwi.pos.y = pj_vwi.pos.y;
+    vwi.size.w = pj_vwi.size.w;
+    vwi.size.h = pj_vwi.size.h;
+    
+    return vwi;
+}
+    
+void VideoWindow::Show(bool show) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_show(winId, show) );
+}   
+
+void VideoWindow::setPos(const MediaCoordinate &pos) throw(Error)
+{
+    pjmedia_coord pj_pos;
+    
+    pj_pos.x = pos.x;
+    pj_pos.y = pos.y;
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_pos(winId, &pj_pos) );
+}
+
+void VideoWindow::setSize(const MediaSize &size) throw(Error)
+{
+    pjmedia_rect_size pj_size;
+
+    pj_size.w = size.w;
+    pj_size.h = size.h;
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_size(winId, &pj_size) );
+}
+
+void VideoWindow::rotate(int angle) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_rotate(winId, angle) );
+}
+
+void VideoWindow::setWindow(const VideoWindowHandle &win) throw(Error)
+{
+    pjmedia_vid_dev_hwnd vhwnd;
+   
+    vhwnd.type = win.type;
+    vhwnd.info.window = win.handle.window;
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_win(winId, &vhwnd) );
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void CodecInfo::fromPj(const pjsua_codec_info &codec_info)
 {
     codecId = pj2Str(codec_info.codec_id);

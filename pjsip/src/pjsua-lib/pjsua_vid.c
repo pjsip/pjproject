@@ -1405,6 +1405,40 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
 }
 
 /*
+ * Set output window.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_win_set_win( pjsua_vid_win_id wid,
+                                           const pjmedia_vid_dev_hwnd *win)
+{
+    pjsua_vid_win *w;
+    pjmedia_vid_dev_stream *s;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS && win, PJ_EINVAL);
+
+    PJSUA_LOCK();
+    w = &pjsua_var.win[wid];
+    if (w->vp_rend == NULL) {
+	/* Native window */
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    s = pjmedia_vid_port_get_stream(w->vp_rend);
+    if (s == NULL) {
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    status = pjmedia_vid_dev_stream_set_cap(s, 
+                            PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW, win);
+
+    PJSUA_UNLOCK();
+
+    return status;
+}
+
+/*
  * Set video orientation.
  */
 PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,

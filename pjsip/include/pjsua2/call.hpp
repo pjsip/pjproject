@@ -413,6 +413,13 @@ struct CallMediaInfo
     pjsua_vid_win_id	    videoIncomingWindowId;
     
     /**
+     * The video window instance for incoming video. Only valid if
+     * videoIncomingWindowId is not PJSUA_INVALID_ID and
+     * the media type is video.
+     */
+    VideoWindow	    	    videoWindow;
+    
+    /**
      * The video capture device for outgoing transmission, if any,
      * or PJMEDIA_VID_INVALID_DEV. Only valid if the media type is video.
      */

@@ -6815,6 +6815,20 @@ PJ_DECL(pj_status_t) pjsua_vid_win_set_size(pjsua_vid_win_id wid,
                                             const pjmedia_rect_size *size);
 
 /**
+ * Set output window. This operation is valid only when the underlying
+ * video device supports PJMEDIA_VIDEO_DEV_CAP_OUTPUT_WINDOW capability AND
+ * allows the output window to be changed on-the-fly. Currently it is only
+ * supported on Android.
+ *
+ * @param wid		The video window ID.
+ * @param win		The new output window.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_set_win(pjsua_vid_win_id wid,
+                                           const pjmedia_vid_dev_hwnd *win);
+
+/**
  * Rotate the video window. This function will change the video orientation
  * and also possibly the video window size (width and height get swapped).
  * This operation is not valid for native windows (pjsua_vid_win_info.is_native
