@@ -1095,6 +1095,9 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 
     PJ_ASSERT_RETURN(sock != PJ_INVALID_SOCKET, PJ_TRUE);
 
+    if (!listener->is_registered)
+	return PJ_FALSE;
+
     PJ_LOG(4,(listener->factory.obj_name, 
 	      "TCP listener %.*s:%d: got incoming TCP connection "
 	      "from %s, sock=%d",
@@ -1133,6 +1136,9 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 	    PJ_LOG(3,(tcp->base.obj_name, "New transport cancelled"));
 	    tcp_destroy(&tcp->base, status);
 	} else {
+	    if (tcp->base.is_shutdown || tcp->base.is_destroying) {
+		return PJ_TRUE;
+	    }
 	    /* Start keep-alive timer */
 	    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
 		pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
@@ -1142,12 +1148,11 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 		tcp->ka_timer.id = PJ_TRUE;
 		pj_gettimeofday(&tcp->last_activity);
 	    }
-
 	    /* Notify application of transport state accepted */
 	    state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
 	    if (state_cb) {
 		pjsip_transport_state_info state_info;
-            
+
 		pj_bzero(&state_info, sizeof(state_info));
 		(*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
 	    }
@@ -1422,6 +1427,9 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     /* Mark that pending connect() operation has completed. */
     tcp->has_pending_connect = PJ_FALSE;
 
+    if (tcp->base.is_shutdown || tcp->base.is_destroying) 
+	return PJ_FALSE;
+
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
 
@@ -1482,7 +1490,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
-    
+	
 	pj_bzero(&state_info, sizeof(state_info));
 	(*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
     }

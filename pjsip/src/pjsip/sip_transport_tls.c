@@ -1179,6 +1179,9 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 
     PJ_ASSERT_RETURN(new_ssock, PJ_TRUE);
 
+    if (!listener->is_registered)
+	return PJ_FALSE;
+
     PJ_LOG(4,(listener->factory.obj_name, 
 	      "TLS listener %.*s:%d: got incoming TLS connection "
 	      "from %s, sock=%d",
@@ -1236,7 +1239,6 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	    tls->close_reason = PJSIP_TLS_ECERTVERIF;
 	pjsip_transport_shutdown(&tls->base);
     }
-
     /* Notify transport state to application */
     state_cb = pjsip_tpmgr_get_state_cb(tls->base.tpmgr);
     if (state_cb) {
@@ -1554,6 +1556,9 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pj_bool_t is_shutdown;
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
+
+    if (tls->base.is_shutdown || tls->base.is_destroying) 
+	return PJ_FALSE;
 
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
