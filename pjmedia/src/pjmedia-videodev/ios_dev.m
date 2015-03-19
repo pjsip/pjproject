@@ -49,6 +49,22 @@ static ios_fmt_info ios_fmts[] =
     { PJMEDIA_FORMAT_I420, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange }
 };
 
+typedef struct ios_supported_size
+{
+    pj_size_t supported_size_w;
+    pj_size_t supported_size_h;
+    NSString *preset_str;
+} ios_supported_size;
+
+/* Set the preset_str on set_preset_str method. */
+static ios_supported_size ios_sizes[] =
+{
+    { 352, 288, NULL },
+    { 640, 480, NULL },
+    { 1280, 720, NULL },
+    { 1920, 1080, NULL }
+};
+
 /* qt device info */
 struct ios_dev_info
 {
@@ -169,6 +185,13 @@ static pjmedia_vid_dev_stream_op stream_op =
     &ios_stream_destroy
 };
 
+static void set_preset_str()
+{
+    ios_sizes[0].preset_str = AVCaptureSessionPreset352x288;
+    ios_sizes[1].preset_str = AVCaptureSessionPreset640x480;
+    ios_sizes[2].preset_str = AVCaptureSessionPreset1280x720;
+    ios_sizes[3].preset_str = AVCaptureSessionPreset1920x1080;
+}
 
 /****************************************************************************
  * Factory operations
@@ -198,6 +221,8 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     struct ios_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
+    
+    set_preset_str();
     
     /* Initialize input and output devices here */
     qf->dev_info = (struct ios_dev_info*)
@@ -268,13 +293,35 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
             {
                 continue;
             }
+            
+            if (qdi->info.dir == PJMEDIA_DIR_RENDER) {
+                fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
+                pjmedia_format_init_video(fmt,
+                                          ios_fmts[l].pjmedia_format,
+                                          DEFAULT_WIDTH,
+                                          DEFAULT_HEIGHT,
+                                          DEFAULT_FPS, 1);
+            } else {
+                int m;
+                AVCaptureDevice *dev = qdi->dev;
                 
-	    fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
-	    pjmedia_format_init_video(fmt,
-				      ios_fmts[l].pjmedia_format,
-				      DEFAULT_WIDTH,
-				      DEFAULT_HEIGHT,
-				      DEFAULT_FPS, 1);	
+                /* Set supported size for capture device */
+                for(m = 0; m < PJ_ARRAY_SIZE(ios_sizes) &&
+                           qdi->info.fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
+                    m++)
+                {
+                    if ([dev supportsAVCaptureSessionPreset:
+                                                       ios_sizes[m].preset_str])
+                    {
+                        fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
+                        pjmedia_format_init_video(fmt,
+                                                  ios_fmts[l].pjmedia_format,
+                                                  ios_sizes[m].supported_size_w,
+                                                  ios_sizes[m].supported_size_h,
+                                                  DEFAULT_FPS, 1);
+                    }
+                }                
+            }
 	}
     }
     
@@ -575,37 +622,28 @@ static pj_status_t ios_factory_create_stream(
     strm->is_planar = vfi->plane_cnt > 1;
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
-        NSString *size_preset_str[] = {
-            AVCaptureSessionPreset352x288,
-            AVCaptureSessionPreset640x480,
-            AVCaptureSessionPreset1280x720,
-            AVCaptureSessionPreset1920x1080
-        };
-        pj_size_t supported_size_w[] = { 352, 640, 1280, 1920 };
-        pj_size_t supported_size_h[] = { 288, 480,  720, 1080 };
-        pj_size_t supported_size[] = { 352*288, 640*480, 1280*720, 1920*1080 };
-        pj_size_t requested_size = strm->size.w * strm->size.h;
         int i;
-        
+	        
         /* Create capture stream here */
 	strm->cap_session = [[AVCaptureSession alloc] init];
 	if (!strm->cap_session) {
 	    status = PJ_ENOMEM;
 	    goto on_error;
 	}
-        
         AVCaptureDevice *dev = qf->dev_info[param->cap_id].dev;
-        
-	/* Find the closest supported size */
-        for(i = PJ_ARRAY_SIZE(supported_size)-1; i > 0; --i) {
-            if (![dev supportsAVCaptureSessionPreset: size_preset_str[i]])
-                continue;
-            if (supported_size[i-1] < requested_size)
+ 
+        for (i = PJ_ARRAY_SIZE(ios_sizes)-1; i > 0; --i) {
+            if ((vfd->size.w == ios_sizes[i].supported_size_w) &&
+                (vfd->size.h == ios_sizes[i].supported_size_h))
+            {
                 break;
+            }
         }
-        strm->cap_session.sessionPreset = size_preset_str[i];
-        vfd->size.w = supported_size_w[i];
-        vfd->size.h = supported_size_h[i];
+        
+        strm->cap_session.sessionPreset = ios_sizes[i].preset_str;
+        
+        vfd->size.w = ios_sizes[i].supported_size_w;
+        vfd->size.h = ios_sizes[i].supported_size_h;
         strm->size = vfd->size;
         strm->bytes_per_row = strm->size.w * vfi->bpp / 8;
         strm->frame_size = strm->bytes_per_row * strm->size.h;
@@ -979,7 +1017,7 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
 					const pjmedia_frame *frame)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
-    
+
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
     else
