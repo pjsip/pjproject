@@ -107,6 +107,7 @@ typedef struct and_stream
     pj_timestamp            frame_ts;		/**< Current timestamp */
     unsigned                ts_inc;		/**< Timestamp interval*/
     unsigned		    convert_to_i420;	/**< Need to convert to I420?
+						     0: no
 						     1: from NV21
 						     2: from YV12	*/
     
@@ -1003,6 +1004,9 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     }
     
     jni_detach_env(with_attach);
+    
+    if (strm->pool)
+	pj_pool_release(strm->pool);
 
     PJ_LOG(4, (THIS_FILE, "Android camera stream destroyed"));
 
