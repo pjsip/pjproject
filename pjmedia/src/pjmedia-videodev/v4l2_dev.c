@@ -208,6 +208,72 @@ static pj_status_t xioctl(int fh, int request, void *arg)
     return (r == -1) ? pj_get_os_error() : PJ_SUCCESS;
 }
 
+static vid4lin_fmt_map* get_v4l2_format_info(pjmedia_format_id id)
+{
+    unsigned i;
+
+    for (i = 0; i < PJ_ARRAY_SIZE(v4l2_fmt_maps); i++) {
+        if (v4l2_fmt_maps[i].pjmedia_fmt_id == id)
+            return &v4l2_fmt_maps[i];
+    }
+
+    return NULL;
+}
+
+/* Get the supported size */
+static void v4l2_get_supported_size(int fd,
+				    pj_uint32_t fmt_id,
+				    pjmedia_vid_dev_info *info)
+{
+    int i=0;
+    pjmedia_rect_size v4l_sizes[] =
+    {
+	 /* Some webcam doesn't work well using size below 320x240 */
+         /*{ 128, 96 },  { 176, 144 },*/ { 320, 240 },   { 352, 240 },
+         { 352, 288 },   { 352, 480 },   { 352, 576 },   { 640, 480 },
+         { 704, 480 },   { 720, 480 },   { 704, 576 },   { 720, 576 },
+         { 800, 600 },   { 1024, 768 },  { 1280, 720 },  { 1280, 960 },
+         { 1280, 1024 }, { 1408, 960 },  { 1408, 1152 }, { 1600, 1200 },
+         { 1920, 1080 }/*, { 1920, 1088 }, { 2048, 1024 }, { 2048, 1080 },
+         { 2048, 1088 }, { 2048, 1536 }, { 2560, 1920 }, { 3616, 1536 },
+         { 3672, 1536 }, { 3680, 1536 }, { 3840, 2160 }, { 4096, 2048 },
+         { 4096, 2160 }, { 4096, 2304 }*/
+    };
+
+    const vid4lin_fmt_map *fmt_map = get_v4l2_format_info(fmt_id);
+    if (fmt_map == NULL)
+	return;
+
+    for (;i<PJ_ARRAY_SIZE(v4l_sizes) &&
+          info->fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
+         i++)
+    {
+	struct v4l2_format v4l2_fmt;
+	pj_status_t status;
+
+	pj_bzero(&v4l2_fmt, sizeof(v4l2_fmt));
+	v4l2_fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	v4l2_fmt.fmt.pix.width       = v4l_sizes[i].w;
+	v4l2_fmt.fmt.pix.height      = v4l_sizes[i].h;
+	v4l2_fmt.fmt.pix.pixelformat = fmt_map->v4l2_fmt_id;
+	v4l2_fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+	status = xioctl(fd, VIDIOC_TRY_FMT, &v4l2_fmt);
+	if (status != PJ_SUCCESS ||
+	    v4l2_fmt.fmt.pix.pixelformat != fmt_map->v4l2_fmt_id ||
+	    v4l2_fmt.fmt.pix.width != v4l_sizes[i].w ||
+	    v4l2_fmt.fmt.pix.height != v4l_sizes[i].h)
+	{
+	    continue;
+	}
+
+	pjmedia_format_init_video(&info->fmt[info->fmt_cnt++],
+				  fmt_id,
+				  v4l_sizes[i].w,
+				  v4l_sizes[i].h,
+				  DEFAULT_FPS, 1);
+    }
+}
+
 /* Scan V4L2 devices */
 static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 {
@@ -281,10 +347,9 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 	    }
 	}
 
-	v4l2_close(fd);
-
 	if (fmt_cnt==0) {
 	    PJ_LOG(5,(THIS_FILE, "    Found no common format"));
+	    v4l2_close(fd);
 	    continue;
 	}
 
@@ -299,14 +364,12 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 	pdi->info.has_callback = PJ_FALSE;
 	pdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
 
-	pdi->info.fmt_cnt = fmt_cnt;
 	for (j=0; j<fmt_cnt; ++j) {
-	    pjmedia_format_init_video(&pdi->info.fmt[j],
-				      fmt_cap[j],
-				      DEFAULT_WIDTH,
-				      DEFAULT_HEIGHT,
-				      DEFAULT_FPS, 1);
+	    v4l2_get_supported_size(fd, fmt_cap[j], &pdi->info);
 	}
+
+	v4l2_close(fd);
+
 	if (j < fmt_cnt)
 	    continue;
 
@@ -406,18 +469,6 @@ static pj_status_t vid4lin_factory_default_param(pj_pool_t *pool,
     pjmedia_format_copy(&param->fmt, &cf->dev_info[index].info.fmt[0]);
 
     return PJ_SUCCESS;
-}
-
-static vid4lin_fmt_map* get_v4l2_format_info(pjmedia_format_id id)
-{
-    unsigned i;
-
-    for (i = 0; i < PJ_ARRAY_SIZE(v4l2_fmt_maps); i++) {
-        if (v4l2_fmt_maps[i].pjmedia_fmt_id == id)
-            return &v4l2_fmt_maps[i];
-    }
-
-    return NULL;
 }
 
 /* util: setup format */
