@@ -835,6 +835,27 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_set_cap(
 					    pjmedia_vid_dev_cap cap,
 					    const void *value)
 {
+    /* For fast switching, device global index needs to be converted to
+     * local index before forwarding the request to the device stream.
+     */
+    if (cap == PJMEDIA_VID_DEV_CAP_SWITCH) {
+	pjmedia_vid_dev_factory *f;
+	unsigned local_idx;
+	pj_status_t status;
+	pjmedia_vid_dev_switch_param p = *(pjmedia_vid_dev_switch_param*)value;
+
+	status = lookup_dev(p.target_id, &f, &local_idx);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Make sure that current & target devices share the same factory */
+	if (f->sys.drv_idx != strm->sys.drv_idx)
+	    return PJMEDIA_EVID_INVDEV;
+
+	p.target_id = local_idx;
+	return strm->op->set_cap(strm, cap, &p);
+    }
+
     return strm->op->set_cap(strm, cap, value);
 }
 
