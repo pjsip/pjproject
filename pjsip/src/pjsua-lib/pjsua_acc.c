@@ -2279,8 +2279,12 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     if (pjsua_var.ua_cfg.cb.on_reg_state2) {
 	pjsua_reg_info reg_info;
+	pjsip_regc_info rinfo;
 
+	pjsip_regc_get_info(param->regc, &rinfo);
 	reg_info.cbparam = param;
+	reg_info.regc = param->regc;
+	reg_info.renew = (rinfo.interval != 0);
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
     
@@ -2588,6 +2592,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
         
         if (pjsua_var.ua_cfg.cb.on_reg_started) {
             (*pjsua_var.ua_cfg.cb.on_reg_started)(acc_id, renew);
+        }
+	if (pjsua_var.ua_cfg.cb.on_reg_started2) {
+	    pjsua_reg_info rinfo;
+
+	    rinfo.cbparam = NULL;
+	    rinfo.regc = pjsua_var.acc[acc_id].regc;
+	    rinfo.renew = renew;
+            (*pjsua_var.ua_cfg.cb.on_reg_started2)(acc_id, &rinfo);
         }
     }
 

@@ -477,6 +477,10 @@ typedef struct pjsua_reg_info
 {
     struct pjsip_regc_cbparam	*cbparam;   /**< Parameters returned by
 						 registration callback.	*/
+    pjsip_regc			*regc;	    /**< Client registration 
+						 structure. */	
+    pj_bool_t			 renew;     /**< Non-zero for registration and 
+						 zero for unregistration. */
 } pjsua_reg_info;
 
 
@@ -907,6 +911,16 @@ typedef struct pjsua_callback
      * 			    unregistration.
      */
     void (*on_reg_started)(pjsua_acc_id acc_id, pj_bool_t renew);
+
+    /**
+     * This is the alternative version of the \a on_reg_started() callback with
+     * \a pjsua_reg_info argument.
+     *
+     * @param acc_id	    The account ID.
+     * @param info	    The registration info.
+     */
+    void (*on_reg_started2)(pjsua_acc_id acc_id, 
+			    pjsua_reg_info *info);
     
     /**
      * Notify application when registration status has changed.
