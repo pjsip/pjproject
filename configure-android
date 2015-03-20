@@ -164,4 +164,4 @@ if test "1" = "1"; then
   echo " RANLIB = ${RANLIB}"
 fi
 
-./configure --host=${TARGET_HOST} --disable-video $*
+./configure --host=${TARGET_HOST} $*

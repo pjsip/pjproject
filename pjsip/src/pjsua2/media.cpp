@@ -1015,6 +1015,7 @@ VideoWindow::VideoWindow(pjsua_vid_win_id win_id)
 VideoWindowInfo VideoWindow::getInfo() const throw(Error)
 {
     VideoWindowInfo vwi;
+#if PJSUA_HAS_VIDEO
     pjsua_vid_win_info pj_vwi;
     
     PJSUA2_CHECK_EXPR( pjsua_vid_win_get_info(winId, &pj_vwi) );
@@ -1028,44 +1029,65 @@ VideoWindowInfo VideoWindow::getInfo() const throw(Error)
     vwi.size.w = pj_vwi.size.w;
     vwi.size.h = pj_vwi.size.h;
     
+#endif
     return vwi;
 }
     
 void VideoWindow::Show(bool show) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_win_set_show(winId, show) );
-}   
+#else
+    PJ_UNUSED_ARG(show);
+#endif
+}
 
 void VideoWindow::setPos(const MediaCoordinate &pos) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     pjmedia_coord pj_pos;
     
     pj_pos.x = pos.x;
     pj_pos.y = pos.y;
     PJSUA2_CHECK_EXPR( pjsua_vid_win_set_pos(winId, &pj_pos) );
+#else
+    PJ_UNUSED_ARG(pos);
+#endif
 }
 
 void VideoWindow::setSize(const MediaSize &size) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     pjmedia_rect_size pj_size;
 
     pj_size.w = size.w;
     pj_size.h = size.h;
     PJSUA2_CHECK_EXPR( pjsua_vid_win_set_size(winId, &pj_size) );
+#else
+    PJ_UNUSED_ARG(size);
+#endif
 }
 
 void VideoWindow::rotate(int angle) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_win_rotate(winId, angle) );
+#else
+    PJ_UNUSED_ARG(angle);
+#endif
 }
 
 void VideoWindow::setWindow(const VideoWindowHandle &win) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     pjmedia_vid_dev_hwnd vhwnd;
    
     vhwnd.type = win.type;
     vhwnd.info.window = win.handle.window;
     PJSUA2_CHECK_EXPR( pjsua_vid_win_set_win(winId, &vhwnd) );
+#else
+    PJ_UNUSED_ARG(win);
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
