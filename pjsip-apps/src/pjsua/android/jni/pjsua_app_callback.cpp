@@ -23,6 +23,8 @@
 
 #if defined(PJ_ANDROID) && PJ_ANDROID != 0
 
+#include <android/log.h>
+
 static PjsuaAppCallback* registeredCallbackObject = NULL;
 static pjsua_app_cfg_t android_app_config;
 static int restart_argc;
@@ -32,8 +34,21 @@ extern const char *pjsua_app_def_argv[];
 
 #define THIS_FILE	"pjsua_app_callback.cpp"
 
+extern "C" {
+static void log_writer(int level, const char *data, int len)
+{
+    __android_log_write(ANDROID_LOG_INFO, "pjsua", data);
+}
+}
+
+
 /** Callback wrapper **/
-void on_cli_started(pj_status_t status, const char *msg)
+static void on_cli_config(pjsua_app_config *cfg)
+{
+    cfg->log_cfg.cb = &log_writer;
+}
+
+static void on_cli_started(pj_status_t status, const char *msg)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
     if (registeredCallbackObject) {
@@ -45,7 +60,7 @@ void on_cli_started(pj_status_t status, const char *msg)
     }
 }
 
-void on_cli_stopped(pj_bool_t restart, int argc, char **argv)
+static void on_cli_stopped(pj_bool_t restart, int argc, char **argv)
 {
     if (restart) {
 	restart_argc = argc;
@@ -82,6 +97,7 @@ int pjsuaStart()
 
     pj_bzero(&android_app_config, sizeof(android_app_config));
 
+    android_app_config.on_config_init = &on_cli_config;
     android_app_config.on_started = &on_cli_started;
     android_app_config.on_stopped = &on_cli_stopped;
 
