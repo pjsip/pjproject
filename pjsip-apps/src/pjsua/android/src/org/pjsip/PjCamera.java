@@ -115,7 +115,10 @@ public class PjCamera implements Camera.PreviewCallback, SurfaceHolder.Callback
 	Camera.Parameters cp = camera.getParameters();
 	cp.setPreviewSize(param.width, param.height);
 	cp.setPreviewFormat(param.format);
-	cp.setPreviewFpsRange(param.fps1000, param.fps1000);
+	// Some devices such as Nexus require an exact FPS range from the
+	// supported FPS ranges, specifying a subset range will raise
+	// exception.
+	//cp.setPreviewFpsRange(param.fps1000, param.fps1000);
 	try {
 	    camera.setParameters(cp);
 	} catch (RuntimeException e) {
