@@ -281,11 +281,6 @@ static pj_status_t deinit_opengl(void * data)
         eglTerminate(stream->display);
     }
     
-    if (stream->window) {
-        ANativeWindow_release(stream->window);
-        stream->window = NULL;
-    }
-    
     stream->display = EGL_NO_DISPLAY;
     stream->surface = EGL_NO_SURFACE;
     stream->context = EGL_NO_CONTEXT;
@@ -426,16 +421,23 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         if (!vfi)
             return PJMEDIA_EVID_BADFORMAT;
         
+        /* Re-init OpenGL */
+        if (strm->window)
+            job_queue_post_job(strm->jq, deinit_opengl, strm, 0, NULL);
+
         pjmedia_format_copy(&strm->param.fmt, fmt);
-        
+
         vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
         pj_memcpy(&strm->vid_size, &vfd->size, sizeof(vfd->size));
-        if (strm->param.disp_size.w == 0 || strm->param.disp_size.h == 0)
-            pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
+        pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
+        
+	if (strm->window)
+	    job_queue_post_job(strm->jq, init_opengl, strm, 0, NULL);
+	    
+	PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL due to format change"));
         
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
-        pj_bool_t is_running = strm->is_running;
         pj_status_t status = PJ_SUCCESS;
         pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
         ANativeWindow *native_wnd = (ANativeWindow *)wnd->info.android.window;
@@ -443,22 +445,20 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         if (strm->window == native_wnd)
             return PJ_SUCCESS;
         
-        /* Stop the stream and re-init OpenGL */
-    	andgl_stream_stop(s);
+        /* Re-init OpenGL */
         job_queue_post_job(strm->jq, deinit_opengl, strm, 0, NULL);
+        if (strm->window)
+            ANativeWindow_release(strm->window);
 
         strm->window = strm->param.window.info.android.window = native_wnd;
         if (strm->window) {
             job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
         }
 
-        PJ_LOG(3, (THIS_FILE, "Re-initializing OpenGL with window %p: %s",
+        PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL with window %p: %s",
         		      strm->window,
                               (status == PJ_SUCCESS? "success": "failed")));
         
-        if (is_running)
-	    andgl_stream_start(s);
-
         return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         pj_memcpy(&strm->param.disp_size, pval, sizeof(strm->param.disp_size));
@@ -524,6 +524,11 @@ static pj_status_t andgl_stream_destroy(pjmedia_vid_dev_stream *strm)
     andgl_stream_stop(strm);
     
     job_queue_post_job(stream->jq, deinit_opengl, strm, 0, NULL);
+    
+    if (stream->window) {
+        ANativeWindow_release(stream->window);
+        stream->window = NULL;
+    }
     
     if (stream->jq) {
         job_queue_destroy(stream->jq);
