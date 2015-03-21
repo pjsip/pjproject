@@ -289,6 +289,11 @@
 				CLASSPREFIX = ipjsua;
 				LastUpgradeCheck = 0450;
 				ORGANIZATIONNAME = Teluu;
+				TargetAttributes = {
+					3AF0580316F050770046B835 = {
+						DevelopmentTeam = 93NHJQ455P;
+					};
+				};
 			};
 			buildConfigurationList = 3AF057FE16F050770046B835 /* Build configuration list for PBXProject "ipjsua" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -424,6 +429,7 @@
 		3AF0582C16F050780046B835 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
@@ -463,6 +469,7 @@
 		3AF0582D16F050780046B835 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (

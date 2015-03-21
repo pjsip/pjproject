@@ -14,11 +14,11 @@
 		<string>https://svn.pjsip.org/repos/pjproject/trunk</string>
 	</dict>
 	<key>IDESourceControlProjectPath</key>
-	<string>pjsip-apps/src/pjsua/ios/ipjsua.xcodeproj</string>
+	<string>pjsip-apps/src/pjsua/ios/ipjsua.xcworkspace</string>
 	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
 	<dict>
 		<key>74dad513-b988-da41-8d7b-12977e46ad98++2595</key>
-		<string>../../../../../..</string>
+		<string>../../../../..</string>
 	</dict>
 	<key>IDESourceControlProjectRepositoryRootDictionary</key>
 	<dict>
@@ -26,7 +26,7 @@
 		<string>https://svn.pjsip.org/repos</string>
 	</dict>
 	<key>IDESourceControlProjectURL</key>
-	<string>https://svn.pjsip.org/repos/pjproject/trunk/pjsip-apps/src/pjsua/ios/ipjsua.xcodeproj</string>
+	<string>https://svn.pjsip.org/repos/pjproject/trunk/pjsip-apps/src/pjsua/ios/ipjsua.xcworkspace</string>
 	<key>IDESourceControlProjectVersion</key>
 	<integer>111</integer>
 	<key>IDESourceControlProjectWCCIdentifier</key>
