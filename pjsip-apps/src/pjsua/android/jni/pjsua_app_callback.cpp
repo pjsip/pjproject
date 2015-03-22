@@ -29,6 +29,8 @@ static PjsuaAppCallback* registeredCallbackObject = NULL;
 static pjsua_app_cfg_t android_app_config;
 static int restart_argc;
 static char **restart_argv;
+static pjsua_callback pjsua_cb_orig;
+static jobject callVideoSurface;
 
 extern const char *pjsua_app_def_argv[];
 
@@ -41,11 +43,44 @@ static void log_writer(int level, const char *data, int len)
 }
 }
 
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pjsua_call_info call_info;
+    unsigned mi;
+    pj_bool_t has_error = PJ_FALSE;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    for (mi=0; mi<call_info.media_cnt; ++mi) {
+        pjsua_call_media_info *med_info = &call_info.media[mi];
+	if (med_info->type == PJMEDIA_TYPE_VIDEO &&
+	    med_info->status == PJSUA_CALL_MEDIA_ACTIVE &&
+	    med_info->stream.vid.win_in != PJSUA_INVALID_ID)
+	{
+	    pjmedia_vid_dev_hwnd vhwnd;
+
+	    /* Setup renderer surface */
+	    pj_bzero(&vhwnd, sizeof(vhwnd));
+	    vhwnd.type = PJMEDIA_VID_DEV_HWND_TYPE_ANDROID;
+	    vhwnd.info.window = callVideoSurface;
+	    pjsua_vid_win_set_win(med_info->stream.vid.win_in, &vhwnd);
+	    break;
+	}
+    }
+    
+    /* Forward to original callback */
+    if (pjsua_cb_orig.on_call_media_state)
+	(*pjsua_cb_orig.on_call_media_state)(call_id);
+}
 
 /** Callback wrapper **/
 static void on_cli_config(pjsua_app_config *cfg)
 {
+    pjsua_cb_orig = cfg->cfg.cb;
     cfg->log_cfg.cb = &log_writer;
+    
+    /* Override pjsua callback, e.g: to install renderer view */
+    cfg->cfg.cb.on_call_media_state = &on_call_media_state;
 }
 
 static void on_cli_started(pj_status_t status, const char *msg)
@@ -124,6 +159,12 @@ int pjsuaRestart()
 void setCallbackObject(PjsuaAppCallback* callback)
 {
     registeredCallbackObject = callback;
+}
+
+
+void setIncomingVideoRenderer(jobject surface)
+{
+    callVideoSurface = surface;
 }
 
 #endif

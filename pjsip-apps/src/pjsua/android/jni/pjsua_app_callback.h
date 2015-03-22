@@ -19,6 +19,8 @@
 #ifndef __PJSUA_APP_CALLBACK_H__
 #define __PJSUA_APP_CALLBACK_H__
 
+#include <jni.h>
+
 class PjsuaAppCallback {
 public:
     virtual ~PjsuaAppCallback() {}
@@ -31,6 +33,7 @@ int pjsuaStart();
 void pjsuaDestroy();
 int pjsuaRestart();
 void setCallbackObject(PjsuaAppCallback* callback);
+void setIncomingVideoRenderer(jobject surface);
 }
 
 #endif /* __PJSUA_APP_CALLBACK_H__ */

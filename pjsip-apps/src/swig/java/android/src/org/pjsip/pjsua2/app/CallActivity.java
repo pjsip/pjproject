@@ -79,7 +79,7 @@ public class CallActivity extends Activity
 			if (holder == null)
 				vidWH.getHandle().setWindow(null);
 			else
-				vidWH.getHandle().setWindow(pjsua2.android_opengl_get_surface(holder.getSurface()));
+			    	vidWH.getHandle().setWindow(holder.getSurface());
 			try {
 				MainActivity.currentCall.vidWin.setWindow(vidWH);
 			} catch (Exception e) {}

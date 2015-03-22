@@ -136,18 +136,6 @@ static pjmedia_vid_dev_stream_op stream_op =
     &andgl_stream_destroy
 };
 
-static void get_jvm(JNIEnv **jni_env)
-{
-    (*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env, JNI_VERSION_1_4);
-}
-
-void* android_opengl_get_surface(jobject surface)
-{
-    JNIEnv *env = 0;
-    get_jvm(&env);
-    return ((env && surface)? ANativeWindow_fromSurface(env, surface): NULL);
-}
-
 int pjmedia_vid_dev_opengl_imp_get_cap(void)
 {
     return PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW |

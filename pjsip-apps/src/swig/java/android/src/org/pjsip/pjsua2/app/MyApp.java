@@ -20,6 +20,7 @@ package org.pjsip.pjsua2.app;
 
 import java.io.File;
 import java.util.ArrayList;
+
 import org.pjsip.pjsua2.*;
 
 
@@ -243,6 +244,14 @@ class MyAccountConfig {
 
 class MyApp {
 	static {
+	    	try{
+		    System.loadLibrary("openh264");
+		    System.loadLibrary("yuv");
+	    	} catch (UnsatisfiedLinkError e) {
+	    	    System.out.println("UnsatisfiedLinkError: " + e.getMessage());
+	    	    System.out.println("This could be safely ignored if you " +
+		    		       "don't need video.");
+	    	}
 		System.loadLibrary("pjsua2");
 		System.out.println("Library loaded");
 	}
