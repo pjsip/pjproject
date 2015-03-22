@@ -107,7 +107,7 @@ using namespace pj;
 %ignore pj::WindowHandle::display;
 %ignore pj::WindowHandle::window;
 %typemap(in) jobject surface {
-    $1 = (jobject)ANativeWindow_fromSurface(jenv, $input);
+    $1 = ($input? (jobject)ANativeWindow_fromSurface(jenv, $input): NULL);
 }
 %extend pj::WindowHandle {
     void setWindow(jobject surface) { $self->window = surface; }

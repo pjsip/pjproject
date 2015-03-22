@@ -95,7 +95,7 @@ class MyCall extends Call {
 				       cmi.getStatus() == pjsua_call_media_status.PJSUA_CALL_MEDIA_ACTIVE &&
 				       cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
 			{
-				vidWin = cmi.getVideoWindow();
+				vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
 			}
 		}
 		

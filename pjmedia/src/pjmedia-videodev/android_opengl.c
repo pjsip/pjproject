@@ -229,7 +229,7 @@ static pj_status_t render(void * data)
 {
     struct andgl_stream *stream = (struct andgl_stream *)data;
     
-    if (!stream->window || stream->err_rend == 0)
+    if (stream->display == EGL_NO_DISPLAY || stream->err_rend == 0)
     	return PJ_SUCCESS;
     
     pjmedia_vid_dev_opengl_draw(stream->gl_buf, stream->vid_size.w,
@@ -481,7 +481,7 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     struct andgl_stream *stream = (struct andgl_stream*)strm;
     pj_status_t status;
 
-    if (!stream->is_running || !stream->window)
+    if (!stream->is_running || stream->display == EGL_NO_DISPLAY)
 	return PJ_EINVALIDOP;
     
     stream->frame = frame;
