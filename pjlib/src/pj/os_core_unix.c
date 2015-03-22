@@ -717,6 +717,9 @@ PJ_DEF(pj_status_t) pj_thread_join(pj_thread_t *p)
 
     PJ_CHECK_STACK();
 
+    if (p == pj_thread_this())
+	return PJ_ECANCELLED;
+
     PJ_LOG(6, (pj_thread_this()->obj_name, "Joining thread %s", p->obj_name));
     result = pthread_join( rec->thread, &ret);
 

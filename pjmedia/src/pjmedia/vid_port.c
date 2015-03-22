@@ -580,7 +580,14 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
         pjmedia_vid_dev_param vid_param;
         pj_status_t status;
         
-	pjmedia_vid_port_stop(vp);
+	/* Ticket #1827:
+	 * Stopping video port should not be necessary here because
+	 * it will also try to stop the clock, from inside the clock's
+	 * own thread, so it may get stuck. We just stop the video device
+	 * stream instead.
+	 * pjmedia_vid_port_stop(vp);
+	 */
+	pjmedia_vid_dev_stream_stop(vp->strm);
         
         /* Retrieve the video format detail */
         vfd = pjmedia_format_get_video_format_detail(
@@ -635,7 +642,8 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
             pjmedia_clock_modify(vp->clock, &clock_param);
         }
         
-	pjmedia_vid_port_start(vp);
+	/* pjmedia_vid_port_start(vp); */
+	pjmedia_vid_dev_stream_start(vp->strm);
     }
     
     /* Republish the event, post the event to the event manager

@@ -311,8 +311,10 @@ PJ_DECL(pj_thread_t*) pj_thread_this(void);
 
 /**
  * Join thread, and block the caller thread until the specified thread exits.
+ * If it is called from within the thread itself, it will return immediately
+ * with failure status.
  * If the specified thread has already been dead, or it does not exist,
- * the function will return immediately with successfull status.
+ * the function will return immediately with successful status.
  *
  * @param thread    The thread handle.
  *
