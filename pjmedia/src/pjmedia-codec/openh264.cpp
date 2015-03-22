@@ -40,7 +40,8 @@
  */
 #define THIS_FILE		"openh264.cpp"
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
+#if (defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE) || \
+     defined(__ANDROID__)
 #  define DEFAULT_WIDTH		352
 #  define DEFAULT_HEIGHT	288
 #else
