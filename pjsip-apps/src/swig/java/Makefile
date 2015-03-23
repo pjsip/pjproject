@@ -176,6 +176,10 @@ clean distclean realclean:
 		$(MY_PACKAGE_PATH)/*.java $(MY_PACKAGE_PATH)/*.class
 
 java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class $(MY_PACKAGE_PATH)/sample.class
+ifeq ($(OS),android)
+	@echo "Copying Android camera helper components..."
+	cp -u $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(MY_PACKAGE_PATH)/..
+endif
 
 $(MY_PACKAGE_PATH)/Error.class: $(MY_PACKAGE_PATH)/Error.java
 	$(MY_JAVAC) -d $(OUT_DIR) $(MY_PACKAGE_PATH)/*.java $(MY_APP_JAVA)

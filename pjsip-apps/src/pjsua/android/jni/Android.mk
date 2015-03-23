@@ -28,8 +28,13 @@ LOCAL_LDFLAGS   := $(APP_LDFLAGS)
 LOCAL_LDLIBS    := $(MY_MODULES) $(APP_LDLIBS)
 LOCAL_SRC_FILES := $(MY_JNI_WRAP) pjsua_app_callback.cpp
 
+# Copy Java Camera helper components from pjmedia/src/pjmedia-videodev/android
+src/org/pjsip/PjCamera.java:
+	@echo "Copying Android camera helper components..."
+	cp -u $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java src/org/pjsip
+
 # Invoke SWIG
-$(MY_JNI_DIR)/$(MY_JNI_WRAP):
+$(MY_JNI_DIR)/$(MY_JNI_WRAP): src/org/pjsip/PjCamera.java
 	@echo "Invoking SWIG..."
 	$(MY_SWIG) -c++ -o $(MY_JNI_DIR)/$(MY_JNI_WRAP) -package org.pjsip.pjsua -outdir src/org/pjsip/pjsua -java $(MY_JNI_DIR)/pjsua.i
 
