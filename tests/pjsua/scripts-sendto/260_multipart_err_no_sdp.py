@@ -32,7 +32,7 @@ include = []
 exclude = []
 
 sendto_cfg = sip.SendtoCfg( "Multipart/mixed body without SDP", 
-			    pjsua_args=args, sdp="", resp_code=400, 
+			    pjsua_args=args, sdp="", resp_code=415,
 			    extra_headers=extra_headers, body=body,
 			    resp_inc=include, resp_exc=exclude)
 
