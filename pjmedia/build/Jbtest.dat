@@ -333,9 +333,9 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with two empty events
 %fixed 5
 !burst	    1
-!discard    4  <- the burst level is about 1, but prefetching will cause delay by 5 frames prefetching, delay adjustment may take place later on
-!lost	    4  <- progressive discard drops frames as if they were lost
-!empty	    10
+!discard    0  <- #1612: no frame discard for delay adjustment in fixed mode
+!lost	    0  <- #1612: no frame discard for delay adjustment in fixed mode
+!empty	    10 <- 5 from GET burst + 5 from prefetching
 !delay	    5
 G
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
@@ -346,10 +346,10 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with random burst
 %fixed 5
 !burst	    3
-!discard    4 <- (see above test scenario)
-!lost	    4 <- (see above test scenario)
+!discard    0 <- (see above test scenario)
+!lost	    0 <- (see above test scenario)
 !empty	    5
-!delay	    5
+!delay	    6
 PGPGPPGGPPPPGGPGGGPG PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPPPGGPGGGPG 
 PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPGGPPPGGGPG PGGGGPPPGPPGPPPGGPGG 
 PGPGPPGGPPPPGGPGGGPG PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPPPGGPGGGPG 
@@ -363,10 +363,10 @@ PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPGGPPPGGGPG PGGGGPPPGPPGPPPGGPGG
 = Fixed mode prefetch 10, PUT burst at the beginning
 %fixed 10
 !burst	    1
-!discard    50 <- frames discarded for delay adaptation
-!lost	    50 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
+!discard    1 <- frames discarded due to JB full (JB default size = 50 frames)
+!lost	    1 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    0
-!delay_min  20 <- minimum delay, twice of minimal prefetch
+!delay_min  50 <- #1612: no frame discard for delay adjustment in fixed mode
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
