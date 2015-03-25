@@ -107,6 +107,8 @@ public class MainActivity extends Activity
 	    accCfg = new AccountConfig();
 	    accCfg.setIdUri("sip:localhost");
 	    accCfg.getNatConfig().setIceEnabled(true);
+	    accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
+	    accCfg.getVideoConfig().setAutoShowIncoming(true);
 	    account = app.addAcc(accCfg);
 	} else {
 	    account = app.accList.get(0);

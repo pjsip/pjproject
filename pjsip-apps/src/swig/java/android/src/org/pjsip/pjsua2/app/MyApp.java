@@ -385,6 +385,12 @@ class MyApp {
 	/* Create accounts. */
 	for (int i = 0; i < accCfgs.size(); i++) {
 	    MyAccountConfig my_cfg = accCfgs.get(i);
+
+	    /* Customize account config */
+	    my_cfg.accCfg.getNatConfig().setIceEnabled(true);
+	    my_cfg.accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
+	    my_cfg.accCfg.getVideoConfig().setAutoShowIncoming(true);
+
 	    MyAccount acc = addAcc(my_cfg.accCfg);
 	    if (acc == null)
 		continue;
