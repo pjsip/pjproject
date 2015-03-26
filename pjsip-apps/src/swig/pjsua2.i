@@ -103,7 +103,13 @@ using namespace pj;
 
 /* pj::WindowHandle::setWindow() receives Surface object */
 #if defined(SWIGJAVA) && defined(__ANDROID__)
-%{#include <android/native_window_jni.h>%}
+%{
+#if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO!=0
+#  include <android/native_window_jni.h>
+#else
+#  define ANativeWindow_fromSurface(a,b) NULL
+#endif
+%}
 %ignore pj::WindowHandle::display;
 %ignore pj::WindowHandle::window;
 %typemap(in) jobject surface {
