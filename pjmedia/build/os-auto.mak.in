@@ -4,6 +4,7 @@
 # Valid values are:
 #   - mac_os
 #   - iphone_os
+#   - android_os
 AC_PJMEDIA_VIDEO = @ac_pjmedia_video@
 
 # SDL flags
@@ -229,6 +230,13 @@ endif
 #
 ifeq ($(AC_PJMEDIA_VIDEO),iphone_os)
 export PJMEDIA_VIDEODEV_OBJS += ios_dev.o ios_opengl_dev.o
+endif
+
+#
+# Android video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO),andriod_os)
+export PJMEDIA_VIDEODEV_OBJS += android_dev.o android_opengl.o
 endif
 
 #

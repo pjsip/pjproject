@@ -196,7 +196,7 @@ PJ_BEGIN_DECL
 /**
  * This setting controls whether Android support should be included.
  *
- * Default: 0
+ * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_ANDROID
 #   define PJMEDIA_VIDEO_DEV_HAS_ANDROID	0

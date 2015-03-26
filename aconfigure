@@ -6197,6 +6197,7 @@ $as_echo "Checking if OpenGL ES 2 is available... yes" >&6; }
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenGL ES 2 is available... no" >&5
 $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
+	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
 	;;
   arm-apple-darwin*)
 	ac_pjmedia_video=iphone_os
