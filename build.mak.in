@@ -152,6 +152,9 @@ QT_CFLAGS = @ac_qt_cflags@
 # iOS
 IOS_CFLAGS = @ac_ios_cflags@
 
+# Android
+ANDROID_CFLAGS = @ac_android_cflags@
+
 # libyuv
 LIBYUV_CFLAGS = @ac_libyuv_cflags@ 
 LIBYUV_LDFLAGS =  @ac_libyuv_ldflags@

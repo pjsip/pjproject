@@ -235,7 +235,7 @@ endif
 #
 # Android video device
 #
-ifeq ($(AC_PJMEDIA_VIDEO),andriod_os)
+ifeq ($(AC_PJMEDIA_VIDEO),android_os)
 export PJMEDIA_VIDEODEV_OBJS += android_dev.o android_opengl.o
 endif
 
