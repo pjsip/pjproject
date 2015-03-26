@@ -38,9 +38,7 @@
 /* Define the number of errors before the stream stops trying to do rendering.
  * To disable this feature, put 0.
  */
-#define STOP_IF_ERROR_RENDERING 5
-
-extern JavaVM *pj_jni_jvm;
+#define STOP_IF_ERROR_RENDERING 8
 
 typedef struct andgl_fmt_info
 {
@@ -138,8 +136,7 @@ static pjmedia_vid_dev_stream_op stream_op =
 
 int pjmedia_vid_dev_opengl_imp_get_cap(void)
 {
-    return PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW |
-           PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
+    return PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
 }
 
 static andgl_fmt_info* get_andgl_format_info(pjmedia_format_id id)
@@ -298,11 +295,6 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     
-    /* If OUTPUT_RESIZE flag is not used, set display size to default */
-    if (!(param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE)) {
-        pj_bzero(&strm->param.disp_size, sizeof(strm->param.disp_size));
-    }
-
     /* Set video format */
     status = andgl_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_FORMAT,
                                   &param->fmt);
@@ -325,12 +317,6 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
         goto on_error;
     }
 
-    /* Apply the remaining settings */
-/*    if (param->flags & PJMEDIA_VID_DEV_CAP_ORIENTATION) {
-        andgl_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                             &param->orient);
-    }
-*/
     PJ_LOG(4, (THIS_FILE, "Android OpenGL ES renderer successfully created"));
                     
     /* Done */
@@ -443,19 +429,11 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
             job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
         }
 
-        PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL with window %p: %s",
-        		      strm->window,
+        PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL with native window"
+        		      " %p: %s", strm->window,
                               (status == PJ_SUCCESS? "success": "failed")));
         
         return status;
-    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
-        pj_memcpy(&strm->param.disp_size, pval, sizeof(strm->param.disp_size));
-        return PJ_SUCCESS;
-    } else if (cap == PJMEDIA_VID_DEV_CAP_ORIENTATION) {
-        pj_memcpy(&strm->param.orient, pval, sizeof(strm->param.orient));
-        if (strm->param.orient == PJMEDIA_ORIENT_UNKNOWN)
-            return PJ_SUCCESS;
-        return PJ_SUCCESS;
     }
     
     return PJMEDIA_EVID_INVCAP;
