@@ -45,9 +45,9 @@ static void log_writer(int level, const char *data, int len)
 
 static void on_call_media_state(pjsua_call_id call_id)
 {
+#if PJMEDIA_HAS_VIDEO
     pjsua_call_info call_info;
     unsigned mi;
-    pj_bool_t has_error = PJ_FALSE;
 
     pjsua_call_get_info(call_id, &call_info);
 
@@ -67,6 +67,7 @@ static void on_call_media_state(pjsua_call_id call_id)
 	    break;
 	}
     }
+#endif
     
     /* Forward to original callback */
     if (pjsua_cb_orig.on_call_media_state)
