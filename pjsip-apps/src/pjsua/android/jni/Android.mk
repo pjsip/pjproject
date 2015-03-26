@@ -31,7 +31,7 @@ LOCAL_SRC_FILES := $(MY_JNI_WRAP) pjsua_app_callback.cpp
 # Copy Java Camera helper components from pjmedia/src/pjmedia-videodev/android
 src/org/pjsip/PjCamera.java:
 	@echo "Copying Android camera helper components..."
-	cp -u $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java src/org/pjsip
+	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java src/org/pjsip
 
 # Invoke SWIG
 $(MY_JNI_DIR)/$(MY_JNI_WRAP): src/org/pjsip/PjCamera.java
