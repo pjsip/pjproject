@@ -370,14 +370,14 @@ static int do_test(const char *title,
 		  client_cfg->have_reg, client_result.have_reg));
 	return -260;
     }
-    if (client_result.interval != client_result.expiration) {
+    if (client_result.have_reg && client_result.interval != client_result.expiration) {
 	PJ_LOG(3,(THIS_FILE, "    error: interval (%d) is different than expiration (%d)",
 		  client_result.interval, client_result.expiration));
 	return -270;
     }
-    if (client_result.expiration > 0 && client_result.next_reg < 1) {
-	PJ_LOG(3,(THIS_FILE, "    error: next_reg=%d, expecting positive number because expiration is %d",
-		  client_result.next_reg, client_result.expiration));
+    if (client_result.interval > 0 && client_result.next_reg < 1) {
+	PJ_LOG(3,(THIS_FILE, "    error: next_reg=%d, expecting positive number because interval is %d",
+		  client_result.next_reg, client_result.interval));
 	return -280;
     }
 
@@ -402,7 +402,7 @@ static int keep_alive_test(const pj_str_t *registrar_uri)
 	{ PJ_TRUE,	200,	PJ_FALSE, EXACT,   TIMEOUT, 0,	    {NULL, 0}};
     struct client client_cfg = 
 	/* error	code	have_reg    expiration	contact_cnt auth?    destroy*/
-	{ PJ_FALSE,	200,	PJ_TRUE,   TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
+	{ PJ_FALSE,	200,	PJ_TRUE,    TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
     pj_str_t contact = pj_str("<sip:c@C>");
 
 
@@ -479,7 +479,7 @@ static int refresh_error(const pj_str_t *registrar_uri,
 	{ PJ_TRUE,	200,	PJ_FALSE, EXACT,   TIMEOUT, 0,	    {NULL, 0}};
     struct client client_cfg = 
 	/* error	code	have_reg    expiration	contact_cnt auth?    destroy*/
-	{ PJ_FALSE,	200,	PJ_TRUE,   TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
+	{ PJ_FALSE,	200,	PJ_TRUE,    TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
     pj_str_t contact = pj_str("<sip:c@C>");
 
     pjsip_regc *regc;
@@ -536,7 +536,7 @@ static int update_test(const pj_str_t *registrar_uri)
 	{ PJ_TRUE,	200,	PJ_FALSE, EXACT,   TIMEOUT, 0,	    {NULL, 0}};
     struct client client_cfg = 
 	/* error	code	have_reg    expiration	contact_cnt auth?    destroy*/
-	{ PJ_FALSE,	200,	PJ_TRUE,   TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
+	{ PJ_FALSE,	200,	PJ_TRUE,    TIMEOUT,	1,	    PJ_FALSE,PJ_FALSE};
     pj_str_t contacts[] = {
 	{ "<sip:a>", 7 },
 	{ "<sip:b>", 7 },
@@ -709,10 +709,10 @@ static int auth_send_error(const pj_str_t *registrar_uri,
     enum { TIMEOUT = 40 };
     struct registrar_cfg server_cfg = 
 	/* respond	code	auth	  contact  exp_prm expires more_contacts */
-	{ PJ_TRUE,	200,	PJ_TRUE,  EXACT,   75,	    0,	    {NULL, 0}};
+	{ PJ_TRUE,	200,	PJ_TRUE,  EXACT,   75,	   0,	    {NULL, 0}};
     struct client client_cfg = 
 	/* error	code	have_reg    expiration	contact_cnt auth?    destroy*/
-	{ PJ_TRUE,	401,	PJ_FALSE, -1,		0,	    PJ_TRUE, PJ_TRUE};
+	{ PJ_TRUE,	401,	PJ_FALSE,   TIMEOUT,	0,	    PJ_TRUE, PJ_TRUE};
     pj_str_t contact = pj_str("<sip:c@C>");
 
     pjsip_regc *regc;
@@ -774,7 +774,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	502,	PJ_FALSE,   -1,		0,	    PJ_FALSE}
+	    { PJ_FALSE,	502,	PJ_FALSE,   600,	0,	    PJ_FALSE}
 	},
 
 	/* timeout test */
@@ -793,7 +793,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth? */
-	    { PJ_FALSE,	408,	PJ_FALSE,   -1,		0,	    PJ_FALSE}
+	    { PJ_FALSE,	408,	PJ_FALSE,   600,	0,	    PJ_FALSE}
 	},
 
 	/* Basic successful registration scenario:
@@ -816,7 +816,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   75,		1,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    75,		1,	    PJ_FALSE}
 	},
 
 	/* Basic successful registration scenario with authentication
@@ -836,7 +836,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   75,		1,	    PJ_TRUE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    75,		1,	    PJ_TRUE}
 	},
 
 	/* a good registrar returns the Contact header as is and
@@ -854,11 +854,11 @@ int regc_test(void)
 
 	    /* registrar config: */
 	    /* respond	code	auth	  contact  exp_prm expires more_contacts */
-	    { PJ_TRUE,	200,	PJ_FALSE, EXACT,    75,	    65,	    {"<sip:a@a>;expires=70", 0}},
+	    { PJ_TRUE,	200,	PJ_FALSE, EXACT,   75,	    65,	    {"<sip:a@a>;expires=70", 0}},
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   75,		2,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    75,		2,	    PJ_FALSE}
 	},
 
 
@@ -883,7 +883,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   75,		1,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    75,		1,	    PJ_FALSE}
 	},
 
 
@@ -909,7 +909,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   75,		2,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    75,		2,	    PJ_FALSE}
 	},
 
 
@@ -933,7 +933,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	202,	PJ_TRUE,   75,		1,	    PJ_FALSE}
+	    { PJ_FALSE,	202,	PJ_TRUE,    75,		1,	    PJ_FALSE}
 	},
 
 
@@ -957,7 +957,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   65,		2,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    65,		2,	    PJ_FALSE}
 	},
 
 	/* the registrar doesn't return any bindings, but for some
@@ -979,7 +979,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   65,		0,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    65,		0,	    PJ_FALSE}
 	},
 
 	/* Neither Contact header nor Expires header are present.
@@ -1000,7 +1000,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	200,	PJ_TRUE,   600,		0,	    PJ_FALSE}
+	    { PJ_FALSE,	200,	PJ_TRUE,    600,	0,	    PJ_FALSE}
 	},
     };
 

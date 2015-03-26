@@ -222,7 +222,9 @@ static pj_status_t loop_destroy(pjsip_transport *tp)
     
     loop->thread_quit_flag = 1;
     /* Unlock transport mutex before joining thread. */
-    pj_lock_release(tp->lock);
+    /// This raised assertion failed "mutex->owner == pj_thread_this()",
+    /// where mutex->owner==NULL
+    //pj_lock_release(tp->lock);
     pj_thread_join(loop->thread);
     pj_thread_destroy(loop->thread);
 
