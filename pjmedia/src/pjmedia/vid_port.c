@@ -25,12 +25,32 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
-
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 
 #define SIGNATURE	PJMEDIA_SIG_VID_PORT
 #define THIS_FILE	"vid_port.c"
+
+
+/**
+ * Enable this to trace the format matching process.
+ */
+#if 0
+#  define TRACE_FIND_FMT(args)	    PJ_LOG(5,args)
+#else
+#  define TRACE_FIND_FMT(args)
+#endif
+
+/**
+ * We use nearest width and aspect ratio to find match between the requested 
+ * format and the supported format. Specify this to determine the array size 
+ * of the supported formats with the nearest width. From this array, we will 
+ * find the one with lowest diff_ratio. Setting this to 1 will thus skip 
+ * the aspect ratio calculation. 
+ */
+#ifndef PJMEDIA_VID_PORT_MATCH_WIDTH_ARRAY_SIZE
+#   define PJMEDIA_VID_PORT_MATCH_WIDTH_ARRAY_SIZE 3
+#endif
 
 typedef struct vid_pasv_port vid_pasv_port;
 
@@ -39,6 +59,13 @@ enum role
     ROLE_NONE,
     ROLE_ACTIVE,
     ROLE_PASSIVE
+};
+
+enum fmt_match
+{
+    FMT_MATCH,
+    FMT_SAME_COLOR_SPACE,
+    FMT_DIFF_COLOR_SPACE
 };
 
 struct pjmedia_vid_port
@@ -86,6 +113,13 @@ struct vid_pasv_port
 {
     pjmedia_port	 base;
     pjmedia_vid_port	*vp;
+};
+
+struct fmt_prop 
+{
+    pj_uint32_t id;
+    pjmedia_rect_size size;
+    pjmedia_ratio fps;
 };
 
 static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
@@ -181,6 +215,252 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     vp->conv.usec_dst = PJMEDIA_PTIME(&vp->conv.conv_param.dst.det.vid.fps);
 
     return PJ_SUCCESS;
+}	  
+
+static pj_uint32_t match_format_id(pj_uint32_t req_id,
+				   pj_uint32_t sup_id)
+{
+    const pjmedia_video_format_info *req_fmt_info, *sup_fmt_info;
+
+    if (req_id == sup_id)
+	return FMT_MATCH;
+
+    req_fmt_info = pjmedia_get_video_format_info( 
+					pjmedia_video_format_mgr_instance(),
+					req_id);
+
+    sup_fmt_info = pjmedia_get_video_format_info( 
+					pjmedia_video_format_mgr_instance(),
+					sup_id);
+
+    if (req_fmt_info->color_model == sup_fmt_info->color_model) {
+	return FMT_SAME_COLOR_SPACE;
+    }
+
+    return FMT_DIFF_COLOR_SPACE;
+}
+
+static pj_uint32_t get_match_format_id(pj_uint32_t req_fmt_id,
+				       pjmedia_vid_dev_info *di)
+{
+    unsigned i = 0, match_idx = 0, match_fmt = FMT_DIFF_COLOR_SPACE+1;
+
+    /* Find the matching format. If no exact match is found, find 
+     * the supported format with the same color space. If no match is found,
+     * use the first supported format on the list.
+     */
+    for (i; i < di->fmt_cnt; ++i) {
+	unsigned tmp_fmt = match_format_id(req_fmt_id, di->fmt[i].id);
+
+	if (match_fmt == FMT_MATCH)
+	    return req_fmt_id;
+
+	if (tmp_fmt < match_fmt) {
+	    match_idx = i;
+	    match_fmt = tmp_fmt;
+	}
+    }
+    return di->fmt[match_idx].id;
+}
+
+/**
+ * Find the closest supported format from the specific requested format.
+ * The algo is to find a supported size with the matching format id, width and
+ * lowest diff_ratio.
+ * ---
+ * For format id matching, the priority is:
+ * 1. Find exact match
+ * 2. Find format with the same color space
+ * 3. Use the first supported format. 
+ * ---
+ * For ratio matching:
+ * Find the lowest difference of the aspect ratio between the requested and
+ * the supported format.
+ */
+static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
+					pjmedia_rect_size *req_fmt_size,
+					pjmedia_ratio *req_fmt_fps,
+					pjmedia_vid_dev_info *di)
+{
+    unsigned i, match_idx = 0;
+    pj_uint32_t match_fmt_id;     
+    float req_ratio, min_diff_ratio = 0.0;    
+    struct fmt_prop ret_prop;
+    pj_bool_t found_exact_match = PJ_FALSE;
+
+    #define	GET_DIFF(x, y)	((x) > (y)? (x-y) : (y-x))
+    
+    /* This will contain the supported format with lowest width difference */
+    pjmedia_rect_size nearest_width[PJMEDIA_VID_PORT_MATCH_WIDTH_ARRAY_SIZE];
+
+    /* Initialize the list. */
+    for (i=0;i<PJMEDIA_VID_PORT_MATCH_WIDTH_ARRAY_SIZE;++i) {
+	nearest_width[i].w = 0xFFFFFFFF;
+	nearest_width[i].h = 0;
+    }
+
+    /* Get the matching format id. We assume each format will support all 
+     * image size. 
+     */
+    match_fmt_id = get_match_format_id(req_fmt_id, di);
+    
+    /* Search from the supported format, the smallest diff width. Stop the 
+     * search if exact match is found.
+     */
+    for (i=0;i<di->fmt_cnt;++i) {
+	pjmedia_video_format_detail *vfd;
+	unsigned diff_width1, diff_width2;
+
+	/* Ignore supported format with different format id. */
+	if (di->fmt[i].id != match_fmt_id)
+	    continue;
+
+	vfd = pjmedia_format_get_video_format_detail(&di->fmt[i], PJ_TRUE);
+
+	/* Exact match found. */
+	if ((vfd->size.w == req_fmt_size->w) && 
+	    (vfd->size.h == req_fmt_size->h)) 
+	{
+	    nearest_width[0] = vfd->size;
+	    found_exact_match = PJ_TRUE;
+	    break;
+	}
+
+	diff_width1 =  GET_DIFF(vfd->size.w, req_fmt_size->w);
+	diff_width2 =  GET_DIFF(nearest_width[0].w, req_fmt_size->w);
+
+	/* Fill the nearest width list. */
+	if (diff_width1 <= diff_width2) {
+	    int k = 1;
+	    pjmedia_rect_size tmp_size = vfd->size;	    
+
+	    while(((GET_DIFF(tmp_size.w, req_fmt_size->w) <
+		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w))) && 
+		  (k < PJ_ARRAY_SIZE(nearest_width))))    	
+	    {
+		nearest_width[k-1] = nearest_width[k];
+		++k;
+	    }
+	    nearest_width[k-1] = tmp_size;
+	}		
+    }
+    /* No need to calculate ratio if exact match is found. */
+    if (!found_exact_match) {
+	/* We have the list of supported format with nearest width. Now get the 
+	 * best ratio.
+	 */
+	req_ratio = (float)req_fmt_size->w / (float)req_fmt_size->h;
+	for (i=0;i<PJ_ARRAY_SIZE(nearest_width);++i) {
+	    float sup_ratio, diff_ratio;
+
+	    if (nearest_width[i].w == 0xFFFFFFFF)
+		continue;
+
+	    sup_ratio = (float)nearest_width[i].w / (float)nearest_width[i].h;
+
+	    diff_ratio = GET_DIFF(sup_ratio, req_ratio);
+
+	    if ((i==0) || (diff_ratio <= min_diff_ratio)) {
+		match_idx = i;
+		min_diff_ratio = diff_ratio;
+	    }
+	}
+    }
+    ret_prop.id = match_fmt_id;
+    ret_prop.size = nearest_width[match_idx];
+    ret_prop.fps = *req_fmt_fps;
+    return ret_prop;
+}
+
+/**
+ * This is to test the algo to find the closest fmt
+ */
+static void test_find_closest_fmt(pjmedia_vid_dev_info *di)
+{  
+    unsigned i, j, k;
+    char fmt_name[5];
+
+    pjmedia_rect_size find_size[] = {
+	{720, 480},
+	{352, 288},
+	{400, 300},
+	{1600, 900},
+	{255, 352},
+	{500, 500},
+    };
+
+    pjmedia_ratio find_fps[] = {
+	{1, 1},
+	{10, 1},
+	{15, 1},
+	{30, 1},
+    };
+
+    pj_uint32_t find_id[] = {
+	PJMEDIA_FORMAT_RGB24,
+	PJMEDIA_FORMAT_RGBA,
+	PJMEDIA_FORMAT_AYUV,
+	PJMEDIA_FORMAT_YUY2,
+	PJMEDIA_FORMAT_I420
+    };
+
+    TRACE_FIND_FMT((THIS_FILE, "Supported format = "));
+    for (i = 0; i < di->fmt_cnt; i++) {
+	//pjmedia_video_format_detail *vid_fd = 
+	//    pjmedia_format_get_video_format_detail(&di->fmt[i], PJ_TRUE);
+
+	pjmedia_fourcc_name(di->fmt[i].id, fmt_name);
+
+	TRACE_FIND_FMT((THIS_FILE, "id:%s size:%d*%d fps:%d/%d", 
+			fmt_name,
+			vid_fd->size.w,
+			vid_fd->size.h,
+			vid_fd->fps.num,
+			vid_fd->fps.denum));
+    }
+    
+    for (i = 0; i < PJ_ARRAY_SIZE(find_id); i++) {
+
+	for (j = 0; j < PJ_ARRAY_SIZE(find_fps); j++) {
+	
+	    for (k = 0; k < PJ_ARRAY_SIZE(find_size); k++) {
+		struct fmt_prop match_prop;
+
+		pjmedia_fourcc_name(find_id[i], fmt_name);
+
+		TRACE_FIND_FMT((THIS_FILE, "Trying to find closest match "
+				           "id:%s size:%dx%d fps:%d/%d", 
+			        fmt_name,
+			        find_size[k].w,
+			        find_size[k].h,
+			        find_fps[j].num,
+			        find_fps[j].denum));
+		
+		match_prop = find_closest_fmt(find_id[i],
+					      &find_size[k],
+					      &find_fps[j],
+					      di);
+
+		if ((match_prop.id == find_id[i]) && 
+		    (match_prop.size.w == find_size[k].w) &&
+		    (match_prop.size.h == find_size[k].h) &&
+		    (match_prop.fps.num / match_prop.fps.denum == 
+		     find_fps[j].num * find_fps[j].denum)) 
+		{
+		    TRACE_FIND_FMT((THIS_FILE, "Exact Match found!!"));
+		} else {
+		    pjmedia_fourcc_name(match_prop.id, fmt_name);
+		    TRACE_FIND_FMT((THIS_FILE, "Closest format = "\
+					        "id:%s size:%dx%d fps:%d/%d", 
+				    fmt_name,
+				    match_prop.size.w,
+				    match_prop.size.h, 
+				    match_prop.fps.num,
+				    match_prop.fps.denum));		    
+		}
+	    }
+	}
+    }
 }
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
@@ -188,7 +468,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 					     pjmedia_vid_port **p_vid_port)
 {
     pjmedia_vid_port *vp;
-    const pjmedia_video_format_detail *vfd;
+    pjmedia_video_format_detail *vfd;
     char dev_name[64];
     char fmt_name[5];
     pjmedia_vid_dev_cb vid_cb;
@@ -197,7 +477,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     unsigned ptime_usec;
     pjmedia_vid_dev_param vparam;
     pjmedia_vid_dev_info di;
-    unsigned i;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -233,18 +512,46 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_ansi_snprintf(dev_name, sizeof(dev_name), "%s [%s]",
                      di.name, di.driver);
 
-    for (i = 0; i < di.fmt_cnt; ++i) {
-        if (prm->vidparam.fmt.id == di.fmt[i].id)
-            break;
-    }
+    if (di.dir == PJMEDIA_DIR_RENDER) {
+	/* Find the matching format. If no exact match is found, find 
+	 * the supported format with the same color space. If no match is found,
+	 * use the first supported format on the list.
+	 */
+	pj_assert(di.fmt_cnt != 0);
+	vparam.fmt.id = get_match_format_id(prm->vidparam.fmt.id, &di);
+    } else {
+	struct fmt_prop match_prop;
 
-    if (i == di.fmt_cnt) {
-        /* The device has no no matching format. Pick one from
-         * the supported formats, and later use converter to
-         * convert it to the required format.
-         */
-        pj_assert(di.fmt_cnt != 0);
-        vparam.fmt.id = di.fmt[0].id;
+	if (di.fmt_cnt == 0) {
+	    status = PJMEDIA_EVID_SYSERR;
+	    PJ_PERROR(4,(THIS_FILE, status, "Device has no supported format"));
+	    return status;
+	}
+
+#if 0
+	test_find_closest_fmt(&di);
+#endif
+
+	pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
+	PJ_LOG(4,(THIS_FILE,
+		  "Finding best match for %s(%s) format=%s, size=%dx%d "\
+		  "@%d:%d fps",
+		  dev_name, vid_dir_name(prm->vidparam.dir), fmt_name,
+		  vfd->size.w, vfd->size.h, vfd->fps.num, vfd->fps.denum));
+
+	match_prop = find_closest_fmt(prm->vidparam.fmt.id, 
+				      &vfd->size,			     
+				      &vfd->fps, 
+				      &di);
+
+	if ((match_prop.id != prm->vidparam.fmt.id) || 
+	    (match_prop.size.w != vfd->size.w) ||
+	    (match_prop.size.h != vfd->size.h))
+	{
+	    vparam.fmt.id = match_prop.id;
+	    vparam.fmt.det.vid.size = match_prop.size;
+	    vfd->size = match_prop.size;
+	}
     }
 
     pj_strdup2_with_null(pool, &vp->dev_name, di.name);
