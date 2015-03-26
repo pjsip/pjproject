@@ -233,6 +233,10 @@ static pj_uint32_t match_format_id(pj_uint32_t req_id,
 					pjmedia_video_format_mgr_instance(),
 					sup_id);
 
+    if ((req_fmt_info == NULL) || (sup_fmt_info == NULL)) {
+	return FMT_DIFF_COLOR_SPACE;
+    }
+
     if (req_fmt_info->color_model == sup_fmt_info->color_model) {
 	return FMT_SAME_COLOR_SPACE;
     }
