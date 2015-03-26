@@ -346,6 +346,8 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
     }
     /* No need to calculate ratio if exact match is found. */
     if (!found_exact_match) {
+	pj_bool_t found_match = PJ_FALSE;
+
 	/* We have the list of supported format with nearest width. Now get the 
 	 * best ratio.
 	 */
@@ -360,7 +362,8 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 
 	    diff_ratio = GET_DIFF(sup_ratio, req_ratio);
 
-	    if ((i==0) || (diff_ratio <= min_diff_ratio)) {
+	    if ((!found_match) || (diff_ratio <= min_diff_ratio)) {
+		found_match = PJ_TRUE;
 		match_idx = i;
 		min_diff_ratio = diff_ratio;
 	    }
