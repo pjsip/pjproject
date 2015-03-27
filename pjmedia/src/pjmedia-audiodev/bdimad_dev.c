@@ -4,10 +4,10 @@
 
  Author: bdSound Development Team (techsupport@bdsound.com)
  
- Date: 30/10/2012
- Version 1.0.206
+ Date: 12/03/2015
+ Version 2.0.0 rev.1618
 
- Copyright (c) 2012 bdSound s.r.l. (www.bdsound.com)
+ Copyright (c) 2015 bdSound s.r.l. (www.bdsound.com)
  All Rights Reserved.
  
  *******************************************************/
@@ -36,7 +36,7 @@
 #define BD_IMAD_MAX_DEV_LENGTH_NAME         256                                
 /* Only mono mode */
 #define BD_IMAD_MAX_CHANNELS                1                                  
-/* Frequency default value (admitted 8000 Hz, 16000 Hz, 32000 Hz and 48000Hz) */
+/* Frequency default value (admitted 8000 Hz, 16000 Hz, 32000 Hz, 44100 Hz and 48000 Hz) */
 #define BD_IMAD_DEFAULT_FREQ                48000                              
 /* Default milliseconds per buffer */
 #define BD_IMAD_MSECOND_PER_BUFFER          16                                 
@@ -45,10 +45,12 @@
 /* Only for supported systems */
 #define BD_IMAD_STARTING_OUTPUT_VOLUME      100                                
 /* Diagnostic Enable/Disable */
-#define BD_IMAD_DIAGNOSTIC                  BD_IMAD_DIAGNOSTIC_DISABLE         
+#define BD_IMAD_DIAGNOSTIC                  BD_IMAD_DIAGNOSTIC_DISABLE
 
 /* Diagnostic folder path */ 
-wchar_t * bdImadPjDiagnosticFolderPath   = L"";                                
+#define BD_IMAD_DIAGNOSTIC_PATH  "/mnt/sdcard/MUSIC/"
+
+static wchar_t bdImadPjDiagnosticFolderPath[200];                          
 
 #define THIS_FILE            "bdimad_dev.c"
 
@@ -302,8 +304,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     // Capture device properties
     for(i=0;i<captureDeviceCount;i++) {
         wf->dev_info[i].deviceId = i;
-        wf->dev_info[i].info.caps = PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING | 
-				    PJMEDIA_AUD_DEV_CAP_EC;
+		bdIMADpj_getDeviceCapabilities(BD_IMAD_CAPTURE_DEVICES,&wf->dev_info[i].info.caps);
         wf->dev_info[i].info.default_samples_per_sec = BD_IMAD_DEFAULT_FREQ;
         strcpy(wf->dev_info[i].info.driver, "BD_IMAD");
         wf->dev_info[i].info.ext_fmt_cnt = 0;
@@ -317,8 +318,7 @@ static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
     // Playback device properties
     for(i=0;i<playbackDeviceCount;i++) {
         wf->dev_info[captureDeviceCount+i].deviceId = captureDeviceCount+i;
-        wf->dev_info[captureDeviceCount+i].info.caps = 
-				PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING | PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
+		bdIMADpj_getDeviceCapabilities(BD_IMAD_PLAYBACK_DEVICES,&wf->dev_info[captureDeviceCount+i].info.caps);
         wf->dev_info[captureDeviceCount+i].info.default_samples_per_sec = 
 				BD_IMAD_DEFAULT_FREQ;
         strcpy(wf->dev_info[captureDeviceCount+i].info.driver, "BD_IMAD");
@@ -706,14 +706,14 @@ static pj_status_t init_streams(struct bd_factory *wf,
     
     strm->bdIMADpjSettingsPtr->FrameSize_ms = ptime;
     strm->bdIMADpjSettingsPtr->DiagnosticEnable = BD_IMAD_DIAGNOSTIC;
-    strm->bdIMADpjSettingsPtr->DiagnosticFolderPath = 
-					    bdImadPjDiagnosticFolderPath;
+    mbstowcs(bdImadPjDiagnosticFolderPath, BD_IMAD_DIAGNOSTIC_PATH, strlen(BD_IMAD_DIAGNOSTIC_PATH));
+    strm->bdIMADpjSettingsPtr->DiagnosticFolderPath = bdImadPjDiagnosticFolderPath;
     strm->bdIMADpjSettingsPtr->validate = (void *)manage_code;
 
     if(prm->clock_rate != 8000 && prm->clock_rate != 16000 
-	   && prm->clock_rate != 32000 && prm->clock_rate != 48000) {
+	   && prm->clock_rate != 32000 && prm->clock_rate != 44100 && prm->clock_rate != 48000) {
         PJ_LOG(4, (THIS_FILE, 
-		   "BDIMAD support 8000 Hz, 16000 Hz, 32000 Hz and 48000 Hz "
+		   "BDIMAD support 8000 Hz, 16000 Hz, 32000 Hz, 44100 Hz and 48000 Hz "
 		   "frequency."));
     }
     strm->bdIMADpjSettingsPtr->SamplingFrequency = prm->clock_rate;
@@ -766,6 +766,9 @@ static pj_status_t init_streams(struct bd_factory *wf,
         bdIMADpj_setParameter(strm->bdIMADpjInstance, 
 			      BD_PARAM_IMAD_PJ_MIC_CONTROL_ENABLE, 
 			      &auxInt);
+		
+		// Enable GUI Socket Communication [default->disabled]
+		bdIMADpj_enableGuiSocketCommunication(strm->bdIMADpjInstance,27000,0);
     }
 
     if(errorInitAEC != BD_PJ_OK && 
@@ -933,8 +936,7 @@ static pj_status_t stream_set_capBDIMAD(pjmedia_aud_stream *s,
 
 	if(cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
 		pjmedia_aud_dev_route outputRoute = *(pjmedia_aud_dev_route*)pval;
-		if(strm->param.output_route!=outputRoute)
-			res = bdIMADpj_setRouteOutputDevice(strm->bdIMADpjInstance, (bdIMADpj_out_dev_route) outputRoute, &strm->bdIMADpjWarningPtr);
+		res = bdIMADpj_setRouteOutputDevice(strm->bdIMADpjInstance, (bdIMADpj_out_dev_route) outputRoute, &strm->bdIMADpjWarningPtr);
 		if(res == BD_PJ_OK) {
 			strm->param.output_route = outputRoute;
             return PJ_SUCCESS;
@@ -1219,13 +1221,8 @@ static pj_status_t stream_start(pjmedia_aud_stream *s)
 }
 
 #if defined (_MSC_VER)
-#ifdef _DEBUG
-#pragma comment ( lib, "bdClientValidationd.lib" )
-#pragma comment ( lib, "bdIMADpjd.lib" )
-#else
 #pragma comment ( lib, "bdClientValidation.lib" )
 #pragma comment ( lib, "bdIMADpj.lib" )
-#endif
 #endif
 
 
