@@ -712,7 +712,7 @@ else
 	AC_SUBST(ac_pjmedia_video_has_android)
 	AC_SUBST(ac_android_cflags)
 	SAVED_LIBS="$LIBS"
-	LIBS="-lGLESv2 -lEGL -landroid"
+	LIBS="-lGLESv2 -lEGL -landroid -lgcc -lc"
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_android=yes],[ac_pjmedia_video_has_android=no])
 	LIBS="$SAVED_LIBS"
 	if test "$ac_pjmedia_video_has_android" = "yes"; then
