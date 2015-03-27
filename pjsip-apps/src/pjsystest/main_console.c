@@ -99,7 +99,7 @@ pj_status_t gui_start(gui_menu *menu)
 	choice = menu;
 	while (*p && *p!='\r' && *p!='\n') {
 	    unsigned d = (*p - '0');
-	    if (d < 0 || d >= choice->submenu_cnt) {
+	    if (d >= choice->submenu_cnt) {
 		puts("Invalid selection");
 		choice = NULL;
 		break;

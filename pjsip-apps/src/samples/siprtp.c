@@ -914,8 +914,9 @@ static pj_status_t init_options(int argc, char *argv[])
 	switch (c) {
 	case 'c':
 	    app.max_calls = atoi(pj_optarg);
-	    if (app.max_calls < 0 || app.max_calls > MAX_CALLS) {
-		PJ_LOG(3,(THIS_FILE, "Invalid max calls value %s", pj_optarg));
+	    if (app.max_calls > MAX_CALLS) {
+		PJ_LOG(3,(THIS_FILE,"Invalid max calls value %s "
+				    "(must be <= %d)", pj_optarg, MAX_CALLS));
 		return 1;
 	    }
 	    break;

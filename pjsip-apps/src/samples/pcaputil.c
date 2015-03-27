@@ -307,7 +307,7 @@ static void pcap2wav(const pj_str_t *codec,
 
     /* Get codec info and param for the specified payload type */
     app.pt = pkt0.rtp->pt;
-    if (app.pt >=0 && app.pt < 96) {
+    if (app.pt < 96) {
 	T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
     } else {
 	unsigned cnt = 2;

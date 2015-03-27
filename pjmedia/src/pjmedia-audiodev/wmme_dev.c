@@ -894,6 +894,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     static unsigned rec_cnt, play_cnt;
     enum { MAX_BURST = 1000 };
 
+    /* Suppress compile warning for unused debugging vars */
+    PJ_UNUSED_ARG(rec_cnt);
+    PJ_UNUSED_ARG(play_cnt);
     rec_cnt = play_cnt = 0;
 
     eventCount = 0;

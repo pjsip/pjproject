@@ -153,7 +153,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	 * is relatively big enough for a SIP packet.
 	 */
 	if (bytes_read > MIN_SIZE) {
-	    pj_size_t size_eaten;
+	    pj_ssize_t size_eaten;
 	    const pj_sockaddr *src_addr = &rdata->pkt_info.src_addr;
 
 	    /* Init pkt_info part. */

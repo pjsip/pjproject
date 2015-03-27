@@ -3636,8 +3636,9 @@ static pj_bool_t inv_check_secure_dlg(pjsip_inv_session *inv,
 
     if (pjsip_cfg()->endpt.disable_secure_dlg_check == PJ_FALSE &&
 	dlg->secure && e->body.tsx_state.type==PJSIP_EVENT_RX_MSG &&
-	(tsx->role==PJSIP_ROLE_UAC && tsx->status_code/100 == 2 ||
-	 tsx->role==PJSIP_ROLE_UAS && tsx->state == PJSIP_TSX_STATE_TRYING) &&
+	((tsx->role==PJSIP_ROLE_UAC && tsx->status_code/100 == 2) ||
+	 (tsx->role==PJSIP_ROLE_UAS && tsx->state == PJSIP_TSX_STATE_TRYING))
+	&&
 	(tsx->method.id==PJSIP_INVITE_METHOD || 
 	 pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0))
     {

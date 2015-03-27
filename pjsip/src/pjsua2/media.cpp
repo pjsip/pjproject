@@ -1010,6 +1010,10 @@ int AudDevManager::getActiveDev(bool is_capture) const throw(Error)
 VideoWindow::VideoWindow(pjsua_vid_win_id win_id)
 : winId(win_id)
 {
+#if !PJSUA_HAS_VIDEO
+    /* Suppress warning of unused field when video is disabled */
+    PJ_UNUSED_ARG(winId);
+#endif
 }
 
 VideoWindowInfo VideoWindow::getInfo() const throw(Error)

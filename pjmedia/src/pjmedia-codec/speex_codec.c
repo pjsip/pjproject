@@ -804,7 +804,7 @@ static int speex_get_next_frame(SpeexBits *bits)
 	    return -1;
 	} else {
 	    /* NB frame */
-	    unsigned int advance = submode;
+	    int advance = submode;
 	    speex_mode_query(&speex_nb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);
 	    if (advance < 0) {
 		TRACE__((THIS_FUNC, "Invalid mode encountered. "

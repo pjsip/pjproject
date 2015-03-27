@@ -1215,10 +1215,6 @@ static pj_status_t init_options(int argc, char *argv[])
 
 	case 'c':
 	    app.client.job_count = my_atoi(pj_optarg);
-	    if (app.client.job_count < 0) {
-		PJ_LOG(3,(THIS_FILE, "Invalid --local-port %s", pj_optarg));
-		return -1;
-	    }
 	    if (app.client.job_count > pjsip_cfg()->tsx.max_count)
 		PJ_LOG(3,(THIS_FILE, 
 			  "Warning: --count value (%d) exceeds maximum "
@@ -1259,7 +1255,7 @@ static pj_status_t init_options(int argc, char *argv[])
 
 	case 't':
 	    app.client.timeout = my_atoi(pj_optarg);
-	    if (app.client.timeout < 0 || app.client.timeout > 600) {
+	    if (app.client.timeout > 600) {
 		PJ_LOG(3,(THIS_FILE, "Invalid --timeout %s", pj_optarg));
 		return -1;
 	    }
