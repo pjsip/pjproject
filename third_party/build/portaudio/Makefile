@@ -39,9 +39,10 @@ export _LDFLAGS += $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 ###############################################################################
 # Defines for building PORTAUDIO library
 #
+# Note: compile warning is turned off, turn back on when updating PA version!
 export PORTAUDIO_SRCDIR = src
 export PORTAUDIO_OBJS += 
-export PORTAUDIO_CFLAGS += $(_CFLAGS)
+export PORTAUDIO_CFLAGS += $(_CFLAGS) -w
 export PORTAUDIO_LDFLAGS += $(_LDFLAGS)
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
