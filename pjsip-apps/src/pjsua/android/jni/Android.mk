@@ -43,3 +43,20 @@ $(MY_JNI_DIR)/$(MY_JNI_WRAP): src/org/pjsip/PjCamera.java
 .PHONY: $(MY_JNI_DIR)/$(MY_JNI_WRAP)
 
 include $(BUILD_SHARED_LIBRARY)
+
+
+# Add prebuilt libopenh264, if configured
+ifneq (,$(OPENH264_LDFLAGS))
+include $(CLEAR_VARS)
+LOCAL_MODULE := libopenh264
+LOCAL_SRC_FILES := $(subst -L,,$(filter -L%,$(OPENH264_LDFLAGS)))/libopenh264.so
+include $(PREBUILT_SHARED_LIBRARY)
+endif
+
+# Add prebuilt libyuv, if configured
+ifneq (,$(LIBYUV_LDFLAGS))
+include $(CLEAR_VARS)
+LOCAL_MODULE := libyuv
+LOCAL_SRC_FILES := $(subst -L,,$(filter -L%,$(LIBYUV_LDFLAGS)))/libyuv.so
+include $(PREBUILT_SHARED_LIBRARY)
+endif
