@@ -32,7 +32,7 @@ export GSM_CODEC_OBJS = add.o code.o decode.o \
                 	lpc.o preprocess.o rpe.o short_term.o \
                 	table.o
 
-export GSM_CODEC_CFLAGS = -DSASR -DWAV49 -DNeedFunctionPrototypes=1 $(_CFLAGS)
+export GSM_CODEC_CFLAGS = -DSASR -DWAV49 -DNeedFunctionPrototypes=1 $(_CFLAGS) -Wno-unused-const-variable
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
