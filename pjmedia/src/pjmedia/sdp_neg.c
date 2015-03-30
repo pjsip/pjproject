@@ -426,6 +426,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 	neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, 
 						       neg->active_local_sdp);
+	neg->initial_sdp = pjmedia_sdp_session_clone(pool,
+						     neg->active_local_sdp);
 	*offer = neg->active_local_sdp;
 
     } else {
@@ -518,6 +520,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 	}
     } else {
 	PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
+	neg->initial_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
     }
 
