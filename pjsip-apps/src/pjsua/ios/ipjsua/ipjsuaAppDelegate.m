@@ -237,12 +237,18 @@ void displayWindow(pjsua_vid_win_id wid)
             UIView *parent = app.viewController.view;
             UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
             
-            if (view && ![view isDescendantOfView:parent]) {
+            if (view) {
                 dispatch_async(dispatch_get_main_queue(), ^{
                     /* Add the video window as subview */
-                    [parent addSubview:view];
+                    if (![view isDescendantOfView:parent])
+                        [parent addSubview:view];
                     
                     if (!wi.is_native) {
+                        /* Resize it to fit width */
+                        view.bounds = CGRectMake(0, 0, parent.bounds.size.width,
+                                                 (parent.bounds.size.height *
+                                                  1.0*parent.bounds.size.width/
+                                                  view.bounds.size.width));
                         /* Center it horizontally */
                         view.center = CGPointMake(parent.bounds.size.width/2.0,
                                               view.bounds.size.height/2.0);
