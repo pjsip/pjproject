@@ -674,12 +674,18 @@
 #else
     /* When FD_SETSIZE is not changeable, check if PJ_IOQUEUE_MAX_HANDLES
      * is lower than FD_SETSIZE value.
+     *
+     * Update: Not all ioqueue backends require this (such as epoll), so
+     * this check will be done on the ioqueue implementation itself, such as
+     * ioqueue select.
      */
+/*
 #   ifdef FD_SETSIZE
 #	if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
 #	    error "PJ_IOQUEUE_MAX_HANDLES is greater than FD_SETSIZE"
 #	endif
 #   endif
+*/
 #endif
 
 
