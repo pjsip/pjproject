@@ -157,7 +157,9 @@ static void activesock_create_iphone_os_stream(pj_activesock_t *asock)
 	    CFReadStreamOpen(asock->readStream) != TRUE)
 	{
 	    PJ_LOG(2,("", "Failed to configure TCP transport for VoIP "
-		      "usage. Background mode will not be supported."));
+		      "usage. Usage of THIS particular TCP transport in "
+		      "background mode will not be supported."));
+
 	    
 	    activesock_destroy_iphone_os_stream(asock);
 	}
