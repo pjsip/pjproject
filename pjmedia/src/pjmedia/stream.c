@@ -2515,6 +2515,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /* Free mutex */
 
     if (stream->jb_mutex) {
+        pj_mutex_unlock(stream->jb_mutex);
 	pj_mutex_destroy(stream->jb_mutex);
 	stream->jb_mutex = NULL;
     }
