@@ -145,6 +145,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx)
      * here.
      */
     /* pj_stun_client_tsx_stop(tsx); */
+    PJ_UNUSED_ARG(tsx);
     return PJ_SUCCESS;
 }
 

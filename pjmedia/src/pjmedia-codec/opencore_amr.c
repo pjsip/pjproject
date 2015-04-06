@@ -568,7 +568,7 @@ static pj_status_t amr_codec_open( pjmedia_codec *codec,
 
     idx = (attr->info.clock_rate <= 8000? IDX_AMR_NB: IDX_AMR_WB);
     enc_mode = pjmedia_codec_amr_get_mode(attr->info.avg_bps);
-    pj_assert(enc_mode >= 0 && enc_mode < amr_bitrates_size[idx]);
+    pj_assert(enc_mode >= 0 && (unsigned)enc_mode < amr_bitrates_size[idx]);
 
     /* Check octet-align */
     for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
@@ -602,7 +602,7 @@ static pj_status_t amr_codec_open( pjmedia_codec *codec,
 	    p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
 	    l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 	    while (l--) {
-		if (*p>='0' && *p<=('0'+amr_bitrates_size[idx]-1)) {
+		if (*p>='0' && (unsigned)*p<=('0'+amr_bitrates_size[idx]-1)) {
 		    pj_int8_t tmp = *p - '0' - enc_mode;
 
 		    if (PJ_ABS(diff) > PJ_ABS(tmp) || 
@@ -897,8 +897,8 @@ static pj_status_t amr_codec_encode( pjmedia_codec *codec,
 	dtx_duration = pj_timestamp_diff32(&amr_data->last_tx, 
 					   &input->timestamp);
 	if (PJMEDIA_CODEC_MAX_SILENCE_PERIOD == -1 ||
-	    dtx_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
-                           amr_data->clock_rate/1000)
+	    dtx_duration < (int)(PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
+                                 amr_data->clock_rate/1000))
 	{
 	    output->size = 0;
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;

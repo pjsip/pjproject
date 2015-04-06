@@ -1023,11 +1023,11 @@ VideoWindowInfo VideoWindow::getInfo() const throw(Error)
     pjsua_vid_win_info pj_vwi;
     
     PJSUA2_CHECK_EXPR( pjsua_vid_win_get_info(winId, &pj_vwi) );
-    vwi.isNative = pj_vwi.is_native;
+    vwi.isNative = (pj_vwi.is_native != PJ_FALSE);
     vwi.winHandle.type = pj_vwi.hwnd.type;
     vwi.winHandle.handle.window = pj_vwi.hwnd.info.window;
     vwi.renderDeviceId = pj_vwi.rdr_dev;
-    vwi.show = pj_vwi.show;
+    vwi.show = (pj_vwi.show != PJ_FALSE);
     vwi.pos.x = pj_vwi.pos.x;
     vwi.pos.y = pj_vwi.pos.y;
     vwi.size.w = pj_vwi.size.w;

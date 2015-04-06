@@ -1508,7 +1508,7 @@ static pj_status_t custom_fmt_match(pj_pool_t *pool,
 }
 
 /* Register customized SDP format negotiation callback function. */
-PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
+PJ_DEF(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
 					const pj_str_t *fmt_name,
 					pjmedia_sdp_neg_fmt_match_cb cb)
 {
