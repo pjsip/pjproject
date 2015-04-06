@@ -32,6 +32,10 @@
 #define THIS_FILE	"vid_port.c"
 
 
+/* Enable/disable test of finding closest format algo */
+#define ENABLE_TEST_FIND_FMT 0
+
+
 /**
  * Enable this to trace the format matching process.
  */
@@ -247,13 +251,13 @@ static pj_uint32_t match_format_id(pj_uint32_t req_id,
 static pj_uint32_t get_match_format_id(pj_uint32_t req_fmt_id,
 				       pjmedia_vid_dev_info *di)
 {
-    unsigned i = 0, match_idx = 0, match_fmt = FMT_DIFF_COLOR_SPACE+1;
+    unsigned i, match_idx = 0, match_fmt = FMT_DIFF_COLOR_SPACE+1;
 
     /* Find the matching format. If no exact match is found, find 
      * the supported format with the same color space. If no match is found,
      * use the first supported format on the list.
      */
-    for (i; i < di->fmt_cnt; ++i) {
+    for (i = 0; i < di->fmt_cnt; ++i) {
 	unsigned tmp_fmt = match_format_id(req_fmt_id, di->fmt[i].id);
 
 	if (match_fmt == FMT_MATCH)
@@ -379,6 +383,7 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
     return ret_prop;
 }
 
+#if ENABLE_TEST_FIND_FMT
 /**
  * This is to test the algo to find the closest fmt
  */
@@ -469,6 +474,7 @@ static void test_find_closest_fmt(pjmedia_vid_dev_info *di)
 	}
     }
 }
+#endif
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 					     const pjmedia_vid_port_param *prm,
@@ -535,7 +541,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	    return status;
 	}
 
-#if 0
+#if ENABLE_TEST_FIND_FMT
 	test_find_closest_fmt(&di);
 #endif
 

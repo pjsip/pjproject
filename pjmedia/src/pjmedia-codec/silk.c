@@ -895,12 +895,12 @@ static pj_status_t silk_codec_decode(pjmedia_codec *codec,
     }
 
     if (output->size == 0) {
-        output->type = PJMEDIA_TYPE_NONE;
+        output->type = PJMEDIA_FRAME_TYPE_NONE;
         output->buf = NULL;
         return PJMEDIA_CODEC_EFAILED;
     }
 
-    output->type = PJMEDIA_TYPE_AUDIO;
+    output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;

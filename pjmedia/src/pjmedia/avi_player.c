@@ -539,8 +539,7 @@ pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
                                unsigned idx)
 {
     pj_assert(streams);
-    return (idx >=0 && idx < streams->num_streams ?
-            streams->streams[idx] : NULL);
+    return (idx < streams->num_streams ? streams->streams[idx] : NULL);
 }
 
 PJ_DEF(pjmedia_avi_stream *)

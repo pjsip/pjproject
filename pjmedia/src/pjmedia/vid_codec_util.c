@@ -399,7 +399,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 		return status;
 	} else if (pj_stricmp(&fmtp->param[i].name, &PACKETIZATION_MODE)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp >= 0 && tmp <= 2) 
+	    if (tmp <= 2) 
 		h264_fmtp->packetization_mode = (pj_uint8_t)tmp;
 	    else
 		return PJMEDIA_SDP_EINFMTP;

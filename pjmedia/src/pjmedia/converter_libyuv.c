@@ -145,17 +145,17 @@ typedef struct fmt_convert_map {
 #define GET_PJ_FORMAT(fmt) PJMEDIA_FORMAT_##fmt
 
 #define MAP_CONV_PACK_TO_PACK(src,dst,method) GET_PJ_FORMAT(src),\
-        GET_PJ_FORMAT(dst),CONV_PACK_TO_PACK,method
+        GET_PJ_FORMAT(dst),CONV_PACK_TO_PACK,(gen_conv_func)&method
 #define MAP_CONV_PACK_TO_PLANAR(src,dst,method) GET_PJ_FORMAT(src),\
-        GET_PJ_FORMAT(dst),CONV_PACK_TO_PLANAR,method
+        GET_PJ_FORMAT(dst),CONV_PACK_TO_PLANAR,(gen_conv_func)&method
 #define MAP_CONV_PLANAR_TO_PACK(src,dst,method) GET_PJ_FORMAT(src),\
-        GET_PJ_FORMAT(dst),CONV_PLANAR_TO_PACK,method
+        GET_PJ_FORMAT(dst),CONV_PLANAR_TO_PACK,(gen_conv_func)&method
 #define MAP_CONV_PLANAR_TO_PLANAR(src,dst,method) GET_PJ_FORMAT(src),\
-        GET_PJ_FORMAT(dst),CONV_PLANAR_TO_PLANAR,method
+        GET_PJ_FORMAT(dst),CONV_PLANAR_TO_PLANAR,(gen_conv_func)&method
 #define MAP_SCALE_PACK(fmt,method) GET_PJ_FORMAT(fmt),\
-        GET_PJ_FORMAT(fmt),SCALE_PACK,method
+        GET_PJ_FORMAT(fmt),SCALE_PACK,(gen_conv_func)&method
 #define MAP_SCALE_PLANAR(fmt,method) GET_PJ_FORMAT(fmt),\
-        GET_PJ_FORMAT(fmt),SCALE_PLANAR,method
+        GET_PJ_FORMAT(fmt),SCALE_PLANAR,(gen_conv_func)&method
 
 static fmt_convert_map conv_to_i420[] = 
 {
