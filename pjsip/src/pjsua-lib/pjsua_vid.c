@@ -1250,20 +1250,24 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
-
+    
     wi->is_native = w->is_native;
 
     if (w->is_native) {
 	pjmedia_vid_dev_stream *cap_strm;
 	pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
 
-	cap_strm = pjmedia_vid_port_get_stream(w->vp_cap);
-	if (!cap_strm) {
+	if (!w->vp_cap) {
 	    status = PJ_EINVAL;
 	} else {
-	    status = pjmedia_vid_dev_stream_get_cap(cap_strm, cap, &wi->hwnd);
+	    cap_strm = pjmedia_vid_port_get_stream(w->vp_cap);
+	    if (!cap_strm) {
+		status = PJ_EINVAL;
+	    } else {
+		status = pjmedia_vid_dev_stream_get_cap(cap_strm, cap, 
+							&wi->hwnd);
+	    }
 	}
-
 	PJSUA_UNLOCK();
 	return status;
     }
