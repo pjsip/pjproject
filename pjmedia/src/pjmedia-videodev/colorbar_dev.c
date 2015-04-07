@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-videodev/videodev_imp.h>
+#include <pjmedia/clock.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -28,12 +29,12 @@
     PJMEDIA_VIDEO_DEV_HAS_CBAR_SRC != 0
     
 
-
 #define THIS_FILE		"colorbar_dev.c"
 #define DEFAULT_CLOCK_RATE	90000
 #define DEFAULT_WIDTH		352 //640
 #define DEFAULT_HEIGHT		288 //480
 #define DEFAULT_FPS		25
+
 
 /* cbar_ device info */
 struct cbar_dev_info
@@ -99,6 +100,10 @@ struct cbar_stream
     pj_uint8_t                      *first_line[PJMEDIA_MAX_VIDEO_PLANES];
     pj_timestamp		     ts;
     unsigned			     ts_inc;
+
+    /* For active capturer only */
+    pjmedia_clock		    *clock;
+    pj_uint8_t			    *clock_buf;
 };
 
 
@@ -188,11 +193,13 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     struct cbar_dev_info *ddi;
     unsigned i;
 
-    cf->dev_count = 1;
+    cf->dev_count = 2;
+
     cf->dev_info = (struct cbar_dev_info*)
  		   pj_pool_calloc(cf->pool, cf->dev_count,
  				  sizeof(struct cbar_dev_info));
 
+    /* Passive capturer */
     ddi = &cf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strncpy(ddi->info.name, "Colorbar generator",
@@ -202,6 +209,26 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     ddi->info.dir = PJMEDIA_DIR_CAPTURE;
     ddi->info.has_callback = PJ_FALSE;
+
+    ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+    ddi->info.fmt_cnt = sizeof(cbar_fmts)/sizeof(cbar_fmts[0]);
+    for (i = 0; i < ddi->info.fmt_cnt; i++) {
+        pjmedia_format *fmt = &ddi->info.fmt[i];
+        pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
+				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
+				  DEFAULT_FPS, 1);
+    }
+
+    /* Active capturer */
+    ddi = &cf->dev_info[1];
+    pj_bzero(ddi, sizeof(*ddi));
+    pj_ansi_strncpy(ddi->info.name, "Colorbar-active",
+		    sizeof(ddi->info.name));
+    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+    pj_ansi_strncpy(ddi->info.driver, "Colorbar", sizeof(ddi->info.driver));
+    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+    ddi->info.dir = PJMEDIA_DIR_CAPTURE;
+    ddi->info.has_callback = PJ_TRUE;
 
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
     ddi->info.fmt_cnt = sizeof(cbar_fmts)/sizeof(cbar_fmts[0]);
@@ -375,6 +402,25 @@ static void fill_first_line(pj_uint8_t *first_lines[],
     }
 }
 
+
+static void clock_cb(const pj_timestamp *ts, void *user_data)
+{
+    struct cbar_stream *stream = (struct cbar_stream*)user_data;
+    pjmedia_frame f;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(ts);
+
+    pj_bzero(&f, sizeof(f));
+    f.buf = stream->clock_buf;
+    f.size = stream->vafp.framebytes;
+    status = cbar_stream_get_frame(&stream->base, &f);
+    if (status == PJ_SUCCESS) {
+	(*stream->vid_cb.capture_cb)(&stream->base, stream->user_data, &f);
+    }
+}
+
+
 /* API: create stream */
 static pj_status_t cbar_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
@@ -438,6 +484,29 @@ static pj_status_t cbar_factory_create_stream(
                             &param->fmt);
     }
 */
+
+    /* Active role? */
+    if (param->cap_id == 1 && cb && cb->capture_cb) {
+        pjmedia_clock_param clock_param;
+	pj_status_t status;
+
+	/* Allocate buffer */
+	strm->clock_buf = pj_pool_alloc(pool, strm->vafp.framebytes);
+
+	/* Create clock */
+	pj_bzero(&clock_param, sizeof(clock_param));
+        clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
+        clock_param.clock_rate = param->clock_rate;
+        status = pjmedia_clock_create2(pool, &clock_param,
+                                       PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
+                                       &clock_cb,
+                                       strm, &strm->clock);
+	if (status != PJ_SUCCESS) {
+	    pj_pool_release(pool);
+            return status;
+	}
+    }
+
     /* Done */
     strm->base.op = &stream_op;
     *p_vid_strm = &strm->base;
@@ -596,9 +665,10 @@ static pj_status_t cbar_stream_start(pjmedia_vid_dev_stream *strm)
 {
     struct cbar_stream *stream = (struct cbar_stream*)strm;
 
-    PJ_UNUSED_ARG(stream);
-
     PJ_LOG(4, (THIS_FILE, "Starting cbar video stream"));
+
+    if (stream->clock)
+	return pjmedia_clock_start(stream->clock);
 
     return PJ_SUCCESS;
 }
@@ -608,9 +678,10 @@ static pj_status_t cbar_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct cbar_stream *stream = (struct cbar_stream*)strm;
 
-    PJ_UNUSED_ARG(stream);
-
     PJ_LOG(4, (THIS_FILE, "Stopping cbar video stream"));
+
+    if (stream->clock)
+	return pjmedia_clock_stop(stream->clock);
 
     return PJ_SUCCESS;
 }
@@ -624,6 +695,10 @@ static pj_status_t cbar_stream_destroy(pjmedia_vid_dev_stream *strm)
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     cbar_stream_stop(strm);
+
+    if (stream->clock)
+	pjmedia_clock_destroy(stream->clock);
+    stream->clock = NULL;
 
     pj_pool_release(stream->pool);
 
