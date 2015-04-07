@@ -1224,8 +1224,10 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     pjmedia_transport_info tpinfo;
     int err_code = 0;
 
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
         goto on_return;
+    }
 
     pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_ENCODING,
 				    pjsua_var.media_cfg.tx_drop_pct);
