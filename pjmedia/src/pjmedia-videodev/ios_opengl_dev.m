@@ -220,6 +220,8 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
     
     pjmedia_vid_dev_opengl_draw(stream->gl_buf, stream->vid_size.w, stream->vid_size.h,
                                 stream->frame->buf);
+
+    [stream->ogl_context presentRenderbuffer:GL_RENDERBUFFER];
 }
 
 - (void)finish_render
@@ -227,6 +229,16 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
     /* Do nothing. This function is serialized in the main thread, so when
      * it is called, we can be sure that render() has completed.
      */
+}
+
+- (void)change_format
+{
+    pjmedia_video_format_detail *vfd;
+    
+    vfd = pjmedia_format_get_video_format_detail(&stream->param.fmt, PJ_TRUE);
+    pj_memcpy(&stream->vid_size, &vfd->size, sizeof(vfd->size));
+    if (stream->param.disp_size.w == 0 || stream->param.disp_size.h == 0)
+        pj_memcpy(&stream->param.disp_size, &vfd->size, sizeof(vfd->size));
 }
 
 @end
@@ -253,6 +265,12 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     
+    rect = CGRectMake(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
+    strm->gl_view = [[GLView alloc] initWithFrame:rect];
+    if (!strm->gl_view)
+        return PJ_ENOMEM;
+    strm->gl_view->stream = strm;
+
     /* If OUTPUT_RESIZE flag is not used, set display size to default */
     if (!(param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE)) {
         pj_bzero(&strm->param.disp_size, sizeof(strm->param.disp_size));
@@ -263,12 +281,6 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
                                   &param->fmt);
     if (status != PJ_SUCCESS)
         goto on_error;
-    
-    rect = CGRectMake(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
-    strm->gl_view = [[GLView alloc] initWithFrame:rect];
-    if (!strm->gl_view)
-        return PJ_ENOMEM;
-    strm->gl_view->stream = strm;
     
     /* Perform OpenGL buffer initializations in the main thread. */
     strm->status = PJ_SUCCESS;
@@ -372,7 +384,6 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
     
     if (cap==PJMEDIA_VID_DEV_CAP_FORMAT) {
         const pjmedia_video_format_info *vfi;
-        pjmedia_video_format_detail *vfd;
         pjmedia_format *fmt = (pjmedia_format *)pval;
         iosgl_fmt_info *ifi;
         
@@ -386,10 +397,8 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         
         pjmedia_format_copy(&strm->param.fmt, fmt);
         
-        vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
-        pj_memcpy(&strm->vid_size, &vfd->size, sizeof(vfd->size));
-        if (strm->param.disp_size.w == 0 || strm->param.disp_size.h == 0)
-            pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
+        [strm->gl_view performSelectorOnMainThread:@selector(change_format)
+                       withObject:nil waitUntilDone:YES];
 
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
@@ -458,8 +467,6 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     /* Perform OpenGL drawing in the main thread. */
     [stream->gl_view performSelectorOnMainThread:@selector(render)
                            withObject:nil waitUntilDone:YES];
-    
-    [stream->ogl_context presentRenderbuffer:GL_RENDERBUFFER];
     
     return PJ_SUCCESS;
 }
