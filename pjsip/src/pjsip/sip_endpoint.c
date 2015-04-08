@@ -1128,6 +1128,15 @@ PJ_DEF(pj_status_t) pjsip_endpt_set_resolver( pjsip_endpoint *endpt,
 }
 
 /*
+ * Set DNS external resolver implementation to be used by the SIP resolver.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_set_ext_resolver(pjsip_endpoint *endpt,
+						 pjsip_ext_resolver *ext_res)
+{
+    return pjsip_resolver_set_ext_resolver(endpt->resolver, ext_res);
+}
+
+/*
  * Get the DNS resolver being used by the SIP resolver.
  */
 PJ_DEF(pj_dns_resolver*) pjsip_endpt_get_resolver(pjsip_endpoint *endpt)

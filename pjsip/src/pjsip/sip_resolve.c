@@ -70,6 +70,7 @@ struct query
 struct pjsip_resolver_t
 {
     pj_dns_resolver *res;
+    pjsip_ext_resolver *ext_res;
 };
 
 
@@ -112,6 +113,26 @@ PJ_DEF(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
     pj_assert(!"Resolver is disabled (PJSIP_HAS_RESOLVER==0)");
     return PJ_EINVALIDOP;
 #endif
+}
+
+/*
+ * Public API to set the DNS external resolver implementation for the SIP 
+ * resolver.
+ */
+PJ_DEF(pj_status_t) pjsip_resolver_set_ext_resolver(pjsip_resolver_t *res,
+                                                    pjsip_ext_resolver *ext_res)
+{
+    if (ext_res && !ext_res->resolve)
+	return PJ_EINVAL;
+
+    if (ext_res && res->res) {
+#if PJSIP_HAS_RESOLVER
+	pj_dns_resolver_destroy(res->res, PJ_FALSE);
+#endif
+	res->res = NULL;
+    }
+    res->ext_res = ext_res;
+    return PJ_SUCCESS;
 }
 
 
@@ -174,6 +195,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     int ip_addr_ver;
     struct query *query;
     pjsip_transport_type_e type = target->type;
+
+    /* If an external implementation has been provided use it instead */
+    if (resolver->ext_res) {
+        (*resolver->ext_res->resolve)(resolver, pool, target, token, cb);
+        return;
+    }
 
     /* Is it IP address or hostname? And if it's an IP, which version? */
     ip_addr_ver = get_ip_addr_ver(&target->addr.host);

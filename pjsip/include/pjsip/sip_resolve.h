@@ -118,6 +118,7 @@ PJ_BEGIN_DECL
  *  - The PJLIB-UTIL DNS resolver provides additional functionality such as
  *    response caching, query aggregation, parallel nameservers, fallback
  *    nameserver, etc., which will be described below.
+ *  - Enable application to provide its own resolver implementation.  
  * 
  *
  * \subsection PJSIP_RESOLVE_DNS_FEATURES DNS Resolver Features
@@ -155,6 +156,14 @@ PJ_BEGIN_DECL
  * Once the resolver is set, it will be used automatically by PJSIP everytime
  * PJSIP needs to send SIP request/response messages.
  *
+ * \section PJSIP_RESOLVE_EXT_RESOLVER External Resolver
+ * 
+ * As an alternative to enabling PJLIB-UTIL DNS resolver, application can 
+ * provide its own resolver implementation by defining the callback in 
+ * pjsip_ext_resolver and pass the callback to 
+ * #pjsip_resolver_set_ext_resolver() function. Please note that if the 
+ * implementation needs feature from PJLIB-UTL DNS resolver, it has to create
+ * its own PJLIB-UTL DNS resolver instance.
  *
  * \section PJSIP_RESOLVE_REFERENCE Reference
  *
@@ -207,6 +216,30 @@ typedef void pjsip_resolver_callback(pj_status_t status,
 				     const struct pjsip_server_addresses *addr);
 
 /**
+ * This structure describes application callback to receive various event from 
+ * the SIP resolver engine. Application can use this for its own resolver
+ * implementation. 
+ */
+typedef struct pjsip_ext_resolver
+{
+    /**
+     * Notify application when the resolution should begin.
+     *
+     * @param resolver      The resolver engine.
+     * @param pool          The pool to allocate resolver job.
+     * @param target        The target specification to be resolved.
+     * @param token         A user defined token to be passed back to callback 
+     *                      function.
+     * @param cb            The callback function.
+     */
+    void (*resolve) (pjsip_resolver_t *resolver, pj_pool_t *pool,
+                     const pjsip_host_info *target, void *token,
+                     pjsip_resolver_callback *cb);
+
+} pjsip_ext_resolver;
+
+
+/**
  * Create SIP resolver engine. Note that this function is normally called
  * internally by pjsip_endpoint instance.
  *
@@ -236,6 +269,28 @@ PJ_DECL(pj_status_t) pjsip_resolver_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) pjsip_resolver_set_resolver(pjsip_resolver_t *res,
 						 pj_dns_resolver *dns_res);
 
+
+/**
+ * Set the DNS external resolver implementation to use in the SIP resolver 
+ * engine. Naturally when implementing its own resolver, application would not
+ * need the internal resolver, hence this function will also destroy the 
+ * PJLIB-UTIL DNS resolver if any (e.g: set using 
+ * #pjsip_resolver_set_resolver()). Application that needs it, still be able 
+ * create its own instance.
+ *
+ * Note that application normally will use #pjsip_endpt_set_ext_resolver() 
+ * instead since it does not normally have access to the SIP resolver instance. 
+ *
+ * @param res       The SIP resolver engine.
+ * @param ext_res   The external resolver implementation callback. This argument
+ *		    can be NULL to reset the whole external implementation. 
+ *		    However, it is prohibited to reset individual callback.
+ * 
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_resolver_set_ext_resolver(
+						pjsip_resolver_t *res,
+					        pjsip_ext_resolver *ext_res);
 
 /**
  * Get the DNS resolver instance of the SIP resolver engine. 
