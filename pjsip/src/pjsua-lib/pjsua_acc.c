@@ -785,7 +785,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
 		     PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Modifying accunt %d", acc_id));
+    PJ_LOG(4,(THIS_FILE, "Modifying account %d", acc_id));
     pj_log_push_indent();
 
     PJSUA_LOCK();
