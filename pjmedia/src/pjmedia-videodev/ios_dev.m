@@ -106,13 +106,14 @@ struct ios_stream
     unsigned		    bytes_per_row;
     unsigned		    frame_size;         /**< Frame size (bytes)*/
     pj_bool_t               is_planar;
+    NSLock 		   *frame_lock;
+    void                   *capture_buf;
     
     AVCaptureSession		*cap_session;
     AVCaptureDeviceInput	*dev_input;
     AVCaptureVideoDataOutput	*video_output;
     VOutDelegate		*vout_delegate;
     dispatch_queue_t 		 queue;
-    void                        *capture_buf;
     AVCaptureVideoPreviewLayer  *prev_layer;
     
     void		*render_buf;
@@ -122,10 +123,6 @@ struct ios_stream
     
     pj_timestamp	 frame_ts;
     unsigned		 ts_inc;
-
-    pj_bool_t		 thread_initialized;
-    pj_thread_desc	 thread_desc;
-    pj_thread_t		*thread;
 };
 
 
@@ -157,6 +154,8 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				      pjmedia_vid_dev_cap cap,
 				      const void *value);
 static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t ios_stream_get_frame(pjmedia_vid_dev_stream *strm,
+                                        pjmedia_frame *frame);
 static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
 					const pjmedia_frame *frame);
 static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm);
@@ -180,7 +179,7 @@ static pjmedia_vid_dev_stream_op stream_op =
     &ios_stream_get_cap,
     &ios_stream_set_cap,
     &ios_stream_start,
-    NULL,
+    &ios_stream_get_frame,
     &ios_stream_put_frame,
     &ios_stream_stop,
     &ios_stream_destroy
@@ -261,7 +260,7 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
                             sizeof(qdi->info.name));
             pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
-            qdi->info.has_callback = PJ_TRUE;
+            qdi->info.has_callback = PJ_FALSE;
             qdi->info.caps = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW |
 		    	     PJMEDIA_VID_DEV_CAP_SWITCH;
             qdi->dev = device;
@@ -435,8 +434,14 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 		      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 		      fromConnection:(AVCaptureConnection *)connection
 {
-    pjmedia_frame frame = {0};
     CVImageBufferRef img;
+
+    /* Refrain from calling pjlib functions which require thread registration
+     * here, since according to the doc, dispatch queue cannot guarantee
+     * the reliability of underlying functions required by PJSIP to perform
+     * the registration, such as pthread_self() and pthread_getspecific()/
+     * pthread_setspecific().
+     */
 
     if (!sampleBuffer)
 	return;
@@ -447,10 +452,8 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     /* Lock the base address of the pixel buffer */
     CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
     
-    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
-    frame.size = stream->frame_size;
-    frame.timestamp.u64 = stream->frame_ts.u64;
-    
+
+    [stream->frame_lock lock];
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
             /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
@@ -498,31 +501,38 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
                     p += (stride - stream->size.w);
                 }
             }
-
-            frame.buf = stream->capture_buf;
         }
     } else {
-        frame.buf = CVPixelBufferGetBaseAddress(img);
-    }
-    
-    if (stream->vid_cb.capture_cb) {
-        if (stream->thread_initialized == 0 || !pj_thread_is_registered())
-        {
-            pj_bzero(stream->thread_desc, sizeof(pj_thread_desc));
-            pj_thread_register("ios_vdev", stream->thread_desc,
-                               &stream->thread);
-            stream->thread_initialized = 1;
-        }
-
-        (*stream->vid_cb.capture_cb)(&stream->base, stream->user_data, &frame);
+        pj_memcpy(stream->capture_buf, CVPixelBufferGetBaseAddress(img),
+                  stream->frame_size);
     }
 
     stream->frame_ts.u64 += stream->ts_inc;
+    [stream->frame_lock unlock];
     
     /* Unlock the pixel buffer */
     CVPixelBufferUnlockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 }
 @end
+
+static pj_status_t ios_stream_get_frame(pjmedia_vid_dev_stream *strm,
+                                        pjmedia_frame *frame)
+{
+    struct ios_stream *stream = (struct ios_stream *)strm;
+
+    frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
+    frame->bit_info = 0;
+    pj_assert(frame->size >= stream->frame_size);
+    frame->size = stream->frame_size;
+    frame->timestamp.u64 = stream->frame_ts.u64;
+    
+    [stream->frame_lock lock];
+    pj_memcpy(frame->buf, stream->capture_buf, stream->frame_size);
+    [stream->frame_lock unlock];
+    
+    return PJ_SUCCESS;
+}
+
 
 static ios_fmt_info* get_ios_format_info(pjmedia_format_id id)
 {
@@ -712,10 +722,9 @@ static pj_status_t ios_factory_create_stream(
 	    goto on_error;
 	}
 	
-        /* Prepare capture buffer if it's planar format */
-        if (strm->is_planar)
-            strm->capture_buf = pj_pool_alloc(strm->pool, strm->frame_size);
-        
+	strm->capture_buf = pj_pool_alloc(strm->pool, strm->frame_size);
+	strm->frame_lock = [[NSLock alloc]init];
+	
         /* Native preview */
         if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) {
             ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
@@ -1125,6 +1134,11 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->queue) {
         dispatch_release(stream->queue);
         stream->queue = nil;
+    }
+    
+    if (stream->frame_lock) {
+        [stream->frame_lock release];
+        stream->frame_lock = nil;
     }
 
     pj_pool_release(stream->pool);
