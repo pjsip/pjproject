@@ -65,14 +65,14 @@ static ios_supported_size ios_sizes[] =
     { 1920, 1080, NULL }
 };
 
-/* qt device info */
+/* ios device info */
 struct ios_dev_info
 {
     pjmedia_vid_dev_info	 info;
     AVCaptureDevice             *dev;
 };
 
-/* qt factory */
+/* ios factory */
 struct ios_factory
 {
     pjmedia_vid_dev_factory	 base;
@@ -111,6 +111,7 @@ struct ios_stream
     AVCaptureDeviceInput	*dev_input;
     AVCaptureVideoDataOutput	*video_output;
     VOutDelegate		*vout_delegate;
+    dispatch_queue_t 		 queue;
     void                        *capture_buf;
     AVCaptureVideoPreviewLayer  *prev_layer;
     
@@ -627,6 +628,7 @@ static pj_status_t ios_factory_create_stream(
         /* Create capture stream here */
 	strm->cap_session = [[AVCaptureSession alloc] init];
 	if (!strm->cap_session) {
+	    PJ_LOG(2, (THIS_FILE, "Unable to create AV capture session"));
 	    status = PJ_ENOMEM;
 	    goto on_error;
 	}
@@ -667,35 +669,49 @@ static pj_status_t ios_factory_create_stream(
 	strm->dev_input = [AVCaptureDeviceInput
 			   deviceInputWithDevice:dev
 			   error: &error];
-	if (!strm->dev_input) {
+	if (error || !strm->dev_input) {
+	    PJ_LOG(2, (THIS_FILE, "Unable to get input capture device"));
 	    status = PJMEDIA_EVID_SYSERR;
 	    goto on_error;
 	}
-	[strm->cap_session addInput:strm->dev_input];
 	
-	strm->video_output = [[[AVCaptureVideoDataOutput alloc] init]
-			      autorelease];
-	if (!strm->video_output) {
+	if ([strm->cap_session canAddInput:strm->dev_input]) {
+	    [strm->cap_session addInput:strm->dev_input];
+	} else {
+	    PJ_LOG(2, (THIS_FILE, "Unable to add input capture device"));
 	    status = PJMEDIA_EVID_SYSERR;
+	    goto on_error;
+	}
+	
+	strm->video_output = [[AVCaptureVideoDataOutput alloc] init];
+	if (!strm->video_output) {
+	    PJ_LOG(2, (THIS_FILE, "Unable to create AV video output"));
+	    status = PJ_ENOMEM;
 	    goto on_error;
 	}
         
-        strm->video_output.alwaysDiscardsLateVideoFrames = YES;
-	[strm->cap_session addOutput:strm->video_output];
-	
 	/* Configure the video output */
-	strm->vout_delegate = [VOutDelegate alloc];
-	strm->vout_delegate->stream = strm;
-	dispatch_queue_t queue = dispatch_queue_create("myQueue", NULL);
-	[strm->video_output setSampleBufferDelegate:strm->vout_delegate
-                                              queue:queue];
-	dispatch_release(queue);
-	
+        strm->video_output.alwaysDiscardsLateVideoFrames = YES;
 	strm->video_output.videoSettings =
 	    [NSDictionary dictionaryWithObjectsAndKeys:
 			  [NSNumber numberWithInt:ifi->ios_format],
 			  kCVPixelBufferPixelFormatTypeKey, nil];
+
+	strm->vout_delegate = [VOutDelegate alloc];
+	strm->vout_delegate->stream = strm;
+	strm->queue = dispatch_queue_create("vout_queue",
+					    DISPATCH_QUEUE_SERIAL);
+	[strm->video_output setSampleBufferDelegate:strm->vout_delegate
+                            queue:strm->queue];
         
+        if ([strm->cap_session canAddOutput:strm->video_output]) {
+	    [strm->cap_session addOutput:strm->video_output];
+	} else {
+	    PJ_LOG(2, (THIS_FILE, "Unable to add video data output"));
+	    status = PJMEDIA_EVID_SYSERR;
+	    goto on_error;
+	}
+	
         /* Prepare capture buffer if it's planar format */
         if (strm->is_planar)
             strm->capture_buf = pj_pool_alloc(strm->pool, strm->frame_size);
@@ -818,7 +834,6 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             /* Create view, if none */
 	    if (!strm->render_view)
 	        ios_init_view(strm);
-	    
             
             /* Preview layer instantiation should be in main thread! */
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -1004,8 +1019,10 @@ static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
             });
         }
     
-	if (![stream->cap_session isRunning])
+	if (![stream->cap_session isRunning]) {
+	    PJ_LOG(3, (THIS_FILE, "Unable to start iOS capture session"));
 	    return PJ_EUNKNOWN;
+	}
     }
     
     return PJ_SUCCESS;
@@ -1036,18 +1053,17 @@ static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
 
-    PJ_UNUSED_ARG(stream);
-
+    if (!stream->cap_session || ![stream->cap_session isRunning])
+        return PJ_SUCCESS;
+    
     PJ_LOG(4, (THIS_FILE, "Stopping iOS video stream"));
 
-    if (stream->cap_session && [stream->cap_session isRunning]) {
-        if ([NSThread isMainThread]) {
+    if ([NSThread isMainThread]) {
+	[stream->cap_session stopRunning];
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), ^{
             [stream->cap_session stopRunning];
-        } else {
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                [stream->cap_session stopRunning];
-            });
-        }
+        });
     }
     
     return PJ_SUCCESS;
@@ -1064,21 +1080,23 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
     ios_stream_stop(strm);
     
     if (stream->cap_session) {
-        [stream->cap_session removeInput:stream->dev_input];
+        if (stream->dev_input) {
+            [stream->cap_session removeInput:stream->dev_input];
+            stream->dev_input = nil;
+        }
         [stream->cap_session removeOutput:stream->video_output];
 	[stream->cap_session release];
 	stream->cap_session = nil;
-    }    
-    if (stream->dev_input) {
-        stream->dev_input = nil;
     }
  
+    if (stream->video_output) {
+        [stream->video_output release];
+        stream->video_output = nil;
+    }
+
     if (stream->vout_delegate) {
 	[stream->vout_delegate release];
 	stream->vout_delegate = nil;
-    }
-    if (stream->video_output) {
-        stream->video_output = nil;
     }
 
     if (stream->prev_layer) {
@@ -1102,6 +1120,11 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
+    }
+
+    if (stream->queue) {
+        dispatch_release(stream->queue);
+        stream->queue = nil;
     }
 
     pj_pool_release(stream->pool);
