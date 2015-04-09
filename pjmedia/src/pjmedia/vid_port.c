@@ -524,6 +524,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     pj_ansi_snprintf(dev_name, sizeof(dev_name), "%s [%s]",
                      di.name, di.driver);
+    pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
+    PJ_LOG(4,(THIS_FILE,
+	      "Opening device %s for %s: format=%s, size=%dx%d @%d:%d fps",
+	      dev_name,
+	      vid_dir_name(prm->vidparam.dir), fmt_name,
+	      vfd->size.w, vfd->size.h,
+	      vfd->fps.num, vfd->fps.denum));
 
     if (di.dir == PJMEDIA_DIR_RENDER) {
 	/* Find the matching format. If no exact match is found, find 
@@ -545,13 +552,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	test_find_closest_fmt(&di);
 #endif
 
-	pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
-	PJ_LOG(4,(THIS_FILE,
-		  "Finding best match for %s(%s) format=%s, size=%dx%d "\
-		  "@%d:%d fps",
-		  dev_name, vid_dir_name(prm->vidparam.dir), fmt_name,
-		  vfd->size.w, vfd->size.h, vfd->fps.num, vfd->fps.denum));
-
 	match_prop = find_closest_fmt(prm->vidparam.fmt.id, 
 				      &vfd->size,			     
 				      &vfd->fps, 
@@ -563,21 +563,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	{
 	    vparam.fmt.id = match_prop.id;
 	    vparam.fmt.det.vid.size = match_prop.size;
-	    vfd->size = match_prop.size;
 	}
     }
 
     pj_strdup2_with_null(pool, &vp->dev_name, di.name);
     vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
-
-    pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
-
-    PJ_LOG(4,(THIS_FILE,
-	      "Opening device %s for %s: format=%s, size=%dx%d @%d:%d fps",
-	      dev_name,
-	      vid_dir_name(prm->vidparam.dir), fmt_name,
-	      vfd->size.w, vfd->size.h,
-	      vfd->fps.num, vfd->fps.denum));
 
     ptime_usec = PJMEDIA_PTIME(&vfd->fps);
     pjmedia_clock_src_init(&vp->clocksrc, PJMEDIA_TYPE_VIDEO,
