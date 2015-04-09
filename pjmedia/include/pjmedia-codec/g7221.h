@@ -76,6 +76,9 @@
  * - for 14kHz audio bandwidth (32kHz sampling rate): 24000 to 48000 bps,
  *   multiplication of 400
  *
+ * The bitrate is set via <tt>param.setting.dec_fmtp</tt>, if it does not
+ * contain bitrate info, the codec will check <tt>param.info.avg_bps</tt>.
+ *
  * \note
  * Currently only up to two non-standard modes can be enabled.
  *

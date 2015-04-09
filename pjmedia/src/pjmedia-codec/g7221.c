@@ -678,7 +678,10 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	    fmtp_bitrate = (pj_uint16_t)pj_strtoul(&fmtp->param[tmp].val);
     }
 
-    /* Validation mode first! */
+    if (fmtp_bitrate == 0)
+	fmtp_bitrate = attr->info.avg_bps;
+
+    /* Validate bitrate */
     if (!fmtp_bitrate || !validate_mode(attr->info.clock_rate, fmtp_bitrate))
 	return PJMEDIA_CODEC_EINMODE;
 

@@ -74,6 +74,14 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
     codec_param.info.avg_bps = bitrate;
     codec_param.setting.vad = 0;
 
+    /* For G7221, the bitrate is set via param.setting.dec_fmtp, if it has
+     * no info about bitrate, the codec will check info.avg_bps. So, let's
+     * just clear the SDP fmtp.
+     */
+    if (pj_ansi_strstr(codec_name, "G7221/")) {
+	codec_param.setting.dec_fmtp.cnt = 0;
+    }
+
     status = pjmedia_codec_init(codec, pool);
     if (status != PJ_SUCCESS) {
 	rc = -60;
@@ -324,6 +332,14 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
     codec_param.info.avg_bps = bitrate;
     codec_param.setting.vad = 0;
+
+    /* For G7221, the bitrate is set via param.setting.dec_fmtp, if it has
+     * no info about bitrate, the codec will check info.avg_bps. So, let's
+     * just clear the SDP fmtp.
+     */
+    if (pj_ansi_strstr(codec_name, "G7221/")) {
+	codec_param.setting.dec_fmtp.cnt = 0;
+    }
 
     status = pjmedia_codec_init(codec, pool);
     if (status != PJ_SUCCESS) {
