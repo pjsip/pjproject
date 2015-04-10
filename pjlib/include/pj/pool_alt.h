@@ -22,6 +22,7 @@
 
 #define __PJ_POOL_H__
 
+PJ_BEGIN_DECL
 
 /**
  * The type for function to receive callback from the pool when it is unable
@@ -193,6 +194,8 @@ typedef struct pj_pool_block
 #define pj_caching_pool_init( cp, pol, mac)
 #define pj_caching_pool_destroy(cp)
 #define pj_pool_factory_dump(pf, detail)
+
+PJ_END_DECL
 
 #endif	/* __PJ_POOL_ALT_H__ */
 
