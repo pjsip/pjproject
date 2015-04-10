@@ -679,7 +679,7 @@ static pj_status_t codec_open( pjmedia_codec *codec,
     }
 
     if (fmtp_bitrate == 0)
-	fmtp_bitrate = attr->info.avg_bps;
+	fmtp_bitrate = (pj_uint16_t)attr->info.avg_bps;
 
     /* Validate bitrate */
     if (!fmtp_bitrate || !validate_mode(attr->info.clock_rate, fmtp_bitrate))

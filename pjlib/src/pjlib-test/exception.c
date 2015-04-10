@@ -48,6 +48,10 @@
 
 #include <pjlib.h>
 
+#ifdef	_MSC_VER
+#pragma warning(disable:4702) // warning C4702: unreachable code
+#endif
+
 #define	ID_1	1
 #define ID_2	2
 
