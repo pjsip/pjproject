@@ -1,6 +1,8 @@
 # $Id$
 import random
 import config_site
+import socket
+import errno
 
 DEFAULT_ECHO = True
 DEFAULT_TRACE = True
@@ -46,7 +48,22 @@ class InstanceParam:
 		self.name = name
 		# Give random sip_port if it's not specified
 		if sip_port==0:
-			self.sip_port = random.randint(DEFAULT_START_SIP_PORT, 65534)
+			# avoid port conflict
+			cnt = 0
+			port = 0
+			while cnt < 10:
+				cnt = cnt + 1
+				port = random.randint(DEFAULT_START_SIP_PORT, 65534)
+				s = socket.socket(socket.AF_INET)
+				try:
+					s.bind(("0.0.0.0", port))
+				except socket.error as serr:
+					s.close()
+					if serr.errno ==  errno.EADDRINUSE:
+						continue
+				s.close()
+				break;
+			self.sip_port = port
 		else:
 			self.sip_port = sip_port
 		# Autogenerate URI if it's empty.
