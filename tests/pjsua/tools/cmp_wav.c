@@ -147,13 +147,16 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    if (file_ori_port->info.clock_rate != file_deg_port->info.clock_rate) {
+    if (file_ori_port->info.fmt.det.aud.clock_rate !=
+	file_deg_port->info.fmt.det.aud.clock_rate)
+    {
 	app_perror(THIS_FILE, "Clock rates must be same.", PJ_EINVAL);
 	return 1;
     }
 
     if (argc > 3)
-	first_nsamples = atoi(argv[3]) * file_ori_port->info.clock_rate / 1000;
+	first_nsamples = atoi(argv[3]) *
+			 file_ori_port->info.fmt.det.aud.clock_rate / 1000;
 
     if (argc > 4)
 	detail = atoi(argv[4]);
