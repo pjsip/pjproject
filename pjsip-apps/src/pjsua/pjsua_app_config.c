@@ -214,6 +214,12 @@ static void usage(void)
     fflush(stdout);
 }
 
+static void log_writer_nobuf(int level, const char *buffer, int len)
+{
+    pj_log_write(level, buffer, len);
+    fflush(stdout);
+}
+
 /*
  * Read command arguments from config file.
  */
@@ -1251,6 +1257,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 #ifdef _IONBF
 	case OPT_STDOUT_NO_BUF:
 	    setvbuf(stdout, NULL, _IONBF, 0);
+	    cfg->log_cfg.cb = &log_writer_nobuf;
 	    break;
 #endif
 

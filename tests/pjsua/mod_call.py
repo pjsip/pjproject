@@ -53,19 +53,19 @@ def test_func(t):
 	callee.send("200")
 
 	# Wait until call is connected in both endpoints
-	time.sleep(0.2)
+	##time.sleep(0.2)
 	caller.expect(const.STATE_CONFIRMED)
 	callee.expect(const.STATE_CONFIRMED)
 
 	# Synchronize stdout
 	caller.sync_stdout()
 	callee.sync_stdout()
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	caller.sync_stdout()
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(0.3)
+	##time.sleep(0.3)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -73,20 +73,20 @@ def test_func(t):
 	caller.send("H")
 	caller.expect("INVITE sip:")
 	callee.expect("INVITE sip:")
-	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
+	caller.expect(const.MEDIA_HOLD)
 	
 	# Synchronize stdout
 	caller.sync_stdout()
 	callee.sync_stdout()
 
 	# Release hold
-	time.sleep(0.5)
+	##time.sleep(0.5)
 	caller.send("v")
 	caller.expect("INVITE sip:")
 	callee.expect("INVITE sip:")
-	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -112,12 +112,12 @@ def test_func(t):
 	callee.sync_stdout()
 
 	# Release hold
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	callee.send("v")
 	callee.expect("INVITE sip:")
 	caller.expect("INVITE sip:")
-	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -125,7 +125,7 @@ def test_func(t):
 
 	# Test that media is okay
 	# Wait for some time for ICE negotiation
-	time.sleep(0.6)
+	##time.sleep(0.6)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -144,7 +144,7 @@ def test_func(t):
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -160,7 +160,7 @@ def test_func(t):
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -193,7 +193,7 @@ def test_func(t):
 	caller.sync_stdout()
 	
 	# Test that media is still okay
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -207,12 +207,12 @@ def test_func(t):
 	callee.sync_stdout()
 	
 	# Test that media is still okay
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	check_media(callee, caller)
 	check_media(caller, callee)
 
 	# Hangup call
-	time.sleep(0.1)
+	##time.sleep(0.1)
 	caller.send("h")
 
 	# Wait until calls are cleared in both endpoints

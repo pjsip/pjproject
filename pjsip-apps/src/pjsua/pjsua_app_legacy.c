@@ -23,6 +23,20 @@
 
 #define THIS_FILE	"pjsua_app_legacy.c"
 
+
+/* An attempt to avoid stdout buffering for python tests:
+ * - call 'fflush(stdout)' after each call to 'printf()/puts()'
+ * - apply 'setbuf(stdout, 0)', but it is not guaranteed by the standard:
+ *   http://stackoverflow.com/questions/1716296
+ */
+#if (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L) || \
+    (defined (_MSC_VER) && _MSC_VER >= 1400)
+/* Variadic macro is introduced in C99; MSVC supports it in since 2005. */
+#  define printf(...) {printf(__VA_ARGS__);fflush(stdout);}
+#  define puts(s) {puts(s);fflush(stdout);}
+#endif
+
+
 static pj_bool_t	cmd_echo;
 
 /*
@@ -38,9 +52,9 @@ static void print_buddy_list()
 
     pjsua_enum_buddies(ids, &count);
 
-    if (count == 0)
+    if (count == 0) {
 	puts(" -none-");
-    else {
+    } else {
 	for (i=0; i<(int)count; ++i) {
 	    pjsua_buddy_info info;
 
@@ -1088,9 +1102,9 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 	}
 	if (result.nb_result != PJSUA_APP_NO_NB) {
-	    if (result.nb_result == -1 || result.nb_result == 0)
+	    if (result.nb_result == -1 || result.nb_result == 0) {
 		puts("You can't do that with transfer call!");
-	    else {
+	    } else {
 		pjsua_buddy_info binfo;
 		pjsua_buddy_get_info(result.nb_result-1, &binfo);
 		pjsua_call_xfer( current_call, &binfo.uri, &msg_data);
@@ -1668,6 +1682,7 @@ static void ui_call_redirect(char menuin[])
 	}
     }
 }
+
 
 /*
  * Main "user interface" loop.

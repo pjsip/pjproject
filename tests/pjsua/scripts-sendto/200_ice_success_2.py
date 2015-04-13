@@ -31,6 +31,5 @@ exclude = [
 
 sendto_cfg = sip.SendtoCfg( "caller sends only one component", 
 			    pjsua_args=args, sdp=sdp, resp_code=200, 
-			    resp_inc=include, resp_exc=exclude,
-			    enable_buffer = True)
+			    resp_inc=include, resp_exc=exclude)
 
