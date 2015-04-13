@@ -40,7 +40,7 @@ else:
 FDEVNULL = None
 
 # SIPp executable path and param
-#SIPP_PATH = '"C:\\Program Files (x86)\\Sipp_3.2\\sipp.exe"'
+#SIPP_PATH = '"C:\\devs\\bin\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
 SIPP_PORT    = 6000
 SIPP_PARAM = "-m 1 -i 127.0.0.1 -p " + str(SIPP_PORT)
@@ -224,8 +224,10 @@ def exec_pjsua_expects(t, sipp):
     #   PJSUA process may stuck.
     # Ideally the poll should be done contiunously until SIPp process is
     # terminated.
-    for ua_idx in range(len(ua)):
-	ua[ua_idx].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
+    # Update: now pjsua stdout is polled continuously by a dedicated thread,
+    #         so the poll is no longer needed
+    #for ua_idx in range(len(ua)):
+    #	ua[ua_idx].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
 
     return ua_err_st
 

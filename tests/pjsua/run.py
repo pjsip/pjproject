@@ -6,6 +6,8 @@ import os
 import subprocess
 import random
 import time
+import threading
+import traceback
 import getopt
 
 import inc_const as const
@@ -109,59 +111,94 @@ G_EXE = G_EXE.rstrip("\n\r \t")
 
 ###################################
 # Poor man's 'expect'-like class
-class Expect:
+class Expect(threading.Thread):
 	proc = None
 	echo = False
 	trace_enabled = False
-	name = ""
 	inst_param = None
 	rh = re.compile(const.DESTROYED)
 	ra = re.compile(const.ASSERT, re.I)
 	rr = re.compile(const.STDOUT_REFRESH)
 	t0 = time.time()
+	output = ""
+	lock = threading.Lock()
+	running = False
 	def __init__(self, inst_param):
+		threading.Thread.__init__(self)
 		self.inst_param = inst_param
 		self.name = inst_param.name
 		self.echo = inst_param.echo_enabled
 		self.trace_enabled = inst_param.trace_enabled
+		
+	def run(self):
 		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
 		if not inst_param.enable_buffer:
 			fullcmd = fullcmd + " --stdout-no-buf"
 		self.trace("Popen " + fullcmd)
 		self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
+		self.running = True
+		while self.proc.poll() == None:
+			line = self.proc.stdout.readline()
+			if line == "":
+				break;
+				
+			#Print the line if echo is ON
+			if self.echo:
+				print self.name + ": " + line.rstrip()
+
+			self.lock.acquire()
+			self.output += line
+			self.lock.release()
+		self.running = False
+				
 	def send(self, cmd):
 		self.trace("send " + cmd)
 		self.proc.stdin.writelines(cmd + "\n")
 		self.proc.stdin.flush()
+		
 	def expect(self, pattern, raise_on_error=True, title=""):
 		self.trace("expect " + pattern)
 		r = re.compile(pattern, re.I)
-		refresh_cnt = 0
-		while True:
-			line = self.proc.stdout.readline()
-		  	if line == "":
-				raise inc.TestError(self.name + ": Premature EOF")
-			# Print the line if echo is ON
-			if self.echo:
-				print self.name + ": " + line.rstrip()
-			# Trap assertion error
-			if self.ra.search(line) != None:
+		found_at = -1
+		t0 = time.time()
+		while found_at < 0:
+			self.lock.acquire()
+			lines = self.output.splitlines()
+			
+			for i, line in enumerate(lines):
+				# Search for expected text
+				if r.search(line) != None:
+					found_at = i
+					break
+				
+				# Trap assertion error
 				if raise_on_error:
-					raise inc.TestError(self.name + ": " + line)
-				else:
-					return None
-			# Count stdout refresh text. 
-			if self.rr.search(line) != None:
-				refresh_cnt = refresh_cnt+1
-				if refresh_cnt >= 6:
+					if self.ra.search(line) != None:
+						self.lock.release()
+						raise inc.TestError(self.name + ": " + line)
+
+			self.output = '\n'.join(lines[found_at+1:]) if found_at >= 0 else ""
+			self.lock.release()
+			
+			if found_at >= 0:
+				return line
+
+			if not self.running:
+				if raise_on_error:
+					raise inc.TestError(self.name + ": Premature EOF")
+				break
+			else:
+				t1 = time.time()
+				dur = int(t1 - t0)
+				if dur > 15:
 					self.trace("Timed-out!")
 					if raise_on_error:
 						raise inc.TestError(self.name + " " + title + ": Timeout expecting pattern: \"" + pattern + "\"")
-					else:
-						return None		# timeout
-			# Search for expected text
-			if r.search(line) != None:
-				return line
+					break
+				else:
+					time.sleep(0.01)
+		return None
+							
 
 	def sync_stdout(self):
 		self.trace("sync_stdout")
@@ -171,6 +208,7 @@ class Expect:
 
 	def wait(self):
 		self.trace("wait")
+		self.join()
 		self.proc.communicate()
 
 	def trace(self, s):
@@ -206,6 +244,7 @@ def handle_error(errmsg, t, close_processes = True):
 					p.wait()
 			else:
 				p.wait()
+				
 	print "Test completed with error: " + errmsg
 	sys.exit(1)
 
@@ -240,17 +279,32 @@ for inst_param in script.test.inst_params:
 	try:
 		# Create pjsua's Expect instance from the param
 		p = Expect(inst_param)
+		p.start()
+	except inc.TestError, e:
+		handle_error(e.desc, script.test)
+		
+	# wait process ready
+	while True:
+		try:
+			p.send("echo 1")
+		except:
+			time.sleep(0.1)
+			continue
+		break
+
+	# add running instance
+	script.test.process.append(p)
+
+for p in script.test.process:
+	try:
 		# Wait until registration completes
-		if inst_param.have_reg:
-			p.expect(inst_param.uri+".*registration success")
+		if p.inst_param.have_reg:
+			p.expect(p.inst_param.uri+".*registration success")
 	 	# Synchronize stdout
 		p.send("")
 		p.expect(const.PROMPT)
 		p.send("echo 1")
-		p.send("echo 1")
 		p.expect("echo 1")
-		# add running instance
-		script.test.process.append(p)
 
 	except inc.TestError, e:
 		handle_error(e.desc, script.test)
@@ -261,9 +315,10 @@ if script.test.test_func != None:
 		script.test.test_func(script.test)
 	except inc.TestError, e:
 		handle_error(e.desc, script.test)
+	except:
+		handle_error("Unknown error: " + str(traceback.format_exc()), script.test)
 
 # Shutdown all instances
-time.sleep(2)
 for p in script.test.process:
 	# Unregister if we have_reg to make sure that next tests
 	# won't wail
@@ -271,9 +326,11 @@ for p in script.test.process:
 		p.send("ru")
 		p.expect(p.inst_param.uri+".*unregistration success")
 	p.send("q")
-	p.send("q")
-	time.sleep(0.5)
-	p.expect(const.DESTROYED, False)
+
+time.sleep(0.5)
+for p in script.test.process:
+	if p.running:
+		p.expect(const.DESTROYED, False)
 	p.wait()
 
 # Run the post test function
