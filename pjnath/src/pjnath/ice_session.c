@@ -560,7 +560,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
 /* Find component by ID */
 static pj_ice_sess_comp *find_comp(const pj_ice_sess *ice, unsigned comp_id)
 {
-    pj_assert(comp_id > 0 && comp_id <= ice->comp_cnt);
+    /* Ticket #1844: possible wrong assertion when remote has less ICE comp */
+    //pj_assert(comp_id > 0 && comp_id <= ice->comp_cnt);
+    if (comp_id > ice->comp_cnt)
+	return NULL;
+
     return (pj_ice_sess_comp*) &ice->comp[comp_id-1];
 }
 
