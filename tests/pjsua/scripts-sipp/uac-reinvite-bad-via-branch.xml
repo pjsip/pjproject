@@ -24,6 +24,9 @@
      
 
 <scenario name="UAC re-INVITE with bad Via branch">
+
+  <label id="1"/>
+  
   <send retrans="500">
     <![CDATA[
 
@@ -112,6 +115,12 @@
     ]]>
   </send>
 
+  <!-- Previous INVITE transaction may have been destroyed, and 200     -->
+  <!-- response is received, instead of 500. So, let's just try again,  -->
+  <!-- i.e: send ACK and repeat the scenario.                           -->
+  <recv response="200" optional="true" next="9">
+  </recv>
+  
   <!-- By adding rrs="true" (Record Route Sets), the route sets         -->
   <!-- are saved and used for following messages sent. Useful to test   -->
   <!-- against stateful SIP proxies/B2BUAs.                             -->
@@ -159,9 +168,31 @@
     ]]>
   </send>
 
-  <recv response="200" crlf="true">
+  <recv response="200" crlf="true" next="10">
   </recv>
 
+  <label id="9"/>
+
+  <!-- Send ACK before repeating the scenario                           -->
+  <send next="1">
+    <![CDATA[
+
+      ACK sip:[service]@[remote_ip]:[remote_port] SIP/2.0
+      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bKPj-1
+      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
+      Call-ID: [call_id]
+      CSeq: 2 ACK
+      Contact: sip:sipp@[local_ip]:[local_port]
+      Max-Forwards: 70
+      Subject: Performance Test
+      Content-Length: 0
+
+    ]]>
+  </send>
+
+  
+  <label id="10"/>
 
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
