@@ -40,7 +40,7 @@ struct send_key {
 
 static int get_cipher_list(void) {
     pj_status_t status;
-    pj_ssl_cipher ciphers[100];
+    pj_ssl_cipher ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
     unsigned cipher_num;
     unsigned i;
 

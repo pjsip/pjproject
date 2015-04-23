@@ -1452,7 +1452,7 @@ void Endpoint::utilTimerCancel(Token prmTimerToken)
 IntVector Endpoint::utilSslGetAvailableCiphers() throw (Error)
 {
 #if PJ_HAS_SSL_SOCK
-    pj_ssl_cipher ciphers[64];
+    pj_ssl_cipher ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
     unsigned count = PJ_ARRAY_SIZE(ciphers);
 
     PJSUA2_CHECK_EXPR( pj_ssl_cipher_get_availables(ciphers, &count) );

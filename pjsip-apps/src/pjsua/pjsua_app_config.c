@@ -1216,12 +1216,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 		}
 
 		if (pj_ssl_cipher_is_supported(cipher)) {
-		    static pj_ssl_cipher tls_ciphers[128];
+		    static pj_ssl_cipher tls_ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
 
 		    tls_ciphers[cfg->udp_cfg.tls_setting.ciphers_num++] = cipher;
 		    cfg->udp_cfg.tls_setting.ciphers = tls_ciphers;
 		} else {
-		    pj_ssl_cipher ciphers[128];
+		    pj_ssl_cipher ciphers[512];
 		    unsigned j, ciphers_cnt;
 
 		    ciphers_cnt = PJ_ARRAY_SIZE(ciphers);

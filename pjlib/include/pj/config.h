@@ -865,6 +865,16 @@
 
 
 /**
+ * Define the maximum number of ciphers supported by the secure socket.
+ *
+ * Default: 256
+ */
+#ifndef PJ_SSL_SOCK_MAX_CIPHERS
+#  define PJ_SSL_SOCK_MAX_CIPHERS   256
+#endif
+
+
+/**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
  * https://trac.pjsip.org/repos/ticket/1197.
  *

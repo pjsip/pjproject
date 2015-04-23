@@ -39,9 +39,6 @@
 /* Workaround for ticket #985 */
 #define DELAYED_CLOSE_TIMEOUT	200
 
-/* Maximum ciphers */
-#define MAX_CIPHERS		100
-
 /* 
  * Include OpenSSL headers 
  */
@@ -296,7 +293,7 @@ static unsigned openssl_cipher_num;
 static struct openssl_ciphers_t {
     pj_ssl_cipher    id;
     const char	    *name;
-} openssl_ciphers[MAX_CIPHERS];
+} openssl_ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
 
 /* OpenSSL application data index */
 static int sslsock_idx;
@@ -345,7 +342,7 @@ static pj_status_t init_openssl(void)
 	pj_assert(meth);
 
 	ctx=SSL_CTX_new(meth);
-	SSL_CTX_set_cipher_list(ctx, "ALL");
+	SSL_CTX_set_cipher_list(ctx, "ALL:COMPLEMENTOFALL");
 
 	ssl = SSL_new(ctx);
 	sk_cipher = SSL_get_ciphers(ssl);
@@ -792,7 +789,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     pj_strset(&cipher_list, buf, 0);
 
     /* Set SSL with ALL available ciphers */
-    SSL_set_cipher_list(ssock->ossl_ssl, "ALL");
+    SSL_set_cipher_list(ssock->ossl_ssl, "ALL:COMPLEMENTOFALL");
 
     /* Generate user specified cipher list in OpenSSL format */
     sk_cipher = SSL_get_ciphers(ssock->ossl_ssl);
