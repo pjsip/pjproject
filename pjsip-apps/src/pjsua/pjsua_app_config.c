@@ -1221,7 +1221,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		    tls_ciphers[cfg->udp_cfg.tls_setting.ciphers_num++] = cipher;
 		    cfg->udp_cfg.tls_setting.ciphers = tls_ciphers;
 		} else {
-		    pj_ssl_cipher ciphers[512];
+		    pj_ssl_cipher ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
 		    unsigned j, ciphers_cnt;
 
 		    ciphers_cnt = PJ_ARRAY_SIZE(ciphers);
