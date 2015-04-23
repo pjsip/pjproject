@@ -783,8 +783,14 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     unsigned i;
     int j, ret;
 
-    if (ssock->param.ciphers_num == 0)
+    if (ssock->param.ciphers_num == 0) {
+	ret = SSL_set_cipher_list(ssock->ossl_ssl, PJ_SSL_SOCK_OSSL_CIPHERS);
+    	if (ret < 1) {
+	    return GET_SSL_STATUS(ssock);
+    	}    
+	
 	return PJ_SUCCESS;
+    }
 
     pj_strset(&cipher_list, buf, 0);
 
@@ -805,7 +811,9 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 		c_name = SSL_CIPHER_get_name(c);
 
 		/* Check buffer size */
-		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 > sizeof(buf)) {
+		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 >
+		    sizeof(buf))
+		{
 		    pj_assert(!"Insufficient temporary buffer for cipher");
 		    return PJ_ETOOMANY;
 		}

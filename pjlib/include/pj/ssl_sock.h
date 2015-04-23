@@ -748,8 +748,9 @@ typedef struct pj_ssl_sock_param
 
     /**
      * Number of ciphers contained in the specified cipher preference. 
-     * If this is set to zero, then default cipher list of the backend 
-     * will be used.
+     * If this is set to zero, then the cipher list used will be determined
+     * by the backend default (for OpenSSL backend, setting 
+     * PJ_SSL_SOCK_OSSL_CIPHERS will be used).
      */
     unsigned ciphers_num;
 

@@ -875,6 +875,18 @@
 
 
 /**
+ * Specify what should be set as the available list of SSL_CIPHERs. For
+ * example, set this as "DEFAULT" to use the default cipher list (Note:
+ * PJSIP release 2.4 and before used this "DEFAULT" setting).
+ *
+ * Default: "HIGH:-COMPLEMENTOFDEFAULT"
+ */
+#ifndef PJ_SSL_SOCK_OSSL_CIPHERS
+#  define PJ_SSL_SOCK_OSSL_CIPHERS   "HIGH:-COMPLEMENTOFDEFAULT"
+#endif
+
+
+/**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
  * https://trac.pjsip.org/repos/ticket/1197.
  *
