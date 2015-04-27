@@ -689,6 +689,18 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    }
     #endif
 	}
+    } else {
+	X509_STORE *pkix_validation_store = SSL_CTX_get_cert_store(ctx);
+	if (NULL != pkix_validation_store) {
+#if defined(X509_V_FLAG_TRUSTED_FIRST)
+	    X509_STORE_set_flags(pkix_validation_store, 
+				 X509_V_FLAG_TRUSTED_FIRST);
+#endif
+#if defined(X509_V_FLAG_PARTIAL_CHAIN)
+	    X509_STORE_set_flags(pkix_validation_store, 
+				 X509_V_FLAG_PARTIAL_CHAIN);
+#endif
+	}
     }
 
     /* Create SSL instance */
