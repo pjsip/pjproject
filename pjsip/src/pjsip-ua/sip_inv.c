@@ -1085,7 +1085,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
     if (r_sdp==NULL && msg && msg->body) {
 
 	/* Check if body really contains SDP. */
-	if (sdp_info->body.ptr == NULL) {
+	if (sdp_info->body.ptr == NULL && !PJSIP_INV_ACCEPT_UNKNOWN_BODY) {
 	    /* Couldn't find "application/sdp" */
 	    code = PJSIP_SC_UNSUPPORTED_MEDIA_TYPE;
 	    status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
