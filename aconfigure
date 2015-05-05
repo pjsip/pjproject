@@ -7155,8 +7155,8 @@ $as_echo "Using OpenH264 prefix... $with_openh264" >&6; }
 			OPENH264_LDFLAGS=""
 		  fi
 
-		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking OpenH264 availability" >&5
-$as_echo_n "checking OpenH264 availability... " >&6; }
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking OpenH264 usability" >&5
+$as_echo_n "checking OpenH264 usability... " >&6; }
 
 		  OPENH264_LIBS="-lopenh264"
 
@@ -7193,8 +7193,8 @@ else
 				   LIBS="$SAVED_LIBS"
 				   LDFLAGS="$SAVED_LDFLAGS"
 				   CFLAGS="$SAVED_CFLAGS"
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: failed" >&5
-$as_echo "failed" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
 
 fi
 rm -f core conftest.err conftest.$ac_objext \
@@ -7597,7 +7597,7 @@ $as_echo "ok" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error $? "failed
+as_fn_error $? "no
 See \`config.log' for more details" "$LINENO" 5; }
 fi
 rm -f core conftest.err conftest.$ac_objext \

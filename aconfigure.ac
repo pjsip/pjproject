@@ -1149,7 +1149,7 @@ AC_ARG_ENABLE(openh264,
 			OPENH264_LDFLAGS="" 
 		  fi
 
-		  AC_MSG_CHECKING([OpenH264 availability])
+		  AC_MSG_CHECKING([OpenH264 usability])
 
 		  OPENH264_LIBS="-lopenh264"
 		  
@@ -1174,7 +1174,7 @@ AC_ARG_ENABLE(openh264,
 				   LIBS="$SAVED_LIBS"
 				   LDFLAGS="$SAVED_LDFLAGS"
 				   CFLAGS="$SAVED_CFLAGS"
-		  		   AC_MSG_RESULT(failed)
+		  		   AC_MSG_RESULT(no)
 		  		 ])
 
 	      ])
@@ -1468,7 +1468,7 @@ if test "x$enable_ipp" != "xno"; then
 					   ]],
 					   [extern USC_Fxns USC_G729AFP_Fxns;])],
 		  [AC_MSG_RESULT(ok)],
-		  [AC_MSG_FAILURE(failed)])
+		  [AC_MSG_FAILURE(no)])
 
 	CFLAGS="$SAVED_CFLAGS"
 	LDFLAGS="$IPP_LDFLAGS $SAVED_LDFLAGS"
