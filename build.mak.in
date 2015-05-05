@@ -17,7 +17,7 @@ export exec_prefix := @exec_prefix@
 export includedir := @includedir@
 export libdir := @libdir@
 
-LIB_SUFFIX = $(TARGET_NAME).a
+LIB_SUFFIX := $(TARGET_NAME).a
 
 ifeq (@ac_shared_libraries@,1)
 export PJ_SHARED_LIBRARIES := 1
@@ -187,7 +187,7 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	@LDFLAGS@
 export APP_LDXXFLAGS := $(APP_LDFLAGS)
 
-export APP_LIB_FILES = \
+export APP_LIB_FILES := \
 	$(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-ua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
@@ -200,7 +200,7 @@ export APP_LIB_FILES = \
 	$(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
 	$(APP_THIRD_PARTY_LIB_FILES) \
 	$(PJ_DIR)/pjlib/lib/libpj-$(LIB_SUFFIX)
-export APP_LIBXX_FILES = \
+export APP_LIBXX_FILES := \
 	$(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) \
 	$(APP_LIB_FILES)
 
