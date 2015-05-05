@@ -4166,6 +4166,16 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
 
+	if (call->med_prov_cnt == 0) {
+	    status = pjsua_media_channel_init(call->index, inv->role, 
+					     call->secure_level, inv->pool_prov, 
+					     NULL, NULL, PJ_FALSE, NULL);
+	    if (status != PJ_SUCCESS) {	    
+		pjsua_perror(THIS_FILE, "Unable to create offer", status);
+		goto on_return;
+	    }
+	}
+
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
 					        NULL, offer, NULL);
