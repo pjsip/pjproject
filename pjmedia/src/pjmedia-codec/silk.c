@@ -772,7 +772,7 @@ static pj_status_t  silk_codec_parse( pjmedia_codec *codec,
     for (i = 0; i < count; i++) {
         frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
         frames[i].bit_info = (((unsigned)ts->u64 & 0xFFFF) << 16) |
-                              (((unsigned)pkt & 0xFF) << 8) |
+                              (((pj_size_t)pkt & 0xFF) << 8) |
                               (toc.framesInPacket << 4) | i;
         frames[i].buf = pkt;
         frames[i].size = pkt_size;
