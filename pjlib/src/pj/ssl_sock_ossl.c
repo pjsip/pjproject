@@ -318,7 +318,10 @@ static pj_status_t init_openssl(void)
     /* Init OpenSSL lib */
     SSL_library_init();
     SSL_load_error_strings();
+#if OPENSSL_VERSION_NUMBER < 0x009080ffL
+    /* This is now synonym of SSL_library_init() */
     OpenSSL_add_all_algorithms();
+#endif
 
     /* Init available ciphers */
     if (openssl_cipher_num == 0) {
@@ -352,7 +355,7 @@ static pj_status_t init_openssl(void)
 	    n = PJ_ARRAY_SIZE(openssl_ciphers);
 
 	for (i = 0; i < n; ++i) {
-	    SSL_CIPHER *c;
+	    const SSL_CIPHER *c;
 	    c = sk_SSL_CIPHER_value(sk_cipher,i);
 	    openssl_ciphers[i].id = (pj_ssl_cipher)
 				    (pj_uint32_t)c->id & 0x00FFFFFF;
@@ -813,7 +816,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     sk_cipher = SSL_get_ciphers(ssock->ossl_ssl);
     for (i = 0; i < ssock->param.ciphers_num; ++i) {
 	for (j = 0; j < sk_SSL_CIPHER_num(sk_cipher); ++j) {
-	    SSL_CIPHER *c;
+	    const SSL_CIPHER *c;
 	    c = sk_SSL_CIPHER_value(sk_cipher, j);
 	    if (ssock->param.ciphers[i] == (pj_ssl_cipher)
 					   ((pj_uint32_t)c->id & 0x00FFFFFF))
