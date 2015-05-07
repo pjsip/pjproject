@@ -21,6 +21,7 @@
 #include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/file_access.h>
 #include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>
@@ -671,6 +672,49 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     }
 
     if (ssock->is_server) {
+	char *p = NULL;
+
+	/* If certificate file name contains "_rsa.", let's check if there are
+	 * ecc and dsa certificates too.
+	 */
+	if (cert && cert->cert_file.slen) {
+	    const pj_str_t RSA = {"_rsa.", 5};
+	    p = pj_strstr(&cert->cert_file, &RSA);
+	    if (p) p++; /* Skip underscore */
+	}
+	if (p) {
+	    /* Certificate type string length must be exactly 3 */
+	    enum { CERT_TYPE_LEN = 3 };
+	    const char* cert_types[] = { "ecc", "dsa" };
+	    char *cf = cert->cert_file.ptr;
+	    int i;
+
+	    /* Check and load ECC & DSA certificates & private keys */
+	    for (i = 0; i < PJ_ARRAY_SIZE(cert_types); ++i) {
+		int err;
+
+		pj_memcpy(p, cert_types[i], CERT_TYPE_LEN);
+		if (!pj_file_exists(cf))
+		    continue;
+
+		err = SSL_CTX_use_certificate_chain_file(ctx, cf);
+		if (err == 1)
+		    err = SSL_CTX_use_PrivateKey_file(ctx, cf,
+						      SSL_FILETYPE_PEM);
+		if (err == 1) {
+		    PJ_LOG(4,(ssock->pool->obj_name,
+			      "Additional certificate '%s' loaded.", cf));
+		} else {
+		    pj_perror(1, ssock->pool->obj_name, GET_SSL_STATUS(ssock),
+			      "Error loading certificate file '%s'", cf);
+		    ERR_clear_error();
+		}
+	    }
+
+	    /* Put back original name */
+	    pj_memcpy(p, "rsa", CERT_TYPE_LEN);
+	}
+
     #ifndef SSL_CTRL_SET_ECDH_AUTO
 	#define SSL_CTRL_SET_ECDH_AUTO 94
     #endif

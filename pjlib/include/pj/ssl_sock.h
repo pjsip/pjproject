@@ -185,7 +185,10 @@ typedef struct pj_ssl_cert_info {
 
 
 /**
- * Create credential from files.
+ * Create credential from files. TLS server application can provide multiple
+ * certificates (RSA, ECC, and DSA) by supplying certificate name with "_rsa"
+ * suffix, e.g: "pjsip_rsa.pem", the library will automatically check for
+ * other certificates with "_ecc" and "_dsa" suffix.
  *
  * @param CA_file	The file of trusted CA list.
  * @param cert_file	The file of certificate.
@@ -203,7 +206,10 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
 						 pj_ssl_cert_t **p_cert);
 
 /**
- * Create credential from files.
+ * Create credential from files. TLS server application can provide multiple
+ * certificates (RSA, ECC, and DSA) by supplying certificate name with "_rsa"
+ * suffix, e.g: "pjsip_rsa.pem", the library will automatically check for
+ * other certificates with "_ecc" and "_dsa" suffix.
  *
  * This is the same as pj_ssl_cert_load_from_files() but also
  * accepts an additional param CA_path to load CA certificates from
