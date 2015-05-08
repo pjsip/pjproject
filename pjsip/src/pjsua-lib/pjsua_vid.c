@@ -478,21 +478,42 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	    } else {
 		strm = pjmedia_vid_port_get_stream(w->vp_rend);
 	    }
-
 	    pj_assert(strm);
-	    status = pjmedia_vid_dev_stream_set_cap(
-				    strm, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
-				    &hide);
 
-	    pjmedia_vid_dev_stream_set_cap(
+	    /* Try to apply show/hide, window flags, and output window */
+
+	    status = pjmedia_vid_dev_stream_set_cap(
+				strm, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+				&hide);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(THIS_FILE, status,
+			     "Ignored error on setting window visibility "
+			     "on wid=%d", wid));
+	    }
+
+	    status = pjmedia_vid_dev_stream_set_cap(
                                 strm, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS,
 				&wnd_flags);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(THIS_FILE, status,
+			     "Ignored error on setting window flags "
+			     "on wid=%d", wid));
+	    }
+
+	    status = pjmedia_vid_dev_stream_set_cap(
+                                strm, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
+				&wnd_flags);	    
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(THIS_FILE, status,
+			     "Ignored error on setting window handle "
+			     "on wid=%d", wid));
+	    }
 
 	    /* Done */
 	    *id = wid;
 	    pj_log_pop_indent();
 
-	    return status;
+	    return PJ_SUCCESS;
 	}
     }
 
