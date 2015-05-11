@@ -1281,8 +1281,8 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	tls_destroy(&tls->base, status);
     } else {
 	/* Start keep-alive timer */
-	if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
-	    pj_time_val delay = {PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0};
+	if (pjsip_cfg()->tls.keep_alive_interval) {
+	    pj_time_val delay = {pjsip_cfg()->tls.keep_alive_interval, 0};
 	    pjsip_endpt_schedule_timer(listener->endpt, 
 				       &tls->ka_timer, 
 				       &delay);
@@ -1747,8 +1747,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     tls_flush_pending_tx(tls);
 
     /* Start keep-alive timer */
-    if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
-	pj_time_val delay = { PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0 };
+    if (pjsip_cfg()->tls.keep_alive_interval) {
+	pj_time_val delay = { pjsip_cfg()->tls.keep_alive_interval, 0 };
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
@@ -1780,9 +1780,9 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_gettimeofday(&now);
     PJ_TIME_VAL_SUB(now, tls->last_activity);
 
-    if (now.sec > 0 && now.sec < PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+    if (now.sec > 0 && now.sec < pjsip_cfg()->tls.keep_alive_interval) {
 	/* There has been activity, so don't send keep-alive */
-	delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL - now.sec;
+	delay.sec = pjsip_cfg()->tls.keep_alive_interval - now.sec;
 	delay.msec = 0;
 
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
@@ -1810,7 +1810,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     }
 
     /* Register next keep-alive */
-    delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL;
+    delay.sec = pjsip_cfg()->tls.keep_alive_interval;
     delay.msec = 0;
 
     pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 

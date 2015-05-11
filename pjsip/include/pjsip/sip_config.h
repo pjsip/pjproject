@@ -217,6 +217,30 @@ typedef struct pjsip_cfg_t
 
     } regc;
 
+    /** TCP transport settings */
+    struct {
+        /**
+         * Set the interval to send keep-alive packet for TCP transports.
+         * If the value is zero, keep-alive will be disabled for TCP.
+         *
+         * Default is PJSIP_TCP_KEEP_ALIVE_INTERVAL.
+         */
+        long keep_alive_interval;
+
+    } tcp;
+
+    /** TLS transport settings */
+    struct {
+        /**
+         * Set the interval to send keep-alive packet for TLS transports.
+         * If the value is zero, keep-alive will be disabled for TLS.
+         *
+         * Default is PJSIP_TLS_KEEP_ALIVE_INTERVAL.
+         */
+        long keep_alive_interval;
+
+    } tls;
+
 } pjsip_cfg_t;
 
 
@@ -649,6 +673,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Set the interval to send keep-alive packet for TCP transports.
  * If the value is zero, keep-alive will be disabled for TCP.
  *
+ * This option can be changed in run-time by settting
+ * \a tcp.keep_alive_interval field of pjsip_cfg().
+ *
  * Default: 90 (seconds)
  *
  * @see PJSIP_TCP_KEEP_ALIVE_DATA
@@ -671,6 +698,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Set the interval to send keep-alive packet for TLS transports.
  * If the value is zero, keep-alive will be disabled for TLS.
+ *
+ * This option can be changed in run-time by settting
+ * \a tls.keep_alive_interval field of pjsip_cfg().
  *
  * Default: 90 (seconds)
  *

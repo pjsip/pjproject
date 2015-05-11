@@ -49,6 +49,16 @@ pjsip_cfg_t pjsip_sip_cfg_var =
     /* Client registration client */
     {
 	PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+    },
+
+    /* TCP transport settings */
+    {
+        PJSIP_TCP_KEEP_ALIVE_INTERVAL
+    },
+
+    /* TLS transport settings */
+    {
+        PJSIP_TLS_KEEP_ALIVE_INTERVAL
     }
 };
 

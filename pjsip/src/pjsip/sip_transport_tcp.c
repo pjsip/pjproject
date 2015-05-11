@@ -1140,8 +1140,8 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 		return PJ_TRUE;
 	    }
 	    /* Start keep-alive timer */
-	    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
-		pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
+	    if (pjsip_cfg()->tcp.keep_alive_interval) {
+		pj_time_val delay = {pjsip_cfg()->tcp.keep_alive_interval, 0};
 		pjsip_endpt_schedule_timer(listener->endpt, 
 					   &tcp->ka_timer, 
 					   &delay);
@@ -1499,8 +1499,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     tcp_flush_pending_tx(tcp);
 
     /* Start keep-alive timer */
-    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
-	pj_time_val delay = { PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0 };
+    if (pjsip_cfg()->tcp.keep_alive_interval) {
+	pj_time_val delay = { pjsip_cfg()->tcp.keep_alive_interval, 0 };
 	pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
 				   &delay);
 	tcp->ka_timer.id = PJ_TRUE;
@@ -1526,9 +1526,9 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_gettimeofday(&now);
     PJ_TIME_VAL_SUB(now, tcp->last_activity);
 
-    if (now.sec > 0 && now.sec < PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+    if (now.sec > 0 && now.sec < pjsip_cfg()->tcp.keep_alive_interval) {
 	/* There has been activity, so don't send keep-alive */
-	delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL - now.sec;
+	delay.sec = pjsip_cfg()->tcp.keep_alive_interval - now.sec;
 	delay.msec = 0;
 
 	pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
@@ -1555,7 +1555,7 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     }
 
     /* Register next keep-alive */
-    delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL;
+    delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
     delay.msec = 0;
 
     pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
