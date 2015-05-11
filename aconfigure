@@ -7676,7 +7676,7 @@ if ${ac_cv_lib_crypto_ERR_load_BIO_strings+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lcrypto -ldl -lz $LIBS"
+LIBS="-lcrypto  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -7707,7 +7707,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_ERR_load_BIO_strings" >&5
 $as_echo "$ac_cv_lib_crypto_ERR_load_BIO_strings" >&6; }
 if test "x$ac_cv_lib_crypto_ERR_load_BIO_strings" = xyes; then :
-  libcrypto_present=1 && LIBS="-lcrypto -ldl -lz $LIBS"
+  libcrypto_present=1 && LIBS="-lcrypto $LIBS"
 fi
 
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SSL_library_init in -lssl" >&5
