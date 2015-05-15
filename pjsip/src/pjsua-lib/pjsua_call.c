@@ -1480,20 +1480,27 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 		 * on_incoming_call_med_tp_complete(), so we need to send
 		 * a response message and terminate the invite here.
 		 */
+		pjsip_dlg_inc_lock(dlg);
 		pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
 		if (call->inv && call->inv->dlg) {
 		    pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
 		}
+		pjsip_dlg_dec_lock(dlg);
+
 		call->inv = NULL;
 		call->async_call.dlg = NULL;
 		goto on_return;
 	    }
 	} else if (status != PJ_EPENDING) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	    
+	    pjsip_dlg_inc_lock(dlg);
 	    pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
 	    if (call->inv && call->inv->dlg) {
 		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
 	    }
+	    pjsip_dlg_dec_lock(dlg);
+
 	    call->inv = NULL;
 	    call->async_call.dlg = NULL;
 	    goto on_return;
