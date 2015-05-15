@@ -2413,6 +2413,13 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
 	goto on_return;
     }
 
+    /* We may need to re-initialize media before creating SDP */
+    if (call->med_prov_cnt == 0) {
+    	status = apply_call_setting(call, &call->opt, NULL);
+    	if (status != PJ_SUCCESS)
+	    goto on_return;
+    }
+
     status = create_sdp_of_call_hold(call, &sdp);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -4156,6 +4163,13 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 #endif
 
+    /* We may need to re-initialize media before creating SDP */
+    if (call->med_prov_cnt == 0) {
+    	status = apply_call_setting(call, &call->opt, NULL);
+    	if (status != PJ_SUCCESS)
+	    goto on_return;
+    }
+
     /* See if we've put call on hold. */
     if (call->local_hold) {
 	PJ_LOG(4,(THIS_FILE,
@@ -4165,16 +4179,6 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     } else {
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
-
-	if (call->med_prov_cnt == 0) {
-	    status = pjsua_media_channel_init(call->index, inv->role, 
-					     call->secure_level, inv->pool_prov, 
-					     NULL, NULL, PJ_FALSE, NULL);
-	    if (status != PJ_SUCCESS) {	    
-		pjsua_perror(THIS_FILE, "Unable to create offer", status);
-		goto on_return;
-	    }
-	}
 
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
