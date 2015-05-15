@@ -138,6 +138,7 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.dir = dir;
     pj_memcpy(&info.fmt, codec_info, sizeof(pjmedia_codec_info));
     info.tx_pt = codec_info->pt;
+    info.rx_pt = codec_info->pt;
     info.ssrc = pj_rand();
     
 #if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
