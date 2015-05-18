@@ -99,6 +99,7 @@ struct pjsip_tpmgr
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
     pjsip_tp_state_callback tp_state_cb;
+    pjsip_tp_on_rx_dropped_cb tp_drop_data_cb;
 
     /* Transmit data list, for transmit data cleanup when transport manager
      * is destroyed.
@@ -1693,6 +1694,18 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	if (p!=current_pkt) {
 	    remaining_len -= (p - current_pkt);
 	    total_processed += (p - current_pkt);
+
+	    /* Notify application about the dropped newlines */
+	    if (mgr->tp_drop_data_cb) {
+		pjsip_tp_dropped_data dd;
+		pj_bzero(&dd, sizeof(dd));
+		dd.tp = tr;
+		dd.data = current_pkt;
+		dd.len = p - current_pkt;
+		dd.status = PJ_EIGNORED;
+		(*mgr->tp_drop_data_cb)(&dd);
+	    }
+
 	    current_pkt = p;
 	    if (remaining_len == 0) {
 		return total_processed;
@@ -1719,6 +1732,18 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    if (msg_status != PJ_SUCCESS) {
 		if (remaining_len == PJSIP_MAX_PKT_LEN) {
 		    mgr->on_rx_msg(mgr->endpt, PJSIP_ERXOVERFLOW, rdata);
+		    
+		    /* Notify application about the message overflow */
+	    	    if (mgr->tp_drop_data_cb) {
+			pjsip_tp_dropped_data dd;
+			pj_bzero(&dd, sizeof(dd));
+			dd.tp = tr;
+			dd.data = current_pkt;
+			dd.len = msg_fragment_size;
+			dd.status = PJSIP_ERXOVERFLOW;
+			(*mgr->tp_drop_data_cb)(&dd);
+	    	    }
+		    
 		    /* Exhaust all data. */
 		    return rdata->pkt_info.len;
 		} else {
@@ -1781,6 +1806,20 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 		      (int)tmp.slen, tmp.ptr,
 		      (int)msg_fragment_size,
 		      rdata->msg_info.msg_buf));
+	    }
+
+	    /* Notify application about the dropped data (syntax error) */
+	    if (tmp.slen && mgr->tp_drop_data_cb) {
+		pjsip_tp_dropped_data dd;
+		pj_bzero(&dd, sizeof(dd));
+		dd.tp = tr;
+		dd.data = current_pkt;
+		dd.len = msg_fragment_size;
+		dd.status = PJSIP_EINVALIDMSG;
+		(*mgr->tp_drop_data_cb)(&dd);
+		
+		if (dd.len > 0 && dd.len < msg_fragment_size)
+		    msg_fragment_size = dd.len;
 	    }
 
 	    goto finish_process_fragment;
@@ -2262,6 +2301,19 @@ PJ_DEF(pj_status_t) pjsip_transport_remove_state_listener (
     pj_list_push_back(&tp_data->st_listeners_empty, entry);
 
     pj_lock_release(tp->lock);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Set callback of data dropping.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_drop_data_cb(pjsip_tpmgr *mgr,
+						 pjsip_tp_on_rx_dropped_cb cb)
+{
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    mgr->tp_drop_data_cb = cb;
 
     return PJ_SUCCESS;
 }
