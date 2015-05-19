@@ -500,13 +500,15 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 			     "on wid=%d", wid));
 	    }
 
-	    status = pjmedia_vid_dev_stream_set_cap(
-                                strm, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-				&wnd_flags);	    
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(4,(THIS_FILE, status,
-			     "Ignored error on setting window handle "
-			     "on wid=%d", wid));
+	    if (wnd) {
+		status = pjmedia_vid_dev_stream_set_cap(
+				 strm, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW, wnd);
+
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(4, (THIS_FILE, status,
+				  "Ignored error on setting window handle "
+				  "on wid=%d", wid));
+		}
 	    }
 
 	    /* Done */
