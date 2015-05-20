@@ -3889,6 +3889,17 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
     /* Update media channel with the new SDP */
     status = pjsua_media_channel_update(call->index, local_sdp, remote_sdp);
+
+    /* If this is not the initial INVITE, don't disconnect call due to
+     * no media after SDP negotiation.
+     */
+    if (status == PJMEDIA_SDPNEG_ENOMEDIA &&
+	call->inv->state == PJSIP_INV_STATE_CONFIRMED)
+    {
+	status = PJ_SUCCESS;
+    }
+
+    /* Disconnect call after failure in media channel update */
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create media session",
 		     status);

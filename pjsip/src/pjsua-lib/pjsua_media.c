@@ -2649,7 +2649,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 			     "pjmedia_stream_info_from_sdp() failed "
 			         "for call_id %d media %d",
 			     call_id, mi));
-		continue;
+		goto on_check_med_status;
 	    }
 
             /* Codec parameter of stream info (si->param) can be NULL if
@@ -2707,7 +2707,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				     "pjmedia_transport_media_stop() failed "
 				     "for call_id %d media %d",
 				     call_id, mi));
-			continue;
+			goto on_check_med_status;
 		    }
 		    status = pjmedia_transport_media_create(call_med->tp,
 							    tmp_pool,
@@ -2717,7 +2717,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				     "pjmedia_transport_media_create() failed "
 				     "for call_id %d media %d",
 				     call_id, mi));
-			continue;
+			goto on_check_med_status;
 		    }
 		}
 
@@ -2730,7 +2730,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				 "pjmedia_transport_media_start() failed "
 				     "for call_id %d media %d",
 				 call_id, mi));
-		    continue;
+		    goto on_check_med_status;
 		}
 
 		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
@@ -2755,7 +2755,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				     "pjsua_aud_channel_update() failed "
 					 "for call_id %d media %d",
 				     call_id, mi));
-			continue;
+			goto on_check_med_status;
 		    }
 		}
 
@@ -2825,7 +2825,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 			     "pjmedia_vid_stream_info_from_sdp() failed "
 			         "for call_id %d media %d",
 			     call_id, mi));
-		continue;
+		goto on_check_med_status;
 	    }
 
 	    /* Check if this media is changed */
@@ -2860,7 +2860,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				 "pjmedia_transport_media_start() failed "
 				     "for call_id %d media %d",
 				 call_id, mi));
-		    continue;
+		    goto on_check_med_status;
 		}
 
 		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
@@ -2885,7 +2885,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				     "pjsua_vid_channel_update() failed "
 					 "for call_id %d media %d",
 				     call_id, mi));
-			continue;
+			goto on_check_med_status;
 		    }
 		}
 
@@ -2950,11 +2950,28 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
 
+on_check_med_status:
 	if (status != PJ_SUCCESS) {
+	    /* Stop stream */
+	    stop_media_stream(call, mi);
+
+	    /* Close the media transport */
+	    if (call_med->tp) {
+		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+		pjmedia_transport_close(call_med->tp);
+		call_med->tp = call_med->tp_orig = NULL;
+	    }
+
+	    /* Update media states */
+	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
+	    call_med->dir = PJMEDIA_DIR_NONE;
+
 	    PJ_PERROR(1,(THIS_FILE, status, "Error updating media call%02d:%d",
 		         call_id, mi));
 	} else {
-	    got_media = PJ_TRUE;
+	    /* Only set 'got_media' flag if this media is not disabled */
+	    if (local_sdp->media[mi]->desc.port != 0)
+		got_media = PJ_TRUE;
 	}
     }
 
