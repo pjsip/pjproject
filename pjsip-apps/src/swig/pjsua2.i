@@ -60,6 +60,7 @@ using namespace pj;
 %feature("director") Call;
 %feature("director") Buddy;
 %feature("director") FindBuddyMatch;
+%feature("director") AudioMediaPlayer;
 
 //
 // STL stuff.
