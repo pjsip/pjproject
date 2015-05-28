@@ -226,6 +226,7 @@ struct pjmedia_stream
 #endif
 
     pj_uint32_t		     rtp_rx_last_ts;        /**< Last received RTP timestamp*/
+    pj_status_t		     rtp_rx_last_err;       /**< Last RTP recv() error */
 };
 
 
@@ -1631,9 +1632,18 @@ static void on_rx_rtp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((stream->port.info.name.ptr, "RTP recv() error",
-		(pj_status_t)-bytes_read));
+	status = (pj_status_t)-bytes_read;
+	if (stream->rtp_rx_last_err != status) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Unable to receive RTP packet, recv() returned %d: %s",
+		      status, errmsg));
+	    stream->rtp_rx_last_err = status;
+	}
 	return;
+    } else {
+	stream->rtp_rx_last_err = PJ_SUCCESS;
     }
 
     /* Ignore keep-alive packets */
