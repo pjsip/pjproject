@@ -1488,6 +1488,105 @@ private:
     pjsua_vid_win_id		winId;
 };
 
+/**
+ * This structure contains parameters for VideoPreview::start()
+ */
+struct VideoPreviewOpParam {
+    /**
+     * Device ID for the video renderer to be used for rendering the
+     * capture stream for preview. This parameter is ignored if native
+     * preview is being used.
+     *
+     * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
+     */
+    pjmedia_vid_dev_index   rendId;
+
+    /**
+     * Show window initially.
+     *
+     * Default: PJ_TRUE.
+     */
+    bool		    show;
+
+    /**
+     * Window flags.  The value is a bitmask combination of
+     * \a pjmedia_vid_dev_wnd_flag.
+     *
+     * Default: 0.
+     */
+    unsigned		    windowFlags;
+
+    /**
+     * Media format. If left unitialized, this parameter will not be used.
+     */
+    MediaFormat		    format;
+
+    /**
+     * Optional output window to be used to display the video preview.
+     * This parameter will only be used if the video device supports
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW capability and the capability
+     * is not read-only.
+     */
+    VideoWindowHandle	    window;
+
+public:
+    /**
+     * Default constructor initializes with default values.
+     */
+    VideoPreviewOpParam();
+
+    /** 
+     * Convert from pjsip
+     */
+    void fromPj(const pjsua_vid_preview_param &prm);
+
+    /**
+     * Convert to pjsip
+     */
+    pjsua_vid_preview_param toPj() const;
+};
+
+/**
+ * Video Preview
+ */
+class VideoPreview {
+public:
+    /**
+     * Constructor
+     */
+    VideoPreview(int dev_id);
+
+    /**
+     * Determine if the specified video input device has built-in native
+     * preview capability. This is a convenience function that is equal to
+     * querying device's capability for PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW
+     * capability.
+     *
+     * @return		true if it has.
+     */
+    bool hasNative();
+
+    /**
+     * Start video preview window for the specified capture device.
+     *
+     * @param p		Video preview parameters. 
+     */
+    void start(const VideoPreviewOpParam &param) throw(Error);
+
+    /**
+     * Stop video preview.
+     */
+    void stop() throw(Error);
+
+    /*
+     * Get the preview window handle associated with the capture device,if any.
+     */
+    VideoWindow getVideoWindow();
+
+private:
+    pjmedia_vid_dev_index devId;
+};
+
 /*************************************************************************
 * Codec management
 */

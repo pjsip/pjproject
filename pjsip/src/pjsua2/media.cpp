@@ -1093,6 +1093,88 @@ void VideoWindow::setWindow(const VideoWindowHandle &win) throw(Error)
     PJ_UNUSED_ARG(win);
 #endif
 }
+///////////////////////////////////////////////////////////////////////////////
+
+VideoPreviewOpParam::VideoPreviewOpParam()
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_preview_param vid_prev_param;
+
+    pjsua_vid_preview_param_default(&vid_prev_param);
+    fromPj(vid_prev_param);
+#endif
+}
+
+void VideoPreviewOpParam::fromPj(const pjsua_vid_preview_param &prm)
+{
+#if PJSUA_HAS_VIDEO
+    this->rendId		    = prm.rend_id;
+    this->show			    = PJ2BOOL(prm.show);
+    this->windowFlags		    = prm.wnd_flags;
+    this->format.id		    = prm.format.id;
+    this->format.type		    = prm.format.type;
+    this->window.type		    = prm.wnd.type;
+    this->window.handle.window	    = prm.wnd.info.window;
+#else
+    PJ_UNUSED_ARG(prm);
+#endif
+}
+
+pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
+{
+    pjsua_vid_preview_param param;
+#if PJSUA_HAS_VIDEO
+    param.rend_id	    = this->rendId;
+    param.show		    = this->show;
+    param.wnd_flags	    = this->windowFlags;
+    param.format.id	    = this->format.id;
+    param.format.type	    = this->format.type;
+    param.wnd.type	    = this->window.type;
+    param.wnd.info.window   = this->window.handle.window;
+#endif
+    return param;
+}
+
+VideoPreview::VideoPreview(int dev_id) 
+: devId(dev_id)
+{
+
+}
+
+bool VideoPreview::hasNative()
+{
+#if PJSUA_HAS_VIDEO
+    return(PJ2BOOL(pjsua_vid_preview_has_native(devId)));
+#else
+    return false;
+#endif
+}
+
+void VideoPreview::start(const VideoPreviewOpParam &param) throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_preview_param prm = param.toPj();
+    PJSUA2_CHECK_EXPR(pjsua_vid_preview_start(devId, &prm));
+#else
+    PJ_UNUSED_ARG(param);
+#endif
+}
+
+void VideoPreview::stop() throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_preview_stop(devId);
+#endif
+}
+
+VideoWindow VideoPreview::getVideoWindow()
+{
+#if PJSUA_HAS_VIDEO
+    return (VideoWindow(pjsua_vid_preview_get_win(devId)));
+#else
+    return (VideoWindow(PJSUA_INVALID_ID));
+#endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 void CodecInfo::fromPj(const pjsua_codec_info &codec_info)

@@ -49,6 +49,7 @@ class MyLogWriter extends LogWriter
 class MyCall extends Call
 {
     public VideoWindow vidWin;
+    public VideoPreview vidPrev;
 
     MyCall(MyAccount acc, int call_id)
     {
@@ -112,6 +113,7 @@ class MyCall extends Call
 		       cmi.getVideoIncomingWindowId() != pjsua2.INVALID_ID)
 	    {
 		vidWin = new VideoWindow(cmi.getVideoIncomingWindowId());
+		vidPrev = new VideoPreview(cmi.getVideoCapDev());
 	    }
 	}
 

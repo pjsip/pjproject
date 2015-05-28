@@ -30,11 +30,66 @@ import android.app.Activity;
 
 import org.pjsip.pjsua2.*;
 
+class VideoPreviewHandler implements SurfaceHolder.Callback
+{   
+    public boolean videoPreviewActive = false;
+        
+    public void updateVideoPreview(SurfaceHolder holder) 
+    {
+	if (MainActivity.currentCall != null &&
+	    MainActivity.currentCall.vidWin != null &&
+	    MainActivity.currentCall.vidPrev != null)
+	{	
+	    if (videoPreviewActive) {
+		VideoWindowHandle vidWH = new VideoWindowHandle();
+		vidWH.getHandle().setWindow(holder.getSurface());
+		VideoPreviewOpParam vidPrevParam = new VideoPreviewOpParam();
+		vidPrevParam.setWindow(vidWH);		
+		try {
+		    MainActivity.currentCall.vidPrev.start(vidPrevParam);
+		} catch (Exception e) {
+		    System.out.println(e);
+		}
+	    } else {
+		try {
+		    MainActivity.currentCall.vidPrev.stop();
+		} catch (Exception e) {
+		    System.out.println(e);
+		}	
+	    }
+	}
+    }    
+    
+    @Override
+    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
+    {
+	updateVideoPreview(holder);
+    }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder holder) 
+    {
+	
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder holder) 
+    {
+	try {
+	    MainActivity.currentCall.vidPrev.stop();
+	} catch (Exception e) {
+	    System.out.println(e);
+	}
+    }    
+}
+
 public class CallActivity extends Activity
 			  implements Handler.Callback, SurfaceHolder.Callback
 {
 
     public static Handler handler_;
+    private static VideoPreviewHandler previewHandler = 
+	    					      new VideoPreviewHandler();
 
     private final Handler handler = new Handler(this);
     private static CallInfo lastCallInfo;
@@ -45,14 +100,22 @@ public class CallActivity extends Activity
 	super.onCreate(savedInstanceState);
 	setContentView(R.layout.activity_call);
 
-	SurfaceView surfaceView = (SurfaceView)
+	SurfaceView surfaceInVideo = (SurfaceView)
 				  findViewById(R.id.surfaceIncomingVideo);
+	SurfaceView surfacePreview = (SurfaceView)
+		  		  findViewById(R.id.surfacePreviewCapture);	
+	Button buttonShowPreview = (Button) 
+		  		  findViewById(R.id.buttonShowPreview);	
+	
 	if (MainActivity.currentCall == null ||
 	    MainActivity.currentCall.vidWin == null)
 	{
-	    surfaceView.setVisibility(View.GONE);
+	    surfaceInVideo.setVisibility(View.GONE);	    
+	    buttonShowPreview.setVisibility(View.GONE);
 	}
-	surfaceView.getHolder().addCallback(this);
+	setupVideoPreview(surfacePreview, buttonShowPreview);
+	surfaceInVideo.getHolder().addCallback(this);
+	surfacePreview.getHolder().addCallback(previewHandler);
 
 	handler_ = handler;
 	if (MainActivity.currentCall != null) {
@@ -73,26 +136,34 @@ public class CallActivity extends Activity
 	super.onDestroy();
 	handler_ = null;
     }
-
-    private void updateVideoWindow(SurfaceHolder holder)
-    {
+    
+    private void updateVideoWindow(boolean show)
+    { 
 	if (MainActivity.currentCall != null &&
-	    MainActivity.currentCall.vidWin != null)
+	    MainActivity.currentCall.vidWin != null &&
+	    MainActivity.currentCall.vidPrev != null)
 	{
-	    VideoWindowHandle vidWH = new VideoWindowHandle();
-	    if (holder == null)
+	    SurfaceView surfaceInVideo = (SurfaceView) 
+		       		  findViewById(R.id.surfaceIncomingVideo);
+	    
+	    VideoWindowHandle vidWH = new VideoWindowHandle();	    
+	    if (show) {
+		vidWH.getHandle().setWindow(
+				       surfaceInVideo.getHolder().getSurface());
+	    } else {
 		vidWH.getHandle().setWindow(null);
-	    else
-		vidWH.getHandle().setWindow(holder.getSurface());
+	    }
 	    try {
 		MainActivity.currentCall.vidWin.setWindow(vidWH);
-	    } catch (Exception e) {}
+	    } catch (Exception e) {
+		System.out.println(e);
+	    }	    
 	}
     }
-
+     
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
     {
-	updateVideoWindow(holder);
+	updateVideoWindow(true);
     }
 
     public void surfaceCreated(SurfaceHolder holder)
@@ -101,7 +172,7 @@ public class CallActivity extends Activity
 
     public void surfaceDestroyed(SurfaceHolder holder)
     {
-	updateVideoWindow(null);
+	updateVideoWindow(false);
     }
 
     public void acceptCall(View view)
@@ -132,13 +203,45 @@ public class CallActivity extends Activity
 	    }
 	}
     }
+    
+    public void setupVideoPreview(SurfaceView surfacePreview, 
+	    			  Button buttonShowPreview)
+    {
+	surfacePreview.setVisibility(previewHandler.videoPreviewActive?
+		     		     View.VISIBLE:View.GONE);
+	
+	buttonShowPreview.setText(previewHandler.videoPreviewActive?
+		  		  getString(R.string.hide_preview):
+		  		  getString(R.string.show_preview));		
+    }
+    
+    public void showPreview(View view)
+    {
+	SurfaceView surfacePreview = (SurfaceView)
+		  	          findViewById(R.id.surfacePreviewCapture);	
+
+	Button buttonShowPreview = (Button) 
+		  		  findViewById(R.id.buttonShowPreview);
+	
+	
+	previewHandler.videoPreviewActive = !previewHandler.videoPreviewActive;
+	
+	setupVideoPreview(surfacePreview, buttonShowPreview);
+	
+	previewHandler.updateVideoPreview(surfacePreview.getHolder());
+    }
 
     private void setupVideoSurface()
     {
-	SurfaceView surfaceView = (SurfaceView)
+	SurfaceView surfaceInVideo = (SurfaceView)
 				  findViewById(R.id.surfaceIncomingVideo);
-	surfaceView.setVisibility(View.VISIBLE);
-	updateVideoWindow(surfaceView.getHolder());
+	SurfaceView surfacePreview = (SurfaceView)
+		  		  findViewById(R.id.surfacePreviewCapture);
+	Button buttonShowPreview = (Button)
+		  		  findViewById(R.id.buttonShowPreview);	
+	surfaceInVideo.setVisibility(View.VISIBLE);
+	buttonShowPreview.setVisibility(View.VISIBLE);
+	surfacePreview.setVisibility(View.GONE);	
     }
 
     @Override
