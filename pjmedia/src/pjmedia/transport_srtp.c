@@ -1363,8 +1363,17 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
 	/* Generate crypto attribute if not yet */
 	if (pjmedia_sdp_media_find_attr(m_loc, &ID_CRYPTO, NULL) == NULL) {
+	    /* Offer only current active crypto if any, otherwise offer all
+	     * crypto-suites in the setting.
+	     */
 	    for (i=0; i<srtp->setting.crypto_count; ++i) {
-		/* Offer crypto-suites based on setting. */
+		if (srtp->tx_policy.name.slen &&
+		    pj_stricmp(&srtp->tx_policy.name,
+			       &srtp->setting.crypto[i].name) != 0)
+		{
+		    continue;
+		}
+
 		buffer_len = MAXLEN;
 		status = generate_crypto_attr_value(srtp->pool, buffer, &buffer_len,
 						    &srtp->setting.crypto[i],
