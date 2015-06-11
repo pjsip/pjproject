@@ -291,7 +291,7 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 static void inv_set_cause(pjsip_inv_session *inv, int cause_code,
 			  const pj_str_t *cause_text)
 {
-    if (cause_code > inv->cause) {
+    if ((cause_code > inv->cause) || inv->pending_bye) {
 	inv->cause = (pjsip_status_code) cause_code;
 	if (cause_text)
 	    pj_strdup(inv->pool, &inv->cause_text, cause_text);
@@ -4506,6 +4506,11 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 						      -1, &bye);
 		    if (status == PJ_SUCCESS) {
 			pjsip_inv_send_msg(inv, bye);
+
+			if (inv->pending_bye) {
+			    pjsip_tx_data_dec_ref(inv->pending_bye);
+			    inv->pending_bye = NULL;
+			}
 		    }
 		}
 	    }
