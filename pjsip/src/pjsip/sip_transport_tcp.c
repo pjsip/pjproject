@@ -1086,7 +1086,8 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     struct tcp_transport *tcp;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     pjsip_tp_state_callback state_cb;
-    pj_sockaddr tmp_src_addr;
+    pj_sockaddr tmp_src_addr, tmp_dst_addr;
+    int addr_len;
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
@@ -1123,13 +1124,19 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     pj_bzero(&tmp_src_addr, sizeof(tmp_src_addr));
     pj_sockaddr_cp(&tmp_src_addr, src_addr);
 
+    /* Get local address */
+    addr_len = sizeof(tmp_dst_addr);
+    status = pj_sock_getsockname(sock, &tmp_dst_addr, &addr_len);
+    if (status != PJ_SUCCESS) {
+	pj_sockaddr_cp(&tmp_dst_addr, &listener->factory.local_addr);
+    }
+
     /* 
      * Incoming connection!
      * Create TCP transport for the new socket.
      */
     status = tcp_create( listener, NULL, sock, PJ_TRUE,
-			 &listener->factory.local_addr,
-			 &tmp_src_addr, &tcp);
+			 &tmp_dst_addr, &tmp_src_addr, &tcp);
     if (status == PJ_SUCCESS) {
 	status = tcp_start_read(tcp);
 	if (status != PJ_SUCCESS) {

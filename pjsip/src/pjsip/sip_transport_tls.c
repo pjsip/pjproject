@@ -1209,8 +1209,7 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
-			 &listener->factory.local_addr,
-			 &tmp_src_addr, NULL, &tls);
+			 &ssl_info.local_addr, &tmp_src_addr, NULL, &tls);
     
     if (status != PJ_SUCCESS)
 	return PJ_TRUE;
