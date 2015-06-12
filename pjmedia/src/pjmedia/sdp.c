@@ -144,6 +144,8 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count,
     unsigned i;
     unsigned c_pt = 0xFFFF;
 
+    PJ_ASSERT_RETURN(count < PJMEDIA_MAX_SDP_ATTR, NULL);
+
     if (c_fmt)
 	c_pt = pj_strtoul(c_fmt);
 
@@ -199,6 +201,7 @@ PJ_DEF(unsigned) pjmedia_sdp_attr_remove_all(unsigned *count,
     pj_str_t attr_name;
 
     PJ_ASSERT_RETURN(count && attr_array && name, PJ_EINVAL);
+    PJ_ASSERT_RETURN(*count < PJMEDIA_MAX_SDP_ATTR, PJ_ETOOMANY);
 
     attr_name.ptr = (char*)name;
     attr_name.slen = pj_ansi_strlen(name);
@@ -225,6 +228,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_remove( unsigned *count,
     unsigned i, removed=0;
 
     PJ_ASSERT_RETURN(count && attr_array && attr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(*count < PJMEDIA_MAX_SDP_ATTR, PJ_ETOOMANY);
 
     for (i=0; i<*count; ) {
 	if (attr_array[i] == attr) {
