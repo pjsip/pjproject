@@ -478,7 +478,7 @@ PJ_DECL(void) pjsip_inv_usage_dump(void);
  *			it can specify the SDP here. Otherwise it can leave 
  *			this to NULL, to let remote UAS specifies an offer.
  * @param options	The options argument is bitmask combination of SIP 
- *			features in pjsip_inv_options enumeration.
+ *			features in pjsip_inv_option enumeration.
  * @param p_inv		On successful return, the invite session will be put 
  *			in this argument.
  *
@@ -615,7 +615,7 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request3( pjsip_rx_data *rdata,
  *			to rearrange the media lines in the answer so that it
  *			matches the offer. 
  * @param options	The options argument is bitmask combination of SIP 
- *			features in pjsip_inv_options enumeration.
+ *			features in pjsip_inv_option enumeration.
  * @param p_inv		Pointer to receive the newly created invite session.
  *
  * @return		On successful, the invite session will be put in 

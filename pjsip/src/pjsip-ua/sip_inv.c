@@ -1675,6 +1675,67 @@ static pjsip_msg_body *create_sdp_body(pj_pool_t *pool,
     return body;
 }
 
+/* Utility to remove a string value from generic array header */
+static void remove_val_from_array_hdr(pjsip_generic_array_hdr *arr_hdr,
+				      const pj_str_t *val)
+{
+    unsigned i;
+    for (i=0; i<arr_hdr->count; ++i) {
+	if (pj_stricmp(&arr_hdr->values[i], val)==0) {
+	    pj_array_erase(arr_hdr->values, sizeof(arr_hdr->values[0]),
+			   arr_hdr->count, i);
+	    --arr_hdr->count;
+	    break;
+	}
+    }
+}
+
+
+/* Remove disabled extensions, e.g: timer & 100rel, from Allow/Supported
+ * headers (see ticket #1858).
+ */
+static void cleanup_allow_sup_hdr(unsigned inv_option,
+				  pjsip_tx_data *tdata,
+				  pjsip_allow_hdr *allow_hdr,
+				  pjsip_supported_hdr *sup_hdr)
+{
+    /* If all extensions are enabled, nothing to do */
+    if ((inv_option & PJSIP_INV_SUPPORT_100REL) &&
+	(inv_option & PJSIP_INV_SUPPORT_TIMER))
+    {
+	return;
+    }
+
+    if (!allow_hdr && tdata) {
+	allow_hdr = (pjsip_allow_hdr*) pjsip_msg_find_hdr(tdata->msg,
+							  PJSIP_H_ALLOW,
+							  NULL);
+    }
+    if (!sup_hdr && tdata) {
+	sup_hdr = (pjsip_supported_hdr*) pjsip_msg_find_hdr(tdata->msg,
+							    PJSIP_H_SUPPORTED,
+							    NULL);
+    }
+
+    /* Remove "timer" from Supported header if Session-Timers is
+     * disabled (https://trac.pjsip.org/repos/ticket/1761)
+     */
+    if ((inv_option & PJSIP_INV_SUPPORT_TIMER) == 0 && sup_hdr) {
+	const pj_str_t STR_TIMER = { "timer", 5 };
+	remove_val_from_array_hdr(sup_hdr, &STR_TIMER);
+    }
+
+    if ((inv_option & PJSIP_INV_SUPPORT_100REL) == 0) {
+	const pj_str_t STR_PRACK  = { "PRACK", 5 };
+	const pj_str_t STR_100REL = { "100rel", 6 };
+
+	if (allow_hdr)
+	    remove_val_from_array_hdr(allow_hdr, &STR_PRACK);
+	if (sup_hdr)
+	    remove_val_from_array_hdr(sup_hdr, &STR_100REL);
+    }
+}
+
 /*
  * Create initial INVITE request.
  */
@@ -1683,6 +1744,8 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 {
     pjsip_tx_data *tdata;
     const pjsip_hdr *hdr;
+    pjsip_allow_hdr *allow_hdr = NULL;
+    pjsip_supported_hdr *sup_hdr = NULL;
     pj_bool_t has_sdp;
     pj_status_t status;
 
@@ -1750,35 +1813,22 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     if (inv->dlg->add_allow) {
 	hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_ALLOW, NULL);
 	if (hdr) {
-	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
-			      pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	    allow_hdr = (pjsip_allow_hdr*)
+			pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)allow_hdr);
 	}
     }
 
     /* Add Supported header */
     hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_SUPPORTED, NULL);
     if (hdr) {
-	pjsip_supported_hdr *h_sup;
-
-	h_sup = (pjsip_supported_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
-	/* Remove "timer" from Supported header if Session-Timers is
-	 * disabled (https://trac.pjsip.org/repos/ticket/1761)
-	 */
-	if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0) {
-	    unsigned i;
-	    const pj_str_t STR_TIMER = { "timer", 5 };
-	    for (i=0; i<h_sup->count; ++i) {
-		if (pj_stricmp(&h_sup->values[i], &STR_TIMER)==0) {
-		    pj_array_erase(h_sup->values, sizeof(h_sup->values[0]),
-		                   h_sup->count, i);
-		    --h_sup->count;
-		    break;
-		}
-	    }
-	}
-
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h_sup);
+	sup_hdr = (pjsip_supported_hdr*)
+		   pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
     }
+
+    /* Cleanup Allow & Supported headers from disabled extensions */
+    cleanup_allow_sup_hdr(inv->options, NULL, allow_hdr, sup_hdr);
 
     /* Add Require header. */
     if ((inv->options & PJSIP_INV_REQUIRE_100REL) ||
@@ -2228,6 +2278,9 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 	goto on_return;
     }
 
+    /* Cleanup Allow & Supported headers from disabled extensions */
+    cleanup_allow_sup_hdr(inv->options, tdata, NULL, NULL);
+
     /* Save this answer */
     inv->last_answer = tdata;
     pjsip_tx_data_add_ref(inv->last_answer);
@@ -2291,6 +2344,9 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
     /* Invoke Session Timers */
     pjsip_timer_update_resp(inv, last_res);
+
+    /* Cleanup Allow & Supported headers from disabled extensions */
+    cleanup_allow_sup_hdr(inv->options, last_res, NULL, NULL);
 
     *p_tdata = last_res;
 
@@ -2882,6 +2938,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     pjsip_tx_data *tdata = NULL;
     pjmedia_sdp_session *sdp_copy;
     const pjsip_hdr *hdr;
+    pjsip_supported_hdr *sup_hdr = NULL;
     pj_status_t status = PJ_SUCCESS;
 
     /* Verify arguments. */
@@ -2957,31 +3014,17 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
      */
     hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_SUPPORTED, NULL);
     if (hdr) {
-	pjsip_supported_hdr *h_sup;
-
-	h_sup = (pjsip_supported_hdr*) pjsip_hdr_clone(tdata->pool, hdr);
-	/* Remove "timer" from Supported header if Session-Timers is
-	 * disabled (https://trac.pjsip.org/repos/ticket/1761)
-	 */
-	if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0) {
-	    unsigned i;
-	    const pj_str_t STR_TIMER = { "timer", 5 };
-	    for (i=0; i<h_sup->count; ++i) {
-		if (pj_stricmp(&h_sup->values[i], &STR_TIMER)==0) {
-		    pj_array_erase(h_sup->values, sizeof(h_sup->values[0]),
-		                   h_sup->count, i);
-		    --h_sup->count;
-		    break;
-		}
-	    }
-	}
-
-	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h_sup);
+	sup_hdr = (pjsip_supported_hdr*)
+		   pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sup_hdr);
     }
 
     status = pjsip_timer_update_req(inv, tdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Cleanup Allow & Supported headers from disabled extensions */
+    cleanup_allow_sup_hdr(inv->options, NULL, NULL, sup_hdr);
 
     /* Unlock dialog. */
     pjsip_dlg_dec_lock(inv->dlg);
