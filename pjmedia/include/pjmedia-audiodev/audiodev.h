@@ -196,7 +196,11 @@ typedef enum pjmedia_aud_dev_cap
  */
 typedef enum pjmedia_aud_dev_route
 {
-    /** Default route. */
+    /**
+     * Default route, it is the default audio route of the audio framework
+     * backend, as in opening audio device without specifying any route
+     * setting or with specifying neutral route setting.
+     */
     PJMEDIA_AUD_DEV_ROUTE_DEFAULT = 0,
 
     /** Route to loudspeaker */
