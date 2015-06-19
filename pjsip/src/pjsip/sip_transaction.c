@@ -1795,10 +1795,16 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	tdata->mod_data[mod_tsx_layer.mod.id] == NULL)
     {
 	*cont = PJ_FALSE;
+
+	/* Decrease pending send counter */
+	pj_grp_lock_dec_ref(tsx->grp_lock);
 	return;
     }
 
     pj_grp_lock_acquire(tsx->grp_lock);
+
+    /* Decrease pending send counter */
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 
     /* Reset */
     tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
@@ -1932,6 +1938,11 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    /* Put again pending tdata */
 	    tdata->mod_data[mod_tsx_layer.mod.id] = tsx;
 	    tsx->pending_tx = tdata;
+
+	    /* Increment group lock again for the next sending retry,
+	     * to prevent us from being destroyed prematurely (ticket #1859).
+	     */
+	    pj_grp_lock_add_ref(tsx->grp_lock);
 	}
     }
 
@@ -2122,6 +2133,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
     tdata->mod_data[mod_tsx_layer.mod.id] = tsx;
     tsx->pending_tx = tdata;
 
+    /* Increment group lock while waiting for send operation to complete,
+     * to prevent us from being destroyed prematurely (ticket #1859).
+     */
+    pj_grp_lock_add_ref(tsx->grp_lock);
+
     /* Begin resolving destination etc to send the message. */
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
 
@@ -2131,6 +2147,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
 	if (status != PJ_SUCCESS) {
+	    pj_grp_lock_dec_ref(tsx->grp_lock);
 	    pjsip_tx_data_dec_ref(tdata);
 	    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
 	    tsx->pending_tx = NULL;
