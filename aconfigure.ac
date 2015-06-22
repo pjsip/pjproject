@@ -1210,7 +1210,7 @@ AC_ARG_ENABLE(libyuv,
 			    arm-apple-darwin*)
 				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
 				case $ARCH in
-				    *armv7*)
+				    *arm*)
 				    LIBYUV_LIBS="-lyuv_neon"
 				    ;;
 				*)
