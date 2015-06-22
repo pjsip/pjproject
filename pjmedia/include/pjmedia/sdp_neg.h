@@ -788,10 +788,11 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
 
 /**
  * Match format in the SDP media offer and answer. The matching mechanism
- * will be done by comparing the encoding name and clock rate, and if the
- * custom format matching callback for the specified format is registered,
- * see #pjmedia_sdp_neg_register_fmt_match_cb(), it will be called for more
- * detail verification, e.g: format parameters specified in SDP fmtp.
+ * will be done by comparing the encoding name, clock rate, and encoding
+ * parameters (if any), and if the custom format matching callback
+ * for the specified format is registered, see
+ * #pjmedia_sdp_neg_register_fmt_match_cb(), it will be called for
+ * more detail verification, e.g: format parameters specified in SDP fmtp.
  *
  * @param pool		The memory pool.
  * @param offer		The SDP media offer.

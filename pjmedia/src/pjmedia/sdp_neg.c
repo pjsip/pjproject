@@ -1599,7 +1599,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_fmt_match(pj_pool_t *pool,
     pjmedia_sdp_attr_get_rtpmap(attr, &a_rtpmap);
 
     if (pj_stricmp(&o_rtpmap.enc_name, &a_rtpmap.enc_name) != 0 ||
-	o_rtpmap.clock_rate != a_rtpmap.clock_rate)
+	(o_rtpmap.clock_rate != a_rtpmap.clock_rate) ||
+	(!(pj_stricmp(&o_rtpmap.param, &a_rtpmap.param) == 0 ||
+	   (a_rtpmap.param.slen == 0 && o_rtpmap.param.slen == 1 &&
+	    *o_rtpmap.param.ptr == '1') ||
+	   (o_rtpmap.param.slen == 0 && a_rtpmap.param.slen == 1 &&
+	    *a_rtpmap.param.ptr=='1'))))
     {
 	return PJMEDIA_SDP_EFORMATNOTEQUAL;
     }
