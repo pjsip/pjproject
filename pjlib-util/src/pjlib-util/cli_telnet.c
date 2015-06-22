@@ -785,7 +785,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     pj_strcat2(&send_data, "^");
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
+	if (hint[i].type.slen > 0) {
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
 		    cmd_length += (hint[i].name.slen + 3);
@@ -807,7 +807,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     cmd_length = 0;
     /* Build hint information */
     for (i=0;i<info->hint_cnt;++i) {
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
+	if (hint[i].type.slen > 0) {
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		parse_state = OP_SHORTCUT;
 	    } else if (pj_stricmp(&hint[i].type, &choice_type) == 0) {
