@@ -329,7 +329,9 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	 * Update the IP address of the corresponding SRV record.
 	 */
 	for (j=0; j<query_job->srv_cnt; ++j) {
-	    if (pj_stricmp(&rr->name, &query_job->srv[j].target_name)==0) {
+            if (pj_stricmp(&rr->name, &query_job->srv[j].target_name)==0 &&
+                query_job->srv[j].addr_cnt < ADDR_MAX_COUNT)
+            {
 		unsigned cnt = query_job->srv[j].addr_cnt;
 		query_job->srv[j].addr[cnt].s_addr = rr->rdata.a.ip_addr.s_addr;
 		/* Only increment host_resolved once per SRV record */
