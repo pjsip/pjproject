@@ -455,9 +455,6 @@
 					"\"$(SRCROOT)/../../../../pjnath/lib\"",
 					"\"$(SRCROOT)/../../../../pjsip/lib\"",
 					"\"$(SRCROOT)/../../../../third_party/lib\"",
-					"../../../../../video/ffmpeg-iphone/build/built/armv7/lib",
-					"/Users/ming/teluu/video/openh264-openh264v1.0",
-					"/Users/ming/teluu/video/libyuv-iphone/trunk/out_ios/Debug-iphoneos",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -494,9 +491,6 @@
 					"\"$(SRCROOT)/../../../../pjnath/lib\"",
 					"\"$(SRCROOT)/../../../../pjsip/lib\"",
 					"\"$(SRCROOT)/../../../../third_party/lib\"",
-					"../../../../../video/ffmpeg-iphone/build/built/armv7/lib",
-					"/Users/ming/teluu/video/openh264-openh264v1.0",
-					"/Users/ming/teluu/video/libyuv-iphone/trunk/out_ios/Debug-iphoneos",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
