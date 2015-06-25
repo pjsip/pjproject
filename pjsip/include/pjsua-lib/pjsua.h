@@ -6600,6 +6600,32 @@ PJ_DECL(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
                                             pjmedia_vid_dev_info *vdi);
 
 /**
+ * Check whether the video capture device is currently active, i.e. if
+ * a video preview has been started or there is a video call using
+ * the device. This function will return PJ_FALSE for video renderer device.
+ *
+ * @param id		The video device index.
+ *
+ * @return		PJ_TRUE if active, PJ_FALSE otherwise.
+ */
+PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
+
+/**
+ * Set the orientation of the video device. The function only works
+ * for video capture device and if the device is currently active (i.e.
+ * a video preview has been started or there is a video call using the device).
+ * Application can check if a video device is active by calling
+ * #pjsua_vid_dev_is_active().
+ *
+ * @param id		The video device index.
+ * @param orient	Video device orientation.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_dev_set_orient(pjmedia_vid_dev_index id,
+					      pjmedia_orient orient);
+
+/**
  * Enum all video devices installed in the system.
  *
  * @param info		Array of info to be initialized.

@@ -39,8 +39,6 @@ static pjsua_app_cfg_t  app_cfg;
 static bool             isShuttingDown;
 static char           **restartArgv;
 static int              restartArgc;
-static pj_thread_desc   a_thread_desc;
-static pj_thread_t     *a_thread;
 
 static void displayMsg(const char *msg)
 {
@@ -117,12 +115,21 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
             return;
         }
     
+        /* Setup device orientation change notification */
+        [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+        [[NSNotificationCenter defaultCenter] addObserver:app
+            selector:@selector(orientationChanged:)
+            name:UIDeviceOrientationDidChangeNotification
+            object:[UIDevice currentDevice]];
+        
         status = pjsua_app_run(PJ_TRUE);
         if (status != PJ_SUCCESS) {
             char errmsg[PJ_ERR_MSG_SIZE];
             pj_strerror(status, errmsg, sizeof(errmsg));
             displayMsg(errmsg);
         }
+        
+        [[UIDevice currentDevice] endGeneratingDeviceOrientationNotifications];
     
         pjsua_app_destroy();
     }
@@ -157,11 +164,46 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     // Use this method to pause ongoing tasks, disable timers, and throttle down OpenGL ES frame rates. Games should use this method to pause the game.
 }
 
+- (void)orientationChanged:(NSNotification *)note
+{
+#if PJSUA_HAS_VIDEO
+    const pjmedia_orient pj_ori[4] =
+    {
+        PJMEDIA_ORIENT_ROTATE_90DEG,  /* UIDeviceOrientationPortrait */
+        PJMEDIA_ORIENT_ROTATE_270DEG, /* UIDeviceOrientationPortraitUpsideDown */
+        PJMEDIA_ORIENT_ROTATE_180DEG, /* UIDeviceOrientationLandscapeLeft,
+                                         home button on the right side */
+        PJMEDIA_ORIENT_NATURAL        /* UIDeviceOrientationLandscapeRight,
+                                         home button on the left side */
+    };
+    static pj_thread_desc a_thread_desc;
+    static pj_thread_t *a_thread;
+    static UIDeviceOrientation prev_ori = 0;
+    UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
+    
+    if (dev_ori == prev_ori && !note) return;
+    
+    NSLog(@"Device orientation changed: %d", (prev_ori = dev_ori));
+    
+    if (dev_ori >= UIDeviceOrientationPortrait &&
+        dev_ori <= UIDeviceOrientationLandscapeRight)
+    {
+        if (!pj_thread_is_registered()) {
+            pj_thread_register("ipjsua", a_thread_desc, &a_thread);
+        }
+        
+        pjsua_vid_dev_set_orient(PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+                                 pj_ori[dev_ori-1]);
+    }
+#endif
+}
+
 - (void)keepAlive {
+    static pj_thread_desc a_thread_desc;
+    static pj_thread_t *a_thread;
     int i;
     
-    if (!pj_thread_is_registered())
-    {
+    if (!pj_thread_is_registered()) {
 	pj_thread_register("ipjsua", a_thread_desc, &a_thread);
     }
     
@@ -229,6 +271,8 @@ void displayWindow(pjsua_vid_win_id wid)
     
     i = (wid == PJSUA_INVALID_ID) ? 0 : wid;
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid+1;
+
+    [app orientationChanged:NULL];
     
     for (;i < last; ++i) {
 	pjsua_vid_win_info wi;

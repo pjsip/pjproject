@@ -32,6 +32,8 @@
 #define PJSUA_HIDE_WINDOW	0
 
 
+static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
+                                            pj_bool_t running_only);
 static void free_vid_win(pjsua_vid_win_id wid);
 
 /*****************************************************************************
@@ -211,6 +213,41 @@ PJ_DEF(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
                                            pjmedia_vid_dev_info *vdi)
 {
     return pjmedia_vid_dev_get_info(id, vdi);
+}
+
+/*
+ * Check whether the video device is currently active.
+ */
+PJ_DEF(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id)
+{
+    pjsua_vid_win_id wid = vid_preview_get_win(id, PJ_FALSE);
+    
+    return (wid != PJSUA_INVALID_ID? PJ_TRUE: PJ_FALSE);
+}
+
+/*
+ * Set the orientation of the video device.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_dev_set_orient( pjmedia_vid_dev_index id,
+					      pjmedia_orient orient)
+{
+    pjsua_vid_win *w;
+    pjmedia_vid_dev_stream *cap_dev;
+    pjsua_vid_win_id wid = vid_preview_get_win(id, PJ_FALSE);
+    
+    if (wid == PJSUA_INVALID_ID) {
+	PJ_LOG(3, (THIS_FILE, "Unable to set orientation for video dev %d: "
+			      "device not active", id));
+	return PJ_ENOTFOUND;
+    }
+
+    w = &pjsua_var.win[wid];
+	
+    cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+
+    return pjmedia_vid_dev_stream_set_cap(cap_dev,
+					  PJMEDIA_VID_DEV_CAP_ORIENTATION,
+    				   	  &orient);
 }
 
 /*
