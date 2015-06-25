@@ -299,12 +299,13 @@ PJ_DEF(pj_status_t) pj_activesock_close(pj_activesock_t *asock)
     PJ_ASSERT_RETURN(asock, PJ_EINVAL);
     asock->shutdown = SHUT_RX | SHUT_TX;
     if (asock->key) {
+	pj_ioqueue_unregister(asock->key);
+
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 	activesock_destroy_iphone_os_stream(asock);
 #endif	
-	
-	pj_ioqueue_unregister(asock->key);
+
 	asock->key = NULL;
     }
     return PJ_SUCCESS;
