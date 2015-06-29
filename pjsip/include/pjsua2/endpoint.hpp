@@ -692,7 +692,7 @@ public:
      * Instantiate pjsua application. Application must call this function before
      * calling any other functions, to make sure that the underlying libraries
      * are properly initialized. Once this function has returned success,
-     * application must call destroy() before quitting.
+     * application must call libDestroy() before quitting.
      */
     void libCreate() throw(Error);
 
