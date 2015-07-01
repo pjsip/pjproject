@@ -242,12 +242,26 @@ PJ_DEF(pj_status_t) pjmedia_codec_opencore_amr_init( pjmedia_endpt *endpt,
     }
 
     /* Register format match callback. */
-    pj_cstr(&codec_name, "AMR");
-    status = pjmedia_sdp_neg_register_fmt_match_cb(
-					&codec_name,
-					&pjmedia_codec_amr_match_sdp);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+#ifdef USE_AMRNB
+    if ((options & PJMEDIA_AMR_NO_NB) == 0) {
+	pj_cstr(&codec_name, "AMR");
+	status = pjmedia_sdp_neg_register_fmt_match_cb(
+					    &codec_name,
+					    &pjmedia_codec_amr_match_sdp);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+#endif
+#ifdef USE_AMRWB
+    if ((options & PJMEDIA_AMR_NO_WB) == 0) {
+	pj_cstr(&codec_name, "AMR-WB");
+	status = pjmedia_sdp_neg_register_fmt_match_cb(
+					    &codec_name,
+					    &pjmedia_codec_amr_match_sdp);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+#endif
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr, 
