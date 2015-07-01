@@ -89,12 +89,22 @@ struct MediaFormatAudio : public MediaFormat
  */
 struct MediaFormatVideo : public MediaFormat
 {
-    unsigned		width;	    /**< Video width. 	*/
-    unsigned		height;	    /**< Video height. 	*/
+    unsigned		width;	    /**< Video width. 			*/
+    unsigned		height;	    /**< Video height.			*/
     int			fpsNum;	    /**< Frames per second numerator.	*/
     int			fpsDenum;   /**< Frames per second denumerator.	*/
     pj_uint32_t		avgBps;	    /**< Average bitrate.		*/
     pj_uint32_t		maxBps;	    /**< Maximum bitrate.		*/
+
+    /**
+     * Construct from pjmedia_format.
+     */
+    void fromPj(const pjmedia_format &format);
+
+    /**
+     * Export to pjmedia_format.
+     */
+    pjmedia_format toPj() const;
 };
 
 /** Array of MediaFormat */
@@ -1586,6 +1596,101 @@ public:
 private:
     pjmedia_vid_dev_index devId;
 };
+
+/**
+ * Video device information structure.
+ */
+struct VideoDevInfo
+{
+    /**
+     * The device name
+     */
+    string name;
+
+    /**
+     * The underlying driver name
+     */
+    string driver;
+
+    /**
+     * The supported direction of the video device, i.e. whether it supports
+     * capture only, render only, or both.
+     */
+    pjmedia_dir dir;
+
+    /** 
+     * Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap 
+     */
+    unsigned caps;
+
+    /**
+     * Array of supported video formats. Some fields in each supported video
+     * format may be set to zero or of "unknown" value, to indicate that the
+     * value is unknown or should be ignored. When these value are not set
+     * to zero, it indicates that the exact format combination is being used.
+     */
+    MediaFormatVector fmt;
+
+    /**
+     * Construct from pjmedia_vid_dev_info.
+     */
+    void fromPj(const pjmedia_vid_dev_info &dev_info);
+
+    /**
+     * Destructor.
+     */
+    ~VideoDevInfo();
+};
+
+/** Array of video device info */
+typedef std::vector<VideoDevInfo*> VideoDevInfoVector;
+
+/**
+ * Video device manager.
+ */
+class VidDevManager {
+public:
+    /**
+     * Get the number of video devices installed in the system.
+     *
+     * @return		The number of devices.
+     */
+    unsigned getDevCount();
+
+    /**
+     * Retrieve the video device info for the specified device index.     
+     *
+     * @param dev_id	The video device id
+     * 
+     * @return		The list of video device info
+     */
+    VideoDevInfo getDevInfo(int dev_id) const throw(Error);
+
+    /**
+     * Enum all video devices installed in the system.
+     *
+     * @return		The list of video device info
+     */
+    const VideoDevInfoVector &enumDev() throw(Error);
+
+private:
+    VideoDevInfoVector videoDevList;
+
+    void clearVideoDevList();
+
+    /**
+     * Constructor.
+     */
+    VidDevManager();
+
+    /**
+     * Destructor.
+     */
+    ~VidDevManager();
+
+    friend class Endpoint;
+};
+
 
 /*************************************************************************
 * Codec management

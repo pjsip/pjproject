@@ -101,6 +101,7 @@ using namespace pj;
 %template(MediaFormatVector)		std::vector<pj::MediaFormat*>;
 %template(AudioDevInfoVector)		std::vector<pj::AudioDevInfo*>;
 %template(CodecInfoVector)		std::vector<pj::CodecInfo*>;
+%template(VideoDevInfoVector)		std::vector<pj::VideoDevInfo*>;
 
 /* pj::WindowHandle::setWindow() receives Surface object */
 #if defined(SWIGJAVA) && defined(__ANDROID__)

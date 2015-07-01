@@ -387,7 +387,8 @@ Endpoint::~Endpoint()
 	delete cur_media; /* this will remove itself from the list */
     }
 
-    clearCodecInfoList();
+    clearCodecInfoList(codecInfoList);
+    clearCodecInfoList(videoCodecInfoList);
 
     try {
 	libDestroy();
@@ -1618,6 +1619,11 @@ AudDevManager &Endpoint::audDevManager()
     return audioDevMgr;
 }
 
+VidDevManager &Endpoint::vidDevManager()
+{
+    return videoDevMgr;
+}
+
 /*
  * Codec operations.
  */
@@ -1628,15 +1634,7 @@ const CodecInfoVector &Endpoint::codecEnum() throw(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_codecs(pj_codec, &count) );
 
-    pj_enter_critical_section();
-    clearCodecInfoList();
-    for (unsigned i=0; i<count; ++i) {
-	CodecInfo *codec_info = new CodecInfo;
-
-	codec_info->fromPj(pj_codec[i]);
-	codecInfoList.push_back(codec_info);
-    }
-    pj_leave_critical_section();
+    updateCodecInfoList(pj_codec, count, codecInfoList);
     return codecInfoList;
 }
 
@@ -1666,10 +1664,70 @@ void Endpoint::codecSetParam(const string &codec_id,
     PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, pj_param) );
 }
 
-void Endpoint::clearCodecInfoList()
+void Endpoint::clearCodecInfoList(CodecInfoVector &codec_list)
 {
-    for (unsigned i=0;i<codecInfoList.size();++i) {
-	delete codecInfoList[i];
+    for (unsigned i=0;i<codec_list.size();++i) {
+	delete codec_list[i];
     }
-    codecInfoList.clear();
+    codec_list.clear();
 }
+
+void Endpoint::updateCodecInfoList(pjsua_codec_info pj_codec[], unsigned count,
+				   CodecInfoVector &codec_list)
+{
+    pj_enter_critical_section();
+    clearCodecInfoList(codec_list);
+    for (unsigned i = 0; i<count; ++i) {
+	CodecInfo *codec_info = new CodecInfo;
+
+	codec_info->fromPj(pj_codec[i]);
+	codecInfoList.push_back(codec_info);
+    }
+    pj_leave_critical_section();
+}
+
+const CodecInfoVector &Endpoint::videoCodecEnum() throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_codec_info pj_codec[MAX_CODEC_NUM];
+    unsigned count = MAX_CODEC_NUM;
+
+    PJSUA2_CHECK_EXPR(pjsua_vid_enum_codecs(pj_codec, &count));
+
+    updateCodecInfoList(pj_codec, count, videoCodecInfoList);
+#endif
+    return codecInfoList;
+}
+
+void Endpoint::videoCodecSetPriority(const string &codec_id,
+				     pj_uint8_t priority) throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pj_str_t codec_str = str2Pj(codec_id);
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_priority(&codec_str, priority));
+#endif
+}
+
+CodecParam Endpoint::videoCodecGetParam(const string &codec_id) const
+	   throw(Error)
+{
+    pjmedia_vid_codec_param *pj_param = NULL;
+#if PJSUA_HAS_VIDEO
+    pj_str_t codec_str = str2Pj(codec_id);
+
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_get_param(&codec_str, pj_param));
+#endif
+    return pj_param;
+}
+
+void Endpoint::videoCodecSetParam(const string &codec_id,
+				  const CodecParam param) throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pj_str_t codec_str = str2Pj(codec_id);
+    pjmedia_vid_codec_param *pj_param = (pjmedia_vid_codec_param*)param;
+
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, pj_param));
+#endif
+}
+
