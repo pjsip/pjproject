@@ -29,6 +29,8 @@
 #   define PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT	0
 #endif
 
+static void stop_media_stream(pjsua_call *call, unsigned med_idx);
+
 static void pjsua_media_config_dup(pj_pool_t *pool,
 				   pjsua_media_config *dst,
 				   const pjsua_media_config *src)
@@ -1524,18 +1526,20 @@ on_return:
 }
 
 
-/* Clean up media transports in provisional media that is not used
- * by call media.
+/* If idx == 0, clean up media transports in provisional media that
+ * is not used by call media, else clean up media transports starting
+ * from index idx that have been removed by remote.
  */
 static void media_prov_clean_up(pjsua_call_id call_id, int idx)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned i;
 
-    if (call->med_prov_cnt > call->med_cnt) {
+    if (idx > 0 || call->med_prov_cnt > call->med_cnt) {
         PJ_LOG(4,(THIS_FILE, "Call %d: cleaning up provisional media, "
         		     "prov_med_cnt=%d, med_cnt=%d",
-			     call_id, call->med_prov_cnt, call->med_cnt));
+			     call_id, (idx == 0? call->med_prov_cnt: idx),
+			     call->med_cnt));
     }
 
     for (i = idx; i < call->med_prov_cnt; ++i) {
@@ -1547,7 +1551,7 @@ static void media_prov_clean_up(pjsua_call_id call_id, int idx)
 	    continue;
 
 	for (j = 0; j < call->med_cnt; ++j) {
-	    if (call->media[j].tp == call_med->tp) {
+	    if (idx == 0 && call->media[j].tp == call_med->tp) {
 		used = PJ_TRUE;
 		break;
 	    }
@@ -1985,6 +1989,9 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 	if (rem_sdp && mi >= rem_sdp->media_count) {
 	    /* Remote might have removed some media lines. */
+	    for (i = rem_sdp->media_count; i < call->med_prov_cnt; ++i) {
+		stop_media_stream(call, i);
+	    }
             media_prov_clean_up(call->index, rem_sdp->media_count);
             call->med_prov_cnt = rem_sdp->media_count;
 	    break;
