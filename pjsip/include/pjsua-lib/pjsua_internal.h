@@ -482,6 +482,9 @@ struct pjsua_data
     /* Video device */
     pjmedia_vid_dev_index vcap_dev;  /**< Capture device ID.		*/
     pjmedia_vid_dev_index vrdr_dev;  /**< Playback device ID.		*/
+    /* For keeping video device settings */
+    pj_uint32_t		  vid_caps[PJMEDIA_VID_DEV_MAX_DEVS];
+    pjmedia_vid_dev_param vid_param[PJMEDIA_VID_DEV_MAX_DEVS];
 
     /* File players: */
     unsigned		 player_cnt;/**< Number of file players.	*/

@@ -226,28 +226,86 @@ PJ_DEF(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id)
 }
 
 /*
- * Set the orientation of the video device.
+ * Set the capability of the video device.
  */
-PJ_DEF(pj_status_t) pjsua_vid_dev_set_orient( pjmedia_vid_dev_index id,
-					      pjmedia_orient orient)
+PJ_DEF(pj_status_t) pjsua_vid_dev_set_setting( pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       const void *pval,
+					       pj_bool_t keep)
 {
-    pjsua_vid_win *w;
-    pjmedia_vid_dev_stream *cap_dev;
+    pj_status_t status = PJ_SUCCESS;
     pjsua_vid_win_id wid = vid_preview_get_win(id, PJ_FALSE);
     
-    if (wid == PJSUA_INVALID_ID) {
-	PJ_LOG(3, (THIS_FILE, "Unable to set orientation for video dev %d: "
-			      "device not active", id));
-	return PJ_ENOTFOUND;
+    if (wid != PJSUA_INVALID_ID) {
+        pjsua_vid_win *w;
+        pjmedia_vid_dev_stream *cap_dev;
+
+        w = &pjsua_var.win[wid];
+        cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+
+    	status = pjmedia_vid_dev_stream_set_cap(cap_dev, cap, pval);
+	if (status != PJ_SUCCESS)
+	    return status;
+    } else {
+	status = PJ_ENOTFOUND;
     }
 
-    w = &pjsua_var.win[wid];
+    if (keep) {
+	pjmedia_vid_dev_info info;
+	    
+	status = pjmedia_vid_dev_get_info(id, &info);
+	if (status != PJ_SUCCESS || (info.dir & PJMEDIA_DIR_CAPTURE) == 0)
+	    return status;
 	
-    cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+        /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
+	id = info.id;
+    	status = pjmedia_vid_dev_param_set_cap(&pjsua_var.vid_param[id],
+    					       cap, pval);
+    	if (status == PJ_SUCCESS) {
+            pjsua_var.vid_caps[id] |= cap;
+    	}
+    }
+    
+    return status;
+}
 
-    return pjmedia_vid_dev_stream_set_cap(cap_dev,
-					  PJMEDIA_VID_DEV_CAP_ORIENTATION,
-    				   	  &orient);
+/*
+ * Get the value of the video device capability.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_dev_get_setting( pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       void *pval)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsua_vid_win_id wid = vid_preview_get_win(id, PJ_FALSE);
+    
+    if (wid != PJSUA_INVALID_ID) {
+        pjsua_vid_win *w;
+        pjmedia_vid_dev_stream *cap_dev;
+
+        w = &pjsua_var.win[wid];
+        cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+
+    	status = pjmedia_vid_dev_stream_get_cap(cap_dev, cap, pval);
+    } else {
+	pjmedia_vid_dev_info info;
+	    
+	status = pjmedia_vid_dev_get_info(id, &info);
+	if (status != PJ_SUCCESS)
+	    return status;
+	
+        /* Get real device ID, if set to default device */
+	id = info.id;
+    
+        if ((pjsua_var.vid_caps[id] & cap) != 0) {
+            status = pjmedia_vid_dev_param_get_cap(&pjsua_var.vid_param[id],
+            					   cap, pval);
+        } else {
+	    status = PJ_ENOTFOUND;
+	}
+    }
+
+    return status;
 }
 
 /*
@@ -613,8 +671,25 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	/* Create capture video port */
 	vp_param.active = PJ_TRUE;
 	vp_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
-	if (fmt)
+
+        /* Update the video setting with user preference */
+#define update_param(cap, field)    \
+	    if ((pjsua_var.vid_caps[cap_id] & cap) && (vdi.caps & cap)) { \
+	        vp_param.vidparam.flags |= cap; \
+	        pj_memcpy(&vp_param.vidparam.field, \
+	        	  &pjsua_var.vid_param[cap_id].field, \
+	        	  sizeof(vp_param.vidparam.field)); \
+	    }
+
+	if (fmt) {
 	    vp_param.vidparam.fmt = *fmt;
+	} else {
+	    update_param(PJMEDIA_VID_DEV_CAP_FORMAT, fmt);
+	}
+	
+	update_param(PJMEDIA_VID_DEV_CAP_ORIENTATION, orient);
+
+#undef update_param
 
 	status = pjmedia_vid_port_create(w->pool, &vp_param, &w->vp_cap);
 	if (status != PJ_SUCCESS)

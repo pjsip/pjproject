@@ -181,7 +181,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     static UIDeviceOrientation prev_ori = 0;
     UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
     
-    if (dev_ori == prev_ori && !note) return;
+    if (dev_ori == prev_ori) return;
     
     NSLog(@"Device orientation changed: %d", (prev_ori = dev_ori));
     
@@ -192,8 +192,9 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
             pj_thread_register("ipjsua", a_thread_desc, &a_thread);
         }
         
-        pjsua_vid_dev_set_orient(PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
-                                 pj_ori[dev_ori-1]);
+        pjsua_vid_dev_set_setting(PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+                                  PJMEDIA_VID_DEV_CAP_ORIENTATION,
+                                  &pj_ori[dev_ori-1], PJ_TRUE);
     }
 #endif
 }
@@ -272,8 +273,6 @@ void displayWindow(pjsua_vid_win_id wid)
     i = (wid == PJSUA_INVALID_ID) ? 0 : wid;
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid+1;
 
-    [app orientationChanged:NULL];
-    
     for (;i < last; ++i) {
 	pjsua_vid_win_info wi;
         

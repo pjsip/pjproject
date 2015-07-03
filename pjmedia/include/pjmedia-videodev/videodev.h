@@ -240,12 +240,11 @@ typedef enum pjmedia_vid_dev_cap
     PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW = 64,
 
     /**
-     * Support for changing video orientation in renderer and querying
-     * video orientation info in capture. Changing video orientation in
-     * a renderer will potentially affect the size of render window,
-     * i.e: width and height swap. When a capture device supports this
-     * capability, it will generate event PJMEDIA_EVENT_ORIENT_CHANGED
-     * (see #pjmedia_event) everytime the capture orientation is changed.
+     * Support for changing video orientation. For a renderer device,
+     * changing video orientation in will potentially affect the size of
+     * render window, i.e: width and height swap. For a capture device,
+     * the video will be rotated but the size of the video frame
+     * will stay the same, so the video may be resized or stretched.
      *
      * The value of this capability is pjmedia_orient.
      */

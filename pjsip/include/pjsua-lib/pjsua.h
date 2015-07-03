@@ -6611,19 +6611,61 @@ PJ_DECL(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
 PJ_DECL(pj_bool_t) pjsua_vid_dev_is_active(pjmedia_vid_dev_index id);
 
 /**
- * Set the orientation of the video device. The function only works
- * for video capture device and if the device is currently active (i.e.
- * a video preview has been started or there is a video call using the device).
- * Application can check if a video device is active by calling
- * #pjsua_vid_dev_is_active().
+ * Configure the capability of a video capture device. If the device is 
+ * currently active (i.e. if there is a video call using the device or
+ * a video preview has been started), the function will forward the setting
+ * to the video device instance to be applied immediately, if it supports it.
+ *
+ * The setting will be saved for future opening of the video device, if the 
+ * "keep" argument is set to non-zero. If the video device is currently
+ * inactive, and the "keep" argument is false, this function will return
+ * error.
+ *
+ * Note: This function will only works for video capture devices. To
+ * configure the setting of video renderer device instances, use
+ * pjsua_vid_win API instead.
+ *
+ * Warning: If application refreshes the video device list, it needs to
+ * manually update the settings to reflect the newly updated video device
+ * indexes. See #pjmedia_vid_dev_refresh() for more information.
+ *
+ * See also #pjmedia_vid_stream_set_cap() for more information about setting
+ * a video device capability.
  *
  * @param id		The video device index.
- * @param orient	Video device orientation.
+ * @param cap		The video device capability to change.
+ * @param pval		Pointer to value. Please see #pjmedia_vid_dev_cap
+ *			documentation about the type of value to be 
+ *			supplied for each setting.
  *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
+ * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_vid_dev_set_orient(pjmedia_vid_dev_index id,
-					      pjmedia_orient orient);
+PJ_DECL(pj_status_t) pjsua_vid_dev_set_setting(pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       const void *pval,
+					       pj_bool_t keep);
+
+/**
+ * Retrieve the value of a video capture device setting. If the device is
+ * currently active (i.e. if there is a video call using the device or
+ * a video preview has been started), the function will forward the request
+ * to the video device. If video device is currently inactive, and if
+ * application had previously set the setting and mark the setting as kept,
+ * then that setting will be returned. Otherwise, this function will return
+ * error.
+ * The function only works for video capture device.
+ *
+ * @param id		The video device index.
+ * @param cap		The video device capability to retrieve.
+ * @param pval		Pointer to receive the value. 
+ *			Please see #pjmedia_vid_dev_cap documentation about
+ *			the type of value to be supplied for each setting.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_dev_get_setting(pjmedia_vid_dev_index id,
+					       pjmedia_vid_dev_cap cap,
+					       void *pval);
 
 /**
  * Enum all video devices installed in the system.
