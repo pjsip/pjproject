@@ -1463,6 +1463,13 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
     pjsua_var.stun_status = result->status;
     if ((result->status == PJ_SUCCESS) && (pjsua_var.ua_cfg.stun_srv_cnt>0)) {
 	pj_memcpy(&pjsua_var.stun_srv, &result->addr, sizeof(result->addr));
+
+	/* Perform NAT type detection if not yet */
+	if (pjsua_var.nat_type == PJ_STUN_NAT_TYPE_UNKNOWN &&
+	    pjsua_var.ua_cfg.nat_type_in_sdp)
+	{
+	    pjsua_detect_nat_type();
+	}
     }
 }
 

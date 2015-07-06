@@ -164,12 +164,14 @@ pj_status_t pjsua_media_subsys_start(void)
 #endif
 
     /* Perform NAT detection */
-    if (pjsua_var.ua_cfg.stun_srv_cnt) {
-	status = pjsua_detect_nat_type();
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status, "NAT type detection failed"));
-	}
-    }
+    // Performed only when STUN server resolution by pjsua_init() completed
+    // successfully (see ticket #1865).
+    //if (pjsua_var.ua_cfg.stun_srv_cnt) {
+	//status = pjsua_detect_nat_type();
+	//if (status != PJ_SUCCESS) {
+	//    PJ_PERROR(1,(THIS_FILE, status, "NAT type detection failed"));
+	//}
+    //}
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
