@@ -38,6 +38,7 @@ struct pjmedia_sdp_neg
     pj_bool_t		  answer_was_remote;
 
     pjmedia_sdp_session	*initial_sdp,	    /**< Initial local SDP	     */
+			*initial_sdp_tmp,   /**< Temporary initial local SDP */
 			*active_local_sdp,  /**< Currently active local SDP. */
 			*active_remote_sdp, /**< Currently active remote's.  */
 			*neg_local_sdp,	    /**< Temporary local SDP.	     */
@@ -398,6 +399,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer2(
     }
 
     /* New_offer fixed */
+    neg->initial_sdp_tmp = neg->initial_sdp;
     neg->initial_sdp = new_offer;
     neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
 
@@ -423,11 +425,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 	/* If in STATE_DONE, set the active SDP as the offer. */
 	PJ_ASSERT_RETURN(neg->active_local_sdp, PJMEDIA_SDPNEG_ENOACTIVE);
 
+	/* Retain initial SDP */
+	if (neg->initial_sdp) {
+	    neg->initial_sdp_tmp = neg->initial_sdp;
+    	    neg->initial_sdp = pjmedia_sdp_session_clone(pool,
+							 neg->initial_sdp);
+	}
+
 	neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, 
 						       neg->active_local_sdp);
-	neg->initial_sdp = pjmedia_sdp_session_clone(pool,
-						     neg->active_local_sdp);
 	*offer = neg->active_local_sdp;
 
     } else {
@@ -437,7 +444,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 	*offer = neg->neg_local_sdp;
     }
 
-    
     return PJ_SUCCESS;
 }
 
@@ -505,6 +511,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
 	if (neg->initial_sdp) {
 	    /* Retain initial_sdp value. */
+	    neg->initial_sdp_tmp = neg->initial_sdp;
 	    neg->initial_sdp = pjmedia_sdp_session_clone(pool,
 							 neg->initial_sdp);
         
@@ -520,6 +527,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
 	}
     } else {
 	PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
+	neg->initial_sdp_tmp = neg->initial_sdp;
 	neg->initial_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);
     }
@@ -1399,10 +1407,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
 		     neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER,
 		     PJMEDIA_SDPNEG_EINSTATE);
 
-    /* Clear temporary SDP */
-    neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
-    neg->has_remote_answer = PJ_FALSE;
-
     if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
 	neg->active_local_sdp) 
     {
@@ -1412,6 +1416,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
 	 */
 	neg->active_local_sdp->origin.version++;
     }
+
+    /* Revert back initial SDP */
+    if (neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+	neg->initial_sdp = neg->initial_sdp_tmp;
+
+    /* Clear temporary SDP */
+    neg->initial_sdp_tmp = NULL;
+    neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
+    neg->has_remote_answer = PJ_FALSE;
 
     /* Reset state to done */
     neg->state = PJMEDIA_SDP_NEG_STATE_DONE;
@@ -1476,7 +1489,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     /* Save state */
     neg->answer_was_remote = neg->has_remote_answer;
 
+    /* Revert back initial SDP if nego fails */
+    if (status != PJ_SUCCESS)
+	neg->initial_sdp = neg->initial_sdp_tmp;
+
     /* Clear temporary SDP */
+    neg->initial_sdp_tmp = NULL;
     neg->neg_local_sdp = neg->neg_remote_sdp = NULL;
     neg->has_remote_answer = PJ_FALSE;
 
