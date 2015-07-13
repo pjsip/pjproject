@@ -38,11 +38,21 @@ using namespace pj;
   // Force the Error Java class to extend java.lang.Exception
   %typemap(javabase) pj::Error "java.lang.Exception";
 
-  // Override getMessage()
   %typemap(javacode) pj::Error %{
+
+  // Override getMessage()
   public String getMessage() {
     return getTitle();
   }
+  
+  // Disable serialization (check ticket #1868)
+  private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException {
+    throw new java.io.NotSerializableException("Check ticket #1868!");
+  }
+  private void readObject(java.io.ObjectInputStream in) throws java.io.IOException {
+    throw new java.io.NotSerializableException("Check ticket #1868!");
+  }
+
 %}
 #endif
 
