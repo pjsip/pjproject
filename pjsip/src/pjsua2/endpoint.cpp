@@ -1277,6 +1277,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
         &Endpoint::on_call_media_transport_state;
     ua_cfg.cb.on_call_media_event       = &Endpoint::on_call_media_event;
     ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
+    ua_cfg.cb.on_stun_resolution_complete = 
+    	&Endpoint::stun_resolve_cb;
 
     /* Init! */
     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );

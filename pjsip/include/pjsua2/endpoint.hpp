@@ -1181,7 +1181,8 @@ public:
 
     /**
      * Callback when the Endpoint has finished performing STUN server
-     * checking that is initiated with natCheckStunServers().
+     * checking that is initiated when calling libInit(), or by
+     * calling natCheckStunServers().
      *
      * @param prm	Callback parameters.
      */

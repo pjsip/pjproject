@@ -1471,6 +1471,9 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
 	    pjsua_detect_nat_type();
 	}
     }
+    
+    if (pjsua_var.ua_cfg.cb.on_stun_resolution_complete)
+    	(*pjsua_var.ua_cfg.cb.on_stun_resolution_complete)(result);
 }
 
 /*

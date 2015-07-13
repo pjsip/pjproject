@@ -283,6 +283,9 @@ typedef struct pjsua_srv_pres pjsua_srv_pres;
 /** Forward declaration for pjsua_msg_data */
 typedef struct pjsua_msg_data pjsua_msg_data;
 
+/** Forward declaration for pj_stun_resolve_result */
+typedef struct pj_stun_resolve_result pj_stun_resolve_result;
+
 
 /**
  * Maximum proxies in account.
@@ -557,6 +560,13 @@ typedef struct pjsua_med_tp_state_info
 typedef pj_status_t
 (*pjsua_med_tp_state_cb)(pjsua_call_id call_id,
                          const pjsua_med_tp_state_info *info);
+
+
+/**
+ * Typedef of callback to be registered to #pjsua_resolve_stun_servers()
+ * and to be called when STUN resolution completes.
+ */
+typedef void (*pj_stun_resolve_cb)(const pj_stun_resolve_result *result);
 
 
 /**
@@ -1351,6 +1361,18 @@ typedef struct pjsua_callback
     void (*on_acc_find_for_incoming)(const pjsip_rx_data *rdata,
 				     pjsua_acc_id* acc_id);
 
+    /**
+     * Calling #pjsua_init() will initiate an async process to resolve and
+     * contact each of the STUN server entries to find which is usable.
+     * This callback is called when the process is complete, and can be
+     * used by the application to start creating and registering accounts.
+     * This way, the accounts can avoid call setup delay caused by pending
+     * STUN resolution.
+     *
+     * See also #pj_stun_resolve_cb.
+     */
+    pj_stun_resolve_cb on_stun_resolution_complete;
+
 } pjsua_callback;
 
 
@@ -1969,7 +1991,7 @@ PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
  * resolution and testing, the #pjsua_resolve_stun_servers() function.
  * This structure will be passed in #pj_stun_resolve_cb callback.
  */
-typedef struct pj_stun_resolve_result
+struct pj_stun_resolve_result
 {
     /**
      * Arbitrary data that was passed to #pjsua_resolve_stun_servers()
@@ -1996,13 +2018,8 @@ typedef struct pj_stun_resolve_result
      */
     pj_sockaddr	     addr;
 
-} pj_stun_resolve_result;
+};
 
-
-/**
- * Typedef of callback to be registered to #pjsua_resolve_stun_servers().
- */
-typedef void (*pj_stun_resolve_cb)(const pj_stun_resolve_result *result);
 
 /**
  * This is a utility function to detect NAT type in front of this
