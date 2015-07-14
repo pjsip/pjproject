@@ -1161,7 +1161,20 @@ static void destroy_stun_resolve(pjsua_stun_resolve *sess)
 	return;
 
     PJSUA_LOCK();
+
+    if (sess->stun_sock) {
+        pj_stun_sock_destroy(sess->stun_sock);
+        sess->stun_sock = NULL;
+    }
+
+    if (pjsua_var.stun_status == PJ_EUNKNOWN ||
+    	pjsua_var.stun_status == PJ_EPENDING)
+    {
+        pjsua_var.stun_status = PJNATH_ESTUNDESTROYED;
+    }
+    
     pj_list_erase(sess);
+
     PJSUA_UNLOCK();
 
     pj_assert(sess->stun_sock==NULL);

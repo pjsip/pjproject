@@ -262,7 +262,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx,
     if (status == PJNATH_ESTUNDESTROYED) {
 	/* We've been destroyed, don't access the object. */
     } else if (status != PJ_SUCCESS) {
-	if (mod_count) {
+	if (mod_count || status == PJ_EINVALIDOP) {
 		pj_timer_heap_cancel_if_active( tsx->timer_heap,
 	                               		&tsx->retransmit_timer,
 	                               		TIMER_INACTIVE);
