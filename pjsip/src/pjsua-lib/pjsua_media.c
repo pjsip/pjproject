@@ -1139,6 +1139,72 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     }
 }
 
+
+/* Go through the list of media in the call, find acceptable media, and
+ * sort them based on the "quality" of the media, and store the indexes
+ * in the specified array. Media with the best quality will be listed
+ * first in the array.
+ */
+static void sort_media2(const pjsua_call_media *call_med,
+			unsigned call_med_cnt,
+			pjmedia_type type,
+			pj_uint8_t midx[],
+			unsigned *p_count,
+			unsigned *p_total_count)
+{
+    unsigned i;
+    unsigned count = 0;
+    int score[PJSUA_MAX_CALL_MEDIA];
+
+    pj_assert(*p_count >= PJSUA_MAX_CALL_MEDIA);
+    pj_assert(*p_total_count >= PJSUA_MAX_CALL_MEDIA);
+
+    *p_count = 0;
+    *p_total_count = 0;
+    for (i=0; i<PJSUA_MAX_CALL_MEDIA; ++i)
+	score[i] = 1;
+
+    /* Score each media */
+    for (i=0; i<call_med_cnt && count<PJSUA_MAX_CALL_MEDIA; ++i) {
+
+	/* Skip different media */
+	if (call_med[i].type != type) {
+	    score[count++] = -22000;
+	    continue;
+	}
+
+	/* Is it active? */
+	if (!call_med[i].tp) {
+	    score[i] -= 10;
+	}
+
+	++count;
+    }
+
+    /* Created sorted list based on quality */
+    for (i=0; i<count; ++i) {
+	unsigned j;
+	int best = 0;
+
+	for (j=1; j<count; ++j) {
+	    if (score[j] > score[best])
+		best = j;
+	}
+	/* Don't put media with negative score, that media is unacceptable
+	 * for us.
+	 */
+	midx[i] = (pj_uint8_t)best;
+	if (score[best] >= 0)
+	    (*p_count)++;
+	if (score[best] > -22000)
+	    (*p_total_count)++;
+
+	score[best] = -22000;
+
+    }
+}
+
+
 /* Callback to receive media events */
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
@@ -1528,23 +1594,21 @@ on_return:
 }
 
 
-/* If idx == 0, clean up media transports in provisional media that
- * is not used by call media, else clean up media transports starting
- * from index idx that have been removed by remote.
+/* Clean up media transports in provisional media that is not used by
+ * call media.
  */
-static void media_prov_clean_up(pjsua_call_id call_id, int idx)
+void pjsua_media_prov_clean_up(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned i;
 
-    if (idx > 0 || call->med_prov_cnt > call->med_cnt) {
+    if (call->med_prov_cnt > call->med_cnt) {
         PJ_LOG(4,(THIS_FILE, "Call %d: cleaning up provisional media, "
         		     "prov_med_cnt=%d, med_cnt=%d",
-			     call_id, (idx == 0? call->med_prov_cnt: idx),
-			     call->med_cnt));
+			     call_id, call->med_prov_cnt, call->med_cnt));
     }
 
-    for (i = idx; i < call->med_prov_cnt; ++i) {
+    for (i = 0; i < call->med_prov_cnt; ++i) {
 	pjsua_call_media *call_med = &call->media_prov[i];
 	unsigned j;
 	pj_bool_t used = PJ_FALSE;
@@ -1553,7 +1617,7 @@ static void media_prov_clean_up(pjsua_call_id call_id, int idx)
 	    continue;
 
 	for (j = 0; j < call->med_cnt; ++j) {
-	    if (idx == 0 && call->media[j].tp == call_med->tp) {
+	    if (call->media[j].tp == call_med->tp) {
 		used = PJ_TRUE;
 		break;
 	    }
@@ -1571,11 +1635,6 @@ static void media_prov_clean_up(pjsua_call_id call_id, int idx)
     }
     
     call->med_prov_cnt = 0;
-}
-
-void pjsua_media_prov_clean_up(pjsua_call_id call_id)
-{
-    media_prov_clean_up(call_id, 0);
 }
 
 
@@ -1664,6 +1723,10 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     /* Get media count for each media type */
     if (rem_sdp) {
+
+	/* We are sending answer, check media count for each media type
+	 * from the remote SDP.
+	 */
 	sort_media(rem_sdp, &STR_AUDIO, acc->cfg.use_srtp,
 		   maudidx, &maudcnt, &mtotaudcnt);
 	if (maudcnt==0) {
@@ -1695,22 +1758,22 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     } else {
 
-	/* If call already established, calculate media count from current 
-	 * local active SDP and call setting. Otherwise, calculate media
-	 * count from the call setting only.
+	/* If call is already established, adjust the existing call media list
+	 * to media count setting in call setting, e.g: re-enable/disable/add
+	 * media from existing media.
+	 * Otherwise, apply media count from the call setting directly.
 	 */
 	if (reinit) {
-	    const pjmedia_sdp_session *sdp;
 
-	    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
-	    pj_assert(status == PJ_SUCCESS);
-
-	    sort_media(sdp, &STR_AUDIO, acc->cfg.use_srtp,
-		       maudidx, &maudcnt, &mtotaudcnt);
+	    /* We are sending reoffer, check media count for each media type
+	     * from the existing call media list.
+	     */
+	    sort_media2(call->media_prov, call->med_prov_cnt,
+			PJMEDIA_TYPE_AUDIO, maudidx, &maudcnt, &mtotaudcnt);
 	    pj_assert(maudcnt > 0);
 
-	    sort_media(sdp, &STR_VIDEO, acc->cfg.use_srtp,
-		       mvididx, &mvidcnt, &mtotvidcnt);
+	    sort_media2(call->media_prov, call->med_prov_cnt,
+			PJMEDIA_TYPE_VIDEO, mvididx, &mvidcnt, &mtotvidcnt);
 
 	    /* Call setting may add or remove media. Adding media is done by
 	     * enabling any disabled/port-zeroed media first, then adding new
@@ -1855,8 +1918,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
 	    }
 
-	    /* Put media type just for info */
-	    call_med->type = media_type;
+	    /* Put media type just for info if not yet defined */
+	    if (call_med->type == PJMEDIA_TYPE_NONE)
+		call_med->type = media_type;
 	}
     }
 
@@ -1991,11 +2055,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 	if (rem_sdp && mi >= rem_sdp->media_count) {
 	    /* Remote might have removed some media lines. */
-	    for (i = rem_sdp->media_count; i < call->med_prov_cnt; ++i) {
-		stop_media_stream(call, i);
-	    }
-            media_prov_clean_up(call->index, rem_sdp->media_count);
-            call->med_prov_cnt = rem_sdp->media_count;
+	    /* Note that we must not modify the current active media
+	     * (e.g: stop stream, close/cleanup media transport), as if
+	     * SDP nego fails, the current active media should be maintained.
+	     * Also note that our media count should never decrease, even when
+	     * remote removed some media lines.
+	     */
 	    break;
 	}
 
@@ -2989,7 +3054,9 @@ on_check_med_status:
     pj_memcpy(call->media, call->media_prov,
 	      sizeof(call->media_prov[0]) * call->med_prov_cnt);
 
-    /* Perform SDP re-negotiation if needed. */
+    /* Perform SDP re-negotiation if some media have just got disabled
+     * in this function due to media count limit settings.
+     */
     if (got_media && need_renego_sdp) {
 	pjmedia_sdp_neg *neg = call->inv->neg;
 
