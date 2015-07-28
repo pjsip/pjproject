@@ -1099,6 +1099,13 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 
 
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
+
+/* Include OpenSSL libraries for MSVC */
+#  ifdef _MSC_VER
+#    pragma comment( lib, "libeay32")
+#    pragma comment( lib, "ssleay32")
+#  endif
+
 	    err = RAND_bytes((unsigned char*)key,
 			     crypto_suites[cs_idx].cipher_key_len);
 	    if (err != 1) {
