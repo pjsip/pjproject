@@ -6,17 +6,6 @@ export BINDIR := ../bin
 
 RULES_MAK := $(PJDIR)/build/rules.mak
 
-PJLIB_LIB:=../../pjlib/lib/libpj-$(TARGET_NAME)$(LIBEXT)
-PJLIB_UTIL_LIB:=../../pjlib-util/lib/libpjlib-util-$(TARGET_NAME)$(LIBEXT)
-PJNATH_LIB:=../../pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
-PJMEDIA_LIB:=../../pjmedia/lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
-PJMEDIA_AUDIODEV_LIB:=../../pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME)$(LIBEXT)
-PJMEDIA_CODEC_LIB:=../../pjmedia/lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
-PJSIP_LIB:=../../pjsip/lib/libpjsip-$(TARGET_NAME)$(LIBEXT)
-PJSIP_UA_LIB:=../../pjsip/lib/libpjsip-ua-$(TARGET_NAME)$(LIBEXT)
-PJSIP_SIMPLE_LIB:=../../pjsip/lib/libpjsip-simple-$(TARGET_NAME)$(LIBEXT)
-PJSUA_LIB_LIB=../../pjsip/lib/libpjsua-$(TARGET_NAME)$(LIBEXT)
-
 
 ###############################################################################
 # Gather all flags.
@@ -78,6 +67,14 @@ distclean: realclean
 pjsua: $(PJSUA_EXE)
 $(PJSUA_EXE):
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
+	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin$$"; then \
+	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
+	    if test -f $$F; then \
+	      tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
+	      ln -sf $$F ../src/pjsua/ios/$$tmp; \
+	    fi; \
+	  done; \
+	fi;
 
 pjsystest: $(PJSYSTEST_EXE)
 $(PJSYSTEST_EXE):
@@ -98,6 +95,9 @@ clean depend realclean:
 	  echo '$(BINDIR)/$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
 	  echo '$(BINDIR)/$(PJSYSTEST_EXE): $(APP_LIB_FILES)' >> .pjsystest-$(TARGET_NAME).depend; \
 	fi
-
-
-
+	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin$$"; then \
+	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
+	    tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
+	    rm -f ../src/pjsua/ios/$$tmp; \
+	  done; \
+	fi;

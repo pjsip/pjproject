@@ -113,6 +113,7 @@ if test "${ARCH}" = ""; then
   export ARCH="-arch armv7"
   echo "$F: ARCH is not specified, choosing ${ARCH}"
 fi
+export ARCH_VAL=`echo ${ARCH} | sed 's/\-arch //' | sed -e 's/^[ \t]*//;s/[ \t]*$//' `
 
 # Set CXX if not set
 if test "${CXX}" = ""; then
@@ -141,10 +142,11 @@ if test "1" = "1"; then
   echo " LDFLAGS = ${LDFLAGS}"
   echo " AR = ${AR}"
   echo " RANLIB = ${RANLIB}"
+  echo " ARCH = ${ARCH_VAL}"
 fi
 
 # And finally invoke the configure script itself
-./aconfigure --host=arm-apple-darwin9 --disable-sdl $*
+./aconfigure --host=${ARCH_VAL}-apple-darwin --disable-sdl $*
 
 if test "$?" = "0"; then
   echo "Done configuring for `basename $SDKPATH`"
