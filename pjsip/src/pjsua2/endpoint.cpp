@@ -1707,6 +1707,9 @@ void Endpoint::videoCodecSetPriority(const string &codec_id,
 #if PJSUA_HAS_VIDEO
     pj_str_t codec_str = str2Pj(codec_id);
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_priority(&codec_str, priority));
+#else
+    PJ_UNUSED_ARG(codec_id);
+    PJ_UNUSED_ARG(priority);
 #endif
 }
 
@@ -1718,6 +1721,8 @@ CodecParam Endpoint::videoCodecGetParam(const string &codec_id) const
     pj_str_t codec_str = str2Pj(codec_id);
 
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_get_param(&codec_str, pj_param));
+#else
+    PJ_UNUSED_ARG(codec_id);
 #endif
     return pj_param;
 }
@@ -1730,6 +1735,9 @@ void Endpoint::videoCodecSetParam(const string &codec_id,
     pjmedia_vid_codec_param *pj_param = (pjmedia_vid_codec_param*)param;
 
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, pj_param));
+#else
+    PJ_UNUSED_ARG(codec_id);
+    PJ_UNUSED_ARG(param);
 #endif
 }
 

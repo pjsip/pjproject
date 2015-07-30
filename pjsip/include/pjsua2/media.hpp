@@ -1354,7 +1354,7 @@ struct MediaCoordinate
  */
 struct MediaSize
 {
-    unsigned	w;	    /**< The width.		*/
+    unsigned	w;	    /**< The width.	*/
     unsigned 	h;	    /**< The height.	*/
 };
 
@@ -1603,6 +1603,11 @@ private:
 struct VideoDevInfo
 {
     /**
+     * The device ID
+     */
+    pjmedia_vid_dev_index id;
+
+    /**
      * The device name
      */
     string name;
@@ -1646,10 +1651,32 @@ struct VideoDevInfo
 typedef std::vector<VideoDevInfo*> VideoDevInfoVector;
 
 /**
+ * Parameter for switching device with PJMEDIA_VID_DEV_CAP_SWITCH capability.
+ */
+struct VideoSwitchParam
+{
+    /**
+     * Target device ID to switch to. Once the switching is successful, the
+     * video stream will use this device and the old device will be closed.
+     */
+    pjmedia_vid_dev_index target_id;
+};
+ 
+/**
  * Video device manager.
  */
 class VidDevManager {
 public:
+    /**
+     * Refresh the list of video devices installed in the system. This function
+     * will only refresh the list of video device so all active video streams
+     * will be unaffected. After refreshing the device list, application MUST
+     * make sure to update all index references to video devices (i.e. all
+     * variables of type pjmedia_vid_dev_index) before calling any function
+     * that accepts video device index as its parameter.
+     */
+    void refreshDevs() throw(Error);
+
     /**
      * Get the number of video devices installed in the system.
      *
@@ -1672,6 +1699,161 @@ public:
      * @return		The list of video device info
      */
     const VideoDevInfoVector &enumDev() throw(Error);
+
+    /**
+     * Lookup device index based on the driver and device name.
+     *
+     * @param drv_name	The driver name.
+     * @param dev_name	The device name.
+     *
+     * @return		The device ID. If the device is not found, 
+     *			Error will be thrown.
+     */
+    int lookupDev(const string &drv_name,
+		  const string &dev_name) const throw(Error);
+
+    /**
+     * Get string info for the specified capability.
+     *
+     * @param cap	The capability ID.
+     *
+     * @return		Capability name.
+     */
+    string capName(pjmedia_vid_dev_cap cap) const;
+
+    /**
+     * This will configure video format capability to the video device. 
+     * If video device is currently active, the method will forward the setting 
+     * to the video device instance to be applied immediately, if it 
+     * supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_FORMAT capability in VideoDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the video device to be
+     * used.
+     *
+     * @param dev_id	The video device id.	
+     * @param format	The video format.
+     * @param keep	Specify whether the setting is to be kept for
+     * 			future use.
+     */
+    void setFormat(int dev_id, 
+		   const MediaFormatVideo &format, 
+		   bool keep) throw(Error);
+
+    /**
+     * Get the video format capability to the video device.
+     * If video device is currently active, the method will forward the request
+     * to the video device. If video device is currently inactive, and if 
+     * application had previously set the setting and mark the setting as kept, 
+     * then that setting will be returned. Otherwise, this method will 
+     * raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_FORMAT capability in VideoDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @param dev_id	The video device id.
+     * @return keep	The video format.
+     */
+    MediaFormatVideo getFormat(int dev_id) const throw(Error);
+
+    /**
+     * This will configure video format capability to the video device.
+     * If video device is currently active, the method will forward the setting
+     * to the video device instance to be applied immediately, if it
+     * supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_INPUT_SCALE capability in VideoDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the video device to be
+     * used.
+     *
+     * @param dev_id	The video device id.
+     * @param scale	The video scale.
+     * @param keep	Specify whether the setting is to be kept for
+     * 			future use.
+     */
+    void setInputScale(int dev_id, 
+		       const MediaSize &scale, 
+		       bool keep) throw(Error);
+
+    /**
+     * Get the video input scale capability to the video device.
+     * If video device is currently active, the method will forward the request
+     * to the video device. If video device is currently inactive, and if
+     * application had previously set the setting and mark the setting as kept,
+     * then that setting will be returned. Otherwise, this method will
+     * raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_FORMAT capability in VideoDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @param dev_id	The video device id.
+     * @return keep	The video format.
+     */
+    MediaSize getInputScale(int dev_id) const throw(Error);
+
+    /**
+     * This will configure fast switching to another video device.
+     * If video device is currently active, the method will forward the setting
+     * to the video device instance to be applied immediately, if it
+     * supports it.
+     *
+     * This method is only valid if the device has 
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * flags, otherwise Error will be thrown.
+     * 
+     * Note that in case the setting is kept for future use, it will be applied
+     * to any devices, even when application has changed the video device to be
+     * used.
+     *
+     * @param dev_id	The video device id.
+     * @param flags	The video window flag.
+     * @param keep	Specify whether the setting is to be kept for
+     * 			future use.
+     */
+    void setOutputWindowFlags(int dev_id, int flags, bool keep) throw(Error);
+    
+    /**
+     * Get the window output flags capability to the video device.
+     * If video device is currently active, the method will forward the request
+     * to the video device. If video device is currently inactive, and if
+     * application had previously set the setting and mark the setting as kept,
+     * then that setting will be returned. Otherwise, this method will
+     * raise error.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS capability in VideoDevInfo.caps 
+     * flags, otherwise Error will be thrown.
+     *
+     * @param dev_id	The video device id.
+     * @return keep	The video format.
+     */
+    int getOutputWindowFlags(int dev_id) throw(Error);
+
+    /**
+     * This will configure fast switching to another video device.
+     * If video device is currently active, the method will forward the setting
+     * to the video device instance to be applied immediately, if it
+     * supports it.
+     *
+     * This method is only valid if the device has
+     * PJMEDIA_VID_DEV_CAP_SWITCH capability in VideoDevInfo.caps flags,
+     * otherwise Error will be thrown.
+     *
+     * @param dev_id	The video device id.
+     * @param param	The video switch param.
+     */
+    void switchDev(int dev_id,
+		   const VideoSwitchParam &param) throw(Error);
 
     /**
      * Check whether the video capture device is currently active, i.e. if
