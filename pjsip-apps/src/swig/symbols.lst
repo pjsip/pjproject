@@ -14,7 +14,7 @@ pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index pjme
 pjmedia-audiodev/audiodev.h 	pjmedia_aud_dev_route pjmedia_aud_dev_cap
 pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
 pjmedia/tonegen.h		pjmedia_tone_digit pjmedia_tone_digit_map pjmedia_tone_desc
-pjmedia/types.h                 pjmedia_type pjmedia_dir pjmedia_tp_proto
+pjmedia/types.h                 pjmedia_type pjmedia_dir pjmedia_tp_proto pjmedia_orient
 pjmedia/format.h		pjmedia_format_id
 
 pjsip/sip_auth.h		pjsip_cred_data_type

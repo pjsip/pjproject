@@ -168,11 +168,13 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
     
     pjmedia_vid_dev_conv_set_rotation(conv, PJMEDIA_ORIENT_NATURAL);
 
-    PJ_LOG(4, (THIS_FILE, "Orientation converter created: %dx%d to %dx%d",
+    PJ_LOG(4, (THIS_FILE, "Orientation converter created: %dx%d to %dx%d, "
+    			  "maintain aspect ratio=%s",
 			  conv_param.src.det.vid.size.w,
 			  conv_param.src.det.vid.size.h,
 			  conv_param.dst.det.vid.size.w,
-			  conv_param.dst.det.vid.size.h));
+			  conv_param.dst.det.vid.size.h,
+			  maintain_aspect_ratio? "yes": "no"));
 			  
     return PJ_SUCCESS;
 }

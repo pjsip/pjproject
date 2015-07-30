@@ -1673,6 +1673,39 @@ public:
      */
     const VideoDevInfoVector &enumDev() throw(Error);
 
+    /**
+     * Check whether the video capture device is currently active, i.e. if
+     * a video preview has been started or there is a video call using
+     * the device.    
+     *
+     * @param dev_id	The video device id
+     * 
+     * @return		True if it's active.
+     */
+    bool isCaptureActive(int dev_id) const;
+
+    /**
+     * This will configure video orientation of the video capture device.
+     * If the device is currently active (i.e. if there is a video call
+     * using the device or a video preview has been started), the method
+     * will forward the setting to the video device instance to be applied
+     * immediately, if it supports it.
+     *
+     * The setting will be saved for future opening of the video device,
+     * if the "keep" argument is set to true. If the video device is
+     * currently inactive, and the "keep" argument is false, this method
+     * will throw Error.
+     *
+     * @param dev_id	The video device id
+     * @param orient	The video orientation.
+     * @param keep	Specify whether the setting is to be kept for
+     * 			future use.
+     *
+     */
+    void setCaptureOrient(pjmedia_vid_dev_index dev_id,
+    			  pjmedia_orient orient,
+    			  bool keep=true) throw(Error);
+
 private:
     VideoDevInfoVector videoDevList;
 

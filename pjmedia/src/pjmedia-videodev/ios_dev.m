@@ -39,9 +39,9 @@
 #define DEFAULT_FPS		15
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
- * For more details, please refer to vid_util.h.
+ * For more details, please refer to util.h.
  */
-#define MAINTAIN_ASPECT_RATIO PJ_TRUE
+#define MAINTAIN_ASPECT_RATIO 	PJ_TRUE
 
 typedef struct ios_fmt_info
 {

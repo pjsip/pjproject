@@ -1306,6 +1306,28 @@ void VidDevManager::clearVideoDevList()
 #endif
 }
 
+bool VidDevManager::isCaptureActive(int dev_id) const
+{
+#if PJSUA_HAS_VIDEO
+    return (pjsua_vid_dev_is_active(dev_id) == PJ_TRUE? true: false);
+#else
+    PJ_UNUSED_ARG(dev_id);
+    
+    return false;
+#endif
+}
+    
+void VidDevManager::setCaptureOrient(pjmedia_vid_dev_index dev_id,
+    			  	     pjmedia_orient orient,
+    			  	     bool keep) throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    PJSUA2_CHECK_EXPR(pjsua_vid_dev_set_setting(dev_id,
+    			  PJMEDIA_VID_DEV_CAP_ORIENTATION, &orient, keep));
+#endif
+}
+
+
 VidDevManager::VidDevManager()
 {
 }

@@ -21,12 +21,17 @@ package org.pjsip.pjsua2.app;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.view.Display;
+import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 import android.app.Activity;
+import android.content.Context;
+import android.content.res.Configuration;
 
 import org.pjsip.pjsua2.*;
 
@@ -129,6 +134,49 @@ public class CallActivity extends Activity
 	    updateCallState(lastCallInfo);
 	}
     }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        
+        WindowManager wm;
+        Display display;
+        int rotation;
+        pjmedia_orient orient;
+
+        wm = (WindowManager)this.getSystemService(Context.WINDOW_SERVICE);
+        display = wm.getDefaultDisplay();
+        rotation = display.getRotation();
+        System.out.println("Device orientation changed: " + rotation);
+        
+        switch (rotation) {
+        case Surface.ROTATION_0:   // Portrait
+            orient = pjmedia_orient.PJMEDIA_ORIENT_ROTATE_270DEG;
+            break;
+        case Surface.ROTATION_90:  // Landscape, home button on the right
+            orient = pjmedia_orient.PJMEDIA_ORIENT_NATURAL;
+            break;
+        case Surface.ROTATION_180:
+            orient = pjmedia_orient.PJMEDIA_ORIENT_ROTATE_90DEG;
+            break;
+        case Surface.ROTATION_270: // Landscape, home button on the left
+            orient = pjmedia_orient.PJMEDIA_ORIENT_ROTATE_180DEG;
+            break;
+        default:
+            orient = pjmedia_orient.PJMEDIA_ORIENT_UNKNOWN;
+        }
+
+        if (MyApp.ep != null && MainActivity.account != null) {
+            try {
+        	AccountConfig cfg = MainActivity.account.cfg;
+        	int cap_dev = cfg.getVideoConfig().getDefaultCaptureDevice();
+        	MyApp.ep.vidDevManager().setCaptureOrient(cap_dev, orient,
+        						  true);
+            } catch (Exception e) {
+        	System.out.println(e);
+            }
+        }
+    }    
 
     @Override
     protected void onDestroy()
@@ -255,6 +303,10 @@ public class CallActivity extends Activity
 	} else if (m.what == MainActivity.MSG_TYPE.CALL_MEDIA_STATE) {
 
 	    if (MainActivity.currentCall.vidWin != null) {
+		/* Set capture orientation according to current
+		 * device orientation.
+		 */
+		onConfigurationChanged(getResources().getConfiguration());
 		/* If there's incoming video, display it. */
 		setupVideoSurface();
 	    }

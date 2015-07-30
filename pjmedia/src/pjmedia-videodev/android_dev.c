@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+#include "util.h"
 #include <pjmedia-videodev/videodev_imp.h>
 #include <pj/assert.h>
 #include <pj/log.h>
@@ -38,6 +39,10 @@
 #define DEFAULT_FPS		15
 #define ALIGN16(x)		((((x)+15) >> 4) << 4)
 
+/* Define whether we should maintain the aspect ratio when rotating the image.
+ * For more details, please refer to util.h.
+ */
+#define MAINTAIN_ASPECT_RATIO 	PJ_TRUE
 
 /* Format map info */
 typedef struct and_fmt_map
@@ -118,6 +123,10 @@ typedef struct and_stream
 
     /** NV21/YV12 -> I420 Conversion buffer  */
     pj_uint8_t		   *convert_buf;
+    pjmedia_rect_size	    cam_size;
+    
+    /** Converter to rotate frame  */
+    pjmedia_vid_dev_conv    conv;
     
     /** Frame format param for NV21/YV12 -> I420 conversion */
     pjmedia_video_apply_fmt_param
@@ -511,7 +520,8 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 	vdi->id = f->dev_count;
 	vdi->dir = PJMEDIA_DIR_CAPTURE;
 	vdi->has_callback = PJ_TRUE;
-	vdi->caps = PJMEDIA_VID_DEV_CAP_SWITCH;
+	vdi->caps = PJMEDIA_VID_DEV_CAP_SWITCH |
+		    PJMEDIA_VID_DEV_CAP_ORIENTATION;
 
 	/* Set driver & name info */
 	pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
@@ -578,12 +588,19 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 		else if (fmt == PJMEDIA_FORMAT_NV21) adi->has_nv21 = PJ_TRUE;
 
 		for (k = 0; k < adi->sup_size_cnt &&
-			    vdi->fmt_cnt < max_fmt_cnt; k++)
+			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
 		{
+		    /* Landscape video */
 		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
 					      fmt,
 					      adi->sup_size[k].w,
 					      adi->sup_size[k].h,
+					      DEFAULT_FPS, 1);
+		    /* Portrait video */
+		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					      fmt,
+					      adi->sup_size[k].h,
+					      adi->sup_size[k].w,
 					      DEFAULT_FPS, 1);
 		}
 	    }
@@ -598,12 +615,17 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 		int k;
 		adi->forced_i420 = PJ_TRUE;
 		for (k = 0; k < adi->sup_size_cnt &&
-			    vdi->fmt_cnt < max_fmt_cnt; k++)
+			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
 		{
 		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
 					      PJMEDIA_FORMAT_I420,
 					      adi->sup_size[k].w,
 					      adi->sup_size[k].h,
+					      DEFAULT_FPS, 1);
+		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					      PJMEDIA_FORMAT_I420,
+					      adi->sup_size[k].h,
+					      adi->sup_size[k].w,
 					      DEFAULT_FPS, 1);
 		}
 	    }
@@ -636,7 +658,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 	       f->dev_count));
     for (i = 0; i < f->dev_count; i++) {
 	and_dev_info *adi = &f->dev_info[i];
-	char tmp_str[1024], *p;
+	char tmp_str[2048], *p;
 	int j, plen, slen;
 	PJ_LOG(4, (THIS_FILE, "%2d: %s", i, f->dev_info[i].info.name));
 
@@ -792,10 +814,12 @@ static pj_status_t and_factory_create_stream(
     with_attach = jni_get_env(&jni_env);
 
     /* Instantiate PjCamera */
+    strm->cam_size.w = (vfd->size.w > vfd->size.h? vfd->size.w: vfd->size.h);
+    strm->cam_size.h = (vfd->size.w > vfd->size.h? vfd->size.h: vfd->size.w);
     jcam = (*jni_env)->NewObject(jni_env, jobjs.cam.cls, jobjs.cam.m_init,
 				 adi->dev_idx,		/* idx */
-				 vfd->size.w,		/* w */
-				 vfd->size.h,		/* h */
+				 strm->cam_size.w,	/* w */
+				 strm->cam_size.h,	/* h */
 				 and_fmt,		/* fmt */
 				 vfd->fps.num*1000/
 				 vfd->fps.denum,	/* fps */
@@ -813,6 +837,19 @@ static pj_status_t and_factory_create_stream(
         PJ_LOG(3, (THIS_FILE, "Unable to create global ref to PjCamera"));
         status = PJMEDIA_EVID_SYSERR;
 	goto on_return;
+    }
+    
+    /* Video orientation.
+     * If we send in portrait, we need to set up orientation converter
+     * as well.
+     */
+    if ((param->flags & PJMEDIA_VID_DEV_CAP_ORIENTATION) ||
+        (vfd->size.h > vfd->size.w))
+    {
+        if (param->orient == PJMEDIA_ORIENT_UNKNOWN)
+    	    param->orient = PJMEDIA_ORIENT_NATURAL;
+        and_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+    		           &param->orient);
     }
 
 on_return:
@@ -921,6 +958,40 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
 	    break;
 	}
 
+        case PJMEDIA_VID_DEV_CAP_ORIENTATION:
+        {
+            pjmedia_orient orient = *(pjmedia_orient *)pval;
+
+	    pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
+	              orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
+
+            if (orient == PJMEDIA_ORIENT_UNKNOWN)
+                return PJ_EINVAL;
+
+            pj_memcpy(&strm->param.orient, pval,
+                      sizeof(strm->param.orient));
+
+	    if (!strm->conv.conv) {
+	        status = pjmedia_vid_dev_conv_create_converter(
+	        				 &strm->conv, strm->pool,
+	        		        	 &strm->param.fmt,
+	        		        	 strm->cam_size,
+	        		        	 strm->param.fmt.det.vid.size,
+	        		        	 PJ_TRUE,
+	        		        	 MAINTAIN_ASPECT_RATIO);
+	    	
+	    	if (status != PJ_SUCCESS)
+	    	    return status;
+	    }
+	    
+	    pjmedia_vid_dev_conv_set_rotation(&strm->conv, strm->param.orient);
+	    
+	    PJ_LOG(4, (THIS_FILE, "Video capture orientation set to %d",
+	    			  strm->param.orient));
+
+            break;
+        }
+
 	default:
 	    status = PJMEDIA_EVID_INVCAP;
 	    break;
@@ -1005,6 +1076,8 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     
     jni_detach_env(with_attach);
     
+    pjmedia_vid_dev_conv_destroy_converter(&strm->conv);
+    
     if (strm->pool)
 	pj_pool_release(strm->pool);
 
@@ -1020,6 +1093,8 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     and_stream *strm = *(and_stream**)&user_data;
     pjmedia_frame f;
     pj_uint8_t *Y, *U, *V;
+    pj_status_t status; 
+    void *frame_buf, *data_buf;     
 
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
@@ -1039,7 +1114,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     f.type = PJMEDIA_FRAME_TYPE_VIDEO;
     f.size = length;
     f.timestamp.u64 = strm->frame_ts.u64;
-    f.buf = (*env)->GetByteArrayElements(env, data, 0);
+    f.buf = data_buf = (*env)->GetByteArrayElements(env, data, 0);
 
     Y = (pj_uint8_t*)f.buf;
     U = Y + strm->vafp.plane_bytes[0];
@@ -1115,9 +1190,16 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
 
 	}
     }
+    
+    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
+    						    f.buf,
+    				       		    &frame_buf);
+    if (status == PJ_SUCCESS) {
+        f.buf = frame_buf;
+    }
 
     (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &f);
-    (*env)->ReleaseByteArrayElements(env, data, f.buf, JNI_ABORT);
+    (*env)->ReleaseByteArrayElements(env, data, data_buf, JNI_ABORT);
 }
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_ANDROID */
