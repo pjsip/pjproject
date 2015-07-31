@@ -159,7 +159,7 @@ void dump_pool_usage( const char *app_name, pj_caching_pool *cp )
     pj_size_t    total_used = 0;
 
     /* Accumulate memory usage in active list. */
-    p = cp->used_list.next;
+    p = (pj_pool_t*)cp->used_list.next;
     while (p != (pj_pool_t*) &cp->used_list) {
 	total_alloc += pj_pool_get_capacity(p);
 	total_used += pj_pool_get_used_size(p);
