@@ -124,6 +124,12 @@ static pj_status_t open_stream( pjmedia_dir dir,
     pjmedia_aud_param param;
     pj_status_t status;
 
+    /* Normalize rec_id & play_id */
+    if (dir & PJMEDIA_DIR_CAPTURE && rec_id < 0)
+	rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    if (dir & PJMEDIA_DIR_PLAYBACK && play_id < 0)
+	play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
     /* Initialize parameters */
     if (dir & PJMEDIA_DIR_CAPTURE) {
 	status = pjmedia_aud_dev_default_param(rec_id, &param);
