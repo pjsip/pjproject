@@ -2198,6 +2198,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->reg_mapped_addr.slen = 0;
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
+	    /* Reset pointer to registration transport */
+	    acc->auto_rereg.reg_tp = NULL;
+
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
 
@@ -2509,7 +2512,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     }
 
     /* Reset pointer to registration transport */
-    pjsua_var.acc[acc_id].auto_rereg.reg_tp = NULL;
+    // Do not reset this here, as if currently there is another registration
+    // on progress, this registration will fail but transport pointer will
+    // become NULL which will prevent transport to be destroyed immediately
+    // after disconnected (which may cause iOS app getting killed (see #1482).
+    //pjsua_var.acc[acc_id].auto_rereg.reg_tp = NULL;
 
     if (renew) {
 	if (pjsua_var.acc[acc_id].regc == NULL) {
