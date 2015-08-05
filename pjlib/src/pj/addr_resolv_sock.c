@@ -129,6 +129,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	    naddr = CFArrayGetCount(addrRef);
 	    for (idx = 0; idx < naddr && i < *count; idx++) {
 		struct sockaddr *addr;
+		size_t addr_size;
 		
 		addr = (struct sockaddr *)
 		       CFDataGetBytePtr(CFArrayGetValueAtIndex(addrRef, idx));
@@ -143,9 +144,12 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 		pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
 		
 		/* Store address */
-		PJ_ASSERT_ON_FAIL(sizeof(*addr) <= sizeof(pj_sockaddr),
-				  continue);
-		pj_memcpy(&ai[i].ai_addr, addr, sizeof(*addr));
+		addr_size = sizeof(*addr);
+		if (af == PJ_AF_INET6) {
+		    addr_size = addr->sa_len;
+		}
+		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), 				  continue);
+		pj_memcpy(&ai[i].ai_addr, addr, addr_size);
 		PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
 		
 		i++;
