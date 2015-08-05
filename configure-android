@@ -32,19 +32,9 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   exit 0
 fi
 
-if test "x${ANDROID_NDK_ROOT}" = "x"; then
-  echo "$F error: ANDROID_NDK_ROOT must be specified"
+if test "x${ANDROID_NDK_ROOT}" = "x" || test ! -e ${ANDROID_NDK_ROOT}; then
+  echo "$F error: ANDROID_NDK_ROOT env var is not specified or invalid"
   exit 0
-fi
-
-#if test "$1" = "--simulator"; then
-if test "1" = "0"; then
-  shift
-  TARGET_HOST="i686-android-linux"
-  TC_DIR="x86"
-else
-  TARGET_HOST="arm-linux-androideabi"
-  TC_DIR=${TARGET_HOST}
 fi
 
 if test "x$APP_PLATFORM" = "x"; then
@@ -62,7 +52,8 @@ if test "$TARGET_ABI" = "x86_64" || test "$TARGET_ABI" = "mips64"; then
     USR_LIB="/usr/lib64"
 else
     USR_LIB="/usr/lib"
-fi 
+fi
+
 
 if test "$1" = "--use-ndk-cflags"; then
   shift
@@ -70,7 +61,14 @@ if test "$1" = "--use-ndk-cflags"; then
   if test "x${IGNORE_CFLAGS}" = "x"; then
     IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias"
   fi
-  for i in `${ANDROID_NDK_ROOT}/ndk-build -n -C ${ANDROID_NDK_ROOT}/samples/hello-jni NDK_TOOLCHAIN_VERSION=4.8 NDK_LOG=1 APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`; do
+
+  NDK_OUT=`${ANDROID_NDK_ROOT}/ndk-build -n -C ${ANDROID_NDK_ROOT}/samples/hello-jni NDK_TOOLCHAIN_VERSION=4.8 APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`
+  if test ! "${NDK_OUT}"; then
+    echo "$F error: failed to run ndk-build, check ANDROID_NDK_ROOT env var"
+    exit 1
+  fi
+
+  for i in $NDK_OUT; do
     if test "x${NDK_CXX}" != "x" -a "$i" = "-o"; then break; fi
 
     # Parse NDK CXXFLAGS
@@ -100,6 +98,18 @@ if test "$1" = "--use-ndk-cflags"; then
     fi
   done
 
+  # Get target host from NDK toolchain dir name
+  TARGET_HOST=`echo ${NDK_CC} | sed -e 's/.*\/toolchains\/\([^\/]*\).*/\1/'`
+  
+  # Remove version number suffix (otherwise config.sub will return error, perhaps it just doesn't like the format)
+  TARGET_HOST=`echo ${TARGET_HOST} | sed -e 's/\-[0-9\.]*$//'`
+
+  # Make sure target host string has 'linux-android' in it
+  if test "x`echo ${TARGET_HOST} | grep 'linux-android'`" = "x"; then
+    #TARGET_HOST=`echo ${TARGET_HOST} | sed -e 's/\(.*\)\-\([0-9\.]*\)/\1-linux-android-\2/'`
+    TARGET_HOST+=-linux-android
+  fi
+
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
   export AR=`echo ${NDK_CXX}|sed 's/-g++/-ar/'`;
@@ -113,7 +123,14 @@ if test "$1" = "--use-ndk-cflags"; then
 
 else
 
-  ANDROID_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/toolchains/${TC_DIR}-* | sed 's/clang/0/' | sort -gr | head -1`
+  if test "$TARGET_ABI" != "armeabi"; then
+    echo "$F error: For targets other than 'armeabi', specify --use-ndk-cflags"
+    exit 1
+  fi
+  
+  TARGET_HOST="arm-linux-androideabi"
+  
+  ANDROID_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/toolchains/${TARGET_HOST}-* | sed 's/clang/0/' | sort -gr | head -1`
   ANDROID_TC=`ls -d ${ANDROID_TC_VER}/prebuilt/* | grep -v gdbserver | head -1`
   if test ! -d ${ANDROID_TC}; then
     echo "$F error: unable to find directory ${ANDROID_TC} in Android NDK"
@@ -139,6 +156,11 @@ else
 
 fi
 
+if test "x${CC}" = "x" || test ! -e ${CC}; then
+  echo "$F error: compiler not found, please check environment settings (TARGET_ABI, etc)"
+  exit 1
+fi
+
 # C++ STL
 # Note: STL for pjsua2 sample app is specified in pjsip-apps/src/swig/java/android/jni/Application.mk
 
@@ -150,7 +172,7 @@ STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/${TARGET_ABI}/"
 
 # stlport
 #STDCPP_CFLAGS="-I${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport"
-#STDCPP_LIBS="${ANDROID_SYSROOT}/usr/lib/crtbegin_so.o -lstlport_static -ldl"
+#STDCPP_LIBS="${ANDROID_SYSROOT}${USR_LIB}/crtbegin_so.o -lstlport_static -ldl"
 #STDCPP_LDFLAGS="-L${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/libs/${TARGET_ABI}"
 
 export CFLAGS="${CFLAGS} ${STDCPP_CFLAGS}"
@@ -168,6 +190,7 @@ if test "1" = "1"; then
   echo " LIBS = ${LIBS}"
   echo " AR = ${AR}"
   echo " RANLIB = ${RANLIB}"
+  echo " TARGET_HOST = ${TARGET_HOST}"
 fi
 
 ./configure --host=${TARGET_HOST} $*
