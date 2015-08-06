@@ -1848,8 +1848,14 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    tsx_send_msg(tsx, tsx->last_tx);
 	}
 
-	/* Need to reschedule retransmission? */
-	if (tsx->transport_flag & TSX_HAS_PENDING_RESCHED) {
+	/* Need to reschedule retransmission?
+	 * Note that when sending a pending message above, tsx_send_msg()
+	 * may set the flag TSX_HAS_PENDING_TRANSPORT.
+	 * Please refer to ticket #1875.
+	 */
+	if (tsx->transport_flag & TSX_HAS_PENDING_RESCHED &&
+	    !(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT))
+	{
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	    /* Only update when transport turns out to be unreliable. */
