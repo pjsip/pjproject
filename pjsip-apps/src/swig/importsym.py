@@ -62,7 +62,7 @@ else:
 	PYCPARSER_DIR="/Library/Python/2.7/site-packages/pycparser"
 
 if not os.path.exists(PYCPARSER_DIR + '/utils/fake_libc_include'):
-	print "Error: couldn't find pycparser utils in '%s'" % PYPARSER_DIR 
+	print "Error: couldn't find pycparser utils in '%s'" % PYCPARSER_DIR 
 	sys.exit(1)
 
 # Heading, to be placed before the source files
