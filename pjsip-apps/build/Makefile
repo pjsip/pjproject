@@ -67,7 +67,7 @@ distclean: realclean
 pjsua: $(PJSUA_EXE)
 $(PJSUA_EXE):
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
-	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin$$"; then \
+	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin_ios$$"; then \
 	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
 	    if test -f $$F; then \
 	      tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
@@ -95,7 +95,7 @@ clean depend realclean:
 	  echo '$(BINDIR)/$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
 	  echo '$(BINDIR)/$(PJSYSTEST_EXE): $(APP_LIB_FILES)' >> .pjsystest-$(TARGET_NAME).depend; \
 	fi
-	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin$$"; then \
+	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin_ios$$"; then \
 	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
 	    tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
 	    rm -f ../src/pjsua/ios/$$tmp; \

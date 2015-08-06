@@ -446,7 +446,7 @@ case $target in
   *)
 	ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
 	case $target in
-	  *-apple-darwin*)
+	  *-apple-darwin_ios*)
 		ac_os_objs="$ac_os_objs os_info_iphone.o"
 		;;
 	esac
@@ -623,7 +623,7 @@ else
 	LIBS="$LIBS -lOpenSLES"
 	AC_MSG_RESULT([Checking sound device backend... OpenSL ES])
 	;;
-  *-apple-darwin*)
+  *-apple-darwin_ios*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
 	ac_pjmedia_audiodev_objs="coreaudio_dev.o"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
@@ -695,7 +695,7 @@ case $target in
  *android*)
 	LIBS="$LIBS -llog"
 	;;
- *-apple-darwin*)
+ *-apple-darwin_ios*)
  	LIBS="$LIBS -framework UIKit"
 	;;
  *darwin*)
@@ -724,7 +724,7 @@ else
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
 	;;
-  *-apple-darwin*)
+  *-apple-darwin_ios*)
 	ac_pjmedia_video=iphone_os
 	AC_SUBST(ac_pjmedia_video_has_ios)
 	AC_SUBST(ac_ios_cflags)
@@ -1207,7 +1207,7 @@ AC_ARG_ENABLE(libyuv,
 		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
 		  	
 			case $target in
-			    *-apple-darwin*)
+			    *-apple-darwin_ios*)
 				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
 				case $ARCH in
 				    *arm*)

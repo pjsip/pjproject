@@ -146,7 +146,7 @@ if test "1" = "1"; then
 fi
 
 # And finally invoke the configure script itself
-./aconfigure --host=${ARCH_VAL}-apple-darwin --disable-sdl $*
+./aconfigure --host=${ARCH_VAL}-apple-darwin_ios --disable-sdl $*
 
 if test "$?" = "0"; then
   echo "Done configuring for `basename $SDKPATH`"
