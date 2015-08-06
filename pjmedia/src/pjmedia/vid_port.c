@@ -887,9 +887,46 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
 
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
         const pjmedia_video_format_detail *vfd;
+        const pjmedia_video_format_detail *vfd_cur;
         pjmedia_vid_dev_param vid_param;
         pj_status_t status;
         
+        /* Retrieve the current video format detail */
+        pjmedia_vid_dev_stream_get_param(vp->strm, &vid_param);
+        vfd_cur = pjmedia_format_get_video_format_detail(
+		  &vid_param.fmt, PJ_TRUE);
+        if (!vfd_cur)
+            return PJMEDIA_EVID_BADFORMAT;
+
+        /* Retrieve the new video format detail */
+        vfd = pjmedia_format_get_video_format_detail(
+                  &event->data.fmt_changed.new_fmt, PJ_TRUE);
+        if (!vfd || !vfd->fps.num || !vfd->fps.denum)
+            return PJMEDIA_EVID_BADFORMAT;
+
+	/* Ticket #1876: if this is a passive renderer and only frame rate is
+	 * changing, simply modify the clock.
+	 */
+	if (vp->dir == PJMEDIA_DIR_RENDER &&
+	    vp->stream_role == ROLE_PASSIVE && vp->role == ROLE_ACTIVE)
+	{
+	    pj_bool_t fps_only;
+	    pjmedia_video_format_detail tmp_vfd;
+	    
+	    tmp_vfd = *vfd_cur;
+	    tmp_vfd.fps = vfd->fps;
+	    fps_only = pj_memcmp(vfd, &tmp_vfd, sizeof(*vfd)) == 0;
+	    if (fps_only) {
+		pjmedia_clock_param clock_param;
+		clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
+		clock_param.clock_rate = vid_param.clock_rate;
+		pjmedia_clock_modify(vp->clock, &clock_param);
+
+		return pjmedia_event_publish(NULL, vp, event,
+					     PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	    }
+	}
+
 	/* Ticket #1827:
 	 * Stopping video port should not be necessary here because
 	 * it will also try to stop the clock, from inside the clock's
@@ -898,12 +935,6 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
 	 * pjmedia_vid_port_stop(vp);
 	 */
 	pjmedia_vid_dev_stream_stop(vp->strm);
-        
-        /* Retrieve the video format detail */
-        vfd = pjmedia_format_get_video_format_detail(
-                  &event->data.fmt_changed.new_fmt, PJ_TRUE);
-        if (!vfd || !vfd->fps.num || !vfd->fps.denum)
-            return PJMEDIA_EVID_BADFORMAT;
         
 	/* Change the destination format to the new format */
 	pjmedia_format_copy(&vp->conv.conv_param.src,
@@ -918,7 +949,6 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
 	    return status;
 	}
 
-        pjmedia_vid_dev_stream_get_param(vp->strm, &vid_param);
         if (vid_param.fmt.id != vp->conv.conv_param.dst.id ||
             (vid_param.fmt.det.vid.size.h !=
              vp->conv.conv_param.dst.det.vid.size.h) ||

@@ -977,21 +977,27 @@ static void on_call_media_event(pjsua_call_id call_id,
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
 	/* Adjust renderer window size to original video size */
 	pjsua_call_info ci;
-	pjsua_vid_win_id wid;
-	pjmedia_rect_size size;
 
 	pjsua_call_get_info(call_id, &ci);
 
 	if ((ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO) &&
 	    (ci.media[med_idx].dir & PJMEDIA_DIR_DECODING))
 	{
-	    wid = ci.media[med_idx].stream.vid.win_in;
-	    size = event->data.fmt_changed.new_fmt.det.vid.size;
-	    pjsua_vid_win_set_size(wid, &size);
-	}
+	    pjsua_vid_win_id wid;
+	    pjmedia_rect_size size;
+	    pjsua_vid_win_info win_info;
 
-	/* Re-arrange video windows */
-	arrange_window(PJSUA_INVALID_ID);
+	    wid = ci.media[med_idx].stream.vid.win_in;
+	    pjsua_vid_win_get_info(wid, &win_info);
+	    
+	    size = event->data.fmt_changed.new_fmt.det.vid.size;
+	    if (size.w != win_info.size.w || size.h != win_info.size.h) {
+		pjsua_vid_win_set_size(wid, &size);
+
+		/* Re-arrange video windows */
+		arrange_window(PJSUA_INVALID_ID);
+	    }
+	}
     }
 #else
     PJ_UNUSED_ARG(call_id);
