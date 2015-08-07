@@ -591,7 +591,7 @@ static pj_status_t  l16_parse( pjmedia_codec *codec,
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = data->frame_size;
-	frames[count].timestamp.u64 = ts->u64 + (count * data->frame_size);
+	frames[count].timestamp.u64 = ts->u64 + (count * data->frame_size >> 1);
 
 	pkt = ((char*)pkt) + data->frame_size;
 	pkt_size -= data->frame_size;
