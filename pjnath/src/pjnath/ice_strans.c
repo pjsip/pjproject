@@ -1149,6 +1149,12 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
 PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
 {
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
+    
+    /* Protect with group lock, since this may cause race condition with
+     * pj_ice_strans_sendto().
+     * See ticket #1877.
+     */
+    pj_grp_lock_acquire(ice_st->grp_lock);
 
     if (ice_st->ice) {
 	pj_ice_sess_destroy(ice_st->ice);
@@ -1156,6 +1162,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
     }
 
     ice_st->state = PJ_ICE_STRANS_STATE_INIT;
+
+    pj_grp_lock_release(ice_st->grp_lock);
+
     return PJ_SUCCESS;
 }
 
@@ -1183,6 +1192,12 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
     if (def_cand >= comp->cand_cnt)
 	return PJ_EINVALIDOP;
 
+    /* Protect with group lock, since this may cause race condition with
+     * pj_ice_strans_stop_ice().
+     * See ticket #1877.
+     */
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
     /* If ICE is available, send data with ICE, otherwise send with the
      * default candidate selected during initialization.
      *
@@ -1190,16 +1205,16 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
      * Once ICE has failed, also send data with the default candidate.
      */
     if (ice_st->ice && ice_st->state == PJ_ICE_STRANS_STATE_RUNNING) {
-	if (comp->turn_sock) {
-	    pj_turn_sock_lock(comp->turn_sock);
-	}
 	status = pj_ice_sess_send_data(ice_st->ice, comp_id, data, data_len);
-	if (comp->turn_sock) {
-	    pj_turn_sock_unlock(comp->turn_sock);
-	}
+	
+	pj_grp_lock_release(ice_st->grp_lock);
+	
 	return status;
-
-    } else if (comp->cand_list[def_cand].status == PJ_SUCCESS) {
+    } 
+    
+    pj_grp_lock_release(ice_st->grp_lock);
+    
+    if (comp->cand_list[def_cand].status == PJ_SUCCESS) {
 
 	if (comp->cand_list[def_cand].type == PJ_ICE_CAND_TYPE_RELAYED) {
 
