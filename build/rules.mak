@@ -57,7 +57,9 @@ FULL_SRCS = $(foreach file, $($(APP)_OBJS), $(SRCDIR)/$(basename $(file)).m $(SR
 # When generating dependency (gcc -MM), ideally we use only either
 # CFLAGS or CXXFLAGS (not both). But I just couldn't make if/ifeq to work.
 #
-DEPFLAGS = $($(APP)_CXXFLAGS) $($(APP)_CFLAGS)
+#DEPFLAGS = $($(APP)_CXXFLAGS) $($(APP)_CFLAGS)
+DEPCFLAGS =  $($(APP)_CFLAGS)
+DEPCXXFLAGS = $($(APP)_CXXFLAGS)
 
 # Dependency file
 DEP_FILE := .$(app)-$(TARGET_NAME).depend
@@ -76,7 +78,7 @@ print_common:
 	@echo $(APP)_CFLAGS=$($(APP)_CFLAGS)
 	@echo $(APP)_CXXFLAGS=$($(APP)_CXXFLAGS)
 	@echo $(APP)_LDFLAGS=$($(APP)_LDFLAGS)
-	@echo DEPFLAGS=$(DEPFLAGS)
+#	@echo DEPFLAGS=$(DEPFLAGS)
 	@echo CC=$(CC)
 	@echo AR=$(AR)
 	@echo AR_FLAGS=$(AR_FLAGS)
@@ -216,7 +218,12 @@ depend:
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
 	     echo "$(OBJDIR)/" | tr -d '\n' >> $(DEP_FILE); \
-	     if $(CC) -M $(DEPFLAGS) $$F | sed '/^#/d' >> $(DEP_FILE); then \
+	     if echo $$F | grep -q .cpp$$; then \
+		dep="$(CC) -M $(DEPCXXFLAGS) $$F"; \
+	     else \
+		dep="$(CC) -M $(DEPCFLAGS) $$F"; \
+	     fi; \
+	     if eval $$dep | sed '/^#/d' >> $(DEP_FILE); then \
 		true; \
 	     else \
 		echo 'err:' >> $(DEP_FILE); \
