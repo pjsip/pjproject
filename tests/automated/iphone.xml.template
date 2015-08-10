@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <Scenario site="$(HOSTNAME)" url="http://my.cdash.org/submit.php?project=PJSIP" wdir="$(PJDIR)">
  
-	<Submit group="Experimental" build="iPhoneOS-default">
+	<Submit group="Experimental" build="iOS-default">
 		<Update />
 		<FileWrite file="user.mak">
 		  <![CDATA[
@@ -16,8 +16,8 @@ export CFLAGS += -Wno-unused-label -g
 #include <pj/config_site_sample.h>
 ]]>			
 		</FileWrite>
-		<Configure cmd="./configure-iphone" />
-		<Build cmd="make distclean &amp;&amp; make dep &amp;&amp; make clean &amp;&amp; make" />
+		<Configure cmd="make distclean &amp;&amp; ./configure-iphone" />
+		<Build cmd="make dep &amp;&amp; make clean &amp;&amp; make" />
 	</Submit>
 	
 </Scenario>
