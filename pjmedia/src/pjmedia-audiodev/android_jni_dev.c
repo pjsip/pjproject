@@ -298,6 +298,8 @@ static int AndroidRecorderCallback(void *userData)
         status = (*stream->rec_cb)(stream->user_data, &frame);
         (*jni_env)->ReleaseByteArrayElements(jni_env, inputBuffer, buf,
         				     JNI_ABORT);
+	if (status != PJ_SUCCESS || stream->quit_flag)
+	    break;
 
         stream->rec_timestamp.u64 += stream->param.samples_per_frame /
                                      stream->param.channel_count;

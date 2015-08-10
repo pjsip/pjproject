@@ -23,6 +23,8 @@
 #include <pj/errno.h>
 #include <pj/log.h>
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
 #if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
     #include  <libyuv.h>
     #define HAS_ROTATION 1
@@ -281,6 +283,9 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
     	    	       src_size.w, src_size.h, mode);
     	    
     	    swap(src, dst);
+#else
+	    PJ_UNUSED_ARG(p_len);
+	    PJ_UNUSED_ARG(dst_size);
 #endif
     	}
     }
@@ -288,13 +293,12 @@ pj_status_t pjmedia_vid_dev_conv_resize_and_rotate(pjmedia_vid_dev_conv *conv,
     if (!conv->match_src_dst && conv->maintain_aspect_ratio) {
 	/* Center the frame and fill the area with black color */    
         if (conv->fmt.id == PJMEDIA_FORMAT_I420) {
-    	    int i = 0;
+    	    unsigned i = 0;
     	    pj_uint8_t *pdst = dst;
     	    pj_uint8_t *psrc = src;
-            pj_size_t p_len_src, p_len_dst;
+            pj_size_t p_len_src = 0, p_len_dst = conv->wxh;
     	    int pad = conv->pad;
 
-            p_len_dst = conv->wxh;
             pj_bzero(pdst, p_len_dst);
 
             if (conv->fit_to_h) {
@@ -357,3 +361,5 @@ void pjmedia_vid_dev_conv_destroy_converter(pjmedia_vid_dev_conv *conv)
         conv->conv = NULL;
     }
 }
+
+#endif /* PJMEDIA_HAS_VIDEO */

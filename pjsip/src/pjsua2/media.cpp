@@ -1158,6 +1158,7 @@ void VideoPreview::start(const VideoPreviewOpParam &param) throw(Error)
     PJSUA2_CHECK_EXPR(pjsua_vid_preview_start(devId, &prm));
 #else
     PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(devId);
 #endif
 }
 
