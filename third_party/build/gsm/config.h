@@ -7,5 +7,10 @@
 //#   pragma warning(disable: 4701)   // local variable used without initialized
 #endif
 
+#if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 402
+#  pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#  pragma GCC diagnostic ignored "-Wunused-const-variable"
+#endif
+
 #include <string.h>
 #include "../../gsm/inc/config.h"
