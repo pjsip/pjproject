@@ -8,7 +8,7 @@
 #endif
 
 #if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 402
-#  pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#  pragma GCC diagnostic ignored "-Wpragmas"
 #  pragma GCC diagnostic ignored "-Wunused-const-variable"
 #endif
 
