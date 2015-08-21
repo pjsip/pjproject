@@ -180,6 +180,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     static pj_thread_t *a_thread;
     static UIDeviceOrientation prev_ori = 0;
     UIDeviceOrientation dev_ori = [[UIDevice currentDevice] orientation];
+    int i;
     
     if (dev_ori == prev_ori) return;
     
@@ -192,9 +193,15 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
             pj_thread_register("ipjsua", a_thread_desc, &a_thread);
         }
         
-        pjsua_vid_dev_set_setting(PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
-                                  PJMEDIA_VID_DEV_CAP_ORIENTATION,
-                                  &pj_ori[dev_ori-1], PJ_TRUE);
+        /* Here we set the orientation for all video devices.
+         * This may return failure for renderer devices or for
+         * capture devices which do not support orientation setting,
+         * we can simply ignore them.
+         */
+        for (i = pjsua_vid_dev_count()-1; i >= 0; i--) {
+            pjsua_vid_dev_set_setting(i, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+                                      &pj_ori[dev_ori-1], PJ_TRUE);
+        }
     }
 #endif
 }

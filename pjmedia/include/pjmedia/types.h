@@ -202,26 +202,34 @@ typedef enum pjmedia_orient
     PJMEDIA_ORIENT_UNKNOWN,
 
     /**
-     * Natural orientation, e.g: sky upside on landscape view, head upside
-     * on human portrait.
+     * Natural orientation, i.e. the original orientation video will be
+     * displayed/captured without rotation.
      */
     PJMEDIA_ORIENT_NATURAL,
 
     /**
      * Specifies that the video/picture needs to be rotated 90 degrees
-     * clockwise to be displayed in natural orientation.
+     * from its natural orientation in clockwise direction from the user's
+     * perspective.
+     * Note that for devices with back cameras (which faces away
+     * from the user), the video will actually need to be rotated
+     * 270 degrees clockwise instead.
      */
     PJMEDIA_ORIENT_ROTATE_90DEG,
 
     /**
      * Specifies that the video/picture needs to be rotated 180 degrees
-     * clockwise to be displayed in natural orientation.
+     * from its natural orientation.
      */
     PJMEDIA_ORIENT_ROTATE_180DEG,
 
     /**
      * Specifies that the video/picture needs to be rotated 270 degrees
-     * clockwise to be displayed in natural orientation.
+     * from its natural orientation in clockwise direction from the user's
+     * perspective.
+     * Note that for devices with back cameras (which faces away
+     * from the user), the video will actually need to be rotated
+     * 90 degrees clockwise instead.
      */
     PJMEDIA_ORIENT_ROTATE_270DEG
 

@@ -71,6 +71,7 @@ typedef struct and_dev_info
 {
     pjmedia_vid_dev_info	 info;		/**< Base info         */
     unsigned			 dev_idx;	/**< Original dev ID   */
+    pj_bool_t			 facing;	/**< Front/back camera?*/
     unsigned			 sup_size_cnt;	/**< # of supp'd size  */
     pjmedia_rect_size		*sup_size;	/**< Supported size    */
     unsigned			 sup_fps_cnt;	/**< # of supp'd FPS   */
@@ -525,6 +526,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 
 	/* Set driver & name info */
 	pj_ansi_strncpy(vdi->driver, "Android", sizeof(vdi->driver));
+	adi->facing = facing;
 	if (facing == 0) {
 	    pj_ansi_strncpy(vdi->name, "Back camera", sizeof(vdi->name));
 	} else {
@@ -953,6 +955,10 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
 		status = PJMEDIA_EVID_SYSERR;
 	    } else {
 		strm->param.cap_id = p->target_id;
+		
+		/* If successful, set the orientation as well */
+		and_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+            		       	   &strm->param.orient);
 	    }
 	    jni_detach_env(with_attach);
 	    break;
@@ -961,6 +967,8 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
             pjmedia_orient orient = *(pjmedia_orient *)pval;
+            pjmedia_orient eff_ori;
+            and_dev_info *adi;
 
 	    pj_assert(orient >= PJMEDIA_ORIENT_UNKNOWN &&
 	              orient <= PJMEDIA_ORIENT_ROTATE_270DEG);
@@ -984,7 +992,16 @@ static pj_status_t and_stream_set_cap(pjmedia_vid_dev_stream *s,
 	    	    return status;
 	    }
 	    
-	    pjmedia_vid_dev_conv_set_rotation(&strm->conv, strm->param.orient);
+	    eff_ori = strm->param.orient;
+	    adi = &strm->factory->dev_info[strm->param.cap_id];
+	    /* Normalize the orientation for back-facing camera */
+	    if (!adi->facing) {
+		if (eff_ori == PJMEDIA_ORIENT_ROTATE_90DEG)
+		    eff_ori = PJMEDIA_ORIENT_ROTATE_270DEG;
+		else if (eff_ori == PJMEDIA_ORIENT_ROTATE_270DEG)
+		    eff_ori = PJMEDIA_ORIENT_ROTATE_90DEG;
+	    }
+	    pjmedia_vid_dev_conv_set_rotation(&strm->conv, eff_ori);
 	    
 	    PJ_LOG(4, (THIS_FILE, "Video capture orientation set to %d",
 	    			  strm->param.orient));

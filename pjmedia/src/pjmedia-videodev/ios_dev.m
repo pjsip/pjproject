@@ -962,6 +962,10 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             strm->dev_input = new_dev_input;
             strm->param.cap_id = p->target_id;
             
+            /* Set the orientation as well */
+            ios_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+            		       &strm->param.orient);
+            
             return PJ_SUCCESS;
         }
         
