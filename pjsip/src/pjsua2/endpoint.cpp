@@ -1750,7 +1750,6 @@ void Endpoint::resetVideoCodecParam(const string &codec_id) throw(Error)
     
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, NULL));
 #else
-    PJ_UNUSED_ARG(codec_id);
-    PJ_UNUSED_ARG(param);
+    PJ_UNUSED_ARG(codec_id);    
 #endif	
 }
