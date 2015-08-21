@@ -47,12 +47,6 @@ using std::vector;
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Codec parameters, corresponds to pjmedia_codec_param or
- * pjmedia_vid_codec_param.
- */
-typedef void *CodecParam;
-
-/**
  * Media stream, corresponds to pjmedia_stream
  */
 typedef void *MediaStream;

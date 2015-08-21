@@ -1506,3 +1506,58 @@ void CodecInfo::fromPj(const pjsua_codec_info &codec_info)
     priority = codec_info.priority;
     desc = pj2Str(codec_info.desc);
 }
+
+void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
+{
+    dir = param.dir;
+    packing = param.packing;
+    ignoreFmtp = param.ignore_fmtp;
+    encMtu = param.enc_mtu;
+    encFmt.fromPj(param.enc_fmt);
+    decFmt.fromPj(param.dec_fmt);
+    setCodecFmtp(param.enc_fmtp, encFmtp);
+    setCodecFmtp(param.dec_fmtp, decFmtp);
+}
+
+pjmedia_vid_codec_param VidCodecParam::toPj() const
+{
+    pjmedia_vid_codec_param param;
+    pj_bzero(&param, sizeof(param));    
+    param.dir = dir;
+    param.packing = packing;
+    param.ignore_fmtp = ignoreFmtp;
+    param.enc_mtu = encMtu;
+    param.enc_fmt = encFmt.toPj();
+    param.dec_fmt = decFmt.toPj();
+    getCodecFmtp(encFmtp, param.enc_fmtp);    
+    getCodecFmtp(decFmtp, param.dec_fmtp);
+    return param;
+}
+
+void VidCodecParam::setCodecFmtp(const pjmedia_codec_fmtp &in_fmtp, 
+				 CodecFmtpVector &out_fmtp)
+{
+    unsigned i = 0;
+    for ( ; i<in_fmtp.cnt; ++i) {
+	CodecFmtp fmtp;
+	fmtp.name = pj2Str(in_fmtp.param[i].name);
+	fmtp.val = pj2Str(in_fmtp.param[i].val);
+
+	out_fmtp.push_back(fmtp);
+    }
+}
+
+void VidCodecParam::getCodecFmtp(const CodecFmtpVector &in_fmtp,
+				 pjmedia_codec_fmtp &out_fmtp) const
+{
+    CodecFmtpVector::const_iterator i;
+    out_fmtp.cnt = 0;    
+    for (i=in_fmtp.begin(); i!=in_fmtp.end();++i) {
+	if (out_fmtp.cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
+	    break;
+	}
+	out_fmtp.param[out_fmtp.cnt].name = str2Pj((*i).name);
+	out_fmtp.param[out_fmtp.cnt].val = str2Pj((*i).val);
+	++out_fmtp.cnt;
+    }
+}

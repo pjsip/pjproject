@@ -1941,10 +1941,63 @@ struct CodecInfo
 typedef std::vector<CodecInfo*> CodecInfoVector;
 
 /**
- * Codec parameters, corresponds to pjmedia_codec_param or
- * pjmedia_vid_codec_param.
+ * Codec parameters, corresponds to pjmedia_codec_param.
  */
 typedef void *CodecParam;
+
+/**
+ * Structure of codec specific parameters which contains name=value pairs.
+ * The codec specific parameters are to be used with SDP according to
+ * the standards (e.g: RFC 3555) in SDP 'a=fmtp' attribute.
+ */
+typedef struct CodecFmtp
+{
+    string name;
+    string val;
+} CodecFmtp;
+
+/** Array of codec fmtp */
+typedef std::vector<CodecFmtp> CodecFmtpVector;
+
+/**
+ * Detailed codec attributes used in configuring a codec and in querying
+ * the capability of codec factories. 
+ *
+ * Please note that codec parameter also contains SDP specific setting,
+ * #decFmtp and #encFmtp, which may need to be set appropriately based on
+ * the effective setting. See each codec documentation for more detail.
+ */
+struct VidCodecParam
+{
+    pjmedia_dir         dir;            /**< Direction                      */
+    pjmedia_vid_packing packing; 	/**< Packetization strategy.	    */
+
+    struct
+    MediaFormatVideo    encFmt;         /**< Encoded format	            */
+    CodecFmtpVector	encFmtp;        /**< Encoder fmtp params	    */
+    unsigned            encMtu;         /**< MTU or max payload size setting*/
+
+    struct
+    MediaFormatVideo    decFmt;         /**< Decoded format	            */
+    CodecFmtpVector	decFmtp;        /**< Decoder fmtp params	    */
+
+    bool		ignoreFmtp;	/**< Ignore fmtp params. If set to
+					     true, the codec will apply
+					     format settings specified in
+					     encFmt and decFmt only.	    */
+
+    void fromPj(const pjmedia_vid_codec_param &param);
+
+    pjmedia_vid_codec_param toPj() const;
+
+private:
+    void setCodecFmtp(const pjmedia_codec_fmtp &in_fmtp, 
+		      CodecFmtpVector &out_fmtp);
+
+    void getCodecFmtp(const CodecFmtpVector &in_fmtp,
+		      pjmedia_codec_fmtp &out_fmtp) const;
+
+};
 
 
 /**

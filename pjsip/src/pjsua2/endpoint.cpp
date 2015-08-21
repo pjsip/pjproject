@@ -1683,7 +1683,7 @@ void Endpoint::updateCodecInfoList(pjsua_codec_info pj_codec[], unsigned count,
 	CodecInfo *codec_info = new CodecInfo;
 
 	codec_info->fromPj(pj_codec[i]);
-	codecInfoList.push_back(codec_info);
+	codec_list.push_back(codec_info);
     }
     pj_leave_critical_section();
 }
@@ -1698,7 +1698,7 @@ const CodecInfoVector &Endpoint::videoCodecEnum() throw(Error)
 
     updateCodecInfoList(pj_codec, count, videoCodecInfoList);
 #endif
-    return codecInfoList;
+    return videoCodecInfoList;
 }
 
 void Endpoint::videoCodecSetPriority(const string &codec_id,
@@ -1713,31 +1713,44 @@ void Endpoint::videoCodecSetPriority(const string &codec_id,
 #endif
 }
 
-CodecParam Endpoint::videoCodecGetParam(const string &codec_id) const
-	   throw(Error)
-{
-    pjmedia_vid_codec_param *pj_param = NULL;
+VidCodecParam Endpoint::getVideoCodecParam(const string &codec_id) const 
+								   throw(Error)
+{    
+    VidCodecParam codec_param;
 #if PJSUA_HAS_VIDEO
-    pj_str_t codec_str = str2Pj(codec_id);
+    pjmedia_vid_codec_param pj_param;
+    pj_str_t codec_str = str2Pj(codec_id);    
 
-    PJSUA2_CHECK_EXPR(pjsua_vid_codec_get_param(&codec_str, pj_param));
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_get_param(&codec_str, &pj_param));
+    codec_param.fromPj(pj_param);
 #else
     PJ_UNUSED_ARG(codec_id);
 #endif
-    return pj_param;
+    return codec_param;
 }
 
-void Endpoint::videoCodecSetParam(const string &codec_id,
-				  const CodecParam param) throw(Error)
+void Endpoint::setVideoCodecParam(const string &codec_id,
+				  const VidCodecParam &param) throw(Error)
 {
 #if PJSUA_HAS_VIDEO
     pj_str_t codec_str = str2Pj(codec_id);
-    pjmedia_vid_codec_param *pj_param = (pjmedia_vid_codec_param*)param;
-
-    PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, pj_param));
+    pjmedia_vid_codec_param pj_param = param.toPj();
+    
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, &pj_param));
 #else
     PJ_UNUSED_ARG(codec_id);
     PJ_UNUSED_ARG(param);
 #endif
 }
 
+void Endpoint::resetVideoCodecParam(const string &codec_id) throw(Error)
+{
+#if PJSUA_HAS_VIDEO
+    pj_str_t codec_str = str2Pj(codec_id);    
+    
+    PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, NULL));
+#else
+    PJ_UNUSED_ARG(codec_id);
+    PJ_UNUSED_ARG(param);
+#endif	
+}

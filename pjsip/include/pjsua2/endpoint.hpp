@@ -1150,18 +1150,25 @@ public:
      *			will be thrown.
      *
      */
-    CodecParam videoCodecGetParam(const string &codec_id) const throw(Error);
+    VidCodecParam getVideoCodecParam(const string &codec_id) const throw(Error);
 
     /**
      * Set video codec parameters.
      *
      * @param codec_id	Codec ID.
-     * @param param	Codec parameter to set. Set to NULL to reset
-     *			codec parameter to library default settings.
+     * @param param	Codec parameter to set.
      *
      */
-    void videoCodecSetParam(const string &codec_id,
-			    const CodecParam param) throw(Error);
+    void setVideoCodecParam(const string &codec_id,
+			    const VidCodecParam &param) throw(Error);
+			    
+    /**
+     * Reset video codec parameters to library default settings.
+     *
+     * @param codec_id	Codec ID.
+     *
+     */
+    void resetVideoCodecParam(const string &codec_id) throw(Error);
 
 public:
     /*
