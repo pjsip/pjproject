@@ -3,14 +3,14 @@
   <ImportGroup Label="PropertySheets">
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
-    <VSVer>8</VSVer>
+    <VSVer>14</VSVer>
   </PropertyGroup>
   <PropertyGroup>
     <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
     <OutDir Condition="'$(TargetExt)'=='.lib'">..\lib\</OutDir>
-	<OutDir Condition="'$(TargetExt)'=='.exe'">..\bin\</OutDir>
-	<OutDir Condition="'$(TargetExt)'=='.dll'">..\lib\</OutDir>
-	<TargetName>$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>    
+    <OutDir Condition="'$(TargetExt)'=='.exe'">..\bin\</OutDir>
+    <OutDir Condition="'$(TargetExt)'=='.dll'">..\lib\</OutDir>
+    <TargetName>$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>
     <IntDir>.\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
