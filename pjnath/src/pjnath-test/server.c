@@ -424,7 +424,7 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
 	//pj_str_t ip_addr;
 	pj_stun_username_attr *uname;
 	pj_activesock_cb alloc_sock_cb;
-	turn_allocation *alloc;
+	///turn_allocation *alloc;
 
 	/* Must be Allocate request */
 	if (req->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {

@@ -1183,7 +1183,8 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 	    }
 	    /* Start keep-alive timer */
 	    if (pjsip_cfg()->tcp.keep_alive_interval) {
-		pj_time_val delay = {pjsip_cfg()->tcp.keep_alive_interval, 0};
+		pj_time_val delay = { 0 };
+		delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
 		pjsip_endpt_schedule_timer(listener->endpt, 
 					   &tcp->ka_timer, 
 					   &delay);
@@ -1542,7 +1543,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 
     /* Start keep-alive timer */
     if (pjsip_cfg()->tcp.keep_alive_interval) {
-	pj_time_val delay = { pjsip_cfg()->tcp.keep_alive_interval, 0 };
+	pj_time_val delay = { 0 };
+	delay.sec = pjsip_cfg()->tcp.keep_alive_interval;
 	pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
 				   &delay);
 	tcp->ka_timer.id = PJ_TRUE;

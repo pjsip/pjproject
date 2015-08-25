@@ -58,7 +58,8 @@ static int test_timer_heap(void)
     pj_pool_t *pool;
     pj_timer_heap_t *timer;
     pj_time_val delay;
-    pj_status_t rc;    int err=0;
+    pj_status_t status;
+    int err=0;
     pj_size_t size;
     unsigned count;
 
@@ -77,9 +78,9 @@ static int test_timer_heap(void)
     for (i=0; i<MAX_COUNT; ++i) {
 	entry[i].cb = &timer_callback;
     }
-    rc = pj_timer_heap_create(pool, MAX_COUNT, &timer);
-    if (rc != PJ_SUCCESS) {
-        app_perror("...error: unable to create timer heap", rc);
+    status = pj_timer_heap_create(pool, MAX_COUNT, &timer);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: unable to create timer heap", status);
 	return -30;
     }
 

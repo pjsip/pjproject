@@ -159,14 +159,14 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 
     pos = 0;
     for (;;) {
-	pj_size_t count;
+	pj_size_t count2;
 	
-	count = fread(in_frame.buf, encoded_frame_len, 1, fref);
-	if (count != 1)
+	count2 = fread(in_frame.buf, encoded_frame_len, 1, fref);
+	if (count2 != 1)
 	    break;
 
-	count = fread(out_frame.buf, encoded_frame_len, 1, output);
-	if (count != 1)
+	count2 = fread(out_frame.buf, encoded_frame_len, 1, output);
+	if (count2 != 1)
 	    break;
 
 	if (memcmp(in_frame.buf, out_frame.buf, encoded_frame_len)) {
@@ -380,7 +380,7 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
     for (;;) {
 	pjmedia_frame in_frame[2];
 	pj_timestamp ts;
-	unsigned count;
+	unsigned count2;
 	pj_bool_t has_frame;
 
 	if (is_itu_format) {
@@ -401,15 +401,15 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 	}
 
 	if (has_frame) {
-	    count = 2;
+	    count2 = 2;
 	    if (pjmedia_codec_parse(codec, pkt, encoded_len, &ts, 
-				    &count, in_frame) != PJ_SUCCESS) 
+				    &count2, in_frame) != PJ_SUCCESS) 
 	    {
 		rc = -100;
 		goto on_return;
 	    }
 
-	    if (count != 1) {
+	    if (count2 != 1) {
 		rc = -110;
 		goto on_return;
 	    }
@@ -459,14 +459,14 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
     pos = 0;
     for (;;) {
-	pj_size_t count;
+	pj_size_t count2;
 	
-	count = fread(pkt, samples_per_frame*2, 1, fref);
-	if (count != 1)
+	count2 = fread(pkt, samples_per_frame*2, 1, fref);
+	if (count2 != 1)
 	    break;
 
-	count = fread(out_frame.buf, samples_per_frame*2, 1, output);
-	if (count != 1)
+	count2 = fread(out_frame.buf, samples_per_frame*2, 1, output);
+	if (count2 != 1)
 	    break;
 
 	if (memcmp(pkt, out_frame.buf, samples_per_frame*2)) {

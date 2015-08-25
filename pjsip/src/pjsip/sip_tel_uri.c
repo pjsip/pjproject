@@ -399,7 +399,6 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     /* Get all parameters. */
     if (parse_params && *scanner->curptr==';') {
 	pj_str_t pname, pvalue;
-	const pjsip_parser_const_t *pc = pjsip_parser_const();
 
 	do {
 	    /* Eat the ';' separator. */

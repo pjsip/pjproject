@@ -1748,9 +1748,9 @@ static pj_status_t cmd_transfer_call(pj_cli_cmd_val *cval)
 		pjsua_call_xfer( current_call, &binfo.uri, &msg_data);
 	    }
 	} else if (result.uri_result) {
-	    pj_str_t tmp;
-	    tmp = pj_str(result.uri_result);
-	    pjsua_call_xfer( current_call, &tmp, &msg_data);
+	    pj_str_t tmp2;
+	    tmp2 = pj_str(result.uri_result);
+	    pjsua_call_xfer( current_call, &tmp2, &msg_data);
 	}
     }
     return PJ_SUCCESS;
@@ -1768,7 +1768,7 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 	pj_str_t STR_FALSE = { "false", 5 };
 	pjsua_call_id ids[PJSUA_MAX_CALLS];
-	pjsua_msg_data msg_data;
+	pjsua_msg_data msg_data_;
 	char buf[8] = {0};
 	pj_str_t tmp = pj_str(buf);
 	unsigned count;
@@ -1822,17 +1822,17 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	    return PJ_SUCCESS;
 	}
 
-	pjsua_msg_data_init(&msg_data);
+	pjsua_msg_data_init(&msg_data_);
 	if (app_config.no_refersub) {
 	    /* Add Refer-Sub: false in outgoing REFER request */
 	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
 					   &STR_FALSE);
-	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+	    pj_list_push_back(&msg_data_.hdr_list, &refer_sub);
 	}
 
 	pjsua_call_xfer_replaces(call, dst_call,
 				 PJSUA_XFER_NO_REQUIRE_REPLACES,
-				 &msg_data);
+				 &msg_data_);
     }
     return PJ_SUCCESS;
 }
@@ -2661,7 +2661,7 @@ static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
-static pj_status_t add_call_command(pj_cli_t *cli)
+static pj_status_t add_call_command(pj_cli_t *c)
 {
     char* call_command =
 	"<CMD name='call' id='100' desc='Call related commands'>"
@@ -2733,12 +2733,12 @@ static pj_status_t add_call_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(call_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_call_handler,
 				   NULL, get_choice_value);
 }
 
-static pj_status_t add_presence_command(pj_cli_t *cli)
+static pj_status_t add_presence_command(pj_cli_t *c)
 {
     char* presence_command =
 	"<CMD name='im' id='200' desc='IM and Presence Commands'>"
@@ -2789,12 +2789,12 @@ static pj_status_t add_presence_command(pj_cli_t *cli)
 
     pj_str_t xml = pj_str(presence_command);
 
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_presence_handler,
 				   NULL, get_choice_value);
 }
 
-static pj_status_t add_account_command(pj_cli_t *cli)
+static pj_status_t add_account_command(pj_cli_t *c)
 {
     char* account_command =
 	"<CMD name='acc' id='300' desc='Account commands'>"
@@ -2834,12 +2834,12 @@ static pj_status_t add_account_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(account_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_account_handler,
 				   NULL, get_choice_value);
 }
 
-static pj_status_t add_media_command(pj_cli_t *cli)
+static pj_status_t add_media_command(pj_cli_t *c)
 {
     char* media_command =
 	"<CMD name='audio' id='400' desc='Conference and Media commands'>"
@@ -2869,12 +2869,12 @@ static pj_status_t add_media_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(media_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_media_handler,
 				   NULL, get_choice_value);
 }
 
-static pj_status_t add_config_command(pj_cli_t *cli)
+static pj_status_t add_config_command(pj_cli_t *c)
 {
     char* config_command =
 	"<CMD name='stat' id='500' desc='Status and config commands'>"
@@ -2890,7 +2890,7 @@ static pj_status_t add_config_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(config_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_config_handler,
 				   NULL, get_choice_value);
 }
@@ -3041,7 +3041,7 @@ static pj_status_t add_video_command(pj_cli_t *cli)
 }
 #endif
 
-static pj_status_t add_other_command(pj_cli_t *cli)
+static pj_status_t add_other_command(pj_cli_t *c)
 {
     char* sleep_command =
 	"<CMD name='sleep' id='700' desc='Suspend keyboard input'>"
@@ -3068,63 +3068,63 @@ static pj_status_t add_other_command(pj_cli_t *cli)
     pj_str_t shutdown_xml = pj_str(shutdown_command);
     pj_str_t restart_xml = pj_str(restart_command);
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL,
+    status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &sleep_xml, cmd_sleep_handler,
 				     NULL, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL,
+    status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &network_xml, cmd_network_handler,
 				     NULL, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL,
+    status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &shutdown_xml, cmd_quit_handler,
 				     NULL, NULL);
 
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_cli_add_cmd_from_xml(cli, NULL,
+    status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &restart_xml, cmd_restart_handler,
 				     NULL, NULL);
 
     return status;
 }
 
-pj_status_t cli_setup_command(pj_cli_t *cli)
+pj_status_t cli_setup_command(pj_cli_t *c)
 {
     pj_status_t status;
 
-    status = add_call_command(cli);
+    status = add_call_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = add_presence_command(cli);
+    status = add_presence_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = add_account_command(cli);
+    status = add_account_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = add_media_command(cli);
+    status = add_media_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = add_config_command(cli);
+    status = add_config_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 
 #if PJSUA_HAS_VIDEO
-    status = add_video_command(cli);
+    status = add_video_command(c);
     if (status != PJ_SUCCESS)
 	return status;
 #endif
 
-    status = add_other_command(cli);
+    status = add_other_command(c);
 
     return status;
 }

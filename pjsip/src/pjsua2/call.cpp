@@ -152,9 +152,9 @@ public:
 };
 
 
-void CallAudioMedia::setPortId(int id)
+void CallAudioMedia::setPortId(int pid)
 {
-    this->id = id;
+    this->id = pid;
 }
 
 CallOpParam::CallOpParam(bool useDefaultCallSetting)

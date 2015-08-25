@@ -84,9 +84,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
             return;
 
         if (bytes_read < 0) {
-            pj_status_t rc = (pj_status_t)-bytes_read;
             char errmsg[PJ_ERR_MSG_SIZE];
 
+	    rc = (pj_status_t)-bytes_read;
 	    if (rc != last_error) {
 	        //last_error = rc;
 	        pj_strerror(rc, errmsg, sizeof(errmsg));

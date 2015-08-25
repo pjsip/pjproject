@@ -906,7 +906,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
      */
     if (ua_cfg->nameserver_count) {
 #if PJSIP_HAS_RESOLVER
-	unsigned i;
+	unsigned ii;
 
 	/* Create DNS resolver */
 	status = pjsip_endpt_create_resolver(pjsua_var.endpt, 
@@ -933,10 +933,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	}
 
 	/* Print nameservers */
-	for (i=0; i<ua_cfg->nameserver_count; ++i) {
+	for (ii=0; ii<ua_cfg->nameserver_count; ++ii) {
 	    PJ_LOG(4,(THIS_FILE, "Nameserver %.*s added",
-		      (int)ua_cfg->nameserver[i].slen,
-		      ua_cfg->nameserver[i].ptr));
+		      (int)ua_cfg->nameserver[ii].slen,
+		      ua_cfg->nameserver[ii].ptr));
 	}
 #else
 	PJ_LOG(2,(THIS_FILE, 
@@ -1099,14 +1099,14 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
     /* Start worker thread if needed. */
     if (pjsua_var.ua_cfg.thread_cnt) {
-	unsigned i;
+	unsigned ii;
 
 	if (pjsua_var.ua_cfg.thread_cnt > PJ_ARRAY_SIZE(pjsua_var.thread))
 	    pjsua_var.ua_cfg.thread_cnt = PJ_ARRAY_SIZE(pjsua_var.thread);
 
-	for (i=0; i<pjsua_var.ua_cfg.thread_cnt; ++i) {
+	for (ii=0; ii<pjsua_var.ua_cfg.thread_cnt; ++ii) {
 	    status = pj_thread_create(pjsua_var.pool, "pjsua", &worker_thread,
-				      NULL, 0, 0, &pjsua_var.thread[i]);
+				      NULL, 0, 0, &pjsua_var.thread[ii]);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}

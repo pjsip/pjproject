@@ -261,7 +261,7 @@ static void send_response( pjsip_rx_data *rdata,
 
 /* Schedule timer to send response for the specified UAS transaction */
 static void schedule_send_response( pjsip_rx_data *rdata,
-				    const pj_str_t *tsx_key,
+				    const pj_str_t *tsx_key_,
 				    int status_code,
 				    int msec_delay )
 {
@@ -280,7 +280,7 @@ static void schedule_send_response( pjsip_rx_data *rdata,
     }
 
     r = PJ_POOL_ALLOC_T(tdata->pool, struct response);
-    pj_strdup(tdata->pool, &r->tsx_key, tsx_key);
+    pj_strdup(tdata->pool, &r->tsx_key, tsx_key_);
     r->tdata = tdata;
 
     delay.sec = 0;

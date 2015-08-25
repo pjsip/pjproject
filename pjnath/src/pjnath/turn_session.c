@@ -1291,7 +1291,6 @@ static void on_allocate_success(pj_turn_session *sess,
     const pj_stun_xor_relayed_addr_attr *raddr_attr;
     const pj_stun_sockaddr_attr *mapped_attr;
     pj_str_t s;
-    pj_time_val timeout;
 
     /* Must have LIFETIME attribute */
     lf_attr = (const pj_stun_lifetime_attr*)
@@ -1396,6 +1395,7 @@ static void on_allocate_success(pj_turn_session *sess,
 
     /* Start keep-alive timer once allocation succeeds */
     if (sess->state < PJ_TURN_STATE_DEALLOCATING) {
+	pj_time_val timeout;
 	timeout.sec = sess->ka_interval;
 	timeout.msec = 0;
 
@@ -1771,14 +1771,14 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
 	ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
 
 	if (bind_channel) {
-	    pj_uint32_t hval = 0;
+	    pj_uint32_t hval2 = 0;
 	    /* Register by channel number */
 	    pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound);
 
 	    if (pj_hash_get(sess->ch_table, &ch->num, 
-			    sizeof(ch->num), &hval)==0) {
+			    sizeof(ch->num), &hval2)==0) {
 		pj_hash_set(sess->pool, sess->ch_table, &ch->num,
-			    sizeof(ch->num), hval, ch);
+			    sizeof(ch->num), hval2, ch);
 	    }
 	}
     }

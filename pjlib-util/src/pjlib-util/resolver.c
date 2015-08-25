@@ -1633,7 +1633,6 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 
     PJ_LOG(3,(resolver->name.ptr, "  Name servers:"));
     for (i=0; i<resolver->ns_count; ++i) {
-	const char *state_names[] = { "probing", "active", "bad"};
 	struct nameserver *ns = &resolver->ns[i];
 
 	PJ_LOG(3,(resolver->name.ptr,

@@ -2536,7 +2536,6 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 				     &tdata);
 
 	if (0 && status == PJ_SUCCESS && pjsua_var.acc[acc_id].cred_cnt) {
-	    pjsua_acc *acc = &pjsua_var.acc[acc_id];
 	    pjsip_authorization_hdr *h;
 	    char *uri;
 	    int d;

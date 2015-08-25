@@ -4510,12 +4510,12 @@ static void on_call_transferred( pjsip_inv_session *inv,
 	/*
 	 * Always answer with 2xx.
 	 */
-	pjsip_tx_data *tdata;
+	pjsip_tx_data *tdata2;
 	const pj_str_t str_false = { "false", 5};
 	pjsip_hdr *hdr;
 
 	status = pjsip_dlg_create_response(inv->dlg, rdata, code, NULL,
-					   &tdata);
+					   &tdata2);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);
@@ -4524,14 +4524,14 @@ static void on_call_transferred( pjsip_inv_session *inv,
 
 	/* Add Refer-Sub header */
 	hdr = (pjsip_hdr*)
-	       pjsip_generic_string_hdr_create(tdata->pool, &str_refer_sub,
+	       pjsip_generic_string_hdr_create(tdata2->pool, &str_refer_sub,
 					      &str_false);
-	pjsip_msg_add_hdr(tdata->msg, hdr);
+	pjsip_msg_add_hdr(tdata2->msg, hdr);
 
 
 	/* Send answer */
 	status = pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata),
-					 tdata);
+					 tdata2);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);

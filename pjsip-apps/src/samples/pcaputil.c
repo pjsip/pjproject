@@ -371,8 +371,6 @@ static void pcap2wav(const pj_str_t *codec,
 	/* Decode and write to WAV file */
 	samples_cnt = 0;
 	for (i=0; i<frame_cnt; ++i) {
-	    pjmedia_frame pcm_frame;
-
 	    pcm_frame.buf = pcm;
 	    pcm_frame.size = samples_per_frame * 2;
 

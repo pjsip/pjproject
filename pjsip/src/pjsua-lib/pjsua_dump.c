@@ -371,10 +371,6 @@ static void dump_media_session(const char *indent,
 
 	/* Get and ICE SRTP status */
 	if (call_med->tp) {
-	    pjmedia_transport_info tp_info;
-
-	    pjmedia_transport_info_init(&tp_info);
-	    pjmedia_transport_get_info(call_med->tp, &tp_info);
 	    if (tp_info.specific_info_cnt > 0) {
 		unsigned j;
 		for (j = 0; j < tp_info.specific_info_cnt; ++j) {

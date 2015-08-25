@@ -98,11 +98,11 @@ static int pjlib_error(pj_status_t code, char *buf, pj_size_t size)
 
     for (i=0; i<sizeof(err_str)/sizeof(err_str[0]); ++i) {
         if (err_str[i].code == code) {
-            pj_size_t len = strlen(err_str[i].msg);
-            if (len >= size) len = size-1;
-            pj_memcpy(buf, err_str[i].msg, len);
-            buf[len] = '\0';
-            return (int)len;
+            pj_size_t len2 = pj_ansi_strlen(err_str[i].msg);
+            if (len2 >= size) len2 = size-1;
+            pj_memcpy(buf, err_str[i].msg, len2);
+            buf[len2] = '\0';
+            return (int)len2;
         }
     }
 #endif

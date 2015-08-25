@@ -115,7 +115,7 @@ static int server_thread(void *p)
 	if (srv->action == ACTION_IGNORE) {
 	    continue;
 	} else if (srv->action == ACTION_REPLY) {
-            pj_size_t send_size = 0;
+            pj_size_t send_len = 0;
 	    unsigned ctr = 0;
             pj_ansi_sprintf(pkt, "HTTP/1.0 200 OK\r\n");
             if (srv->send_content_length) {
@@ -130,11 +130,11 @@ static int server_thread(void *p)
         	pj_sock_close(newsock);
         	continue;
             }
-            while (send_size < srv->data_size) {
-                pkt_len = srv->data_size - send_size;
+            while (send_len < srv->data_size) {
+                pkt_len = srv->data_size - send_len;
                 if (pkt_len > (signed)srv->buf_size)
                     pkt_len = srv->buf_size;
-                send_size += pkt_len;
+		send_len += pkt_len;
                 pj_create_random_string(pkt, pkt_len);
                 pj_ansi_sprintf(pkt, "\nPacket: %d", ++ctr);
                 pkt[pj_ansi_strlen(pkt)] = '\n';
@@ -418,12 +418,12 @@ int http_client_test1()
         return -43;
 
     {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	pj_sockaddr_in addr2;
+	int addr_len = sizeof(addr2);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
 	if (sstatus != PJ_SUCCESS)
 	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr);
+	g_server.port = pj_sockaddr_in_get_port(&addr2);
 	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
 			 "http://127.0.0.1:%d/about-us/",
 			 g_server.port);
@@ -530,12 +530,12 @@ int http_client_test2()
         return -43;
 
     {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	pj_sockaddr_in addr2;
+	int addr_len = sizeof(addr2);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
 	if (sstatus != PJ_SUCCESS)
 	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr);
+	g_server.port = pj_sockaddr_in_get_port(&addr2);
 	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
 			 "http://127.0.0.1:%d",
 			 g_server.port);
@@ -659,12 +659,12 @@ int http_client_test_put1()
         return -43;
 
     {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	pj_sockaddr_in addr2;
+	int addr_len = sizeof(addr2);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
 	if (sstatus != PJ_SUCCESS)
 	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr);
+	g_server.port = pj_sockaddr_in_get_port(&addr2);
 	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
 			 "http://127.0.0.1:%d/test/test.txt",
 			 g_server.port);
@@ -762,12 +762,12 @@ int http_client_test_put2()
         return -43;
 
     {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	pj_sockaddr_in addr2;
+	int addr_len = sizeof(addr2);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
 	if (sstatus != PJ_SUCCESS)
 	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr);
+	g_server.port = pj_sockaddr_in_get_port(&addr2);
 	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
 			 "http://127.0.0.1:%d/test/test2.txt",
 			 g_server.port);
@@ -857,12 +857,12 @@ int http_client_test_delete()
         return -43;
 
     {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
-	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	pj_sockaddr_in addr2;
+	int addr_len = sizeof(addr2);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr2, &addr_len);
 	if (sstatus != PJ_SUCCESS)
 	    return -44;
-	g_server.port = pj_sockaddr_in_get_port(&addr);
+	g_server.port = pj_sockaddr_in_get_port(&addr2);
 	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
 			 "http://127.0.0.1:%d/test/test2.txt",
 			 g_server.port);

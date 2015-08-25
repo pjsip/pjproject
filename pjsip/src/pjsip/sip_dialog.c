@@ -242,25 +242,25 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 	pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)
 				 pjsip_uri_get_uri(dlg->remote.info->uri);
 	if (!pj_list_empty(&sip_uri->header_param)) {
-	    pj_str_t tmp;
+	    pj_str_t tmp2;
 
 	    /* Remove all header param */
 	    pj_list_init(&sip_uri->header_param);
 
 	    /* Print URI */
-	    tmp.ptr = (char*) pj_pool_alloc(dlg->pool,
+	    tmp2.ptr = (char*) pj_pool_alloc(dlg->pool,
 	    				    dlg->remote.info_str.slen);
-	    tmp.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
-				       sip_uri, tmp.ptr,
+	    tmp2.slen = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+				       sip_uri, tmp2.ptr,
 				       dlg->remote.info_str.slen);
 
-	    if (tmp.slen < 1) {
+	    if (tmp2.slen < 1) {
 		status = PJSIP_EURITOOLONG;
 		goto on_error;
 	    }
 
 	    /* Assign remote.info_str */
-	    dlg->remote.info_str = tmp;
+	    dlg->remote.info_str = tmp2;
 	}
     }
 
@@ -391,12 +391,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
      *  MUST be a SIPS URI.
      */
     if (contact) {
-	pj_str_t tmp;
+	pj_str_t tmp2;
 
-	pj_strdup_with_null(dlg->pool, &tmp, contact);
+	pj_strdup_with_null(dlg->pool, &tmp2, contact);
 	dlg->local.contact = (pjsip_contact_hdr*)
-			     pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr,
-					     tmp.slen, NULL);
+			     pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp2.ptr,
+					     tmp2.slen, NULL);
 	if (!dlg->local.contact) {
 	    status = PJSIP_EINVALIDURI;
 	    goto on_error;

@@ -47,14 +47,14 @@ static int pool_test_pool()
 	return -1;
 
     for (i=0; i<COUNT; ++i) {
-	char *p;
-	if ( (p=(char*)pj_pool_alloc(pool, sizes[i])) == NULL) {
+	char *ptr;
+	if ( (ptr=(char*)pj_pool_alloc(pool, sizes[i])) == NULL) {
 	    PJ_LOG(3,(THIS_FILE,"   error: pool failed to allocate %d bytes",
 		      sizes[i]));
 	    pj_pool_release(pool);
 	    return -1;
 	}
-	*p = '\0';
+	*ptr = '\0';
     }
 
     pj_pool_release(pool);

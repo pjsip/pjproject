@@ -606,7 +606,7 @@ on_error:
 static void ui_make_new_call()
 {
     char buf[128];
-    pjsua_msg_data msg_data;
+    pjsua_msg_data msg_data_;
     input_result result;
     pj_str_t tmp;
 
@@ -631,10 +631,10 @@ static void ui_make_new_call()
 	tmp.slen = 0;
     }
 
-    pjsua_msg_data_init(&msg_data);
-    TEST_MULTIPART(&msg_data);
+    pjsua_msg_data_init(&msg_data_);
+    TEST_MULTIPART(&msg_data_);
     pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
-			 &msg_data, &current_call);
+			 &msg_data_, &current_call);
 }
 
 static void ui_make_multi_call()
@@ -757,7 +757,7 @@ static void ui_answer_call()
 {
     pjsua_call_info call_info;
     char buf[128];
-    pjsua_msg_data msg_data;
+    pjsua_msg_data msg_data_;
 
     if (current_call != -1) {
 	pjsua_call_get_info(current_call, &call_info);
@@ -789,7 +789,7 @@ static void ui_answer_call()
 	if (st_code < 100)
 	    return;
 
-	pjsua_msg_data_init(&msg_data);
+	pjsua_msg_data_init(&msg_data_);
 
 	if (st_code/100 == 3) {
 	    if (!simple_input("Enter URL to be put in Contact",
@@ -798,7 +798,7 @@ static void ui_answer_call()
 	    hvalue = pj_str(contact);
 	    pjsip_generic_string_hdr_init2(&hcontact, &hname, &hvalue);
 
-	    pj_list_push_back(&msg_data.hdr_list, &hcontact);
+	    pj_list_push_back(&msg_data_.hdr_list, &hcontact);
 	}
 
 	/*
@@ -812,7 +812,7 @@ static void ui_answer_call()
 	    return;
 	}
 
-	pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data);
+	pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data_);
     }
 }
 
@@ -1079,7 +1079,7 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 	pj_str_t STR_FALSE = { "false", 5 };
 	pjsua_call_info ci;
 	input_result result;
-	pjsua_msg_data msg_data;
+	pjsua_msg_data msg_data_;
 
 	pjsua_call_get_info(current_call, &ci);
 	printf("Transferring current call [%d] %.*s\n", current_call,
@@ -1094,12 +1094,12 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 	    return;
 	}
 
-	pjsua_msg_data_init(&msg_data);
+	pjsua_msg_data_init(&msg_data_);
 	if (no_refersub) {
 	    /* Add Refer-Sub: false in outgoing REFER request */
 	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
 		&STR_FALSE);
-	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+	    pj_list_push_back(&msg_data_.hdr_list, &refer_sub);
 	}
 	if (result.nb_result != PJSUA_APP_NO_NB) {
 	    if (result.nb_result == -1 || result.nb_result == 0) {
@@ -1107,13 +1107,13 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 	    } else {
 		pjsua_buddy_info binfo;
 		pjsua_buddy_get_info(result.nb_result-1, &binfo);
-		pjsua_call_xfer( current_call, &binfo.uri, &msg_data);
+		pjsua_call_xfer( current_call, &binfo.uri, &msg_data_);
 	    }
 
 	} else if (result.uri_result) {
 	    pj_str_t tmp;
 	    tmp = pj_str(result.uri_result);
-	    pjsua_call_xfer( current_call, &tmp, &msg_data);
+	    pjsua_call_xfer( current_call, &tmp, &msg_data_);
 	}
     }
 }
@@ -1130,7 +1130,7 @@ static void ui_call_transfer_replaces(pj_bool_t no_refersub)
 	pj_str_t STR_FALSE = { "false", 5 };
 	pjsua_call_id ids[PJSUA_MAX_CALLS];
 	pjsua_call_info ci;
-	pjsua_msg_data msg_data;
+	pjsua_msg_data msg_data_;
 	char buf[128];
 	unsigned i, count;
 
@@ -1189,17 +1189,17 @@ static void ui_call_transfer_replaces(pj_bool_t no_refersub)
 	    return;
 	}
 
-	pjsua_msg_data_init(&msg_data);
+	pjsua_msg_data_init(&msg_data_);
 	if (no_refersub) {
 	    /* Add Refer-Sub: false in outgoing REFER request */
 	    pjsip_generic_string_hdr_init2(&refer_sub, &STR_REFER_SUB,
 					   &STR_FALSE);
-	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
+	    pj_list_push_back(&msg_data_.hdr_list, &refer_sub);
 	}
 
 	pjsua_call_xfer_replaces(call, dst_call,
 				 PJSUA_XFER_NO_REQUIRE_REPLACES,
-				 &msg_data);
+				 &msg_data_);
     }
 }
 
@@ -1262,19 +1262,19 @@ static void ui_send_dtmf_info()
 	digits = pj_str(buf);
 	for (i=0; i<digits.slen; ++i) {
 	    char body[80];
-	    pjsua_msg_data msg_data;
+	    pjsua_msg_data msg_data_;
 
 	    pjsua_msg_data_init(&msg_data);
-	    msg_data.content_type = pj_str("application/dtmf-relay");
+	    msg_data_.content_type = pj_str("application/dtmf-relay");
 
 	    pj_ansi_snprintf(body, sizeof(body),
 		"Signal=%c\r\n"
 		"Duration=160",
 		buf[i]);
-	    msg_data.msg_body = pj_str(body);
+	    msg_data_.msg_body = pj_str(body);
 
 	    status = pjsua_call_send_request(current_call, &SIP_INFO,
-		&msg_data);
+					     &msg_data_);
 	    if (status != PJ_SUCCESS) {
 		return;
 	    }

@@ -43,11 +43,11 @@ static FILE *f = NULL;
 //#define VERBOSE
 #define THIS_FILE	    "http_demo"
 
-static void on_response(pj_http_req *http_req, const pj_http_resp *resp)
+static void on_response(pj_http_req *req, const pj_http_resp *resp)
 {
     unsigned i;
 
-    PJ_UNUSED_ARG(http_req);
+    PJ_UNUSED_ARG(req);
     PJ_LOG(3,(THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
 				           resp->status_code,
 				           (int)resp->reason.slen, resp->reason.ptr));
@@ -65,9 +65,9 @@ static void on_response(pj_http_req *http_req, const pj_http_resp *resp)
     }
 }
 
-static void on_send_data(pj_http_req *http_req, void **data, pj_size_t *size)
+static void on_send_data(pj_http_req *req, void **data, pj_size_t *size)
 {
-	PJ_UNUSED_ARG(http_req);
+	PJ_UNUSED_ARG(req);
 	PJ_UNUSED_ARG(size);
 	PJ_UNUSED_ARG(data);
 }

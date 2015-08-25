@@ -665,16 +665,16 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    {
 		/* Fade in */
 		short *samp = (dst - cnt);
-		short *end;
+		short *samp_end;
 
 		if (cnt > tonegen->fade_in_len)
 		    cnt = tonegen->fade_in_len;
-		end = samp + cnt;
+		samp_end = samp + cnt;
 		if (cnt) {
 		    const unsigned step = 0xFFFF / cnt;
 		    unsigned scale = 0;
 
-		    for (; samp < end; ++samp) {
+		    for (; samp < samp_end; ++samp) {
 			(*samp) = (short)(((*samp) * scale) >> 16);
 			scale += step;
 		    }

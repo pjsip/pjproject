@@ -439,12 +439,12 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 	} else {
 	    if (acc->cfg.allow_sdp_nat_rewrite && acc->reg_mapped_addr.slen) {
-		pj_status_t status;
+		pj_status_t status2;
 
 		/* Take the address from mapped addr as seen by registrar */
-		status = pj_sockaddr_set_str_addr(af, &bound_addr,
-		                                  &acc->reg_mapped_addr);
-		if (status != PJ_SUCCESS) {
+		status2 = pj_sockaddr_set_str_addr(af, &bound_addr,
+		                                   &acc->reg_mapped_addr);
+		if (status2 != PJ_SUCCESS) {
 		    /* just leave bound_addr with whatever it was
 		    pj_bzero(pj_sockaddr_get_addr(&bound_addr),
 		             pj_sockaddr_get_addr_len(&bound_addr));

@@ -173,25 +173,25 @@ static void add_dns_entries(pj_dns_resolver *resv)
      * Sample of invalid SRV records: _sip._udp.sip01.example.com.
      */
     for (i=0; i<PJ_ARRAY_SIZE(ans); ++i) {
-	pj_dns_parsed_query q;
+	pj_dns_parsed_query q2;
 	char buf[128];
 	char *services[] = { "_sip._udp.", "_sip._tcp.", "_sips._tcp."};
 	unsigned j;
 
 	for (j=0; j<PJ_ARRAY_SIZE(services); ++j) {
-	    q.dnsclass = PJ_DNS_CLASS_IN;
-	    q.type = PJ_DNS_TYPE_SRV;
+	    q2.dnsclass = PJ_DNS_CLASS_IN;
+	    q2.type = PJ_DNS_TYPE_SRV;
 
-	    q.name.ptr = buf;
+	    q2.name.ptr = buf;
 	    pj_bzero(buf, sizeof(buf));
-	    pj_strcpy2(&q.name, services[j]);
-	    pj_strcat(&q.name, &ans[i].rdata.srv.target);
+	    pj_strcpy2(&q2.name, services[j]);
+	    pj_strcat(&q2.name, &ans[i].rdata.srv.target);
 
 	    pj_bzero(&pkt, sizeof(pkt));
 	    pkt.hdr.qdcount = 1;
 	    pkt.hdr.flags = PJ_DNS_SET_QR(1) |
 			    PJ_DNS_SET_RCODE(PJ_DNS_RCODE_NXDOMAIN);
-	    pkt.q = &q;
+	    pkt.q = &q2;
 	    
 	    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
 	}
@@ -406,10 +406,10 @@ static int round_robin_test(pj_pool_t *pool)
 	pjsip_endpt_resolve(endpt, pool, &dest, &result, &cb);
 
 	while (result.status == 0x12345678) {
-	    int i = 0;
+	    int ii = 0;
 	    pj_time_val timeout = { 1, 0 };
 	    pjsip_endpt_handle_events(endpt, &timeout);
-	    if (i == 1)
+	    if (ii == 1)
 		pj_dns_resolver_dump(pjsip_endpt_get_resolver(endpt), PJ_TRUE);
 	}
 

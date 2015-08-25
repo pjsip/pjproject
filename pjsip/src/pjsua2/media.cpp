@@ -1511,7 +1511,7 @@ void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
 {
     dir = param.dir;
     packing = param.packing;
-    ignoreFmtp = param.ignore_fmtp;
+    ignoreFmtp = param.ignore_fmtp != PJ_FALSE;
     encMtu = param.enc_mtu;
     encFmt.fromPj(param.enc_fmt);
     decFmt.fromPj(param.dec_fmt);

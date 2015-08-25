@@ -247,7 +247,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
     } else {
 	/* This is CANCEL request */
 	pjsip_transaction *invite_uas;
-	struct uas_data *uas_data;
+	struct uas_data *uas_data2;
 	pj_str_t key;
 	
 	/* Find the UAS INVITE transaction */
@@ -269,17 +269,17 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
 	 * The UAS INVITE transaction will get final response when
 	 * we receive final response from the UAC INVITE transaction.
 	 */
-	uas_data = (struct uas_data*) invite_uas->mod_data[mod_tu.id];
-	if (uas_data->uac_tsx && uas_data->uac_tsx->status_code < 200) {
+	uas_data2 = (struct uas_data*) invite_uas->mod_data[mod_tu.id];
+	if (uas_data2->uac_tsx && uas_data2->uac_tsx->status_code < 200) {
 	    pjsip_tx_data *cancel;
 
-	    pj_grp_lock_acquire(uas_data->uac_tsx->grp_lock);
+	    pj_grp_lock_acquire(uas_data2->uac_tsx->grp_lock);
 
-	    pjsip_endpt_create_cancel(global.endpt, uas_data->uac_tsx->last_tx,
+	    pjsip_endpt_create_cancel(global.endpt, uas_data2->uac_tsx->last_tx,
 				      &cancel);
 	    pjsip_endpt_send_request(global.endpt, cancel, -1, NULL, NULL);
 
-	    pj_grp_lock_release(uas_data->uac_tsx->grp_lock);
+	    pj_grp_lock_release(uas_data2->uac_tsx->grp_lock);
 	}
 
 	/* Unlock UAS tsx because it is locked in find_tsx() */

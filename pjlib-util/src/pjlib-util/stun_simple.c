@@ -49,8 +49,8 @@ PJ_DEF(pj_status_t) pjstun_create_bind_req( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t len, 
-				       pjstun_msg *msg)
+PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t buf_len, 
+				      pjstun_msg *msg)
 {
     pj_uint16_t msg_type, msg_len;
     char *p_attr;
@@ -74,9 +74,9 @@ PJ_DEF(pj_status_t) pjstun_parse_msg( void *buf, pj_size_t len,
     }
 
     msg_len = pj_ntohs(msg->hdr->length);
-    if (msg_len != len - sizeof(pjstun_msg_hdr)) {
+    if (msg_len != buf_len - sizeof(pjstun_msg_hdr)) {
 	PJ_LOG(4,(THIS_FILE, "Error: invalid msg_len %d (expecting %d)", 
-			     msg_len, len - sizeof(pjstun_msg_hdr)));
+			     msg_len, buf_len - sizeof(pjstun_msg_hdr)));
 	return PJLIB_UTIL_ESTUNINMSGLEN;
     }
 

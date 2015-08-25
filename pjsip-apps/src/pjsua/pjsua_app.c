@@ -138,7 +138,7 @@ static void call_timeout_callback(pj_timer_heap_t *timer_heap,
 				  struct pj_timer_entry *entry)
 {
     pjsua_call_id call_id = entry->id;
-    pjsua_msg_data msg_data;
+    pjsua_msg_data msg_data_;
     pjsip_generic_string_hdr warn;
     pj_str_t hname = pj_str("Warning");
     pj_str_t hvalue = pj_str("399 pjsua \"Call duration exceeded\"");
@@ -151,16 +151,16 @@ static void call_timeout_callback(pj_timer_heap_t *timer_heap,
     }
     
     /* Add warning header */
-    pjsua_msg_data_init(&msg_data);
+    pjsua_msg_data_init(&msg_data_);
     pjsip_generic_string_hdr_init2(&warn, &hname, &hvalue);
-    pj_list_push_back(&msg_data.hdr_list, &warn);
+    pj_list_push_back(&msg_data_.hdr_list, &warn);
 
     /* Call duration has been exceeded; disconnect the call */
     PJ_LOG(3,(THIS_FILE, "Duration (%d seconds) has been exceeded "
 			 "for call %d, disconnecting the call",
 			 app_config.duration, call_id));
     entry->id = PJSUA_INVALID_ID;
-    pjsua_call_hangup(call_id, 200, NULL, &msg_data);
+    pjsua_call_hangup(call_id, 200, NULL, &msg_data_);
 }
 
 /*
@@ -293,13 +293,13 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     ring_start(call_id);
     
     if (app_config.auto_answer > 0) {
-	pjsua_call_setting call_opt;
+	pjsua_call_setting opt;
 
-	pjsua_call_setting_default(&call_opt);
-	call_opt.aud_cnt = app_config.aud_cnt;
-	call_opt.vid_cnt = app_config.vid.vid_cnt;
+	pjsua_call_setting_default(&opt);
+	opt.aud_cnt = app_config.aud_cnt;
+	opt.vid_cnt = app_config.vid.vid_cnt;
 
-	pjsua_call_answer2(call_id, &call_opt, app_config.auto_answer, NULL,
+	pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
 			   NULL);
     }
     
@@ -667,7 +667,7 @@ static void on_incoming_subscribe(pjsua_acc_id acc_id,
 				  pjsip_rx_data *rdata,
 				  pjsip_status_code *code,
 				  pj_str_t *reason,
-				  pjsua_msg_data *msg_data)
+				  pjsua_msg_data *msg_data_)
 {
     /* Just accept the request (the default behavior) */
     PJ_UNUSED_ARG(acc_id);
@@ -677,7 +677,7 @@ static void on_incoming_subscribe(pjsua_acc_id acc_id,
     PJ_UNUSED_ARG(rdata);
     PJ_UNUSED_ARG(code);
     PJ_UNUSED_ARG(reason);
-    PJ_UNUSED_ARG(msg_data);
+    PJ_UNUSED_ARG(msg_data_);
 }
 
 
@@ -1412,26 +1412,26 @@ static pj_status_t app_init()
 	pjmedia_port *tport;
 	char name[80];
 	pj_str_t label;
-	pj_status_t status;
+	pj_status_t status2;
 
 	pj_ansi_snprintf(name, sizeof(name), "tone-%d,%d",
 			 app_config.tones[i].freq1, 
 			 app_config.tones[i].freq2);
 	label = pj_str(name);
-	status = pjmedia_tonegen_create2(app_config.pool, &label,
-					 8000, 1, 160, 16, 
-					 PJMEDIA_TONEGEN_LOOP,  &tport);
-	if (status != PJ_SUCCESS) {
+	status2 = pjmedia_tonegen_create2(app_config.pool, &label,
+					  8000, 1, 160, 16, 
+					  PJMEDIA_TONEGEN_LOOP,  &tport);
+	if (status2 != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create tone generator", status);
 	    goto on_error;
 	}
 
-	status = pjsua_conf_add_port(app_config.pool, tport, 
+	status2 = pjsua_conf_add_port(app_config.pool, tport,
 				     &app_config.tone_slots[i]);
-	pj_assert(status == PJ_SUCCESS);
+	pj_assert(status2 == PJ_SUCCESS);
 
-	status = pjmedia_tonegen_play(tport, 1, &app_config.tones[i], 0);
-	pj_assert(status == PJ_SUCCESS);
+	status2 = pjmedia_tonegen_play(tport, 1, &app_config.tones[i], 0);
+	pj_assert(status2 == PJ_SUCCESS);
     }
 
     /* Optionally create recorder file, if any. */
@@ -1448,7 +1448,7 @@ static pj_status_t app_init()
 
     /* Create ringback tones */
     if (app_config.no_tones == PJ_FALSE) {
-	unsigned i, samples_per_frame;
+	unsigned samples_per_frame;
 	pjmedia_tone_desc tone[RING_CNT+RINGBACK_CNT];
 	pj_str_t name;
 

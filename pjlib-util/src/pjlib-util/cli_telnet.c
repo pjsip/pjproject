@@ -36,6 +36,10 @@
     (defined(PJ_WIN64) && PJ_WIN64!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
 
+/* Undefine EADDRINUSE first, we want it equal to WSAEADDRINUSE,
+ * while WinSDK 10 defines it to another value.
+ */
+#undef EADDRINUSE
 #define EADDRINUSE WSAEADDRINUSE
 
 #endif

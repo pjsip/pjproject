@@ -434,14 +434,14 @@ static pj_status_t create_request(pjsip_publishc *pubc,
 
     /* Add user headers */
     if (!pj_list_empty(&pubc->usr_hdr)) {
-	const pjsip_hdr *hdr;
+	const pjsip_hdr *uhdr;
 
-	hdr = pubc->usr_hdr.next;
-	while (hdr != &pubc->usr_hdr) {
+	uhdr = pubc->usr_hdr.next;
+	while (uhdr != &pubc->usr_hdr) {
 	    pjsip_hdr *new_hdr = (pjsip_hdr*)
-	    			 pjsip_hdr_shallow_clone(tdata->pool, hdr);
+	    			 pjsip_hdr_shallow_clone(tdata->pool, uhdr);
 	    pjsip_msg_add_hdr(tdata->msg, new_hdr);
-	    hdr = hdr->next;
+	    uhdr = uhdr->next;
 	}
     }
 

@@ -616,25 +616,25 @@ static void dns_callback(void *user_data,
 	srv_rec.count = 0;
 	for (i=0; i<query_job->srv_cnt; ++i) {
 	    unsigned j;
-	    struct srv_target *srv = &query_job->srv[i];
+	    struct srv_target *srv2 = &query_job->srv[i];
 
-	    srv_rec.entry[srv_rec.count].priority = srv->priority;
-	    srv_rec.entry[srv_rec.count].weight = srv->weight;
-	    srv_rec.entry[srv_rec.count].port = (pj_uint16_t)srv->port ;
+	    srv_rec.entry[srv_rec.count].priority = srv2->priority;
+	    srv_rec.entry[srv_rec.count].weight = srv2->weight;
+	    srv_rec.entry[srv_rec.count].port = (pj_uint16_t)srv2->port ;
 
-	    srv_rec.entry[srv_rec.count].server.name = srv->target_name;
-	    srv_rec.entry[srv_rec.count].server.alias = srv->cname;
+	    srv_rec.entry[srv_rec.count].server.name = srv2->target_name;
+	    srv_rec.entry[srv_rec.count].server.alias = srv2->cname;
 	    srv_rec.entry[srv_rec.count].server.addr_count = 0;
 
-	    pj_assert(srv->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
+	    pj_assert(srv2->addr_cnt <= PJ_DNS_MAX_IP_IN_A_REC);
 
-	    for (j=0; j<srv->addr_cnt; ++j) {
+	    for (j=0; j<srv2->addr_cnt; ++j) {
 		srv_rec.entry[srv_rec.count].server.addr[j].s_addr = 
-		    srv->addr[j].s_addr;
+		    srv2->addr[j].s_addr;
 		++srv_rec.entry[srv_rec.count].server.addr_count;
 	    }
 
-	    if (srv->addr_cnt > 0) {
+	    if (srv2->addr_cnt > 0) {
 		++srv_rec.count;
 		if (srv_rec.count == PJ_DNS_SRV_MAX_ADDR)
 		    break;

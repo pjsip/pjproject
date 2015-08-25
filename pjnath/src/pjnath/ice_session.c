@@ -1600,8 +1600,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 			      pj_ice_sess *ice,
 			      const pj_str_t *rem_ufrag,
 			      const pj_str_t *rem_passwd,
-			      unsigned rcand_cnt,
-			      const pj_ice_sess_cand rcand[])
+			      unsigned rem_cand_cnt,
+			      const pj_ice_sess_cand rem_cand[])
 {
     pj_ice_sess_checklist *clist;
     char buf[128];
@@ -1611,9 +1611,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     unsigned highest_comp = 0;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rcand_cnt && rcand,
-		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(rcand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND, 
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rem_cand_cnt &&
+		     rem_cand, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
 		     PJ_ETOOMANY);
 
     pj_grp_lock_acquire(ice->grp_lock);
@@ -1638,19 +1638,19 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     /* Save remote candidates */
     ice->rcand_cnt = 0;
-    for (i=0; i<rcand_cnt; ++i) {
+    for (i=0; i<rem_cand_cnt; ++i) {
 	pj_ice_sess_cand *cn = &ice->rcand[ice->rcand_cnt];
 
 	/* Ignore candidate which has no matching component ID */
-	if (rcand[i].comp_id==0 || rcand[i].comp_id > ice->comp_cnt) {
+	if (rem_cand[i].comp_id==0 || rem_cand[i].comp_id > ice->comp_cnt) {
 	    continue;
 	}
 
-	if (rcand[i].comp_id > highest_comp)
-	    highest_comp = rcand[i].comp_id;
+	if (rem_cand[i].comp_id > highest_comp)
+	    highest_comp = rem_cand[i].comp_id;
 
-	pj_memcpy(cn, &rcand[i], sizeof(pj_ice_sess_cand));
-	pj_strdup(ice->pool, &cn->foundation, &rcand[i].foundation);
+	pj_memcpy(cn, &rem_cand[i], sizeof(pj_ice_sess_cand));
+	pj_strdup(ice->pool, &cn->foundation, &rem_cand[i].foundation);
 	ice->rcand_cnt++;
     }
 

@@ -967,12 +967,12 @@ static void call_on_media_update( pjsip_inv_session *inv,
 {
     if (status != PJ_SUCCESS) {
 	pjsip_tx_data *tdata;
-	pj_status_t status;
+	pj_status_t status2;
 
-	status = pjsip_inv_end_session(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE, 
+	status2 = pjsip_inv_end_session(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE,
 				       NULL, &tdata);
-	if (status == PJ_SUCCESS && tdata)
-	    status = pjsip_inv_send_msg(inv, tdata);
+	if (status2 == PJ_SUCCESS && tdata)
+	    status2 = pjsip_inv_send_msg(inv, tdata);
     }
 }
 

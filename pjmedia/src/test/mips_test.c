@@ -2490,7 +2490,7 @@ int mips_test(void)
 #endif
     };
 
-    unsigned i, c, k[3] = {K8, K16, K32}, clock_rates[3] = {8000, 16000, 32000};
+    unsigned i, c, clks[3] = {K8, K16, K32}, clock_rates[3] = {8000, 16000, 32000};
 
     PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%dMhz, %6.1f MIPS", CPU_MHZ, CPU_IPS / 1000000));
     PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
@@ -2509,7 +2509,7 @@ int mips_test(void)
 	    float cpu_pct, mips_val;
 	    unsigned j, clock_rate = clock_rates[c];
 
-	    if ((e->valid_clock_rate & k[c]) == 0)
+	    if ((e->valid_clock_rate & clks[c]) == 0)
 		continue;
 
 	    /* Run test */

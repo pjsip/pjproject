@@ -580,15 +580,13 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 {
     struct file_reader_port *fport = (struct file_reader_port*)this_port;
     pj_size_t frame_size;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
     pj_assert(frame->size <= fport->bufsize);
 
     /* EOF is set and readpos already passed the eofpos */
     if (fport->eof && fport->readpos >= fport->eofpos) {
-	pj_status_t status = PJ_SUCCESS;
-
 	PJ_LOG(5,(THIS_FILE, "File port %.*s EOF",
 		  (int)fport->base.info.name.slen,
 		  fport->base.info.name.ptr));
