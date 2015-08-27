@@ -2082,8 +2082,17 @@ static pj_status_t ca_stream_stop(pjmedia_aud_stream *strm)
 
 #if !COREAUDIO_MAC
     if (should_deactivate) {
-	if ([stream->sess setActive:false error:nil] != YES) {
-            PJ_LOG(4, (THIS_FILE, "Warning: cannot deactivate audio session"));
+        if ([stream->sess 
+             respondsToSelector:@selector(setActive:withOptions:error:)])
+        {
+  	    [stream->sess setActive:NO
+  	    withOptions:AVAudioSessionSetActiveOptionNotifyOthersOnDeactivation 
+  	    error:nil];
+	} else {
+	    if ([stream->sess setActive:NO error:nil] != YES) {
+            	PJ_LOG(4, (THIS_FILE, "Warning: cannot deactivate "
+            			      "audio session"));
+            }
         }
     }
 #endif
