@@ -952,23 +952,44 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
     pjsip_transport_destroy(tp);
 }
 
+
+static pj_bool_t is_transport_valid(pjsip_transport *tp, pjsip_tpmgr *tpmgr,
+				    const pjsip_transport_key *key,
+				    int key_len)
+{
+    return (pj_hash_get(tpmgr->table, key, key_len, NULL) == (void*)tp);
+}
+
 /*
  * Add ref.
  */
 PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
 {
+    pjsip_tpmgr *tpmgr;
+    pjsip_transport_key key;
+    int key_len;
+
     PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
 
+    /* Cache some vars for checking transport validity later */
+    tpmgr = tp->tpmgr;
+    key_len = sizeof(tp->key.type) + tp->addr_len;
+    pj_memcpy(&key, &tp->key, key_len);
+
     if (pj_atomic_inc_and_get(tp->ref_cnt) == 1) {
-	pj_lock_acquire(tp->tpmgr->lock);
-	/* Verify again. */
-	if (pj_atomic_get(tp->ref_cnt) == 1) {
+	pj_lock_acquire(tpmgr->lock);
+	/* Verify again. But first, make sure transport is still valid
+	 * (see #1883).
+	 */
+	if (is_transport_valid(tp, tpmgr, &key, key_len) &&
+	    pj_atomic_get(tp->ref_cnt) == 1)
+	{
 	    if (tp->idle_timer.id != PJ_FALSE) {
 		pjsip_endpt_cancel_timer(tp->tpmgr->endpt, &tp->idle_timer);
 		tp->idle_timer.id = PJ_FALSE;
 	    }
 	}
-	pj_lock_release(tp->tpmgr->lock);
+	pj_lock_release(tpmgr->lock);
     }
 
     return PJ_SUCCESS;
@@ -979,16 +1000,27 @@ PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
  */
 PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 {
-    PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
+    pjsip_tpmgr *tpmgr;
+    pjsip_transport_key key;
+    int key_len;
 
+    PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
     pj_assert(pj_atomic_get(tp->ref_cnt) > 0);
 
+    /* Cache some vars for checking transport validity later */
+    tpmgr = tp->tpmgr;
+    key_len = sizeof(tp->key.type) + tp->addr_len;
+    pj_memcpy(&key, &tp->key, key_len);
+
     if (pj_atomic_dec_and_get(tp->ref_cnt) == 0) {
-	pj_lock_acquire(tp->tpmgr->lock);
+	pj_lock_acquire(tpmgr->lock);
 	/* Verify again. Do not register timer if the transport is
-	 * being destroyed.
+	 * being destroyed. But first, make sure transport is still valid
+	 * (see #1883).
 	 */
-	if (pj_atomic_get(tp->ref_cnt) == 0 && !tp->is_destroying) {
+	if (is_transport_valid(tp, tpmgr, &key, key_len) &&
+	    !tp->is_destroying && pj_atomic_get(tp->ref_cnt) == 0)
+	{
 	    pj_time_val delay;
 	    
 	    /* If transport is in graceful shutdown, then this is the
@@ -1009,7 +1041,7 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 	    pjsip_endpt_schedule_timer(tp->tpmgr->endpt, &tp->idle_timer, 
 				       &delay);
 	}
-	pj_lock_release(tp->tpmgr->lock);
+	pj_lock_release(tpmgr->lock);
     }
 
     return PJ_SUCCESS;
@@ -1077,12 +1109,12 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     pj_uint32_t hval;
     void *entry;
 
+    tp->is_destroying = PJ_TRUE;
+
     TRACE_((THIS_FILE, "Transport %s is being destroyed", tp->obj_name));
 
     pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
-
-    tp->is_destroying = PJ_TRUE;
 
     /*
      * Unregister timer, if any.
