@@ -1268,18 +1268,13 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	       frame->buf == NULL &&
 	       stream->port.info.fmt.id == PJMEDIA_FORMAT_L16 &&
 	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
-	       stream->codec_param.info.frm_ptime *
-	       stream->codec_param.info.channel_cnt *
-	       stream->codec_param.info.clock_rate/1000 <
-		  PJ_ARRAY_SIZE(zero_frame))
+	       stream->enc_samples_per_pkt < PJ_ARRAY_SIZE(zero_frame))
     {
 	pjmedia_frame silence_frame;
 
 	pj_bzero(&silence_frame, sizeof(silence_frame));
 	silence_frame.buf = zero_frame;
-	silence_frame.size = stream->codec_param.info.frm_ptime * 2 *
-			     stream->codec_param.info.channel_cnt *
-			     stream->codec_param.info.clock_rate / 1000;
+	silence_frame.size = stream->enc_samples_per_pkt * 2;
 	silence_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
 
