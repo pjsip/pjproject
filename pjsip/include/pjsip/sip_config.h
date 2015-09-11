@@ -315,8 +315,6 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Specify maximum URL size.
- * This constant is used mainly when printing the URL for logging purpose 
- * only.
  */
 #ifndef PJSIP_MAX_URL_SIZE
 #   define PJSIP_MAX_URL_SIZE		256
