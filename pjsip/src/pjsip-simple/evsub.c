@@ -628,6 +628,14 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     pjsip_dlg_inc_lock(sub->dlg);
 
+    /* If this timer entry has just been rescheduled or cancelled
+     * while waiting for dialog mutex, just return (see #1885 scenario 1).
+     */
+    if (pj_timer_entry_running(entry) || entry->id == TIMER_TYPE_NONE) {
+	pjsip_dlg_dec_lock(sub->dlg);
+	return;
+    }
+
     timer_id = entry->id;
     entry->id = TIMER_TYPE_NONE;
 
