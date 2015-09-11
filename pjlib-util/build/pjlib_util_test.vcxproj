@@ -53,7 +53,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{ED02BE13-8297-4770-8097-27DC2CCABF9A}</ProjectGuid>
     <RootNamespace>pjlib_util_test</RootNamespace>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
