@@ -235,6 +235,7 @@ struct pjsip_evsub
     int			  pending_tsx;	/**< Number of pending transactions.*/
     pjsip_transaction	 *pending_sub;	/**< Pending UAC SUBSCRIBE tsx.	    */
     pj_timer_entry	 *pending_sub_timer; /**< Stop pending sub timer.   */
+    pj_grp_lock_t	 *grp_lock;	/* Session group lock	    */
 
     void		 *mod_data[PJSIP_MAX_MODULE];	/**< Module data.   */
 };
@@ -514,13 +515,26 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
 
 	timeout.sec = seconds;
 	timeout.msec = 0;
-	sub->timer.id = timer_id;
 
-	pjsip_endpt_schedule_timer(sub->endpt, &sub->timer, &timeout);
+	pj_timer_heap_schedule_w_grp_lock(
+			    pjsip_endpt_get_timer_heap(sub->endpt),
+			    &sub->timer, &timeout, timer_id, sub->grp_lock);
 
 	PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %d seconds", 
 		  timer_names[sub->timer.id], timeout.sec));
     }
+}
+
+
+/*
+ * Destructor.
+ */
+static void evsub_on_destroy(void *obj)
+{
+    pjsip_evsub *sub = (pjsip_evsub*)obj;
+
+    /* Decrement dialog's session */
+    pjsip_dlg_dec_session(sub->dlg, &mod_evsub.mod);
 }
 
 
@@ -556,8 +570,7 @@ static void evsub_destroy( pjsip_evsub *sub )
 	dlgsub = dlgsub->next;
     }
 
-    /* Decrement dialog's session */
-    pjsip_dlg_dec_session(sub->dlg, &mod_evsub.mod);
+    pj_grp_lock_dec_ref(sub->grp_lock);
 }
 
 /*
@@ -848,6 +861,16 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uac( pjsip_dialog *dlg,
     /* Increment dlg session. */
     pjsip_dlg_inc_session(sub->dlg, &mod_evsub.mod);
 
+    /* Init group lock */
+    status = pj_grp_lock_create(dlg->pool, NULL, &sub->grp_lock);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_session(sub->dlg, &mod_evsub.mod);
+	goto on_return;
+    }
+
+    pj_grp_lock_add_ref(sub->grp_lock);
+    pj_grp_lock_add_handler(sub->grp_lock, dlg->pool, sub, &evsub_on_destroy);
+
     /* Done */
     *p_evsub = sub;
 
@@ -937,12 +960,23 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
     if (accept_hdr)
 	sub->accept = (pjsip_accept_hdr*)pjsip_hdr_clone(sub->pool,accept_hdr);
 
+    /* Increment dlg session. */
+    pjsip_dlg_inc_session(dlg, &mod_evsub.mod);
+
+    /* Init group lock */
+    status = pj_grp_lock_create(dlg->pool, NULL, &sub->grp_lock);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_session(sub->dlg, &mod_evsub.mod);
+	goto on_return;
+    }
+
+    pj_grp_lock_add_ref(sub->grp_lock);
+    pj_grp_lock_add_handler(sub->grp_lock, dlg->pool, sub, &evsub_on_destroy);
+
     /* We can start the session: */
 
-    pjsip_dlg_inc_session(dlg, &mod_evsub.mod);
     sub->pending_tsx++;
     tsx->mod_data[mod_evsub.mod.id] = sub;
-
 
     /* Done. */
     *p_evsub = sub;
