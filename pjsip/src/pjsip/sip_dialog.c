@@ -108,9 +108,10 @@ on_error:
     return status;
 }
 
-static void destroy_dialog( pjsip_dialog *dlg )
+static void destroy_dialog( pjsip_dialog *dlg, pj_bool_t unlock_mutex )
 {
     if (dlg->mutex_) {
+        if (unlock_mutex) pj_mutex_unlock(dlg->mutex_);
 	pj_mutex_destroy(dlg->mutex_);
 	dlg->mutex_ = NULL;
     }
@@ -302,7 +303,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     return PJ_SUCCESS;
 
 on_error:
-    destroy_dialog(dlg);
+    destroy_dialog(dlg, PJ_FALSE);
     return status;
 }
 
@@ -551,7 +552,7 @@ on_error:
 	--dlg->tsx_count;
     }
 
-    destroy_dialog(dlg);
+    destroy_dialog(dlg, PJ_FALSE);
     return status;
 }
 
@@ -725,7 +726,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     return PJ_SUCCESS;
 
 on_error:
-    destroy_dialog(dlg);
+    destroy_dialog(dlg, PJ_FALSE);
     return status;
 }
 
@@ -733,7 +734,8 @@ on_error:
 /*
  * Destroy dialog.
  */
-static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg )
+static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg,
+						  pj_bool_t unlock_mutex )
 {
     pj_status_t status;
 
@@ -757,7 +759,7 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg )
     PJ_LOG(5,(dlg->obj_name, "Dialog destroyed"));
 
     /* Destroy this dialog. */
-    destroy_dialog(dlg);
+    destroy_dialog(dlg, unlock_mutex);
 
     return PJ_SUCCESS;
 }
@@ -774,7 +776,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg )
     /* MUST not have pending transactions. */
     PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
 
-    return unregister_and_destroy_dialog(dlg);
+    return unregister_and_destroy_dialog(dlg, PJ_FALSE);
 }
 
 
@@ -893,7 +895,11 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     if (dlg->sess_count==0 && dlg->tsx_count==0) {
 	pj_mutex_unlock(dlg->mutex_);
 	pj_mutex_lock(dlg->mutex_);
-	unregister_and_destroy_dialog(dlg);
+	/* We are holding the dialog mutex here, so before we destroy
+	 * the dialog, make sure that we unlock it first to avoid
+	 * undefined behaviour on some platforms. See ticket #1886.
+	 */
+	unregister_and_destroy_dialog(dlg, PJ_TRUE);
     } else {
 	pj_mutex_unlock(dlg->mutex_);
     }
