@@ -1,0 +1,228 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{01ac843c-8657-45e4-8c9c-aa8ab906fdc8}</UniqueIdentifier>
+      <Extensions>cpp;c;cxx;rc;def;r;odl;idl;hpj;bat</Extensions>
+    </Filter>
+    <Filter Include="Source Files\Base %28.c%29">
+      <UniqueIdentifier>{391bfdc9-02b9-41eb-b2c5-2f0124c59b35}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Messaging and Parsing %28.c%29">
+      <UniqueIdentifier>{23d61d47-dd86-4aa4-863e-0cd599a70000}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Core %28.c%29">
+      <UniqueIdentifier>{c5cb5819-1a9a-476b-b0db-1ba96b757673}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Transport Layer %28.c%29">
+      <UniqueIdentifier>{2138e275-95d4-4fd4-a58c-afd0d1ddaa33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Authentication %28.c%29">
+      <UniqueIdentifier>{6f88bcbd-02a7-4694-a659-1735e740079d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Transaction Layer %28.c%29">
+      <UniqueIdentifier>{816fe75a-ef48-4688-a552-99e617e88452}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\UA Layer %28.c%29">
+      <UniqueIdentifier>{2f75cad5-aa9f-4858-b5ff-aaacddd38811}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{dafdeb57-3823-46a8-9594-e1ba24ffbce3}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl</Extensions>
+    </Filter>
+    <Filter Include="Header Files\Base Types %28.h%29">
+      <UniqueIdentifier>{237fd024-84bd-47ab-bc96-fb9fecdc1079}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Messaging and Parsing %28.h%29">
+      <UniqueIdentifier>{2c99449b-0ca0-4545-af73-14e1fcb47562}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Core %28.h%29">
+      <UniqueIdentifier>{ddaf32b8-43e3-4a29-9e61-8026eb48783b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Transport Layer %28.h%29">
+      <UniqueIdentifier>{d491258b-3b88-450d-b581-2e57a1e7e392}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Authentication %28.h%29">
+      <UniqueIdentifier>{1c9b6fe8-c507-4ee5-b034-b0bb4d5a7a9e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Transaction Layer %28.h%29">
+      <UniqueIdentifier>{b282631d-0d6b-4d6c-bfa3-2d3398de3c7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\UA Layer %28.h%29">
+      <UniqueIdentifier>{998075b6-2c7b-48d7-b06e-b97923224db7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Inline Files">
+      <UniqueIdentifier>{713f540e-5d52-4740-a8ab-7ebf6c2f8f3c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\pjsip\sip_errno.c">
+      <Filter>Source Files\Base %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_msg.c">
+      <Filter>Source Files\Messaging and Parsing %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_multipart.c">
+      <Filter>Source Files\Messaging and Parsing %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_parser.c">
+      <Filter>Source Files\Messaging and Parsing %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_tel_uri.c">
+      <Filter>Source Files\Messaging and Parsing %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_uri.c">
+      <Filter>Source Files\Messaging and Parsing %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_config.c">
+      <Filter>Source Files\Core %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_endpoint.c">
+      <Filter>Source Files\Core %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_util.c">
+      <Filter>Source Files\Core %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_util_proxy.c">
+      <Filter>Source Files\Core %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_resolve.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transport.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transport_loop.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transport_tcp.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transport_tls.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transport_udp.c">
+      <Filter>Source Files\Transport Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_auth_aka.c">
+      <Filter>Source Files\Authentication %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_auth_client.c">
+      <Filter>Source Files\Authentication %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_auth_msg.c">
+      <Filter>Source Files\Authentication %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_auth_parser.c">
+      <Filter>Source Files\Authentication %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_auth_server.c">
+      <Filter>Source Files\Authentication %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_transaction.c">
+      <Filter>Source Files\Transaction Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_util_statefull.c">
+      <Filter>Source Files\Transaction Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_dialog.c">
+      <Filter>Source Files\UA Layer %28.c%29</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjsip\sip_ua_layer.c">
+      <Filter>Source Files\UA Layer %28.c%29</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\docs\doxygen.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_config.h">
+      <Filter>Header Files\Base Types %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_errno.h">
+      <Filter>Header Files\Base Types %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_private.h">
+      <Filter>Header Files\Base Types %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_types.h">
+      <Filter>Header Files\Base Types %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\print_util.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_msg.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_multipart.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_parser.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_tel_uri.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_uri.h">
+      <Filter>Header Files\Messaging and Parsing %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_endpoint.h">
+      <Filter>Header Files\Core %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_event.h">
+      <Filter>Header Files\Core %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_module.h">
+      <Filter>Header Files\Core %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_util.h">
+      <Filter>Header Files\Core %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_resolve.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transport.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transport_loop.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transport_tcp.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transport_tls.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transport_udp.h">
+      <Filter>Header Files\Transport Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_auth.h">
+      <Filter>Header Files\Authentication %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_auth_aka.h">
+      <Filter>Header Files\Authentication %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_auth_msg.h">
+      <Filter>Header Files\Authentication %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_auth_parser.h">
+      <Filter>Header Files\Authentication %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_transaction.h">
+      <Filter>Header Files\Transaction Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_dialog.h">
+      <Filter>Header Files\UA Layer %28.h%29</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjsip\sip_ua_layer.h">
+      <Filter>Header Files\UA Layer %28.h%29</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\INSTALL.txt" />
+    <Text Include="..\..\RELNOTES.txt" />
+  </ItemGroup>
+</Project>
