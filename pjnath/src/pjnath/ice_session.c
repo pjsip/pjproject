@@ -2323,7 +2323,13 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     /* Find local candidate that matches the XOR-MAPPED-ADDRESS */
     pj_assert(lcand == NULL);
     for (i=0; i<ice->lcand_cnt; ++i) {
-	if (pj_sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0) {
+	/* Ticket #1891: apply additional check as there may be a shared
+	 * mapped address for different base/local addresses.
+	 */
+	if (pj_sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0 &&
+	    pj_sockaddr_cmp(&check->lcand->base_addr,
+			    &ice->lcand[i].base_addr) == 0)
+	{
 	    /* Match */
 	    lcand = &ice->lcand[i];
 	    break;
