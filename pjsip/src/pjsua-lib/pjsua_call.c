@@ -4181,8 +4181,14 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 #endif
 
+    if (pjsua_var.ua_cfg.cb.on_call_tx_offer) {
+	cleanup_call_setting_flag(&call->opt);
+	(*pjsua_var.ua_cfg.cb.on_call_tx_offer)(call->index, NULL,
+						&call->opt);
+    }
+
     /* We may need to re-initialize media before creating SDP */
-    if (call->med_prov_cnt == 0) {
+    if (call->med_prov_cnt == 0 || pjsua_var.ua_cfg.cb.on_call_tx_offer) {
     	status = apply_call_setting(call, &call->opt, NULL);
     	if (status != PJ_SUCCESS)
 	    goto on_return;

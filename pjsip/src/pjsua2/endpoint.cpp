@@ -1073,6 +1073,25 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     *opt = prm.opt.toPj();
 }
 
+void Endpoint::on_call_tx_offer(pjsua_call_id call_id,
+				void *reserved,
+				pjsua_call_setting *opt)
+{
+    PJ_UNUSED_ARG(reserved);
+
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+
+    OnCallTxOfferParam prm;
+    prm.opt.fromPj(*opt);
+
+    call->onCallTxOffer(prm);
+
+    *opt = prm.opt.toPj();
+}
+
 pjsip_redirect_op Endpoint::on_call_redirected(pjsua_call_id call_id,
                                                const pjsip_uri *target,
                                                const pjsip_event *e)
@@ -1272,6 +1291,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;
     ua_cfg.cb.on_call_replaced          = &Endpoint::on_call_replaced;
     ua_cfg.cb.on_call_rx_offer          = &Endpoint::on_call_rx_offer;
+    ua_cfg.cb.on_call_tx_offer          = &Endpoint::on_call_tx_offer;
     ua_cfg.cb.on_call_redirected        = &Endpoint::on_call_redirected;
     ua_cfg.cb.on_call_media_transport_state =
         &Endpoint::on_call_media_transport_state;

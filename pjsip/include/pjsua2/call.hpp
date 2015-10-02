@@ -851,6 +851,19 @@ struct OnCallRxOfferParam
 };
 
 /**
+ * This structure contains parameters for Call::onCallTxOffer() callback.
+ */
+struct OnCallTxOfferParam
+{
+    /**
+     * The current call setting, application can update this setting for
+     * generating the offer. Note that application should maintain any
+     * active media to avoid the need for the peer to reject the offer.
+     */
+    CallSetting         opt;
+};
+
+/**
  * This structure contains parameters for Call::onCallRedirected() callback.
  */
 struct OnCallRedirectedParam
@@ -1600,6 +1613,25 @@ public:
      * @param prm	Callback parameter.
      */
     virtual void onCallRxOffer(OnCallRxOfferParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+    
+    /**
+     * Notify application when call has received INVITE with no SDP offer.
+     * Application can update the call setting (e.g: add audio/video), or
+     * enable/disable codecs, or update other media session settings from
+     * within the callback, however, as mandated by the standard (RFC3261
+     * section 14.2), it must ensure that the update overlaps with the
+     * existing media session (in codecs, transports, or other parameters)
+     * that require support from the peer, this is to avoid the need for
+     * the peer to reject the offer.
+     *
+     * When this callback is not implemented, the default behavior is to send
+     * SDP offer using current active media session (with all enabled codecs
+     * on each media type).
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onCallTxOffer(OnCallTxOfferParam &prm)
     { PJ_UNUSED_ARG(prm); }
     
     /**

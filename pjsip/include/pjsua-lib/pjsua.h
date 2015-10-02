@@ -910,6 +910,31 @@ typedef struct pjsua_callback
 			     pjsip_status_code *code,
 			     pjsua_call_setting *opt);
 
+
+    /**
+    * Notify application when call has received INVITE with no SDP offer.
+    * Application can update the call setting (e.g: add audio/video), or
+    * enable/disable codecs, or update other media session settings from
+    * within the callback, however, as mandated by the standard (RFC3261
+    * section 14.2), it must ensure that the update overlaps with the
+    * existing media session (in codecs, transports, or other parameters)
+    * that require support from the peer, this is to avoid the need for
+    * the peer to reject the offer.
+    *
+    * When this callback is not defined, the default behavior is to send
+    * SDP offer using current active media session (with all enabled codecs
+    * on each media type).
+    *
+    * @param call_id	The call index.
+    * @param reserved	Reserved param, currently not used.
+    * @param opt	The current call setting, application can update
+    *			this setting for generating the offer.
+    */
+    void (*on_call_tx_offer)(pjsua_call_id call_id,
+			     void *reserved,
+			     pjsua_call_setting *opt);
+
+
     /**
      * Notify application when registration or unregistration has been
      * initiated. Note that this only notifies the initial registration
