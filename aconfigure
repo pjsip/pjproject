@@ -638,6 +638,8 @@ libcrypto_present
 libssl_present
 openssl_h_present
 ac_no_ssl
+ac_webrtc_ldflags
+ac_webrtc_cflags
 ac_libyuv_ldflags
 ac_libyuv_cflags
 ac_openh264_ldflags
@@ -800,6 +802,8 @@ with_openh264
 enable_openh264
 with_libyuv
 enable_libyuv
+with_webrtc
+enable_webrtc
 enable_ipp
 with_ipp
 with_ipp_samples
@@ -1465,6 +1469,7 @@ Optional Features:
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
+  --disable-webrtc        Exclude webrtc in the build
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
@@ -1505,6 +1510,7 @@ Optional Packages:
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
   --with-libyuv=DIR       Specify alternate libyuv prefix
+  --with-webrtc=DIR       Specify alternate WebRtc prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -7320,6 +7326,123 @@ fi
 
 fi
 
+
+
+
+# Check whether --with-webrtc was given.
+if test "${with_webrtc+set}" = set; then :
+  withval=$with_webrtc;
+else
+  with_webrtc=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_webrtc" = "xno"; then
+    enable_webrtc=no
+fi
+
+
+
+# Check whether --enable-webrtc was given.
+if test "${enable_webrtc+set}" = set; then :
+  enableval=$enable_webrtc; if test "$enable_webrtc" = "no"; then
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if webrtc is disabled...yes" >&5
+$as_echo "Checking if webrtc is disabled...yes" >&6; }
+	       fi
+else
+
+		  if test "x$with_webrtc" != "xno" -a "x$with_webrtc" != "x"; then
+		        WEBRTC_PREFIX=$with_webrtc
+		  	WEBRTC_CFLAGS="-I$WEBRTC_PREFIX/src"
+
+			case $target in
+			    *-apple-darwin_ios*)
+				case $ARCH in
+				    *arm*)
+				    WEBRTC_CFLAGS="-DPJMEDIA_WEBRTC_AEC_USE_MOBILE=1 $WEBRTC_CFLAGS"
+				    WEBRTC_LDFLAGS="-L$WEBRTC_PREFIX/src/out_ios/Release-iphoneos"
+				    WEBRTC_LIBS="-laudio_processing_neon -lcommon_audio_neon"
+				    ;;
+				*)
+				    ;;
+				esac
+				;;
+			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
+			        WEBRTC_LDFLAGS="-L$WEBRTC_PREFIX/src/out/Release"
+			        WEBRTC_LIBS="-laudio_processing_sse2"
+				;;
+			    *)
+				;;
+			esac
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using webrtc prefix... $with_webrtc" >&5
+$as_echo "Using webrtc prefix... $with_webrtc" >&6; }
+		  else
+		  	WEBRTC_CFLAGS=""
+			WEBRTC_LDFLAGS=""
+		  fi
+
+		  WEBRTC_LIBS="$WEBRTC_LIBS -laudio_processing -lcommon_audio -lsystem_wrappers"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$WEBRTC_LIBS $LIBS"
+		  LDFLAGS="$WEBRTC_LDFLAGS $LDFLAGS"
+		  CFLAGS="$WEBRTC_CFLAGS $CFLAGS"
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for WebRtcAec_Process in -laudio_processing" >&5
+$as_echo_n "checking for WebRtcAec_Process in -laudio_processing... " >&6; }
+if ${ac_cv_lib_audio_processing_WebRtcAec_Process+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-laudio_processing
+			        $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char WebRtcAec_Process ();
+int
+main ()
+{
+return WebRtcAec_Process ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_audio_processing_WebRtcAec_Process=yes
+else
+  ac_cv_lib_audio_processing_WebRtcAec_Process=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_audio_processing_WebRtcAec_Process" >&5
+$as_echo "$ac_cv_lib_audio_processing_WebRtcAec_Process" >&6; }
+if test "x$ac_cv_lib_audio_processing_WebRtcAec_Process" = xyes; then :
+   ac_webrtc_cflags="-DPJMEDIA_HAS_WEBRTC_AEC=1 $WEBRTC_CFLAGS"
+		  		 ac_webrtc_ldflags="$WEBRTC_LDFLAGS $WEBRTC_LIBS"
+
+else
+   LIBS="$SAVED_LIBS"
+				 LDFLAGS="$SAVED_LDFLAGS"
+				 CFLAGS="$SAVED_CFLAGS"
+
+fi
+
+
+fi
 
 
 # Check whether --enable-ipp was given.

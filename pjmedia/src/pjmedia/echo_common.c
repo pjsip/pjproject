@@ -125,6 +125,20 @@ static struct ec_operations ipp_aec_op =
 #endif
 
 /*
+ * WebRTC AEC prototypes
+ */
+#if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC!=0
+static struct ec_operations webrtc_aec_op =
+{
+    "WebRTC AEC",
+    &webrtc_aec_create,
+    &webrtc_aec_destroy,
+    &webrtc_aec_reset,
+    &webrtc_aec_cancel_echo
+};
+#endif
+
+/*
  * Create the echo canceller. 
  */
 PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
@@ -185,6 +199,13 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 
 #endif
 
+#if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC!=0
+    } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_WEBRTC ||
+               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
+    {
+        ec->op = &webrtc_aec_op;
+#endif
+        
     } else {
 	ec->op = &echo_supp_op;
     }

@@ -657,6 +657,24 @@
 
 
 /**
+ * WebRtc Accoustic Echo Cancellation (AEC).
+ * By default is disabled.
+ */
+#ifndef PJMEDIA_HAS_WEBRTC_AEC
+#   define PJMEDIA_HAS_WEBRTC_AEC		0
+#endif
+
+/**
+ * Specify whether WebRtc EC should use its mobile version AEC.
+ *
+ * Default: 0 (no)
+ */
+#ifndef PJMEDIA_WEBRTC_AEC_USE_MOBILE
+#   define PJMEDIA_WEBRTC_AEC_USE_MOBILE 	0
+#endif
+
+
+/**
  * Maximum number of parameters in SDP fmtp attribute.
  *
  * Default: 16

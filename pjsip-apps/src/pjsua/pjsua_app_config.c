@@ -23,6 +23,9 @@
 
 #define MAX_APP_OPTIONS 128
 
+#define str(s) #s
+#define xstr(s) str(s)
+
 char   *stdout_refresh_text = "STDOUT_REFRESH";
 
 /* Show usage */
@@ -141,17 +144,22 @@ static void usage(void)
     puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3");
     puts  ("  --auto-rec          Automatically record conversation");
-    puts  ("  --quality=N         Specify media quality (0-10, default=6)");
+    puts  ("  --quality=N         Specify media quality (0-10, default="
+    				  xstr(PJSUA_DEFAULT_CODEC_QUALITY) ")");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
-    puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
+    puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default="
+	   			  xstr(PJSUA_DEFAULT_EC_TAIL_LEN) ")");
     puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
-    puts  ("                        1=speex, 2=suppressor)");
-    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 30)");
+    puts  ("                        1=speex, 2=suppressor, 3=WebRtc)");
+    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is "
+    				  xstr(PJSUA_DEFAULT_ILBC_MODE) ")");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
-    puts  ("  --capture-lat=N     Audio capture latency, in ms (default=100)");
-    puts  ("  --playback-lat=N    Audio playback latency, in ms (default=100)");
+    puts  ("  --capture-lat=N     Audio capture latency, in ms (default="
+    				  xstr(PJMEDIA_SND_DEFAULT_REC_LATENCY) ")");
+    puts  ("  --playback-lat=N    Audio playback latency, in ms (default="
+    				  xstr(PJMEDIA_SND_DEFAULT_PLAY_LATENCY) ")");
     puts  ("  --snd-auto-close=N  Auto close audio device when idle for N secs (default=1)");
     puts  ("                      Specify N=-1 to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");

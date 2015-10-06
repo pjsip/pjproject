@@ -66,7 +66,8 @@ typedef enum pjmedia_echo_flag
 
     /**
      * Force to use Speex AEC as the backend echo canceller algorithm.
-     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE.
+     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
+     * PJMEDIA_ECHO_WEBRTC.
      */
     PJMEDIA_ECHO_SPEEX	= 1,
 
@@ -74,9 +75,16 @@ typedef enum pjmedia_echo_flag
      * If PJMEDIA_ECHO_SIMPLE flag is specified during echo canceller
      * creation, then a simple echo suppressor will be used instead of
      * an accoustic echo cancellation. This setting is mutually exclusive
-     * with PJMEDIA_ECHO_SPEEX.
+     * with PJMEDIA_ECHO_SPEEX and PJMEDIA_ECHO_WEBRTC.
      */
     PJMEDIA_ECHO_SIMPLE	= 2,
+
+    /**
+     * Force to use WebRTC AEC as the backend echo canceller algorithm.
+     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
+     * PJMEDIA_ECHO_SPEEX.
+     */
+    PJMEDIA_ECHO_WEBRTC = 3,
 
     /**
      * For internal use.
@@ -101,7 +109,46 @@ typedef enum pjmedia_echo_flag
      * If PJMEDIA_ECHO_USE_SW_ECHO flag is specified, software echo canceller
      * will be used instead of device EC.
      */
-    PJMEDIA_ECHO_USE_SW_ECHO = 64
+    PJMEDIA_ECHO_USE_SW_ECHO = 64,
+    
+    /**
+     * If PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR flag is specified, the echo
+     * canceller will also apply noise suppressor method to reduce noise.
+     */
+    PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR = 128,
+    
+    /**
+     * Use default aggressiveness setting for the echo canceller algorithm. 
+     * This setting is mutually exclusive with the other aggressiveness
+     * settings.
+     */
+    PJMEDIA_ECHO_AGGRESSIVENESS_DEFAULT = 0,
+    
+    /**
+     * Use conservative aggressiveness setting for the echo canceller
+     * algorithm. This setting is mutually exclusive with the other
+     * aggressiveness settings.
+     */
+    PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x100,
+    
+    /**
+     * Use moderate aggressiveness setting for the echo canceller algorithm. 
+     * This setting is mutually exclusive with the other aggressiveness
+     * settings.
+     */
+    PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x200,
+    
+    /**
+     * Use aggressive aggressiveness setting for the echo canceller
+     * algorithm. This setting is mutually exclusive with the other
+     * aggressiveness settings.
+     */
+    PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x300,
+    
+    /**
+     * For internal use.
+     */
+    PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF00
 
 } pjmedia_echo_flag;
 

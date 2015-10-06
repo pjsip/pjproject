@@ -77,6 +77,21 @@ PJ_DECL(pj_status_t) ipp_aec_cancel_echo(void *state,
 					 unsigned options,
 					 void *reserved );
 
+PJ_DECL(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
+                                       unsigned clock_rate,
+                                       unsigned channel_count,
+                                       unsigned samples_per_frame,
+                                       unsigned tail_ms,
+                                       unsigned options,
+                                       void **p_echo );
+PJ_DECL(pj_status_t) webrtc_aec_destroy(void *state );
+PJ_DECL(void) webrtc_aec_reset(void *state );
+PJ_DECL(pj_status_t) webrtc_aec_cancel_echo(void *state,
+                                            pj_int16_t *rec_frm,
+                                            const pj_int16_t *play_frm,
+                                            unsigned options,
+                                            void *reserved );
+
 
 PJ_END_DECL
 
