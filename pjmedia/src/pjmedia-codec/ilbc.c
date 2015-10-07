@@ -527,7 +527,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
      */
     pj_set_timestamp32(&ilbc_codec->last_tx, 0, 0);
 
-    PJ_LOG(5,(ilbc_codec->obj_name, 
+    PJ_LOG(4,(ilbc_codec->obj_name, 
 	      "iLBC codec opened, mode=%d", dec_fmtp_mode));
 
     return PJ_SUCCESS;

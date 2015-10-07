@@ -2081,7 +2081,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Get codec param: */
     if (info->param)
-	stream->codec_param = *info->param;
+	stream->codec_param = *stream->si.param;
     else {
 	status = pjmedia_codec_mgr_get_default_param(stream->codec_mgr,
 						     &info->fmt,
@@ -2384,6 +2384,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 				    i);
     }
 #endif
+
+    /* Update the stream info's codec param */
+    stream->si.param = &stream->codec_param;
 
     /* Send RTCP SDES */
     if (!stream->rtcp_sdes_bye_disabled) {
