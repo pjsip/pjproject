@@ -2199,7 +2199,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
 
 	    /* Reset pointer to registration transport */
-	    acc->auto_rereg.reg_tp = NULL;
+	    //acc->auto_rereg.reg_tp = NULL;
 
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2591,10 +2591,15 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 
     /* Update pointer to registration transport */
     if (status == PJ_SUCCESS) {
-	pjsip_regc_info reg_info;
+        /* Variable auto_rereg.reg_tp is currently unused since it may differ
+         * with the transport used by regc (for example, when a resolver is
+         * employed). A more reliable way is to query the regc directly
+         * when needed.
+         */
+	//pjsip_regc_info reg_info;
 
-	pjsip_regc_get_info(pjsua_var.acc[acc_id].regc, &reg_info);
-	pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
+	//pjsip_regc_get_info(pjsua_var.acc[acc_id].regc, &reg_info);
+	//pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
         
         if (pjsua_var.ua_cfg.cb.on_reg_started) {
             (*pjsua_var.ua_cfg.cb.on_reg_started)(acc_id, renew);
@@ -3630,24 +3635,27 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
     for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_acc *acc = &pjsua_var.acc[i];
 
-	/* Skip if this account is not valid OR auto re-registration
-	 * feature is disabled OR this transport is not used by this account.
-	 */
-	if (!acc->valid || !acc->cfg.reg_retry_interval || 
-	    tp != acc->auto_rereg.reg_tp)
-	{
+	/* Skip if this account is not valid. */
+	if (!acc->valid)
 	    continue;
-	}
 
-	/* Release regc transport immediately
+	/* Release transport immediately if regc is using it
 	 * See https://trac.pjsip.org/repos/ticket/1481
 	 */
-	if (pjsua_var.acc[i].regc) {
-	    pjsip_regc_release_transport(pjsua_var.acc[i].regc);
-	}
+	if (acc->regc) {
+	    pjsip_regc_info reg_info;
 
-	/* Schedule reregistration for this account */
-	schedule_reregistration(acc);
+	    pjsip_regc_get_info(acc->regc, &reg_info);
+	    if (reg_info.transport != tp)
+	        continue;
+
+	    pjsip_regc_release_transport(pjsua_var.acc[i].regc);
+
+	    /* Schedule reregistration for this account */
+	    if (acc->cfg.reg_retry_interval) {
+	        schedule_reregistration(acc);
+	    }
+	}
     }
 
     PJSUA_UNLOCK();
