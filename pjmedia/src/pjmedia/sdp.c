@@ -1242,9 +1242,19 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    attr = parse_attr(pool, &scanner, &ctx);
 		    if (attr) {
 			if (media) {
-			    pjmedia_sdp_media_add_attr(media, attr);
+			    if (media->attr_count < PJMEDIA_MAX_SDP_ATTR)
+				pjmedia_sdp_media_add_attr(media, attr);
+			    else
+				PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+					      "Error adding media attribute, "
+					      "attribute is ignored"));
 			} else {
-			    pjmedia_sdp_session_add_attr(session, attr);
+			    if (session->attr_count < PJMEDIA_MAX_SDP_ATTR)
+				pjmedia_sdp_session_add_attr(session, attr);
+			    else
+				PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+					      "Error adding session attribute"
+					      ", attribute is ignored"));
 			}
 		    }
 		    break;
@@ -1294,9 +1304,19 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    bandw = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_bandw);
 		    parse_bandwidth_info(&scanner, bandw, &ctx);
 		    if (media) {
-			media->bandw[media->bandw_count++] = bandw;
+			if (media->bandw_count < PJMEDIA_MAX_SDP_BANDW)
+			    media->bandw[media->bandw_count++] = bandw;
+			else
+			    PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+					  "Error adding media bandwidth "
+					  "info, info is ignored"));
 		    } else {
-			session->bandw[session->bandw_count++] = bandw;
+			if (session->bandw_count < PJMEDIA_MAX_SDP_BANDW)
+			    session->bandw[session->bandw_count++] = bandw;
+			else
+			    PJ_PERROR(2, (THIS_FILE, PJ_ETOOMANY,
+					  "Error adding session bandwidth "
+					  "info, info is ignored"));
 		    }
 		    break;
 		default:
