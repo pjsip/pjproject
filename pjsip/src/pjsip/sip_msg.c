@@ -1702,17 +1702,21 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     /* Check the proprietary param 'hide', don't print this header 
      * if it exists in the route URI.
      */
-    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->name_addr.uri);
-    p = sip_uri->other_param.next;
-    while (p != &sip_uri->other_param) {
-	const pj_str_t st_hide = {"hide", 4};
+    if (PJSIP_URI_SCHEME_IS_SIPS(hdr->name_addr.uri) ||
+	PJSIP_URI_SCHEME_IS_SIP(hdr->name_addr.uri))
+    {
+	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->name_addr.uri);
+	p = sip_uri->other_param.next;
+	while (p != &sip_uri->other_param) {
+	    const pj_str_t st_hide = {"hide", 4};
 
-	if (pj_stricmp(&p->name, &st_hide) == 0) {
-	    /* Check if param 'hide' is specified without 'lr'. */
-	    pj_assert(sip_uri->lr_param != 0);
-	    return 0;
+	    if (pj_stricmp(&p->name, &st_hide) == 0) {
+		/* Check if param 'hide' is specified without 'lr'. */
+		pj_assert(sip_uri->lr_param != 0);
+		return 0;
+	    }
+	    p = p->next;
 	}
-	p = p->next;
     }
 
     /* Route and Record-Route don't compact forms */
