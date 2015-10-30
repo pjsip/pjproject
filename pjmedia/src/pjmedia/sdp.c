@@ -144,7 +144,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find (unsigned count,
     unsigned i;
     unsigned c_pt = 0xFFFF;
 
-    PJ_ASSERT_RETURN(count < PJMEDIA_MAX_SDP_ATTR, NULL);
+    PJ_ASSERT_RETURN(count <= PJMEDIA_MAX_SDP_ATTR, NULL);
 
     if (c_fmt)
 	c_pt = pj_strtoul(c_fmt);
