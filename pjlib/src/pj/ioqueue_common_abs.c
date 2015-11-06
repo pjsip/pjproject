@@ -195,14 +195,20 @@ PJ_INLINE(int) key_has_pending_connect(pj_ioqueue_key_t *key)
  * Report occurence of an event in the key to be processed by the
  * framework.
  */
-void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
+pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
+				        pj_ioqueue_key_t *h)
 {
-    /* Lock the key. */
-    pj_ioqueue_lock_key(h);
+    pj_status_t rc;
+
+    /* Try lock the key. */
+    rc = pj_ioqueue_trylock_key(h);
+    if (rc != PJ_SUCCESS) {
+	return PJ_FALSE;
+    }
 
     if (IS_CLOSING(h)) {
 	pj_ioqueue_unlock_key(h);
-	return;
+	return PJ_TRUE;
     }
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
@@ -417,19 +423,27 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
          * able to process the event.
          */
 	pj_ioqueue_unlock_key(h);
+
+	return PJ_FALSE;
     }
+
+    return PJ_TRUE;
 }
 
-void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
+pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
+				       pj_ioqueue_key_t *h )
 {
     pj_status_t rc;
 
-    /* Lock the key. */
-    pj_ioqueue_lock_key(h);
+    /* Try lock the key. */
+    rc = pj_ioqueue_trylock_key(h);
+    if (rc != PJ_SUCCESS) {
+	return PJ_FALSE;
+    }
 
     if (IS_CLOSING(h)) {
 	pj_ioqueue_unlock_key(h);
-	return;
+	return PJ_TRUE;
     }
 
 #   if PJ_HAS_TCP
@@ -604,16 +618,25 @@ void ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h )
          * able to process the event.
          */
 	pj_ioqueue_unlock_key(h);
+
+	return PJ_FALSE;
     }
+
+    return PJ_TRUE;
 }
 
 
-void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue, 
-                                       pj_ioqueue_key_t *h )
+pj_bool_t ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
+					    pj_ioqueue_key_t *h )
 {
     pj_bool_t has_lock;
+    pj_status_t rc;
 
-    pj_ioqueue_lock_key(h);
+    /* Try lock the key. */
+    rc = pj_ioqueue_trylock_key(h);
+    if (rc != PJ_SUCCESS) {
+	return PJ_FALSE;
+    }
 
     if (!h->connecting) {
         /* It is possible that more than one thread was woken up, thus
@@ -621,12 +644,12 @@ void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
          * it has been processed by other thread.
          */
 	pj_ioqueue_unlock_key(h);
-        return;
+	return PJ_TRUE;
     }
 
     if (IS_CLOSING(h)) {
 	pj_ioqueue_unlock_key(h);
-	return;
+	return PJ_TRUE;
     }
 
     /* Clear operation. */
@@ -668,6 +691,8 @@ void ioqueue_dispatch_exception_event( pj_ioqueue_t *ioqueue,
     if (has_lock) {
 	pj_ioqueue_unlock_key(h);
     }
+
+    return PJ_TRUE;
 }
 
 /*
@@ -1322,6 +1347,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key)
 	return pj_grp_lock_acquire(key->grp_lock);
     else
 	return pj_lock_acquire(key->lock);
+}
+
+PJ_DEF(pj_status_t) pj_ioqueue_trylock_key(pj_ioqueue_key_t *key)
+{
+    if (key->grp_lock)
+	return pj_grp_lock_tryacquire(key->grp_lock);
+    else
+	return pj_lock_tryacquire(key->lock);
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)

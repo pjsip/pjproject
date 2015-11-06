@@ -303,6 +303,28 @@ typedef enum pj_ioqueue_operation_e
 #   define PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL     (16)
 #endif
 
+
+/**
+ * This macro specifies the maximum event candidates collected by each
+ * polling thread to be able to reach maximum number of processed events
+ * (i.e: PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) in each poll cycle.
+ * An event candidate will be dispatched to application as event unless
+ * it is already being dispatched by other polling thread. So in order to
+ * anticipate such race condition, each poll operation should collects its
+ * event candidates more than PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL, the
+ * recommended value is (PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL *
+ * number of polling threads).
+ *
+ * The value is only meaningfull when specified during PJLIB build and
+ * is only effective on multiple polling threads environment.
+ */
+#if !defined(PJ_IOQUEUE_MAX_CAND_EVENTS) || \
+    PJ_IOQUEUE_MAX_CAND_EVENTS < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL
+#   undef  PJ_IOQUEUE_MAX_CAND_EVENTS
+#   define PJ_IOQUEUE_MAX_CAND_EVENTS	PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL
+#endif
+
+
 /**
  * When this flag is specified in ioqueue's recv() or send() operations,
  * the ioqueue will always mark the operation as asynchronous.
@@ -502,6 +524,17 @@ PJ_DECL(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
  * @return	    PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key);
+
+/**
+ * Try to acquire the key's mutex. When the key's concurrency is disabled, 
+ * application may call this function to synchronize its operation
+ * with the key's callback.
+ *
+ * @param key	    The key that was previously obtained from registration.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_trylock_key(pj_ioqueue_key_t *key);
 
 /**
  * Release the lock previously acquired with pj_ioqueue_lock_key().
