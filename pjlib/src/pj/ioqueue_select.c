@@ -338,8 +338,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
      * avoid potential memory corruption caused by select() when given
      * an fd that is higher than FD_SETSIZE.
      */
-    if (sizeof(fd_set) < FD_SETSIZE && sock >= PJ_IOQUEUE_MAX_HANDLES)
-	return PJ_ETOOBIG;
+    if (sizeof(fd_set) < FD_SETSIZE && sock >= FD_SETSIZE) {
+	PJ_LOG(4, ("pjlib", "Failed to register socket to ioqueue because "
+		   	    "socket fd is too big (fd=%d/FD_SETSIZE=%d)",
+		   	    sock, FD_SETSIZE));
+    	return PJ_ETOOBIG;
+    }
 
     pj_lock_acquire(ioqueue->lock);
 
