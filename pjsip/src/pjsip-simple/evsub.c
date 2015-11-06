@@ -253,13 +253,14 @@ struct dlgsub
 
 
 /* Static vars. */
-static const pj_str_t STR_EVENT	     = { "Event", 5 };
-static const pj_str_t STR_EVENT_S    = { "o", 1 };
-static const pj_str_t STR_SUB_STATE  = { "Subscription-State", 18 };
-static const pj_str_t STR_TERMINATED = { "terminated", 10 };
-static const pj_str_t STR_ACTIVE     = { "active", 6 };
-static const pj_str_t STR_PENDING    = { "pending", 7 };
-static const pj_str_t STR_TIMEOUT    = { "timeout", 7};
+static const pj_str_t STR_EVENT	       = { "Event", 5 };
+static const pj_str_t STR_EVENT_S      = { "o", 1 };
+static const pj_str_t STR_SUB_STATE    = { "Subscription-State", 18 };
+static const pj_str_t STR_TERMINATED   = { "terminated", 10 };
+static const pj_str_t STR_ACTIVE       = { "active", 6 };
+static const pj_str_t STR_PENDING      = { "pending", 7 };
+static const pj_str_t STR_TIMEOUT      = { "timeout", 7};
+static const pj_str_t STR_RETRY_AFTER  = { "Retry-After", 11 };
 
 
 /*
@@ -2156,40 +2157,66 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 
-	/* Handle authentication */ 
+	/* Handle authentication */
 	if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 	    (tsx->status_code==401 || tsx->status_code==407))
-	{
-	    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+	{	    
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
+	    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 
-	    status = pjsip_auth_clt_reinit_req( &sub->dlg->auth_sess, rdata, 
-						tsx->last_tx, &tdata);
+	    status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess, rdata,
+					       tsx->last_tx, &tdata);
 	    if (status == PJ_SUCCESS)
-		status = pjsip_dlg_send_request( sub->dlg, tdata, -1, NULL );
+		status = pjsip_dlg_send_request(sub->dlg, tdata, -1, NULL);
 
 	    if (status != PJ_SUCCESS) {
 		/* Can't authenticate. Terminate session (?) */
-		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, 
+		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL,
 			  &tsx->status_text);
 		return;
 	    }
 
 	}
-	/*
-	 * Terminate event usage if we receive 481, 408, and 7 class
-	 * responses.
-	 */
-	if (sub->state != PJSIP_EVSUB_STATE_TERMINATED &&
-	    (tsx->status_code==481 || tsx->status_code==408 ||
-	     tsx->status_code/100 == 7))
-	{
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event,
-		      &tsx->status_text);
-	    return;
-	}
 
+	if (sub->state == PJSIP_EVSUB_STATE_TERMINATED)
+	    return;
+
+	/* NOTIFY failure check */
+	if (tsx->status_code/100 != 2) {
+	    pj_bool_t should_terminate_sub = PJ_FALSE;
+
+	    if (event->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+		if (tsx->status_code == 481) {
+		    should_terminate_sub = PJ_TRUE;
+		} else {
+		    pjsip_retry_after_hdr *retry_after;
+		    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;;
+		    pjsip_msg *msg = rdata->msg_info.msg;		    
+
+		    retry_after = (pjsip_retry_after_hdr*)
+		       pjsip_msg_find_hdr_by_name(msg, &STR_RETRY_AFTER, NULL);
+
+		    if (!retry_after) {
+			should_terminate_sub = PJ_TRUE;
+		    }
+		}
+	    } else if (event->body.tsx_state.type == PJSIP_EVENT_TIMER) {
+		if (tsx->status_code == 408) {
+		    should_terminate_sub = PJ_TRUE;
+		}
+	    }
+
+	    /*
+	     * Terminate event usage if we receive non 2xx without retry_after
+	     * parameter, 481, 408 responses.
+	     */
+	    if (should_terminate_sub) {
+		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event,
+			  &tsx->status_text);
+		return;
+	    }
+	}
     } else {
 
 	/*
