@@ -195,8 +195,19 @@ ifeq (@ac_external_pa@,1)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
 else
 # Our PA in third_party
-export CFLAGS += -I$(THIRD_PARTY)/build/portaudio -I$(THIRD_PARTY)/portaudio/include -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
+export CFLAGS += -I$(THIRD_PARTY)/build/portaudio \
+		 -I$(THIRD_PARTY)/portaudio/include \
+		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
 endif
+endif
+
+#
+# MacOSX specific
+#
+ifneq ($(findstring coreaudio,$(AC_PJMEDIA_SND)),)
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_COREAUDIO=1 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -212,14 +223,16 @@ endif
 # Null sound device
 #
 ifeq ($(AC_PJMEDIA_SND),null)
-export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
 # External sound device
 #
 ifeq ($(AC_PJMEDIA_SND),external)
-export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
@@ -244,7 +257,8 @@ export PJMEDIA_VIDEODEV_OBJS += android_dev.o android_opengl.o
 endif
 
 #
-# Determine whether we should compile the obj-c version of a particular source code
+# Determine whether we should compile the obj-c version of a particular
+# source code
 #
 ifneq (,$(filter $(AC_PJMEDIA_VIDEO),mac_os iphone_os))
 # Mac and iPhone OS specific, use obj-c

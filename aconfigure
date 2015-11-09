@@ -6087,7 +6087,7 @@ $as_echo "Checking sound device backend... AudioUnit" >&6; }
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... old coreaudio" >&5
 $as_echo "Checking sound device backend... old coreaudio" >&6; }
 	else
-		ac_pjmedia_snd=pa_darwinos
+		ac_pjmedia_snd=coreaudio
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... coreaudio" >&5
 $as_echo "Checking sound device backend... coreaudio" >&6; }
 	fi

@@ -637,7 +637,7 @@ else
 		ac_pjmedia_snd=pa_old_darwinos
 		AC_MSG_RESULT([Checking sound device backend... old coreaudio])
 	else
-		ac_pjmedia_snd=pa_darwinos
+		ac_pjmedia_snd=coreaudio
 		AC_MSG_RESULT([Checking sound device backend... coreaudio])
 	fi
 	;;
