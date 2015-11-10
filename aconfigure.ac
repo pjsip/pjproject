@@ -642,7 +642,7 @@ else
 	fi
 	;;
   *cygwin* | *mingw*)
-	ac_pjmedia_snd=pa_win32
+	ac_pjmedia_snd=win32
 	AC_MSG_RESULT([Checking sound device backend... win32 sound])
 	;;
   *rtems*)
@@ -654,6 +654,7 @@ else
 	ac_pjmedia_snd=pa_unix
 	AC_CHECK_HEADER(alsa/version.h,
 			[AC_SUBST(ac_pa_use_alsa,1)
+			 AC_SUBST(ac_pjmedia_snd,alsa)
 			 LIBS="$LIBS -lasound"
 			],
 		        [AC_SUBST(ac_pa_use_alsa,0)])

@@ -6093,7 +6093,7 @@ $as_echo "Checking sound device backend... coreaudio" >&6; }
 	fi
 	;;
   *cygwin* | *mingw*)
-	ac_pjmedia_snd=pa_win32
+	ac_pjmedia_snd=win32
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... win32 sound" >&5
 $as_echo "Checking sound device backend... win32 sound" >&6; }
 	;;
@@ -6107,6 +6107,8 @@ $as_echo "Checking sound device backend... null sound" >&6; }
 	ac_fn_c_check_header_mongrel "$LINENO" "alsa/version.h" "ac_cv_header_alsa_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_alsa_version_h" = xyes; then :
   ac_pa_use_alsa=1
+
+			 ac_pjmedia_snd=alsa
 
 			 LIBS="$LIBS -lasound"
 

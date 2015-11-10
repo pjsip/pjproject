@@ -56,7 +56,9 @@ export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
 #   - pa_darwinos:  	PortAudio on MacOSX (CoreAudio)
 #   - pa_old_darwinos:  PortAudio on MacOSX (old CoreAudio, for OSX 10.2)
 #   - pa_win32:	    	PortAudio on Win32 (WMME)
-#   - ds:	    	Win32 DirectSound (dsound.c)
+#   - win32:	    	Win32 MME (wmme_dev.c)
+#   - coreaudio:	MaxOSX CoreAudio (coreaudio_dev.m)
+#   - alsa:		Unix ALSA (alsa_dev.c)
 #   - null:	    	Null sound device (nullsound.c)
 #   - external:		Link with no sounddev (app will provide)
 AC_PJMEDIA_SND=@ac_pjmedia_snd@
@@ -211,10 +213,20 @@ export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_COREAUDIO=1 \
 endif
 
 #
+# Unix specific
+#
+ifneq ($(findstring alsa,$(AC_PJMEDIA_SND)),)
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_ALSA=1 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
+endif
+
+#
 # Windows specific
 #
 ifneq ($(findstring win32,$(AC_PJMEDIA_SND)),)
-export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_WMME=1
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_WMME=1 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0
 else
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
