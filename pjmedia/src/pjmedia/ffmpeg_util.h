@@ -41,9 +41,9 @@ void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 
 pj_status_t pjmedia_format_id_to_PixelFormat(pjmedia_format_id fmt_id,
-					     enum PixelFormat *pixel_format);
+					     enum AVPixelFormat *pixel_format);
 
-pj_status_t PixelFormat_to_pjmedia_format_id(enum PixelFormat pf,
+pj_status_t PixelFormat_to_pjmedia_format_id(enum AVPixelFormat pf,
 					     pjmedia_format_id *fmt_id);
 
 pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,

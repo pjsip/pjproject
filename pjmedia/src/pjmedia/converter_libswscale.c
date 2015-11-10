@@ -66,7 +66,7 @@ static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 					    const pjmedia_conversion_param *prm,
 					    pjmedia_converter **p_cv)
 {
-    enum PixelFormat srcFormat, dstFormat;
+    enum AVPixelFormat srcFormat, dstFormat;
     const pjmedia_video_format_detail *src_detail, *dst_detail;
     const pjmedia_video_format_info *src_fmt_info, *dst_fmt_info;
     struct SwsContext *sws_ctx;

@@ -26,39 +26,26 @@
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
 
-/* PIX_FMT_GBR24P hassle:
- * - PIX_FMT_GBR24P is introduced (perhaps in avutil 51.20.1)
- * - suddenly PIX_FMT_GBR24P is replaced by PIX_FMT_GBRP, no alias defined,
- *   so PIX_FMT_GBR24P is just gone! (perhaps in avutil 51.42.0)
- * - then lately PIX_FMT_GBR24P is defined as PIX_FMT_GBRP
- */
-#if !defined(PIX_FMT_GBR24P) && \
-    LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51,42,0)
-#  define PIX_FMT_GBR24P PIX_FMT_GBRP
-#endif
-
-/* Conversion table between pjmedia_format_id and PixelFormat */
+/* Conversion table between pjmedia_format_id and AVPixelFormat */
 static const struct ffmpeg_fmt_table_t
 {
     pjmedia_format_id	id;
-    enum PixelFormat	pf;
+    enum AVPixelFormat	pf;
 } ffmpeg_fmt_table[] =
 {
-    { PJMEDIA_FORMAT_RGBA, PIX_FMT_RGBA},
-    { PJMEDIA_FORMAT_RGB24,PIX_FMT_BGR24},
-    { PJMEDIA_FORMAT_BGRA, PIX_FMT_BGRA},
-#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(51, 20, 1)
-    { PJMEDIA_FORMAT_GBRP, PIX_FMT_GBR24P},
-#endif
+    { PJMEDIA_FORMAT_RGBA, AV_PIX_FMT_RGBA},
+    { PJMEDIA_FORMAT_RGB24,AV_PIX_FMT_BGR24},
+    { PJMEDIA_FORMAT_BGRA, AV_PIX_FMT_BGRA},
+    { PJMEDIA_FORMAT_GBRP, AV_PIX_FMT_GBRP},
 
-    { PJMEDIA_FORMAT_AYUV, PIX_FMT_NONE},
-    { PJMEDIA_FORMAT_YUY2, PIX_FMT_YUYV422},
-    { PJMEDIA_FORMAT_UYVY, PIX_FMT_UYVY422},
-    { PJMEDIA_FORMAT_I420, PIX_FMT_YUV420P},
-    //{ PJMEDIA_FORMAT_YV12, PIX_FMT_YUV420P},
-    { PJMEDIA_FORMAT_I422, PIX_FMT_YUV422P},
-    { PJMEDIA_FORMAT_I420JPEG, PIX_FMT_YUVJ420P},
-    { PJMEDIA_FORMAT_I422JPEG, PIX_FMT_YUVJ422P},
+    { PJMEDIA_FORMAT_AYUV, AV_PIX_FMT_NONE},
+    { PJMEDIA_FORMAT_YUY2, AV_PIX_FMT_YUYV422},
+    { PJMEDIA_FORMAT_UYVY, AV_PIX_FMT_UYVY422},
+    { PJMEDIA_FORMAT_I420, AV_PIX_FMT_YUV420P},
+    //{ PJMEDIA_FORMAT_YV12, AV_PIX_FMT_YUV420P},
+    { PJMEDIA_FORMAT_I422, AV_PIX_FMT_YUV422P},
+    { PJMEDIA_FORMAT_I420JPEG, AV_PIX_FMT_YUVJ420P},
+    { PJMEDIA_FORMAT_I422JPEG, AV_PIX_FMT_YUVJ422P},
 };
 
 /* Conversion table between pjmedia_format_id and CodecID */
@@ -68,14 +55,14 @@ static const struct ffmpeg_codec_table_t
     unsigned		codec_id;
 } ffmpeg_codec_table[] =
 {
-    {PJMEDIA_FORMAT_H261,	CODEC_ID_H261},
-    {PJMEDIA_FORMAT_H263,	CODEC_ID_H263},
-    {PJMEDIA_FORMAT_H263P,	CODEC_ID_H263P},
-    {PJMEDIA_FORMAT_H264,	CODEC_ID_H264},
-    {PJMEDIA_FORMAT_MPEG1VIDEO,	CODEC_ID_MPEG1VIDEO},
-    {PJMEDIA_FORMAT_MPEG2VIDEO, CODEC_ID_MPEG2VIDEO},
-    {PJMEDIA_FORMAT_MPEG4,	CODEC_ID_MPEG4},
-    {PJMEDIA_FORMAT_MJPEG,	CODEC_ID_MJPEG}
+    {PJMEDIA_FORMAT_H261,	AV_CODEC_ID_H261},
+    {PJMEDIA_FORMAT_H263,	AV_CODEC_ID_H263},
+    {PJMEDIA_FORMAT_H263P,	AV_CODEC_ID_H263P},
+    {PJMEDIA_FORMAT_H264,	AV_CODEC_ID_H264},
+    {PJMEDIA_FORMAT_MPEG1VIDEO,	AV_CODEC_ID_MPEG1VIDEO},
+    {PJMEDIA_FORMAT_MPEG2VIDEO, AV_CODEC_ID_MPEG2VIDEO},
+    {PJMEDIA_FORMAT_MPEG4,	AV_CODEC_ID_MPEG4},
+    {PJMEDIA_FORMAT_MJPEG,	AV_CODEC_ID_MJPEG}
 };
 
 static int pjmedia_ffmpeg_ref_cnt;
@@ -139,22 +126,22 @@ static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl)
 
 
 pj_status_t pjmedia_format_id_to_PixelFormat(pjmedia_format_id fmt_id,
-					     enum PixelFormat *pixel_format)
+					     enum AVPixelFormat *pixel_format)
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_fmt_table); ++i) {
 	const struct ffmpeg_fmt_table_t *t = &ffmpeg_fmt_table[i];
-	if (t->id==fmt_id && t->pf != PIX_FMT_NONE) {
+	if (t->id==fmt_id && t->pf != AV_PIX_FMT_NONE) {
 	    *pixel_format = t->pf;
 	    return PJ_SUCCESS;
 	}
     }
 
-    *pixel_format = PIX_FMT_NONE;
+    *pixel_format = AV_PIX_FMT_NONE;
     return PJ_ENOTFOUND;
 }
 
-pj_status_t PixelFormat_to_pjmedia_format_id(enum PixelFormat pf,
+pj_status_t PixelFormat_to_pjmedia_format_id(enum AVPixelFormat pf,
 					     pjmedia_format_id *fmt_id)
 {
     unsigned i;
@@ -175,13 +162,13 @@ pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
 	const struct ffmpeg_codec_table_t *t = &ffmpeg_codec_table[i];
-	if (t->id==fmt_id && t->codec_id != PIX_FMT_NONE) {
+	if (t->id==fmt_id && t->codec_id != AV_PIX_FMT_NONE) {
 	    *codec_id = t->codec_id;
 	    return PJ_SUCCESS;
 	}
     }
 
-    *codec_id = (unsigned)PIX_FMT_NONE;
+    *codec_id = (unsigned)AV_PIX_FMT_NONE;
     return PJ_ENOTFOUND;
 }
 

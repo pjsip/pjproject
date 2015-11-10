@@ -194,7 +194,7 @@ typedef struct ffmpeg_private
     /* The ffmpeg decoder cannot set the output format, so format conversion
      * may be needed for post-decoding.
      */
-    enum PixelFormat		     expected_dec_fmt;
+    enum AVPixelFormat		     expected_dec_fmt;
 						/**< Expected output format of 
 						     ffmpeg decoder	    */
 
@@ -673,7 +673,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 	    pjmedia_format_id raw_fmt[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
 	    unsigned raw_fmt_cnt = 0;
 	    unsigned raw_fmt_cnt_should_be = 0;
-	    const enum PixelFormat *p = c->pix_fmts;
+	    const enum AVPixelFormat *p = c->pix_fmts;
 
 	    for(;(p && *p != -1) &&
 		 (raw_fmt_cnt < PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT);
@@ -1096,7 +1096,7 @@ static void print_ffmpeg_err(int err)
 static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
                                      pj_mutex_t *ff_mutex)
 {
-    enum PixelFormat pix_fmt;
+    enum AVPixelFormat pix_fmt;
     pjmedia_video_format_detail *vfd;
     pj_bool_t enc_opened = PJ_FALSE, dec_opened = PJ_FALSE;
     pj_status_t status;
@@ -1429,7 +1429,8 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     /* Check if encoder has been opened */
     PJ_ASSERT_RETURN(ff->enc_ctx, PJ_EINVALIDOP);
 
-    avcodec_get_frame_defaults(&avframe);
+    pj_bzero(&avframe, sizeof(avframe));
+    av_frame_unref(&avframe);
 
     // Let ffmpeg manage the timestamps
     /*
@@ -1679,7 +1680,8 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
      * whole decoding session, and seems to be freed when the codec context
      * closed).
      */
-    avcodec_get_frame_defaults(&avframe);
+    pj_bzero(&avframe, sizeof(avframe));
+    av_frame_unref(&avframe);
 
     /* Init packet, the container of the encoded data */
     av_init_packet(&avpacket);
