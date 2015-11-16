@@ -1566,8 +1566,16 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
-    if (tls->base.is_shutdown || tls->base.is_destroying) 
-	return PJ_FALSE;
+    /* If transport is being shutdown/destroyed, proceed as error connect.
+     * Note that it is important to notify application via on_data_sent()
+     * as otherwise the transport reference counter may never reach zero
+     * (see #1898).
+     */
+    if ((tls->base.is_shutdown || tls->base.is_destroying) &&
+	status == PJ_SUCCESS)
+    {
+	status = PJ_ECANCELLED;
+    }
 
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
