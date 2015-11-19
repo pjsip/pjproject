@@ -75,7 +75,8 @@ typedef struct pjmedia_snd_stream pjmedia_snd_stream;
  */
 typedef struct pjmedia_snd_dev_info
 {
-    char	name[64];	        /**< Device name.		    */
+    char	name[PJMEDIA_AUD_DEV_INFO_NAME_LEN];	        
+    					/**< Device name.		    */
     unsigned	input_count;	        /**< Max number of input channels.  */
     unsigned	output_count;	        /**< Max number of output channels. */
     unsigned	default_samples_per_sec;/**< Default sampling rate.	    */

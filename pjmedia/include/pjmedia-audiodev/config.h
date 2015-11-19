@@ -43,6 +43,20 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * This setting controls the buffer length of audio device name.
+ *
+ * Default: 128 for Windows platforms, 64 for others
+ */
+#ifndef PJMEDIA_AUD_DEV_INFO_NAME_LEN
+#   if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+       (defined(PJ_WIN64) && PJ_WIN64!=0)
+#	define PJMEDIA_AUD_DEV_INFO_NAME_LEN 128
+#   else
+#	define PJMEDIA_AUD_DEV_INFO_NAME_LEN 64
+#   endif
+#endif
+
+/**
  * This setting controls whether PortAudio support should be included.
  *
  * By default it is enabled except on Windows platforms (including
