@@ -1995,6 +1995,8 @@ static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 	    pjsip_param *prm = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
 	    int_parse_param(scanner, ctx->pool, &prm->name, &prm->value, 0);
 	    pj_list_push_back(&hdr->param, prm);
+	} else {
+	    on_syntax_error(scanner);
 	}
     }
 
