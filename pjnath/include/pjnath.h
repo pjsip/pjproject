@@ -18,6 +18,13 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
+#ifndef __PJNATH_H__
+#define __PJNATH_H__
+
+/**
+ * @file pjnath.h
+ * @brief PJNATH main header file.
+ */
 #include <pjnath/config.h>
 #include <pjnath/errno.h>
 #include <pjnath/ice_session.h>
@@ -32,4 +39,6 @@
 #include <pjnath/turn_session.h>
 #include <pjnath/turn_sock.h>
 #include <pjnath/types.h>
+
+#endif
 
