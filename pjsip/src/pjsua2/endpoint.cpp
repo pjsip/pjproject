@@ -1337,6 +1337,8 @@ void Endpoint::libRegisterThread(const string &name) throw(Error)
 	PJSUA2_RAISE_ERROR(PJ_ENOMEM);
     }
 
+    pj_bzero(desc, sizeof(pj_thread_desc));
+
     status = pj_thread_register(name.c_str(), *desc, &thread);
     if (status == PJ_SUCCESS) {
 	threadDescMap[thread] = desc;
