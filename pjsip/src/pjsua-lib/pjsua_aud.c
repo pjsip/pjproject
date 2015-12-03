@@ -588,7 +588,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
     si->rtcp_sdes_bye_disabled = pjsua_var.media_cfg.no_rtcp_sdes_bye;
 
     /* Check if no media is active */
-    if (si->dir != PJMEDIA_DIR_NONE) {
+    if (local_sdp->media[strm_idx]->desc.port != 0) {
 
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
