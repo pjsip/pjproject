@@ -45,6 +45,7 @@ Endpoint *Endpoint::instance_;
 ///////////////////////////////////////////////////////////////////////////////
 
 UaConfig::UaConfig()
+: mainThreadOnly(false)
 {
     pjsua_config ua_cfg;
 
