@@ -18,12 +18,16 @@
       <BrowseInformation>true</BrowseInformation>
       <WarningLevel>Level4</WarningLevel>
       <CompileAs>Default</CompileAs>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+      <AdditionalOptions>/Ignore:4264 %(AdditionalOptions)</AdditionalOptions>      
     </Lib>
     <Link>
-      <OutputFile>..\bin\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).exe</OutputFile>
+      <OutputFile  Condition="'$(TargetExt)'=='.exe'">..\bin\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).exe</OutputFile>
+      <GenerateWindowsMetadata Condition="'$(TargetExt)'=='.lib'">false</GenerateWindowsMetadata>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

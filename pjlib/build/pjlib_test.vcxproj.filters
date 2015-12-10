@@ -54,9 +54,6 @@
     <ClCompile Include="..\src\pjlib-test\list.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pjlib-test\main.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\main_mod.c">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -1,0 +1,18 @@
+﻿<Page
+    x:Class="PjsuaCLI.UI.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:PjsuaCLI.UI"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="Black">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <Image x:Name="imgMain" HorizontalAlignment="Center" Margin="0" Grid.RowSpan="2" VerticalAlignment="Center" Source="/Assets/teluu-logo.png" Height="239"/>
+        <TextBlock x:Name="txtStatus" HorizontalAlignment="Center" Margin="0" Grid.RowSpan="2" TextWrapping="Wrap" VerticalAlignment="Bottom" Foreground="White"/>
+    </Grid>
+</Page>

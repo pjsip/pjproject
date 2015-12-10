@@ -50,9 +50,18 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B3F7D4E9-702F-4EB4-ADA8-098D0A83D770}</ProjectGuid>
     <RootNamespace>pjsip_test</RootNamespace>
+    <!-- Specific UWP property -->
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <AppContainerApplication Condition="'$(API_Family)'=='UWP'">true</AppContainerApplication>
+    <ApplicationType Condition="'$(API_Family)'=='UWP'">Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision Condition="'$(API_Family)'=='UWP'">$(AppTypeRev)</ApplicationTypeRevision>    
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -127,10 +136,17 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
+  <!-- Override the PlatformToolset -->
+  <PropertyGroup>
+    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <ConfigurationType Condition="'$(API_Family)'=='WinDesktop'">Application</ConfigurationType>
+    <ConfigurationType Condition="'$(API_Family)'=='UWP' Or '$(API_Family)'=='WinPhone8'">StaticLibrary</ConfigurationType>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-<ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
 	<Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
     <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />    
@@ -193,8 +209,17 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>	
-	<TargetName>pjsip-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>
+	  <TargetName>pjsip-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>
   </PropertyGroup>
+  <!-- Compile and link option definition -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\lib\pjsip-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

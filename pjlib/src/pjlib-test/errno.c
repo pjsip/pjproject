@@ -106,7 +106,7 @@ int errno_test(void)
     /*
      * Unix errors
      */
-#   if defined(EINVAL) && !defined(PJ_SYMBIAN)
+#   if defined(EINVAL) && !defined(PJ_SYMBIAN) && !defined(PJ_WIN32)
     rc = PJ_STATUS_FROM_OS(EINVAL);
     pj_set_os_error(rc);
 

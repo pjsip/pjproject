@@ -50,9 +50,18 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{553C094C-F581-4A80-9540-D5D7B398A2C6}</ProjectGuid>
     <RootNamespace>pjnath_test</RootNamespace>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <!-- Specific UWP property -->
+    <AppContainerApplication Condition="'$(API_Family)'=='UWP'">true</AppContainerApplication>
+    <ApplicationType Condition="'$(API_Family)'=='UWP'">Windows Store</ApplicationType>
+    <WindowsTargetPlatformVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformMinVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformMinVersion>
+    <ApplicationTypeRevision Condition="'$(API_Family)'=='UWP'">$(AppTypeRev)</ApplicationTypeRevision>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -127,6 +136,13 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
+  <!-- Override the PlatformToolset -->
+  <PropertyGroup>
+    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <ConfigurationType Condition="'$(API_Family)'=='WinDesktop'">Application</ConfigurationType>
+    <ConfigurationType Condition="'$(API_Family)'=='UWP' Or '$(API_Family)'=='WinPhone8'">StaticLibrary</ConfigurationType>
+  </PropertyGroup>  
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -193,8 +209,17 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
-	<TargetName>pjnath-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>
+	  <TargetName>pjnath-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration)</TargetName>
   </PropertyGroup>
+  <!-- Compile and link option definition -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\lib\pjnath-test-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

@@ -894,8 +894,21 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     /* Unlock ioqueue before select(). */
     pj_lock_release(ioqueue->lock);
 
+#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+    count = 0;
+    __try {
+#endif
+
     count = pj_sock_select(nfds+1, &rfdset, &wfdset, &xfdset, 
 			   timeout);
+
+#if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+    /* Ignore Invalid Handle Exception raised by select().*/
+    }
+    __except (GetExceptionCode() == STATUS_INVALID_HANDLE ?
+	      EXCEPTION_CONTINUE_EXECUTION : EXCEPTION_CONTINUE_SEARCH) {
+    }
+#endif    
     
     if (count == 0)
 	return 0;

@@ -192,6 +192,9 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     #endif
 #elif defined(_MSC_VER)
     {
+    #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+	si.os_name = pj_str("winphone");
+    #else
 	OSVERSIONINFO ovi;
 
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
@@ -206,14 +209,21 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	#else
 	    si.os_name = pj_str("win32");
 	#endif
+    #endif
     }
 
     {
 	SYSTEM_INFO wsi;
 
+    #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+	GetNativeSystemInfo(&wsi);
+    #else
 	GetSystemInfo(&wsi);
+    #endif
+	
 	switch (wsi.wProcessorArchitecture) {
-    #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
+	#if (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE) || \
+	    (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8)
 	case PROCESSOR_ARCHITECTURE_ARM:
 	    si.machine = pj_str("arm");
 	    break;
@@ -232,6 +242,10 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	    break;
     #endif	/* PJ_WIN32_WINCE */
 	}
+    #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
+	/* Avoid compile warning. */
+	goto get_sdk_info;
+    #endif
     }
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     {
