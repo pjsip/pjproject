@@ -375,8 +375,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.sock_af = af;
     ssock_param.cb.on_accept_complete = &on_accept_complete;
-    ssock_param.cb.on_data_read = &on_data_read;
-    ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = async_cnt;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
     ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
