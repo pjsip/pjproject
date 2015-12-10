@@ -1,0 +1,6 @@
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Target Name="CheckAPI">
+    <Message Condition="'$(API_Family)'!='$(PROJ_Target)'" Text="Skipped project build"></Message>
+    <CallTarget Condition="'$(API_Family)'=='$(PROJ_Target)'" Targets="Build"/>
+  </Target>
+</Project>
