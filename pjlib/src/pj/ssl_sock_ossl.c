@@ -141,6 +141,7 @@ struct pj_ssl_sock_t
     pj_pool_t		 *pool;
     pj_ssl_sock_t	 *parent;
     pj_ssl_sock_param	  param;
+    pj_ssl_sock_param	  newsock_param;
     pj_ssl_cert_t	 *cert;
     
     pj_ssl_cert_info	  local_cert_info;
@@ -1757,11 +1758,9 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     unsigned i;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(src_addr_len);
-
     /* Create new SSL socket instance */
-    status = pj_ssl_sock_create(ssock_parent->pool, &ssock_parent->param,
-				&ssock);
+    status = pj_ssl_sock_create(ssock_parent->pool,
+    				&ssock_parent->newsock_param, &ssock);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -2183,20 +2182,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
 	return status;
 
     /* Init secure socket param */
-    ssock->param = *param;
+    pj_ssl_sock_param_copy(pool, &ssock->param, param);
     ssock->param.read_buffer_size = ((ssock->param.read_buffer_size+7)>>3)<<3;
-    if (param->ciphers_num > 0) {
-	unsigned i;
-	ssock->param.ciphers = (pj_ssl_cipher*)
-			       pj_pool_calloc(pool, param->ciphers_num, 
-					      sizeof(pj_ssl_cipher));
-	for (i = 0; i < param->ciphers_num; ++i)
-	    ssock->param.ciphers[i] = param->ciphers[i];
-    }
-
-    /* Server name must be null-terminated */
-    pj_strdup_with_null(pool, &ssock->param.server_name, 
-			&param->server_name);
 
     /* Finally */
     *p_ssock = ssock;
@@ -2617,11 +2604,35 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
 					      const pj_sockaddr_t *localaddr,
 					      int addr_len)
 {
+    return pj_ssl_sock_start_accept2(ssock, pool, localaddr, addr_len,
+    				     &ssock->param);
+}
+
+
+/**
+ * Same as #pj_ssl_sock_start_accept(), but application provides parameter
+ * for new accepted secure sockets.
+ */
+PJ_DEF(pj_status_t)
+pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
+			  pj_pool_t *pool,
+			  const pj_sockaddr_t *localaddr,
+			  int addr_len,
+			  const pj_ssl_sock_param *newsock_param)
+{
     pj_activesock_cb asock_cb;
     pj_activesock_cfg asock_cfg;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ssock && pool && localaddr && addr_len, PJ_EINVAL);
+
+    /* Verify new socket parameters */
+    if (newsock_param->grp_lock != ssock->param.grp_lock ||
+        newsock_param->sock_af != ssock->param.sock_af ||
+        newsock_param->sock_type != ssock->param.sock_type)
+    {
+        return PJ_EINVAL;
+    }
 
     /* Create socket */
     status = pj_sock_socket(ssock->param.sock_af, ssock->param.sock_type, 0, 
@@ -2691,6 +2702,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
 	goto on_error;
 
     /* Start accepting */
+    pj_ssl_sock_param_copy(pool, &ssock->newsock_param, newsock_param);
     status = pj_activesock_start_accept(ssock->asock, pool);
     if (status != PJ_SUCCESS)
 	goto on_error;

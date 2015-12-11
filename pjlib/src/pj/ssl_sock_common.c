@@ -19,6 +19,7 @@
 #include <pj/ssl_sock.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/pool.h>
 #include <pj/string.h>
 
 /*
@@ -45,6 +46,31 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
 
     /* Security config */
     param->proto = PJ_SSL_SOCK_PROTO_DEFAULT;
+}
+
+
+/*
+ * Duplicate SSL socket parameter.
+ */
+PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool, 
+				     pj_ssl_sock_param *dst,
+				     const pj_ssl_sock_param *src)
+{
+    /* Init secure socket param */
+    pj_memcpy(dst, src, sizeof(*dst));
+    if (src->ciphers_num > 0) {
+	unsigned i;
+	dst->ciphers = (pj_ssl_cipher*)
+			pj_pool_calloc(pool, src->ciphers_num, 
+				       sizeof(pj_ssl_cipher));
+	for (i = 0; i < src->ciphers_num; ++i)
+	    dst->ciphers[i] = src->ciphers[i];
+    }
+
+    if (src->server_name.slen) {
+        /* Server name must be null-terminated */
+        pj_strdup_with_null(pool, &dst->server_name, &src->server_name);
+    }
 }
 
 
