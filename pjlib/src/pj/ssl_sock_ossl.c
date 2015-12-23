@@ -2043,7 +2043,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
 
 
 /* Set SSL socket credentials. */
-PJ_DECL(pj_status_t) pj_ssl_sock_set_certificate(
+PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
 					    pj_ssl_sock_t *ssock,
 					    pj_pool_t *pool,
 					    const pj_ssl_cert_t *cert)
@@ -2727,7 +2727,7 @@ on_error:
 /**
  * Starts asynchronous socket connect() operation.
  */
-PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
+PJ_DEF(pj_status_t) pj_ssl_sock_start_connect( pj_ssl_sock_t *ssock,
 					       pj_pool_t *pool,
 					       const pj_sockaddr_t *localaddr,
 					       const pj_sockaddr_t *remaddr,
