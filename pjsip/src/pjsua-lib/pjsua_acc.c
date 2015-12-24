@@ -2480,7 +2480,15 @@ pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id)
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
     return acc->cfg.sip_stun_use != PJSUA_STUN_USE_DISABLED &&
-	    pjsua_var.ua_cfg.stun_srv_cnt != 0;
+	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
+}
+
+pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.media_stun_use != PJSUA_STUN_USE_DISABLED &&
+	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
 }
 
 /*

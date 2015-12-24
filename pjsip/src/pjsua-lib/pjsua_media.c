@@ -253,7 +253,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     af = use_ipv6 ? pj_AF_INET6() : pj_AF_INET();
 
     /* Make sure STUN server resolution has completed */
-    if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
+    if (!use_ipv6 && pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
 	status = resolve_stun_server(PJ_TRUE);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
@@ -350,7 +350,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	 * If we're configured to use STUN, then find out the mapped address,
 	 * and make sure that the mapped RTCP port is adjacent with the RTP.
 	 */
-	if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id) &&
+	if (!use_ipv6 &&
+	    pjsua_media_acc_is_using_stun(call_med->call->acc_id) &&
 	    pjsua_var.stun_srv.addr.sa_family != 0)
 	{
 	    char ip_addr[32];
@@ -747,10 +748,12 @@ static pj_status_t create_ice_media_transport(
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
-	return status;
+    if (pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
+	status = resolve_stun_server(PJ_TRUE);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
+	    return status;
+	}
     }
 
     /* Create ICE stream transport configuration */
@@ -765,7 +768,9 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
 
     /* Configure STUN settings */
-    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
+    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
+	pjsua_media_acc_is_using_stun(call_med->call->acc_id))
+    {
 	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
 	ice_cfg.stun.server = pj_str(stunip);
 	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
