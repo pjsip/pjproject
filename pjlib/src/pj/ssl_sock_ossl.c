@@ -965,7 +965,7 @@ static void get_cn_from_gen_name(const pj_str_t *gen_name, pj_str_t *cn)
     pj_str_t CN_sign = {"/CN=", 4};
     char *p, *q;
 
-    pj_bzero(cn, sizeof(cn));
+    pj_bzero(cn, sizeof(pj_str_t));
 
     p = pj_strstr(gen_name, &CN_sign);
     if (!p)
@@ -2053,7 +2053,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     PJ_ASSERT_RETURN(ssock && pool && cert, PJ_EINVAL);
 
     cert_ = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
-    pj_memcpy(cert_, cert, sizeof(cert));
+    pj_memcpy(cert_, cert, sizeof(pj_ssl_cert_t));
     pj_strdup_with_null(pool, &cert_->CA_file, &cert->CA_file);
     pj_strdup_with_null(pool, &cert_->CA_path, &cert->CA_path);
     pj_strdup_with_null(pool, &cert_->cert_file, &cert->cert_file);
