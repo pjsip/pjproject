@@ -113,7 +113,7 @@ octet_string_hex_string(const void *s, int length) {
   length *= 2;
 
   /* truncate string if it would be too long */
-  if (length > MAX_PRINT_STRING_LEN)
+  if (length >= MAX_PRINT_STRING_LEN)
     length = MAX_PRINT_STRING_LEN-1;
   
   for (i=0; i < length; i+=2) {
