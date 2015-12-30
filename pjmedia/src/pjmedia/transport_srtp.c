@@ -1456,6 +1456,9 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 				       &srtp->setting.crypto[j].name) == 0)
 			{
 			    int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
+			    
+	    		    if (cs_idx == -1)
+	    		        return PJMEDIA_SRTP_ENOTSUPCRYPTO;
 
 			    /* Force to use test key */
 			    /* bad keys for snom: */
