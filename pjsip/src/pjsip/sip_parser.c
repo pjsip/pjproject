@@ -1671,14 +1671,13 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 		 &hdr->values[hdr->count]);
     hdr->count++;
 
-    while (*scanner->curptr == ',') {
+    while ((hdr->count < PJSIP_GENERIC_ARRAY_MAX_COUNT) &&
+    	   (*scanner->curptr == ','))
+    {
 	pj_scan_get_char(scanner);
 	pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
 		     &hdr->values[hdr->count]);
 	hdr->count++;
-
-	if (hdr->count >= PJSIP_GENERIC_ARRAY_MAX_COUNT)
-	    break;
     }
 
 end:
