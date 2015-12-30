@@ -249,9 +249,13 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     total += info->uri.slen;
 
     /* contact */
-    info->contact.ptr = info->buf_ + total;
-    pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_)-total);
-    total += info->contact.slen;
+    if (total < sizeof(info->buf_)) {
+        info->contact.ptr = info->buf_ + total;
+        pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_) - total);
+        total += info->contact.slen;
+    } else {
+        info->contact = pj_str("");
+    }
 
     /* Presence status */
     pj_memcpy(&info->pres_status, &buddy->status, sizeof(pjsip_pres_status));
