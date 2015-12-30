@@ -1661,12 +1661,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
 	    pj_ice_sess_cand *lcand = &ice->lcand[i];
 	    pj_ice_sess_cand *rcand = &ice->rcand[j];
-	    pj_ice_sess_check *chk = &clist->checks[clist->count];
+	    pj_ice_sess_check *chk = NULL;
 
 	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
 		pj_grp_lock_release(ice->grp_lock);
 		return PJ_ETOOMANY;
 	    } 
+
+           chk = &clist->checks[clist->count];
 
 	    /* A local candidate is paired with a remote candidate if
 	     * and only if the two candidates have the same component ID 
