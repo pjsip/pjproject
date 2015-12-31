@@ -170,7 +170,7 @@ PJ_DEF(void) pj_dns_dump_packet(const pj_dns_parsed_packet *res)
     }
 
     /* Dump NS sections */
-    if (res->hdr.anscount) {
+    if (res->hdr.nscount) {
 	PJ_LOG(3,(THIS_FILE, " NS Authority RR:"));
 
 	for (i=0; i<res->hdr.nscount; ++i) {
