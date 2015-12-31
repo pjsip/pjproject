@@ -113,8 +113,8 @@ octet_string_hex_string(const void *s, int length) {
   length *= 2;
 
   /* truncate string if it would be too long */
-  if (length >= MAX_PRINT_STRING_LEN)
-    length = MAX_PRINT_STRING_LEN-1;
+  if (length >= MAX_PRINT_STRING_LEN-1)
+    length = MAX_PRINT_STRING_LEN-2;
   
   for (i=0; i < length; i+=2) {
     bit_string[i]   = nibble_to_hex_char(*str >> 4);
