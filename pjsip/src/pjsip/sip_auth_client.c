@@ -339,7 +339,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	}
 	else {
 	    pjsip_auth_create_digest( &cred->response, &cred->nonce,
-				      &cred->nc, cnonce, &pjsip_AUTH_STR,
+				      &cred->nc, &cred->cnonce, &pjsip_AUTH_STR,
 				      uri, &chal->realm, cred_info, method );
 	}
 
