@@ -1318,9 +1318,11 @@ on_return:
     if (ssock_serv) 
 	pj_ssl_sock_close(ssock_serv);
 
-    for (i = 0; i < clients; ++i) {
-	if (ssock_cli[i] && !state_cli[i].err && !state_cli[i].done)
-	    pj_ssl_sock_close(ssock_cli[i]);
+    if (ssock_cli && state_cli) {
+        for (i = 0; i < clients; ++i) {
+	    if (ssock_cli[i] && !state_cli[i].err && !state_cli[i].done)
+	        pj_ssl_sock_close(ssock_cli[i]);
+	}
     }
     if (ioqueue)
 	pj_ioqueue_destroy(ioqueue);
