@@ -2203,6 +2203,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 	    *answer->opt = *opt;
 	}
         if (reason) {
+	    answer->reason = PJ_POOL_ZALLOC_T(call->inv->pool_prov, pj_str_t);
             pj_strdup(call->inv->pool_prov, answer->reason, reason);
         }
         if (msg_data) {
