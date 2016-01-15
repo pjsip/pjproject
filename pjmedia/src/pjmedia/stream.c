@@ -1628,6 +1628,9 @@ static void on_rx_rtp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	status = (pj_status_t)-bytes_read;
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    return;
+	}
 	if (stream->rtp_rx_last_err != status) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1894,8 +1897,10 @@ static void on_rx_rtcp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((stream->port.info.name.ptr, "RTCP recv() error",
-		(pj_status_t)-bytes_read));
+	if (bytes_read != -PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    LOGERR_((stream->port.info.name.ptr, "RTCP recv() error",
+		    (pj_status_t)-bytes_read));
+	}
 	return;
     }
 
