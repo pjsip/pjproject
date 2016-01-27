@@ -983,12 +983,13 @@ static void get_cn_from_gen_name(const pj_str_t *gen_name, pj_str_t *cn)
  * hal already populated, this function will check if the contents need 
  * to be updated by inspecting the issuer and the serial number.
  */
-static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x)
+static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
+			  pj_bool_t get_pem)
 {
     pj_bool_t update_needed;
     char buf[512];
     pj_uint8_t serial_no[64] = {0}; /* should be >= sizeof(ci->serial_no) */
-    pj_uint8_t *p;
+    pj_uint8_t *q;
     unsigned len;
     GENERAL_NAMES *names = NULL;
 
@@ -998,11 +999,11 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x)
     X509_NAME_oneline(X509_get_issuer_name(x), buf, sizeof(buf));
 
     /* Get serial no */
-    p = (pj_uint8_t*) M_ASN1_STRING_data(X509_get_serialNumber(x));
+    q = (pj_uint8_t*) M_ASN1_STRING_data(X509_get_serialNumber(x));
     len = M_ASN1_STRING_length(X509_get_serialNumber(x));
     if (len > sizeof(ci->serial_no)) 
 	len = sizeof(ci->serial_no);
-    pj_memcpy(serial_no + sizeof(ci->serial_no) - len, p, len);
+    pj_memcpy(serial_no + sizeof(ci->serial_no) - len, q, len);
 
     /* Check if the contents need to be updated. */
     update_needed = pj_strcmp2(&ci->issuer.info, buf) || 
@@ -1096,6 +1097,24 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x)
 	    }
         }
     }
+
+    if (get_pem) {
+	/* Update raw Certificate info in PEM format. */
+	BIO *bio;	
+	BUF_MEM *ptr;
+	
+	bio = BIO_new(BIO_s_mem());
+	if (!PEM_write_bio_X509(bio, x)) {
+	    PJ_LOG(3,(THIS_FILE, "Error retrieving raw certificate info"));
+	    ci->raw.ptr = NULL;
+	    ci->raw.slen = 0;
+	} else {
+	    BIO_write(bio, "\0", 1);
+	    BIO_get_mem_ptr(bio, &ptr);
+	    pj_strdup2(pool, &ci->raw, ptr->data);	
+	}	
+	BIO_free(bio);	    
+    }	 
 }
 
 
@@ -1111,7 +1130,7 @@ static void update_certs_info(pj_ssl_sock_t *ssock)
     /* Active local certificate */
     x = SSL_get_certificate(ssock->ossl_ssl);
     if (x) {
-	get_cert_info(ssock->pool, &ssock->local_cert_info, x);
+	get_cert_info(ssock->pool, &ssock->local_cert_info, x, PJ_FALSE);
 	/* Don't free local's X509! */
     } else {
 	pj_bzero(&ssock->local_cert_info, sizeof(pj_ssl_cert_info));
@@ -1120,7 +1139,7 @@ static void update_certs_info(pj_ssl_sock_t *ssock)
     /* Active remote certificate */
     x = SSL_get_peer_certificate(ssock->ossl_ssl);
     if (x) {
-	get_cert_info(ssock->pool, &ssock->remote_cert_info, x);
+	get_cert_info(ssock->pool, &ssock->remote_cert_info, x, PJ_TRUE);
 	/* Free peer's X509 */
 	X509_free(x);
     } else {

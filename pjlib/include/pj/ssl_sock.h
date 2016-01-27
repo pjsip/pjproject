@@ -181,6 +181,9 @@ typedef struct pj_ssl_cert_info {
     } subj_alt_name;		    /**< Subject alternative
 					 name extension		*/
 
+    pj_str_t raw;		    /**< Raw certificate in PEM format, only
+					 available for remote certificate. */
+
 } pj_ssl_cert_info;
 
 
