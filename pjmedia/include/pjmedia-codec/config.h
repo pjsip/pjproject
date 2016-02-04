@@ -420,6 +420,56 @@
 
 
 /**
+ * Enable OPUS codec.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_OPUS_CODEC
+#   define PJMEDIA_HAS_OPUS_CODEC			0
+#endif
+
+/**
+ * OPUS codec sample rate.
+ *
+ * Default: 48000
+ */
+#ifndef PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_SAMPLE_RATE  	48000
+#endif
+
+/**
+ * OPUS codec default maximum average bit rate.
+ *
+ * Default: 0 (leave it to default value specified by Opus, which will
+ * take into account factors such as media content (speech/music), sample
+ * rate, channel count, etc).
+ */
+#ifndef PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE  	0
+#endif
+
+
+/**
+ * OPUS default encoding complexity, which is an integer from
+ * 0 to 10, where 0 is the lowest complexity and 10 is the highest.
+ *
+ * Default: 5
+ */
+#ifndef PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_COMPLEXITY 	5
+#endif
+
+
+/**
+ * OPUS default CBR (constant bit rate) setting
+ *
+ * Default: PJ_FALSE (which means Opus will use VBR (variable bit rate))
+ */
+#ifndef PJMEDIA_CODEC_OPUS_DEFAULT_CBR
+#   define PJMEDIA_CODEC_OPUS_DEFAULT_CBR 		PJ_FALSE
+#endif
+
+/**
  * Specify if FFMPEG codecs are available.
  *
  * Default: PJMEDIA_HAS_LIBAVCODEC

@@ -623,6 +623,9 @@ LIBOBJS
 ac_main_obj
 ac_host
 ac_linux_poll
+opus_present
+opus_h_present
+ac_no_opus
 silk_present
 silk_h_present
 ac_no_silk
@@ -816,6 +819,8 @@ with_opencore_amrwbenc
 enable_opencore_amr
 with_silk
 enable_silk
+with_opus
+enable_opus
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1482,6 +1487,9 @@ Optional Features:
   --disable-silk          Exclude SILK support from the build (default:
                           autodetect)
 
+  --disable-opus          Exclude OPUS support from the build (default:
+                          autodetect)
+
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1523,6 +1531,7 @@ Optional Packages:
   --with-opencore-amrwbenc=DIR
                           Specify alternate libvo-amrwbenc prefix
   --with-silk=DIR         Specify alternate SILK prefix
+  --with-opus=DIR         Specify alternate OPUS prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -8220,6 +8229,107 @@ $as_echo "SILK library found, SILK support enabled" >&6; }
 		else
 			ac_no_silk=1
 			$as_echo "#define PJMEDIA_HAS_SILK_CODEC 0" >>confdefs.h
+
+		fi
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_opus" = "xno"; then
+    enable_opus=no
+fi
+
+
+# Check whether --with-opus was given.
+if test "${with_opus+set}" = set; then :
+  withval=$with_opus;
+else
+  with_opus=no
+
+fi
+
+
+
+# Check whether --enable-opus was given.
+if test "${enable_opus+set}" = set; then :
+  enableval=$enable_opus;
+		if test "$enable_opus" = "no"; then
+		 ac_no_opus=1
+		 $as_echo "#define PJMEDIA_HAS_OPUS_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OPUS support is disabled... yes" >&5
+$as_echo "Checking if OPUS support is disabled... yes" >&6; }
+	        fi
+
+else
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OPUS installations.." >&5
+$as_echo "checking for OPUS installations.." >&6; }
+                if test "x$with_opus" != "xno" -a "x$with_opus" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_opus/include"
+		    CPPFLAGS="$CPPFLAGS -I$with_opus/include"
+                    LDFLAGS="$LDFLAGS -L$with_opus/lib"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using OPUS prefix... $with_opus" >&5
+$as_echo "Using OPUS prefix... $with_opus" >&6; }
+                fi
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "opus/opus.h" "ac_cv_header_opus_opus_h" "$ac_includes_default"
+if test "x$ac_cv_header_opus_opus_h" = xyes; then :
+  opus_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for opus_repacketizer_get_size in -lopus" >&5
+$as_echo_n "checking for opus_repacketizer_get_size in -lopus... " >&6; }
+if ${ac_cv_lib_opus_opus_repacketizer_get_size+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lopus  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char opus_repacketizer_get_size ();
+int
+main ()
+{
+return opus_repacketizer_get_size ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_opus_opus_repacketizer_get_size=yes
+else
+  ac_cv_lib_opus_opus_repacketizer_get_size=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opus_opus_repacketizer_get_size" >&5
+$as_echo "$ac_cv_lib_opus_opus_repacketizer_get_size" >&6; }
+if test "x$ac_cv_lib_opus_opus_repacketizer_get_size" = xyes; then :
+  opus_present=1 && LIBS="$LIBS -lopus"
+fi
+
+		if test "x$opus_h_present" = "x1" -a "x$opus_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OPUS library found, OPUS support enabled" >&5
+$as_echo "OPUS library found, OPUS support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_OPUS_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_opus=1
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OPUS library not found, OPUS support disabled" >&5
+$as_echo "OPUS library not found, OPUS support disabled" >&6; }
+			$as_echo "#define PJMEDIA_HAS_OPUS_CODEC 0" >>confdefs.h
 
 		fi
 

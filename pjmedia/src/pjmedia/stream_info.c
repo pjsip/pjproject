@@ -33,6 +33,47 @@ static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
 static const pj_str_t ID_TELEPHONE_EVENT = { "telephone-event", 15 };
 
+static void get_opus_channels_and_clock_rate(const pjmedia_codec_fmtp *enc_fmtp,
+					     const pjmedia_codec_fmtp *dec_fmtp,
+					     unsigned *channel_cnt,
+					     unsigned *clock_rate)
+{
+    unsigned i;
+    unsigned enc_channel_cnt = 0, local_channel_cnt = 0;
+    unsigned enc_clock_rate = 0, local_clock_rate = 0;
+
+    for (i = 0; i < dec_fmtp->cnt; ++i) {
+	if (!pj_stricmp2(&dec_fmtp->param[i].name, "sprop-maxcapturerate")) {
+	    local_clock_rate = (unsigned)pj_strtoul(&dec_fmtp->param[i].val);
+	} else if (!pj_stricmp2(&dec_fmtp->param[i].name, "sprop-stereo")) {
+	    local_channel_cnt = (unsigned)pj_strtoul(&dec_fmtp->param[i].val);
+	    local_channel_cnt = (local_channel_cnt > 0) ? 2 : 1;
+	}
+    }
+    if (!local_clock_rate) local_clock_rate = *clock_rate;
+    if (!local_channel_cnt) local_channel_cnt = *channel_cnt;
+
+    for (i = 0; i < enc_fmtp->cnt; ++i) {
+	if (!pj_stricmp2(&enc_fmtp->param[i].name, "maxplaybackrate")) {
+	    enc_clock_rate = (unsigned)pj_strtoul(&enc_fmtp->param[i].val);
+	} else if (!pj_stricmp2(&enc_fmtp->param[i].name, "stereo")) {
+	    enc_channel_cnt = (unsigned)pj_strtoul(&enc_fmtp->param[i].val);
+	    enc_channel_cnt = (enc_channel_cnt > 0) ? 2 : 1;
+	}
+    }
+    /* The default is a standard mono session with 48000 Hz clock rate
+     * (RFC 7587, section 7)
+     */
+    if (!enc_clock_rate) enc_clock_rate = 48000;
+    if (!enc_channel_cnt) enc_channel_cnt = 1;
+
+    *clock_rate = (enc_clock_rate < local_clock_rate) ? enc_clock_rate :
+		  local_clock_rate;
+
+    *channel_cnt = (enc_channel_cnt < local_channel_cnt) ? enc_channel_cnt :
+		   local_channel_cnt;
+}
+
 /*
  * Internal function for collecting codec info and param from the SDP media.
  */
@@ -217,6 +258,14 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     /* Get local fmtp for our decoder. */
     pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
 				   &si->param->setting.dec_fmtp);
+
+    if (!pj_stricmp2(&si->fmt.encoding_name, "opus")) {
+	get_opus_channels_and_clock_rate(&si->param->setting.enc_fmtp,
+					 &si->param->setting.dec_fmtp,
+					 &si->fmt.channel_cnt,
+					 &si->fmt.clock_rate);
+    }
+
 
     /* Get the remote ptime for our encoder. */
     attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,

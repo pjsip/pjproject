@@ -2109,6 +2109,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
     /* Open the codec. */
+
+    /* The clock rate for Opus codec is not static,
+     * it's negotiated in the SDP.
+     */
+    if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
+	stream->codec_param.info.clock_rate = info->fmt.clock_rate;
+	stream->codec_param.info.channel_cnt = info->fmt.channel_cnt;
+    }
+
     status = pjmedia_codec_open(stream->codec, &stream->codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
@@ -2223,6 +2232,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	/* RTP clock rate = 1/2 real clock rate */
 	stream->rtp_tx_ts_len_per_pkt >>= 1;
+    } else if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
+	unsigned opus_ts_modifier = 48000 / afd->clock_rate;
+	stream->rtp_rx_check_cnt = 0;
+	stream->has_g722_mpeg_bug = PJ_TRUE;
+	stream->rtp_tx_ts_len_per_pkt *= opus_ts_modifier;
+	stream->rtp_rx_ts_len_per_frame *= opus_ts_modifier;
     }
 #endif
 

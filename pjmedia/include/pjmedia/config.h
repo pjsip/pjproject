@@ -972,6 +972,7 @@
  * See:
  *  - G.722      : RFC 3551 4.5.2
  *  - MPEG audio : RFC 3551 4.5.13 & RFC 3119
+ *  - OPUS	 : RFC 7587
  *
  * Also when this feature is enabled, some handling will be performed
  * to deal with clock rate incompatibilities of some phones.
