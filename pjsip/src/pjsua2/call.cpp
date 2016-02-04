@@ -390,8 +390,13 @@ Call::~Call()
      * PJSUA library.
      */
     if (pjsua_get_state() < PJSUA_STATE_CLOSING && isActive()) {
-        CallOpParam prm;
-        hangup(prm);
+	try {
+	    CallOpParam prm;
+	    hangup(prm);
+	} catch (Error &err) {
+	    // Ignore
+	    PJ_UNUSED_ARG(err);
+	}
     }
 }
 
