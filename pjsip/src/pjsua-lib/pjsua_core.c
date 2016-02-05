@@ -1105,7 +1105,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	    pjsua_var.ua_cfg.thread_cnt = PJ_ARRAY_SIZE(pjsua_var.thread);
 
 	for (ii=0; ii<pjsua_var.ua_cfg.thread_cnt; ++ii) {
-	    status = pj_thread_create(pjsua_var.pool, "pjsua", &worker_thread,
+	    char thread_name[16];
+	    pj_ansi_snprintf(thread_name, 16, "pjsua_%d", ii);
+	    status = pj_thread_create(pjsua_var.pool, thread_name, &worker_thread,
 				      NULL, 0, 0, &pjsua_var.thread[ii]);
 	    if (status != PJ_SUCCESS)
 		goto on_error;

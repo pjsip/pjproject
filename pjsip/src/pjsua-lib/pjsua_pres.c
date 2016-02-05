@@ -855,8 +855,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Create UAS dialog: */
-    status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
-				  &contact, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
+					       &contact, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to create UAS dialog for subscription", 
@@ -921,10 +921,14 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 					     tdata);
 	}
 
+	pjsip_dlg_dec_lock(dlg);
 	PJSUA_UNLOCK();
 	pj_log_pop_indent();
 	return PJ_TRUE;
     }
+
+    /* Subscription has been created, decrement & release dlg lock */
+    pjsip_dlg_dec_lock(dlg);
 
     /* If account is locked to specific transport, then lock dialog
      * to this transport too.
@@ -1035,7 +1039,6 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Done: */
-
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return PJ_TRUE;

@@ -308,8 +308,8 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 	 * Create UAS
 	 */
 	uri = pj_str(CONTACT);
-	status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata,
-				      &uri, &dlg);
+	status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
+						   &uri, &dlg);
 	pj_assert(status == PJ_SUCCESS);
 
 	if (inv_test.param.oa[0] == OFFERER_UAC)
@@ -321,6 +321,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 
 	status = pjsip_inv_create_uas(dlg, rdata, sdp, inv_test.param.inv_option, &inv_test.uas);
 	pj_assert(status == PJ_SUCCESS);
+	pjsip_dlg_dec_lock(dlg);
 
 	TRACE_((THIS_FILE, "    Sending 183 with SDP"));
 

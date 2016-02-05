@@ -637,8 +637,8 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     }
 
     /* Create UAS dialog */
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &app.local_contact, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
+						&app.local_contact, &dlg);
     if (status != PJ_SUCCESS) {
 	const pj_str_t reason = pj_str("Unable to create dialog");
 	pjsip_endpt_respond_stateless( app.sip_endpt, rdata, 
@@ -655,9 +655,12 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_dlg_create_response(dlg, rdata, 500, NULL, &tdata);
 	pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);
+	pjsip_dlg_dec_lock(dlg);
 	return;
     }
     
+    /* Invite session has been created, decrement & release dialog lock */
+    pjsip_dlg_dec_lock(dlg);
 
     /* Attach call data to invite session */
     call->inv->mod_data[mod_siprtp.id] = call;

@@ -277,7 +277,7 @@ static struct dlg_set *alloc_dlgset_node(void)
 
 /*
  * Register new dialog. Called by pjsip_dlg_create_uac() and
- * pjsip_dlg_create_uas();
+ * pjsip_dlg_create_uas_and_inc_lock();
  */
 PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 					   pjsip_dialog *dlg )

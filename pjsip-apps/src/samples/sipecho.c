@@ -417,7 +417,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     pj_sockaddr hostaddr;
     char temp[80], hostip[PJ_INET6_ADDRSTRLEN];
     pj_str_t local_uri;
-    pjsip_dialog *dlg;
+    pjsip_dialog *dlg = NULL;
     pjsip_rdata_sdp_info *sdp_info;
     pjmedia_sdp_session *answer = NULL;
     pjsip_tx_data *tdata = NULL;
@@ -498,13 +498,18 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, sip_port);
     local_uri = pj_str(temp);
 
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &local_uri, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
+						&local_uri, &dlg);
 
     if (status == PJ_SUCCESS)
 	answer = create_answer((int)(call-app.call), dlg->pool, sdp_info->sdp);
+
     if (status == PJ_SUCCESS)
     	status = pjsip_inv_create_uas( dlg, rdata, answer, 0, &call->inv);
+
+    if (dlg)
+	pjsip_dlg_dec_lock(dlg);
+
     if (status == PJ_SUCCESS)
     	status = pjsip_inv_initial_answer(call->inv, rdata, 100,
 				          NULL, NULL, &tdata);

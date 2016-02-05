@@ -311,10 +311,11 @@ on_error:
 /*
  * Create UAS dialog.
  */
-PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
-					    pjsip_rx_data *rdata,
-					    const pj_str_t *contact,
-					    pjsip_dialog **p_dlg)
+pj_status_t create_uas_dialog( pjsip_user_agent *ua,
+			       pjsip_rx_data *rdata,
+			       const pj_str_t *contact,
+			       pj_bool_t inc_lock,
+			       pjsip_dialog **p_dlg)
 {
     pj_status_t status;
     pjsip_hdr *pos = NULL;
@@ -510,6 +511,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Increment the dialog's lock since tsx may cause the dialog to be
+     * destroyed prematurely (such as in case of transport error).
+     */
+    if (inc_lock)
+        pjsip_dlg_inc_lock(dlg);
+
     /* Create UAS transaction for this request. */
     status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
     if (status != PJ_SUCCESS)
@@ -552,8 +559,40 @@ on_error:
 	--dlg->tsx_count;
     }
 
-    destroy_dialog(dlg, PJ_FALSE);
+    if (inc_lock) {
+        pjsip_dlg_dec_lock(dlg);
+    } else {
+        destroy_dialog(dlg, PJ_FALSE);
+    }
+    
     return status;
+}
+
+
+#if !DEPRECATED_FOR_TICKET_1902
+/*
+ * Create UAS dialog.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
+					    pjsip_rx_data *rdata,
+					    const pj_str_t *contact,
+					    pjsip_dialog **p_dlg)
+{
+    return create_uas_dialog(ua, rdata, contact, PJ_FALSE, p_dlg);
+}
+#endif
+
+
+/*
+ * Create UAS dialog and increase its session count.
+ */
+PJ_DEF(pj_status_t)
+pjsip_dlg_create_uas_and_inc_lock(    pjsip_user_agent *ua,
+				      pjsip_rx_data *rdata,
+				      const pj_str_t *contact,
+				      pjsip_dialog **p_dlg)
+{
+    return create_uas_dialog(ua, rdata, contact, PJ_TRUE, p_dlg);
 }
 
 

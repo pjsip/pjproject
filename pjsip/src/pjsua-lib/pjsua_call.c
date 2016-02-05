@@ -982,10 +982,19 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
     pjmedia_sdp_session *answer;
     pjsip_tx_data *response = NULL;
     unsigned options = 0;
+    pjsip_dialog *dlg = call->async_call.dlg;
     int sip_err_code = (info? info->sip_err_code: 0);
     pj_status_t status = (info? info->status: PJ_SUCCESS);
 
     PJSUA_LOCK();
+    
+    /* Increment the dialog's lock to prevent it to be destroyed prematurely,
+     * such as in case of transport error.
+     */
+    pjsip_dlg_inc_lock(dlg);
+
+    /* Decrement dialog session. */
+    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);    
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
@@ -996,6 +1005,7 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
     if (call->async_call.med_ch_deinit) {
         pjsua_media_channel_deinit(call->index);
         call->med_ch_cb = NULL;
+        pjsip_dlg_dec_lock(dlg);
         PJSUA_UNLOCK();
         return PJ_SUCCESS;
     }
@@ -1067,7 +1077,9 @@ on_return:
 	    process_pending_call_answer(call);
 	}
     }
-
+    
+    pjsip_dlg_dec_lock(dlg);
+    
     PJSUA_UNLOCK();
     return status;
 }
@@ -1351,8 +1363,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /* Create dialog: */
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &contact, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
+				   		&contact, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
@@ -1460,6 +1472,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     call->async_call.dlg = dlg;
     pj_list_init(&call->async_call.call_var.inc_call.answers);
 
+    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+
     /* Init media channel, only when there is offer or call replace request.
      * For incoming call without SDP offer, media channel init will be done
      * in pjsua_call_answer(), see ticket #1526.
@@ -1500,6 +1514,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
 	    }
 	    pjsip_dlg_dec_lock(dlg);
+
+	    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 
 	    call->inv = NULL;
 	    call->async_call.dlg = NULL;
@@ -1618,6 +1634,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* This INVITE request has been handled. */
 on_return:
+    if (dlg) {
+        pjsip_dlg_dec_lock(dlg);
+    }
+    
     pj_log_pop_indent();
     PJSUA_UNLOCK();
     return PJ_TRUE;

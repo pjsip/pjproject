@@ -138,6 +138,12 @@ static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
 #define TIMEOUT_TIMER		2
 #define TRANSPORT_ERR_TIMER	3
 
+/* Flags for tsx_set_state() */
+enum
+{
+    NO_NOTIFY = 1,
+    NO_SCHEDULE_HANDLER = 2,
+};
 
 /* Prototypes. */
 static pj_status_t tsx_on_state_null(		pjsip_transaction *tsx, 
@@ -169,11 +175,8 @@ static void	   tsx_tp_state_callback(
 static void 	   tsx_set_state( pjsip_transaction *tsx,
             	                  pjsip_tsx_state_e state,
             	                  pjsip_event_id_e event_src_type,
-            	                  void *event_src );
-static void 	   tsx_set_state_no_notify( pjsip_transaction *tsx,
-            	                            pjsip_tsx_state_e state,
-            	                            pjsip_event_id_e event_src_type,
-            	                            void *event_src );
+            	                  void *event_src,
+				  int flag);
 static void 	   tsx_set_status_code(pjsip_transaction *tsx,
             	                       int code, const pj_str_t *reason);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
@@ -1103,6 +1106,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	entry->id = 0;
 	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
 	    pjsip_tsx_state_e prev_state;
+	    pj_time_val timeout = { 0, 0 };
 
 	    pj_grp_lock_acquire(tsx->grp_lock);
 	    prev_state = tsx->state;
@@ -1122,8 +1126,15 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	     * otherwise we'll get a deadlock. See:
 	     * https://trac.pjsip.org/repos/ticket/1646
 	     */
-	    tsx_set_state_no_notify( tsx, PJSIP_TSX_STATE_TERMINATED,
-	                             PJSIP_EVENT_TRANSPORT_ERROR, NULL);
+	    /* Also don't schedule tsx handler, otherwise we'll get race
+	     * condition of TU notifications due to delayed TERMINATED
+	     * state TU notification. It happened in multiple worker threads
+	     * environment between TERMINATED & DESTROYED! See:
+	     * https://trac.pjsip.org/repos/ticket/1902
+	     */
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+	                   PJSIP_EVENT_TRANSPORT_ERROR, NULL,
+			   NO_NOTIFY | NO_SCHEDULE_HANDLER);
 	    pj_grp_lock_release(tsx->grp_lock);
 
 	    /* Now notify TU about state change, WITHOUT holding the
@@ -1138,6 +1149,10 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 					   prev_state);
 		(*tsx->tsx_user->on_tsx_state)(tsx, &e);
 	    }
+
+	    /* Now let's schedule the tsx handler */
+	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout,
+			       TIMEOUT_TIMER);
 	}
     } else {
 	pjsip_event event;
@@ -1167,7 +1182,8 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 static void tsx_set_state( pjsip_transaction *tsx,
 			   pjsip_tsx_state_e state,
 			   pjsip_event_id_e event_src_type,
-                           void *event_src )
+                           void *event_src,
+			   int flag)
 {
     pjsip_tsx_state_e prev_state = tsx->state;
 
@@ -1192,7 +1208,9 @@ static void tsx_set_state( pjsip_transaction *tsx,
     /* Before informing TU about state changed, inform TU about
      * rx event.
      */
-    if (event_src_type==PJSIP_EVENT_RX_MSG && tsx->tsx_user) {
+    if (event_src_type==PJSIP_EVENT_RX_MSG && tsx->tsx_user &&
+	(flag & NO_NOTIFY)==0)
+    {
 	pjsip_rx_data *rdata = (pjsip_rx_data*) event_src;
 
 	pj_assert(rdata != NULL);
@@ -1206,7 +1224,9 @@ static void tsx_set_state( pjsip_transaction *tsx,
     }
 
     /* Inform TU about state changed. */
-    if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
+    if (tsx->tsx_user && tsx->tsx_user->on_tsx_state &&
+	(flag & NO_NOTIFY) == 0)
+    {
 	pjsip_event e;
 	PJSIP_EVENT_INIT_TSX_STATE(e, tsx, event_src_type, event_src,
 				   prev_state);
@@ -1218,7 +1238,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
      * saved last transmitted message.
      */
     if (state == PJSIP_TSX_STATE_TERMINATED) {
-	pj_time_val timeout = {0, 0};
+	pj_time_val timeout = { 0, 0 };
 
 	/* If we're still waiting for a message to be sent.. */
 	if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
@@ -1236,7 +1256,10 @@ static void tsx_set_state( pjsip_transaction *tsx,
 
 	lock_timer(tsx);
 	tsx_cancel_timer(tsx, &tsx->timeout_timer);
-	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
+	if ((flag & NO_SCHEDULE_HANDLER) == 0) {
+	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout,
+			       TIMEOUT_TIMER);
+	}
 	unlock_timer(tsx);
 
     } else if (state == PJSIP_TSX_STATE_DESTROYED) {
@@ -1249,18 +1272,6 @@ static void tsx_set_state( pjsip_transaction *tsx,
     }
 
     pj_log_pop_indent();
-}
-
-/* Set transaction state without notifying tsx_user */
-static void tsx_set_state_no_notify( pjsip_transaction *tsx,
-                                     pjsip_tsx_state_e state,
-                                     pjsip_event_id_e event_src_type,
-                                     void *event_src )
-{
-    pjsip_module *tsx_user = tsx->tsx_user;
-    tsx->tsx_user = NULL;
-    tsx_set_state(tsx, state, event_src_type, event_src);
-    tsx->tsx_user = tsx_user;
 }
 
 /*
@@ -1626,7 +1637,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 
     if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
         tsx_set_status_code(tsx, code, NULL);
-        tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER, NULL);
+        tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, PJSIP_EVENT_USER,
+		       NULL, 0);
     }
     pj_grp_lock_release(tsx->grp_lock);
 
@@ -1837,7 +1849,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	/* Pending destroy? */
 	if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
-			   PJSIP_EVENT_UNKNOWN, NULL );
+			   PJSIP_EVENT_UNKNOWN, NULL, 0 );
 	    pj_grp_lock_release(tsx->grp_lock);
 	    return;
 	}
@@ -1912,7 +1924,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
 		tsx->state != PJSIP_TSX_STATE_DESTROYED)
 	    {
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-			       PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata);
+			       PJSIP_EVENT_TRANSPORT_ERROR,
+			       send_state->tdata, 0);
 	    } 
 	    /* Don't forget to destroy if we have pending destroy flag
 	     * (http://trac.pjsip.org/repos/ticket/906)
@@ -1920,7 +1933,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
 	    {
 		tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
-			       PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata);
+			       PJSIP_EVENT_TRANSPORT_ERROR,
+			       send_state->tdata, 0);
 	    }
 
 	} else {
@@ -2122,7 +2136,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 
 	tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-		       PJSIP_EVENT_TRANSPORT_ERROR, NULL );
+		       PJSIP_EVENT_TRANSPORT_ERROR, NULL, 0 );
 
 	return status;
     }
@@ -2354,7 +2368,7 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 		  event->body.rx_msg.rdata->msg_info.msg->type == 
 		    PJSIP_REQUEST_MSG);
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TRYING, PJSIP_EVENT_RX_MSG,
-		       event->body.rx_msg.rdata);
+		       event->body.rx_msg.rdata, 0);
 
     } else {
 	pjsip_tx_data *tdata;
@@ -2409,7 +2423,7 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 
 	/* Move state. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_CALLING, 
-                       PJSIP_EVENT_TX_MSG, tdata);
+                       PJSIP_EVENT_TX_MSG, tdata, 0);
     }
 
     return PJ_SUCCESS;
@@ -2450,7 +2464,7 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 
 	/* Inform TU. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-                       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
+                       PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0);
 
 	/* Transaction is destroyed */
 	//return PJSIP_ETSXDESTROYED;
@@ -2569,7 +2583,7 @@ static pj_status_t tsx_on_state_trying( pjsip_transaction *tsx,
     if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TRYING) {
 
 	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
-                       PJSIP_EVENT_TX_MSG, event->body.tx_msg.tdata);
+                       PJSIP_EVENT_TX_MSG, event->body.tx_msg.tdata, 0);
 
     }
 
@@ -2650,7 +2664,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	    }
 
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
-                           PJSIP_EVENT_TX_MSG, tdata );
+                           PJSIP_EVENT_TX_MSG, tdata, 0 );
 
 	    /* Retransmit provisional response every 1 minute if this is
 	     * an INVITE provisional response greater than 100.
@@ -2684,7 +2698,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
                  * is handled by TU.
 		 */
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-                               PJSIP_EVENT_TX_MSG, tdata );
+                               PJSIP_EVENT_TX_MSG, tdata, 0 );
 
 		/* Transaction is destroyed. */
 		//return PJSIP_ETSXDESTROYED;
@@ -2742,7 +2756,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 
 		/* Set state to "Completed" */
 		tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
-                               PJSIP_EVENT_TX_MSG, tdata );
+                               PJSIP_EVENT_TX_MSG, tdata, 0 );
 	    }
 
 	} else if (tsx->status_code >= 300) {
@@ -2801,7 +2815,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 
 	    /* Inform TU */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
-                           PJSIP_EVENT_TX_MSG, tdata );
+                           PJSIP_EVENT_TX_MSG, tdata, 0 );
 
 	} else {
 	    pj_assert(0);
@@ -2835,7 +2849,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-                       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
+                       PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0);
 
 	return PJ_EBUG;
 
@@ -2900,7 +2914,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Inform the message to TU. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_PROCEEDING, 
-                       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+                       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
 
     } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code,200)) {
 
@@ -2914,7 +2928,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	 */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
 	    //return PJSIP_ETSXDESTROYED;
 
 	} else {
@@ -2941,7 +2955,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	    /* Move state to Completed, inform TU. */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
-                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
 	}
 
     } else if (event->type == PJSIP_EVENT_TIMER &&
@@ -2949,7 +2963,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Inform TU. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-		       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
+		       PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0);
 
 
     } else if (tsx->status_code >= 300 && tsx->status_code <= 699) {
@@ -3040,7 +3054,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Inform TU. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
-		       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata);
+		       PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0);
 
 	/* Generate and send ACK for INVITE. */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
@@ -3151,7 +3165,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 
 	    /* Move state to "Confirmed" */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_CONFIRMED, 
-                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata );
+                           PJSIP_EVENT_RX_MSG, event->body.rx_msg.rdata, 0 );
 	}	
 
     } else if (event->type == PJSIP_EVENT_TIMER) {
@@ -3175,14 +3189,14 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 		tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-                               PJSIP_EVENT_TIMER, &tsx->timeout_timer );
+                               PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0 );
 
 		//return PJSIP_ETSXDESTROYED;
 
 	    } else {
 		/* Transaction terminated, it can now be deleted. */
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-                               PJSIP_EVENT_TIMER, &tsx->timeout_timer );
+                               PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0 );
 		//return PJSIP_ETSXDESTROYED;
 	    }
 	}
@@ -3215,7 +3229,7 @@ static pj_status_t tsx_on_state_completed_uac( pjsip_transaction *tsx,
 
 	/* Move to Terminated state. */
 	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-                       PJSIP_EVENT_TIMER, event->body.timer.entry );
+                       PJSIP_EVENT_TIMER, event->body.timer.entry, 0 );
 
 	/* Transaction has been destroyed. */
 	//return PJSIP_ETSXDESTROYED;
@@ -3290,7 +3304,7 @@ static pj_status_t tsx_on_state_confirmed( pjsip_transaction *tsx,
 
 	    /* Move to Terminated state. */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-			   PJSIP_EVENT_TIMER, &tsx->timeout_timer );
+			   PJSIP_EVENT_TIMER, &tsx->timeout_timer, 0 );
 
 	    /* Transaction has been destroyed. */
 	    //return PJSIP_ETSXDESTROYED;
@@ -3321,7 +3335,7 @@ static pj_status_t tsx_on_state_terminated( pjsip_transaction *tsx,
 
     /* Destroy this transaction */
     tsx_set_state(tsx, PJSIP_TSX_STATE_DESTROYED, 
-                  event->type, event->body.user.user1 );
+                  event->type, event->body.user.user1, 0 );
 
     return PJ_SUCCESS;
 }
