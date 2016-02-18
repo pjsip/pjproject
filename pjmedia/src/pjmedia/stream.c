@@ -1566,7 +1566,11 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     }
 
     /* Ignore unknown event. */
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
     if (event->event > 16) {
+#else
+    if (event->event > 15) {
+#endif    
 	PJ_LOG(5,(stream->port.info.name.ptr,
 		  "Ignored RTP pkt with bad DTMF event %d",
     		  event->event));
@@ -2786,10 +2790,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    {
 		pt = 11;
 	    }
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0	    
 	    else if (dig == 'r')
 	    {
 		pt = 16;
 	    }
+#endif
 	    else
 	    {
 		status = PJMEDIA_RTP_EINDTMF;

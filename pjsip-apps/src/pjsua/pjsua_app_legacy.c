@@ -1215,8 +1215,13 @@ static void ui_send_dtmf_2833()
 	pj_status_t status;
 	char buf[128];
 
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0	    	
 	if (!simple_input("DTMF strings to send (0-9*R#A-B)", buf,
 	    sizeof(buf)))
+#else
+	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
+	    sizeof(buf)))
+#endif
 	{
 	    return;
 	}

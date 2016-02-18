@@ -556,7 +556,11 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	/* Add fmtp */
 	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
 	attr->name = pj_str("fmtp");
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
 	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-16");
+#else
+	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
+#endif
 	m->attr[m->attr_count++] = attr;
     }
 #endif
