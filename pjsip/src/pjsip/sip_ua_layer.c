@@ -479,8 +479,14 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
     }
 
     /* Dialog has been found. It SHOULD have the right Call-ID!! */
-    PJ_ASSERT_ON_FAIL(pj_strcmp(&dlg->call_id->id, call_id)==0, 
-			{pj_mutex_unlock(mod_ua.mutex); return NULL;});
+    if (pj_strcmp(&dlg->call_id->id, call_id)!=0) {
+
+	PJ_LOG(6, (THIS_FILE, "Dialog not found: local and remote tags "
+		              "matched but not call id"));
+
+        pj_mutex_unlock(mod_ua.mutex);
+        return NULL;
+    }
 
     if (lock_dialog) {
 	if (pjsip_dlg_try_inc_lock(dlg) != PJ_SUCCESS) {
