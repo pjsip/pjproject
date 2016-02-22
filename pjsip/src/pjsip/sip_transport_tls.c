@@ -170,7 +170,7 @@ static void tls_perror(const char *sender, const char *title,
 
     pj_strerror(status, errmsg, sizeof(errmsg));
 
-    PJ_LOG(1,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
 }
 
 

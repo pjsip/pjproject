@@ -1898,7 +1898,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	    err =pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
 
-	    PJ_LOG(2,(tsx->obj_name,
+	    PJ_LOG(3,(tsx->obj_name,
 		      "Failed to send %s! err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
 		      errmsg));
@@ -1938,7 +1938,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    }
 
 	} else {
-	    PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
+	    PJ_PERROR(3,(tsx->obj_name, (pj_status_t)-sent,
 		         "Temporary failure in sending %s, "
 		         "will try next server",
 		         pjsip_tx_data_get_info(send_state->tdata)));
