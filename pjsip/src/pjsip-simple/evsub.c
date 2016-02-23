@@ -2191,7 +2191,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 		    should_terminate_sub = PJ_TRUE;
 		} else {
 		    pjsip_retry_after_hdr *retry_after;
-		    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;;
+		    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 		    pjsip_msg *msg = rdata->msg_info.msg;		    
 
 		    retry_after = (pjsip_retry_after_hdr*)
