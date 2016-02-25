@@ -799,6 +799,8 @@ struct pjsip_transport
     
     pjsip_endpoint	   *endpt;	    /**< Endpoint instance.	    */
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
+    pjsip_tpfactory	   *factory;	    /**< Factory instance. Note: it
+					         may be invalid/shutdown.   */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
 
     pj_timestamp	    last_recv_ts;   /**< Last time receiving data.  */

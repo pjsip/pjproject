@@ -1295,6 +1295,23 @@ PJ_DECL(void) pjsip_tpmgr_fla2_param_default(pjsip_tpmgr_fla2_param *prm)
     pj_bzero(prm, sizeof(*prm));
 }
 
+static pj_bool_t pjsip_tpmgr_is_tpfactory_valid(pjsip_tpmgr *mgr,
+						pjsip_tpfactory *tpf)
+{
+    pjsip_tpfactory *p;
+
+    pj_lock_acquire(mgr->lock);
+    for (p=mgr->factory_list.next; p!=&mgr->factory_list; p=p->next) {
+	if (p == tpf) {
+	    pj_lock_release(mgr->lock);
+	    return PJ_TRUE;
+	}
+    }
+    pj_lock_release(mgr->lock);
+
+    return PJ_FALSE;
+}
+
 /*****************************************************************************
  *
  * TRANSPORT MANAGER
@@ -2000,33 +2017,27 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	TRACE_((THIS_FILE, "Transport %s acquired", seltp->obj_name));
 	return PJ_SUCCESS;
 
-
-    } else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
-	       sel->u.listener)
-    {
-	/* Application has requested that a specific listener is to
-	 * be used. In this case, skip transport hash table lookup.
-	 */
-
-	/* Verify that the listener type matches the destination type */
-	if (sel->u.listener->type != type) {
-	    pj_lock_release(mgr->lock);
-	    return PJSIP_ETPNOTSUITABLE;
-	}
-
-	/* We'll use this listener to create transport */
-	factory = sel->u.listener;
-
     } else {
 
 	/*
 	 * This is the "normal" flow, where application doesn't specify
-	 * specific transport/listener to be used to send message to.
+	 * specific transport to be used to send message to.
 	 * In this case, lookup the transport from the hash table.
 	 */
 	pjsip_transport_key key;
 	int key_len;
 	pjsip_transport *transport;
+
+	/* If listener is specified, verify that the listener type matches
+	 * the destination type.
+	 */
+	if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener)
+	{
+	    if (sel->u.listener->type != type) {
+		pj_lock_release(mgr->lock);
+		return PJSIP_ETPNOTSUITABLE;
+	    }
+	}
 
 	pj_bzero(&key, sizeof(key));
 	key_len = sizeof(key.type) + addr_len;
@@ -2069,6 +2080,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    }
 	}
 
+	/* If transport is found and listener is specified, verify listener */
+	else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
+		 sel->u.listener && transport->factory != sel->u.listener)
+	{
+	    transport = NULL;
+	    /* This will cause a new transport to be created which will be a
+	     * 'duplicate' of the existing transport (same type & remote addr,
+	     * but different factory). Any future hash lookup will return
+	     * the new one, and eventually the old one will still be freed
+	     * (by application or #1774).
+	     */
+	}
+
 	if (transport!=NULL && !transport->is_shutdown) {
 	    /*
 	     * Transport found!
@@ -2081,22 +2105,51 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    return PJ_SUCCESS;
 	}
 
+
 	/*
 	 * Transport not found!
-	 * Find factory that can create such transport.
+	 * So we need to create one, find factory that can create
+	 * such transport.
 	 */
-	factory = mgr->factory_list.next;
-	while (factory != &mgr->factory_list) {
-	    if (factory->type == type)
-		break;
-	    factory = factory->next;
-	}
+	if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener)
+	{
+	    /* Application has requested that a specific listener is to
+	     * be used.
+	     */
 
-	if (factory == &mgr->factory_list) {
-	    /* No factory can create the transport! */
-	    pj_lock_release(mgr->lock);
-	    TRACE_((THIS_FILE, "No suitable factory was found either"));
-	    return PJSIP_EUNSUPTRANSPORT;
+	    /* Verify that the listener type matches the destination type */
+	    if (sel->u.listener->type != type) {
+		pj_lock_release(mgr->lock);
+		return PJSIP_ETPNOTSUITABLE;
+	    }
+
+	    /* We'll use this listener to create transport */
+	    factory = sel->u.listener;
+
+	    /* Verify if listener is still valid */
+	    if (!pjsip_tpmgr_is_tpfactory_valid(mgr, factory)) {
+		pj_lock_release(mgr->lock);
+		PJ_LOG(3,(THIS_FILE, "Specified factory for creating "
+				     "transport is not found"));
+		return PJ_ENOTFOUND;
+	    }
+
+	} else {
+
+	    /* Find factory with type matches the destination type */
+	    factory = mgr->factory_list.next;
+	    while (factory != &mgr->factory_list) {
+		if (factory->type == type)
+		    break;
+		factory = factory->next;
+	    }
+
+	    if (factory == &mgr->factory_list) {
+		/* No factory can create the transport! */
+		pj_lock_release(mgr->lock);
+		TRACE_((THIS_FILE, "No suitable factory was found either"));
+		return PJSIP_EUNSUPTRANSPORT;
+	    }
 	}
     }
 
@@ -2116,6 +2169,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	PJ_ASSERT_ON_FAIL(tp!=NULL, 
 	    {pj_lock_release(mgr->lock); return PJ_EBUG;});
 	pjsip_transport_add_ref(*tp);
+	(*tp)->factory = factory;
     }
     pj_lock_release(mgr->lock);
     return status;
