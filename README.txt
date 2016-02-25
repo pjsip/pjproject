@@ -463,6 +463,7 @@ Using Default Settings
    $ ./configure --help
    ...
    Optional Features:
+   --enable-epoll           Use epoll on Linux instead of select
    --disable-floating-point	Disable floating point where possible
    --disable-sound 		Exclude sound (i.e. use null sound)
    --disable-small-filter 	Exclude small filter in resampling
