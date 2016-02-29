@@ -565,7 +565,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     stream = PJ_POOL_ZALLOC_T(pool, struct android_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, "JNI stream");
-    stream->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    stream->dir = param->dir;
     pj_memcpy(&stream->param, param, sizeof(*param));
     stream->user_data = user_data;
     stream->rec_cb = rec_cb;
