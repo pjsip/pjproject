@@ -1645,8 +1645,12 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
 				   &recv_addr);
     if (status == PJ_SUCCESS) {
-	/* Compare the addresses as sockaddr according to the ticket above */
-	matched = (uri->port == rport &&
+	/* Compare the addresses as sockaddr according to the ticket above,
+	 * but only if they have the same family (ipv4 vs ipv4, or
+	 * ipv6 vs ipv6)
+	 */
+	matched = (contact_addr.addr.sa_family != recv_addr.addr.sa_family) ||
+	          (uri->port == rport &&
 		   pj_sockaddr_cmp(&contact_addr, &recv_addr)==0);
     } else {
 	/* Compare the addresses as string, as before */
@@ -3099,7 +3103,8 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
      * to use IPv6 as well.
      */
     if (pj_strchr(&sip_uri->host, ':'))
-	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) |
+	 	  PJSIP_TRANSPORT_IPV6);
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
 
@@ -3164,6 +3169,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
 	    af = (dinfo.type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
 	    status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai);
+	    if (cnt == 0) status = PJ_ENOTSUP;
 	}
 
 	if (status == PJ_SUCCESS) {
