@@ -856,7 +856,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 	    dd->uas_state = PJ_POOL_ZALLOC_T(inv->dlg->pool,
 					     uas_state_t);
 	    dd->uas_state->cseq = cseq_hdr->cseq;
-	    dd->uas_state->rseq = pj_rand() % 0x7FFF;
+	    dd->uas_state->rseq = (pj_rand() % 0x7FFF) + 1;
 	    pj_list_init(&dd->uas_state->tx_data_list);
 	    dd->uas_state->retransmit_timer.user_data = dd;
 	    dd->uas_state->retransmit_timer.cb = &on_retransmit;
