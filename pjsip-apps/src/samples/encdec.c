@@ -142,9 +142,9 @@ static pj_status_t enc_dec_test(const char *codec_id,
     
     for (;;) {
 	pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
-	pj_int16_t pcmbuf[320];
+	pj_int16_t pcmbuf[2048];
 	pj_timestamp ts;
-	pj_uint8_t bitstream[160];
+	pj_uint8_t bitstream[2048];
 
 	frm_pcm.buf = (char*)pcmbuf;
 	frm_pcm.size = samples_per_frame * 2;
