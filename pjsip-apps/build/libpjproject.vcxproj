@@ -78,7 +78,7 @@
   <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{23D7679C-764C-4E02-8B29-BB882CEEEFE2}</ProjectGuid>
-    <RootNamespace>libpjproject</RootNamespace>    
+    <RootNamespace>libpjproject</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
     <AppContainerApplication Condition="'$(API_Family)'=='UWP'">true</AppContainerApplication>
@@ -199,7 +199,8 @@
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
     <PlatformToolset>$(BuildToolset)</PlatformToolset>
-    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
+    </CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -322,6 +323,7 @@
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>

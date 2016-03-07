@@ -1,0 +1,136 @@
+﻿<Page
+    x:Class="VoipUI.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:VoipUI"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+          Margin="5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <TextBlock FontSize="12" Text="Pjsua Sample App" Margin="5"/>
+            <TextBox x:Name="txt_CallerName"  Text="Test Account" Margin="5"/>
+            <TextBox x:Name="txt_CallerNumber" Text="sip:192.168.0.103:6000" Margin="5"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1">
+            <Grid HorizontalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="165"/>
+                    <ColumnDefinition Width="165"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <Button x:Name="btn_NewOutgoingCall" 
+                        Grid.Column="0" Grid.Row="0" 
+                        Content="Make Call" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Top" 
+                        Width="150" Height="40" 
+                        Margin="5"
+                        Click="btn_NewOutgoingCall_Click"/>
+                <Button x:Name="btn_EndCall" Grid.Column="1"  Grid.Row="0" Content="End Call" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Top" 
+                        Width="150" Height="40" 
+                        Margin="5" Click="btn_EndCall_Click"/>
+
+                <TextBlock x:Name="label1" Grid.Column="0"  Grid.Row="1" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Text="User Id"
+                        Margin="10,5,5,5"/>
+
+                <TextBox x:Name="txt_UserId" Grid.Column="1"  Grid.Row="1"
+                        HorizontalAlignment="Right"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Margin="5" IsEnabled="True"/>
+
+                <TextBlock x:Name="label2" Grid.Column="0"  Grid.Row="2" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Text="Registrar"
+                        Margin="10,5,5,5"/>
+
+                <TextBox x:Name="txt_Registrar" Grid.Column="1"  Grid.Row="2"
+                        HorizontalAlignment="Right"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Margin="5" IsEnabled="True"/>
+
+                <TextBlock x:Name="label3" Grid.Column="0"  Grid.Row="3" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Text="Proxy"
+                        Margin="10,5,5,5"/>
+
+                <TextBox x:Name="txt_Proxy" Grid.Column="1"  Grid.Row="3"
+                        HorizontalAlignment="Right"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Margin="5" IsEnabled="True"/>
+
+                <TextBlock x:Name="label4" Grid.Column="0"  Grid.Row="4" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Text="User Name"
+                        Margin="10,5,5,5"/>
+
+                <TextBox x:Name="txt_RegUserName" Grid.Column="1"  Grid.Row="4"
+                        HorizontalAlignment="Right"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Margin="5" IsEnabled="True"/>
+
+                <TextBlock x:Name="label5" Grid.Column="0"  Grid.Row="5" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Text="Password"
+                        Margin="10,5,5,5"/>
+
+                <TextBox x:Name="txt_Password" Grid.Column="1"  Grid.Row="5"
+                        HorizontalAlignment="Right"  VerticalAlignment="Center" 
+                        Width="150" Height="40" 
+                        Margin="5" IsEnabled="True"/>
+                <Button x:Name="btn_GetAccountInfo" Grid.Column="0"  Grid.Row="6" Content="Get Account Info" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Top" 
+                        Width="150" Height="40" 
+                        Margin="5" Click="btn_GetAccountInfo_Click"/>
+
+                <Button x:Name="btn_ModifyAccount" Grid.Column="1"  Grid.Row="6" Content="Modify Account" 
+                        HorizontalAlignment="Left"  VerticalAlignment="Top" 
+                        Width="150" Height="40" 
+                        Margin="5" Click="btn_ModifyAccount_Click"/>
+
+                <TextBlock x:Name="txt_RegState" Grid.Column="0" Grid.Row="7"
+                    Text="Reg: Not Registered" 
+                    Margin="15,20,5,15" 
+                    VerticalAlignment="Bottom" 
+                    HorizontalAlignment="Center" 
+                    TextWrapping="WrapWholeWords"/>
+
+                <TextBlock x:Name="txt_CallStatus" Grid.Column="1" Grid.Row="7"
+                    Text="Disconnected" 
+                    Margin="15,20,5,15" 
+                    VerticalAlignment="Bottom" 
+                    HorizontalAlignment="Center" 
+                    TextWrapping="WrapWholeWords"/>
+
+            </Grid>
+        </StackPanel>
+
+    </Grid>
+</Page>

@@ -44,5 +44,8 @@
     <ClInclude Include="..\src\pjsua\pjsua_app_common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\pjsua\pjsua_app_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

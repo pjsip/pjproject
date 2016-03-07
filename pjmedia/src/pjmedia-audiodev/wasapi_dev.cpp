@@ -26,6 +26,7 @@
 #include <Avrt.h>
 #include <windows.h>
 #include <audioclient.h>
+#include <Processthreadsapi.h>
 
 #if defined(PJ_WIN32_UWP) && PJ_WIN32_UWP
 #define USE_ASYNC_ACTIVATE 1;
@@ -37,7 +38,7 @@
     #include <ppltasks.h>
     using namespace Windows::Media::Devices;  
     using namespace Microsoft::WRL;
-    using namespace concurrency;
+    using namespace concurrency;   
 #else
     #include <phoneaudioclient.h>
     #using <Windows.winmd>
@@ -106,8 +107,7 @@ struct wasapi_stream
     pjmedia_format_id	    fmt_id;		/* Frame format		    */
     unsigned		    bytes_per_sample;
 
-    /* Playback */
-    LPCWSTR		    pb_id;		/* playback Id		    */
+    /* Playback */    
     pjmedia_aud_play_cb	    pb_cb;		/* Playback callback	    */
     IAudioClient2	   *default_pb_dev;     /* Default playback dev	    */
     IAudioRenderClient	   *pb_client;		/* Playback client	    */
@@ -117,10 +117,12 @@ struct wasapi_stream
     pj_timestamp	    pb_timestamp;
 #if defined(USE_ASYNC_ACTIVATE)
     ComPtr<AudioActivator>  pb_aud_act;
+    Platform::String^	    pb_id;
+#else
+    LPCWSTR		    pb_id;		
 #endif
 
-    /* Capture */
-    LPCWSTR		    cap_id;		/* Capture Id		    */	
+    /* Capture */    
     pjmedia_aud_rec_cb	    cap_cb;		/* Capture callback	    */
     IAudioClient2	   *default_cap_dev;	/* Default capture dev	    */    
     IAudioCaptureClient    *cap_client;		/* Capture client	    */
@@ -132,6 +134,9 @@ struct wasapi_stream
     pj_timestamp	    cap_timestamp;
 #if defined(USE_ASYNC_ACTIVATE)
     ComPtr<AudioActivator>  cap_aud_act;
+    Platform::String^	    cap_id;
+#else
+    LPCWSTR		    cap_id;		
 #endif
 };
 
@@ -250,25 +255,6 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
     if (strm->param.dir & PJMEDIA_DIR_CAPTURE)
 	events[eventCount++] = strm->cap_event;
 
-    /* Raise self priority. We don't want the audio to be distorted by
-     * system activity.
-     */
-#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
-    if (strm->param.dir & PJMEDIA_DIR_PLAYBACK)
-	CeSetThreadPriority(GetCurrentThread(), 153);
-    else
-	CeSetThreadPriority(GetCurrentThread(), 247);
-#else
-    //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-#endif
-
-    /* Raise thread priority */
-    //   mmcs_handle = AvSetMmThreadCharacteristicsW(L"Audio", 
-    //						     &mmcss_task_index);
-    //   if (!mmcs_handle) {
-    //PJ_LOG(4,(THIS_FILE, "Unable to enable MMCS on wasapi stream thread"));
-    //   }
-
     /*
      * Loop while not signalled to quit, wait for event objects to be 
      * signalled by Wasapi capture and play buffer.
@@ -335,6 +321,7 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
 
 	    hr = strm->pb_client->GetBuffer(frame_to_render, &cur_pb_buf);
 	    if (FAILED(hr)) {
+		PJ_LOG(4, (THIS_FILE, "Error getting wasapi buffer"));
 		continue;
 	    }
 
@@ -352,6 +339,7 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
 	    /* Write to the device. */
 	    hr = strm->pb_client->ReleaseBuffer(frame_to_render, 0);
 	    if (FAILED(hr)) {
+		PJ_LOG(4, (THIS_FILE, "Error releasing wasapi buffer"));
 		continue;
 	    }
 
@@ -362,8 +350,10 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
 	    pj_uint32_t packet_size = 0;
 
 	    hr = strm->cap_client->GetNextPacketSize(&packet_size);
-	    if (FAILED(hr))
+	    if (FAILED(hr)) {
+		PJ_LOG(4, (THIS_FILE, "Error getting next packet size"));
 		continue;
+	    }
 	    
 	    while (packet_size) {
 
@@ -379,6 +369,8 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
 						 NULL);
 
 		if (FAILED(hr) || (next_frame_size == 0)) {
+		    PJ_LOG(4, (THIS_FILE, "Error getting next buffer, \
+			       next frame size : %d", next_frame_size));
 		    packet_size = 0;
 		    continue;
 		}
@@ -479,13 +471,13 @@ static int PJ_THREAD_FUNC wasapi_dev_thread(void *arg)
 		hr = strm->cap_client->ReleaseBuffer(next_frame_size);
 
 		hr = strm->cap_client->GetNextPacketSize(&packet_size);
-		if (FAILED(hr))
+		if (FAILED(hr)) {
+		    PJ_LOG(4, (THIS_FILE, "Error getting next packet size"));
 		    packet_size = 0;
+		}
 	    }
 	}
     }
-
-    //AvRevertMmThreadCharacteristics(mmcs_handle);
 
     PJ_LOG(5,(THIS_FILE, "WASAPI: thread stopping.."));
     return 0;
@@ -498,7 +490,7 @@ static pj_status_t activate_capture_dev(struct wasapi_stream *ws)
 #if defined(USE_ASYNC_ACTIVATE)
     ComPtr<IActivateAudioInterfaceAsyncOperation> async_op;
     ws->cap_id = MediaDevice::GetDefaultAudioCaptureId(
-				      AudioDeviceRole::Communications)->Data();
+					      AudioDeviceRole::Communications);
 #else
     ws->cap_id = GetDefaultAudioCaptureId(AudioDeviceRole::Communications);
 #endif
@@ -509,22 +501,33 @@ static pj_status_t activate_capture_dev(struct wasapi_stream *ws)
     }
 
 #if defined(USE_ASYNC_ACTIVATE)
+
     ws->cap_aud_act = Make<AudioActivator>();
     if (ws->cap_aud_act == NULL) {
 	PJ_LOG(4, (THIS_FILE, "Error activating capture device"));
 	return PJMEDIA_EAUD_SYSERR;
     }
-    hr = ActivateAudioInterfaceAsync(ws->cap_id, __uuidof(IAudioClient2), 
+    hr = ActivateAudioInterfaceAsync(ws->cap_id->Data(), 
+				     __uuidof(IAudioClient2), 
 				     NULL, ws->cap_aud_act.Get(), 
 				     &async_op);
 
+    //pj_thread_sleep(100);
     auto task_completed = create_task(ws->cap_aud_act->task_completed);
-    task_completed.wait();
+    task_completed.wait();    
     ws->default_cap_dev = task_completed.get().Get();
 #else
     hr = ActivateAudioInterface(ws->cap_id, __uuidof(IAudioClient2),
 				(void**)&ws->default_cap_dev);
 #endif
+    AudioClientProperties properties = {};
+    if (SUCCEEDED(hr))
+    {
+	properties.cbSize = sizeof AudioClientProperties;
+	properties.eCategory = AudioCategory_Communications;
+	hr = ws->default_cap_dev->SetClientProperties(&properties);
+    }
+
     return FAILED(hr) ? PJMEDIA_EAUD_SYSERR : PJ_SUCCESS;
 }
 
@@ -633,7 +636,7 @@ static pj_status_t activate_playback_dev(struct wasapi_stream *ws)
     ComPtr<IActivateAudioInterfaceAsyncOperation> async_op;
 
     ws->pb_id = MediaDevice::GetDefaultAudioRenderId(
-				      AudioDeviceRole::Communications)->Data();
+					      AudioDeviceRole::Communications);
 #else
     ws->pb_id = GetDefaultAudioRenderId(AudioDeviceRole::Communications);
 #endif
@@ -649,10 +652,12 @@ static pj_status_t activate_playback_dev(struct wasapi_stream *ws)
 	PJ_LOG(4, (THIS_FILE, "Error activating playback device"));
 	return PJMEDIA_EAUD_SYSERR;
     }
-    hr = ActivateAudioInterfaceAsync(ws->pb_id, __uuidof(IAudioClient2),
+    hr = ActivateAudioInterfaceAsync(ws->pb_id->Data(), 
+				     __uuidof(IAudioClient2),
 				     NULL, ws->pb_aud_act.Get(),
 				     &async_op);
 
+    //pj_thread_sleep(100);
     auto task_completed = create_task(ws->pb_aud_act->task_completed);
     task_completed.wait();
     ws->default_pb_dev = task_completed.get().Get();
@@ -660,6 +665,14 @@ static pj_status_t activate_playback_dev(struct wasapi_stream *ws)
     hr = ActivateAudioInterface(ws->pb_id, __uuidof(IAudioClient2),
 				(void**)&ws->default_pb_dev);
 #endif
+
+    AudioClientProperties properties = {};
+    if (SUCCEEDED(hr))
+    {
+	properties.cbSize = sizeof AudioClientProperties;
+	properties.eCategory = AudioCategory_Communications;
+	hr = ws->default_pb_dev->SetClientProperties(&properties);
+    }
     
     return FAILED(hr) ? PJMEDIA_EAUD_SYSERR : PJ_SUCCESS;
 }
@@ -1024,31 +1037,6 @@ static pj_status_t wasapi_factory_create_stream(pjmedia_aud_dev_factory *f,
         }	
     }
 
-    /* Apply the remaining settings */
-    /* Set the output volume */
- //   if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
- //       status = wasapi_stream_set_cap(&strm->base,
- //                             PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
- //                             &param->output_vol);
-	//if (status != PJ_SUCCESS) {
-	//    PJ_LOG(4, (THIS_FILE, "Error setting output volume:%d", status));
-	//}
- //   }
-
- //   /* Set the audio routing ONLY if app explicitly asks one */
- //   if ((param->dir & PJMEDIA_DIR_PLAYBACK) &&
-	//(param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE))
- //   {
-	//PJ_TODO(CREATE_STREAM_WITH_AUDIO_ROUTE);
-	////status = wasapi_stream_set_cap(&strm->base,
-	////			       PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
-	////			       &param->output_route);
-	////if (status != PJ_SUCCESS) {
-	////    PJ_LOG(4, (THIS_FILE, "Error setting output route,status: %d",
-	////	       status));
-	////}
- //   } 
-
     strm->quit_event = CreateEventEx(NULL, NULL, CREATE_EVENT_MANUAL_RESET, 
 				     EVENT_ALL_ACCESS);
     if (!strm->quit_event)
@@ -1126,41 +1114,6 @@ static pj_status_t wasapi_stream_set_cap(pjmedia_aud_stream *s,
     PJ_UNUSED_ARG(cap);
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
-
-
- //   if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
- //       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
- //   {
-	//pjmedia_aud_dev_route route;
-	//AudioRoutingEndpoint endpoint;
-	//AudioRoutingManager ^routing_mgr = AudioRoutingManager::GetDefault();
-
-	//PJ_ASSERT_RETURN(pval, PJ_EINVAL);
-
- //   	route = *((pjmedia_aud_dev_route*)pval);
- //       /* Use the initialization function which lazy-inits the
- //        * handle for routing
- //        */
-	//switch (route) {
-	//    case PJMEDIA_AUD_DEV_ROUTE_DEFAULT :
-	//	endpoint = AudioRoutingEndpoint::Default;
-	//	break;
-	//    case PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER :
-	//	endpoint = AudioRoutingEndpoint::Speakerphone;
-	//	break;
-	//    case PJMEDIA_AUD_DEV_ROUTE_EARPIECE :
-	//	endpoint = AudioRoutingEndpoint::Earpiece;
-	//	break;    
-	//    case PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH :
-	//	endpoint = AudioRoutingEndpoint::Bluetooth;
-	//	break;
-	//    default:
-	//	endpoint = AudioRoutingEndpoint::Default;		
-	//}
-	//routing_mgr->SetAudioEndpoint(endpoint);
-	//
-	//return PJ_SUCCESS;
- //   } 
 
     return PJMEDIA_EAUD_INVCAP;
 }
@@ -1295,13 +1248,6 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
 	ws->pb_volume = NULL;
     }
 
-    if (ws->cap_id) {
-	CoTaskMemFree((LPVOID)ws->cap_id);
-    }
-
-    if (ws->pb_id) {
-	CoTaskMemFree((LPVOID)ws->pb_id);
-    }
 
 #if defined(USE_ASYNC_ACTIVATE)
     /* Release audio activator */
@@ -1311,6 +1257,22 @@ static pj_status_t wasapi_stream_destroy(pjmedia_aud_stream *strm)
 
     if (ws->pb_aud_act) {
 	ws->pb_aud_act = nullptr;
+    }
+
+    if (ws->cap_id) {
+	ws->cap_id = nullptr;
+    }
+
+    if (ws->pb_id) {
+	ws->pb_id = nullptr;
+    }
+#else
+    if (ws->cap_id) {
+	CoTaskMemFree((LPVOID)ws->cap_id);
+    }
+
+    if (ws->pb_id) {
+	CoTaskMemFree((LPVOID)ws->pb_id);
     }
 #endif
 
