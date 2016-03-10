@@ -40,6 +40,7 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/transport.h>
+#include <pjmedia-audiodev/audiodev.h>
 
 
 PJ_BEGIN_DECL
@@ -81,10 +82,50 @@ typedef void (*pjmedia_endpt_exit_callback)(pjmedia_endpt *endpt);
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_create( pj_pool_factory *pf,
+PJ_DECL(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
 					   pj_ioqueue_t *ioqueue,
 					   unsigned worker_cnt,
 					   pjmedia_endpt **p_endpt);
+
+/**
+ * Create an instance of media endpoint and initialize audio subsystem.
+ *
+ * @param pf		Pool factory, which will be used by the media endpoint
+ *			throughout its lifetime.
+ * @param ioqueue	Optional ioqueue instance to be registered to the 
+ *			endpoint. The ioqueue instance is used to poll all RTP
+ *			and RTCP sockets. If this argument is NULL, the 
+ *			endpoint will create an internal ioqueue instance.
+ * @param worker_cnt	Specify the number of worker threads to be created
+ *			to poll the ioqueue.
+ * @param p_endpt	Pointer to receive the endpoint instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
+					    pj_ioqueue_t *ioqueue,
+					    unsigned worker_cnt,
+					    pjmedia_endpt **p_endpt)
+{
+    /* This function is inlined to avoid build problem due to circular
+     * dependency, i.e: this function prevents pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+
+    pj_status_t status;
+
+    /* Sound */
+    status = pjmedia_aud_subsys_init(pf);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    status = pjmedia_endpt_create2(pf, ioqueue, worker_cnt, p_endpt);
+    if (status != PJ_SUCCESS) {
+        pjmedia_aud_subsys_shutdown();
+    }
+    
+    return status;
+}
 
 /**
  * Destroy media endpoint instance.
@@ -93,7 +134,25 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create( pj_pool_factory *pf,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt);
+PJ_DECL(pj_status_t) pjmedia_endpt_destroy2(pjmedia_endpt *endpt);
+
+/**
+ * Destroy media endpoint instance and shutdown audio subsystem.
+ *
+ * @param endpt		Media endpoint instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt)
+{
+    /* This function is inlined to avoid build problem due to circular
+     * dependency, i.e: this function prevents pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+     pj_status_t status = pjmedia_endpt_destroy2(endpt);
+     pjmedia_aud_subsys_shutdown();
+     return status;
+}
 
 /**
  * Change the value of a flag.

@@ -105,10 +105,10 @@ struct pjmedia_endpt
 /**
  * Initialize and get the instance of media endpoint.
  */
-PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
-					 pj_ioqueue_t *ioqueue,
-					 unsigned worker_cnt,
-					 pjmedia_endpt **p_endpt)
+PJ_DEF(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
+					  pj_ioqueue_t *ioqueue,
+					  unsigned worker_cnt,
+					  pjmedia_endpt **p_endpt)
 {
     pj_pool_t *pool;
     pjmedia_endpt *endpt;
@@ -133,10 +133,15 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt->thread_cnt = worker_cnt;
     endpt->has_telephone_event = PJ_TRUE;
 
-    /* Sound */
-    status = pjmedia_aud_subsys_init(pf);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    /* Initialize audio subsystem.
+     * To avoid pjmedia's dependendy on pjmedia-audiodev, the initialization
+     * (and shutdown) of audio subsystem will be done in the application
+     * level instead, when it calls inline functions pjmedia_endpt_create()
+     * and pjmedia_endpt_destroy().
+     */
+    //status = pjmedia_aud_subsys_init(pf);
+    //if (status != PJ_SUCCESS)
+    //	goto on_error;
 
     /* Init codec manager. */
     status = pjmedia_codec_mgr_init(&endpt->codec_mgr, endpt->pf);
@@ -188,7 +193,7 @@ on_error:
 	pj_ioqueue_destroy(endpt->ioqueue);
 
     pjmedia_codec_mgr_destroy(&endpt->codec_mgr);
-    pjmedia_aud_subsys_shutdown();
+    //pjmedia_aud_subsys_shutdown();
     pj_pool_release(pool);
     return status;
 }
@@ -204,7 +209,7 @@ PJ_DEF(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt)
 /**
  * Deinitialize media endpoint.
  */
-PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
+PJ_DEF(pj_status_t) pjmedia_endpt_destroy2 (pjmedia_endpt *endpt)
 {
     exit_cb *ecb;
 
@@ -219,7 +224,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
     endpt->pf = NULL;
 
     pjmedia_codec_mgr_destroy(&endpt->codec_mgr);
-    pjmedia_aud_subsys_shutdown();
+    //pjmedia_aud_subsys_shutdown();
 
     /* Call all registered exit callbacks */
     ecb = endpt->exit_cb_list.next;
