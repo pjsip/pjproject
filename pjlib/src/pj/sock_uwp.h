@@ -18,6 +18,13 @@
  */
 #pragma once
 
+
+#include <pj/assert.h>
+#include <pj/sock.h>
+#include <pj/string.h>
+#include <pj/unicode.h>
+
+
 enum {
     READ_TIMEOUT	= 60 * 1000,
     WRITE_TIMEOUT	= 60 * 1000,
@@ -36,6 +43,17 @@ enum PjUwpSocketState {
 
 ref class PjUwpSocketDatagramRecvHelper;
 ref class PjUwpSocketListenerHelper;
+class PjUwpSocket;
+
+
+typedef struct PjUwpSocketCallback
+{
+    void (*on_read)(PjUwpSocket *s, int bytes_read);
+    void (*on_write)(PjUwpSocket *s, int bytes_sent);
+    void (*on_accept)(PjUwpSocket *s);
+    void (*on_connect)(PjUwpSocket *s, pj_status_t status);
+} PjUwpSocketCallback;
+
 
 /*
  * UWP Socket Wrapper.
@@ -44,19 +62,55 @@ class PjUwpSocket
 {
 public:
     PjUwpSocket(int af_, int type_, int proto_);
-    PjUwpSocket* CreateAcceptSocket(Windows::Networking::Sockets::StreamSocket^ stream_sock_);
     virtual ~PjUwpSocket();
-
     pj_status_t InitSocket(enum PjUwpSocketType sock_type_);
+    void DeinitSocket();
 
-public:
+    void* GetUserData() { return user_data; }
+    void SetNonBlocking(const PjUwpSocketCallback *cb_, void *user_data_)
+    {
+	is_blocking = PJ_FALSE;
+	cb=*cb_;
+	user_data = user_data_;
+    }
+
+    enum PjUwpSocketType GetType() { return sock_type; }
+    enum PjUwpSocketState GetState() { return sock_state; }
+
+    pj_sockaddr* GetLocalAddr() { return &local_addr; }
+    pj_sockaddr* GetRemoteAddr() { return &remote_addr; }
+
+
+    pj_status_t Bind(const pj_sockaddr_t *addr = NULL);
+    pj_status_t Send(const void *buf, pj_ssize_t *len);
+    pj_status_t SendTo(const void *buf, pj_ssize_t *len, const pj_sockaddr_t *to);
+    pj_status_t Recv(void *buf, pj_ssize_t *len);
+    pj_status_t RecvFrom(void *buf, pj_ssize_t *len, pj_sockaddr_t *from);
+    pj_status_t Connect(const pj_sockaddr_t *addr);
+    pj_status_t Listen();
+    pj_status_t Accept(PjUwpSocket **new_sock);
+
+    void (*on_read)(PjUwpSocket *s, int bytes_read);
+    void (*on_write)(PjUwpSocket *s, int bytes_sent);
+    void (*on_accept)(PjUwpSocket *s, pj_status_t status);
+    void (*on_connect)(PjUwpSocket *s, pj_status_t status);
+
+private:
+    PjUwpSocket* CreateAcceptSocket(Windows::Networking::Sockets::StreamSocket^ stream_sock_);
+    pj_status_t SendImp(const void *buf, pj_ssize_t *len);
+    int ConsumeReadBuffer(void *buf, int max_len);
+
     int af;
     int type;
     int proto;
     pj_sockaddr local_addr;
     pj_sockaddr remote_addr;
     pj_bool_t is_blocking;
+    pj_bool_t has_pending_bind;
+    pj_bool_t has_pending_send;
+    pj_bool_t has_pending_recv;
     void *user_data;
+    PjUwpSocketCallback cb;
 
     enum PjUwpSocketType sock_type;
     enum PjUwpSocketState sock_state;
@@ -65,22 +119,15 @@ public:
     Windows::Networking::Sockets::StreamSocketListener^ listener_sock;
     
     /* Helper objects */
-    PjUwpSocketDatagramRecvHelper^ datagram_recv_helper;
+    PjUwpSocketDatagramRecvHelper^ dgram_recv_helper;
     PjUwpSocketListenerHelper^ listener_helper;
 
     Windows::Storage::Streams::DataReader^ socket_reader;
     Windows::Storage::Streams::DataWriter^ socket_writer;
     Windows::Storage::Streams::IBuffer^ send_buffer;
-    pj_bool_t is_busy_sending;
 
-    void *read_userdata;
-    void *write_userdata;
-    void *accept_userdata;
-
-    void (*on_read)(PjUwpSocket *s, int bytes_read);
-    void (*on_write)(PjUwpSocket *s, int bytes_sent);
-    void (*on_accept)(PjUwpSocket *s, pj_status_t status);
-    void (*on_connect)(PjUwpSocket *s, pj_status_t status);
+    friend PjUwpSocketDatagramRecvHelper;
+    friend PjUwpSocketListenerHelper;
 };
 
 
@@ -92,6 +139,7 @@ inline pj_status_t wstr_addr_to_sockaddr(const wchar_t *waddr,
 					 const wchar_t *wport,
 					 pj_sockaddr_t *sockaddr)
 {
+#if 0
     char tmp_str_buf[PJ_INET6_ADDRSTRLEN+1];
     pj_assert(wcslen(waddr) < sizeof(tmp_str_buf));
     pj_unicode_to_ansi(waddr, wcslen(waddr), tmp_str_buf, sizeof(tmp_str_buf));
@@ -100,6 +148,31 @@ inline pj_status_t wstr_addr_to_sockaddr(const wchar_t *waddr,
     pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &remote_host, (pj_sockaddr*)sockaddr);
     pj_sockaddr_set_port((pj_sockaddr*)sockaddr,  (pj_uint16_t)_wtoi(wport));
 
+    return PJ_SUCCESS;
+#endif
+    char tmp_str_buf[PJ_INET6_ADDRSTRLEN+1];
+    pj_assert(wcslen(waddr) < sizeof(tmp_str_buf));
+    pj_unicode_to_ansi(waddr, wcslen(waddr), tmp_str_buf, sizeof(tmp_str_buf));
+    pj_str_t remote_host;
+    pj_strset(&remote_host, tmp_str_buf, pj_ansi_strlen(tmp_str_buf));
+    pj_sockaddr *addr = (pj_sockaddr*)sockaddr;
+    pj_bool_t got_addr = PJ_FALSE;
+
+    if (pj_inet_pton(PJ_AF_INET, &remote_host, &addr->ipv4.sin_addr)
+	== PJ_SUCCESS)
+    {
+	addr->addr.sa_family = PJ_AF_INET;
+	got_addr = PJ_TRUE;
+    } else if (pj_inet_pton(PJ_AF_INET6, &remote_host, &addr->ipv6.sin6_addr)
+	== PJ_SUCCESS)
+    {
+	addr->addr.sa_family = PJ_AF_INET6;
+	got_addr = PJ_TRUE;
+    }
+    if (!got_addr)
+	return PJ_EINVAL;
+
+    pj_sockaddr_set_port(addr, (pj_uint16_t)_wtoi(wport));
     return PJ_SUCCESS;
 }
 

@@ -16,22 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pj/sock.h>
-#include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/math.h>
 #include <pj/os.h>
-#include <pj/string.h>
-#include <pj/unicode.h>
 #include <pj/compat/socket.h>
 
 #include <ppltasks.h>
 #include <string>
 
-#include "sock_uwp.h"
-
 #define THIS_FILE	"sock_uwp.cpp"
+
+#include "sock_uwp.h"
 
  /*
  * Address families conversion.
@@ -200,24 +196,18 @@ internal:
 			   DatagramSocketMessageReceivedEventArgs ^args)
     {
 	try {
+	    if (uwp_sock->sock_state >= SOCKSTATE_DISCONNECTED)
+		return;
+
 	    recv_args = args;
 	    avail_data_len = args->GetDataReader()->UnconsumedBufferLength;
 
-	    // Notify application asynchronously
-	    concurrency::create_task([this]()
-	    {
-		if (uwp_sock->on_read) {
-		    if (!pj_thread_is_registered())
-			pj_thread_register("MsgReceive", thread_desc, 
-					   &rec_thread);
-
-		    (tp)(*uwp_sock->read_userdata)
-		    (*uwp_sock->on_read)(uwp_sock, avail_data_len);
-		}
-	    });
+	    if (uwp_sock->cb.on_read) {
+		(*uwp_sock->cb.on_read)(uwp_sock, avail_data_len);
+	    }
 
 	    WaitForSingleObjectEx(recv_wait, INFINITE, false);
-	} catch (Exception^ e) {}
+	} catch (...) {}
     }
 
     pj_status_t ReadDataIfAvailable(void *buf, pj_ssize_t *len,
@@ -264,8 +254,6 @@ private:
     EventRegistrationToken event_token;
     HANDLE recv_wait;
     int avail_data_len;
-    pj_thread_desc thread_desc;
-    pj_thread_t *rec_thread;
 };
 
 
@@ -287,23 +275,15 @@ internal:
 	try {
 	    conn_args = args;
 
-	    // Notify application asynchronously
-	    concurrency::create_task([this]()
-	    {
-		if (uwp_sock->on_accept) {
-		    if (!pj_thread_is_registered())
-			pj_thread_register("ConnReceive", thread_desc, 
-					   &listener_thread);
-
-		    (*uwp_sock->on_accept)(uwp_sock, PJ_SUCCESS);
-		}
-	    });
+	    if (uwp_sock->cb.on_accept) {
+		(*uwp_sock->cb.on_accept)(uwp_sock);
+	    }
 
 	    WaitForSingleObjectEx(conn_wait, INFINITE, false);
 	} catch (Exception^ e) {}
     }
 
-    pj_status_t GetAcceptedSocket(StreamSocket^ stream_sock)
+    pj_status_t GetAcceptedSocket(StreamSocket^& stream_sock)
     {
 	if (conn_args == nullptr)
 	    return PJ_ENOTFOUND;
@@ -332,23 +312,26 @@ private:
     StreamSocketListenerConnectionReceivedEventArgs^ conn_args;
     EventRegistrationToken event_token;
     HANDLE conn_wait;
-
-    pj_thread_desc thread_desc;
-    pj_thread_t *listener_thread;
 };
 
 
 PjUwpSocket::PjUwpSocket(int af_, int type_, int proto_) :
     af(af_), type(type_), proto(proto_),
-    sock_type(SOCKTYPE_UNKNOWN), sock_state(SOCKSTATE_NULL),
-    is_blocking(PJ_TRUE), is_busy_sending(PJ_FALSE)
+    sock_type(SOCKTYPE_UNKNOWN),
+    sock_state(SOCKSTATE_NULL),
+    is_blocking(PJ_TRUE),
+    has_pending_bind(PJ_FALSE),
+    has_pending_send(PJ_FALSE),
+    has_pending_recv(PJ_FALSE)
 {
     pj_sockaddr_init(pj_AF_INET(), &local_addr, NULL, 0);
     pj_sockaddr_init(pj_AF_INET(), &remote_addr, NULL, 0);
 }
 
 PjUwpSocket::~PjUwpSocket()
-{}
+{
+    DeinitSocket();
+}
 
 PjUwpSocket* PjUwpSocket::CreateAcceptSocket(Windows::Networking::Sockets::StreamSocket^ stream_sock_)
 {
@@ -358,6 +341,7 @@ PjUwpSocket* PjUwpSocket::CreateAcceptSocket(Windows::Networking::Sockets::Strea
     new_sock->sock_state = SOCKSTATE_CONNECTED;
     new_sock->socket_reader = ref new DataReader(new_sock->stream_sock->InputStream);
     new_sock->socket_writer = ref new DataWriter(new_sock->stream_sock->OutputStream);
+    new_sock->socket_reader->InputStreamOptions = InputStreamOptions::Partial;
     new_sock->send_buffer = ref new Buffer(SEND_BUFFER_SIZE);
     new_sock->is_blocking = is_blocking;
 
@@ -398,6 +382,492 @@ pj_status_t PjUwpSocket::InitSocket(enum PjUwpSocketType sock_type_)
     return PJ_SUCCESS;
 }
 
+
+void PjUwpSocket::DeinitSocket()
+{
+    if (stream_sock) {
+	concurrency::create_task(stream_sock->CancelIOAsync()).wait();
+    }
+    if (datagram_sock) {
+	concurrency::create_task(datagram_sock->CancelIOAsync()).wait();
+    }
+    if (listener_sock) {
+	concurrency::create_task(listener_sock->CancelIOAsync()).wait();
+    }
+    stream_sock = nullptr;
+    datagram_sock = nullptr;
+    dgram_recv_helper = nullptr;
+    listener_sock = nullptr;
+    listener_helper = nullptr;
+    socket_writer = nullptr;
+    socket_reader = nullptr;
+    sock_state = SOCKSTATE_NULL;
+}
+
+pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
+{
+    /* Not initialized yet, socket type is perhaps TCP, just not decided yet
+     * whether it is a stream or a listener.
+     */
+    if (sock_state < SOCKSTATE_INITIALIZED) {
+	pj_sockaddr_cp(&local_addr, addr);
+	has_pending_bind = PJ_TRUE;
+	return PJ_SUCCESS;
+    }
+    
+    PJ_ASSERT_RETURN(sock_state == SOCKSTATE_INITIALIZED, PJ_EINVALIDOP);
+    if (sock_type != SOCKTYPE_DATAGRAM && sock_type != SOCKTYPE_LISTENER)
+	return PJ_EINVALIDOP;
+
+    if (has_pending_bind) {
+	has_pending_bind = PJ_FALSE;
+	if (!addr)
+	    addr = &local_addr;
+    }
+
+    /* If no bound address is set, just return */
+    if (!pj_sockaddr_has_addr(addr) && !pj_sockaddr_get_port(addr))
+	return PJ_SUCCESS;
+
+    if (addr != &local_addr)
+	pj_sockaddr_cp(&local_addr, addr);
+
+    HRESULT err = 0;
+    try {
+	concurrency::create_task([this, addr]() {
+	    HostName ^host;
+	    int port;
+	    sockaddr_to_hostname_port(addr, host, &port);
+	    if (pj_sockaddr_has_addr(addr)) {
+		if (sock_type == SOCKTYPE_DATAGRAM)
+		    return datagram_sock->BindEndpointAsync(host, port.ToString());
+		else
+		    return listener_sock->BindEndpointAsync(host, port.ToString());
+	    } else /* if (pj_sockaddr_get_port(addr) != 0) */ {
+		if (sock_type == SOCKTYPE_DATAGRAM)
+		    return datagram_sock->BindServiceNameAsync(port.ToString());
+		else
+		    return listener_sock->BindServiceNameAsync(port.ToString());
+	    }
+	}).then([this, &err](concurrency::task<void> t)
+	{
+	    try {
+		t.get();
+	    } catch (Exception^ e) {
+		err = e->HResult;
+	    }
+	}).get();
+    } catch (Exception^ e) {
+	err = e->HResult;
+    }
+
+    return (err? PJ_RETURN_OS_ERROR(err) : PJ_SUCCESS);
+}
+
+
+pj_status_t PjUwpSocket::SendImp(const void *buf, pj_ssize_t *len)
+{
+    if (has_pending_send)
+	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+
+    if (*len > (pj_ssize_t)send_buffer->Capacity)
+	return PJ_ETOOBIG;
+
+    CopyToIBuffer((unsigned char*)buf, *len, send_buffer);
+    send_buffer->Length = *len;
+    socket_writer->WriteBuffer(send_buffer);
+
+    /* Blocking version */
+    if (is_blocking) {
+	pj_status_t status = PJ_SUCCESS;
+	concurrency::cancellation_token_source cts;
+	auto cts_token = cts.get_token();
+	auto t = concurrency::create_task(socket_writer->StoreAsync(),
+					  cts_token);
+	*len = cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
+	    then([cts_token, &status](concurrency::task<unsigned int> t_)
+	{
+	    int sent = 0;
+	    try {
+		if (cts_token.is_canceled())
+		    status = PJ_ETIMEDOUT;
+		else
+		    sent = t_.get();
+	    } catch (Exception^ e) {
+		status = PJ_RETURN_OS_ERROR(e->HResult);
+	    }
+	    return sent;
+	}).get();
+
+	return status;
+    } 
+
+    /* Non-blocking version */
+    has_pending_send = PJ_TRUE;
+    concurrency::create_task(socket_writer->StoreAsync()).
+	then([this](concurrency::task<unsigned int> t_)
+    {
+	try {
+	    unsigned int l = t_.get();
+	    has_pending_send = PJ_FALSE;
+
+	    // invoke callback
+	    if (cb.on_write) {
+		(*cb.on_write)(this, l);
+	    }
+	} catch (...) {
+	    has_pending_send = PJ_FALSE;
+	    sock_state = SOCKSTATE_ERROR;
+	    DeinitSocket();
+
+	    // invoke callback
+	    if (cb.on_write) {
+		(*cb.on_write)(this, -PJ_EUNKNOWN);
+	    }
+	}
+    });
+
+    return PJ_SUCCESS;
+}
+
+
+pj_status_t PjUwpSocket::Send(const void *buf, pj_ssize_t *len)
+{
+    if ((sock_type!=SOCKTYPE_STREAM && sock_type!=SOCKTYPE_DATAGRAM) ||
+	(sock_state!=SOCKSTATE_CONNECTED))
+    {
+	return PJ_EINVALIDOP;
+    }
+
+    /* Sending for SOCKTYPE_DATAGRAM is implemented in pj_sock_sendto() */
+    if (sock_type == SOCKTYPE_DATAGRAM) {
+	return SendTo(buf, len, &remote_addr);
+    }
+
+    return SendImp(buf, len);
+}
+
+
+pj_status_t PjUwpSocket::SendTo(const void *buf, pj_ssize_t *len,
+				const pj_sockaddr_t *to)
+{
+    if (sock_type != SOCKTYPE_DATAGRAM || sock_state < SOCKSTATE_INITIALIZED
+	|| sock_state >= SOCKSTATE_DISCONNECTED)
+    {
+	return PJ_EINVALIDOP;
+    }
+
+    if (has_pending_send)
+	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+
+    if (*len > (pj_ssize_t)send_buffer->Capacity)
+	return PJ_ETOOBIG;
+
+    HostName ^hostname;
+    int port;
+    sockaddr_to_hostname_port(to, hostname, &port);
+
+    concurrency::cancellation_token_source cts;
+    auto cts_token = cts.get_token();
+    auto t = concurrency::create_task(datagram_sock->GetOutputStreamAsync(
+				      hostname, port.ToString()), cts_token);
+    pj_status_t status = PJ_SUCCESS;
+
+    cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
+	then([this, cts_token, &status](concurrency::task<IOutputStream^> t_)
+    {
+	try {
+	    if (cts_token.is_canceled()) {
+		status = PJ_ETIMEDOUT;
+	    } else {
+		IOutputStream^ outstream = t_.get();
+		socket_writer = ref new DataWriter(outstream);
+	    }
+	} catch (Exception^ e) {
+	    status = PJ_RETURN_OS_ERROR(e->HResult);
+	}
+    }).get();
+
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = SendImp(buf, len);
+    if ((status == PJ_SUCCESS || status == PJ_EPENDING) &&
+	sock_state < SOCKSTATE_CONNECTED)
+    {
+	sock_state = SOCKSTATE_CONNECTED;
+    }
+
+    return status;
+}
+
+
+int PjUwpSocket::ConsumeReadBuffer(void *buf, int max_len)
+{
+    if (socket_reader->UnconsumedBufferLength == 0)
+	return 0;
+
+    int read_len = PJ_MIN((int)socket_reader->UnconsumedBufferLength,max_len);
+    IBuffer^ buffer = socket_reader->ReadBuffer(read_len);
+    read_len = buffer->Length;
+    CopyFromIBuffer((unsigned char*)buf, read_len, buffer);
+    return read_len;
+}
+
+
+pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
+{
+    /* Only for TCP, at least for now! */
+    if (sock_type == SOCKTYPE_DATAGRAM)
+	return PJ_ENOTSUP;
+
+    if (sock_type != SOCKTYPE_STREAM || sock_state != SOCKSTATE_CONNECTED)
+	return PJ_EINVALIDOP;
+
+    if (has_pending_recv)
+	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+
+    /* First check if there is already some data in the read buffer */
+    if (buf) {
+	int avail_len = ConsumeReadBuffer(buf, *len);
+	if (avail_len > 0) {
+	    *len = avail_len;
+	    return PJ_SUCCESS;
+	}
+    }
+
+    /* Blocking version */
+    if (is_blocking) {
+	pj_status_t status = PJ_SUCCESS;
+	concurrency::cancellation_token_source cts;
+	auto cts_token = cts.get_token();
+	auto t = concurrency::create_task(socket_reader->LoadAsync(*len),
+					    cts_token);
+	*len = cancel_after_timeout(t, cts, READ_TIMEOUT)
+	    .then([this, len, buf, cts_token, &status]
+				    (concurrency::task<unsigned int> t_)
+	{
+	    try {
+		if (cts_token.is_canceled()) {
+		    status = PJ_ETIMEDOUT;
+		    return 0;
+		}
+		t_.get();
+	    } catch (Exception^) {
+		status = PJ_ETIMEDOUT;
+		return 0;
+	    }
+
+	    *len = ConsumeReadBuffer(buf, *len);
+	    return (int)*len;
+	}).get();
+
+	return status;
+    }
+
+    /* Non-blocking version */
+
+    has_pending_recv = PJ_TRUE;
+    concurrency::create_task(socket_reader->LoadAsync(*len))
+	.then([this](concurrency::task<unsigned int> t_)
+    {
+	try {
+	    // catch any exception
+	    t_.get();
+	    has_pending_recv = PJ_FALSE;
+
+	    // invoke callback
+	    int read_len = socket_reader->UnconsumedBufferLength;
+	    if (read_len > 0 && cb.on_read) {
+		(*cb.on_read)(this, read_len);
+	    }
+	} catch (Exception^ e) {
+	    has_pending_recv = PJ_FALSE;
+
+	    // invoke callback
+	    if (cb.on_read) {
+		(*cb.on_read)(this, -PJ_EUNKNOWN);
+	    }
+	}
+    });
+
+    return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+}
+
+
+pj_status_t PjUwpSocket::RecvFrom(void *buf, pj_ssize_t *len,
+				  pj_sockaddr_t *from)
+{
+    if (sock_type != SOCKTYPE_DATAGRAM || sock_state < SOCKSTATE_INITIALIZED
+	|| sock_state >= SOCKSTATE_DISCONNECTED)
+    {
+	return PJ_EINVALIDOP;
+    }
+
+    /* Start receive, if not yet */
+    if (dgram_recv_helper == nullptr) {
+	dgram_recv_helper = ref new PjUwpSocketDatagramRecvHelper(this);
+    }
+
+    /* Try to read any available data first */
+    if (buf || is_blocking) {
+	pj_status_t status;
+	status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
+	if (status != PJ_ENOTFOUND)
+	    return status;
+    }
+
+    /* Blocking version */
+    if (is_blocking) {
+	int max_loop = 0;
+	pj_status_t status = PJ_ENOTFOUND;
+	while (status == PJ_ENOTFOUND && sock_state <= SOCKSTATE_CONNECTED)
+	{
+	    status = dgram_recv_helper->ReadDataIfAvailable(buf, len, from);
+	    if (status != PJ_SUCCESS)
+		pj_thread_sleep(100);
+
+	    if (++max_loop > 10)
+		return PJ_ETIMEDOUT;
+	}
+	return status;
+    }
+
+    /* For non-blocking version, just return PJ_EPENDING */
+    return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+}
+
+
+pj_status_t PjUwpSocket::Connect(const pj_sockaddr_t *addr)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN((sock_type == SOCKTYPE_UNKNOWN && sock_state == SOCKSTATE_NULL) ||
+		     (sock_type == SOCKTYPE_DATAGRAM && sock_state == SOCKSTATE_INITIALIZED),
+		     PJ_EINVALIDOP);
+
+    if (sock_type == SOCKTYPE_UNKNOWN) {
+	InitSocket(SOCKTYPE_STREAM);
+	// No need to check pending bind, no bind for TCP client socket
+    }
+
+    pj_sockaddr_cp(&remote_addr, addr);
+
+    auto t = concurrency::create_task([this, addr]()
+    {
+	HostName ^hostname;
+	int port;
+	sockaddr_to_hostname_port(&remote_addr, hostname, &port);
+	if (sock_type == SOCKTYPE_STREAM)
+	    return stream_sock->ConnectAsync(hostname, port.ToString(),
+				      SocketProtectionLevel::PlainSocket);
+	else
+	    return datagram_sock->ConnectAsync(hostname, port.ToString());
+    }).then([=](concurrency::task<void> t_)
+    {
+	try {
+	    t_.get();
+
+	    sock_state = SOCKSTATE_CONNECTED;
+
+	    // Update local & remote address
+	    HostName^ local_address;
+	    String^ local_port;
+
+	    if (sock_type == SOCKTYPE_STREAM) {
+		local_address = stream_sock->Information->LocalAddress;
+		local_port = stream_sock->Information->LocalPort;
+
+		socket_reader = ref new DataReader(stream_sock->InputStream);
+		socket_writer = ref new DataWriter(stream_sock->OutputStream);
+		socket_reader->InputStreamOptions = InputStreamOptions::Partial;
+	    } else {
+		local_address = datagram_sock->Information->LocalAddress;
+		local_port = datagram_sock->Information->LocalPort;
+	    }
+	    if (local_address && local_port) {
+		wstr_addr_to_sockaddr(local_address->CanonicalName->Data(),
+		    local_port->Data(),
+		    &local_addr);
+	    }
+
+	    if (!is_blocking && cb.on_connect) {
+		(*cb.on_connect)(this, PJ_SUCCESS);
+	    }
+	    return (pj_status_t)PJ_SUCCESS;
+
+	} catch (Exception^ ex) {
+
+	    SocketErrorStatus status = SocketError::GetStatus(ex->HResult);
+
+	    switch (status)
+	    {
+	    case SocketErrorStatus::UnreachableHost:
+		break;
+	    case SocketErrorStatus::ConnectionTimedOut:
+		break;
+	    case SocketErrorStatus::ConnectionRefused:
+		break;
+	    default:
+		break;
+	    }
+
+	    if (!is_blocking && cb.on_connect) {
+		(*cb.on_connect)(this, PJ_EUNKNOWN);
+	    }
+
+	    return (pj_status_t)PJ_EUNKNOWN;
+	}
+    });
+
+    if (!is_blocking)
+	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_CONNECT_ERROR_VAL);
+
+    try {
+	status = t.get();
+    } catch (Exception^) {
+	return PJ_EUNKNOWN;
+    }
+    return status;
+}
+
+pj_status_t PjUwpSocket::Listen()
+{
+    PJ_ASSERT_RETURN((sock_type == SOCKTYPE_UNKNOWN) ||
+		     (sock_type == SOCKTYPE_LISTENER &&
+		      sock_state == SOCKSTATE_INITIALIZED),
+		     PJ_EINVALIDOP);
+
+    if (sock_type == SOCKTYPE_UNKNOWN)
+	InitSocket(SOCKTYPE_LISTENER);
+
+    if (has_pending_bind)
+	Bind();
+
+    /* Start listen */
+    if (listener_helper == nullptr) {
+	listener_helper = ref new PjUwpSocketListenerHelper(this);
+    }
+
+    return PJ_SUCCESS;
+}
+
+pj_status_t PjUwpSocket::Accept(PjUwpSocket **new_sock)
+{
+    if (sock_type != SOCKTYPE_LISTENER || sock_state != SOCKSTATE_INITIALIZED)
+	return PJ_EINVALIDOP;
+
+    StreamSocket^ accepted_sock;
+    pj_status_t status = listener_helper->GetAcceptedSocket(accepted_sock);
+    if (status == PJ_ENOTFOUND)
+	return PJ_RETURN_OS_ERROR(PJ_BLOCKING_ERROR_VAL);
+
+    if (status != PJ_SUCCESS)
+	return status;
+
+    *new_sock = CreateAcceptSocket(accepted_sock);
+    return PJ_SUCCESS;
+}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -717,48 +1187,8 @@ PJ_DEF(pj_status_t) pj_sock_bind( pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock, PJ_EINVAL);
     PJ_ASSERT_RETURN(addr && len>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
-
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    if (s->sock_state > SOCKSTATE_INITIALIZED)
-	return PJ_EINVALIDOP;
-
-    pj_sockaddr_cp(&s->local_addr, addr);
-
-    /* Bind now if this is UDP. But if it is TCP, unfortunately we don't
-     * know yet whether it is SocketStream or Listener!
-     */
-    if (s->type == pj_SOCK_DGRAM()) {
-	HRESULT err = 0;
-
-	try {
-	    concurrency::create_task([s, addr]() {
-		HostName ^hostname;
-		int port;
-		sockaddr_to_hostname_port(addr, hostname, &port);
-		if (pj_sockaddr_has_addr(addr)) {
-		    s->datagram_sock->BindEndpointAsync(hostname, 
-							port.ToString());
-		} else if (pj_sockaddr_get_port(addr) != 0) {
-		    s->datagram_sock->BindServiceNameAsync(port.ToString());
-		}
-	    }).then([s, &err](concurrency::task<void> t)
-	    {
-		try {
-		    t.get();
-		    s->sock_state = SOCKSTATE_CONNECTED;
-		} catch (Exception^ e) {
-		    err = e->HResult;
-		}
-	    }).get();
-	} catch (Exception^ e) {
-	    err = e->HResult;
-	}
-
-	return (err? PJ_RETURN_OS_ERROR(err) : PJ_SUCCESS);
-    }
-
-    return PJ_SUCCESS;
+    return s->Bind(addr);
 }
 
 
@@ -811,9 +1241,8 @@ PJ_DEF(pj_status_t) pj_sock_getpeername( pj_sock_t sock,
 		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    pj_sockaddr_cp(addr, &s->remote_addr);
-    *namelen = pj_sockaddr_get_len(&s->remote_addr);
+    pj_sockaddr_cp(addr, s->GetRemoteAddr());
+    *namelen = pj_sockaddr_get_len(addr);
 
     return PJ_SUCCESS;
 }
@@ -830,77 +1259,12 @@ PJ_DEF(pj_status_t) pj_sock_getsockname( pj_sock_t sock,
 		     *namelen>=(int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    pj_sockaddr_cp(addr, &s->local_addr);
-    *namelen = pj_sockaddr_get_len(&s->local_addr);
+    pj_sockaddr_cp(addr, s->GetLocalAddr());
+    *namelen = pj_sockaddr_get_len(addr);
 
     return PJ_SUCCESS;
 }
 
-
-static pj_status_t sock_send_imp(PjUwpSocket *s, const void *buf,
-				 pj_ssize_t *len)
-{
-    if (s->is_busy_sending)
-	return PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK);
-
-    if (*len > (pj_ssize_t)s->send_buffer->Capacity)
-	return PJ_ETOOBIG;
-
-    CopyToIBuffer((unsigned char*)buf, *len, s->send_buffer);
-    s->send_buffer->Length = *len;
-    s->socket_writer->WriteBuffer(s->send_buffer);
-
-    if (s->is_blocking) {
-	pj_status_t status = PJ_SUCCESS;
-	concurrency::cancellation_token_source cts;
-	auto cts_token = cts.get_token();
-	auto t = concurrency::create_task(s->socket_writer->StoreAsync(),
-					  cts_token);
-	*len = cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
-	    then([cts_token, &status](concurrency::task<unsigned int> t_)
-	{
-	    int sent = 0;
-	    try {
-		if (cts_token.is_canceled())
-		    status = PJ_ETIMEDOUT;
-		else
-		    sent = t_.get();
-	    } catch (Exception^ e) {
-		status = PJ_RETURN_OS_ERROR(e->HResult);
-	    }
-	    return sent;
-	}).get();
-
-	return status;
-    } 
-
-    s->is_busy_sending = true;
-    concurrency::create_task(s->socket_writer->StoreAsync()).
-	then([s](concurrency::task<unsigned int> t_)
-    {
-	try {
-	    unsigned int l = t_.get();
-	    s->is_busy_sending = false;
-
-	    // invoke callback
-	    if (s->on_write) {
-		(*s->on_write)(s, l);
-	    }
-	} catch (Exception^ e) {
-	    s->is_busy_sending = false;
-	    if (s->sock_type == SOCKTYPE_STREAM)
-		s->sock_state = SOCKSTATE_DISCONNECTED;
-
-	    // invoke callback
-	    if (s->on_write) {
-		(*s->on_write)(s, -PJ_RETURN_OS_ERROR(e->HResult));
-	    }
-	}
-    });
-
-    return PJ_EPENDING;
-}
 
 /*
  * Send data
@@ -915,20 +1279,7 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_UNUSED_ARG(flags);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    if ((s->sock_type!=SOCKTYPE_STREAM && s->sock_type!=SOCKTYPE_DATAGRAM) ||
-	(s->sock_state!=SOCKSTATE_CONNECTED))
-    {
-	return PJ_EINVALIDOP;
-    }
- 
-    /* Sending for SOCKTYPE_DATAGRAM is implemented in pj_sock_sendto() */
-    if (s->sock_type == SOCKTYPE_DATAGRAM) {
-	return pj_sock_sendto(sock, buf, len, flags, &s->remote_addr,
-			      pj_sockaddr_get_len(&s->remote_addr));
-    }
-
-    return sock_send_imp(s, buf, len);
+    return s->Send(buf, len);
 }
 
 
@@ -948,71 +1299,7 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     PJ_UNUSED_ARG(tolen);
     
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    if (s->sock_type != SOCKTYPE_DATAGRAM ||
-	s->sock_state < SOCKSTATE_INITIALIZED)
-    {
-	return PJ_EINVALIDOP;
-    }
-
-    if (s->is_busy_sending)
-	return PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK);
-
-    if (*len > (pj_ssize_t)s->send_buffer->Capacity)
-	return PJ_ETOOBIG;
-
-    HostName ^hostname;
-    int port;
-    sockaddr_to_hostname_port(to, hostname, &port);
-
-    concurrency::cancellation_token_source cts;
-    auto cts_token = cts.get_token();
-    auto t = concurrency::create_task(
-		s->datagram_sock->GetOutputStreamAsync(
-		    hostname, port.ToString()), cts_token);
-    pj_status_t status = PJ_SUCCESS;
-
-    cancel_after_timeout(t, cts, (unsigned int)WRITE_TIMEOUT).
-	then([s, cts_token, &status](concurrency::task<IOutputStream^> t_)
-    {
-	try {
-	    if (cts_token.is_canceled()) {
-		status = PJ_ETIMEDOUT;
-	    } else {
-		IOutputStream^ outstream = t_.get();
-		s->socket_writer = ref new DataWriter(outstream);
-	    }
-	} catch (Exception^ e) {
-	    status = PJ_RETURN_OS_ERROR(e->HResult);
-	}
-    }).get();
-
-    if (status != PJ_SUCCESS)
-	return status;
-
-    status = sock_send_imp(s, buf, len);
-
-    if ((status == PJ_SUCCESS || status == PJ_EPENDING) &&
-	s->sock_state < SOCKSTATE_CONNECTED)
-    {
-	s->sock_state = SOCKSTATE_CONNECTED;
-    }
-
-    return status;
-}
-
-
-static int consume_read_buffer(PjUwpSocket *s, void *buf, int max_len)
-{
-    if (s->socket_reader->UnconsumedBufferLength == 0)
-	return 0;
-
-    int read_len = PJ_MIN((int)s->socket_reader->UnconsumedBufferLength,
-			  max_len);
-    IBuffer^ buffer = s->socket_reader->ReadBuffer(read_len);
-    read_len = buffer->Length;
-    CopyFromIBuffer((unsigned char*)buf, read_len, buffer);
-    return read_len;
+    return s->SendTo(buf, len, to);
 }
 
 
@@ -1030,78 +1317,7 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     PJ_UNUSED_ARG(flags);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    /* Only for TCP, at least for now! */
-    if (s->sock_type == SOCKTYPE_DATAGRAM)
-	return PJ_ENOTSUP;
-
-    if (s->sock_type != SOCKTYPE_STREAM ||
-	s->sock_state != SOCKSTATE_CONNECTED)
-    {
-	return PJ_EINVALIDOP;
-    }
-
-    /* First check if there is already some data in the read buffer */
-    int avail_len = consume_read_buffer(s, buf, *len);
-    if (avail_len > 0) {
-	*len = avail_len;
-	return PJ_SUCCESS;
-    }
-
-    /* Start sync read */
-    if (s->is_blocking) {
-	pj_status_t status = PJ_SUCCESS;
-	concurrency::cancellation_token_source cts;
-	auto cts_token = cts.get_token();
-	auto t = concurrency::create_task(s->socket_reader->LoadAsync(*len), cts_token);
-	*len = cancel_after_timeout(t, cts, READ_TIMEOUT)
-		    .then([s, len, buf, cts_token, &status](concurrency::task<unsigned int> t_)
-	{
-	    try {
-		if (cts_token.is_canceled()) {
-		    status = PJ_ETIMEDOUT;
-		    return 0;
-		}
-		t_.get();
-	    } catch (Exception^) {
-		status = PJ_ETIMEDOUT;
-		return 0;
-	    }
-
-	    *len = consume_read_buffer(s, buf, *len);
-	    return (int)*len;
-	}).get();
-
-	return status;
-    }
-
-    /* Start async read */
-    int read_len = *len;
-    concurrency::create_task(s->socket_reader->LoadAsync(read_len))
-	.then([s, &read_len](concurrency::task<unsigned int> t_)
-    {
-	try {
-	    // catch any exception
-	    t_.get();
-
-	    // invoke callback
-	    read_len = PJ_MIN((int)s->socket_reader->UnconsumedBufferLength,
-			      read_len);
-	    if (read_len > 0 && s->on_read) {
-		(*s->on_read)(s, read_len);
-	    }
-	} catch (Exception^ e) {
-	    // invoke callback
-	    if (s->on_read) {
-		(*s->on_read)(s, -PJ_RETURN_OS_ERROR(e->HResult));
-	    }
-	    return 0;
-	}
-
-	return (int)read_len;
-    });
-
-    return PJ_EPENDING;
+    return s->Recv(buf, len);
 }
 
 /*
@@ -1122,37 +1338,10 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PJ_UNUSED_ARG(flags);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-
-    if (s->sock_type != SOCKTYPE_DATAGRAM ||
-	s->sock_state < SOCKSTATE_INITIALIZED)
-    {
-	return PJ_EINVALIDOP;
-    }
-
-    /* Start receive, if not yet */
-    if (s->datagram_recv_helper == nullptr) {
-	s->datagram_recv_helper = ref new PjUwpSocketDatagramRecvHelper(s);
-    }
-
-    /* Try to read any available data first */
-    pj_status_t status = s->datagram_recv_helper->
-					ReadDataIfAvailable(buf, len, from);
-    if (status != PJ_ENOTFOUND)
-	return status;
-
-    /* Start sync read */
-    if (s->is_blocking) {
-	while (status == PJ_ENOTFOUND && s->sock_state <= SOCKSTATE_CONNECTED)
-	{
-	    status = s->datagram_recv_helper->
-					ReadDataIfAvailable(buf, len, from);
-	    pj_thread_sleep(100);
-	}
-	return PJ_SUCCESS;
-    }
-
-    /* For async read, just return PJ_EPENDING */
-    return PJ_EPENDING;
+    pj_status_t status = s->RecvFrom(buf, len, from);
+    if (status == PJ_SUCCESS)
+	*fromlen = pj_sockaddr_get_len(from);
+    return status;
 }
 
 /*
@@ -1221,41 +1410,6 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_params( pj_sock_t sockfd,
     return retval;
 }
 
-static pj_status_t tcp_bind(PjUwpSocket *s)
-{
-    /* If no bound address is set, just return */
-    if (!pj_sockaddr_has_addr(&s->local_addr) &&
-	pj_sockaddr_get_port(&s->local_addr)==0)
-    {
-	return PJ_SUCCESS;
-    }
-
-    HRESULT err = 0;    
-
-    try {
-	concurrency::create_task([s]() {
-	    HostName ^hostname;
-	    int port;
-	    sockaddr_to_hostname_port(&s->local_addr, hostname, &port);
-
-	    s->listener_sock->BindEndpointAsync(hostname, 
-						port.ToString());
-	}).then([s, &err](concurrency::task<void> t)
-	{
-	    try {
-		t.get();
-		s->sock_state = SOCKSTATE_CONNECTED;
-	    } catch (Exception^ e) {
-		err = e->HResult;
-	    }
-	}).get();
-    } catch (Exception^ e) {
-	err = e->HResult;
-    }
-
-    return (err? PJ_RETURN_OS_ERROR(err) : PJ_SUCCESS);
-}
-
 
 /*
  * Connect socket.
@@ -1266,131 +1420,10 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && addr, PJ_EINVAL);
-
     PJ_UNUSED_ARG(namelen);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-    pj_status_t status;
-
-    pj_sockaddr_cp(&s->remote_addr, addr);
-
-    /* UDP */
-
-    if (s->sock_type == SOCKTYPE_DATAGRAM) {
-	if (s->sock_state != SOCKSTATE_INITIALIZED)
-	    return PJ_EINVALIDOP;
-	
-	HostName ^hostname;
-	int port;
-	sockaddr_to_hostname_port(addr, hostname, &port);
-
-	try {
-	    concurrency::create_task(s->datagram_sock->ConnectAsync
-						   (hostname, port.ToString()))
-		.then([s](concurrency::task<void> t_)
-	    {
-		try {
-		    t_.get();
-		} catch (Exception^ ex) 
-		{
-		
-		}
-	    }).get();
-	} catch (Exception^) {
-	    return PJ_EUNKNOWN;
-	}
-
-	// Update local & remote address
-	wstr_addr_to_sockaddr(s->datagram_sock->Information->RemoteAddress->CanonicalName->Data(),
-			      s->datagram_sock->Information->RemotePort->Data(),
-			      &s->remote_addr);
-	wstr_addr_to_sockaddr(s->datagram_sock->Information->LocalAddress->CanonicalName->Data(),
-			      s->datagram_sock->Information->LocalPort->Data(),
-			      &s->local_addr);
-
-	s->sock_state = SOCKSTATE_CONNECTED;
-	
-	return PJ_SUCCESS;
-    }
-
-    /* TCP */
-
-    /* Init stream socket now */
-    s->InitSocket(SOCKTYPE_STREAM);
-
-    pj_sockaddr_cp(&s->remote_addr, addr);
-    wstr_addr_to_sockaddr(s->stream_sock->Information->LocalAddress->CanonicalName->Data(),
-			  s->stream_sock->Information->LocalPort->Data(),
-			  &s->local_addr);
-
-    /* Perform any pending bind */
-    status = tcp_bind(s);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    char tmp[PJ_INET6_ADDRSTRLEN];
-    wchar_t wtmp[PJ_INET6_ADDRSTRLEN];
-    pj_sockaddr_print(addr, tmp, PJ_INET6_ADDRSTRLEN, 0);
-    pj_ansi_to_unicode(tmp, pj_ansi_strlen(tmp), wtmp,
-		       PJ_INET6_ADDRSTRLEN);
-    auto host = ref new HostName(ref new String(wtmp));
-    int port = pj_sockaddr_get_port(addr);
-
-    auto t = concurrency::create_task(s->stream_sock->ConnectAsync
-	     (host, port.ToString(), SocketProtectionLevel::PlainSocket))
-	     .then([=](concurrency::task<void> t_)
-    {
-	try {
-	    t_.get();
-	    s->socket_reader = ref new DataReader(s->stream_sock->InputStream);
-	    s->socket_writer = ref new DataWriter(s->stream_sock->OutputStream);
-
-	    // Update local & remote address
-	    wstr_addr_to_sockaddr(s->stream_sock->Information->RemoteAddress->CanonicalName->Data(),
-				  s->stream_sock->Information->RemotePort->Data(),
-				  &s->remote_addr);
-	    wstr_addr_to_sockaddr(s->stream_sock->Information->LocalAddress->CanonicalName->Data(),
-				  s->stream_sock->Information->LocalPort->Data(),
-				  &s->local_addr);
-
-	    s->sock_state = SOCKSTATE_CONNECTED;
-
-	    if (!s->is_blocking && s->on_connect) {
-		(*s->on_connect)(s, PJ_SUCCESS);
-	    }
-	    return (pj_status_t)PJ_SUCCESS;
-	} catch (Exception^ ex) {
-	    SocketErrorStatus status = SocketError::GetStatus(ex->HResult);
-
-	    switch (status)
-	    {
-	    case SocketErrorStatus::UnreachableHost:
-		break;
-	    case SocketErrorStatus::ConnectionTimedOut:
-		break;
-	    case SocketErrorStatus::ConnectionRefused:
-		break;
-	    default:
-		break;
-	    }
-
-	    if (!s->is_blocking && s->on_connect) {
-		(*s->on_connect)(s, PJ_EUNKNOWN);
-	    }
-
-	    return (pj_status_t)PJ_EUNKNOWN;
-	}
-    });
-
-    if (!s->is_blocking)
-	return PJ_EPENDING;
-
-    try {
-	status = t.get();
-    } catch (Exception^) {
-	return PJ_EUNKNOWN;
-    }
-    return status;
+    return s->Connect(addr);
 }
 
 
@@ -1419,22 +1452,7 @@ PJ_DEF(pj_status_t) pj_sock_listen( pj_sock_t sock,
     PJ_ASSERT_RETURN(sock, PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)sock;
-    pj_status_t status;
-
-    /* Init listener socket now */
-    s->InitSocket(SOCKTYPE_LISTENER);
-
-    /* Perform any pending bind */
-    status = tcp_bind(s);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Start listen */
-    if (s->listener_helper == nullptr) {
-	s->listener_helper = ref new PjUwpSocketListenerHelper(s);
-    }
-
-    return PJ_SUCCESS;
+    return s->Listen();
 }
 
 /*
@@ -1445,31 +1463,23 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 				    pj_sockaddr_t *addr,
 				    int *addrlen)
 {
-    PJ_CHECK_STACK();
+    pj_status_t status;
 
+    PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(serverfd && newsock, PJ_EINVAL);
 
     PjUwpSocket *s = (PjUwpSocket*)serverfd;
+    PjUwpSocket *new_uwp_sock;
 
-    if (s->sock_type != SOCKTYPE_LISTENER ||
-	s->sock_state != SOCKSTATE_INITIALIZED)
-    {
-	return PJ_EINVALIDOP;
-    }
-
-    StreamSocket^ accepted_sock;
-    pj_status_t status = s->listener_helper->GetAcceptedSocket(accepted_sock);
-    if (status == PJ_ENOTFOUND)
-	return PJ_EPENDING;
-
+    status = s->Accept(&new_uwp_sock);
     if (status != PJ_SUCCESS)
 	return status;
+    if (newsock == NULL)
+	return PJ_ENOTFOUND;
 
-    PjUwpSocket *new_sock = s->CreateAcceptSocket(accepted_sock);
-
-    pj_sockaddr_cp(addr, &new_sock->remote_addr);
-    *addrlen = pj_sockaddr_get_len(&new_sock->remote_addr);
-    *newsock = (pj_sock_t)new_sock;
+    *newsock = (pj_sock_t)new_uwp_sock;
+    pj_sockaddr_cp(addr, new_uwp_sock->GetRemoteAddr());
+    *addrlen = pj_sockaddr_get_len(addr);
 
     return PJ_SUCCESS;
 }

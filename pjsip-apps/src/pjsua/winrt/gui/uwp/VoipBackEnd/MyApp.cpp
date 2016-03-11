@@ -470,6 +470,7 @@ void MyAppRT::init(IntAccount^ iAcc, IntCall^ iCall)
     /* Create transports. */
 
     try {
+	sipTpConfig->port = 5060;
 	ep.transportCreate(::pjsip_transport_type_e::PJSIP_TRANSPORT_TCP,
 			   *sipTpConfig);
     } catch (pj::Error& e) {
@@ -582,7 +583,9 @@ void MyAppRT::registerThread(Platform::String^ name)
 
 bool MyAppRT::isThreadRegistered()
 {
-    return ep.libIsThreadRegistered();
+    // Some threads are registered using PJLIB API, ep.libIsThreadRegistered() will return false on those threads.
+    //return ep.libIsThreadRegistered();
+    return pj_thread_is_registered() != PJ_FALSE;
 }
 
 AccountInfo^ MyAppRT::getAccountInfo()
