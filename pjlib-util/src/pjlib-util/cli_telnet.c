@@ -1373,7 +1373,7 @@ static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
         cli_telnet_sess *tsess = (cli_telnet_sess *)sess;
 
         sess = sess->next;
-	if (tsess->base.log_level > level) {
+	if (tsess->base.log_level >= level) {
 	    pj_str_t s;
 
 	    pj_strset(&s, (char *)data, len);
