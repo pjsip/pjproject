@@ -43,6 +43,10 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "prng.h"
 
 /* single, global prng structure */
@@ -51,7 +55,7 @@ x917_prng_t x917_prng;
 
 err_status_t
 x917_prng_init(rand_source_func_t random_source) {
-  v128_t tmp_key;
+  uint8_t tmp_key[16];
   err_status_t status;
 
   /* initialize output count to zero */
@@ -61,12 +65,12 @@ x917_prng_init(rand_source_func_t random_source) {
   x917_prng.rand = random_source;
   
   /* initialize secret key from random source */
-  status = random_source((uint8_t *)&tmp_key, 16);
+  status = random_source(tmp_key, 16);
   if (status) 
     return status;
 
   /* expand aes key */
-  aes_expand_encryption_key(&tmp_key, x917_prng.key);
+  aes_expand_encryption_key(tmp_key, 16, &x917_prng.key);
 
   /* initialize prng state from random source */
   status = x917_prng.rand((uint8_t *)&x917_prng.state, 16);
@@ -108,7 +112,7 @@ x917_prng_get_octet_string(uint8_t *dest, uint32_t len) {
     v128_copy(&buffer, &x917_prng.state);
 
     /* apply aes to buffer */
-    aes_encrypt(&buffer, x917_prng.key);
+    aes_encrypt(&buffer, &x917_prng.key);
     
     /* write data to output */
     *dest++ = buffer.v8[0];
@@ -132,7 +136,7 @@ x917_prng_get_octet_string(uint8_t *dest, uint32_t len) {
     buffer.v32[0] ^= t;
 
     /* encrypt buffer */
-    aes_encrypt(&buffer, x917_prng.key);
+    aes_encrypt(&buffer, &x917_prng.key);
 
     /* copy buffer into state */
     v128_copy(&x917_prng.state, &buffer);
@@ -150,7 +154,7 @@ x917_prng_get_octet_string(uint8_t *dest, uint32_t len) {
     v128_copy(&buffer, &x917_prng.state);
 
     /* apply aes to buffer */
-    aes_encrypt(&buffer, x917_prng.key);
+    aes_encrypt(&buffer, &x917_prng.key);
 
     /* write data to output */
     for (i=0; i < tail_len; i++) {
@@ -163,7 +167,7 @@ x917_prng_get_octet_string(uint8_t *dest, uint32_t len) {
     buffer.v32[0] ^= t;
 
     /* encrypt buffer */
-    aes_encrypt(&buffer, x917_prng.key);
+    aes_encrypt(&buffer, &x917_prng.key);
 
     /* copy buffer into state */
     v128_copy(&x917_prng.state, &buffer);

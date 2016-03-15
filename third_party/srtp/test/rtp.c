@@ -7,6 +7,41 @@
  * Cisco Systems, Inc.
  */
 
+/*
+ *	
+ * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ *   Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * 
+ *   Redistributions in binary form must reproduce the above
+ *   copyright notice, this list of conditions and the following
+ *   disclaimer in the documentation and/or other materials provided
+ *   with the distribution.
+ * 
+ *   Neither the name of the Cisco Systems, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived
+ *   from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
 
 #include "rtp_priv.h"
 
@@ -21,7 +56,7 @@
 #define PRINT_DEBUG    0    /* set to 1 to print out debugging data */
 #define VERBOSE_DEBUG  0    /* set to 1 to print out more data      */
 
-unsigned int
+int
 rtp_sendto(rtp_sender_t sender, const void* msg, int len) {
   int octets_sent;
   err_status_t stat;
@@ -61,13 +96,18 @@ rtp_sendto(rtp_sender_t sender, const void* msg, int len) {
   return octets_sent;
 }
 
-unsigned int
+int
 rtp_recvfrom(rtp_receiver_t receiver, void *msg, int *len) {
   int octets_recvd;
   err_status_t stat;
   
   octets_recvd = recvfrom(receiver->socket, (void *)&receiver->message,
 			 *len, 0, (struct sockaddr *) NULL, 0);
+
+  if (octets_recvd == -1) {
+    *len = 0;
+    return -1;
+  }
 
   /* verify rtp header */
   if (receiver->message.header.version != 2) {
@@ -100,7 +140,7 @@ rtp_recvfrom(rtp_receiver_t receiver, void *msg, int *len) {
 
 int
 rtp_sender_init(rtp_sender_t sender, 
-		int socket, 
+		int sock, 
 		struct sockaddr_in addr,
 		unsigned int ssrc) {
 
@@ -116,7 +156,7 @@ rtp_sender_init(rtp_sender_t sender,
   sender->message.header.cc      = 0;
 
   /* set other stuff */
-  sender->socket = socket;
+  sender->socket = sock;
   sender->addr = addr;
 
   return 0;
@@ -124,7 +164,7 @@ rtp_sender_init(rtp_sender_t sender,
 
 int
 rtp_receiver_init(rtp_receiver_t rcvr, 
-		  int socket, 
+		  int sock, 
 		  struct sockaddr_in addr,
 		  unsigned int ssrc) {
   
@@ -140,7 +180,7 @@ rtp_receiver_init(rtp_receiver_t rcvr,
   rcvr->message.header.cc      = 0;
 
   /* set other stuff */
-  rcvr->socket = socket;
+  rcvr->socket = sock;
   rcvr->addr = addr;
 
   return 0;
@@ -152,16 +192,36 @@ rtp_sender_init_srtp(rtp_sender_t sender, const srtp_policy_t *policy) {
 }
 
 int
+rtp_sender_deinit_srtp(rtp_sender_t sender) {
+  return srtp_dealloc(sender->srtp_ctx);
+}
+
+int
 rtp_receiver_init_srtp(rtp_receiver_t sender, const srtp_policy_t *policy) {
   return srtp_create(&sender->srtp_ctx, policy);
 }
 
+int
+rtp_receiver_deinit_srtp(rtp_receiver_t sender) {
+  return srtp_dealloc(sender->srtp_ctx);
+}
+
 rtp_sender_t 
-rtp_sender_alloc() {
+rtp_sender_alloc(void) {
   return (rtp_sender_t)malloc(sizeof(rtp_sender_ctx_t));
 }
 
+void
+rtp_sender_dealloc(rtp_sender_t rtp_ctx) {
+  free(rtp_ctx);
+}
+
 rtp_receiver_t 
-rtp_receiver_alloc() {
+rtp_receiver_alloc(void) {
   return (rtp_receiver_t)malloc(sizeof(rtp_receiver_ctx_t));
+}
+
+void
+rtp_receiver_dealloc(rtp_receiver_t rtp_ctx) {
+  free(rtp_ctx);
 }

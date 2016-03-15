@@ -46,7 +46,8 @@
 #ifndef ERR_H
 #define ERR_H
 
-#include "datatypes.h"
+#include <stdio.h>
+#include <stdarg.h>
 
 /**
  * @defgroup Error Error Codes
@@ -87,7 +88,7 @@ typedef enum {
   err_status_nonce_bad    = 18, /**< nonce check failed                      */
   err_status_read_fail    = 19, /**< couldn't read data                      */
   err_status_write_fail   = 20, /**< couldn't write data                     */
-  err_status_parse_err    = 21, /**< error pasring data                      */
+  err_status_parse_err    = 21, /**< error parsing data                      */
   err_status_encode_err   = 22, /**< error encoding data                     */
   err_status_semaphore_err = 23,/**< error while using semaphores            */
   err_status_pfkey_err    = 24  /**< error while using pfkey                 */
@@ -118,7 +119,7 @@ typedef enum {
  */
 
 err_status_t
-err_reporting_init(char *ident);
+err_reporting_init(const char *ident);
 
 #ifdef SRTP_KERNEL_LINUX
 extern err_reporting_level_t err_level;
@@ -135,7 +136,7 @@ extern err_reporting_level_t err_level;
  */
 
 void
-err_report(int priority, char *format, ...);
+err_report(int priority, const char *format, ...);
 #endif /* ! SRTP_KERNEL_LINUX */
 
 
@@ -145,7 +146,7 @@ err_report(int priority, char *format, ...);
 
 typedef struct {
   int   on;          /* 1 if debugging is on, 0 if it is off */
-  char *name;        /* printable name for debug module      */
+  const char *name;  /* printable name for debug module      */
 } debug_module_t;
 
 #ifdef ENABLE_DEBUGGING

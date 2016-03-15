@@ -44,6 +44,9 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
 
 #include "sha1.h"
 
@@ -114,7 +117,7 @@ sha1_core(const uint32_t M[16], uint32_t hash_value[5]) {
   H4 = hash_value[4];
 
   /* copy/xor message into array */
-    
+
   W[0]  = be32_to_cpu(M[0]);
   W[1]  = be32_to_cpu(M[1]);
   W[2]  = be32_to_cpu(M[2]);
@@ -184,7 +187,7 @@ sha1_core(const uint32_t M[16], uint32_t hash_value[5]) {
 
 void
 sha1_init(sha1_ctx_t *ctx) {
- 
+
   /* initialize state vector */
   ctx->H[0] = 0x67452301;
   ctx->H[1] = 0xefcdab89;
@@ -210,7 +213,7 @@ sha1_update(sha1_ctx_t *ctx, const uint8_t *msg, int octets_in_msg) {
 
   /* loop over 16-word blocks of M */
   while (octets_in_msg > 0) {
-    
+
     if (octets_in_msg + ctx->octets_in_buffer >= 64) {
 
       /* 
@@ -260,7 +263,7 @@ sha1_final(sha1_ctx_t *ctx, uint32_t *output) {
    */
   {
     int tail = ctx->octets_in_buffer % 4;
-    
+
     /* copy/xor message into array */
     for (i=0; i < (ctx->octets_in_buffer+3)/4; i++) 
       W[i]  = be32_to_cpu(ctx->M[i]);
@@ -283,7 +286,7 @@ sha1_final(sha1_ctx_t *ctx, uint32_t *output) {
       W[i] = 0x80000000;
       break;
     }
-    
+
     /* zeroize remaining words */
     for (i++   ; i < 15; i++)
       W[i] = 0x0;
@@ -299,7 +302,8 @@ sha1_final(sha1_ctx_t *ctx, uint32_t *output) {
     else if (ctx->octets_in_buffer < 60)
       W[15] = 0x0;
 
-    /* process the word array */    for (t=16; t < 80; t++) {
+    /* process the word array */
+    for (t=16; t < 80; t++) {
       TEMP = W[t-3] ^ W[t-8] ^ W[t-14] ^ W[t-16];
       W[t] = S1(TEMP);
     }

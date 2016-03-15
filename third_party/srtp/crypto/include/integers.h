@@ -47,7 +47,7 @@
 #ifndef INTEGERS_H
 #define INTEGERS_H
 
-#include "srtp_config.h"	/* configuration file, using autoconf  */
+#include "config.h"
 
 #ifdef SRTP_KERNEL
 
@@ -76,7 +76,7 @@
 #endif
 
 /* Can we do 64 bit integers? */
-#ifndef HAVE_UINT64_T
+#if !defined(HAVE_UINT64_T)
 # if SIZEOF_UNSIGNED_LONG == 8
 typedef unsigned long		uint64_t;
 # elif SIZEOF_UNSIGNED_LONG_LONG == 8
@@ -99,7 +99,7 @@ typedef unsigned int		uint32_t;
 #endif
 
 
-#ifdef NO_64BIT_MATH
+#if defined(NO_64BIT_MATH) && defined(HAVE_CONFIG_H)
 typedef double uint64_t;
 /* assert that sizeof(double) == 8 */
 extern uint64_t make64(uint32_t high, uint32_t low);

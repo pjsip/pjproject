@@ -42,6 +42,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "alloc.h"
 #include "crypto_kernel.h"
 
@@ -73,8 +77,9 @@ crypto_alloc(size_t size) {
 
   if (ptr) {
     debug_print(mod_alloc, "(location: %p) allocated", ptr);
-  } else
+  } else {
     debug_print(mod_alloc, "allocation failed (asked for %d bytes)\n", size);
+  }
 
   return ptr;
 }
@@ -98,9 +103,10 @@ crypto_alloc(size_t size) {
     
   if (ptr) {
     debug_print(mod_alloc, "(location: %p) allocated", ptr);
-  } else
+  } else {
     debug_print(mod_alloc, "allocation failed (asked for %d bytes)\n", size);
-    
+  }
+
   return ptr;
 }
 

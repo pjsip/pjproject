@@ -1,5 +1,9 @@
 /* Hacked config.h for Windows XP 32-bit & VC7  */
 
+#ifdef (_MSC_VER >= 1400)
+# define HAVE_RAND_S	1
+#endif
+
 /* Define if building for a CISC machine (e.g. Intel). */
 #define CPU_CISC 1
 

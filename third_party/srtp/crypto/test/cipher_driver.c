@@ -9,7 +9,7 @@
 
 /*
  *	
- * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * Copyright (c) 2001-2006,2013 Cisco Systems, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -43,12 +43,21 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include <stdio.h>           /* for printf() */
 #include <stdlib.h>          /* for rand() */
 #include <string.h>          /* for memset() */
-#include <unistd.h>          /* for getopt() */
+#include "getopt_s.h"
 #include "cipher.h"
+#ifdef OPENSSL
+#include "aes_icm_ossl.h"
+#include "aes_gcm_ossl.h"
+#else
 #include "aes_icm.h"
+#endif
 #include "null_cipher.h"
 
 #define PRINT_DEBUG 0
@@ -114,16 +123,28 @@ check_status(err_status_t s) {
 
 extern cipher_type_t null_cipher;
 extern cipher_type_t aes_icm;
+#ifndef OPENSSL
 extern cipher_type_t aes_cbc;
+#else
+#ifndef SRTP_NO_AES192
+extern cipher_type_t aes_icm_192;
+#endif
+extern cipher_type_t aes_icm_256;
+extern cipher_type_t aes_gcm_128_openssl;
+extern cipher_type_t aes_gcm_256_openssl;
+#endif
 
 int
 main(int argc, char *argv[]) {
   cipher_t *c = NULL;
   err_status_t status;
-  unsigned char test_key[20] = {
+  unsigned char test_key[48] = {
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
     0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-    0x10, 0x11, 0x12, 0x13
+    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+    0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27,
+    0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f,
   };
   int q;
   unsigned do_timing_test = 0;
@@ -132,7 +153,7 @@ main(int argc, char *argv[]) {
 
   /* process input arguments */
   while (1) {
-    q = getopt(argc, argv, "tva");
+    q = getopt_s(argc, argv, "tva");
     if (q == -1) 
       break;
     switch (q) {
@@ -168,22 +189,53 @@ main(int argc, char *argv[]) {
     for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
       cipher_driver_test_array_throughput(&aes_icm, 30, num_cipher); 
 
+#ifndef OPENSSL
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
+      cipher_driver_test_array_throughput(&aes_icm, 46, num_cipher); 
+
     for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
       cipher_driver_test_array_throughput(&aes_cbc, 16, num_cipher); 
  
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
+      cipher_driver_test_array_throughput(&aes_cbc, 32, num_cipher); 
+#else
+#ifndef SRTP_NO_AES192
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
+      cipher_driver_test_array_throughput(&aes_icm_192, 38, num_cipher); 
+#endif
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8)
+      cipher_driver_test_array_throughput(&aes_icm_256, 46, num_cipher); 
+
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8) {
+	cipher_driver_test_array_throughput(&aes_gcm_128_openssl, AES_128_GCM_KEYSIZE_WSALT, num_cipher);         
+    }
+
+    for (num_cipher=1; num_cipher < max_num_cipher; num_cipher *=8) {
+	cipher_driver_test_array_throughput(&aes_gcm_256_openssl, AES_256_GCM_KEYSIZE_WSALT, num_cipher);         
+    }
+#endif
   }
 
   if (do_validation) {
     cipher_driver_self_test(&null_cipher);
     cipher_driver_self_test(&aes_icm);
+#ifndef OPENSSL
     cipher_driver_self_test(&aes_cbc);
+#else
+#ifndef SRTP_NO_AES192
+    cipher_driver_self_test(&aes_icm_192);
+#endif
+    cipher_driver_self_test(&aes_icm_256);
+    cipher_driver_self_test(&aes_gcm_128_openssl);
+    cipher_driver_self_test(&aes_gcm_256_openssl);
+#endif
   }
 
   /* do timing and/or buffer_test on null_cipher */
-  status = cipher_type_alloc(&null_cipher, &c, 0); 
+  status = cipher_type_alloc(&null_cipher, &c, 0, 0); 
   check_status(status);
 
-  status = cipher_init(c, NULL, direction_encrypt);
+  status = cipher_init(c, NULL);
   check_status(status);
 
   if (do_timing_test) 
@@ -196,14 +248,14 @@ main(int argc, char *argv[]) {
   check_status(status);
   
 
-  /* run the throughput test on the aes_icm cipher */
-    status = cipher_type_alloc(&aes_icm, &c, 30);  
+  /* run the throughput test on the aes_icm cipher (128-bit key) */
+    status = cipher_type_alloc(&aes_icm, &c, 30, 0);  
     if (status) {
       fprintf(stderr, "error: can't allocate cipher\n");
       exit(status);
     }
 
-    status = cipher_init(c, test_key, direction_encrypt);
+    status = cipher_init(c, test_key);
     check_status(status);
 
     if (do_timing_test)
@@ -216,8 +268,73 @@ main(int argc, char *argv[]) {
     
     status = cipher_dealloc(c);
     check_status(status);
-  
-  return 0;
+
+  /* repeat the tests with 256-bit keys */
+#ifndef OPENSSL
+    status = cipher_type_alloc(&aes_icm, &c, 46, 0);  
+#else
+    status = cipher_type_alloc(&aes_icm_256, &c, 46, 0);  
+#endif
+    if (status) {
+      fprintf(stderr, "error: can't allocate cipher\n");
+      exit(status);
+    }
+
+    status = cipher_init(c, test_key);
+    check_status(status);
+
+    if (do_timing_test)
+      cipher_driver_test_throughput(c);
+    
+    if (do_validation) {
+      status = cipher_driver_test_buffering(c);
+      check_status(status);
+    }
+    
+    status = cipher_dealloc(c);
+    check_status(status);
+
+#ifdef OPENSSL
+    /* run the throughput test on the aes_gcm_128_openssl cipher */
+    status = cipher_type_alloc(&aes_gcm_128_openssl, &c, AES_128_GCM_KEYSIZE_WSALT, 8);
+    if (status) {
+        fprintf(stderr, "error: can't allocate GCM 128 cipher\n");
+        exit(status);
+    }
+    status = cipher_init(c, test_key);
+    check_status(status);
+    if (do_timing_test) {
+        cipher_driver_test_throughput(c);
+    }
+
+    if (do_validation) {
+        status = cipher_driver_test_buffering(c);
+        check_status(status);
+    }
+    status = cipher_dealloc(c);
+    check_status(status);
+
+    /* run the throughput test on the aes_gcm_256_openssl cipher */
+    status = cipher_type_alloc(&aes_gcm_256_openssl, &c, AES_256_GCM_KEYSIZE_WSALT, 16);
+    if (status) {
+        fprintf(stderr, "error: can't allocate GCM 256 cipher\n");
+        exit(status);
+    }
+    status = cipher_init(c, test_key);
+    check_status(status);
+    if (do_timing_test) {
+        cipher_driver_test_throughput(c);
+    }
+
+    if (do_validation) {
+        status = cipher_driver_test_buffering(c);
+        check_status(status);
+    }
+    status = cipher_dealloc(c);
+    check_status(status);
+#endif 
+
+    return 0;
 }
 
 void
@@ -225,9 +342,9 @@ cipher_driver_test_throughput(cipher_t *c) {
   int i;
   int min_enc_len = 32;     
   int max_enc_len = 2048;   /* should be a power of two */
-  int num_trials = 100000;  
+  int num_trials = 1000000;  
   
-  printf("timing %s throughput:\n", c->type->description);
+  printf("timing %s throughput, key length %d:\n", c->type->description, c->key_len);
   fflush(stdout);
   for (i=min_enc_len; i <= max_enc_len; i = i * 2)
     printf("msg len: %d\tgigabits per second: %f\n",
@@ -256,11 +373,12 @@ cipher_driver_self_test(cipher_type_t *ct) {
  * calls
  */
 
+#define INITIAL_BUFLEN 1024
 err_status_t
 cipher_driver_test_buffering(cipher_t *c) {
   int i, j, num_trials = 1000;
-  unsigned len, buflen = 1024;
-  uint8_t buffer0[buflen], buffer1[buflen], *current, *end;
+  unsigned len, buflen = INITIAL_BUFLEN;
+  uint8_t buffer0[INITIAL_BUFLEN], buffer1[INITIAL_BUFLEN], *current, *end;
   uint8_t idx[16] = { 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x12, 0x34
@@ -273,11 +391,12 @@ cipher_driver_test_buffering(cipher_t *c) {
   for (i=0; i < num_trials; i++) {
 
    /* set buffers to zero */
-    for (j=0; j < buflen; j++) 
+    for (j=0; j < (int) buflen; j++) {
       buffer0[j] = buffer1[j] = 0;
+    }
     
     /* initialize cipher  */
-    status = cipher_set_iv(c, idx);
+    status = cipher_set_iv(c, idx, direction_encrypt);
     if (status)
       return status;
 
@@ -287,7 +406,7 @@ cipher_driver_test_buffering(cipher_t *c) {
       return status;
 
     /* re-initialize cipher */
-    status = cipher_set_iv(c, idx);
+    status = cipher_set_iv(c, idx, direction_encrypt);
     if (status)
       return status;
     
@@ -316,7 +435,7 @@ cipher_driver_test_buffering(cipher_t *c) {
     }
 
     /* compare buffers */
-    for (j=0; j < buflen; j++)
+    for (j=0; j < (int) buflen; j++) {
       if (buffer0[j] != buffer1[j]) {
 #if PRINT_DEBUG
 	printf("test case %d failed at byte %d\n", i, j);
@@ -325,6 +444,7 @@ cipher_driver_test_buffering(cipher_t *c) {
 #endif 
 	return err_status_algo_fail;
       }
+    }
   }
   
   printf("passed\n");
@@ -348,6 +468,9 @@ cipher_array_alloc_init(cipher_t ***ca, int num_ciphers,
   err_status_t status;
   uint8_t *key;
   cipher_t **cipher_array;
+  /* pad klen allocation, to handle aes_icm reading 16 bytes for the
+     14-byte salt */
+  int klen_pad = ((klen + 15) >> 4) << 4;
 
   /* allocate array of pointers to ciphers */
   cipher_array = (cipher_t **) malloc(sizeof(cipher_t *) * num_ciphers);
@@ -358,7 +481,7 @@ cipher_array_alloc_init(cipher_t ***ca, int num_ciphers,
   *ca = cipher_array;
 
   /* allocate key */
-  key = crypto_alloc(klen);
+  key = crypto_alloc(klen_pad);
   if (key == NULL) {
     free(cipher_array);
     return err_status_alloc_fail;
@@ -368,14 +491,16 @@ cipher_array_alloc_init(cipher_t ***ca, int num_ciphers,
   for (i=0; i < num_ciphers; i++) {
 
     /* allocate cipher */
-    status = cipher_type_alloc(ctype, cipher_array, klen);
+    status = cipher_type_alloc(ctype, cipher_array, klen, 16);
     if (status)
       return status;
     
     /* generate random key and initialize cipher */
     for (j=0; j < klen; j++)
       key[j] = (uint8_t) rand();
-    status = cipher_init(*cipher_array, key, direction_encrypt);
+    for (; j < klen_pad; j++)
+      key[j] = 0;
+    status = cipher_init(*cipher_array, key);
     if (status)
       return status;
 
@@ -386,6 +511,8 @@ cipher_array_alloc_init(cipher_t ***ca, int num_ciphers,
     /* advance cipher array pointer */
     cipher_array++;
   }
+
+  crypto_free(key);
 
   return err_status_ok;
 }
@@ -423,24 +550,28 @@ cipher_array_bits_per_second(cipher_t *cipher_array[], int num_cipher,
   v128_t nonce;
   clock_t timer;
   unsigned char *enc_buf;
-  int cipher_index = 0;
+  int cipher_index = rand() % num_cipher;
 
-
-  enc_buf = crypto_alloc(octets_in_buffer);
+  /* Over-alloc, for NIST CBC padding */
+  enc_buf = crypto_alloc(octets_in_buffer+17);
   if (enc_buf == NULL)
     return 0;  /* indicate bad parameters by returning null */
+  memset(enc_buf, 0, octets_in_buffer);
   
   /* time repeated trials */
   v128_set_to_zero(&nonce);
   timer = clock();
   for(i=0; i < num_trials; i++, nonce.v32[3] = i) {
+    /* length parameter to cipher_encrypt is in/out -- out is total, padded
+     * length -- so reset it each time. */
+    unsigned octets_to_encrypt = octets_in_buffer;
+
+    /* encrypt buffer with cipher */
+    cipher_set_iv(cipher_array[cipher_index], &nonce, direction_encrypt);
+    cipher_encrypt(cipher_array[cipher_index], enc_buf, &octets_to_encrypt);
 
     /* choose a cipher at random from the array*/
     cipher_index = (*((uint32_t *)enc_buf)) % num_cipher;
-
-    /* encrypt buffer with cipher */
-    cipher_set_iv(cipher_array[cipher_index], &nonce);
-    cipher_encrypt(cipher_array[cipher_index], enc_buf, &octets_in_buffer);
   }
   timer = clock() - timer;
 
@@ -451,7 +582,7 @@ cipher_array_bits_per_second(cipher_t *cipher_array[], int num_cipher,
     return 0;
   }
 
-  return CLOCKS_PER_SEC * num_trials * 8 * octets_in_buffer / timer;
+  return (uint64_t)CLOCKS_PER_SEC * num_trials * 8 * octets_in_buffer / timer;
 }
 
 void
@@ -459,10 +590,10 @@ cipher_array_test_throughput(cipher_t *ca[], int num_cipher) {
   int i;
   int min_enc_len = 16;     
   int max_enc_len = 2048;   /* should be a power of two */
-  int num_trials = 10000;
+  int num_trials = 1000000;
 
-  printf("timing %s throughput with array size %d:\n", 
-	 (ca[0])->type->description, num_cipher);
+  printf("timing %s throughput with key length %d, array size %d:\n", 
+	 (ca[0])->type->description, (ca[0])->key_len, num_cipher);
   fflush(stdout);
   for (i=min_enc_len; i <= max_enc_len; i = i * 4)
     printf("msg len: %d\tgigabits per second: %f\n", i,

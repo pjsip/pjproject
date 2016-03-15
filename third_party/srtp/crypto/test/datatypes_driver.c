@@ -44,6 +44,10 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include <stdio.h>            /* for printf() */
 #include <string.h>           /* for strlen() */
 #include "datatypes.h"
@@ -205,7 +209,7 @@ test_hex_string_funcs(void) {
 
 void
 print_string(char *s) {
-  int i;  
+  size_t i;
   printf("%s\n", s);
   printf("strlen(s) = %u\n", (unsigned)strlen(s));
   printf("{ ");

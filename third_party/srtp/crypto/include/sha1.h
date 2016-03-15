@@ -47,7 +47,49 @@
 #ifndef SHA1_H
 #define SHA1_H
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "err.h"
+#ifdef OPENSSL
+#include <openssl/evp.h>
+#include <stdint.h>
+
+typedef EVP_MD_CTX sha1_ctx_t;
+
+/*
+ * sha1_init(&ctx) initializes the SHA1 context ctx
+ *
+ * sha1_update(&ctx, msg, len) hashes the len octets starting at msg
+ * into the SHA1 context
+ *
+ * sha1_final(&ctx, output) performs the final processing of the SHA1
+ * context and writes the result to the 20 octets at output
+ *
+ * Return values are ignored on the EVP functions since all three
+ * of these functions return void.
+ *
+ */
+
+static inline void sha1_init (sha1_ctx_t *ctx)
+{
+    EVP_MD_CTX_init(ctx);
+    EVP_DigestInit(ctx, EVP_sha1());
+}
+
+static inline void sha1_update (sha1_ctx_t *ctx, const uint8_t *M, int octets_in_msg)
+{
+    EVP_DigestUpdate(ctx, M, octets_in_msg);
+}
+
+static inline void sha1_final (sha1_ctx_t *ctx, uint32_t *output)
+{
+    unsigned int len = 0;
+
+    EVP_DigestFinal(ctx, (unsigned char*)output, &len);
+}
+#else
 #include "datatypes.h"
 
 typedef struct {
@@ -104,5 +146,7 @@ sha1_final(sha1_ctx_t *ctx, uint32_t output[5]);
 
 void
 sha1_core(const uint32_t M[16], uint32_t hash_value[5]);
+
+#endif /* else OPENSSL */
      
 #endif /* SHA1_H */

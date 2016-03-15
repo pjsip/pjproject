@@ -45,6 +45,10 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "ut_sim.h"
 
 

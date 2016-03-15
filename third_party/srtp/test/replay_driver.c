@@ -43,6 +43,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include <stdio.h>
 
 #include "rdb.h"
@@ -114,15 +118,23 @@ rdb_check_expect_failure(rdb_t *rdb, uint32_t idx) {
 }
 
 err_status_t
-rdb_check_unordered(rdb_t *rdb, uint32_t idx) {
+rdb_check_add_unordered(rdb_t *rdb, uint32_t idx) {
   err_status_t rstat;
 
  /* printf("index: %u\n", idx); */
   rstat = rdb_check(rdb, idx);
   if ((rstat != err_status_ok) && (rstat != err_status_replay_old)) {
-    printf("rdb_check_unordered failed at index %u\n", idx);
+    printf("rdb_check_add_unordered failed at index %u\n", idx);
     return rstat;
   }
+  if (rstat == err_status_replay_old) {
+	return err_status_ok;
+  }
+  if (rdb_add_index(rdb, idx) != err_status_ok) {
+    printf("rdb_add_index failed at index %u\n", idx);
+    return err_status_fail;
+  }  
+
   return err_status_ok;
 }
 
@@ -163,10 +175,50 @@ test_rdb_db() {
   
   for (idx=0; idx < num_trials; idx++) {
     ircvd = ut_next_index(&utc);
-    err = rdb_check_unordered(&rdb, ircvd);
+    err = rdb_check_add_unordered(&rdb, ircvd);
+    if (err) 
+      return err;
+    err = rdb_check_expect_failure(&rdb, ircvd);
     if (err) 
       return err;
   }
+
+  /* re-initialize */
+  if (rdb_init(&rdb) != err_status_ok) {
+    printf("rdb_init failed\n");
+    return err_status_fail;
+  }
+
+  /* test insertion with large gaps */
+  for (idx=0, ircvd=0; idx < num_trials; idx++, ircvd += (1 << (rand() % 10))) {
+    err = rdb_check_add(&rdb, ircvd);
+    if (err)
+      return err;
+    err = rdb_check_expect_failure(&rdb, ircvd);
+    if (err)
+      return err;
+  }
+
+  /* re-initialize */
+  if (rdb_init(&rdb) != err_status_ok) {
+    printf("rdb_init failed\n");
+    return err_status_fail;
+  }
+
+  /* test loss of first 513 packets */
+  for (idx=0; idx < num_trials; idx++) {
+    err = rdb_check_add(&rdb, idx + 513);
+    if (err) 
+      return err;
+  }
+
+  /* test for false positives */
+  for (idx=0; idx < num_trials + 513; idx++) {
+    err = rdb_check_expect_failure(&rdb, idx);
+    if (err) 
+      return err;
+  }
+
 
   return err_status_ok;
 }

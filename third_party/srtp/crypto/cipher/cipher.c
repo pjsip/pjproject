@@ -10,7 +10,7 @@
 
 /*
  *	
- * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * Copyright (c) 2001-2006,2013 Cisco Systems, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -44,7 +44,12 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "cipher.h"
+#include "crypto_types.h"
 #include "rand_source.h"        /* used in invertibiltiy tests        */
 #include "alloc.h"              /* for crypto_alloc(), crypto_free()  */
 
@@ -71,8 +76,8 @@ cipher_get_key_length(const cipher_t *c) {
 }
 
 /* 
- * cipher_type_self_test(ct) tests a cipher of type ct against test cases
- * provided in an array of values of key, salt, xtd_seq_num_t,
+ * cipher_type_test(ct, test_data) tests a cipher of type ct against
+ * test cases provided in a list test_data of values of key, salt, iv,
  * plaintext, and ciphertext that is known to be good
  */
 
@@ -81,12 +86,13 @@ cipher_get_key_length(const cipher_t *c) {
 #define MAX_KEY_LEN          64
 
 err_status_t
-cipher_type_self_test(const cipher_type_t *ct) {
-  const cipher_test_case_t *test_case = ct->test_data;
+cipher_type_test(const cipher_type_t *ct, const cipher_test_case_t *test_data) {
+  const cipher_test_case_t *test_case = test_data;
   cipher_t *c;
   err_status_t status;
   uint8_t buffer[SELF_TEST_BUF_OCTETS];
   uint8_t buffer2[SELF_TEST_BUF_OCTETS];
+  int tag_len;
   unsigned int len;
   int i, j, case_num = 0;
 
@@ -105,9 +111,8 @@ cipher_type_self_test(const cipher_type_t *ct) {
    * encryption and decryption functions
    */  
   while (test_case != NULL) {
-
     /* allocate cipher */
-    status = cipher_type_alloc(ct, &c, test_case->key_length_octets);
+    status = cipher_type_alloc(ct, &c, test_case->key_length_octets, test_case->tag_length_octets);
     if (status)
       return status;
     
@@ -117,7 +122,7 @@ cipher_type_self_test(const cipher_type_t *ct) {
     debug_print(mod_cipher, "testing encryption", NULL);    
     
     /* initialize cipher */
-    status = cipher_init(c, test_case->key, direction_encrypt);
+    status = cipher_init(c, test_case->key);
     if (status) {
       cipher_dealloc(c);
       return status;
@@ -136,12 +141,30 @@ cipher_type_self_test(const cipher_type_t *ct) {
 				     test_case->plaintext_length_octets));
 
     /* set the initialization vector */
-    status = cipher_set_iv(c, test_case->idx);
+    status = cipher_set_iv(c, test_case->idx, direction_encrypt);
     if (status) {
       cipher_dealloc(c);
       return status;
     } 
     
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        debug_print(mod_cipher, "IV:    %s",
+      	            octet_string_hex_string(test_case->idx, 12));
+
+        /*
+         * Set the AAD 
+         */
+        status = cipher_set_aad(c, test_case->aad, 
+      	                        test_case->aad_length_octets);
+        if (status) {
+      	    cipher_dealloc(c);
+      	    return status;
+        } 
+        debug_print(mod_cipher, "AAD:    %s",
+      	octet_string_hex_string(test_case->aad, 
+      	                        test_case->aad_length_octets));
+    }
+
     /* encrypt */
     len = test_case->plaintext_length_octets;
     status = cipher_encrypt(c, buffer, &len);
@@ -150,6 +173,18 @@ cipher_type_self_test(const cipher_type_t *ct) {
       return status;
     }
     
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        /*
+         * Get the GCM tag
+         */
+        status = cipher_get_tag(c, buffer + len, &tag_len);
+        if (status) {
+            cipher_dealloc(c);
+            return status;
+        }
+        len += tag_len;
+    }
+
     debug_print(mod_cipher, "ciphertext:   %s",
 	     octet_string_hex_string(buffer,
 				     test_case->ciphertext_length_octets));
@@ -184,7 +219,7 @@ cipher_type_self_test(const cipher_type_t *ct) {
     debug_print(mod_cipher, "testing decryption", NULL);    
 
     /* re-initialize cipher for decryption */
-    status = cipher_init(c, test_case->key, direction_decrypt);
+    status = cipher_init(c, test_case->key);
     if (status) {
       cipher_dealloc(c);
       return status;
@@ -203,12 +238,27 @@ cipher_type_self_test(const cipher_type_t *ct) {
 					test_case->plaintext_length_octets));
 
     /* set the initialization vector */
-    status = cipher_set_iv(c, test_case->idx);
+    status = cipher_set_iv(c, test_case->idx, direction_decrypt);
     if (status) {
       cipher_dealloc(c);
       return status;
     } 
     
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        /*
+         * Set the AAD 
+         */
+        status = cipher_set_aad(c, test_case->aad, 
+                                test_case->aad_length_octets);
+        if (status) {
+            cipher_dealloc(c);
+            return status;
+        } 
+        debug_print(mod_cipher, "AAD:    %s",
+                    octet_string_hex_string(test_case->aad, 
+                                            test_case->aad_length_octets));
+    }
+
     /* decrypt */
     len = test_case->ciphertext_length_octets;
     status = cipher_decrypt(c, buffer, &len);
@@ -260,8 +310,8 @@ cipher_type_self_test(const cipher_type_t *ct) {
   /* now run some random invertibility tests */
 
   /* allocate cipher, using paramaters from the first test case */
-  test_case = ct->test_data;
-  status = cipher_type_alloc(ct, &c, test_case->key_length_octets);
+  test_case = test_data;
+  status = cipher_type_alloc(ct, &c, test_case->key_length_octets, test_case->tag_length_octets);
   if (status)
       return status;
   
@@ -269,7 +319,7 @@ cipher_type_self_test(const cipher_type_t *ct) {
   
   for (j=0; j < NUM_RAND_TESTS; j++) {
     unsigned length;
-    unsigned plaintext_len;
+    int plaintext_len;
     uint8_t key[MAX_KEY_LEN];
     uint8_t  iv[MAX_KEY_LEN];
 
@@ -297,18 +347,33 @@ cipher_type_self_test(const cipher_type_t *ct) {
     if (status) return status;
         
     /* initialize cipher */
-    status = cipher_init(c, key, direction_encrypt);
+    status = cipher_init(c, key);
     if (status) {
       cipher_dealloc(c);
       return status;
     }
 
     /* set initialization vector */
-    status = cipher_set_iv(c, test_case->idx);
+    status = cipher_set_iv(c, test_case->idx, direction_encrypt);
     if (status) {
       cipher_dealloc(c);
       return status;
     } 
+
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        /*
+         * Set the AAD 
+         */
+        status = cipher_set_aad(c, test_case->aad, 
+        test_case->aad_length_octets);
+        if (status) {
+            cipher_dealloc(c);
+            return status;
+        } 
+        debug_print(mod_cipher, "AAD:    %s",
+                    octet_string_hex_string(test_case->aad, 
+                                            test_case->aad_length_octets));
+    }
 
     /* encrypt buffer with cipher */
     plaintext_len = length;
@@ -317,6 +382,17 @@ cipher_type_self_test(const cipher_type_t *ct) {
       cipher_dealloc(c);
       return status;
     }
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        /*
+         * Get the GCM tag
+         */
+        status = cipher_get_tag(c, buffer + length, &tag_len);
+        if (status) {
+            cipher_dealloc(c);
+            return status;
+        }
+        length += tag_len;
+    }
     debug_print(mod_cipher, "ciphertext:   %s",
 		octet_string_hex_string(buffer, length));
 
@@ -324,16 +400,30 @@ cipher_type_self_test(const cipher_type_t *ct) {
      * re-initialize cipher for decryption, re-set the iv, then
      * decrypt the ciphertext
      */
-    status = cipher_init(c, key, direction_decrypt);
+    status = cipher_init(c, key);
     if (status) {
       cipher_dealloc(c);
       return status;
     }
-    status = cipher_set_iv(c, test_case->idx);
+    status = cipher_set_iv(c, test_case->idx, direction_decrypt);
     if (status) {
       cipher_dealloc(c);
       return status;
     } 
+    if (c->algorithm == AES_128_GCM || c->algorithm == AES_256_GCM) {
+        /*
+         * Set the AAD 
+         */
+        status = cipher_set_aad(c, test_case->aad, 
+                                test_case->aad_length_octets);
+        if (status) {
+            cipher_dealloc(c);
+            return status;
+        } 
+        debug_print(mod_cipher, "AAD:    %s",
+                    octet_string_hex_string(test_case->aad, 
+                                            test_case->aad_length_octets));
+    }
     status = cipher_decrypt(c, buffer, &length);
     if (status) {
       cipher_dealloc(c);
@@ -344,8 +434,9 @@ cipher_type_self_test(const cipher_type_t *ct) {
 		octet_string_hex_string(buffer, length));    
 
     /* compare the resulting plaintext with the original one */
-    if (length != plaintext_len)
+    if (length != plaintext_len) {
       return err_status_algo_fail;
+    }
     status = err_status_ok;
     for (i=0; i < plaintext_len; i++)
       if (buffer[i] != buffer2[i]) {
@@ -360,11 +451,23 @@ cipher_type_self_test(const cipher_type_t *ct) {
         
   }
 
-  cipher_dealloc(c);
+  status = cipher_dealloc(c);
+  if (status)
+    return status;
 
   return err_status_ok;
 }
 
+
+/* 
+ * cipher_type_self_test(ct) performs cipher_type_test on ct's internal
+ * list of test data.
+ */
+
+err_status_t
+cipher_type_self_test(const cipher_type_t *ct) {
+  return cipher_type_test(ct, ct->test_data);
+}
 
 /*
  * cipher_bits_per_second(c, l, t) computes (an estimate of) the
@@ -393,7 +496,7 @@ cipher_bits_per_second(cipher_t *c, int octets_in_buffer, int num_trials) {
   v128_set_to_zero(&nonce);
   timer = clock();
   for(i=0; i < num_trials; i++, nonce.v32[3] = i) {
-    cipher_set_iv(c, &nonce);
+    cipher_set_iv(c, &nonce, direction_encrypt);
     cipher_encrypt(c, enc_buf, &len);
   }
   timer = clock() - timer;

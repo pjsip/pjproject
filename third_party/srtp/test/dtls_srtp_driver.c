@@ -47,7 +47,7 @@
 #include "srtp_priv.h"
 
 err_status_t 
-test_dtls_srtp();
+test_dtls_srtp(void);
 
 srtp_hdr_t *
 srtp_create_test_packet(int pkt_octet_len, uint32_t ssrc);
@@ -63,7 +63,7 @@ usage(char *prog_name) {
 int
 main(int argc, char *argv[]) {
   unsigned do_list_mods      = 0;
-  char q;
+  int q;
   err_status_t err;
 
   printf("dtls_srtp_driver\n");
@@ -112,12 +112,19 @@ main(int argc, char *argv[]) {
   }
   printf("passed\n");
   
+  /* shut down srtp library */
+  err = srtp_shutdown();
+  if (err) {
+    printf("error: srtp shutdown failed with error code %d\n", err);
+    exit(1);
+  }
+
   return 0;
 }
 
 
 err_status_t
-test_dtls_srtp() {
+test_dtls_srtp(void) {
   srtp_hdr_t *test_packet;
   int test_packet_len = 80;
   srtp_t s;
@@ -183,12 +190,21 @@ test_dtls_srtp() {
   err = crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, profile);
   if (err) return err;
   policy.ssrc.type  = ssrc_any_inbound;
+  policy.ekt = NULL;
+  policy.window_size = 128;
+  policy.allow_repeat_tx = 0;
   policy.next = NULL;
     
   err = srtp_add_stream(s, &policy);
   if (err)
     return err;
   
+  err = srtp_dealloc(s);
+  if (err)
+    return err;
+
+  free(test_packet);
+
   return err_status_ok;
 }
 

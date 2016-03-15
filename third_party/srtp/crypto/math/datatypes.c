@@ -43,6 +43,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "datatypes.h"
 
 int 
@@ -113,8 +117,8 @@ octet_string_hex_string(const void *s, int length) {
   length *= 2;
 
   /* truncate string if it would be too long */
-  if (length >= MAX_PRINT_STRING_LEN-1)
-    length = MAX_PRINT_STRING_LEN-2;
+  if (length > MAX_PRINT_STRING_LEN)
+    length = MAX_PRINT_STRING_LEN-1;
   
   for (i=0; i < length; i+=2) {
     bit_string[i]   = nibble_to_hex_char(*str >> 4);
@@ -149,9 +153,10 @@ hex_char_to_nibble(uint8_t c) {
   case ('E'): return 0xe;
   case ('f'): return 0xf;
   case ('F'): return 0xf;
-  default: break;   /* this flags an error */
+  default: return -1;   /* this flags an error */
   }
-  return -1;
+  /* NOTREACHED */
+  return -1;  /* this keeps compilers from complaining */
 }
 
 int
@@ -206,16 +211,16 @@ v128_hex_string(v128_t *x) {
 
 char *
 v128_bit_string(v128_t *x) {
-  int j, index;
+  int j, i;
   uint32_t mask;
   
-  for (j=index=0; j < 4; j++) {
+  for (j=i=0; j < 4; j++) {
     for (mask=0x80000000; mask > 0; mask >>= 1) {
       if (x->v32[j] & mask)
-	bit_string[index] = '1';
+	bit_string[i] = '1';
       else
-	bit_string[index] = '0';
-      ++index;
+	bit_string[i] = '0';
+      ++i;
     }
   }
   bit_string[128] = 0; /* null terminate string */
@@ -322,13 +327,13 @@ v128_set_bit_to(v128_t *x, int i, int y){
 #endif /* DATATYPES_USE_MACROS */
 
 void
-v128_right_shift(v128_t *x, int index) {
-  const int base_index = index >> 5;
-  const int bit_index = index & 31;
+v128_right_shift(v128_t *x, int shift) {
+  const int base_index = shift >> 5;
+  const int bit_index = shift & 31;
   int i, from;
   uint32_t b;
     
-  if (index > 127) {
+  if (shift > 127) {
     v128_set_to_zero(x);
     return;
   }
@@ -360,12 +365,12 @@ v128_right_shift(v128_t *x, int index) {
 }
 
 void
-v128_left_shift(v128_t *x, int index) {
+v128_left_shift(v128_t *x, int shift) {
   int i;
-  const int base_index = index >> 5;
-  const int bit_index = index & 31;
+  const int base_index = shift >> 5;
+  const int bit_index = shift & 31;
 
-  if (index > 127) {
+  if (shift > 127) {
     v128_set_to_zero(x);
     return;
   } 
@@ -383,6 +388,124 @@ v128_left_shift(v128_t *x, int index) {
   /* now wrap up the final portion */
   for (i = 4 - base_index; i < 4; i++) 
     x->v32[i] = 0;
+
+}
+
+/* functions manipulating bitvector_t */
+
+#ifndef DATATYPES_USE_MACROS /* little functions are not macros */
+
+int
+bitvector_get_bit(const bitvector_t *v, int bit_index)
+{
+  return _bitvector_get_bit(v, bit_index);
+}
+
+void
+bitvector_set_bit(bitvector_t *v, int bit_index)
+{
+  _bitvector_set_bit(v, bit_index);
+}
+
+void
+bitvector_clear_bit(bitvector_t *v, int bit_index)
+{
+  _bitvector_clear_bit(v, bit_index);
+}
+
+
+#endif /* DATATYPES_USE_MACROS */
+
+int
+bitvector_alloc(bitvector_t *v, unsigned long length) {
+  unsigned long l;
+
+  /* Round length up to a multiple of bits_per_word */
+  length = (length + bits_per_word - 1) & ~(unsigned long)((bits_per_word - 1));
+
+  l = length / bits_per_word * bytes_per_word;
+
+  /* allocate memory, then set parameters */
+  if (l == 0)
+    v->word = NULL;
+  else {
+    v->word = (uint32_t*)crypto_alloc(l);
+    if (v->word == NULL) {
+      v->word = NULL;
+      v->length = 0;
+      return -1;
+    }
+  }
+  v->length = length;
+
+  /* initialize bitvector to zero */
+  bitvector_set_to_zero(v);
+
+  return 0;
+}
+
+
+void
+bitvector_dealloc(bitvector_t *v) {
+  if (v->word != NULL)
+    crypto_free(v->word);
+  v->word = NULL;
+  v->length = 0;
+}
+
+void
+bitvector_set_to_zero(bitvector_t *x)
+{
+  /* C99 guarantees that memset(0) will set the value 0 for uint32_t */
+  memset(x->word, 0, x->length >> 3);
+}
+
+char *
+bitvector_bit_string(bitvector_t *x, char* buf, int len) {
+  int j, i;
+  uint32_t mask;
+  
+  for (j=i=0; j < (int)(x->length>>5) && i < len-1; j++) {
+    for (mask=0x80000000; mask > 0; mask >>= 1) {
+      if (x->word[j] & mask)
+	buf[i] = '1';
+      else
+	buf[i] = '0';
+      ++i;
+      if (i >= len-1)
+        break;
+    }
+  }
+  buf[i] = 0; /* null terminate string */
+
+  return buf;
+}
+
+void
+bitvector_left_shift(bitvector_t *x, int shift) {
+  int i;
+  const int base_index = shift >> 5;
+  const int bit_index = shift & 31;
+  const int word_length = x->length >> 5;
+
+  if (shift >= (int)x->length) {
+    bitvector_set_to_zero(x);
+    return;
+  } 
+  
+  if (bit_index == 0) {
+    for (i=0; i < word_length - base_index; i++)
+      x->word[i] = x->word[i+base_index];
+  } else {
+    for (i=0; i < word_length - base_index - 1; i++)
+      x->word[i] = (x->word[i+base_index] >> bit_index) ^
+	(x->word[i+base_index+1] << (32 - bit_index));
+    x->word[word_length - base_index-1] = x->word[word_length-1] >> bit_index;
+  }
+
+  /* now wrap up the final portion */
+  for (i = word_length - base_index; i < word_length; i++) 
+    x->word[i] = 0;
 
 }
 
@@ -406,194 +529,41 @@ octet_string_set_to_zero(uint8_t *s, int len) {
   
 }
 
+#ifdef TESTAPP_SOURCE
 
-/*
- *  From RFC 1521: The Base64 Alphabet
- *
- *   Value Encoding  Value Encoding  Value Encoding  Value Encoding
- *        0 A            17 R            34 i            51 z
- *        1 B            18 S            35 j            52 0
- *        2 C            19 T            36 k            53 1
- *        3 D            20 U            37 l            54 2
- *        4 E            21 V            38 m            55 3
- *        5 F            22 W            39 n            56 4
- *        6 G            23 X            40 o            57 5
- *        7 H            24 Y            41 p            58 6
- *        8 I            25 Z            42 q            59 7
- *        9 J            26 a            43 r            60 8
- *       10 K            27 b            44 s            61 9
- *       11 L            28 c            45 t            62 +
- *       12 M            29 d            46 u            63 /
- *       13 N            30 e            47 v
- *       14 O            31 f            48 w         (pad) =
- *       15 P            32 g            49 x
- *       16 Q            33 h            50 y
- */
+static const char b64chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  "abcdefghijklmnopqrstuvwxyz0123456789+/";
 
-int
-base64_char_to_sextet(uint8_t c) {
-  switch(c) {
-  case 'A':
-    return 0;
-  case 'B':
-    return 1;
-  case 'C':
-    return 2;
-  case 'D':
-    return 3;
-  case 'E':
-    return 4;
-  case 'F':
-    return 5;
-  case 'G':
-    return 6;
-  case 'H':
-    return 7;
-  case 'I':
-    return 8;
-  case 'J':
-    return 9;
-  case 'K':
-    return 10;
-  case 'L':
-    return 11;
-  case 'M':
-    return 12;
-  case 'N':
-    return 13;
-  case 'O':
-    return 14;
-  case 'P':
-    return 15;
-  case 'Q':
-    return 16;
-  case 'R':
-    return 17;
-  case 'S':
-    return 18;
-  case 'T':
-    return 19;
-  case 'U':
-    return 20;
-  case 'V':
-    return 21;
-  case 'W':
-    return 22;
-  case 'X':
-    return 23;
-  case 'Y':
-    return 24;
-  case 'Z':
-    return 25;
-  case 'a':
-    return 26;
-  case 'b':
-    return 27;
-  case 'c':
-    return 28;
-  case 'd':
-    return 29;
-  case 'e':
-    return 30;
-  case 'f':
-    return 31;
-  case 'g':
-    return 32;
-  case 'h':
-    return 33;
-  case 'i':
-    return 34;
-  case 'j':
-    return 35;
-  case 'k':
-    return 36;
-  case 'l':
-    return 37;
-  case 'm':
-    return 38;
-  case 'n':
-    return 39;
-  case 'o':
-    return 40;
-  case 'p':
-    return 41;
-  case 'q':
-    return 42;
-  case 'r':
-    return 43;
-  case 's':
-    return 44;
-  case 't':
-    return 45;
-  case 'u':
-    return 46;
-  case 'v':
-    return 47;
-  case 'w':
-    return 48;
-  case 'x':
-    return 49;
-  case 'y':
-    return 50;
-  case 'z':
-    return 51;
-  case '0':
-    return 52;
-  case '1':
-    return 53;
-  case '2':
-    return 54;
-  case '3':
-    return 55;
-  case '4':
-    return 56;
-  case '5':
-    return 57;
-  case '6':
-    return 58;
-  case '7':
-    return 59;
-  case '8':
-    return 60;
-  case '9':
-    return 61;
-  case '+':
-    return 62;
-  case '/':
-    return 63;
-  case '=':
-    return 64;
-  default:
-    break;
- }
- return -1;
-}
+static int base64_block_to_octet_triple(char *out, char *in) {
+  unsigned char sextets[4] = {0};
+  int j = 0;
+  int i;
 
-/*
- * base64_string_to_octet_string converts a hexadecimal string
- * of length 2 * len to a raw octet string of length len
- */
-
-int
-base64_string_to_octet_string(char *raw, char *base64, int len) {
-  uint8_t x;
-  int tmp;
-  int base64_len;
-
-  base64_len = 0;
-  while (base64_len < len) {
-    tmp = base64_char_to_sextet(base64[0]);
-    if (tmp == -1)
-      return base64_len;
-    x = (tmp << 6);
-    base64_len++;
-    tmp = base64_char_to_sextet(base64[1]);
-    if (tmp == -1)
-      return base64_len;
-    x |= (tmp & 0xffff);
-    base64_len++;
-    *raw++ = x;
-    base64 += 2;
+  for (i = 0; i < 4; i++) {
+    char *p = strchr(b64chars, in[i]);
+    if (p != NULL) sextets[i] = p - b64chars;
+    else j++;
   }
-  return base64_len;
+
+  out[0] = (sextets[0]<<2)|(sextets[1]>>4);
+  if (j < 2) out[1] = (sextets[1]<<4)|(sextets[2]>>2);
+  if (j < 1) out[2] = (sextets[2]<<6)|sextets[3];
+  return j;
 }
+
+int base64_string_to_octet_string(char *out, int *pad, char *in, int len) {
+  int k = 0;
+  int i = 0;
+  int j = 0;
+  if (len % 4 != 0) return 0;
+
+  while (i < len && j == 0) {
+    j = base64_block_to_octet_triple(out + k, in + i);
+    k += 3;
+    i += 4;
+  }
+  *pad = j;
+  return i;
+}
+
+#endif

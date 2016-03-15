@@ -1,5 +1,75 @@
 Changelog
 
+1.5.4
+
+  Use BE byte ordering of RTCP trailer.
+
+  Allow zero length payload on unprotect.
+
+1.5.3
+
+  Fix for CVE-2015-6360.
+
+  Pull request 103 - Makefile.in: Don't hard-code ar.
+
+  Pull request 99 - Various fixes for compiling with Visual Studio.
+ 
+  Pull request 98 - Do not duplicate shared library when installing.
+
+  Please see commit log for a full list of other minor fixes.
+
+1.5.2
+ 
+  Autoconf checks for libz and libdl for buildroot support.
+
+  Pull request 96 - Include config.h to get inline on Windows.
+
+  Pull request 93 - Don't include AES-192 when compiling against BoringSSL.
+
+1.5.1
+
+  Pull request 95 - Additional header check from Chromium
+
+  Pull request 94 - Add missing copyright headers. 
+
+  Pull request 90 - Fix out-of-source tree builds.
+
+  Pull request 89 - Introduce little endian RISC support
+
+  Pull request 86 - Add support for cross-compiling the shared library for Windows and OS X
+
+  Pull request 85 - Add -f <pcap filter> option to rtp_decoder
+
+  Pull request 84 - Avoid problems due to unsafe macros
+
+  Pull request 82 - Align the AES ICM nonce
+
+  Pull request 80 - Take advantage of base64 conversion in testapps
+
+  Pull request 75 - Cleanup: miscellaneous cleanup of initial OpenSSL AES support
+
+  Pull request 74 - Allow testing with pcap file or capture - Issue #45
+
+  Other trivial fixes are included as well.  Please see github for details.
+
+1.5.0
+ 
+  Add support for using OpenSSL crypto using the --enable-openssl 
+  option.
+
+  Add support for AES-GCM crypto suites. 
+
+  Add support for pkg_config.
+
+  Add user data API to allow user to associate additional data with a 
+  SRTP context.
+
+  This release also includes a variety of bug fixes, which can be 
+  viewed at: https://github.com/cisco/libsrtp/commits/master
+
+  Note: The change log was not maintained between versions 1.3.20 and
+        1.4.5.
+
 1.3.20
 
   Lots of changes.  Thanks to Jeff Chan for catching a memory leak and

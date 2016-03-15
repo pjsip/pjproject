@@ -48,7 +48,7 @@ err     = pjlib/srtp_err.o
 kernel  = crypto/kernel/crypto_kernel.o  crypto/kernel/alloc.o   \
           crypto/kernel/key.o $(rng) $(err) # $(ust) 
 
-srtpobj = srtp/srtp.o 
+srtpobj = srtp/srtp.o srtp/ekt.o
 
 cryptobj =  $(ciphers) $(hashes) $(math) $(stat) $(kernel) $(replay)
 
