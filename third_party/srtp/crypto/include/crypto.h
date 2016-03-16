@@ -46,6 +46,8 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#include "err.h"
+
 /** 
  *  @brief A cipher_type_id_t is an identifier for a particular cipher
  *  type.
