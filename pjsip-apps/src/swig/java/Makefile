@@ -137,6 +137,7 @@ else
   MY_JNI_CFLAGS	 += -fPIC
   ifeq ($(OS),android)
     MY_JNI_CFLAGS+= -D__ANDROID__
+    MY_JNI_LDFLAGS+= -Wl,-soname,libpjsua2.so
     SWIG_FLAGS+= -D__ANDROID__
   endif
 endif
