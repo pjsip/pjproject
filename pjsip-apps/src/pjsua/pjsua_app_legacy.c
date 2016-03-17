@@ -1269,7 +1269,7 @@ static void ui_send_dtmf_info()
 	    char body[80];
 	    pjsua_msg_data msg_data_;
 
-	    pjsua_msg_data_init(&msg_data);
+	    pjsua_msg_data_init(&msg_data_);
 	    msg_data_.content_type = pj_str("application/dtmf-relay");
 
 	    pj_ansi_snprintf(body, sizeof(body),
