@@ -455,11 +455,18 @@ case $target in
 		;;
 	esac
 	# UUID
-	if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
-		ac_os_objs="$ac_os_objs guid_uuid.o"
-	else
-		ac_os_objs="$ac_os_objs guid_simple.o"
-	fi
+	case $target in
+	  *android*)
+	  	ac_os_objs="$ac_os_objs guid_android.o"
+	  	;;
+	  *)
+		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
+			ac_os_objs="$ac_os_objs guid_uuid.o"
+		else
+			ac_os_objs="$ac_os_objs guid_simple.o"
+		fi
+		;;
+	esac
 	;;
 esac
 
