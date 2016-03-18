@@ -130,65 +130,65 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-<ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-	<Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
-    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />    
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -302,6 +302,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\pjmedia\alaw_ulaw.c" />
     <ClCompile Include="..\src\pjmedia\alaw_ulaw_table.c" />
+    <ClCompile Include="..\src\pjmedia\audiodev.c" />
     <ClCompile Include="..\src\pjmedia\avi_player.c" />
     <ClCompile Include="..\src\pjmedia\bidirectional.c" />
     <ClCompile Include="..\src\pjmedia\clock_thread.c" />
@@ -354,6 +355,7 @@
     <ClCompile Include="..\src\pjmedia\transport_srtp.c" />
     <ClCompile Include="..\src\pjmedia\transport_udp.c" />
     <ClCompile Include="..\src\pjmedia\types.c" />
+    <ClCompile Include="..\src\pjmedia\videodev.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec_util.c" />
     <ClCompile Include="..\src\pjmedia\vid_port.c" />
@@ -369,6 +371,7 @@
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia.h" />
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h" />
+    <ClInclude Include="..\include\pjmedia\audiodev.h" />
     <ClInclude Include="..\include\pjmedia\avi.h" />
     <ClInclude Include="..\include\pjmedia\avi_stream.h" />
     <ClInclude Include="..\include\pjmedia\bidirectional.h" />
@@ -416,6 +419,7 @@
     <ClInclude Include="..\include\pjmedia\transport_srtp.h" />
     <ClInclude Include="..\include\pjmedia\transport_udp.h" />
     <ClInclude Include="..\include\pjmedia\types.h" />
+    <ClInclude Include="..\include\pjmedia\videodev.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec_util.h" />
     <ClInclude Include="..\include\pjmedia\vid_port.h" />

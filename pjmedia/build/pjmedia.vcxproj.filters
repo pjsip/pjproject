@@ -206,6 +206,12 @@
     <ClCompile Include="..\src\pjmedia\wsola.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\audiodev.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pjmedia\videodev.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h">
@@ -380,6 +386,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\wsola.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia\audiodev.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia\videodev.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
