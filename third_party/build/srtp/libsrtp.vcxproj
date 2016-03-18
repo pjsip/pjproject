@@ -187,7 +187,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -200,7 +200,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -211,7 +211,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -224,7 +224,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -234,7 +234,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -247,7 +247,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -258,7 +258,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -271,7 +271,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -281,7 +281,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -294,7 +294,7 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
     </ClCompile>
@@ -305,7 +305,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
@@ -318,15 +318,14 @@
     </Midl>
     <ClCompile>
       <AdditionalIncludeDirectories>.;../../srtp/include;../../srtp/crypto/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\srtp\crypto\ae_xfm\xfm.c" />
+  <ItemGroup>    
     <ClCompile Include="..\..\srtp\crypto\cipher\aes.c" />
     <ClCompile Include="..\..\srtp\crypto\cipher\aes_cbc.c" />
     <ClCompile Include="..\..\srtp\crypto\cipher\aes_icm.c" />
@@ -349,8 +348,9 @@
     <ClCompile Include="..\..\srtp\crypto\rng\rand_source.c" />
     <ClCompile Include="..\..\srtp\pjlib\srtp_err.c" />
     <ClCompile Include="..\..\srtp\srtp\srtp.c" />
+    <ClCompile Include="..\..\srtp\srtp\ekt.c" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup>    
     <ClInclude Include="..\..\srtp\crypto\include\aes.h" />
     <ClInclude Include="..\..\srtp\crypto\include\aes_cbc.h" />
     <ClInclude Include="..\..\srtp\crypto\include\aes_icm.h" />
@@ -377,7 +377,7 @@
     <ClInclude Include="..\..\srtp\crypto\include\rdbx.h" />
     <ClInclude Include="..\..\srtp\crypto\include\sha1.h" />
     <ClInclude Include="..\..\srtp\crypto\include\stat.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\xfm.h" />
+    <ClInclude Include="..\..\srtp\include\ekt.h" />
     <ClInclude Include="..\..\srtp\include\rtp.h" />
     <ClInclude Include="..\..\srtp\include\srtp.h" />
     <ClInclude Include="..\..\srtp\include\ut_sim.h" />
