@@ -27,7 +27,7 @@ ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 ifeq (@ac_external_pa@,1)
 # External PA
 else
-DIRS += portaudio
+#DIRS += portaudio
 endif
 endif
 

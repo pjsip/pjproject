@@ -48,8 +48,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgsmcodec", "third_party\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libilbccodec", "third_party\build\ilbc\libilbccodec.vcxproj", "{B5FE16F8-3EDB-4110-BD80-B4238CC01E8D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libportaudio", "third_party\build\portaudio\libportaudio.vcxproj", "{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}"
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libresample", "third_party\build\resample\libresample.vcxproj", "{6794B975-4E84-4F49-B2DC-C31F2224E03E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libspeex", "third_party\build\speex\libspeex.vcxproj", "{4B059DBA-CD9C-4D0F-BE8C-FFB4EFD498E9}"
@@ -458,30 +456,6 @@ Global
 		{B5FE16F8-3EDB-4110-BD80-B4238CC01E8D}.Release-Static|Win32.Build.0 = Release-Static|Win32
 		{B5FE16F8-3EDB-4110-BD80-B4238CC01E8D}.Release-Static|x64.ActiveCfg = Release-Static|x64
 		{B5FE16F8-3EDB-4110-BD80-B4238CC01E8D}.Release-Static|x64.Build.0 = Release-Static|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug|Win32.ActiveCfg = Debug|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug|Win32.Build.0 = Debug|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug|x64.ActiveCfg = Debug|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug|x64.Build.0 = Debug|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Dynamic|Win32.ActiveCfg = Debug-Dynamic|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Dynamic|Win32.Build.0 = Debug-Dynamic|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Dynamic|x64.ActiveCfg = Debug-Dynamic|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Dynamic|x64.Build.0 = Debug-Dynamic|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Static|Win32.ActiveCfg = Debug-Static|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Static|Win32.Build.0 = Debug-Static|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Static|x64.ActiveCfg = Debug-Static|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Debug-Static|x64.Build.0 = Debug-Static|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release|Win32.ActiveCfg = Release|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release|Win32.Build.0 = Release|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release|x64.ActiveCfg = Release|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release|x64.Build.0 = Release|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Dynamic|Win32.ActiveCfg = Release-Dynamic|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Dynamic|Win32.Build.0 = Release-Dynamic|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Dynamic|x64.ActiveCfg = Release-Dynamic|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Dynamic|x64.Build.0 = Release-Dynamic|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Static|Win32.ActiveCfg = Release-Static|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Static|Win32.Build.0 = Release-Static|Win32
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Static|x64.ActiveCfg = Release-Static|x64
-		{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}.Release-Static|x64.Build.0 = Release-Static|x64
 		{6794B975-4E84-4F49-B2DC-C31F2224E03E}.Debug|Win32.ActiveCfg = Debug|Win32
 		{6794B975-4E84-4F49-B2DC-C31F2224E03E}.Debug|Win32.Build.0 = Debug|Win32
 		{6794B975-4E84-4F49-B2DC-C31F2224E03E}.Debug|x64.ActiveCfg = Debug|x64
