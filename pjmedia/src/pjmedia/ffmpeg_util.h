@@ -37,6 +37,16 @@
 #include <libavutil/avutil.h>
 #include <libavcodec/avcodec.h>
 
+
+#ifdef PJMEDIA_USE_OLD_FFMPEG
+#   define AVPixelFormat	PixelFormat
+#   define AV(str)		str
+#   define PIX_FMT_GBRP 	PIX_FMT_GBR24P
+#else
+#   define AV(str)		AV_ ## str
+#endif
+					 
+
 void pjmedia_ffmpeg_add_ref();
 void pjmedia_ffmpeg_dec_ref();
 

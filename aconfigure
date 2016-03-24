@@ -2010,6 +2010,60 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_type LINENO TYPE VAR INCLUDES
+# -------------------------------------------
+# Tests whether TYPE exists after having included INCLUDES, setting cache
+# variable VAR accordingly.
+ac_fn_c_check_type ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  eval "$3=no"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof ($2))
+	 return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof (($2)))
+	    return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  eval "$3=yes"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_type
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -2273,7 +2327,7 @@ $as_echo "$as_me: loading site script $ac_site_file" >&6;}
       || { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "failed to load site script $ac_site_file
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
   fi
 done
 
@@ -2416,7 +2470,7 @@ fi
 $as_echo "$ac_cv_build" >&6; }
 case $ac_cv_build in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5 ;;
 esac
 build=$ac_cv_build
 ac_save_IFS=$IFS; IFS='-'
@@ -2449,7 +2503,7 @@ fi
 $as_echo "$ac_cv_host" >&6; }
 case $ac_cv_host in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5 ;;
 esac
 host=$ac_cv_host
 ac_save_IFS=$IFS; IFS='-'
@@ -2482,7 +2536,7 @@ fi
 $as_echo "$ac_cv_target" >&6; }
 case $ac_cv_target in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5 ;;
 esac
 target=$ac_cv_target
 ac_save_IFS=$IFS; IFS='-'
@@ -2819,7 +2873,7 @@ fi
 test -z "$CC" && { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "no acceptable C compiler found in \$PATH
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 
 # Provide some information about the compiler.
 $as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler version" >&5
@@ -2934,7 +2988,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
 { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error 77 "C compiler cannot create executables
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -2977,7 +3031,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot compute suffix of executables: cannot compile and link
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f conftest conftest$ac_cv_exeext
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_exeext" >&5
@@ -3036,7 +3090,7 @@ $as_echo "$ac_try_echo"; } >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot run C compiled programs.
 If you meant to cross compile, use \`--host'.
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
     fi
   fi
 fi
@@ -3088,7 +3142,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
 { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot compute suffix of object files: cannot compile
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f conftest.$ac_cv_objext conftest.$ac_ext
 fi
@@ -4482,7 +4536,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "C preprocessor \"$CPP\" fails sanity check
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 
 ac_ext=c
@@ -4972,7 +5026,7 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
      ;; #(
    *)
      as_fn_error $? "unknown endianness
- presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5 ;;
+ presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5  ;;
  esac
 
 
@@ -7076,6 +7130,21 @@ fi
 
 		fi
 
+		ac_fn_c_check_type "$LINENO" "enum AVPixelFormat" "ac_cv_type_enum_AVPixelFormat" "#include <libavformat/avformat.h>
+
+"
+if test "x$ac_cv_type_enum_AVPixelFormat" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_ENUM_AVPIXELFORMAT 1
+_ACEOF
+
+
+else
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_USE_OLD_FFMPEG=1"
+fi
+
+
 		LIBS="$LIBS $ac_ffmpeg_ldflags"
 		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 
@@ -7613,7 +7682,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -7669,13 +7738,13 @@ $as_echo_n "checking Intel IPP USC build location... " >&6; }
 		{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "Unable to find to find built binaries under $IPPSAMPLES/speech-codecs/{bin,_bin}. Have you built the IPP samples?
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	    fi
 	else
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	# Test the directory
@@ -7683,7 +7752,7 @@ See \`config.log' for more details" "$LINENO" 5; }
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "There's something wrong with this script, directory $IPPSAMP_DIR does not exist
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	    exit 1;
 	fi
 
@@ -7697,14 +7766,14 @@ See \`config.log' for more details" "$LINENO" 5; }
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "bug in this script: unsupported IPP version
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $IPPSAMP_DIR" >&5
@@ -7740,7 +7809,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "no
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -9138,7 +9207,7 @@ do
     "pjsip/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjsip/build/os-auto.mak" ;;
     "third_party/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES third_party/build/os-auto.mak" ;;
 
-  *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
+  *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5 ;;
   esac
 done
 
@@ -9455,7 +9524,7 @@ do
   esac
   case $ac_mode$ac_tag in
   :[FHL]*:*);;
-  :L* | :C*:*) as_fn_error $? "invalid tag \`$ac_tag'" "$LINENO" 5;;
+  :L* | :C*:*) as_fn_error $? "invalid tag \`$ac_tag'" "$LINENO" 5 ;;
   :[FH]-) ac_tag=-:-;;
   :[FH]*) ac_tag=$ac_tag:$ac_tag.in;;
   esac
@@ -9483,7 +9552,7 @@ do
 	   [\\/$]*) false;;
 	   *) test -f "$srcdir/$ac_f" && ac_f="$srcdir/$ac_f";;
 	   esac ||
-	   as_fn_error 1 "cannot find input file: \`$ac_f'" "$LINENO" 5;;
+	   as_fn_error 1 "cannot find input file: \`$ac_f'" "$LINENO" 5 ;;
       esac
       case $ac_f in *\'*) ac_f=`$as_echo "$ac_f" | sed "s/'/'\\\\\\\\''/g"`;; esac
       as_fn_append ac_file_inputs " '$ac_f'"
@@ -9510,7 +9579,7 @@ $as_echo "$as_me: creating $ac_file" >&6;}
 
     case $ac_tag in
     *:-:* | *:-) cat >"$ac_tmp/stdin" \
-      || as_fn_error $? "could not create $ac_file" "$LINENO" 5 ;;
+      || as_fn_error $? "could not create $ac_file" "$LINENO" 5  ;;
     esac
     ;;
   esac

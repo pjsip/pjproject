@@ -1097,6 +1097,12 @@ AC_ARG_ENABLE(ffmpeg,
 			
 		fi
 		
+		AC_CHECK_TYPES(enum AVPixelFormat,
+			       [],
+			       [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_USE_OLD_FFMPEG=1"],
+			       [[#include <libavformat/avformat.h>]]
+			     )
+				     
 		LIBS="$LIBS $ac_ffmpeg_ldflags"
 		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 	      ]
