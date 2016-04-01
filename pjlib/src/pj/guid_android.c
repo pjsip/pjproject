@@ -47,7 +47,7 @@ static pj_bool_t attach_jvm(JNIEnv **jni_env)
         (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
 
 
-PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=37;
+PJ_DEF_DATA(const unsigned) PJ_GUID_STRING_LENGTH=36;
 
 PJ_DEF(unsigned) pj_GUID_STRING_LENGTH()
 {
@@ -103,7 +103,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
 
     native_str.ptr = (char *)native_string;
     native_str.slen = pj_ansi_strlen(native_string);
-    pj_strncpy(str, &native_str, str->slen);
+    pj_strncpy(str, &native_str, PJ_GUID_STRING_LENGTH);
 
     (*jni_env)->ReleaseStringUTFChars(jni_env, uuid_string, native_string);
     detach_jvm(attached);
