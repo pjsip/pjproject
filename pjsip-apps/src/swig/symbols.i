@@ -165,3 +165,5 @@ typedef enum pjsua_call_flag {PJSUA_CALL_UNHOLD = 1, PJSUA_CALL_UPDATE_CONTACT =
 
 typedef enum pjsua_create_media_transport_flag {PJSUA_MED_TP_CLOSE_MEMBER = 1} pjsua_create_media_transport_flag;
 
+typedef enum pjsua_snd_dev_mode {PJSUA_SND_DEV_SPEAKER_ONLY = 1, PJSUA_SND_DEV_NO_IMMEDIATE_OPEN = 2} pjsua_snd_dev_mode;
+

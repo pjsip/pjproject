@@ -5997,6 +5997,62 @@ typedef struct pjsua_media_transport
 
 } pjsua_media_transport;
 
+/**
+ * This enumeration specifies the sound device mode.
+ */
+typedef enum pjsua_snd_dev_mode
+{
+    /**
+     * Open sound device without mic (speaker only).
+     */
+    PJSUA_SND_DEV_SPEAKER_ONLY = 1,
+
+    /**
+     * Do not open sound device, after setting the sound device.
+     */
+    PJSUA_SND_DEV_NO_IMMEDIATE_OPEN  = 2
+
+} pjsua_snd_dev_mode;
+
+
+/**
+ * This structure specifies the parameters to set the sound device.
+ * Use pjsua_snd_dev_param_default() to initialize this structure with
+ * default values.
+ */
+typedef struct pjsua_snd_dev_param
+{
+    /*
+     * Capture dev id.
+     *
+     * Default: PJMEDIA_AUD_DEFAULT_CAPTURE_DEV
+     */
+    int			capture_dev;
+
+    /*
+     * Playback dev id.
+     *
+     * Default: PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
+     */
+    int			playback_dev;
+
+    /*
+     * Sound device mode, refer to #pjsua_snd_dev_mode.
+     *
+     * Default: 0
+     */
+    unsigned		mode;
+
+} pjsua_snd_dev_param;
+
+
+/**
+ * Initialize pjsua_snd_dev_param with default values.
+ *
+ * @param prm		The parameter.
+ */
+PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
+
 
 /**
  * Get maxinum number of conference ports.
@@ -6383,6 +6439,15 @@ PJ_DECL(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
  */
 PJ_DECL(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 				       int playback_dev);
+
+/**
+ * Select or change sound device according to the specified param.
+ *
+ * @param snd_param	Sound device param. 
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param);
 
 
 /**
