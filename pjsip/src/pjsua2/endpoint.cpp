@@ -894,8 +894,15 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     
     /* Check if application modifies the SDP */
     if (orig_sdp != prm.sdp.wholeSdp) {
-        pjmedia_sdp_parse(pool, (char*)prm.sdp.wholeSdp.c_str(),
-                          prm.sdp.wholeSdp.size(), &sdp);
+        pjmedia_sdp_session *new_sdp;
+        pj_str_t dup_new_sdp;
+        pj_str_t new_sdp_str = {(char*)prm.sdp.wholeSdp.c_str(),
+        			prm.sdp.wholeSdp.size()};
+
+        pj_strdup(pool, &dup_new_sdp, &new_sdp_str);        
+        pjmedia_sdp_parse(pool, dup_new_sdp.ptr,
+                          dup_new_sdp.slen, &new_sdp);
+        pj_memcpy(sdp, new_sdp, sizeof(*sdp));
     }
 }
 
