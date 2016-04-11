@@ -327,7 +327,7 @@ static pj_status_t init_parser()
 
     status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC_ESC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
-    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, ":");
+    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC_ESC, ":");
 
     status = pj_cis_dup(&pconst.pjsip_HOST_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
