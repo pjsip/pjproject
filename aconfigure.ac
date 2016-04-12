@@ -1641,7 +1641,7 @@ AC_ARG_WITH(opencore-amrnb,
     AC_HELP_STRING([--with-opencore-amrnb=DIR],
 		   [This option is obsolete and replaced by --with-opencore-amr=DIR]),
     [AC_MSG_ERROR(This option is obsolete and replaced by --with-opencore-amr=DIR)],
-    []
+    [true;]
     )
 
 dnl # opencore-amr alt prefix
