@@ -1136,7 +1136,7 @@ static void boost_priority(void)
 		    PJ_RETURN_OS_ERROR(rc));
 	return;
     }
-    tp.__sched_priority = max_prio;
+    tp.sched_priority = max_prio;
 
     rc = sched_setscheduler(0, POLICY, &tp);
     if (rc != 0) {
@@ -1145,7 +1145,7 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "New process policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 
     /*
      * Adjust thread scheduling algorithm and priority
@@ -1158,10 +1158,10 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "Old thread policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 
     policy = POLICY;
-    tp.__sched_priority = max_prio;
+    tp.sched_priority = max_prio;
 
     rc = pthread_setschedparam(pthread_self(), policy, &tp);
     if (rc != 0) {
@@ -1171,7 +1171,7 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "New thread policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 }
 
 #else
