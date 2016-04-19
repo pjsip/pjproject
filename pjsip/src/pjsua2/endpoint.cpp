@@ -816,6 +816,20 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
+				        pjsua_acc_id* acc_id)
+{
+    OnSelectAccountParam prm;
+
+    pj_assert(rdata && acc_id);
+    prm.rdata.fromPj(*((pjsip_rx_data *)rdata));
+    prm.accountIndex = *acc_id;
+    
+    instance_->onSelectAccount(prm);
+    
+    *acc_id = prm.accountIndex;
+}
+
 void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
 {
     Buddy *buddy = (Buddy*)pjsua_buddy_get_user_data(buddy_id);
@@ -1285,6 +1299,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_typing2	= &Endpoint::on_typing2;
     ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state	= &Endpoint::on_buddy_state;
+    ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
 
     /* Call callbacks */
     ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
