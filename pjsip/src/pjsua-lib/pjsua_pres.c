@@ -555,7 +555,6 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    PJ_LOG(4,(THIS_FILE, "Buddy %d: unsubscribing presence..", buddy_id));
     pj_log_push_indent();
 
     lck.buddy->monitor = subscribe;
