@@ -1149,14 +1149,18 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 		    pvalue->ptr++;
 		    pvalue->slen -= 2;
 		}
-	    } else if (*scanner->curptr == '[') {
+	    // } else if (*scanner->curptr == '[') {
 		/* pvalue can be a quoted IPv6; in this case, the
 		 * '[' and ']' quote characters are to be removed
-		 * from the pvalue. 
+		 * from the pvalue.
+		 *
+		 * Update: this seems to be unnecessary and may cause
+		 * parsing error for cases such as IPv6 reference with
+		 * port number.
 		 */
-		pj_scan_get_char(scanner);
-		pj_scan_get_until_ch(scanner, ']', pvalue);
-		pj_scan_get_char(scanner);
+		// pj_scan_get_char(scanner);
+		// pj_scan_get_until_ch(scanner, ']', pvalue);
+		// pj_scan_get_char(scanner);
 	    } else if(pj_cis_match(spec, *scanner->curptr)) {
 		parser_get_and_unescape(scanner, pool, spec, esc_spec, pvalue);
 	    }
