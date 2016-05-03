@@ -61,24 +61,26 @@ if pj_version_suffix:
 
 #print 'PJ_VERSION = "'+ pj_version + '"'
 
+# Get 'make' from environment variable if any
+MAKE = os.environ.get('MAKE') or "make"
 
 # Fill in pj_inc_dirs
 pj_inc_dirs = []
-f = os.popen("make -f helper.mak inc_dir")
+f = os.popen("%s -f helper.mak inc_dir" % MAKE)
 for line in f:
     pj_inc_dirs.append(line.rstrip("\r\n"))
 f.close()
 
 # Fill in pj_lib_dirs
 pj_lib_dirs = []
-f = os.popen("make -f helper.mak lib_dir")
+f = os.popen("%s -f helper.mak lib_dir" % MAKE)
 for line in f:
     pj_lib_dirs.append(line.rstrip("\r\n"))
 f.close()
 
 # Fill in pj_libs
 pj_libs = []
-f = os.popen("make -f helper.mak libs")
+f = os.popen("%s -f helper.mak libs" % MAKE)
 for line in f:
     pj_libs.append(line.rstrip("\r\n"))
 f.close()

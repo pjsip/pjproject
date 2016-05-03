@@ -61,28 +61,31 @@ if pj_version_suffix:
 
 #print 'PJ_VERSION = "'+ pj_version + '"'
 
+# Get 'make' from environment variable if any
+MAKE = os.environ.get('MAKE') or "make"
+
 # Get targetname
-f = os.popen("make --no-print-directory -f helper.mak target_name")
+f = os.popen("%s --no-print-directory -f helper.mak target_name" % MAKE)
 pj_target_name = f.read().rstrip("\r\n")
 f.close()
 
 # Fill in extra_compile_args
 extra_compile_args = []
-f = os.popen("make --no-print-directory -f helper.mak cflags")
+f = os.popen("%s --no-print-directory -f helper.mak cflags" % MAKE)
 for line in f:
     extra_compile_args.append(line.rstrip("\r\n"))
 f.close()
 
 # Fill in libraries
 libraries = []
-f = os.popen("make --no-print-directory -f helper.mak libs")
+f = os.popen("%s --no-print-directory -f helper.mak libs" % MAKE)
 for line in f:
     libraries.append(line.rstrip("\r\n"))
 f.close()
 
 # Fill in extra_link_args
 extra_link_args = []
-f = os.popen("make --no-print-directory -f helper.mak ldflags")
+f = os.popen("%s --no-print-directory -f helper.mak ldflags" % MAKE)
 for line in f:
     extra_link_args.append(line.rstrip("\r\n"))
 f.close()
