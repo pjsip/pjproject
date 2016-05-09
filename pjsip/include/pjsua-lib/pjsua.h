@@ -1577,7 +1577,7 @@ typedef struct pjsua_config
     pj_str_t	    stun_srv[8];
 
     /**
-     * This specifies if the library startup should ignore failure with the
+     * This specifies if the library should ignore failure with the
      * STUN servers. If this is set to PJ_FALSE, the library will refuse to
      * start if it fails to resolve or contact any of the STUN servers.
      *

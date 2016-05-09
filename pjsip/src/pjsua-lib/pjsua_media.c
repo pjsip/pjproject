@@ -390,8 +390,32 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    else
 #endif
 	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "STUN resolve error", status);
-		goto on_error;
+		if (!pjsua_var.ua_cfg.stun_ignore_failure) {
+		    pjsua_perror(THIS_FILE, "STUN resolve error", status);
+		    goto on_error;
+		}
+
+		PJ_LOG(4,(THIS_FILE, "Ignoring STUN resolve error %d", 
+		          status));
+
+		if (!pj_sockaddr_has_addr(&bound_addr)) {
+		    pj_sockaddr addr;
+
+		    /* Get local IP address. */
+		    status = pj_gethostip(af, &addr);
+		    if (status != PJ_SUCCESS)
+			goto on_error;
+
+		    pj_sockaddr_copy_addr(&bound_addr, &addr);
+		}
+
+		for (i=0; i<2; ++i) {
+		    pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		    pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		    pj_sockaddr_set_port(&mapped_addr[i],
+					 (pj_uint16_t)(acc->next_rtp_port+i));
+		}
+		break;
 	    }
 
 	    pj_sockaddr_cp(&mapped_addr[0], &resolved_addr[0]);

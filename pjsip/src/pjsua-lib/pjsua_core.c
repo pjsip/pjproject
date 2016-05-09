@@ -2052,7 +2052,7 @@ static pj_status_t create_sip_udp_sock(int af,
 			 pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
 	status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
 					 1, &sock, &p_pub_addr->ipv4);
-	if (status != PJ_SUCCESS) {
+	if (status != PJ_SUCCESS && !pjsua_var.ua_cfg.stun_ignore_failure) {
 	    pjsua_perror(THIS_FILE, "Error contacting STUN server", status);
 	    pj_sock_close(sock);
 	    return status;
