@@ -679,6 +679,7 @@ static void on_ice_complete(pjmedia_transport *tp,
 	pjsua_call_schedule_reinvite_check(call, 0);
 	break;
     case PJ_ICE_STRANS_OP_KEEP_ALIVE:
+    case PJ_ICE_STRANS_OP_ADDR_CHANGE:
 	if (result != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, result,
 		         "ICE keep alive failure for transport %d:%d",
@@ -695,7 +696,9 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    (*pjsua_var.ua_cfg.cb.on_call_media_transport_state)(
                 call->index, &info);
         }
-	if (pjsua_var.ua_cfg.cb.on_ice_transport_error) {
+	if (pjsua_var.ua_cfg.cb.on_ice_transport_error &&
+	    op == PJ_ICE_STRANS_OP_KEEP_ALIVE)
+	{
 	    pjsua_call_id id = call->index;
 	    (*pjsua_var.ua_cfg.cb.on_ice_transport_error)(id, op, result,
 							  NULL);

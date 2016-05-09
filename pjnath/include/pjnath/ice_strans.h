@@ -125,10 +125,14 @@ typedef enum pj_ice_strans_op
     /** Negotiation */
     PJ_ICE_STRANS_OP_NEGOTIATION,
 
-    /** This operatino is used to report failure in keep-alive operation.
+    /** This operation is used to report failure in keep-alive operation.
      *  Currently it is only used to report TURN Refresh failure.
      */
-    PJ_ICE_STRANS_OP_KEEP_ALIVE
+    PJ_ICE_STRANS_OP_KEEP_ALIVE,
+
+    /** IP address change notification from STUN keep-alive operation.
+     */
+    PJ_ICE_STRANS_OP_ADDR_CHANGE
 
 } pj_ice_strans_op;
 

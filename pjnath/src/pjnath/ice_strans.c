@@ -1640,6 +1640,14 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 					     sizeof(ipaddr), 3)));
 
 		sess_init_update(ice_st);
+		
+		if (op == PJ_STUN_SOCK_MAPPED_ADDR_CHANGE &&
+		    ice_st->cb.on_ice_complete)
+		{
+		    (*ice_st->cb.on_ice_complete)(ice_st, 
+		    				  PJ_ICE_STRANS_OP_ADDR_CHANGE,
+		    				  status);
+		}
 	    }
 	}
 
