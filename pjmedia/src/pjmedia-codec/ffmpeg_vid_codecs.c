@@ -1429,8 +1429,12 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     /* Check if encoder has been opened */
     PJ_ASSERT_RETURN(ff->enc_ctx, PJ_EINVALIDOP);
 
+#ifdef PJMEDIA_USE_OLD_FFMPEG
+    avcodec_get_frame_defaults(&avframe);
+#else
     pj_bzero(&avframe, sizeof(avframe));
     av_frame_unref(&avframe);
+#endif
 
     // Let ffmpeg manage the timestamps
     /*
@@ -1680,8 +1684,12 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
      * whole decoding session, and seems to be freed when the codec context
      * closed).
      */
+#ifdef PJMEDIA_USE_OLD_FFMPEG
+    avcodec_get_frame_defaults(&avframe);
+#else
     pj_bzero(&avframe, sizeof(avframe));
     av_frame_unref(&avframe);
+#endif
 
     /* Init packet, the container of the encoded data */
     av_init_packet(&avpacket);
