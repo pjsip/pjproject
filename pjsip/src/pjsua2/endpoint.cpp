@@ -602,12 +602,25 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	return;
     }
 
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    if (!call->incoming_data) {
+	/* This happens when the incoming call callback has been called from 
+	 * inside the on_create_media_transport() callback. So we simply 
+	 * return here to avoid calling	the callback twice. 
+	 */
+	return;
+    }
+
     /* call callback */
     OnIncomingCallParam prm;
     prm.callId = call_id;
     prm.rdata.fromPj(*rdata);
 
     acc->onIncomingCall(prm);
+
+    /* Free cloned rdata. */
+    pjsip_rx_data_free_cloned(call->incoming_data);
+    call->incoming_data = NULL;
 
     /* disconnect if callback doesn't handle the call */
     pjsua_call_info ci;
@@ -1225,7 +1238,22 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
-	return base_tp;
+	pjsua_call *in_call = &pjsua_var.calls[call_id];
+	if (in_call->incoming_data) {
+	    /* This can happen when there is an incoming call but the
+	     * on_incoming_call() callback hasn't been called. So we need to 
+	     * call the callback here.
+	     */
+	    on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+
+	    /* New call should already be created by app. */
+	    call = Call::lookup(call_id);
+	    if (!call) {
+		return base_tp;
+	    }
+	} else {
+	    return base_tp;
+	}
     }
     
     OnCreateMediaTransportParam prm;

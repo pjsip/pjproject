@@ -189,6 +189,13 @@ struct pjsua_call
     pj_timer_entry	 reinv_timer;  /**< Reinvite retry timer.	    */
     pj_bool_t	 	 reinv_pending;/**< Pending until CONFIRMED state.  */
     pj_bool_t	 	 reinv_ice_sent;/**< Has reinvite for ICE upd sent? */
+    pjsip_rx_data	*incoming_data;/**< Cloned incoming call rdata.
+				            On pjsua2, when handling incoming 
+					    call, onCreateMediaTransport() will
+					    not be called since the call isn't
+					    created yet. This temporary 
+					    variable is used to handle such 
+					    case, see ticket #1916.	    */
 };
 
 

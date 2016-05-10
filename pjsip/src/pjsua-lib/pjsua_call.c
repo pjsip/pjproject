@@ -1100,7 +1100,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     unsigned options = 0;
     pjsip_inv_session *inv = NULL;
     int acc_id;
-    pjsua_call *call;
+    pjsua_call *call = NULL;
     int call_id = -1;
     int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
@@ -1221,6 +1221,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				st_code, &st_text, NULL, NULL, NULL);
 	    goto on_return;
 	}
+    }
+
+    if (!replaced_dlg) {
+	/* Clone rdata. */
+	pjsip_rx_data_clone(rdata, 0, &call->incoming_data);
     }
 
     /*
@@ -1636,6 +1641,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 on_return:
     if (dlg) {
         pjsip_dlg_dec_lock(dlg);
+    }
+
+    if (call && call->incoming_data) {
+	pjsip_rx_data_free_cloned(call->incoming_data);
+	call->incoming_data = NULL;
     }
     
     pj_log_pop_indent();
