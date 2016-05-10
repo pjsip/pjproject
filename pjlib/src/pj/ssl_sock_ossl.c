@@ -837,7 +837,9 @@ static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
 /* Generate cipher list with user preference order in OpenSSL format */
 static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 {
-    char buf[1024];
+    pj_pool_t *tmp_pool = NULL;
+    char *buf = NULL;
+    enum { BUF_SIZE = 8192 };
     pj_str_t cipher_list;
     STACK_OF(SSL_CIPHER) *sk_cipher;
     unsigned i;
@@ -851,6 +853,14 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 	
 	return PJ_SUCCESS;
     }
+
+    /* Create temporary pool. */
+    tmp_pool = pj_pool_create(ssock->pool->factory, "ciphpool", BUF_SIZE, 
+			      BUF_SIZE/2 , NULL);
+    if (!tmp_pool)
+	return PJ_ENOMEM;
+
+    buf = (char *)pj_pool_zalloc(tmp_pool, BUF_SIZE);
 
     pj_strset(&cipher_list, buf, 0);
 
@@ -872,7 +882,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
 		/* Check buffer size */
 		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 >
-		    sizeof(buf))
+		    BUF_SIZE)
 		{
 		    pj_assert(!"Insufficient temporary buffer for cipher");
 		    return PJ_ETOOMANY;
@@ -895,9 +905,11 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     /* Finally, set chosen cipher list */
     ret = SSL_set_cipher_list(ssock->ossl_ssl, buf);
     if (ret < 1) {
+	pj_pool_release(tmp_pool);
 	return GET_SSL_STATUS(ssock);
     }
 
+    pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
 }
 
