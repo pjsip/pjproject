@@ -26,6 +26,7 @@
  */
 
 #include <pjsip/sip_transport.h>
+#include <pj/sock_qos.h>
 
 PJ_BEGIN_DECL
 
@@ -57,6 +58,99 @@ enum
      */
     PJSIP_UDP_TRANSPORT_DESTROY_SOCKET	= 2
 };
+
+
+/**
+ * Settings to be specified when creating the UDP transport. Application 
+ * should initialize this structure with its default values by calling 
+ * pjsip_udp_transport_cfg_default().
+ */
+typedef struct pjsip_udp_transport_cfg
+{
+    /**
+     * Address family to use. Valid values are pj_AF_INET() and
+     * pj_AF_INET6(). Default is pj_AF_INET().
+     */
+    int			af;
+
+    /**
+     * Address to bind the socket to.
+     */
+    pj_sockaddr		bind_addr;
+
+    /**
+     * Optional published address, which is the address to be
+     * advertised as the address of this SIP transport. 
+     * By default the bound address will be used as the published address.
+     */
+    pjsip_host_port	addr_name;
+
+    /**
+     * Number of simultaneous asynchronous accept() operations to be 
+     * supported. It is recommended that the number here corresponds to 
+     * the number of processors in the system (or the number of SIP
+     * worker threads).
+     *
+     * Default: 1
+     */
+    unsigned	        async_cnt;
+
+    /**
+     * QoS traffic type to be set on this transport. When application wants
+     * to apply QoS tagging to the transport, it's preferable to set this
+     * field rather than \a qos_param fields since this is more portable.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_type		qos_type;
+
+    /**
+     * Set the low level QoS parameters to the transport. This is a lower
+     * level operation than setting the \a qos_type field and may not be
+     * supported on all platforms.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_params	qos_params;
+
+    /**
+     * Specify options to be set on the transport. 
+     *
+     * By default there is no options.
+     * 
+     */
+    pj_sockopt_params	sockopt_params;
+
+} pjsip_udp_transport_cfg;
+
+
+/**
+ * Initialize pjsip_udp_transport_cfg structure with default values for
+ * the specifed address family.
+ *
+ * @param cfg		The structure to initialize.
+ * @param af		Address family to be used.
+ */
+PJ_DECL(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
+					      int af);
+
+
+/**
+ * Start UDP IPv4/IPv6 transport.
+ *
+ * @param endpt		The SIP endpoint.
+ * @param cfg		UDP transport settings. Application should initialize
+ *			this setting with #pjsip_udp_transport_cfg_default().
+ * @param p_transport	Pointer to receive the transport.
+ *
+ * @return		PJ_SUCCESS when the transport has been successfully
+ *			started and registered to transport manager, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_start2(
+					pjsip_endpoint *endpt,
+					const pjsip_udp_transport_cfg *cfg,
+					pjsip_transport **p_transport);
 
 
 /**
