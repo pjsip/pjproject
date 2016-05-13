@@ -145,7 +145,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 		
 		/* Store address */
 		addr_size = sizeof(*addr);
-		if (af == PJ_AF_INET6) {
+		if (addr->sa_family == PJ_AF_INET6) {
 		    addr_size = addr->sa_len;
 		}
 		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), 				  continue);
