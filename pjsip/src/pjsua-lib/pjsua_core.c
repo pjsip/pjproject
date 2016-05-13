@@ -1376,6 +1376,36 @@ on_return:
 
 
 /*
+ * Update STUN servers.
+ */
+PJ_DEF(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
+					      pj_bool_t wait)
+{
+    unsigned i;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(count && srv, PJ_EINVAL);
+    
+    PJSUA_LOCK();
+
+    pjsua_var.ua_cfg.stun_srv_cnt = count;
+    for (i = 0; i < count; i++) {
+        if (pj_strcmp(&pjsua_var.ua_cfg.stun_srv[i], &srv[i]))
+            pj_strdup(pjsua_var.pool, &pjsua_var.ua_cfg.stun_srv[i], &srv[i]);
+    }
+    pjsua_var.stun_status = PJ_EUNKNOWN;
+
+    status = resolve_stun_server(wait);
+    if (wait == PJ_FALSE && status == PJ_EPENDING)
+        status = PJ_SUCCESS;
+
+    PJSUA_UNLOCK();
+    
+    return status;
+}
+
+
+/*
  * Resolve STUN server.
  */
 PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
@@ -1481,6 +1511,7 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
 
 	/* Perform NAT type detection if not yet */
 	if (pjsua_var.nat_type == PJ_STUN_NAT_TYPE_UNKNOWN &&
+	    !pjsua_var.nat_in_progress &&
 	    pjsua_var.ua_cfg.nat_type_in_sdp)
 	{
 	    pjsua_detect_nat_type();

@@ -389,6 +389,33 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    }
 	    else
 #endif
+
+	    if (status != PJ_SUCCESS && pjsua_var.ua_cfg.stun_srv_cnt > 1 &&
+	        ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)!=0))
+	    {
+	    	PJ_LOG(4,(THIS_FILE, "Failed to get STUN mapped address, "
+	    			     "retrying other STUN servers"));
+	    	status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
+	    			   	    	 pjsua_var.ua_cfg.stun_srv,
+	    			   	    	 PJ_TRUE);
+	    	if (status == PJ_SUCCESS) {
+		    if (pjsua_var.stun_srv.addr.sa_family != 0) {
+			pj_ansi_strcpy(ip_addr,
+			    pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+			stun_srv = pj_str(ip_addr);
+	    	    } else {
+		    	stun_srv.slen = 0;
+    	            }
+    	    
+    	            stun_opt.srv1  = stun_opt.srv2  = stun_srv;
+	            stun_opt.port1 = stun_opt.port2 = 
+			        pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
+	    	    status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory,
+	    				  	     &stun_opt, 2, sock,
+	    				    	     resolved_addr);
+	        }
+	    }
+
 	    if (status != PJ_SUCCESS) {
 		if (!pjsua_var.ua_cfg.stun_ignore_failure) {
 		    pjsua_perror(THIS_FILE, "STUN resolve error", status);

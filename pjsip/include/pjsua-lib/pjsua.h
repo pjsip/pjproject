@@ -1581,6 +1581,11 @@ typedef struct pjsua_config
      * STUN servers. If this is set to PJ_FALSE, the library will refuse to
      * start if it fails to resolve or contact any of the STUN servers.
      *
+     * This setting will also determine what happens if STUN servers are
+     * unavailable during runtime (if set to PJ_FALSE, calls will
+     * directly fail, otherwise (if PJ_TRUE) call medias will
+     * fallback to proceed as though not using STUN servers.
+     *
      * Default: PJ_TRUE
      */
     pj_bool_t	    stun_ignore_failure;
@@ -2082,6 +2087,30 @@ PJ_DECL(pj_status_t) pjsua_detect_nat_type(void);
  * @see pjsua_call_get_rem_nat_type()
  */
 PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
+
+
+/**
+ * Update the STUN servers list. The #pjsua_init() must have been called
+ * before calling this function.
+ *
+ * @param count		Number of STUN server entries.
+ * @param srv		Array of STUN server entries to try. Please see
+ *			the \a stun_srv field in the #pjsua_config 
+ *			documentation about the format of this entry.
+ * @param wait		Specify non-zero to make the function block until
+ *			it gets the result. In this case, the function
+ *			will block while the resolution is being done,
+ *			and the callback will be called before this function
+ *			returns.
+ *
+ * @return		If \a wait parameter is non-zero, this will return
+ *			PJ_SUCCESS if one usable STUN server is found.
+ *			Otherwise it will always return PJ_SUCCESS, and
+ *			application will be notified about the result in
+ *			the callback #on_stun_resolution_complete.
+ */
+PJ_DECL(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
+					       pj_bool_t wait);
 
 
 /**
@@ -2722,7 +2751,16 @@ typedef enum pjsua_stun_use
      * Disable STUN. If STUN is not enabled in the global \a pjsua_config,
      * this setting has no effect.
      */
-    PJSUA_STUN_USE_DISABLED
+    PJSUA_STUN_USE_DISABLED,
+    
+    /**
+     * Retry other STUN servers if the STUN server selected during
+     * startup (#pjsua_init()) or after calling #pjsua_update_stun_servers()
+     * is unavailable during runtime. This setting is valid only for
+     * account's media STUN setting and if the call is using UDP media
+     * transport.
+     */
+    PJSUA_STUN_RETRY_ON_FAILURE
 
 } pjsua_stun_use;
 

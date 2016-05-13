@@ -1561,6 +1561,21 @@ pj_stun_nat_type Endpoint::natGetType() throw(Error)
     return type;
 }
 
+void Endpoint::natUpdateStunServers(const StringVector &servers,
+				    bool wait) throw(Error)
+{
+    pj_str_t srv[MAX_STUN_SERVERS];
+    unsigned i, count = 0;
+
+    for (i=0; i<servers.size() && i<MAX_STUN_SERVERS; ++i) {
+	srv[count].ptr = (char*)servers[i].c_str();
+	srv[count].slen = servers[i].size();
+	++count;
+    }
+
+    PJSUA2_CHECK_EXPR(pjsua_update_stun_servers(count, srv, wait) );
+}
+
 void Endpoint::natCheckStunServers(const StringVector &servers,
 				   bool wait,
 				   Token token) throw(Error)
