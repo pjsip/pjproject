@@ -6844,10 +6844,6 @@ $as_echo_n "checking ffmpeg packages... " >&6; }
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
 				av_pkg="$av_pkg libavutil"
 			fi
-			if $PKG_CONFIG --exists libavcore; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
-				av_pkg="$av_pkg libavcore"
-			fi
 
 			if test "x$av_pkg" == "x"; then
 			   { $as_echo "$as_me:${as_lineno-$LINENO}: result: none detected (check the prefix)! **" >&5

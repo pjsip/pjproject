@@ -1141,15 +1141,6 @@
 #endif
 
 /**
- * Specify if FFMPEG libavcore is available.
- *
- * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
- */
-#ifndef PJMEDIA_HAS_LIBAVCORE
-#   define PJMEDIA_HAS_LIBAVCORE			PJMEDIA_HAS_FFMPEG
-#endif
-
-/**
  * Maximum video planes.
  *
  * Default: 4
