@@ -6824,9 +6824,9 @@ test -n "$PKG_CONFIG" || PKG_CONFIG="none"
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking ffmpeg packages" >&5
 $as_echo_n "checking ffmpeg packages... " >&6; }
 			av_pkg=""
-			if $PKG_CONFIG --exists libdevice; then
+			if $PKG_CONFIG --exists libavdevice; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
-				av_pkg="$av_pkg libdevice"
+				av_pkg="$av_pkg libavdevice"
 			fi
 			if $PKG_CONFIG --exists libavformat; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
