@@ -44,9 +44,16 @@
 
 #define THIS_FILE		"ffmpeg.c"
 
+#define LIBAVFORMAT_VER_AT_LEAST(major,minor)  (LIBAVFORMAT_VERSION_MAJOR > major || \
+     					       (LIBAVFORMAT_VERSION_MAJOR == major && \
+					        LIBAVFORMAT_VERSION_MINOR >= minor))
+
 #include "../pjmedia/ffmpeg_util.h"
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+# include <libavutil/pixdesc.h>
+#endif
 
 #define MAX_DEV_CNT     8
 
@@ -158,7 +165,12 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
                                        const char *dev_name,
                                        const pjmedia_vid_dev_param *param)
 {
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+    AVDictionary *format_opts = NULL;
+    char buf[128];
+#else
     AVFormatParameters fp;
+#endif
     pjmedia_video_format_detail *vfd;
     int err;
 
@@ -171,6 +183,17 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
     /* Init ffmpeg format context */
     *ctx = avformat_alloc_context();
 
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+    /* Init ffmpeg dictionary */
+    snprintf(buf, sizeof(buf), "%d/%d", vfd->fps.num, vfd->fps.denum);
+    av_dict_set(&format_opts, "framerate", buf, 0);
+    snprintf(buf, sizeof(buf), "%dx%d", vfd->size.w, vfd->size.h);
+    av_dict_set(&format_opts, "video_size", buf, 0);
+    av_dict_set(&format_opts, "pixel_format", av_get_pix_fmt_name(PIX_FMT_BGR24), 0);
+
+    /* Open capture stream */
+    err = avformat_open_input(ctx, dev_name, ifmt, &format_opts);
+#else
     /* Init ffmpeg format param */
     pj_bzero(&fp, sizeof(fp));
     fp.prealloced_context = 1;
@@ -182,6 +205,7 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
 
     /* Open capture stream */
     err = av_open_input_stream(ctx, NULL, dev_name, ifmt, &fp);
+#endif
     if (err < 0) {
         *ctx = NULL; /* ffmpeg freed its states on failure, do we must too */
         print_ffmpeg_err(err);
@@ -194,7 +218,11 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
 static void ffmpeg_capture_close(AVFormatContext *ctx)
 {
     if (ctx)
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+        avformat_close_input(&ctx);
+#else
         av_close_input_stream(ctx);
+#endif
 }
 
 
