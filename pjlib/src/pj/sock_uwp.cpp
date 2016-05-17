@@ -394,6 +394,8 @@ void PjUwpSocket::DeinitSocket()
     if (listener_sock) {
 	concurrency::create_task(listener_sock->CancelIOAsync()).wait();
     }
+    while (has_pending_recv) pj_thread_sleep(10);
+
     stream_sock = nullptr;
     datagram_sock = nullptr;
     dgram_recv_helper = nullptr;
@@ -433,10 +435,11 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
 	pj_sockaddr_cp(&local_addr, addr);
 
     HRESULT err = 0;
-    try {
-	concurrency::create_task([this, addr]() {
-	    HostName ^host;
-	    int port;
+    concurrency::create_task([this, addr, &err]() {
+	HostName ^host;
+	int port;
+
+	try {
 	    sockaddr_to_hostname_port(addr, host, &port);
 	    if (pj_sockaddr_has_addr(addr)) {
 		if (sock_type == SOCKTYPE_DATAGRAM)
@@ -449,17 +452,18 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
 		else
 		    return listener_sock->BindServiceNameAsync(port.ToString());
 	    }
-	}).then([this, &err](concurrency::task<void> t)
-	{
-	    try {
+	} catch (Exception^ e) {
+	    err = e->HResult;
+	}
+    }).then([this, &err](concurrency::task<void> t)
+    {
+	try {
+	    if (!err)
 		t.get();
-	    } catch (Exception^ e) {
-		err = e->HResult;
-	    }
-	}).get();
-    } catch (Exception^ e) {
-	err = e->HResult;
-    }
+	} catch (Exception^ e) {
+	    err = e->HResult;
+	}
+    }).get();
 
     return (err? PJ_RETURN_OS_ERROR(err) : PJ_SUCCESS);
 }
@@ -642,7 +646,7 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 	concurrency::cancellation_token_source cts;
 	auto cts_token = cts.get_token();
 	auto t = concurrency::create_task(socket_reader->LoadAsync(*len),
-					    cts_token);
+					  cts_token);
 	*len = cancel_after_timeout(t, cts, READ_TIMEOUT)
 	    .then([this, len, buf, cts_token, &status]
 				    (concurrency::task<unsigned int> t_)
@@ -667,12 +671,24 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 
     /* Non-blocking version */
 
+    concurrency::cancellation_token_source cts;
+    auto cts_token = cts.get_token();
+
     has_pending_recv = PJ_TRUE;
-    concurrency::create_task(socket_reader->LoadAsync(*len))
-	.then([this](concurrency::task<unsigned int> t_)
+    concurrency::create_task(socket_reader->LoadAsync(*len), cts_token)
+	.then([this, cts_token](concurrency::task<unsigned int> t_)
     {
 	try {
-	    // catch any exception
+	    if (cts_token.is_canceled()) {
+		has_pending_recv = PJ_FALSE;
+
+		// invoke callback
+		if (cb.on_read) {
+		    (*cb.on_read)(this, -PJ_EUNKNOWN);
+		}
+		return;
+	    }
+
 	    t_.get();
 	    has_pending_recv = PJ_FALSE;
 
@@ -681,7 +697,7 @@ pj_status_t PjUwpSocket::Recv(void *buf, pj_ssize_t *len)
 	    if (read_len > 0 && cb.on_read) {
 		(*cb.on_read)(this, read_len);
 	    }
-	} catch (Exception^ e) {
+	} catch (...) {
 	    has_pending_recv = PJ_FALSE;
 
 	    // invoke callback
@@ -1478,8 +1494,12 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 	return PJ_ENOTFOUND;
 
     *newsock = (pj_sock_t)new_uwp_sock;
-    pj_sockaddr_cp(addr, new_uwp_sock->GetRemoteAddr());
-    *addrlen = pj_sockaddr_get_len(addr);
+
+    if (addr)
+	pj_sockaddr_cp(addr, new_uwp_sock->GetRemoteAddr());
+
+    if (addrlen)
+	*addrlen = pj_sockaddr_get_len(addr);
 
     return PJ_SUCCESS;
 }
