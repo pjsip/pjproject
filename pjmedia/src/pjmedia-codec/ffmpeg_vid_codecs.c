@@ -1476,10 +1476,17 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
         print_ffmpeg_err(err);
         return PJMEDIA_CODEC_EFAILED;
     } else {
+        pj_bool_t has_key_frame = PJ_FALSE;
         output->size = err;
 	output->bit_info = 0;
-	if (ff->enc_ctx->coded_frame->key_frame)
-	    output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
+
+#if LIBAVCODEC_VER_AT_LEAST(54,15)
+        has_key_frame = (avpacket.flags & AV_PKT_FLAG_KEY);
+#else
+	has_key_frame = ff->enc_ctx->coded_frame->key_frame;	    
+#endif
+        if (has_key_frame)    
+            output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
 
     return PJ_SUCCESS;
