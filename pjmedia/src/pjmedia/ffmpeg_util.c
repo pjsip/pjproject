@@ -21,7 +21,8 @@
 #include <pj/log.h>
 #include <pj/string.h>
 
-#if PJMEDIA_HAS_LIBAVFORMAT && PJMEDIA_HAS_LIBAVUTIL
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBAVFORMAT) && (PJMEDIA_HAS_LIBAVFORMAT != 0)
 
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
@@ -193,4 +194,4 @@ pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
 #   pragma comment( lib, "avutil.lib")
 #endif
 
-#endif	/* #if PJMEDIA_HAS_LIBAVFORMAT && PJMEDIA_HAS_LIBAVUTIL */
+#endif	/* PJMEDIA_HAS_LIBAVFORMAT */
