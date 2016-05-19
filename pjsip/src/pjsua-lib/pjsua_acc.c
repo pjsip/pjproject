@@ -1944,7 +1944,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-				  PJSIP_TRANSPORT_UDP, &tp_sel,
+				  acc->ka_transport->key.type, &tp_sel,
 				  NULL, acc->cfg.ka_data.ptr, 
 				  acc->cfg.ka_data.slen, 
 				  &acc->ka_target, acc->ka_target_len,
@@ -2011,7 +2011,8 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	 */
 	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
 	    acc->cfg.ka_interval == 0 ||
-	    param->rdata->tp_info.transport->key.type != PJSIP_TRANSPORT_UDP)
+	    (param->rdata->tp_info.transport->key.type & PJSIP_TRANSPORT_UDP)!=
+	     PJSIP_TRANSPORT_UDP)
 	{
 	    /* Keep alive is not necessary */
 	    return;

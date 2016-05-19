@@ -2447,7 +2447,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
     PJSUA_LOCK();
 
-    if (t->type == PJSIP_TRANSPORT_UDP) {
+    if ((t->type & PJSIP_TRANSPORT_UDP) == PJSIP_TRANSPORT_UDP) {
 
 	pjsip_transport *tp = t->data.tp;
 
@@ -2468,8 +2468,8 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
 	status = PJ_SUCCESS;
 
-    } else if (t->type == PJSIP_TRANSPORT_TCP ||
-	       t->type == PJSIP_TRANSPORT_TLS)
+    } else if ((t->type & PJSIP_TRANSPORT_TCP) == PJSIP_TRANSPORT_TCP ||
+	       (t->type & PJSIP_TRANSPORT_TLS) == PJSIP_TRANSPORT_TLS)
     {
 
 	pjsip_tpfactory *factory = t->data.factory;
@@ -2481,10 +2481,8 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
     
 	info->id = id;
 	info->type = t->type;
-	info->type_name = (t->type==PJSIP_TRANSPORT_TCP)? pj_str("TCP"):
-							  pj_str("TLS");
-	info->info = (t->type==PJSIP_TRANSPORT_TCP)? pj_str("TCP transport"):
-						     pj_str("TLS transport");
+	info->type_name = pj_str(factory->type_name);
+	info->info = pj_str(factory->info);
 	info->flag = factory->flag;
 	info->addr_len = sizeof(factory->local_addr);
 	info->local_addr = factory->local_addr;
@@ -2534,6 +2532,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 					   pj_bool_t force )
 {
     pj_status_t status;
+    pjsip_transport_type_e tp_type;
 
     /* Make sure id is in range. */
     PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
@@ -2542,11 +2541,13 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     /* Make sure that transport exists */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[id].data.ptr != NULL, PJ_EINVAL);
 
+    tp_type = pjsua_var.tpdata[id].type & ~PJSIP_TRANSPORT_IPV6;
+
     /* Note: destroy() may not work if there are objects still referencing
      *	     the transport.
      */
     if (force) {
-	switch (pjsua_var.tpdata[id].type) {
+	switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
 	    status = pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
 	    if (status  != PJ_SUCCESS)
@@ -2579,7 +2580,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 	 * transport is closed thus it can't cleanup PJSUA transport
 	 * descriptor.
 	 */
-	switch (pjsua_var.tpdata[id].type) {
+	switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
 	    return pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
 	case PJSIP_TRANSPORT_TLS:

@@ -309,6 +309,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 					        unsigned async_cnt,
 					        pjsip_tpfactory **p_factory)
 {
+    enum { INFO_LEN = 100 };
+    char local_addr[PJ_INET6_ADDRSTRLEN+10];
     pj_pool_t *pool;
     pj_bool_t is_ipv6;
     int af, sip_ssl_method;
@@ -545,6 +547,19 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	listener->is_registered = PJ_FALSE;
 	goto on_error;
     }
+
+    /* Set transport info. */
+    if (listener->factory.info == NULL) {
+	listener->factory.info = (char*) pj_pool_alloc(listener->factory.pool,
+						       INFO_LEN);
+    }
+    pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
+    pj_ansi_snprintf( 
+	listener->factory.info, INFO_LEN, "tls %s [published as %.*s:%d]",
+	local_addr,
+	(int)listener->factory.addr_name.host.slen,
+	listener->factory.addr_name.host.ptr,
+	listener->factory.addr_name.port);
 
     if (has_listener) {
 	PJ_LOG(4,(listener->factory.obj_name, 

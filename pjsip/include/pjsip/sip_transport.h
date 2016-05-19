@@ -994,6 +994,7 @@ struct pjsip_tpfactory
     pjsip_transport_type_e  type;	    /**< Transport type.	*/
     char		   *type_name;      /**< Type string name.	*/
     unsigned		    flag;	    /**< Transport flag.	*/
+    char		   *info;	    /**< Transport info/description.*/
 
     pj_sockaddr		    local_addr;	    /**< Bound address.		*/
     pjsip_host_port	    addr_name;	    /**< Published name.	*/
