@@ -435,7 +435,8 @@ struct pjsua_data
     pj_sockaddr		 stun_srv;  /**< Resolved STUN server address	*/
     pj_status_t		 stun_status; /**< STUN server status.		*/
     pjsua_stun_resolve	 stun_res;  /**< List of pending STUN resolution*/
-    pj_dns_resolver	*resolver;  /**< DNS resolver.			*/
+    unsigned		 stun_srv_idx; /**< Resolved STUN server index	*/
+    pj_dns_resolver	*resolver;  /**< DNS resolver.			*/   
 
     /* Detected NAT type */
     pj_stun_nat_type	 nat_type;	/**< NAT type.			*/

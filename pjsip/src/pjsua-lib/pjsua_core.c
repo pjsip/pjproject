@@ -1205,6 +1205,7 @@ static void stun_resolve_complete(pjsua_stun_resolve *sess)
     result.token = sess->token;
     result.status = sess->status;
     result.name = sess->srv[sess->idx];
+    result.index = sess->idx;
     pj_memcpy(&result.addr, &sess->addr, sizeof(result.addr));
     sess->has_result = PJ_TRUE;
 
@@ -1508,6 +1509,7 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
     pjsua_var.stun_status = result->status;
     if ((result->status == PJ_SUCCESS) && (pjsua_var.ua_cfg.stun_srv_cnt>0)) {
 	pj_memcpy(&pjsua_var.stun_srv, &result->addr, sizeof(result->addr));
+	pjsua_var.stun_srv_idx = result->index;
 
 	/* Perform NAT type detection if not yet */
 	if (pjsua_var.nat_type == PJ_STUN_NAT_TYPE_UNKNOWN &&
@@ -1554,7 +1556,12 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 	 * result.
 	 */
 	if (wait) {
-	    while (pjsua_var.stun_status == PJ_EPENDING) {
+	    pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
+
+	    if (has_pjsua_lock)
+		PJSUA_UNLOCK();
+
+	    while (pjsua_var.stun_status == PJ_EPENDING) {		
                 /* If there is no worker thread or
                  * the function is called from the only worker thread,
                  * we have to handle the events here.
@@ -1568,6 +1575,8 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 		    pj_thread_sleep(10);
                 }
 	    }
+	    if (has_pjsua_lock)
+		PJSUA_LOCK();
 	}
     }
 

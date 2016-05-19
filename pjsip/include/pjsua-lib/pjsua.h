@@ -2048,6 +2048,10 @@ struct pj_stun_resolve_result
      */
     pj_sockaddr	     addr;
 
+    /**
+     * The index of the usable STUN server.
+     */
+    unsigned	     index;
 };
 
 

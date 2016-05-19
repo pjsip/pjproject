@@ -393,11 +393,37 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    if (status != PJ_SUCCESS && pjsua_var.ua_cfg.stun_srv_cnt > 1 &&
 	        ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)!=0))
 	    {
-	    	PJ_LOG(4,(THIS_FILE, "Failed to get STUN mapped address, "
-	    			     "retrying other STUN servers"));
+		pj_str_t srv = 
+			     pjsua_var.ua_cfg.stun_srv[pjsua_var.stun_srv_idx];
+
+		PJ_LOG(4,(THIS_FILE, "Failed to get STUN mapped address, "
+		       "retrying other STUN servers"));
+
+		if (pjsua_var.stun_srv_idx < pjsua_var.ua_cfg.stun_srv_cnt-1) {
+		    PJSUA_LOCK();
+		    /* Move the unusable STUN server to the last position
+		     * as the least prioritize.
+		     */
+		    pj_array_erase(pjsua_var.ua_cfg.stun_srv, 
+				   sizeof(pj_str_t),
+				   pjsua_var.ua_cfg.stun_srv_cnt,
+				   pjsua_var.stun_srv_idx);
+
+		    pj_array_insert(pjsua_var.ua_cfg.stun_srv, 
+				    sizeof(pj_str_t),
+				    pjsua_var.ua_cfg.stun_srv_cnt-1,
+				    pjsua_var.ua_cfg.stun_srv_cnt-1,
+				    &srv);
+
+		    PJSUA_UNLOCK();
+		}
 	    	status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
 	    			   	    	 pjsua_var.ua_cfg.stun_srv,
-	    			   	    	 PJ_TRUE);
+	    			   	    	 PJ_FALSE);
+
+		if (status == PJ_SUCCESS)
+		    status = resolve_stun_server(PJ_TRUE);
+
 	    	if (status == PJ_SUCCESS) {
 		    if (pjsua_var.stun_srv.addr.sa_family != 0) {
 			pj_ansi_strcpy(ip_addr,
