@@ -1,4 +1,4 @@
-AC_INIT(pjproject,2.x)
+AC_INIT([pjproject],[2.x])
 
 host_orig="$host"
 
@@ -38,7 +38,7 @@ dnl # Configure tools
 dnl #
 AC_PROG_CC
 AC_PROG_CXX
-AC_LANG_C
+AC_LANG([C])
 
 AC_PROG_RANLIB
 AC_CHECK_TOOLS([AR], [ar gar], :)
@@ -180,7 +180,7 @@ esac
 
 dnl # --disable-floating-point option
 AC_ARG_ENABLE(floating-point,
-	      AC_HELP_STRING([--disable-floating-point],
+	      AS_HELP_STRING([--disable-floating-point],
 			     [Disable floating point where possible]),
 	      [if test "$enable_floating_point" = "no"; then
 		AC_DEFINE(PJ_HAS_FLOATING_POINT,0)
@@ -412,7 +412,7 @@ AC_SUBST(ac_os_objs)
 AC_SUBST(ac_linux_poll)
 AC_MSG_CHECKING([ioqueue backend])
 AC_ARG_ENABLE(epoll,
-	      AC_HELP_STRING([--enable-epoll],
+	      AS_HELP_STRING([--enable-epoll],
 			     [Use /dev/epoll ioqueue on Linux (experimental)]),
 	      [
 		ac_os_objs=ioqueue_epoll.o
@@ -428,7 +428,7 @@ AC_ARG_ENABLE(epoll,
 
 AC_SUBST(ac_shared_libraries)
 AC_ARG_ENABLE(shared,
-	      AC_HELP_STRING([--enable-shared],
+	      AS_HELP_STRING([--enable-shared],
 			     [Build shared libraries]),
 	      [if test "$enable_shared" = "yes"; then
 		[ac_shared_libraries=1]
@@ -483,7 +483,7 @@ dnl #
 dnl # Use external Speex installation
 AC_SUBST(ac_external_speex,0)
 AC_ARG_WITH(external-speex,
-    AC_HELP_STRING([--with-external-speex],
+    AS_HELP_STRING([--with-external-speex],
 		   [Use external Speex development files, not the one in "third_party" directory. When this option is set, make sure that Speex is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
 	if test "x$with_external_speex" != "xno"; then
@@ -505,7 +505,7 @@ AC_ARG_WITH(external-speex,
 dnl # Use external GSM codec library installation
 AC_SUBST(ac_external_gsm,0)
 AC_ARG_WITH(external-gsm,
-    AC_HELP_STRING([--with-external-gsm],
+    AS_HELP_STRING([--with-external-gsm],
 		   [Use external GSM codec library, not the one in "third_party" directory. When this option is set, make sure that the GSM include/lib files are accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
 	if test "x$with_external_gsm" != "xno"; then
@@ -541,7 +541,7 @@ AC_ARG_WITH(external-gsm,
 dnl # Use external SRTP installation
 AC_SUBST(ac_external_srtp,0)
 AC_ARG_WITH(external-srtp,
-    AC_HELP_STRING([--with-external-srtp],
+    AS_HELP_STRING([--with-external-srtp],
 		   [Use external SRTP development files, not the one in "third_party" directory. When this option is set, make sure that SRTP is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
 	if test "x$with_external_srtp" != "xno"; then
@@ -571,7 +571,7 @@ fi
 dnl # Resample implementation
 AC_SUBST(ac_pjmedia_resample,libresample)
 AC_ARG_ENABLE(resample,
-	      AC_HELP_STRING([--disable-resample],
+	      AS_HELP_STRING([--disable-resample],
 			     [Disable resampling implementations]),
 	      [if test "$enable_resample" = "no"; then
 		[ac_pjmedia_resample=none]
@@ -582,7 +582,7 @@ AC_ARG_ENABLE(resample,
 dnl # Sound device backend selection
 AC_SUBST(ac_pjmedia_snd)
 AC_ARG_ENABLE(sound,
-	      AC_HELP_STRING([--disable-sound],
+	      AS_HELP_STRING([--disable-sound],
 			     [Exclude sound (i.e. use null sound)]),
 	      [if test "$enable_sound" = "no"; then
 		[ac_pjmedia_snd=null]
@@ -593,7 +593,7 @@ AC_ARG_ENABLE(sound,
 dnl # Use external PortAudio installation
 AC_SUBST(ac_external_pa,0)
 AC_ARG_WITH(external-pa,
-    AC_HELP_STRING([--with-external-pa],
+    AS_HELP_STRING([--with-external-pa],
 		   [Use external PortAudio development files, not the one in "third_party" directory. When this option is set, make sure that PortAudio is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
 	if test "x$with_external_pa" != "xno"; then
@@ -671,7 +671,7 @@ else
 	dnl # Check if OSS is disabled
 	AC_SUBST(ac_pa_use_oss,1)
 	AC_ARG_ENABLE(oss,
-		      AC_HELP_STRING([--disable-oss],
+		      AS_HELP_STRING([--disable-oss],
 				     [Disable OSS audio (default: not disabled)]),
 		      [
 			if test "$enable_oss" = "no"; then
@@ -687,7 +687,7 @@ AC_SUBST(ac_pjmedia_video)
 
 dnl # --disable-video option
 AC_ARG_ENABLE(video,
-	      AC_HELP_STRING([--disable-video],
+	      AS_HELP_STRING([--disable-video],
 	      		     [Disable video feature]),
 	      [if test "$enable_video" = "no"; then
 	        #AC_DEFINE(PJMEDIA_HAS_VIDEO,0)
@@ -769,7 +769,7 @@ else
 fi
 
 AC_ARG_ENABLE(ext_sound,
-	      AC_HELP_STRING([--enable-ext-sound],
+	      AS_HELP_STRING([--enable-ext-sound],
 			     [PJMEDIA will not provide any sound device backend]),
 	      [if test "$enable_ext_sound" = "yes"; then
 		[ac_pjmedia_snd=external]
@@ -780,7 +780,7 @@ AC_ARG_ENABLE(ext_sound,
 dnl # Include resampling small filter
 AC_SUBST(ac_no_small_filter)
 AC_ARG_ENABLE(small-filter,
-	      AC_HELP_STRING([--disable-small-filter],
+	      AS_HELP_STRING([--disable-small-filter],
 			     [Exclude small filter in resampling]),
 	      [if test "$enable_small_filter" = "no"; then
 		[ac_no_small_filter='-DPJMEDIA_HAS_SMALL_FILTER=0']
@@ -791,7 +791,7 @@ AC_ARG_ENABLE(small-filter,
 dnl # Include resampling large filter
 AC_SUBST(ac_no_large_filter)
 AC_ARG_ENABLE(large-filter,
-	      AC_HELP_STRING([--disable-large-filter],
+	      AS_HELP_STRING([--disable-large-filter],
 			     [Exclude large filter in resampling]),
 	      [if test "$enable_large_filter" = "no"; then
 		[ac_no_large_filter='-DPJMEDIA_HAS_LARGE_FILTER=0']
@@ -802,7 +802,7 @@ AC_ARG_ENABLE(large-filter,
 dnl # Include Speex AEC
 AC_SUBST(ac_no_speex_aec)
 AC_ARG_ENABLE(speex-aec,
-	      AC_HELP_STRING([--disable-speex-aec],
+	      AS_HELP_STRING([--disable-speex-aec],
 			     [Exclude Speex Acoustic Echo Canceller/AEC]),
 	      [if test "$enable_speex_aec" = "no"; then
 		[ac_no_speex_aec='-DPJMEDIA_HAS_SPEEX_AEC=0']
@@ -813,7 +813,7 @@ AC_ARG_ENABLE(speex-aec,
 dnl # Include G711 codec
 AC_SUBST(ac_no_g711_codec)
 AC_ARG_ENABLE(g711-codec,
-	      AC_HELP_STRING([--disable-g711-codec],
+	      AS_HELP_STRING([--disable-g711-codec],
 			     [Exclude G.711 codecs from the build]),
 	      [if test "$enable_g711_codec" = "no"; then
 		[ac_no_g711_codec=1]
@@ -826,7 +826,7 @@ AC_ARG_ENABLE(g711-codec,
 dnl # Include L16 codec
 AC_SUBST(ac_no_l16_codec)
 AC_ARG_ENABLE(l16-codec,
-	      AC_HELP_STRING([--disable-l16-codec],
+	      AS_HELP_STRING([--disable-l16-codec],
 			     [Exclude Linear/L16 codec family from the build]),
 	      [if test "$enable_l16_codec" = "no"; then
 		[ac_no_l16_codec=1]
@@ -839,7 +839,7 @@ AC_ARG_ENABLE(l16-codec,
 dnl # Include GSM codec
 AC_SUBST(ac_no_gsm_codec)
 AC_ARG_ENABLE(gsm-codec,
-	      AC_HELP_STRING([--disable-gsm-codec],
+	      AS_HELP_STRING([--disable-gsm-codec],
 			     [Exclude GSM codec in the build]),
 	      [if test "$enable_gsm_codec" = "no"; then
 		[ac_no_gsm_codec=1]
@@ -851,7 +851,7 @@ AC_ARG_ENABLE(gsm-codec,
 dnl # Include G.722 codec
 AC_SUBST(ac_no_g722_codec)
 AC_ARG_ENABLE(g722-codec,
-	      AC_HELP_STRING([--disable-g722-codec],
+	      AS_HELP_STRING([--disable-g722-codec],
 			     [Exclude G.722 codec in the build]),
 	      [if test "$enable_g722_codec" = "no"; then
 		[ac_no_g722_codec=1]
@@ -863,7 +863,7 @@ AC_ARG_ENABLE(g722-codec,
 dnl # Include G722.1 codec
 AC_SUBST(ac_no_g7221_codec)
 AC_ARG_ENABLE(g7221-codec,
-	      AC_HELP_STRING([--disable-g7221-codec],
+	      AS_HELP_STRING([--disable-g7221-codec],
 			     [Exclude G.7221 codec in the build]),
 	      [if test "$enable_g7221_codec" = "no"; then
 		[ac_no_g7221_codec=1]
@@ -875,7 +875,7 @@ AC_ARG_ENABLE(g7221-codec,
 dnl # Include Speex codec
 AC_SUBST(ac_no_speex_codec)
 AC_ARG_ENABLE(speex-codec,
-	      AC_HELP_STRING([--disable-speex-codec],
+	      AS_HELP_STRING([--disable-speex-codec],
 			     [Exclude Speex codecs in the build]),
 	      [if test "$enable_speex_codec" = "no"; then
 		[ac_no_speex_codec=1]
@@ -887,7 +887,7 @@ AC_ARG_ENABLE(speex-codec,
 dnl # Include iLBC codec
 AC_SUBST(ac_no_ilbc_codec)
 AC_ARG_ENABLE(ilbc-codec,
-	      AC_HELP_STRING([--disable-ilbc-codec],
+	      AS_HELP_STRING([--disable-ilbc-codec],
 			     [Exclude iLBC codec in the build]),
 	      [if test "$enable_ilbc_codec" = "no"; then
 		[ac_no_ilbc_codec=1]
@@ -898,7 +898,7 @@ AC_ARG_ENABLE(ilbc-codec,
 
 dnl # Include libsamplerate
 AC_ARG_ENABLE(libsamplerate,
-           AC_HELP_STRING([--enable-libsamplerate],
+           AS_HELP_STRING([--enable-libsamplerate],
                     [Link with libsamplerate when available.]),
            [
            if test "$enable_libsamplerate" = "yes"; then
@@ -912,7 +912,7 @@ AC_ARG_ENABLE(libsamplerate,
 
 AC_SUBST(ac_resample_dll)
 AC_ARG_ENABLE(resample_dll,
-	      AC_HELP_STRING([--enable-resample-dll],
+	      AS_HELP_STRING([--enable-resample-dll],
 			     [Build libresample as shared library]),
 	      [if test "$enable_resample_dll" = "yes"; then
 		[ac_resample_dll=1]
@@ -923,7 +923,7 @@ AC_ARG_ENABLE(resample_dll,
 
 dnl # SDL alt prefix
 AC_ARG_WITH(sdl,
-    AC_HELP_STRING([--with-sdl=DIR],
+    AS_HELP_STRING([--with-sdl=DIR],
 		   [Specify alternate libSDL prefix]),
     [],
     [with_sdl=no]
@@ -936,7 +936,7 @@ fi
 
 dnl # SDL
 AC_ARG_ENABLE(sdl,
-	      AC_HELP_STRING([--disable-sdl],
+	      AS_HELP_STRING([--disable-sdl],
 			     [Disable SDL (default: not disabled)]),
 	      [
 		if test "$enable_sdl" = "no"; then
@@ -968,7 +968,7 @@ AC_ARG_ENABLE(sdl,
 
 
 AC_ARG_WITH(ffmpeg,
-    AC_HELP_STRING([--with-ffmpeg=DIR],
+    AS_HELP_STRING([--with-ffmpeg=DIR],
 		   [Specify alternate FFMPEG prefix]),
     [],
     [with_ffmpeg=no]
@@ -981,7 +981,7 @@ fi
 
 dnl # FFMPEG stuffs
 AC_ARG_ENABLE(ffmpeg,
-	      AC_HELP_STRING([--disable-ffmpeg],
+	      AS_HELP_STRING([--disable-ffmpeg],
 			     [Disable ffmpeg (default: not disabled)]),
 	      [
 	        AC_SUBST(ac_has_ffmpeg,0)
@@ -1106,7 +1106,7 @@ AC_ARG_ENABLE(ffmpeg,
 
 dnl # Video for Linux 2
 AC_ARG_ENABLE(v4l2,
-	      AC_HELP_STRING([--disable-v4l2],
+	      AS_HELP_STRING([--disable-v4l2],
 			     [Disable Video4Linux2 (default: not disabled)]),
 	      [
 		if test "$enable_v4l2" = "no"; then
@@ -1127,7 +1127,7 @@ AC_ARG_ENABLE(v4l2,
 
 dnl # OpenH264 alt prefix
 AC_ARG_WITH(openh264,
-            AC_HELP_STRING([--with-openh264=DIR],
+            AS_HELP_STRING([--with-openh264=DIR],
 		           [Specify alternate OpenH264 prefix]),
             [],
             [with_openh264=no]
@@ -1142,7 +1142,7 @@ dnl # OpenH264
 AC_SUBST(ac_openh264_cflags)
 AC_SUBST(ac_openh264_ldflags)
 AC_ARG_ENABLE(openh264,
-	      AC_HELP_STRING([--disable-openh264],
+	      AS_HELP_STRING([--disable-openh264],
 			     [Disable OpenH264 (default: not disabled)]),
 	      [
 		if test "$enable_openh264" = "no"; then
@@ -1192,7 +1192,7 @@ AC_ARG_ENABLE(openh264,
 
 dnl # libyuv alt prefix
 AC_ARG_WITH(libyuv,
-            AC_HELP_STRING([--with-libyuv=DIR],
+            AS_HELP_STRING([--with-libyuv=DIR],
 		           [Specify alternate libyuv prefix]),
             [],
             [with_libyuv=no]
@@ -1207,7 +1207,7 @@ dnl # Include libyuv
 AC_SUBST(ac_libyuv_cflags)
 AC_SUBST(ac_libyuv_ldflags)
 AC_ARG_ENABLE(libyuv,
-	      AC_HELP_STRING([--disable-libyuv],
+	      AS_HELP_STRING([--disable-libyuv],
 			     [Exclude libyuv in the build]),
 	      [if test "$enable_libyuv" = "no"; then
 		AC_MSG_RESULT([Checking if libyuv is disabled...yes])
@@ -1269,7 +1269,7 @@ AC_ARG_ENABLE(libyuv,
 
 dnl # WebRtc alt prefix
 AC_ARG_WITH(webrtc,
-            AC_HELP_STRING([--with-webrtc=DIR],
+            AS_HELP_STRING([--with-webrtc=DIR],
 		           [Specify alternate WebRtc prefix]),
             [],
             [with_webrtc=no]
@@ -1284,7 +1284,7 @@ dnl # WebRtc
 AC_SUBST(ac_webrtc_cflags)
 AC_SUBST(ac_webrtc_ldflags)
 AC_ARG_ENABLE(webrtc,
-	      AC_HELP_STRING([--disable-webrtc],
+	      AS_HELP_STRING([--disable-webrtc],
 			     [Exclude webrtc in the build]),
 	      [if test "$enable_webrtc" = "no"; then
 		AC_MSG_RESULT([Checking if webrtc is disabled...yes])
@@ -1347,28 +1347,28 @@ dnl ########################################################
 dnl # Intel IPP support
 dnl #
 AC_ARG_ENABLE(ipp,
-    AC_HELP_STRING([--enable-ipp],
+    AS_HELP_STRING([--enable-ipp],
 		   [Enable Intel IPP support. Specify the Intel IPP package and samples location using IPPROOT and IPPSAMPLES env var or with --with-ipp and --with-ipp-samples options]),
     [],
     [enable_ipp=no]
     )
 
 AC_ARG_WITH(ipp,
-    AC_HELP_STRING([--with-ipp=DIR],
+    AS_HELP_STRING([--with-ipp=DIR],
 		   [Specify the Intel IPP location]),
     [],
     [with_ipp=no]
     )
 
 AC_ARG_WITH(ipp-samples,
-    AC_HELP_STRING([--with-ipp-samples=DIR],
+    AS_HELP_STRING([--with-ipp-samples=DIR],
 		   [Specify the Intel IPP samples location]),
     [],
     [with_ipp_samples=no]
     )
 
 AC_ARG_WITH(ipp-arch,
-    AC_HELP_STRING([--with-ipp-arch=ARCH],
+    AS_HELP_STRING([--with-ipp-arch=ARCH],
 		   [Specify the Intel IPP ARCH suffix, e.g. "64" or "em64t. Default is blank for IA32"]),
     [],
     [with_ipp_arch=no]
@@ -1586,7 +1586,7 @@ dnl #
 
 dnl # SSL alt prefix
 AC_ARG_WITH(ssl,
-    AC_HELP_STRING([--with-ssl=DIR],
+    AS_HELP_STRING([--with-ssl=DIR],
 		   [Specify alternate libssl prefix]),
     [],
     [with_ssl=no]
@@ -1600,7 +1600,7 @@ fi
 dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_ARG_ENABLE(ssl,
-	      AC_HELP_STRING([--disable-ssl],
+	      AS_HELP_STRING([--disable-ssl],
 			     [Exclude SSL support the build (default: autodetect)])
 	      ,
 	      [
@@ -1634,7 +1634,7 @@ AC_ARG_ENABLE(ssl,
 
 dnl # Obsolete option --with-opencore-amrnb
 AC_ARG_WITH(opencore-amrnb,
-    AC_HELP_STRING([--with-opencore-amrnb=DIR],
+    AS_HELP_STRING([--with-opencore-amrnb=DIR],
 		   [This option is obsolete and replaced by --with-opencore-amr=DIR]),
     [AC_MSG_ERROR(This option is obsolete and replaced by --with-opencore-amr=DIR)],
     [true;]
@@ -1642,7 +1642,7 @@ AC_ARG_WITH(opencore-amrnb,
 
 dnl # opencore-amr alt prefix
 AC_ARG_WITH(opencore-amr,
-    AC_HELP_STRING([--with-opencore-amr=DIR],
+    AS_HELP_STRING([--with-opencore-amr=DIR],
 		   [Specify alternate libopencore-amr prefix]),
     [],
     [with_opencore_amr=no]
@@ -1655,7 +1655,7 @@ fi
 
 dnl # vo-amrwbenc alt prefix
 AC_ARG_WITH(opencore-amrwbenc,
-    AC_HELP_STRING([--with-opencore-amrwbenc=DIR],
+    AS_HELP_STRING([--with-opencore-amrwbenc=DIR],
 		   [Specify alternate libvo-amrwbenc prefix]),
     [],
     [with_opencore_amrwbenc=no]
@@ -1671,7 +1671,7 @@ dnl # Include opencore-amr support
 AC_SUBST(ac_no_opencore_amrnb)
 AC_SUBST(ac_no_opencore_amrwb)
 AC_ARG_ENABLE(opencore_amr,
-	      AC_HELP_STRING([--disable-opencore-amr],
+	      AS_HELP_STRING([--disable-opencore-amr],
 			     [Exclude OpenCORE AMR support from the build (default: autodetect)])
 	      ,
 	      [
@@ -1726,7 +1726,7 @@ AC_ARG_ENABLE(opencore_amr,
 
 dnl # SILK prefix
 AC_ARG_WITH(silk,
-    AC_HELP_STRING([--with-silk=DIR],
+    AS_HELP_STRING([--with-silk=DIR],
 		   [Specify alternate SILK prefix]),
     [],
     [with_silk=no]
@@ -1740,7 +1740,7 @@ fi
 dnl # Include SILK support
 AC_SUBST(ac_no_silk)
 AC_ARG_ENABLE(silk,
-	      AC_HELP_STRING([--disable-silk],
+	      AS_HELP_STRING([--disable-silk],
 			     [Exclude SILK support from the build (default: autodetect)])
 	      ,
 	      [
@@ -1778,7 +1778,7 @@ fi
 
 dnl # OPUS prefix
 AC_ARG_WITH(opus,
-    AC_HELP_STRING([--with-opus=DIR],
+    AS_HELP_STRING([--with-opus=DIR],
 		   [Specify alternate OPUS prefix]),
     [],
     [with_opus=no]
@@ -1787,7 +1787,7 @@ AC_ARG_WITH(opus,
 dnl # Include OPUS support
 AC_SUBST(ac_no_opus)
 AC_ARG_ENABLE(opus,
-	      AC_HELP_STRING([--disable-opus],
+	      AS_HELP_STRING([--disable-opus],
 			     [Exclude OPUS support from the build (default: autodetect)])
 	      ,
 	      [
@@ -1902,7 +1902,7 @@ esac
 AC_SUBST(CC)
 
 ac_build_mak_vars=`echo $ac_build_mak_vars | sed 's/\\\\n/\n/g'`
-AC_OUTPUT()
+AC_OUTPUT
 
 
 AC_MSG_RESULT([
