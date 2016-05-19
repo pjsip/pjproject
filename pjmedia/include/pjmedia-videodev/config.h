@@ -138,6 +138,15 @@ PJ_BEGIN_DECL
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_SDL
 #   define PJMEDIA_VIDEO_DEV_HAS_SDL		0
+#endif
+
+
+/**
+ * This setting controls whether SDL with OPENGL support should be included.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #   define PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL	0
 #endif
 
