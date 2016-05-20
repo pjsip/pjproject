@@ -252,21 +252,27 @@ static pj_status_t init_proxy(void)
      * to be added in Record-Route.
      */
     if (pj_gethostip(pj_AF_INET(), &pri_addr)==PJ_SUCCESS) {
-	pj_strdup2(global.pool, &global.name[global.name_cnt].host,
-		   pj_inet_ntoa(pri_addr.ipv4.sin_addr));
+	char addr[PJ_INET_ADDRSTRLEN];
+	pj_inet_ntop(pj_AF_INET(), &pri_addr.ipv4.sin_addr, addr,
+		     sizeof(addr));
+	pj_strdup2(global.pool, &global.name[global.name_cnt].host, addr);
 	global.name[global.name_cnt].port = global.port;
 	global.name_cnt++;
     }
 
     /* Get the rest of IP interfaces */
-    if (pj_enum_ip_interface(pj_AF_INET(), &addr_cnt, addr_list) == PJ_SUCCESS) {
+    if (pj_enum_ip_interface(pj_AF_INET(), &addr_cnt, addr_list) == PJ_SUCCESS)
+    {
 	for (i=0; i<addr_cnt; ++i) {
-
+	    char addr[PJ_INET_ADDRSTRLEN];
+	    
 	    if (addr_list[i].ipv4.sin_addr.s_addr == pri_addr.ipv4.sin_addr.s_addr)
 		continue;
 
+	    pj_inet_ntop(pj_AF_INET(), &addr_list[i].ipv4.sin_addr, addr,
+	    		 sizeof(addr));
 	    pj_strdup2(global.pool, &global.name[global.name_cnt].host,
-		       pj_inet_ntoa(addr_list[i].ipv4.sin_addr));
+		       addr);
 	    global.name[global.name_cnt].port = global.port;
 	    global.name_cnt++;
 	}

@@ -431,6 +431,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
     enum {
 	ATTR_LEN = PJ_INET6_ADDRSTRLEN+16
     };
+    char tmp_addr[PJ_INET6_ADDRSTRLEN];
     pjmedia_sdp_attr *attr;
 
     attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
@@ -440,10 +441,10 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
 	attr->value.slen = 
 	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
 			    "%u IN IP4 %s",
-			    pj_ntohs(a->ipv4.sin_port),
-			    pj_inet_ntoa(a->ipv4.sin_addr));
+			    pj_sockaddr_get_port(a),
+			    pj_sockaddr_print(a, tmp_addr, 
+					      sizeof(tmp_addr), 0));
     } else if (a->addr.sa_family == pj_AF_INET6()) {
-	char tmp_addr[PJ_INET6_ADDRSTRLEN];
 	attr->value.slen = 
 	    pj_ansi_snprintf(attr->value.ptr, ATTR_LEN,
 			    "%u IN IP6 %s",

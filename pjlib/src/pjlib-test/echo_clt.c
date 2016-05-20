@@ -57,6 +57,7 @@ static int echo_client_thread(void *arg)
     pj_sock_t sock;
     char send_buf[BUF_SIZE];
     char recv_buf[BUF_SIZE];
+    char addr[PJ_INET_ADDRSTRLEN];
     pj_sockaddr_in addr;
     pj_str_t s;
     pj_status_t rc;
@@ -87,7 +88,8 @@ static int echo_client_thread(void *arg)
     }
 
     PJ_LOG(3,("", "...socket connected to %s:%d", 
-		  pj_inet_ntoa(addr.sin_addr),
+		  pj_inet_ntop2(pj_AF_INET(), &addr.sin_addr,
+		  		addr, sizeof(addr)),
 		  pj_ntohs(addr.sin_port)));
 
     pj_memset(send_buf, 'A', BUF_SIZE);

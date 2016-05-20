@@ -638,6 +638,7 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 
     /* Send the packet to name servers */
     for (i=0; i<server_cnt; ++i) {
+        char addr[PJ_INET6_ADDRSTRLEN];
 	pj_ssize_t sent  = (pj_ssize_t) pkt_size;
 	struct nameserver *ns = &resolver->ns[servers[i]];
 
@@ -651,7 +652,8 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 		  "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
 		  (q->transmit_cnt==0? "Transmitting":"Re-transmitting"),
 		  (int)pkt_size, servers[i],
-		  pj_inet_ntoa(ns->addr.sin_addr), 
+		  pj_inet_ntop2(pj_AF_INET(), &ns->addr.sin_addr, addr,
+		 		sizeof(addr)),
 		  (int)pj_ntohs(ns->addr.sin_port),
 		  pj_dns_get_type_name(q->key.qtype), 
 		  q->key.name));
@@ -1034,6 +1036,7 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
 {
     struct nameserver *ns = &resolver->ns[index];
     enum ns_state old_state = ns->state;
+    char addr[PJ_INET_ADDRSTRLEN];
 
     ns->state = state;
     ns->state_expiry = *now;
@@ -1047,7 +1050,8 @@ static void set_nameserver_state(pj_dns_resolver *resolver,
 	ns->state_expiry.sec += resolver->settings.bad_ns_ttl;
 
     PJ_LOG(5, (resolver->name.ptr, "Nameserver %s:%d state changed %s --> %s",
-	       pj_inet_ntoa(ns->addr.sin_addr),
+    	       pj_inet_ntop2(pj_AF_INET(), &ns->addr.sin_addr, addr,
+		 	     sizeof(addr)),
 	       (int)pj_ntohs(ns->addr.sin_port),
 	       state_names[old_state], state_names[state]));
 }
@@ -1390,6 +1394,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_pool_t *pool = NULL;
     pj_dns_parsed_packet *dns_pkt;
     pj_dns_async_query *q;
+    char addr[PJ_INET_ADDRSTRLEN];
     pj_status_t status;
     PJ_USE_EXCEPTION;
 
@@ -1406,7 +1411,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	PJ_LOG(4,(resolver->name.ptr, 
 		  "DNS resolver read error from %s:%d: %s", 
-		  pj_inet_ntoa(resolver->udp_src_addr.sin_addr),
+		  pj_inet_ntop2(pj_AF_INET(), &resolver->udp_src_addr.sin_addr,
+		  		addr, sizeof(addr)), 
 		  pj_ntohs(resolver->udp_src_addr.sin_port),
 		  errmsg));
 
@@ -1416,7 +1422,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     PJ_LOG(5,(resolver->name.ptr, 
 	      "Received %d bytes DNS response from %s:%d",
 	      (int)bytes_read, 
-	      pj_inet_ntoa(resolver->udp_src_addr.sin_addr),
+	      pj_inet_ntop2(pj_AF_INET(), &resolver->udp_src_addr.sin_addr,
+		  	    addr, sizeof(addr)), 
 	      pj_ntohs(resolver->udp_src_addr.sin_port)));
 
 
@@ -1450,7 +1457,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	PJ_LOG(3,(resolver->name.ptr, 
 		  "Error parsing DNS response from %s:%d: %s", 
-		  pj_inet_ntoa(resolver->udp_src_addr.sin_addr), 
+		  pj_inet_ntop2(pj_AF_INET(), &resolver->udp_src_addr.sin_addr,
+		  		addr, sizeof(addr)),
 		  pj_ntohs(resolver->udp_src_addr.sin_port), 
 		  errmsg));
 	goto read_next_packet;
@@ -1463,7 +1471,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     if (!q) {
 	PJ_LOG(5,(resolver->name.ptr, 
 		  "DNS response from %s:%d id=%d discarded",
-		  pj_inet_ntoa(resolver->udp_src_addr.sin_addr), 
+		  pj_inet_ntop2(pj_AF_INET(), &resolver->udp_src_addr.sin_addr,
+		  		addr, sizeof(addr)), 
 		  pj_ntohs(resolver->udp_src_addr.sin_port),
 		  (unsigned)dns_pkt->hdr.id));
 	goto read_next_packet;
@@ -1633,11 +1642,13 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 
     PJ_LOG(3,(resolver->name.ptr, "  Name servers:"));
     for (i=0; i<resolver->ns_count; ++i) {
+	char addr[PJ_INET_ADDRSTRLEN];
 	struct nameserver *ns = &resolver->ns[i];
 
 	PJ_LOG(3,(resolver->name.ptr,
 		  "   NS %d: %s:%d (state=%s until %ds, rtt=%d ms)",
-		  i, pj_inet_ntoa(ns->addr.sin_addr),
+		  i, pj_inet_ntop2(pj_AF_INET(), &ns->addr.sin_addr, addr,
+		 		   sizeof(addr)),
 		  pj_ntohs(ns->addr.sin_port),
 		  state_names[ns->state],
 		  ns->state_expiry.sec - now.sec,

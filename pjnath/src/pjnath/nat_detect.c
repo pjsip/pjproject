@@ -214,6 +214,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     pj_stun_session_cb sess_cb;
     pj_ioqueue_callback ioqueue_cb;
     int addr_len;
+    char addr[PJ_INET_ADDRSTRLEN];
     pj_status_t status;
 
     PJ_ASSERT_RETURN(server && stun_cfg, PJ_EINVAL);
@@ -286,11 +287,13 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 	goto on_error;
 
     PJ_LOG(5,(sess->pool->obj_name, "Local address is %s:%d",
-	      pj_inet_ntoa(sess->local_addr.sin_addr), 
+	      pj_inet_ntop2(pj_AF_INET(), &sess->local_addr.sin_addr,
+	      		    addr, sizeof(addr)), 
 	      pj_ntohs(sess->local_addr.sin_port)));
 
     PJ_LOG(5,(sess->pool->obj_name, "Server set to %s:%d",
-	      pj_inet_ntoa(server->sin_addr), 
+	      pj_inet_ntop2(pj_AF_INET(), &server->sin_addr, addr,
+	      		    sizeof(addr)), 
 	      pj_ntohs(server->sin_port)));
 
     /*
@@ -814,6 +817,7 @@ static pj_status_t send_test(nat_detect_session *sess,
 			     pj_uint32_t change_flag)
 {
     pj_uint32_t magic, tsx_id[3];
+    char addr[PJ_INET_ADDRSTRLEN];
     pj_status_t status;
 
     sess->result[test_id].executed = PJ_TRUE;
@@ -852,7 +856,8 @@ static pj_status_t send_test(nat_detect_session *sess,
     PJ_LOG(5,(sess->pool->obj_name, 
               "Performing %s to %s:%d", 
 	      test_names[test_id],
-	      pj_inet_ntoa(sess->cur_server->sin_addr),
+	      pj_inet_ntop2(pj_AF_INET(), &sess->cur_server->sin_addr,
+	      		    addr, sizeof(addr)),
 	      pj_ntohs(sess->cur_server->sin_port)));
 
     /* Send the request */

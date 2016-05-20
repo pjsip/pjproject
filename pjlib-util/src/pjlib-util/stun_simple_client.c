@@ -33,7 +33,6 @@ static int stun_timer[] = {500, 500, 500, 500 };
 #define STUN_MAGIC 0x2112A442
 
 #define THIS_FILE	"stun_client.c"
-#define LOG_ADDR(addr)	pj_inet_ntoa(addr.sin_addr), pj_ntohs(addr.sin_port)
 
 #define TRACE_(x)	PJ_LOG(6,x)
 

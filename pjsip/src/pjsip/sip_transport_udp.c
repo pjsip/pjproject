@@ -160,17 +160,9 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    rdata->pkt_info.len = bytes_read;
 	    rdata->pkt_info.zero = 0;
 	    pj_gettimeofday(&rdata->pkt_info.timestamp);
-	    if (src_addr->addr.sa_family == pj_AF_INET()) {
-		pj_ansi_strcpy(rdata->pkt_info.src_name,
-			       pj_inet_ntoa(src_addr->ipv4.sin_addr));
-		rdata->pkt_info.src_port = pj_ntohs(src_addr->ipv4.sin_port);
-	    } else {
-		pj_inet_ntop(pj_AF_INET6(), 
-			     pj_sockaddr_get_addr(&rdata->pkt_info.src_addr),
-			     rdata->pkt_info.src_name,
-			     sizeof(rdata->pkt_info.src_name));
-		rdata->pkt_info.src_port = pj_ntohs(src_addr->ipv6.sin6_port);
-	    }
+	    pj_sockaddr_print(src_addr, rdata->pkt_info.src_name,
+			      sizeof(rdata->pkt_info.src_name), 0);
+	    rdata->pkt_info.src_port = pj_sockaddr_get_port(src_addr);
 
 	    size_eaten = 
 		pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
@@ -517,12 +509,12 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	    if (status != PJ_SUCCESS)
 		return status;
 
-	    pj_strcpy2(&bound_name->host, pj_inet_ntoa(hostip.ipv4.sin_addr));
+	    status = pj_inet_ntop(pj_AF_INET(), &hostip.ipv4.sin_addr,
+	    		 	  hostbuf, hostbufsz);
 	} else {
 	    /* Otherwise use bound address. */
-	    pj_strcpy2(&bound_name->host, 
-		       pj_inet_ntoa(tmp_addr.ipv4.sin_addr));
-	    status = PJ_SUCCESS;
+	    status = pj_inet_ntop(pj_AF_INET(), &tmp_addr.ipv4.sin_addr,
+	    		 	  hostbuf, hostbufsz);
 	}
 
     } else {
@@ -542,9 +534,9 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	status = pj_inet_ntop(tmp_addr.addr.sa_family, 
 			      pj_sockaddr_get_addr(&tmp_addr),
 			      hostbuf, hostbufsz);
-	if (status == PJ_SUCCESS) {
-	    bound_name->host.slen = pj_ansi_strlen(hostbuf);
-	}
+    }
+    if (status == PJ_SUCCESS) {
+	bound_name->host.slen = pj_ansi_strlen(hostbuf);
     }
 
 

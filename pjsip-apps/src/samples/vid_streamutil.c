@@ -347,6 +347,7 @@ int main(int argc, char *argv[])
     pj_pool_t *pool;
     pjmedia_vid_stream *stream = NULL;
     pjmedia_port *enc_port, *dec_port;
+    char addr[PJ_INET_ADDRSTRLEN];
     pj_status_t status; 
 
     pjmedia_vid_port *capture=NULL, *renderer=NULL;
@@ -859,13 +860,15 @@ int main(int argc, char *argv[])
 	       local_port);
     else if (dir == PJMEDIA_DIR_ENCODING)
 	printf("Stream is active, dir is send-only, sending to %s:%d\n",
-	       pj_inet_ntoa(remote_addr.sin_addr),
+               pj_inet_ntop2(pj_AF_INET(), &remote_addr.sin_addr, addr,
+        		     sizeof(addr)),
 	       pj_ntohs(remote_addr.sin_port));
     else
 	printf("Stream is active, send/recv, local port is %d, "
 	       "sending to %s:%d\n",
 	       local_port,
-	       pj_inet_ntoa(remote_addr.sin_addr),
+	       pj_inet_ntop2(pj_AF_INET(), &remote_addr.sin_addr, addr,
+        		     sizeof(addr)),
 	       pj_ntohs(remote_addr.sin_port));
 
     if (dir & PJMEDIA_DIR_ENCODING)

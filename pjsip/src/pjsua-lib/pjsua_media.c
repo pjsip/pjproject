@@ -359,8 +359,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    pj_sockaddr_in resolved_addr[2];
 	    pjstun_setting stun_opt;
 
-	    pj_ansi_strcpy(ip_addr,
-			   pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+	    pj_sockaddr_print(&pjsua_var.stun_srv, ip_addr,sizeof(ip_addr),0);
 	    stun_srv = pj_str(ip_addr);
 
 	    pj_bzero(&stun_opt, sizeof(stun_opt));
@@ -426,8 +425,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 	    	if (status == PJ_SUCCESS) {
 		    if (pjsua_var.stun_srv.addr.sa_family != 0) {
-			pj_ansi_strcpy(ip_addr,
-			    pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+    			pj_sockaddr_print(&pjsua_var.stun_srv,
+    		     		     	  ip_addr, sizeof(ip_addr), 0);
 			stun_srv = pj_str(ip_addr);
 	    	    } else {
 		    	stun_srv.slen = 0;

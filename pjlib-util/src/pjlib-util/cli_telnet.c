@@ -1928,7 +1928,8 @@ PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe,
     if (status != PJ_SUCCESS)
 	return status;
 
-    pj_strcpy2(&info->ip_address, pj_inet_ntoa(hostip.ipv4.sin_addr));
+    pj_sockaddr_print(&hostip, info->buf_, sizeof(info->buf_), 0);
+    pj_strset2(&info->ip_address, info->buf_);
 
     info->port = tfe->cfg.port;
 

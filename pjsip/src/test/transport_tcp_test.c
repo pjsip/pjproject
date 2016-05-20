@@ -37,6 +37,7 @@ int transport_tcp_test(void)
     pj_sockaddr_in rem_addr;
     pj_status_t status;
     char url[PJSIP_MAX_URL_SIZE];
+    char addr[PJ_INET_ADDRSTRLEN];
     int rtt[SEND_RECV_LOOP], min_rtt;
     int i, pkt_lost;
 
@@ -57,7 +58,8 @@ int transport_tcp_test(void)
     }
 
     pj_ansi_sprintf(url, "sip:alice@%s:%d;transport=tcp",
-		    pj_inet_ntoa(rem_addr.sin_addr),
+		    pj_inet_ntop2(pj_AF_INET(), &rem_addr.sin_addr, addr,
+		    		  sizeof(addr)),
 		    pj_ntohs(rem_addr.sin_port));
 
 

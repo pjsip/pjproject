@@ -2056,7 +2056,8 @@ static pj_status_t create_sip_udp_sock(int af,
     }
 
     if (pjsua_var.stun_srv.addr.sa_family != 0) {
-	pj_ansi_strcpy(stun_ip_addr,pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+    	pj_sockaddr_print(&pjsua_var.stun_srv,
+    		     	  stun_ip_addr, sizeof(stun_ip_addr), 0);
 	stun_srv = pj_str(stun_ip_addr);
     } else {
 	stun_srv.slen = 0;

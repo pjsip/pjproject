@@ -37,8 +37,9 @@ int generic_transport_test(pjsip_transport *tp)
     {
 	struct pj_in_addr addr;
 
-	/* Note: inet_aton() returns non-zero if addr is valid! */
-	if (pj_inet_aton(&tp->local_name.host, &addr) != 0) {
+	if (pj_inet_pton(pj_AF_INET(), &tp->local_name.host,
+			 &addr) == PJ_SUCCESS)
+	{
 	    if (addr.s_addr==PJ_INADDR_ANY || addr.s_addr==PJ_INADDR_NONE) {
 		PJ_LOG(3,(THIS_FILE, "   Error: invalid address name"));
 		return -420;

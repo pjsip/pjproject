@@ -764,6 +764,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_base_sdp( pjmedia_endpt *endpt,
 						   const pj_sockaddr *origin,
 						   pjmedia_sdp_session **p_sdp)
 {
+    char tmp_addr[PJ_INET6_ADDRSTRLEN];
     pj_time_val tv;
     pjmedia_sdp_session *sdp;
 
@@ -779,19 +780,15 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_base_sdp( pjmedia_endpt *endpt,
 
     if (origin->addr.sa_family == pj_AF_INET()) {
  	sdp->origin.addr_type = STR_IP4;
- 	pj_strdup2(pool, &sdp->origin.addr,
- 		   pj_inet_ntoa(origin->ipv4.sin_addr));
     } else if (origin->addr.sa_family == pj_AF_INET6()) {
- 	char tmp_addr[PJ_INET6_ADDRSTRLEN];
-
  	sdp->origin.addr_type = STR_IP6;
- 	pj_strdup2(pool, &sdp->origin.addr,
- 		   pj_sockaddr_print(origin, tmp_addr, sizeof(tmp_addr), 0));
-
     } else {
  	pj_assert(!"Invalid address family");
  	return PJ_EAFNOTSUP;
     }
+
+    pj_strdup2(pool, &sdp->origin.addr,
+ 	       pj_sockaddr_print(origin, tmp_addr, sizeof(tmp_addr), 0));
 
     if (sess_name)
 	pj_strdup(pool, &sdp->name, sess_name);

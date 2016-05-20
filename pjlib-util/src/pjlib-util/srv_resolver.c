@@ -368,7 +368,9 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	    continue;
 	}
 
-	if (pj_inet_aton(&query_job->srv[i].target_name, &addr) != 0) {
+	if (pj_inet_pton(pj_AF_INET(), &query_job->srv[i].target_name,
+			 &addr) == PJ_SUCCESS)
+	{
 	    query_job->srv[i].addr[query_job->srv[i].addr_cnt++] = addr;
 	    ++query_job->host_resolved;
 	}
@@ -385,12 +387,13 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	      (query_job->srv_cnt ? ':' : ' ')));
 
     for (i=0; i<query_job->srv_cnt; ++i) {
-	const char *addr;
+	char addr[PJ_INET_ADDRSTRLEN];
 
-	if (query_job->srv[i].addr_cnt != 0)
-	    addr = pj_inet_ntoa(query_job->srv[i].addr[0]);
-	else
-	    addr = "-";
+	if (query_job->srv[i].addr_cnt != 0) {
+	    pj_inet_ntop(pj_AF_INET(), &query_job->srv[i].addr[0],
+			 addr, sizeof(addr));
+	} else
+	    pj_ansi_strcpy(addr, "-");
 
 	PJ_LOG(5,(query_job->objname, 
 		  " %d: SRV %d %d %d %.*s (%s)",
@@ -547,6 +550,7 @@ static void dns_callback(void *user_data,
 
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
+	    char addr[PJ_INET_ADDRSTRLEN];
 	    pj_dns_a_record rec;
 
 	    /* Parse response */
@@ -573,7 +577,8 @@ static void dns_callback(void *user_data,
 			  "DNS A for %.*s: %s",
 			  (int)srv->target_name.slen, 
 			  srv->target_name.ptr,
-			  pj_inet_ntoa(rec.addr[0])));
+			  pj_inet_ntop2(pj_AF_INET(), &rec.addr[0],
+			  		addr, sizeof(addr))));
 	    }
 
 	    /* Check for multiple IP addresses */
@@ -585,7 +590,8 @@ static void dns_callback(void *user_data,
 			  "Additional DNS A for %.*s: %s",
 			  (int)srv->target_name.slen, 
 			  srv->target_name.ptr,
-			  pj_inet_ntoa(rec.addr[i])));
+			  pj_inet_ntop2(pj_AF_INET(), &rec.addr[i],
+			  		addr, sizeof(addr))));
 	    }
 
 	} else if (status != PJ_SUCCESS) {

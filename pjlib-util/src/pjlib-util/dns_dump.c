@@ -90,6 +90,7 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
     const pj_str_t root_name = { "<Root>", 6 };
     const pj_str_t *name = &rr->name;
     char ttl_words[32];
+    char addr[PJ_INET6_ADDRSTRLEN];
 
     if (name->slen == 0)
 	name = &root_name;
@@ -117,9 +118,9 @@ static void dump_answer(unsigned index, const pj_dns_parsed_rr *rr)
 		  rr->rdata.cname.name.ptr));
     } else if (rr->type == PJ_DNS_TYPE_A) {
 	PJ_LOG(3,(THIS_FILE, "    IP address: %s",
-		  pj_inet_ntoa(rr->rdata.a.ip_addr)));
+		  pj_inet_ntop2(pj_AF_INET(), &rr->rdata.a.ip_addr,
+		  		addr, sizeof(addr))));
     } else if (rr->type == PJ_DNS_TYPE_AAAA) {
-	char addr[PJ_INET6_ADDRSTRLEN];
 	PJ_LOG(3,(THIS_FILE, "    IPv6 address: %s",
 		  pj_inet_ntop2(pj_AF_INET6(), &rr->rdata.aaaa.ip_addr,
 			        addr, sizeof(addr))));
