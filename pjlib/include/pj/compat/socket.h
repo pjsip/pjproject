@@ -64,7 +64,7 @@
 #	define s_addr  S_un.S_addr
 #   endif
 
-#   if !defined(IPPROTO_IPV6)
+#   if !defined(IPPROTO_IPV6) && (_WIN32_WINNT == 0x0500)
 	/* Need to download and install IPv6Kit for this platform.
 	 * Please see the comments above about Visual Studio 6.
 	 */
