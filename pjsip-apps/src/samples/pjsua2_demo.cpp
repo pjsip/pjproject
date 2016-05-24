@@ -291,6 +291,35 @@ static void mainProg() throw(Error)
     }
 }
 
+
+static void mainProg4(Endpoint &ep) throw(Error)
+{
+    // Init library
+    EpConfig ep_cfg;
+    ep.libInit( ep_cfg );
+
+    // Create transport
+    TransportConfig tcfg;
+    tcfg.port = 5060;
+    ep.transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
+    ep.transportCreate(PJSIP_TRANSPORT_TCP, tcfg);
+
+    // Add account
+    AccountConfig acc_cfg;
+    acc_cfg.idUri = "sip:localhost";
+    std::auto_ptr<MyAccount> acc(new MyAccount);
+    acc->create(acc_cfg);
+
+    // Start library
+    ep.libStart();
+    std::cout << "*** PJSUA2 STARTED ***" << std::endl;
+
+    // Just wait for ENTER key
+    std::cout << "Press ENTER to quit..." << std::endl;
+    std::cin.get();
+}
+
+
 int main()
 {
     int ret = 0;
@@ -299,7 +328,7 @@ int main()
     try {
 	ep.libCreate();
 
-	mainProg3(ep);
+	mainProg4(ep);
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;
