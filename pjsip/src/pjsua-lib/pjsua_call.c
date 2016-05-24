@@ -953,6 +953,10 @@ static void process_pending_call_answer(pjsua_call *call)
 {
     struct call_answer *answer, *next;
 
+    /* No initial answer yet, this function should be called again later */
+    if (!call->inv->last_answer)
+	return;
+
     answer = call->async_call.call_var.inc_call.answers.next;
     while (answer != &call->async_call.call_var.inc_call.answers) {
         next = answer->next;
@@ -1630,6 +1634,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	 */
 	if (pjsua_var.ua_cfg.cb.on_incoming_call) {
 	    pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
+
+	    /* onIncomingCall() may be simulated by onCreateMediaTransport()
+	     * when media init is done synchrounously (see #1916). And if app
+	     * happens to answer the call from the callback, the answer should
+	     * have been delayed (see #1923), so let's process the answer now.
+	     */
+	    if (call->med_ch_cb == NULL)
+		process_pending_call_answer(call);
 	} else {
 	    pjsua_call_hangup(call_id, PJSIP_SC_TEMPORARILY_UNAVAILABLE,
 			      NULL, NULL);
@@ -2218,8 +2230,10 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 
     /* If media transport creation is not yet completed, we will answer
      * the call in the media transport creation callback instead.
+     * Or if initial answer is not sent yet, we will answer the call after
+     * initial answer is sent (see #1923).
      */
-    if (call->med_ch_cb) {
+    if (call->med_ch_cb || !call->inv->last_answer) {
         struct call_answer *answer;
 
         PJ_LOG(4,(THIS_FILE, "Pending answering call %d upon completion "
