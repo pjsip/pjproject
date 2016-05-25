@@ -82,6 +82,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 ||
 		     af==PJ_AF_UNSPEC, PJ_EINVAL);
 
+#if PJ_WIN32_WINCE
+
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
     if ((af==PJ_AF_INET || af==PJ_AF_UNSPEC) &&
@@ -108,6 +110,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	return PJ_SUCCESS;
     }
+
+#else /* PJ_WIN32_WINCE */
+    PJ_UNUSED_ARG(has_addr);
+#endif
 
     /* Copy node name to null terminated string. */
     if (nodename->slen >= PJ_MAX_HOSTNAME)
@@ -213,6 +219,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     PJ_ASSERT_RETURN(count && *count, PJ_EINVAL);
 
+#if PJ_WIN32_WINCE
+
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
     if ((af==PJ_AF_INET || af==PJ_AF_UNSPEC) &&
@@ -240,6 +248,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	return PJ_SUCCESS;
     }
+
+#else /* PJ_WIN32_WINCE */
+    PJ_UNUSED_ARG(has_addr);
+#endif
 
     if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
 	pj_hostent he;
