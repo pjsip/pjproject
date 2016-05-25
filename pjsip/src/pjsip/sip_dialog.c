@@ -787,11 +787,13 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg,
     /* MUST not have pending transactions. */
     PJ_ASSERT_RETURN(dlg->tsx_count==0, PJ_EINVALIDOP);
 
-    /* Unregister from user agent. */
-    status = pjsip_ua_unregister_dlg(dlg->ua, dlg);
-    if (status != PJ_SUCCESS) {
-	pj_assert(!"Unexpected failed unregistration!");
-	return status;
+    /* Unregister from user agent, if it has been registered (see #1924) */
+    if (dlg->dlg_set) {
+	status = pjsip_ua_unregister_dlg(dlg->ua, dlg);
+	if (status != PJ_SUCCESS) {
+	    pj_assert(!"Unexpected failed unregistration!");
+	    return status;
+	}
     }
 
     /* Log */
