@@ -122,12 +122,20 @@ PJ_BEGIN_DECL
 
 
 /**
- * This setting controls whether OpenGL support should be included.
+ * This setting controls whether OpenGL support should be included. Note that as
+ * currently only OpenGLES is supported, when PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES is
+ * unset, PJMEDIA_VIDEO_DEV_HAS_OPENGL will automatically also be unset.
  *
  * Default: 0 (or detected by configure)
  */
 #ifndef PJMEDIA_VIDEO_DEV_HAS_OPENGL
 #   define PJMEDIA_VIDEO_DEV_HAS_OPENGL		0
+#else
+#  if defined(PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES) && \
+	      PJMEDIA_VIDEO_DEV_HAS_OPENGL_ES == 0
+#    undef  PJMEDIA_VIDEO_DEV_HAS_OPENGL
+#    define PJMEDIA_VIDEO_DEV_HAS_OPENGL	0
+#  endif
 #endif
 
 
