@@ -105,8 +105,9 @@ enum pj_log_decoration
  * @hideinitializer
  */
 #define PJ_LOG(level,arg)	do { \
-				    if (level <= pj_log_get_level()) \
+				    if (level <= pj_log_get_level()) { \
 					pj_log_wrapper_##level(arg); \
+				    } \
 				} while (0)
 
 /**

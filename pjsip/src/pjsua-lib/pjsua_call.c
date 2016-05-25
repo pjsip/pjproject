@@ -4515,7 +4515,7 @@ static void on_call_transferred( pjsip_inv_session *inv,
 	pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &str_refer_sub, NULL);
 
     if (refer_sub) {
-	if (!pj_strnicmp2(&refer_sub->hvalue, "true", 4)==0)
+	if (pj_strnicmp2(&refer_sub->hvalue, "true", 4)!=0)
 	    no_refer_sub = PJ_TRUE;
     }
 
