@@ -23,10 +23,11 @@ MY_JNI_DIR	:= jni
 
 # Android build settings
 LOCAL_MODULE    := libpjsua
-LOCAL_CFLAGS    := -Werror $(APP_CFLAGS) -frtti
+LOCAL_CFLAGS    := -Werror $(APP_CFLAGS)
 LOCAL_LDFLAGS   := $(APP_LDFLAGS)
 LOCAL_LDLIBS    := $(MY_MODULES) $(APP_LDLIBS)
 LOCAL_SRC_FILES := $(MY_JNI_WRAP) pjsua_app_callback.cpp
+LOCAL_CPP_FEATURES += exceptions rtti
 
 # Copy Java Camera helper components from pjmedia/src/pjmedia-videodev/android
 src/org/pjsip/PjCamera.java:
