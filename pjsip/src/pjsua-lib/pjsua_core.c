@@ -2448,7 +2448,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
     PJSUA_LOCK();
 
-    if ((t->type & PJSIP_TRANSPORT_UDP) == PJSIP_TRANSPORT_UDP) {
+    if ((t->type & ~PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_UDP) {
 
 	pjsip_transport *tp = t->data.tp;
 
@@ -2469,8 +2469,8 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
 	status = PJ_SUCCESS;
 
-    } else if ((t->type & PJSIP_TRANSPORT_TCP) == PJSIP_TRANSPORT_TCP ||
-	       (t->type & PJSIP_TRANSPORT_TLS) == PJSIP_TRANSPORT_TLS)
+    } else if ((t->type & ~PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_TCP ||
+	       (t->type & ~PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_TLS)
     {
 
 	pjsip_tpfactory *factory = t->data.factory;

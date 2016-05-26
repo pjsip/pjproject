@@ -2011,8 +2011,8 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	 */
 	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
 	    acc->cfg.ka_interval == 0 ||
-	    (param->rdata->tp_info.transport->key.type & PJSIP_TRANSPORT_UDP)!=
-	     PJSIP_TRANSPORT_UDP)
+	    (param->rdata->tp_info.transport->key.type &  
+	     ~PJSIP_TRANSPORT_IPV6)!= PJSIP_TRANSPORT_UDP)
 	{
 	    /* Keep alive is not necessary */
 	    return;
