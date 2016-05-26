@@ -153,7 +153,13 @@ PJ_INLINE(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
  *
  * @return		Number of devices.
  */
-PJ_DECL(int) pjmedia_snd_get_dev_count(void);
+PJ_INLINE(int) pjmedia_snd_get_dev_count(void)
+{
+    /* This function is inlined to avoid pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+    return (int)pjmedia_aud_dev_count();
+}
 
 
 /**
