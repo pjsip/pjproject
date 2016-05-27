@@ -172,8 +172,9 @@ struct pjsua_call
                 pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
                 pj_bool_t        hangup;  /**< Call is hangup?              */
             } out_call;
-            struct {
+            struct {		
                 call_answer      answers;/**< A list of call answers.       */
+		pj_bool_t	 hangup;/**< Call is hangup?		    */
 		pjsip_dialog	*replaced_dlg; /**< Replaced dialog.	    */
             } inc_call;
         } call_var;

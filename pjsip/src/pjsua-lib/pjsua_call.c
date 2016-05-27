@@ -1637,11 +1637,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	    /* onIncomingCall() may be simulated by onCreateMediaTransport()
 	     * when media init is done synchrounously (see #1916). And if app
-	     * happens to answer the call from the callback, the answer should
-	     * have been delayed (see #1923), so let's process the answer now.
+	     * happens to answer/hangup the call from the callback, the 
+	     * answer/hangup should have been delayed (see #1923), 
+	     * so let's process the answer/hangup now.
 	     */
-	    if (call->med_ch_cb == NULL)
+	    if (call->async_call.call_var.inc_call.hangup) {
+		pjsua_call_hangup(call_id, call->last_code, &call->last_text,
+				  NULL);
+	    } else if (call->med_ch_cb == NULL) {
 		process_pending_call_answer(call);
+	    }
 	} else {
 	    pjsua_call_hangup(call_id, PJSIP_SC_TEMPORARILY_UNAVAILABLE,
 			      NULL, NULL);
@@ -2336,10 +2341,17 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     /* If media transport creation is not yet completed, we will hangup
      * the call in the media transport creation callback instead.
      */
-    if (call->med_ch_cb && !call->inv) {
+    if ((call->med_ch_cb && !call->inv) ||
+	((call->inv != NULL) && (call->inv->state == PJSIP_INV_STATE_NULL)))
+    {
         PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
                              "of media transport", call_id));
-        call->async_call.call_var.out_call.hangup = PJ_TRUE;
+
+	if (call->inv->role == PJSIP_ROLE_UAS)
+	    call->async_call.call_var.inc_call.hangup = PJ_TRUE;
+	else
+	    call->async_call.call_var.out_call.hangup = PJ_TRUE;
+
         if (code == 0)
             call->last_code = PJSIP_SC_REQUEST_TERMINATED;
         else
