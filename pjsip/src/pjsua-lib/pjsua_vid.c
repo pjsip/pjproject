@@ -1822,6 +1822,7 @@ on_error:
 	pjmedia_transport_close(call_med->tp);
 	call_med->tp = call_med->tp_orig = NULL;
     }
+    call->med_prov_cnt = 0;
 
     return status;
 }
