@@ -302,6 +302,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->call_hold_type = PJSUA_CALL_HOLD_TYPE_DEFAULT;
     cfg->register_on_acc_add = PJ_TRUE;
     cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
+
+    cfg->media_stun_use = PJSUA_STUN_RETRY_ON_FAILURE;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
@@ -1049,7 +1051,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     }
 
     /* Start resolving STUN server */
-    status = resolve_stun_server(PJ_FALSE);
+    status = resolve_stun_server(PJ_FALSE, PJ_FALSE);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	goto on_error;
@@ -1156,13 +1158,40 @@ static void stun_resolve_add_ref(pjsua_stun_resolve *sess)
     ++sess->ref_cnt;
 }
 
-static void destroy_stun_resolve(pjsua_stun_resolve *sess)
+
+static void destroy_stun_resolve_cb(pj_timer_heap_t *t, pj_timer_entry *e)
 {
-    sess->destroy_flag = PJ_TRUE;
-    if (sess->ref_cnt > 0)
-	return;
+    pjsua_stun_resolve *sess = (pjsua_stun_resolve*)e->user_data;
+    PJ_UNUSED_ARG(t);
 
     PJSUA_LOCK();
+    pj_list_erase(sess);
+    PJSUA_UNLOCK();
+
+    pj_assert(sess->stun_sock==NULL);
+    pj_pool_release(sess->pool);
+}
+
+
+static void destroy_stun_resolve(pjsua_stun_resolve *sess)
+{
+    pj_time_val timeout = {0, 0};
+
+    sess->destroy_flag = PJ_TRUE;
+
+    /* If the STUN resolution session is blocking, only the waiting thread
+     * is allowed to destroy the session, otherwise it may cause deadlock.
+     */
+    if (sess->blocking) {
+	if (sess->waiter != pj_thread_this())
+	    return;
+
+	/* Before destroying, make sure ref count is zero. */
+	while (sess->ref_cnt > 0)
+	    pj_thread_sleep(10);
+
+    } else if (sess->ref_cnt > 0)
+	return;
 
     if (sess->stun_sock) {
         pj_stun_sock_destroy(sess->stun_sock);
@@ -1175,12 +1204,14 @@ static void destroy_stun_resolve(pjsua_stun_resolve *sess)
         pjsua_var.stun_status = PJNATH_ESTUNDESTROYED;
     }
     
-    pj_list_erase(sess);
-
-    PJSUA_UNLOCK();
-
-    pj_assert(sess->stun_sock==NULL);
-    pj_pool_release(sess->pool);
+    /* Schedule session clean up, it needs PJSUA lock and locking it here
+     * may cause deadlock as this function may be called by STUN socket
+     * while holding STUN socket lock, while application may wait for STUN
+     * resolution while holding PJSUA lock.
+     */
+    pj_timer_entry_init(&sess->timer, 0, (void*)sess,
+			&destroy_stun_resolve_cb);
+    pjsua_schedule_timer(&sess->timer, &timeout);
 }
 
 static void stun_resolve_dec_ref(pjsua_stun_resolve *sess)
@@ -1223,9 +1254,7 @@ static void stun_resolve_complete(pjsua_stun_resolve *sess)
 	PJ_LOG(1,(THIS_FILE, "STUN resolution failed: %s", errmsg));
     }
 
-    stun_resolve_add_ref(sess);
     sess->cb(&result);
-    stun_resolve_dec_ref(sess);
 
 on_return:
     if (!sess->blocking) {
@@ -1257,11 +1286,15 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 	pj_stun_sock_destroy(stun_sock);
 	sess->stun_sock = NULL;
 
+	stun_resolve_add_ref(sess);
+
 	++sess->idx;
 	if (sess->idx >= sess->count)
             sess->status = status;
 
 	resolve_stun_entry(sess);
+
+	stun_resolve_dec_ref(sess);
 
 	return PJ_FALSE;
 
@@ -1271,11 +1304,15 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 	pj_stun_sock_get_info(stun_sock, &ssi);
 	pj_memcpy(&sess->addr, &ssi.srv_addr, sizeof(sess->addr));
 
+	stun_resolve_add_ref(sess);
+
 	sess->status = PJ_SUCCESS;
 	pj_stun_sock_destroy(stun_sock);
 	sess->stun_sock = NULL;
 
 	stun_resolve_complete(sess);
+
+	stun_resolve_dec_ref(sess);
 
 	return PJ_FALSE;
 
@@ -1291,8 +1328,6 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 static void resolve_stun_entry(pjsua_stun_resolve *sess)
 {
     pj_status_t status = PJ_EUNKNOWN;
-
-    stun_resolve_add_ref(sess);
 
     /* Loop while we have entry to try */
     for (; sess->idx < sess->count; ++sess->idx) {
@@ -1360,19 +1395,18 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	/* Done for now, testing will resume/complete asynchronously in
 	 * stun_sock_cb()
 	 */
-	goto on_return;
+	return;
     }
 
     if (sess->idx >= sess->count) {
 	/* No more entries to try */
+	stun_resolve_add_ref(sess);
 	pj_assert(status != PJ_SUCCESS || sess->status != PJ_EPENDING);
         if (sess->status == PJ_EPENDING)
             sess->status = status;
 	stun_resolve_complete(sess);
+	stun_resolve_dec_ref(sess);
     }
-
-on_return:
-    stun_resolve_dec_ref(sess);
 }
 
 
@@ -1396,12 +1430,12 @@ PJ_DEF(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
     }
     pjsua_var.stun_status = PJ_EUNKNOWN;
 
-    status = resolve_stun_server(wait);
+    PJSUA_UNLOCK();
+    
+    status = resolve_stun_server(wait, PJ_FALSE);
     if (wait == PJ_FALSE && status == PJ_EPENDING)
         status = PJ_SUCCESS;
 
-    PJSUA_UNLOCK();
-    
     return status;
 }
 
@@ -1418,7 +1452,8 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
     pj_pool_t *pool;
     pjsua_stun_resolve *sess;
     pj_status_t status;
-    unsigned i;
+    unsigned i, max_wait_ms;
+    pj_timestamp start, now;
 
     PJ_ASSERT_RETURN(count && srv && cb, PJ_EINVAL);
 
@@ -1432,6 +1467,7 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
     sess->cb = cb;
     sess->count = count;
     sess->blocking = wait;
+    sess->waiter = pj_thread_this();
     sess->status = PJ_EPENDING;
     sess->srv = (pj_str_t*) pj_pool_calloc(pool, count, sizeof(pj_str_t));
     for (i=0; i<count; ++i) {
@@ -1447,6 +1483,13 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
     if (!wait)
 	return PJ_SUCCESS;
 
+    /* Should limit the wait time to avoid deadlock. For example,
+     * if app holds dlg/tsx lock, pjsua worker thread will block on
+     * any dlg/tsx state change.
+     */
+    max_wait_ms = count * pjsua_var.stun_cfg.rto_msec * (1 << 7);
+    pj_get_timestamp(&start);
+
     while (sess->status == PJ_EPENDING) {
         /* If there is no worker thread or
          * the function is called from the only worker thread,
@@ -1460,6 +1503,10 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
         } else {
             pj_thread_sleep(20);
         }
+
+	pj_get_timestamp(&now);
+	if (pj_elapsed_msec(&start, &now) > max_wait_ms)
+	    sess->status = PJ_ETIMEDOUT;
     }
 
     status = sess->status;
@@ -1527,8 +1574,16 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
 /*
  * Resolve STUN server.
  */
-pj_status_t resolve_stun_server(pj_bool_t wait)
+pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error)
 {
+    /* Retry resolving if currently the STUN status is error */
+    if (pjsua_var.stun_status != PJ_EPENDING &&
+	pjsua_var.stun_status != PJ_SUCCESS &&
+	retry_if_cur_error)
+    {
+	pjsua_var.stun_status = PJ_EUNKNOWN;
+    }
+
     if (pjsua_var.stun_status == PJ_EUNKNOWN) {
 	pj_status_t status;
 
@@ -1556,10 +1611,16 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 	 * result.
 	 */
 	if (wait) {
-	    pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
+	    unsigned max_wait_ms;
+	    pj_timestamp start, now;
 
-	    if (has_pjsua_lock)
-		PJSUA_UNLOCK();
+	    /* Should limit the wait time to avoid deadlock. For example,
+	     * if app holds dlg/tsx lock, pjsua worker thread will block on
+	     * any dlg/tsx state change.
+	     */
+	    max_wait_ms = pjsua_var.ua_cfg.stun_srv_cnt *
+			  pjsua_var.stun_cfg.rto_msec * (1 << 7);
+	    pj_get_timestamp(&start);
 
 	    while (pjsua_var.stun_status == PJ_EPENDING) {		
                 /* If there is no worker thread or
@@ -1574,9 +1635,11 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
                 } else {
 		    pj_thread_sleep(10);
                 }
+
+		pj_get_timestamp(&now);
+		if (pj_elapsed_msec(&start, &now) > max_wait_ms)
+		    return PJ_ETIMEDOUT;
 	    }
-	    if (has_pjsua_lock)
-		PJSUA_LOCK();
 	}
     }
 
@@ -1997,7 +2060,7 @@ static pj_status_t create_sip_udp_sock(int af,
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE, PJ_TRUE);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	return status;
@@ -2784,7 +2847,7 @@ PJ_DEF(pj_status_t) pjsua_detect_nat_type()
 	return PJ_SUCCESS;
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE, PJ_TRUE);
     if (status != PJ_SUCCESS) {
 	pjsua_var.nat_status = status;
 	pjsua_var.nat_type = PJ_STUN_NAT_TYPE_ERR_UNKNOWN;

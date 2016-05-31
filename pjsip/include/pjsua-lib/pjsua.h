@@ -3325,7 +3325,7 @@ typedef struct pjsua_acc_config
     /**
      * Control the use of STUN for the media transports.
      *
-     * Default: PJSUA_STUN_USE_DEFAULT
+     * Default: PJSUA_STUN_RETRY_ON_FAILURE
      */
     pjsua_stun_use 		media_stun_use;
 

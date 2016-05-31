@@ -254,7 +254,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
     /* Make sure STUN server resolution has completed */
     if (!use_ipv6 && pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
-	status = resolve_stun_server(PJ_TRUE);
+	pj_bool_t retry_stun = (acc->cfg.media_stun_use &
+				PJSUA_STUN_RETRY_ON_FAILURE) ==
+				PJSUA_STUN_RETRY_ON_FAILURE;
+	status = resolve_stun_server(PJ_TRUE, retry_stun);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	    return status;
@@ -390,7 +393,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 #endif
 
 	    if (status != PJ_SUCCESS && pjsua_var.ua_cfg.stun_srv_cnt > 1 &&
-	        ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)!=0))
+	        ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)==
+		  PJSUA_STUN_RETRY_ON_FAILURE))
 	    {
 		pj_str_t srv = 
 			     pjsua_var.ua_cfg.stun_srv[pjsua_var.stun_srv_idx];
@@ -418,11 +422,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 		}
 	    	status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
 	    			   	    	 pjsua_var.ua_cfg.stun_srv,
-	    			   	    	 PJ_FALSE);
-
-		if (status == PJ_SUCCESS)
-		    status = resolve_stun_server(PJ_TRUE);
-
+	    			   	    	 PJ_TRUE);
 	    	if (status == PJ_SUCCESS) {
 		    if (pjsua_var.stun_srv.addr.sa_family != 0) {
     			pj_sockaddr_print(&pjsua_var.stun_srv,
@@ -828,7 +828,10 @@ static pj_status_t create_ice_media_transport(
 
     /* Make sure STUN server resolution has completed */
     if (pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
-	status = resolve_stun_server(PJ_TRUE);
+	pj_bool_t retry_stun = (acc_cfg->media_stun_use &
+				PJSUA_STUN_RETRY_ON_FAILURE) ==
+				PJSUA_STUN_RETRY_ON_FAILURE;
+	status = resolve_stun_server(PJ_TRUE, retry_stun);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	    return status;
