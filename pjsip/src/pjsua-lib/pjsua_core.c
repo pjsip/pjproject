@@ -2137,18 +2137,13 @@ static pj_status_t create_sip_udp_sock(int af,
 	if (pj_sockaddr_get_port(p_pub_addr) == 0)
 	    pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
 
-    } else if (stun_srv.slen) {
+    } else if (stun_srv.slen && af == pj_AF_INET()) {
 	pjstun_setting stun_opt;
 
 	/*
 	 * STUN is specified, resolve the address with STUN.
+	 * Currently, this is available for IPv4 address only.
 	 */
-	if (af != pj_AF_INET()) {
-	    pjsua_perror(THIS_FILE, "Cannot use STUN", PJ_EAFNOTSUP);
-	    pj_sock_close(sock);
-	    return PJ_EAFNOTSUP;
-	}
-
 	pj_bzero(&stun_opt, sizeof(stun_opt));
 	stun_opt.use_stun2 = pjsua_var.ua_cfg.stun_map_use_stun2;
 	stun_opt.srv1  = stun_opt.srv2  = stun_srv;
@@ -2163,6 +2158,7 @@ static pj_status_t create_sip_udp_sock(int af,
 	}
 
     } else {
+
 	pj_bzero(p_pub_addr, sizeof(pj_sockaddr));
 
 	if (pj_sockaddr_has_addr(&bind_addr)) {
@@ -2178,6 +2174,15 @@ static pj_status_t create_sip_udp_sock(int af,
 
 	p_pub_addr->addr.sa_family = (pj_uint16_t)af;
 	pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
+
+	if (stun_srv.slen && af != pj_AF_INET()) {
+	    /* STUN is specified, but it is not IPv4, just print warning */
+	    PJ_PERROR(2, (THIS_FILE, PJ_EAFNOTSUP,
+		          "Cannot use STUN for SIP UDP socket %s:%d",
+		          addr_string(p_pub_addr),
+		          (int)pj_sockaddr_get_port(p_pub_addr)));
+	}
+
     }
 
     *p_sock = sock;
