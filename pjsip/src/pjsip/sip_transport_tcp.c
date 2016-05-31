@@ -728,6 +728,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.send_msg = &tcp_send_msg;
     tcp->base.do_shutdown = &tcp_shutdown;
     tcp->base.destroy = &tcp_destroy_transport;
+    tcp->base.factory = &listener->factory;
 
     /* Create group lock */
     status = pj_grp_lock_create(pool, NULL, &tcp->grp_lock);

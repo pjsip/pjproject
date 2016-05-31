@@ -757,6 +757,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.send_msg = &tls_send_msg;
     tls->base.do_shutdown = &tls_shutdown;
     tls->base.destroy = &tls_destroy_transport;
+    tls->base.factory = &listener->factory;
 
     tls->ssock = ssock;
 
