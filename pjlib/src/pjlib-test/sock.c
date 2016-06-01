@@ -425,7 +425,7 @@ static int purity_test(void)
 	rc = pj_getaddrinfo(pj_AF_UNSPEC(), &str_ip, &cnt, ai);
 	if (rc == PJ_SUCCESS) {
 	    while (cnt--)
-            CHECK_SA_ZERO_LEN(&ai[0].ai_addr, -70);
+		CHECK_SA_ZERO_LEN(&ai[cnt].ai_addr, -70);
 	}
     }
 #endif
