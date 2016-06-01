@@ -1644,7 +1644,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    if (call->async_call.call_var.inc_call.hangup) {
 		pjsua_call_hangup(call_id, call->last_code, &call->last_text,
 				  NULL);
-	    } else if (call->med_ch_cb == NULL) {
+	    } else if (call->med_ch_cb == NULL && call->inv) {
 		process_pending_call_answer(call);
 	    }
 	} else {
