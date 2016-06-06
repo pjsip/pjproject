@@ -408,7 +408,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 	    pj_scan_get(&scanner, &cs_token, &rtcp->addr_type);
 
 	    /* Get the address */
-	    pj_scan_get(&scanner, &cs_token, &rtcp->addr);
+	    //pj_scan_get(&scanner, &cs_token, &rtcp->addr);
+	    pj_scan_get_until_chr(&scanner, "/ \t\r\n", &rtcp->addr);
 
 	}
 
