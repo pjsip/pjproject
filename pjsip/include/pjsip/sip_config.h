@@ -1122,6 +1122,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
 #endif
 
+/**
+ * Maximum size of pool allowed for auth client session in pjsip_regc.
+ * After the size exceeds because of Digest authentication processing,
+ * the pool is reset.
+ *
+ * Default is 20 kB
+ */
+#ifndef PJSIP_AUTH_CACHED_POOL_MAX_SIZE
+#   define PJSIP_AUTH_CACHED_POOL_MAX_SIZE	(20 * 1024)
+#endif
 
 /*****************************************************************************
  *  SIP Event framework and presence settings.
