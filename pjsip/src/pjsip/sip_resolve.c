@@ -195,6 +195,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     int ip_addr_ver;
     struct query *query;
     pjsip_transport_type_e type = target->type;
+    int af = pj_AF_UNSPEC();
 
     /* If an external implementation has been provided use it instead */
     if (resolver->ext_res) {
@@ -204,6 +205,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
     /* Is it IP address or hostname? And if it's an IP, which version? */
     ip_addr_ver = get_ip_addr_ver(&target->addr.host);
+
+    /* Initialize address family type */
+    if ((ip_addr_ver == 6) || (type & PJSIP_TRANSPORT_IPV6))
+	af = pj_AF_INET6();
+    else if (ip_addr_ver == 4)
+	af = pj_AF_INET();
 
     /* Set the transport type if not explicitly specified. 
      * RFC 3263 section 4.1 specify rules to set up this.
@@ -241,10 +248,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		type = PJSIP_TRANSPORT_UDP;
 	    }
 	}
-
-	/* Add IPv6 flag for IPv6 address */
-	if (ip_addr_ver == 6)
-	    type = (pjsip_transport_type_e)((int)type + PJSIP_TRANSPORT_IPV6);
     }
 
 
@@ -271,7 +274,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	} else {
 	    pj_addrinfo ai;
 	    unsigned count;
-	    int af;
 
 	    PJ_LOG(5,(THIS_FILE,
 		      "DNS resolver not available, target '%.*s:%d' type=%s "
@@ -280,12 +282,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		      target->addr.host.ptr,
 		      target->addr.port,
 		      pjsip_transport_get_type_name(target->type)));
-
-	    if (type & PJSIP_TRANSPORT_IPV6) {
-		af = pj_AF_INET6();
-	    } else {
-		af = pj_AF_INET();
-	    }
 
 	    /* Resolve */
 	    count = 1;
@@ -299,10 +295,14 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		goto on_error;
 	    }
 
-	    svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
-	    pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr,
-		      sizeof(pj_sockaddr));
+	    pj_sockaddr_cp(&svr_addr.entry[0].addr, &ai.ai_addr);
+	    if (af == pj_AF_UNSPEC())
+		af = ai.ai_addr.addr.sa_family;
 	}
+
+	/* After address resolution, update IPv6 bitflag in transport type. */
+	if (af == pj_AF_INET6())
+	    type |= PJSIP_TRANSPORT_IPV6;
 
 	/* Set the port number */
 	if (target->addr.port == 0) {

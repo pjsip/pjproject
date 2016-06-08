@@ -283,6 +283,8 @@ typedef struct pjsua_acc
     pjsip_dialog    *mwi_dlg;	    /**< Dialog for MWI sub.		*/
 
     pj_uint16_t      next_rtp_port; /**< Next RTP port to be used.      */
+    pjsip_transport_type_e tp_type; /**< Transport type (for local acc or
+				         transport binding)		*/
 } pjsua_acc;
 
 
@@ -621,6 +623,9 @@ pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
 /* acc use stun? */
 pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id);
 pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id);
+
+/* acc use IPv6? */
+pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id);
 
 /* Get local transport address suitable to be used for Via or Contact address
  * to send request to the specified destination URI.

@@ -381,6 +381,9 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pj_array_insert(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
 		    pjsua_var.acc_cnt, i, &acc_id);
 
+    if (acc_cfg->transport_id != PJSUA_INVALID_ID)
+	acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+
     return PJ_SUCCESS;
 }
 
@@ -512,6 +515,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     const char *beginquote, *endquote;
     char transport_param[32];
     char uri[PJSIP_MAX_URL_SIZE];
+    pjsua_acc_id acc_id;
+    pj_status_t status;
 
     /* ID must be valid */
     PJ_ASSERT_RETURN(tid>=0 && tid<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
@@ -554,7 +559,14 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 
     cfg.id = pj_str(uri);
     
-    return pjsua_acc_add(&cfg, is_default, p_acc_id);
+    status = pjsua_acc_add(&cfg, is_default, &acc_id);
+    if (status == PJ_SUCCESS) {
+	pjsua_var.acc[acc_id].tp_type = t->type;
+	if (p_acc_id)
+	    *p_acc_id = acc_id;
+    }
+
+    return status;
 }
 
 
@@ -2480,6 +2492,13 @@ static pj_status_t pjsua_regc_init(int acc_id)
     return PJ_SUCCESS;
 }
 
+pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return (acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6;
+}
+
 pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
@@ -2919,15 +2938,10 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
 	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
-
-	    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-		pjsip_transport_type_e type;
-		type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
-		if (type == PJSIP_TRANSPORT_UNSPECIFIED)
-		    type = PJSIP_TRANSPORT_UDP;
-
-		if (pjsua_var.tpdata[acc->cfg.transport_id].type != type)
-		    continue;
+	    if (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED &&
+		acc->tp_type != rdata->tp_info.transport->key.type)
+	    {
+		continue;
 	    }
 
 	    /* Match ! */
@@ -3100,10 +3114,10 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
-    /* If destination URI specifies IPv6, then set transport type
-     * to use IPv6 as well.
+    /* If destination URI specifies IPv6 or account is configured to use IPv6,
+     * then set transport type to use IPv6 as well.
      */
-    if (pj_strchr(&sip_uri->host, ':'))
+    if (pj_strchr(&sip_uri->host, ':') || pjsua_sip_acc_is_using_ipv6(acc_id))
 	tp_type = (pjsip_transport_type_e)(((int)tp_type) |
 	 	  PJSIP_TRANSPORT_IPV6);
 
@@ -3166,11 +3180,26 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
 	if (status == PJ_SUCCESS) {
 	    unsigned cnt=1;
-	    int af;
+	    int af = pj_AF_UNSPEC();
 
-	    af = (dinfo.type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
+	    if (pjsua_sip_acc_is_using_ipv6(acc_id) ||
+		(dinfo.type & PJSIP_TRANSPORT_IPV6))
+	    {
+		af = pj_AF_INET6();
+	    }
 	    status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai);
-	    if (cnt == 0) status = PJ_ENOTSUP;
+	    if (cnt == 0) {
+		status = PJ_ENOTSUP;
+	    } else if ((dinfo.type & PJSIP_TRANSPORT_IPV6)==0 &&
+			ai.ai_addr.addr.sa_family == pj_AF_INET6())
+	    {
+		/* Destination is a hostname and account is not bound to IPv6,
+		 * but hostname resolution reveals that it has IPv6 address,
+		 * so let's use IPv6 transport type.
+		 */
+		dinfo.type |= PJSIP_TRANSPORT_IPV6;
+		tp_type |= PJSIP_TRANSPORT_IPV6;
+	    }
 	}
 
 	if (status == PJ_SUCCESS) {
@@ -3416,11 +3445,17 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
-    /* If destination URI specifies IPv6, then set transport type
-     * to use IPv6 as well.
+    /* If destination URI specifies IPv6 or account is configured to use IPv6
+     * or the transport being used to receive data is an IPv6 transport,
+     * then set transport type to use IPv6 as well.
      */
-    if (pj_strchr(&sip_uri->host, ':'))
-	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+    if (pj_strchr(&sip_uri->host, ':') ||
+	pjsua_sip_acc_is_using_ipv6(acc_id) ||
+	(rdata->tp_info.transport->key.type & PJSIP_TRANSPORT_IPV6))
+    {
+	tp_type = (pjsip_transport_type_e)
+		  (((int)tp_type) | PJSIP_TRANSPORT_IPV6);
+    }
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
@@ -3504,6 +3539,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 		     PJ_EINVAL);
     
     acc->cfg.transport_id = tp_id;
+    acc->tp_type = pjsua_var.tpdata[tp_id].type;
 
     return PJ_SUCCESS;
 }
