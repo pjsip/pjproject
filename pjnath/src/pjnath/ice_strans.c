@@ -593,6 +593,13 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		}
 	    }
 
+	    /* Ignore IPv6 link-local address */
+	    if (stun_cfg->af == pj_AF_INET6()) {
+		const pj_in6_addr *a = &addr->ipv6.sin6_addr;
+		if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80)
+		    continue;
+	    }
+
 	    cand = &comp->cand_list[comp->cand_cnt];
 
 	    cand->type = PJ_ICE_CAND_TYPE_HOST;
