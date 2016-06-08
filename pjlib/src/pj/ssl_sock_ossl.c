@@ -37,8 +37,10 @@
 
 #define THIS_FILE		"ssl_sock_ossl.c"
 
-/* Workaround for ticket #985 */
-#define DELAYED_CLOSE_TIMEOUT	200
+/* Workaround for ticket #985 and #1930 */
+#ifndef PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT
+#   define PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT	500
+#endif
 
 /* 
  * Include OpenSSL headers 
@@ -807,13 +809,9 @@ static void destroy_ssl(pj_ssl_sock_t *ssock)
 }
 
 
-/* Reset SSL socket state */
-static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
+/* Close sockets */
+static void close_sockets(pj_ssl_sock_t *ssock)
 {
-    ssock->ssl_state = SSL_STATE_NULL;
-
-    destroy_ssl(ssock);
-
     if (ssock->asock) {
 	pj_activesock_close(ssock->asock);
 	ssock->asock = NULL;
@@ -823,6 +821,17 @@ static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
 	pj_sock_close(ssock->sock);
 	ssock->sock = PJ_INVALID_SOCKET;
     }
+}
+
+
+/* Reset SSL socket state */
+static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
+{
+    ssock->ssl_state = SSL_STATE_NULL;
+
+    destroy_ssl(ssock);
+
+    close_sockets(ssock);
 
     /* Upon error, OpenSSL may leave any error description in the thread 
      * error queue, which sometime may cause next call to SSL API returning
@@ -1192,26 +1201,40 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
 		      errmsg));
 
-	    /* Workaround for ticket #985 */
-#if (defined(PJ_WIN32) && PJ_WIN32!=0) || (defined(PJ_WIN64) && PJ_WIN64!=0)
+	    /* Originally, this is a workaround for ticket #985. However,
+	     * a race condition may occur in multiple worker threads
+	     * environment when we are destroying SSL objects while other
+	     * threads are still accessing them.
+	     * Please see ticket #1930 for more info.
+	     */
+#if 1 //(defined(PJ_WIN32) && PJ_WIN32!=0)||(defined(PJ_WIN64) && PJ_WIN64!=0)
 	    if (ssock->param.timer_heap) {
-		pj_time_val interval = {0, DELAYED_CLOSE_TIMEOUT};
+		pj_time_val interval = {0, PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT};
 
-		reset_ssl_sock_state(ssock);
+		ssock->ssl_state = SSL_STATE_NULL;
+		close_sockets(ssock);
 
+		if (ssock->timer.id != TIMER_NONE) {
+		    pj_timer_heap_cancel(ssock->param.timer_heap,
+					 &ssock->timer);
+		}
 		ssock->timer.id = TIMER_CLOSE;
 		pj_time_val_normalize(&interval);
 		if (pj_timer_heap_schedule(ssock->param.timer_heap, 
 					   &ssock->timer, &interval) != 0)
 		{
+	    	    PJ_LOG(3,(ssock->pool->obj_name, "Failed to schedule "
+		      	      "a delayed close. Race condition may occur."));
 		    ssock->timer.id = TIMER_NONE;
 		    pj_ssl_sock_close(ssock);
 		}
-	    } else 
-#endif	/* PJ_WIN32 */
+	    } 
+#else
 	    {
 		pj_ssl_sock_close(ssock);
 	    }
+#endif
+
 	    return PJ_FALSE;
 	}
 	/* Notify application the newly accepted SSL socket */
@@ -2215,6 +2238,12 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     /* Init secure socket param */
     pj_ssl_sock_param_copy(pool, &ssock->param, param);
     ssock->param.read_buffer_size = ((ssock->param.read_buffer_size+7)>>3)<<3;
+    if (!ssock->param.timer_heap) {
+	PJ_LOG(3,(ssock->pool->obj_name, "Warning: timer heap is not "
+		  "available. It is recommended to supply one to avoid "
+		  "a race condition if more than one worker threads "
+		  "are used."));
+    }
 
     /* Finally */
     *p_ssock = ssock;
