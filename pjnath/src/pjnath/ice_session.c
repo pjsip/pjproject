@@ -396,7 +396,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
 
     /* Initialize transport datas */
     for (i=0; i<PJ_ARRAY_SIZE(ice->tp_data); ++i) {
-	ice->tp_data[i].transport_id = i;
+	ice->tp_data[i].transport_id = 0;
 	ice->tp_data[i].has_req_data = PJ_FALSE;
     }
 
@@ -723,6 +723,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
     char address[PJ_INET6_ADDRSTRLEN];
+    unsigned i;
 
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
@@ -747,6 +748,21 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     if (rel_addr == NULL)
 	rel_addr = base_addr;
     pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
+
+    /* Update transport data */
+    for (i = 0; i < PJ_ARRAY_SIZE(ice->tp_data); ++i) {
+	/* Check if this transport has been registered */
+	if (ice->tp_data[i].transport_id == transport_id)
+	    break;
+
+	if (ice->tp_data[i].transport_id == 0) {
+	    /* Found an empty slot, register this transport here */
+	    ice->tp_data[i].transport_id = transport_id;
+	    break;
+	}
+    }
+    pj_assert(i < PJ_ARRAY_SIZE(ice->tp_data) &&
+	      ice->tp_data[i].transport_id == transport_id);
 
     pj_ansi_strcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
                                                    sizeof(address), 0));

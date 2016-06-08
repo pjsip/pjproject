@@ -653,7 +653,7 @@ struct pj_ice_sess
     pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
 
     /** Array of transport datas */
-    pj_ice_msg_data	 tp_data[4];
+    pj_ice_msg_data	 tp_data[PJ_ICE_MAX_STUN + PJ_ICE_MAX_TURN];
 
     /* List of eearly checks */
     pj_ice_rx_check	 early_check;		    /**< Early checks.	    */

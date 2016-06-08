@@ -844,68 +844,78 @@ static pj_status_t create_ice_media_transport(
 		        pjsip_endpt_get_ioqueue(pjsua_var.endpt),
 			pjsip_endpt_get_timer_heap(pjsua_var.endpt));
     
-    ice_cfg.af = pj_AF_INET();
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
+
+    /* Check if STUN transport is configured */
+    if ((pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
+	 pjsua_media_acc_is_using_stun(call_med->call->acc_id)) ||
+	acc_cfg->ice_cfg.ice_max_host_cands != 0)
+    {
+	ice_cfg.stun_tp_cnt = 1;
+	pj_ice_strans_stun_cfg_default(&ice_cfg.stun_tp[0]);
+    }
 
     /* Configure STUN settings */
     if (pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
 	pjsua_media_acc_is_using_stun(call_med->call->acc_id))
     {
 	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
-	ice_cfg.stun.server = pj_str(stunip);
-	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
+	ice_cfg.stun_tp[0].server = pj_str(stunip);
+	ice_cfg.stun_tp[0].port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
     }
     if (acc_cfg->ice_cfg.ice_max_host_cands >= 0)
-	ice_cfg.stun.max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
+	ice_cfg.stun_tp[0].max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
 
     /* Copy binding port setting to STUN setting */
-    pj_sockaddr_init(ice_cfg.af, &ice_cfg.stun.cfg.bound_addr,
+    pj_sockaddr_init(ice_cfg.stun_tp[0].af, &ice_cfg.stun_tp[0].cfg.bound_addr,
 		     &cfg->bound_addr, (pj_uint16_t)cfg->port);
-    ice_cfg.stun.cfg.port_range = (pj_uint16_t)cfg->port_range;
-    if (cfg->port != 0 && ice_cfg.stun.cfg.port_range == 0)
-	ice_cfg.stun.cfg.port_range = 
+    ice_cfg.stun_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
+    if (cfg->port != 0 && ice_cfg.stun_tp[0].cfg.port_range == 0)
+	ice_cfg.stun_tp[0].cfg.port_range = 
 				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
 
     /* Copy QoS setting to STUN setting */
-    ice_cfg.stun.cfg.qos_type = cfg->qos_type;
-    pj_memcpy(&ice_cfg.stun.cfg.qos_params, &cfg->qos_params,
+    ice_cfg.stun_tp[0].cfg.qos_type = cfg->qos_type;
+    pj_memcpy(&ice_cfg.stun_tp[0].cfg.qos_params, &cfg->qos_params,
 	      sizeof(cfg->qos_params));
 
     /* Configure TURN settings */
     if (acc_cfg->turn_cfg.enable_turn) {
+	ice_cfg.turn_tp_cnt = 1;
+	pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[0]);
 	status = parse_host_port(&acc_cfg->turn_cfg.turn_server,
-				 &ice_cfg.turn.server,
-				 &ice_cfg.turn.port);
-	if (status != PJ_SUCCESS || ice_cfg.turn.server.slen == 0) {
+				 &ice_cfg.turn_tp[0].server,
+				 &ice_cfg.turn_tp[0].port);
+	if (status != PJ_SUCCESS || ice_cfg.turn_tp[0].server.slen == 0) {
 	    PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
 	    return PJ_EINVAL;
 	}
-	if (ice_cfg.turn.port == 0)
-	    ice_cfg.turn.port = 3479;
-	ice_cfg.turn.conn_type = acc_cfg->turn_cfg.turn_conn_type;
-	pj_memcpy(&ice_cfg.turn.auth_cred, 
+	if (ice_cfg.turn_tp[0].port == 0)
+	    ice_cfg.turn_tp[0].port = 3479;
+	ice_cfg.turn_tp[0].conn_type = acc_cfg->turn_cfg.turn_conn_type;
+	pj_memcpy(&ice_cfg.turn_tp[0].auth_cred, 
 		  &acc_cfg->turn_cfg.turn_auth_cred,
-		  sizeof(ice_cfg.turn.auth_cred));
+		  sizeof(ice_cfg.turn_tp[0].auth_cred));
 
 	/* Copy QoS setting to TURN setting */
-	ice_cfg.turn.cfg.qos_type = cfg->qos_type;
-	pj_memcpy(&ice_cfg.turn.cfg.qos_params, &cfg->qos_params,
+	ice_cfg.turn_tp[0].cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&ice_cfg.turn_tp[0].cfg.qos_params, &cfg->qos_params,
 		  sizeof(cfg->qos_params));
 
 	/* Copy binding port setting to TURN setting */
-	pj_sockaddr_init(ice_cfg.af, &ice_cfg.turn.cfg.bound_addr,
+	pj_sockaddr_init(ice_cfg.turn_tp[0].af, &ice_cfg.turn_tp[0].cfg.bound_addr,
 			 &cfg->bound_addr, (pj_uint16_t)cfg->port);
-	ice_cfg.turn.cfg.port_range = (pj_uint16_t)cfg->port_range;
-	if (cfg->port != 0 && ice_cfg.turn.cfg.port_range == 0)
-	    ice_cfg.turn.cfg.port_range = 
+	ice_cfg.turn_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
+	if (cfg->port != 0 && ice_cfg.turn_tp[0].cfg.port_range == 0)
+	    ice_cfg.turn_tp[0].cfg.port_range = 
 				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
     }
 
     /* Configure packet size for STUN and TURN sockets */
-    ice_cfg.stun.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
-    ice_cfg.turn.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+    ice_cfg.stun_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+    ice_cfg.turn_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
 
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;

@@ -175,6 +175,162 @@ typedef struct pj_ice_strans_cb
 
 
 /**
+ * STUN and local transport settings for ICE stream transport.
+ */
+typedef struct pj_ice_strans_stun_cfg
+{
+    /**
+     * Address family, IPv4 or IPv6.
+     *
+     * Default value is pj_AF_INET() (IPv4)
+     */
+    int			 af;
+
+    /**
+     * Optional configuration for STUN transport. The default
+     * value will be initialized with #pj_stun_sock_cfg_default().
+     */
+    pj_stun_sock_cfg	 cfg;
+
+    /**
+     * Maximum number of host candidates to be added. If the
+     * value is zero, no host candidates will be added.
+     *
+     * Default: 64
+     */
+    unsigned		 max_host_cands;
+
+    /**
+     * Include loopback addresses in the host candidates.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t		 loop_addr;
+
+    /**
+     * Specify the STUN server domain or hostname or IP address.
+     * If DNS SRV resolution is required, application must fill
+     * in this setting with the domain name of the STUN server 
+     * and set the resolver instance in the \a resolver field.
+     * Otherwise if the \a resolver setting is not set, this
+     * field will be resolved with hostname resolution and in
+     * this case the \a port field must be set.
+     *
+     * The \a port field should also be set even when DNS SRV
+     * resolution is used, in case the DNS SRV resolution fails.
+     *
+     * When this field is empty, STUN mapped address resolution
+     * will not be performed. In this case only ICE host candidates
+     * will be added to the ICE transport, unless if \a no_host_cands
+     * field is set. In this case, both host and srflx candidates 
+     * are disabled.
+     *
+     * If there are more than one STUN candidates per ICE stream
+     * transport component, the standard recommends to use the same
+     * STUN server for all STUN candidates.
+     *
+     * The default value is empty.
+     */
+    pj_str_t		 server;
+
+    /**
+     * The port number of the STUN server, when \a server
+     * field specifies a hostname rather than domain name. This
+     * field should also be set even when the \a server
+     * specifies a domain name, to allow DNS SRV resolution
+     * to fallback to DNS A/AAAA resolution when the DNS SRV
+     * resolution fails.
+     *
+     * The default value is PJ_STUN_PORT.
+     */
+    pj_uint16_t		 port;
+
+    /**
+     * Ignore STUN resolution error and proceed with just local
+     * addresses.
+     *
+     * The default is PJ_FALSE
+     */
+    pj_bool_t		 ignore_stun_error;
+
+} pj_ice_strans_stun_cfg;
+
+
+/**
+ * TURN transport settings for ICE stream transport.
+ */
+typedef struct pj_ice_strans_turn_cfg
+{
+    /**
+     * Address family, IPv4 or IPv6.
+     *
+     * Default value is pj_AF_INET() (IPv4)
+     */
+    int			 af;
+
+    /**
+     * Optional TURN socket settings. The default values will be
+     * initialized by #pj_turn_sock_cfg_default(). This contains
+     * settings such as QoS.
+     */
+    pj_turn_sock_cfg	 cfg;
+
+    /**
+     * Specify the TURN server domain or hostname or IP address.
+     * If DNS SRV resolution is required, application must fill
+     * in this setting with the domain name of the TURN server 
+     * and set the resolver instance in the \a resolver field.
+     * Otherwise if the \a resolver setting is not set, this
+     * field will be resolved with hostname resolution and in
+     * this case the \a port field must be set.
+     *
+     * The \a port field should also be set even when DNS SRV
+     * resolution is used, in case the DNS SRV resolution fails.
+     *
+     * When this field is empty, relay candidate will not be
+     * created.
+     *
+     * The default value is empty.
+     */
+    pj_str_t		 server;
+
+    /**
+     * The port number of the TURN server, when \a server
+     * field specifies a hostname rather than domain name. This
+     * field should also be set even when the \a server
+     * specifies a domain name, to allow DNS SRV resolution
+     * to fallback to DNS A/AAAA resolution when the DNS SRV
+     * resolution fails.
+     *
+     * Default is zero.
+     */
+    pj_uint16_t		 port;
+
+    /**
+     * Type of connection to the TURN server.
+     *
+     * Default is PJ_TURN_TP_UDP.
+     */
+    pj_turn_tp_type	 conn_type;
+
+    /**
+     * Credential to be used for the TURN session. This setting
+     * is mandatory.
+     *
+     * Default is to have no credential.
+     */
+    pj_stun_auth_cred	 auth_cred;
+
+    /**
+     * Optional TURN Allocate parameter. The default value will be
+     * initialized by #pj_turn_alloc_param_default().
+     */
+    pj_turn_alloc_param	 alloc_param;
+
+} pj_ice_strans_turn_cfg;
+
+
+/**
  * This structure describes ICE stream transport configuration. Application
  * should initialize the structure by calling #pj_ice_strans_cfg_default()
  * before changing the settings.
@@ -182,10 +338,11 @@ typedef struct pj_ice_strans_cb
 typedef struct pj_ice_strans_cfg
 {
     /**
-     * Address family, IPv4 or IPv6. Currently only pj_AF_INET() (IPv4)
-     * is supported, and this is the default value.
+     * Warning: this field is deprecated and will be ignored. Please specify
+     * transport address family in STUN and TURN transport setting, i.e:
+     * \a stun_tp and \a turn_tp.
      */
-    int			af;
+    int			 af;
 
     /**
      * STUN configuration which contains the timer heap and
@@ -213,140 +370,48 @@ typedef struct pj_ice_strans_cfg
     pj_ice_sess_options	 opt;
 
     /**
-     * STUN and local transport settings. This specifies the 
-     * settings for local UDP socket, which will be resolved
-     * to get the STUN mapped address.
+     * Warning: this field is deprecated, please use \a stun_tp field instead.
+     * To maintain backward compatibility, if \a stun_tp_cnt is zero, the
+     * value of this field will be copied to \a stun_tp.
+     *
+     * STUN and local transport settings. This specifies the settings
+     * for local UDP socket address and STUN resolved address.
      */
-    struct {
-	/**
-	 * Optional configuration for STUN transport. The default
-	 * value will be initialized with #pj_stun_sock_cfg_default().
-	 */
-	pj_stun_sock_cfg     cfg;
-
-	/**
-	 * Maximum number of host candidates to be added. If the
-	 * value is zero, no host candidates will be added.
-	 *
-	 * Default: 64
-	 */
-	unsigned	     max_host_cands;
-
-	/**
-	 * Include loopback addresses in the host candidates.
-	 *
-	 * Default: PJ_FALSE
-	 */
-	pj_bool_t	     loop_addr;
-
-	/**
-	 * Specify the STUN server domain or hostname or IP address.
-	 * If DNS SRV resolution is required, application must fill
-	 * in this setting with the domain name of the STUN server 
-	 * and set the resolver instance in the \a resolver field.
-	 * Otherwise if the \a resolver setting is not set, this
-	 * field will be resolved with hostname resolution and in
-	 * this case the \a port field must be set.
-	 *
-	 * The \a port field should also be set even when DNS SRV
-	 * resolution is used, in case the DNS SRV resolution fails.
-	 *
-	 * When this field is empty, STUN mapped address resolution
-	 * will not be performed. In this case only ICE host candidates
-	 * will be added to the ICE transport, unless if \a no_host_cands
-	 * field is set. In this case, both host and srflx candidates 
-	 * are disabled.
-	 *
-	 * The default value is empty.
-	 */
-	pj_str_t	     server;
-
-	/**
-	 * The port number of the STUN server, when \a server
-	 * field specifies a hostname rather than domain name. This
-	 * field should also be set even when the \a server
-	 * specifies a domain name, to allow DNS SRV resolution
-	 * to fallback to DNS A/AAAA resolution when the DNS SRV
-	 * resolution fails.
-	 *
-	 * The default value is PJ_STUN_PORT.
-	 */
-	pj_uint16_t	     port;
-
-	/**
-	 * Ignore STUN resolution error and proceed with just local
-	 * addresses.
-	 *
-	 * The default is PJ_FALSE
-	 */
-	pj_bool_t	     ignore_stun_error;
-
-    } stun;
+    pj_ice_strans_stun_cfg stun;
 
     /**
-     * TURN specific settings.
+     * Number of STUN transports.
+     *
+     * Default: 0
      */
-    struct {
-	/**
-	 * Optional TURN socket settings. The default values will be
-	 * initialized by #pj_turn_sock_cfg_default(). This contains
-	 * settings such as QoS.
-	 */
-	pj_turn_sock_cfg     cfg;
+    unsigned		 stun_tp_cnt;
 
-	/**
-	 * Specify the TURN server domain or hostname or IP address.
-	 * If DNS SRV resolution is required, application must fill
-	 * in this setting with the domain name of the TURN server 
-	 * and set the resolver instance in the \a resolver field.
-	 * Otherwise if the \a resolver setting is not set, this
-	 * field will be resolved with hostname resolution and in
-	 * this case the \a port field must be set.
-	 *
-	 * The \a port field should also be set even when DNS SRV
-	 * resolution is used, in case the DNS SRV resolution fails.
-	 *
-	 * When this field is empty, relay candidate will not be
-	 * created.
-	 *
-	 * The default value is empty.
-	 */
-	pj_str_t	     server;
+    /**
+     * STUN and local transport settings. This specifies the settings
+     * for local UDP socket address and STUN resolved address.
+     */
+    pj_ice_strans_stun_cfg stun_tp[PJ_ICE_MAX_STUN];
 
-	/**
-	 * The port number of the TURN server, when \a server
-	 * field specifies a hostname rather than domain name. This
-	 * field should also be set even when the \a server
-	 * specifies a domain name, to allow DNS SRV resolution
-	 * to fallback to DNS A/AAAA resolution when the DNS SRV
-	 * resolution fails.
-	 *
-	 * Default is zero.
-	 */
-	pj_uint16_t	     port;
+    /**
+     * Warning: this field is deprecated, please use \a turn_tp field instead.
+     * To maintain backward compatibility, if \a turn_tp_cnt is zero, the
+     * value of this field will be copied to \a turn_tp.
+     *
+     * TURN transport settings.
+     */
+    pj_ice_strans_turn_cfg turn;
 
-	/**
-	 * Type of connection to the TURN server.
-	 *
-	 * Default is PJ_TURN_TP_UDP.
-	 */
-	pj_turn_tp_type	     conn_type;
+    /**
+     * Number of TURN transports.
+     *
+     * Default: 0
+     */
+    unsigned		 turn_tp_cnt;
 
-	/**
-	 * Credential to be used for the TURN session. This setting
-	 * is mandatory.
-	 *
-	 * Default is to have no credential.
-	 */
-	pj_stun_auth_cred    auth_cred;
-
-	/**
-	 * Optional TURN Allocate parameter. The default value will be
-	 * initialized by #pj_turn_alloc_param_default().
-	 */
-	pj_turn_alloc_param  alloc_param;
-
-    } turn;
+    /**
+     * TURN transport settings.
+     */
+    pj_ice_strans_turn_cfg turn_tp[PJ_ICE_MAX_TURN];
 
     /**
      * Component specific settings, which will override the settings in
@@ -464,6 +529,22 @@ typedef enum pj_ice_strans_state
  * @param cfg		The configuration to be initialized.
  */
 PJ_DECL(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg);
+
+
+/** 
+ * Initialize ICE STUN transport configuration with default values.
+ *
+ * @param cfg		The configuration to be initialized.
+ */
+PJ_DECL(void) pj_ice_strans_stun_cfg_default(pj_ice_strans_stun_cfg *cfg);
+
+
+/** 
+ * Initialize ICE TURN transport configuration with default values.
+ *
+ * @param cfg		The configuration to be initialized.
+ */
+PJ_DECL(void) pj_ice_strans_turn_cfg_default(pj_ice_strans_turn_cfg *cfg);
 
 
 /**

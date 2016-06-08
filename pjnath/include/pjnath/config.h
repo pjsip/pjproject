@@ -246,6 +246,28 @@
 
 
 /**
+ * Maximum number of STUN transports for each ICE stream transport component.
+ * Valid values are 1 - 64.
+ *
+ * Default: 2
+ */
+#ifndef PJ_ICE_MAX_STUN
+#   define PJ_ICE_MAX_STUN			    2
+#endif
+
+
+/**
+ * Maximum number of TURN transports for each ICE stream transport component.
+ * Valid values are 1 - 64.
+ *
+ * Default: 2
+ */
+#ifndef PJ_ICE_MAX_TURN
+#   define PJ_ICE_MAX_TURN			    2
+#endif
+
+
+/**
  * The number of bits to represent component IDs. This will affect
  * the maximum number of components (PJ_ICE_MAX_COMP) value.
  */

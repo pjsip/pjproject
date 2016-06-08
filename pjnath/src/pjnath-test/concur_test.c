@@ -26,7 +26,7 @@
 /****************************************************************************/
 #define WORKER_THREAD_CNT	4
 #define SERVER_THREAD_CNT	4
-#define MAX_SOCK_CLIENTS	80
+#define MAX_SOCK_CLIENTS	(PJ_IOQUEUE_MAX_HANDLES/2)
 
 struct stun_test_session
 {
@@ -218,6 +218,9 @@ static int stun_destroy_test_session(struct stun_test_session *test_sess)
 	    PJ_PERROR(1,(THIS_FILE, status, "Error destroying stun socket"));
 	}
     }
+
+    /* Give some time to ioqueue to free sockets */
+    pj_thread_sleep(PJ_IOQUEUE_KEY_FREE_DELAY);
 
     return 0;
 }
