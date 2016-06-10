@@ -90,19 +90,19 @@ static crypto_suite crypto_suites[] = {
     {"NULL", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none},
 
     /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_CM_256_HMAC_SHA1_80", AES_ICM, 46, HMAC_SHA1, 20, 10, 10,
+    {"AES_256_CM_HMAC_SHA1_80", AES_ICM, 46, HMAC_SHA1, 20, 10, 10,
 	sec_serv_conf_and_auth},
 
     /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_CM_256_HMAC_SHA1_32", AES_ICM, 46, HMAC_SHA1, 20, 4, 10,
+    {"AES_256_CM_HMAC_SHA1_32", AES_ICM, 46, HMAC_SHA1, 20, 4, 10,
         sec_serv_conf_and_auth},
 
     /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 10 octets */
-    //{"AES_CM_192_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 10, 10,
+    //{"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 10, 10,
 	//sec_serv_conf_and_auth},
 
     /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 4 octets */
-    //{"AES_CM_192_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 4, 10,
+    //{"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 4, 10,
 	//sec_serv_conf_and_auth},
 
     /* cipher AES_CM, auth HMAC_SHA1, auth tag len = 10 octets */
