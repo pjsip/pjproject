@@ -674,15 +674,23 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
     /* Create STUN transport if configured */
     for (i=0; i<ice_st->cfg.stun_tp_cnt; ++i) {
 	status = add_stun_and_host(ice_st, comp, i);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3,(ice_st->obj_name, status,
+			 "Failed creating STUN transport #%d for comp %d",
+			 i, comp->comp_id));
+	    //return status;
+	}
     }
 
     /* Create TURN relay if configured. */
     for (i=0; i<ice_st->cfg.turn_tp_cnt; ++i) {
 	status = add_update_turn(ice_st, comp, i);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3,(ice_st->obj_name, status,
+			 "Failed creating TURN transport #%d for comp %d",
+			 i, comp->comp_id));
+	    //return status;
+	}
     }
 
     /* It's possible that we end up without any candidates */

@@ -823,8 +823,10 @@ static pj_status_t create_ice_media_transport(
     char name[32];
     unsigned comp_cnt;
     pj_status_t status;
+    pj_bool_t use_ipv6;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
+    use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
 
     /* Make sure STUN server resolution has completed */
     if (pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
@@ -855,6 +857,11 @@ static pj_status_t create_ice_media_transport(
     {
 	ice_cfg.stun_tp_cnt = 1;
 	pj_ice_strans_stun_cfg_default(&ice_cfg.stun_tp[0]);
+	if (use_ipv6 && PJ_ICE_MAX_STUN >= 2) {
+	    ice_cfg.stun_tp_cnt = 2;
+	    pj_ice_strans_stun_cfg_default(&ice_cfg.stun_tp[1]);
+	    ice_cfg.stun_tp[1].af = pj_AF_INET6();
+	}
     }
 
     /* Configure STUN settings */
@@ -865,21 +872,38 @@ static pj_status_t create_ice_media_transport(
 	ice_cfg.stun_tp[0].server = pj_str(stunip);
 	ice_cfg.stun_tp[0].port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
     }
-    if (acc_cfg->ice_cfg.ice_max_host_cands >= 0)
-	ice_cfg.stun_tp[0].max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
+    if (acc_cfg->ice_cfg.ice_max_host_cands >= 0) {
+	ice_cfg.stun_tp[0].max_host_cands =
+				    acc_cfg->ice_cfg.ice_max_host_cands;
+	if (use_ipv6)
+	    ice_cfg.stun_tp[1].max_host_cands =
+				    acc_cfg->ice_cfg.ice_max_host_cands;
+    }
 
     /* Copy binding port setting to STUN setting */
     pj_sockaddr_init(ice_cfg.stun_tp[0].af, &ice_cfg.stun_tp[0].cfg.bound_addr,
 		     &cfg->bound_addr, (pj_uint16_t)cfg->port);
     ice_cfg.stun_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
-    if (cfg->port != 0 && ice_cfg.stun_tp[0].cfg.port_range == 0)
+    if (cfg->port != 0 && ice_cfg.stun_tp[0].cfg.port_range == 0) {
 	ice_cfg.stun_tp[0].cfg.port_range = 
 				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
+    }
+    if (use_ipv6) {
+	pj_str_t IN6_ADDR_ANY = {"0", 1};
+	pj_sockaddr_init(pj_AF_INET6(), &ice_cfg.stun_tp[1].cfg.bound_addr,
+			 &IN6_ADDR_ANY, (pj_uint16_t)cfg->port);
+	ice_cfg.stun_tp[1].cfg.port_range = ice_cfg.stun_tp[0].cfg.port_range;
+    }
 
     /* Copy QoS setting to STUN setting */
     ice_cfg.stun_tp[0].cfg.qos_type = cfg->qos_type;
     pj_memcpy(&ice_cfg.stun_tp[0].cfg.qos_params, &cfg->qos_params,
 	      sizeof(cfg->qos_params));
+    if (use_ipv6) {
+	ice_cfg.stun_tp[1].cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&ice_cfg.stun_tp[1].cfg.qos_params, &cfg->qos_params,
+		  sizeof(cfg->qos_params));
+    }
 
     /* Configure TURN settings */
     if (acc_cfg->turn_cfg.enable_turn) {
@@ -916,6 +940,10 @@ static pj_status_t create_ice_media_transport(
     /* Configure packet size for STUN and TURN sockets */
     ice_cfg.stun_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
     ice_cfg.turn_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+
+    if (use_ipv6) {
+	ice_cfg.stun_tp[1].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+    }
 
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;
