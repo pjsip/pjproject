@@ -812,15 +812,29 @@ static void destroy_ssl(pj_ssl_sock_t *ssock)
 /* Close sockets */
 static void close_sockets(pj_ssl_sock_t *ssock)
 {
-    if (ssock->asock) {
-	pj_activesock_close(ssock->asock);
-	ssock->asock = NULL;
-	ssock->sock = PJ_INVALID_SOCKET;
+    pj_activesock_t *asock;
+    pj_sock_t sock;
+
+    /* This can happen when pj_ssl_sock_create() fails. */
+    if (!ssock->write_mutex)
+    	return;
+
+    pj_lock_acquire(ssock->write_mutex);
+    asock = ssock->asock;
+    if (asock) {
+        ssock->asock = NULL;
+        ssock->sock = PJ_INVALID_SOCKET;
     }
-    if (ssock->sock != PJ_INVALID_SOCKET) {
-	pj_sock_close(ssock->sock);
-	ssock->sock = PJ_INVALID_SOCKET;
-    }
+    sock = ssock->sock;
+    if (sock != PJ_INVALID_SOCKET)
+        ssock->sock = PJ_INVALID_SOCKET;
+    pj_lock_release(ssock->write_mutex);
+
+    if (asock)
+        pj_activesock_close(asock);
+
+    if (sock != PJ_INVALID_SOCKET)
+        pj_sock_close(sock);
 }
 
 
@@ -1945,18 +1959,24 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
 	status = pj_timer_heap_schedule(ssock->param.timer_heap, 
 				        &ssock->timer,
 					&ssock->param.timeout);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
 	    ssock->timer.id = TIMER_NONE;
+	    status = PJ_SUCCESS;
+	}
     }
 
     /* Start SSL handshake */
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
     SSL_set_accept_state(ssock->ossl_ssl);
-    status = do_handshake(ssock);
+    //To avoid race condition, we don't need to do it here and
+    //let the handshake happen in ssock->asock's callback instead.
+    //status = do_handshake(ssock);
 
 on_return:
-    if (ssock && status != PJ_EPENDING)
-	on_handshake_complete(ssock, status);
+    if (ssock && status != PJ_SUCCESS) {
+	//on_handshake_complete(ssock, status);
+	close_sockets(ssock);
+    }
 
     /* Must return PJ_TRUE whatever happened, as active socket must 
      * continue listening.
@@ -2863,8 +2883,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect( pj_ssl_sock_t *ssock,
 	status = pj_timer_heap_schedule(ssock->param.timer_heap,
 					&ssock->timer,
 				        &ssock->param.timeout);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
 	    ssock->timer.id = TIMER_NONE;
+	    status = PJ_SUCCESS;
+	}
     }
 
     status = pj_activesock_start_connect(ssock->asock, pool, remaddr,
