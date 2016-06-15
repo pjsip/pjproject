@@ -94,7 +94,7 @@ typedef struct pj_cli_telnet_cfg
 
     /**
      * Specify a password to be asked to the end user to access the
-     * application.
+     * application. Currently this is not implemented yet.
      *
      * Default: empty (no password)
      */
@@ -102,6 +102,7 @@ typedef struct pj_cli_telnet_cfg
 
     /**
      * Specify text message to be displayed to newly connected users.
+     * Currently this is not implemented yet.
      *
      * Default: empty
      */
