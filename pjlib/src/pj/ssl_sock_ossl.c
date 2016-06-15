@@ -1968,14 +1968,11 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     /* Start SSL handshake */
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
     SSL_set_accept_state(ssock->ossl_ssl);
-    //To avoid race condition, we don't need to do it here and
-    //let the handshake happen in ssock->asock's callback instead.
-    //status = do_handshake(ssock);
+    status = do_handshake(ssock);
 
 on_return:
-    if (ssock && status != PJ_SUCCESS) {
-	//on_handshake_complete(ssock, status);
-	close_sockets(ssock);
+    if (ssock && status != PJ_EPENDING) {
+	on_handshake_complete(ssock, status);
     }
 
     /* Must return PJ_TRUE whatever happened, as active socket must 
