@@ -377,6 +377,10 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.unpublish_max_wait_time_msec = presConfig.publishShutdownWaitMsec;
     ret.pidf_tuple_id		= str2Pj(presConfig.pidfTupleId);
 
+    // AccountMwiConfig
+    ret.mwi_enabled 		= mwiConfig.enabled;
+    ret.mwi_expires 		= mwiConfig.expirationSec;
+
     // AccountNatConfig
     ret.sip_stun_use		= natConfig.sipStunUse;
     ret.media_stun_use		= natConfig.mediaStunUse;
