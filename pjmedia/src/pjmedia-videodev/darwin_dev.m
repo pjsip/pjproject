@@ -23,19 +23,27 @@
 #include <pj/os.h>
 
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
-    defined(PJMEDIA_VIDEO_DEV_HAS_IOS) && PJMEDIA_VIDEO_DEV_HAS_IOS != 0
+    defined(PJMEDIA_VIDEO_DEV_HAS_DARWIN) && PJMEDIA_VIDEO_DEV_HAS_DARWIN != 0
 
-#include "Availability.h"
-#ifdef __IPHONE_4_0
+#include "TargetConditionals.h"
 
-#import <UIKit/UIKit.h>
+#if TARGET_OS_IPHONE
+    /* On iOS, we supports rendering using UIView */
+    #import <UIKit/UIKit.h>
+#endif
+
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
 
-#define THIS_FILE		"ios_dev.c"
+#define THIS_FILE		"darwin_dev.c"
 #define DEFAULT_CLOCK_RATE	90000
-#define DEFAULT_WIDTH		352
-#define DEFAULT_HEIGHT		288
+#if TARGET_OS_IPHONE
+    #define DEFAULT_WIDTH	352
+    #define DEFAULT_HEIGHT	288
+#else
+    #define DEFAULT_WIDTH	1280
+    #define DEFAULT_HEIGHT	720
+#endif
 #define DEFAULT_FPS		15
 
 /* Define whether we should maintain the aspect ratio when rotating the image.
@@ -43,67 +51,75 @@
  */
 #define MAINTAIN_ASPECT_RATIO 	PJ_TRUE
 
-typedef struct ios_fmt_info
+typedef struct darwin_fmt_info
 {
     pjmedia_format_id   pjmedia_format;
-    UInt32		ios_format;
-} ios_fmt_info;
+    UInt32		darwin_format;
+} darwin_fmt_info;
 
-static ios_fmt_info ios_fmts[] =
+static darwin_fmt_info darwin_fmts[] =
 {
+#if !TARGET_OS_IPHONE
+    { PJMEDIA_FORMAT_YUY2, kCVPixelFormatType_422YpCbCr8_yuvs },
+    { PJMEDIA_FORMAT_UYVY, kCVPixelFormatType_422YpCbCr8 },
+#endif
     { PJMEDIA_FORMAT_BGRA, kCVPixelFormatType_32BGRA },
     { PJMEDIA_FORMAT_I420, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange }
 };
 
-typedef struct ios_supported_size
+typedef struct darwin_supported_size
 {
     pj_size_t supported_size_w;
     pj_size_t supported_size_h;
     NSString *preset_str;
-} ios_supported_size;
+} darwin_supported_size;
 
 /* Set the preset_str on set_preset_str method. */
-static ios_supported_size ios_sizes[] =
+static darwin_supported_size darwin_sizes[] =
 {
+#if TARGET_OS_IPHONE
     { 352, 288, NULL },
     { 640, 480, NULL },
     { 1280, 720, NULL },
     { 1920, 1080, NULL }
+#else
+    { 1280, 720, NULL }
+#endif
 };
 
-/* ios device info */
-struct ios_dev_info
+/* darwin device info */
+struct darwin_dev_info
 {
     pjmedia_vid_dev_info	 info;
     AVCaptureDevice             *dev;
 };
 
-/* ios factory */
-struct ios_factory
+/* darwin factory */
+struct darwin_factory
 {
     pjmedia_vid_dev_factory	 base;
     pj_pool_t			*pool;
     pj_pool_factory		*pf;
 
     unsigned			 dev_count;
-    struct ios_dev_info		*dev_info;
+    struct darwin_dev_info	*dev_info;
 };
 
 @interface VOutDelegate: NSObject 
 			 <AVCaptureVideoDataOutputSampleBufferDelegate>
 {
 @public
-    struct ios_stream *stream;
+    struct darwin_stream *stream;
 }
 @end
 
 /* Video stream. */
-struct ios_stream
+struct darwin_stream
 {
     pjmedia_vid_dev_stream  base;		/**< Base stream       */
     pjmedia_vid_dev_param   param;		/**< Settings	       */
     pj_pool_t		   *pool;		/**< Memory pool       */
-    struct ios_factory     *factory;            /**< Factory           */
+    struct darwin_factory  *factory;            /**< Factory           */
 
     pjmedia_vid_dev_cb	    vid_cb;		/**< Stream callback   */
     void		   *user_data;          /**< Application data  */
@@ -126,96 +142,102 @@ struct ios_stream
     dispatch_queue_t 		 queue;
     AVCaptureVideoPreviewLayer  *prev_layer;
     
+#if TARGET_OS_IPHONE
     void		*render_buf;
     pj_size_t		 render_buf_size;
     CGDataProviderRef    render_data_provider;
     UIView              *render_view;
-    
+#endif
+
     pj_timestamp	 frame_ts;
     unsigned		 ts_inc;
 };
 
 
 /* Prototypes */
-static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f);
-static pj_status_t ios_factory_destroy(pjmedia_vid_dev_factory *f);
-static pj_status_t ios_factory_refresh(pjmedia_vid_dev_factory *f);
-static unsigned    ios_factory_get_dev_count(pjmedia_vid_dev_factory *f);
-static pj_status_t ios_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info);
-static pj_status_t ios_factory_default_param(pj_pool_t *pool,
-					     pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param);
-static pj_status_t ios_factory_create_stream(
+static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f);
+static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f);
+static unsigned    darwin_factory_get_dev_count(pjmedia_vid_dev_factory *f);
+static pj_status_t darwin_factory_get_dev_info(pjmedia_vid_dev_factory *f,
+					       unsigned index,
+					       pjmedia_vid_dev_info *info);
+static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
+						pjmedia_vid_dev_factory *f,
+					     	unsigned index,
+					     	pjmedia_vid_dev_param *param);
+static pj_status_t darwin_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
 					pjmedia_vid_dev_param *param,
 					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t ios_stream_get_param(pjmedia_vid_dev_stream *strm,
-				        pjmedia_vid_dev_param *param);
-static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *strm,
-				      pjmedia_vid_dev_cap cap,
-				      void *value);
-static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *strm,
-				      pjmedia_vid_dev_cap cap,
-				      const void *value);
-static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm);
-static pj_status_t ios_stream_get_frame(pjmedia_vid_dev_stream *strm,
-                                        pjmedia_frame *frame);
-static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
-					const pjmedia_frame *frame);
-static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm);
-static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm);
+static pj_status_t darwin_stream_get_param(pjmedia_vid_dev_stream *strm,
+				           pjmedia_vid_dev_param *param);
+static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *strm,
+				         pjmedia_vid_dev_cap cap,
+				         void *value);
+static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *strm,
+				         pjmedia_vid_dev_cap cap,
+				         const void *value);
+static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
+                                           pjmedia_frame *frame);
+static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
+					   const pjmedia_frame *frame);
+static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
 {
-    &ios_factory_init,
-    &ios_factory_destroy,
-    &ios_factory_get_dev_count,
-    &ios_factory_get_dev_info,
-    &ios_factory_default_param,
-    &ios_factory_create_stream,
-    &ios_factory_refresh
+    &darwin_factory_init,
+    &darwin_factory_destroy,
+    &darwin_factory_get_dev_count,
+    &darwin_factory_get_dev_info,
+    &darwin_factory_default_param,
+    &darwin_factory_create_stream,
+    &darwin_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
 {
-    &ios_stream_get_param,
-    &ios_stream_get_cap,
-    &ios_stream_set_cap,
-    &ios_stream_start,
-    &ios_stream_get_frame,
-    &ios_stream_put_frame,
-    &ios_stream_stop,
-    &ios_stream_destroy
+    &darwin_stream_get_param,
+    &darwin_stream_get_cap,
+    &darwin_stream_set_cap,
+    &darwin_stream_start,
+    &darwin_stream_get_frame,
+    &darwin_stream_put_frame,
+    &darwin_stream_stop,
+    &darwin_stream_destroy
 };
 
 static void set_preset_str()
 {
-    ios_sizes[0].preset_str = AVCaptureSessionPreset352x288;
-    ios_sizes[1].preset_str = AVCaptureSessionPreset640x480;
-    ios_sizes[2].preset_str = AVCaptureSessionPreset1280x720;
-    ios_sizes[3].preset_str = AVCaptureSessionPreset1920x1080;
+#if TARGET_OS_IPHONE
+    darwin_sizes[0].preset_str = AVCaptureSessionPreset352x288;
+    darwin_sizes[1].preset_str = AVCaptureSessionPreset640x480;
+    darwin_sizes[2].preset_str = AVCaptureSessionPreset1280x720;
+    darwin_sizes[3].preset_str = AVCaptureSessionPreset1920x1080;
+#else
+    darwin_sizes[0].preset_str = AVCaptureSessionPreset1280x720;
+#endif
 }
 
 /****************************************************************************
  * Factory operations
  */
 /*
- * Init ios_ video driver.
+ * Init darwin_ video driver.
  */
-pjmedia_vid_dev_factory* pjmedia_ios_factory(pj_pool_factory *pf)
+pjmedia_vid_dev_factory* pjmedia_darwin_factory(pj_pool_factory *pf)
 {
-    struct ios_factory *f;
+    struct darwin_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "ios video", 512, 512, NULL);
-    f = PJ_POOL_ZALLOC_T(pool, struct ios_factory);
+    pool = pj_pool_create(pf, "darwin video", 512, 512, NULL);
+    f = PJ_POOL_ZALLOC_T(pool, struct darwin_factory);
     f->pf = pf;
     f->pool = pool;
     f->base.op = &factory_op;
@@ -225,21 +247,22 @@ pjmedia_vid_dev_factory* pjmedia_ios_factory(pj_pool_factory *pf)
 
 
 /* API: init factory */
-static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
+static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
-    struct ios_dev_info *qdi;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
+    struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
     
     set_preset_str();
     
     /* Initialize input and output devices here */
-    qf->dev_info = (struct ios_dev_info*)
+    qf->dev_info = (struct darwin_dev_info*)
 		   pj_pool_calloc(qf->pool, MAX_DEV_COUNT,
-				  sizeof(struct ios_dev_info));
+				  sizeof(struct darwin_dev_info));
     qf->dev_count = 0;
     
+#if TARGET_OS_IPHONE
     /* Init output device */
     qdi = &qf->dev_info[qf->dev_count++];
     pj_bzero(qdi, sizeof(*qdi));
@@ -247,6 +270,7 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
+#endif
     
     /* Init input device */
     first_idx = qf->dev_count;
@@ -268,18 +292,20 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
             pj_bzero(qdi, sizeof(*qdi));
             pj_ansi_strncpy(qdi->info.name, [device.localizedName UTF8String],
                             sizeof(qdi->info.name));
-            pj_ansi_strncpy(qdi->info.driver, "iOS", sizeof(qdi->info.driver));
+            pj_ansi_strncpy(qdi->info.driver, "AVF", sizeof(qdi->info.driver));
             qdi->info.dir = PJMEDIA_DIR_CAPTURE;
             qdi->info.has_callback = PJ_FALSE;
+#if TARGET_OS_IPHONE
             qdi->info.caps = PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW |
 		    	     PJMEDIA_VID_DEV_CAP_SWITCH;
+#endif
             qdi->dev = device;
         }
     }
     
     /* Set front camera to be the first input device (as default dev) */
     if (front_idx != -1 && front_idx != first_idx) {
-        struct ios_dev_info tmp_dev_info = qf->dev_info[first_idx];
+        struct darwin_dev_info tmp_dev_info = qf->dev_info[first_idx];
         qf->dev_info[first_idx] = qf->dev_info[front_idx];
         qf->dev_info[front_idx] = tmp_dev_info;
     }
@@ -294,12 +320,12 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
                           PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
                           PJMEDIA_VID_DEV_CAP_ORIENTATION;
 	
-	for (l = 0; l < PJ_ARRAY_SIZE(ios_fmts); l++) {
+	for (l = 0; l < PJ_ARRAY_SIZE(darwin_fmts); l++) {
             pjmedia_format *fmt;
             
             /* Simple renderer UIView only supports BGRA */
             if (qdi->info.dir == PJMEDIA_DIR_RENDER &&
-                ios_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
+                darwin_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
             {
                 continue;
             }
@@ -307,7 +333,7 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
             if (qdi->info.dir == PJMEDIA_DIR_RENDER) {
                 fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                 pjmedia_format_init_video(fmt,
-                                          ios_fmts[l].pjmedia_format,
+                                          darwin_fmts[l].pjmedia_format,
                                           DEFAULT_WIDTH,
                                           DEFAULT_HEIGHT,
                                           DEFAULT_FPS, 1);
@@ -316,34 +342,35 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
                 AVCaptureDevice *dev = qdi->dev;
                 
                 /* Set supported size for capture device */
-                for(m = 0; m < PJ_ARRAY_SIZE(ios_sizes) &&
-                           qdi->info.fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
+                for(m = 0;
+                    m < PJ_ARRAY_SIZE(darwin_sizes) &&
+                    qdi->info.fmt_cnt<PJMEDIA_VID_DEV_INFO_FMT_CNT;
                     m++)
                 {
                     if ([dev supportsAVCaptureSessionPreset:
-                                                       ios_sizes[m].preset_str])
+                             darwin_sizes[m].preset_str])
                     {
                         /* Landscape video */
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
-                                                  ios_fmts[l].pjmedia_format,
-                                                  ios_sizes[m].supported_size_w,
-                                                  ios_sizes[m].supported_size_h,
-                                                  DEFAULT_FPS, 1);
+                		darwin_fmts[l].pjmedia_format,
+                                darwin_sizes[m].supported_size_w,
+                                darwin_sizes[m].supported_size_h,
+                                DEFAULT_FPS, 1);
                         /* Portrait video */
                         fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                         pjmedia_format_init_video(fmt,
-                                                  ios_fmts[l].pjmedia_format,
-                                                  ios_sizes[m].supported_size_h,
-                                                  ios_sizes[m].supported_size_w,
-                                                  DEFAULT_FPS, 1);
+                        	darwin_fmts[l].pjmedia_format,
+                          	darwin_sizes[m].supported_size_h,
+                          	darwin_sizes[m].supported_size_w,
+                                DEFAULT_FPS, 1);
                     }
                 }                
             }
 	}
     }
     
-    PJ_LOG(4, (THIS_FILE, "iOS video initialized with %d devices:",
+    PJ_LOG(4, (THIS_FILE, "Darwin video initialized with %d devices:",
 	       qf->dev_count));
     for (i = 0; i < qf->dev_count; i++) {
         qdi = &qf->dev_info[i];
@@ -356,9 +383,9 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
 }
 
 /* API: destroy factory */
-static pj_status_t ios_factory_destroy(pjmedia_vid_dev_factory *f)
+static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
     pj_pool_t *pool = qf->pool;
 
     qf->pool = NULL;
@@ -368,25 +395,25 @@ static pj_status_t ios_factory_destroy(pjmedia_vid_dev_factory *f)
 }
 
 /* API: refresh the list of devices */
-static pj_status_t ios_factory_refresh(pjmedia_vid_dev_factory *f)
+static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 {
     PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
 }
 
 /* API: get number of devices */
-static unsigned ios_factory_get_dev_count(pjmedia_vid_dev_factory *f)
+static unsigned darwin_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
     return qf->dev_count;
 }
 
 /* API: get device info */
-static pj_status_t ios_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					    unsigned index,
-					    pjmedia_vid_dev_info *info)
+static pj_status_t darwin_factory_get_dev_info(pjmedia_vid_dev_factory *f,
+					       unsigned index,
+					       pjmedia_vid_dev_info *info)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
 
     PJ_ASSERT_RETURN(index < qf->dev_count, PJMEDIA_EVID_INVDEV);
 
@@ -396,13 +423,13 @@ static pj_status_t ios_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 }
 
 /* API: create default device parameter */
-static pj_status_t ios_factory_default_param(pj_pool_t *pool,
-					     pjmedia_vid_dev_factory *f,
-					     unsigned index,
-					     pjmedia_vid_dev_param *param)
+static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
+					        pjmedia_vid_dev_factory *f,
+					        unsigned index,
+					        pjmedia_vid_dev_param *param)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
-    struct ios_dev_info *di;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
+    struct darwin_dev_info *di;
 
     PJ_ASSERT_RETURN(index < qf->dev_count, PJMEDIA_EVID_INVDEV);
     PJ_UNUSED_ARG(pool);
@@ -430,6 +457,7 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 }
 
 @implementation VOutDelegate
+#if TARGET_OS_IPHONE
 - (void)update_image
 {    
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
@@ -446,7 +474,8 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     CGImageRelease(cgIm);
 
     [pool release];
-}    
+}
+#endif
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
 		      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
@@ -473,6 +502,11 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 
     [stream->frame_lock lock];
+    
+    // TODO: on Mac, nearly all frames, regardless of video format,
+    // have extra padding. So we may need to create a util function to
+    // remove the stride.
+    
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
             /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
@@ -551,10 +585,10 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 }
 @end
 
-static pj_status_t ios_stream_get_frame(pjmedia_vid_dev_stream *strm,
+static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                         pjmedia_frame *frame)
 {
-    struct ios_stream *stream = (struct ios_stream *)strm;
+    struct darwin_stream *stream = (struct darwin_stream *)strm;
 
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame->bit_info = 0;
@@ -570,20 +604,21 @@ static pj_status_t ios_stream_get_frame(pjmedia_vid_dev_stream *strm,
 }
 
 
-static ios_fmt_info* get_ios_format_info(pjmedia_format_id id)
+static darwin_fmt_info* get_darwin_format_info(pjmedia_format_id id)
 {
     unsigned i;
     
-    for (i = 0; i < PJ_ARRAY_SIZE(ios_fmts); i++) {
-        if (ios_fmts[i].pjmedia_format == id)
-            return &ios_fmts[i];
+    for (i = 0; i < PJ_ARRAY_SIZE(darwin_fmts); i++) {
+        if (darwin_fmts[i].pjmedia_format == id)
+            return &darwin_fmts[i];
     }
     
     return NULL;
 }
 
 
-static pj_status_t ios_init_view(struct ios_stream *strm)
+#if TARGET_OS_IPHONE
+static pj_status_t darwin_init_view(struct darwin_stream *strm)
 {
     pjmedia_vid_dev_param *param = &strm->param;
     CGRect view_rect = CGRectMake(0, 0, param->fmt.det.vid.size.w,
@@ -601,40 +636,41 @@ static pj_status_t ios_init_view(struct ios_stream *strm)
     
     strm->render_view = [[UIView alloc] initWithFrame:view_rect];
     strm->param.window.info.ios.window = strm->render_view;
-    
+
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         PJ_ASSERT_RETURN(param->window.info.ios.window, PJ_EINVAL);
-        ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
+        darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
                            param->window.info.ios.window);
     }
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
-        ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+        darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
                            &param->window_hide);
     }
     if (param->flags & PJMEDIA_VID_DEV_CAP_ORIENTATION) {
-        ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+        darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                            &param->orient);
     }
 
     return PJ_SUCCESS;
 }
+#endif /* TARGET_OS_IPHONE */
 
 
 /* API: create stream */
-static pj_status_t ios_factory_create_stream(
+static pj_status_t darwin_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
 					pjmedia_vid_dev_param *param,
 					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
-    struct ios_factory *qf = (struct ios_factory*)f;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
     pj_pool_t *pool;
-    struct ios_stream *strm;
+    struct darwin_stream *strm;
     pjmedia_video_format_detail *vfd;
     const pjmedia_video_format_info *vfi;
     pj_status_t status = PJ_SUCCESS;
-    ios_fmt_info *ifi = get_ios_format_info(param->fmt.id);
+    darwin_fmt_info *ifi = get_darwin_format_info(param->fmt.id);
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -643,7 +679,7 @@ static pj_status_t ios_factory_create_stream(
                      param->dir == PJMEDIA_DIR_RENDER),
 		     PJ_EINVAL);
 
-    if (!(ifi = get_ios_format_info(param->fmt.id)))
+    if (!(ifi = get_darwin_format_info(param->fmt.id)))
         return PJMEDIA_EVID_BADFORMAT;
     
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
@@ -651,10 +687,10 @@ static pj_status_t ios_factory_create_stream(
         return PJMEDIA_EVID_BADFORMAT;
 
     /* Create and Initialize stream descriptor */
-    pool = pj_pool_create(qf->pf, "ios-dev", 4000, 4000, NULL);
+    pool = pj_pool_create(qf->pf, "darwin-dev", 4000, 4000, NULL);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
-    strm = PJ_POOL_ZALLOC_T(pool, struct ios_stream);
+    strm = PJ_POOL_ZALLOC_T(pool, struct darwin_stream);
     pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
@@ -680,27 +716,27 @@ static pj_status_t ios_factory_create_stream(
 	}
         AVCaptureDevice *dev = qf->dev_info[param->cap_id].dev;
  
-        for (i = PJ_ARRAY_SIZE(ios_sizes)-1; i > 0; --i) {
-            if (((vfd->size.w == ios_sizes[i].supported_size_w) &&
-                 (vfd->size.h == ios_sizes[i].supported_size_h)) ||
-                ((vfd->size.w == ios_sizes[i].supported_size_h) &&
-                 (vfd->size.h == ios_sizes[i].supported_size_w)))
+        for (i = PJ_ARRAY_SIZE(darwin_sizes)-1; i > 0; --i) {
+            if (((vfd->size.w == darwin_sizes[i].supported_size_w) &&
+                 (vfd->size.h == darwin_sizes[i].supported_size_h)) ||
+                ((vfd->size.w == darwin_sizes[i].supported_size_h) &&
+                 (vfd->size.h == darwin_sizes[i].supported_size_w)))
             {
                 break;
             }
         }
         
-        strm->cap_session.sessionPreset = ios_sizes[i].preset_str;
+        strm->cap_session.sessionPreset = darwin_sizes[i].preset_str;
         
         /* If the requested size is portrait (or landscape), we make
          * our natural orientation portrait (or landscape) as well.
          */
         if (vfd->size.w > vfd->size.h) {
-            vfd->size.w = ios_sizes[i].supported_size_w;
-            vfd->size.h = ios_sizes[i].supported_size_h;
+            vfd->size.w = darwin_sizes[i].supported_size_w;
+            vfd->size.h = darwin_sizes[i].supported_size_h;
         } else {
-            vfd->size.h = ios_sizes[i].supported_size_w;
-            vfd->size.w = ios_sizes[i].supported_size_h;
+            vfd->size.h = darwin_sizes[i].supported_size_w;
+            vfd->size.w = darwin_sizes[i].supported_size_h;
         }
         strm->size = vfd->size;
         strm->vid_size = vfd->size;
@@ -710,16 +746,23 @@ static pj_status_t ios_factory_create_stream(
         /* Update param as output */
         param->fmt = strm->param.fmt;
 
-        /* Set frame rate, this may only work on iOS 7 or later */
+#if TARGET_OS_IPHONE
+        /* Set frame rate, this may only work on iOS 7 or later.
+         * On Mac, this may raise an exception if we set it to a value
+         * unsupported by the device. We need to query
+         * activeFormat.videoSupportedFrameRateRanges to get the valid
+         * range.
+         */
         if ([dev respondsToSelector:@selector(activeVideoMinFrameDuration)] &&
             [dev lockForConfiguration:NULL])
         {
             dev.activeVideoMinFrameDuration = CMTimeMake(vfd->fps.denum,
-                                                            vfd->fps.num);
+                                                         vfd->fps.num);
             dev.activeVideoMaxFrameDuration = CMTimeMake(vfd->fps.denum,
-                                                            vfd->fps.num);
+                                                         vfd->fps.num);
             [dev unlockForConfiguration];
         }
+#endif
         
 	/* Add the video device to the session as a device input */
         NSError *error;
@@ -751,7 +794,7 @@ static pj_status_t ios_factory_create_stream(
         strm->video_output.alwaysDiscardsLateVideoFrames = YES;
 	strm->video_output.videoSettings =
 	    [NSDictionary dictionaryWithObjectsAndKeys:
-			  [NSNumber numberWithInt:ifi->ios_format],
+			  [NSNumber numberWithInt:ifi->darwin_format],
 			  kCVPixelBufferPixelFormatTypeKey, nil];
 
 	strm->vout_delegate = [VOutDelegate alloc];
@@ -775,7 +818,7 @@ static pj_status_t ios_factory_create_stream(
 	
         /* Native preview */
         if (param->flags & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW) {
-            ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
+            darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
                                &param->native_preview);
         }
 
@@ -788,15 +831,15 @@ static pj_status_t ios_factory_create_stream(
         {
             if (param->orient == PJMEDIA_ORIENT_UNKNOWN)
                 param->orient = PJMEDIA_ORIENT_NATURAL;
-            ios_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+            darwin_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                                &param->orient);
         }
         
     } else if (param->dir & PJMEDIA_DIR_RENDER) {
-
+#if TARGET_OS_IPHONE
         /* Create renderer stream here */
         
-        status = ios_init_view(strm);
+        status = darwin_init_view(strm);
         if (status != PJ_SUCCESS)
             goto on_error;
         
@@ -810,6 +853,7 @@ static pj_status_t ios_factory_create_stream(
         strm->render_data_provider = CGDataProviderCreateWithData(NULL,
                                             strm->render_buf, strm->frame_size,
                                             NULL);
+#endif
     }
     
     /* Done */
@@ -819,16 +863,16 @@ static pj_status_t ios_factory_create_stream(
     return PJ_SUCCESS;
     
 on_error:
-    ios_stream_destroy((pjmedia_vid_dev_stream *)strm);
+    darwin_stream_destroy((pjmedia_vid_dev_stream *)strm);
     
     return status;
 }
 
 /* API: Get stream info. */
-static pj_status_t ios_stream_get_param(pjmedia_vid_dev_stream *s,
-				        pjmedia_vid_dev_param *pi)
+static pj_status_t darwin_stream_get_param(pjmedia_vid_dev_stream *s,
+				           pjmedia_vid_dev_param *pi)
 {
-    struct ios_stream *strm = (struct ios_stream*)s;
+    struct darwin_stream *strm = (struct darwin_stream*)s;
 
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
@@ -838,15 +882,17 @@ static pj_status_t ios_stream_get_param(pjmedia_vid_dev_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *s,
-				      pjmedia_vid_dev_cap cap,
-				      void *pval)
+static pj_status_t darwin_stream_get_cap(pjmedia_vid_dev_stream *s,
+				         pjmedia_vid_dev_cap cap,
+				         void *pval)
 {
-    struct ios_stream *strm = (struct ios_stream*)s;
+    struct darwin_stream *strm = (struct darwin_stream*)s;
     
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
+    PJ_UNUSED_ARG(strm);
 
     switch (cap) {
+#if TARGET_OS_IPHONE
         case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW:
         {
             pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*) pval;
@@ -854,7 +900,7 @@ static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *s,
             hwnd->info.ios.window = (void*)strm->render_view;
             return PJ_SUCCESS;
         }
-            
+#endif /* TARGET_OS_IPHONE */
         default:
             break;
     }
@@ -863,11 +909,11 @@ static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
-				      pjmedia_vid_dev_cap cap,
-				      const void *pval)
+static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
+				         pjmedia_vid_dev_cap cap,
+				         const void *pval)
 {
-    struct ios_stream *strm = (struct ios_stream*)s;
+    struct darwin_stream *strm = (struct darwin_stream*)s;
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
@@ -901,9 +947,10 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!strm->cap_session)
 		return PJ_EINVALIDOP;
             
+#if TARGET_OS_IPHONE
             /* Create view, if none */
 	    if (!strm->render_view)
-	        ios_init_view(strm);
+	        darwin_init_view(strm);
             
             /* Preview layer instantiation should be in main thread! */
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -919,6 +966,7 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
                 strm->prev_layer = prev_layer;
             });
             PJ_LOG(4, (THIS_FILE, "Native preview initialized"));
+#endif
             
             return PJ_SUCCESS;
         }
@@ -929,7 +977,7 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!strm->cap_session) return PJ_EINVAL;
             
             NSError *error;
-            struct ios_dev_info* di = strm->factory->dev_info;
+            struct darwin_dev_info* di = strm->factory->dev_info;
             pjmedia_vid_dev_switch_param *p =
                                     (pjmedia_vid_dev_switch_param*)pval;
 
@@ -963,20 +1011,21 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             strm->param.cap_id = p->target_id;
             
             /* Set the orientation as well */
-            ios_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
+            darwin_stream_set_cap(s, PJMEDIA_VID_DEV_CAP_ORIENTATION,
             		       &strm->param.orient);
             
             return PJ_SUCCESS;
         }
         
+#if TARGET_OS_IPHONE
         case PJMEDIA_VID_DEV_CAP_FORMAT:
 	{
             const pjmedia_video_format_info *vfi;
             pjmedia_video_format_detail *vfd;
             pjmedia_format *fmt = (pjmedia_format *)pval;
-            ios_fmt_info *ifi;
+            darwin_fmt_info *ifi;
         
-            if (!(ifi = get_ios_format_info(fmt->id)))
+            if (!(ifi = get_darwin_format_info(fmt->id)))
                 return PJMEDIA_EVID_BADFORMAT;
         
             vfi = pjmedia_get_video_format_info(
@@ -1051,7 +1100,8 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
             });
             return PJ_SUCCESS;
         }
-            
+#endif /* TARGET_OS_IPHONE */
+        
         case PJMEDIA_VID_DEV_CAP_ORIENTATION:
         {
             pjmedia_orient orient = *(pjmedia_orient *)pval;
@@ -1066,11 +1116,13 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
                       sizeof(strm->param.orient));
         
             if (strm->param.dir == PJMEDIA_DIR_RENDER) {
+#if TARGET_OS_IPHONE
             	dispatch_async(dispatch_get_main_queue(), ^{
                     strm->render_view.transform =
                         CGAffineTransformMakeRotation(
                             ((int)strm->param.orient-1) * -M_PI_2);
                 });
+#endif
 
 		return PJ_SUCCESS;
             }
@@ -1141,13 +1193,13 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
 }
 
 /* API: Start stream. */
-static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
+static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm)
 {
-    struct ios_stream *stream = (struct ios_stream*)strm;
+    struct darwin_stream *stream = (struct darwin_stream*)strm;
 
     PJ_UNUSED_ARG(stream);
 
-    PJ_LOG(4, (THIS_FILE, "Starting iOS video stream"));
+    PJ_LOG(4, (THIS_FILE, "Starting Darwin video stream"));
 
     if (stream->cap_session) {
         if ([NSThread isMainThread]) {
@@ -1159,7 +1211,8 @@ static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
         }
     
 	if (![stream->cap_session isRunning]) {
-	    PJ_LOG(3, (THIS_FILE, "Unable to start iOS capture session"));
+	    PJ_LOG(3, (THIS_FILE, "Unable to start AVFoundation capture "
+				  "session"));
 	    return PJ_EUNKNOWN;
 	}
     }
@@ -1169,10 +1222,11 @@ static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
 
 
 /* API: Put frame from stream */
-static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
-					const pjmedia_frame *frame)
+static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
+					   const pjmedia_frame *frame)
 {
-    struct ios_stream *stream = (struct ios_stream*)strm;
+#if TARGET_OS_IPHONE
+    struct darwin_stream *stream = (struct darwin_stream*)strm;
 
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
@@ -1183,19 +1237,20 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
     dispatch_async(dispatch_get_main_queue(), ^{
         [stream->vout_delegate update_image];
     });
-    
+#endif
+
     return PJ_SUCCESS;
 }
 
 /* API: Stop stream. */
-static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
+static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
 {
-    struct ios_stream *stream = (struct ios_stream*)strm;
+    struct darwin_stream *stream = (struct darwin_stream*)strm;
 
     if (!stream->cap_session || ![stream->cap_session isRunning])
         return PJ_SUCCESS;
     
-    PJ_LOG(4, (THIS_FILE, "Stopping iOS video stream"));
+    PJ_LOG(4, (THIS_FILE, "Stopping Darwin video stream"));
 
     if ([NSThread isMainThread]) {
 	[stream->cap_session stopRunning];
@@ -1210,13 +1265,13 @@ static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
+static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
-    struct ios_stream *stream = (struct ios_stream*)strm;
+    struct darwin_stream *stream = (struct darwin_stream*)strm;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-    ios_stream_stop(strm);
+    darwin_stream_stop(strm);
     
     if (stream->cap_session) {
         if (stream->dev_input) {
@@ -1238,6 +1293,7 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
 	stream->vout_delegate = nil;
     }
 
+#if TARGET_OS_IPHONE
     if (stream->prev_layer) {
         CALayer *prev_layer = stream->prev_layer;
         dispatch_async(dispatch_get_main_queue(), ^{
@@ -1260,6 +1316,7 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
     }
+#endif /* TARGET_OS_IPHONE */
 
     if (stream->queue) {
         dispatch_release(stream->queue);
@@ -1278,5 +1335,4 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
     return PJ_SUCCESS;
 }
 
-#endif  /* __IPHONE_4_0 */
-#endif	/* PJMEDIA_VIDEO_DEV_HAS_IOS */
+#endif	/* PJMEDIA_VIDEO_DEV_HAS_DARWIN */

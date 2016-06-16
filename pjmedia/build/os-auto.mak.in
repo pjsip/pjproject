@@ -2,8 +2,7 @@
 
 # Define the desired video device backend
 # Valid values are:
-#   - mac_os
-#   - iphone_os
+#   - darwin_os
 #   - android_os
 AC_PJMEDIA_VIDEO = @ac_pjmedia_video@
 
@@ -21,10 +20,10 @@ V4L2_LDFLAGS = @ac_v4l2_ldflags@
 
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
-QT_CFLAGS = @ac_qt_cflags@
+# QT_CFLAGS = @ac_qt_cflags@
 
-# iOS
-IOS_CFLAGS = @ac_ios_cflags@
+# Darwin (Mac and iOS)
+DARWIN_CFLAGS = @ac_darwin_cflags@
 
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
@@ -45,7 +44,7 @@ WEBRTC_LDFLAGS = @ac_webrtc_ldflags@
 # PJMEDIA features exclusion
 export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
 		 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		 $(IOS_CFLAGS) $(ANDROID_CFLAGS) $(LIBYUV_CFLAGS) \
+		 $(DARWIN_CFLAGS) $(ANDROID_CFLAGS) $(LIBYUV_CFLAGS) \
 		 $(OPENH264_CFLAGS) $(WEBRTC_CFLAGS)
 export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
 		  $(LIBYUV_LDFLAGS) $(OPENH264_LDFLAGS) $(WEBRTC_LDFLAGS)
@@ -248,10 +247,17 @@ export PJMEDIA_VIDEODEV_OBJS += qt_dev.o
 endif
 
 #
-# iOS video device
+# Darwin video device
 #
-ifeq ($(AC_PJMEDIA_VIDEO),iphone_os)
-export PJMEDIA_VIDEODEV_OBJS += ios_dev.o ios_opengl_dev.o
+ifeq ($(AC_PJMEDIA_VIDEO_HAS_DARWIN),yes)
+export PJMEDIA_VIDEODEV_OBJS += darwin_dev.o
+endif
+
+#
+# iOS OpenGL video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL),yes)
+export PJMEDIA_VIDEODEV_OBJS += ios_opengl_dev.o
 endif
 
 #
@@ -265,7 +271,7 @@ endif
 # Determine whether we should compile the obj-c version of a particular
 # source code
 #
-ifneq (,$(filter $(AC_PJMEDIA_VIDEO),mac_os iphone_os))
+ifneq (,$(filter $(AC_PJMEDIA_VIDEO),darwin_os))
 # Mac and iPhone OS specific, use obj-c
 export PJMEDIA_VIDEODEV_OBJS += sdl_dev_m.o
 else

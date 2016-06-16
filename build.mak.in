@@ -147,10 +147,12 @@ OPENH264_LDFLAGS =  @ac_openh264_ldflags@
 
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
-QT_CFLAGS = @ac_qt_cflags@
+# QT_CFLAGS = @ac_qt_cflags@
 
-# iOS
-IOS_CFLAGS = @ac_ios_cflags@
+# Darwin (Mac and iOS)
+AC_PJMEDIA_VIDEO_HAS_DARWIN = @ac_pjmedia_video_has_darwin@
+AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL = @ac_pjmedia_video_has_ios_opengl@
+DARWIN_CFLAGS = @ac_darwin_cflags@
 
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
@@ -161,7 +163,7 @@ LIBYUV_LDFLAGS =  @ac_libyuv_ldflags@
 
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(IOS_CFLAGS) $(LIBYUV_CFLAGS)
+		   $(OPENH264_CFLAGS) $(DARWIN_CFLAGS) $(LIBYUV_CFLAGS)
 PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
                    $(OPENH264_LDFLAGS) $(LIBYUV_LDFLAGS)
 

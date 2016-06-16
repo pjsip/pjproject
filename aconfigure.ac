@@ -733,38 +733,53 @@ else
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
 	;;
-  *-apple-darwin_ios*)
-	ac_pjmedia_video=iphone_os
-	AC_SUBST(ac_pjmedia_video_has_ios)
-	AC_SUBST(ac_ios_cflags)
+  *darwin*)
+	ac_pjmedia_video=darwin_os
+	AC_SUBST(ac_pjmedia_video_has_darwin)
+	AC_SUBST(ac_pjmedia_video_has_ios_opengl)
+	AC_SUBST(ac_darwin_cflags)
 	SAVED_LIBS="$LIBS"
 	LIBS="-framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_ios=yes],[ac_pjmedia_video_has_ios=no])
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
+		       [ac_pjmedia_video_has_darwin=yes],
+		       [ac_pjmedia_video_has_darwin=no])
+	LIBS="-framework OpenGLES"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
+		       [ac_pjmedia_video_has_ios_opengl=yes],
+		       [ac_pjmedia_video_has_ios_opengl=no])
 	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_ios" = "yes"; then
-	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1 -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
-	  LIBS="$LIBS -framework OpenGLES -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	if test "$ac_pjmedia_video_has_darwin" = "yes"; then
+	  ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_DARWIN=1"
+	  LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
 	else
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
 	fi
-	;;
-  *darwin*)
-	ac_pjmedia_video=mac_os
-	AC_SUBST(ac_pjmedia_video_has_qt)
-	AC_SUBST(ac_qt_cflags)
-	SAVED_LIBS="$LIBS"
-	LIBS="-framework QTKit"
-	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_qt=yes],[ac_pjmedia_video_has_qt=no])
-	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_qt" = "yes"; then
-	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
-	  LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
-	  AC_MSG_RESULT([Checking if QTKit framework is available... yes])
+	if test "$ac_pjmedia_video_has_ios_opengl" = "yes"; then
+	  ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
+	  LIBS="$LIBS -framework OpenGLES"
+	  AC_MSG_RESULT([Checking if OpenGLES framework is available... yes])
 	else
-	  AC_MSG_RESULT([Checking if QTKit framework is available... no])
+	  AC_MSG_RESULT([Checking if OpenGLES framework is available... no])
 	fi
-	;;
+        if false; then
+          # QTKit is deprecated, see ticket #1931.
+	  ac_pjmedia_video=mac_os
+	  AC_SUBST(ac_pjmedia_video_has_qt)
+	  AC_SUBST(ac_qt_cflags)
+	  SAVED_LIBS="$LIBS"
+	  LIBS="-framework QTKit"
+	  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_qt=yes],[ac_pjmedia_video_has_qt=no])
+	  LIBS="$SAVED_LIBS"
+	  if test "$ac_pjmedia_video_has_qt" = "yes"; then
+	    ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
+	    LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
+	    AC_MSG_RESULT([Checking if QTKit framework is available... yes])
+	  else
+	    AC_MSG_RESULT([Checking if QTKit framework is available... no])
+ 	  fi
+ 	fi
+ 	;;
  esac
 fi
 
