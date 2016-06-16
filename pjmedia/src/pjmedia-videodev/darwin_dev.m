@@ -35,7 +35,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <QuartzCore/QuartzCore.h>
 
-#define THIS_FILE		"darwin_dev.c"
+#define THIS_FILE		"darwin_dev.m"
 #define DEFAULT_CLOCK_RATE	90000
 #if TARGET_OS_IPHONE
     #define DEFAULT_WIDTH	352

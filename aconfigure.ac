@@ -756,7 +756,7 @@ else
 	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
 	fi
 	if test "$ac_pjmedia_video_has_ios_opengl" = "yes"; then
-	  ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
+	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
 	  LIBS="$LIBS -framework OpenGLES"
 	  AC_MSG_RESULT([Checking if OpenGLES framework is available... yes])
 	else
