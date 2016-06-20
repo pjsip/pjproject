@@ -608,9 +608,16 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
 	    goto on_return;
 	}
 
+	/* Init DNS resolution option for IPv6 */
+	if (sess->af == pj_AF_INET6())
+	    opt |= PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
+
 	/* Fallback to DNS A only if default port is specified */
 	if (default_port>0 && default_port<65536) {
-	    opt = PJ_DNS_SRV_FALLBACK_A;
+	    if (sess->af == pj_AF_INET6())
+		opt |= PJ_DNS_SRV_FALLBACK_AAAA;
+	    else
+		opt |= PJ_DNS_SRV_FALLBACK_A;
 	    sess->default_port = (pj_uint16_t)default_port;
 	}
 
@@ -1718,13 +1725,18 @@ static void dns_srv_resolver_cb(void *user_data,
 	for (j=0; j<rec->entry[i].server.addr_count && 
 		  cnt<PJ_TURN_MAX_DNS_SRV_CNT; ++j) 
 	{
-	    pj_sockaddr_in *addr = &sess->srv_addr_list[cnt].ipv4;
+	    if (rec->entry[i].server.addr[j].af == sess->af) {
+		pj_sockaddr *addr = &sess->srv_addr_list[cnt];
 
-	    addr->sin_family = sess->af;
-	    addr->sin_port = pj_htons(rec->entry[i].port);
-	    addr->sin_addr.s_addr = rec->entry[i].server.addr[j].s_addr;
+		addr->addr.sa_family = sess->af;
+		pj_sockaddr_set_port(addr, rec->entry[i].port);
+		if (sess->af == pj_AF_INET6())
+		    addr->ipv6.sin6_addr = rec->entry[i].server.addr[j].ip.v6;
+		else
+		    addr->ipv4.sin_addr = rec->entry[i].server.addr[j].ip.v4;
 
-	    ++cnt;
+		++cnt;
+	    }
 	}
     }
     sess->srv_addr_cnt = (pj_uint16_t)cnt;
