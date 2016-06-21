@@ -831,7 +831,21 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+/*
+ * Increment the event subscription's group lock.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_add_ref(pjsip_evsub *sub)
+{
+    return pj_grp_lock_add_ref(sub->grp_lock);
+}
 
+/*
+ * Decrement the event subscription's group lock.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_dec_ref(pjsip_evsub *sub)
+{
+    return pj_grp_lock_dec_ref(sub->grp_lock);
+}
 
 /*
  * Create client subscription session.

@@ -490,6 +490,26 @@ PJ_DECL(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,
 PJ_DECL(void*) pjsip_evsub_get_mod_data( pjsip_evsub *sub, unsigned mod_id );
 
 
+/**
+ * Increment the event subscription's group lock.
+ *
+ * @param sub		The server subscription instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_add_ref(pjsip_evsub *sub);
+
+
+/**
+ * Decrement the event subscription's group lock.
+ *
+ * @param sub		The server subscription instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_dec_ref(pjsip_evsub *sub);
+
+
 
 PJ_END_DECL
 
