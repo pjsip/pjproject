@@ -88,19 +88,17 @@ static int print_attr(char *buffer, unsigned length,
 	{
 	    char addr[PJ_INET6_ADDRSTRLEN];
 	    const pj_stun_sockaddr_attr *attr;
+	    pj_uint16_t af;
 
 	    attr = (const pj_stun_sockaddr_attr*)ahdr;
+	    af = attr->sockaddr.addr.sa_family;
 
-	    if (attr->sockaddr.addr.sa_family == pj_AF_INET()) {
+	    if ((af == pj_AF_INET()) || (af == pj_AF_INET6())) {
 		len = pj_ansi_snprintf(p, end-p,
-				       ", IPv4 addr=%s:%d\n",
+				       ", %s addr=%s\n",
+				       (af == pj_AF_INET())?"IPv4":"IPv6",
 				       pj_sockaddr_print(&attr->sockaddr,
-				           		 addr, sizeof(addr),0),
-				       pj_sockaddr_get_port(&attr->sockaddr));
-
-	    } else if (attr->sockaddr.addr.sa_family == pj_AF_INET6()) {
-		len = pj_ansi_snprintf(p, end-p,
-				       ", IPv6 addr present\n");
+				           		addr, sizeof(addr),3));
 	    } else {
 		len = pj_ansi_snprintf(p, end-p,
 				       ", INVALID ADDRESS FAMILY!\n");

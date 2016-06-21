@@ -39,12 +39,14 @@ enum
 {
     WRONG_TURN	= 1,
     DEL_ON_ERR	= 2,
+    CLIENT_IPV4	= 4,
+    CLIENT_IPV6	= 8
 };
-
 
 /* Test results */
 struct test_result
 {
+    pj_status_t start_status;	/* start ice successful?	*/	
     pj_status_t	init_status;	/* init successful?		*/
     pj_status_t	nego_status;	/* negotiation successful?	*/
     unsigned	rx_cnt[4];	/* Number of data received	*/
@@ -101,7 +103,8 @@ struct test_sess
 
     struct sess_param	*param;
 
-    test_server		*server;
+    test_server		*server1;   /* Test server for IPv4.	*/
+    test_server		*server2;   /* Test server for IPv6.	*/
 
     pj_thread_t		*worker_threads[MAX_THREADS];
 
@@ -121,23 +124,89 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_status_t status);
 static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
 
+static void set_stun_turn_cfg(struct ice_ept *ept, 
+				     pj_ice_strans_cfg *ice_cfg, 
+				     char *serverip,
+				     pj_bool_t use_ipv6) 
+{        
+    if (ept->cfg.enable_stun & YES) {
+	unsigned stun_idx = ice_cfg->stun_tp_cnt++;
+	pj_ice_strans_stun_cfg_default(&ice_cfg->stun_tp[stun_idx]);
+
+	if ((ept->cfg.enable_stun & SRV) == SRV) {
+	    ice_cfg->stun_tp[stun_idx].server = pj_str(SRV_DOMAIN);
+	} else {
+	    ice_cfg->stun_tp[stun_idx].server = pj_str(serverip);
+	}
+	ice_cfg->stun_tp[stun_idx].port = STUN_SERVER_PORT;
+
+	ice_cfg->stun_tp[stun_idx].af = GET_AF(use_ipv6);
+    }
+    ice_cfg->stun.af = GET_AF(use_ipv6);
+    if (ept->cfg.enable_host == 0) {	
+	ice_cfg->stun.max_host_cands = 0;
+    } else {
+	//ice_cfg.stun.no_host_cands = PJ_FALSE;	
+	ice_cfg->stun.loop_addr = PJ_TRUE;
+    }
+
+    if (ept->cfg.enable_turn & YES) {
+	unsigned turn_idx = ice_cfg->turn_tp_cnt++;	
+	pj_ice_strans_turn_cfg_default(&ice_cfg->turn_tp[turn_idx]);
+
+	if ((ept->cfg.enable_turn & SRV) == SRV) {
+	    ice_cfg->turn_tp[turn_idx].server = pj_str(SRV_DOMAIN);
+	} else {
+	    ice_cfg->turn_tp[turn_idx].server = pj_str(serverip);
+	}
+	ice_cfg->turn_tp[turn_idx].port = TURN_SERVER_PORT;
+	ice_cfg->turn_tp[turn_idx].conn_type = PJ_TURN_TP_UDP;
+	ice_cfg->turn_tp[turn_idx].auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.realm =
+	    pj_str(SRV_DOMAIN);
+	if (ept->cfg.client_flag & WRONG_TURN)
+	    ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.username =
+	    pj_str("xxx");
+	else
+	    ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.username =
+	    pj_str(TURN_USERNAME);
+
+	ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.data_type =
+	    PJ_STUN_PASSWD_PLAIN;
+	ice_cfg->turn_tp[turn_idx].auth_cred.data.static_cred.data =
+	    pj_str(TURN_PASSWD);
+	
+	ice_cfg->turn_tp[turn_idx].af = GET_AF(use_ipv6);
+    }    
+}
+
 /* Create ICE stream transport */
 static int create_ice_strans(struct test_sess *test_sess,
-			     struct ice_ept *ept,
+			     struct ice_ept *ept,			     
 			     pj_ice_strans **p_ice)
 {
     pj_ice_strans *ice;
     pj_ice_strans_cb ice_cb;
     pj_ice_strans_cfg ice_cfg;
     pj_sockaddr hostip;
-    char serverip[PJ_INET6_ADDRSTRLEN];
+    char serveripv4[PJ_INET6_ADDRSTRLEN];
+    char serveripv6[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
+    unsigned flag = (ept->cfg.client_flag)?ept->cfg.client_flag:CLIENT_IPV4;
 
     status = pj_gethostip(pj_AF_INET(), &hostip);
     if (status != PJ_SUCCESS)
 	return -1030;
 
-    pj_sockaddr_print(&hostip, serverip, sizeof(serverip), 0);
+    pj_sockaddr_print(&hostip, serveripv4, sizeof(serveripv4), 0);
+
+    if (flag & CLIENT_IPV6) {
+	status = pj_gethostip(pj_AF_INET6(), &hostip);    
+	if (status != PJ_SUCCESS)
+	    return -1031;
+
+	pj_sockaddr_print(&hostip, serveripv6, sizeof(serveripv6), 0);
+    }
 
     /* Init callback structure */
     pj_bzero(&ice_cb, sizeof(ice_cb));
@@ -150,39 +219,12 @@ static int create_ice_strans(struct test_sess *test_sess,
     if ((ept->cfg.enable_stun & SRV)==SRV || (ept->cfg.enable_turn & SRV)==SRV)
 	ice_cfg.resolver = test_sess->resolver;
 
-    if (ept->cfg.enable_stun & YES) {
-	if ((ept->cfg.enable_stun & SRV) == SRV) {
-	    ice_cfg.stun.server = pj_str(SRV_DOMAIN);
-	} else {
-	    ice_cfg.stun.server = pj_str(serverip);
-	}
-	ice_cfg.stun.port = STUN_SERVER_PORT;
+    if (flag & CLIENT_IPV4) {
+	set_stun_turn_cfg(ept, &ice_cfg, serveripv4, PJ_FALSE);
     }
 
-    if (ept->cfg.enable_host == 0) {
-	ice_cfg.stun.max_host_cands = 0;
-    } else {
-	//ice_cfg.stun.no_host_cands = PJ_FALSE;
-	ice_cfg.stun.loop_addr = PJ_TRUE;
-    }
-
-
-    if (ept->cfg.enable_turn & YES) {
-	if ((ept->cfg.enable_turn & SRV) == SRV) {
-	    ice_cfg.turn.server = pj_str(SRV_DOMAIN);
-	} else {
-	    ice_cfg.turn.server = pj_str(serverip);
-	}
-	ice_cfg.turn.port = TURN_SERVER_PORT;
-	ice_cfg.turn.conn_type = PJ_TURN_TP_UDP;
-	ice_cfg.turn.auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
-	ice_cfg.turn.auth_cred.data.static_cred.realm = pj_str(SRV_DOMAIN);
-	if (ept->cfg.client_flag & WRONG_TURN)
-	    ice_cfg.turn.auth_cred.data.static_cred.username = pj_str("xxx");
-	else
-	    ice_cfg.turn.auth_cred.data.static_cred.username = pj_str(TURN_USERNAME);
-	ice_cfg.turn.auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
-	ice_cfg.turn.auth_cred.data.static_cred.data = pj_str(TURN_PASSWD);
+    if (flag & CLIENT_IPV6) {
+	set_stun_turn_cfg(ept, &ice_cfg, serveripv6, PJ_TRUE);
     }
 
     /* Create ICE stream transport */
@@ -215,7 +257,7 @@ static int create_sess(pj_stun_config *stun_cfg,
     pj_str_t ns_ip;
     pj_uint16_t ns_port;
     unsigned flags;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Create session structure */
     pool = pj_pool_create(mem, "testsess", 512, 512, NULL);
@@ -232,31 +274,53 @@ static int create_sess(pj_stun_config *stun_cfg,
 
     /* Create server */
     flags = server_flag;
-    status = create_test_server(stun_cfg, flags, SRV_DOMAIN, &sess->server);
+    if (flags & SERVER_IPV4) {
+	status = create_test_server(stun_cfg, (flags & ~SERVER_IPV6), 
+				    SRV_DOMAIN, &sess->server1);
+    }
+
+    if ((status == PJ_SUCCESS) && (flags & SERVER_IPV6)) {
+	status = create_test_server(stun_cfg, (flags & ~SERVER_IPV4), 
+				    SRV_DOMAIN, &sess->server2);
+    }
+
     if (status != PJ_SUCCESS) {
 	app_perror(INDENT "error: create_test_server()", status);
 	destroy_sess(sess, 500);
 	return -10;
     }
-    sess->server->turn_respond_allocate =
-	sess->server->turn_respond_refresh = PJ_TRUE;
-
-    /* Create resolver */
-    status = pj_dns_resolver_create(mem, NULL, 0, stun_cfg->timer_heap,
-				    stun_cfg->ioqueue, &sess->resolver);
-    if (status != PJ_SUCCESS) {
-	app_perror(INDENT "error: pj_dns_resolver_create()", status);
-	destroy_sess(sess, 500);
-	return -20;
+    if (flags & SERVER_IPV4) {
+	sess->server1->turn_respond_allocate =
+	    sess->server1->turn_respond_refresh = PJ_TRUE;
     }
 
-    ns_ip = pj_str("127.0.0.1");
-    ns_port = (pj_uint16_t)DNS_SERVER_PORT;
-    status = pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip, &ns_port);
-    if (status != PJ_SUCCESS) {
-	app_perror( INDENT "error: pj_dns_resolver_set_ns()", status);
-	destroy_sess(sess, 500);
-	return -21;
+    if (flags & SERVER_IPV6) {
+	sess->server2->turn_respond_allocate =
+	    sess->server2->turn_respond_refresh = PJ_TRUE;
+    }
+
+    /* Create resolver */
+    if ((sess->callee.cfg.enable_stun & SRV)==SRV || 
+	(sess->callee.cfg.enable_turn & SRV)==SRV ||
+	(sess->caller.cfg.enable_stun & SRV)==SRV || 
+	(sess->caller.cfg.enable_turn & SRV)==SRV) 
+    {
+	status = pj_dns_resolver_create(mem, NULL, 0, stun_cfg->timer_heap,
+					stun_cfg->ioqueue, &sess->resolver);
+	if (status != PJ_SUCCESS) {
+	    app_perror(INDENT "error: pj_dns_resolver_create()", status);
+	    destroy_sess(sess, 500);
+	    return -20;
+	}
+
+	ns_ip =  (flags & SERVER_IPV6)?pj_str("::1"):pj_str("127.0.0.1");
+	ns_port = (pj_uint16_t)DNS_SERVER_PORT;
+	status = pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip, &ns_port);
+	if (status != PJ_SUCCESS) {
+	    app_perror(INDENT "error: pj_dns_resolver_set_ns()", status);
+	    destroy_sess(sess, 500);
+	    return -21;
+	}
     }
 
     /* Create caller ICE stream transport */
@@ -305,9 +369,14 @@ static void destroy_sess(struct test_sess *sess, unsigned wait_msec)
 	sess->resolver = NULL;
     }
 
-    if (sess->server) {
-	destroy_test_server(sess->server);
-	sess->server = NULL;
+    if (sess->server1) {
+	destroy_test_server(sess->server1);
+	sess->server1 = NULL;
+    }
+
+    if (sess->server2) {
+	destroy_test_server(sess->server2);
+	sess->server2 = NULL;
     }
 
     if (sess->pool) {
@@ -384,12 +453,13 @@ static pj_status_t start_ice(struct ice_ept *ept, const struct ice_ept *remote)
 
     status = pj_ice_strans_start_ice(ept->ice, &remote->ufrag, &remote->pass,
 				     rcand_cnt, rcand);
-    if (status != PJ_SUCCESS) {
+
+    if (status != ept->cfg.expected.start_status) {
 	app_perror(INDENT "err: pj_ice_strans_start_ice()", status);
 	return status;
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -498,12 +568,25 @@ static int perform_test2(const char *title,
     struct test_sess *sess;
     unsigned i;
     int rc;
+    char add_title1[16];
+    char add_title2[16];
+    pj_bool_t client_mix_test = ((callee_cfg->client_flag &
+				 (CLIENT_IPV4+CLIENT_IPV6)) !=
+				 (caller_cfg->client_flag &
+				 (CLIENT_IPV4+CLIENT_IPV6)));
 
-    PJ_LOG(3,(THIS_FILE, INDENT "%s", title));
+    sprintf(add_title1, "%s%s%s", (server_flag & SERVER_IPV4)?"IPv4":"", 
+	    ((server_flag & SERVER_IPV4)&&(server_flag & SERVER_IPV6))?"+":"",
+	    (server_flag & SERVER_IPV6)?"IPv6":"");
+    
+    sprintf(add_title2, "%s", client_mix_test?"Mix test":"");
+
+    PJ_LOG(3,(THIS_FILE, INDENT "%s (%s) %s", title, add_title1, add_title2));
 
     capture_pjlib_state(stun_cfg, &pjlib_state);
 
-    rc = create_sess(stun_cfg, server_flag, caller_cfg, callee_cfg, test_param, &sess);
+    rc = create_sess(stun_cfg, server_flag, caller_cfg, callee_cfg, test_param,
+		     &sess);
     if (rc != 0)
 	return rc;
 
@@ -557,16 +640,18 @@ static int perform_test2(const char *title,
     /* Start ICE on callee */
     rc = start_ice(&sess->callee, &sess->caller);
     if (rc != PJ_SUCCESS) {
-	destroy_sess(sess, 500);
-	return -120;
+	int retval = (rc == sess->callee.cfg.expected.start_status)?0:-120;
+	destroy_sess(sess, 500);	
+	return retval;
     }
     /* Wait for callee's answer_delay */
     poll_events(stun_cfg, sess->callee.cfg.answer_delay, PJ_FALSE);
     /* Start ICE on caller */
     rc = start_ice(&sess->caller, &sess->callee);
     if (rc != PJ_SUCCESS) {
+	int retval = (rc == sess->caller.cfg.expected.start_status)?0:-130;
 	destroy_sess(sess, 500);
-	return -130;
+	return retval;
     }
 
     for (i=0; i<sess->param->worker_cnt; ++i) {
@@ -663,6 +748,23 @@ on_return:
     return rc;
 }
 
+static void set_client_server_flag(unsigned server_flag,
+				   unsigned caller_flag,
+				   unsigned callee_flag,
+				   unsigned *res_server_flag,
+				   unsigned *res_caller_flag,
+				   unsigned *res_callee_flag)
+{
+    enum {
+	RST_CLT_FLAG = CLIENT_IPV4+CLIENT_IPV6,
+	RST_SRV_FLAG = SERVER_IPV4+SERVER_IPV6
+    };
+
+    *res_server_flag = (*res_server_flag & ~RST_SRV_FLAG) | server_flag;
+    *res_caller_flag = (*res_caller_flag & ~RST_CLT_FLAG) | caller_flag;
+    *res_callee_flag = (*res_callee_flag & ~RST_CLT_FLAG) | callee_flag;
+}
+
 static int perform_test(const char *title,
                         pj_stun_config *stun_cfg,
                         unsigned server_flag,
@@ -670,10 +772,67 @@ static int perform_test(const char *title,
                         struct test_cfg *callee_cfg)
 {
     struct sess_param test_param;
+    int rc;
+    int expected_caller_start_ice = caller_cfg->expected.start_status;
+    int expected_callee_start_ice = callee_cfg->expected.start_status;
+
+    set_client_server_flag(SERVER_IPV4, CLIENT_IPV4, CLIENT_IPV4,
+			   &server_flag, &caller_cfg->client_flag, 
+			   &callee_cfg->client_flag);
+
 
     pj_bzero(&test_param, sizeof(test_param));
-    return perform_test2(title, stun_cfg, server_flag, caller_cfg,
-                         callee_cfg, &test_param);
+
+    rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+		       callee_cfg, &test_param);
+
+#if USE_IPV6
+    /* Test for IPV6. */
+    if (rc == PJ_SUCCESS) {
+	pj_bzero(&test_param, sizeof(test_param));
+	set_client_server_flag(SERVER_IPV6, CLIENT_IPV6, CLIENT_IPV6,
+			       &server_flag, &caller_cfg->client_flag,
+			       &callee_cfg->client_flag);
+
+	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			   callee_cfg, &test_param);
+    }
+
+    /* Test for IPV4+IPV6. */
+    if (rc == PJ_SUCCESS) {
+	pj_bzero(&test_param, sizeof(test_param));
+	set_client_server_flag(SERVER_IPV4+SERVER_IPV6, 
+			       CLIENT_IPV4+CLIENT_IPV6,
+			       CLIENT_IPV4+CLIENT_IPV6, 
+			       &server_flag,
+			       &caller_cfg->client_flag, 
+			       &callee_cfg->client_flag);
+
+	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			   callee_cfg, &test_param);
+    }
+
+    /* Test controller(IPV4) vs controlled(IPV6). */
+    if (rc == PJ_SUCCESS) {
+	pj_bzero(&test_param, sizeof(test_param));
+	set_client_server_flag(SERVER_IPV4+SERVER_IPV6, 
+			       CLIENT_IPV4,
+			       CLIENT_IPV6, 
+			       &server_flag,
+			       &caller_cfg->client_flag, 
+			       &callee_cfg->client_flag);
+	caller_cfg->expected.start_status = PJ_ENOTFOUND;
+	callee_cfg->expected.start_status = PJ_ENOTFOUND;
+
+	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			   callee_cfg, &test_param);
+    }
+
+#endif
+    callee_cfg->expected.start_status = expected_callee_start_ice;
+    caller_cfg->expected.start_status = expected_caller_start_ice;
+
+    return rc;
 }
 
 #define ROLE1	PJ_ICE_SESS_ROLE_CONTROLLED
@@ -695,39 +854,39 @@ int ice_test(void)
 	/*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
 	{
 	    "hosts candidates only",
-	    0xFFFF,
-	    {ROLE1, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
 	{
 	    "host and srflxes",
-	    0xFFFF,
-	    {ROLE1, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
 	{
 	    "host vs relay",
-	    0xFFFF,
-	    {ROLE1, 1,	    YES,    NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	    NO,     NO,    YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	    YES,    NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    NO,     NO,    YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
 	{
 	    "relay vs host",
-	    0xFFFF,
-	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	   YES,     NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	   YES,     NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
 	{
 	    "relay vs relay",
-	    0xFFFF,
-	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	    NO,     NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    NO,     NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
 	{
 	    "all candidates",
-	    0xFFFF,
-	    {ROLE1, 1,	   YES,	   YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2, 1,	   YES,    YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    0x1FFF,
+	    {ROLE1, 1,	   YES,	   YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	   YES,    YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	},
     };
 
@@ -745,8 +904,8 @@ int ice_test(void)
 	    "Basic with host candidates",
 	    0x0,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    {ROLE1,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -770,8 +929,8 @@ int ice_test(void)
 	    "Basic with srflx candidates",
 	    0xFFFF,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    {ROLE1,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -796,8 +955,8 @@ int ice_test(void)
 	    "Basic with relay candidates",
 	    0xFFFF,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	    {ROLE2,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	    {ROLE1,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -822,8 +981,8 @@ int ice_test(void)
 	    "STUN resolution failure",
 	    0x0,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}},
-	    {ROLE2,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}}
+	    {ROLE1,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}},
+	    {ROLE2,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -848,8 +1007,8 @@ int ice_test(void)
 	    "TURN allocation failure",
 	    0xFFFF,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}},
-	    {ROLE2,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}}
+	    {ROLE1,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_SUCCESS, PJ_STATUS_FROM_STUN_CODE(401), -1}},
+	    {ROLE2,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_SUCCESS, PJ_STATUS_FROM_STUN_CODE(401), -1}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -875,8 +1034,8 @@ int ice_test(void)
 	    "STUN failure, testing TURN deallocation",
 	    0xFFFF & (~(CREATE_STUN_SERVER)),
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	1,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}},
-	    {ROLE2,	1,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}}
+	    {ROLE1,	1,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}},
+	    {ROLE2,	1,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJ_SUCCESS, PJNATH_ESTUNTIMEDOUT, -1}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag,
@@ -969,10 +1128,10 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
     } cfg =
     {
 	"Concurrency test",
-	0xFFFF,
+	0x1FFF,
 	/*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	{ROLE1,	1,	YES,     YES,	    YES,    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
-	{ROLE2,	1,	YES,     YES,	    YES,    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	{ROLE1,	1,	YES,     YES,	    YES,    CLIENT_IPV4,    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2,	1,	YES,     YES,	    YES,    CLIENT_IPV4,    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
     };
     struct sess_param test_param;
     int rc;

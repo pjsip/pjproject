@@ -39,12 +39,14 @@ enum test_server_flags
     CREATE_DNS_SERVER		= (1 << 0),
     CREATE_A_RECORD_FOR_DOMAIN	= (1 << 1),
 
-    CREATE_STUN_SERVER		= (1 << 5),
-    CREATE_STUN_SERVER_DNS_SRV	= (1 << 6),
+    CREATE_STUN_SERVER		= (1 << 4),
+    CREATE_STUN_SERVER_DNS_SRV	= (1 << 5),
 
-    CREATE_TURN_SERVER		= (1 << 10),
-    CREATE_TURN_SERVER_DNS_SRV	= (1 << 11),
+    CREATE_TURN_SERVER		= (1 << 8),
+    CREATE_TURN_SERVER_DNS_SRV	= (1 << 9),
 
+    SERVER_IPV4			= (1 << 12),
+    SERVER_IPV6			= (1 << 13)
 };
 
 typedef struct test_server test_server;
