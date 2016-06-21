@@ -521,7 +521,7 @@ static pj_status_t create_request(pjsip_regc *regc,
 	route = regc->route_set.next;
 	while (route != &regc->route_set) {
 	    pjsip_hdr *new_hdr = (pjsip_hdr*)
-				 pjsip_hdr_shallow_clone(tdata->pool, route);
+				 pjsip_hdr_clone(tdata->pool, route);
 	    pj_list_insert_after(route_pos, new_hdr);
 	    route_pos = new_hdr;
 	    route = route->next;
@@ -535,7 +535,7 @@ static pj_status_t create_request(pjsip_regc *regc,
 	hdr = regc->hdr_list.next;
 	while (hdr != &regc->hdr_list) {
 	    pjsip_hdr *new_hdr = (pjsip_hdr*)
-				 pjsip_hdr_shallow_clone(tdata->pool, hdr);
+				 pjsip_hdr_clone(tdata->pool, hdr);
 	    pjsip_msg_add_hdr(tdata->msg, new_hdr);
 	    hdr = hdr->next;
 	}
@@ -574,7 +574,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     hdr = regc->contact_hdr_list.next;
     while (hdr != &regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+			       pjsip_hdr_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
 
@@ -589,8 +589,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     if (regc->expires_hdr)
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool,
-						       regc->expires_hdr));
+			       pjsip_hdr_clone(tdata->pool,
+					       regc->expires_hdr));
 
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
@@ -601,7 +601,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     h_allow = pjsip_endpt_get_capability(regc->endpt, PJSIP_H_ALLOW, NULL);
     if (h_allow) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, h_allow));
+			       pjsip_hdr_clone(tdata->pool, h_allow));
 
     }
 
@@ -646,7 +646,7 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
     hdr = (pjsip_hdr*)regc->contact_hdr_list.next;
     while ((void*)hdr != (void*)&regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+			       pjsip_hdr_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
 
@@ -1171,7 +1171,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             chdr = regc->contact_hdr_list.next;
             while (chdr != &regc->contact_hdr_list) {
 	        pj_list_insert_before(ins_hdr, (pjsip_hdr*)
-                    pjsip_hdr_shallow_clone(tsx->last_tx->pool, chdr));
+                    pjsip_hdr_clone(tsx->last_tx->pool, chdr));
 	        chdr = chdr->next;
             }
 
