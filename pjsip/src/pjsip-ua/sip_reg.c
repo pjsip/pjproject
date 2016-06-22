@@ -1432,6 +1432,11 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
 				      regc, &regc_tsx_callback);
     if (status!=PJ_SUCCESS) {
+	/* On failure, regc_tsx_callback() may not be called, so we need
+	 * to reset regc->has_tsx here (see also ticket #1936).
+	 */
+	regc->has_tsx = PJ_FALSE;
+
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
 
