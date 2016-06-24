@@ -77,6 +77,7 @@ struct pjsip_regc_cbparam
     int			 expiration;/**< Next expiration interval.	    */
     int			 contact_cnt;/**<Number of contacts in response.    */
     pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
+    pj_bool_t		 is_unreg;  /**< Expire header, if any, set to zero?*/
 };
 
 

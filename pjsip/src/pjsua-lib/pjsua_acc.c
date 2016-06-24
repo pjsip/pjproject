@@ -2304,7 +2304,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_get_info(param->regc, &rinfo);
 	reg_info.cbparam = param;
 	reg_info.regc = param->regc;
-	reg_info.renew = (rinfo.interval != 0);
+	reg_info.renew = !param->is_unreg;
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
     
