@@ -8424,7 +8424,7 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opus_opus_repacketizer_get_size" >&5
 $as_echo "$ac_cv_lib_opus_opus_repacketizer_get_size" >&6; }
 if test "x$ac_cv_lib_opus_opus_repacketizer_get_size" = xyes; then :
-  opus_present=1 && LIBS="$LIBS -lopus"
+  opus_present=1 && LIBS="-lopus $LIBS"
 fi
 
 		if test "x$opus_h_present" = "x1" -a "x$opus_present" = "x1"; then
