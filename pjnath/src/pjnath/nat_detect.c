@@ -84,16 +84,16 @@ typedef struct nat_detect_session
     void		    *user_data;
     pj_stun_nat_detect_cb   *cb;
     pj_sock_t		     sock;
-    pj_sockaddr_in	     local_addr;
+    pj_sockaddr	     	     local_addr;
     pj_ioqueue_key_t	    *key;
-    pj_sockaddr_in	     server;
-    pj_sockaddr_in	    *cur_server;
+    pj_sockaddr	     	     server;
+    pj_sockaddr	    	    *cur_server;
     pj_stun_session	    *stun_sess;
 
     pj_ioqueue_op_key_t	     read_op, write_op;
     pj_uint8_t		     rx_pkt[PJ_STUN_MAX_PKT_LEN];
     pj_ssize_t		     rx_pkt_len;
-    pj_sockaddr_in	     src_addr;
+    pj_sockaddr	     	     src_addr;
     int			     src_addr_len;
 
     struct result
@@ -101,8 +101,8 @@ typedef struct nat_detect_session
 	pj_bool_t	executed;
 	pj_bool_t	complete;
 	pj_status_t	status;
-	pj_sockaddr_in	ma;
-	pj_sockaddr_in	ca;
+	pj_sockaddr	ma;
+	pj_sockaddr	ca;
 	pj_stun_tx_data	*tdata;
     } result[ST_MAX];
 
@@ -128,7 +128,7 @@ static pj_status_t on_send_msg(pj_stun_session *sess,
 
 static pj_status_t send_test(nat_detect_session *sess,
 			     enum test_type test_id,
-			     const pj_sockaddr_in *alt_addr,
+			     const pj_sockaddr *alt_addr,
 			     pj_uint32_t change_flag);
 static void on_sess_timer(pj_timer_heap_t *th,
 			     pj_timer_entry *te);
@@ -166,38 +166,40 @@ static int test_completed(nat_detect_session *sess)
     return count;
 }
 
-static pj_status_t get_local_interface(const pj_sockaddr_in *server,
-				       pj_in_addr *local_addr)
+static pj_status_t get_local_interface(const pj_sockaddr *server,
+				       pj_sockaddr *local_addr)
 {
     pj_sock_t sock;
-    pj_sockaddr_in tmp;
+    pj_sockaddr tmp, local;
     int addr_len;
     pj_status_t status;
 
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock);
+    status = pj_sock_socket(server->addr.sa_family, pj_SOCK_DGRAM(),
+    			    0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_sock_bind_in(sock, 0, 0);
+    addr_len = pj_sockaddr_get_len(server);
+    pj_bzero(&local, sizeof(pj_sockaddr));
+    status = pj_sock_bind(sock, &local, addr_len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
 	return status;
     }
 
-    status = pj_sock_connect(sock, server, sizeof(pj_sockaddr_in));
+    status = pj_sock_connect(sock, server, addr_len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
 	return status;
     }
 
-    addr_len = sizeof(pj_sockaddr_in);
     status = pj_sock_getsockname(sock, &tmp, &addr_len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
 	return status;
     }
 
-    local_addr->s_addr = tmp.sin_addr.s_addr;
+    pj_sockaddr_cp(local_addr, &tmp);
     
     pj_sock_close(sock);
     return PJ_SUCCESS;
@@ -209,12 +211,25 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 					    void *user_data,
 					    pj_stun_nat_detect_cb *cb)
 {
+    pj_sockaddr srv;
+
+    if (server)
+	pj_sockaddr_cp(&srv, server);
+
+    return pj_stun_detect_nat_type2(&srv, stun_cfg, user_data, cb);
+}
+
+PJ_DEF(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
+					     pj_stun_config *stun_cfg,
+					     void *user_data,
+					     pj_stun_nat_detect_cb *cb)
+{
     pj_pool_t *pool;
     nat_detect_session *sess;
     pj_stun_session_cb sess_cb;
     pj_ioqueue_callback ioqueue_cb;
-    int addr_len;
-    char addr[PJ_INET_ADDRSTRLEN];
+    int af, addr_len;
+    char addr[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
 
     PJ_ASSERT_RETURN(server && stun_cfg, PJ_EINVAL);
@@ -244,7 +259,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     pj_grp_lock_add_ref(sess->grp_lock);
     pj_grp_lock_add_handler(sess->grp_lock, pool, sess, &sess_on_destroy);
 
-    pj_memcpy(&sess->server, server, sizeof(pj_sockaddr_in));
+    pj_sockaddr_cp(&sess->server, server);
 
     /*
      * Init timer to self-destroy.
@@ -257,24 +272,23 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Initialize socket.
      */
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sess->sock);
+    af = server->addr.sa_family;
+    status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sess->sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /*
      * Bind to any.
      */
-    pj_bzero(&sess->local_addr, sizeof(pj_sockaddr_in));
-    sess->local_addr.sin_family = pj_AF_INET();
-    status = pj_sock_bind(sess->sock, &sess->local_addr, 
-			  sizeof(pj_sockaddr_in));
+    pj_bzero(&sess->local_addr, sizeof(pj_sockaddr));
+    addr_len = pj_sockaddr_get_len(server);
+    status = pj_sock_bind(sess->sock, &sess->local_addr, addr_len);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /*
      * Get local/bound address.
      */
-    addr_len = sizeof(sess->local_addr);
     status = pj_sock_getsockname(sess->sock, &sess->local_addr, &addr_len);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -282,19 +296,17 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     /*
      * Find out which interface is used to send to the server.
      */
-    status = get_local_interface(server, &sess->local_addr.sin_addr);
+    status = get_local_interface(server, &sess->local_addr);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     PJ_LOG(5,(sess->pool->obj_name, "Local address is %s:%d",
-	      pj_inet_ntop2(pj_AF_INET(), &sess->local_addr.sin_addr,
-	      		    addr, sizeof(addr)), 
-	      pj_ntohs(sess->local_addr.sin_port)));
+    	      pj_sockaddr_print(&sess->local_addr, addr, sizeof(addr), 0),
+    	      pj_sockaddr_get_port(&sess->local_addr)));
 
     PJ_LOG(5,(sess->pool->obj_name, "Server set to %s:%d",
-	      pj_inet_ntop2(pj_AF_INET(), &server->sin_addr, addr,
-	      		    sizeof(addr)), 
-	      pj_ntohs(server->sin_port)));
+    	      pj_sockaddr_print(server, addr, sizeof(addr), 0),
+    	      pj_sockaddr_get_port(server)));
 
     /*
      * Register socket to ioqueue to receive asynchronous input
@@ -574,10 +586,8 @@ static void on_request_complete(pj_stun_session *stun_sess,
     sess->result[test_id].complete = PJ_TRUE;
     sess->result[test_id].status = status;
     if (status == PJ_SUCCESS) {
-	pj_memcpy(&sess->result[test_id].ma, &mattr->sockaddr.ipv4,
-		  sizeof(pj_sockaddr_in));
-	pj_memcpy(&sess->result[test_id].ca, &ca->sockaddr.ipv4,
-		  sizeof(pj_sockaddr_in));
+	pj_sockaddr_cp(&sess->result[test_id].ma, &mattr->sockaddr);
+	pj_sockaddr_cp(&sess->result[test_id].ca, &ca->sockaddr);
     }
 
     /* Send Test 1B only when Test 2 completes. Must not send Test 1B
@@ -589,8 +599,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	sess->result[ST_TEST_1].complete &&
 	sess->result[ST_TEST_1].status == PJ_SUCCESS) 
     {
-	cmp = pj_memcmp(&sess->local_addr, &sess->result[ST_TEST_1].ma,
-			sizeof(pj_sockaddr_in));
+	cmp = pj_sockaddr_cmp(&sess->local_addr, &sess->result[ST_TEST_1].ma);
 	if (cmp != 0)
 	    send_test(sess, ST_TEST_1B, &sess->result[ST_TEST_1].ca, 0);
     }
@@ -659,8 +668,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	 * Test 1 is successful. Further tests are needed to detect
 	 * NAT type. Compare the MAPPED-ADDRESS with the local address.
 	 */
-	cmp = pj_memcmp(&sess->local_addr, &sess->result[ST_TEST_1].ma,
-			sizeof(pj_sockaddr_in));
+	cmp = pj_sockaddr_cmp(&sess->local_addr, &sess->result[ST_TEST_1].ma);
 	if (cmp==0) {
 	    /*
 	     * MAPPED-ADDRESS and local address is equal. Need one more
@@ -710,9 +718,8 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		     * Compare the MAPPED-ADDRESS of test 1B with the
 		     * MAPPED-ADDRESS returned in test 1..
 		     */
-		    cmp = pj_memcmp(&sess->result[ST_TEST_1].ma,
-				    &sess->result[ST_TEST_1B].ma,
-				    sizeof(pj_sockaddr_in));
+		    cmp = pj_sockaddr_cmp(&sess->result[ST_TEST_1].ma,
+				    	  &sess->result[ST_TEST_1B].ma);
 		    if (cmp != 0) {
 			/*
 			 * MAPPED-ADDRESS is different, we're behind a
@@ -813,11 +820,11 @@ on_return:
 /* Perform test */
 static pj_status_t send_test(nat_detect_session *sess,
 			     enum test_type test_id,
-			     const pj_sockaddr_in *alt_addr,
+			     const pj_sockaddr *alt_addr,
 			     pj_uint32_t change_flag)
 {
     pj_uint32_t magic, tsx_id[3];
-    char addr[PJ_INET_ADDRSTRLEN];
+    char addr[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
 
     sess->result[test_id].executed = PJ_TRUE;
@@ -849,21 +856,20 @@ static pj_status_t send_test(nat_detect_session *sess,
 
     /* Configure alternate address */
     if (alt_addr)
-	sess->cur_server = (pj_sockaddr_in*) alt_addr;
+	sess->cur_server = (pj_sockaddr*) alt_addr;
     else
 	sess->cur_server = &sess->server;
 
     PJ_LOG(5,(sess->pool->obj_name, 
               "Performing %s to %s:%d", 
 	      test_names[test_id],
-	      pj_inet_ntop2(pj_AF_INET(), &sess->cur_server->sin_addr,
-	      		    addr, sizeof(addr)),
-	      pj_ntohs(sess->cur_server->sin_port)));
+	      pj_sockaddr_print(sess->cur_server, addr, sizeof(addr), 0),
+	      pj_sockaddr_get_port(sess->cur_server)));
 
     /* Send the request */
     status = pj_stun_session_send_msg(sess->stun_sess, NULL, PJ_TRUE,
 				      PJ_TRUE, sess->cur_server, 
-				      sizeof(pj_sockaddr_in),
+				      pj_sockaddr_get_len(sess->cur_server),
 				      sess->result[test_id].tdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
