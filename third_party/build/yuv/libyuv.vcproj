@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="liblibyuv"
-	ProjectGUID="{6AC9B65F-0862-4A5C-8A9D-141516993130}"
-	RootNamespace="liblibyuv"
+	Name="libyuv"
+	ProjectGUID="{740DDEB9-D47C-4A83-A585-A366B6965410}"
+	RootNamespace="libyuv"
 	>
 	<Platforms>
 		<Platform
@@ -61,7 +61,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -121,7 +121,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -189,7 +189,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -256,7 +256,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -315,7 +315,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -382,7 +382,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -449,7 +449,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -509,7 +509,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -577,7 +577,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -644,7 +644,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -703,7 +703,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -770,7 +770,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -837,7 +837,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -897,7 +897,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -965,7 +965,7 @@
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1032,7 +1032,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1091,7 +1091,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1158,7 +1158,7 @@
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1226,7 +1226,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 				DebugInformationFormat="3"
@@ -1287,7 +1287,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1347,7 +1347,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 				DebugInformationFormat="3"
@@ -1408,7 +1408,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1468,7 +1468,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 				DebugInformationFormat="3"
@@ -1529,7 +1529,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1589,7 +1589,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1657,7 +1657,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1725,7 +1725,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1793,7 +1793,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1860,7 +1860,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1927,7 +1927,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -1994,7 +1994,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2061,7 +2061,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2129,7 +2129,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2197,7 +2197,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2265,7 +2265,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2333,7 +2333,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2400,7 +2400,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2467,7 +2467,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2534,7 +2534,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2601,7 +2601,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2669,7 +2669,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2737,7 +2737,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2805,7 +2805,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2873,7 +2873,7 @@
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
 				Optimization="2"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -2940,7 +2940,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -3007,7 +3007,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -3074,7 +3074,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -3141,7 +3141,7 @@
 				Name="VCCLCompilerTool"
 				AdditionalOptions="/wd4100 /wd4244 /wd4127"
 				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../libyuv/include,../../../pjlib/include"
+				AdditionalIncludeDirectories=".,../../yuv/include,../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
 				PrecompiledHeaderFile=""
 			/>
@@ -3192,115 +3192,115 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
-				RelativePath="..\..\libyuv\source\compare.cc"
+				RelativePath="..\..\yuv\source\compare.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\compare_common.cc"
+				RelativePath="..\..\yuv\source\compare_common.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\compare_win.cc"
+				RelativePath="..\..\yuv\source\compare_win.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert.cc"
+				RelativePath="..\..\yuv\source\convert.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_argb.cc"
+				RelativePath="..\..\yuv\source\convert_argb.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_from.cc"
+				RelativePath="..\..\yuv\source\convert_from.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_from_argb.cc"
+				RelativePath="..\..\yuv\source\convert_from_argb.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_jpeg.cc"
+				RelativePath="..\..\yuv\source\convert_jpeg.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_to_argb.cc"
+				RelativePath="..\..\yuv\source\convert_to_argb.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\convert_to_i420.cc"
+				RelativePath="..\..\yuv\source\convert_to_i420.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\cpu_id.cc"
+				RelativePath="..\..\yuv\source\cpu_id.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\mjpeg_decoder.cc"
+				RelativePath="..\..\yuv\source\mjpeg_decoder.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\mjpeg_validate.cc"
+				RelativePath="..\..\yuv\source\mjpeg_validate.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\planar_functions.cc"
+				RelativePath="..\..\yuv\source\planar_functions.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\rotate.cc"
+				RelativePath="..\..\yuv\source\rotate.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\rotate_any.cc"
+				RelativePath="..\..\yuv\source\rotate_any.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\rotate_argb.cc"
+				RelativePath="..\..\yuv\source\rotate_argb.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\rotate_common.cc"
+				RelativePath="..\..\yuv\source\rotate_common.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\rotate_win.cc"
+				RelativePath="..\..\yuv\source\rotate_win.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\row_any.cc"
+				RelativePath="..\..\yuv\source\row_any.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\row_common.cc"
+				RelativePath="..\..\yuv\source\row_common.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\row_win.cc"
+				RelativePath="..\..\yuv\source\row_win.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\scale.cc"
+				RelativePath="..\..\yuv\source\scale.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\scale_any.cc"
+				RelativePath="..\..\yuv\source\scale_any.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\scale_argb.cc"
+				RelativePath="..\..\yuv\source\scale_argb.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\scale_common.cc"
+				RelativePath="..\..\yuv\source\scale_common.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\scale_win.cc"
+				RelativePath="..\..\yuv\source\scale_win.cc"
 				>
 			</File>
 			<File
-				RelativePath="..\..\libyuv\source\video_common.cc"
+				RelativePath="..\..\yuv\source\video_common.cc"
 				>
 			</File>
 		</Filter>

@@ -52,7 +52,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{6AC9B65F-0862-4A5C-8A9D-141516993130}</ProjectGuid>
-    <RootNamespace>liblibyuv</RootNamespace>
+    <RootNamespace>libyuv</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -198,7 +198,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -209,7 +209,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -220,7 +220,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -231,7 +231,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -242,7 +242,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -253,7 +253,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -267,7 +267,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -282,7 +282,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -296,7 +296,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -311,7 +311,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -325,7 +325,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -340,7 +340,7 @@
     </Midl>
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../libyuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;../../yuv/include;../../../pjlib/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
     </ClCompile>
@@ -349,39 +349,39 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\libyuv\source\compare.cc" />
-    <ClCompile Include="..\..\libyuv\source\compare_common.cc" />
-    <ClCompile Include="..\..\libyuv\source\compare_win.cc">
+    <ClCompile Include="..\..\yuv\source\compare.cc" />
+    <ClCompile Include="..\..\yuv\source\compare_common.cc" />
+    <ClCompile Include="..\..\yuv\source\compare_win.cc">
       <CompileAs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</CompileAs>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_argb.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_from.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_from_argb.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_jpeg.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_to_argb.cc" />
-    <ClCompile Include="..\..\libyuv\source\convert_to_i420.cc" />
-    <ClCompile Include="..\..\libyuv\source\cpu_id.cc" />
-    <ClCompile Include="..\..\libyuv\source\mjpeg_decoder.cc" />
-    <ClCompile Include="..\..\libyuv\source\mjpeg_validate.cc" />
-    <ClCompile Include="..\..\libyuv\source\planar_functions.cc" />
-    <ClCompile Include="..\..\libyuv\source\rotate.cc" />
-    <ClCompile Include="..\..\libyuv\source\rotate_any.cc" />
-    <ClCompile Include="..\..\libyuv\source\rotate_argb.cc" />
-    <ClCompile Include="..\..\libyuv\source\rotate_common.cc" />
-    <ClCompile Include="..\..\libyuv\source\rotate_win.cc" />
-    <ClCompile Include="..\..\libyuv\source\row_any.cc" />
-    <ClCompile Include="..\..\libyuv\source\row_common.cc" />
-    <ClCompile Include="..\..\libyuv\source\row_win.cc" />
-    <ClCompile Include="..\..\libyuv\source\scale.cc" />
-    <ClCompile Include="..\..\libyuv\source\scale_any.cc" />
-    <ClCompile Include="..\..\libyuv\source\scale_argb.cc" />
-    <ClCompile Include="..\..\libyuv\source\scale_common.cc" />
-    <ClCompile Include="..\..\libyuv\source\scale_win.cc" />
-    <ClCompile Include="..\..\libyuv\source\video_common.cc" />
+    <ClCompile Include="..\..\yuv\source\convert.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_argb.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_from.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_from_argb.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_jpeg.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_to_argb.cc" />
+    <ClCompile Include="..\..\yuv\source\convert_to_i420.cc" />
+    <ClCompile Include="..\..\yuv\source\cpu_id.cc" />
+    <ClCompile Include="..\..\yuv\source\mjpeg_decoder.cc" />
+    <ClCompile Include="..\..\yuv\source\mjpeg_validate.cc" />
+    <ClCompile Include="..\..\yuv\source\planar_functions.cc" />
+    <ClCompile Include="..\..\yuv\source\rotate.cc" />
+    <ClCompile Include="..\..\yuv\source\rotate_any.cc" />
+    <ClCompile Include="..\..\yuv\source\rotate_argb.cc" />
+    <ClCompile Include="..\..\yuv\source\rotate_common.cc" />
+    <ClCompile Include="..\..\yuv\source\rotate_win.cc" />
+    <ClCompile Include="..\..\yuv\source\row_any.cc" />
+    <ClCompile Include="..\..\yuv\source\row_common.cc" />
+    <ClCompile Include="..\..\yuv\source\row_win.cc" />
+    <ClCompile Include="..\..\yuv\source\scale.cc" />
+    <ClCompile Include="..\..\yuv\source\scale_any.cc" />
+    <ClCompile Include="..\..\yuv\source\scale_argb.cc" />
+    <ClCompile Include="..\..\yuv\source\scale_common.cc" />
+    <ClCompile Include="..\..\yuv\source\scale_win.cc" />
+    <ClCompile Include="..\..\yuv\source\video_common.cc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\libyuv\include\libyuv.h" />
+    <ClInclude Include="..\..\yuv\include\libyuv.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -428,9 +428,6 @@
       <Project>{b5fe16f8-3edb-4110-bd80-b4238cc01e8d}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Include="..\..\third_party\build\libyuv\liblibyuv.vcxproj">
-      <Project>{6ac9b65f-0862-4a5c-8a9d-141516993130}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\..\third_party\build\milenage\libmilenage.vcxproj">
       <Project>{4bf51c21-5a30-423b-82fe-1ed410e5769d}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -446,6 +443,9 @@
     <ProjectReference Include="..\..\third_party\build\srtp\libsrtp.vcxproj">
       <Project>{f0dbaa03-1ba3-4e3b-a2ca-727e3d3ab858}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\..\third_party\build\yuv\libyuv.vcxproj">
+      <Project>{6ac9b65f-0862-4a5c-8a9d-141516993130}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -80,7 +80,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libbaseclasses", "third_par
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjsua2_lib", "pjsip\build\pjsua2_lib.vcxproj", "{B82CDD25-6903-430E-BD38-D8129A2015C1}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "liblibyuv", "third_party\build\libyuv\liblibyuv.vcxproj", "{6AC9B65F-0862-4A5C-8A9D-141516993130}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libyuv", "third_party\build\yuv\libyuv.vcxproj", "{6AC9B65F-0862-4A5C-8A9D-141516993130}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

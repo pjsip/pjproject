@@ -22,7 +22,7 @@
 
 #if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
 
-#include "../../third_party/libyuv/include/libyuv.h"
+#include "../../third_party/yuv/include/libyuv.h"
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 					    pj_pool_t *pool,
