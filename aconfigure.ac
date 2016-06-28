@@ -568,6 +568,27 @@ if test "x$ac_external_srtp" = "x1"; then
 	fi
 fi
 
+
+dnl # Use external libyuv installation
+AC_SUBST(ac_external_yuv,0)
+AC_ARG_WITH(external-yuv,
+    AS_HELP_STRING([--with-external-yuv],
+		   [Use external libyuv development files, not the one in "third_party" directory. When this option is set, make sure that libyuv is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+    [
+	if test "x$with_external_yuv" != "xno"; then
+		# Test libyuv installation
+		AC_MSG_CHECKING([if external libyuv devkit is installed])
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <libyuv.h>]],
+						  [RGB24ToI420(0,0,0,0,0,0,0,0,0,0);])],
+				  [AC_MSG_RESULT(yes!!)
+				   ac_external_yuv="1"
+				   ],
+				  [AC_MSG_ERROR([Unable to use external libyuv. If libyuv development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
+	fi
+    ]
+    )
+
+
 dnl # Resample implementation
 AC_SUBST(ac_pjmedia_resample,libresample)
 AC_ARG_ENABLE(resample,
@@ -684,6 +705,13 @@ else
 fi
 
 AC_SUBST(ac_pjmedia_video)
+
+# Disable video on mingw
+case $target in
+ *mingw*)
+	enable_video="no"
+	;;
+esac
 
 dnl # --disable-video option
 AC_ARG_ENABLE(video,
@@ -1037,6 +1065,8 @@ AC_ARG_ENABLE(ffmpeg,
 			if $PKG_CONFIG --exists libswscale; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				av_pkg="$av_pkg libswscale"
+				dnl # disable libyuv when libswscale is enabled
+				enable_libyuv="no"
 			fi
 			if $PKG_CONFIG --exists libavutil; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
@@ -1095,6 +1125,7 @@ AC_ARG_ENABLE(ffmpeg,
 				     sws_scale,
 				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
+				      enable_libyuv="no"
 				     ],
 				     [],
 				     [-lavutil]
@@ -1203,82 +1234,6 @@ AC_ARG_ENABLE(openh264,
 		  		   AC_MSG_RESULT(no)
 		  		 ])
 
-	      ])
-
-dnl # libyuv alt prefix
-AC_ARG_WITH(libyuv,
-            AS_HELP_STRING([--with-libyuv=DIR],
-		           [Specify alternate libyuv prefix]),
-            [],
-            [with_libyuv=no]
-            )
-
-dnl # Do not use default libyuv installation if we are cross-compiling
-if test "x$ac_cross_compile" != "x" -a "x$with_libyuv" = "xno"; then
-    enable_libyuv=no
-fi	      
-	      
-dnl # Include libyuv
-AC_SUBST(ac_libyuv_cflags)
-AC_SUBST(ac_libyuv_ldflags)
-AC_ARG_ENABLE(libyuv,
-	      AS_HELP_STRING([--disable-libyuv],
-			     [Exclude libyuv in the build]),
-	      [if test "$enable_libyuv" = "no"; then
-		AC_MSG_RESULT([Checking if libyuv is disabled...yes])
-	       fi],
-	      [
-		  if test "x$with_libyuv" != "xno" -a "x$with_libyuv" != "x"; then
-		        LIBYUV_PREFIX=$with_libyuv
-		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
-		  	
-			case $target in
-			    *-apple-darwin_ios*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
-				case $ARCH in
-				    *arm*)
-				    LIBYUV_LIBS="-lyuv_neon"
-				    ;;
-				*)
-				    ;;
-				esac
-				;;			
-			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out/Release"
-				;;
-			    *)
-				LIBYUV_CFLAGS=""
-				LIBYUV_LDFLAGS=""
-				;;
-			esac		  	
-		  	
-			AC_MSG_RESULT([Using libyuv prefix... $with_libyuv])
-		  else
-		  	LIBYUV_CFLAGS=""
-			LIBYUV_LDFLAGS="" 
-		  fi
-		  		  
-		  LIBYUV_LIBS="$LIBYUV_LIBS -lyuv"
-		  
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-		  
-		  LIBS="$LIBYUV_LIBS $LIBS"
-		  LDFLAGS="$LIBYUV_LDFLAGS $LDFLAGS"
-		  CFLAGS="$LIBYUV_CFLAGS $CFLAGS"
-		  
-		  AC_CHECK_LIB(yuv,
-			       I420Scale,
-			       [ ac_libyuv_cflags="-DPJMEDIA_HAS_LIBYUV=1 $LIBYUV_CFLAGS"
-		  		 ac_libyuv_ldflags="$LIBYUV_LDFLAGS $LIBYUV_LIBS"
-			       ],
-			       [ LIBS="$SAVED_LIBS"
-				 LDFLAGS="$SAVED_LDFLAGS"
-				 CFLAGS="$SAVED_CFLAGS"
-			       ],
-			       []
-			       )
 	      ])
 
 
@@ -1833,6 +1788,18 @@ AC_ARG_ENABLE(opus,
 			AC_DEFINE(PJMEDIA_HAS_OPUS_CODEC,0)
 		fi
 	      ])
+
+dnl # Include libyuv
+AC_SUBST(ac_no_yuv)
+AC_ARG_ENABLE(libyuv,
+	      AS_HELP_STRING([--disable-libyuv],
+			     [Exclude libyuv in the build]),
+	      [if test "$enable_libyuv" = "no"; then
+		[ac_no_yuv=1],
+		AC_DEFINE(PJMEDIA_HAS_LIBYUV,0)
+		AC_MSG_RESULT([Checking if libyuv is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if libyuv is disabled...no]))
 
 
 dnl ##########################################

@@ -622,6 +622,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ac_main_obj
 ac_host
+ac_no_yuv
 opus_present
 opus_h_present
 ac_no_opus
@@ -642,8 +643,6 @@ openssl_h_present
 ac_no_ssl
 ac_webrtc_ldflags
 ac_webrtc_cflags
-ac_libyuv_ldflags
-ac_libyuv_cflags
 ac_openh264_ldflags
 ac_openh264_cflags
 ac_v4l2_ldflags
@@ -682,6 +681,7 @@ ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
 ac_pjmedia_resample
+ac_external_yuv
 ac_srtp_shutdown_present
 ac_srtp_deinit_present
 ac_external_srtp
@@ -779,6 +779,7 @@ enable_shared
 with_external_speex
 with_external_gsm
 with_external_srtp
+with_external_yuv
 enable_resample
 enable_sound
 with_external_pa
@@ -804,8 +805,6 @@ enable_ffmpeg
 enable_v4l2
 with_openh264
 enable_openh264
-with_libyuv
-enable_libyuv
 with_webrtc
 enable_webrtc
 enable_ipp
@@ -822,6 +821,7 @@ with_silk
 enable_silk
 with_opus
 enable_opus
+enable_libyuv
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1474,7 +1474,6 @@ Optional Features:
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
-  --disable-libyuv        Exclude libyuv in the build
   --disable-webrtc        Exclude webrtc in the build
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
@@ -1491,6 +1490,7 @@ Optional Features:
   --disable-opus          Exclude OPUS support from the build (default:
                           autodetect)
 
+  --disable-libyuv        Exclude libyuv in the build
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1510,6 +1510,11 @@ Optional Packages:
                           make sure that SRTP is accessible to use (hint: use
                           CFLAGS and LDFLAGS env var to set the include/lib
                           paths)
+  --with-external-yuv     Use external libyuv development files, not the one
+                          in "third_party" directory. When this option is set,
+                          make sure that libyuv is accessible to use (hint:
+                          use CFLAGS and LDFLAGS env var to set the
+                          include/lib paths)
   --with-external-pa      Use external PortAudio development files, not the
                           one in "third_party" directory. When this option is
                           set, make sure that PortAudio is accessible to use
@@ -1518,7 +1523,6 @@ Optional Packages:
   --with-sdl=DIR          Specify alternate libSDL prefix
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
-  --with-libyuv=DIR       Specify alternate libyuv prefix
   --with-webrtc=DIR       Specify alternate WebRtc prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
@@ -6049,6 +6053,44 @@ fi
 	fi
 fi
 
+
+ac_external_yuv=0
+
+
+# Check whether --with-external-yuv was given.
+if test "${with_external_yuv+set}" = set; then :
+  withval=$with_external_yuv;
+	if test "x$with_external_yuv" != "xno"; then
+		# Test libyuv installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external libyuv devkit is installed" >&5
+$as_echo_n "checking if external libyuv devkit is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <libyuv.h>
+int
+main ()
+{
+RGB24ToI420(0,0,0,0,0,0,0,0,0,0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_yuv="1"
+
+else
+  as_fn_error $? "Unable to use external libyuv. If libyuv development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
 ac_pjmedia_resample=libresample
 
 # Check whether --enable-resample was given.
@@ -6211,6 +6253,13 @@ fi
 fi
 
 
+
+# Disable video on mingw
+case $target in
+ *mingw*)
+	enable_video="no"
+	;;
+esac
 
 # Check whether --enable-video was given.
 if test "${enable_video+set}" = set; then :
@@ -6870,6 +6919,7 @@ $as_echo_n "checking ffmpeg packages... " >&6; }
 			if $PKG_CONFIG --exists libswscale; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				av_pkg="$av_pkg libswscale"
+								enable_libyuv="no"
 			fi
 			if $PKG_CONFIG --exists libavutil; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
@@ -7108,6 +7158,7 @@ $as_echo "$ac_cv_lib_swscale_sws_scale" >&6; }
 if test "x$ac_cv_lib_swscale_sws_scale" = xyes; then :
   ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
+				      enable_libyuv="no"
 
 fi
 
@@ -7320,123 +7371,6 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-
-
-fi
-
-
-
-# Check whether --with-libyuv was given.
-if test "${with_libyuv+set}" = set; then :
-  withval=$with_libyuv;
-else
-  with_libyuv=no
-
-fi
-
-
-if test "x$ac_cross_compile" != "x" -a "x$with_libyuv" = "xno"; then
-    enable_libyuv=no
-fi
-
-
-
-# Check whether --enable-libyuv was given.
-if test "${enable_libyuv+set}" = set; then :
-  enableval=$enable_libyuv; if test "$enable_libyuv" = "no"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...yes" >&5
-$as_echo "Checking if libyuv is disabled...yes" >&6; }
-	       fi
-else
-
-		  if test "x$with_libyuv" != "xno" -a "x$with_libyuv" != "x"; then
-		        LIBYUV_PREFIX=$with_libyuv
-		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
-
-			case $target in
-			    *-apple-darwin_ios*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
-				case $ARCH in
-				    *arm*)
-				    LIBYUV_LIBS="-lyuv_neon"
-				    ;;
-				*)
-				    ;;
-				esac
-				;;
-			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out/Release"
-				;;
-			    *)
-				LIBYUV_CFLAGS=""
-				LIBYUV_LDFLAGS=""
-				;;
-			esac
-
-			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using libyuv prefix... $with_libyuv" >&5
-$as_echo "Using libyuv prefix... $with_libyuv" >&6; }
-		  else
-		  	LIBYUV_CFLAGS=""
-			LIBYUV_LDFLAGS=""
-		  fi
-
-		  LIBYUV_LIBS="$LIBYUV_LIBS -lyuv"
-
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-
-		  LIBS="$LIBYUV_LIBS $LIBS"
-		  LDFLAGS="$LIBYUV_LDFLAGS $LDFLAGS"
-		  CFLAGS="$LIBYUV_CFLAGS $CFLAGS"
-
-		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for I420Scale in -lyuv" >&5
-$as_echo_n "checking for I420Scale in -lyuv... " >&6; }
-if ${ac_cv_lib_yuv_I420Scale+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lyuv
-			        $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char I420Scale ();
-int
-main ()
-{
-return I420Scale ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_yuv_I420Scale=yes
-else
-  ac_cv_lib_yuv_I420Scale=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_yuv_I420Scale" >&5
-$as_echo "$ac_cv_lib_yuv_I420Scale" >&6; }
-if test "x$ac_cv_lib_yuv_I420Scale" = xyes; then :
-   ac_libyuv_cflags="-DPJMEDIA_HAS_LIBYUV=1 $LIBYUV_CFLAGS"
-		  		 ac_libyuv_ldflags="$LIBYUV_LDFLAGS $LIBYUV_LIBS"
-
-else
-   LIBS="$SAVED_LIBS"
-				 LDFLAGS="$SAVED_LDFLAGS"
-				 CFLAGS="$SAVED_CFLAGS"
-
-fi
 
 
 fi
@@ -8440,6 +8374,22 @@ $as_echo "OPUS library not found, OPUS support disabled" >&6; }
 
 		fi
 
+fi
+
+
+
+# Check whether --enable-libyuv was given.
+if test "${enable_libyuv+set}" = set; then :
+  enableval=$enable_libyuv; if test "$enable_libyuv" = "no"; then
+		ac_no_yuv=1,
+		$as_echo "#define PJMEDIA_HAS_LIBYUV 0" >>confdefs.h
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...yes" >&5
+$as_echo "Checking if libyuv is disabled...yes" >&6; }
+	       fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...no" >&5
+$as_echo "Checking if libyuv is disabled...no" >&6; }
 fi
 
 

@@ -51,7 +51,7 @@ OBJDIRS := $(sort $(dir $(OBJS)))
 #
 # FULL_SRCS is ../src/app/file1.c ../src/app/file1.S
 #
-FULL_SRCS = $(foreach file, $($(APP)_OBJS), $(SRCDIR)/$(basename $(file)).m $(SRCDIR)/$(basename $(file)).c $(SRCDIR)/$(basename $(file)).cpp $(SRCDIR)/$(basename $(file)).S)
+FULL_SRCS = $(foreach file, $($(APP)_OBJS), $(SRCDIR)/$(basename $(file)).m $(SRCDIR)/$(basename $(file)).c $(SRCDIR)/$(basename $(file)).cpp $(SRCDIR)/$(basename $(file)).cc $(SRCDIR)/$(basename $(file)).S)
 
 #
 # When generating dependency (gcc -MM), ideally we use only either
@@ -170,6 +170,11 @@ $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S
 		$(subst /,$(HOST_PSEP),$<) 
 
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp
+	$(CXX) $($(APP)_CXXFLAGS) \
+		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
+		$(subst /,$(HOST_PSEP),$<)
+
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)

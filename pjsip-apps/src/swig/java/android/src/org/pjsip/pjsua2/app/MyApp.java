@@ -283,7 +283,8 @@ class MyApp {
     static {
 	try{
 	    System.loadLibrary("openh264");
-	    System.loadLibrary("yuv");
+            // Ticket #1937: libyuv is now included as static lib
+            //System.loadLibrary("yuv");
 	} catch (UnsatisfiedLinkError e) {
 	    System.out.println("UnsatisfiedLinkError: " + e.getMessage());
 	    System.out.println("This could be safely ignored if you " +
