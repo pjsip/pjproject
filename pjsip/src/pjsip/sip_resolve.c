@@ -217,10 +217,15 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * really tell the address family type, except when IPv6 flag is
      * explicitly set.
      */
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6==1
     if ((ip_addr_ver == 6) || (type & PJSIP_TRANSPORT_IPV6))
 	af = pj_AF_INET6();
     else if (ip_addr_ver == 4)
 	af = pj_AF_INET();
+#else
+    /* IPv6 is disabled, will resolving IPv6 address be useful? */
+    af = pj_AF_INET();
+#endif
 
     /* Set the transport type if not explicitly specified. 
      * RFC 3263 section 4.1 specify rules to set up this.
@@ -430,6 +435,15 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 	/* Resolve DNS A record if address family is not fixed to IPv6 */
 	if (af != pj_AF_INET6()) {
+
+	    /* If there will be DNS AAAA query too, let's setup a dummy one
+	     * here, otherwise app callback may be called immediately (before
+	     * DNS AAAA query is sent) when DNS A record is available in the
+	     * cache.
+	     */
+	    if (af == pj_AF_UNSPEC())
+		query->object6 = (pj_dns_async_query*)0x1;
+
 	    status = pj_dns_resolver_start_query(resolver->res, 
 						 &query->naptr[0].name,
 						 PJ_DNS_TYPE_A, 0, 
