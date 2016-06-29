@@ -391,7 +391,9 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     param->info.channel_cnt = opus_cfg.channel_cnt = cfg->channel_cnt;
 
     /* Set bit_rate */
-    if (cfg->bit_rate < 6000 || cfg->bit_rate > 510000) {
+    if (cfg->bit_rate != PJMEDIA_CODEC_OPUS_DEFAULT_BIT_RATE) && 
+       (cfg->bit_rate < 6000 || cfg->bit_rate > 510000) 
+    {
 	return PJ_EINVAL;
     }
     opus_cfg.bit_rate = cfg->bit_rate;
