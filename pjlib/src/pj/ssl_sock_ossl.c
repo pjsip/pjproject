@@ -1242,7 +1242,9 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		    ssock->timer.id = TIMER_NONE;
 		    pj_ssl_sock_close(ssock);
 		}
-	    } 
+	    } else {
+		pj_ssl_sock_close(ssock);
+	    }
 #else
 	    {
 		pj_ssl_sock_close(ssock);
