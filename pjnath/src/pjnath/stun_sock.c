@@ -436,6 +436,9 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 	    unsigned cnt = 1;
 
 	    status = pj_getaddrinfo(stun_sock->af, domain, &cnt, &ai);
+	    if (cnt == 0)
+		status = PJ_EAFNOTSUP;
+
 	    if (status != PJ_SUCCESS) {
 	        pj_grp_lock_release(stun_sock->grp_lock);
 		return status;
