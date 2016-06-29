@@ -1312,7 +1312,8 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     } else {
 	/* Start keep-alive timer */
 	if (pjsip_cfg()->tls.keep_alive_interval) {
-	    pj_time_val delay = {pjsip_cfg()->tls.keep_alive_interval, 0};
+	    pj_time_val delay = {0};	    
+	    delay.sec = pjsip_cfg()->tls.keep_alive_interval;
 	    pjsip_endpt_schedule_timer(listener->endpt, 
 				       &tls->ka_timer, 
 				       &delay);
@@ -1786,7 +1787,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     /* Start keep-alive timer */
     if (pjsip_cfg()->tls.keep_alive_interval) {
-	pj_time_val delay = { pjsip_cfg()->tls.keep_alive_interval, 0 };
+	pj_time_val delay = {0};	    
+	delay.sec = pjsip_cfg()->tls.keep_alive_interval;
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;

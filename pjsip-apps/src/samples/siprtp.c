@@ -888,7 +888,6 @@ static pj_status_t init_options(int argc, char *argv[])
     {
 	const pj_str_t *hostname;
 	pj_sockaddr_in tmp_addr;
-	char *addr;
 
 	hostname = pj_gethostname();
 	pj_sockaddr_in_init(&tmp_addr, hostname, 0);

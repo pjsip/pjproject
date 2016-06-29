@@ -1544,7 +1544,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pjsip_sip_uri *uri;
     pjsip_via_hdr *via;
     pj_sockaddr contact_addr;
-    pj_sockaddr recv_addr;
+    pj_sockaddr recv_addr = {{0}};
     pj_status_t status;
     pj_bool_t matched;
     pj_str_t srv_ip;
