@@ -6919,7 +6919,6 @@ $as_echo_n "checking ffmpeg packages... " >&6; }
 			if $PKG_CONFIG --exists libswscale; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				av_pkg="$av_pkg libswscale"
-								enable_libyuv="no"
 			fi
 			if $PKG_CONFIG --exists libavutil; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
@@ -7158,7 +7157,6 @@ $as_echo "$ac_cv_lib_swscale_sws_scale" >&6; }
 if test "x$ac_cv_lib_swscale_sws_scale" = xyes; then :
   ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
-				      enable_libyuv="no"
 
 fi
 

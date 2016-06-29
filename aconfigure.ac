@@ -1065,8 +1065,6 @@ AC_ARG_ENABLE(ffmpeg,
 			if $PKG_CONFIG --exists libswscale; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				av_pkg="$av_pkg libswscale"
-				dnl # disable libyuv when libswscale is enabled
-				enable_libyuv="no"
 			fi
 			if $PKG_CONFIG --exists libavutil; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
@@ -1125,7 +1123,6 @@ AC_ARG_ENABLE(ffmpeg,
 				     sws_scale,
 				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
-				      enable_libyuv="no"
 				     ],
 				     [],
 				     [-lavutil]
