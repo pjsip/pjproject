@@ -77,13 +77,14 @@ typedef struct darwin_supported_size
 /* Set the preset_str on set_preset_str method. */
 static darwin_supported_size darwin_sizes[] =
 {
-#if TARGET_OS_IPHONE
+#if !TARGET_OS_IPHONE
+    { 320, 240, NULL },
+#endif
     { 352, 288, NULL },
     { 640, 480, NULL },
-    { 1280, 720, NULL },
-    { 1920, 1080, NULL }
-#else
     { 1280, 720, NULL }
+#if TARGET_OS_IPHONE
+    ,{ 1920, 1080, NULL }
 #endif
 };
 
@@ -215,13 +216,15 @@ static pjmedia_vid_dev_stream_op stream_op =
 
 static void set_preset_str()
 {
+    int idx = 0;
+#if !TARGET_OS_IPHONE
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset320x240;
+#endif
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset352x288;
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset640x480;
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset1280x720;
 #if TARGET_OS_IPHONE
-    darwin_sizes[0].preset_str = AVCaptureSessionPreset352x288;
-    darwin_sizes[1].preset_str = AVCaptureSessionPreset640x480;
-    darwin_sizes[2].preset_str = AVCaptureSessionPreset1280x720;
-    darwin_sizes[3].preset_str = AVCaptureSessionPreset1920x1080;
-#else
-    darwin_sizes[0].preset_str = AVCaptureSessionPreset1280x720;
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset1920x1080;
 #endif
 }
 
@@ -502,10 +505,6 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
     CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 
     [stream->frame_lock lock];
-    
-    // TODO: on Mac, nearly all frames, regardless of video format,
-    // have extra padding. So we may need to create a util function to
-    // remove the stride.
     
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
@@ -794,6 +793,17 @@ static pj_status_t darwin_factory_create_stream(
         strm->video_output.alwaysDiscardsLateVideoFrames = YES;
 	strm->video_output.videoSettings =
 	    [NSDictionary dictionaryWithObjectsAndKeys:
+#if !TARGET_OS_IPHONE
+    			  /* On Mac, we need to set the buffer's dimension
+    			   * to avoid extra padding.
+    			   */
+                          [NSNumber numberWithDouble:
+                          	    darwin_sizes[i].supported_size_w],
+                          (id)kCVPixelBufferWidthKey,
+                          [NSNumber numberWithDouble:
+                          	    darwin_sizes[i].supported_size_h],
+                          (id)kCVPixelBufferHeightKey,
+#endif
 			  [NSNumber numberWithInt:ifi->darwin_format],
 			  kCVPixelBufferPixelFormatTypeKey, nil];
 
