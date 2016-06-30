@@ -176,7 +176,6 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	regc->cb = NULL;
 	pj_lock_release(regc->lock);
     } else {
-	pjsip_cached_auth *auth = NULL;
 	pjsip_tpselector_dec_ref(&regc->tp_sel);
 	if (regc->last_transport) {
 	    pjsip_transport_dec_ref(regc->last_transport);
@@ -191,12 +190,7 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	pj_lock_destroy(regc->lock);
 	regc->lock = NULL;
 
-	auth = regc->auth_sess.cached_auth.next;
-	while (auth != &regc->auth_sess.cached_auth) {
-	    pjsip_endpt_release_pool(regc->endpt, auth->pool);
-	    auth = auth->next;
-	}
-
+	pjsip_auth_clt_deinit(&regc->auth_sess);
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 

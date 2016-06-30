@@ -119,6 +119,7 @@ static void destroy_dialog( pjsip_dialog *dlg, pj_bool_t unlock_mutex )
 	pjsip_tpselector_dec_ref(&dlg->tp_sel);
 	pj_bzero(&dlg->tp_sel, sizeof(pjsip_tpselector));
     }
+    pjsip_auth_clt_deinit(&dlg->auth_sess);
     pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
 }
 

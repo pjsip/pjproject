@@ -499,6 +499,23 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
 }
 
 
+/* Deinit client session. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
+{
+    pjsip_cached_auth *auth;
+    
+    PJ_ASSERT_RETURN(sess && sess->endpt, PJ_EINVAL);
+    
+    auth = sess->cached_auth.next;
+    while (auth != &sess->cached_auth) {
+	pjsip_endpt_release_pool(sess->endpt, auth->pool);
+	auth = auth->next;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /* Clone session. */
 PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 					  pjsip_auth_clt_sess *sess,
@@ -964,7 +981,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 static void recreate_cached_auth_pool( pjsip_endpoint *endpt, 
 				       pjsip_cached_auth *auth )
 {
-    pj_pool_t *auth_pool = pjsip_endpt_create_pool(endpt, "regc_auth%p", 1024, 
+    pj_pool_t *auth_pool = pjsip_endpt_create_pool(endpt, "auth_cli%p", 1024, 
 						   1024);
 
     if (auth->realm.slen) {
@@ -1163,7 +1180,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	if (!cached_auth) {
 	    cached_auth = PJ_POOL_ZALLOC_T(sess->pool, pjsip_cached_auth);
 	    cached_auth->pool = pjsip_endpt_create_pool(sess->endpt,
-							"regc_auth%p",
+							"auth_cli%p",
 							1024,
 							1024);
 	    pj_strdup(cached_auth->pool, &cached_auth->realm,

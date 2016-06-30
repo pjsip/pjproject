@@ -342,6 +342,16 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_init( pjsip_auth_clt_sess *sess,
 
 
 /**
+ * Deinitialize client authentication session data structure.
+ *
+ * @param sess		The client authentication session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_deinit( pjsip_auth_clt_sess *sess);
+
+
+/**
  * Clone client initialization session. 
  *
  * @param pool		Pool to use.

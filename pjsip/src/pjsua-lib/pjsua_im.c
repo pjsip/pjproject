@@ -387,8 +387,10 @@ static void im_callback(void *token, pjsip_event *e)
 						   im_data2, &im_callback);
 		if (status == PJ_SUCCESS) {
 		    /* Done */
+		    pjsip_auth_clt_deinit(&auth);
 		    return;
 		}
+		pjsip_auth_clt_deinit(&auth);
 	    }
 	}
 
@@ -489,8 +491,10 @@ static void typing_callback(void *token, pjsip_event *e)
 						   im_data2, &typing_callback);
 		if (status == PJ_SUCCESS) {
 		    /* Done */
+		    pjsip_auth_clt_deinit(&auth);
 		    return;
 		}
+		pjsip_auth_clt_deinit(&auth);
 	    }
 	}
 
