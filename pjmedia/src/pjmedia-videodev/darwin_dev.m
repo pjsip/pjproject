@@ -82,6 +82,9 @@ static darwin_supported_size darwin_sizes[] =
 #endif
     { 352, 288, NULL },
     { 640, 480, NULL },
+#if !TARGET_OS_IPHONE
+    { 960, 540, NULL },
+#endif
     { 1280, 720, NULL }
 #if TARGET_OS_IPHONE
     ,{ 1920, 1080, NULL }
@@ -222,6 +225,9 @@ static void set_preset_str()
 #endif
     darwin_sizes[idx++].preset_str = AVCaptureSessionPreset352x288;
     darwin_sizes[idx++].preset_str = AVCaptureSessionPreset640x480;
+#if !TARGET_OS_IPHONE
+    darwin_sizes[idx++].preset_str = AVCaptureSessionPreset960x540;
+#endif
     darwin_sizes[idx++].preset_str = AVCaptureSessionPreset1280x720;
 #if TARGET_OS_IPHONE
     darwin_sizes[idx++].preset_str = AVCaptureSessionPreset1920x1080;
