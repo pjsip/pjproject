@@ -397,6 +397,7 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
 	return PJ_EINVAL;
     }
     opus_cfg.bit_rate = cfg->bit_rate;
+    param->info.avg_bps = opus_cfg.bit_rate;
 
     /* Set expected packet loss */
     if (cfg->packet_loss >= 100)
@@ -461,9 +462,7 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
     attr->info.pt          	   = (pj_uint8_t)ci->pt;
     attr->info.clock_rate  	   = opus_cfg.sample_rate;
     attr->info.channel_cnt 	   = opus_cfg.channel_cnt;
-    attr->info.avg_bps     	   = (opus_cfg.bit_rate > 0) ?
-				     opus_cfg.bit_rate :
-    				     opus_cfg.sample_rate; // Estimate
+    attr->info.avg_bps     	   = opus_cfg.bit_rate;
     attr->info.max_bps     	   = opus_cfg.bit_rate * 2;
     attr->info.frm_ptime   	   = 20;
     attr->setting.frm_per_pkt 	   = 1;
@@ -587,6 +586,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
 {
     struct opus_data *opus_data = (struct opus_data *)codec->codec_data;
     int idx, err;
+    pj_bool_t auto_bit_rate = PJ_TRUE;
 
     PJ_ASSERT_RETURN(codec && attr && opus_data, PJ_EINVAL);
 
@@ -629,6 +629,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     idx = find_fmtp(&attr->setting.enc_fmtp, &STR_MAX_BIT_RATE, PJ_FALSE);
     if (idx >= 0) {
 	unsigned rate;
+	auto_bit_rate = PJ_FALSE;
 	rate = (unsigned)pj_strtoul(&attr->setting.enc_fmtp.param[idx].val);
 	if (rate < attr->info.avg_bps)
 	    attr->info.avg_bps = rate;
@@ -683,7 +684,9 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     /* Set signal type */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
     /* Set bitrate */
-    opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps));
+    opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(auto_bit_rate?
+    						      OPUS_AUTO:
+    						      attr->info.avg_bps));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
     /* Set PLC */
@@ -766,7 +769,9 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
 
     /* Set bitrate */
     opus_data->cfg.bit_rate = attr->info.avg_bps;
-    opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps));
+    opus_encoder_ctl(opus_data->enc, OPUS_SET_BITRATE(attr->info.avg_bps?
+    						      attr->info.avg_bps:
+    						      OPUS_AUTO));
     /* Set VAD */
     opus_encoder_ctl(opus_data->enc, OPUS_SET_DTX(attr->setting.vad ? 1 : 0));
     /* Set PLC */
