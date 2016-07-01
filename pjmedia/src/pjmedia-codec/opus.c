@@ -384,6 +384,7 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
 	return PJ_EINVAL;
     }
     param->info.clock_rate = opus_cfg.sample_rate = cfg->sample_rate;
+    param->info.max_bps = opus_cfg.sample_rate * 2;
 
     /* Set channel count */
     if (cfg->channel_cnt != 1 && cfg->channel_cnt != 2)
@@ -463,7 +464,7 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
     attr->info.clock_rate  	   = opus_cfg.sample_rate;
     attr->info.channel_cnt 	   = opus_cfg.channel_cnt;
     attr->info.avg_bps     	   = opus_cfg.bit_rate;
-    attr->info.max_bps     	   = opus_cfg.bit_rate * 2;
+    attr->info.max_bps     	   = opus_cfg.sample_rate * 2;
     attr->info.frm_ptime   	   = 20;
     attr->setting.frm_per_pkt 	   = 1;
     attr->info.pcm_bits_per_sample = 16;
