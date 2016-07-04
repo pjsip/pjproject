@@ -737,6 +737,16 @@ static void turn_on_state(pj_turn_session *sess,
 	return;
     }
 
+    if (old_state == PJ_TURN_STATE_ALLOCATING &&
+	new_state == PJ_TURN_STATE_RESOLVED)
+    {
+	/* TURN session won't destroy itself upon allocation failure, it will
+	 * just revert back TURN state to PJ_TURN_STATE_RESOLVED. So, let's
+	 * avoid infinite loop here (see ticket #1942).
+	 */
+	return;
+    }
+
     /* Notify app first */
     if (turn_sock->cb.on_state) {
 	(*turn_sock->cb.on_state)(turn_sock, old_state, new_state);
