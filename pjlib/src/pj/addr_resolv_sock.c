@@ -186,7 +186,6 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     orig_res = res;
 
     /* Enumerate each item in the result */
-    rc = 0;
     for (i=0; i<*count && res; res=res->ai_next) {
 	/* Ignore unwanted address families */
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
@@ -194,23 +193,23 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	/* Store canonical name (possibly truncating the name) */
 	if (res->ai_canonname) {
-	    pj_ansi_strncpy(ai[rc].ai_canonname, res->ai_canonname,
-			    sizeof(ai[rc].ai_canonname));
-	    ai[rc].ai_canonname[sizeof(ai[rc].ai_canonname)-1] = '\0';
+	    pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
+			    sizeof(ai[i].ai_canonname));
+	    ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
 	} else {
-	    pj_ansi_strcpy(ai[rc].ai_canonname, nodecopy);
+	    pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
 	}
 
 	/* Store address */
 	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
-	pj_memcpy(&ai[rc].ai_addr, res->ai_addr, res->ai_addrlen);
-	PJ_SOCKADDR_RESET_LEN(&ai[rc].ai_addr);
+	pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
+	PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
 
 	/* Next slot */
-	++rc;
+	++i;
     }
 
-    *count = rc;
+    *count = i;
 
     freeaddrinfo(orig_res);
 
