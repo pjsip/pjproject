@@ -154,7 +154,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 		if (addr->sa_family == PJ_AF_INET6) {
 		    addr_size = addr->sa_len;
 		}
-		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), 				  continue);
+		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), continue);
 		pj_memcpy(&ai[i].ai_addr, addr, addr_size);
 		PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
 		
@@ -163,6 +163,9 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	}
 	
 	*count = i;
+	if (*count == 0)
+	    status = PJ_ERESOLVE;
+
     } else {
 	status = PJ_ERESOLVE;
     }
@@ -183,6 +186,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     orig_res = res;
 
     /* Enumerate each item in the result */
+    rc = 0;
     for (i=0; i<*count && res; res=res->ai_next) {
 	/* Ignore unwanted address families */
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
@@ -190,28 +194,28 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	/* Store canonical name (possibly truncating the name) */
 	if (res->ai_canonname) {
-	    pj_ansi_strncpy(ai[i].ai_canonname, res->ai_canonname,
-			    sizeof(ai[i].ai_canonname));
-	    ai[i].ai_canonname[sizeof(ai[i].ai_canonname)-1] = '\0';
+	    pj_ansi_strncpy(ai[rc].ai_canonname, res->ai_canonname,
+			    sizeof(ai[rc].ai_canonname));
+	    ai[rc].ai_canonname[sizeof(ai[rc].ai_canonname)-1] = '\0';
 	} else {
-	    pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+	    pj_ansi_strcpy(ai[rc].ai_canonname, nodecopy);
 	}
 
 	/* Store address */
 	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
-	pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
-	PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
+	pj_memcpy(&ai[rc].ai_addr, res->ai_addr, res->ai_addrlen);
+	PJ_SOCKADDR_RESET_LEN(&ai[rc].ai_addr);
 
 	/* Next slot */
-	++i;
+	++rc;
     }
 
-    *count = i;
+    *count = rc;
 
     freeaddrinfo(orig_res);
 
     /* Done */
-    return PJ_SUCCESS;
+    return (*count > 0? PJ_SUCCESS : PJ_ERESOLVE);
 #endif
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
@@ -285,7 +289,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	    (*count)++;
 	}
 
-	return PJ_SUCCESS;
+	return (*count > 0? PJ_SUCCESS : PJ_ERESOLVE);
 
     } else {
 	/* IPv6 is not supported */
