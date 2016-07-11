@@ -20,7 +20,8 @@
 #include <pjmedia/converter.h>
 #include <pj/errno.h>
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
 
 #include <libyuv.h>
 

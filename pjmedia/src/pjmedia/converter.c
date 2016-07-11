@@ -35,7 +35,8 @@ PJ_DECL(pj_status_t)
 pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr);
 #endif
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
 PJ_DECL(pj_status_t)
 pjmedia_libyuv_converter_init(pjmedia_converter_mgr *mgr);
 #endif
@@ -61,7 +62,8 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
     }
 #endif
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
     status = pjmedia_libyuv_converter_init(mgr);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(4,(THIS_FILE, status,
