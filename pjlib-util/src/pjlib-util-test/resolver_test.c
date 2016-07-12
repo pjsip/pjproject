@@ -457,7 +457,7 @@ static int init(pj_bool_t use_ipv6)
 	pj_sockaddr_init((use_ipv6? pj_AF_INET6() : pj_AF_INET()),
 			 &addr, NULL, (pj_uint16_t)g_server[i].port);
 
-	status = pj_sock_bind(g_server[i].sock, &addr, sizeof(addr));
+	status = pj_sock_bind(g_server[i].sock, &addr, pj_sockaddr_get_len(&addr));
 	if (status != PJ_SUCCESS)
 	    return -20;
 
@@ -1878,7 +1878,7 @@ int resolver_test(void)
 
 #if PJ_HAS_IPV6
     /* Similar tests using IPv6 socket and without parser tests */
-    PJ_LOG(3,(THIS_FILE, "  Re-run DNS resolution tests using IPv6 socket"));
+    PJ_LOG(3,(THIS_FILE, "Re-run DNS resolution tests using IPv6 socket"));
 
     rc = init(PJ_TRUE);
     if (rc != 0)
