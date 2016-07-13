@@ -784,7 +784,8 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 	/* Set state back to RESOLVED. We don't want to destroy session now,
 	 * let the application do it if it wants to.
 	 */
-	set_state(sess, PJ_TURN_STATE_RESOLVED);
+	/* Set state back to RESOLVED may cause infinite loop (see #1942). */
+	//set_state(sess, PJ_TURN_STATE_RESOLVED);
     }
 
     pj_grp_lock_release(sess->grp_lock);
@@ -1749,7 +1750,10 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Run pending allocation */
     if (sess->pending_alloc) {
-	pj_turn_session_alloc(sess, NULL);
+	pj_status_t status;
+	status = pj_turn_session_alloc(sess, NULL);
+	if (status != PJ_SUCCESS)
+	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status, NULL);
     }
 }
 
