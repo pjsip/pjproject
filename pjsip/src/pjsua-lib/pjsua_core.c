@@ -2151,10 +2151,24 @@ static pj_status_t create_sip_udp_sock(int af,
 			 pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
 	status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
 					 1, &sock, &p_pub_addr->ipv4);
-	if (status != PJ_SUCCESS && !pjsua_var.ua_cfg.stun_ignore_failure) {
+	if (status != PJ_SUCCESS) {
+	    /* Failed getting mapped address via STUN */
 	    pjsua_perror(THIS_FILE, "Error contacting STUN server", status);
-	    pj_sock_close(sock);
-	    return status;
+	    
+	    /* Return error if configured to not ignore STUN failure */
+	    if (!pjsua_var.ua_cfg.stun_ignore_failure) {
+		pj_sock_close(sock);
+		return status;
+	    }
+
+	    /* Otherwise, just use host IP */
+	    pj_sockaddr_init(af, p_pub_addr, NULL, (pj_uint16_t)port);
+	    status = pj_gethostip(af, p_pub_addr);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
+		pj_sock_close(sock);
+		return status;
+	    }
 	}
 
     } else {
