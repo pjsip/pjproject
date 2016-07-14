@@ -1331,7 +1331,7 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 
     /* Loop while we have entry to try */
     for (; sess->idx < sess->count; ++sess->idx) {
-	const int af = pj_AF_INET();
+	int af;
 	char target[64];
 	pj_str_t hostpart;
 	pj_uint16_t port;
@@ -1344,10 +1344,18 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 			 sess->srv[sess->idx].ptr);
 
 	/* Parse the server entry into host:port */
-	status = pj_sockaddr_parse2(af, 0, &sess->srv[sess->idx],
-					  &hostpart, &port, NULL);
+	status = pj_sockaddr_parse2(pj_AF_UNSPEC(), 0, &sess->srv[sess->idx],
+				    &hostpart, &port, &af);
 	if (status != PJ_SUCCESS) {
     	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %s", target));
+	    continue;
+	} else if (af != pj_AF_INET()) {
+	    /* Ignore IPv6 STUN server for now */
+	    status = PJ_EAFNOTSUP;
+	    PJ_LOG(3,(THIS_FILE, "Ignored STUN server entry %s, currently "
+				 "only IPv4 STUN server is supported (does "
+				 "IPv6 still need a mapped address?)",
+		      target));
 	    continue;
 	}
 	
@@ -1364,8 +1372,8 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
 	stun_sock_cb.on_status = &test_stun_on_status;
 	status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
-					   pj_AF_INET(), &stun_sock_cb,
-					   NULL, sess, &sess->stun_sock);
+				     pj_AF_INET(), &stun_sock_cb,
+				     NULL, sess, &sess->stun_sock);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1376,8 +1384,8 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	    continue;
 	}
 
-	status = pj_stun_sock_start(sess->stun_sock, &hostpart,
-					  port, pjsua_var.resolver);
+	status = pj_stun_sock_start(sess->stun_sock, &hostpart, port,
+				    pjsua_var.resolver);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
