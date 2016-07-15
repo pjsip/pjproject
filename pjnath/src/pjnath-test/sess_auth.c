@@ -290,11 +290,19 @@ static int create_std_server(pj_stun_auth_type auth_type,
 	    return -43;
 	}
 
-	status = pj_gethostip(GET_AF(use_ipv6), &addr);
-	if (status != PJ_SUCCESS) {
-	    destroy_server();
-	    return -45;
-	}
+	if (use_ipv6) {
+	    /* pj_gethostip() may return IPv6 link-local and currently it will cause
+	     * 'no route to host' error, so let's just hardcode to [::1]
+	     */
+	    pj_sockaddr_init(pj_AF_INET6(), &addr, NULL, 0);
+	    addr.ipv6.sin6_addr.s6_addr[15] = 1;	
+	} else {
+	    status = pj_gethostip(GET_AF(use_ipv6), &addr);
+	    if (status != PJ_SUCCESS) {
+		destroy_server();
+		return -45;
+	    }
+        }
 
 	pj_sockaddr_copy_addr(&server->addr, &addr);
     }
