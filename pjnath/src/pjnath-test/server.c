@@ -57,9 +57,17 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
     PJ_ASSERT_RETURN(stun_cfg && domain && p_test_srv, PJ_EINVAL);
 
-    status = pj_gethostip(GET_AF(use_ipv6), &hostip);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (use_ipv6) {
+	/* pj_gethostip() may return IPv6 link-local and will cause EINVAL
+	 * error, so let's just hardcode it.
+	 */
+	pj_sockaddr_init(pj_AF_INET6(), &hostip, NULL, 0);
+	hostip.ipv6.sin6_addr.s6_addr[15] = 1;
+    } else {
+	status = pj_gethostip(GET_AF(use_ipv6), &hostip);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
     test_srv = (test_server*) PJ_POOL_ZALLOC_T(pool, test_server);
@@ -501,7 +509,21 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
 
 	/* Create relay socket */	
 	pj_sockaddr_init(GET_AF(use_ipv6), &alloc->alloc_addr, NULL, 0);
-	pj_gethostip(GET_AF(use_ipv6), &alloc->alloc_addr);
+	if (use_ipv6) {
+	    /* pj_gethostip() may return IPv6 link-local and will cause EINVAL
+	     * error, so let's just hardcode it.
+	     */
+	    pj_sockaddr_init(pj_AF_INET6(), &alloc->alloc_addr, NULL, 0);
+	    alloc->alloc_addr.ipv6.sin6_addr.s6_addr[15] = 1;
+	} else {
+	    status = pj_gethostip(GET_AF(use_ipv6), &alloc->alloc_addr);
+	    if (status != PJ_SUCCESS) {
+		pj_pool_release(alloc->pool);
+		pj_stun_msg_create_response(pool, req, PJ_STUN_SC_SERVER_ERROR,
+					    NULL, &resp);
+		goto send_pkt;
+	    }
+	}
 
 	status = pj_activesock_create_udp(alloc->pool, &alloc->alloc_addr, NULL, 
 					  test_srv->stun_cfg->ioqueue,

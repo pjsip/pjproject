@@ -124,6 +124,29 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_status_t status);
 static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
 
+#if USE_IPV6
+
+static pj_bool_t enable_ipv6_test()
+{
+    pj_sockaddr addr;
+    pj_bool_t retval = PJ_TRUE;
+    if (pj_gethostip(pj_AF_INET6(), &addr) == PJ_SUCCESS) {
+	const pj_in6_addr *a = &addr.ipv6.sin6_addr;
+	if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80) {
+	    retval = PJ_FALSE;
+	    PJ_LOG(3,(THIS_FILE, INDENT "Skipping IPv6 test due to link-local "
+		     "address"));
+	}
+    } else {
+	retval = PJ_FALSE;
+	PJ_LOG(3,(THIS_FILE, INDENT "Skipping IPv6 test due to fail getting "
+		 "IPv6 address"));
+    }
+    return retval;
+}
+
+#endif
+
 static void set_stun_turn_cfg(struct ice_ept *ept, 
 				     pj_ice_strans_cfg *ice_cfg, 
 				     char *serverip,
@@ -787,47 +810,49 @@ static int perform_test(const char *title,
 		       callee_cfg, &test_param);
 
 #if USE_IPV6
-    /* Test for IPV6. */
-    if (rc == PJ_SUCCESS) {
-	pj_bzero(&test_param, sizeof(test_param));
-	set_client_server_flag(SERVER_IPV6, CLIENT_IPV6, CLIENT_IPV6,
-			       &server_flag, &caller_cfg->client_flag,
-			       &callee_cfg->client_flag);
+    if (enable_ipv6_test()) {
 
-	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
-			   callee_cfg, &test_param);
+	/* Test for IPV6. */
+	if (rc == PJ_SUCCESS) {
+	    pj_bzero(&test_param, sizeof(test_param));
+	    set_client_server_flag(SERVER_IPV6, CLIENT_IPV6, CLIENT_IPV6,
+				   &server_flag, &caller_cfg->client_flag,
+				   &callee_cfg->client_flag);
+
+	    rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			       callee_cfg, &test_param);
+	}
+
+	/* Test for IPV4+IPV6. */
+	if (rc == PJ_SUCCESS) {
+	    pj_bzero(&test_param, sizeof(test_param));
+	    set_client_server_flag(SERVER_IPV4+SERVER_IPV6,
+				   CLIENT_IPV4+CLIENT_IPV6,
+				   CLIENT_IPV4+CLIENT_IPV6,
+				   &server_flag,
+				   &caller_cfg->client_flag,
+				   &callee_cfg->client_flag);
+
+	    rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			       callee_cfg, &test_param);
+	}
+
+	/* Test controller(IPV4) vs controlled(IPV6). */
+	if (rc == PJ_SUCCESS) {
+	    pj_bzero(&test_param, sizeof(test_param));
+	    set_client_server_flag(SERVER_IPV4+SERVER_IPV6,
+				   CLIENT_IPV4,
+				   CLIENT_IPV6,
+				   &server_flag,
+				   &caller_cfg->client_flag,
+				   &callee_cfg->client_flag);
+	    caller_cfg->expected.start_status = PJ_ENOTFOUND;
+	    callee_cfg->expected.start_status = PJ_ENOTFOUND;
+
+	    rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
+			       callee_cfg, &test_param);
+	}
     }
-
-    /* Test for IPV4+IPV6. */
-    if (rc == PJ_SUCCESS) {
-	pj_bzero(&test_param, sizeof(test_param));
-	set_client_server_flag(SERVER_IPV4+SERVER_IPV6, 
-			       CLIENT_IPV4+CLIENT_IPV6,
-			       CLIENT_IPV4+CLIENT_IPV6, 
-			       &server_flag,
-			       &caller_cfg->client_flag, 
-			       &callee_cfg->client_flag);
-
-	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
-			   callee_cfg, &test_param);
-    }
-
-    /* Test controller(IPV4) vs controlled(IPV6). */
-    if (rc == PJ_SUCCESS) {
-	pj_bzero(&test_param, sizeof(test_param));
-	set_client_server_flag(SERVER_IPV4+SERVER_IPV6, 
-			       CLIENT_IPV4,
-			       CLIENT_IPV6, 
-			       &server_flag,
-			       &caller_cfg->client_flag, 
-			       &callee_cfg->client_flag);
-	caller_cfg->expected.start_status = PJ_ENOTFOUND;
-	callee_cfg->expected.start_status = PJ_ENOTFOUND;
-
-	rc = perform_test2(title, stun_cfg, server_flag, caller_cfg,
-			   callee_cfg, &test_param);
-    }
-
 #endif
     callee_cfg->expected.start_status = expected_callee_start_ice;
     caller_cfg->expected.start_status = expected_caller_start_ice;
