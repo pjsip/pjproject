@@ -445,9 +445,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
     }
 
-#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
-      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
-
     /* Check if certificate/CA list for SSL socket is set */
     if (listener->tls_setting.cert_file.slen ||
 	listener->tls_setting.ca_list_file.slen ||
@@ -462,7 +459,12 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 			&listener->cert);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+     }
 
+#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
+      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
+
+     if (listener->cert) {
 	status = pj_ssl_sock_set_certificate(listener->ssock, pool, 
 					     listener->cert);
 	if (status != PJ_SUCCESS)
