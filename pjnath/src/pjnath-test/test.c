@@ -19,6 +19,7 @@
  */
 #include "test.h"
 #include <pjlib.h>
+#include <pj/compat/socket.h>
 
 void app_perror(const char *msg, pj_status_t rc)
 {
@@ -28,6 +29,20 @@ void app_perror(const char *msg, pj_status_t rc)
 
     pj_strerror(rc, errbuf, sizeof(errbuf));
     PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+}
+
+/* Set socket to nonblocking. */
+void app_set_sock_nb(pj_sock_t sock)
+{
+#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0 || \
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    u_long value = 1;
+    ioctlsocket(sock, FIONBIO, &value);
+#else
+    pj_uint32_t value = 1;
+    ioctl(sock, FIONBIO, &value);
+#endif
 }
 
 pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)

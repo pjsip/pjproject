@@ -263,6 +263,9 @@ static int stun_destroy_test(void)
     status = pj_sock_bind(test_sess.server_sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
     pj_assert(status == PJ_SUCCESS);
 
+    /* Set socket to nonblocking to avoid stuck in recv/recvfrom() on concurrent events */
+    app_set_sock_nb(test_sess.server_sock);
+
     addr_len = sizeof(bind_addr);
     status = pj_sock_getsockname(test_sess.server_sock, &bind_addr, &addr_len);
     pj_assert(status == PJ_SUCCESS);
