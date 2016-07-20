@@ -114,6 +114,9 @@ using namespace pj;
 %template(VideoDevInfoVector)		std::vector<pj::VideoDevInfo*>;
 %template(CodecFmtpVector)		std::vector<pj::CodecFmtp>;	
 
+%ignore pj::WindowHandle::display;
+%ignore pj::WindowHandle::window;
+
 /* pj::WindowHandle::setWindow() receives Surface object */
 #if defined(SWIGJAVA) && defined(__ANDROID__)
 %{
@@ -123,13 +126,15 @@ using namespace pj;
 #  define ANativeWindow_fromSurface(a,b) NULL
 #endif
 %}
-%ignore pj::WindowHandle::display;
-%ignore pj::WindowHandle::window;
 %typemap(in) jobject surface {
     $1 = ($input? (jobject)ANativeWindow_fromSurface(jenv, $input): NULL);
 }
 %extend pj::WindowHandle {
     void setWindow(jobject surface) { $self->window = surface; }
+}
+#else
+%extend pj::WindowHandle {
+    void setWindow(long long hwnd) { $self->window = (void*)hwnd; }
 }
 #endif
 
