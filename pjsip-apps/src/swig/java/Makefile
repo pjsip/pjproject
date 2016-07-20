@@ -126,9 +126,11 @@ endif
 MY_SWIG		 := swig
 MY_JAVA	 	 := "$(JAVA_BIN)/java"
 MY_JAVAC	 := "$(JAVA_BIN)/javac"
-MY_JNI_CFLAGS	 := -I"$(JAVA_INC)" -I"$(JAVA_INC)/win32" \
+ifneq ($(OS),android)
+  MY_JNI_CFLAGS  := -I"$(JAVA_INC)" -I"$(JAVA_INC)/win32" \
 		    -I"$(JAVA_INC)/linux" -I"$(JAVA_INC)/darwin" -I.
-MY_JNI_LDFLAGS	 := -L"$(JAVA_LIB)"
+  MY_JNI_LDFLAGS := -L"$(JAVA_LIB)"
+endif
 
 # OS specific
 ifeq ($(OS),Windows_NT)
