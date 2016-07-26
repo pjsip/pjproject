@@ -583,7 +583,8 @@ PJ_DECL(pj_bool_t) pjsip_endpt_has_capability( pjsip_endpoint *endpt,
  * @param hname	    If htype specifies PJSIP_H_OTHER, then the header name
  *		    must be supplied in this argument. Otherwise the value
  *		    must be set to NULL.
- * @param count	    The number of tags in the array.
+ * @param count	    The number of tags in the array. The value must not
+ *		    be greater than PJSIP_GENERIC_ARRAY_MAX_COUNT.
  * @param tags	    Array of tags describing the capabilities or extensions
  *		    to be added to the appropriate header.
  *

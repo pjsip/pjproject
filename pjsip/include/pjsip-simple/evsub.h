@@ -246,7 +246,8 @@ PJ_DECL(pjsip_module*) pjsip_evsub_instance(void);
  *			registered.
  * @param event_name	Event package identification.
  * @param expires	Default subscription expiration time, in seconds.
- * @param accept_cnt	Number of strings in Accept array.
+ * @param accept_cnt	Number of strings in Accept array. The value must
+ *			not be greater than PJSIP_GENERIC_ARRAY_MAX_COUNT.
  * @param accept	Array of Accept value.
  *
  * @return		PJ_SUCCESS on success.

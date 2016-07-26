@@ -412,7 +412,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
     unsigned i;
 
     PJ_ASSERT_RETURN(pkg_mod && event_name, PJ_EINVAL);
-    PJ_ASSERT_RETURN(accept_cnt < PJ_ARRAY_SIZE(pkg->pkg_accept->values), 
+    
+    /* Make sure accept_cnt < PJ_ARRAY_SIZE(pkg->pkg_accept->values) */
+    PJ_ASSERT_RETURN(accept_cnt <= PJSIP_GENERIC_ARRAY_MAX_COUNT, 
 		     PJ_ETOOMANY);
 
     /* Make sure evsub module has been initialized */
