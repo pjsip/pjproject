@@ -225,8 +225,9 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 			   inv->invite_tsx->mod_data[mod_inv.mod.id];
 	}
 
-	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE &&
-	    (tsx_inv_data && !tsx_inv_data->sdp_done) )
+	if ((tsx_inv_data && !tsx_inv_data->sdp_done) &&
+	    (!inv->neg || pjmedia_sdp_neg_get_state(inv->neg)!=
+						PJMEDIA_SDP_NEG_STATE_DONE))
 	{
 	    pjsip_tx_data *bye;
 
