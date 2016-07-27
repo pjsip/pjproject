@@ -58,6 +58,11 @@
 
 #define MAX_DEV_CNT     8
 
+#ifndef PJMEDIA_USE_OLD_FFMPEG
+#  define av_close_input_stream(ctx) avformat_close_input(&ctx)
+#endif
+
+
 typedef struct ffmpeg_dev_info
 {
     pjmedia_vid_dev_info         base;
@@ -169,15 +174,23 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
 #if LIBAVFORMAT_VER_AT_LEAST(53,2)
     AVDictionary *format_opts = NULL;
     char buf[128];
+    enum AVPixelFormat av_fmt;
 #else
     AVFormatParameters fp;
 #endif
     pjmedia_video_format_detail *vfd;
+    pj_status_t status;
     int err;
 
     PJ_ASSERT_RETURN(ctx && ifmt && dev_name && param, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
                      PJ_EINVAL);
+
+    status = pjmedia_format_id_to_PixelFormat(param->fmt.id, &av_fmt);
+    if (status != PJ_SUCCESS) {
+	avformat_free_context(*ctx);
+	return status;
+    }
 
     vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
 
@@ -190,7 +203,7 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
     av_dict_set(&format_opts, "framerate", buf, 0);
     snprintf(buf, sizeof(buf), "%dx%d", vfd->size.w, vfd->size.h);
     av_dict_set(&format_opts, "video_size", buf, 0);
-    av_dict_set(&format_opts, "pixel_format", av_get_pix_fmt_name(PIX_FMT_BGR24), 0);
+    av_dict_set(&format_opts, "pixel_format", av_get_pix_fmt_name(av_fmt), 0);
 
     /* Open capture stream */
     err = avformat_open_input(ctx, dev_name, ifmt, &format_opts);
@@ -200,7 +213,7 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
     fp.prealloced_context = 1;
     fp.width = vfd->size.w;
     fp.height = vfd->size.h;
-    fp.pix_fmt = PIX_FMT_BGR24;
+    fp.pix_fmt = av_fmt;
     fp.time_base.num = vfd->fps.denum;
     fp.time_base.den = vfd->fps.num;
 
@@ -219,11 +232,7 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
 static void ffmpeg_capture_close(AVFormatContext *ctx)
 {
     if (ctx)
-#if LIBAVFORMAT_VER_AT_LEAST(53,2)
-        avformat_close_input(&ctx);
-#else
         av_close_input_stream(ctx);
-#endif
 }
 
 
@@ -294,39 +303,70 @@ static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 
     p = av_iformat_next(NULL);
     while (p) {
-        if (p->flags & AVFMT_NOFILE) {
-            unsigned i;
+	AVFormatContext *ctx;
+	AVCodecContext *codec = NULL;
+	pjmedia_format_id fmt_id;
+	pj_status_t status;
+	unsigned i;
+        
+	if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
+	    goto next_format;
+	}
 
-            info = &ff->dev_info[ff->dev_count++];
-            pj_bzero(info, sizeof(*info));
-            pj_ansi_strncpy(info->base.name, "default", 
-                            sizeof(info->base.name));
-            pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
-                             "%s (ffmpeg)", p->name);
-            info->base.dir = PJMEDIA_DIR_CAPTURE;
-            info->base.has_callback = PJ_FALSE;
+        info = &ff->dev_info[ff->dev_count];
+        pj_bzero(info, sizeof(*info));
+        pj_ansi_strncpy(info->base.name, "default", 
+                        sizeof(info->base.name));
+        pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
+                         "%s (ffmpeg)", p->name);
+        info->base.dir = PJMEDIA_DIR_CAPTURE;
+        info->base.has_callback = PJ_FALSE;
 
-            info->host_api = p;
+        info->host_api = p;
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN64) && PJ_WIN64!=0)
-            info->def_devname = "0";
+        info->def_devname = "0";
 #elif defined(PJ_LINUX) && PJ_LINUX!=0
-            info->def_devname = "/dev/video0";
+        info->def_devname = "/dev/video0";
 #endif
 
-            /* Set supported formats, currently hardcoded to RGB24 only */
-            info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-            info->base.fmt_cnt = 1;
-            for (i = 0; i < info->base.fmt_cnt; ++i) {
-                pjmedia_format *fmt = &info->base.fmt[i];
+	ctx = avformat_alloc_context();
+	if (!ctx || avformat_open_input(&ctx, info->def_devname, p, NULL)!=0)
+	    goto next_format;
 
-                fmt->id = PJMEDIA_FORMAT_RGB24;
-                fmt->type = PJMEDIA_TYPE_VIDEO;
-                fmt->detail_type = PJMEDIA_FORMAT_DETAIL_NONE;
-            }
-        }
-        p = av_iformat_next(p);
+	for(i = 0; i < ctx->nb_streams; i++) {
+	    if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+		codec = ctx->streams[i]->codec;
+		break;
+	    }
+	}
+	if (!codec) {
+	    av_close_input_stream(ctx);
+	    goto next_format;
+	}
+
+	status = PixelFormat_to_pjmedia_format_id(codec->pix_fmt, &fmt_id);
+	if (status != PJ_SUCCESS) {
+	    av_close_input_stream(ctx);
+	    goto next_format;
+	}
+
+	/* Set supported formats */
+        info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+        info->base.fmt_cnt = 1;
+        for (i = 0; i < info->base.fmt_cnt; ++i) {
+            pjmedia_format *fmt = &info->base.fmt[i];
+	    pjmedia_format_init_video(fmt, fmt_id,
+				      codec->width, codec->height, 15, 1);
+	}
+
+	av_close_input_stream(ctx);
+
+	ff->dev_count++;
+
+next_format:
+	p = av_iformat_next(p);
     }
 
     return PJ_SUCCESS;
