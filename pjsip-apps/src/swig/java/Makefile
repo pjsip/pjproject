@@ -192,6 +192,8 @@ $(MY_PACKAGE_PATH)/test.class: test.java
 	
 $(MY_PACKAGE_PATH)/sample.class: sample.java
 	$(MY_JAVAC) -d $(OUT_DIR) -classpath "$(OUT_DIR)" sample.java
+	@# Build javafx sample app
+	@# $(MY_JAVAC) -d $(OUT_DIR) -classpath "$(OUT_DIR)" sample2.java
 
 test:
 	@# Need to specify classpath and library path, alternatively,
@@ -203,6 +205,9 @@ sample:
 	@# they can be set via CLASSPATH and java.library.path env settings
 	$(MY_JAVA) -cp "$(OUT_DIR)" -Djava.library.path="$(OUT_DIR)" \
 		org.pjsip.pjsua2.app.sample	
+	@# This is for sample2 app
+	@# $(MY_JAVA) -cp "$(OUT_DIR)" -Djava.library.path="$(OUT_DIR)" \
+	@#	org.pjsip.pjsua2.app.sample2	        
 
 install:
 uninstall:
