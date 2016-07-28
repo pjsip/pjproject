@@ -491,8 +491,13 @@ static void tx_data_destroy(pjsip_tx_data *tdata)
  */
 PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 {
-    pj_assert( pj_atomic_get(tdata->ref_cnt) > 0);
-    if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
+    pj_atomic_value_t ref_cnt;
+    
+    PJ_ASSERT_RETURN(tdata && tdata->ref_cnt, PJ_EINVAL);
+
+    ref_cnt = pj_atomic_dec_and_get(tdata->ref_cnt);
+    pj_assert( ref_cnt >= 0);
+    if (ref_cnt == 0) {
 	tx_data_destroy(tdata);
 	return PJSIP_EBUFDESTROYED;
     } else {
