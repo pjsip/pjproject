@@ -92,6 +92,12 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     pj_list_init(&dlg->inv_hdr);
     pj_list_init(&dlg->rem_cap_hdr);
 
+    /* Init client authentication session. */
+    status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
+				 dlg->pool, 0);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     status = pj_mutex_create_recursive(pool, dlg->obj_name, &dlg->mutex_);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -282,12 +288,6 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Initial route set is empty. */
     pj_list_init(&dlg->route_set);
-
-    /* Init client authentication session. */
-    status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
-				 dlg->pool, 0);
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
     /* Register this dialog to user agent. */
     status = pjsip_ua_register_dlg( ua, dlg );
@@ -505,12 +505,6 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 						   PJSIP_H_RECORD_ROUTE, rr);
     }
     dlg->route_set_frozen = PJ_TRUE;
-
-    /* Init client authentication session. */
-    status = pjsip_auth_clt_init(&dlg->auth_sess, dlg->endpt,
-				 dlg->pool, 0);
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
     /* Increment the dialog's lock since tsx may cause the dialog to be
      * destroyed prematurely (such as in case of transport error).
