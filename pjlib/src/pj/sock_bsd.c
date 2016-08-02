@@ -539,6 +539,12 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 	    pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
 			       &val, sizeof(val));
 	}
+#if defined(PJ_SOCK_HAS_IPV6_V6ONLY) && PJ_SOCK_HAS_IPV6_V6ONLY != 0
+	if (af == PJ_AF_INET6) {
+	    pj_sock_setsockopt(*sock, PJ_SOL_IPV6, IPV6_V6ONLY,
+			       &val, sizeof(val));
+	}
+#endif
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 	if (type == pj_SOCK_DGRAM()) {

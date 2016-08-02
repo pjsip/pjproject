@@ -343,6 +343,15 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 		   AC_MSG_RESULT(yes)],
 		  AC_MSG_RESULT(no))
 
+dnl # Determine if IPV6_V6ONLY is available
+AC_MSG_CHECKING([if IPV6_V6ONLY is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>
+                                     #include <netinet/in.h>]],
+		    		   [int opt = IPV6_V6ONLY;])],
+		  [AC_DEFINE(PJ_SOCK_HAS_IPV6_V6ONLY,1)
+		   AC_MSG_RESULT(yes)],
+		  AC_MSG_RESULT(no))
+
 dnl # Determine if SO_ERROR is available
 AC_MSG_CHECKING([if SO_ERROR is available])
 case $target in
