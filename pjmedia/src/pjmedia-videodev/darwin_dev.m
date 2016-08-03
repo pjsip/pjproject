@@ -234,6 +234,15 @@ static void set_preset_str()
 #endif
 }
 
+static void dispatch_sync_on_main_queue(void (^block)(void))
+{
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
+
 /****************************************************************************
  * Factory operations
  */
@@ -943,7 +952,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             if (!native_preview) {
 		if (strm->prev_layer) {
 		    CALayer *prev_layer = strm->prev_layer;
-		    dispatch_async(dispatch_get_main_queue(), ^{
+                    dispatch_sync_on_main_queue(^{
 		        [prev_layer removeFromSuperlayer];
 		        [prev_layer release];
 		    });
@@ -969,7 +978,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 	        darwin_init_view(strm);
             
             /* Preview layer instantiation should be in main thread! */
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync_on_main_queue(^{
                 /* Create preview layer */
                 AVCaptureVideoPreviewLayer *prev_layer =
                             [[AVCaptureVideoPreviewLayer alloc]
@@ -1074,7 +1083,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         {
             UIView *view = (UIView *)pval;
             strm->param.window.info.ios.window = (void *)pval;
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync_on_main_queue(^{
                 [view addSubview:strm->render_view];
             });
             return PJ_SUCCESS;
@@ -1087,7 +1096,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             CGRect r = strm->render_view.bounds;
             r.size = CGSizeMake(strm->param.disp_size.w,
                                 strm->param.disp_size.h);
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync_on_main_queue(^{
 		strm->render_view.bounds = r;
                 if (strm->prev_layer)
                     strm->prev_layer.frame = r;
@@ -1099,7 +1108,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         {
             pj_memcpy(&strm->param.window_pos, pval,
                       sizeof(strm->param.window_pos));
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync_on_main_queue(^{
                 strm->render_view.center =
                             CGPointMake(strm->param.window_pos.x +
                                         strm->param.disp_size.w/2.0,
@@ -1111,7 +1120,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
             
         case PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE:
         {
-            dispatch_async(dispatch_get_main_queue(), ^{
+            dispatch_sync_on_main_queue(^{
                 strm->render_view.hidden = (BOOL)(*((pj_bool_t *)pval));
             });
             return PJ_SUCCESS;
@@ -1133,7 +1142,7 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         
             if (strm->param.dir == PJMEDIA_DIR_RENDER) {
 #if TARGET_OS_IPHONE
-            	dispatch_async(dispatch_get_main_queue(), ^{
+                dispatch_sync_on_main_queue(^{
                     strm->render_view.transform =
                         CGAffineTransformMakeRotation(
                             ((int)strm->param.orient-1) * -M_PI_2);
@@ -1218,13 +1227,9 @@ static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Starting Darwin video stream"));
 
     if (stream->cap_session) {
-        if ([NSThread isMainThread]) {
+        dispatch_sync_on_main_queue(^{
             [stream->cap_session startRunning];
-        } else {
-            dispatch_sync(dispatch_get_main_queue(), ^{
-                [stream->cap_session startRunning];
-            });
-        }
+        });
     
 	if (![stream->cap_session isRunning]) {
 	    PJ_LOG(3, (THIS_FILE, "Unable to start AVFoundation capture "
@@ -1250,7 +1255,7 @@ static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
         pj_memcpy(stream->render_buf, frame->buf, stream->frame_size);
     
     /* Perform video display in a background thread */
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_sync_on_main_queue(^{
         [stream->vout_delegate update_image];
     });
 #endif
@@ -1268,13 +1273,9 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
     
     PJ_LOG(4, (THIS_FILE, "Stopping Darwin video stream"));
 
-    if ([NSThread isMainThread]) {
-	[stream->cap_session stopRunning];
-    } else {
-        dispatch_sync(dispatch_get_main_queue(), ^{
-            [stream->cap_session stopRunning];
-        });
-    }
+    dispatch_sync_on_main_queue(^{
+        [stream->cap_session stopRunning];
+    });
     
     return PJ_SUCCESS;
 }
@@ -1312,7 +1313,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
 #if TARGET_OS_IPHONE
     if (stream->prev_layer) {
         CALayer *prev_layer = stream->prev_layer;
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             [prev_layer removeFromSuperlayer];
             [prev_layer release];
         });
@@ -1321,7 +1322,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     
     if (stream->render_view) {
         UIView *view = stream->render_view;
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             [view removeFromSuperview];
             [view release];
         });
