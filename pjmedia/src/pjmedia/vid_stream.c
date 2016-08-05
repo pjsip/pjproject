@@ -152,7 +152,6 @@ struct pjmedia_vid_stream
     unsigned		     rx_frame_cnt;  /**< # of array in rx_frames    */
     pjmedia_frame	    *rx_frames;	    /**< Temp. buffer for incoming
 					         frame assembly.	    */
-
     pj_bool_t		     force_keyframe;/**< Forced to encode keyframe? */
     unsigned		     num_keyframe;  /**< The number of keyframe needed 
 						 to be sent, after the stream
@@ -821,6 +820,7 @@ static pj_status_t put_frame(pjmedia_port *port,
     pjmedia_vid_encode_opt enc_opt;
     unsigned pkt_cnt = 0;
     pj_timestamp initial_time;
+    pj_timestamp null_ts ={0};
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than
@@ -858,7 +858,9 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.size = 0;
 
     /* Check if need to send keyframe. */
-    if (stream->num_keyframe) {
+    if (stream->num_keyframe && 
+	(pj_cmp_timestamp(&null_ts, &stream->last_keyframe_tx) != 0)) 
+    {	
 	unsigned elapse_time;
 	pj_timestamp now;
 
@@ -869,8 +871,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	if (elapse_time > stream->info.sk_cfg.interval)
 	{
 	    stream->force_keyframe = PJ_TRUE;
-	    if (--stream->num_keyframe)
-		stream->last_keyframe_tx = now;
+	    --stream->num_keyframe;		
 	}
     }
 
@@ -902,6 +903,13 @@ static pj_status_t put_frame(pjmedia_port *port,
     }
     
     pj_get_timestamp(&initial_time);
+
+    if ((stream->num_keyframe) && 
+	((frame_out.bit_info & PJMEDIA_VID_FRM_KEYFRAME) 
+						  == PJMEDIA_VID_FRM_KEYFRAME)) 
+    {
+	stream->last_keyframe_tx = initial_time;
+    }
 
     /* Loop while we have frame to send */
     for (;;) {
