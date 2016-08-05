@@ -154,6 +154,13 @@ struct pjmedia_vid_stream
 					         frame assembly.	    */
 
     pj_bool_t		     force_keyframe;/**< Forced to encode keyframe? */
+    unsigned		     num_keyframe;  /**< The number of keyframe needed 
+						 to be sent, after the stream
+						 is created. */
+    pj_timestamp	     last_keyframe_tx;  
+					    /**< Timestamp of the last 
+						 keyframe. */
+
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
@@ -850,6 +857,23 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
+    /* Check if need to send keyframe. */
+    if (stream->num_keyframe) {
+	unsigned elapse_time;
+	pj_timestamp now;
+
+	pj_get_timestamp(&now);
+
+	elapse_time = pj_elapsed_msec(&stream->last_keyframe_tx, &now);
+
+	if (elapse_time > stream->info.sk_cfg.interval)
+	{
+	    stream->force_keyframe = PJ_TRUE;
+	    if (--stream->num_keyframe)
+		stream->last_keyframe_tx = now;
+	}
+    }
+
     /* Init encoding option */
     pj_bzero(&enc_opt, sizeof(enc_opt));
     if (stream->force_keyframe) {
@@ -1459,6 +1483,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
 #endif
+    stream->num_keyframe = info->sk_cfg.count;
 
     /* Build random RTCP CNAME. CNAME has user@host format */
     stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
@@ -2006,6 +2031,18 @@ pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
     cfg->method = PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING;
+}
+
+
+/*
+ * Initialize the video stream send keyframe with default settings.
+ */
+PJ_DEF(void)
+pjmedia_vid_stream_sk_config_default(pjmedia_vid_stream_sk_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->count = PJMEDIA_VID_STREAM_START_KEYFRAME_CNT;
+    cfg->interval = PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC;
 }
 
 

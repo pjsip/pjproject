@@ -117,6 +117,28 @@ typedef struct pjmedia_vid_stream_rc_config
 
 } pjmedia_vid_stream_rc_config;
 
+/**
+ * Structure of configuration settings for video stream sending keyframe 
+ * after it is created.
+ */
+typedef struct pjmedia_vid_stream_sk_config
+{
+    /**
+     * The number of keyframe to be sent after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
+     */
+    unsigned			    count;
+
+    /**
+     * The keyframe sending interval after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
+     */
+    unsigned			    interval;
+
+} pjmedia_vid_stream_sk_config;
+
 
 /** 
  * This structure describes video stream information. Each video stream
@@ -165,6 +187,9 @@ typedef struct pjmedia_vid_stream_info
 
     pjmedia_vid_stream_rc_config rc_cfg;
                                     /**< Stream send rate control settings. */
+
+    pjmedia_vid_stream_sk_config sk_cfg;
+				    /**< Stream send keyframe settings.	    */
 } pjmedia_vid_stream_info;
 
 
@@ -200,6 +225,14 @@ pjmedia_vid_stream_info_from_sdp(pjmedia_vid_stream_info *si,
  */
 PJ_DECL(void)
 pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg);
+
+/**
+ * Initialize the video stream send keyframe with default settings.
+ *
+ * @param cfg		Video stream send keyframe structure to be initialized.
+ */
+PJ_DECL(void)
+pjmedia_vid_stream_sk_config_default(pjmedia_vid_stream_sk_config *cfg);
 
 
 /*

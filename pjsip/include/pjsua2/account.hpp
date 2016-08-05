@@ -831,6 +831,21 @@ struct AccountVideoConfig : public PersistentObject
      */
     unsigned			rateControlBandwidth;
 
+    /**
+     * The number of keyframe to be sent after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
+     */
+    unsigned			    startKeyframeCount;
+
+    /**
+     * The keyframe sending interval after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
+     */
+    unsigned			    startKeyframeInterval;
+
+
 public:
     /**
      * Read this object from a container node.

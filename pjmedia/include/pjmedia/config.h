@@ -1330,6 +1330,25 @@
 #   define PJMEDIA_HAS_DTMF_FLASH			1
 #endif
 
+/**
+ * Specify the number of keyframe needed to be sent after the stream is 
+ * created. Setting this to 0 will disable it.
+ *
+ * Default : 5
+ */
+#ifndef PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
+#   define PJMEDIA_VID_STREAM_START_KEYFRAME_CNT	5
+#endif
+
+/**
+ * Specify the interval to send keyframe after the stream is created, in msec.
+ *
+ * Default : 1000
+ */
+#ifndef PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
+#   define PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC  1000
+#endif
+
 
 /**
  * @}

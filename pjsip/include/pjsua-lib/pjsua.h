@@ -3306,6 +3306,13 @@ typedef struct pjsua_acc_config
     pjmedia_vid_stream_rc_config vid_stream_rc_cfg;
 
     /**
+     * Specify the send keyframe config for video stream.
+     *
+     * Default: see #pjmedia_vid_stream_sk_config
+     */
+    pjmedia_vid_stream_sk_config vid_stream_sk_cfg;
+
+    /**
      * Media transport config.
      */
     pjsua_transport_config rtp_cfg;

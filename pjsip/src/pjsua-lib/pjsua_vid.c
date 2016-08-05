@@ -911,6 +911,9 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	/* Set rate control config from account setting */
 	si->rc_cfg = acc->cfg.vid_stream_rc_cfg;
 
+	/* Set send keyframe config from account setting */
+	si->sk_cfg = acc->cfg.vid_stream_sk_cfg;
+
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 	/* Enable/disable stream keep-alive and NAT hole punch. */
 	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;

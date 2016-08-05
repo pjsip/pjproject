@@ -277,6 +277,8 @@ void AccountVideoConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
     NODE_READ_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
     NODE_READ_UNSIGNED( this_node, rateControlBandwidth);
+    NODE_READ_UNSIGNED( this_node, startKeyframeCount);
+    NODE_READ_UNSIGNED( this_node, startKeyframeInterval);
 }
 
 void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
@@ -290,6 +292,8 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
     NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
     NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
+    NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
+    NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -433,6 +437,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_rend_dev		= videoConfig.defaultRenderDevice;
     ret.vid_stream_rc_cfg.method= videoConfig.rateControlMethod;
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
+    ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
+    ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
 }
 
 /* Initialize from pjsip. */
@@ -598,6 +604,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.defaultRenderDevice	= prm.vid_rend_dev;
     videoConfig.rateControlMethod	= prm.vid_stream_rc_cfg.method;
     videoConfig.rateControlBandwidth	= prm.vid_stream_rc_cfg.bandwidth;
+    videoConfig.startKeyframeCount	= prm.vid_stream_sk_cfg.count;
+    videoConfig.startKeyframeInterval	= prm.vid_stream_sk_cfg.interval;
 }
 
 void AccountConfig::readObject(const ContainerNode &node) throw(Error)

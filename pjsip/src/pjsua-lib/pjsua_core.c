@@ -277,6 +277,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 #if PJMEDIA_HAS_VIDEO
     pjmedia_vid_stream_rc_config_default(&cfg->vid_stream_rc_cfg);
+    pjmedia_vid_stream_sk_config_default(&cfg->vid_stream_sk_cfg);
 #endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
 
