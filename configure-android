@@ -62,7 +62,7 @@ if test "$1" = "--use-ndk-cflags"; then
     IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias"
   fi
 
-  NDK_OUT=`${ANDROID_NDK_ROOT}/ndk-build -n -C ${ANDROID_NDK_ROOT}/samples/hello-jni NDK_TOOLCHAIN_VERSION=4.8 APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`
+  NDK_OUT=`${ANDROID_NDK_ROOT}/ndk-build -n -C pjsip-apps/src/samples/android_sample APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`
   if test ! "${NDK_OUT}"; then
     echo "$F error: failed to run ndk-build, check ANDROID_NDK_ROOT env var"
     exit 1
@@ -72,7 +72,7 @@ if test "$1" = "--use-ndk-cflags"; then
     if test "x${NDK_CXX}" != "x" -a "$i" = "-o"; then break; fi
 
     # Parse NDK CXXFLAGS
-    if test "x${NDK_CXX}" != "x" -a "x`echo $i|grep 'hello-jni'`" = "x"; then
+    if test "x${NDK_CXX}" != "x" -a "x`echo $i|grep 'dummy'`" = "x"; then
       if test "x`echo $i|grep '\-\-sysroot='`" != "x"; then
         ANDROID_SYSROOT=`echo $i|sed 's/--sysroot=//'`;
       fi
@@ -80,7 +80,7 @@ if test "$1" = "--use-ndk-cflags"; then
     fi
 
     # Parse NDK CFLAGS
-    if test "x${NDK_CC}" != "x" -a "x`echo $i|grep 'hello-jni'`" = "x" -a "${ADD_CFLAGS}" = "1"; then
+    if test "x${NDK_CC}" != "x" -a "x`echo $i|grep 'dummy'`" = "x" -a "${ADD_CFLAGS}" = "1"; then
       if test "$i" = "-c"; then ADD_CFLAGS="0"; else
         if test "x`echo $i|grep ${IGNORE_CFLAGS}`" = "x"; then
           NDK_CFLAGS="${NDK_CFLAGS} $i"
