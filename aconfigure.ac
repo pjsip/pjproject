@@ -1603,7 +1603,8 @@ AC_ARG_ENABLE(ssl,
 	        	AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
 			
 			# Check if SRTP should be compiled with OpenSSL
-			# support, to enable cryptos such as AES GCM	AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])
+			# support, to enable cryptos such as AES GCM
+			AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])
 			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
 				AC_MSG_RESULT([OpenSSL has AES GCM support, SRTP will use OpenSSl version])
 			else
