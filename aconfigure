@@ -640,6 +640,7 @@ ac_no_opencore_amrnb
 libcrypto_present
 libssl_present
 openssl_h_present
+ac_ssl_has_aes_gcm
 ac_no_ssl
 ac_webrtc_ldflags
 ac_webrtc_cflags
@@ -7837,6 +7838,8 @@ if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno"; then
 fi
 
 
+ac_ssl_has_aes_gcm=0
+
 # Check whether --enable-ssl was given.
 if test "${enable_ssl+set}" = set; then :
   enableval=$enable_ssl;
@@ -7948,6 +7951,17 @@ fi
 		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL library found, SSL support enabled" >&5
 $as_echo "OpenSSL library found, SSL support enabled" >&6; }
+
+			# Check if SRTP should be compiled with OpenSSL
+			# support, to enable cryptos such as AES GCM	AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])
+			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL has AES GCM support, SRTP will use OpenSSl version" >&5
+$as_echo "OpenSSL has AES GCM support, SRTP will use OpenSSl version" >&6; }
+			else
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&5
+$as_echo "OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&6; }
+			fi
+
 			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
 			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
 			$as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h

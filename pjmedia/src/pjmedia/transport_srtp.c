@@ -84,35 +84,56 @@ typedef struct crypto_suite
     sec_serv_t		 service;
 } crypto_suite;
 
-/* Crypto suites as defined on RFC 4568 */
+/* https://www.iana.org/assignments/sdp-security-descriptions/sdp-security-descriptions.xhtml */
 static crypto_suite crypto_suites[] = {
     /* plain RTP/RTCP (no cipher & no auth) */
     {"NULL", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none},
-
+#if defined(PJMEDIA_SRTP_HAS_AES_GCM_256) && \
+    (PJMEDIA_SRTP_HAS_AES_GCM_256 != 0)
+    /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
+    {"AEAD_AES_256_GCM", AES_256_GCM, AES_256_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth},
+    /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
+    {"AEAD_AES_256_GCM_8", AES_256_GCM, AES_256_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_256) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_256 != 0)
     /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
     {"AES_256_CM_HMAC_SHA1_80", AES_ICM, 46, HMAC_SHA1, 20, 10, 10,
 	sec_serv_conf_and_auth},
-
     /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
     {"AES_256_CM_HMAC_SHA1_32", AES_ICM, 46, HMAC_SHA1, 20, 4, 10,
-        sec_serv_conf_and_auth},
-
-    /* cipher AES_192_CM, auth HMAC_SHA1, auth tag len = 10 octets */
-    //{"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 10, 10,
-	//sec_serv_conf_and_auth},
-
-    /* cipher AES_192_CM, auth HMAC_SHA1, auth tag len = 4 octets */
-    //{"AES_192_CM_HMAC_SHA1_32", AES_ICM, 38, HMAC_SHA1, 20, 4, 10,
-	//sec_serv_conf_and_auth},
-
-    /* cipher AES_CM, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_CM_128_HMAC_SHA1_80", AES_128_ICM, 30, HMAC_SHA1, 20, 10, 10,
 	sec_serv_conf_and_auth},
-
-    /* cipher AES_CM, auth HMAC_SHA1, auth tag len = 4 octets */
-    {"AES_CM_128_HMAC_SHA1_32", AES_128_ICM, 30, HMAC_SHA1, 20, 4, 10,
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_192) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_192 != 0)
+    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 10, 10,
 	sec_serv_conf_and_auth},
+    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_192_CM_HMAC_SHA1_32", AES_ICM, 38, HMAC_SHA1, 20, 4, 10,
+	sec_serv_conf_and_auth},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_GCM_128) && \
+    (PJMEDIA_SRTP_HAS_AES_GCM_128 != 0)
+    /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
+    {"AEAD_AES_128_GCM", AES_128_GCM, AES_128_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth},
 
+    /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
+    {"AEAD_AES_128_GCM_8", AES_128_GCM, AES_128_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_128) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_128 != 0)
+    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_CM_128_HMAC_SHA1_80", AES_ICM, 30, HMAC_SHA1, 20, 10, 10,
+	sec_serv_conf_and_auth},
+    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_CM_128_HMAC_SHA1_32", AES_ICM, 30, HMAC_SHA1, 20, 4, 10,
+	sec_serv_conf_and_auth},
+#endif
     /*
      * F8_128_HMAC_SHA1_8 not supported by libsrtp?
      * {"F8_128_HMAC_SHA1_8", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none}

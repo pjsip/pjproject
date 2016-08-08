@@ -953,6 +953,61 @@
 
 
 /**
+ * Maximum number of SRTP cryptos.
+ *
+ * Default: 16
+ */
+#ifndef PJMEDIA_SRTP_MAX_CRYPTOS
+#   define PJMEDIA_SRTP_MAX_CRYPTOS		    16
+#endif
+
+
+/**
+ * Enable AES_CM_256 cryptos in SRTP.
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_AES_CM_256
+#   define PJMEDIA_SRTP_HAS_AES_CM_256	    	    1
+#endif
+
+
+/**
+ * Enable AES_CM_192 cryptos in SRTP
+ * Default: disabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_AES_CM_192
+#   define PJMEDIA_SRTP_HAS_AES_CM_192	    	    0
+#endif
+
+
+/**
+ * Enable AES_CM_128 cryptos in SRTP.
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_AES_CM_128
+#   define PJMEDIA_SRTP_HAS_AES_CM_128    	    1
+#endif
+
+
+/**
+ * Enable AES_GCM_256 cryptos in SRTP.
+ * Default: disabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_AES_GCM_256
+#   define PJMEDIA_SRTP_HAS_AES_GCM_256	    	    0
+#endif
+
+
+/**
+ * Enable AES_GCM_128 cryptos in SRTP.
+ * Default: disabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_AES_GCM_128
+#   define PJMEDIA_SRTP_HAS_AES_GCM_128    	    0
+#endif
+
+
+/**
  * Let the library handle libsrtp initialization and deinitialization.
  * Application may want to disable this and manually perform libsrtp
  * initialization and deinitialization when it needs to use libsrtp
