@@ -61,8 +61,14 @@ if test "$1" = "--use-ndk-cflags"; then
   if test "x${IGNORE_CFLAGS}" = "x"; then
     IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias"
   fi
+  
+  if test -f ${ANDROID_NDK_ROOT}/build/ndk-build; then    
+    NDK_BUILD=${ANDROID_NDK_ROOT}/build/ndk-build
+  else 
+    NDK_BUILD=${ANDROID_NDK_ROOT}/ndk-build
+  fi
 
-  NDK_OUT=`${ANDROID_NDK_ROOT}/ndk-build -n -C pjsip-apps/src/samples/android_sample APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`
+  NDK_OUT=`${NDK_BUILD} -n -C pjsip-apps/src/samples/android_sample APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`
   if test ! "${NDK_OUT}"; then
     echo "$F error: failed to run ndk-build, check ANDROID_NDK_ROOT env var"
     exit 1
