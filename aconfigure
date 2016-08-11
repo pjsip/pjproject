@@ -7954,13 +7954,13 @@ $as_echo "OpenSSL library found, SSL support enabled" >&6; }
 
 			# Check if SRTP should be compiled with OpenSSL
 			# support, to enable cryptos such as AES GCM
-			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EVP_aes_128_gcm in -lssl" >&5
-$as_echo_n "checking for EVP_aes_128_gcm in -lssl... " >&6; }
-if ${ac_cv_lib_ssl_EVP_aes_128_gcm+:} false; then :
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EVP_aes_128_gcm in -lcrypto" >&5
+$as_echo_n "checking for EVP_aes_128_gcm in -lcrypto... " >&6; }
+if ${ac_cv_lib_crypto_EVP_aes_128_gcm+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lssl  $LIBS"
+LIBS="-lcrypto  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -7980,23 +7980,23 @@ return EVP_aes_128_gcm ();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_ssl_EVP_aes_128_gcm=yes
+  ac_cv_lib_crypto_EVP_aes_128_gcm=yes
 else
-  ac_cv_lib_ssl_EVP_aes_128_gcm=no
+  ac_cv_lib_crypto_EVP_aes_128_gcm=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ssl_EVP_aes_128_gcm" >&5
-$as_echo "$ac_cv_lib_ssl_EVP_aes_128_gcm" >&6; }
-if test "x$ac_cv_lib_ssl_EVP_aes_128_gcm" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_EVP_aes_128_gcm" >&5
+$as_echo "$ac_cv_lib_crypto_EVP_aes_128_gcm" >&6; }
+if test "x$ac_cv_lib_crypto_EVP_aes_128_gcm" = xyes; then :
   ac_ssl_has_aes_gcm=1
 fi
 
 			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
-				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL has AES GCM support, SRTP will use OpenSSl version" >&5
-$as_echo "OpenSSL has AES GCM support, SRTP will use OpenSSl version" >&6; }
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL has AES GCM support, SRTP will use OpenSSL" >&5
+$as_echo "OpenSSL has AES GCM support, SRTP will use OpenSSL" >&6; }
 			else
 				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&5
 $as_echo "OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&6; }
