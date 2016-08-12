@@ -1266,6 +1266,53 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
     return (pjmedia_transport *)prm.mediaTp;
 }
 
+void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
+                                    	      unsigned media_idx,
+                                    	      pjmedia_srtp_setting *srtp_opt)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	pjsua_call *in_call = &pjsua_var.calls[call_id];
+	if (in_call->incoming_data) {
+	    /* This can happen when there is an incoming call but the
+	     * on_incoming_call() callback hasn't been called. So we need to 
+	     * call the callback here.
+	     */
+	    on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+
+	    /* New call should already be created by app. */
+	    call = Call::lookup(call_id);
+	    if (!call) {
+		return;
+	    }
+	} else {
+	    return;
+	}
+    }
+    
+    OnCreateMediaTransportSrtpParam prm;
+    prm.mediaIdx = media_idx;
+    prm.srtpUse  = srtp_opt->use;
+    for (int i = 0; i < srtp_opt->crypto_count; i++) {
+    	SrtpCrypto crypto;
+    	
+    	crypto.key   = pj2Str(srtp_opt->crypto[i].key);
+    	crypto.name  = pj2Str(srtp_opt->crypto[i].name);
+    	crypto.flags = srtp_opt->crypto[i].flags;
+    	prm.cryptos.push_back(crypto);
+    }
+    
+    call->onCreateMediaTransportSrtp(prm);
+    
+    srtp_opt->use = prm.srtpUse;
+    srtp_opt->crypto_count = prm.cryptos.size();
+    for (int i = 0; i < srtp_opt->crypto_count; i++) {
+    	srtp_opt->crypto[i].key   = str2Pj(prm.cryptos[i].key);
+    	srtp_opt->crypto[i].name  = str2Pj(prm.cryptos[i].name);
+    	srtp_opt->crypto[i].flags = prm.cryptos[i].flags;
+    }    
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint library operations

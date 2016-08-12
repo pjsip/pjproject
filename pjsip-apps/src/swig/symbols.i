@@ -42,6 +42,8 @@ typedef enum pjmedia_event_type {PJMEDIA_EVENT_NONE, PJMEDIA_EVENT_FMT_CHANGED =
 
 typedef enum pjmedia_srtp_use {PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, PJMEDIA_SRTP_MANDATORY} pjmedia_srtp_use;
 
+typedef enum pjmedia_srtp_crypto_option {PJMEDIA_SRTP_NO_ENCRYPTION  = 1, PJMEDIA_SRTP_NO_AUTHENTICATION  = 2} pjmedia_srtp_crypto_option;
+
 typedef enum pjmedia_vid_stream_rc_method {PJMEDIA_VID_STREAM_RC_NONE = 0, PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING = 1} pjmedia_vid_stream_rc_method;
 
 typedef pj_int32_t pjmedia_vid_dev_index;

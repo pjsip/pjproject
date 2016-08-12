@@ -1402,6 +1402,10 @@ private:
                               unsigned media_idx,
                               pjmedia_transport *base_tp,
                               unsigned flags);
+    static void
+    on_create_media_transport_srtp(pjsua_call_id call_id,
+                                   unsigned media_idx,
+                                   pjmedia_srtp_setting *srtp_opt);
 
 private:
     void clearCodecInfoList(CodecInfoVector &codec_list);

@@ -1366,6 +1366,23 @@ typedef struct pjsua_callback
                                                     unsigned flags);
 
     /**
+     * This callback is called when SRTP media transport is created.
+     * Application can modify the SRTP setting \a srtp_opt to specify
+     * the cryptos and keys which are going to be used. Note that
+     * application should not modify the field
+     * \a pjmedia_srtp_setting.close_member_tp and can only modify
+     * the field \a pjmedia_srtp_setting.use for initial INVITE.
+     *
+     * @param call_id       Call ID
+     * @param media_idx     The media index in the SDP for which this SRTP
+     * 			    media transport will be used.
+     * @param srtp_opt      The SRTP setting. Application can modify this.
+     */
+    void (*on_create_media_transport_srtp)(pjsua_call_id call_id,
+                                           unsigned media_idx,
+                                           pjmedia_srtp_setting *srtp_opt);
+
+    /**
      * This callback can be used by application to override the account
      * to be used to handle an incoming message. Initially, the account to
      * be used will be calculated automatically by the library. This initial

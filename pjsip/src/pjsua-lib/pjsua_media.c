@@ -1480,6 +1480,22 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	    srtp_opt.use = call_med->rem_srtp_use;
 	else
 	    srtp_opt.use = acc->cfg.use_srtp;
+	    
+	if (pjsua_var.ua_cfg.cb.on_create_media_transport_srtp) {
+	    pjsua_call *call = call_med->call;
+	    pjmedia_srtp_use srtp_use = srtp_opt.use;
+
+	    (*pjsua_var.ua_cfg.cb.on_create_media_transport_srtp)
+		(call->index, call_med->idx, &srtp_opt);
+
+	    /* Close_member_tp must not be overwritten by app */
+	    srtp_opt.close_member_tp = PJ_TRUE;
+
+	    /* Revert SRTP usage policy if media is reinitialized */
+	    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+		srtp_opt.use = srtp_use;
+	    }
+    	}
 
 	status = pjmedia_transport_srtp_create(pjsua_var.med_endpt,
 					       call_med->tp,
