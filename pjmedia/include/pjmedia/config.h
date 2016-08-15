@@ -972,7 +972,13 @@
 
 
 /**
- * Enable AES_CM_192 cryptos in SRTP
+ * Enable AES_CM_192 cryptos in SRTP.
+ * It was reported that this crypto only works among libsrtp backends,
+ * so we recommend to disable this.
+ *
+ * To enable this, you would require OpenSSL which supports it.
+ * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ *
  * Default: disabled.
  */
 #ifndef PJMEDIA_SRTP_HAS_AES_CM_192
@@ -991,6 +997,10 @@
 
 /**
  * Enable AES_GCM_256 cryptos in SRTP.
+ *
+ * To enable this, you would require OpenSSL which supports it.
+ * See https://trac.pjsip.org/repos/ticket/1943 for more info. 
+ *
  * Default: disabled.
  */
 #ifndef PJMEDIA_SRTP_HAS_AES_GCM_256
@@ -1000,6 +1010,10 @@
 
 /**
  * Enable AES_GCM_128 cryptos in SRTP.
+ *
+ * To enable this, you would require OpenSSL which supports it.
+ * See https://trac.pjsip.org/repos/ticket/1943 for more info.
+ *
  * Default: disabled.
  */
 #ifndef PJMEDIA_SRTP_HAS_AES_GCM_128
