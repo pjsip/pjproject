@@ -19,6 +19,7 @@
  */
 #include <pjlib-util/resolver.h>
 #include <pjlib-util/errno.h>
+#include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/except.h>
@@ -309,8 +310,16 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     /* Create the UDP socket */
     status = pj_sock_socket(pj_AF_INET6(), pj_SOCK_DGRAM(), 0,
 			    &resv->udp6_sock);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	/* Skip IPv6 socket on system without IPv6 (see ticket #1953) */
+	if (status == PJ_STATUS_FROM_OS(OSERR_EAFNOSUPPORT)) {
+	    PJ_LOG(3,(resv->name.ptr,
+		      "System does not support IPv6, resolver will "
+		      "ignore any IPv6 nameservers"));
+	    return PJ_SUCCESS;
+	}
 	return status;
+    }
 
     /* Bind to any address/port */
     pj_sockaddr_init(pj_AF_INET6(), &bound_addr, NULL, 0);
@@ -650,7 +659,7 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 				  pj_dns_async_query *q)
 {
     unsigned pkt_size;
-    unsigned i, server_cnt;
+    unsigned i, server_cnt, send_cnt;
     unsigned servers[PJ_DNS_RESOLVER_MAX_NS];
     pj_time_val now;
     pj_str_t name;
@@ -685,8 +694,9 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     /* Check if the socket is available for sending */
     if (pj_ioqueue_is_pending(resolver->udp_key, &resolver->udp_op_tx_key)
 #if PJ_HAS_IPV6
-	|| pj_ioqueue_is_pending(resolver->udp6_key,
-				 &resolver->udp6_op_tx_key)
+	|| (resolver->udp6_key &&
+	    pj_ioqueue_is_pending(resolver->udp6_key,
+				  &resolver->udp6_op_tx_key))
 #endif
 	)
     {
@@ -714,6 +724,7 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     pj_gettimeofday(&now);
 
     /* Send the packet to name servers */
+    send_cnt = 0;
     for (i=0; i<server_cnt; ++i) {
         char addr[PJ_INET6_ADDRSTRLEN];
 	pj_ssize_t sent  = (pj_ssize_t) pkt_size;
@@ -725,16 +736,23 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 				       resolver->udp_tx_pkt, &sent, 0,
 				       &ns->addr,
 				       pj_sockaddr_get_len(&ns->addr));
+	    if (status == PJ_SUCCESS || status == PJ_EPENDING)
+		send_cnt++;
 	}
 #if PJ_HAS_IPV6
-	else {
+	else if (resolver->udp6_key) {
 	    status = pj_ioqueue_sendto(resolver->udp6_key,
 				       &resolver->udp6_op_tx_key,
 				       resolver->udp_tx_pkt, &sent, 0,
 				       &ns->addr,
 				       pj_sockaddr_get_len(&ns->addr));
+	    if (status == PJ_SUCCESS || status == PJ_EPENDING)
+		send_cnt++;
 	}
 #endif
+	else {
+	    continue;
+	}
 
 	PJ_PERROR(4,(resolver->name.ptr, status,
 		  "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
@@ -750,6 +768,9 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 	    ns->sent_time = now;
 	}
     }
+
+    if (send_cnt == 0)
+	return PJLIB_UTIL_EDNSNOWORKINGNS;
 
     ++q->transmit_cnt;
 
