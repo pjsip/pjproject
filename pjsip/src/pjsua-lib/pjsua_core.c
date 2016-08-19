@@ -1658,7 +1658,8 @@ pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error)
     {
 	PJ_LOG(2,(THIS_FILE, 
 		  "Ignoring STUN resolution failure (by setting)"));
-	pjsua_var.stun_status = PJ_SUCCESS;
+	//pjsua_var.stun_status = PJ_SUCCESS;
+	return PJ_SUCCESS;
     }
 
     return pjsua_var.stun_status;
