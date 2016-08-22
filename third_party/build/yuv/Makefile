@@ -92,7 +92,7 @@ distclean: realclean
 
 .PHONY: all dep depend clean realclean distclean
 .PHONY: $(TARGETS)
-.PHONE: $(YUV_LIB) $(YUV_SONAME)
+.PHONY: $(YUV_LIB) $(YUV_SONAME)
 
 libyuv: $(YUV_LIB)
 $(YUV_SONAME): $(YUV_LIB)
