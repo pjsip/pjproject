@@ -344,7 +344,8 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	svr_addr.entry[0].priority = 0;
 	svr_addr.entry[0].weight = 0;
 	svr_addr.entry[0].type = type;
-	svr_addr.entry[0].addr_len = pj_sockaddr_get_len(&svr_addr.entry[0].addr);
+	svr_addr.entry[0].addr_len = 
+				pj_sockaddr_get_len(&svr_addr.entry[0].addr);
 	(*cb)(status, token, &svr_addr);
 
 	/* Done. */
@@ -382,12 +383,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 	query->req.def_port = 5060;
 
-	if (type == PJSIP_TRANSPORT_TLS) {
+	if (type == PJSIP_TRANSPORT_TLS || type == PJSIP_TRANSPORT_TLS6) {
 	    query->naptr[0].res_type = pj_str("_sips._tcp.");
 	    query->req.def_port = 5061;
-	} else if (type == PJSIP_TRANSPORT_TCP)
+	} else if (type == PJSIP_TRANSPORT_TCP || type == PJSIP_TRANSPORT_TCP6)
 	    query->naptr[0].res_type = pj_str("_sip._tcp.");
-	else if (type == PJSIP_TRANSPORT_UDP)
+	else if (type == PJSIP_TRANSPORT_UDP || type == PJSIP_TRANSPORT_UDP6)
 	    query->naptr[0].res_type = pj_str("_sip._udp.");
 	else {
 	    pj_assert(!"Unknown transport type");
@@ -586,7 +587,7 @@ static void dns_aaaa_callback(void *user_data,
 					  PJSIP_TRANSPORT_IPV6;
 	    srv->entry[srv->count].priority = 0;
 	    srv->entry[srv->count].weight = 0;
-	    srv->entry[srv->count].addr_len = sizeof(pj_sockaddr_in);
+	    srv->entry[srv->count].addr_len = sizeof(pj_sockaddr_in6);
 	    pj_sockaddr_init(pj_AF_INET6(), &srv->entry[srv->count].addr,
 			     0, (pj_uint16_t)query->req.def_port);
 	    srv->entry[srv->count].addr.ipv6.sin6_addr = rec.addr[i].ip.v6;
@@ -650,7 +651,6 @@ static void srv_resolver_cb(void *user_data,
 	    srv.entry[srv.count].type = query->naptr[0].type;
 	    srv.entry[srv.count].priority = rec->entry[i].priority;
 	    srv.entry[srv.count].weight = rec->entry[i].weight;
-	    srv.entry[srv.count].addr_len = sizeof(pj_sockaddr_in);
 	    pj_sockaddr_init(s->addr[j].af,
 			     &srv.entry[srv.count].addr,
 			     0, (pj_uint16_t)rec->entry[i].port);
@@ -658,6 +658,8 @@ static void srv_resolver_cb(void *user_data,
 		srv.entry[srv.count].addr.ipv6.sin6_addr = s->addr[j].ip.v6;
 	    else
 		srv.entry[srv.count].addr.ipv4.sin_addr = s->addr[j].ip.v4;
+	    srv.entry[srv.count].addr_len =
+			    pj_sockaddr_get_len(&srv.entry[srv.count].addr);
 
 	    /* Update transport type if this is IPv6 */
 	    if (s->addr[j].af == pj_AF_INET6())
