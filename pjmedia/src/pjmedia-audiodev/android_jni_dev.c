@@ -483,9 +483,11 @@ static pj_status_t android_get_dev_info(pjmedia_aud_dev_factory *f,
     
     pj_ansi_strcpy(info->name, "Android JNI");
     info->default_samples_per_sec = 8000;
-    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
+    		 PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE;
     info->input_count = 1;
     info->output_count = 1;
+    info->routes = PJMEDIA_AUD_DEV_ROUTE_CUSTOM;
     
     return PJ_SUCCESS;
 }
@@ -665,6 +667,12 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
         jthrowable exc;
         jobject record_obj;
         int mic_source = 0; /* DEFAULT: default audio source */
+
+	if ((param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE) &&
+	    (param->input_route & PJMEDIA_AUD_DEV_ROUTE_CUSTOM))
+	{
+    	    mic_source = param->input_route & ~PJMEDIA_AUD_DEV_ROUTE_CUSTOM;
+    	}
 
         /* Get pointer to the constructor */
         constructor_method = (*jni_env)->GetMethodID(jni_env,
