@@ -266,9 +266,10 @@ typedef enum pjmedia_aud_dev_route
      * VOICE_COMMUNICATION (7). To change it to another value, set
      * the input source capability of pjmedia_aud_param accordingly.
      * For example:
+     *   // 6 is VOICE_RECOGNITION
+     *   unsigned aud_source = PJMEDIA_AUD_DEV_ROUTE_CUSTOM | 6;
      *   pjmedia_aud_param_set_cap(&param, PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE,
-     *				   // 4 is VOICE_CALL
-     *                             PJMEDIA_AUD_DEV_ROUTE_CUSTOM | 4);
+     *				   &aud_source);
      */
     PJMEDIA_AUD_DEV_ROUTE_CUSTOM = 128
 
