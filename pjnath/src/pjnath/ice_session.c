@@ -1892,9 +1892,9 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	if (check->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
 	    status = perform_check(ice, clist, i, ice->is_nominating);
 	    if (status != PJ_SUCCESS) {
-		pj_grp_lock_release(ice->grp_lock);
-		pj_log_pop_indent();
-		return status;
+		check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				status);
+		on_check_complete(ice, check);
 	    }
 
 	    ++start_count;
@@ -1912,9 +1912,9 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    if (check->state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
 		status = perform_check(ice, clist, i, ice->is_nominating);
 		if (status != PJ_SUCCESS) {
-		    pj_grp_lock_release(ice->grp_lock);
-		    pj_log_pop_indent();
-		    return status;
+		    check_set_state(ice, check,
+		    		    PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+		    on_check_complete(ice, check);
 		}
 
 		++start_count;
