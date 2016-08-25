@@ -8436,7 +8436,7 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    	;;
 			    armeabi)
 				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-mfloat-abi=softfp -mfpu=neon -march=armv7"
+				ac_webrtc_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
 			    	;;
 			    arm64*)
 				ac_webrtc_instset=neon

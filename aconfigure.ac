@@ -1799,7 +1799,7 @@ AC_ARG_ENABLE(libwebrtc,
 			    	;;
 			    armeabi)
 				ac_webrtc_instset=neon
-				ac_webrtc_cflags="-mfloat-abi=softfp -mfpu=neon -march=armv7"
+				ac_webrtc_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
 			    	;;
 			    arm64*)
 				ac_webrtc_instset=neon
