@@ -149,6 +149,7 @@ else
     exit 1
   fi
 
+  export TARGET_ABI="${TARGET_ABI}"
   export CC="${ANDROID_TC}/bin/${TARGET_HOST}-gcc"
   export CXX="${ANDROID_TC}/bin/${TARGET_HOST}-g++"
   export AR="${ANDROID_TC}/bin/${TARGET_HOST}-ar"
