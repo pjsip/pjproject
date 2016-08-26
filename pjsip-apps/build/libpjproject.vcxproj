@@ -444,6 +444,9 @@
       <Project>{f0dbaa03-1ba3-4e3b-a2ca-727e3d3ab858}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+    <ProjectReference Include="..\..\third_party\build\webrtc\libwebrtc.vcxproj">
+      <Project>{5BCF2773-3825-4D91-9D72-3E2F650DF1DB}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\..\third_party\build\yuv\libyuv.vcxproj">
       <Project>{6ac9b65f-0862-4a5c-8a9d-141516993130}</Project>
     </ProjectReference>

@@ -212,6 +212,9 @@
     <ClCompile Include="..\src\pjmedia\videodev.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\echo_webrtc.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h">

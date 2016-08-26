@@ -209,11 +209,12 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
         }
     }
 
-    PJ_LOG(3, (THIS_FILE, "WebRTC AEC%s successfully created with options %d",
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
-			  " mobile", options));
+    PJ_LOG(3, (THIS_FILE, "WebRTC AEC mobile successfully created with "
+			  "options %d", options));
 #else
-			  "", options));
+    PJ_LOG(3, (THIS_FILE, "WebRTC AEC successfully created with "
+			  "options %d", options));
 #endif
 
     /* Done */
