@@ -1783,6 +1783,10 @@ AC_ARG_ENABLE(libwebrtc,
 		  case $target in
 		      *-apple-darwin_ios*)
 			case $target in
+			    arm64*)
+				ac_webrtc_instset=neon
+				ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
 			    *arm*)
 				ac_webrtc_instset=neon
 			    	;;
