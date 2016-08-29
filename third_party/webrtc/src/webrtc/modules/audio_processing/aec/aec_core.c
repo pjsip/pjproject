@@ -1201,11 +1201,11 @@ static void ProcessBlock(AecCore* aec) {
   float output[PART_LEN];
   float outputH[NUM_HIGH_BANDS_MAX][PART_LEN];
   float* outputH_ptr[NUM_HIGH_BANDS_MAX];
+  float* xf_ptr = NULL;
+
   for (i = 0; i < NUM_HIGH_BANDS_MAX; ++i) {
     outputH_ptr[i] = outputH[i];
   }
-
-  float* xf_ptr = NULL;
 
   // Concatenate old and new nearend blocks.
   for (i = 0; i < aec->num_bands - 1; ++i) {

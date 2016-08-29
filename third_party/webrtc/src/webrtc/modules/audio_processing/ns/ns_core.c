@@ -1204,14 +1204,14 @@ void WebRtcNs_ProcessCore(NoiseSuppressionC* self,
   float gainTimeDomainHB = 1.0;
   float avgProbSpeechHB, avgProbSpeechHBTmp, avgFilterGainHB, gainModHB;
   float sumMagnAnalyze, sumMagnProcess;
+  const float* const* speechFrameHB = NULL;
+  float* const* outFrameHB = NULL;
+  size_t num_high_bands = 0;
 
   // Check that initiation has been done.
   assert(self->initFlag == 1);
   assert((num_bands - 1) <= NUM_HIGH_BANDS_MAX);
 
-  const float* const* speechFrameHB = NULL;
-  float* const* outFrameHB = NULL;
-  size_t num_high_bands = 0;
   if (num_bands > 1) {
     speechFrameHB = &speechFrame[1];
     outFrameHB = &outFrame[1];

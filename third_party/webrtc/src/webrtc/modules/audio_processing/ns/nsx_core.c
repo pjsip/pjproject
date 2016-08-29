@@ -1537,6 +1537,9 @@ void WebRtcNsx_ProcessCore(NoiseSuppressionFixedC* inst,
   int norm32no1, norm32no2;
   int flag, sign;
   int q_domain_to_use = 0;
+  const short* const* speechFrameHB = NULL;
+  short* const* outFrameHB = NULL;
+  size_t num_high_bands = 0;
 
   // Code for ARMv7-Neon platform assumes the following:
   assert(inst->anaLen > 0);
@@ -1558,9 +1561,6 @@ void WebRtcNsx_ProcessCore(NoiseSuppressionFixedC* inst,
   assert(inst->initFlag == 1);
   assert((num_bands - 1) <= NUM_HIGH_BANDS_MAX);
 
-  const short* const* speechFrameHB = NULL;
-  short* const* outFrameHB = NULL;
-  size_t num_high_bands = 0;
   if (num_bands > 1) {
     speechFrameHB = &speechFrame[1];
     outFrameHB = &outFrame[1];
