@@ -444,6 +444,9 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
     /* Send RTCP */
     send_rtcp(stream, PJ_TRUE, PJ_FALSE);
 
+    /* Update stats in case the stream is paused */
+    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
+
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
     /* Keep-alive packet is defined in PJMEDIA_STREAM_KA_USER_PKT */
