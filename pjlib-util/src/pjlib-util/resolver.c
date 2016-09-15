@@ -1384,7 +1384,12 @@ static void report_nameserver_status(pj_dns_resolver *resolver,
 	q_id = (pj_uint32_t)-1;
     }
 
-    if (!pkt || rcode == PJ_DNS_RCODE_SERVFAIL ||
+    /* Some nameserver is reported to respond with PJ_DNS_RCODE_SERVFAIL for
+     * missing AAAA record, and the standard doesn't seem to specify that
+     * SERVFAIL should prevent the server to be contacted again for other
+     * queries. So let's not mark nameserver as bad for SERVFAIL response.
+     */
+    if (!pkt || /* rcode == PJ_DNS_RCODE_SERVFAIL || */
 	        rcode == PJ_DNS_RCODE_REFUSED ||
 	        rcode == PJ_DNS_RCODE_NOTAUTH) 
     {
