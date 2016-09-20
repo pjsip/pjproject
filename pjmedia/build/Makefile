@@ -160,8 +160,8 @@ export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
 			       $(PJMEDIA_VIDEODEV_LDLIB) \
-			       $(PJMEDIA_LDLIB) \
 			       $(PJMEDIA_AUDIODEV_LDLIB) \
+			       $(PJMEDIA_LDLIB) \
 			       $(PJLIB_LDLIB) \
 			       $(PJLIB_UTIL_LDLIB) \
 			       $(PJNATH_LDLIB) \
