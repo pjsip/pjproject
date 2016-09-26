@@ -388,7 +388,7 @@ void PjUwpSocket::DeinitSocket()
     if (stream_sock) {
 	concurrency::create_task(stream_sock->CancelIOAsync()).wait();
     }
-    if (datagram_sock) {
+    if (datagram_sock && has_pending_send) {
 	concurrency::create_task(datagram_sock->CancelIOAsync()).wait();
     }
     if (listener_sock) {
@@ -439,21 +439,17 @@ pj_status_t PjUwpSocket::Bind(const pj_sockaddr_t *addr)
 	HostName ^host;
 	int port;
 
-	try {
-	    sockaddr_to_hostname_port(addr, host, &port);
-	    if (pj_sockaddr_has_addr(addr)) {
-		if (sock_type == SOCKTYPE_DATAGRAM)
-		    return datagram_sock->BindEndpointAsync(host, port.ToString());
-		else
-		    return listener_sock->BindEndpointAsync(host, port.ToString());
-	    } else /* if (pj_sockaddr_get_port(addr) != 0) */ {
-		if (sock_type == SOCKTYPE_DATAGRAM)
-		    return datagram_sock->BindServiceNameAsync(port.ToString());
-		else
-		    return listener_sock->BindServiceNameAsync(port.ToString());
-	    }
-	} catch (Exception^ e) {
-	    err = e->HResult;
+	sockaddr_to_hostname_port(addr, host, &port);
+	if (pj_sockaddr_has_addr(addr)) {
+	    if (sock_type == SOCKTYPE_DATAGRAM)
+		return datagram_sock->BindEndpointAsync(host, port.ToString());
+	    else
+		return listener_sock->BindEndpointAsync(host, port.ToString());
+	} else /* if (pj_sockaddr_get_port(addr) != 0) */ {
+	    if (sock_type == SOCKTYPE_DATAGRAM)
+		return datagram_sock->BindServiceNameAsync(port.ToString());
+	    else
+		return listener_sock->BindServiceNameAsync(port.ToString());
 	}
     }).then([this, &err](concurrency::task<void> t)
     {
