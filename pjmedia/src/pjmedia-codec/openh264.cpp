@@ -508,7 +508,9 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     elayer_ctx.sSliceArgument.uiSliceMode = (oh264_data->whole ?
                                              SM_SINGLE_SLICE : 
                                              SM_SIZELIMITED_SLICE);
-    elayer_ctx.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu;
+
+    /* uiSliceSizeConstraint = uiMaxNalSize - NAL_HEADER_ADD_0X30BYTES */
+    elayer_ctx.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu - 50;
     elayer_ctx.sSliceArgument.uiSliceNum      = 1;
     elayer_ctx.sSliceArgument.uiSliceMbNum[0] = 960;
     elayer_ctx.sSliceArgument.uiSliceMbNum[1] = 0;
