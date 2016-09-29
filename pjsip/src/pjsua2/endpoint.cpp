@@ -490,7 +490,7 @@ void Endpoint::logFunc(int level, const char *data, int len)
     LogEntry entry;
     entry.level = level;
     entry.msg = string(data, len);
-    entry.threadId = (long)pj_thread_this();
+    entry.threadId = (long)(size_t)pj_thread_this();
     entry.threadName = string(pj_thread_get_name(pj_thread_this()));
 
     ep.utilLogWrite(entry);
