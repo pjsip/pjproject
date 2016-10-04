@@ -1284,6 +1284,14 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 		  (int)sess->srv[sess->idx].slen,
 		  sess->srv[sess->idx].ptr, errmsg));
 
+	if (op == PJ_STUN_SOCK_BINDING_OP && !sess->async_wait) {
+	    /* Just return here, we will destroy the STUN socket and
+	     * continue the STUN resolution later in resolve_stun_entry().
+	     * For more details, please refer to ticket #19xx.
+	     */
+            return PJ_FALSE;
+	}
+
 	pj_stun_sock_destroy(stun_sock);
 	sess->stun_sock = NULL;
 
@@ -1372,6 +1380,7 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	/* Use STUN_sock to test this entry */
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
 	stun_sock_cb.on_status = &test_stun_on_status;
+	sess->async_wait = PJ_FALSE;
 	status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
 				     pj_AF_INET(), &stun_sock_cb,
 				     NULL, sess, &sess->stun_sock);
@@ -1404,6 +1413,7 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	/* Done for now, testing will resume/complete asynchronously in
 	 * stun_sock_cb()
 	 */
+	sess->async_wait = PJ_TRUE;
 	return;
     }
 

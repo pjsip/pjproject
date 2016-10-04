@@ -374,6 +374,8 @@ typedef struct pjsua_stun_resolve
     pj_status_t		 status;    /**< Session status	    */
     pj_sockaddr		 addr;	    /**< Result		    */
     pj_stun_sock	*stun_sock; /**< Testing STUN sock  */
+    pj_bool_t 		 async_wait;/**< Async resolution 
+    					 of STUN entry      */
 } pjsua_stun_resolve;
 
 /* See also pjsua_vid_win_type_name() */
