@@ -1244,6 +1244,11 @@ PJ_DEF(int) pj_IPTOS_MINCOST(void)
     return PJ_IPTOS_MINCOST;
 }
 
+PJ_DEF(int) pj_IPV6_TCLASS(void)
+{
+    return PJ_IPV6_TCLASS;
+}
+
 PJ_DEF(pj_uint16_t) pj_SO_TYPE(void)
 {
     return PJ_SO_TYPE;

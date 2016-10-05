@@ -276,6 +276,19 @@ extern const pj_uint16_t PJ_IPTOS_MINCOST;
 #endif
 
 
+/** IPV6_TCLASS optname in setsockopt(). @see pj_IPV6_TCLASS() */
+extern const pj_uint16_t PJ_IPV6_TCLASS;
+
+
+#if defined(PJ_DLL)
+    /** Get #PJ_IPV6_TCLASS constant */
+    PJ_DECL(int) pj_IPV6_TCLASS(void);
+#else
+    /** Get #PJ_IPV6_TCLASS constant */
+#   define pj_IPV6_TCLASS()	PJ_IPV6_TCLASS
+#endif
+
+
 /**
  * Values to be specified as \c optname when calling #pj_sock_setsockopt() 
  * or #pj_sock_getsockopt().

@@ -131,6 +131,14 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
 #endif
 
 
+/* IPV6_TCLASS */
+#ifdef IPV6_TCLASS
+const pj_uint16_t PJ_IPV6_TCLASS = IPV6_TCLASS;
+#else
+const pj_uint16_t PJ_IPV6_TCLASS = 0xFFFF;
+#endif
+
+
 /* optname values. */
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
 const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
