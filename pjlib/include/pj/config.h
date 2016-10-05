@@ -842,6 +842,9 @@
 /** QoS backend for Symbian */
 #define PJ_QOS_SYMBIAN	    4
 
+/** QoS backend for Darwin */
+#define PJ_QOS_DARWIN	    5
+
 /**
  * Force the use of some QoS backend API for some platforms.
  */

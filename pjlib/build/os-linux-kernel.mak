@@ -21,6 +21,8 @@ export PJLIB_OBJS +=	compat/sigjmp.o compat/setjmp_i386.o \
 export PJLIB_OBJS +=	ioqueue_epoll.o 
 #export PJLIB_OBJS +=	ioqueue_select.o 
 
+export PJLIB_OBJS +=	sock_qos_bsd.o
+
 #
 # TEST_OBJS are operating system specific object files to be included in
 # the test application.

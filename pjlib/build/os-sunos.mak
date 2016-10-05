@@ -17,6 +17,8 @@ export PJLIB_OBJS += 	addr_resolv_sock.o file_access_unistd.o \
 export PJLIB_OBJS += ioqueue_select.o 
 #export PJLIB_OBJS += ioqueue_epoll.o
 
+export PJLIB_OBJS += sock_qos_bsd.o
+
 #
 # TEST_OBJS are operating system specific object files to be included in
 # the test application.

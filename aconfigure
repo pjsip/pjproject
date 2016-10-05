@@ -5824,6 +5824,14 @@ case $target in
 		ac_os_objs="$ac_os_objs os_info_iphone.o"
 		;;
 	esac
+	# QoS
+	case $target in
+	  *darwin*)
+		;;
+	  *)
+		ac_os_objs="$ac_os_objs sock_qos_bsd.o"
+		;;
+	esac
 	# UUID
 	case $target in
 	  *android*)
@@ -5842,7 +5850,7 @@ esac
 
 case $target in
   *darwin*)
-	ac_os_objs="$ac_os_objs os_core_darwin.o"
+	ac_os_objs="$ac_os_objs sock_qos_darwin.o os_core_darwin.o"
 	;;
 esac
 
