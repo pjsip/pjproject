@@ -16,7 +16,7 @@ enum pj_file_access {PJ_O_RDONLY = 0x1101, PJ_O_WRONLY = 0x1102, PJ_O_RDWR = 0x1
 
 enum pj_log_decoration {PJ_LOG_HAS_DAY_NAME = 1, PJ_LOG_HAS_YEAR = 2, PJ_LOG_HAS_MONTH = 4, PJ_LOG_HAS_DAY_OF_MON = 8, PJ_LOG_HAS_TIME = 16, PJ_LOG_HAS_MICRO_SEC = 32, PJ_LOG_HAS_SENDER = 64, PJ_LOG_HAS_NEWLINE = 128, PJ_LOG_HAS_CR = 256, PJ_LOG_HAS_SPACE = 512, PJ_LOG_HAS_COLOR = 1024, PJ_LOG_HAS_LEVEL_TEXT = 2048, PJ_LOG_HAS_THREAD_ID = 4096, PJ_LOG_HAS_THREAD_SWC = 8192, PJ_LOG_HAS_INDENT = 16384};
 
-typedef enum pj_qos_type {PJ_QOS_TYPE_BEST_EFFORT, PJ_QOS_TYPE_BACKGROUND, PJ_QOS_TYPE_VIDEO, PJ_QOS_TYPE_VOICE, PJ_QOS_TYPE_CONTROL} pj_qos_type;
+typedef enum pj_qos_type {PJ_QOS_TYPE_BEST_EFFORT, PJ_QOS_TYPE_BACKGROUND, PJ_QOS_TYPE_VIDEO, PJ_QOS_TYPE_VOICE, PJ_QOS_TYPE_CONTROL, PJ_QOS_TYPE_SIGNALLING} pj_qos_type;
 
 typedef enum pj_qos_flag {PJ_QOS_PARAM_HAS_DSCP = 1, PJ_QOS_PARAM_HAS_SO_PRIO = 2, PJ_QOS_PARAM_HAS_WMM = 4} pj_qos_flag;
 
@@ -42,7 +42,7 @@ typedef enum pjmedia_event_type {PJMEDIA_EVENT_NONE, PJMEDIA_EVENT_FMT_CHANGED =
 
 typedef enum pjmedia_srtp_use {PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, PJMEDIA_SRTP_MANDATORY} pjmedia_srtp_use;
 
-typedef enum pjmedia_srtp_crypto_option {PJMEDIA_SRTP_NO_ENCRYPTION  = 1, PJMEDIA_SRTP_NO_AUTHENTICATION  = 2} pjmedia_srtp_crypto_option;
+typedef enum pjmedia_srtp_crypto_option {PJMEDIA_SRTP_NO_ENCRYPTION = 1, PJMEDIA_SRTP_NO_AUTHENTICATION = 2} pjmedia_srtp_crypto_option;
 
 typedef enum pjmedia_vid_stream_rc_method {PJMEDIA_VID_STREAM_RC_NONE = 0, PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING = 1} pjmedia_vid_stream_rc_method;
 
@@ -135,7 +135,7 @@ enum pjsua_invalid_id_const_ {PJSUA_INVALID_ID = -1};
 
 typedef enum pjsua_state {PJSUA_STATE_NULL, PJSUA_STATE_CREATED, PJSUA_STATE_INIT, PJSUA_STATE_STARTING, PJSUA_STATE_RUNNING, PJSUA_STATE_CLOSING} pjsua_state;
 
-typedef enum pjsua_stun_use {PJSUA_STUN_USE_DEFAULT, PJSUA_STUN_USE_DISABLED} pjsua_stun_use;
+typedef enum pjsua_stun_use {PJSUA_STUN_USE_DEFAULT, PJSUA_STUN_USE_DISABLED, PJSUA_STUN_RETRY_ON_FAILURE} pjsua_stun_use;
 
 typedef enum pjsua_call_hold_type {PJSUA_CALL_HOLD_TYPE_RFC3264, PJSUA_CALL_HOLD_TYPE_RFC2543} pjsua_call_hold_type;
 
