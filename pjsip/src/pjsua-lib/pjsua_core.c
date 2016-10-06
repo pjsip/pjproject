@@ -1287,7 +1287,7 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 	if (op == PJ_STUN_SOCK_BINDING_OP && !sess->async_wait) {
 	    /* Just return here, we will destroy the STUN socket and
 	     * continue the STUN resolution later in resolve_stun_entry().
-	     * For more details, please refer to ticket #19xx.
+	     * For more details, please refer to ticket #1962.
 	     */
             return PJ_FALSE;
 	}
