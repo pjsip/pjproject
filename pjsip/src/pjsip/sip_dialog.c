@@ -1124,6 +1124,9 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Put this dialog in tdata's mod_data */
+    tdata->mod_data[dlg->ua->id] = dlg;
+
     /* Just copy dialog route-set to Route header.
      * The transaction will do the processing as specified in Section 12.2.1
      * of RFC 3261 in function tsx_process_route() in sip_transaction.c.
@@ -1223,6 +1226,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 
     /* Lock and increment session */
     pjsip_dlg_inc_lock(dlg);
+
+    /* Put this dialog in tdata's mod_data */
+    tdata->mod_data[dlg->ua->id] = dlg;
 
     /* If via_addr is set, use this address for the Via header. */
     if (dlg->via_addr.host.slen > 0) {
@@ -1405,6 +1411,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_response(	pjsip_dialog *dlg,
 
     /* Lock the dialog. */
     pjsip_dlg_inc_lock(dlg);
+
+    /* Put this dialog in tdata's mod_data */
+    tdata->mod_data[dlg->ua->id] = dlg;
 
     dlg_beautify_response(dlg, PJ_FALSE, st_code, tdata);
 

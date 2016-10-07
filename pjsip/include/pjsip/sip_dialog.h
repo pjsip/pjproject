@@ -557,6 +557,16 @@ PJ_DECL(void) pjsip_dlg_dec_lock( pjsip_dialog *dlg );
 PJ_DECL(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata );
 
 /**
+ * Get the dialog instance for the outgoing tdata. Returns NULL if the message
+ * wasn't sent from a dialog.
+ *
+ * @param tdata		    Outgoing message buffer.
+ *
+ * @return		    The dialog instance that "owns" the message.
+ */
+PJ_DECL(pjsip_dialog*) pjsip_tdata_get_dlg( pjsip_tx_data *tdata );
+
+/**
  * Get the associated dialog for the specified transaction, if any.
  *
  * @param tsx		    The transaction.

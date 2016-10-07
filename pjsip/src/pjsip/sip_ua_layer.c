@@ -412,6 +412,11 @@ PJ_DEF(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata )
     return (pjsip_dialog*) rdata->endpt_info.mod_data[mod_ua.mod.id];
 }
 
+PJ_DEF(pjsip_dialog*) pjsip_tdata_get_dlg( pjsip_tx_data *tdata )
+{
+    return (pjsip_dialog*) tdata->mod_data[mod_ua.mod.id];
+}
+
 PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 {
     return (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
