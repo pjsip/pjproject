@@ -251,7 +251,7 @@ PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
-	if (pj_memcmp(str, &method_names[i], sizeof(pj_str_t))==0 || 
+	if (pj_memcmp(str, method_names[i], sizeof(pj_str_t))==0 || 
 	    pj_stricmp(str, method_names[i])==0) 
 	{
 	    m->id = (pjsip_method_e)i;
