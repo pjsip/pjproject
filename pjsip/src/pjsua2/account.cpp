@@ -43,6 +43,7 @@ void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_BOOL	(this_node, dropCallsOnFail);
     NODE_READ_UNSIGNED	(this_node, unregWaitMsec);
     NODE_READ_UNSIGNED	(this_node, proxyUse);
+    NODE_READ_STRING	(this_node, contactParams);
 
     readSipHeaders(this_node, "headers", headers);
 }
@@ -61,6 +62,7 @@ void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_BOOL	(this_node, dropCallsOnFail);
     NODE_WRITE_UNSIGNED	(this_node, unregWaitMsec);
     NODE_WRITE_UNSIGNED	(this_node, proxyUse);
+    NODE_WRITE_STRING	(this_node, contactParams);
 
     writeSipHeaders(this_node, "headers", headers);
 }
@@ -329,6 +331,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.drop_calls_on_reg_fail	= regConfig.dropCallsOnFail;
     ret.unreg_timeout		= regConfig.unregWaitMsec;
     ret.reg_use_proxy		= regConfig.proxyUse;
+    ret.reg_contact_params	= str2Pj(regConfig.contactParams);
     for (i=0; i<regConfig.headers.size(); ++i) {
 	pj_list_push_back(&ret.reg_hdr_list, &regConfig.headers[i].toPj());
     }
@@ -463,6 +466,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.dropCallsOnFail	= PJ2BOOL(prm.drop_calls_on_reg_fail);
     regConfig.unregWaitMsec	= prm.unreg_timeout;
     regConfig.proxyUse		= prm.reg_use_proxy;
+    regConfig.contactParams	= pj2Str(prm.reg_contact_params);
     regConfig.headers.clear();
     hdr = prm.reg_hdr_list.next;
     while (hdr != &prm.reg_hdr_list) {

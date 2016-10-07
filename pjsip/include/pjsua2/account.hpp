@@ -70,6 +70,17 @@ struct AccountRegConfig : public PersistentObject
     SipHeaderVector	headers;
 
     /**
+     * Additional parameters that will be appended in the Contact header
+     * of the registration requests. This will be appended after
+     * \a AccountSipConfig.contactParams;
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    string	    	contactParams;
+
+    /**
      * Optional interval for registration, in seconds. If the value is zero,
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */

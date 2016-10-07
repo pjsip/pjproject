@@ -87,6 +87,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->id, &src->id);
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
+    pj_strdup_with_null(pool, &dst->reg_contact_params,
+			&src->reg_contact_params);
     pj_strdup_with_null(pool, &dst->contact_params, &src->contact_params);
     pj_strdup_with_null(pool, &dst->contact_uri_params,
                         &src->contact_uri_params);
@@ -994,6 +996,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	unreg_first = PJ_TRUE;
     }
 
+    /* Register contact params */
+    if (pj_strcmp(&acc->cfg.reg_contact_params, &cfg->reg_contact_params)) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.reg_contact_params,
+			    &cfg->reg_contact_params);
+	update_reg = PJ_TRUE;
+    }
+
     /* Contact param */
     if (pj_strcmp(&acc->cfg.contact_params, &cfg->contact_params)) {
 	pj_strdup_with_null(acc->pool, &acc->cfg.contact_params,
@@ -1477,35 +1486,49 @@ static void update_regc_contact(pjsua_acc *acc)
     need_outbound = PJ_TRUE;
 
 done:
-    if (!need_outbound) {
-	/* Outbound is not needed/wanted for the account. acc->reg_contact
-	 * is set to the same as acc->contact.
-	 */
-	acc->reg_contact = acc->contact;
-	acc->rfc5626_status = OUTBOUND_NA;
-    } else {
-	/* Need to use outbound, append the contact with +sip.instance and
-	 * reg-id parameters.
-	 */
+    {
 	pj_ssize_t len;
 	pj_str_t reg_contact;
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
-	len = acc->contact.slen + acc->rfc5626_instprm.slen +
-	      acc->rfc5626_regprm.slen;
-	reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
+	len = acc->contact.slen + acc->cfg.reg_contact_params.slen +
+	      (need_outbound?
+	       (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
+	if (len > acc->contact.slen) {
+	    reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
-	pj_strcpy(&reg_contact, &acc->contact);
-	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
-	pj_strcat(&reg_contact, &acc->rfc5626_instprm);
+	    pj_strcpy(&reg_contact, &acc->contact);
+	
+    	    if (need_outbound) {
+    	    	acc->rfc5626_status = OUTBOUND_WANTED;
 
-	acc->reg_contact = reg_contact;
+	    	/* Need to use outbound, append the contact with
+	    	 * +sip.instance and reg-id parameters.
+	     	 */
+	    	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
+	    	pj_strcat(&reg_contact, &acc->rfc5626_instprm);
+	    } else {
+	    	acc->rfc5626_status = OUTBOUND_NA;
+	    }
 
-	PJ_LOG(4,(THIS_FILE,
-		  "Contact for acc %d updated for SIP outbound: %.*s",
-		  acc->index,
-		  (int)acc->reg_contact.slen,
-		  acc->reg_contact.ptr));
+	    pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
+	    
+	    acc->reg_contact = reg_contact;
+
+	    PJ_LOG(4,(THIS_FILE,
+		      "Contact for acc %d updated: %.*s",
+		      acc->index,
+		      (int)acc->reg_contact.slen,
+		      acc->reg_contact.ptr));
+
+	} else {
+	     /* Outbound is not needed/wanted for the account and there's
+	      * no custom registration Contact params. acc->reg_contact
+	      * is set to the same as acc->contact.
+	      */
+	     acc->reg_contact = acc->contact;
+	     acc->rfc5626_status = OUTBOUND_NA;
+	}
     }
 }
 
