@@ -293,7 +293,33 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
-        for (AVCaptureDevice *device in [AVCaptureDevice devices]) {
+	NSArray<AVCaptureDevice *> *dev_list;
+
+#if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
+    	if (NSClassFromString(@"AVCaptureDeviceTypeBuiltInWideAngleCamera")) {
+	    /* Starting in iOS 10, [AVCaptureDevice devices] is deprecated
+	     * and replaced by AVCaptureDeviceDiscoverySession.
+	     */
+    	    AVCaptureDeviceDiscoverySession *dds;
+	    NSArray<AVCaptureDeviceType> *dev_types =
+	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera,
+	    	  AVCaptureDeviceTypeBuiltInDuoCamera,
+	    	  AVCaptureDeviceTypeBuiltInTelephotoCamera];
+
+    	    dds = [AVCaptureDeviceDiscoverySession
+    	       	   discoverySessionWithDeviceTypes:dev_types
+    	           mediaType:AVMediaTypeVideo
+    	           position:AVCaptureDevicePositionUnspecified];
+
+    	    dev_list = [dds devices];
+	} else {
+	    dev_list = [AVCaptureDevice devices];
+	}
+#else
+	dev_list = [AVCaptureDevice devices];
+#endif
+
+        for (AVCaptureDevice *device in dev_list) {
             if (![device hasMediaType:AVMediaTypeVideo] ||
                 qf->dev_count >= MAX_DEV_COUNT)
             {
