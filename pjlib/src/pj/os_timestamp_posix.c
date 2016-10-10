@@ -161,45 +161,41 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 }
 
 #elif defined(__ANDROID__)
-#include <errno.h>
-#include <time.h>
 
-#if !defined(CLOCK_BOOTTIME)
-#  include <linux/android_alarm.h>
-#  include <fcntl.h>
-#endif
+#include <errno.h>
+#include <linux/android_alarm.h>
+#include <fcntl.h>
 
 #define NSEC_PER_SEC	1000000000
+
+static int s_alarm_fd = -1;
+
+void close_alarm_fd()
+{
+    if (s_alarm_fd != -1)
+	close(s_alarm_fd);
+    s_alarm_fd = -1;
+}
 
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     struct timespec tp;
 
-#if defined(CLOCK_BOOTTIME)
-    /* Use CLOCK_BOOTTIME if supported */
-    if (clock_gettime(CLOCK_BOOTTIME, &tp) != 0) {
-	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
-    }
-#else
-    /* For older NDK version, use ANDROID_ALARM_ELAPSED_REALTIME */
-    static int s_fd = -1;
-
-    if (s_fd == -1) {
+    if (s_alarm_fd == -1) {
         int fd = open("/dev/alarm", O_RDONLY);
         if (fd >= 0) {
-	    s_fd = fd;
-            //close(fd);
+	    s_alarm_fd = fd;
+	    pj_atexit(&close_alarm_fd);
         } else {
 	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());		
 	}
     }
-    int err = ioctl(s_fd,
+    int err = ioctl(s_alarm_fd,
             ANDROID_ALARM_GET_TIME(ANDROID_ALARM_ELAPSED_REALTIME), &tp);
 
     if (err != 0) {
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
-#endif
 
     ts->u64 = tp.tv_sec;
     ts->u64 *= NSEC_PER_SEC;
