@@ -113,7 +113,7 @@ typedef struct pjmedia_rtp_hdr pjmedia_rtp_hdr;
 
 
 /**
- * RTP extendsion header.
+ * RTP extension header.
  */
 struct pjmedia_rtp_ext_hdr
 {
@@ -126,6 +126,21 @@ struct pjmedia_rtp_ext_hdr
  */
 typedef struct pjmedia_rtp_ext_hdr pjmedia_rtp_ext_hdr;
 
+/**
+ * This will contain the RTP header decode output.
+ */
+struct pjmedia_rtp_dec_hdr
+{
+    /* RTP extension header output decode */
+    pjmedia_rtp_ext_hdr *ext_hdr;
+    pj_uint32_t *ext;
+    unsigned ext_len;
+};
+
+/**
+ * @see pjmedia_rtp_dec_hdr
+ */
+typedef struct pjmedia_rtp_dec_hdr pjmedia_rtp_dec_hdr;
 
 #pragma pack(1)
 
@@ -320,6 +335,38 @@ PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 					     const pjmedia_rtp_hdr **hdr,
 					     const void **payload,
 					     unsigned *payloadlen);
+
+
+/**
+ * This function decodes incoming packet into RTP header and payload.
+ * The decode function is guaranteed to point the payload to the correct
+ * position regardless of any options present in the RTP packet.
+ *
+ * Note that this function does not modify the returned RTP header to
+ * host byte order.
+ *
+ * @param ses		The session.
+ * @param pkt		The received RTP packet.
+ * @param pkt_len	The length of the packet.
+ * @param hdr		Upon return will point to the location of the RTP
+ *			header inside the packet. Note that the RTP header
+ *			will be given back as is, meaning that the fields
+ *			will be in network byte order.
+ * @param dec_hdr	Upon return will point to the location of the 
+ *			additional RTP header inside the packet, if any.
+ * @param payload	Upon return will point to the location of the
+ *			payload inside the packet.
+ * @param payloadlen	Upon return will indicate the size of the payload.
+ *
+ * @return		PJ_SUCCESS if successfull.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtp_decode_rtp2(
+				    pjmedia_rtp_session *ses,
+				    const void *pkt, int pkt_len,
+				    const pjmedia_rtp_hdr **hdr,
+				    pjmedia_rtp_dec_hdr *dec_hdr,
+				    const void **payload,
+				    unsigned *payloadlen);
 
 /**
  * Call this function everytime an RTP packet is received to check whether 
