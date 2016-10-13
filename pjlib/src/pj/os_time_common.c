@@ -28,19 +28,24 @@
 
 PJ_DEF(pj_status_t) pj_time_decode(const pj_time_val *tv, pj_parsed_time *pt)
 {
-    struct tm *local_time;
+    struct tm local_time;
 
     PJ_CHECK_STACK();
 
-    local_time = localtime((time_t*)&tv->sec);
+#if defined(PJ_HAS_LOCALTIME_R) && PJ_HAS_LOCALTIME_R != 0
+    localtime_r((time_t*)&tv->sec, &local_time);
+#else
+    /* localtime() is NOT thread-safe. */
+    local_time = *localtime((time_t*)&tv->sec);
+#endif
 
-    pt->year = local_time->tm_year+1900;
-    pt->mon = local_time->tm_mon;
-    pt->day = local_time->tm_mday;
-    pt->hour = local_time->tm_hour;
-    pt->min = local_time->tm_min;
-    pt->sec = local_time->tm_sec;
-    pt->wday = local_time->tm_wday;
+    pt->year = local_time.tm_year+1900;
+    pt->mon = local_time.tm_mon;
+    pt->day = local_time.tm_mday;
+    pt->hour = local_time.tm_hour;
+    pt->min = local_time.tm_min;
+    pt->sec = local_time.tm_sec;
+    pt->wday = local_time.tm_wday;
     pt->msec = tv->msec;
 
     return PJ_SUCCESS;

@@ -5414,6 +5414,12 @@ if test "x$ac_cv_header_net_if_h" = xyes; then :
 fi
 
 
+ac_fn_c_check_func "$LINENO" "localtime_r" "ac_cv_func_localtime_r"
+if test "x$ac_cv_func_localtime_r" = xyes; then :
+  $as_echo "#define PJ_HAS_LOCALTIME_R 1" >>confdefs.h
+
+fi
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Setting PJ_OS_NAME to $target" >&5
 $as_echo "Setting PJ_OS_NAME to $target" >&6; }
 cat >>confdefs.h <<_ACEOF

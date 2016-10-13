@@ -166,6 +166,9 @@
 #   define PJ_OS_HAS_CHECK_STACK    0
 #endif
 
+/* Is localtime_r() available? */
+#undef PJ_HAS_LOCALTIME_R
+
 /* Unicode? */
 #undef PJ_NATIVE_STRING_IS_UNICODE
 

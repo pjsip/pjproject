@@ -55,6 +55,8 @@
 #define PJ_HAS_WINSOCK_H	    0
 #define PJ_HAS_WINSOCK2_H	    0
 
+#define PJ_HAS_LOCALTIME_R	    1
+
 /* Is errno a good way to retrieve OS errors?
  */
 #define PJ_HAS_ERRNO_VAR	    1
