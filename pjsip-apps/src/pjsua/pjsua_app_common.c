@@ -52,9 +52,9 @@ int my_atoi(const char *cs)
 	return 0 - (int)pj_strtoul(&s);
     } else if (cs[0] == '+') {
 	s.ptr++, s.slen--;
-	return pj_strtoul(&s);
+	return (int)pj_strtoul(&s);
     } else {
-	return pj_strtoul(&s);
+	return (int)pj_strtoul(&s);
     }
 }
 

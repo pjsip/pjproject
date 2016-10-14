@@ -1378,7 +1378,7 @@ static void ui_sleep(char menuin[])
 	    return;
 	}
 
-	delay = pj_strtoul(&tmp);
+	delay = (int)pj_strtoul(&tmp);
 	if (delay < 0) delay = 0;
 	pj_thread_sleep(delay);
     }
