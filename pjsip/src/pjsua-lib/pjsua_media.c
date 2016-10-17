@@ -926,6 +926,13 @@ static pj_status_t create_ice_media_transport(
     if (acc_cfg->turn_cfg.enable_turn) {
 	ice_cfg.turn_tp_cnt = 1;
 	pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[0]);
+	if (use_ipv6 && PJ_ICE_MAX_TURN >= 2) {
+	    ice_cfg.turn_tp_cnt = 2;
+	    pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[1]);
+	    ice_cfg.turn_tp[1].af = pj_AF_INET6();
+	}
+
+	/* Configure TURN server */
 	status = parse_host_port(&acc_cfg->turn_cfg.turn_server,
 				 &ice_cfg.turn_tp[0].server,
 				 &ice_cfg.turn_tp[0].port);
@@ -933,6 +940,8 @@ static pj_status_t create_ice_media_transport(
 	    PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
 	    return PJ_EINVAL;
 	}
+
+	/* Configure TURN connection settings and credential */
 	if (ice_cfg.turn_tp[0].port == 0)
 	    ice_cfg.turn_tp[0].port = 3479;
 	ice_cfg.turn_tp[0].conn_type = acc_cfg->turn_cfg.turn_conn_type;
@@ -940,12 +949,26 @@ static pj_status_t create_ice_media_transport(
 		  &acc_cfg->turn_cfg.turn_auth_cred,
 		  sizeof(ice_cfg.turn_tp[0].auth_cred));
 
-	/* Copy QoS setting to TURN setting */
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    ice_cfg.turn_tp[1].server    = ice_cfg.turn_tp[0].server;
+	    ice_cfg.turn_tp[1].port      = ice_cfg.turn_tp[0].port;
+	    ice_cfg.turn_tp[1].conn_type = ice_cfg.turn_tp[0].conn_type;
+	    pj_memcpy(&ice_cfg.turn_tp[1].auth_cred, 
+		      &acc_cfg->turn_cfg.turn_auth_cred,
+		      sizeof(ice_cfg.turn_tp[1].auth_cred));
+	}
+
+	/* Configure QoS setting */
 	ice_cfg.turn_tp[0].cfg.qos_type = cfg->qos_type;
 	pj_memcpy(&ice_cfg.turn_tp[0].cfg.qos_params, &cfg->qos_params,
 		  sizeof(cfg->qos_params));
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    ice_cfg.turn_tp[1].cfg.qos_type = cfg->qos_type;
+	    pj_memcpy(&ice_cfg.turn_tp[1].cfg.qos_params, &cfg->qos_params,
+		      sizeof(cfg->qos_params));
+	}
 
-	/* Copy binding port setting to TURN setting */
+	/* Configure binding address */
 	pj_sockaddr_init(ice_cfg.turn_tp[0].af, &ice_cfg.turn_tp[0].cfg.bound_addr,
 			 &cfg->bound_addr, (pj_uint16_t)cfg->port);
 	ice_cfg.turn_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
@@ -953,8 +976,19 @@ static pj_status_t create_ice_media_transport(
 	    ice_cfg.turn_tp[0].cfg.port_range = 
 				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
 
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    pj_str_t IN6_ADDR_ANY = {"0", 1};
+	    pj_sockaddr_init(pj_AF_INET6(),
+			     &ice_cfg.turn_tp[1].cfg.bound_addr,
+			     &IN6_ADDR_ANY, (pj_uint16_t)cfg->port);
+	    ice_cfg.turn_tp[1].cfg.port_range =
+			    ice_cfg.turn_tp[0].cfg.port_range;
+	}
+
 	/* Configure max packet size */
 	ice_cfg.turn_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1)
+	    ice_cfg.turn_tp[1].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
     }
 
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
