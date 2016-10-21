@@ -1665,11 +1665,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
 	status = (pj_status_t)-bytes_read;
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(resolver->name.ptr, 
-		  "DNS resolver read error from %s:%d: %s", 
-		  pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
-		  pj_sockaddr_get_port(src_addr),
-		  errmsg));
+	PJ_LOG(4,(resolver->name.ptr, "DNS resolver read error: %s", errmsg));
 
 	goto read_next_packet;
     }
