@@ -682,7 +682,10 @@ Account::~Account()
 	    delete b; /* this will remove itself from the list */
 	}
 
-	pjsua_acc_set_user_data(id, NULL);
+	// This caused error message of "Error: cannot find Account.."
+	// when Endpoint::on_reg_started() is called for unregistration.
+	//pjsua_acc_set_user_data(id, NULL);
+
 	pjsua_acc_del(id);
     }
 }
