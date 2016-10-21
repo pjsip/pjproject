@@ -125,7 +125,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     // Add account
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:test1@pjsip.org";
-    acc_cfg.regConfig.registrarUri = "sip:pjsip.org";
+    acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
     std::auto_ptr<MyAccount> acc(new MyAccount);
@@ -249,7 +249,7 @@ static void mainProg() throw(Error)
 	AccountConfig accCfg;
 
 	accCfg.idUri = "\"Just Test\" <sip:test@pjsip.org>";
-	accCfg.regConfig.registrarUri = "sip:pjsip.org";
+	accCfg.regConfig.registrarUri = "sip:sip.pjsip.org";
 	SipHeader h;
 	h.hName = "X-Header";
 	h.hValue = "User header";
