@@ -1989,6 +1989,39 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 
 	sess_init_update(comp->ice_st);
 
+    } else if (old_state == PJ_TURN_STATE_RESOLVING &&
+	       new_state == PJ_TURN_STATE_DESTROYING)
+    {
+	pj_ice_sess_cand *cand = NULL;
+	unsigned i;
+
+	/* DNS resolution has failed! */
+	++comp->turn[tp_idx].err_cnt;
+
+	/* Unregister ourself from the TURN relay */
+	pj_turn_sock_set_user_data(turn_sock, NULL);
+	comp->turn[tp_idx].sock = NULL;
+
+	/* Wait until initialization completes */
+	pj_grp_lock_acquire(comp->ice_st->grp_lock);
+
+	/* Find relayed candidate in the component */
+	for (i=0; i<comp->cand_cnt; ++i) {
+	    if (comp->cand_list[i].type == PJ_ICE_CAND_TYPE_RELAYED &&
+		comp->cand_list[i].transport_id == data->transport_id)
+	    {
+		cand = &comp->cand_list[i];
+		break;
+	    }
+	}
+	pj_assert(cand != NULL);
+
+	pj_grp_lock_release(comp->ice_st->grp_lock);
+
+	cand->status = PJ_ERESOLVE;
+
+	sess_init_update(comp->ice_st);
+
     } else if (new_state >= PJ_TURN_STATE_DEALLOCATING) {
 	pj_turn_session_info info;
 
