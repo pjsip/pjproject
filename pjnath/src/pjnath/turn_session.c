@@ -770,6 +770,13 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 				  sess->alloc_param.lifetime);
     }
 
+    /* Include ADDRESS-FAMILY for IPv6 request */
+    if (sess->af == pj_AF_INET6()) {
+	enum { IPV6_AF_TYPE = 0x02 << 24 };
+	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				  PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
+    }
+
     /* Server address must be set */
     pj_assert(sess->srv_addr != NULL);
 
@@ -1353,9 +1360,8 @@ static void on_allocate_success(pj_turn_session *sess,
     }
     if (raddr_attr && raddr_attr->sockaddr.addr.sa_family != sess->af) {
 	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-			pj_cstr(&s, "Error: RELAY-ADDRESS with non IPv4"
-				    " address family is not supported "
-				    "for now"));
+			pj_cstr(&s, "Error: Mismatched RELAY-ADDRESS "
+				    "address family"));
 	return;
     }
     if (raddr_attr && !pj_sockaddr_has_addr(&raddr_attr->sockaddr)) {
