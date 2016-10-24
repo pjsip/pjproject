@@ -2013,7 +2013,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     *buf++ = ' ';
 
     /* Check if host contains IPv6 */
-    if (pj_memchr(hdr->sent_by.host.ptr, ':', hdr->sent_by.host.slen)) {
+    if (pj_strchr(&hdr->sent_by.host, ':')) {
 	copy_advance_pair_quote_cond(buf, "", 0, hdr->sent_by.host, '[', ']');
     } else {
 	copy_advance_check(buf, hdr->sent_by.host);

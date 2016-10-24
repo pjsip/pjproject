@@ -120,7 +120,8 @@ PJ_IDEF(pj_str_t*) pj_strncpy( pj_str_t *dst, const pj_str_t *src,
 {
     pj_assert(max >= 0);
     if (max > src->slen) max = src->slen;
-    pj_memcpy(dst->ptr, src->ptr, max);
+    if (max > 0)
+	pj_memcpy(dst->ptr, src->ptr, max);
     dst->slen = max;
     return dst;
 }
