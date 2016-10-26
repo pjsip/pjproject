@@ -91,12 +91,20 @@
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-arm-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Label="ExtensionSettings">
@@ -235,6 +243,7 @@
       <AdditionalUsingDirectories>$(WindowsSDK_WindowsMetadata);$(AdditionalUsingDirectories)</AdditionalUsingDirectories>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <CompileAsWinRT>true</CompileAsWinRT>
       <DisableSpecificWarnings>28204</DisableSpecificWarnings>
     </ClCompile>

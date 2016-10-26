@@ -604,7 +604,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\src\pj\ip_helper_generic.c">
+    <ClCompile Include="..\src\pj\ip_helper_winphone8.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'">true</ExcludedFromBuild>
@@ -627,7 +627,7 @@
     <ClCompile Include="..\src\pj\ip_helper_win32.c">
       <ExcludedFromBuild Condition="'$(API_Family)'!='WinDesktop'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\src\pj\ip_helper_winphone8.c">
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
       <ExcludedFromBuild Condition="'$(API_Family)'=='WinDesktop'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\pj\list.c" />

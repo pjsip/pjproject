@@ -185,9 +185,6 @@
     <ClCompile Include="..\src\pj\ioqueue_epoll.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pj\ip_helper_generic.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pj\log_writer_printk.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
@@ -225,6 +222,12 @@
       <Filter>Source Files\winrt</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pj\ip_helper_winphone8.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

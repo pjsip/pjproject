@@ -114,7 +114,10 @@
 
 #define PJ_HAS_HIGH_RES_TIMER	    1
 #define PJ_HAS_MALLOC               1
-#define PJ_OS_HAS_CHECK_STACK	    1
+
+#ifndef PJ_OS_HAS_CHECK_STACK
+#   define PJ_OS_HAS_CHECK_STACK    0
+#endif
 
 #define PJ_ATOMIC_VALUE_TYPE	    long
 
