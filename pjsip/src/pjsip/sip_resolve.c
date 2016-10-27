@@ -453,7 +453,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	}
 
 	/* Resolve DNS AAAA record if address family is not fixed to IPv4 */
-	if (af != pj_AF_INET()) {
+	if (af != pj_AF_INET() && status == PJ_SUCCESS) {
 	    status = pj_dns_resolver_start_query(resolver->res, 
 						 &query->naptr[0].name,
 						 PJ_DNS_TYPE_AAAA, 0, 
@@ -531,9 +531,9 @@ static void dns_a_callback(void *user_data,
 
 	    ++srv->count;
 	}
-
-    } else {
-
+    }
+    
+    if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 
 	/* Log error */
@@ -594,9 +594,9 @@ static void dns_aaaa_callback(void *user_data,
 
 	    ++srv->count;
 	}
-
-    } else {
-
+    }
+    
+    if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 
 	/* Log error */

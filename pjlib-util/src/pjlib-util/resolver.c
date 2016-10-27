@@ -856,7 +856,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     pj_time_val now;
     struct res_key key;
     struct cached_res *cache;
-    pj_dns_async_query *q;
+    pj_dns_async_query *q, *p_q = NULL;
     pj_uint32_t hval;
     pj_status_t status = PJ_SUCCESS;
 
@@ -869,9 +869,6 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 
     /* Check type */
     PJ_ASSERT_RETURN(type > 0 && type < 0xFFFF, PJ_EINVAL);
-
-    if (p_query)
-	*p_query = NULL;
 
     /* Build resource key for looking up hash tables */
     init_res_key(&key, type, name);
@@ -991,10 +988,12 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     pj_hash_set_np(resolver->hquerybyres, &q->key, sizeof(q->key),
 		   0, q->hbufkey, q);
 
-    if (p_query)
-	*p_query = q;
+    p_q = q;
 
 on_return:
+    if (p_query)
+	*p_query = p_q;
+
     pj_mutex_unlock(resolver->mutex);
     return status;
 }

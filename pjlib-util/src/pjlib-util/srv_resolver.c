@@ -187,9 +187,12 @@ PJ_DEF(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
 	    has_pending = PJ_TRUE;
 	}
 	if (srv->q_aaaa) {
-	    pj_dns_resolver_cancel_query(srv->q_aaaa, PJ_FALSE);
+	    /* Check if it is a dummy query. */
+	    if (srv->q_aaaa != (pj_dns_async_query*)0x1) {
+		pj_dns_resolver_cancel_query(srv->q_aaaa, PJ_FALSE);
+		has_pending = PJ_TRUE;
+	    }
 	    srv->q_aaaa = NULL;
-	    has_pending = PJ_TRUE;
 	}
     }
 
@@ -485,12 +488,22 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 	srv->common.type = PJ_DNS_TYPE_A;
 	srv->common_aaaa.type = PJ_DNS_TYPE_AAAA;
 	srv->parent = query_job;
+	srv->q_a = NULL;
+	srv->q_aaaa = NULL;
 
 	status = PJ_SUCCESS;
 
 	/* Start DNA A record query */
 	if ((query_job->option & PJ_DNS_SRV_RESOLVE_AAAA_ONLY) == 0)
 	{
+	    if ((query_job->option & PJ_DNS_SRV_RESOLVE_AAAA) != 0) {
+		/* If there will be DNS AAAA query too, let's setup
+		 * a dummy one here, otherwise app callback may be called
+		 * immediately (before DNS AAAA query is sent) when
+		 * DNS A record is available in the cache.
+		 */
+		srv->q_aaaa = (pj_dns_async_query*)0x1;
+	    }
 	    status = pj_dns_resolver_start_query(query_job->resolver,
 						 &srv->target_name,
 						 PJ_DNS_TYPE_A, 0,
