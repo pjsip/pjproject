@@ -401,6 +401,99 @@ PJ_DECL(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher);
  */
 PJ_DECL(pj_ssl_cipher) pj_ssl_cipher_id(const char *cipher_name);
 
+/**
+ * Elliptic curves enumeration.
+ */
+typedef enum pj_ssl_curve
+{
+	PJ_TLS_UNKNOWN_CURVE 		= 0,
+	PJ_TLS_CURVE_SECT163K1		= 1,
+	PJ_TLS_CURVE_SECT163R1		= 2,
+	PJ_TLS_CURVE_SECT163R2		= 3,
+	PJ_TLS_CURVE_SECT193R1		= 4,
+	PJ_TLS_CURVE_SECT193R2		= 5,
+	PJ_TLS_CURVE_SECT233K1		= 6,
+	PJ_TLS_CURVE_SECT233R1		= 7,
+	PJ_TLS_CURVE_SECT239K1		= 8,
+	PJ_TLS_CURVE_SECT283K1		= 9,
+	PJ_TLS_CURVE_SECT283R1		= 10,
+	PJ_TLS_CURVE_SECT409K1		= 11,
+	PJ_TLS_CURVE_SECT409R1		= 12,
+	PJ_TLS_CURVE_SECT571K1		= 13,
+	PJ_TLS_CURVE_SECT571R1		= 14,
+	PJ_TLS_CURVE_SECP160K1		= 15,
+	PJ_TLS_CURVE_SECP160R1		= 16,
+	PJ_TLS_CURVE_SECP160R2		= 17,
+	PJ_TLS_CURVE_SECP192K1		= 18,
+	PJ_TLS_CURVE_SECP192R1		= 19,
+	PJ_TLS_CURVE_SECP224K1		= 20,
+	PJ_TLS_CURVE_SECP224R1		= 21,
+	PJ_TLS_CURVE_SECP256K1		= 22,
+	PJ_TLS_CURVE_SECP256R1		= 23,
+	PJ_TLS_CURVE_SECP384R1		= 24,
+	PJ_TLS_CURVE_SECP521R1		= 25,
+	PJ_TLS_CURVE_BRAINPOOLP256R1	= 26,
+	PJ_TLS_CURVE_BRAINPOOLP384R1	= 27,
+	PJ_TLS_CURVE_BRAINPOOLP512R1	= 28,
+	PJ_TLS_CURVE_ARBITRARY_EXPLICIT_PRIME_CURVES	= 0XFF01,
+	PJ_TLS_CURVE_ARBITRARY_EXPLICIT_CHAR2_CURVES	= 0XFF02
+} pj_ssl_curve;
+
+/**
+ * Get curve list supported by SSL/TLS backend.
+ *
+ * @param curves	The curves buffer to receive curve list.
+ * @param curves_num	Maximum number of curves to be received.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_curve_get_availables(pj_ssl_curve curves[],
+					         unsigned *curve_num);
+
+/**
+ * Check if the specified curve is supported by SSL/TLS backend.
+ *
+ * @param curve		The curve.
+ *
+ * @return		PJ_TRUE when supported.
+ */
+PJ_DECL(pj_bool_t) pj_ssl_curve_is_supported(pj_ssl_curve curve);
+
+
+/**
+ * Get curve name string.
+ *
+ * @param curve		The curve.
+ *
+ * @return		The curve name or NULL if curve is not recognized/
+ *			supported.
+ */
+PJ_DECL(const char*) pj_ssl_curve_name(pj_ssl_curve curve);
+
+/**
+ * Get curve ID from curve name string. Note that on different backends
+ * (e.g. OpenSSL or Symbian implementation), curve names may not be
+ * equivalent for the same curve ID.
+ *
+ * @param curve_name	The curve name string.
+ *
+ * @return		The curve ID or PJ_TLS_UNKNOWN_CURVE if the curve
+ *			name string is not recognized/supported.
+ */
+PJ_DECL(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name);
+
+/*
+ * Entropy enumeration
+ */
+typedef enum pj_ssl_entropy
+{
+	PJ_SSL_ENTROPY_NONE	= 0,
+	PJ_SSL_ENTROPY_EGD	= 1,
+	PJ_SSL_ENTROPY_RANDOM	= 2,
+	PJ_SSL_ENTROPY_URANDOM	= 3,
+	PJ_SSL_ENTROPY_FILE	= 4,
+	PJ_SSL_ENTROPY_UNKNOWN	= 0x0F
+} pj_ssl_entropy_t;
 
 /**
  * This structure contains the callbacks to be called by the secure socket.
@@ -768,6 +861,51 @@ typedef struct pj_ssl_sock_param
      * its default order of the backend will be used.
      */
     pj_ssl_cipher *ciphers;
+
+    /**
+     * Number of curves contained in the specified curve preference.
+     * If this is set to zero, then default curve list of the backend
+     * will be used.
+     *
+     * Default: 0 (zero).
+     */
+    unsigned curves_num;
+
+    /**
+     * Curves and order preference. The #pj_ssl_curve_get_availables()
+     * can be used to check the available curves supported by backend.
+     */
+    pj_ssl_curve *curves;
+
+    /**
+     * The supported signature algorithms. Set the sigalgs string
+     * using this form:
+     * "<DIGEST>+<ALGORITHM>:<DIGEST>+<ALGORITHM>"
+     * Digests are: "RSA", "DSA" or "ECDSA"
+     * Algorithms are: "MD5", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512"
+     * Example: "ECDSA+SHA256:RSA+SHA256"
+     */
+    pj_str_t	sigalgs;
+
+    /**
+     * Reseed random number generator.
+     * For type #PJ_SSL_ENTROPY_FILE, parameter \a entropy_path
+     * must be set to a file.
+     * For type #PJ_SSL_ENTROPY_EGD, parameter \a entropy_path
+     * must be set to a socket.
+     *
+     * Default value is PJ_SSL_ENTROPY_NONE.
+    */
+    pj_ssl_entropy_t	entropy_type;
+
+    /**
+     * When using a file/socket for entropy #PJ_SSL_ENTROPY_EGD or
+     * #PJ_SSL_ENTROPY_FILE, \a entropy_path must contain the path
+     * to entropy socket/file.
+     *
+     * Default value is an empty string.
+     */
+    pj_str_t		entropy_path;
 
     /**
      * Security negotiation timeout. If this is set to zero (both sec and 

@@ -891,6 +891,16 @@
 
 
 /**
+ * Define the maximum number of curves supported by the secure socket.
+ *
+ * Default: 32
+ */
+#ifndef PJ_SSL_SOCK_MAX_CURVES
+#  define PJ_SSL_SOCK_MAX_CURVES   32
+#endif
+
+
+/**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
  * https://trac.pjsip.org/repos/ticket/1197.
  *

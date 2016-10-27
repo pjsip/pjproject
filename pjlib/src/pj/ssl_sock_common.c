@@ -67,9 +67,27 @@ PJ_DEF(void) pj_ssl_sock_param_copy( pj_pool_t *pool,
 	    dst->ciphers[i] = src->ciphers[i];
     }
 
+    if (src->curves_num > 0) {
+	unsigned i;
+    	dst->curves = (pj_ssl_curve *)pj_pool_calloc(pool, src->curves_num,
+					   	     sizeof(pj_ssl_curve));
+	for (i = 0; i < src->curves_num; ++i)
+	    dst->curves[i] = src->curves[i];
+    }
+
     if (src->server_name.slen) {
         /* Server name must be null-terminated */
         pj_strdup_with_null(pool, &dst->server_name, &src->server_name);
+    }
+
+    if (src->sigalgs.slen) {
+    	/* Sigalgs name must be null-terminated */
+    	pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
+    }
+
+    if (src->entropy_path.slen) {
+    	/* Path name must be null-terminated */
+    	pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
     }
 }
 

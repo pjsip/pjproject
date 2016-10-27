@@ -391,6 +391,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
     ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
     ssock_param.ciphers = listener->tls_setting.ciphers;
+    ssock_param.curves_num = listener->tls_setting.curves_num;
+    ssock_param.curves = listener->tls_setting.curves;
+    ssock_param.sigalgs = listener->tls_setting.sigalgs;
+    ssock_param.entropy_type = listener->tls_setting.entropy_type;
+    ssock_param.entropy_path = listener->tls_setting.entropy_path;
     ssock_param.reuse_addr = listener->tls_setting.reuse_addr;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
@@ -1070,6 +1075,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
     ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
     ssock_param.ciphers = listener->tls_setting.ciphers;
+    ssock_param.curves_num = listener->tls_setting.curves_num;
+    ssock_param.curves = listener->tls_setting.curves;
+    ssock_param.sigalgs = listener->tls_setting.sigalgs;
+    ssock_param.entropy_type = listener->tls_setting.entropy_type;
+    ssock_param.entropy_path = listener->tls_setting.entropy_path;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,

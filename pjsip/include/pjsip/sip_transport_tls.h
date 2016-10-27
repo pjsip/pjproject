@@ -141,6 +141,51 @@ typedef struct pjsip_tls_setting
     pj_ssl_cipher *ciphers;
 
     /**
+     * Number of curves contained in the specified curve preference.
+     * If this is set to zero, then default curve list of the backend
+     * will be used.
+     *
+     * Default: 0 (zero).
+     */
+    unsigned curves_num;
+
+    /**
+     * Curves and order preference. The #pj_ssl_curve_get_availables()
+     * can be used to check the available curves supported by backend.
+     */
+    pj_ssl_curve *curves;
+
+    /**
+     * The supported signature algorithms. Set the sigalgs string
+     * using this form:
+     * "<DIGEST>+<ALGORITHM>:<DIGEST>+<ALGORITHM>"
+     * Digests are: "RSA", "DSA" or "ECDSA"
+     * Algorithms are: "MD5", "SHA1", "SHA224", "SHA256", "SHA384", "SHA512"
+     * Example: "ECDSA+SHA256:RSA+SHA256"
+     */
+    pj_str_t	sigalgs;
+
+    /**
+     * Reseed random number generator.
+     * For type #PJ_SSL_ENTROPY_FILE, parameter \a entropy_path
+     * must be set to a file.
+     * For type #PJ_SSL_ENTROPY_EGD, parameter \a entropy_path
+     * must be set to a socket.
+     *
+     * Default value is PJ_SSL_ENTROPY_NONE.
+    */
+    pj_ssl_entropy_t	entropy_type;
+
+    /**
+     * When using a file/socket for entropy #PJ_SSL_ENTROPY_EGD or
+     * #PJ_SSL_ENTROPY_FILE, \a entropy_path must contain the path
+     * to entropy socket/file.
+     *
+     * Default value is an empty string.
+     */
+    pj_str_t		entropy_path;
+
+    /**
      * Specifies TLS transport behavior on the server TLS certificate 
      * verification result:
      * - If \a verify_server is disabled (set to PJ_FALSE), TLS transport 
@@ -292,12 +337,22 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->cert_file, &src->cert_file);
     pj_strdup_with_null(pool, &dst->privkey_file, &src->privkey_file);
     pj_strdup_with_null(pool, &dst->password, &src->password);
+    pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
+    pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
     if (src->ciphers_num) {
 	unsigned i;
 	dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,
 						       sizeof(pj_ssl_cipher));
 	for (i=0; i<src->ciphers_num; ++i)
 	    dst->ciphers[i] = src->ciphers[i];
+    }
+
+    if (src->curves_num) {
+	unsigned i;
+	dst->curves = (pj_ssl_curve*) pj_pool_calloc(pool, src->curves_num,
+						     sizeof(pj_ssl_curve));
+	for (i=0; i<src->curves_num; ++i)
+	    dst->curves[i] = src->curves[i];
     }
 }
 

@@ -49,7 +49,13 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#include <openssl/rand.h>
+#include <openssl/engine.h>
 
+#if !defined(OPENSSL_NO_EC)
+   extern int tls1_ec_nid2curve_id(int nid);
+   extern int tls1_ec_curve_id2nid(int curve_id);
+#endif
 
 #ifdef _MSC_VER
 #  pragma comment( lib, "libeay32")
@@ -299,6 +305,13 @@ static struct openssl_ciphers_t {
     const char	    *name;
 } openssl_ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
 
+/* OpenSSL available curves */
+static unsigned openssl_curves_num;
+static struct openssl_curves_t {
+    pj_ssl_curve    id;
+    const char	    *name;
+} openssl_curves[PJ_SSL_SOCK_MAX_CURVES];
+
 /* OpenSSL application data index */
 static int sslsock_idx;
 
@@ -328,12 +341,14 @@ static pj_status_t init_openssl(void)
 #endif
 
     /* Init available ciphers */
-    if (openssl_cipher_num == 0) {
+    if (openssl_cipher_num == 0 || openssl_curves_num == 0) {
 	SSL_METHOD *meth = NULL;
 	SSL_CTX *ctx;
 	SSL *ssl;
 	STACK_OF(SSL_CIPHER) *sk_cipher;
 	unsigned i, n;
+	int nid;
+	const char *cname;
 
 	meth = (SSL_METHOD*)SSLv23_server_method();
 	if (!meth)
@@ -352,6 +367,7 @@ static pj_status_t init_openssl(void)
 	SSL_CTX_set_cipher_list(ctx, "ALL:COMPLEMENTOFALL");
 
 	ssl = SSL_new(ctx);
+
 	sk_cipher = SSL_get_ciphers(ssl);
 
 	n = sk_SSL_CIPHER_num(sk_cipher);
@@ -365,17 +381,42 @@ static pj_status_t init_openssl(void)
 				    (pj_uint32_t)c->id & 0x00FFFFFF;
 	    openssl_ciphers[i].name = SSL_CIPHER_get_name(c);
 	}
+	openssl_cipher_num = n;
+
+	ssl->session = SSL_SESSION_new();
+
+#if !defined(OPENSSL_NO_EC)
+	openssl_curves_num = SSL_get_shared_curve(ssl,-1);
+	if (openssl_curves_num > PJ_ARRAY_SIZE(openssl_curves))
+	    openssl_curves_num = PJ_ARRAY_SIZE(openssl_curves);
+
+	for (i = 0; i < openssl_curves_num; i++) {
+	    nid = SSL_get_shared_curve(ssl, i);
+
+	    if (nid & TLSEXT_nid_unknown) {
+		cname = "curve unknown";
+		nid &= 0xFFFF;
+	    } else {
+		cname = EC_curve_nid2nist(nid);
+		if (!cname)
+		    cname = OBJ_nid2sn(nid);
+	    }
+
+	    openssl_curves[i].id   = tls1_ec_nid2curve_id(nid);
+	    openssl_curves[i].name = cname;
+	}
+#else
+	openssl_curves_num = 0;
+#endif
 
 	SSL_free(ssl);
 	SSL_CTX_free(ctx);
-
-	openssl_cipher_num = n;
     }
 
     /* Create OpenSSL application data index for SSL socket */
     sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -498,7 +539,12 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 
 /* Setting SSL sock cipher list */
 static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock);
-
+/* Setting SSL sock curves list */
+static pj_status_t set_curves_list(pj_ssl_sock_t *ssock);
+/* Setting sigalgs list */
+static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock);
+/* Setting entropy for rng */
+static void set_entropy(pj_ssl_sock_t *ssock);
 
 /* Create and initialize new SSL context and instance */
 static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
@@ -522,6 +568,8 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 
     /* Make sure OpenSSL library has been initialized */
     init_openssl();
+
+    set_entropy(ssock);
 
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
 	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
@@ -775,6 +823,16 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Set curve list */
+    status = set_curves_list(ssock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Set sigalg list */
+    status = set_sigalgs(ssock);
+    if (status != PJ_SUCCESS)
+	return status;
+
     /* Setup SSL BIOs */
     ssock->ossl_rbio = BIO_new(BIO_s_mem());
     ssock->ossl_wbio = BIO_new(BIO_s_mem());
@@ -939,6 +997,89 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
+{
+#if !defined(OPENSSL_NO_EC)
+    int ret;
+    int curves[PJ_SSL_SOCK_MAX_CURVES];
+    int cnt;
+
+    if (ssock->param.curves_num == 0)
+	return PJ_SUCCESS;
+
+    for (cnt = 0; cnt < ssock->param.curves_num; cnt++) {
+	curves[cnt] = tls1_ec_curve_id2nid(ssock->param.curves[cnt]);
+    }
+
+    if( ssock->ossl_ssl->server ) {
+	ret = SSL_set1_curves(ssock->ossl_ssl, curves,
+			      ssock->param.curves_num);
+	if (ret < 1)
+	    return GET_SSL_STATUS(ssock);
+    } else {
+	ret = SSL_CTX_set1_curves(ssock->ossl_ctx, curves,
+				  ssock->param.curves_num);
+	if (ret < 1)
+	    return GET_SSL_STATUS(ssock);
+    }
+
+    return PJ_SUCCESS;
+#else
+    return PJ_ENOTSUP;
+#endif
+}
+
+static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
+{
+    int ret;
+
+    if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
+	if (ssock->is_server) {
+	    ret = SSL_set1_client_sigalgs_list(ssock->ossl_ssl,
+	    				       ssock->param.sigalgs.ptr);
+	} else {
+	    ret = SSL_set1_sigalgs_list(ssock->ossl_ssl,
+	    				ssock->param.sigalgs.ptr);
+	}
+
+	if (ret < 1)
+	    return GET_SSL_STATUS(ssock);
+    }
+
+    return PJ_SUCCESS;
+}
+
+static void set_entropy(pj_ssl_sock_t *ssock)
+{
+    int ret;
+
+    switch (ssock->param.entropy_type) {
+#ifndef OPENSSL_NO_EGD
+	case PJ_SSL_ENTROPY_EGD:
+	    ret = RAND_egd(ssock->param.entropy_path.ptr);
+	    break;
+#endif
+	case PJ_SSL_ENTROPY_RANDOM:
+	    ret = RAND_load_file("/dev/random",255);
+	    break;
+	case PJ_SSL_ENTROPY_URANDOM:
+	    ret = RAND_load_file("/dev/urandom",255);
+	    break;
+	case PJ_SSL_ENTROPY_FILE:
+	    ret = RAND_load_file(ssock->param.entropy_path.ptr,255);
+	    break;
+	case PJ_SSL_ENTROPY_NONE:
+	    default:
+	    return;
+	    break;
+    }
+
+    if (ret < 0) {
+	PJ_LOG(3, (ssock->pool->obj_name, "SSL failed to reseed with "
+					  "entropy type %d",
+			  		  ssock->param.entropy_type));
+    }
+}
 
 /* Parse OpenSSL ASN1_TIME to pj_time_val and GMT info */
 static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
@@ -2231,6 +2372,85 @@ PJ_DEF(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher)
     return PJ_FALSE;
 }
 
+/* Get available curves. */
+PJ_DEF(pj_status_t) pj_ssl_curve_get_availables(pj_ssl_curve curves[],
+						unsigned *curve_num)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(curves && curve_num, PJ_EINVAL);
+
+    if (openssl_curves_num == 0) {
+	init_openssl();
+	shutdown_openssl();
+    }
+
+    if (openssl_curves_num == 0) {
+	*curve_num = 0;
+	return PJ_ENOTFOUND;
+    }
+
+    *curve_num = PJ_MIN(*curve_num, openssl_curves_num);
+
+    for (i = 0; i < *curve_num; ++i)
+    curves[i] = openssl_curves[i].id;
+
+    return PJ_SUCCESS;
+}
+
+/* Get curve name string. */
+PJ_DEF(const char*) pj_ssl_curve_name(pj_ssl_curve curve)
+{
+    unsigned i;
+
+    if (openssl_curves_num == 0) {
+	init_openssl();
+	shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_curves_num; ++i) {
+	if (curve == openssl_curves[i].id)
+	    return openssl_curves[i].name;
+    }
+
+    return NULL;
+}
+
+/* Get curve ID from curve name string. */
+PJ_DEF(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name)
+{
+    unsigned i;
+
+    if (openssl_curves_num == 0) {
+        init_openssl();
+        shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_curves_num; ++i) {
+        if (!pj_ansi_stricmp(openssl_curves[i].name, curve_name))
+            return openssl_curves[i].id;
+    }
+
+    return PJ_TLS_UNKNOWN_CURVE;
+}
+
+/* Check if the specified curve is supported by SSL/TLS backend. */
+PJ_DEF(pj_bool_t) pj_ssl_curve_is_supported(pj_ssl_curve curve)
+{
+    unsigned i;
+
+    if (openssl_curves_num == 0) {
+	init_openssl();
+	shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_curves_num; ++i) {
+	if (curve == openssl_curves[i].id)
+	    return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
 
 /*
  * Create SSL socket instance. 
