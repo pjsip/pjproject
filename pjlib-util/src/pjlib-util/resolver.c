@@ -961,6 +961,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	/* Done. This child query will be notified once the "parent"
 	 * query completes.
 	 */
+	p_q = nq;
 	status = PJ_SUCCESS;
 	goto on_return;
     } 
