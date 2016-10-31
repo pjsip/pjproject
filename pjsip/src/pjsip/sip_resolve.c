@@ -276,10 +276,34 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	if (ip_addr_ver != 0) {
 	    /* Target is an IP address, no need to resolve */
 	    if (ip_addr_ver == 4) {
-		pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
-				 NULL, 0);
-		pj_inet_pton(pj_AF_INET(), &target->addr.host,
-			     &svr_addr.entry[0].addr.ipv4.sin_addr);
+	        if (af == pj_AF_INET6()) {
+	            /* Generate a synthesized IPv6 address, if possible. */
+		    unsigned int count = 1;
+		    pj_addrinfo ai[1];
+		    pj_status_t status;
+
+                    status = pj_getaddrinfo(pj_AF_INET6(),
+                    			    &target->addr.host, &count, ai);
+		    if (status == PJ_SUCCESS && count > 0 &&
+		    	ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
+		    {
+			pj_sockaddr_init(pj_AF_INET6(),
+					 &svr_addr.entry[0].addr,
+					 NULL, 0);
+			svr_addr.entry[0].addr.ipv6.sin6_addr =
+			    ai[0].ai_addr.ipv6.sin6_addr;
+		    } else {
+		        pj_sockaddr_init(pj_AF_INET(),
+		        		 &svr_addr.entry[0].addr, NULL, 0);
+		        pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	     &svr_addr.entry[0].addr.ipv4.sin_addr);
+		    }
+		} else {
+		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
+				     NULL, 0);
+		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
+		}
 	    } else {
 		pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
 				 NULL, 0);
