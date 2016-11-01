@@ -929,7 +929,13 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	    /* Must return PJ_SUCCESS */
 	    status = PJ_SUCCESS;
 
-	    goto on_return;
+	    /*
+	     * We cannot write to *p_query after calling cb because what
+	     * p_query points to may have been freed by cb.
+             * Refer to ticket #1974.
+	     */
+	    pj_mutex_unlock(resolver->mutex);
+	    return status;
 	}
 
 	/* At this point, we have a cached entry, but this entry has expired.
