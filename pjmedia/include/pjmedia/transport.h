@@ -241,6 +241,11 @@ typedef struct pjmedia_transport pjmedia_transport;
 typedef struct pjmedia_transport_info pjmedia_transport_info;
 
 /**
+ * Forward declaration for media transport attach param.
+ */
+typedef struct pjmedia_transport_attach_param pjmedia_transport_attach_param;
+
+/**
  * This enumeration specifies the general behaviour of media processing
  */
 typedef enum pjmedia_tranport_media_option
@@ -303,7 +308,8 @@ struct pjmedia_transport_op
      * This function is called by the stream when the transport is about
      * to be used by the stream for the first time, and it tells the transport
      * about remote RTP address to send the packet and some callbacks to be 
-     * called for incoming packets.
+     * called for incoming packets. This function exists for backwards
+     * compatibility. Transports should implement attach2 instead.
      *
      * Application should call #pjmedia_transport_attach() instead of 
      * calling this function directly.
@@ -433,6 +439,18 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*destroy)(pjmedia_transport *tp);
+
+    /**
+     * This function is called by the stream when the transport is about
+     * to be used by the stream for the first time, and it tells the transport
+     * about remote RTP address to send the packet and some callbacks to be
+     * called for incoming packets.
+     *
+     * Application should call #pjmedia_transport_attach2() instead of
+     * calling this function directly.
+     */
+    pj_status_t (*attach2)(pjmedia_transport *tp,
+			   pjmedia_transport_attach_param *att_param);
 };
 
 
@@ -547,6 +565,56 @@ struct pjmedia_transport_info
 
 
 /**
+ * This structure describes the data passed when calling
+ * #pjmedia_transport_attach2().
+ */
+struct pjmedia_transport_attach_param
+{
+    /**
+     * The media stream.
+     */
+    void *stream;
+
+    /**
+     * Indicate the stream type, either it's audio (PJMEDIA_TYPE_AUDIO) 
+     * or video (PJMEDIA_TYPE_VIDEO).
+     */
+    pjmedia_type media_type;
+
+    /**
+     * Remote RTP address to send RTP packet to.
+     */
+    pj_sockaddr rem_addr;
+
+    /**
+     * Optional remote RTCP address. If the argument is NULL
+     * or if the address is zero, the RTCP address will be
+     * calculated from the RTP address (which is RTP port plus one).
+     */
+    pj_sockaddr rem_rtcp;
+
+    /**
+     * Length of the remote address.
+     */
+    unsigned addr_len;
+
+    /**
+     * Arbitrary user data to be set when the callbacks are called.
+     */
+    void *user_data;
+
+    /**
+     * Callback to be called when RTP packet is received on the transport.
+     */
+    void (*rtp_cb)(void *user_data, void *pkt, pj_ssize_t);
+
+    /**
+     * Callback to be called when RTCP packet is received on the transport.
+     */
+    void (*rtcp_cb)(void *user_data, void *pkt, pj_ssize_t);
+};
+
+/**
  * Initialize transport info.
  *
  * @param info	    Transport info to be initialized.
@@ -599,6 +667,32 @@ PJ_INLINE(void*) pjmedia_transport_info_get_spc_info(
 	    return (void*)info->spc_info[i].buffer;
     }
     return NULL;
+}
+
+
+/**
+ * Attach callbacks to be called on receipt of incoming RTP/RTCP packets.
+ * This is just a simple wrapper which calls <tt>attach2()</tt> member of
+ * the transport if it is implemented, otherwise it calls <tt>attach()</tt>
+ * member of the transport.
+ *
+ * @param tp	    The media transport.
+ * @param att_param The transport attach param.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_attach2(pjmedia_transport *tp,
+                                      pjmedia_transport_attach_param *att_param)
+{
+    if (tp->op->attach2) {
+	return tp->op->attach2(tp, att_param);
+    } else {
+	return tp->op->attach(tp, att_param->user_data, 
+			      (pj_sockaddr_t*)&att_param->rem_addr, 
+			      (pj_sockaddr_t*)&att_param->rem_rtcp, 
+			      att_param->addr_len, att_param->rtp_cb, 
+			      att_param->rtcp_cb);
+    }
 }
 
 
