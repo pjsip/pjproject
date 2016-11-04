@@ -22,7 +22,6 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
-#include <pjmedia/stream_common.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/compat/socket.h>
@@ -2060,6 +2059,20 @@ pjmedia_vid_stream_sk_config_default(pjmedia_vid_stream_sk_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
     cfg->count = PJMEDIA_VID_STREAM_START_KEYFRAME_CNT;
     cfg->interval = PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC;
+}
+
+
+/**
+ * Get RTP session information from video stream.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_vid_stream_get_rtp_session_info(pjmedia_vid_stream *stream,
+				    pjmedia_stream_rtp_sess_info *session_info)
+{
+    session_info->rx_rtp = &stream->dec->rtp;
+    session_info->tx_rtp = &stream->enc->rtp;
+    session_info->rtcp = &stream->rtcp;
+    return PJ_SUCCESS;
 }
 
 

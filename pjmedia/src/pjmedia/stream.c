@@ -22,7 +22,6 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
-#include <pjmedia/stream_common.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
@@ -2921,5 +2920,19 @@ pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream )
 	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE);
     }
 
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Get RTP session information from stream.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_get_rtp_session_info(pjmedia_stream *stream,
+				    pjmedia_stream_rtp_sess_info *session_info)
+{
+    session_info->rx_rtp = &stream->dec->rtp;
+    session_info->tx_rtp = &stream->enc->rtp;
+    session_info->rtcp = &stream->rtcp;
     return PJ_SUCCESS;
 }

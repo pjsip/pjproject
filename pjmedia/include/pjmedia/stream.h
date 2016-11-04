@@ -33,6 +33,7 @@
 #include <pjmedia/rtcp.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/vid_codec.h>
+#include <pjmedia/stream_common.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
@@ -429,6 +430,25 @@ pjmedia_stream_send_rtcp_sdes( pjmedia_stream *stream );
  */
 PJ_DECL(pj_status_t)
 pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream );
+
+
+/**
+ * Get the RTP session information of the media stream. This function can be 
+ * useful for app with custom media transport to inject/filter some 
+ * outgoing/incoming proprietary packets into normal audio RTP traffics.
+ * This will return the original pointer to the internal states of the stream, 
+ * and generally it is not advisable for app to modify them.
+ *
+ * @param stream	The media stream.
+ *
+ * @param session_info	The stream session info.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_get_rtp_session_info(pjmedia_stream *stream,
+			           pjmedia_stream_rtp_sess_info *session_info);
+
 
 /**
  * @}
