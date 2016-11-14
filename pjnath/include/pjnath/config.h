@@ -263,7 +263,7 @@
  * Default: 2
  */
 #ifndef PJ_ICE_MAX_TURN
-#   define PJ_ICE_MAX_TURN			    2
+#   define PJ_ICE_MAX_TURN			    3
 #endif
 
 

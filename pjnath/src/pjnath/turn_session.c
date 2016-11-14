@@ -724,6 +724,12 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 		     sess->state<=PJ_TURN_STATE_RESOLVED, 
 		     PJ_EINVALIDOP);
 
+    /* Verify address family in allocation param */
+    if (param && param->af) {
+	PJ_ASSERT_RETURN(param->af==pj_AF_INET() || param->af==pj_AF_INET6(),
+			 PJ_EINVAL);
+    }
+
     pj_grp_lock_acquire(sess->grp_lock);
 
     if (param && param != &sess->alloc_param) 
@@ -770,11 +776,21 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 				  sess->alloc_param.lifetime);
     }
 
-    /* Include ADDRESS-FAMILY for IPv6 request */
-    if (sess->af == pj_AF_INET6()) {
-	enum { IPV6_AF_TYPE = 0x02 << 24 };
-	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
+    /* Include ADDRESS-FAMILY if requested */
+    if (sess->alloc_param.af || sess->af == pj_AF_INET6()) {
+	enum  { IPV4_AF_TYPE = 0x01 << 24,
+		IPV6_AF_TYPE = 0x02 << 24 };
+
+	if (sess->alloc_param.af == pj_AF_INET6() ||
+	    (sess->alloc_param.af == 0 && sess->af == pj_AF_INET6()))
+	{
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
+	} else if (sess->alloc_param.af == pj_AF_INET()) {
+	    /* For IPv4, only add the attribute when explicitly requested */
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV4_AF_TYPE);
+	}
     }
 
     /* Server address must be set */
@@ -1358,7 +1374,12 @@ static void on_allocate_success(pj_turn_session *sess,
 				    "RELAY-ADDRESS attribute"));
 	return;
     }
-    if (raddr_attr && raddr_attr->sockaddr.addr.sa_family != sess->af) {
+    if (raddr_attr &&
+	((sess->alloc_param.af != 0 &&
+	  raddr_attr->sockaddr.addr.sa_family != sess->alloc_param.af) ||
+	 (sess->alloc_param.af == 0 &&
+	  raddr_attr->sockaddr.addr.sa_family != sess->af)))
+    {
 	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
 			pj_cstr(&s, "Error: Mismatched RELAY-ADDRESS "
 				    "address family"));

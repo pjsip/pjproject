@@ -1991,6 +1991,21 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	/* Set default candidate to relay */
 	comp->default_cand = (unsigned)(cand - comp->cand_list);
 
+	/* Prefer IPv4 relay as default candidate for better connectivity
+	 * with IPv4 endpoints.
+	 */
+	if (cand->addr.addr.sa_family != pj_AF_INET()) {
+	    for (i=0; i<comp->cand_cnt; ++i) {
+		if (comp->cand_list[i].type == PJ_ICE_CAND_TYPE_RELAYED &&
+		    comp->cand_list[i].addr.addr.sa_family == pj_AF_INET() &&
+		    comp->cand_list[i].status == PJ_SUCCESS)
+		{
+		    comp->default_cand = i;
+		    break;
+		}
+	    }
+	}
+
 	PJ_LOG(4,(comp->ice_st->obj_name,
 		  "Comp %d: TURN allocation complete, relay address is %s",
 		  comp->comp_id,
