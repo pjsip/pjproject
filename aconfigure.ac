@@ -1533,6 +1533,8 @@ fi
 dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_SUBST(ac_ssl_has_aes_gcm,0)
+AC_SUBST(ac_ssl_has_ec,0)
+AC_SUBST(ac_ssl_has_sigalg,0)
 AC_ARG_ENABLE(ssl,
 	      AS_HELP_STRING([--disable-ssl],
 			     [Exclude SSL support the build (default: autodetect)])
@@ -1567,6 +1569,43 @@ AC_ARG_ENABLE(ssl,
 			else
 				AC_MSG_RESULT([OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos])
 			fi
+
+			# Check if OpenSSL supports setting curve algorithm
+			# and has elliptic curve
+			
+			AC_MSG_CHECKING([OpenSSL setting curve functions])
+			AC_SUBST(set_curve_present,0)
+			AC_SUBST(ec_curve_present,0)
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/ssl.h>
+					          ]],
+					          [ SSL_set1_curves(NULL, NULL, 0);]
+					         )],
+		  		 [ set_curve_present=1
+		  		   AC_MSG_RESULT(ok)
+		  		  ],
+		  		 [
+		  		   AC_MSG_RESULT(no)
+		  		 ])
+
+			AC_CHECK_LIB(ssl,EC_curve_nid2nist,[ec_curve_present=1])
+			if test "x$set_curve_present" = "x1" -a "x$ec_curve_present" = "x1"; then
+				[ac_ssl_has_ec=1]
+				AC_MSG_RESULT([OpenSSL has elliptic curve support])
+			else
+				AC_MSG_RESULT([OpenSSL elliptic curve algorithm unsupported])
+			fi
+
+			AC_MSG_CHECKING([OpenSSL setting sigalg])
+			AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <openssl/ssl.h>
+					          ]],
+					          [SSL_set1_sigalgs_list(NULL, NULL);]
+					         )],
+		  		 [ ac_ssl_has_sigalg=1
+		  		   AC_MSG_RESULT(ok)
+		  		  ],
+		  		 [
+		  		   AC_MSG_RESULT(no)
+		  		 ])
 
 			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
 			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)

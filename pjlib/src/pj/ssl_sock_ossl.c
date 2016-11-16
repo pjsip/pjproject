@@ -52,7 +52,7 @@
 #include <openssl/rand.h>
 #include <openssl/engine.h>
 
-#if !defined(OPENSSL_NO_EC)
+#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
    extern int tls1_ec_nid2curve_id(int nid);
    extern int tls1_ec_curve_id2nid(int curve_id);
 #endif
@@ -385,7 +385,7 @@ static pj_status_t init_openssl(void)
 
 	ssl->session = SSL_SESSION_new();
 
-#if !defined(OPENSSL_NO_EC)
+#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
 	openssl_curves_num = SSL_get_shared_curve(ssl,-1);
 	if (openssl_curves_num > PJ_ARRAY_SIZE(openssl_curves))
 	    openssl_curves_num = PJ_ARRAY_SIZE(openssl_curves);
@@ -999,7 +999,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
 static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 {
-#if !defined(OPENSSL_NO_EC)
+#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
     int ret;
     int curves[PJ_SSL_SOCK_MAX_CURVES];
     int cnt;
@@ -1022,15 +1022,14 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
     }
+#endif
 
     return PJ_SUCCESS;
-#else
-    return PJ_ENOTSUP;
-#endif
 }
 
 static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 {
+#if defined(PJ_SSL_SOCK_OSSL_HAS_SIGALG) && PJ_SSL_SOCK_OSSL_HAS_SIGALG==1
     int ret;
 
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
@@ -1045,6 +1044,7 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
     }
+#endif
 
     return PJ_SUCCESS;
 }
@@ -2393,7 +2393,7 @@ PJ_DEF(pj_status_t) pj_ssl_curve_get_availables(pj_ssl_curve curves[],
     *curve_num = PJ_MIN(*curve_num, openssl_curves_num);
 
     for (i = 0; i < *curve_num; ++i)
-    curves[i] = openssl_curves[i].id;
+	curves[i] = openssl_curves[i].id;
 
     return PJ_SUCCESS;
 }

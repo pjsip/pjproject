@@ -33,4 +33,10 @@ export TEST_OBJS +=	@ac_main_obj@
 export TARGETS	    =	$(PJLIB_LIB) $(PJLIB_SONAME)
 export TARGETS_EXE  =   $(TEST_EXE)
 
+ifeq (@ac_ssl_has_ec@,1)
+export PJLIB_CFLAGS += -DPJ_SSL_SOCK_OSSL_HAS_EC=1
+endif
 
+ifeq (@ac_ssl_has_sigalg@,1)
+export PJLIB_CFLAGS += -DPJ_SSL_SOCK_OSSL_HAS_SIGALG=1
+endif
