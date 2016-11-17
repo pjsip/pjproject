@@ -435,7 +435,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     /* Copy config */
     pjsua_acc_config_dup(acc->pool, &pjsua_var.acc[id].cfg, cfg);
     
-    /* Normalize registration (and unreg) timeout and refresh delay */
+    /* Normalize registration timeout and refresh delay */
     if (pjsua_var.acc[id].cfg.reg_uri.slen) {
         if (pjsua_var.acc[id].cfg.reg_timeout == 0) {
             pjsua_var.acc[id].cfg.reg_timeout = PJSUA_REG_INTERVAL;
@@ -443,9 +443,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
         if (pjsua_var.acc[id].cfg.reg_delay_before_refresh == 0) {
             pjsua_var.acc[id].cfg.reg_delay_before_refresh =
                 PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH;
-        }
-        if (pjsua_var.acc[id].cfg.unreg_timeout == 0) {
-            pjsua_var.acc[id].cfg.unreg_timeout = PJSUA_UNREG_TIMEOUT;
         }
     }
 
