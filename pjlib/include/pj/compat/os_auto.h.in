@@ -181,6 +181,10 @@
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
      /* Disable local host resolution in pj_gethostip() (see ticket #1342) */
 #    define PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION 1
+     /* Use pj_getaddrinfo() (instead of pj_inet_pton()) in
+      * pj_sockaddr_set_str_addr()
+      */
+#    define PJ_SOCKADDR_USE_GETADDRINFO 1
 
 #    include "TargetConditionals.h"
 #    if TARGET_OS_IPHONE
