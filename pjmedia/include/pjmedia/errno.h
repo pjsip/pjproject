@@ -406,7 +406,11 @@ PJ_BEGIN_DECL
  * Invalid or bad format
  */
 #define PJMEDIA_EBADFMT             (PJMEDIA_ERRNO_START+108)    /* 220108 */
-
+/**
+ * @hideinitializer
+ * Unsupported media type.
+ */
+#define PJMEDIA_EUNSUPMEDIATYPE     (PJMEDIA_ERRNO_START+109)    /* 220109 */
 
 /************************************************************
  * RTP SESSION ERRORS

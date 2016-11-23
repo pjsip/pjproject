@@ -3232,7 +3232,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 #endif
 	} else {
-	    status = PJMEDIA_EINVALIMEDIATYPE;
+	    status = PJMEDIA_EUNSUPMEDIATYPE;
 	}
 
 	/* Close the transport of deactivated media, need this here as media
@@ -3261,8 +3261,15 @@ on_check_med_status:
 	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	    call_med->dir = PJMEDIA_DIR_NONE;
 
-	    PJ_PERROR(1,(THIS_FILE, status, "Error updating media call%02d:%d",
-		         call_id, mi));
+	    if (status != PJMEDIA_EUNSUPMEDIATYPE) {
+		PJ_PERROR(1, (THIS_FILE, status, "Error updating media "
+		              "call%02d:%d", call_id, mi));
+	    } else {
+		PJ_PERROR(3, (THIS_FILE, status, "Skipped updating media "
+		              "call%02d:%d (media type=%s)", call_id, mi, 
+			      pjmedia_type_name(call_med->type)));
+	    }
+
 	} else {
 	    /* Only set 'got_media' flag if this media is not disabled */
 	    if (local_sdp->media[mi]->desc.port != 0)

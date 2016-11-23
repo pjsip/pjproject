@@ -117,6 +117,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_RTP_EINDTMF,	    "Invalid DTMF digit" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_EREMNORFC2833,"Remote does not support RFC 2833" ),
     PJ_BUILD_ERR( PJMEDIA_EBADFMT,	    "Bad format"),
+    PJ_BUILD_ERR( PJMEDIA_EUNSUPMEDIATYPE,  "Unsupported media type"),
 
     /* RTP session errors. */
     PJ_BUILD_ERR( PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" ),
