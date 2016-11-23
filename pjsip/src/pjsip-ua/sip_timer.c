@@ -733,8 +733,15 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	{if(st_code)*st_code=PJSIP_SC_INTERNAL_SERVER_ERROR;return PJ_EINVAL;});
 
     /* Check if Session Timers is supported */
-    if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0)
-	return PJ_SUCCESS;
+    if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0) {
+        if (rdata->msg_info.msg->line.status.code == 
+            PJSIP_SC_SESSION_TIMER_TOO_SMALL)
+        {
+            return PJSIP_EINVALIDSTATUS;
+        } else {
+            return PJ_SUCCESS;
+        }
+    }
 
     pj_assert(is_initialized);
 
