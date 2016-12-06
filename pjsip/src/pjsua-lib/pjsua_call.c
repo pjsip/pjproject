@@ -569,7 +569,8 @@ on_error:
 static void cleanup_call_setting_flag(pjsua_call_setting *opt)
 {
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
-		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA);
+		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA |
+		   PJSUA_CALL_UPDATE_VIA);
 }
 
 
@@ -636,6 +637,27 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     }
 
     return PJ_SUCCESS;
+}
+
+static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
+{
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
+        pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
+    } else if (!pjsua_sip_acc_is_using_stun(acc->index)) {
+   	/* Choose local interface to use in Via if acc is not using
+   	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+   	 */
+   	pjsip_host_port via_addr;
+   	const void *via_tp;
+
+   	if (pjsua_acc_get_uac_addr(acc->index, dlg->pool, &acc->cfg.id,
+   				   &via_addr, NULL, NULL,
+   				   &via_tp) == PJ_SUCCESS)
+   	{
+   	    pjsip_dlg_set_via_sent_by(dlg, &via_addr,
+   	                              (pjsip_transport*)via_tp);
+   	}
+    }
 }
 
 /*
@@ -777,23 +799,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     pjsip_dlg_inc_lock(dlg);
 
-    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
-        pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
-   	/* Choose local interface to use in Via if acc is not using
-   	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
-   	 */
-   	pjsip_host_port via_addr;
-   	const void *via_tp;
-
-   	if (pjsua_acc_get_uac_addr(acc_id, dlg->pool, &acc->cfg.id,
-   				   &via_addr, NULL, NULL,
-   				   &via_tp) == PJ_SUCCESS)
-   	{
-   	    pjsip_dlg_set_via_sent_by(dlg, &via_addr,
-   	                              (pjsip_transport*)via_tp);
-   	}
-    }
+    dlg_set_via(dlg, acc);
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
@@ -2499,6 +2505,12 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
     }
 
+    if ((options & PJSUA_CALL_UPDATE_VIA) &&
+	pjsua_acc_is_valid(call->acc_id))
+    {
+    	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
+    }
+
     /* Create re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
@@ -2620,6 +2632,12 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
     }
 
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_VIA) &&
+	pjsua_acc_is_valid(call->acc_id))
+    {
+    	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
+    }
+
     /* Create re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
@@ -2727,6 +2745,12 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
 	    pjsua_acc_is_valid(call->acc_id))
     {
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
+    }
+
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_VIA) &&
+	pjsua_acc_is_valid(call->acc_id))
+    {
+	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
     }
 
     /* Create UPDATE with new offer */

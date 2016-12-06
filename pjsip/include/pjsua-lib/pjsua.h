@@ -4297,7 +4297,17 @@ typedef enum pjsua_call_flag
      * Warning: If the re-INVITE/UPDATE fails, the old media will not be
      * reverted.
      */
-    PJSUA_CALL_REINIT_MEDIA = 16
+    PJSUA_CALL_REINIT_MEDIA = 16,
+    
+    /**
+     * Update the local invite session's Via with the via address from
+     * the account. This flag is only valid for #pjsua_call_set_hold2(),
+     * #pjsua_call_reinvite() and #pjsua_call_update(). Similar to
+     * the flag PJSUA_CALL_UPDATE_CONTACT above, this flag is useful
+     * in IP address change situation, after the local account's Via has
+     * been updated (typically with re-registration).
+     */
+    PJSUA_CALL_UPDATE_VIA = 32
 
 } pjsua_call_flag;
 
