@@ -4111,13 +4111,13 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	goto on_return;
     }
 
+    cleanup_call_setting_flag(&call->opt);
+
     if (pjsua_var.ua_cfg.cb.on_call_rx_offer) {
 	pjsip_status_code code = PJSIP_SC_OK;
 	pjsua_call_setting opt;
 
-	cleanup_call_setting_flag(&call->opt);
 	opt = call->opt;
-
 	(*pjsua_var.ua_cfg.cb.on_call_rx_offer)(call->index, offer, NULL,
 						&code, &opt);
 
@@ -4243,8 +4243,9 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 #endif
 
+    cleanup_call_setting_flag(&call->opt);
+
     if (pjsua_var.ua_cfg.cb.on_call_tx_offer) {
-	cleanup_call_setting_flag(&call->opt);
 	(*pjsua_var.ua_cfg.cb.on_call_tx_offer)(call->index, NULL,
 						&call->opt);
     }
