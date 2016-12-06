@@ -4284,7 +4284,20 @@ typedef enum pjsua_call_flag
      * #pjsua_call_update()/update2(). For re-invite/update, specifying
      * PJSUA_CALL_UNHOLD will take precedence over this flag.
      */
-    PJSUA_CALL_NO_SDP_OFFER = 8
+    PJSUA_CALL_NO_SDP_OFFER = 8,
+
+    /**
+     * Deinitialize and recreate media, including media transport. This flag
+     * is useful in IP address change situation, if the media transport
+     * address (or address family) changes, for example during IPv4/IPv6
+     * network handover.
+     * This flag is only valid for #pjsua_call_reinvite()/reinvite2(), or
+     * #pjsua_call_update()/update2().
+     *
+     * Warning: If the re-INVITE/UPDATE fails, the old media will not be
+     * reverted.
+     */
+    PJSUA_CALL_REINIT_MEDIA = 16
 
 } pjsua_call_flag;
 

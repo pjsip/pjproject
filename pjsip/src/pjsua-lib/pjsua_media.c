@@ -1975,7 +1975,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 * media from existing media.
 	 * Otherwise, apply media count from the call setting directly.
 	 */
-	if (reinit) {
+	if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) == 0) {
 
 	    /* We are sending reoffer, check media count for each media type
 	     * from the existing call media list.

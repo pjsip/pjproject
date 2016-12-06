@@ -569,7 +569,7 @@ on_error:
 static void cleanup_call_setting_flag(pjsua_call_setting *opt)
 {
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
-		   PJSUA_CALL_NO_SDP_OFFER);
+		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA);
 }
 
 
@@ -608,12 +608,17 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 
     call->opt = *opt;
 
+    if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
+    	pjsua_media_channel_deinit(call->index);
+    }
+
     /* If call is established or media channel hasn't been initialized,
      * reinit media channel.
      */
     if ((call->inv && call->inv->state == PJSIP_INV_STATE_CONNECTING &&
          call->med_cnt == 0) ||
-        (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED))
+        (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) ||
+        (call->opt.flag & PJSUA_CALL_REINIT_MEDIA))
     {
 	pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
 	pj_status_t status;
