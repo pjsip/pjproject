@@ -76,26 +76,12 @@ PJ_DEF(pj_uint32_t) pj_hash_calc_tolower( pj_uint32_t hval,
 {
     long i;
 
-#if defined(PJ_HASH_USE_OWN_TOLOWER) && PJ_HASH_USE_OWN_TOLOWER != 0
-    for (i=0; i<key->slen; ++i) {
-	pj_uint8_t c = key->ptr[i];
-        char lower;
-	if (c & 64)
-	    lower = (char)(c | 32);
-	else
-	    lower = (char)c;
-	if (result)
-            result[i] = lower;
-	hval = hval * PJ_HASH_MULTIPLIER + lower;
-    }
-#else
     for (i=0; i<key->slen; ++i) {
         char lower = (char)pj_tolower(key->ptr[i]);
 	if (result)
             result[i] = lower;
 	hval = hval * PJ_HASH_MULTIPLIER + lower;
     }
-#endif
 
     return hval;
 }
