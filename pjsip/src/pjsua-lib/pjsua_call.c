@@ -2869,8 +2869,11 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     char str_dest_buf[PJSIP_MAX_URL_SIZE*2];
     pj_str_t str_dest;
     int len;
+    char call_id_dest_buf[PJSIP_MAX_URL_SIZE * 2];
+    int call_id_len;
     pjsip_uri *uri;
     pj_status_t status;
+    const pjsip_parser_const_t *pconst;
 
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -2915,7 +2918,22 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
     }
 
     str_dest.slen += len;
-
+	
+    /* This uses the the same scanner definition used for SIP parsing 
+     * to escape the call-id in the refer.
+     *
+     * A common pattern for call-ids is: name@domain. The '@' character, 
+     * when used in a URL parameter, throws off many SIP parsers. 
+     * URL escape it based off of the allowed characters for header values.
+    */
+    pconst = pjsip_parser_const();	
+    call_id_len = pj_strncpy2_escape(call_id_dest_buf, &dest_dlg->call_id->id,
+     				     PJ_ARRAY_SIZE(call_id_dest_buf),
+     				     &pconst->pjsip_HDR_CHAR_SPEC);
+    if (call_id_len < 0) {
+    	status = PJSIP_EURITOOLONG;
+    	goto on_error;
+    }
 
     /* Build the URI */
     len = pj_ansi_snprintf(str_dest_buf + str_dest.slen,
@@ -2926,8 +2944,8 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
 			   "%%3Bfrom-tag%%3D%.*s>",
 			   ((options&PJSUA_XFER_NO_REQUIRE_REPLACES) ?
 			    "" : "Require=replaces&"),
-			   (int)dest_dlg->call_id->id.slen,
-			   dest_dlg->call_id->id.ptr,
+			   call_id_len,
+			   call_id_dest_buf,
 			   (int)dest_dlg->remote.info->tag.slen,
 			   dest_dlg->remote.info->tag.ptr,
 			   (int)dest_dlg->local.info->tag.slen,
