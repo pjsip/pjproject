@@ -26,11 +26,6 @@
     <Keyword>Win32Proj</Keyword>    
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
-    <AppContainerApplication Condition="'$(API_Family)'=='UWP'">true</AppContainerApplication>
-    <ApplicationType Condition="'$(API_Family)'=='UWP'">Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformMinVersion>
-    <ApplicationTypeRevision Condition="'$(API_Family)'=='UWP'">$(AppTypeRev)</ApplicationTypeRevision>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">

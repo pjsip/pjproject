@@ -33,9 +33,20 @@
         <BuildToolset>v140</BuildToolset>
         <PreprocessorDef>PJ_WIN32_UWP;UNICODE;_UNICODE;</PreprocessorDef>
         <PreprocessorDef Condition="'$(Platform)'=='ARM'">$(PreprocessorDef);PJ_M_ARMV7=1;</PreprocessorDef>
-        <PlatformVersion>10.0.10240.0</PlatformVersion>
+        <PlatformVersion>10.0.10586.0</PlatformVersion>
+        <MinPlatformVersion>10.0.10240.0</MinPlatformVersion>
         <AppTypeRev>10.0</AppTypeRev>
-    </PropertyGroup>
+        
+        <WindowsTargetPlatformVersion>$(PlatformVersion)</WindowsTargetPlatformVersion>
+        <WindowsTargetPlatformMinVersion>$(MinPlatformVersion)</WindowsTargetPlatformMinVersion>
+        <AppContainerApplication>true</AppContainerApplication>
+        <ApplicationType>Windows Store</ApplicationType>
+        <ApplicationTypeRevision>$(AppTypeRev)</ApplicationTypeRevision>
+        
+        <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+        <TargetPlatformVersion>$(PlatformVersion)</TargetPlatformVersion>
+        <TargetPlatformMinVersion>$(MinPlatformVersion)</TargetPlatformMinVersion>
+      </PropertyGroup>
     </When>
     <When Condition="'$(API_Family)'=='WinPhone8'">
       <PropertyGroup>

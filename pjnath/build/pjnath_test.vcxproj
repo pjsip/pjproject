@@ -57,11 +57,6 @@
     <RootNamespace>pjnath_test</RootNamespace>
     <DefaultLanguage>en-US</DefaultLanguage>
     <!-- Specific UWP property -->
-    <AppContainerApplication Condition="'$(API_Family)'=='UWP'">true</AppContainerApplication>
-    <ApplicationType Condition="'$(API_Family)'=='UWP'">Windows Store</ApplicationType>
-    <WindowsTargetPlatformVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformVersion>
-    <WindowsTargetPlatformMinVersion Condition="'$(API_Family)'=='UWP'">$(PlatformVersion)</WindowsTargetPlatformMinVersion>
-    <ApplicationTypeRevision Condition="'$(API_Family)'=='UWP'">$(AppTypeRev)</ApplicationTypeRevision>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
