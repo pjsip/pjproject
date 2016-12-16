@@ -293,7 +293,7 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
-	NSArray<AVCaptureDevice *> *dev_list;
+	NSArray *dev_list;
 
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
     	if (NSClassFromString(@"AVCaptureDeviceTypeBuiltInWideAngleCamera")) {
