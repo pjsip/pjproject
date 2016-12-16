@@ -116,6 +116,7 @@ if test "$1" = "--use-ndk-cflags"; then
     TARGET_HOST="${TARGET_HOST}-linux-android"
   fi
 
+  export TARGET_ABI="${TARGET_ABI}"
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
   export AR=`echo ${NDK_CXX}|sed 's/-g++/-ar/'`;
@@ -198,6 +199,7 @@ if test "1" = "1"; then
   echo " AR = ${AR}"
   echo " RANLIB = ${RANLIB}"
   echo " TARGET_HOST = ${TARGET_HOST}"
+  echo " TARGET_ABI = ${TARGET_ABI}"
 fi
 
 ./configure --host=${TARGET_HOST} $*
