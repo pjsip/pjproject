@@ -1293,7 +1293,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     OnCreateMediaTransportSrtpParam prm;
     prm.mediaIdx = media_idx;
     prm.srtpUse  = srtp_opt->use;
-    for (int i = 0; i < srtp_opt->crypto_count; i++) {
+    for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
     	SrtpCrypto crypto;
     	
     	crypto.key   = pj2Str(srtp_opt->crypto[i].key);
@@ -1306,11 +1306,11 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     
     srtp_opt->use = prm.srtpUse;
     srtp_opt->crypto_count = prm.cryptos.size();
-    for (int i = 0; i < srtp_opt->crypto_count; i++) {
+    for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
     	srtp_opt->crypto[i].key   = str2Pj(prm.cryptos[i].key);
     	srtp_opt->crypto[i].name  = str2Pj(prm.cryptos[i].name);
     	srtp_opt->crypto[i].flags = prm.cryptos[i].flags;
-    }    
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

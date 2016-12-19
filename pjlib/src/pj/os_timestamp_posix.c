@@ -165,6 +165,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #include <errno.h>
 #include <linux/android_alarm.h>
 #include <fcntl.h>
+#include <time.h>
 
 #define NSEC_PER_SEC	1000000000
 

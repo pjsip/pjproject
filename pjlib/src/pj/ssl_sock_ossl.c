@@ -406,6 +406,8 @@ static pj_status_t init_openssl(void)
 	    openssl_curves[i].name = cname;
 	}
 #else
+	PJ_UNUSED_ARG(nid);
+	PJ_UNUSED_ARG(cname);
 	openssl_curves_num = 0;
 #endif
 
@@ -1022,6 +1024,8 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
     }
+#else
+    PJ_UNUSED_ARG(ssock);
 #endif
 
     return PJ_SUCCESS;
@@ -1044,6 +1048,8 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
     }
+#else
+    PJ_UNUSED_ARG(ssock);
 #endif
 
     return PJ_SUCCESS;
