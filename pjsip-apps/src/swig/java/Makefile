@@ -21,7 +21,7 @@ else
     LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.jnilib
   else
     ifeq ($(OS),android)
-      LIBPJSUA2_SO=android/libs/armeabi/libpjsua2.so
+      LIBPJSUA2_SO=android/app/src/main/jniLibs/armeabi/libpjsua2.so
     else
       LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.so
     endif
@@ -149,12 +149,12 @@ MY_CFLAGS	 := $(PJ_CXXFLAGS) $(MY_JNI_CFLAGS) $(CFLAGS)
 MY_LDFLAGS	 := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
 MY_PACKAGE_NAME	 := org.pjsip.pjsua2
 ifeq ($(OS),android)
-  MY_PACKAGE_PATH  := android/src/$(subst .,/,$(MY_PACKAGE_NAME))
+  MY_PACKAGE_PATH  := android/app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))
 else
   MY_PACKAGE_PATH  := $(OUT_DIR)/$(subst .,/,$(MY_PACKAGE_NAME))
 endif
 
-MY_APP_JAVA := android/src/$(subst .,/,$(MY_PACKAGE_NAME))/app/MyApp.java
+MY_APP_JAVA := android/app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))/app/MyApp.java
 
 .PHONY: all java install uninstall
 
