@@ -1418,6 +1418,8 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
 	/* Generate crypto attribute if not yet */
 	if (pjmedia_sdp_media_find_attr(m_loc, &ID_CRYPTO, NULL) == NULL) {
+	    int tag = 1;
+
 	    /* Offer only current active crypto if any, otherwise offer all
 	     * crypto-suites in the setting.
 	     */
@@ -1432,7 +1434,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 		buffer_len = MAXLEN;
 		status = generate_crypto_attr_value(srtp->pool, buffer, &buffer_len,
 						    &srtp->setting.crypto[i],
-						    i+1);
+						    tag);
 		if (status != PJ_SUCCESS)
 		    return status;
 
@@ -1442,6 +1444,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 		    attr = pjmedia_sdp_attr_create(srtp->pool, ID_CRYPTO.ptr,
 						   &attr_value);
 		    m_loc->attr[m_loc->attr_count++] = attr;
+		    ++tag;
 		}
 	    }
 	}
