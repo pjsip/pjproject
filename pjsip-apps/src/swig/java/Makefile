@@ -170,6 +170,7 @@ $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp Makefile
 
 $(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
 	mkdir -p $(MY_PACKAGE_PATH)
+	mkdir -p $(OUT_DIR)
 	swig $(SWIG_FLAGS) -java  -package $(MY_PACKAGE_NAME) \
 		-outdir $(MY_PACKAGE_PATH) \
 		-o $(OUT_DIR)/pjsua2_wrap.cpp ../pjsua2.i
