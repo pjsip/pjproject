@@ -161,6 +161,9 @@ MY_APP_JAVA := android/app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))/app/MyA
 all: $(LIBPJSUA2_SO) java
 
 $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
+ifeq ($(OS),android)
+	mkdir -p android/app/src/main/jniLibs/armeabi
+endif
 	$(PJ_CXX) -shared -o $(LIBPJSUA2_SO) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS) $(MY_LDFLAGS)
 
