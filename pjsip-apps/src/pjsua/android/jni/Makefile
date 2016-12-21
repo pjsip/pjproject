@@ -13,13 +13,13 @@ LIBPJSUA_SO	:= ../app/src/main/jniLibs/armeabi/libpjsua.so
 
 # Env settings, e.g: path to SWIG, JDK, java(.exe), javac(.exe)
 MY_SWIG		:= swig
-MY_JNI_CFLAGS   := -D__ANDROID__
+MY_JNI_CFLAGS   := -D__ANDROID__ -fPIC
 MY_JNI_LDFLAGS  := -Wl,-soname,libpjsua.so
 SWIG_FLAGS      := -D__ANDROID__ -c++
 
 # Build settings
-MY_CFLAGS	:= $(PJ_CXXFLAGS) $(CFLAGS)
-MY_LDFLAGS	:= $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
+MY_CFLAGS	:= $(PJ_CXXFLAGS) $(MY_JNI_CFLAGS) $(CFLAGS)
+MY_LDFLAGS	:= $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
 MY_PACKAGE_NAME	:= org.pjsip.pjsua
 MY_PACKAGE_PATH := ../app/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))
 
