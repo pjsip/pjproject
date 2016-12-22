@@ -101,6 +101,11 @@ else ifneq ($(findstring mips,@ac_webrtc_instset@),)
 	      common_audio/signal_processing/min_max_operations_mips.o
 
     WEBRTC_OTHER_CFLAGS += -DMIPS_FPU_LE
+else # Generic fixed point
+    WEBRTC_SRC = \
+	      modules/audio_processing/aecm/aecm_core_c.o                \
+	      modules/audio_processing/ns/nsx_core_c.o                   \
+	      common_audio/signal_processing/complex_fft.o
 endif
 endif
 endif
