@@ -2040,6 +2040,17 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 		}
 #endif
 	    }
+
+	    /* In case of media reinit, 'med_prov_cnt' may be decreased
+	     * because the new call->opt says so. As media count should
+	     * never decrease, we should verify 'med_prov_cnt' to be
+	     * at least equal to 'med_cnt' (see also #1987).
+	     */
+	    if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) &&
+		call->med_prov_cnt < call->med_cnt)
+	    {
+		call->med_prov_cnt = call->med_cnt;
+	    }
 	}
 
 	call->rem_offerer = PJ_FALSE;
