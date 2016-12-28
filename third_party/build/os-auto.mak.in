@@ -27,7 +27,7 @@ ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 ifeq (@ac_external_pa@,1)
 # External PA
 else
-DIRS += portaudio
+#DIRS += portaudio
 endif
 endif
 
@@ -35,8 +35,77 @@ ifeq (@ac_external_srtp@,1)
 # External SRTP
 else
 DIRS += srtp
+
+ifeq (@ac_ssl_has_aes_gcm@,0)
+CIPHERS_SRC = crypto/cipher/aes.o crypto/cipher/aes_icm.o       \
+              crypto/cipher/aes_cbc.o
+HASHES_SRC  = crypto/hash/sha1.o crypto/hash/hmac.o 		\
+	      # crypto/hash/tmmhv2.o
+RNG_SRC     = crypto/rng/rand_source.o crypto/rng/prng.o 	\
+	      crypto/rng/ctr_prng.o
+else
+CIPHERS_SRC = crypto/cipher/aes_icm_ossl.o crypto/cipher/aes_gcm_ossl.o
+HASHES_SRC  = crypto/hash/hmac_ossl.o
+RNG_SRC     = crypto/rng/rand_source_ossl.o
+SRTP_OTHER_CFLAGS = -DOPENSSL
+endif
+
+
 endif
 
 ifeq (@ac_pjmedia_resample@,libresample)
 DIRS += resample
+endif
+
+ifneq (@ac_no_yuv@,1)
+ifeq (@ac_external_yuv@,1)
+# External yuv
+else
+DIRS += yuv
+endif
+endif
+
+ifneq (@ac_no_webrtc@,1)
+ifeq (@ac_external_webrtc@,1)
+# External webrtc
+else
+DIRS += webrtc
+WEBRTC_OTHER_CFLAGS = -fexceptions -DWEBRTC_POSIX=1 @ac_webrtc_cflags@
+ifneq ($(findstring sse2,@ac_webrtc_instset@),)
+    WEBRTC_SRC = \
+    	      modules/audio_processing/aec/aec_core_sse2.o		 \
+	      modules/audio_processing/aec/aec_rdft_sse2.o	         \
+	      modules/audio_processing/aecm/aecm_core_c.o	         \
+	      modules/audio_processing/ns/nsx_core_c.o	                 \
+	      system_wrappers/source/cpu_features.o
+else ifneq ($(findstring neon,@ac_webrtc_instset@),)
+    WEBRTC_SRC = \
+       	      modules/audio_processing/aec/aec_core_neon.o               \
+	      modules/audio_processing/aec/aec_rdft_neon.o               \
+	      modules/audio_processing/aecm/aecm_core_c.o                \
+	      modules/audio_processing/aecm/aecm_core_neon.o             \
+	      modules/audio_processing/ns/nsx_core_c.o                   \
+	      modules/audio_processing/ns/nsx_core_neon.o                \
+	      common_audio/signal_processing/cross_correlation_neon.o    \
+	      common_audio/signal_processing/downsample_fast_neon.o      \
+	      common_audio/signal_processing/min_max_operations_neon.o
+    WEBRTC_OTHER_CFLAGS += -DWEBRTC_HAS_NEON
+else ifneq ($(findstring mips,@ac_webrtc_instset@),)
+    WEBRTC_SRC = \
+              modules/audio_processing/aec/aec_core_mips.o               \
+	      modules/audio_processing/aec/aec_rdft_mips.o               \
+	      modules/audio_processing/aecm/aecm_core_mips.o             \
+	      modules/audio_processing/ns/nsx_core_mips.o                \
+	      common_audio/signal_processing/cross_correlation_mips.o    \
+	      common_audio/signal_processing/downsample_fast_mips.o      \
+	      common_audio/signal_processing/min_max_operations_mips.o
+
+    WEBRTC_OTHER_CFLAGS += -DMIPS_FPU_LE
+else # Generic fixed point
+    WEBRTC_SRC = \
+	      modules/audio_processing/aecm/aecm_core_c.o                \
+	      modules/audio_processing/ns/nsx_core_c.o                   \
+	      common_audio/signal_processing/complex_fft.o
+endif
+endif
 endif

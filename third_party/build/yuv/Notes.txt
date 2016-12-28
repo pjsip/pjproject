@@ -1,0 +1,21 @@
+Notes:
+* Source code for libyuv from https://chromium.googlesource.com/libyuv/libyuv/ dated 23 June 2016.
+* All code is compilable, except for compare_win.cc
+  - Use older version (https://chromium.googlesource.com/libyuv/libyuv/+/baf6a3c1bd385e7ffe6b7634560e71fb49e4f589%5E%21/)
+    Since there's a compiler error on:
+    --------------------------------------------------------------------------------------
+    pmulld      xmm0,xmm6
+    --------------------------------------------------------------------------------------
+
+  - On VS2015, error C2024: 'alignas' attribute applies to variables, data members and tag types only
+    --------------------------------------------------------------------------------------
+    __declspec(naked) __declspec(align(16))
+
+    Change to :
+
+    __declspec(naked)
+    --------------------------------------------------------------------------------------
+* Disable some compiler warning which apear alot:
+  - warning C4100: unreferenced formal parameter
+  - warning C4127: conditional expression is constant
+  - warning C4244: '=' : conversion from 'uint32' to 'uint8', possible loss of data

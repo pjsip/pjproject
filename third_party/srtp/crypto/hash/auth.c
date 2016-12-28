@@ -43,6 +43,10 @@
  *
  */
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "auth.h"
 
 /* the debug module for authentiation */
@@ -74,8 +78,8 @@ auth_type_get_ref_count(const auth_type_t *at) {
 }
 
 /*
- * auth_type_self_test() tests an auth function of type ct against
- * test cases provided in an array of values of key, data, and tag
+ * auth_type_test() tests an auth function of type ct against
+ * test cases provided in a list test_data of values of key, data, and tag
  * that is known to be good
  */
 
@@ -83,8 +87,8 @@ auth_type_get_ref_count(const auth_type_t *at) {
 #define SELF_TEST_TAG_BUF_OCTETS 32
 
 err_status_t
-auth_type_self_test(const auth_type_t *at) {
-  auth_test_case_t *test_case = at->test_data;
+auth_type_test(const auth_type_t *at, const auth_test_case_t *test_data) {
+  const auth_test_case_t *test_case = test_data;
   auth_t *a;
   err_status_t status;
   uint8_t tag[SELF_TEST_TAG_BUF_OCTETS];
@@ -170,4 +174,14 @@ auth_type_self_test(const auth_type_t *at) {
   return err_status_ok;
 }
 
+
+/* 
+ * auth_type_self_test(at) performs auth_type_test on at's internal
+ * list of test data.
+ */
+
+err_status_t
+auth_type_self_test(const auth_type_t *at) {
+  return auth_type_test(at, at->test_data);
+}
 

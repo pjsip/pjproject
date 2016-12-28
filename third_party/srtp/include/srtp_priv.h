@@ -45,10 +45,20 @@
 #ifndef SRTP_PRIV_H
 #define SRTP_PRIV_H
 
+#include "config.h"
 #include "srtp.h"
 #include "rdbx.h"
 #include "rdb.h"
 #include "integers.h"
+#include "crypto.h"
+#include "cipher.h"
+#include "auth.h"
+#include "aes.h"
+#include "key.h"
+#include "crypto_kernel.h"
+
+#define SRTP_VER_STRING	    PACKAGE_STRING
+#define SRTP_VERSION        PACKAGE_VERSION
 
 /*
  * an srtp_hdr_t represents the srtp header
@@ -59,11 +69,6 @@
  * is not identical)
  */
  
-#ifdef _MSC_VER
-#   pragma warning(push)
-#   pragma warning(disable:4214) // bit field types other than int
-#endif
-
 #ifndef WORDS_BIGENDIAN
 
 /*
@@ -72,6 +77,7 @@
  * "unsigned char", but doing so causes the MS compiler to not
  * fully pack the bit fields.
  */
+
 typedef struct {
   unsigned char cc:4;	/* CSRC count             */
   unsigned char x:1;	/* header extension flag  */
@@ -92,14 +98,13 @@ typedef struct {
   unsigned char x:1;	/* header extension flag  */
   unsigned char cc:4;	/* CSRC count             */
   unsigned char m:1;	/* marker bit             */
-  unsigned pt:7;	/* payload type           */
+  unsigned char pt:7;	/* payload type           */
   uint16_t seq;		/* sequence number        */
   uint32_t ts;		/* timestamp              */
   uint32_t ssrc;	/* synchronization source */
 } srtp_hdr_t;
 
 #endif
-
 
 typedef struct {
   uint16_t profile_specific;    /* profile-specific info               */
@@ -162,11 +167,6 @@ typedef struct {
 #endif
 
 
-#ifdef _MSC_VER
-#   pragma warning( pop ) 
-#endif
-
-
 /*
  * the following declarations are libSRTP internal functions 
  */
@@ -188,6 +188,15 @@ srtp_get_stream(srtp_t srtp, uint32_t ssrc);
 
 err_status_t
 srtp_stream_init_keys(srtp_stream_t srtp, const void *key);
+
+/*
+ * srtp_stream_init(s, p) initializes the srtp_stream_t s to 
+ * use the policy at the location p
+ */
+err_status_t
+srtp_stream_init(srtp_stream_t srtp, 
+		 const srtp_policy_t *p);
+
 
 /*
  * libsrtp internal datatypes 
@@ -219,6 +228,10 @@ typedef struct srtp_stream_ctx_t {
   sec_serv_t rtcp_services;
   key_limit_ctx_t *limit;
   direction_t direction;
+  int        allow_repeat_tx;
+  ekt_stream_t ekt; 
+  uint8_t    salt[SRTP_AEAD_SALT_LEN];   /* used with GCM mode for SRTP */
+  uint8_t    c_salt[SRTP_AEAD_SALT_LEN]; /* used with GCM mode for SRTCP */
   struct srtp_stream_ctx_t *next;   /* linked list of streams */
 } srtp_stream_ctx_t;
 
@@ -230,6 +243,7 @@ typedef struct srtp_stream_ctx_t {
 typedef struct srtp_ctx_t {
   srtp_stream_ctx_t *stream_list;     /* linked list of streams            */
   srtp_stream_ctx_t *stream_template; /* act as template for other streams */
+  void *user_data;                    /* user custom data */
 } srtp_ctx_t;
 
 

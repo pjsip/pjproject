@@ -8,6 +8,42 @@
  */
 
 /*
+ *	
+ * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ *   Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * 
+ *   Redistributions in binary form must reproduce the above
+ *   copyright notice, this list of conditions and the following
+ *   disclaimer in the documentation and/or other materials provided
+ *   with the distribution.
+ * 
+ *   Neither the name of the Cisco Systems, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived
+ *   from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+/*
   
  Example usage (with first NIST FIPS 197 test case):
  
@@ -17,6 +53,10 @@
  ciphertext:     69c4e0d86a7b0430d8cdb78070b4c55a
 
  */
+
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
 
 #include "aes.h"
 #include <stdio.h>
@@ -28,14 +68,16 @@ usage(char *prog_name) {
   exit(255);
 }
 
-#define AES_KEY_LEN 16
+#define AES_MAX_KEY_LEN 32
 
 int
 main (int argc, char *argv[]) {
-  v128_t data, key;
+  v128_t data;
+  uint8_t key[AES_MAX_KEY_LEN];
   aes_expanded_key_t exp_key;
-  int len;
-  int verbose;
+  int key_len, len;
+  int verbose = 0;
+  err_status_t status;
 
   if (argc == 3) {
     /* we're not in verbose mode */
@@ -54,22 +96,23 @@ main (int argc, char *argv[]) {
   }
   
   /* read in key, checking length */
-  if (strlen(argv[1]) > AES_KEY_LEN*2) {
+  if (strlen(argv[1]) > AES_MAX_KEY_LEN*2) {
     fprintf(stderr, 
 	    "error: too many digits in key "
-	    "(should be %d hexadecimal digits, found %u)\n",
-	    AES_KEY_LEN*2, (unsigned)strlen(argv[1]));
+	    "(should be at most %d hexadecimal digits, found %u)\n",
+	    AES_MAX_KEY_LEN*2, (unsigned)strlen(argv[1]));
     exit(1);    
   }
-  len = hex_string_to_octet_string((char *)&key, argv[1], AES_KEY_LEN*2);
+  len = hex_string_to_octet_string((char*)key, argv[1], AES_MAX_KEY_LEN*2);
   /* check that hex string is the right length */
-  if (len < AES_KEY_LEN*2) {
+  if (len != 32 && len != 48 && len != 64) {
     fprintf(stderr, 
-	    "error: too few digits in key "
-	    "(should be %d hexadecimal digits, found %d)\n",
-	    AES_KEY_LEN*2, len);
+	    "error: bad number of digits in key "
+	    "(should be 32/48/64 hexadecimal digits, found %d)\n",
+	    len);
     exit(1);    
   } 
+  key_len = len/2;
       
   /* read in plaintext, checking length */
   if (strlen(argv[2]) > 16*2) {
@@ -95,13 +138,18 @@ main (int argc, char *argv[]) {
   }
 
   /* encrypt plaintext */
-  aes_expand_encryption_key(&key, exp_key);
+  status = aes_expand_encryption_key(key, key_len, &exp_key);
+  if (status) {
+    fprintf(stderr,
+	    "error: AES key expansion failed.\n");
+    exit(1);
+  }
 
-  aes_encrypt(&data, exp_key);
+  aes_encrypt(&data, &exp_key);
 
   /* write ciphertext to output */
   if (verbose) {
-    printf("key:\t\t%s\n", v128_hex_string(&key));
+    printf("key:\t\t%s\n", octet_string_hex_string(key, key_len));
     printf("ciphertext:\t");
   }
   printf("%s\n", v128_hex_string(&data));

@@ -66,18 +66,18 @@ typedef struct rtp_sender_ctx_t *rtp_sender_t;
 
 typedef struct rtp_receiver_ctx_t *rtp_receiver_t;
 
-unsigned int
+int
 rtp_sendto(rtp_sender_t sender, const void* msg, int len);
 
-unsigned int
+int
 rtp_recvfrom(rtp_receiver_t receiver, void *msg, int *len);
 
 int
-rtp_receiver_init(rtp_receiver_t rcvr, int socket, 
+rtp_receiver_init(rtp_receiver_t rcvr, int sock, 
 		  struct sockaddr_in addr, unsigned int ssrc);
 
 int
-rtp_sender_init(rtp_sender_t sender, int socket, 
+rtp_sender_init(rtp_sender_t sender, int sock, 
 		struct sockaddr_in addr, unsigned int ssrc);
 
 /*
@@ -103,14 +103,26 @@ int
 rtp_sender_init_srtp(rtp_sender_t sender, const srtp_policy_t *policy);
 
 int
+rtp_sender_deinit_srtp(rtp_sender_t sender);
+
+int
 rtp_receiver_init_srtp(rtp_receiver_t sender, const srtp_policy_t *policy);
+
+int
+rtp_receiver_deinit_srtp(rtp_receiver_t sender);
 
 
 rtp_sender_t 
-rtp_sender_alloc();
+rtp_sender_alloc(void);
+
+void
+rtp_sender_dealloc(rtp_sender_t rtp_ctx);
 
 rtp_receiver_t 
-rtp_receiver_alloc();
+rtp_receiver_alloc(void);
+
+void
+rtp_receiver_dealloc(rtp_receiver_t rtp_ctx);
 
 
 /*

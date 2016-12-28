@@ -26,9 +26,10 @@ The configure script accepts the following options:
    --enable-syslog     use syslog for error reporting
    --disable-stdout    use stdout for error reporting
    --enable-console    use /dev/console for error reporting
+   --enable-openssl    use OpenSSL crypto primitives
    --gdoi              use GDOI key management (disabled at present)
 
-By default, debbuging is enabled and stdout is used for debugging.
+By default, debugging is enabled and stdout is used for debugging.
 You can use the above configure options to have the debugging output
 sent to syslog or the system console.  Alternatively, you can define
 ERR_REPORTING_FILE in include/conf.h to be any other file that can be
@@ -77,7 +78,7 @@ Applications
   Manual srtp keying uses the -k option; automated key management
   using gdoi will be added later.
 
-usage: rtpw [-d <debug>]* [-k <key> [-a][-e]] [-s | -r] dest_ip dest_port
+usage: rtpw [-d <debug>]* [-k|b <key> [-a][-e <key size>][-g]] [-s | -r] dest_ip dest_port
 or     rtpw -l
 
   Either the -s (sender) or -r (receiver) option must be chosen.
@@ -89,14 +90,19 @@ or     rtpw -l
 
   -s		(s)rtp sender - causes app to send words
 
-  -r		(s)rtp receive - causes app to receve words
+  -r		(s)rtp receive - causes app to receive words
 
   -k <key>      use srtp master key <key>, where the
 		key is a hexadecimal value (without the
                 leading "0x")
 
-  -e            encrypt/decrypt (for data confidentiality)
+  -b <key>      same as -k but with base64 encoded key
+
+  -e <keysize>  encrypt/decrypt (for data confidentiality)
                 (requires use of -k option as well)
+                (use 128, 192, or 256 for keysize)
+
+  -g            use AES-GCM mode (must be used with -e) 
 
   -a            message authentication 
                 (requires use of -k option as well)
@@ -104,6 +110,8 @@ or     rtpw -l
   -l            list debug modules
 
   -d <debug>    turn on debugging for module <debug>
+  -i            specify input/output file 
+                (instead of using dictionary file)
 
 
 In order to get random 30-byte values for use as key/salt pairs , you
@@ -119,7 +127,7 @@ An example of an SRTP session using two rtpw programs follows:
 
 set k=c1eec3717da76195bb878578790af71c4ee9f859e197a414a78d5abc7451
 
-[sh1]$ test/rtpw -s -k $k -ea 0.0.0.0 9999 
+[sh1]$ test/rtpw -s -k $k -e 128 -a 0.0.0.0 9999 
 Security services: confidentiality message authentication
 set master key/salt to C1EEC3717DA76195BB878578790AF71C/4EE9F859E197A414A78D5ABC7451
 setting SSRC to 2078917053
@@ -129,7 +137,7 @@ sending word: aa
 sending word: aal
 ...
 
-[sh2]$ test/rtpw -r -k $k -ea 0.0.0.0 9999 
+[sh2]$ test/rtpw -r -k $k -e 128 -a 0.0.0.0 9999 
 security services: confidentiality message authentication
 set master key/salt to C1EEC3717DA76195BB878578790AF71C/4EE9F859E197A414A78D5ABC7451
 19 octets received from SSRC 2078917053 word: A

@@ -1,0 +1,8 @@
+Notes:
+* Source code for webrtc from https://chromium.googlesource.com/external/webrtc circa Oct 2015.
+
+Modification to original source to build on VS2005 which don't support C99 syntax 
+(declare all variables at the beginning of a scope block).
+- modules\audio_processing\aec\aec_core.c
+- modules\audio_processing\ns\ns_core.c
+- modules\audio_processing\ns\nsx_core.c

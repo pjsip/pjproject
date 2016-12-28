@@ -8,7 +8,7 @@
  */
 /*
  *	
- * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * Copyright (c) 2001-2006,2013 Cisco Systems, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -49,6 +49,8 @@
 #include "datatypes.h"          
 #include "rdbx.h"               /* for xtd_seq_num_t */
 #include "err.h"                /* for error codes  */
+#include "crypto.h"		/* for cipher_type_id_t */
+#include "crypto_types.h"	/* for values of cipher_type_id_t */
 
 
 /**
@@ -78,15 +80,14 @@ typedef struct cipher_t      *cipher_pointer_t;
  */
 
 typedef err_status_t (*cipher_alloc_func_t)
-     (cipher_pointer_t *cp, int key_len);
+     (cipher_pointer_t *cp, int key_len, int tag_len);
 
 /* 
  * a cipher_init_func_t [re-]initializes a cipher_t with a given key
- * and direction (i.e., encrypt or decrypt)
  */
 
 typedef err_status_t (*cipher_init_func_t)
-  (void *state, const uint8_t *key, cipher_direction_t dir);
+(void *state, const uint8_t *key, int key_len);
 
 /* a cipher_dealloc_func_t de-allocates a cipher_t */
 
@@ -96,6 +97,13 @@ typedef err_status_t (*cipher_dealloc_func_t)(cipher_pointer_t cp);
 
 typedef err_status_t (*cipher_set_segment_func_t)
      (void *state, xtd_seq_num_t idx);
+
+/* 
+ * a cipher_set_aad_func_t processes the AAD data for AEAD ciphers 
+ */
+typedef err_status_t (*cipher_set_aad_func_t)
+     (void *state, uint8_t *aad, unsigned int aad_len);
+
 
 /* a cipher_encrypt_func_t encrypts data in-place */
 
@@ -108,12 +116,19 @@ typedef err_status_t (*cipher_decrypt_func_t)
      (void *state, uint8_t *buffer, unsigned int *octets_to_decrypt);
 
 /* 
- * a cipher_set_nonce_seq_func_t function sets both the nonce
- * and the extended sequence number
+ * a cipher_set_iv_func_t function sets the current initialization vector
  */
 
 typedef err_status_t (*cipher_set_iv_func_t)
-     (cipher_pointer_t cp, void *iv);
+     (cipher_pointer_t cp, void *iv, cipher_direction_t direction);
+
+/*
+ * a cipher_get_tag_funct_t function is used to get the authentication
+ * tag that was calculated by an AEAD cipher.
+ */
+typedef err_status_t (*cipher_get_tag_func_t)
+     (void *state, void *tag, int *len);
+
 
 /*
  * cipher_test_case_t is a (list of) key, salt, xtd_seq_num_t,
@@ -127,10 +142,13 @@ typedef struct cipher_test_case_t {
   int key_length_octets;                      /* octets in key            */
   uint8_t *key;                               /* key                      */
   uint8_t *idx;                               /* packet index             */
-  unsigned int plaintext_length_octets;	      /* octets in plaintext      */ 
+  int plaintext_length_octets;                /* octets in plaintext      */ 
   uint8_t *plaintext;                         /* plaintext                */
-  unsigned int ciphertext_length_octets;      /* octets in plaintext      */ 
+  int ciphertext_length_octets;               /* octets in plaintext      */ 
   uint8_t *ciphertext;                        /* ciphertext               */
+  int aad_length_octets;                      /* octets in AAD            */ 
+  uint8_t *aad;                               /* AAD                      */
+  int tag_length_octets;                      /* Length of AEAD tag       */
   struct cipher_test_case_t *next_test_case;  /* pointer to next testcase */
 } cipher_test_case_t;
 
@@ -140,13 +158,16 @@ typedef struct cipher_type_t {
   cipher_alloc_func_t         alloc;
   cipher_dealloc_func_t       dealloc;
   cipher_init_func_t          init;
+  cipher_set_aad_func_t       set_aad;
   cipher_encrypt_func_t       encrypt;
   cipher_encrypt_func_t       decrypt;
   cipher_set_iv_func_t        set_iv;
+  cipher_get_tag_func_t       get_tag;
   char                       *description;
   int                         ref_count;
   cipher_test_case_t         *test_data;
   debug_module_t             *debug;
+  cipher_type_id_t            id;
 } cipher_type_t;
 
 /*
@@ -158,27 +179,32 @@ typedef struct cipher_t {
   cipher_type_t *type;
   void          *state;
   int            key_len;
-#ifdef FORCE_64BIT_ALIGN
-  int            pad;
-#endif
+  int		 algorithm;
 } cipher_t;
 
 /* some syntactic sugar on these function types */
 
-#define cipher_type_alloc(ct, c, klen) ((ct)->alloc((c), (klen)))
+#define cipher_type_alloc(ct, c, klen, tlen) ((ct)->alloc((c), (klen), (tlen)))
 
 #define cipher_dealloc(c) (((c)->type)->dealloc(c))
 
-#define cipher_init(c, k, dir) (((c)->type)->init(((c)->state), (k), (dir)))
+#define cipher_init(c, k) (((c)->type)->init(((c)->state), (k), ((c)->key_len)))
 
 #define cipher_encrypt(c, buf, len) \
         (((c)->type)->encrypt(((c)->state), (buf), (len)))
 
+#define cipher_get_tag(c, buf, len) \
+        (((c)->type)->get_tag(((c)->state), (buf), (len)))
+
 #define cipher_decrypt(c, buf, len) \
         (((c)->type)->decrypt(((c)->state), (buf), (len)))
 
-#define cipher_set_iv(c, n)                           \
-  ((c) ? (((c)->type)->set_iv(((cipher_pointer_t)(c)->state), (n))) :   \
+#define cipher_set_iv(c, n, dir)                           \
+  ((c) ? (((c)->type)->set_iv(((cipher_pointer_t)(c)->state), (n), (dir))) :   \
+                                err_status_no_such_op)  
+#define cipher_set_aad(c, a, l)                       \
+  (((c) && (((c)->type)->set_aad)) ?                  \
+  (((c)->type)->set_aad(((c)->state), (a), (l))) :    \
                                 err_status_no_such_op)  
 
 err_status_t
@@ -199,6 +225,16 @@ cipher_get_key_length(const cipher_t *c);
 
 err_status_t
 cipher_type_self_test(const cipher_type_t *ct);
+
+
+/* 
+ * cipher_type_test() tests a cipher against external test cases provided in 
+ * an array of values of key/xtd_seq_num_t/plaintext/ciphertext 
+ * that is known to be good
+ */
+
+err_status_t
+cipher_type_test(const cipher_type_t *ct, const cipher_test_case_t *test_data);
 
 
 /*

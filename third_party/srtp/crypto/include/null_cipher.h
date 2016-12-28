@@ -62,11 +62,11 @@ typedef struct {
  */
 
 err_status_t
-null_cipher_init(null_cipher_ctx_t *c, const uint8_t *key);
+null_cipher_init(null_cipher_ctx_t *c, const uint8_t *key, int key_len);
 
 err_status_t
 null_cipher_set_segment(null_cipher_ctx_t *c,
-			unsigned long index);
+			unsigned long segment_index);
 
 err_status_t
 null_cipher_encrypt(null_cipher_ctx_t *c,

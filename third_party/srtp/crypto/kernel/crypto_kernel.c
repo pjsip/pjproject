@@ -8,7 +8,7 @@
  */
 /*
  *	
- * Copyright(c) 2001-2006 Cisco Systems, Inc.
+ * Copyright(c) 2001-2006,2013 Cisco Systems, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -43,6 +43,10 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include "alloc.h"
 
 #include "crypto_kernel.h"
@@ -69,7 +73,12 @@ extern debug_module_t mod_alloc;
 
 extern cipher_type_t null_cipher;
 extern cipher_type_t aes_icm;
+#ifndef OPENSSL
 extern cipher_type_t aes_cbc;
+#else
+extern cipher_type_t aes_gcm_128_openssl;
+extern cipher_type_t aes_gcm_256_openssl;
+#endif
 
 
 /*
@@ -137,6 +146,7 @@ crypto_kernel_init() {
   if (status)
     return status;
 
+#ifndef OPENSSL
   /* initialize pseudorandom number generator */
   status = ctr_prng_init(rand_source_get_octet_string);
   if (status)
@@ -146,17 +156,29 @@ crypto_kernel_init() {
   status = stat_test_rand_source_with_repetition(ctr_prng_get_octet_string, MAX_RNG_TRIALS);
   if (status)
     return status;
+#endif
  
   /* load cipher types */
   status = crypto_kernel_load_cipher_type(&null_cipher, NULL_CIPHER);
   if (status) 
     return status;
-  status = crypto_kernel_load_cipher_type(&aes_icm, AES_128_ICM);
+  status = crypto_kernel_load_cipher_type(&aes_icm, AES_ICM);
   if (status) 
     return status;
-  status = crypto_kernel_load_cipher_type(&aes_cbc, AES_128_CBC);
+#ifndef OPENSSL
+  status = crypto_kernel_load_cipher_type(&aes_cbc, AES_CBC);
   if (status) 
     return status;
+#else
+  status = crypto_kernel_load_cipher_type(&aes_gcm_128_openssl, AES_128_GCM);
+  if (status) {
+      return status;
+  }
+  status = crypto_kernel_load_cipher_type(&aes_gcm_256_openssl, AES_256_GCM);
+  if (status) {
+      return status;
+  }
+#endif
 
   /* load auth func types */
   status = crypto_kernel_load_auth_type(&null_auth, NULL_AUTH);
@@ -297,13 +319,17 @@ crypto_kernel_shutdown() {
   return err_status_ok;
 }
 
-err_status_t
-crypto_kernel_load_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id) {
+static inline err_status_t
+crypto_kernel_do_load_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id,
+				  int replace) {
   kernel_cipher_type_t *ctype, *new_ctype;
   err_status_t status;
 
   /* defensive coding */
   if (new_ct == NULL)
+    return err_status_bad_param;
+
+  if (new_ct->id != id)
     return err_status_bad_param;
 
   /* check cipher type by running self-test */
@@ -315,24 +341,35 @@ crypto_kernel_load_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id) {
   /* walk down list, checking if this type is in the list already  */
   ctype = crypto_kernel.cipher_type_list;
   while (ctype != NULL) {
-    if ((new_ct == ctype->cipher_type) || (id == ctype->id))
+    if (id == ctype->id) {
+      if (!replace)
+	return err_status_bad_param;
+      status = cipher_type_test(new_ct, ctype->cipher_type->test_data);
+      if (status)
+	return status;
+      new_ctype = ctype;
+      break;
+    }
+    else if (new_ct == ctype->cipher_type)
       return err_status_bad_param;    
     ctype = ctype->next;
   }
 
-  /* put new_ct at the head of the list */
+  /* if not found, put new_ct at the head of the list */
+  if (ctype == NULL) {
   /* allocate memory */
-  new_ctype = (kernel_cipher_type_t *) crypto_alloc(sizeof(kernel_cipher_type_t));
-  if (new_ctype == NULL)
-    return err_status_alloc_fail;
+    new_ctype = (kernel_cipher_type_t *) crypto_alloc(sizeof(kernel_cipher_type_t));
+    if (new_ctype == NULL)
+      return err_status_alloc_fail;
+    new_ctype->next = crypto_kernel.cipher_type_list;
+
+    /* set head of list to new cipher type */
+    crypto_kernel.cipher_type_list = new_ctype;    
+  }
     
   /* set fields */
   new_ctype->cipher_type = new_ct;
   new_ctype->id = id;
-  new_ctype->next = crypto_kernel.cipher_type_list;
-
-  /* set head of list to new cipher type */
-  crypto_kernel.cipher_type_list = new_ctype;    
 
   /* load debug module, if there is one present */
   if (new_ct->debug != NULL)
@@ -343,12 +380,26 @@ crypto_kernel_load_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id) {
 }
 
 err_status_t
-crypto_kernel_load_auth_type(auth_type_t *new_at, auth_type_id_t id) {
+crypto_kernel_load_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id) {
+  return crypto_kernel_do_load_cipher_type(new_ct, id, 0);
+}
+
+err_status_t
+crypto_kernel_replace_cipher_type(cipher_type_t *new_ct, cipher_type_id_t id) {
+  return crypto_kernel_do_load_cipher_type(new_ct, id, 1);
+}
+
+err_status_t
+crypto_kernel_do_load_auth_type(auth_type_t *new_at, auth_type_id_t id,
+				int replace) {
   kernel_auth_type_t *atype, *new_atype;
   err_status_t status;
 
   /* defensive coding */
   if (new_at == NULL)
+    return err_status_bad_param;
+
+  if (new_at->id != id)
     return err_status_bad_param;
 
   /* check auth type by running self-test */
@@ -360,24 +411,35 @@ crypto_kernel_load_auth_type(auth_type_t *new_at, auth_type_id_t id) {
   /* walk down list, checking if this type is in the list already  */
   atype = crypto_kernel.auth_type_list;
   while (atype != NULL) {
-    if ((new_at == atype->auth_type) || (id == atype->id))
+    if (id == atype->id) {
+      if (!replace)
+	return err_status_bad_param;
+      status = auth_type_test(new_at, atype->auth_type->test_data);
+      if (status)
+	return status;
+      new_atype = atype;
+      break;
+    }
+    else if (new_at == atype->auth_type)
       return err_status_bad_param;    
     atype = atype->next;
   }
 
-  /* put new_at at the head of the list */
-  /* allocate memory */
-  new_atype = (kernel_auth_type_t *)crypto_alloc(sizeof(kernel_auth_type_t));
-  if (new_atype == NULL)
-    return err_status_alloc_fail;
+  /* if not found, put new_at at the head of the list */
+  if (atype == NULL) {
+    /* allocate memory */
+    new_atype = (kernel_auth_type_t *)crypto_alloc(sizeof(kernel_auth_type_t));
+    if (new_atype == NULL)
+      return err_status_alloc_fail;
+
+    new_atype->next = crypto_kernel.auth_type_list;
+    /* set head of list to new auth type */
+    crypto_kernel.auth_type_list = new_atype;
+  }
     
   /* set fields */
   new_atype->auth_type = new_at;
   new_atype->id = id;
-  new_atype->next = crypto_kernel.auth_type_list;
-
-  /* set head of list to new auth type */
-  crypto_kernel.auth_type_list = new_atype;    
 
   /* load debug module, if there is one present */
   if (new_at->debug != NULL)
@@ -386,6 +448,16 @@ crypto_kernel_load_auth_type(auth_type_t *new_at, auth_type_id_t id) {
 
   return err_status_ok;
 
+}
+
+err_status_t
+crypto_kernel_load_auth_type(auth_type_t *new_at, auth_type_id_t id) {
+  return crypto_kernel_do_load_auth_type(new_at, id, 0);
+}
+
+err_status_t
+crypto_kernel_replace_auth_type(auth_type_t *new_at, auth_type_id_t id) {
+  return crypto_kernel_do_load_auth_type(new_at, id, 1);
 }
 
 
@@ -409,7 +481,8 @@ crypto_kernel_get_cipher_type(cipher_type_id_t id) {
 err_status_t
 crypto_kernel_alloc_cipher(cipher_type_id_t id, 
 			      cipher_pointer_t *cp, 
-			      int key_len) {
+			      int key_len,
+			      int tag_len) {
   cipher_type_t *ct;
 
   /* 
@@ -423,7 +496,7 @@ crypto_kernel_alloc_cipher(cipher_type_id_t id,
   if (!ct)
     return err_status_fail;
   
-  return ((ct)->alloc(cp, key_len));
+  return ((ct)->alloc(cp, key_len, tag_len));
 }
 
 
@@ -517,7 +590,11 @@ crypto_kernel_set_debug_module(char *name, int on) {
 err_status_t
 crypto_get_random(unsigned char *buffer, unsigned int length) {
   if (crypto_kernel.state == crypto_kernel_state_secure)
+#ifdef OPENSSL
+    return rand_source_get_octet_string(buffer, length);
+#else
     return ctr_prng_get_octet_string(buffer, length);
+#endif
   else
     return err_status_fail;
 }

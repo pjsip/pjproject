@@ -8,6 +8,42 @@
  *
  */
 
+/*
+ *	
+ * Copyright (c) 2001-2006, Cisco Systems, Inc.
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 
+ *   Redistributions of source code must retain the above copyright
+ *   notice, this list of conditions and the following disclaimer.
+ * 
+ *   Redistributions in binary form must reproduce the above
+ *   copyright notice, this list of conditions and the following
+ *   disclaimer in the documentation and/or other materials provided
+ *   with the distribution.
+ * 
+ *   Neither the name of the Cisco Systems, Inc. nor the names of its
+ *   contributors may be used to endorse or promote products derived
+ *   from this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT HOLDERS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
 #ifndef RDBX_H
 #define RDBX_H
 
@@ -46,19 +82,29 @@ typedef uint64_t xtd_seq_num_t;
 
 typedef struct {
   xtd_seq_num_t index;
-  v128_t bitmask;
+  bitvector_t bitmask;
 } rdbx_t;
 
 
 /*
- * rdbx_init(rdbx_ptr)
+ * rdbx_init(rdbx_ptr, ws)
  *
- * initializes the rdbx pointed to by its argument, setting the
- * rollover counter and sequence number to zero
+ * initializes the rdbx pointed to by its argument with the window size ws,
+ * setting the rollover counter and sequence number to zero
  */
 
 err_status_t
-rdbx_init(rdbx_t *rdbx);
+rdbx_init(rdbx_t *rdbx, unsigned long ws);
+
+
+/*
+ * rdbx_dealloc(rdbx_ptr)
+ *
+ * frees memory associated with the rdbx
+ */
+
+err_status_t
+rdbx_dealloc(rdbx_t *rdbx);
 
 
 /*
@@ -100,11 +146,41 @@ rdbx_check(const rdbx_t *rdbx, int difference);
 err_status_t
 rdbx_add_index(rdbx_t *rdbx, int delta);
 
+
+/*
+ * rdbx_set_roc(rdbx, roc) initalizes the rdbx_t at the location rdbx
+ * to have the rollover counter value roc.  If that value is less than
+ * the current rollover counter value, then the function returns
+ * err_status_replay_old; otherwise, err_status_ok is returned.
+ * 
+ */
+
+err_status_t
+rdbx_set_roc(rdbx_t *rdbx, uint32_t roc);
+
+/*
+ * rdbx_get_roc(rdbx) returns the value of the rollover counter for
+ * the rdbx_t pointed to by rdbx
+ * 
+ */
+
+xtd_seq_num_t
+rdbx_get_packet_index(const rdbx_t *rdbx);
+
 /*
  * xtd_seq_num_t functions - these are *internal* functions of rdbx, and
  * shouldn't be used to manipulate rdbx internal values.  use the rdbx
  * api instead!
  */
+
+/*
+ * rdbx_get_ws(rdbx_ptr)
+ *
+ * gets the window size which was used to initialize the rdbx
+ */
+
+unsigned long
+rdbx_get_window_size(const rdbx_t *rdbx);
 
 
 /* index_init(&pi) initializes a packet index pi (sets it to zero) */

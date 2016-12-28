@@ -43,8 +43,12 @@
  */
 
 
+#ifdef HAVE_CONFIG_H
+    #include <config.h>
+#endif
+
 #include <stdio.h>           /* for printf() */
-#include <unistd.h>          /* for getopt() */
+#include "getopt_s.h"
 #include "crypto_kernel.h"
 
 /*
@@ -68,7 +72,6 @@ usage(char *prog_name) {
 
 int
 main (int argc, char *argv[]) {
-  extern char *optarg;
   int q;
   int num_octets = 0;
   unsigned do_list_mods = 0;
@@ -86,14 +89,14 @@ main (int argc, char *argv[]) {
 
   /* process input arguments */
   while (1) {
-    q = getopt(argc, argv, "ld:n:");
+    q = getopt_s(argc, argv, "ld:n:");
     if (q == -1) 
       break;
     switch (q) {
     case 'd':
-      status = crypto_kernel_set_debug_module(optarg, 1);
+      status = crypto_kernel_set_debug_module(optarg_s, 1);
       if (status) {
-	printf("error: set debug module (%s) failed\n", optarg);
+	printf("error: set debug module (%s) failed\n", optarg_s);
 	exit(1);
       }
       break;
@@ -101,7 +104,7 @@ main (int argc, char *argv[]) {
       do_list_mods = 1;
       break;
     case 'n':
-      num_octets = atoi(optarg);
+      num_octets = atoi(optarg_s);
       if (num_octets < 0 || num_octets > BUF_LEN)
 	usage(argv[0]);
       break;
