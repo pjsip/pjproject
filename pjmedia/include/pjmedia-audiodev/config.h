@@ -113,15 +113,32 @@ PJ_BEGIN_DECL
 #endif
 
 
-/**
- * This setting controls whether WMME support should be included.
- */
+ /**
+  * This setting controls whether WMME support should be included.
+  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WMME
-#   define PJMEDIA_AUDIO_DEV_HAS_WMME		1
+#  ifdef PJ_WIN32_UWP
+#    define PJMEDIA_AUDIO_DEV_HAS_WMME		0
+#  else
+#    define PJMEDIA_AUDIO_DEV_HAS_WMME		1
+#  endif
 #endif
 
- 
-/**
+
+ /**
+  * This setting controls whether Windows Audio Session API (WASAPI)
+  * support should be included.
+  */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
+#  ifdef PJ_WIN32_UWP
+#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	1
+#  else
+#    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	0
+#  endif
+#endif
+
+
+ /**
  * This setting controls whether BDIMAD support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_BDIMAD

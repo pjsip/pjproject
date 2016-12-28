@@ -230,7 +230,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	case PROCESSOR_ARCHITECTURE_SHX:
 	    si.machine = pj_str("shx");
 	    break;
-    #else
+	#else
 	case PROCESSOR_ARCHITECTURE_AMD64:
 	    si.machine = pj_str("x86_64");
 	    break;
@@ -240,7 +240,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	case PROCESSOR_ARCHITECTURE_INTEL:
 	    si.machine = pj_str("i386");
 	    break;
-    #endif	/* PJ_WIN32_WINCE */
+	#endif	/* PJ_WIN32_WINCE */
 	}
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
 	/* Avoid compile warning. */
