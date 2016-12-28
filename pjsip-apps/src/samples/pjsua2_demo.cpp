@@ -125,7 +125,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     // Add account
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:test1@pjsip.org";
-    acc_cfg.regConfig.registrarUri = "sip:pjsip.org";
+    acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
     std::auto_ptr<MyAccount> acc(new MyAccount);
@@ -249,7 +249,7 @@ static void mainProg() throw(Error)
 	AccountConfig accCfg;
 
 	accCfg.idUri = "\"Just Test\" <sip:test@pjsip.org>";
-	accCfg.regConfig.registrarUri = "sip:pjsip.org";
+	accCfg.regConfig.registrarUri = "sip:sip.pjsip.org";
 	SipHeader h;
 	h.hName = "X-Header";
 	h.hValue = "User header";
@@ -291,6 +291,35 @@ static void mainProg() throw(Error)
     }
 }
 
+
+static void mainProg4(Endpoint &ep) throw(Error)
+{
+    // Init library
+    EpConfig ep_cfg;
+    ep.libInit( ep_cfg );
+
+    // Create transport
+    TransportConfig tcfg;
+    tcfg.port = 5060;
+    ep.transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
+    ep.transportCreate(PJSIP_TRANSPORT_TCP, tcfg);
+
+    // Add account
+    AccountConfig acc_cfg;
+    acc_cfg.idUri = "sip:localhost";
+    std::auto_ptr<MyAccount> acc(new MyAccount);
+    acc->create(acc_cfg);
+
+    // Start library
+    ep.libStart();
+    std::cout << "*** PJSUA2 STARTED ***" << std::endl;
+
+    // Just wait for ENTER key
+    std::cout << "Press ENTER to quit..." << std::endl;
+    std::cin.get();
+}
+
+
 int main()
 {
     int ret = 0;
@@ -299,7 +328,7 @@ int main()
     try {
 	ep.libCreate();
 
-	mainProg3(ep);
+	mainProg4(ep);
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;

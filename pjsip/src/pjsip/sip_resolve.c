@@ -53,6 +53,7 @@ struct query
     void		    *token;
     pjsip_resolver_callback *cb;
     pj_dns_async_query	    *object;
+    pj_dns_async_query	    *object6;
     pj_status_t		     last_error;
 
     /* Original request: */
@@ -64,6 +65,9 @@ struct query
     /* NAPTR records: */
     unsigned		     naptr_cnt;
     struct naptr_target	     naptr[8];
+
+    /* Query result */
+    pjsip_server_addresses   server;
 };
 
 
@@ -80,6 +84,9 @@ static void srv_resolver_cb(void *user_data,
 static void dns_a_callback(void *user_data,
 			   pj_status_t status,
 			   pj_dns_parsed_packet *response);
+static void dns_aaaa_callback(void *user_data,
+			      pj_status_t status,
+			      pj_dns_parsed_packet *response);
 
 
 /*
@@ -168,8 +175,8 @@ static int get_ip_addr_ver(const pj_str_t *host)
     pj_in_addr dummy;
     pj_in6_addr dummy6;
 
-    /* First check with inet_aton() */
-    if (pj_inet_aton(host, &dummy) > 0)
+    /* First check if this is an IPv4 address */
+    if (pj_inet_pton(pj_AF_INET(), host, &dummy) == PJ_SUCCESS)
 	return 4;
 
     /* Then check if this is an IPv6 address */
@@ -195,6 +202,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     int ip_addr_ver;
     struct query *query;
     pjsip_transport_type_e type = target->type;
+    int af = pj_AF_UNSPEC();
 
     /* If an external implementation has been provided use it instead */
     if (resolver->ext_res) {
@@ -204,6 +212,20 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
     /* Is it IP address or hostname? And if it's an IP, which version? */
     ip_addr_ver = get_ip_addr_ver(&target->addr.host);
+
+    /* Initialize address family type. Unfortunately, target type doesn't
+     * really tell the address family type, except when IPv6 flag is
+     * explicitly set.
+     */
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6==1
+    if ((ip_addr_ver == 6) || (type & PJSIP_TRANSPORT_IPV6))
+	af = pj_AF_INET6();
+    else if (ip_addr_ver == 4)
+	af = pj_AF_INET();
+#else
+    /* IPv6 is disabled, will resolving IPv6 address be useful? */
+    af = pj_AF_INET();
+#endif
 
     /* Set the transport type if not explicitly specified. 
      * RFC 3263 section 4.1 specify rules to set up this.
@@ -241,10 +263,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		type = PJSIP_TRANSPORT_UDP;
 	    }
 	}
-
-	/* Add IPv6 flag for IPv6 address */
-	if (ip_addr_ver == 6)
-	    type = (pjsip_transport_type_e)((int)type + PJSIP_TRANSPORT_IPV6);
     }
 
 
@@ -258,10 +276,34 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	if (ip_addr_ver != 0) {
 	    /* Target is an IP address, no need to resolve */
 	    if (ip_addr_ver == 4) {
-		pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
-				 NULL, 0);
-		pj_inet_aton(&target->addr.host,
-			     &svr_addr.entry[0].addr.ipv4.sin_addr);
+	        if (af == pj_AF_INET6()) {
+	            /* Generate a synthesized IPv6 address, if possible. */
+		    unsigned int count = 1;
+		    pj_addrinfo ai[1];
+		    pj_status_t status;
+
+                    status = pj_getaddrinfo(pj_AF_INET6(),
+                    			    &target->addr.host, &count, ai);
+		    if (status == PJ_SUCCESS && count > 0 &&
+		    	ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
+		    {
+			pj_sockaddr_init(pj_AF_INET6(),
+					 &svr_addr.entry[0].addr,
+					 NULL, 0);
+			svr_addr.entry[0].addr.ipv6.sin6_addr =
+			    ai[0].ai_addr.ipv6.sin6_addr;
+		    } else {
+		        pj_sockaddr_init(pj_AF_INET(),
+		        		 &svr_addr.entry[0].addr, NULL, 0);
+		        pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	     &svr_addr.entry[0].addr.ipv4.sin_addr);
+		    }
+		} else {
+		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
+				     NULL, 0);
+		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
+		}
 	    } else {
 		pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
 				 NULL, 0);
@@ -271,7 +313,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	} else {
 	    pj_addrinfo ai;
 	    unsigned count;
-	    int af;
 
 	    PJ_LOG(5,(THIS_FILE,
 		      "DNS resolver not available, target '%.*s:%d' type=%s "
@@ -280,12 +321,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		      target->addr.host.ptr,
 		      target->addr.port,
 		      pjsip_transport_get_type_name(target->type)));
-
-	    if (type & PJSIP_TRANSPORT_IPV6) {
-		af = pj_AF_INET6();
-	    } else {
-		af = pj_AF_INET();
-	    }
 
 	    /* Resolve */
 	    count = 1;
@@ -299,10 +334,14 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		goto on_error;
 	    }
 
-	    svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
-	    pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr,
-		      sizeof(pj_sockaddr));
+	    pj_sockaddr_cp(&svr_addr.entry[0].addr, &ai.ai_addr);
+	    if (af == pj_AF_UNSPEC())
+		af = ai.ai_addr.addr.sa_family;
 	}
+
+	/* After address resolution, update IPv6 bitflag in transport type. */
+	if (af == pj_AF_INET6())
+	    type |= PJSIP_TRANSPORT_IPV6;
 
 	/* Set the port number */
 	if (target->addr.port == 0) {
@@ -329,7 +368,8 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	svr_addr.entry[0].priority = 0;
 	svr_addr.entry[0].weight = 0;
 	svr_addr.entry[0].type = type;
-	svr_addr.entry[0].addr_len = pj_sockaddr_get_len(&svr_addr.entry[0].addr);
+	svr_addr.entry[0].addr_len = 
+				pj_sockaddr_get_len(&svr_addr.entry[0].addr);
 	(*cb)(status, token, &svr_addr);
 
 	/* Done. */
@@ -367,12 +407,12 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 	query->req.def_port = 5060;
 
-	if (type == PJSIP_TRANSPORT_TLS) {
+	if (type == PJSIP_TRANSPORT_TLS || type == PJSIP_TRANSPORT_TLS6) {
 	    query->naptr[0].res_type = pj_str("_sips._tcp.");
 	    query->req.def_port = 5061;
-	} else if (type == PJSIP_TRANSPORT_TCP)
+	} else if (type == PJSIP_TRANSPORT_TCP || type == PJSIP_TRANSPORT_TCP6)
 	    query->naptr[0].res_type = pj_str("_sip._tcp.");
-	else if (type == PJSIP_TRANSPORT_UDP)
+	else if (type == PJSIP_TRANSPORT_UDP || type == PJSIP_TRANSPORT_UDP6)
 	    query->naptr[0].res_type = pj_str("_sip._udp.");
 	else {
 	    pj_assert(!"Unknown transport type");
@@ -401,19 +441,49 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	       target->addr.port));
 
     if (query->query_type == PJ_DNS_TYPE_SRV) {
+	int opt = 0;
+
+	if (af == pj_AF_UNSPEC())
+	    opt = PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA |
+		  PJ_DNS_SRV_RESOLVE_AAAA;
+	else if (af == pj_AF_INET6())
+	    opt = PJ_DNS_SRV_FALLBACK_AAAA | PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
+	else /* af == pj_AF_INET() */
+	    opt = PJ_DNS_SRV_FALLBACK_A;
 
 	status = pj_dns_srv_resolve(&query->naptr[0].name,
 				    &query->naptr[0].res_type,
 				    query->req.def_port, pool, resolver->res,
-				    PJ_TRUE, query, &srv_resolver_cb, NULL);
+				    opt, query, &srv_resolver_cb, NULL);
 
     } else if (query->query_type == PJ_DNS_TYPE_A) {
 
-	status = pj_dns_resolver_start_query(resolver->res, 
-					     &query->naptr[0].name,
-					     PJ_DNS_TYPE_A, 0, 
-					     &dns_a_callback,
-    					     query, &query->object);
+	/* Resolve DNS A record if address family is not fixed to IPv6 */
+	if (af != pj_AF_INET6()) {
+
+	    /* If there will be DNS AAAA query too, let's setup a dummy one
+	     * here, otherwise app callback may be called immediately (before
+	     * DNS AAAA query is sent) when DNS A record is available in the
+	     * cache.
+	     */
+	    if (af == pj_AF_UNSPEC())
+		query->object6 = (pj_dns_async_query*)0x1;
+
+	    status = pj_dns_resolver_start_query(resolver->res, 
+						 &query->naptr[0].name,
+						 PJ_DNS_TYPE_A, 0, 
+						 &dns_a_callback,
+    						 query, &query->object);
+	}
+
+	/* Resolve DNS AAAA record if address family is not fixed to IPv4 */
+	if (af != pj_AF_INET() && status == PJ_SUCCESS) {
+	    status = pj_dns_resolver_start_query(resolver->res, 
+						 &query->naptr[0].name,
+						 PJ_DNS_TYPE_AAAA, 0, 
+						 &dns_aaaa_callback,
+    						 query, &query->object6);
+	}
 
     } else {
 	pj_assert(!"Unexpected");
@@ -454,17 +524,39 @@ static void dns_a_callback(void *user_data,
 			   pj_dns_parsed_packet *pkt)
 {
     struct query *query = (struct query*) user_data;
-    pjsip_server_addresses srv;
-    pj_dns_a_record rec;
-    unsigned i;
+    pjsip_server_addresses *srv = &query->server;
 
-    rec.addr_count = 0;
+    /* Reset outstanding job */
+    query->object = NULL;
 
-    /* Parse the response */
     if (status == PJ_SUCCESS) {
-	status = pj_dns_parse_a_response(pkt, &rec);
-    }
+	pj_dns_addr_record rec;
+	unsigned i;
 
+	/* Parse the response */
+	rec.addr_count = 0;
+	status = pj_dns_parse_addr_response(pkt, &rec);
+
+	/* Build server addresses and call callback */
+	for (i = 0; i < rec.addr_count &&
+		    srv->count < PJSIP_MAX_RESOLVED_ADDRESSES; ++i)
+	{
+	    /* Should not happen, just in case */
+	    if (rec.addr[i].af != pj_AF_INET())
+		continue;
+
+	    srv->entry[srv->count].type = query->naptr[0].type;
+	    srv->entry[srv->count].priority = 0;
+	    srv->entry[srv->count].weight = 0;
+	    srv->entry[srv->count].addr_len = sizeof(pj_sockaddr_in);
+	    pj_sockaddr_in_init(&srv->entry[srv->count].addr.ipv4,
+				0, (pj_uint16_t)query->req.def_port);
+	    srv->entry[srv->count].addr.ipv4.sin_addr = rec.addr[i].ip.v4;
+
+	    ++srv->count;
+	}
+    }
+    
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -473,30 +565,79 @@ static void dns_a_callback(void *user_data,
 	PJ_LOG(4,(query->objname, "DNS A record resolution failed: %s", 
 		  errmsg));
 
-	/* Call the callback */
-	(*query->cb)(status, query->token, NULL);
-	return;
+	query->last_error = status;
     }
 
-    /* Build server addresses and call callback */
-    srv.count = 0;
-    for (i = 0; i < rec.addr_count &&
-		srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++i)
-    {
-	srv.entry[srv.count].type = query->naptr[0].type;
-	srv.entry[srv.count].priority = 0;
-	srv.entry[srv.count].weight = 0;
-	srv.entry[srv.count].addr_len = sizeof(pj_sockaddr_in);
-	pj_sockaddr_in_init(&srv.entry[srv.count].addr.ipv4,
-			    0, (pj_uint16_t)query->req.def_port);
-	srv.entry[srv.count].addr.ipv4.sin_addr.s_addr =
-	    rec.addr[i].s_addr;
+    /* Call the callback if all DNS queries have been completed */
+    if (query->object == NULL && query->object6 == NULL) {
+	if (srv->count > 0)
+	    (*query->cb)(PJ_SUCCESS, query->token, &query->server);
+	else
+	    (*query->cb)(query->last_error, query->token, NULL);
+    }
+}
 
-	++srv.count;
+
+/* 
+ * This callback is called when target is resolved with DNS AAAA query.
+ */
+static void dns_aaaa_callback(void *user_data,
+			      pj_status_t status,
+			      pj_dns_parsed_packet *pkt)
+{
+    struct query *query = (struct query*) user_data;
+    pjsip_server_addresses *srv = &query->server;
+
+    /* Reset outstanding job */
+    query->object6 = NULL;
+
+    if (status == PJ_SUCCESS) {
+	pj_dns_addr_record rec;
+	unsigned i;
+
+	/* Parse the response */
+	rec.addr_count = 0;
+	status = pj_dns_parse_addr_response(pkt, &rec);
+
+	/* Build server addresses and call callback */
+	for (i = 0; i < rec.addr_count &&
+		    srv->count < PJSIP_MAX_RESOLVED_ADDRESSES; ++i)
+	{
+	    /* Should not happen, just in case */
+	    if (rec.addr[i].af != pj_AF_INET6())
+		continue;
+
+	    srv->entry[srv->count].type = query->naptr[0].type |
+					  PJSIP_TRANSPORT_IPV6;
+	    srv->entry[srv->count].priority = 0;
+	    srv->entry[srv->count].weight = 0;
+	    srv->entry[srv->count].addr_len = sizeof(pj_sockaddr_in6);
+	    pj_sockaddr_init(pj_AF_INET6(), &srv->entry[srv->count].addr,
+			     0, (pj_uint16_t)query->req.def_port);
+	    srv->entry[srv->count].addr.ipv6.sin6_addr = rec.addr[i].ip.v6;
+
+	    ++srv->count;
+	}
+    }
+    
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+
+	/* Log error */
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(4,(query->objname, "DNS AAAA record resolution failed: %s", 
+		  errmsg));
+
+	query->last_error = status;
     }
 
-    /* Call the callback */
-    (*query->cb)(PJ_SUCCESS, query->token, &srv);
+    /* Call the callback if all DNS queries have been completed */
+    if (query->object == NULL && query->object6 == NULL) {
+	if (srv->count > 0)
+	    (*query->cb)(PJ_SUCCESS, query->token, &query->server);
+	else
+	    (*query->cb)(query->last_error, query->token, NULL);
+    }
 }
 
 
@@ -514,7 +655,7 @@ static void srv_resolver_cb(void *user_data,
 
 	/* Log error */
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS A record resolution failed: %s", 
+	PJ_LOG(4,(query->objname, "DNS A/AAAA record resolution failed: %s",
 		  errmsg));
 
 	/* Call the callback */
@@ -525,19 +666,28 @@ static void srv_resolver_cb(void *user_data,
     /* Build server addresses and call callback */
     srv.count = 0;
     for (i=0; i<rec->count; ++i) {
+	const pj_dns_addr_record *s = &rec->entry[i].server;
 	unsigned j;
 
-	for (j = 0; j < rec->entry[i].server.addr_count &&
+	for (j = 0; j < s->addr_count &&
 		    srv.count < PJSIP_MAX_RESOLVED_ADDRESSES; ++j)
 	{
 	    srv.entry[srv.count].type = query->naptr[0].type;
 	    srv.entry[srv.count].priority = rec->entry[i].priority;
 	    srv.entry[srv.count].weight = rec->entry[i].weight;
-	    srv.entry[srv.count].addr_len = sizeof(pj_sockaddr_in);
-	    pj_sockaddr_in_init(&srv.entry[srv.count].addr.ipv4,
-				0, (pj_uint16_t)rec->entry[i].port);
-	    srv.entry[srv.count].addr.ipv4.sin_addr.s_addr =
-		rec->entry[i].server.addr[j].s_addr;
+	    pj_sockaddr_init(s->addr[j].af,
+			     &srv.entry[srv.count].addr,
+			     0, (pj_uint16_t)rec->entry[i].port);
+	    if (s->addr[j].af == pj_AF_INET6())
+		srv.entry[srv.count].addr.ipv6.sin6_addr = s->addr[j].ip.v6;
+	    else
+		srv.entry[srv.count].addr.ipv4.sin_addr = s->addr[j].ip.v4;
+	    srv.entry[srv.count].addr_len =
+			    pj_sockaddr_get_len(&srv.entry[srv.count].addr);
+
+	    /* Update transport type if this is IPv6 */
+	    if (s->addr[j].af == pj_AF_INET6())
+		srv.entry[srv.count].type |= PJSIP_TRANSPORT_IPV6;
 
 	    ++srv.count;
 	}

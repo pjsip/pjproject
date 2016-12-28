@@ -87,6 +87,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->id, &src->id);
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
+    pj_strdup_with_null(pool, &dst->reg_contact_params,
+			&src->reg_contact_params);
     pj_strdup_with_null(pool, &dst->contact_params, &src->contact_params);
     pj_strdup_with_null(pool, &dst->contact_uri_params,
                         &src->contact_uri_params);
@@ -381,6 +383,9 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pj_array_insert(pjsua_var.acc_ids, sizeof(pjsua_var.acc_ids[0]),
 		    pjsua_var.acc_cnt, i, &acc_id);
 
+    if (acc_cfg->transport_id != PJSUA_INVALID_ID)
+	acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
+
     return PJ_SUCCESS;
 }
 
@@ -512,6 +517,8 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     const char *beginquote, *endquote;
     char transport_param[32];
     char uri[PJSIP_MAX_URL_SIZE];
+    pjsua_acc_id acc_id;
+    pj_status_t status;
 
     /* ID must be valid */
     PJ_ASSERT_RETURN(tid>=0 && tid<(int)PJ_ARRAY_SIZE(pjsua_var.tpdata), 
@@ -554,7 +561,14 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 
     cfg.id = pj_str(uri);
     
-    return pjsua_acc_add(&cfg, is_default, p_acc_id);
+    status = pjsua_acc_add(&cfg, is_default, &acc_id);
+    if (status == PJ_SUCCESS) {
+	pjsua_var.acc[acc_id].tp_type = t->type;
+	if (p_acc_id)
+	    *p_acc_id = acc_id;
+    }
+
+    return status;
 }
 
 
@@ -980,6 +994,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 			    &cfg->force_contact);
 	update_reg = PJ_TRUE;
 	unreg_first = PJ_TRUE;
+    }
+
+    /* Register contact params */
+    if (pj_strcmp(&acc->cfg.reg_contact_params, &cfg->reg_contact_params)) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.reg_contact_params,
+			    &cfg->reg_contact_params);
+	update_reg = PJ_TRUE;
     }
 
     /* Contact param */
@@ -1465,35 +1486,49 @@ static void update_regc_contact(pjsua_acc *acc)
     need_outbound = PJ_TRUE;
 
 done:
-    if (!need_outbound) {
-	/* Outbound is not needed/wanted for the account. acc->reg_contact
-	 * is set to the same as acc->contact.
-	 */
-	acc->reg_contact = acc->contact;
-	acc->rfc5626_status = OUTBOUND_NA;
-    } else {
-	/* Need to use outbound, append the contact with +sip.instance and
-	 * reg-id parameters.
-	 */
+    {
 	pj_ssize_t len;
 	pj_str_t reg_contact;
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
-	len = acc->contact.slen + acc->rfc5626_instprm.slen +
-	      acc->rfc5626_regprm.slen;
-	reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
+	len = acc->contact.slen + acc->cfg.reg_contact_params.slen +
+	      (need_outbound?
+	       (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
+	if (len > acc->contact.slen) {
+	    reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
-	pj_strcpy(&reg_contact, &acc->contact);
-	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
-	pj_strcat(&reg_contact, &acc->rfc5626_instprm);
+	    pj_strcpy(&reg_contact, &acc->contact);
+	
+    	    if (need_outbound) {
+    	    	acc->rfc5626_status = OUTBOUND_WANTED;
 
-	acc->reg_contact = reg_contact;
+	    	/* Need to use outbound, append the contact with
+	    	 * +sip.instance and reg-id parameters.
+	     	 */
+	    	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
+	    	pj_strcat(&reg_contact, &acc->rfc5626_instprm);
+	    } else {
+	    	acc->rfc5626_status = OUTBOUND_NA;
+	    }
 
-	PJ_LOG(4,(THIS_FILE,
-		  "Contact for acc %d updated for SIP outbound: %.*s",
-		  acc->index,
-		  (int)acc->reg_contact.slen,
-		  acc->reg_contact.ptr));
+	    pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
+	    
+	    acc->reg_contact = reg_contact;
+
+	    PJ_LOG(4,(THIS_FILE,
+		      "Contact for acc %d updated: %.*s",
+		      acc->index,
+		      (int)acc->reg_contact.slen,
+		      acc->reg_contact.ptr));
+
+	} else {
+	     /* Outbound is not needed/wanted for the account and there's
+	      * no custom registration Contact params. acc->reg_contact
+	      * is set to the same as acc->contact.
+	      */
+	     acc->reg_contact = acc->contact;
+	     acc->rfc5626_status = OUTBOUND_NA;
+	}
     }
 }
 
@@ -1532,7 +1567,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pjsip_sip_uri *uri;
     pjsip_via_hdr *via;
     pj_sockaddr contact_addr;
-    pj_sockaddr recv_addr;
+    pj_sockaddr recv_addr = {{0}};
     pj_status_t status;
     pj_bool_t matched;
     pj_str_t srv_ip;
@@ -1645,8 +1680,12 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
 				   &recv_addr);
     if (status == PJ_SUCCESS) {
-	/* Compare the addresses as sockaddr according to the ticket above */
-	matched = (uri->port == rport &&
+	/* Compare the addresses as sockaddr according to the ticket above,
+	 * but only if they have the same family (ipv4 vs ipv4, or
+	 * ipv6 vs ipv6)
+	 */
+	matched = (contact_addr.addr.sa_family != recv_addr.addr.sa_family) ||
+	          (uri->port == rport &&
 		   pj_sockaddr_cmp(&contact_addr, &recv_addr)==0);
     } else {
 	/* Compare the addresses as string, as before */
@@ -1940,7 +1979,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     /* Send raw packet */
     status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-				  PJSIP_TRANSPORT_UDP, &tp_sel,
+				  acc->ka_transport->key.type, &tp_sel,
 				  NULL, acc->cfg.ka_data.ptr, 
 				  acc->cfg.ka_data.slen, 
 				  &acc->ka_target, acc->ka_target_len,
@@ -2007,7 +2046,8 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	 */
 	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
 	    acc->cfg.ka_interval == 0 ||
-	    param->rdata->tp_info.transport->key.type != PJSIP_TRANSPORT_UDP)
+	    (param->rdata->tp_info.transport->key.type &  
+	     ~PJSIP_TRANSPORT_IPV6)!= PJSIP_TRANSPORT_UDP)
 	{
 	    /* Keep alive is not necessary */
 	    return;
@@ -2287,7 +2327,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	pjsip_regc_get_info(param->regc, &rinfo);
 	reg_info.cbparam = param;
 	reg_info.regc = param->regc;
-	reg_info.renew = (rinfo.interval != 0);
+	reg_info.renew = !param->is_unreg;
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
     
@@ -2475,12 +2515,27 @@ static pj_status_t pjsua_regc_init(int acc_id)
     return PJ_SUCCESS;
 }
 
+pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return (acc->tp_type & PJSIP_TRANSPORT_IPV6) == PJSIP_TRANSPORT_IPV6;
+}
+
 pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
     return acc->cfg.sip_stun_use != PJSUA_STUN_USE_DISABLED &&
-	    pjsua_var.ua_cfg.stun_srv_cnt != 0;
+	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
+}
+
+pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.media_stun_use != PJSUA_STUN_USE_DISABLED &&
+	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
 }
 
 /*
@@ -2906,15 +2961,10 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
 	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
-
-	    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-		pjsip_transport_type_e type;
-		type = pjsip_transport_get_type_from_name(&sip_uri->transport_param);
-		if (type == PJSIP_TRANSPORT_UNSPECIFIED)
-		    type = PJSIP_TRANSPORT_UDP;
-
-		if (pjsua_var.tpdata[acc->cfg.transport_id].type != type)
-		    continue;
+	    if (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED &&
+		acc->tp_type != rdata->tp_info.transport->key.type)
+	    {
+		continue;
 	    }
 
 	    /* Match ! */
@@ -3018,8 +3068,8 @@ static int get_ip_addr_ver(const pj_str_t *host)
     pj_in_addr dummy;
     pj_in6_addr dummy6;
 
-    /* First check with inet_aton() */
-    if (pj_inet_aton(host, &dummy) > 0)
+    /* First check if this is an IPv4 address */
+    if (pj_inet_pton(pj_AF_INET(), host, &dummy) == PJ_SUCCESS)
 	return 4;
 
     /* Then check if this is an IPv6 address */
@@ -3087,11 +3137,12 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
-    /* If destination URI specifies IPv6, then set transport type
-     * to use IPv6 as well.
+    /* If destination URI specifies IPv6 or account is configured to use IPv6,
+     * then set transport type to use IPv6 as well.
      */
-    if (pj_strchr(&sip_uri->host, ':'))
-	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+    if (pj_strchr(&sip_uri->host, ':') || pjsua_sip_acc_is_using_ipv6(acc_id))
+	tp_type = (pjsip_transport_type_e)(((int)tp_type) |
+	 	  PJSIP_TRANSPORT_IPV6);
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
 
@@ -3152,10 +3203,26 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 
 	if (status == PJ_SUCCESS) {
 	    unsigned cnt=1;
-	    int af;
+	    int af = pj_AF_UNSPEC();
 
-	    af = (dinfo.type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
+	    if (pjsua_sip_acc_is_using_ipv6(acc_id) ||
+		(dinfo.type & PJSIP_TRANSPORT_IPV6))
+	    {
+		af = pj_AF_INET6();
+	    }
 	    status = pj_getaddrinfo(af, &dinfo.addr.host, &cnt, &ai);
+	    if (cnt == 0) {
+		status = PJ_ENOTSUP;
+	    } else if ((dinfo.type & PJSIP_TRANSPORT_IPV6)==0 &&
+			ai.ai_addr.addr.sa_family == pj_AF_INET6())
+	    {
+		/* Destination is a hostname and account is not bound to IPv6,
+		 * but hostname resolution reveals that it has IPv6 address,
+		 * so let's use IPv6 transport type.
+		 */
+		dinfo.type |= PJSIP_TRANSPORT_IPV6;
+		tp_type |= PJSIP_TRANSPORT_IPV6;
+	    }
 	}
 
 	if (status == PJ_SUCCESS) {
@@ -3401,11 +3468,17 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     if (tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	return PJSIP_EUNSUPTRANSPORT;
 
-    /* If destination URI specifies IPv6, then set transport type
-     * to use IPv6 as well.
+    /* If destination URI specifies IPv6 or account is configured to use IPv6
+     * or the transport being used to receive data is an IPv6 transport,
+     * then set transport type to use IPv6 as well.
      */
-    if (pj_strchr(&sip_uri->host, ':'))
-	tp_type = (pjsip_transport_type_e)(((int)tp_type) + PJSIP_TRANSPORT_IPV6);
+    if (pj_strchr(&sip_uri->host, ':') ||
+	pjsua_sip_acc_is_using_ipv6(acc_id) ||
+	(rdata->tp_info.transport->key.type & PJSIP_TRANSPORT_IPV6))
+    {
+	tp_type = (pjsip_transport_type_e)
+		  (((int)tp_type) | PJSIP_TRANSPORT_IPV6);
+    }
 
     flag = pjsip_transport_get_flag_from_type(tp_type);
     secure = (flag & PJSIP_TRANSPORT_SECURE) != 0;
@@ -3489,6 +3562,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 		     PJ_EINVAL);
     
     acc->cfg.transport_id = tp_id;
+    acc->tp_type = pjsua_var.tpdata[tp_id].type;
 
     return PJ_SUCCESS;
 }

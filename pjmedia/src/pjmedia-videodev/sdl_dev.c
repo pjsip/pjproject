@@ -634,7 +634,7 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
 static pj_status_t sdl_destroy(void *data)
 {
     struct sdl_stream *strm = (struct sdl_stream *)data;
-
+     
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->texture) {
 	glDeleteTextures(1, &strm->texture);
@@ -652,14 +652,13 @@ static pj_status_t sdl_destroy(void *data)
     if (strm->renderer) {
         SDL_DestroyRenderer(strm->renderer);
         strm->renderer = NULL;
-    }
-
+    }    
     return PJ_SUCCESS;
 }
 
 static pj_status_t sdl_destroy_all(void *data)
 {
-    struct sdl_stream *strm = (struct sdl_stream *)data;
+    struct sdl_stream *strm = (struct sdl_stream *)data;  
 
     sdl_destroy(data);
 #if !defined(TARGET_OS_IPHONE) || TARGET_OS_IPHONE == 0
@@ -670,48 +669,14 @@ static pj_status_t sdl_destroy_all(void *data)
     }
     strm->window = NULL;
 #endif /* TARGET_OS_IPHONE */
-
     return PJ_SUCCESS;
 }
 
-static pj_status_t sdl_create_rend(struct sdl_stream * strm,
-                                   pjmedia_format *fmt)
+static pj_status_t sdl_create_window(struct sdl_stream *strm, 
+				     pj_bool_t use_app_win,
+				     Uint32 sdl_format,
+				     pjmedia_vid_dev_hwnd *hwnd)
 {
-    sdl_fmt_info *sdl_info;
-    const pjmedia_video_format_info *vfi;
-    pjmedia_video_format_detail *vfd;
-
-    sdl_info = get_sdl_format_info(fmt->id);
-    vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
-                                        fmt->id);
-    if (!vfi || !sdl_info)
-        return PJMEDIA_EVID_BADFORMAT;
-
-    strm->vafp.size = fmt->det.vid.size;
-    strm->vafp.buffer = NULL;
-    if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS)
-        return PJMEDIA_EVID_BADFORMAT;
-
-    vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
-    strm->rect.x = strm->rect.y = 0;
-    strm->rect.w = (Uint16)vfd->size.w;
-    strm->rect.h = (Uint16)vfd->size.h;
-    if (strm->param.disp_size.w == 0)
-        strm->param.disp_size.w = strm->rect.w;
-    if (strm->param.disp_size.h == 0)
-        strm->param.disp_size.h = strm->rect.h;
-    strm->dstrect.x = strm->dstrect.y = 0;
-    strm->dstrect.w = (Uint16)strm->param.disp_size.w;
-    strm->dstrect.h = (Uint16)strm->param.disp_size.h;
-
-    sdl_destroy(strm);
-
-#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-    if (strm->param.rend_id == OPENGL_DEV_IDX) {
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
-    }
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-
     if (!strm->window) {
         Uint32 flags = 0;
         
@@ -736,12 +701,10 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-
-        if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
-            /* Use the window supplied by the application. */
-	    strm->window = SDL_CreateWindowFrom(
-                               strm->param.window.info.window);
+#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */	
+	if (use_app_win) {
+            /* Use the window supplied by the application. */	    
+	    strm->window = SDL_CreateWindowFrom(hwnd->info.window);
 	    if (!strm->window) {
 		sdl_log_err("SDL_CreateWindowFrom()");
 		return PJMEDIA_EVID_SYSERR;
@@ -812,7 +775,7 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
     } else
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
     {    
-        strm->scr_tex = SDL_CreateTexture(strm->renderer, sdl_info->sdl_format,
+        strm->scr_tex = SDL_CreateTexture(strm->renderer, sdl_format,
                                           SDL_TEXTUREACCESS_STREAMING,
                                           strm->rect.w, strm->rect.h);
         if (strm->scr_tex == NULL) {
@@ -820,10 +783,53 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
             return PJMEDIA_EVID_SYSERR;
         }
     
-        strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_info->sdl_format);
+        strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_format);
     }
 
     return PJ_SUCCESS;
+}
+
+static pj_status_t sdl_create_rend(struct sdl_stream * strm,
+                                   pjmedia_format *fmt)
+{
+    sdl_fmt_info *sdl_info;
+    const pjmedia_video_format_info *vfi;
+    pjmedia_video_format_detail *vfd;
+
+    sdl_info = get_sdl_format_info(fmt->id);
+    vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
+                                        fmt->id);
+    if (!vfi || !sdl_info)
+        return PJMEDIA_EVID_BADFORMAT;
+
+    strm->vafp.size = fmt->det.vid.size;
+    strm->vafp.buffer = NULL;
+    if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS)
+        return PJMEDIA_EVID_BADFORMAT;
+
+    vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
+    strm->rect.x = strm->rect.y = 0;
+    strm->rect.w = (Uint16)vfd->size.w;
+    strm->rect.h = (Uint16)vfd->size.h;
+    if (strm->param.disp_size.w == 0)
+        strm->param.disp_size.w = strm->rect.w;
+    if (strm->param.disp_size.h == 0)
+        strm->param.disp_size.h = strm->rect.h;
+    strm->dstrect.x = strm->dstrect.y = 0;
+    strm->dstrect.w = (Uint16)strm->param.disp_size.w;
+    strm->dstrect.h = (Uint16)strm->param.disp_size.h;
+
+    sdl_destroy(strm);
+
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->param.rend_id == OPENGL_DEV_IDX) {
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+    }
+#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
+    return sdl_create_window(strm, 
+			 (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW),
+			 sdl_info->sdl_format,
+			 &strm->param.window);
 }
 
 static pj_status_t sdl_create(void *data)
@@ -1165,6 +1171,20 @@ static pj_status_t set_cap(void *data)
 
 	SDL_SetWindowSize(strm->window, new_size->w, new_size->h);
         return resize_disp(strm, new_size);
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
+	pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*)pval;
+	pj_status_t status = PJ_SUCCESS;
+	sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
+	/* Re-init SDL */
+	status = sdl_destroy_all(strm);
+	if (status != PJ_SUCCESS)
+	    return status;	
+
+	status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
+        PJ_LOG(4, (THIS_FILE, "Re-initializing SDL with native window"
+        		      " %d: %s", hwnd->info.window,
+                              (status == PJ_SUCCESS? "success": "failed")));
+	return status;	
     }
 
     return PJMEDIA_EVID_INVCAP;

@@ -55,6 +55,8 @@
 #define PJ_HAS_WINSOCK_H	    0
 #define PJ_HAS_WINSOCK2_H	    0
 
+#define PJ_HAS_LOCALTIME_R	    1
+
 #define PJ_SOCK_HAS_INET_ATON	    1
 
 /* Set 1 if native sockaddr_in has sin_len member. 

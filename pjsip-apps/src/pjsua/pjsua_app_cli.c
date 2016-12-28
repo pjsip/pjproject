@@ -1088,7 +1088,7 @@ static pj_status_t cmd_set_presence_text(pj_cli_cmd_val *cval)
 	AVAILABLE, BUSY, OTP, IDLE, AWAY, BRB, OFFLINE, OPT_MAX
     };
 
-    choice = pj_strtol(&cval->argv[1]) - 1;
+    choice = (int)pj_strtol(&cval->argv[1]) - 1;
 
     pj_bzero(&elem, sizeof(elem));
     elem.type = PJRPID_ELEMENT_TYPE_PERSON;
@@ -1247,11 +1247,11 @@ static pj_status_t cmd_media_connect(pj_cli_cmd_val *cval, pj_bool_t connect)
     pj_status_t status;
 
     if (connect)
-	status = pjsua_conf_connect(pj_strtol(&cval->argv[1]),
-				    pj_strtol(&cval->argv[2]));
+	status = pjsua_conf_connect((int)pj_strtol(&cval->argv[1]),
+				    (int)pj_strtol(&cval->argv[2]));
     else
-	status = pjsua_conf_disconnect(pj_strtol(&cval->argv[1]),
-				       pj_strtol(&cval->argv[2]));
+	status = pjsua_conf_disconnect((int)pj_strtol(&cval->argv[1]),
+				       (int)pj_strtol(&cval->argv[2]));
 
     if (status == PJ_SUCCESS) {
 	static const pj_str_t success_msg = {"Success\n", 9};
@@ -1305,7 +1305,7 @@ static pj_status_t cmd_set_codec_prio(pj_cli_cmd_val *cval)
     int new_prio;
     pj_status_t status;
 
-    new_prio = pj_strtol(&cval->argv[2]);
+    new_prio = (int)pj_strtol(&cval->argv[2]);
     if (new_prio < 0)
 	new_prio = 0;
     else if (new_prio > PJMEDIA_CODEC_PRIO_HIGHEST)
@@ -1516,7 +1516,7 @@ static pj_status_t cmd_make_multi_call(pj_cli_cmd_val *cval)
 		     "(You currently have %d calls)\n",
 		     pjsua_call_get_count());
 
-    count = pj_strtol(&cval->argv[1]);
+    count = (int)pj_strtol(&cval->argv[1]);
     if (count < 1)
 	return PJ_SUCCESS;
 
@@ -1576,7 +1576,7 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
 	pj_str_t hvalue;
 	pjsip_generic_string_hdr hcontact;
 
-	st_code = pj_strtol(&cval->argv[1]);
+	st_code = (int)pj_strtol(&cval->argv[1]);
 	if ((st_code < 100) || (st_code > 699))
 	    return PJ_SUCCESS;
 
@@ -1849,7 +1849,7 @@ static pj_status_t cmd_redirect_call(pj_cli_cmd_val *cval)
 	enum {
 	    ACCEPT_REPLACE, ACCEPT, REJECT, STOP
 	};
-	int choice = pj_strtol(&cval->argv[1]);
+	int choice = (int)pj_strtol(&cval->argv[1]);
 
 	switch (choice) {
 	case ACCEPT_REPLACE:
@@ -2549,7 +2549,7 @@ static pj_status_t cmd_sleep_handler(pj_cli_cmd_val *cval)
 {
     int delay;
 
-    delay = pj_strtoul(&cval->argv[1]);
+    delay = (int)pj_strtoul(&cval->argv[1]);
     if (delay < 0) delay = 0;
     pj_thread_sleep(delay);
 

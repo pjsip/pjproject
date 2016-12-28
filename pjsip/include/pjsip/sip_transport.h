@@ -799,6 +799,8 @@ struct pjsip_transport
     
     pjsip_endpoint	   *endpt;	    /**< Endpoint instance.	    */
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
+    pjsip_tpfactory	   *factory;	    /**< Factory instance. Note: it
+					         may be invalid/shutdown.   */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
 
     pj_timestamp	    last_recv_ts;   /**< Last time receiving data.  */
@@ -992,6 +994,7 @@ struct pjsip_tpfactory
     pjsip_transport_type_e  type;	    /**< Transport type.	*/
     char		   *type_name;      /**< Type string name.	*/
     unsigned		    flag;	    /**< Transport flag.	*/
+    char		   *info;	    /**< Transport info/description.*/
 
     pj_sockaddr		    local_addr;	    /**< Bound address.		*/
     pjsip_host_port	    addr_name;	    /**< Published name.	*/

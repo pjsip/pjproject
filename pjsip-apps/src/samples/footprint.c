@@ -341,7 +341,7 @@ int dummy_function()
     pjsip_ua_init_module(NULL, NULL);
     pjsip_ua_destroy();
     pjsip_dlg_create_uac(NULL, NULL, NULL, NULL, NULL, NULL);
-    pjsip_dlg_create_uas(NULL, NULL, NULL, NULL);
+    pjsip_dlg_create_uas_and_inc_lock(NULL, NULL, NULL, NULL);
     pjsip_dlg_terminate(NULL);
     pjsip_dlg_set_route_set(NULL, NULL);
     pjsip_dlg_create_request(NULL, NULL, -1, NULL);

@@ -149,6 +149,21 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
 					    const void **payload,
 					    unsigned *payloadlen)
 {
+    pjmedia_rtp_dec_hdr dec_hdr;
+
+    return pjmedia_rtp_decode_rtp2(ses, pkt, pkt_len, hdr, &dec_hdr, 
+				   payload, payloadlen);
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
+					    pjmedia_rtp_session *ses,
+					    const void *pkt, int pkt_len,
+					    const pjmedia_rtp_hdr **hdr,
+					    pjmedia_rtp_dec_hdr *dec_hdr,
+					    const void **payload,
+					    unsigned *payloadlen)
+{
     int offset;
 
     PJ_UNUSED_ARG(ses);
@@ -164,11 +179,16 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
     /* Payload is located right after header plus CSRC */
     offset = sizeof(pjmedia_rtp_hdr) + ((*hdr)->cc * sizeof(pj_uint32_t));
 
-    /* Adjust offset if RTP extension is used. */
+    /* Decode RTP extension. */
     if ((*hdr)->x) {
-	pjmedia_rtp_ext_hdr *ext = (pjmedia_rtp_ext_hdr*) 
-				    (((pj_uint8_t*)pkt) + offset);
-	offset += ((pj_ntohs(ext->length)+1) * sizeof(pj_uint32_t));
+        dec_hdr->ext_hdr = (pjmedia_rtp_ext_hdr*)(((pj_uint8_t*)pkt) + offset);
+        dec_hdr->ext = (pj_uint32_t*)(dec_hdr->ext_hdr + 1);
+        dec_hdr->ext_len = pj_ntohs((dec_hdr->ext_hdr)->length);
+        offset += ((dec_hdr->ext_len + 1) * sizeof(pj_uint32_t));
+    } else {
+	dec_hdr->ext_hdr = NULL;
+	dec_hdr->ext = NULL;
+	dec_hdr->ext_len = 0;
     }
 
     /* Check that offset is less than packet size */

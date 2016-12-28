@@ -140,15 +140,26 @@ typedef pj_status_t (*pjmedia_snd_rec_cb)(/* in */   void *user_data,
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory);
-
+PJ_INLINE(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
+{
+    /* This function is inlined to avoid pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+    return pjmedia_aud_subsys_init(factory);
+}
 
 /**
  * Get the number of devices detected by the library.
  *
  * @return		Number of devices.
  */
-PJ_DECL(int) pjmedia_snd_get_dev_count(void);
+PJ_INLINE(int) pjmedia_snd_get_dev_count(void)
+{
+    /* This function is inlined to avoid pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+    return (int)pjmedia_aud_dev_count();
+}
 
 
 /**
@@ -323,7 +334,13 @@ PJ_DECL(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream);
  *
  * @return		Zero on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_deinit(void);
+PJ_INLINE(pj_status_t) pjmedia_snd_deinit(void)
+{
+    /* This function is inlined to avoid pjmedia's dependency on
+     * pjmedia-audiodev.
+     */
+    return pjmedia_aud_subsys_shutdown();
+}
 
 
 

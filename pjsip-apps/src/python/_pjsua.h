@@ -1451,6 +1451,8 @@ static PyMemberDef PyObj_pjsua_transport_config_members[] =
         "       Voice traffic."
         "  4: PJ_QOS_TYPE_CONTROL"
         "       Control traffic."
+        "  5: PJ_QOS_TYPE_SIGNALLING"
+        "       Signalling traffic."
     },
     {
         "qos_params_flags", T_INT,

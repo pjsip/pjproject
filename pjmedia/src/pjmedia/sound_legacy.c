@@ -27,7 +27,6 @@
  */
 
 #include <pjmedia/sound.h>
-#include <pjmedia-audiodev/errno.h>
 #include <pj/assert.h>
 
 #if PJMEDIA_HAS_LEGACY_SOUND_API
@@ -49,20 +48,6 @@ struct pjmedia_snd_stream
     void		*user_user_data;
 };
 
-PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
-{
-    return pjmedia_aud_subsys_init(factory);
-}
-
-PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
-{
-    return pjmedia_aud_subsys_shutdown();
-}
-
-PJ_DEF(int) pjmedia_snd_get_dev_count(void)
-{
-    return pjmedia_aud_dev_count();
-}
 
 PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
 {
@@ -158,7 +143,7 @@ static pj_status_t open_stream( pjmedia_dir dir,
     }
 
     /* Create sound wrapper */
-    pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(),
+    pool = pj_pool_create(pjmedia_get_aud_subsys()->pf,
 			  "legacy-snd", 512, 512, NULL);
     snd_strm = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
     snd_strm->pool = pool;

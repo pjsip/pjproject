@@ -1215,8 +1215,13 @@ static void ui_send_dtmf_2833()
 	pj_status_t status;
 	char buf[128];
 
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0	    	
 	if (!simple_input("DTMF strings to send (0-9*R#A-B)", buf,
 	    sizeof(buf)))
+#else
+	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
+	    sizeof(buf)))
+#endif
 	{
 	    return;
 	}
@@ -1264,7 +1269,7 @@ static void ui_send_dtmf_info()
 	    char body[80];
 	    pjsua_msg_data msg_data_;
 
-	    pjsua_msg_data_init(&msg_data);
+	    pjsua_msg_data_init(&msg_data_);
 	    msg_data_.content_type = pj_str("application/dtmf-relay");
 
 	    pj_ansi_snprintf(body, sizeof(body),
@@ -1373,7 +1378,7 @@ static void ui_sleep(char menuin[])
 	    return;
 	}
 
-	delay = pj_strtoul(&tmp);
+	delay = (int)pj_strtoul(&tmp);
 	if (delay < 0) delay = 0;
 	pj_thread_sleep(delay);
     }

@@ -75,13 +75,11 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			types.o vid_codec.o vid_codec_util.o \
 			vid_port.o vid_stream.o vid_stream_info.o vid_tee.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
-			wsola.o
+			wsola.o audiodev.o videodev.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
 export PJMEDIA_CXXFLAGS += $(_CXXFLAGS)
-export PJMEDIA_LDFLAGS += $(PJMEDIA_VIDEODEV_LDLIB) \
-			  $(PJMEDIA_AUDIODEV_LDLIB) \
-			  $(PJLIB_LDLIB) \
+export PJMEDIA_LDFLAGS += $(PJLIB_LDLIB) \
 			  $(PJLIB_UTIL_LDLIB) \
 			  $(PJNATH_LDLIB) \
 			  $(_LDFLAGS)
@@ -97,7 +95,8 @@ export PJMEDIA_AUDIODEV_OBJS +=  audiodev.o audiotest.o errno.o \
 				 android_jni_dev.o opensl_dev.o
 export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
 export PJMEDIA_AUDIODEV_CXXFLAGS += $(_CXXFLAGS)
-export PJMEDIA_AUDIODEV_LDFLAGS += $(PJLIB_LDLIB) \
+export PJMEDIA_AUDIODEV_LDFLAGS += $(PJMEDIA_LDLIB) \
+				   $(PJLIB_LDLIB) \
 				   $(_LDFLAGS)
 
 
@@ -105,12 +104,13 @@ export PJMEDIA_AUDIODEV_LDFLAGS += $(PJLIB_LDLIB) \
 # Defines for building PJMEDIA-VIDEODEV library
 #
 export PJMEDIA_VIDEODEV_SRCDIR = ../src/pjmedia-videodev
-export PJMEDIA_VIDEODEV_OBJS +=  errno.o videodev.o avi_dev.o ffmpeg_dev.o \
+export PJMEDIA_VIDEODEV_OBJS += videodev.o errno.o avi_dev.o ffmpeg_dev.o \
 				colorbar_dev.o v4l2_dev.o opengl_dev.o \
 				util.o
 export PJMEDIA_VIDEODEV_CFLAGS += $(_CFLAGS)
 export PJMEDIA_VIDEODEV_CXXFLAGS += $(_CXXFLAGS)
-export PJMEDIA_VIDEODEV_LDFLAGS += $(PJLIB_LDLIB) \
+export PJMEDIA_VIDEODEV_LDFLAGS += $(PJMEDIA_LDLIB) \
+				   $(PJLIB_LDLIB) \
 				   $(_LDFLAGS)
 
 
@@ -138,7 +138,7 @@ export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o openh264.o \
 			h263_packetizer.o h264_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			ipp_codecs.o silk.o $(CODEC_OBJS) \
+			ipp_codecs.o silk.o opus.o $(CODEC_OBJS) \
                         g7221_sdp_match.o amr_sdp_match.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
@@ -160,8 +160,8 @@ export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
 			       $(PJMEDIA_VIDEODEV_LDLIB) \
-			       $(PJMEDIA_LDLIB) \
 			       $(PJMEDIA_AUDIODEV_LDLIB) \
+			       $(PJMEDIA_LDLIB) \
 			       $(PJLIB_LDLIB) \
 			       $(PJLIB_UTIL_LDLIB) \
 			       $(PJNATH_LDLIB) \
@@ -211,7 +211,7 @@ distclean: realclean
 
 pjmedia: $(PJMEDIA_LIB)
 $(PJMEDIA_SONAME): $(PJMEDIA_LIB)
-$(PJMEDIA_LIB) $(PJMEDIA_SONAME): $(PJMEDIA_AUDIODEV_LIB) $(PJMEDIA_AUDIODEV_SONAME) $(PJMEDIA_VIDEODEV_LIB) $(PJMEDIA_VIDEODEV_SONAME)
+$(PJMEDIA_LIB) $(PJMEDIA_SONAME):
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 pjmedia-codec: $(PJMEDIA_CODEC_LIB)
@@ -221,12 +221,12 @@ $(PJMEDIA_CODEC_LIB) $(PJMEDIA_CODEC_SONAME): $(PJMEDIA_LIB) $(PJMEDIA_SONAME)
 
 pjmedia-videodev: $(PJMEDIA_VIDEODEV_LIB)
 $(PJMEDIA_VIDEODEV_SONAME): $(PJMEDIA_VIDEODEV_LIB)
-$(PJMEDIA_VIDEODEV_LIB) $(PJMEDIA_VIDEODEV_SONAME):
+$(PJMEDIA_VIDEODEV_LIB) $(PJMEDIA_VIDEODEV_SONAME): $(PJMEDIA_LIB) $(PJMEDIA_SONAME)
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_VIDEODEV app=pjmedia-videodev $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 pjmedia-audiodev: $(PJMEDIA_AUDIODEV_LIB)
 $(PJMEDIA_AUDIODEV_SONAME): $(PJMEDIA_AUDIODEV_LIB)
-$(PJMEDIA_AUDIODEV_LIB) $(PJMEDIA_AUDIODEV_SONAME):
+$(PJMEDIA_AUDIODEV_LIB) $(PJMEDIA_AUDIODEV_SONAME): $(PJMEDIA_LIB) $(PJMEDIA_SONAME)
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 pjsdp: $(PJSDP_LIB)

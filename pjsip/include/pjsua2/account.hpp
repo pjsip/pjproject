@@ -70,6 +70,17 @@ struct AccountRegConfig : public PersistentObject
     SipHeaderVector	headers;
 
     /**
+     * Additional parameters that will be appended in the Contact header
+     * of the registration requests. This will be appended after
+     * \a AccountSipConfig.contactParams;
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    string	    	contactParams;
+
+    /**
      * Optional interval for registration, in seconds. If the value is zero,
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */
@@ -830,6 +841,21 @@ struct AccountVideoConfig : public PersistentObject
      * Default: 0 (follow codec maximum bitrate).
      */
     unsigned			rateControlBandwidth;
+
+    /**
+     * The number of keyframe to be sent after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_CNT
+     */
+    unsigned			    startKeyframeCount;
+
+    /**
+     * The keyframe sending interval after the stream is created.
+     *
+     * Default: PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
+     */
+    unsigned			    startKeyframeInterval;
+
 
 public:
     /**

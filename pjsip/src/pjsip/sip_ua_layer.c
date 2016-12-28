@@ -277,7 +277,7 @@ static struct dlg_set *alloc_dlgset_node(void)
 
 /*
  * Register new dialog. Called by pjsip_dlg_create_uac() and
- * pjsip_dlg_create_uas();
+ * pjsip_dlg_create_uas_and_inc_lock();
  */
 PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 					   pjsip_dialog *dlg )
@@ -412,6 +412,11 @@ PJ_DEF(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata )
     return (pjsip_dialog*) rdata->endpt_info.mod_data[mod_ua.mod.id];
 }
 
+PJ_DEF(pjsip_dialog*) pjsip_tdata_get_dlg( pjsip_tx_data *tdata )
+{
+    return (pjsip_dialog*) tdata->mod_data[mod_ua.mod.id];
+}
+
 PJ_DEF(pjsip_dialog*) pjsip_tsx_get_dlg( pjsip_transaction *tsx )
 {
     return (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
@@ -479,8 +484,14 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
     }
 
     /* Dialog has been found. It SHOULD have the right Call-ID!! */
-    PJ_ASSERT_ON_FAIL(pj_strcmp(&dlg->call_id->id, call_id)==0, 
-			{pj_mutex_unlock(mod_ua.mutex); return NULL;});
+    if (pj_strcmp(&dlg->call_id->id, call_id)!=0) {
+
+	PJ_LOG(6, (THIS_FILE, "Dialog not found: local and remote tags "
+		              "matched but not call id"));
+
+        pj_mutex_unlock(mod_ua.mutex);
+        return NULL;
+    }
 
     if (lock_dialog) {
 	if (pjsip_dlg_try_inc_lock(dlg) != PJ_SUCCESS) {

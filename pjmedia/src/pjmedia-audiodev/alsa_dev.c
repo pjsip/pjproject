@@ -348,8 +348,9 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
     n = hints;
     while (*n != NULL) {
 	char *name = snd_device_name_get_hint(*n, "NAME");
-	if (name != NULL && 0 != strcmp("null", name)) {
-	    add_dev(af, name);
+	if (name != NULL) {
+	    if (0 != strcmp("null", name))
+		add_dev(af, name);
 	    free(name);
 	}
 	n++;

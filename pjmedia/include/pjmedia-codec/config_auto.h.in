@@ -84,6 +84,11 @@
 #undef PJMEDIA_HAS_SILK_CODEC
 #endif
 
+/* OPUS codec */
+#ifndef PJMEDIA_HAS_OPUS_CODEC
+#undef PJMEDIA_HAS_OPUS_CODEC
+#endif
+
 #endif	/* __PJMEDIA_CODEC_CONFIG_AUTO_H_ */
 
 

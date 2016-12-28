@@ -767,7 +767,9 @@ public:
 
     /**
      * Select or change capture sound device. Application may call this
-     * function at any time to replace current sound device.
+     * function at any time to replace current sound device. Calling this 
+     * method will not change the state of the sound device (opened/closed).
+     * Note that this method will override the mode set by setSndDevMode().
      *
      * @param capture_dev   	Device ID of the capture device.
      */
@@ -775,7 +777,9 @@ public:
 
     /**
      * Select or change playback sound device. Application may call this
-     * function at any time to replace current sound device.
+     * function at any time to replace current sound device. Calling this 
+     * method will not change the state of the sound device (opened/closed).
+     * Note that this method will override the mode set by setSndDevMode().
      *
      * @param playback_dev   	Device ID of the playback device.
      */
@@ -805,6 +809,15 @@ public:
      *				own sound device or master port.
      */
     MediaPort *setNoDev();
+
+    /**
+     * Set sound device mode.
+     * 
+     * @param mode		The sound device mode, as bitmask combination 
+     *				of #pjsua_snd_dev_mode
+     *
+     */
+    void setSndDevMode(unsigned mode) const throw(Error);
 
     /**
      * Change the echo cancellation settings.

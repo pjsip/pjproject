@@ -61,6 +61,15 @@
 PJ_BEGIN_DECL
 
 
+/* Deprecated API pjsip_dlg_create_uas() due to a fatal bug of possible
+ * premature dialog destroy. Application should not change this setting,
+ * unless it uses single worker thread.
+ * See also https://trac.pjsip.org/repos/ticket/1902.
+ */
+#ifndef DEPRECATED_FOR_TICKET_1902
+#  define DEPRECATED_FOR_TICKET_1902      1
+#endif
+
 /**
  * This structure is used to describe dialog's participants, which in this
  * case is local party (i.e. us) and remote party.
@@ -240,6 +249,7 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 					   pjsip_dialog **p_dlg);
 
 
+#if !DEPRECATED_FOR_TICKET_1902
 /**
  * Initialize UAS dialog from the information found in the incoming request 
  * that creates a dialog (such as INVITE, REFER, or SUBSCRIBE), and set the 
@@ -279,6 +289,50 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uas(  pjsip_user_agent *ua,
 					    pjsip_rx_data *rdata,
 					    const pj_str_t *contact,
 					    pjsip_dialog **p_dlg);
+#endif
+
+
+/**
+ * Initialize UAS dialog from the information found in the incoming request 
+ * that creates a dialog (such as INVITE, REFER, or SUBSCRIBE), and set the 
+ * local Contact to contact. If contact is not specified, the local contact 
+ * is initialized from the URI in the To header in the request. 
+ *
+ * This function will also create UAS transaction for the incoming request,
+ * and associate the transaction to the rdata. Application can query the
+ * transaction used to handle this request by calling #pjsip_rdata_get_tsx()
+ * after this function returns.
+ *
+ * Note that initially, the session count in the dialog will be initialized 
+ * to 1 (one), and the dialog is locked. Application needs to explicitly call
+ * #pjsip_dlg_dec_lock() to release the lock and decrease the session count.
+ *
+ *
+ * @param ua		    The user agent module instance.
+ * @param rdata		    The incoming request that creates the dialog,
+ *			    such as INVITE, SUBSCRIBE, or REFER.
+ * @param contact	    Optional dialog local Contact to be put as Contact
+ *			    header value, hence the format must follow
+ *			    RFC 3261 Section 20.10:
+ *			    When the header field value contains a display 
+ *			    name, the URI including all URI parameters is 
+ *			    enclosed in "<" and ">".  If no "<" and ">" are 
+ *			    present, all parameters after the URI are header
+ *			    parameters, not URI parameters.  The display name 
+ *			    can be tokens, or a quoted string, if a larger 
+ *			    character set is desired.
+ *			    If this argument is NULL, the local contact will be
+ *			    initialized from the value of To header in the
+ *			    request.
+ * @param p_dlg		    Pointer to receive the dialog.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsip_dlg_create_uas_and_inc_lock(    pjsip_user_agent *ua,
+				      pjsip_rx_data *rdata,
+				      const pj_str_t *contact,
+				      pjsip_dialog **p_dlg);
 
 
 /**
@@ -361,8 +415,9 @@ PJ_DECL(pj_status_t) pjsip_dlg_terminate( pjsip_dialog *dlg );
  * for UAC dialog, before any request is sent. After dialog has been 
  * established, the route set can not be changed.
  *
- * For UAS dialog,the route set will be initialized in pjsip_dlg_create_uas()
- * from the Record-Route headers in the incoming request.
+ * For UAS dialog, the route set will be initialized in
+ * pjsip_dlg_create_uas_and_inc_lock() from the Record-Route headers in
+ * the incoming request.
  *
  * The route_set argument is standard list of Route headers (i.e. with 
  * sentinel).
@@ -500,6 +555,16 @@ PJ_DECL(void) pjsip_dlg_dec_lock( pjsip_dialog *dlg );
  * @return		    The dialog instance that "owns" the message.
  */
 PJ_DECL(pjsip_dialog*) pjsip_rdata_get_dlg( pjsip_rx_data *rdata );
+
+/**
+ * Get the dialog instance for the outgoing tdata. Returns NULL if the message
+ * wasn't sent from a dialog.
+ *
+ * @param tdata		    Outgoing message buffer.
+ *
+ * @return		    The dialog instance that "owns" the message.
+ */
+PJ_DECL(pjsip_dialog*) pjsip_tdata_get_dlg( pjsip_tx_data *tdata );
 
 /**
  * Get the associated dialog for the specified transaction, if any.

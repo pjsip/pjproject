@@ -872,6 +872,9 @@
 /** QoS backend for Symbian */
 #define PJ_QOS_SYMBIAN	    4
 
+/** QoS backend for Darwin */
+#define PJ_QOS_DARWIN	    5
+
 /**
  * Force the use of some QoS backend API for some platforms.
  */
@@ -914,6 +917,16 @@
  */
 #ifndef PJ_SSL_SOCK_OSSL_CIPHERS
 #  define PJ_SSL_SOCK_OSSL_CIPHERS   "HIGH:-COMPLEMENTOFDEFAULT"
+#endif
+
+
+/**
+ * Define the maximum number of curves supported by the secure socket.
+ *
+ * Default: 32
+ */
+#ifndef PJ_SSL_SOCK_MAX_CURVES
+#  define PJ_SSL_SOCK_MAX_CURVES   32
 #endif
 
 
@@ -1247,7 +1260,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR	2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	4
+#define PJ_VERSION_NUM_MINOR	5
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV	5

@@ -487,6 +487,8 @@ class TransportConfig:
                           Voice traffic.
                      4: PJ_QOS_TYPE_CONTROL
                           Control traffic.
+                     5: PJ_QOS_TYPE_SIGNALLING
+                          Signalling traffic.
     qos_params_flags    -- Determines which values to set, bitmask of pj_qos_flag.
                              PJ_QOS_PARAM_HAS_DSCP = 1
                              PJ_QOS_PARAM_HAS_SO_PRIO = 2

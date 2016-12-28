@@ -53,12 +53,21 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     pj_sockaddr hostip;
     char strbuf[100];
     pj_status_t status;
+    pj_bool_t use_ipv6 = flags & SERVER_IPV6;
 
     PJ_ASSERT_RETURN(stun_cfg && domain && p_test_srv, PJ_EINVAL);
 
-    status = pj_gethostip(pj_AF_INET(), &hostip);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (use_ipv6) {
+	/* pj_gethostip() may return IPv6 link-local and will cause EINVAL
+	 * error, so let's just hardcode it.
+	 */
+	pj_sockaddr_init(pj_AF_INET6(), &hostip, NULL, 0);
+	hostip.ipv6.sin6_addr.s6_addr[15] = 1;
+    } else {
+	status = pj_gethostip(GET_AF(use_ipv6), &hostip);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
     test_srv = (test_server*) PJ_POOL_ZALLOC_T(pool, test_server);
@@ -74,7 +83,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
     if (flags & CREATE_DNS_SERVER) {
 	status = pj_dns_server_create(mem, test_srv->stun_cfg->ioqueue,
-				      pj_AF_INET(), DNS_SERVER_PORT,
+				      GET_AF(use_ipv6), DNS_SERVER_PORT,
 				      0, &test_srv->dns_server);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
@@ -85,11 +94,17 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	if (flags & CREATE_A_RECORD_FOR_DOMAIN) {
 	    pj_dns_parsed_rr rr;
 	    pj_str_t res_name;
-	    pj_in_addr ip_addr;
 
 	    pj_strdup2(pool, &res_name, domain);
-	    ip_addr = hostip.ipv4.sin_addr;
-	    pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, &ip_addr);
+
+	    if (use_ipv6) {
+		pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				    &hostip.ipv6.sin6_addr);
+	    } else {		
+		pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				 &hostip.ipv4.sin_addr);
+	    }
+	    
 	    pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 	}
 
@@ -102,7 +117,8 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
 	stun_sock_cb.on_data_recvfrom = &stun_on_data_recvfrom;
 
-	pj_sockaddr_in_init(&bound_addr.ipv4, NULL, STUN_SERVER_PORT);
+	pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, 
+			 NULL, STUN_SERVER_PORT);
 
 	status = pj_activesock_create_udp(pool, &bound_addr, NULL, 
 					  test_srv->stun_cfg->ioqueue,
@@ -123,7 +139,6 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	if (test_srv->dns_server && (flags & CREATE_STUN_SERVER_DNS_SRV)) {
 	    pj_str_t res_name, target;
 	    pj_dns_parsed_rr rr;
-	    pj_in_addr ip_addr;
 
 	    /* Add DNS entries:
 	     *  _stun._udp.domain 60 IN SRV 0 0 PORT stun.domain.
@@ -140,8 +155,13 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	    pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
 	    res_name = target;
-	    ip_addr = hostip.ipv4.sin_addr;
-	    pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, &ip_addr);
+	    if (use_ipv6) {		
+		pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				    &hostip.ipv6.sin6_addr);
+	    } else {		
+		pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				 &hostip.ipv4.sin_addr);
+	    }
 	    pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 	}
 
@@ -154,7 +174,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
 	turn_sock_cb.on_data_recvfrom = &turn_on_data_recvfrom;
 
-	pj_sockaddr_in_init(&bound_addr.ipv4, NULL, TURN_SERVER_PORT);
+	pj_sockaddr_init(GET_AF(use_ipv6), &bound_addr, NULL, TURN_SERVER_PORT);
 
 	status = pj_activesock_create_udp(pool, &bound_addr, NULL, 
 					  test_srv->stun_cfg->ioqueue,
@@ -175,7 +195,6 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	if (test_srv->dns_server && (flags & CREATE_TURN_SERVER_DNS_SRV)) {
 	    pj_str_t res_name, target;
 	    pj_dns_parsed_rr rr;
-	    pj_in_addr ip_addr;
 
 	    /* Add DNS entries:
 	     *  _turn._udp.domain 60 IN SRV 0 0 PORT turn.domain.
@@ -192,8 +211,14 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	    pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 
 	    res_name = target;
-	    ip_addr = hostip.ipv4.sin_addr;
-	    pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, &ip_addr);
+	    
+	    if (use_ipv6) {		
+		pj_dns_init_aaaa_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				    &hostip.ipv6.sin6_addr);
+	    } else {		
+		pj_dns_init_a_rr(&rr, &res_name, PJ_DNS_CLASS_IN, 60, 
+				 &hostip.ipv4.sin_addr);
+	    }
 	    pj_dns_server_add_rec(test_srv->dns_server, 1, &rr);
 	}
     }
@@ -344,6 +369,7 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
     char client_info[PJ_INET6_ADDRSTRLEN+10];
     unsigned i;
     pj_ssize_t len;
+    pj_bool_t use_ipv6 = PJ_FALSE;
 
     if (status != PJ_SUCCESS)
 	return PJ_TRUE;
@@ -351,6 +377,7 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
     pj_sockaddr_print(src_addr, client_info, sizeof(client_info), 3);
 
     test_srv = (test_server*) pj_activesock_get_user_data(asock);
+    use_ipv6 = test_srv->flags & SERVER_IPV6;
     pool = pj_pool_create(test_srv->stun_cfg->pf, NULL, 512, 512, NULL);
 
     /* Find the client */
@@ -480,9 +507,23 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
 
 	alloc->pool = pj_pool_create(test_srv->stun_cfg->pf, "alloc", 512, 512, NULL);
 
-	/* Create relay socket */
-	pj_sockaddr_in_init(&alloc->alloc_addr.ipv4, NULL, 0);
-	pj_gethostip(pj_AF_INET(), &alloc->alloc_addr);
+	/* Create relay socket */	
+	pj_sockaddr_init(GET_AF(use_ipv6), &alloc->alloc_addr, NULL, 0);
+	if (use_ipv6) {
+	    /* pj_gethostip() may return IPv6 link-local and will cause EINVAL
+	     * error, so let's just hardcode it.
+	     */
+	    pj_sockaddr_init(pj_AF_INET6(), &alloc->alloc_addr, NULL, 0);
+	    alloc->alloc_addr.ipv6.sin6_addr.s6_addr[15] = 1;
+	} else {
+	    status = pj_gethostip(GET_AF(use_ipv6), &alloc->alloc_addr);
+	    if (status != PJ_SUCCESS) {
+		pj_pool_release(alloc->pool);
+		pj_stun_msg_create_response(pool, req, PJ_STUN_SC_SERVER_ERROR,
+					    NULL, &resp);
+		goto send_pkt;
+	    }
+	}
 
 	status = pj_activesock_create_udp(alloc->pool, &alloc->alloc_addr, NULL, 
 					  test_srv->stun_cfg->ioqueue,
@@ -697,6 +738,8 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
     pj_ssize_t sent;
     unsigned i;
 
+    PJ_UNUSED_ARG(addr_len);
+
     if (status != PJ_SUCCESS)
 	return PJ_TRUE;
 
@@ -707,10 +750,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 
     /* Check that this peer has a permission */
     for (i=0; i<alloc->perm_cnt; ++i) {
-	if (pj_sockaddr_get_len(&alloc->perm[i]) == (unsigned)addr_len &&
-	    pj_memcmp(pj_sockaddr_get_addr(&alloc->perm[i]),
-		      pj_sockaddr_get_addr(src_addr),
-		      addr_len) == 0)
+	if (pj_sockaddr_cmp(&alloc->perm[i], src_addr) == 0)
 	{
 	    break;
 	}

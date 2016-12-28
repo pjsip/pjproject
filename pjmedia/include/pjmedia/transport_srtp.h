@@ -155,7 +155,7 @@ typedef struct pjmedia_srtp_setting
     /**
      * Specify individual crypto suite setting.
      */
-    pjmedia_srtp_crypto		crypto[8];
+    pjmedia_srtp_crypto		crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
 
 } pjmedia_srtp_setting;
 

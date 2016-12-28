@@ -170,7 +170,7 @@ static void tls_perror(const char *sender, const char *title,
 
     pj_strerror(status, errmsg, sizeof(errmsg));
 
-    PJ_LOG(1,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
 }
 
 
@@ -309,12 +309,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 					        unsigned async_cnt,
 					        pjsip_tpfactory **p_factory)
 {
+    enum { INFO_LEN = 100 };
+    char local_addr[PJ_INET6_ADDRSTRLEN+10];
     pj_pool_t *pool;
     pj_bool_t is_ipv6;
     int af, sip_ssl_method;
     pj_uint32_t sip_ssl_proto;
     struct tls_listener *listener;
-    pj_ssl_sock_param ssock_param;
+    pj_ssl_sock_param ssock_param, newsock_param;
     pj_sockaddr *listener_addr;
     pj_bool_t has_listener;
     pj_status_t status;
@@ -375,10 +377,9 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.sock_af = af;
     ssock_param.cb.on_accept_complete = &on_accept_complete;
-    ssock_param.cb.on_data_read = &on_data_read;
-    ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = async_cnt;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
+    ssock_param.timer_heap = pjsip_endpt_get_timer_heap(endpt);    
     ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = listener;
@@ -390,6 +391,11 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
     ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
     ssock_param.ciphers = listener->tls_setting.ciphers;
+    ssock_param.curves_num = listener->tls_setting.curves_num;
+    ssock_param.curves = listener->tls_setting.curves;
+    ssock_param.sigalgs = listener->tls_setting.sigalgs;
+    ssock_param.entropy_type = listener->tls_setting.entropy_type;
+    ssock_param.entropy_path = listener->tls_setting.entropy_path;
     ssock_param.reuse_addr = listener->tls_setting.reuse_addr;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
@@ -444,9 +450,6 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
     }
 
-#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
-      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
-
     /* Check if certificate/CA list for SSL socket is set */
     if (listener->tls_setting.cert_file.slen ||
 	listener->tls_setting.ca_list_file.slen ||
@@ -461,7 +464,12 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 			&listener->cert);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+     }
 
+#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
+      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
+
+     if (listener->cert) {
 	status = pj_ssl_sock_set_certificate(listener->ssock, pool, 
 					     listener->cert);
 	if (status != PJ_SUCCESS)
@@ -473,9 +481,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
      */
     has_listener = PJ_FALSE;
 
-    status = pj_ssl_sock_start_accept(listener->ssock, pool, 
+    pj_memcpy(&newsock_param, &ssock_param, sizeof(newsock_param));
+    newsock_param.async_cnt = 1;
+    newsock_param.cb.on_data_read = &on_data_read;
+    newsock_param.cb.on_data_sent = &on_data_sent;
+    status = pj_ssl_sock_start_accept2(listener->ssock, pool, 
 			  (pj_sockaddr_t*)listener_addr, 
-			  pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr));
+			  pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr),
+			  &newsock_param);
     if (status == PJ_SUCCESS || status == PJ_EPENDING) {
 	pj_ssl_sock_info info;
 	has_listener = PJ_TRUE;
@@ -542,6 +555,19 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	listener->is_registered = PJ_FALSE;
 	goto on_error;
     }
+
+    /* Set transport info. */
+    if (listener->factory.info == NULL) {
+	listener->factory.info = (char*) pj_pool_alloc(listener->factory.pool,
+						       INFO_LEN);
+    }
+    pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
+    pj_ansi_snprintf( 
+	listener->factory.info, INFO_LEN, "tls %s [published as %.*s:%d]",
+	local_addr,
+	(int)listener->factory.addr_name.host.slen,
+	listener->factory.addr_name.host.ptr,
+	listener->factory.addr_name.port);
 
     if (has_listener) {
 	PJ_LOG(4,(listener->factory.obj_name, 
@@ -739,6 +765,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.send_msg = &tls_send_msg;
     tls->base.do_shutdown = &tls_shutdown;
     tls->base.destroy = &tls_destroy_transport;
+    tls->base.factory = &listener->factory;
 
     tls->ssock = ssock;
 
@@ -1036,6 +1063,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
+    ssock_param.timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
     ssock_param.server_name = remote_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
@@ -1047,6 +1075,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
     ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
     ssock_param.ciphers = listener->tls_setting.ciphers;
+    ssock_param.curves_num = listener->tls_setting.curves_num;
+    ssock_param.curves = listener->tls_setting.curves;
+    ssock_param.sigalgs = listener->tls_setting.sigalgs;
+    ssock_param.entropy_type = listener->tls_setting.entropy_type;
+    ssock_param.entropy_path = listener->tls_setting.entropy_path;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
@@ -1291,7 +1324,8 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     } else {
 	/* Start keep-alive timer */
 	if (pjsip_cfg()->tls.keep_alive_interval) {
-	    pj_time_val delay = {pjsip_cfg()->tls.keep_alive_interval, 0};
+	    pj_time_val delay = {0};	    
+	    delay.sec = pjsip_cfg()->tls.keep_alive_interval;
 	    pjsip_endpt_schedule_timer(listener->endpt, 
 				       &tls->ka_timer, 
 				       &delay);
@@ -1765,7 +1799,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     /* Start keep-alive timer */
     if (pjsip_cfg()->tls.keep_alive_interval) {
-	pj_time_val delay = { pjsip_cfg()->tls.keep_alive_interval, 0 };
+	pj_time_val delay = {0};	    
+	delay.sec = pjsip_cfg()->tls.keep_alive_interval;
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;

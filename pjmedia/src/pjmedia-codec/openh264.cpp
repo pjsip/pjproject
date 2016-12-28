@@ -163,8 +163,8 @@ typedef struct oh264_codec_data
 
 struct SLayerPEncCtx
 {
-  pj_int32_t			iDLayerQp;
-  SSliceConfig			sSliceCfg;
+    pj_int32_t			iDLayerQp;
+    SSliceArgument		sSliceArgument;
 };
 
 PJ_DEF(pj_status_t) pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr *mgr,
@@ -470,18 +470,19 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
      */
 
     /* Init encoder parameters */
-    pj_bzero(&eprm, sizeof(eprm));
-    eprm.iInputCsp			= videoFormatI420;
+    oh264_data->enc->GetDefaultParams (&eprm);
+    eprm.iComplexityMode    		= MEDIUM_COMPLEXITY;
     eprm.sSpatialLayers[0].uiProfileIdc	= PRO_BASELINE;
     eprm.iPicWidth			= param->enc_fmt.det.vid.size.w;
+    eprm.iUsageType         		= CAMERA_VIDEO_REAL_TIME;
     eprm.iPicHeight			= param->enc_fmt.det.vid.size.h;
     eprm.fMaxFrameRate			= (param->enc_fmt.det.vid.fps.num *
 					   1.0f /
 					   param->enc_fmt.det.vid.fps.denum);
-    eprm.uiFrameToBeCoded		= (unsigned int) -1;
     eprm.iTemporalLayerNum		= 1;
     eprm.uiIntraPeriod			= 0; /* I-Frame interval in frames */
-    eprm.bEnableSpsPpsIdAddition	= (oh264_data->whole? false : true);
+    eprm.eSpsPpsIdStrategy      	= (oh264_data->whole ? CONSTANT_ID :
+    					   INCREASING_ID);
     eprm.bEnableFrameCroppingFlag	= true;
     eprm.iLoopFilterDisableIdc		= 0;
     eprm.iLoopFilterAlphaC0Offset	= 0;
@@ -504,18 +505,21 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
 
     pj_bzero(&elayer_ctx, sizeof (SLayerPEncCtx));
     elayer_ctx.iDLayerQp		= 24;
-    elayer_ctx.sSliceCfg.uiSliceMode	= (oh264_data->whole ?
-					    SM_SINGLE_SLICE : SM_DYN_SLICE);
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceNum      = 1;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[0] = 960;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[1] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[2] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[3] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[4] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[5] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[6] = 0;
-    elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[7] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMode = (oh264_data->whole ?
+                                             SM_SINGLE_SLICE : 
+                                             SM_SIZELIMITED_SLICE);
+
+    /* uiSliceSizeConstraint = uiMaxNalSize - NAL_HEADER_ADD_0X30BYTES */
+    elayer_ctx.sSliceArgument.uiSliceSizeConstraint = param->enc_mtu - 50;
+    elayer_ctx.sSliceArgument.uiSliceNum      = 1;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[0] = 960;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[1] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[2] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[3] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[4] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[5] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[6] = 0;
+    elayer_ctx.sSliceArgument.uiSliceMbNum[7] = 0;
 
     elayer->iVideoWidth			= eprm.iPicWidth;
     elayer->iVideoHeight		= eprm.iPicHeight;
@@ -523,14 +527,14 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     elayer->uiProfileIdc		= eprm.sSpatialLayers[0].uiProfileIdc;
     elayer->iSpatialBitrate		= eprm.iTargetBitrate;
     elayer->iDLayerQp			= elayer_ctx.iDLayerQp;
-    elayer->sSliceCfg.uiSliceMode	= elayer_ctx.sSliceCfg.uiSliceMode;
+    elayer->sSliceArgument.uiSliceMode = elayer_ctx.sSliceArgument.uiSliceMode;
 
-    memcpy( &elayer->sSliceCfg,
-            &elayer_ctx.sSliceCfg,
-            sizeof (SSliceConfig));
-    memcpy( &elayer->sSliceCfg.sSliceArgument.uiSliceMbNum[0],
-            &elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum[0],
-            sizeof (elayer_ctx.sSliceCfg.sSliceArgument.uiSliceMbNum));
+    memcpy ( &elayer->sSliceArgument,
+             &elayer_ctx.sSliceArgument,
+             sizeof (SSliceArgument));
+    memcpy ( &elayer->sSliceArgument.uiSliceMbNum[0],
+             &elayer_ctx.sSliceArgument.uiSliceMbNum[0],
+             sizeof (elayer_ctx.sSliceArgument.uiSliceMbNum));
 
     /* Init input picture */
     oh264_data->esrc_pic->iColorFormat	= videoFormatI420;
@@ -552,13 +556,20 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
 	return PJMEDIA_CODEC_EFAILED;
     }
 
+    int videoFormat = videoFormatI420;
+    rc = oh264_data->enc->SetOption (ENCODER_OPTION_DATAFORMAT, &videoFormat);
+    if (rc != cmResultSuccess) {
+        PJ_LOG(4,(THIS_FILE, "SVC encoder SetOption videoFormatI420 failed, "
+        		     "rc=%d", rc));
+        return PJMEDIA_CODEC_EFAILED;
+    }
+    
     /*
      * Decoder
      */
     sDecParam.sVideoProperty.size	= sizeof (sDecParam.sVideoProperty);
-    sDecParam.iOutputColorFormat	= videoFormatI420;
     sDecParam.uiTargetDqLayer		= (pj_uint8_t) - 1;
-    sDecParam.uiEcActiveFlag		= 1;
+    sDecParam.eEcActiveIdc          	= ERROR_CON_SLICE_COPY;
     sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
 
     //TODO:
@@ -574,14 +585,6 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     if (rc) {
 	PJ_LOG(4,(THIS_FILE, "Decoder initialization failed, rc=%d", rc));
 	return PJMEDIA_CODEC_EFAILED;
-    }
-
-    pj_int32_t color_fmt = videoFormatI420;
-    rc = oh264_data->dec->SetOption (DECODER_OPTION_DATAFORMAT,  &color_fmt);
-    if (rc) {
-	PJ_LOG(4,(THIS_FILE,
-		 "Warning: SetOption(DECODER_OPTION_DATAFORMAT) failed, rc=%d",
-		 rc));
     }
 
     oh264_data->dec_buf_size = (MAX_RX_WIDTH * MAX_RX_HEIGHT * 3 >> 1) +
@@ -661,7 +664,7 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 	return PJMEDIA_CODEC_EFAILED;
     }
 
-    if (oh264_data->bsi.eOutputFrameType == videoFrameTypeSkip) {
+    if (oh264_data->bsi.eFrameType == videoFrameTypeSkip) {
 	output->size = 0;
 	output->type = PJMEDIA_FRAME_TYPE_NONE;
 	output->timestamp = input->timestamp;
@@ -681,13 +684,13 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 
 	/* Find which layer with biggest payload */
 	oh264_data->ilayer = 0;
-	payload_size = oh264_data->bsi.sLayerInfo[0].iNalLengthInByte[0];
+        payload_size = oh264_data->bsi.sLayerInfo[0].pNalLengthInByte[0];
 	for (i=0; i < (unsigned)oh264_data->bsi.iLayerNum; ++i) {
 	    unsigned j;
 	    pLayerBsInfo = &oh264_data->bsi.sLayerInfo[i];
 	    for (j=0; j < (unsigned)pLayerBsInfo->iNalCount; ++j) {
-		if (pLayerBsInfo->iNalLengthInByte[j] > (int)payload_size) {
-		    payload_size = pLayerBsInfo->iNalLengthInByte[j];
+		if (pLayerBsInfo->pNalLengthInByte[j] > (int)payload_size) {
+                    payload_size = pLayerBsInfo->pNalLengthInByte[j];
 		    oh264_data->ilayer = i;
 		}
 	    }
@@ -703,7 +706,7 @@ static pj_status_t oh264_codec_encode_begin(pjmedia_vid_codec *codec,
 	payload = pLayerBsInfo->pBsBuf;
 	payload_size = 0;
 	for (int inal = pLayerBsInfo->iNalCount - 1; inal >= 0; --inal) {
-	    payload_size += pLayerBsInfo->iNalLengthInByte[inal];
+	    payload_size += pLayerBsInfo->pNalLengthInByte[inal];
 	}
 
 	if (payload_size > out_size)
@@ -760,7 +763,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
         pj_memcpy(output->buf, payload, payload_len);
         output->size = payload_len;
 
-        if (oh264_data->bsi.eOutputFrameType == videoFrameTypeIDR) {
+        if (oh264_data->bsi.eFrameType == videoFrameTypeIDR) {
 	    output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
         }
 
@@ -782,7 +785,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
 
     oh264_data->enc_frame_size = 0;
     for (int inal = pLayerBsInfo->iNalCount - 1; inal >= 0; --inal) {
-	oh264_data->enc_frame_size += pLayerBsInfo->iNalLengthInByte[inal];
+	oh264_data->enc_frame_size += pLayerBsInfo->pNalLengthInByte[inal];
     }
 
     oh264_data->enc_frame_whole = pLayerBsInfo->pBsBuf;
@@ -809,7 +812,7 @@ static pj_status_t oh264_codec_encode_more(pjmedia_vid_codec *codec,
     pj_memcpy(output->buf, payload, payload_len);
     output->size = payload_len;
 
-    if (oh264_data->bsi.eOutputFrameType == videoFrameTypeIDR) {
+    if (oh264_data->bsi.eFrameType == videoFrameTypeIDR) {
 	output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
     }
 

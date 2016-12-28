@@ -469,6 +469,8 @@ PJ_IDECL(void) pj_strcat2(pj_str_t *dst, const char *src);
  */
 PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 {
+    if (str->slen == 0)
+	return NULL;
     return (char*) memchr((char*)str->ptr, chr, str->slen);
 }
 

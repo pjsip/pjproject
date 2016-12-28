@@ -447,9 +447,11 @@ Using Default Settings
    ...
 
    Notes:
-          The default settings build the libraries in "release" mode, with
-          default CFLAGS set to "-O2 -DNDEBUG". To change the default CFLAGS,
-          we can use the usual "./configure CFLAGS='-g'" construct.
+          The default settings build the libraries in "debug" mode 
+	  (active assert()), with default CFLAGS set to "-O2".  To change 
+	  the default CFLAGS, we can use the usual "./configure CFLAGS='-g'" 
+	  construct. To build in "release" mode, and deactivate assert(), 
+	  we can use "./configure CFLAGS='-DNDEBUG'".	  
 
     Features Customization
 
@@ -463,6 +465,7 @@ Using Default Settings
    $ ./configure --help
    ...
    Optional Features:
+   --enable-epoll           Use epoll on Linux instead of select
    --disable-floating-point	Disable floating point where possible
    --disable-sound 		Exclude sound (i.e. use null sound)
    --disable-small-filter 	Exclude small filter in resampling

@@ -371,6 +371,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_add_capability( pjsip_endpoint *endpt,
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(endpt!=NULL && count>0 && tags, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count <= PJSIP_GENERIC_ARRAY_MAX_COUNT, PJ_ETOOMANY);
     PJ_ASSERT_RETURN(htype==PJSIP_H_ACCEPT || 
 		     htype==PJSIP_H_ALLOW ||
 		     htype==PJSIP_H_SUPPORTED,

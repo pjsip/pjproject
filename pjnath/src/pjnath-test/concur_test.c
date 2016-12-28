@@ -26,7 +26,7 @@
 /****************************************************************************/
 #define WORKER_THREAD_CNT	4
 #define SERVER_THREAD_CNT	4
-#define MAX_SOCK_CLIENTS	80
+#define MAX_SOCK_CLIENTS	(PJ_IOQUEUE_MAX_HANDLES/2)
 
 struct stun_test_session
 {
@@ -219,6 +219,9 @@ static int stun_destroy_test_session(struct stun_test_session *test_sess)
 	}
     }
 
+    /* Give some time to ioqueue to free sockets */
+    pj_thread_sleep(PJ_IOQUEUE_KEY_FREE_DELAY);
+
     return 0;
 }
 
@@ -259,6 +262,9 @@ static int stun_destroy_test(void)
     pj_sockaddr_init(pj_AF_INET(), &bind_addr, NULL, 0);
     status = pj_sock_bind(test_sess.server_sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
     pj_assert(status == PJ_SUCCESS);
+
+    /* Set socket to nonblocking to avoid stuck in recv/recvfrom() on concurrent events */
+    app_set_sock_nb(test_sess.server_sock);
 
     addr_len = sizeof(bind_addr);
     status = pj_sock_getsockname(test_sess.server_sock, &bind_addr, &addr_len);

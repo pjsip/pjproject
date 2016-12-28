@@ -175,6 +175,8 @@ PJ_DECL(const char*) pj_stun_get_nat_name(pj_stun_nat_type type);
  * asynchronously. Application can register a callback to be notified
  * when such detection has completed.
  *
+ * See also #pj_stun_detect_nat_type2() which supports IPv6.
+ *
  * @param server	STUN server address.
  * @param stun_cfg	A structure containing various STUN configurations,
  *			such as the ioqueue and timer heap instance used
@@ -194,6 +196,30 @@ PJ_DECL(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
 					     pj_stun_config *stun_cfg,
 					     void *user_data,
 					     pj_stun_nat_detect_cb *cb);
+
+
+/**
+ * Variant of #pj_stun_detect_nat_type() that supports IPv6.
+ *
+ * @param server	STUN server address.
+ * @param stun_cfg	A structure containing various STUN configurations,
+ *			such as the ioqueue and timer heap instance used
+ *			to receive network I/O and timer events.
+ * @param user_data	Application data, which will be returned back
+ *			in the callback.
+ * @param cb		Callback to be registered to receive notification
+ *			about detection result.
+ *
+ * @return		If this function returns PJ_SUCCESS, the procedure
+ *			will complete asynchronously and callback will be
+ *			called when it completes. For other return
+ *			values, it means that an error has occured and
+ *			the procedure did not start.
+ */
+PJ_DECL(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
+					      pj_stun_config *stun_cfg,
+					      void *user_data,
+					      pj_stun_nat_detect_cb *cb);
 
 
 /**

@@ -82,6 +82,8 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 ||
 		     af==PJ_AF_UNSPEC, PJ_EINVAL);
 
+#if PJ_WIN32_WINCE
+
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
     if ((af==PJ_AF_INET || af==PJ_AF_UNSPEC) &&
@@ -108,6 +110,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	return PJ_SUCCESS;
     }
+
+#else /* PJ_WIN32_WINCE */
+    PJ_UNUSED_ARG(has_addr);
+#endif
 
     /* Copy node name to null terminated string. */
     if (nodename->slen >= PJ_MAX_HOSTNAME)
@@ -145,10 +151,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 		
 		/* Store address */
 		addr_size = sizeof(*addr);
-		if (af == PJ_AF_INET6) {
+		if (addr->sa_family == PJ_AF_INET6) {
 		    addr_size = addr->sa_len;
 		}
-		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), 				  continue);
+		PJ_ASSERT_ON_FAIL(addr_size <= sizeof(pj_sockaddr), continue);
 		pj_memcpy(&ai[i].ai_addr, addr, addr_size);
 		PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
 		
@@ -157,6 +163,9 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	}
 	
 	*count = i;
+	if (*count == 0)
+	    status = PJ_ERESOLVE;
+
     } else {
 	status = PJ_ERESOLVE;
     }
@@ -205,13 +214,15 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     freeaddrinfo(orig_res);
 
     /* Done */
-    return PJ_SUCCESS;
+    return (*count > 0? PJ_SUCCESS : PJ_ERESOLVE);
 #endif
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
     pj_bool_t has_addr = PJ_FALSE;
 
     PJ_ASSERT_RETURN(count && *count, PJ_EINVAL);
+
+#if PJ_WIN32_WINCE
 
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
@@ -240,6 +251,10 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 	return PJ_SUCCESS;
     }
+
+#else /* PJ_WIN32_WINCE */
+    PJ_UNUSED_ARG(has_addr);
+#endif
 
     if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
 	pj_hostent he;
@@ -273,7 +288,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	    (*count)++;
 	}
 
-	return PJ_SUCCESS;
+	return (*count > 0? PJ_SUCCESS : PJ_ERESOLVE);
 
     } else {
 	/* IPv6 is not supported */

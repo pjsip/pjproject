@@ -1016,6 +1016,14 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* If transport selector is set, set destination type accordingly */
+    if (tdata->tp_sel.type != PJSIP_TPSELECTOR_NONE && tdata->tp_sel.u.ptr) {
+	if (tdata->tp_sel.type == PJSIP_TPSELECTOR_TRANSPORT)
+	    dest_info->type = tdata->tp_sel.u.transport->key.type;
+	else if (tdata->tp_sel.type == PJSIP_TPSELECTOR_LISTENER)
+	    dest_info->type = tdata->tp_sel.u.listener->type;
+    }
+
     /* If target URI is different than request URI, replace 
      * request URI add put the original URI in the last Route header.
      */

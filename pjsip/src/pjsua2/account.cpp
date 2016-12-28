@@ -43,6 +43,7 @@ void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_BOOL	(this_node, dropCallsOnFail);
     NODE_READ_UNSIGNED	(this_node, unregWaitMsec);
     NODE_READ_UNSIGNED	(this_node, proxyUse);
+    NODE_READ_STRING	(this_node, contactParams);
 
     readSipHeaders(this_node, "headers", headers);
 }
@@ -61,6 +62,7 @@ void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_BOOL	(this_node, dropCallsOnFail);
     NODE_WRITE_UNSIGNED	(this_node, unregWaitMsec);
     NODE_WRITE_UNSIGNED	(this_node, proxyUse);
+    NODE_WRITE_STRING	(this_node, contactParams);
 
     writeSipHeaders(this_node, "headers", headers);
 }
@@ -277,6 +279,8 @@ void AccountVideoConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
     NODE_READ_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
     NODE_READ_UNSIGNED( this_node, rateControlBandwidth);
+    NODE_READ_UNSIGNED( this_node, startKeyframeCount);
+    NODE_READ_UNSIGNED( this_node, startKeyframeInterval);
 }
 
 void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
@@ -290,6 +294,8 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
     NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
     NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
+    NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
+    NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -325,6 +331,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.drop_calls_on_reg_fail	= regConfig.dropCallsOnFail;
     ret.unreg_timeout		= regConfig.unregWaitMsec;
     ret.reg_use_proxy		= regConfig.proxyUse;
+    ret.reg_contact_params	= str2Pj(regConfig.contactParams);
     for (i=0; i<regConfig.headers.size(); ++i) {
 	pj_list_push_back(&ret.reg_hdr_list, &regConfig.headers[i].toPj());
     }
@@ -376,6 +383,10 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.publish_opt.queue_request= presConfig.publishQueue;
     ret.unpublish_max_wait_time_msec = presConfig.publishShutdownWaitMsec;
     ret.pidf_tuple_id		= str2Pj(presConfig.pidfTupleId);
+
+    // AccountMwiConfig
+    ret.mwi_enabled 		= mwiConfig.enabled;
+    ret.mwi_expires 		= mwiConfig.expirationSec;
 
     // AccountNatConfig
     ret.sip_stun_use		= natConfig.sipStunUse;
@@ -429,6 +440,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_rend_dev		= videoConfig.defaultRenderDevice;
     ret.vid_stream_rc_cfg.method= videoConfig.rateControlMethod;
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
+    ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
+    ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
 }
 
 /* Initialize from pjsip. */
@@ -453,6 +466,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.dropCallsOnFail	= PJ2BOOL(prm.drop_calls_on_reg_fail);
     regConfig.unregWaitMsec	= prm.unreg_timeout;
     regConfig.proxyUse		= prm.reg_use_proxy;
+    regConfig.contactParams	= pj2Str(prm.reg_contact_params);
     regConfig.headers.clear();
     hdr = prm.reg_hdr_list.next;
     while (hdr != &prm.reg_hdr_list) {
@@ -594,6 +608,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.defaultRenderDevice	= prm.vid_rend_dev;
     videoConfig.rateControlMethod	= prm.vid_stream_rc_cfg.method;
     videoConfig.rateControlBandwidth	= prm.vid_stream_rc_cfg.bandwidth;
+    videoConfig.startKeyframeCount	= prm.vid_stream_sk_cfg.count;
+    videoConfig.startKeyframeInterval	= prm.vid_stream_sk_cfg.interval;
 }
 
 void AccountConfig::readObject(const ContainerNode &node) throw(Error)
@@ -666,7 +682,10 @@ Account::~Account()
 	    delete b; /* this will remove itself from the list */
 	}
 
-	pjsua_acc_set_user_data(id, NULL);
+	// This caused error message of "Error: cannot find Account.."
+	// when Endpoint::on_reg_started() is called for unregistration.
+	//pjsua_acc_set_user_data(id, NULL);
+
 	pjsua_acc_del(id);
     }
 }

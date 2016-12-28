@@ -22,7 +22,6 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
-#include <pjmedia/stream_common.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/compat/socket.h>
@@ -152,8 +151,14 @@ struct pjmedia_vid_stream
     unsigned		     rx_frame_cnt;  /**< # of array in rx_frames    */
     pjmedia_frame	    *rx_frames;	    /**< Temp. buffer for incoming
 					         frame assembly.	    */
-
     pj_bool_t		     force_keyframe;/**< Forced to encode keyframe? */
+    unsigned		     num_keyframe;  /**< The number of keyframe needed 
+						 to be sent, after the stream
+						 is created. */
+    pj_timestamp	     last_keyframe_tx;  
+					    /**< Timestamp of the last 
+						 keyframe. */
+
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
@@ -438,6 +443,9 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
     /* Send RTCP */
     send_rtcp(stream, PJ_TRUE, PJ_FALSE);
 
+    /* Update stats in case the stream is paused */
+    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
+
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
     /* Keep-alive packet is defined in PJMEDIA_STREAM_KA_USER_PKT */
@@ -607,6 +615,9 @@ static void on_rx_rtp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	status = (pj_status_t)-bytes_read;
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    return;
+	}
 	if (stream->rtp_rx_last_err != status) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -786,8 +797,10 @@ static void on_rx_rtcp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((stream->cname.ptr, "RTCP recv() error", 
-		 (pj_status_t)-bytes_read));
+	if (bytes_read != -PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    LOGERR_((stream->cname.ptr, "RTCP recv() error",
+		    (pj_status_t)-bytes_read));
+	}
 	return;
     }
 
@@ -809,6 +822,7 @@ static pj_status_t put_frame(pjmedia_port *port,
     pjmedia_vid_encode_opt enc_opt;
     unsigned pkt_cnt = 0;
     pj_timestamp initial_time;
+    pj_timestamp null_ts ={0};
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than
@@ -845,6 +859,24 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
+    /* Check if need to send keyframe. */
+    if (stream->num_keyframe && 
+	(pj_cmp_timestamp(&null_ts, &stream->last_keyframe_tx) != 0)) 
+    {	
+	unsigned elapse_time;
+	pj_timestamp now;
+
+	pj_get_timestamp(&now);
+
+	elapse_time = pj_elapsed_msec(&stream->last_keyframe_tx, &now);
+
+	if (elapse_time > stream->info.sk_cfg.interval)
+	{
+	    stream->force_keyframe = PJ_TRUE;
+	    --stream->num_keyframe;		
+	}
+    }
+
     /* Init encoding option */
     pj_bzero(&enc_opt, sizeof(enc_opt));
     if (stream->force_keyframe) {
@@ -873,6 +905,13 @@ static pj_status_t put_frame(pjmedia_port *port,
     }
     
     pj_get_timestamp(&initial_time);
+
+    if ((stream->num_keyframe) && 
+	((frame_out.bit_info & PJMEDIA_VID_FRM_KEYFRAME) 
+						  == PJMEDIA_VID_FRM_KEYFRAME)) 
+    {
+	stream->last_keyframe_tx = initial_time;
+    }
 
     /* Loop while we have frame to send */
     for (;;) {
@@ -1384,6 +1423,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     pjmedia_video_format_detail *vfd_enc, *vfd_dec;
     char *p;
     pj_status_t status;
+    pjmedia_transport_attach_param att_param;
 
     if (!pool) {
 	own_pool = pjmedia_endpt_create_pool( endpt, "vstrm%p",
@@ -1454,6 +1494,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
 #endif
+    stream->num_keyframe = info->sk_cfg.count;
 
     /* Build random RTCP CNAME. CNAME has user@host format */
     stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
@@ -1624,12 +1665,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	stream->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
 
     stream->out_rtcp_pkt = pj_pool_alloc(pool, stream->out_rtcp_pkt_size);
+    att_param.stream = stream;
+    att_param.media_type = PJMEDIA_TYPE_VIDEO;
+    att_param.user_data = stream;
+    pj_sockaddr_cp(&att_param.rem_addr, &info->rem_addr);
+    pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
+    att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
+    att_param.rtp_cb = &on_rx_rtp;
+    att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Only attach transport when stream is ready. */
-    status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 
-				      &info->rem_rtcp, 
-				      pj_sockaddr_get_len(&info->rem_addr), 
-                                      &on_rx_rtp, &on_rx_rtcp);
+    status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -2001,6 +2047,32 @@ pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
     cfg->method = PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING;
+}
+
+
+/*
+ * Initialize the video stream send keyframe with default settings.
+ */
+PJ_DEF(void)
+pjmedia_vid_stream_sk_config_default(pjmedia_vid_stream_sk_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->count = PJMEDIA_VID_STREAM_START_KEYFRAME_CNT;
+    cfg->interval = PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC;
+}
+
+
+/**
+ * Get RTP session information from video stream.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_vid_stream_get_rtp_session_info(pjmedia_vid_stream *stream,
+				    pjmedia_stream_rtp_sess_info *session_info)
+{
+    session_info->rx_rtp = &stream->dec->rtp;
+    session_info->tx_rtp = &stream->enc->rtp;
+    session_info->rtcp = &stream->rtcp;
+    return PJ_SUCCESS;
 }
 
 

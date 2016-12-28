@@ -20,6 +20,8 @@ else
 export PJLIB_OBJS += ioqueue_select.o 
 endif
 
+export PJLIB_OBJS += sock_qos_bsd.o
+
 #
 # TEST_OBJS are operating system specific object files to be included in
 # the test application.

@@ -622,7 +622,14 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ac_main_obj
 ac_host
-ac_linux_poll
+ac_webrtc_ldflags
+ac_webrtc_cflags
+ac_webrtc_instset
+ac_no_webrtc
+ac_no_yuv
+opus_present
+opus_h_present
+ac_no_opus
 silk_present
 silk_h_present
 ac_no_silk
@@ -634,14 +641,15 @@ opencore_amrnb_present
 opencore_amrnb_h_present
 ac_no_opencore_amrwb
 ac_no_opencore_amrnb
+ec_curve_present
+set_curve_present
 libcrypto_present
 libssl_present
 openssl_h_present
+ac_ssl_has_sigalg
+ac_ssl_has_ec
+ac_ssl_has_aes_gcm
 ac_no_ssl
-ac_webrtc_ldflags
-ac_webrtc_cflags
-ac_libyuv_ldflags
-ac_libyuv_cflags
 ac_openh264_ldflags
 ac_openh264_cflags
 ac_v4l2_ldflags
@@ -667,8 +675,9 @@ ac_no_large_filter
 ac_no_small_filter
 ac_qt_cflags
 ac_pjmedia_video_has_qt
-ac_ios_cflags
-ac_pjmedia_video_has_ios
+ac_darwin_cflags
+ac_pjmedia_video_has_ios_opengl
+ac_pjmedia_video_has_darwin
 ac_android_cflags
 ac_pjmedia_video_has_android
 ac_pjmedia_video
@@ -679,12 +688,15 @@ ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
 ac_pjmedia_resample
+ac_external_webrtc
+ac_external_yuv
 ac_srtp_shutdown_present
 ac_srtp_deinit_present
 ac_external_srtp
 ac_external_gsm
 ac_external_speex
 ac_shared_libraries
+ac_linux_poll
 ac_os_objs
 EGREP
 GREP
@@ -775,6 +787,8 @@ enable_shared
 with_external_speex
 with_external_gsm
 with_external_srtp
+with_external_yuv
+with_external_webrtc
 enable_resample
 enable_sound
 with_external_pa
@@ -800,10 +814,6 @@ enable_ffmpeg
 enable_v4l2
 with_openh264
 enable_openh264
-with_libyuv
-enable_libyuv
-with_webrtc
-enable_webrtc
 enable_ipp
 with_ipp
 with_ipp_samples
@@ -816,6 +826,10 @@ with_opencore_amrwbenc
 enable_opencore_amr
 with_silk
 enable_silk
+with_opus
+enable_opus
+enable_libyuv
+enable_libwebrtc
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1468,8 +1482,6 @@ Optional Features:
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
-  --disable-libyuv        Exclude libyuv in the build
-  --disable-webrtc        Exclude webrtc in the build
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
@@ -1482,6 +1494,11 @@ Optional Features:
   --disable-silk          Exclude SILK support from the build (default:
                           autodetect)
 
+  --disable-opus          Exclude OPUS support from the build (default:
+                          autodetect)
+
+  --disable-libyuv        Exclude libyuv in the build
+  --disable-libwebrtc     Exclude libwebrtc in the build
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1501,6 +1518,16 @@ Optional Packages:
                           make sure that SRTP is accessible to use (hint: use
                           CFLAGS and LDFLAGS env var to set the include/lib
                           paths)
+  --with-external-yuv     Use external libyuv development files, not the one
+                          in "third_party" directory. When this option is set,
+                          make sure that libyuv is accessible to use (hint:
+                          use CFLAGS and LDFLAGS env var to set the
+                          include/lib paths)
+  --with-external-webrtc  Use external webrtc development files, not the one
+                          in "third_party" directory. When this option is set,
+                          make sure that webrtc is accessible to use (hint:
+                          use CFLAGS and LDFLAGS env var to set the
+                          include/lib paths)
   --with-external-pa      Use external PortAudio development files, not the
                           one in "third_party" directory. When this option is
                           set, make sure that PortAudio is accessible to use
@@ -1509,8 +1536,6 @@ Optional Packages:
   --with-sdl=DIR          Specify alternate libSDL prefix
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
-  --with-libyuv=DIR       Specify alternate libyuv prefix
-  --with-webrtc=DIR       Specify alternate WebRtc prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -1523,6 +1548,7 @@ Optional Packages:
   --with-opencore-amrwbenc=DIR
                           Specify alternate libvo-amrwbenc prefix
   --with-silk=DIR         Specify alternate SILK prefix
+  --with-opus=DIR         Specify alternate OPUS prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -2001,6 +2027,60 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_type LINENO TYPE VAR INCLUDES
+# -------------------------------------------
+# Tests whether TYPE exists after having included INCLUDES, setting cache
+# variable VAR accordingly.
+ac_fn_c_check_type ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  eval "$3=no"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof ($2))
+	 return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+int
+main ()
+{
+if (sizeof (($2)))
+	    return 0;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+
+else
+  eval "$3=yes"
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_type
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -2264,7 +2344,7 @@ $as_echo "$as_me: loading site script $ac_site_file" >&6;}
       || { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "failed to load site script $ac_site_file
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
   fi
 done
 
@@ -2407,7 +2487,7 @@ fi
 $as_echo "$ac_cv_build" >&6; }
 case $ac_cv_build in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical build" "$LINENO" 5 ;;
 esac
 build=$ac_cv_build
 ac_save_IFS=$IFS; IFS='-'
@@ -2440,7 +2520,7 @@ fi
 $as_echo "$ac_cv_host" >&6; }
 case $ac_cv_host in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical host" "$LINENO" 5 ;;
 esac
 host=$ac_cv_host
 ac_save_IFS=$IFS; IFS='-'
@@ -2473,7 +2553,7 @@ fi
 $as_echo "$ac_cv_target" >&6; }
 case $ac_cv_target in
 *-*-*) ;;
-*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5;;
+*) as_fn_error $? "invalid value of canonical target" "$LINENO" 5 ;;
 esac
 target=$ac_cv_target
 ac_save_IFS=$IFS; IFS='-'
@@ -2497,7 +2577,7 @@ test -n "$target_alias" &&
   program_prefix=${target_alias}-
 ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
-ac_config_files="$ac_config_files build.mak build/os-auto.mak build/cc-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak third_party/build/portaudio/os-auto.mak"
+ac_config_files="$ac_config_files build.mak build/os-auto.mak build/cc-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak"
 
 
 
@@ -2810,7 +2890,7 @@ fi
 test -z "$CC" && { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "no acceptable C compiler found in \$PATH
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 
 # Provide some information about the compiler.
 $as_echo "$as_me:${as_lineno-$LINENO}: checking for C compiler version" >&5
@@ -2925,7 +3005,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
 { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error 77 "C compiler cannot create executables
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
@@ -2968,7 +3048,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot compute suffix of executables: cannot compile and link
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f conftest conftest$ac_cv_exeext
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_exeext" >&5
@@ -3027,7 +3107,7 @@ $as_echo "$ac_try_echo"; } >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot run C compiled programs.
 If you meant to cross compile, use \`--host'.
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
     fi
   fi
 fi
@@ -3079,7 +3159,7 @@ sed 's/^/| /' conftest.$ac_ext >&5
 { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "cannot compute suffix of object files: cannot compile
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f conftest.$ac_cv_objext conftest.$ac_ext
 fi
@@ -4473,7 +4553,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "C preprocessor \"$CPP\" fails sanity check
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 
 ac_ext=c
@@ -4963,7 +5043,7 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
      ;; #(
    *)
      as_fn_error $? "unknown endianness
- presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5 ;;
+ presetting ac_cv_c_bigendian=no (or yes) will help" "$LINENO" 5  ;;
  esac
 
 
@@ -5338,6 +5418,14 @@ if test "x$ac_cv_header_net_if_h" = xyes; then :
 fi
 
 
+
+ac_fn_c_check_func "$LINENO" "localtime_r" "ac_cv_func_localtime_r"
+if test "x$ac_cv_func_localtime_r" = xyes; then :
+  $as_echo "#define PJ_HAS_LOCALTIME_R 1" >>confdefs.h
+
+fi
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Setting PJ_OS_NAME to $target" >&5
 $as_echo "Setting PJ_OS_NAME to $target" >&6; }
 cat >>confdefs.h <<_ACEOF
@@ -5526,6 +5614,31 @@ $as_echo "no" >&6; }
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if IPV6_V6ONLY is available" >&5
+$as_echo_n "checking if IPV6_V6ONLY is available... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <sys/socket.h>
+                                     #include <netinet/in.h>
+int
+main ()
+{
+int opt = IPV6_V6ONLY;
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  $as_echo "#define PJ_SOCK_HAS_IPV6_V6ONLY 1" >>confdefs.h
+
+		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking if SO_ERROR is available" >&5
 $as_echo_n "checking if SO_ERROR is available... " >&6; }
 case $target in
@@ -5672,6 +5785,7 @@ fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 
 
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking ioqueue backend" >&5
 $as_echo_n "checking ioqueue backend... " >&6; }
 # Check whether --enable-epoll was given.
@@ -5680,12 +5794,16 @@ if test "${enable_epoll+set}" = set; then :
 		ac_os_objs=ioqueue_epoll.o
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: /dev/epoll" >&5
 $as_echo "/dev/epoll" >&6; }
+		$as_echo "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
+
+		ac_linux_poll=epoll
 
 else
 
 		ac_os_objs=ioqueue_select.o
-	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: select()" >&5
 $as_echo "select()" >&6; }
+		ac_linux_poll=select
 
 fi
 
@@ -5718,18 +5836,33 @@ case $target in
 		ac_os_objs="$ac_os_objs os_info_iphone.o"
 		;;
 	esac
+	# QoS
+	case $target in
+	  *darwin*)
+		;;
+	  *)
+		ac_os_objs="$ac_os_objs sock_qos_bsd.o"
+		;;
+	esac
 	# UUID
-	if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
-		ac_os_objs="$ac_os_objs guid_uuid.o"
-	else
-		ac_os_objs="$ac_os_objs guid_simple.o"
-	fi
+	case $target in
+	  *android*)
+	  	ac_os_objs="$ac_os_objs guid_android.o"
+	  	;;
+	  *)
+		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
+			ac_os_objs="$ac_os_objs guid_uuid.o"
+		else
+			ac_os_objs="$ac_os_objs guid_simple.o"
+		fi
+		;;
+	esac
 	;;
 esac
 
 case $target in
   *darwin*)
-	ac_os_objs="$ac_os_objs os_core_darwin.o"
+	ac_os_objs="$ac_os_objs sock_qos_darwin.o os_core_darwin.o"
 	;;
 esac
 
@@ -5973,6 +6106,83 @@ fi
 	fi
 fi
 
+
+ac_external_yuv=0
+
+
+# Check whether --with-external-yuv was given.
+if test "${with_external_yuv+set}" = set; then :
+  withval=$with_external_yuv;
+	if test "x$with_external_yuv" != "xno"; then
+		# Test libyuv installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external libyuv devkit is installed" >&5
+$as_echo_n "checking if external libyuv devkit is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <libyuv.h>
+int
+main ()
+{
+RGB24ToI420(0,0,0,0,0,0,0,0,0,0);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_yuv="1"
+
+else
+  as_fn_error $? "Unable to use external libyuv. If libyuv development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
+ac_external_webrtc=0
+
+
+# Check whether --with-external-webrtc was given.
+if test "${with_external_webrtc+set}" = set; then :
+  withval=$with_external_webrtc;
+	if test "x$with_external_webrtc" != "xno"; then
+		# Test webrtc installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external webrtc devkit is installed" >&5
+$as_echo_n "checking if external webrtc devkit is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <webrtc/modules/audio_processing/aec/aec_core.h>
+						     #include <webrtc/modules/audio_processing/aec/include/echo_cancellation.h>
+
+int
+main ()
+{
+WebRtcAec_Create();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_webrtc="1"
+
+else
+  as_fn_error $? "Unable to use external webrtc. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
 ac_pjmedia_resample=libresample
 
 # Check whether --enable-resample was given.
@@ -6103,18 +6313,14 @@ $as_echo "Checking sound device backend... win32 sound" >&6; }
 $as_echo "Checking sound device backend... null sound" >&6; }
 	;;
   *)
-		ac_pjmedia_snd=pa_unix
+		ac_pjmedia_snd=alsa
+	ac_pa_use_alsa=1
+
 	ac_fn_c_check_header_mongrel "$LINENO" "alsa/version.h" "ac_cv_header_alsa_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_alsa_version_h" = xyes; then :
-  ac_pa_use_alsa=1
-
-			 ac_pjmedia_snd=alsa
-
-			 LIBS="$LIBS -lasound"
-
+  LIBS="$LIBS -lasound"
 else
   ac_pa_use_alsa=0
-
 fi
 
 
@@ -6139,6 +6345,13 @@ fi
 fi
 
 
+
+# Disable video on mingw
+case $target in
+ *mingw*)
+	enable_video="no"
+	;;
+esac
 
 # Check whether --enable-video was given.
 if test "${enable_video+set}" = set; then :
@@ -6207,8 +6420,9 @@ $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
 	;;
-  *-apple-darwin_ios*)
-	ac_pjmedia_video=iphone_os
+  *darwin*)
+	ac_pjmedia_video=darwin_os
+
 
 
 	SAVED_LIBS="$LIBS"
@@ -6225,30 +6439,58 @@ main ()
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_pjmedia_video_has_ios=yes
+  ac_pjmedia_video_has_darwin=yes
 else
-  ac_pjmedia_video_has_ios=no
+  ac_pjmedia_video_has_darwin=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	LIBS="-framework OpenGLES"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_pjmedia_video_has_ios_opengl=yes
+else
+  ac_pjmedia_video_has_ios_opengl=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_ios" = "yes"; then
-	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1 -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
-	  LIBS="$LIBS -framework OpenGLES -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	if test "$ac_pjmedia_video_has_darwin" = "yes"; then
+	  ac_darwin_cflags="-DPJMEDIA_VIDEO_DEV_HAS_DARWIN=1"
+	  LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if AVFoundation framework is available... yes" >&5
 $as_echo "Checking if AVFoundation framework is available... yes" >&6; }
 	else
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if AVFoundation framework is available... no" >&5
 $as_echo "Checking if AVFoundation framework is available... no" >&6; }
 	fi
-	;;
-  *darwin*)
-	ac_pjmedia_video=mac_os
+	if test "$ac_pjmedia_video_has_ios_opengl" = "yes"; then
+	  ac_darwin_cflags+=" -DPJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL=1"
+	  LIBS="$LIBS -framework OpenGLES"
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenGLES framework is available... yes" >&5
+$as_echo "Checking if OpenGLES framework is available... yes" >&6; }
+	else
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenGLES framework is available... no" >&5
+$as_echo "Checking if OpenGLES framework is available... no" >&6; }
+	fi
+        if false; then
+          # QTKit is deprecated, see ticket #1931.
+	  ac_pjmedia_video=mac_os
 
 
-	SAVED_LIBS="$LIBS"
-	LIBS="-framework QTKit"
-	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+	  SAVED_LIBS="$LIBS"
+	  LIBS="-framework QTKit"
+	  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
 int
@@ -6266,17 +6508,18 @@ else
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
-	LIBS="$SAVED_LIBS"
-	if test "$ac_pjmedia_video_has_qt" = "yes"; then
-	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
-	  LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
-	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... yes" >&5
+	  LIBS="$SAVED_LIBS"
+	  if test "$ac_pjmedia_video_has_qt" = "yes"; then
+	    ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
+	    LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
+	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... yes" >&5
 $as_echo "Checking if QTKit framework is available... yes" >&6; }
-	else
-	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... no" >&5
+	  else
+	    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... no" >&5
 $as_echo "Checking if QTKit framework is available... no" >&6; }
-	fi
-	;;
+ 	  fi
+ 	fi
+ 	;;
  esac
 fi
 
@@ -6753,9 +6996,9 @@ test -n "$PKG_CONFIG" || PKG_CONFIG="none"
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking ffmpeg packages" >&5
 $as_echo_n "checking ffmpeg packages... " >&6; }
 			av_pkg=""
-			if $PKG_CONFIG --exists libdevice; then
+			if $PKG_CONFIG --exists libavdevice; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
-				av_pkg="$av_pkg libdevice"
+				av_pkg="$av_pkg libavdevice"
 			fi
 			if $PKG_CONFIG --exists libavformat; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
@@ -6772,10 +7015,6 @@ $as_echo_n "checking ffmpeg packages... " >&6; }
 			if $PKG_CONFIG --exists libavutil; then
 				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
 				av_pkg="$av_pkg libavutil"
-			fi
-			if $PKG_CONFIG --exists libavcore; then
-				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
-				av_pkg="$av_pkg libavcore"
 			fi
 
 			if test "x$av_pkg" == "x"; then
@@ -7059,6 +7298,21 @@ fi
 
 		fi
 
+		ac_fn_c_check_type "$LINENO" "enum AVPixelFormat" "ac_cv_type_enum_AVPixelFormat" "#include <libavformat/avformat.h>
+
+"
+if test "x$ac_cv_type_enum_AVPixelFormat" = xyes; then :
+
+cat >>confdefs.h <<_ACEOF
+#define HAVE_ENUM_AVPIXELFORMAT 1
+_ACEOF
+
+
+else
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_USE_OLD_FFMPEG=1"
+fi
+
+
 		LIBS="$LIBS $ac_ffmpeg_ldflags"
 		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 
@@ -7213,240 +7467,6 @@ fi
 
 
 
-# Check whether --with-libyuv was given.
-if test "${with_libyuv+set}" = set; then :
-  withval=$with_libyuv;
-else
-  with_libyuv=no
-
-fi
-
-
-if test "x$ac_cross_compile" != "x" -a "x$with_libyuv" = "xno"; then
-    enable_libyuv=no
-fi
-
-
-
-# Check whether --enable-libyuv was given.
-if test "${enable_libyuv+set}" = set; then :
-  enableval=$enable_libyuv; if test "$enable_libyuv" = "no"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...yes" >&5
-$as_echo "Checking if libyuv is disabled...yes" >&6; }
-	       fi
-else
-
-		  if test "x$with_libyuv" != "xno" -a "x$with_libyuv" != "x"; then
-		        LIBYUV_PREFIX=$with_libyuv
-		  	LIBYUV_CFLAGS="-I$LIBYUV_PREFIX/include"
-
-			case $target in
-			    *-apple-darwin_ios*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out_ios/Release-iphoneos"
-				case $ARCH in
-				    *arm*)
-				    LIBYUV_LIBS="-lyuv_neon"
-				    ;;
-				*)
-				    ;;
-				esac
-				;;
-			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
-				LIBYUV_LDFLAGS="-L$LIBYUV_PREFIX/out/Release"
-				;;
-			    *)
-				LIBYUV_CFLAGS=""
-				LIBYUV_LDFLAGS=""
-				;;
-			esac
-
-			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using libyuv prefix... $with_libyuv" >&5
-$as_echo "Using libyuv prefix... $with_libyuv" >&6; }
-		  else
-		  	LIBYUV_CFLAGS=""
-			LIBYUV_LDFLAGS=""
-		  fi
-
-		  LIBYUV_LIBS="$LIBYUV_LIBS -lyuv"
-
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-
-		  LIBS="$LIBYUV_LIBS $LIBS"
-		  LDFLAGS="$LIBYUV_LDFLAGS $LDFLAGS"
-		  CFLAGS="$LIBYUV_CFLAGS $CFLAGS"
-
-		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for I420Scale in -lyuv" >&5
-$as_echo_n "checking for I420Scale in -lyuv... " >&6; }
-if ${ac_cv_lib_yuv_I420Scale+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lyuv
-			        $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char I420Scale ();
-int
-main ()
-{
-return I420Scale ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_yuv_I420Scale=yes
-else
-  ac_cv_lib_yuv_I420Scale=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_yuv_I420Scale" >&5
-$as_echo "$ac_cv_lib_yuv_I420Scale" >&6; }
-if test "x$ac_cv_lib_yuv_I420Scale" = xyes; then :
-   ac_libyuv_cflags="-DPJMEDIA_HAS_LIBYUV=1 $LIBYUV_CFLAGS"
-		  		 ac_libyuv_ldflags="$LIBYUV_LDFLAGS $LIBYUV_LIBS"
-
-else
-   LIBS="$SAVED_LIBS"
-				 LDFLAGS="$SAVED_LDFLAGS"
-				 CFLAGS="$SAVED_CFLAGS"
-
-fi
-
-
-fi
-
-
-
-
-# Check whether --with-webrtc was given.
-if test "${with_webrtc+set}" = set; then :
-  withval=$with_webrtc;
-else
-  with_webrtc=no
-
-fi
-
-
-if test "x$ac_cross_compile" != "x" -a "x$with_webrtc" = "xno"; then
-    enable_webrtc=no
-fi
-
-
-
-# Check whether --enable-webrtc was given.
-if test "${enable_webrtc+set}" = set; then :
-  enableval=$enable_webrtc; if test "$enable_webrtc" = "no"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if webrtc is disabled...yes" >&5
-$as_echo "Checking if webrtc is disabled...yes" >&6; }
-	       fi
-else
-
-		  if test "x$with_webrtc" != "xno" -a "x$with_webrtc" != "x"; then
-		        WEBRTC_PREFIX=$with_webrtc
-		  	WEBRTC_CFLAGS="-I$WEBRTC_PREFIX/src"
-
-			case $target in
-			    *-apple-darwin_ios*)
-				case $ARCH in
-				    *arm*)
-				    WEBRTC_CFLAGS="-DPJMEDIA_WEBRTC_AEC_USE_MOBILE=1 $WEBRTC_CFLAGS"
-				    WEBRTC_LDFLAGS="-L$WEBRTC_PREFIX/src/out_ios/Release-iphoneos"
-				    WEBRTC_LIBS="-laudio_processing_neon -lcommon_audio_neon"
-				    ;;
-				*)
-				    ;;
-				esac
-				;;
-			    *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux* | *android*)
-			        WEBRTC_LDFLAGS="-L$WEBRTC_PREFIX/src/out/Release"
-			        WEBRTC_LIBS="-laudio_processing_sse2"
-				;;
-			    *)
-				;;
-			esac
-
-			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using webrtc prefix... $with_webrtc" >&5
-$as_echo "Using webrtc prefix... $with_webrtc" >&6; }
-		  else
-		  	WEBRTC_CFLAGS=""
-			WEBRTC_LDFLAGS=""
-		  fi
-
-		  WEBRTC_LIBS="$WEBRTC_LIBS -laudio_processing -lcommon_audio -lsystem_wrappers"
-
-		  SAVED_LIBS="$LIBS"
-		  SAVED_LDFLAGS="$LDFLAGS"
-		  SAVED_CFLAGS="$CFLAGS"
-
-		  LIBS="$WEBRTC_LIBS $LIBS"
-		  LDFLAGS="$WEBRTC_LDFLAGS $LDFLAGS"
-		  CFLAGS="$WEBRTC_CFLAGS $CFLAGS"
-
-		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for WebRtcAec_Process in -laudio_processing" >&5
-$as_echo_n "checking for WebRtcAec_Process in -laudio_processing... " >&6; }
-if ${ac_cv_lib_audio_processing_WebRtcAec_Process+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-laudio_processing
-			        $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char WebRtcAec_Process ();
-int
-main ()
-{
-return WebRtcAec_Process ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_audio_processing_WebRtcAec_Process=yes
-else
-  ac_cv_lib_audio_processing_WebRtcAec_Process=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_audio_processing_WebRtcAec_Process" >&5
-$as_echo "$ac_cv_lib_audio_processing_WebRtcAec_Process" >&6; }
-if test "x$ac_cv_lib_audio_processing_WebRtcAec_Process" = xyes; then :
-   ac_webrtc_cflags="-DPJMEDIA_HAS_WEBRTC_AEC=1 $WEBRTC_CFLAGS"
-		  		 ac_webrtc_ldflags="$WEBRTC_LDFLAGS $WEBRTC_LIBS"
-
-else
-   LIBS="$SAVED_LIBS"
-				 LDFLAGS="$SAVED_LDFLAGS"
-				 CFLAGS="$SAVED_CFLAGS"
-
-fi
-
-
-fi
-
-
 # Check whether --enable-ipp was given.
 if test "${enable_ipp+set}" = set; then :
   enableval=$enable_ipp;
@@ -7596,7 +7616,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -7652,13 +7672,13 @@ $as_echo_n "checking Intel IPP USC build location... " >&6; }
 		{ { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "Unable to find to find built binaries under $IPPSAMPLES/speech-codecs/{bin,_bin}. Have you built the IPP samples?
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	    fi
 	else
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	# Test the directory
@@ -7666,7 +7686,7 @@ See \`config.log' for more details" "$LINENO" 5; }
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "There's something wrong with this script, directory $IPPSAMP_DIR does not exist
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	    exit 1;
 	fi
 
@@ -7680,14 +7700,14 @@ See \`config.log' for more details" "$LINENO" 5; }
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "bug in this script: unsupported IPP version
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 	fi
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $IPPSAMP_DIR" >&5
@@ -7723,7 +7743,7 @@ else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
 as_fn_error $? "no
-See \`config.log' for more details" "$LINENO" 5; }
+See \`config.log' for more details" "$LINENO" 5 ; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -7766,6 +7786,12 @@ if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno"; then
     enable_ssl=no
 fi
 
+
+ac_ssl_has_aes_gcm=0
+
+ac_ssl_has_ec=0
+
+ac_ssl_has_sigalg=0
 
 # Check whether --enable-ssl was given.
 if test "${enable_ssl+set}" = set; then :
@@ -7878,6 +7904,171 @@ fi
 		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL library found, SSL support enabled" >&5
 $as_echo "OpenSSL library found, SSL support enabled" >&6; }
+
+			# Check if SRTP should be compiled with OpenSSL
+			# support, to enable cryptos such as AES GCM
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EVP_aes_128_gcm in -lcrypto" >&5
+$as_echo_n "checking for EVP_aes_128_gcm in -lcrypto... " >&6; }
+if ${ac_cv_lib_crypto_EVP_aes_128_gcm+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcrypto  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char EVP_aes_128_gcm ();
+int
+main ()
+{
+return EVP_aes_128_gcm ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_crypto_EVP_aes_128_gcm=yes
+else
+  ac_cv_lib_crypto_EVP_aes_128_gcm=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_crypto_EVP_aes_128_gcm" >&5
+$as_echo "$ac_cv_lib_crypto_EVP_aes_128_gcm" >&6; }
+if test "x$ac_cv_lib_crypto_EVP_aes_128_gcm" = xyes; then :
+  ac_ssl_has_aes_gcm=1
+fi
+
+			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL has AES GCM support, SRTP will use OpenSSL" >&5
+$as_echo "OpenSSL has AES GCM support, SRTP will use OpenSSL" >&6; }
+			else
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&5
+$as_echo "OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos" >&6; }
+			fi
+
+			# Check if OpenSSL supports setting curve algorithm
+			# and has elliptic curve
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OpenSSL setting curve functions" >&5
+$as_echo_n "checking OpenSSL setting curve functions... " >&6; }
+			set_curve_present=0
+
+			ec_curve_present=0
+
+			cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <openssl/ssl.h>
+
+int
+main ()
+{
+ SSL_set1_curves(NULL, NULL, 0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+   set_curve_present=1
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+
+else
+
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for EC_curve_nid2nist in -lssl" >&5
+$as_echo_n "checking for EC_curve_nid2nist in -lssl... " >&6; }
+if ${ac_cv_lib_ssl_EC_curve_nid2nist+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lssl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char EC_curve_nid2nist ();
+int
+main ()
+{
+return EC_curve_nid2nist ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_ssl_EC_curve_nid2nist=yes
+else
+  ac_cv_lib_ssl_EC_curve_nid2nist=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ssl_EC_curve_nid2nist" >&5
+$as_echo "$ac_cv_lib_ssl_EC_curve_nid2nist" >&6; }
+if test "x$ac_cv_lib_ssl_EC_curve_nid2nist" = xyes; then :
+  ec_curve_present=1
+fi
+
+			if test "x$set_curve_present" = "x1" -a "x$ec_curve_present" = "x1"; then
+				ac_ssl_has_ec=1
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL has elliptic curve support" >&5
+$as_echo "OpenSSL has elliptic curve support" >&6; }
+			else
+				{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenSSL elliptic curve algorithm unsupported" >&5
+$as_echo "OpenSSL elliptic curve algorithm unsupported" >&6; }
+			fi
+
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: checking OpenSSL setting sigalg" >&5
+$as_echo_n "checking OpenSSL setting sigalg... " >&6; }
+			cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <openssl/ssl.h>
+
+int
+main ()
+{
+SSL_set1_sigalgs_list(NULL, NULL);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+   ac_ssl_has_sigalg=1
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+
+else
+
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
 			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
 			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
 			$as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
@@ -7894,6 +8085,9 @@ fi
 # Check whether --with-opencore-amrnb was given.
 if test "${with_opencore_amrnb+set}" = set; then :
   withval=$with_opencore_amrnb; as_fn_error $? "This option is obsolete and replaced by --with-opencore-amr=DIR" "$LINENO" 5
+else
+  true;
+
 fi
 
 
@@ -8226,6 +8420,191 @@ $as_echo "SILK library found, SILK support enabled" >&6; }
 fi
 
 
+if test "x$ac_cross_compile" != "x" -a "x$with_opus" = "xno"; then
+    enable_opus=no
+fi
+
+
+# Check whether --with-opus was given.
+if test "${with_opus+set}" = set; then :
+  withval=$with_opus;
+else
+  with_opus=no
+
+fi
+
+
+
+# Check whether --enable-opus was given.
+if test "${enable_opus+set}" = set; then :
+  enableval=$enable_opus;
+		if test "$enable_opus" = "no"; then
+		 ac_no_opus=1
+		 $as_echo "#define PJMEDIA_HAS_OPUS_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OPUS support is disabled... yes" >&5
+$as_echo "Checking if OPUS support is disabled... yes" >&6; }
+	        fi
+
+else
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OPUS installations.." >&5
+$as_echo "checking for OPUS installations.." >&6; }
+                if test "x$with_opus" != "xno" -a "x$with_opus" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_opus/include"
+		    CPPFLAGS="$CPPFLAGS -I$with_opus/include"
+                    LDFLAGS="$LDFLAGS -L$with_opus/lib"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using OPUS prefix... $with_opus" >&5
+$as_echo "Using OPUS prefix... $with_opus" >&6; }
+                fi
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "opus/opus.h" "ac_cv_header_opus_opus_h" "$ac_includes_default"
+if test "x$ac_cv_header_opus_opus_h" = xyes; then :
+  opus_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for opus_repacketizer_get_size in -lopus" >&5
+$as_echo_n "checking for opus_repacketizer_get_size in -lopus... " >&6; }
+if ${ac_cv_lib_opus_opus_repacketizer_get_size+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lopus  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char opus_repacketizer_get_size ();
+int
+main ()
+{
+return opus_repacketizer_get_size ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_opus_opus_repacketizer_get_size=yes
+else
+  ac_cv_lib_opus_opus_repacketizer_get_size=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opus_opus_repacketizer_get_size" >&5
+$as_echo "$ac_cv_lib_opus_opus_repacketizer_get_size" >&6; }
+if test "x$ac_cv_lib_opus_opus_repacketizer_get_size" = xyes; then :
+  opus_present=1 && LIBS="-lopus $LIBS"
+fi
+
+		if test "x$opus_h_present" = "x1" -a "x$opus_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OPUS library found, OPUS support enabled" >&5
+$as_echo "OPUS library found, OPUS support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_OPUS_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_opus=1
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OPUS library not found, OPUS support disabled" >&5
+$as_echo "OPUS library not found, OPUS support disabled" >&6; }
+			$as_echo "#define PJMEDIA_HAS_OPUS_CODEC 0" >>confdefs.h
+
+		fi
+
+fi
+
+
+
+# Check whether --enable-libyuv was given.
+if test "${enable_libyuv+set}" = set; then :
+  enableval=$enable_libyuv; if test "$enable_libyuv" = "no"; then
+		ac_no_yuv=1
+		$as_echo "#define PJMEDIA_HAS_LIBYUV 0" >>confdefs.h
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...yes" >&5
+$as_echo "Checking if libyuv is disabled...yes" >&6; }
+	       fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libyuv is disabled...no" >&5
+$as_echo "Checking if libyuv is disabled...no" >&6; }
+fi
+
+
+
+
+
+
+
+# Check whether --enable-libwebrtc was given.
+if test "${enable_libwebrtc+set}" = set; then :
+  enableval=$enable_libwebrtc; if test "$enable_libwebrtc" = "no"; then
+		ac_no_webrtc=1
+		$as_echo "#define PJMEDIA_HAS_LIBWEBRTC 0" >>confdefs.h
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc is disabled...yes" >&5
+$as_echo "Checking if libwebrtc is disabled...yes" >&6; }
+	       fi
+else
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc is disabled...no" >&5
+$as_echo "Checking if libwebrtc is disabled...no" >&6; }
+		  case $target in
+		      *-apple-darwin_ios*)
+			case $target in
+			    arm64*)
+				ac_webrtc_instset=neon
+				ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    *arm*)
+				ac_webrtc_instset=neon
+			    	;;
+			    *)
+				ac_webrtc_instset=sse2
+			    	;;
+			esac
+		        ;;
+		      *android*)
+			case $TARGET_ABI in
+			    armeabi-v7a)
+				ac_webrtc_instset=neon
+				ac_webrtc_cflags="-mfloat-abi=softfp -mfpu=neon"
+			    	;;
+			    armeabi)
+				ac_webrtc_instset=neon
+				ac_webrtc_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+			    	;;
+			    arm64*)
+				ac_webrtc_instset=neon
+				ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    mips64*)
+			    	ac_webrtc_instset=generic
+			        ;;
+			    mips*)
+			    	ac_webrtc_instset=mips
+			        ;;
+			    *)
+				ac_webrtc_instset=sse2
+			    	;;
+			esac
+		        ;;
+		     *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux*)
+			ac_webrtc_instset=sse2
+			;;
+		     *)
+			;;
+		esac
+
+fi
+
+
 
 
 
@@ -8301,8 +8680,6 @@ $as_echo "** Setting non-blocking connect() retval to EINPROGRESS (please check)
 esac
 
 
-
-ac_linux_poll=select
 
 ac_host=unix
 
@@ -9021,9 +9398,8 @@ do
     "pjmedia/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjmedia/build/os-auto.mak" ;;
     "pjsip/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjsip/build/os-auto.mak" ;;
     "third_party/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES third_party/build/os-auto.mak" ;;
-    "third_party/build/portaudio/os-auto.mak") CONFIG_FILES="$CONFIG_FILES third_party/build/portaudio/os-auto.mak" ;;
 
-  *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
+  *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5 ;;
   esac
 done
 
@@ -9340,7 +9716,7 @@ do
   esac
   case $ac_mode$ac_tag in
   :[FHL]*:*);;
-  :L* | :C*:*) as_fn_error $? "invalid tag \`$ac_tag'" "$LINENO" 5;;
+  :L* | :C*:*) as_fn_error $? "invalid tag \`$ac_tag'" "$LINENO" 5 ;;
   :[FH]-) ac_tag=-:-;;
   :[FH]*) ac_tag=$ac_tag:$ac_tag.in;;
   esac
@@ -9368,7 +9744,7 @@ do
 	   [\\/$]*) false;;
 	   *) test -f "$srcdir/$ac_f" && ac_f="$srcdir/$ac_f";;
 	   esac ||
-	   as_fn_error 1 "cannot find input file: \`$ac_f'" "$LINENO" 5;;
+	   as_fn_error 1 "cannot find input file: \`$ac_f'" "$LINENO" 5 ;;
       esac
       case $ac_f in *\'*) ac_f=`$as_echo "$ac_f" | sed "s/'/'\\\\\\\\''/g"`;; esac
       as_fn_append ac_file_inputs " '$ac_f'"
@@ -9395,7 +9771,7 @@ $as_echo "$as_me: creating $ac_file" >&6;}
 
     case $ac_tag in
     *:-:* | *:-) cat >"$ac_tmp/stdin" \
-      || as_fn_error $? "could not create $ac_file" "$LINENO" 5 ;;
+      || as_fn_error $? "could not create $ac_file" "$LINENO" 5  ;;
     esac
     ;;
   esac

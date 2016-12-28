@@ -38,6 +38,7 @@
 #include <pjmedia-codec/openh264.h>
 #include <pjmedia-codec/passthrough.h>
 #include <pjmedia-codec/silk.h>
+#include <pjmedia-codec/opus.h>
 
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

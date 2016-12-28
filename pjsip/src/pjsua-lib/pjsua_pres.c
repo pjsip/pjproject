@@ -249,9 +249,13 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     total += info->uri.slen;
 
     /* contact */
-    info->contact.ptr = info->buf_ + total;
-    pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_)-total);
-    total += info->contact.slen;
+    if (total < sizeof(info->buf_)) {
+        info->contact.ptr = info->buf_ + total;
+        pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_) - total);
+        total += info->contact.slen;
+    } else {
+        info->contact = pj_str("");
+    }
 
     /* Presence status */
     pj_memcpy(&info->pres_status, &buddy->status, sizeof(pjsip_pres_status));
@@ -551,7 +555,6 @@ PJ_DEF(pj_status_t) pjsua_buddy_subscribe_pres( pjsua_buddy_id buddy_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    PJ_LOG(4,(THIS_FILE, "Buddy %d: unsubscribing presence..", buddy_id));
     pj_log_push_indent();
 
     lck.buddy->monitor = subscribe;
@@ -851,8 +854,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Create UAS dialog: */
-    status = pjsip_dlg_create_uas(pjsip_ua_instance(), rdata, 
-				  &contact, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock(pjsip_ua_instance(), rdata,
+					       &contact, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to create UAS dialog for subscription", 
@@ -917,10 +920,14 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 					     tdata);
 	}
 
+	pjsip_dlg_dec_lock(dlg);
 	PJSUA_UNLOCK();
 	pj_log_pop_indent();
 	return PJ_TRUE;
     }
+
+    /* Subscription has been created, decrement & release dlg lock */
+    pjsip_dlg_dec_lock(dlg);
 
     /* If account is locked to specific transport, then lock dialog
      * to this transport too.
@@ -1031,7 +1038,6 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Done: */
-
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return PJ_TRUE;

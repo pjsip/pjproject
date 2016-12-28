@@ -20,9 +20,10 @@
 #include <pjmedia/converter.h>
 #include <pj/errno.h>
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
 
-#include  <libyuv.h>
+#include <libyuv.h>
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 					    pj_pool_t *pool,
@@ -650,9 +651,5 @@ pjmedia_libyuv_converter_shutdown(pjmedia_converter_mgr *mgr,
     return pjmedia_converter_mgr_unregister_factory(mgr, &libyuv_factory,
 						    PJ_TRUE);
 }
-
-#ifdef _MSC_VER
-#   pragma comment(lib, "libyuv.lib")
-#endif
 
 #endif //#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0

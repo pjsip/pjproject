@@ -39,16 +39,29 @@
 
 
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
+    defined(PJMEDIA_HAS_LIBAVDEVICE) && PJMEDIA_HAS_LIBAVDEVICE != 0 && \
     defined(PJMEDIA_VIDEO_DEV_HAS_FFMPEG) && PJMEDIA_VIDEO_DEV_HAS_FFMPEG != 0
 
 
 #define THIS_FILE		"ffmpeg.c"
 
+#define LIBAVFORMAT_VER_AT_LEAST(major,minor)  (LIBAVFORMAT_VERSION_MAJOR > major || \
+     					       (LIBAVFORMAT_VERSION_MAJOR == major && \
+					        LIBAVFORMAT_VERSION_MINOR >= minor))
+
 #include "../pjmedia/ffmpeg_util.h"
 #include <libavdevice/avdevice.h>
 #include <libavformat/avformat.h>
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+# include <libavutil/pixdesc.h>
+#endif
 
 #define MAX_DEV_CNT     8
+
+#ifndef PJMEDIA_USE_OLD_FFMPEG
+#  define av_close_input_stream(ctx) avformat_close_input(&ctx)
+#endif
+
 
 typedef struct ffmpeg_dev_info
 {
@@ -76,6 +89,7 @@ typedef struct ffmpeg_stream
     pj_pool_t                   *pool;
     pjmedia_vid_dev_param        param;
     AVFormatContext             *ff_fmt_ctx;
+    void			*frame_buf;
 } ffmpeg_stream;
 
 
@@ -148,7 +162,11 @@ static void print_ffmpeg_err(int err)
 static void print_ffmpeg_log(void* ptr, int level, const char* fmt, va_list vl)
 {
     PJ_UNUSED_ARG(ptr);
-    PJ_UNUSED_ARG(level);
+
+    /* Custom callback needs to filter log level by itself */
+    if (level > av_log_get_level())
+	return;
+
     vfprintf(stdout, fmt, vl);
 }
 
@@ -158,30 +176,56 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
                                        const char *dev_name,
                                        const pjmedia_vid_dev_param *param)
 {
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+    AVDictionary *format_opts = NULL;
+    char buf[128];
+    enum AVPixelFormat av_fmt;
+#else
     AVFormatParameters fp;
+#endif
     pjmedia_video_format_detail *vfd;
+    pj_status_t status;
     int err;
 
     PJ_ASSERT_RETURN(ctx && ifmt && dev_name && param, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
                      PJ_EINVAL);
 
+    status = pjmedia_format_id_to_PixelFormat(param->fmt.id, &av_fmt);
+    if (status != PJ_SUCCESS) {
+	avformat_free_context(*ctx);
+	return status;
+    }
+
     vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
 
     /* Init ffmpeg format context */
     *ctx = avformat_alloc_context();
 
+#if LIBAVFORMAT_VER_AT_LEAST(53,2)
+    /* Init ffmpeg dictionary */
+    /*
+    snprintf(buf, sizeof(buf), "%d/%d", vfd->fps.num, vfd->fps.denum);
+    av_dict_set(&format_opts, "framerate", buf, 0);
+    snprintf(buf, sizeof(buf), "%dx%d", vfd->size.w, vfd->size.h);
+    av_dict_set(&format_opts, "video_size", buf, 0);
+    av_dict_set(&format_opts, "pixel_format", av_get_pix_fmt_name(av_fmt), 0);
+    */
+    /* Open capture stream */
+    err = avformat_open_input(ctx, dev_name, ifmt, &format_opts);
+#else
     /* Init ffmpeg format param */
     pj_bzero(&fp, sizeof(fp));
     fp.prealloced_context = 1;
     fp.width = vfd->size.w;
     fp.height = vfd->size.h;
-    fp.pix_fmt = PIX_FMT_BGR24;
+    fp.pix_fmt = av_fmt;
     fp.time_base.num = vfd->fps.denum;
     fp.time_base.den = vfd->fps.num;
 
     /* Open capture stream */
     err = av_open_input_stream(ctx, NULL, dev_name, ifmt, &fp);
+#endif
     if (err < 0) {
         *ctx = NULL; /* ffmpeg freed its states on failure, do we must too */
         print_ffmpeg_err(err);
@@ -244,60 +288,212 @@ static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
     return PJ_SUCCESS;
 }
 
+
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN64) && PJ_WIN64!=0)
+
+#ifdef _MSC_VER
+#   pragma warning(push, 3)
+#endif
+
+#define COBJMACROS
+#include <DShow.h>
+#pragma comment(lib, "Strmiids.lib")
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif
+
+#define MAX_DEV_NAME_LEN 80
+
+static pj_status_t dshow_enum_devices(unsigned *dev_cnt,
+				      char dev_names[][MAX_DEV_NAME_LEN])
+{
+    unsigned max_cnt = *dev_cnt;
+    ICreateDevEnum *dev_enum = NULL;
+    IEnumMoniker *enum_cat = NULL;
+    IMoniker *moniker = NULL;
+    HRESULT hr;
+    ULONG fetched;
+    unsigned i = 0;
+
+    CoInitialize(0);
+
+    *dev_cnt = 0;
+    hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL,
+                          CLSCTX_INPROC_SERVER, &IID_ICreateDevEnum,
+                          (void**)&dev_enum);
+    if (FAILED(hr) ||
+        ICreateDevEnum_CreateClassEnumerator(dev_enum,
+            &CLSID_VideoInputDeviceCategory, &enum_cat, 0) != S_OK) 
+    {
+	PJ_LOG(4,(THIS_FILE, "Windows found no video input devices"));
+        if (dev_enum)
+            ICreateDevEnum_Release(dev_enum);
+
+	return PJ_SUCCESS;
+    }
+
+    while (IEnumMoniker_Next(enum_cat, 1, &moniker, &fetched) == S_OK &&
+	   *dev_cnt < max_cnt)
+    {
+	(*dev_cnt)++;
+    }
+
+    if (*dev_cnt == 0) {
+        IEnumMoniker_Release(enum_cat);
+        ICreateDevEnum_Release(dev_enum);
+	return PJ_SUCCESS;
+    }
+
+    IEnumMoniker_Reset(enum_cat);
+    while (i < max_cnt &&
+	   IEnumMoniker_Next(enum_cat, 1, &moniker, &fetched) == S_OK)
+    {
+        IPropertyBag *prop_bag;
+
+        hr = IMoniker_BindToStorage(moniker, 0, 0, &IID_IPropertyBag,
+                                    (void**)&prop_bag);
+        if (SUCCEEDED(hr)) {
+            VARIANT var_name;
+
+            VariantInit(&var_name);
+            hr = IPropertyBag_Read(prop_bag, L"FriendlyName", &var_name,
+				   NULL);
+            if (SUCCEEDED(hr) && var_name.bstrVal) {
+		char tmp[MAX_DEV_NAME_LEN] = {0};
+                WideCharToMultiByte(CP_ACP, 0, var_name.bstrVal,
+                                    (int)wcslen(var_name.bstrVal),
+                                    tmp, MAX_DEV_NAME_LEN, NULL, NULL);
+		pj_ansi_snprintf(dev_names[i++], MAX_DEV_NAME_LEN,
+				 "video=%s", tmp);
+            }
+            VariantClear(&var_name);
+            IPropertyBag_Release(prop_bag);
+        }
+        IMoniker_Release(moniker);
+    }
+
+    IEnumMoniker_Release(enum_cat);
+    ICreateDevEnum_Release(dev_enum);
+
+    PJ_LOG(4, (THIS_FILE, "DShow has %d devices:", *dev_cnt));
+    for (i = 0; i < *dev_cnt; ++i) {
+	PJ_LOG(4, (THIS_FILE, " %d: %s", (i+1), dev_names[i]));
+    }
+
+    return PJ_SUCCESS;
+}
+
+#endif /* PJ_WIN32 or PJ_WIN64 */
+
+
 /* API: refresh the list of devices */
 static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     AVInputFormat *p;
-    ffmpeg_dev_info *info;
 
     av_log_set_callback(&print_ffmpeg_log);
-    av_log_set_level(AV_LOG_DEBUG);
+    av_log_set_level(AV_LOG_ERROR);
 
     if (ff->dev_pool) {
         pj_pool_release(ff->dev_pool);
         ff->dev_pool = NULL;
     }
 
-    /* TODO: this should enumerate devices, now it enumerates host APIs */
     ff->dev_count = 0;
     ff->dev_pool = pj_pool_create(ff->pf, "ffmpeg_cap_dev", 500, 500, NULL);
 
-    p = av_iformat_next(NULL);
-    while (p) {
-        if (p->flags & AVFMT_NOFILE) {
-            unsigned i;
+    /* Iterate host APIs */
+    p = av_input_video_device_next(NULL);
+    while (p && ff->dev_count < MAX_DEV_CNT) {
+	char dev_names[MAX_DEV_CNT][MAX_DEV_NAME_LEN];
+	unsigned dev_cnt = MAX_DEV_CNT;
+	unsigned dev_idx;
 
-            info = &ff->dev_info[ff->dev_count++];
-            pj_bzero(info, sizeof(*info));
-            pj_ansi_strncpy(info->base.name, "default", 
-                            sizeof(info->base.name));
-            pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
-                             "%s (ffmpeg)", p->name);
-            info->base.dir = PJMEDIA_DIR_CAPTURE;
-            info->base.has_callback = PJ_FALSE;
-
-            info->host_api = p;
+	if ((p->flags & AVFMT_NOFILE)==0 || p->read_probe) {
+	    goto next_format;
+	}
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN64) && PJ_WIN64!=0)
-            info->def_devname = "0";
+	if (pj_ansi_strcmp(p->name, "dshow") == 0) {
+	    dshow_enum_devices(&dev_cnt, dev_names);
+	} else if (pj_ansi_strcmp(p->name, "vfwcap") == 0) {
+	    dev_cnt = 1;
+	    pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "0");
+	} else {
+	    dev_cnt = 0;
+	}
 #elif defined(PJ_LINUX) && PJ_LINUX!=0
-            info->def_devname = "/dev/video0";
+	dev_cnt = 1;
+	pj_ansi_snprintf(dev_names[0], MAX_DEV_NAME_LEN, "/dev/video0");
+#else
+	dev_cnt = 0;
 #endif
 
-            /* Set supported formats, currently hardcoded to RGB24 only */
-            info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-            info->base.fmt_cnt = 1;
-            for (i = 0; i < info->base.fmt_cnt; ++i) {
-                pjmedia_format *fmt = &info->base.fmt[i];
+	/* Iterate devices (only DirectShow devices for now) */
+	for (dev_idx = 0; dev_idx < dev_cnt && ff->dev_count < MAX_DEV_CNT;
+	    ++dev_idx)
+	{
+	    ffmpeg_dev_info *info;
+	    AVFormatContext *ctx;
+	    AVCodecContext *codec = NULL;
+	    pjmedia_format_id fmt_id;
+	    pj_str_t dev_name;
+	    pj_status_t status;
+	    unsigned i;
+            
+	    ctx = avformat_alloc_context();
+	    if (!ctx || avformat_open_input(&ctx, dev_names[dev_idx], p, NULL)!=0)
+		continue;
 
-                fmt->id = PJMEDIA_FORMAT_RGB24;
-                fmt->type = PJMEDIA_TYPE_VIDEO;
-                fmt->detail_type = PJMEDIA_FORMAT_DETAIL_NONE;
-            }
-        }
-        p = av_iformat_next(p);
+	    for(i = 0; i < ctx->nb_streams; i++) {
+		if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO) {
+		    codec = ctx->streams[i]->codec;
+		    break;
+		}
+	    }
+	    if (!codec) {
+		av_close_input_stream(ctx);
+		continue;
+	    }
+
+	    status = PixelFormat_to_pjmedia_format_id(codec->pix_fmt, &fmt_id);
+	    if (status != PJ_SUCCESS) {
+		av_close_input_stream(ctx);
+		continue;
+	    }
+
+	    info = &ff->dev_info[ff->dev_count++];
+	    pj_bzero(info, sizeof(*info));
+	    pj_ansi_strncpy(info->base.name, "default", 
+			    sizeof(info->base.name));
+	    pj_ansi_snprintf(info->base.driver, sizeof(info->base.driver),
+			     "ffmpeg %s", p->name);
+	    
+	    pj_strdup2_with_null(ff->pool, &dev_name, dev_names[dev_idx]);
+	    info->def_devname = dev_name.ptr;
+	    info->base.dir = PJMEDIA_DIR_CAPTURE;
+	    info->base.has_callback = PJ_FALSE;
+
+	    info->host_api = p;
+
+	    /* Set supported formats */
+	    info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+	    info->base.fmt_cnt = 1;
+	    for (i = 0; i < info->base.fmt_cnt; ++i) {
+		pjmedia_format *fmt = &info->base.fmt[i];
+		pjmedia_format_init_video(fmt, fmt_id,
+					  codec->width, codec->height, 15, 1);
+	    }
+
+	    av_close_input_stream(ctx);
+	}
+
+next_format:
+	p = av_input_video_device_next(p);
     }
 
     return PJ_SUCCESS;
@@ -386,11 +582,30 @@ static pj_status_t ffmpeg_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->param, param, sizeof(*param));
 
+    /* Allocate frame buffer */
+    {
+	const pjmedia_video_format_info *vfi;
+	pjmedia_video_apply_fmt_param vafp;
+
+	vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
+	if (!vfi) goto on_error;
+
+	pj_bzero(&vafp, sizeof(vafp));
+	vafp.size = param->fmt.det.vid.size;
+	vfi->apply_fmt(vfi, &vafp);
+
+	strm->frame_buf = pj_pool_alloc(pool, vafp.framebytes);
+    }
+
     /* Done */
     strm->base.op = &stream_op;
     *p_vid_strm = &strm->base;
 
     return PJ_SUCCESS;
+
+on_error:
+    pj_pool_release(pool);
+    return PJMEDIA_EVID_INVCAP;
 }
 
 /* API: Get stream info. */
@@ -462,7 +677,7 @@ static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_dev_stream *s,
                                            pjmedia_frame *frame)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
-    AVPacket p;
+    AVPacket p = {0};
     int err;
 
     err = av_read_frame(strm->ff_fmt_ctx, &p);
@@ -473,8 +688,10 @@ static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_dev_stream *s,
 
     pj_bzero(frame, sizeof(*frame));
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
-    frame->buf = p.data;
+    frame->buf = strm->frame_buf;
     frame->size = p.size;
+    pj_memcpy(frame->buf, p.data, p.size);
+    av_free_packet(&p);
 
     return PJ_SUCCESS;
 }

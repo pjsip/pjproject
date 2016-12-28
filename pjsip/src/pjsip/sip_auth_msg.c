@@ -71,7 +71,8 @@ static int print_digest_credential(pjsip_digest_credential *cred, char *buf, pj_
     const pjsip_parser_const_t *pc = pjsip_parser_const();
     
     copy_advance_pair_quote_cond(buf, "username=", 9, cred->username, '"', '"');
-    copy_advance_pair_quote_cond(buf, ", realm=", 8, cred->realm, '"', '"');
+    copy_advance_pair_quote_cond_always(buf, ", realm=", 8, cred->realm, '"', 
+					'"');
     copy_advance_pair_quote(buf, ", nonce=", 8, cred->nonce, '"', '"');
     copy_advance_pair_quote_cond(buf, ", uri=", 6, cred->uri, '"', '"');
     copy_advance_pair_quote(buf, ", response=", 11, cred->response, '"', '"');

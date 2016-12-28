@@ -160,17 +160,9 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    rdata->pkt_info.len = bytes_read;
 	    rdata->pkt_info.zero = 0;
 	    pj_gettimeofday(&rdata->pkt_info.timestamp);
-	    if (src_addr->addr.sa_family == pj_AF_INET()) {
-		pj_ansi_strcpy(rdata->pkt_info.src_name,
-			       pj_inet_ntoa(src_addr->ipv4.sin_addr));
-		rdata->pkt_info.src_port = pj_ntohs(src_addr->ipv4.sin_port);
-	    } else {
-		pj_inet_ntop(pj_AF_INET6(), 
-			     pj_sockaddr_get_addr(&rdata->pkt_info.src_addr),
-			     rdata->pkt_info.src_name,
-			     sizeof(rdata->pkt_info.src_name));
-		rdata->pkt_info.src_port = pj_ntohs(src_addr->ipv6.sin6_port);
-	    }
+	    pj_sockaddr_print(src_addr, rdata->pkt_info.src_name,
+			      sizeof(rdata->pkt_info.src_name), 0);
+	    rdata->pkt_info.src_port = pj_sockaddr_get_port(src_addr);
 
 	    size_eaten = 
 		pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
@@ -517,12 +509,12 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	    if (status != PJ_SUCCESS)
 		return status;
 
-	    pj_strcpy2(&bound_name->host, pj_inet_ntoa(hostip.ipv4.sin_addr));
+	    status = pj_inet_ntop(pj_AF_INET(), &hostip.ipv4.sin_addr,
+	    		 	  hostbuf, hostbufsz);
 	} else {
 	    /* Otherwise use bound address. */
-	    pj_strcpy2(&bound_name->host, 
-		       pj_inet_ntoa(tmp_addr.ipv4.sin_addr));
-	    status = PJ_SUCCESS;
+	    status = pj_inet_ntop(pj_AF_INET(), &tmp_addr.ipv4.sin_addr,
+	    		 	  hostbuf, hostbufsz);
 	}
 
     } else {
@@ -542,9 +534,9 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	status = pj_inet_ntop(tmp_addr.addr.sa_family, 
 			      pj_sockaddr_get_addr(&tmp_addr),
 			      hostbuf, hostbufsz);
-	if (status == PJ_SUCCESS) {
-	    bound_name->host.slen = pj_ansi_strlen(hostbuf);
-	}
+    }
+    if (status == PJ_SUCCESS) {
+	bound_name->host.slen = pj_ansi_strlen(hostbuf);
     }
 
 
@@ -869,6 +861,81 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_attach2( pjsip_endpoint *endpt,
 			    async_cnt, p_transport);
 }
 
+
+/*
+ * Initialize pjsip_udp_transport_cfg structure with default values.
+ */
+PJ_DEF(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
+					     int af)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->af = af;
+    pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
+    cfg->async_cnt = 1;
+}
+
+
+/*
+ * pjsip_udp_transport_start2()
+ *
+ * Create a UDP socket in the specified address and start a transport.
+ */
+PJ_DEF(pj_status_t) pjsip_udp_transport_start2(
+					pjsip_endpoint *endpt,
+					const pjsip_udp_transport_cfg *cfg,
+					pjsip_transport **p_transport)
+{
+    pj_sock_t sock;
+    pj_status_t status;
+    pjsip_host_port addr_name;
+    char addr_buf[PJ_INET6_ADDRSTRLEN];
+    pjsip_transport_type_e transport_type;
+    pj_uint16_t af;
+    int addr_len;
+
+    PJ_ASSERT_RETURN(endpt && cfg && cfg->async_cnt, PJ_EINVAL);
+
+    if (cfg->bind_addr.addr.sa_family == pj_AF_INET()) {
+	af = pj_AF_INET();
+	transport_type = PJSIP_TRANSPORT_UDP;
+	addr_len = sizeof(pj_sockaddr_in);
+    } else {
+	af = pj_AF_INET6();
+	transport_type = PJSIP_TRANSPORT_UDP6;
+	addr_len = sizeof(pj_sockaddr_in6);
+    }
+
+    status = create_socket(af, &cfg->bind_addr, addr_len, &sock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Apply QoS, if specified */
+    pj_sock_apply_qos2(sock, cfg->qos_type, &cfg->qos_params,
+		       2, THIS_FILE, "SIP UDP transport");
+
+    /* Apply sockopt, if specified */
+    if (cfg->sockopt_params.cnt)
+	pj_sock_setsockopt_params(sock, &cfg->sockopt_params);
+
+    if (cfg->addr_name.host.slen == 0) {
+	/* Address name is not specified.
+	 * Build a name based on bound address.
+	 */
+	status = get_published_name(sock, addr_buf, sizeof(addr_buf),
+				    &addr_name);
+	if (status != PJ_SUCCESS) {
+	    pj_sock_close(sock);
+	    return status;
+	}
+    } else {
+	addr_name = cfg->addr_name;
+    }
+
+    return pjsip_udp_transport_attach2(endpt, transport_type, sock,
+				       &addr_name, cfg->async_cnt,
+				       p_transport);
+}
+
 /*
  * pjsip_udp_transport_start()
  *
@@ -880,36 +947,17 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start( pjsip_endpoint *endpt,
 					       unsigned async_cnt,
 					       pjsip_transport **p_transport)
 {
-    pj_sock_t sock;
-    pj_status_t status;
-    char addr_buf[PJ_INET6_ADDRSTRLEN];
-    pjsip_host_port bound_name;
+    pjsip_udp_transport_cfg cfg;
 
-    PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
+    pjsip_udp_transport_cfg_default(&cfg, pj_AF_INET());
+    if (local_a)
+	pj_sockaddr_cp(&cfg.bind_addr, local_a);
+    if (a_name)
+	cfg.addr_name = *a_name;
+    cfg.async_cnt = async_cnt;
 
-    status = create_socket(pj_AF_INET(), local_a, sizeof(pj_sockaddr_in), 
-			   &sock);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    if (a_name == NULL) {
-	/* Address name is not specified. 
-	 * Build a name based on bound address.
-	 */
-	status = get_published_name(sock, addr_buf, sizeof(addr_buf), 
-				    &bound_name);
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(sock);
-	    return status;
-	}
-
-	a_name = &bound_name;
-    }
-
-    return pjsip_udp_transport_attach( endpt, sock, a_name, async_cnt, 
-				       p_transport );
+    return pjsip_udp_transport_start2(endpt, &cfg, p_transport);
 }
-
 
 /*
  * pjsip_udp_transport_start()
@@ -922,34 +970,16 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start6(pjsip_endpoint *endpt,
 					       unsigned async_cnt,
 					       pjsip_transport **p_transport)
 {
-    pj_sock_t sock;
-    pj_status_t status;
-    char addr_buf[PJ_INET6_ADDRSTRLEN];
-    pjsip_host_port bound_name;
+    pjsip_udp_transport_cfg cfg;
 
-    PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
+    pjsip_udp_transport_cfg_default(&cfg, pj_AF_INET6());
+    if (local_a)
+	pj_sockaddr_cp(&cfg.bind_addr, local_a);
+    if (a_name)
+	cfg.addr_name = *a_name;
+    cfg.async_cnt = async_cnt;
 
-    status = create_socket(pj_AF_INET6(), local_a, sizeof(pj_sockaddr_in6), 
-			   &sock);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    if (a_name == NULL) {
-	/* Address name is not specified. 
-	 * Build a name based on bound address.
-	 */
-	status = get_published_name(sock, addr_buf, sizeof(addr_buf), 
-				    &bound_name);
-	if (status != PJ_SUCCESS) {
-	    pj_sock_close(sock);
-	    return status;
-	}
-
-	a_name = &bound_name;
-    }
-
-    return pjsip_udp_transport_attach2(endpt, PJSIP_TRANSPORT_UDP6,
-				       sock, a_name, async_cnt, p_transport);
+    return pjsip_udp_transport_start2(endpt, &cfg, p_transport);
 }
 
 /*
@@ -1090,8 +1120,10 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
         /* Init local address. */
         status = pj_sock_getsockname(sock, &tp->base.local_addr, 
 				     &tp->base.addr_len);
-        if (status != PJ_SUCCESS)
-	    return status;
+        if (status != PJ_SUCCESS) {
+            pj_sock_close(sock);
+            return status;
+        }
 
 	/* Assign the socket and published address to transport. */
 	udp_set_socket(tp, sock, a_name);

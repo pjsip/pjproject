@@ -339,7 +339,7 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 	}
 	else {
 	    pjsip_auth_create_digest( &cred->response, &cred->nonce,
-				      &cred->nc, cnonce, &pjsip_AUTH_STR,
+				      &cred->nc, &cred->cnonce, &pjsip_AUTH_STR,
 				      uri, &chal->realm, cred_info, method );
 	}
 
@@ -357,15 +357,14 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 /*
  * Update authentication session with a challenge.
  */
-static void update_digest_session( pj_pool_t *ses_pool,
-				   pjsip_cached_auth *cached_auth,
+static void update_digest_session( pjsip_cached_auth *cached_auth,
 				   const pjsip_www_authenticate_hdr *hdr )
 {
     if (hdr->challenge.digest.qop.slen == 0) {
 #if PJSIP_AUTH_AUTO_SEND_NEXT!=0
 	if (!cached_auth->last_chal || pj_stricmp2(&hdr->scheme, "digest")) {
 	    cached_auth->last_chal = (pjsip_www_authenticate_hdr*)
-				     pjsip_hdr_clone(ses_pool, hdr);
+				     pjsip_hdr_clone(cached_auth->pool, hdr);
 	} else {
 	    /* Only update if the new challenge is "significantly different"
 	     * than the one in the cache, to reduce memory usage.
@@ -382,7 +381,7 @@ static void update_digest_session( pj_pool_t *ses_pool,
 		pj_strcmp(&d1->qop, &d2->qop))
 	    {
 		cached_auth->last_chal = (pjsip_www_authenticate_hdr*)
-				         pjsip_hdr_clone(ses_pool, hdr);
+				       pjsip_hdr_clone(cached_auth->pool, hdr);
 	    }
 	}
 #endif
@@ -393,10 +392,10 @@ static void update_digest_session( pj_pool_t *ses_pool,
     if (cached_auth->cnonce.slen == 0) {
 	/* Save the whole challenge */
 	cached_auth->last_chal = (pjsip_www_authenticate_hdr*)
-				 pjsip_hdr_clone(ses_pool, hdr);
+				 pjsip_hdr_clone(cached_auth->pool, hdr);
 
 	/* Create cnonce */
-	pj_create_unique_string( ses_pool, &cached_auth->cnonce );
+	pj_create_unique_string( cached_auth->pool, &cached_auth->cnonce );
 
 	/* Initialize nonce-count */
 	cached_auth->nc = 1;
@@ -406,7 +405,7 @@ static void update_digest_session( pj_pool_t *ses_pool,
 	pj_assert(cached_auth->realm.slen != 0);
 	*/
 	if (cached_auth->realm.slen == 0) {
-	    pj_strdup(ses_pool, &cached_auth->realm,
+	    pj_strdup(cached_auth->pool, &cached_auth->realm,
 		      &hdr->challenge.digest.realm);
 	}
 
@@ -419,13 +418,14 @@ static void update_digest_session( pj_pool_t *ses_pool,
 	    ++cached_auth->nc;
 	} else {
 	    /* Server gives new nonce. */
-	    pj_strdup(ses_pool, &cached_auth->last_chal->challenge.digest.nonce,
+	    pj_strdup(cached_auth->pool, 
+		      &cached_auth->last_chal->challenge.digest.nonce,
 		      &hdr->challenge.digest.nonce);
 	    /* Has the opaque changed? */
 	    if (pj_strcmp(&cached_auth->last_chal->challenge.digest.opaque,
 			  &hdr->challenge.digest.opaque))
 	    {
-		pj_strdup(ses_pool,
+		pj_strdup(cached_auth->pool,
 			  &cached_auth->last_chal->challenge.digest.opaque,
 			  &hdr->challenge.digest.opaque);
 	    }
@@ -494,6 +494,23 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init(  pjsip_auth_clt_sess *sess,
     sess->cred_cnt = 0;
     sess->cred_info = NULL;
     pj_list_init(&sess->cached_auth);
+
+    return PJ_SUCCESS;
+}
+
+
+/* Deinit client session. */
+PJ_DEF(pj_status_t) pjsip_auth_clt_deinit(pjsip_auth_clt_sess *sess)
+{
+    pjsip_cached_auth *auth;
+    
+    PJ_ASSERT_RETURN(sess && sess->endpt, PJ_EINVAL);
+    
+    auth = sess->cached_auth.next;
+    while (auth != &sess->cached_auth) {
+	pjsip_endpt_release_pool(sess->endpt, auth->pool);
+	auth = auth->next;
+    }
 
     return PJ_SUCCESS;
 }
@@ -691,7 +708,7 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
 #	if PJSIP_AUTH_QOP_SUPPORT
 	{
 	    if (cached_auth) {
-		update_digest_session( sess_pool, cached_auth, hdr );
+		update_digest_session( cached_auth, hdr );
 
 		cnonce = &cached_auth->cnonce;
 		nc = cached_auth->nc;
@@ -961,6 +978,33 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 }
 
 
+static void recreate_cached_auth_pool( pjsip_endpoint *endpt, 
+				       pjsip_cached_auth *auth )
+{
+    pj_pool_t *auth_pool = pjsip_endpt_create_pool(endpt, "auth_cli%p", 1024, 
+						   1024);
+
+    if (auth->realm.slen) {
+        pj_str_t realm;
+        pj_strdup(auth_pool, &realm, &auth->realm);
+        pj_strassign(&auth->realm, &realm);
+    }
+
+    if (auth->cnonce.slen) {
+        pj_str_t cnonce;
+        pj_strdup(auth_pool, &cnonce, &auth->cnonce);
+        pj_strassign(&auth->cnonce, &cnonce);
+    }
+
+    if (auth->last_chal) {
+        auth->last_chal = (pjsip_www_authenticate_hdr*)
+			  pjsip_hdr_clone(auth_pool, auth->last_chal);
+    }
+
+    pjsip_endpt_release_pool(endpt, auth->pool);
+    auth->pool = auth_pool;
+}
+
 /* Process authorization challenge */
 static pj_status_t process_auth( pj_pool_t *req_pool,
 				 const pjsip_www_authenticate_hdr *hchal,
@@ -1126,32 +1170,43 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	if (hdr == &rdata->msg_info.msg->hdr)
 	    break;
 
-	hchal = (const pjsip_www_authenticate_hdr*) hdr;
+	hchal = (const pjsip_www_authenticate_hdr*)hdr;
 	++chal_cnt;
 
 	/* Find authentication session for this realm, create a new one
 	 * if not present.
 	 */
-	cached_auth = find_cached_auth(sess, &hchal->challenge.common.realm );
+	cached_auth = find_cached_auth(sess, &hchal->challenge.common.realm);
 	if (!cached_auth) {
-	    cached_auth = PJ_POOL_ZALLOC_T( sess->pool, pjsip_cached_auth);
-	    pj_strdup( sess->pool, &cached_auth->realm, &hchal->challenge.common.realm);
+	    cached_auth = PJ_POOL_ZALLOC_T(sess->pool, pjsip_cached_auth);
+	    cached_auth->pool = pjsip_endpt_create_pool(sess->endpt,
+							"auth_cli%p",
+							1024,
+							1024);
+	    pj_strdup(cached_auth->pool, &cached_auth->realm,
+		      &hchal->challenge.common.realm);
 	    cached_auth->is_proxy = (hchal->type == PJSIP_H_PROXY_AUTHENTICATE);
 #	    if (PJSIP_AUTH_HEADER_CACHING)
 	    {
 		pj_list_init(&cached_auth->cached_hdr);
 	    }
 #	    endif
-	    pj_list_insert_before( &sess->cached_auth, cached_auth );
+	    pj_list_insert_before(&sess->cached_auth, cached_auth);
 	}
 
 	/* Create authorization header for this challenge, and update
 	 * authorization session.
 	 */
-	status = process_auth( tdata->pool, hchal, tdata->msg->line.req.uri,
-			       tdata, sess, cached_auth, &hauth);
+	status = process_auth(tdata->pool, hchal, tdata->msg->line.req.uri,
+			      tdata, sess, cached_auth, &hauth);
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	if (pj_pool_get_used_size(cached_auth->pool) >
+	    PJSIP_AUTH_CACHED_POOL_MAX_SIZE) 
+	{
+	    recreate_cached_auth_pool(sess->endpt, cached_auth);
+	}	
 
 	/* Add to the message. */
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hauth);

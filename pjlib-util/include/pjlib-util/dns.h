@@ -427,6 +427,22 @@ PJ_DECL(void) pj_dns_init_a_rr(pj_dns_parsed_rr *rec,
 			       const pj_in_addr *ip_addr);
 
 /**
+ * Initialize DNS record as DNS AAAA record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			AAAA record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param ip_addr	Host address.
+ */
+PJ_DECL(void) pj_dns_init_aaaa_rr(pj_dns_parsed_rr *rec,
+				  const pj_str_t *res_name,
+				  unsigned dnsclass,
+				  unsigned ttl,
+				  const pj_in6_addr *ip_addr);
+
+/**
  * Dump DNS packet to standard log.
  *
  * @param res		The DNS packet.

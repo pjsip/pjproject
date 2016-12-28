@@ -253,8 +253,11 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     af = use_ipv6 ? pj_AF_INET6() : pj_AF_INET();
 
     /* Make sure STUN server resolution has completed */
-    if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
-	status = resolve_stun_server(PJ_TRUE);
+    if (!use_ipv6 && pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
+	pj_bool_t retry_stun = (acc->cfg.media_stun_use &
+				PJSUA_STUN_RETRY_ON_FAILURE) ==
+				PJSUA_STUN_RETRY_ON_FAILURE;
+	status = resolve_stun_server(PJ_TRUE, retry_stun);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	    return status;
@@ -350,7 +353,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	 * If we're configured to use STUN, then find out the mapped address,
 	 * and make sure that the mapped RTCP port is adjacent with the RTP.
 	 */
-	if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id) &&
+	if (!use_ipv6 &&
+	    pjsua_media_acc_is_using_stun(call_med->call->acc_id) &&
 	    pjsua_var.stun_srv.addr.sa_family != 0)
 	{
 	    char ip_addr[32];
@@ -358,8 +362,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    pj_sockaddr_in resolved_addr[2];
 	    pjstun_setting stun_opt;
 
-	    pj_ansi_strcpy(ip_addr,
-			   pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
+	    pj_sockaddr_print(&pjsua_var.stun_srv, ip_addr,sizeof(ip_addr),0);
 	    stun_srv = pj_str(ip_addr);
 
 	    pj_bzero(&stun_opt, sizeof(stun_opt));
@@ -388,9 +391,83 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    }
 	    else
 #endif
+
+	    if (status != PJ_SUCCESS && pjsua_var.ua_cfg.stun_srv_cnt > 1 &&
+	        ((acc->cfg.media_stun_use & PJSUA_STUN_RETRY_ON_FAILURE)==
+		  PJSUA_STUN_RETRY_ON_FAILURE))
+	    {
+		pj_str_t srv = 
+			     pjsua_var.ua_cfg.stun_srv[pjsua_var.stun_srv_idx];
+
+		PJ_LOG(4,(THIS_FILE, "Failed to get STUN mapped address, "
+		       "retrying other STUN servers"));
+
+		if (pjsua_var.stun_srv_idx < pjsua_var.ua_cfg.stun_srv_cnt-1) {
+		    PJSUA_LOCK();
+		    /* Move the unusable STUN server to the last position
+		     * as the least prioritize.
+		     */
+		    pj_array_erase(pjsua_var.ua_cfg.stun_srv, 
+				   sizeof(pj_str_t),
+				   pjsua_var.ua_cfg.stun_srv_cnt,
+				   pjsua_var.stun_srv_idx);
+
+		    pj_array_insert(pjsua_var.ua_cfg.stun_srv, 
+				    sizeof(pj_str_t),
+				    pjsua_var.ua_cfg.stun_srv_cnt-1,
+				    pjsua_var.ua_cfg.stun_srv_cnt-1,
+				    &srv);
+
+		    PJSUA_UNLOCK();
+		}
+	    	status=pjsua_update_stun_servers(pjsua_var.ua_cfg.stun_srv_cnt,
+	    			   	    	 pjsua_var.ua_cfg.stun_srv,
+	    			   	    	 PJ_TRUE);
+	    	if (status == PJ_SUCCESS) {
+		    if (pjsua_var.stun_srv.addr.sa_family != 0) {
+    			pj_sockaddr_print(&pjsua_var.stun_srv,
+    		     		     	  ip_addr, sizeof(ip_addr), 0);
+			stun_srv = pj_str(ip_addr);
+	    	    } else {
+		    	stun_srv.slen = 0;
+    	            }
+    	    
+    	            stun_opt.srv1  = stun_opt.srv2  = stun_srv;
+	            stun_opt.port1 = stun_opt.port2 = 
+			        pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
+	    	    status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory,
+	    				  	     &stun_opt, 2, sock,
+	    				    	     resolved_addr);
+	        }
+	    }
+
 	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "STUN resolve error", status);
-		goto on_error;
+		if (!pjsua_var.ua_cfg.stun_ignore_failure) {
+		    pjsua_perror(THIS_FILE, "STUN resolve error", status);
+		    goto on_error;
+		}
+
+		PJ_LOG(4,(THIS_FILE, "Ignoring STUN resolve error %d", 
+		          status));
+
+		if (!pj_sockaddr_has_addr(&bound_addr)) {
+		    pj_sockaddr addr;
+
+		    /* Get local IP address. */
+		    status = pj_gethostip(af, &addr);
+		    if (status != PJ_SUCCESS)
+			goto on_error;
+
+		    pj_sockaddr_copy_addr(&bound_addr, &addr);
+		}
+
+		for (i=0; i<2; ++i) {
+		    pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		    pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		    pj_sockaddr_set_port(&mapped_addr[i],
+					 (pj_uint16_t)(acc->next_rtp_port+i));
+		}
+		break;
 	    }
 
 	    pj_sockaddr_cp(&mapped_addr[0], &resolved_addr[0]);
@@ -678,6 +755,7 @@ static void on_ice_complete(pjmedia_transport *tp,
 	pjsua_call_schedule_reinvite_check(call, 0);
 	break;
     case PJ_ICE_STRANS_OP_KEEP_ALIVE:
+    case PJ_ICE_STRANS_OP_ADDR_CHANGE:
 	if (result != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, result,
 		         "ICE keep alive failure for transport %d:%d",
@@ -694,7 +772,9 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    (*pjsua_var.ua_cfg.cb.on_call_media_transport_state)(
                 call->index, &info);
         }
-	if (pjsua_var.ua_cfg.cb.on_ice_transport_error) {
+	if (pjsua_var.ua_cfg.cb.on_ice_transport_error &&
+	    op == PJ_ICE_STRANS_OP_KEEP_ALIVE)
+	{
 	    pjsua_call_id id = call->index;
 	    (*pjsua_var.ua_cfg.cb.on_ice_transport_error)(id, op, result,
 							  NULL);
@@ -743,82 +823,198 @@ static pj_status_t create_ice_media_transport(
     char name[32];
     unsigned comp_cnt;
     pj_status_t status;
+    pj_bool_t use_ipv6;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
+    use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
-	return status;
+    if (pjsua_media_acc_is_using_stun(call_med->call->acc_id)) {
+	pj_bool_t retry_stun = (acc_cfg->media_stun_use &
+				PJSUA_STUN_RETRY_ON_FAILURE) ==
+				PJSUA_STUN_RETRY_ON_FAILURE;
+	status = resolve_stun_server(PJ_TRUE, retry_stun);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
+	    return status;
+	}
     }
 
     /* Create ICE stream transport configuration */
     pj_ice_strans_cfg_default(&ice_cfg);
+    pj_bzero(&ice_cfg.stun, sizeof(ice_cfg.stun));
+    pj_bzero(&ice_cfg.turn, sizeof(ice_cfg.turn));
     pj_stun_config_init(&ice_cfg.stun_cfg, &pjsua_var.cp.factory, 0,
 		        pjsip_endpt_get_ioqueue(pjsua_var.endpt),
 			pjsip_endpt_get_timer_heap(pjsua_var.endpt));
     
-    ice_cfg.af = pj_AF_INET();
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
 
-    /* Configure STUN settings */
-    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
-	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
-	ice_cfg.stun.server = pj_str(stunip);
-	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
+    /* If STUN transport is configured, initialize STUN transport settings */
+    if ((pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
+	 pjsua_media_acc_is_using_stun(call_med->call->acc_id)) ||
+	acc_cfg->ice_cfg.ice_max_host_cands != 0)
+    {
+	ice_cfg.stun_tp_cnt = 1;
+	pj_ice_strans_stun_cfg_default(&ice_cfg.stun_tp[0]);
+	if (use_ipv6 && PJ_ICE_MAX_STUN >= 2) {
+	    ice_cfg.stun_tp_cnt = 2;
+	    pj_ice_strans_stun_cfg_default(&ice_cfg.stun_tp[1]);
+	    ice_cfg.stun_tp[1].af = pj_AF_INET6();
+	}
     }
-    if (acc_cfg->ice_cfg.ice_max_host_cands >= 0)
-	ice_cfg.stun.max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
 
-    /* Copy binding port setting to STUN setting */
-    pj_sockaddr_init(ice_cfg.af, &ice_cfg.stun.cfg.bound_addr,
-		     &cfg->bound_addr, (pj_uint16_t)cfg->port);
-    ice_cfg.stun.cfg.port_range = (pj_uint16_t)cfg->port_range;
-    if (cfg->port != 0 && ice_cfg.stun.cfg.port_range == 0)
-	ice_cfg.stun.cfg.port_range = 
-				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
+    /* Configure STUN transport settings */
+    if (ice_cfg.stun_tp_cnt) {
+	unsigned i;
 
-    /* Copy QoS setting to STUN setting */
-    ice_cfg.stun.cfg.qos_type = cfg->qos_type;
-    pj_memcpy(&ice_cfg.stun.cfg.qos_params, &cfg->qos_params,
-	      sizeof(cfg->qos_params));
+	/* Configure STUN server (currently only for IPv4) */
+	if (pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
+	    pjsua_media_acc_is_using_stun(call_med->call->acc_id))
+	{
+	    pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
+	    ice_cfg.stun_tp[0].server = pj_str(stunip);
+	    ice_cfg.stun_tp[0].port = 
+				    pj_sockaddr_get_port(&pjsua_var.stun_srv);
+	}
+
+	/* Configure max host candidates */
+	if (acc_cfg->ice_cfg.ice_max_host_cands >= 0) {
+	    for (i = 0; i < ice_cfg.stun_tp_cnt; ++i)
+		ice_cfg.stun_tp[i].max_host_cands =
+				acc_cfg->ice_cfg.ice_max_host_cands;
+	}
+
+	/* Configure binding address */
+	pj_sockaddr_init(ice_cfg.stun_tp[0].af,
+			 &ice_cfg.stun_tp[0].cfg.bound_addr,
+			 &cfg->bound_addr, (pj_uint16_t)cfg->port);
+	ice_cfg.stun_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
+	if (cfg->port != 0 && ice_cfg.stun_tp[0].cfg.port_range == 0) {
+	    ice_cfg.stun_tp[0].cfg.port_range = 
+			    (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
+	}
+	if (use_ipv6 && ice_cfg.stun_tp_cnt > 1) {
+	    pj_str_t IN6_ADDR_ANY = {"0", 1};
+	    pj_sockaddr_init(pj_AF_INET6(),
+			     &ice_cfg.stun_tp[1].cfg.bound_addr,
+			     &IN6_ADDR_ANY, (pj_uint16_t)cfg->port);
+	    ice_cfg.stun_tp[1].cfg.port_range =
+			    ice_cfg.stun_tp[0].cfg.port_range;
+	}
+
+	/* Configure QoS setting */
+	ice_cfg.stun_tp[0].cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&ice_cfg.stun_tp[0].cfg.qos_params, &cfg->qos_params,
+		  sizeof(cfg->qos_params));
+	if (use_ipv6 && ice_cfg.stun_tp_cnt > 1) {
+	    ice_cfg.stun_tp[1].cfg.qos_type = cfg->qos_type;
+	    pj_memcpy(&ice_cfg.stun_tp[1].cfg.qos_params, &cfg->qos_params,
+		      sizeof(cfg->qos_params));
+	}
+
+	/* Configure max packet size */
+	ice_cfg.stun_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	if (use_ipv6 && ice_cfg.stun_tp_cnt > 1)
+	    ice_cfg.stun_tp[1].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+
+    }
 
     /* Configure TURN settings */
     if (acc_cfg->turn_cfg.enable_turn) {
+	ice_cfg.turn_tp_cnt = 1;
+	pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[0]);
+	if (use_ipv6 && PJ_ICE_MAX_TURN >= 3) {
+	    ice_cfg.turn_tp_cnt = 3;
+
+	    pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[1]);
+	    ice_cfg.turn_tp[1].af = pj_AF_INET6();
+
+	    /* Additional candidate: IPv4 relay via IPv6 TURN server */
+	    pj_ice_strans_turn_cfg_default(&ice_cfg.turn_tp[2]);
+	    ice_cfg.turn_tp[2].af = pj_AF_INET6();
+	    ice_cfg.turn_tp[2].alloc_param.af = pj_AF_INET();
+	}
+
+	/* Configure TURN server */
 	status = parse_host_port(&acc_cfg->turn_cfg.turn_server,
-				 &ice_cfg.turn.server,
-				 &ice_cfg.turn.port);
-	if (status != PJ_SUCCESS || ice_cfg.turn.server.slen == 0) {
+				 &ice_cfg.turn_tp[0].server,
+				 &ice_cfg.turn_tp[0].port);
+	if (status != PJ_SUCCESS || ice_cfg.turn_tp[0].server.slen == 0) {
 	    PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
 	    return PJ_EINVAL;
 	}
-	if (ice_cfg.turn.port == 0)
-	    ice_cfg.turn.port = 3479;
-	ice_cfg.turn.conn_type = acc_cfg->turn_cfg.turn_conn_type;
-	pj_memcpy(&ice_cfg.turn.auth_cred, 
+
+	/* Configure TURN connection settings and credential */
+	if (ice_cfg.turn_tp[0].port == 0)
+	    ice_cfg.turn_tp[0].port = 3479;
+	ice_cfg.turn_tp[0].conn_type = acc_cfg->turn_cfg.turn_conn_type;
+	pj_memcpy(&ice_cfg.turn_tp[0].auth_cred, 
 		  &acc_cfg->turn_cfg.turn_auth_cred,
-		  sizeof(ice_cfg.turn.auth_cred));
+		  sizeof(ice_cfg.turn_tp[0].auth_cred));
 
-	/* Copy QoS setting to TURN setting */
-	ice_cfg.turn.cfg.qos_type = cfg->qos_type;
-	pj_memcpy(&ice_cfg.turn.cfg.qos_params, &cfg->qos_params,
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    ice_cfg.turn_tp[1].server    = ice_cfg.turn_tp[0].server;
+	    ice_cfg.turn_tp[1].port      = ice_cfg.turn_tp[0].port;
+	    ice_cfg.turn_tp[1].conn_type = ice_cfg.turn_tp[0].conn_type;
+	    pj_memcpy(&ice_cfg.turn_tp[1].auth_cred, 
+		      &acc_cfg->turn_cfg.turn_auth_cred,
+		      sizeof(ice_cfg.turn_tp[1].auth_cred));
+
+	    ice_cfg.turn_tp[2].server    = ice_cfg.turn_tp[0].server;
+	    ice_cfg.turn_tp[2].port      = ice_cfg.turn_tp[0].port;
+	    ice_cfg.turn_tp[2].conn_type = ice_cfg.turn_tp[0].conn_type;
+	    pj_memcpy(&ice_cfg.turn_tp[2].auth_cred, 
+		      &acc_cfg->turn_cfg.turn_auth_cred,
+		      sizeof(ice_cfg.turn_tp[2].auth_cred));
+	}
+
+	/* Configure QoS setting */
+	ice_cfg.turn_tp[0].cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&ice_cfg.turn_tp[0].cfg.qos_params, &cfg->qos_params,
 		  sizeof(cfg->qos_params));
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    ice_cfg.turn_tp[1].cfg.qos_type = cfg->qos_type;
+	    pj_memcpy(&ice_cfg.turn_tp[1].cfg.qos_params, &cfg->qos_params,
+		      sizeof(cfg->qos_params));
 
-	/* Copy binding port setting to TURN setting */
-	pj_sockaddr_init(ice_cfg.af, &ice_cfg.turn.cfg.bound_addr,
+	    ice_cfg.turn_tp[2].cfg.qos_type = cfg->qos_type;
+	    pj_memcpy(&ice_cfg.turn_tp[2].cfg.qos_params, &cfg->qos_params,
+		      sizeof(cfg->qos_params));
+	}
+
+	/* Configure binding address */
+	pj_sockaddr_init(ice_cfg.turn_tp[0].af, &ice_cfg.turn_tp[0].cfg.bound_addr,
 			 &cfg->bound_addr, (pj_uint16_t)cfg->port);
-	ice_cfg.turn.cfg.port_range = (pj_uint16_t)cfg->port_range;
-	if (cfg->port != 0 && ice_cfg.turn.cfg.port_range == 0)
-	    ice_cfg.turn.cfg.port_range = 
+	ice_cfg.turn_tp[0].cfg.port_range = (pj_uint16_t)cfg->port_range;
+	if (cfg->port != 0 && ice_cfg.turn_tp[0].cfg.port_range == 0)
+	    ice_cfg.turn_tp[0].cfg.port_range = 
 				 (pj_uint16_t)(pjsua_var.ua_cfg.max_calls * 10);
-    }
 
-    /* Configure packet size for STUN and TURN sockets */
-    ice_cfg.stun.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
-    ice_cfg.turn.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    pj_str_t IN6_ADDR_ANY = {"0", 1};
+	    pj_sockaddr_init(pj_AF_INET6(),
+			     &ice_cfg.turn_tp[1].cfg.bound_addr,
+			     &IN6_ADDR_ANY, (pj_uint16_t)cfg->port);
+	    ice_cfg.turn_tp[1].cfg.port_range =
+			    ice_cfg.turn_tp[0].cfg.port_range;
+
+	    pj_sockaddr_init(pj_AF_INET6(),
+			     &ice_cfg.turn_tp[2].cfg.bound_addr,
+			     &IN6_ADDR_ANY, (pj_uint16_t)cfg->port);
+	    ice_cfg.turn_tp[2].cfg.port_range =
+			    ice_cfg.turn_tp[0].cfg.port_range;
+	}
+
+	/* Configure max packet size */
+	ice_cfg.turn_tp[0].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	if (use_ipv6 && ice_cfg.turn_tp_cnt > 1) {
+	    ice_cfg.turn_tp[1].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	    ice_cfg.turn_tp[2].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+	}
+    }
 
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;
@@ -1343,6 +1539,22 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	    srtp_opt.use = call_med->rem_srtp_use;
 	else
 	    srtp_opt.use = acc->cfg.use_srtp;
+	    
+	if (pjsua_var.ua_cfg.cb.on_create_media_transport_srtp) {
+	    pjsua_call *call = call_med->call;
+	    pjmedia_srtp_use srtp_use = srtp_opt.use;
+
+	    (*pjsua_var.ua_cfg.cb.on_create_media_transport_srtp)
+		(call->index, call_med->idx, &srtp_opt);
+
+	    /* Close_member_tp must not be overwritten by app */
+	    srtp_opt.close_member_tp = PJ_TRUE;
+
+	    /* Revert SRTP usage policy if media is reinitialized */
+	    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+		srtp_opt.use = srtp_use;
+	    }
+    	}
 
 	status = pjmedia_transport_srtp_create(pjsua_var.med_endpt,
 					       call_med->tp,
@@ -1763,7 +1975,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 * media from existing media.
 	 * Otherwise, apply media count from the call setting directly.
 	 */
-	if (reinit) {
+	if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) == 0) {
 
 	    /* We are sending reoffer, check media count for each media type
 	     * from the existing call media list.
@@ -1827,6 +2039,17 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 		    mvididx[0] = (pj_uint8_t)call->med_prov_cnt++;
 		}
 #endif
+	    }
+
+	    /* In case of media reinit, 'med_prov_cnt' may be decreased
+	     * because the new call->opt says so. As media count should
+	     * never decrease, we should verify 'med_prov_cnt' to be
+	     * at least equal to 'med_cnt' (see also #1987).
+	     */
+	    if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) &&
+		call->med_prov_cnt < call->med_cnt)
+	    {
+		call->med_prov_cnt = call->med_cnt;
 	    }
 	}
 
@@ -2099,9 +2322,18 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 			const pjmedia_sdp_session *s_;
 			pjmedia_sdp_neg_get_active_local(call->inv->neg, &s_);
 
-			pj_assert(mi < s_->media_count);
-			m = pjmedia_sdp_media_clone(pool, s_->media[mi]);
-			m->desc.port = 0;
+			if (mi < s_->media_count) {
+			    m = pjmedia_sdp_media_clone(pool, s_->media[mi]);
+			    m->desc.port = 0;
+			} else {
+			    /* Remote may have removed some media lines in
+			     * previous negotiations. However, since our
+			     * media count may never decrease (as per
+			     * the RFC), we'll just offer unknown media here.
+			     */
+		    	    m->desc.media = pj_str("unknown");
+		            m->desc.fmt[0] = pj_str("0");
+			}
 		    }
 		    break;
 		}
@@ -3011,7 +3243,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 #endif
 	} else {
-	    status = PJMEDIA_EINVALIMEDIATYPE;
+	    status = PJMEDIA_EUNSUPMEDIATYPE;
 	}
 
 	/* Close the transport of deactivated media, need this here as media
@@ -3040,8 +3272,15 @@ on_check_med_status:
 	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	    call_med->dir = PJMEDIA_DIR_NONE;
 
-	    PJ_PERROR(1,(THIS_FILE, status, "Error updating media call%02d:%d",
-		         call_id, mi));
+	    if (status != PJMEDIA_EUNSUPMEDIATYPE) {
+		PJ_PERROR(1, (THIS_FILE, status, "Error updating media "
+		              "call%02d:%d", call_id, mi));
+	    } else {
+		PJ_PERROR(3, (THIS_FILE, status, "Skipped updating media "
+		              "call%02d:%d (media type=%s)", call_id, mi, 
+			      pjmedia_type_name(call_med->type)));
+	    }
+
 	} else {
 	    /* Only set 'got_media' flag if this media is not disabled */
 	    if (local_sdp->media[mi]->desc.port != 0)

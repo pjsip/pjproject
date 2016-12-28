@@ -436,6 +436,8 @@
     #define PJMEDIA_HAS_SPEEX_AEC			0
     #undef PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO		0
+    #undef PJMEDIA_AUDIO_DEV_HAS_ALSA
+    #define PJMEDIA_AUDIO_DEV_HAS_ALSA			0    
 #endif
 
 
@@ -475,7 +477,6 @@
 #   define PJ_DEBUG			0
 #   define PJSIP_SAFE_MODULE		0
 #   define PJ_HAS_STRICMP_ALNUM		0
-#   define PJ_HASH_USE_OWN_TOLOWER	1
 #   define PJSIP_UNESCAPE_IN_PLACE	1
 
 #   if defined(PJ_WIN32) || defined(PJ_WIN64) 

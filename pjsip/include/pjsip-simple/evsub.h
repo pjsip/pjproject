@@ -246,7 +246,8 @@ PJ_DECL(pjsip_module*) pjsip_evsub_instance(void);
  *			registered.
  * @param event_name	Event package identification.
  * @param expires	Default subscription expiration time, in seconds.
- * @param accept_cnt	Number of strings in Accept array.
+ * @param accept_cnt	Number of strings in Accept array. The value must
+ *			not be greater than PJSIP_GENERIC_ARRAY_MAX_COUNT.
  * @param accept	Array of Accept value.
  *
  * @return		PJ_SUCCESS on success.
@@ -488,6 +489,26 @@ PJ_DECL(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,
  * @return		Data previously set at the specified id.
  */
 PJ_DECL(void*) pjsip_evsub_get_mod_data( pjsip_evsub *sub, unsigned mod_id );
+
+
+/**
+ * Increment the event subscription's group lock.
+ *
+ * @param sub		The server subscription instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_add_ref(pjsip_evsub *sub);
+
+
+/**
+ * Decrement the event subscription's group lock.
+ *
+ * @param sub		The server subscription instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_dec_ref(pjsip_evsub *sub);
 
 
 

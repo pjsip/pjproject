@@ -21,7 +21,8 @@
 #include <pj/log.h>
 #include <pj/string.h>
 
-#if PJMEDIA_HAS_LIBAVFORMAT && PJMEDIA_HAS_LIBAVUTIL
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBAVFORMAT) && (PJMEDIA_HAS_LIBAVFORMAT != 0)
 
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
@@ -33,19 +34,19 @@ static const struct ffmpeg_fmt_table_t
     enum AVPixelFormat	pf;
 } ffmpeg_fmt_table[] =
 {
-    { PJMEDIA_FORMAT_RGBA, AV_PIX_FMT_RGBA},
-    { PJMEDIA_FORMAT_RGB24,AV_PIX_FMT_BGR24},
-    { PJMEDIA_FORMAT_BGRA, AV_PIX_FMT_BGRA},
-    { PJMEDIA_FORMAT_GBRP, AV_PIX_FMT_GBRP},
+    { PJMEDIA_FORMAT_RGBA, AV(PIX_FMT_RGBA)},
+    { PJMEDIA_FORMAT_RGB24,AV(PIX_FMT_BGR24)},
+    { PJMEDIA_FORMAT_BGRA, AV(PIX_FMT_BGRA)},
+    { PJMEDIA_FORMAT_GBRP, AV(PIX_FMT_GBRP)},
 
-    { PJMEDIA_FORMAT_AYUV, AV_PIX_FMT_NONE},
-    { PJMEDIA_FORMAT_YUY2, AV_PIX_FMT_YUYV422},
-    { PJMEDIA_FORMAT_UYVY, AV_PIX_FMT_UYVY422},
-    { PJMEDIA_FORMAT_I420, AV_PIX_FMT_YUV420P},
-    //{ PJMEDIA_FORMAT_YV12, AV_PIX_FMT_YUV420P},
-    { PJMEDIA_FORMAT_I422, AV_PIX_FMT_YUV422P},
-    { PJMEDIA_FORMAT_I420JPEG, AV_PIX_FMT_YUVJ420P},
-    { PJMEDIA_FORMAT_I422JPEG, AV_PIX_FMT_YUVJ422P},
+    { PJMEDIA_FORMAT_AYUV, AV(PIX_FMT_NONE)},
+    { PJMEDIA_FORMAT_YUY2, AV(PIX_FMT_YUYV422)},
+    { PJMEDIA_FORMAT_UYVY, AV(PIX_FMT_UYVY422)},
+    { PJMEDIA_FORMAT_I420, AV(PIX_FMT_YUV420P)},
+    //{ PJMEDIA_FORMAT_YV12, AV(PIX_FMT_YUV420P)},
+    { PJMEDIA_FORMAT_I422, AV(PIX_FMT_YUV422P)},
+    { PJMEDIA_FORMAT_I420JPEG, AV(PIX_FMT_YUVJ420P)},
+    { PJMEDIA_FORMAT_I422JPEG, AV(PIX_FMT_YUVJ422P)},
 };
 
 /* Conversion table between pjmedia_format_id and CodecID */
@@ -55,14 +56,14 @@ static const struct ffmpeg_codec_table_t
     unsigned		codec_id;
 } ffmpeg_codec_table[] =
 {
-    {PJMEDIA_FORMAT_H261,	AV_CODEC_ID_H261},
-    {PJMEDIA_FORMAT_H263,	AV_CODEC_ID_H263},
-    {PJMEDIA_FORMAT_H263P,	AV_CODEC_ID_H263P},
-    {PJMEDIA_FORMAT_H264,	AV_CODEC_ID_H264},
-    {PJMEDIA_FORMAT_MPEG1VIDEO,	AV_CODEC_ID_MPEG1VIDEO},
-    {PJMEDIA_FORMAT_MPEG2VIDEO, AV_CODEC_ID_MPEG2VIDEO},
-    {PJMEDIA_FORMAT_MPEG4,	AV_CODEC_ID_MPEG4},
-    {PJMEDIA_FORMAT_MJPEG,	AV_CODEC_ID_MJPEG}
+    {PJMEDIA_FORMAT_H261,	AV(CODEC_ID_H261)},
+    {PJMEDIA_FORMAT_H263,	AV(CODEC_ID_H263)},
+    {PJMEDIA_FORMAT_H263P,	AV(CODEC_ID_H263P)},
+    {PJMEDIA_FORMAT_H264,	AV(CODEC_ID_H264)},
+    {PJMEDIA_FORMAT_MPEG1VIDEO,	AV(CODEC_ID_MPEG1VIDEO)},
+    {PJMEDIA_FORMAT_MPEG2VIDEO, AV(CODEC_ID_MPEG2VIDEO)},
+    {PJMEDIA_FORMAT_MPEG4,	AV(CODEC_ID_MPEG4)},
+    {PJMEDIA_FORMAT_MJPEG,	AV(CODEC_ID_MJPEG)}
 };
 
 static int pjmedia_ffmpeg_ref_cnt;
@@ -131,13 +132,13 @@ pj_status_t pjmedia_format_id_to_PixelFormat(pjmedia_format_id fmt_id,
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_fmt_table); ++i) {
 	const struct ffmpeg_fmt_table_t *t = &ffmpeg_fmt_table[i];
-	if (t->id==fmt_id && t->pf != AV_PIX_FMT_NONE) {
+	if (t->id==fmt_id && t->pf != AV(PIX_FMT_NONE)) {
 	    *pixel_format = t->pf;
 	    return PJ_SUCCESS;
 	}
     }
 
-    *pixel_format = AV_PIX_FMT_NONE;
+    *pixel_format = AV(PIX_FMT_NONE);
     return PJ_ENOTFOUND;
 }
 
@@ -162,13 +163,13 @@ pj_status_t pjmedia_format_id_to_CodecID(pjmedia_format_id fmt_id,
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(ffmpeg_codec_table); ++i) {
 	const struct ffmpeg_codec_table_t *t = &ffmpeg_codec_table[i];
-	if (t->id==fmt_id && t->codec_id != AV_PIX_FMT_NONE) {
+	if (t->id==fmt_id && t->codec_id != AV(PIX_FMT_NONE)) {
 	    *codec_id = t->codec_id;
 	    return PJ_SUCCESS;
 	}
     }
 
-    *codec_id = (unsigned)AV_PIX_FMT_NONE;
+    *codec_id = (unsigned)AV(PIX_FMT_NONE);
     return PJ_ENOTFOUND;
 }
 
@@ -193,4 +194,4 @@ pj_status_t CodecID_to_pjmedia_format_id(unsigned codec_id,
 #   pragma comment( lib, "avutil.lib")
 #endif
 
-#endif	/* #if PJMEDIA_HAS_LIBAVFORMAT && PJMEDIA_HAS_LIBAVUTIL */
+#endif	/* PJMEDIA_HAS_LIBAVFORMAT */

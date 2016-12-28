@@ -172,8 +172,12 @@ PJ_DEF(pj_status_t) pj_sockaddr_set_str_addr(int af,
     PJ_SOCKADDR_RESET_LEN(addr);
 
     if (str_addr && str_addr->slen) {
+#if defined(PJ_SOCKADDR_USE_GETADDRINFO) && PJ_SOCKADDR_USE_GETADDRINFO!=0
+	if (1) {
+#else
 	status = pj_inet_pton(PJ_AF_INET6, str_addr, &addr->ipv6.sin6_addr);
 	if (status != PJ_SUCCESS) {
+#endif
     	    pj_addrinfo ai;
 	    unsigned count = 1;
 
@@ -181,6 +185,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_set_str_addr(int af,
 	    if (status==PJ_SUCCESS) {
 		pj_memcpy(&addr->ipv6.sin6_addr, &ai.ai_addr.ipv6.sin6_addr,
 			  sizeof(addr->ipv6.sin6_addr));
+		addr->ipv6.sin6_scope_id = ai.ai_addr.ipv6.sin6_scope_id;
 	    }
 	}
     } else {
@@ -1242,6 +1247,11 @@ PJ_DEF(int) pj_IPTOS_RELIABILITY(void)
 PJ_DEF(int) pj_IPTOS_MINCOST(void)
 {
     return PJ_IPTOS_MINCOST;
+}
+
+PJ_DEF(int) pj_IPV6_TCLASS(void)
+{
+    return PJ_IPV6_TCLASS;
 }
 
 PJ_DEF(pj_uint16_t) pj_SO_TYPE(void)

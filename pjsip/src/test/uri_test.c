@@ -722,7 +722,7 @@ static pjsip_uri *create_uri35( pj_pool_t *pool )
     url = pjsip_sip_uri_create(pool, 0);
     url->user = pj_str("user");
     url->host = pj_str("::1");
-    url->maddr_param = pj_str("::01");
+    url->maddr_param = pj_str("[::01]");
     return (pjsip_uri*)url;
 }
 
@@ -732,7 +732,7 @@ static pjsip_uri *create_uri36( pj_pool_t *pool )
     pjsip_sip_uri *url;
     url = pjsip_sip_uri_create(pool, 0);
     url->host = pj_str("::1");
-    url->maddr_param = pj_str("::01");
+    url->maddr_param = pj_str("[::01]");
     return (pjsip_uri*)url;
 
 }

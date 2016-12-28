@@ -251,7 +251,7 @@ PJ_DEF(void) pjsip_method_init_np(pjsip_method *m,
 {
     unsigned i;
     for (i=0; i<PJ_ARRAY_SIZE(method_names); ++i) {
-	if (pj_memcmp(str->ptr, method_names[i]->ptr, str->slen)==0 || 
+	if (pj_memcmp(str, method_names[i], sizeof(pj_str_t))==0 || 
 	    pj_stricmp(str, method_names[i])==0) 
 	{
 	    m->id = (pjsip_method_e)i;
@@ -2013,7 +2013,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     *buf++ = ' ';
 
     /* Check if host contains IPv6 */
-    if (pj_memchr(hdr->sent_by.host.ptr, ':', hdr->sent_by.host.slen)) {
+    if (pj_strchr(&hdr->sent_by.host, ':')) {
 	copy_advance_pair_quote_cond(buf, "", 0, hdr->sent_by.host, '[', ']');
     } else {
 	copy_advance_check(buf, hdr->sent_by.host);

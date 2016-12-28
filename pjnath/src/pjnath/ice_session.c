@@ -396,7 +396,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
 
     /* Initialize transport datas */
     for (i=0; i<PJ_ARRAY_SIZE(ice->tp_data); ++i) {
-	ice->tp_data[i].transport_id = i;
+	ice->tp_data[i].transport_id = 0;
 	ice->tp_data[i].has_req_data = PJ_FALSE;
     }
 
@@ -723,6 +723,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
     char address[PJ_INET6_ADDRSTRLEN];
+    unsigned i;
 
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
@@ -747,6 +748,21 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     if (rel_addr == NULL)
 	rel_addr = base_addr;
     pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
+
+    /* Update transport data */
+    for (i = 0; i < PJ_ARRAY_SIZE(ice->tp_data); ++i) {
+	/* Check if this transport has been registered */
+	if (ice->tp_data[i].transport_id == transport_id)
+	    break;
+
+	if (ice->tp_data[i].transport_id == 0) {
+	    /* Found an empty slot, register this transport here */
+	    ice->tp_data[i].transport_id = transport_id;
+	    break;
+	}
+    }
+    pj_assert(i < PJ_ARRAY_SIZE(ice->tp_data) &&
+	      ice->tp_data[i].transport_id == transport_id);
 
     pj_ansi_strcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
                                                    sizeof(address), 0));
@@ -1661,12 +1677,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
 	    pj_ice_sess_cand *lcand = &ice->lcand[i];
 	    pj_ice_sess_cand *rcand = &ice->rcand[j];
-	    pj_ice_sess_check *chk = &clist->checks[clist->count];
+	    pj_ice_sess_check *chk = NULL;
 
 	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
 		pj_grp_lock_release(ice->grp_lock);
 		return PJ_ETOOMANY;
 	    } 
+
+           chk = &clist->checks[clist->count];
 
 	    /* A local candidate is paired with a remote candidate if
 	     * and only if the two candidates have the same component ID 
@@ -1874,9 +1892,9 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	if (check->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
 	    status = perform_check(ice, clist, i, ice->is_nominating);
 	    if (status != PJ_SUCCESS) {
-		pj_grp_lock_release(ice->grp_lock);
-		pj_log_pop_indent();
-		return status;
+		check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				status);
+		on_check_complete(ice, check);
 	    }
 
 	    ++start_count;
@@ -1894,9 +1912,9 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    if (check->state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
 		status = perform_check(ice, clist, i, ice->is_nominating);
 		if (status != PJ_SUCCESS) {
-		    pj_grp_lock_release(ice->grp_lock);
-		    pj_log_pop_indent();
-		    return status;
+		    check_set_state(ice, check,
+		    		    PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+		    on_check_complete(ice, check);
 		}
 
 		++start_count;

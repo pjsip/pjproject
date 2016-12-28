@@ -22,7 +22,7 @@
 #include <pj/string.h>
 
 /* This is the implementation of QoS with BSD socket's setsockopt(),
- * using IP_TOS and SO_PRIORITY
+ * using IP_TOS/IPV6_TCLASS and SO_PRIORITY
  */ 
 #if !defined(PJ_QOS_IMPLEMENTATION) || PJ_QOS_IMPLEMENTATION==PJ_QOS_BSD
 
@@ -41,10 +41,30 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
 
     /* Set TOS/DSCP */
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
+	/* We need to know if the socket is IPv4 or IPv6 */
+	pj_sockaddr sa;
+	int salen = sizeof(salen);
+
 	/* Value is dscp_val << 2 */
 	int val = (param->dscp_val << 2);
-	status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
-				    &val, sizeof(val));
+
+	status = pj_sock_getsockname(sock, &sa, &salen);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	if (sa.addr.sa_family == pj_AF_INET()) {
+	    /* In IPv4, the DS field goes in the TOS field */
+	    status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
+					&val, sizeof(val));
+	} else if (sa.addr.sa_family == pj_AF_INET6()) {
+	    /* In IPv6, the DS field goes in the Traffic Class field */
+	    status = pj_sock_setsockopt(sock, pj_SOL_IPV6(),
+					pj_IPV6_TCLASS(),
+					&val, sizeof(val));
+	} else {
+	    status = PJ_EINVAL;
+	}
+
 	if (status != PJ_SUCCESS) {
 	    param->flags &= ~(PJ_QOS_PARAM_HAS_DSCP);
 	    last_err = status;
@@ -84,17 +104,33 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
 {
     pj_status_t last_err = PJ_ENOTSUP;
     int val, optlen;
+    pj_sockaddr sa;
+    int salen = sizeof(salen);
     pj_status_t status;
 
     pj_bzero(p_param, sizeof(*p_param));
 
     /* Get DSCP/TOS value */
-    optlen = sizeof(val);
-    status = pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
-				&val, &optlen);
+    status = pj_sock_getsockname(sock, &sa, &salen);
     if (status == PJ_SUCCESS) {
-	p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
-	p_param->dscp_val = (pj_uint8_t)(val >> 2);
+	optlen = sizeof(val);
+	if (sa.addr.sa_family == pj_AF_INET()) {
+	    status = pj_sock_getsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
+					&val, &optlen);
+	} else if (sa.addr.sa_family == pj_AF_INET6()) {
+	    status = pj_sock_getsockopt(sock, pj_SOL_IPV6(),
+					pj_IPV6_TCLASS(),
+					&val, &optlen);
+	} else {
+	    status = PJ_EINVAL;
+	}
+
+        if (status == PJ_SUCCESS) {
+    	    p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
+	    p_param->dscp_val = (pj_uint8_t)(val >> 2);
+	} else {
+	    last_err = status;
+	}
     } else {
 	last_err = status;
     }

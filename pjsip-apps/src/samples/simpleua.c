@@ -725,10 +725,10 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     /*
      * Create UAS dialog.
      */
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), 
-				   rdata,
-				   &local_uri, /* contact */
-				   &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(),
+						rdata,
+						&local_uri, /* contact */
+						&dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(g_endpt, rdata, 500, NULL,
 				      NULL, NULL);
@@ -741,7 +741,11 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 
     status = pjmedia_endpt_create_sdp( g_med_endpt, rdata->tp_info.pool,
 				       MAX_MEDIA_CNT, g_sock_info, &local_sdp);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, PJ_TRUE);
+    pj_assert(status == PJ_SUCCESS);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
+	return PJ_TRUE;
+    }
 
 
     /* 
@@ -749,7 +753,16 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      * capability to the session.
      */
     status = pjsip_inv_create_uas( dlg, rdata, local_sdp, 0, &g_inv);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, PJ_TRUE);
+    pj_assert(status == PJ_SUCCESS);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
+	return PJ_TRUE;
+    }
+
+    /*
+     * Invite session has been created, decrement & release dialog lock.
+     */
+    pjsip_dlg_dec_lock(dlg);
 
 
     /*

@@ -687,6 +687,12 @@ on_return:
     return status;
 }
 
+PJ_DEF(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+    prm->capture_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    prm->playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+}
 
 /*
  * Get maxinum number of conference ports.
@@ -1696,6 +1702,7 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 {
     pjmedia_port *conf_port;
     pj_status_t status;
+    pj_bool_t speaker_only = (pjsua_var.snd_mode & PJSUA_SND_DEV_SPEAKER_ONLY);
 
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
@@ -1724,15 +1731,29 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     if (pjsua_var.media_cfg.on_aud_prev_rec_frame)
 	param->on_rec_frame = &on_aud_prev_rec_frame;
 
-    PJ_LOG(4,(THIS_FILE, "Opening sound device %s@%d/%d/%dms",
+    PJ_LOG(4,(THIS_FILE, "Opening sound device (%s) %s@%d/%d/%dms",
+	      speaker_only?"speaker only":"speaker + mic",
 	      get_fmt_name(param->base.ext_fmt.id),
 	      param->base.clock_rate, param->base.channel_count,
 	      param->base.samples_per_frame / param->base.channel_count *
 	      1000 / param->base.clock_rate));
     pj_log_push_indent();
 
-    status = pjmedia_snd_port_create2( pjsua_var.snd_pool,
-				       param, &pjsua_var.snd_port);
+    if (speaker_only) {
+	status = pjmedia_snd_port_create_player(pjsua_var.snd_pool,
+						-1,
+						param->base.clock_rate,
+						param->base.channel_count,
+						param->base.samples_per_frame,
+						param->base.bits_per_sample, 
+						0,
+						&pjsua_var.snd_port);
+
+    } else {
+	status = pjmedia_snd_port_create2(pjsua_var.snd_pool,
+					  param, &pjsua_var.snd_port);
+    }
+
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -1920,27 +1941,46 @@ static void close_snd_dev(void)
 }
 
 
+PJ_DEF(pj_status_t) pjsua_set_snd_dev(int capture_dev,
+				      int playback_dev)
+{
+    pjsua_snd_dev_param param;
+
+    pjsua_snd_dev_param_default(&param);
+
+    param.capture_dev = capture_dev;
+    param.playback_dev = playback_dev;
+    /* Always open the sound device. */
+    param.mode = 0;
+
+    return pjsua_set_snd_dev2(&param);
+}
+
 /*
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
  */
-PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
-				       int playback_dev)
+PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
 {
     unsigned alt_cr_cnt = 1;
     unsigned alt_cr[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned i;
     pj_status_t status = -1;
+    unsigned orig_snd_dev_mode = pjsua_var.snd_mode;
+    pj_bool_t no_change = (pjsua_var.snd_is_on || (!pjsua_var.snd_is_on &&
+			   (snd_param->mode & 
+			    PJSUA_SND_DEV_NO_IMMEDIATE_OPEN)));
 
     PJ_LOG(4,(THIS_FILE, "Set sound device: capture=%d, playback=%d",
-	      capture_dev, playback_dev));
+	      snd_param->capture_dev, snd_param->playback_dev));
     pj_log_push_indent();
 
     PJSUA_LOCK();
 
-    if (pjsua_var.cap_dev == capture_dev &&
-	pjsua_var.play_dev == playback_dev &&
-	pjsua_var.snd_is_on && !pjsua_var.no_snd)
+    if (pjsua_var.cap_dev == snd_param->capture_dev &&
+	pjsua_var.play_dev == snd_param->playback_dev &&
+	pjsua_var.snd_mode == snd_param->mode &&
+	!pjsua_var.no_snd && no_change)
     {
 	PJ_LOG(4, (THIS_FILE, "No changes in capture and playback devices"));
         PJSUA_UNLOCK();
@@ -1949,11 +1989,26 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     }
     
     /* Null-sound */
-    if (capture_dev==NULL_SND_DEV_ID && playback_dev==NULL_SND_DEV_ID) {
+    if (snd_param->capture_dev == NULL_SND_DEV_ID && 
+	snd_param->playback_dev == NULL_SND_DEV_ID) 
+    {
 	PJSUA_UNLOCK();
 	status = pjsua_set_null_snd_dev();
 	pj_log_pop_indent();
 	return status;
+    }
+
+    pjsua_var.snd_mode = snd_param->mode;
+
+    if (!pjsua_var.no_snd &&
+	(snd_param->mode & PJSUA_SND_DEV_NO_IMMEDIATE_OPEN))
+    {
+	pjsua_var.cap_dev = snd_param->capture_dev;
+	pjsua_var.play_dev = snd_param->playback_dev;
+
+	PJSUA_UNLOCK();	
+	pj_log_pop_indent();
+	return PJ_SUCCESS;
     }
 
     /* Set default clock rate */
@@ -1982,7 +2037,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 			    pjsua_var.media_cfg.channel_count / 1000;
 	pjmedia_snd_port_param_default(&param);
 	param.ec_options = pjsua_var.media_cfg.ec_options;
-	status = create_aud_param(&param.base, capture_dev, playback_dev,
+	status = create_aud_param(&param.base, snd_param->capture_dev, 
+				  snd_param->playback_dev, 
 				  alt_cr[i], pjsua_var.media_cfg.channel_count,
 				  samples_per_frame, 16);
 	if (status != PJ_SUCCESS)
@@ -2008,6 +2064,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     return PJ_SUCCESS;
 
 on_error:
+    pjsua_var.snd_mode = orig_snd_dev_mode;
     PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;

@@ -59,7 +59,7 @@ struct android_aud_stream
     pj_str_t            name;
     pjmedia_dir         dir;
     pjmedia_aud_param   param;
-    
+
     int                 bytes_per_sample;
     pj_uint32_t         samples_per_sec;
     unsigned            samples_per_frame;
@@ -76,8 +76,8 @@ struct android_aud_stream
     pj_bool_t           rec_thread_exited;
     pj_thread_t        *rec_thread;
     pj_sem_t           *rec_sem;
-    pj_timestamp	rec_timestamp;
-    
+    pj_timestamp        rec_timestamp;    
+
     /* Track */
     jobject             track;
     jclass              track_class;
@@ -86,7 +86,7 @@ struct android_aud_stream
     pj_bool_t           play_thread_exited;
     pj_thread_t        *play_thread;
     pj_sem_t           *play_sem;
-    pj_timestamp	play_timestamp;
+    pj_timestamp        play_timestamp;
 };
 
 /* Factory prototypes */
@@ -483,9 +483,11 @@ static pj_status_t android_get_dev_info(pjmedia_aud_dev_factory *f,
     
     pj_ansi_strcpy(info->name, "Android JNI");
     info->default_samples_per_sec = 8000;
-    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
+    		 PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE;
     info->input_count = 1;
     info->output_count = 1;
+    info->routes = PJMEDIA_AUD_DEV_ROUTE_CUSTOM;
     
     return PJ_SUCCESS;
 }
@@ -565,7 +567,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     stream = PJ_POOL_ZALLOC_T(pool, struct android_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, "JNI stream");
-    stream->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    stream->dir = param->dir;
     pj_memcpy(&stream->param, param, sizeof(*param));
     stream->user_data = user_data;
     stream->rec_cb = rec_cb;
@@ -663,7 +665,14 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     
     if (stream->dir & PJMEDIA_DIR_CAPTURE) {
         jthrowable exc;
+        jobject record_obj;
         int mic_source = 0; /* DEFAULT: default audio source */
+
+	if ((param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE) &&
+	    (param->input_route & PJMEDIA_AUD_DEV_ROUTE_CUSTOM))
+	{
+    	    mic_source = param->input_route & ~PJMEDIA_AUD_DEV_ROUTE_CUSTOM;
+    	}
 
         /* Get pointer to the constructor */
         constructor_method = (*jni_env)->GetMethodID(jni_env,
@@ -694,15 +703,15 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
         PJ_LOG(4, (THIS_FILE, "Using audio input source : %d", mic_source));
         
         do {
-            stream->record =  (*jni_env)->NewObject(jni_env,
-                                                    stream->record_class,
-                                                    constructor_method,
-                                                    mic_source, 
-                                                    param->clock_rate,
-                                                    channelInCfg,
-                                                    sampleFormat,
-                                                    inputBuffSizeRec);
-            if (stream->record == 0) {
+            record_obj =  (*jni_env)->NewObject(jni_env,
+                                                stream->record_class,
+                                                constructor_method,
+                                                mic_source, 
+                                                param->clock_rate,
+                                                channelInCfg,
+                                                sampleFormat,
+                                                inputBuffSizeRec);
+            if (record_obj == 0) {
                 PJ_LOG(3, (THIS_FILE, "Unable to create audio record object"));
                 status = PJMEDIA_EAUD_INIT;
                 goto on_error;
@@ -731,8 +740,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
                 status = PJMEDIA_EAUD_SYSERR;
                 goto on_error;
             }
-            state = (*jni_env)->CallIntMethod(jni_env, stream->record,
-                                              method_id);
+            state = (*jni_env)->CallIntMethod(jni_env, record_obj, method_id);
             if (state == 0) { /* STATE_UNINITIALIZED */
                 PJ_LOG(3, (THIS_FILE, "Failure in initializing audio record."));
                 if (mic_source == 0) {
@@ -744,9 +752,16 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
             }
         } while (state == 0);
         
-        stream->record = (*jni_env)->NewGlobalRef(jni_env, stream->record);
+        stream->record = (*jni_env)->NewGlobalRef(jni_env, record_obj);
         if (stream->record == 0) {
-            PJ_LOG(3, (THIS_FILE, "Unable to create audio record global ref."));
+            jmethodID release_method=0;
+            
+            PJ_LOG(3, (THIS_FILE, "Unable to create audio record global ref."));            
+            release_method = (*jni_env)->GetMethodID(jni_env, 
+                                                     stream->record_class,
+                                                     "release", "()V");
+            (*jni_env)->CallVoidMethod(jni_env, record_obj, release_method);
+            
             status = PJMEDIA_EAUD_INIT;
             goto on_error;
         }
@@ -766,6 +781,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     
     if (stream->dir & PJMEDIA_DIR_PLAYBACK) {
         jthrowable exc;
+        jobject track_obj;
         
         /* Get pointer to the constructor */
         constructor_method = (*jni_env)->GetMethodID(jni_env,
@@ -777,16 +793,16 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
             goto on_error;
         }
         
-        stream->track = (*jni_env)->NewObject(jni_env,
-                                              stream->track_class,
-                                              constructor_method,
-                                              0, /* STREAM_VOICE_CALL */
-                                              param->clock_rate,
-                                              channelOutCfg,
-                                              sampleFormat,
-                                              inputBuffSizePlay,
-                                              1 /* MODE_STREAM */);
-        if (stream->track == 0) {
+        track_obj = (*jni_env)->NewObject(jni_env,
+                                          stream->track_class,
+                                          constructor_method,
+                                          0, /* STREAM_VOICE_CALL */
+                                          param->clock_rate,
+                                          channelOutCfg,
+                                          sampleFormat,
+                                          inputBuffSizePlay,
+                                          1 /* MODE_STREAM */);
+        if (track_obj == 0) {
             PJ_LOG(3, (THIS_FILE, "Unable to create audio track object."));
             status = PJMEDIA_EAUD_INIT;
             goto on_error;
@@ -801,8 +817,15 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
             goto on_error;
         }
         
-        stream->track = (*jni_env)->NewGlobalRef(jni_env, stream->track);
+        stream->track = (*jni_env)->NewGlobalRef(jni_env, track_obj);
         if (stream->track == 0) {
+            jmethodID release_method=0;
+        	
+            release_method = (*jni_env)->GetMethodID(jni_env, 
+                                                     stream->track_class,
+                                                     "release", "()V");
+            (*jni_env)->CallVoidMethod(jni_env, track_obj, release_method);
+            
             PJ_LOG(3, (THIS_FILE, "Unable to create audio track's global ref"));
             status = PJMEDIA_EAUD_INIT;
             goto on_error;
@@ -972,14 +995,14 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
     pj_bool_t attached;
     
     PJ_LOG(4,(THIS_FILE, "Destroying Android JNI stream..."));
-    
+
     stream->quit_flag = PJ_TRUE;
     
     /* Stop the stream */
     strm_stop(s);
     
     attached = attach_jvm(&jni_env);
-    
+
     if (stream->record){
         if (stream->rec_thread) {
             pj_sem_post(stream->rec_sem);
@@ -992,16 +1015,20 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
             pj_sem_destroy(stream->rec_sem);
             stream->rec_sem = NULL;
         }
-        
-        release_method = (*jni_env)->GetMethodID(jni_env, stream->record_class,
-                                                 "release", "()V");
-        (*jni_env)->CallVoidMethod(jni_env, stream->record, release_method);
-        
+        if (stream->record_class) {
+            release_method = (*jni_env)->GetMethodID(jni_env, 
+                                                     stream->record_class,
+                                                     "release", "()V");
+            (*jni_env)->CallVoidMethod(jni_env, stream->record,
+                                       release_method);
+        }
         (*jni_env)->DeleteGlobalRef(jni_env, stream->record);
-        (*jni_env)->DeleteGlobalRef(jni_env, stream->record_class);
         stream->record = NULL;
-        stream->record_class = NULL;
         PJ_LOG(4, (THIS_FILE, "Audio record released"));
+    }
+    if (stream->record_class) {
+    	(*jni_env)->DeleteGlobalRef(jni_env, stream->record_class);
+    	stream->record_class = NULL;
     }
     
     if (stream->track) {
@@ -1016,16 +1043,20 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
             pj_sem_destroy(stream->play_sem);
             stream->play_sem = NULL;
         }
-        
-        release_method = (*jni_env)->GetMethodID(jni_env, stream->track_class,
-                                                 "release", "()V");
-        (*jni_env)->CallVoidMethod(jni_env, stream->track, release_method);
-        
+        if (stream->track_class) {
+            release_method = (*jni_env)->GetMethodID(jni_env, 
+                                                     stream->track_class,
+                                                     "release", "()V");
+            (*jni_env)->CallVoidMethod(jni_env, stream->track, 
+                                       release_method);
+        }
         (*jni_env)->DeleteGlobalRef(jni_env, stream->track);
-        (*jni_env)->DeleteGlobalRef(jni_env, stream->track_class);
-        stream->track = NULL;
-        stream->track_class = NULL;
-        PJ_LOG(3, (THIS_FILE, "Audio track released"));
+        stream->track = NULL;        
+        PJ_LOG(4, (THIS_FILE, "Audio track released"));
+    }
+    if (stream->track_class) {
+    	(*jni_env)->DeleteGlobalRef(jni_env, stream->track_class);
+    	stream->track_class = NULL;
     }
 
     pj_pool_release(stream->pool);

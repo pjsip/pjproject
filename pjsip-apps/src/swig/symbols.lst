@@ -8,7 +8,7 @@ pjnath/nat_detect.h          	pj_stun_nat_type
 pjnath/turn_session.h          	pj_turn_tp_type
 
 pjmedia/event.h                 pjmedia_event_type
-pjmedia/transport_srtp.h	pjmedia_srtp_use
+pjmedia/transport_srtp.h	pjmedia_srtp_use pjmedia_srtp_crypto_option
 pjmedia/vid_stream.h		pjmedia_vid_stream_rc_method
 pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index pjmedia_vid_dev_cap
 pjmedia-audiodev/audiodev.h 	pjmedia_aud_dev_route pjmedia_aud_dev_cap
@@ -33,4 +33,4 @@ pjsip-simple/evsub.h		pjsip_evsub_state
 
 pjsip-ua/sip_inv.h              pjsip_inv_state
 
-pjsua-lib/pjsua.h		pjsua_invalid_id_const_ pjsua_state pjsua_stun_use pjsua_call_hold_type pjsua_acc_id pjsua_destroy_flag pjsua_100rel_use pjsua_sip_timer_use pjsua_ipv6_use pjsua_buddy_status pjsua_call_media_status pjsua_vid_win_id pjsua_call_id pjsua_med_tp_st pjsua_call_vid_strm_op pjsua_vid_req_keyframe_method pjsua_call_flag pjsua_create_media_transport_flag
+pjsua-lib/pjsua.h		pjsua_invalid_id_const_ pjsua_state pjsua_stun_use pjsua_call_hold_type pjsua_acc_id pjsua_destroy_flag pjsua_100rel_use pjsua_sip_timer_use pjsua_ipv6_use pjsua_buddy_status pjsua_call_media_status pjsua_vid_win_id pjsua_call_id pjsua_med_tp_st pjsua_call_vid_strm_op pjsua_vid_req_keyframe_method pjsua_call_flag pjsua_create_media_transport_flag pjsua_snd_dev_mode

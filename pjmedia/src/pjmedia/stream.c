@@ -22,7 +22,6 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
-#include <pjmedia/stream_common.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
@@ -440,6 +439,9 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 
     /* Send RTCP */
     send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+    
+    /* Update stats in case the stream is paused */
+    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
@@ -1566,7 +1568,11 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     }
 
     /* Ignore unknown event. */
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
     if (event->event > 16) {
+#else
+    if (event->event > 15) {
+#endif    
 	PJ_LOG(5,(stream->port.info.name.ptr,
 		  "Ignored RTP pkt with bad DTMF event %d",
     		  event->event));
@@ -1628,6 +1634,9 @@ static void on_rx_rtp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	status = (pj_status_t)-bytes_read;
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    return;
+	}
 	if (stream->rtp_rx_last_err != status) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1894,8 +1903,10 @@ static void on_rx_rtcp( void *data,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	LOGERR_((stream->port.info.name.ptr, "RTCP recv() error",
-		(pj_status_t)-bytes_read));
+	if (bytes_read != -PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    LOGERR_((stream->port.info.name.ptr, "RTCP recv() error",
+		    (pj_status_t)-bytes_read));
+	}
 	return;
     }
 
@@ -1993,6 +2004,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_pool_t *own_pool = NULL;
     char *p;
     pj_status_t status;
+    pjmedia_transport_attach_param att_param;
 
     PJ_ASSERT_RETURN(endpt && info && p_stream, PJ_EINVAL);
 
@@ -2104,6 +2116,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
     /* Open the codec. */
+
+    /* The clock rate for Opus codec is not static,
+     * it's negotiated in the SDP.
+     */
+    if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
+	stream->codec_param.info.clock_rate = info->fmt.clock_rate;
+	stream->codec_param.info.channel_cnt = info->fmt.channel_cnt;
+    }
+
     status = pjmedia_codec_open(stream->codec, &stream->codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
@@ -2218,6 +2239,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	/* RTP clock rate = 1/2 real clock rate */
 	stream->rtp_tx_ts_len_per_pkt >>= 1;
+    } else if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
+	unsigned opus_ts_modifier = 48000 / afd->clock_rate;
+	stream->rtp_rx_check_cnt = 0;
+	stream->has_g722_mpeg_bug = PJ_TRUE;
+	stream->rtp_tx_ts_len_per_pkt *= opus_ts_modifier;
+	stream->rtp_rx_ts_len_per_frame *= opus_ts_modifier;
     }
 #endif
 
@@ -2319,12 +2346,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
 
     stream->out_rtcp_pkt = pj_pool_alloc(pool, stream->out_rtcp_pkt_size);
+    att_param.stream = stream;
+    att_param.media_type = PJMEDIA_TYPE_AUDIO;
+    att_param.user_data = stream;
+    pj_sockaddr_cp(&att_param.rem_addr, &info->rem_addr);
+    pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
+    att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
+    att_param.rtp_cb = &on_rx_rtp;
+    att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Only attach transport when stream is ready. */
-    status = pjmedia_transport_attach(tp, stream, &info->rem_addr,
-				      &info->rem_rtcp,
-				      pj_sockaddr_get_len(&info->rem_addr),
-                                      &on_rx_rtp, &on_rx_rtcp);
+    status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -2766,10 +2798,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    {
 		pt = 11;
 	    }
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0	    
 	    else if (dig == 'r')
 	    {
 		pt = 16;
 	    }
+#endif
 	    else
 	    {
 		status = PJMEDIA_RTP_EINDTMF;
@@ -2886,5 +2920,19 @@ pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream )
 	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE);
     }
 
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Get RTP session information from stream.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_get_rtp_session_info(pjmedia_stream *stream,
+				    pjmedia_stream_rtp_sess_info *session_info)
+{
+    session_info->rx_rtp = &stream->dec->rtp;
+    session_info->tx_rtp = &stream->enc->rtp;
+    session_info->rtcp = &stream->rtcp;
     return PJ_SUCCESS;
 }

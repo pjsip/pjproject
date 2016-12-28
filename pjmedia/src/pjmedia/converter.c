@@ -29,12 +29,14 @@ struct pjmedia_converter_mgr
 
 static pjmedia_converter_mgr *converter_manager_instance;
 
-#if PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBSWSCALE) && (PJMEDIA_HAS_LIBSWSCALE != 0)
 PJ_DECL(pj_status_t)
 pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr);
 #endif
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
 PJ_DECL(pj_status_t)
 pjmedia_libyuv_converter_init(pjmedia_converter_mgr *mgr);
 #endif
@@ -51,19 +53,21 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
     if (!converter_manager_instance)
 	converter_manager_instance = mgr;
 
-#if defined(PJMEDIA_HAS_LIBYUV) && PJMEDIA_HAS_LIBYUV != 0
-    status = pjmedia_libyuv_converter_init(mgr);
-    if (status != PJ_SUCCESS) {
-	PJ_PERROR(4,(THIS_FILE, status,
-		     "Error initializing libyuv converter"));
-    }
-#endif
-
-#if PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBSWSCALE) && (PJMEDIA_HAS_LIBSWSCALE != 0)
     status = pjmedia_libswscale_converter_init(mgr);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(4,(THIS_FILE, status,
 		     "Error initializing libswscale converter"));
+    }
+#endif
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
+    status = pjmedia_libyuv_converter_init(mgr);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Error initializing libyuv converter"));
     }
 #endif
 

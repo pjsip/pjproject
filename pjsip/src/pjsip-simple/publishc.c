@@ -222,6 +222,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 
 	if (pubc->mutex)
 	    pj_mutex_destroy(pubc->mutex);
+
+	pjsip_auth_clt_deinit(&pubc->auth_sess);
 	pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
     }
 

@@ -121,6 +121,35 @@ endif
 endif
 endif
 
+ifneq (@ac_no_yuv@,1)
+ifeq (@ac_external_yuv@,1)
+APP_THIRD_PARTY_EXT += -lyuv
+else
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libyuv-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lyuv-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lyuv
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libyuv.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libyuv.$(SHLIB_SUFFIX)
+endif
+endif
+endif
+
+ifneq (@ac_no_webrtc@,1)
+ifeq (@ac_external_webrtc@,1)
+APP_THIRD_PARTY_EXT += -lwebrtc
+else
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lwebrtc-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lwebrtc
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libwebrtc.$(SHLIB_SUFFIX)
+endif
+endif
+endif
+
+
 # Additional flags
 @ac_build_mak_vars@
 
@@ -147,23 +176,21 @@ OPENH264_LDFLAGS =  @ac_openh264_ldflags@
 
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
-QT_CFLAGS = @ac_qt_cflags@
+# QT_CFLAGS = @ac_qt_cflags@
 
-# iOS
-IOS_CFLAGS = @ac_ios_cflags@
+# Darwin (Mac and iOS)
+AC_PJMEDIA_VIDEO_HAS_DARWIN = @ac_pjmedia_video_has_darwin@
+AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL = @ac_pjmedia_video_has_ios_opengl@
+DARWIN_CFLAGS = @ac_darwin_cflags@
 
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
 
-# libyuv
-LIBYUV_CFLAGS = @ac_libyuv_cflags@ 
-LIBYUV_LDFLAGS =  @ac_libyuv_ldflags@
-
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(IOS_CFLAGS) $(LIBYUV_CFLAGS)
+		   $(OPENH264_CFLAGS) $(DARWIN_CFLAGS)
 PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
-                   $(OPENH264_LDFLAGS) $(LIBYUV_LDFLAGS)
+                   $(OPENH264_LDFLAGS)
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export APP_CC := @CC@

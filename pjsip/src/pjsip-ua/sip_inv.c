@@ -195,6 +195,65 @@ static pj_status_t mod_inv_unload(void)
 }
 
 /*
+ * Add reference to INVITE session.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_add_ref( pjsip_inv_session *inv )
+{
+    PJ_ASSERT_RETURN(inv && inv->ref_cnt, PJ_EINVAL);
+
+    pj_atomic_inc(inv->ref_cnt);
+
+    return PJ_SUCCESS;
+}
+
+static void inv_session_destroy(pjsip_inv_session *inv)
+{
+    if (inv->last_ack) {
+	pjsip_tx_data_dec_ref(inv->last_ack);
+	inv->last_ack = NULL;
+    }
+    if (inv->invite_req) {
+	pjsip_tx_data_dec_ref(inv->invite_req);
+	inv->invite_req = NULL;
+    }
+    if (inv->pending_bye) {
+	pjsip_tx_data_dec_ref(inv->pending_bye);
+	inv->pending_bye = NULL;
+    }
+    pjsip_100rel_end_session(inv);
+    pjsip_timer_end_session(inv);
+    pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
+
+    /* Release the flip-flop pools */
+    pj_pool_release(inv->pool_prov);
+    inv->pool_prov = NULL;
+    pj_pool_release(inv->pool_active);
+    inv->pool_active = NULL;
+
+    pj_atomic_destroy(inv->ref_cnt);
+    inv->ref_cnt = NULL;
+}
+
+/*
+ * Decrease INVITE session reference, destroy it when the reference count
+ * reaches zero.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_dec_ref( pjsip_inv_session *inv )
+{
+    pj_atomic_value_t ref_cnt;
+
+    PJ_ASSERT_RETURN(inv && inv->ref_cnt, PJ_EINVAL);
+
+    ref_cnt = pj_atomic_dec_and_get(inv->ref_cnt);
+    pj_assert( ref_cnt >= 0);
+    if (ref_cnt == 0) {
+        inv_session_destroy(inv);
+        return PJ_EGONE;
+    } 
+    return PJ_SUCCESS;    
+}
+
+/*
  * Set session state.
  */
 static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
@@ -225,8 +284,9 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 			   inv->invite_tsx->mod_data[mod_inv.mod.id];
 	}
 
-	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE &&
-	    (tsx_inv_data && !tsx_inv_data->sdp_done) )
+	if ((tsx_inv_data && !tsx_inv_data->sdp_done) &&
+	    (!inv->neg || pjmedia_sdp_neg_get_state(inv->neg)!=
+						PJMEDIA_SDP_NEG_STATE_DONE))
 	{
 	    pjsip_tx_data *bye;
 
@@ -260,27 +320,7 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
 	prev_state != PJSIP_INV_STATE_DISCONNECTED) 
     {
-	if (inv->last_ack) {
-	    pjsip_tx_data_dec_ref(inv->last_ack);
-	    inv->last_ack = NULL;
-	}
-	if (inv->invite_req) {
-	    pjsip_tx_data_dec_ref(inv->invite_req);
-	    inv->invite_req = NULL;
-	}
-	if (inv->pending_bye) {
-	    pjsip_tx_data_dec_ref(inv->pending_bye);
-	    inv->pending_bye = NULL;
-	}
-	pjsip_100rel_end_session(inv);
-	pjsip_timer_end_session(inv);
-	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
-
-	/* Release the flip-flop pools */
-	pj_pool_release(inv->pool_prov);
-	inv->pool_prov = NULL;
-	pj_pool_release(inv->pool_active);
-	inv->pool_active = NULL;
+	pjsip_inv_dec_ref(inv);
     }
 }
 
@@ -837,6 +877,12 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_inv_session);
     pj_assert(inv != NULL);
 
+    status = pj_atomic_create(dlg->pool, 0, &inv->ref_cnt);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
+	return status;
+    }
+
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAC;
     inv->state = PJSIP_INV_STATE_NULL;
@@ -880,6 +926,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     pjsip_100rel_attach(inv);
 
     /* Done */
+    pjsip_inv_add_ref(inv);
     *p_inv = inv;
 
     pjsip_dlg_dec_lock(dlg);
@@ -1470,6 +1517,12 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_inv_session);
     pj_assert(inv != NULL);
 
+    status = pj_atomic_create(dlg->pool, 0, &inv->ref_cnt);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(dlg);
+	return status;
+    }
+
     inv->pool = dlg->pool;
     inv->role = PJSIP_ROLE_UAS;
     inv->state = PJSIP_INV_STATE_NULL;
@@ -1539,6 +1592,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     }
 
     /* Done */
+    pjsip_inv_add_ref(inv);
     pjsip_dlg_dec_lock(dlg);
     *p_inv = inv;
 

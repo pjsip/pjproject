@@ -129,7 +129,7 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
 
 	if (status != PJ_SUCCESS) {
 
-	    for ( --i; i>=0; ++i) {
+	    for ( --i; i>=0; --i) {
 		pjmedia_stream_destroy(session->stream[i]);
 	    }
 

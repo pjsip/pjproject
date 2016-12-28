@@ -371,7 +371,7 @@ PJ_DECL(pj_status_t) pj_stun_sock_create(pj_stun_config *stun_cfg,
  * timer will be started.
  *
  * @param stun_sock	The STUN transport instance.
- * @param domain	The domain, hostname, or IP address of the TURN
+ * @param domain	The domain, hostname, or IP address of the STUN
  *			server. When this parameter contains domain name,
  *			the \a resolver parameter must be set to activate
  *			DNS SRV resolution.

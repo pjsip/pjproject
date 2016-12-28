@@ -1318,9 +1318,11 @@ on_return:
     if (ssock_serv) 
 	pj_ssl_sock_close(ssock_serv);
 
-    for (i = 0; i < clients; ++i) {
-	if (ssock_cli[i] && !state_cli[i].err && !state_cli[i].done)
-	    pj_ssl_sock_close(ssock_cli[i]);
+    if (ssock_cli && state_cli) {
+        for (i = 0; i < clients; ++i) {
+	    if (ssock_cli[i] && !state_cli[i].err && !state_cli[i].done)
+	        pj_ssl_sock_close(ssock_cli[i]);
+	}
     }
     if (ioqueue)
 	pj_ioqueue_destroy(ioqueue);
@@ -1376,9 +1378,9 @@ int ssl_sock_test(void)
      * which require SSL server, for now.
      */
 
-    PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_DES_CBC_SHA cipher"));
+    PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
-		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA, 
+		    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA, 
 		    PJ_FALSE, PJ_FALSE);
     if (ret != 0)
 	return ret;

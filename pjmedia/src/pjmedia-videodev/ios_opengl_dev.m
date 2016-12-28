@@ -19,6 +19,7 @@
 #include <pjmedia-videodev/videodev_imp.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/os.h>
 
 #if defined(PJMEDIA_HAS_VIDEO) && PJMEDIA_HAS_VIDEO != 0 && \
     defined(PJMEDIA_VIDEO_DEV_HAS_IOS_OPENGL) && \
@@ -126,6 +127,15 @@ static iosgl_fmt_info* get_iosgl_format_info(pjmedia_format_id id)
     }
     
     return NULL;
+}
+
+static void dispatch_sync_on_main_queue(void (^block)(void))
+{
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
 }
 
 @implementation GLView
@@ -266,7 +276,9 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     
     rect = CGRectMake(0, 0, strm->param.disp_size.w, strm->param.disp_size.h);
-    strm->gl_view = [[GLView alloc] initWithFrame:rect];
+    dispatch_sync_on_main_queue(^{
+	strm->gl_view = [[GLView alloc] initWithFrame:rect];
+    });
     if (!strm->gl_view)
         return PJ_ENOMEM;
     strm->gl_view->stream = strm;
@@ -404,19 +416,18 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         UIView *view = (UIView *)pval;
         strm->param.window.info.ios.window = (void *)pval;
-        dispatch_async(dispatch_get_main_queue(),
-                       ^{[view addSubview:strm->gl_view];});
+        dispatch_sync_on_main_queue(^{[view addSubview:strm->gl_view];});
         return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         pj_memcpy(&strm->param.disp_size, pval, sizeof(strm->param.disp_size));
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             strm->gl_view.bounds = CGRectMake(0, 0, strm->param.disp_size.w,
                                               strm->param.disp_size.h);
         });
         return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         pj_memcpy(&strm->param.window_pos, pval, sizeof(strm->param.window_pos));
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             strm->gl_view.center = CGPointMake(strm->param.window_pos.x +
                                                strm->param.disp_size.w/2.0,
                                                strm->param.window_pos.y +
@@ -424,7 +435,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         });
         return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             strm->gl_view.hidden = (BOOL)(*((pj_bool_t *)pval));
         });
         return PJ_SUCCESS;
@@ -432,7 +443,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         pj_memcpy(&strm->param.orient, pval, sizeof(strm->param.orient));
         if (strm->param.orient == PJMEDIA_ORIENT_UNKNOWN)
             return PJ_SUCCESS;
-        dispatch_async(dispatch_get_main_queue(), ^{
+        dispatch_sync_on_main_queue(^{
             strm->gl_view.transform =
                 CGAffineTransformMakeRotation(((int)strm->param.orient-1) *
                                               -M_PI_2);

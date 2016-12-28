@@ -99,6 +99,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     pj_str_t tmp;
     pjmedia_port *wavin, *wavout;
     unsigned lost_pct;
+    unsigned bitstream_size = 0;
     pj_status_t status;
 
 #define T   file_msec_duration/1000, file_msec_duration%1000
@@ -142,9 +143,9 @@ static pj_status_t enc_dec_test(const char *codec_id,
     
     for (;;) {
 	pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
-	pj_int16_t pcmbuf[320];
+	pj_int16_t pcmbuf[2048];
 	pj_timestamp ts;
-	pj_uint8_t bitstream[160];
+	pj_uint8_t bitstream[2048];
 
 	frm_pcm.buf = (char*)pcmbuf;
 	frm_pcm.size = samples_per_frame * 2;
@@ -175,6 +176,8 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	    continue;
 	}
 	
+	bitstream_size += frm_bit.size;
+
 	/* Parse the bitstream (not really necessary for this case
 	 * since we always decode 1 frame, but it's still good
 	 * for testing)
@@ -217,6 +220,8 @@ static pj_status_t enc_dec_test(const char *codec_id,
     /* Release pool */
     pj_pool_release(pool);
 
+    printf("Total encoded size: %u bytes\n", bitstream_size);
+    printf("Bitrate: %.3fKbps\n", bitstream_size*8.0/file_msec_duration);
     return PJ_SUCCESS;
 }
 

@@ -166,6 +166,7 @@ typedef struct pjsip_cached_auth
     /** Standard list member */
     PJ_DECL_LIST_MEMBER(struct pjsip_cached_auth);
 
+    pj_pool_t			*pool;      /**< Pool for cached auth	    */
     pj_str_t			 realm;	    /**< Realm.			    */
     pj_bool_t			 is_proxy;  /**< Server type (401/407)	    */
     pjsip_auth_qop_type		 qop_value; /**< qop required by server.    */
@@ -338,6 +339,16 @@ PJ_DECL(pj_status_t) pjsip_auth_clt_init( pjsip_auth_clt_sess *sess,
 					  pjsip_endpoint *endpt,
 					  pj_pool_t *pool, 
 					  unsigned options);
+
+
+/**
+ * Deinitialize client authentication session data structure.
+ *
+ * @param sess		The client authentication session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_clt_deinit( pjsip_auth_clt_sess *sess);
 
 
 /**

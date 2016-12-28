@@ -64,7 +64,7 @@
 #	define s_addr  S_un.S_addr
 #   endif
 
-#   if !defined(IPPROTO_IPV6)
+#   if !defined(IPPROTO_IPV6) && (_WIN32_WINNT == 0x0500)
 	/* Need to download and install IPv6Kit for this platform.
 	 * Please see the comments above about Visual Studio 6.
 	 */
@@ -158,16 +158,22 @@
 #  define OSERR_EINPROGRESS    WSAEINPROGRESS
 #  define OSERR_ECONNRESET     WSAECONNRESET
 #  define OSERR_ENOTCONN       WSAENOTCONN
+#  define OSERR_EAFNOSUPPORT   WSAEAFNOSUPPORT
+#  define OSERR_ENOPROTOOPT    WSAENOPROTOOPT
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
 #  define OSERR_EWOULDBLOCK    -1
 #  define OSERR_EINPROGRESS    -1
 #  define OSERR_ECONNRESET     -1
 #  define OSERR_ENOTCONN       -1
+#  define OSERR_EAFNOSUPPORT   -1
+#  define OSERR_ENOPROTOOPT    -1
 #else
 #  define OSERR_EWOULDBLOCK    EWOULDBLOCK
 #  define OSERR_EINPROGRESS    EINPROGRESS
 #  define OSERR_ECONNRESET     ECONNRESET
 #  define OSERR_ENOTCONN       ENOTCONN
+#  define OSERR_EAFNOSUPPORT   EAFNOSUPPORT
+#  define OSERR_ENOPROTOOPT    ENOPROTOOPT
 #endif
 
 

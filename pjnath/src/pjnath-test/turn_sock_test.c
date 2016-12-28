@@ -102,6 +102,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     pj_turn_alloc_param alloc_param;
     pj_stun_auth_cred cred;
     pj_status_t status;
+    pj_bool_t use_ipv6 = cfg->srv.flags & SERVER_IPV6;
 
     /* Create client */
     pool = pj_pool_create(mem, "turnclient", 512, 512, NULL);
@@ -113,16 +114,21 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
     turn_sock_cb.on_rx_data = &turn_on_rx_data;
     turn_sock_cb.on_state = &turn_on_state;
-    status = pj_turn_sock_create(sess->stun_cfg, pj_AF_INET(), PJ_TURN_TP_UDP,
-				 &turn_sock_cb, 0, sess, &sess->turn_sock);
+    status = pj_turn_sock_create(sess->stun_cfg,
+				 GET_AF(use_ipv6),
+				 PJ_TURN_TP_UDP, 
+				 &turn_sock_cb, 
+				 0, 
+				 sess, 
+				 &sess->turn_sock);
     if (status != PJ_SUCCESS) {
 	destroy_session(sess);
 	return -20;
     }
 
     /* Create test server */
-    status = create_test_server(sess->stun_cfg, cfg->srv.flags,
-				SRV_DOMAIN, &sess->test_srv);
+    status = create_test_server(sess->stun_cfg, cfg->srv.flags, SRV_DOMAIN, 
+				&sess->test_srv);
     if (status != PJ_SUCCESS) {
 	destroy_session(sess);
 	return -30;
@@ -139,7 +145,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 	return -40;
 
     } else {
-	pj_str_t dns_srv = pj_str("127.0.0.1");
+	pj_str_t dns_srv = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
 	pj_uint16_t dns_srv_port = (pj_uint16_t) DNS_SERVER_PORT;
 	status = pj_dns_resolver_set_ns(sess->resolver, 1, &dns_srv, &dns_srv_port);
 
@@ -170,7 +176,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
 
     } else {
 	/* Explicitly specify server address */
-	pj_str_t host = pj_str("127.0.0.1");
+	pj_str_t host = use_ipv6?pj_str("::1") : pj_str("127.0.0.1");
 	status = pj_turn_sock_alloc(sess->turn_sock, &host, TURN_SERVER_PORT,
 				    NULL, &cred, &alloc_param);
 
@@ -250,13 +256,21 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 
 /////////////////////////////////////////////////////////////////////
 
-static int state_progression_test(pj_stun_config  *stun_cfg)
+static void set_server_flag(struct test_session_cfg *test_cfg, 
+			    pj_bool_t use_ipv6)
+{
+    test_cfg->srv.flags &= ~(SERVER_IPV4+SERVER_IPV6);
+    test_cfg->srv.flags |= (use_ipv6)?SERVER_IPV6:SERVER_IPV4;
+}
+
+static int state_progression_test(pj_stun_config  *stun_cfg, 
+				  pj_bool_t use_ipv6)
 {
     struct test_session_cfg test_cfg = 
     {
-	{   /* Client cfg */
-	    /* DNS SRV */   /* Destroy on state */
-	    PJ_TRUE,	    0xFFFF
+	{   /* Client cfg */			
+	    PJ_TRUE,	    /* DNS SRV */       
+	    0xFFFF	    /* Destroy on state */
 	},
 	{   /* Server cfg */
 	    0xFFFFFFFF,	    /* flags */
@@ -266,10 +280,11 @@ static int state_progression_test(pj_stun_config  *stun_cfg)
     };
     struct test_session *sess;
     unsigned i;
-    int rc;
+    int rc = 0;
 
-    PJ_LOG(3,("", "  state progression tests"));
-
+    PJ_LOG(3,("", "  state progression tests - (%s)",use_ipv6?"IPv6":"IPv4"));
+    
+    set_server_flag(&test_cfg, use_ipv6);
     for (i=0; i<=1; ++i) {
 	enum { TIMEOUT = 60 };
 	pjlib_state pjlib_state;
@@ -372,7 +387,10 @@ static int state_progression_test(pj_stun_config  *stun_cfg)
 	}
     }
 
-    return 0;
+    if (use_ipv6)
+	rc = state_progression_test(stun_cfg, 0);
+
+    return rc;
 }
 
 
@@ -380,13 +398,14 @@ static int state_progression_test(pj_stun_config  *stun_cfg)
 
 static int destroy_test(pj_stun_config  *stun_cfg,
 			pj_bool_t with_dns_srv,
-			pj_bool_t in_callback)
+			pj_bool_t in_callback,
+			pj_bool_t use_ipv6)
 {
     struct test_session_cfg test_cfg = 
     {
-	{   /* Client cfg */
-	    /* DNS SRV */   /* Destroy on state */
-	    PJ_TRUE,	    0xFFFF
+	{   /* Client cfg */	    
+	    PJ_TRUE,	    /* DNS SRV */   
+	    0xFFFF	    /* Destroy on state */
 	},
 	{   /* Server cfg */
 	    0xFFFFFFFF,	    /* flags */
@@ -404,6 +423,7 @@ static int destroy_test(pj_stun_config  *stun_cfg,
 		  ));
 
     test_cfg.client.enable_dns_srv = with_dns_srv;
+    set_server_flag(&test_cfg, use_ipv6);    
 
     for (target_state=PJ_TURN_STATE_RESOLVING; target_state<=PJ_TURN_STATE_READY; ++target_state) {
 	enum { TIMEOUT = 60 };
@@ -495,14 +515,14 @@ int turn_sock_test(void)
 	return -2;
     }
 
-    rc = state_progression_test(&stun_cfg);
+    rc = state_progression_test(&stun_cfg, USE_IPV6);
     if (rc != 0) 
 	goto on_return;
 
     for (i=0; i<=1; ++i) {
 	int j;
 	for (j=0; j<=1; ++j) {
-	    rc = destroy_test(&stun_cfg, i, j);
+	    rc = destroy_test(&stun_cfg, i, j, USE_IPV6);
 	    if (rc != 0)
 		goto on_return;
 	}

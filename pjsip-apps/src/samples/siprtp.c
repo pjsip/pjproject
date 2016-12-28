@@ -637,8 +637,8 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     }
 
     /* Create UAS dialog */
-    status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
-				   &app.local_contact, &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock( pjsip_ua_instance(), rdata,
+						&app.local_contact, &dlg);
     if (status != PJ_SUCCESS) {
 	const pj_str_t reason = pj_str("Unable to create dialog");
 	pjsip_endpt_respond_stateless( app.sip_endpt, rdata, 
@@ -655,9 +655,12 @@ static void process_incoming_call(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_dlg_create_response(dlg, rdata, 500, NULL, &tdata);
 	pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata), tdata);
+	pjsip_dlg_dec_lock(dlg);
 	return;
     }
     
+    /* Invite session has been created, decrement & release dialog lock */
+    pjsip_dlg_dec_lock(dlg);
 
     /* Attach call data to invite session */
     call->inv->mod_data[mod_siprtp.id] = call;
@@ -844,7 +847,7 @@ static int sip_worker_thread(void *arg)
 /* Init application options */
 static pj_status_t init_options(int argc, char *argv[])
 {
-    static char ip_addr[32];
+    static char ip_addr[PJ_INET_ADDRSTRLEN];
     static char local_uri[64];
 
     enum { OPT_START,
@@ -885,12 +888,11 @@ static pj_status_t init_options(int argc, char *argv[])
     {
 	const pj_str_t *hostname;
 	pj_sockaddr_in tmp_addr;
-	char *addr;
 
 	hostname = pj_gethostname();
 	pj_sockaddr_in_init(&tmp_addr, hostname, 0);
-	addr = pj_inet_ntoa(tmp_addr.sin_addr);
-	pj_ansi_strcpy(ip_addr, addr);
+	pj_inet_ntop(pj_AF_INET(), &tmp_addr.sin_addr, ip_addr,
+        	     sizeof(ip_addr));
     }
 
     /* Init defaults */
@@ -1133,7 +1135,7 @@ static void boost_priority(void)
 		    PJ_RETURN_OS_ERROR(rc));
 	return;
     }
-    tp.__sched_priority = max_prio;
+    tp.sched_priority = max_prio;
 
     rc = sched_setscheduler(0, POLICY, &tp);
     if (rc != 0) {
@@ -1142,7 +1144,7 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "New process policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 
     /*
      * Adjust thread scheduling algorithm and priority
@@ -1155,10 +1157,10 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "Old thread policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 
     policy = POLICY;
-    tp.__sched_priority = max_prio;
+    tp.sched_priority = max_prio;
 
     rc = pthread_setschedparam(pthread_self(), policy, &tp);
     if (rc != 0) {
@@ -1168,7 +1170,7 @@ static void boost_priority(void)
     }
 
     PJ_LOG(4, (THIS_FILE, "New thread policy=%d, priority=%d",
-	      policy, tp.__sched_priority));
+	      policy, tp.sched_priority));
 }
 
 #else

@@ -890,6 +890,10 @@ static void turn_on_state(pj_turn_session *sess,
 	if (status == PJ_SUCCESS) {
 	    on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
 	} else if (status != PJ_EPENDING) {
+            pj_perror(3, turn_sock->pool->obj_name, status,
+                      "Failed to connect to %s",
+                      pj_sockaddr_print(&info.server, addrtxt,
+                                        sizeof(addrtxt), 3));
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
 	}

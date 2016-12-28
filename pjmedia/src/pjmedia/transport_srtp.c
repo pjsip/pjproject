@@ -47,6 +47,7 @@
 #  include <srtp/crypto_kernel.h>
 #else
 #  include <srtp.h>
+#  include <crypto_kernel.h>
 #endif
 
 #define THIS_FILE   "transport_srtp.c"
@@ -71,6 +72,8 @@ static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 static const pj_str_t ID_INACTIVE = { "inactive", 8 };
 static const pj_str_t ID_CRYPTO   = { "crypto", 6 };
 
+typedef void (*crypto_method_t)(crypto_policy_t *policy);
+
 typedef struct crypto_suite
 {
     char		*name;
@@ -81,21 +84,69 @@ typedef struct crypto_suite
     unsigned		 srtp_auth_tag_len;
     unsigned		 srtcp_auth_tag_len;
     sec_serv_t		 service;
+    /* This is an attempt to validate crypto support by libsrtp, i.e: it should
+     * raise linking error if the libsrtp does not support the crypto. 
+     */
+    cipher_type_t       *ext_cipher_type;
+    crypto_method_t      ext_crypto_method;
 } crypto_suite;
 
-/* Crypto suites as defined on RFC 4568 */
+extern cipher_type_t aes_gcm_256_openssl;
+extern cipher_type_t aes_gcm_128_openssl;
+extern cipher_type_t aes_icm_192;
+
+/* https://www.iana.org/assignments/sdp-security-descriptions/sdp-security-descriptions.xhtml */
 static crypto_suite crypto_suites[] = {
     /* plain RTP/RTCP (no cipher & no auth) */
     {"NULL", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none},
+#if defined(PJMEDIA_SRTP_HAS_AES_GCM_256) && \
+    (PJMEDIA_SRTP_HAS_AES_GCM_256 != 0)
+    /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
+    {"AEAD_AES_256_GCM", AES_256_GCM, AES_256_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth, &aes_gcm_256_openssl},
+    /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
+    {"AEAD_AES_256_GCM_8", AES_256_GCM, AES_256_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth, &aes_gcm_256_openssl},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_256) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_256 != 0)
+    /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_256_CM_HMAC_SHA1_80", AES_ICM, 46, HMAC_SHA1, 20, 10, 10,
+	sec_serv_conf_and_auth, NULL, 
+        &crypto_policy_set_aes_cm_256_hmac_sha1_80},
+    /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_256_CM_HMAC_SHA1_32", AES_ICM, 46, HMAC_SHA1, 20, 4, 10,
+	sec_serv_conf_and_auth, NULL,
+        &crypto_policy_set_aes_cm_256_hmac_sha1_32},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_192) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_192 != 0)
+    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, HMAC_SHA1, 20, 10, 10,
+	sec_serv_conf_and_auth, &aes_icm_192},
+    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_192_CM_HMAC_SHA1_32", AES_ICM, 38, HMAC_SHA1, 20, 4, 10,
+	sec_serv_conf_and_auth, &aes_icm_192},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_GCM_128) && \
+    (PJMEDIA_SRTP_HAS_AES_GCM_128 != 0)
+    /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
+    {"AEAD_AES_128_GCM", AES_128_GCM, AES_128_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth, &aes_gcm_128_openssl},
 
-    /* cipher AES_CM, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_CM_128_HMAC_SHA1_80", AES_128_ICM, 30, HMAC_SHA1, 20, 10, 10,
+    /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
+    {"AEAD_AES_128_GCM_8", AES_128_GCM, AES_128_GCM_KEYSIZE_WSALT,
+	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth, &aes_gcm_128_openssl},
+#endif
+#if defined(PJMEDIA_SRTP_HAS_AES_CM_128) && \
+    (PJMEDIA_SRTP_HAS_AES_CM_128 != 0)
+    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_CM_128_HMAC_SHA1_80", AES_ICM, 30, HMAC_SHA1, 20, 10, 10,
 	sec_serv_conf_and_auth},
-
-    /* cipher AES_CM, auth HMAC_SHA1, auth tag len = 4 octets */
-    {"AES_CM_128_HMAC_SHA1_32", AES_128_ICM, 30, HMAC_SHA1, 20, 4, 10,
+    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_CM_128_HMAC_SHA1_32", AES_ICM, 30, HMAC_SHA1, 20, 4, 10,
 	sec_serv_conf_and_auth},
-
+#endif
     /*
      * F8_128_HMAC_SHA1_8 not supported by libsrtp?
      * {"F8_128_HMAC_SHA1_8", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none}
@@ -336,7 +387,9 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 
     PJ_UNUSED_ARG(endpt);
 
-#if defined(PJMEDIA_EXTERNAL_SRTP) && (PJMEDIA_EXTERNAL_SRTP != 0)
+#if !defined(PJMEDIA_SRTP_HAS_DEINIT) && !defined(PJMEDIA_SRTP_HAS_SHUTDOWN)
+# define PJMEDIA_SRTP_HAS_SHUTDOWN 1
+#endif
 
 # if defined(PJMEDIA_SRTP_HAS_DEINIT) && PJMEDIA_SRTP_HAS_DEINIT!=0
     err = srtp_deinit();
@@ -345,10 +398,6 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 # else
     err = err_status_ok;
 # endif
-
-#else
-    err = srtp_deinit();
-#endif
     if (err != err_status_ok) {
 	PJ_LOG(4, (THIS_FILE, "Failed to deinitialize libsrtp: %s",
 		   get_libsrtp_errstr(err)));
@@ -1169,10 +1218,9 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 {
     pj_str_t input;
     char *token;
-    pj_size_t token_len;
     pj_str_t tmp;
     pj_status_t status;
-    int itmp;
+    int itmp, token_len;
 
     pj_bzero(crypto, sizeof(*crypto));
     pj_strdup_with_null(pool, &input, &attr->value);
@@ -1370,6 +1418,8 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
 	/* Generate crypto attribute if not yet */
 	if (pjmedia_sdp_media_find_attr(m_loc, &ID_CRYPTO, NULL) == NULL) {
+	    int tag = 1;
+
 	    /* Offer only current active crypto if any, otherwise offer all
 	     * crypto-suites in the setting.
 	     */
@@ -1384,7 +1434,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 		buffer_len = MAXLEN;
 		status = generate_crypto_attr_value(srtp->pool, buffer, &buffer_len,
 						    &srtp->setting.crypto[i],
-						    i+1);
+						    tag);
 		if (status != PJ_SUCCESS)
 		    return status;
 
@@ -1394,6 +1444,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 		    attr = pjmedia_sdp_attr_create(srtp->pool, ID_CRYPTO.ptr,
 						   &attr_value);
 		    m_loc->attr[m_loc->attr_count++] = attr;
+		    ++tag;
 		}
 	    }
 	}
@@ -1456,6 +1507,9 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 				       &srtp->setting.crypto[j].name) == 0)
 			{
 			    int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
+			    
+	    		    if (cs_idx == -1)
+	    		        return PJMEDIA_SRTP_ENOTSUPCRYPTO;
 
 			    /* Force to use test key */
 			    /* bad keys for snom: */

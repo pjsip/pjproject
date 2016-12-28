@@ -189,6 +189,8 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	pj_lock_release(regc->lock);
 	pj_lock_destroy(regc->lock);
 	regc->lock = NULL;
+
+	pjsip_auth_clt_deinit(&regc->auth_sess);
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 
@@ -513,7 +515,7 @@ static pj_status_t create_request(pjsip_regc *regc,
 	route = regc->route_set.next;
 	while (route != &regc->route_set) {
 	    pjsip_hdr *new_hdr = (pjsip_hdr*)
-				 pjsip_hdr_shallow_clone(tdata->pool, route);
+				 pjsip_hdr_clone(tdata->pool, route);
 	    pj_list_insert_after(route_pos, new_hdr);
 	    route_pos = new_hdr;
 	    route = route->next;
@@ -527,7 +529,7 @@ static pj_status_t create_request(pjsip_regc *regc,
 	hdr = regc->hdr_list.next;
 	while (hdr != &regc->hdr_list) {
 	    pjsip_hdr *new_hdr = (pjsip_hdr*)
-				 pjsip_hdr_shallow_clone(tdata->pool, hdr);
+				 pjsip_hdr_clone(tdata->pool, hdr);
 	    pjsip_msg_add_hdr(tdata->msg, new_hdr);
 	    hdr = hdr->next;
 	}
@@ -566,7 +568,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     hdr = regc->contact_hdr_list.next;
     while (hdr != &regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+			       pjsip_hdr_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
 
@@ -581,8 +583,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     if (regc->expires_hdr)
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool,
-						       regc->expires_hdr));
+			       pjsip_hdr_clone(tdata->pool,
+					       regc->expires_hdr));
 
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
@@ -593,7 +595,7 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
     h_allow = pjsip_endpt_get_capability(regc->endpt, PJSIP_H_ALLOW, NULL);
     if (h_allow) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, h_allow));
+			       pjsip_hdr_clone(tdata->pool, h_allow));
 
     }
 
@@ -638,7 +640,7 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
     hdr = (pjsip_hdr*)regc->contact_hdr_list.next;
     while ((void*)hdr != (void*)&regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
-			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+			       pjsip_hdr_clone(tdata->pool, hdr));
 	hdr = hdr->next;
     }
 
@@ -738,7 +740,8 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
                           pj_status_t status, int st_code, 
 			  const pj_str_t *reason,
 			  pjsip_rx_data *rdata, pj_int32_t expiration,
-			  int contact_cnt, pjsip_contact_hdr *contact[])
+			  int contact_cnt, pjsip_contact_hdr *contact[],
+			  pj_bool_t is_unreg)
 {
     cbparam->regc = regc;
     cbparam->token = regc->token;
@@ -749,6 +752,7 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
     cbparam->contact_cnt = contact_cnt;
     cbparam->expiration = (expiration >= 0? expiration:
           		   regc->expires_requested);
+    cbparam->is_unreg = is_unreg;
     if (contact_cnt) {
 	pj_memcpy( cbparam->contact, contact, 
 		   contact_cnt*sizeof(pjsip_contact_hdr*));
@@ -758,7 +762,8 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
 static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code, 
 			  const pj_str_t *reason,
 			  pjsip_rx_data *rdata, pj_int32_t expiration,
-			  int contact_cnt, pjsip_contact_hdr *contact[])
+			  int contact_cnt, pjsip_contact_hdr *contact[],
+			  pj_bool_t is_unreg)
 {
     struct pjsip_regc_cbparam cbparam;
 
@@ -766,7 +771,7 @@ static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code,
 	return;
 
     cbparam_init(&cbparam, regc, status, st_code, reason, rdata, expiration,
-                 contact_cnt, contact);
+                 contact_cnt, contact, is_unreg);
     (*regc->cb)(&cbparam);
 }
 
@@ -793,7 +798,8 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     if (status != PJ_SUCCESS && regc->cb) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
+	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL,
+		      PJ_FALSE);
     }
 
     /* Delete the record if user destroy regc during the callback. */
@@ -1091,7 +1097,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		     &tsx->status_text,
                      (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
 	              event->body.tsx_state.src.rdata : NULL,
-                     -1, 0, NULL);
+                     -1, 0, NULL, PJ_FALSE);
 
         /* Call regc tsx callback before handling any response */
         pj_lock_release(regc->lock);
@@ -1130,8 +1136,10 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
     {
 	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 	pjsip_tx_data *tdata;
+	pj_bool_t is_unreg;
 
 	/* reset current op */
+	is_unreg = (regc->current_op == REGC_UNREGISTERING);
 	regc->current_op = REGC_IDLE;
 
         if (update_contact) {
@@ -1163,7 +1171,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
             chdr = regc->contact_hdr_list.next;
             while (chdr != &regc->contact_hdr_list) {
 	        pj_list_insert_before(ins_hdr, (pjsip_hdr*)
-                    pjsip_hdr_shallow_clone(tsx->last_tx->pool, chdr));
+                    pjsip_hdr_clone(tsx->last_tx->pool, chdr));
 	        chdr = chdr->next;
             }
 
@@ -1197,7 +1205,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code, 
 			      &rdata->msg_info.msg->line.status.reason,
-			      rdata, -1, 0, NULL);
+			      rdata, -1, 0, NULL, is_unreg);
 		pj_lock_acquire(regc->lock);
 	    }
 	}
@@ -1286,7 +1294,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code,
 			      &rdata->msg_info.msg->line.status.reason,
-			      rdata, -1, 0, NULL);
+			      rdata, -1, 0, NULL, PJ_FALSE);
 		pj_lock_acquire(regc->lock);
 	    }
 	}
@@ -1301,6 +1309,7 @@ handle_err:
 	pj_int32_t expiration = NOEXP;
 	unsigned contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
+	pj_bool_t is_unreg;
 
 	if (tsx->status_code/100 == 2) {
 
@@ -1325,6 +1334,7 @@ handle_err:
 	regc->expires = expiration;
 
 	/* Mark operation as complete */
+	is_unreg = (regc->current_op == REGC_UNREGISTERING);
 	regc->current_op = REGC_IDLE;
 
 	/* Call callback. */
@@ -1336,7 +1346,7 @@ handle_err:
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: &tsx->status_text),
 		      rdata, expiration, 
-		      contact_cnt, contact);
+		      contact_cnt, contact, is_unreg);
 	pj_lock_acquire(regc->lock);
     }
 
@@ -1424,6 +1434,11 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
 				      regc, &regc_tsx_callback);
     if (status!=PJ_SUCCESS) {
+	/* On failure, regc_tsx_callback() may not be called, so we need
+	 * to reset regc->has_tsx here (see also ticket #1936).
+	 */
+	regc->has_tsx = PJ_FALSE;
+
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
 

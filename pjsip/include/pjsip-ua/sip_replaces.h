@@ -138,7 +138,7 @@
 
     // Create UAS Invite session as usual.
     //
-    status = pjsip_dlg_create_uas(.., rdata, .., &dlg);
+    status = pjsip_dlg_create_uas_and_inc_lock(.., rdata, .., &dlg);
     ..
     status = pjsip_inv_create_uas(dlg, .., &inv);
 

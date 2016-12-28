@@ -154,7 +154,7 @@ static const char *timer_names[] =
 {
     "None",
     "UAC_REFRESH",
-    "UAS_TIMEOUT"
+    "UAS_TIMEOUT",
     "UAC_TERMINATE",
     "UAC_WAIT_NOTIFY",
     "INVALID_TIMER"
@@ -412,7 +412,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
     unsigned i;
 
     PJ_ASSERT_RETURN(pkg_mod && event_name, PJ_EINVAL);
-    PJ_ASSERT_RETURN(accept_cnt < PJ_ARRAY_SIZE(pkg->pkg_accept->values), 
+    
+    /* Make sure accept_cnt < PJ_ARRAY_SIZE(pkg->pkg_accept->values) */
+    PJ_ASSERT_RETURN(accept_cnt <= PJSIP_GENERIC_ARRAY_MAX_COUNT, 
 		     PJ_ETOOMANY);
 
     /* Make sure evsub module has been initialized */
@@ -831,7 +833,21 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+/*
+ * Increment the event subscription's group lock.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_add_ref(pjsip_evsub *sub)
+{
+    return pj_grp_lock_add_ref(sub->grp_lock);
+}
 
+/*
+ * Decrement the event subscription's group lock.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_dec_ref(pjsip_evsub *sub)
+{
+    return pj_grp_lock_dec_ref(sub->grp_lock);
+}
 
 /*
  * Create client subscription session.

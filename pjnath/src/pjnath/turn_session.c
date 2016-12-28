@@ -608,9 +608,16 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
 	    goto on_return;
 	}
 
+	/* Init DNS resolution option for IPv6 */
+	if (sess->af == pj_AF_INET6())
+	    opt |= PJ_DNS_SRV_RESOLVE_AAAA_ONLY;
+
 	/* Fallback to DNS A only if default port is specified */
 	if (default_port>0 && default_port<65536) {
-	    opt = PJ_DNS_SRV_FALLBACK_A;
+	    if (sess->af == pj_AF_INET6())
+		opt |= PJ_DNS_SRV_FALLBACK_AAAA;
+	    else
+		opt |= PJ_DNS_SRV_FALLBACK_A;
 	    sess->default_port = (pj_uint16_t)default_port;
 	}
 
@@ -717,6 +724,12 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 		     sess->state<=PJ_TURN_STATE_RESOLVED, 
 		     PJ_EINVALIDOP);
 
+    /* Verify address family in allocation param */
+    if (param && param->af) {
+	PJ_ASSERT_RETURN(param->af==pj_AF_INET() || param->af==pj_AF_INET6(),
+			 PJ_EINVAL);
+    }
+
     pj_grp_lock_acquire(sess->grp_lock);
 
     if (param && param != &sess->alloc_param) 
@@ -763,6 +776,23 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 				  sess->alloc_param.lifetime);
     }
 
+    /* Include ADDRESS-FAMILY if requested */
+    if (sess->alloc_param.af || sess->af == pj_AF_INET6()) {
+	enum  { IPV4_AF_TYPE = 0x01 << 24,
+		IPV6_AF_TYPE = 0x02 << 24 };
+
+	if (sess->alloc_param.af == pj_AF_INET6() ||
+	    (sess->alloc_param.af == 0 && sess->af == pj_AF_INET6()))
+	{
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV6_AF_TYPE);
+	} else if (sess->alloc_param.af == pj_AF_INET()) {
+	    /* For IPv4, only add the attribute when explicitly requested */
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				      PJ_STUN_ATTR_REQ_ADDR_TYPE, IPV4_AF_TYPE);
+	}
+    }
+
     /* Server address must be set */
     pj_assert(sess->srv_addr != NULL);
 
@@ -777,7 +807,8 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 	/* Set state back to RESOLVED. We don't want to destroy session now,
 	 * let the application do it if it wants to.
 	 */
-	set_state(sess, PJ_TURN_STATE_RESOLVED);
+	/* Set state back to RESOLVED may cause infinite loop (see #1942). */
+	//set_state(sess, PJ_TURN_STATE_RESOLVED);
     }
 
     pj_grp_lock_release(sess->grp_lock);
@@ -1343,11 +1374,15 @@ static void on_allocate_success(pj_turn_session *sess,
 				    "RELAY-ADDRESS attribute"));
 	return;
     }
-    if (raddr_attr && raddr_attr->sockaddr.addr.sa_family != sess->af) {
+    if (raddr_attr &&
+	((sess->alloc_param.af != 0 &&
+	  raddr_attr->sockaddr.addr.sa_family != sess->alloc_param.af) ||
+	 (sess->alloc_param.af == 0 &&
+	  raddr_attr->sockaddr.addr.sa_family != sess->af)))
+    {
 	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
-			pj_cstr(&s, "Error: RELAY-ADDRESS with non IPv4"
-				    " address family is not supported "
-				    "for now"));
+			pj_cstr(&s, "Error: Mismatched RELAY-ADDRESS "
+				    "address family"));
 	return;
     }
     if (raddr_attr && !pj_sockaddr_has_addr(&raddr_attr->sockaddr)) {
@@ -1718,13 +1753,18 @@ static void dns_srv_resolver_cb(void *user_data,
 	for (j=0; j<rec->entry[i].server.addr_count && 
 		  cnt<PJ_TURN_MAX_DNS_SRV_CNT; ++j) 
 	{
-	    pj_sockaddr_in *addr = &sess->srv_addr_list[cnt].ipv4;
+	    if (rec->entry[i].server.addr[j].af == sess->af) {
+		pj_sockaddr *addr = &sess->srv_addr_list[cnt];
 
-	    addr->sin_family = sess->af;
-	    addr->sin_port = pj_htons(rec->entry[i].port);
-	    addr->sin_addr.s_addr = rec->entry[i].server.addr[j].s_addr;
+		addr->addr.sa_family = sess->af;
+		pj_sockaddr_set_port(addr, rec->entry[i].port);
+		if (sess->af == pj_AF_INET6())
+		    addr->ipv6.sin6_addr = rec->entry[i].server.addr[j].ip.v6;
+		else
+		    addr->ipv4.sin_addr = rec->entry[i].server.addr[j].ip.v4;
 
-	    ++cnt;
+		++cnt;
+	    }
 	}
     }
     sess->srv_addr_cnt = (pj_uint16_t)cnt;
@@ -1737,7 +1777,10 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Run pending allocation */
     if (sess->pending_alloc) {
-	pj_turn_session_alloc(sess, NULL);
+	pj_status_t status;
+	status = pj_turn_session_alloc(sess, NULL);
+	if (status != PJ_SUCCESS)
+	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status, NULL);
     }
 }
 

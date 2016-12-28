@@ -904,6 +904,32 @@ public:
     pj_stun_nat_type natGetType() throw(Error);
 
     /**
+     * Update the STUN servers list. The libInit() must have been called
+     * before calling this function.
+     *
+     * @param prmServers	Array of STUN servers to try. The endpoint
+     * 				will try to resolve and contact each of the
+     * 				STUN server entry until it finds one that is
+     * 				usable. Each entry may be a domain name, host
+     * 				name, IP address, and it may contain an
+     * 				optional port number. For example:
+     *				- "pjsip.org" (domain name)
+     *				- "sip.pjsip.org" (host name)
+     *				- "pjsip.org:33478" (domain name and a non-
+     *				   standard port number)
+     *				- "10.0.0.1:3478" (IP address and port number)
+     * @param prmWait		Specify if the function should block until
+     *				it gets the result. In this case, the
+     *				function will block while the resolution
+     * 				is being done, and the callback
+     * 				onNatCheckStunServersComplete() will be called
+     * 				before this function returns.
+     *
+     */
+    void natUpdateStunServers(const StringVector &prmServers,
+                              bool prmWait) throw(Error);
+
+    /**
      * Auxiliary function to resolve and contact each of the STUN server
      * entries (sequentially) to find which is usable. The libInit() must
      * have been called before calling this function.
@@ -1189,7 +1215,7 @@ public:
     /**
      * Callback when the Endpoint has finished performing STUN server
      * checking that is initiated when calling libInit(), or by
-     * calling natCheckStunServers().
+     * calling natCheckStunServers() or natUpdateStunServers().
      *
      * @param prm	Callback parameters.
      */
@@ -1310,7 +1336,8 @@ private:
                            pjsua_acc_id acc_id);
     static void on_mwi_info(pjsua_acc_id acc_id,
                             pjsua_mwi_info *mwi_info);
-
+    static void on_acc_find_for_incoming(const pjsip_rx_data *rdata,
+				     	 pjsua_acc_id* acc_id);
     static void on_buddy_state(pjsua_buddy_id buddy_id);
     // Call callbacks
     static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
@@ -1375,6 +1402,10 @@ private:
                               unsigned media_idx,
                               pjmedia_transport *base_tp,
                               unsigned flags);
+    static void
+    on_create_media_transport_srtp(pjsua_call_id call_id,
+                                   unsigned media_idx,
+                                   pjmedia_srtp_setting *srtp_opt);
 
 private:
     void clearCodecInfoList(CodecInfoVector &codec_list);

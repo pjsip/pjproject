@@ -84,27 +84,34 @@ typedef enum pj_dns_srv_option
      * Specify if the resolver should fallback with DNS A
      * resolution when the SRV resolution fails. This option may
      * be specified together with PJ_DNS_SRV_FALLBACK_AAAA to
-     * make the resolver fallback to AAAA if SRV resolution fails,
-     * and then to DNS A resolution if the AAAA resolution fails.
+     * make the resolver fallback to both DNS A and DNS AAAA
+     * resolutions if SRV resolution fails.
      */
     PJ_DNS_SRV_FALLBACK_A	= 1,
 
     /**
      * Specify if the resolver should fallback with DNS AAAA
      * resolution when the SRV resolution fails. This option may
-     * be specified together with PJ_DNS_SRV_FALLBACK_A to
-     * make the resolver fallback to AAAA if SRV resolution fails,
-     * and then to DNS A resolution if the AAAA resolution fails.
+     * be specified together with PJ_DNS_SRV_FALLBACK_AAAA to
+     * make the resolver fallback to both DNS A and DNS AAAA
+     * resolutions if SRV resolution fails.
      */
     PJ_DNS_SRV_FALLBACK_AAAA	= 2,
 
     /**
      * Specify if the resolver should try to resolve with DNS AAAA
-     * resolution first of each targets in the DNS SRV record. If
-     * this option is not specified, the SRV resolver will query
-     * the DNS A record for the target instead.
+     * resolution of each targets in the DNS SRV record. If this
+     * option is not specified, the SRV resolver will query the
+     * DNS A record for the target instead.
      */
-    PJ_DNS_SRV_RESOLVE_AAAA	= 4
+    PJ_DNS_SRV_RESOLVE_AAAA	= 4,
+
+    /**
+     * Specify if the resolver should try to resolve with DNS AAAA
+     * resolution only (i.e: without DNS A resolution) for each targets
+     * in the DNS SRV record.
+     */
+    PJ_DNS_SRV_RESOLVE_AAAA_ONLY = 8
 
 } pj_dns_srv_option;
 
@@ -131,7 +138,7 @@ typedef struct pj_dns_srv_record
 	pj_uint16_t		port;
 
 	/** The host address. */
-	pj_dns_a_record		server;
+	pj_dns_addr_record	server;
 
     } entry[PJ_DNS_SRV_MAX_ADDR];
 

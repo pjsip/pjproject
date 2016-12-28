@@ -679,17 +679,29 @@ AudioMedia &AudDevManager::getPlaybackDevMedia() throw(Error)
 }
 
 void AudDevManager::setCaptureDev(int capture_dev) const throw(Error)
-{
-    int playback_dev = getPlaybackDev();
+{    
+    pjsua_snd_dev_param param;
+    pjsua_snd_dev_param_default(&param);    
 
-    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev(capture_dev, playback_dev) );
+    param.capture_dev = capture_dev;
+    param.playback_dev = getPlaybackDev();    
+
+    param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
+
+    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
 }
 
 void AudDevManager::setPlaybackDev(int playback_dev) const throw(Error)
 {
-    int capture_dev = getCaptureDev();
+    pjsua_snd_dev_param param;
+    pjsua_snd_dev_param_default(&param);    
 
-    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev(capture_dev, playback_dev) );
+    param.capture_dev = getCaptureDev();
+    param.playback_dev = playback_dev;
+
+    param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
+
+    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );    
 }
 
 const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
@@ -718,6 +730,21 @@ void AudDevManager::setNullDev() throw(Error)
 MediaPort *AudDevManager::setNoDev()
 {
     return (MediaPort*)pjsua_set_no_snd_dev();
+}
+
+void AudDevManager::setSndDevMode(unsigned mode) const throw(Error)
+{    
+    int capture_dev = 0, playback_dev = 0;
+    pjsua_snd_dev_param param;
+    pj_status_t status = pjsua_get_snd_dev(&capture_dev, &playback_dev);    
+    if (status != PJ_SUCCESS) {
+	PJSUA2_RAISE_ERROR2(status, "AudDevManager::setSndDevMode()");	
+    }
+    pjsua_snd_dev_param_default(&param);
+    param.capture_dev = capture_dev;
+    param.playback_dev = playback_dev;
+    param.mode = mode;
+    PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
 }
 
 void AudDevManager::setEcOptions(unsigned tail_msec,

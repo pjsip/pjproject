@@ -229,7 +229,8 @@ static void destroy_server(void)
 
 /* Instantiate standard server */
 static int create_std_server(pj_stun_auth_type auth_type,
-			     pj_bool_t responding)
+			     pj_bool_t responding,
+			     pj_bool_t use_ipv6)
 {
     pj_pool_t *pool;
     pj_stun_session_cb sess_cb;
@@ -266,14 +267,14 @@ static int create_std_server(pj_stun_auth_type auth_type,
     }
 
     /* Create socket */
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &server->sock);
+    status = pj_sock_socket(GET_AF(use_ipv6), pj_SOCK_DGRAM(), 0, &server->sock);
     if (status != PJ_SUCCESS) {
 	destroy_server();
 	return -30;
     }
 
     /* Bind */
-    pj_sockaddr_in_init(&server->addr.ipv4, NULL, 0);
+    pj_sockaddr_init(GET_AF(use_ipv6), &server->addr, NULL, 0);
     status = pj_sock_bind(server->sock, &server->addr, pj_sockaddr_get_len(&server->addr));
     if (status != PJ_SUCCESS) {
 	destroy_server();
@@ -289,11 +290,19 @@ static int create_std_server(pj_stun_auth_type auth_type,
 	    return -43;
 	}
 
-	status = pj_gethostip(pj_AF_INET(), &addr);
-	if (status != PJ_SUCCESS) {
-	    destroy_server();
-	    return -45;
-	}
+	if (use_ipv6) {
+	    /* pj_gethostip() may return IPv6 link-local and currently it will cause
+	     * 'no route to host' error, so let's just hardcode to [::1]
+	     */
+	    pj_sockaddr_init(pj_AF_INET6(), &addr, NULL, 0);
+	    addr.ipv6.sin6_addr.s6_addr[15] = 1;	
+	} else {
+	    status = pj_gethostip(GET_AF(use_ipv6), &addr);
+	    if (status != PJ_SUCCESS) {
+		destroy_server();
+		return -45;
+	    }
+        }
 
 	pj_sockaddr_copy_addr(&server->addr, &addr);
     }
@@ -452,7 +461,7 @@ static int run_client_test(const char *title,
 			   const char *nonce,
 			   const char *password,
 			   pj_bool_t dummy_mi,
-
+			   pj_bool_t use_ipv6,
 			   pj_bool_t expected_error,
 			   pj_status_t expected_code,
 			   const char *expected_realm,
@@ -465,9 +474,10 @@ static int run_client_test(const char *title,
     pj_stun_auth_cred cred;
     pj_stun_tx_data *tdata;
     pj_status_t status;
+    pj_sockaddr addr;
     int rc = 0;
     
-    PJ_LOG(3,(THIS_FILE, "   %s test", title));
+    PJ_LOG(3,(THIS_FILE, "   %s test (%s)", title, use_ipv6?"IPv6":"IPv4"));
 
     /* Create client */
     pool = pj_pool_create(mem, "client", 1000, 1000, NULL);
@@ -493,14 +503,15 @@ static int run_client_test(const char *title,
     }
 
     /* Create client socket */
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &client->sock);
+    status = pj_sock_socket(GET_AF(use_ipv6), pj_SOCK_DGRAM(), 0, &client->sock);
     if (status != PJ_SUCCESS) {
 	destroy_client_server();
 	return -210;
     }
 
     /* Bind client socket */
-    status = pj_sock_bind_in(client->sock, 0, 0);
+    pj_sockaddr_init(GET_AF(use_ipv6), &addr, NULL, 0);
+    status = pj_sock_bind(client->sock, &addr, pj_sockaddr_get_len(&addr));
     if (status != PJ_SUCCESS) {
 	destroy_client_server();
 	return -220;
@@ -528,7 +539,7 @@ static int run_client_test(const char *title,
     }
 
     /* Create the server */
-    status = create_std_server(server_auth_type, server_responding);
+    status = create_std_server(server_auth_type, server_responding, use_ipv6);
     if (status != 0) {
 	destroy_client_server();
 	return status;
@@ -680,6 +691,26 @@ static int run_client_test(const char *title,
 
 done:
     destroy_client_server();
+
+    /* If IPv6 is enabled, test again for IPv4. */
+    if ((rc == 0) && use_ipv6) {
+	rc = run_client_test(title,
+			     server_responding,
+			     server_auth_type,
+			     client_auth_type,
+			     realm,
+			     username,
+			     nonce,
+			     password,
+			     dummy_mi,
+			     0,
+			     expected_error,
+			     expected_code,
+			     expected_realm,
+			     expected_nonce,
+			     more_check);
+    }
+
     return rc;
 }
 
@@ -778,6 +809,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 NULL,		    // password
 			 PJ_FALSE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJNATH_ESTUNTIMEDOUT,// expected code
 			 NULL,		    // expected realm
@@ -808,6 +840,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 NULL,		    // password
 			 PJ_FALSE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(400),// expected code
 			 NULL,		    // expected realm
@@ -832,6 +865,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 "anotherpass",	    // password
 			 PJ_FALSE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401),// expected code
 			 NULL,		    // expected realm
@@ -860,6 +894,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 "anotherpass",	    // password
 			 PJ_FALSE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401),// expected code
 			 NULL,		    // expected realm
@@ -882,6 +917,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 NULL,		    // password
 			 PJ_TRUE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(400),	    // expected code
 			 NULL,		    // expected realm
@@ -902,6 +938,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 PASSWORD,	    // password
 			 PJ_FALSE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_FALSE,	    // expected error
 			 PJ_SUCCESS,	    // expected code
 			 NULL,		    // expected realm
@@ -928,6 +965,7 @@ int sess_auth_test(void)
 			 NULL,		    // nonce
 			 PASSWORD,	    // password
 			 PJ_TRUE,	    // dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401),	    // expected code
 			 NULL,		    // expected realm
@@ -961,6 +999,7 @@ int sess_auth_test(void)
 			 NULL,		    // client nonce
 			 NULL,		    // client password
 			 PJ_FALSE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401), // expected code
 			 REALM,		    // expected realm
@@ -987,6 +1026,7 @@ int sess_auth_test(void)
 			 NONCE,		    // client nonce
 			 PASSWORD,	    // client password
 			 PJ_TRUE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(400), // expected code
 			 NULL,		    // expected realm
@@ -1007,6 +1047,7 @@ int sess_auth_test(void)
 			 NONCE,		    // client nonce
 			 PASSWORD,	    // client password
 			 PJ_TRUE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(400), // expected code
 			 NULL,		    // expected realm
@@ -1027,6 +1068,7 @@ int sess_auth_test(void)
 			 NULL,		    // client nonce
 			 PASSWORD,	    // client password
 			 PJ_TRUE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(400), // expected code
 			 NULL,		    // expected realm
@@ -1063,6 +1105,7 @@ int sess_auth_test(void)
 			 "a nonce",	    // client nonce
 			 "somepassword",    // client password
 			 PJ_FALSE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401), // expected code
 			 REALM,		    // expected realm
@@ -1083,6 +1126,7 @@ int sess_auth_test(void)
 			 "anothernonce",    // client nonce
 			 PASSWORD,	    // client password
 			 PJ_FALSE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_FALSE,	    // expected error
 			 0,		    // expected code
 			 NULL,		    // expected realm
@@ -1113,6 +1157,7 @@ int sess_auth_test(void)
 			 NONCE,		    // client nonce
 			 PASSWORD,	    // client password
 			 PJ_FALSE,	    // client dummy MI
+			 USE_IPV6,	    // use IPv6
 			 PJ_TRUE,	    // expected error
 			 PJ_STATUS_FROM_STUN_CODE(401), // expected code
 			 REALM,		    // expected realm

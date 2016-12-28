@@ -19,7 +19,8 @@
 #include <pjmedia/converter.h>
 #include <pj/errno.h>
 
-#if PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
+    defined(PJMEDIA_HAS_LIBSWSCALE) && (PJMEDIA_HAS_LIBSWSCALE != 0)
 
 #include "ffmpeg_util.h"
 #include <libswscale/swscale.h>
@@ -205,4 +206,4 @@ pjmedia_libswscale_converter_shutdown(pjmedia_converter_mgr *mgr,
 #   pragma comment( lib, "swscale.lib")
 #endif
 
-#endif /* #if PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL */
+#endif /* PJMEDIA_HAS_LIBSWSCALE */

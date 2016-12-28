@@ -27,6 +27,14 @@
 #define INCLUDE_TURN_SOCK_TEST	    1
 #define INCLUDE_CONCUR_TEST    	    1
 
+#define GET_AF(use_ipv6) (use_ipv6?pj_AF_INET6():pj_AF_INET())
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+#   define USE_IPV6	1
+#else
+#   define USE_IPV6	0
+#endif
+
 int stun_test(void);
 int sess_auth_test(void);
 int stun_sock_test(void);
@@ -36,6 +44,7 @@ int concur_test(void);
 int test_main(void);
 
 extern void app_perror(const char *title, pj_status_t rc);
+extern void app_set_sock_nb(pj_sock_t sock);
 extern pj_pool_factory *mem;
 
 int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit);

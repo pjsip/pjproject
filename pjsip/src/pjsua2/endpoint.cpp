@@ -45,6 +45,7 @@ Endpoint *Endpoint::instance_;
 ///////////////////////////////////////////////////////////////////////////////
 
 UaConfig::UaConfig()
+: mainThreadOnly(false)
 {
     pjsua_config ua_cfg;
 
@@ -489,7 +490,7 @@ void Endpoint::logFunc(int level, const char *data, int len)
     LogEntry entry;
     entry.level = level;
     entry.msg = string(data, len);
-    entry.threadId = (long)pj_thread_this();
+    entry.threadId = (long)(size_t)pj_thread_this();
     entry.threadName = string(pj_thread_get_name(pj_thread_this()));
 
     ep.utilLogWrite(entry);
@@ -601,12 +602,25 @@ void Endpoint::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	return;
     }
 
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    if (!call->incoming_data) {
+	/* This happens when the incoming call callback has been called from 
+	 * inside the on_create_media_transport() callback. So we simply 
+	 * return here to avoid calling	the callback twice. 
+	 */
+	return;
+    }
+
     /* call callback */
     OnIncomingCallParam prm;
     prm.callId = call_id;
     prm.rdata.fromPj(*rdata);
 
     acc->onIncomingCall(prm);
+
+    /* Free cloned rdata. */
+    pjsip_rx_data_free_cloned(call->incoming_data);
+    call->incoming_data = NULL;
 
     /* disconnect if callback doesn't handle the call */
     pjsua_call_info ci;
@@ -815,6 +829,20 @@ void Endpoint::on_mwi_info(pjsua_acc_id acc_id,
     acc->onMwiInfo(prm);
 }
 
+void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
+				        pjsua_acc_id* acc_id)
+{
+    OnSelectAccountParam prm;
+
+    pj_assert(rdata && acc_id);
+    prm.rdata.fromPj(*((pjsip_rx_data *)rdata));
+    prm.accountIndex = *acc_id;
+    
+    instance_->onSelectAccount(prm);
+    
+    *acc_id = prm.accountIndex;
+}
+
 void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
 {
     Buddy *buddy = (Buddy*)pjsua_buddy_get_user_data(buddy_id);
@@ -893,8 +921,15 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     
     /* Check if application modifies the SDP */
     if (orig_sdp != prm.sdp.wholeSdp) {
-        pjmedia_sdp_parse(pool, (char*)prm.sdp.wholeSdp.c_str(),
-                          prm.sdp.wholeSdp.size(), &sdp);
+        pjmedia_sdp_session *new_sdp;
+        pj_str_t dup_new_sdp;
+        pj_str_t new_sdp_str = {(char*)prm.sdp.wholeSdp.c_str(),
+        			(pj_ssize_t)prm.sdp.wholeSdp.size()};
+
+        pj_strdup(pool, &dup_new_sdp, &new_sdp_str);        
+        pjmedia_sdp_parse(pool, dup_new_sdp.ptr,
+                          dup_new_sdp.slen, &new_sdp);
+        pj_memcpy(sdp, new_sdp, sizeof(*sdp));
     }
 }
 
@@ -1203,7 +1238,22 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
-	return base_tp;
+	pjsua_call *in_call = &pjsua_var.calls[call_id];
+	if (in_call->incoming_data) {
+	    /* This can happen when there is an incoming call but the
+	     * on_incoming_call() callback hasn't been called. So we need to 
+	     * call the callback here.
+	     */
+	    on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+
+	    /* New call should already be created by app. */
+	    call = Call::lookup(call_id);
+	    if (!call) {
+		return base_tp;
+	    }
+	} else {
+	    return base_tp;
+	}
     }
     
     OnCreateMediaTransportParam prm;
@@ -1214,6 +1264,53 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
     call->onCreateMediaTransport(prm);
     
     return (pjmedia_transport *)prm.mediaTp;
+}
+
+void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
+                                    	      unsigned media_idx,
+                                    	      pjmedia_srtp_setting *srtp_opt)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	pjsua_call *in_call = &pjsua_var.calls[call_id];
+	if (in_call->incoming_data) {
+	    /* This can happen when there is an incoming call but the
+	     * on_incoming_call() callback hasn't been called. So we need to 
+	     * call the callback here.
+	     */
+	    on_incoming_call(in_call->acc_id, call_id, in_call->incoming_data);
+
+	    /* New call should already be created by app. */
+	    call = Call::lookup(call_id);
+	    if (!call) {
+		return;
+	    }
+	} else {
+	    return;
+	}
+    }
+    
+    OnCreateMediaTransportSrtpParam prm;
+    prm.mediaIdx = media_idx;
+    prm.srtpUse  = srtp_opt->use;
+    for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
+    	SrtpCrypto crypto;
+    	
+    	crypto.key   = pj2Str(srtp_opt->crypto[i].key);
+    	crypto.name  = pj2Str(srtp_opt->crypto[i].name);
+    	crypto.flags = srtp_opt->crypto[i].flags;
+    	prm.cryptos.push_back(crypto);
+    }
+    
+    call->onCreateMediaTransportSrtp(prm);
+    
+    srtp_opt->use = prm.srtpUse;
+    srtp_opt->crypto_count = prm.cryptos.size();
+    for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
+    	srtp_opt->crypto[i].key   = str2Pj(prm.cryptos[i].key);
+    	srtp_opt->crypto[i].name  = str2Pj(prm.cryptos[i].name);
+    	srtp_opt->crypto[i].flags = prm.cryptos[i].flags;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1277,6 +1374,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_typing2	= &Endpoint::on_typing2;
     ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state	= &Endpoint::on_buddy_state;
+    ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
 
     /* Call callbacks */
     ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
@@ -1508,6 +1606,21 @@ pj_stun_nat_type Endpoint::natGetType() throw(Error)
     PJSUA2_CHECK_EXPR( pjsua_get_nat_type(&type) );
 
     return type;
+}
+
+void Endpoint::natUpdateStunServers(const StringVector &servers,
+				    bool wait) throw(Error)
+{
+    pj_str_t srv[MAX_STUN_SERVERS];
+    unsigned i, count = 0;
+
+    for (i=0; i<servers.size() && i<MAX_STUN_SERVERS; ++i) {
+	srv[count].ptr = (char*)servers[i].c_str();
+	srv[count].slen = servers[i].size();
+	++count;
+    }
+
+    PJSUA2_CHECK_EXPR(pjsua_update_stun_servers(count, srv, wait) );
 }
 
 void Endpoint::natCheckStunServers(const StringVector &servers,

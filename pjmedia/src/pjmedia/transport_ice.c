@@ -50,7 +50,6 @@ struct transport_ice
 {
     pjmedia_transport	 base;
     pj_pool_t		*pool;
-    int			 af;
     unsigned		 options;	/**< Transport options.		    */
 
     unsigned		 comp_cnt;
@@ -235,7 +234,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     pool = pjmedia_endpt_create_pool(endpt, name, 512, 512);
     tp_ice = PJ_POOL_ZALLOC_T(pool, struct transport_ice);
     tp_ice->pool = pool;
-    tp_ice->af = cfg->af;
     tp_ice->options = options;
     tp_ice->comp_cnt = comp_cnt;
     pj_ansi_strcpy(tp_ice->base.name, pool->obj_name);
@@ -822,6 +820,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     pj_bool_t comp1_found=PJ_FALSE, comp2_found=PJ_FALSE, has_rtcp=PJ_FALSE;
     pj_sockaddr rem_conn_addr, rtcp_addr;
     unsigned i;
+    int rem_af = 0;
     pj_status_t status;
 
     rem_m = rem_sdp->media[media_index];
@@ -848,6 +847,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	return PJMEDIA_SDP_EMISSINGCONN;
 
     /* Verify address family matches */
+    /*
     if ((tp_ice->af==pj_AF_INET() && 
 	 pj_strcmp(&rem_conn->addr_type, &STR_IP4)!=0) ||
 	(tp_ice->af==pj_AF_INET6() && 
@@ -855,9 +855,18 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     {
 	return PJMEDIA_SDP_ETPORTNOTEQUAL;
     }
+    */
+
+    /* Get remote address family */
+    if (pj_strcmp(&rem_conn->addr_type, &STR_IP4)==0)
+	rem_af = pj_AF_INET();
+    else if (pj_strcmp(&rem_conn->addr_type, &STR_IP6)==0)
+	rem_af = pj_AF_INET6();
+    else
+	pj_assert(!"Unsupported address family");
 
     /* Assign remote connection address */
-    status = pj_sockaddr_init(tp_ice->af, &rem_conn_addr, &rem_conn->addr,
+    status = pj_sockaddr_init(rem_af, &rem_conn_addr, &rem_conn->addr,
 			      (pj_uint16_t)rem_m->desc.port);
     if (status != PJ_SUCCESS)
 	return status;
@@ -883,6 +892,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     	
 	    if (rtcp_attr.addr.slen) {
 		/* Verify address family matches */
+		/*
 		if ((tp_ice->af==pj_AF_INET() && 
 		     pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
 		    (tp_ice->af==pj_AF_INET6() && 
@@ -890,9 +900,10 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 		{
 		    return PJMEDIA_SDP_ETPORTNOTEQUAL;
 		}
+		*/
 
 		/* Assign RTCP address */
-		status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
+		status = pj_sockaddr_init(rem_af, &rtcp_addr,
 					  &rtcp_attr.addr,
 					  (pj_uint16_t)rtcp_attr.port);
 		if (status != PJ_SUCCESS) {
@@ -900,7 +911,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 		}
 	    } else {
 		/* Assign RTCP address */
-		status = pj_sockaddr_init(tp_ice->af, &rtcp_addr, 
+		status = pj_sockaddr_init(rem_af, &rtcp_addr, 
 					  NULL, 
 					  (pj_uint16_t)rtcp_attr.port);
 		if (status != PJ_SUCCESS) {

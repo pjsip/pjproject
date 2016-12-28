@@ -330,6 +330,16 @@ typedef struct pj_turn_alloc_param
      */
     int	    ka_interval;
 
+    /**
+     * The requested ADDRESS-FAMILY. Default is zero to request relay with
+     * address family matched to the one specified in TURN session creation.
+     * Valid values are zero, pj_AF_INET(), and pj_AF_INET6().
+     *
+     * Default value is zero.
+     */
+    int	    af;
+
+
 } pj_turn_alloc_param;
 
 
