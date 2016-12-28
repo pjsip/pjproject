@@ -623,10 +623,6 @@
       <Project>{4bf51c21-5a30-423b-82fe-1ed410e5769d}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
-    <ProjectReference Condition="'$(API_Family)'=='WinDesktop'" Include="..\..\third_party\build\portaudio\libportaudio.vcxproj">
-      <Project>{3cf9ffa9-8387-4635-9d1b-e7944cbefeaa}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
     <ProjectReference Include="..\..\third_party\build\resample\libresample.vcxproj">
       <Project>{6794b975-4e84-4f49-b2dc-c31f2224e03e}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
@@ -638,6 +634,12 @@
     <ProjectReference Include="..\..\third_party\build\srtp\libsrtp.vcxproj">
       <Project>{f0dbaa03-1ba3-4e3b-a2ca-727e3d3ab858}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
+    </ProjectReference>
+    <ProjectReference Include="..\..\third_party\build\webrtc\libwebrtc.vcxproj">
+      <Project>{5BCF2773-3825-4D91-9D72-3E2F650DF1DB}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\..\third_party\build\yuv\libyuv.vcxproj">
+      <Project>{6ac9b65f-0862-4a5c-8a9d-141516993130}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

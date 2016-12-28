@@ -9,6 +9,6 @@
      * UWP          (UWP)
      * WinPhone8    (Windows Phone 8)
     -->
-    <API_Family>UWP</API_Family>
+    <API_Family>WinDesktop</API_Family>
   </PropertyGroup>
 </Project>

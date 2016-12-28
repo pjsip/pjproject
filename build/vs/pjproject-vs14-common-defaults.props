@@ -20,10 +20,11 @@
       <CompileAs>Default</CompileAs>
       <CompileAsWinRT>false</CompileAsWinRT>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
-      <AdditionalOptions>/Ignore:4264 %(AdditionalOptions)</AdditionalOptions>      
+      <AdditionalOptions>/Ignore:4264 %(AdditionalOptions)</AdditionalOptions>
     </Lib>
     <Link>
       <OutputFile  Condition="'$(TargetExt)'=='.exe'">..\bin\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).exe</OutputFile>
