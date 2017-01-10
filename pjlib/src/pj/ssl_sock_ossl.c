@@ -51,10 +51,63 @@
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
 #include <openssl/engine.h>
+#include <openssl/opensslconf.h>
 
-#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
-   extern int tls1_ec_nid2curve_id(int nid);
-   extern int tls1_ec_curve_id2nid(int curve_id);
+#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
+
+#   include <openssl/obj_mac.h>
+
+static const unsigned nid_cid_map[] = {
+    NID_sect163k1,              /* sect163k1 (1) */
+    NID_sect163r1,              /* sect163r1 (2) */
+    NID_sect163r2,              /* sect163r2 (3) */
+    NID_sect193r1,              /* sect193r1 (4) */
+    NID_sect193r2,              /* sect193r2 (5) */
+    NID_sect233k1,              /* sect233k1 (6) */
+    NID_sect233r1,              /* sect233r1 (7) */
+    NID_sect239k1,              /* sect239k1 (8) */
+    NID_sect283k1,              /* sect283k1 (9) */
+    NID_sect283r1,              /* sect283r1 (10) */
+    NID_sect409k1,              /* sect409k1 (11) */
+    NID_sect409r1,              /* sect409r1 (12) */
+    NID_sect571k1,              /* sect571k1 (13) */
+    NID_sect571r1,              /* sect571r1 (14) */
+    NID_secp160k1,              /* secp160k1 (15) */
+    NID_secp160r1,              /* secp160r1 (16) */
+    NID_secp160r2,              /* secp160r2 (17) */
+    NID_secp192k1,              /* secp192k1 (18) */
+    NID_X9_62_prime192v1,       /* secp192r1 (19) */
+    NID_secp224k1,              /* secp224k1 (20) */
+    NID_secp224r1,              /* secp224r1 (21) */
+    NID_secp256k1,              /* secp256k1 (22) */
+    NID_X9_62_prime256v1,       /* secp256r1 (23) */
+    NID_secp384r1,              /* secp384r1 (24) */
+    NID_secp521r1,              /* secp521r1 (25) */
+    NID_brainpoolP256r1,        /* brainpoolP256r1 (26) */
+    NID_brainpoolP384r1,        /* brainpoolP384r1 (27) */
+    NID_brainpoolP512r1         /* brainpoolP512r1 (28) */
+};
+
+static unsigned get_cid_from_nid(unsigned nid)
+{
+    unsigned i, cid = 0;
+    for (i=0; i<PJ_ARRAY_SIZE(nid_cid_map); ++i) {
+	if (nid == nid_cid_map[i]) {
+	    cid = i+1;
+	    break;
+	}
+    }
+    return cid;
+};
+
+static unsigned get_nid_from_cid(unsigned cid)
+{
+    if ((cid == 0) || (cid > PJ_ARRAY_SIZE(nid_cid_map)))
+	return 0;
+
+    return nid_cid_map[cid-1];
+}
+
 #endif
 
 #ifdef _MSC_VER
@@ -385,7 +438,7 @@ static pj_status_t init_openssl(void)
 
 	ssl->session = SSL_SESSION_new();
 
-#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
+#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 	openssl_curves_num = SSL_get_shared_curve(ssl,-1);
 	if (openssl_curves_num > PJ_ARRAY_SIZE(openssl_curves))
 	    openssl_curves_num = PJ_ARRAY_SIZE(openssl_curves);
@@ -402,7 +455,7 @@ static pj_status_t init_openssl(void)
 		    cname = OBJ_nid2sn(nid);
 	    }
 
-	    openssl_curves[i].id   = tls1_ec_nid2curve_id(nid);
+	    openssl_curves[i].id   = get_cid_from_nid(nid);
 	    openssl_curves[i].name = cname;
 	}
 #else
@@ -1001,16 +1054,16 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
 static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 {
-#if defined(PJ_SSL_SOCK_OSSL_HAS_EC) && PJ_SSL_SOCK_OSSL_HAS_EC==1
+#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
     int ret;
     int curves[PJ_SSL_SOCK_MAX_CURVES];
-    int cnt;
+    unsigned cnt;
 
     if (ssock->param.curves_num == 0)
 	return PJ_SUCCESS;
 
     for (cnt = 0; cnt < ssock->param.curves_num; cnt++) {
-	curves[cnt] = tls1_ec_curve_id2nid(ssock->param.curves[cnt]);
+	curves[cnt] = get_nid_from_cid(ssock->param.curves[cnt]);
     }
 
     if( ssock->ossl_ssl->server ) {
@@ -1027,13 +1080,12 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 #else
     PJ_UNUSED_ARG(ssock);
 #endif
-
     return PJ_SUCCESS;
 }
 
 static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 {
-#if defined(PJ_SSL_SOCK_OSSL_HAS_SIGALG) && PJ_SSL_SOCK_OSSL_HAS_SIGALG==1
+#if OPENSSL_VERSION_NUMBER >= 0x1000200fL
     int ret;
 
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
@@ -1051,7 +1103,6 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 #else
     PJ_UNUSED_ARG(ssock);
 #endif
-
     return PJ_SUCCESS;
 }
 
