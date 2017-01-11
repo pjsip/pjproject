@@ -1216,63 +1216,62 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 				     pjmedia_srtp_crypto *crypto,
 				     int *tag)
 {
-    pj_str_t input;
-    char *token;
-    pj_str_t tmp;
+    pj_str_t token, delim;
     pj_status_t status;
-    int itmp, token_len;
+    int itmp, found_idx;
 
     pj_bzero(crypto, sizeof(*crypto));
-    pj_strdup_with_null(pool, &input, &attr->value);
 
     /* Tag */
-    token = strtok(input.ptr, " ");
-    if (!token) {
+    delim = pj_str(" ");
+    found_idx = pj_strtok(&attr->value, &delim, &token, 0);
+    if (found_idx == attr->value.slen) {
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting tag"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    token_len = pj_ansi_strlen(token);
 
     /* Tag must not use leading zeroes. */
-    if (token_len > 1 && *token == '0')
+    if (token.slen > 1 && *token.ptr == '0')
 	return PJMEDIA_SDP_EINATTR;
 
     /* Tag must be decimal, i.e: contains only digit '0'-'9'. */
-    for (itmp = 0; itmp < token_len; ++itmp)
-	if (!pj_isdigit(token[itmp]))
+    for (itmp = 0; itmp < token.slen; ++itmp)
+	if (!pj_isdigit(token.ptr[itmp]))
 	    return PJMEDIA_SDP_EINATTR;
 
     /* Get tag value. */
-    *tag = atoi(token);
+    *tag = pj_strtoul(&token);
 
     /* Crypto-suite */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);
+    if (found_idx == attr->value.slen) {
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting crypto suite"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    crypto->name = pj_str(token);
+    crypto->name = token;
 
     /* Key method */
-    token = strtok(NULL, ":");
-    if (!token) {
+    delim = pj_str(": ");
+    found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);
+    if (found_idx == attr->value.slen) {
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting key method"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    if (pj_ansi_stricmp(token, "inline")) {
-	PJ_LOG(4,(THIS_FILE, "Attribute crypto key method '%s' not supported!",
-	          token));
+    if (pj_stricmp2(&token, "inline")) {
+	PJ_LOG(4,(THIS_FILE, "Attribute crypto key method '%.*s' "
+	          "not supported!", token.slen, token.ptr));
 	return PJMEDIA_SDP_EINATTR;
     }
 
-    /* Key */
-    token = strtok(NULL, "| ");
-    if (!token) {
+    /* Key */    
+    delim = pj_str("| ");
+    found_idx = pj_strtok(&attr->value, &delim, &token, found_idx+token.slen);
+    if (found_idx == attr->value.slen) {
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting key"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    tmp = pj_str(token);
-    if (PJ_BASE64_TO_BASE256_LEN(tmp.slen) > MAX_KEY_LEN) {
+    
+    if (PJ_BASE64_TO_BASE256_LEN(token.slen) > MAX_KEY_LEN) {
 	PJ_LOG(4,(THIS_FILE, "Key too long"));
 	return PJMEDIA_SRTP_EINKEYLEN;
     }
@@ -1280,7 +1279,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
     /* Decode key */
     crypto->key.ptr = (char*) pj_pool_zalloc(pool, MAX_KEY_LEN);
     itmp = MAX_KEY_LEN;
-    status = pj_base64_decode(&tmp, (pj_uint8_t*)crypto->key.ptr,
+    status = pj_base64_decode(&token, (pj_uint8_t*)crypto->key.ptr,
 			      &itmp);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Failed decoding crypto key from base64"));
