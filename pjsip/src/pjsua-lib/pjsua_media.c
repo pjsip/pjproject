@@ -1742,6 +1742,9 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
         call->med_ch_mutex = NULL;
     }
 
+    PJ_PERROR(5,(THIS_FILE, status,
+		 "Call %d: media transport initialization complete", call_id));
+
     if (status != PJ_SUCCESS) {
 	if (call->med_ch_info.status == PJ_SUCCESS) {
 	    call->med_ch_info.status = status;

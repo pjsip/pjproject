@@ -1836,6 +1836,11 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
 
+    pj_perror(5, tp_ice->base.name, result, "ICE operation complete"
+	      " (op=%d%s)", op,
+	      (op==PJ_ICE_STRANS_OP_INIT? "/initialization" :
+	      (op==PJ_ICE_STRANS_OP_NEGOTIATION? "/negotiation":"")));
+
     /* Notify application */
     if (tp_ice->cb.on_ice_complete)
 	(*tp_ice->cb.on_ice_complete)(&tp_ice->base, op, result);
