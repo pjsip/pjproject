@@ -164,6 +164,11 @@ struct SslCertInfo
 
 public:
     /**
+     * Constructor.
+     */
+    SslCertInfo();
+
+    /**
      * Check if the info is set with empty values.
      *
      * @return      	True if the info is empty.
@@ -174,6 +179,9 @@ public:
      * Convert from pjsip
      */
     void fromPj(const pj_ssl_cert_info &info);
+    
+private:
+    bool empty;
 };
 
 /**
@@ -255,6 +263,9 @@ public:
      * Convert from pjsip
      */
     void fromPj(const pjsip_tls_state_info &info);
+
+private:
+    bool empty;
 };
 
 /**

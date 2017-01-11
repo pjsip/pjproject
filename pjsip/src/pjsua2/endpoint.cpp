@@ -45,16 +45,13 @@ Endpoint *Endpoint::instance_;
 ///////////////////////////////////////////////////////////////////////////////
 
 TlsInfo::TlsInfo()
+	: empty(true)
 {
-    pj_bzero(this, sizeof(TlsInfo));
 }
 
 bool TlsInfo::isEmpty() const
 {
-    TlsInfo dummy;
-
-    pj_bzero(&dummy, sizeof(dummy));
-    return ((pj_memcmp(this, &dummy, sizeof(dummy)) == 0)? true: false);
+    return empty;
 }
 
 void TlsInfo::fromPj(const pjsip_tls_state_info &info)
@@ -65,6 +62,7 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
     const char *verif_msgs[32];
     unsigned verif_msg_cnt;
     
+    empty	= false;
     established = PJ2BOOL(ssock_info->established);
     protocol 	= ssock_info->proto;
     cipher 	= ssock_info->cipher;
@@ -89,16 +87,19 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
 #endif
 }
 
+SslCertInfo::SslCertInfo()
+	: empty(true)
+{
+}
+
 bool SslCertInfo::isEmpty() const
 {
-    SslCertInfo dummy;
-
-    pj_bzero(&dummy, sizeof(dummy));
-    return ((pj_memcmp(this, &dummy, sizeof(dummy)) == 0)? true: false);
+    return empty;
 }
 
 void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
 {
+    empty 	= false;
     version 	= info.version;
     pj_memcpy(serialNo, info.serial_no, sizeof(info.serial_no));
     subjectCn 	= pj2Str(info.subject.cn);
@@ -637,7 +638,6 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
     prm.type = tp->type_name;
     prm.state = state;
     prm.lastError = info ? info->status : PJ_SUCCESS;
-    pj_bzero(&prm.tlsInfo, sizeof(TlsInfo));
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
