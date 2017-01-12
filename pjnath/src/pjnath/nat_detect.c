@@ -180,7 +180,7 @@ static pj_status_t get_local_interface(const pj_sockaddr *server,
 	return status;
 
     addr_len = pj_sockaddr_get_len(server);
-    pj_bzero(&local, sizeof(pj_sockaddr));
+    pj_sockaddr_init(server->addr.sa_family, &local, NULL, 0);
     status = pj_sock_bind(sock, &local, addr_len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
@@ -280,8 +280,8 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type2(const pj_sockaddr *server,
     /*
      * Bind to any.
      */
-    pj_bzero(&sess->local_addr, sizeof(pj_sockaddr));
     addr_len = pj_sockaddr_get_len(server);
+    pj_sockaddr_init(server->addr.sa_family, &sess->local_addr, NULL, 0);
     status = pj_sock_bind(sess->sock, &sess->local_addr, addr_len);
     if (status != PJ_SUCCESS)
 	goto on_error;
