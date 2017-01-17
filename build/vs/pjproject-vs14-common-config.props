@@ -57,7 +57,8 @@
   </Choose>
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>$(PreprocessorDef);%(PreprocessorDefinitions)</PreprocessorDefinitions>      
+      <PreprocessorDefinitions>$(PreprocessorDef);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild Condition="'$(API_Family)'=='UWP'">false</MinimalRebuild>
     </ClCompile>
   </ItemDefinitionGroup>
 </Project>

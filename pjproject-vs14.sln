@@ -124,6 +124,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwebrtc", "third_party\bu
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{207e7bd4-7b11-4a40-ba3a-cc627762a7b6}*SharedItemsImports = 4
 		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{45d41acc-2c3c-43d2-bc10-02aa73ffc7c7}*SharedItemsImports = 9
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
