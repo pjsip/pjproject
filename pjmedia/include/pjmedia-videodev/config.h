@@ -45,10 +45,14 @@ PJ_BEGIN_DECL
  * This setting controls the maximum number of formats that can be
  * supported by a video device.
  *
- * Default: 64
+ * Default: 128 (for Android), 64 (for others)
  */
 #ifndef PJMEDIA_VID_DEV_INFO_FMT_CNT
-#   define PJMEDIA_VID_DEV_INFO_FMT_CNT 64
+#   if defined(PJ_ANDROID) && PJ_ANDROID != 0
+#       define PJMEDIA_VID_DEV_INFO_FMT_CNT 128
+#   else
+#       define PJMEDIA_VID_DEV_INFO_FMT_CNT 64
+#   endif
 #endif
 
 
