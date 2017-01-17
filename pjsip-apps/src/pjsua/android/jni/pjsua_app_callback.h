@@ -19,21 +19,25 @@
 #ifndef __PJSUA_APP_CALLBACK_H__
 #define __PJSUA_APP_CALLBACK_H__
 
-#include <jni.h>
-
 class PjsuaAppCallback {
 public:
     virtual ~PjsuaAppCallback() {}
     virtual void onStarted(const char *msg) {}
     virtual void onStopped(int restart) {}
+    virtual void onCallVideoStart() {}
 };
+
+typedef struct WindowHandle {
+    void    	*window;
+} WindowHandle;
+
+void setVideoWindow(const WindowHandle& win);
 
 extern "C" {
 int pjsuaStart();
 void pjsuaDestroy();
 int pjsuaRestart();
 void setCallbackObject(PjsuaAppCallback* callback);
-void setIncomingVideoRenderer(jobject surface);
 }
 
 #endif /* __PJSUA_APP_CALLBACK_H__ */

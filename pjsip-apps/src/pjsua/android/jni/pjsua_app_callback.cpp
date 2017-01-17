@@ -30,7 +30,16 @@ static pjsua_app_cfg_t android_app_config;
 static int restart_argc;
 static char **restart_argv;
 static pjsua_callback pjsua_cb_orig;
-static jobject callVideoSurface;
+static pjsua_vid_win_id winId = PJSUA_INVALID_ID;
+
+void setVideoWindow(const WindowHandle& win)
+{
+    pjmedia_vid_dev_hwnd vhwnd;
+   
+    vhwnd.info.window = win.window;
+    if (winId != PJSUA_INVALID_ID)
+    	pjsua_vid_win_set_win(winId, &vhwnd);
+}
 
 extern const char *pjsua_app_def_argv[];
 
@@ -57,13 +66,8 @@ static void on_call_media_state(pjsua_call_id call_id)
 	    med_info->status == PJSUA_CALL_MEDIA_ACTIVE &&
 	    med_info->stream.vid.win_in != PJSUA_INVALID_ID)
 	{
-	    pjmedia_vid_dev_hwnd vhwnd;
-
-	    /* Setup renderer surface */
-	    pj_bzero(&vhwnd, sizeof(vhwnd));
-	    vhwnd.type = PJMEDIA_VID_DEV_HWND_TYPE_ANDROID;
-	    vhwnd.info.window = callVideoSurface;
-	    pjsua_vid_win_set_win(med_info->stream.vid.win_in, &vhwnd);
+	    winId = med_info->stream.vid.win_in;
+	    registeredCallbackObject->onCallVideoStart();
 	    break;
 	}
     }
@@ -160,12 +164,6 @@ int pjsuaRestart()
 void setCallbackObject(PjsuaAppCallback* callback)
 {
     registeredCallbackObject = callback;
-}
-
-
-void setIncomingVideoRenderer(jobject surface)
-{
-    callVideoSurface = surface;
 }
 
 #endif
