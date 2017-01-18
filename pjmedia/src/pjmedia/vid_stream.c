@@ -822,7 +822,7 @@ static pj_status_t put_frame(pjmedia_port *port,
     pjmedia_vid_encode_opt enc_opt;
     unsigned pkt_cnt = 0;
     pj_timestamp initial_time;
-    pj_timestamp null_ts ={0};
+    pj_timestamp null_ts ={{0}};
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than

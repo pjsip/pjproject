@@ -343,8 +343,8 @@ static struct attr_desc mandatory_attr_desc[] =
 	&clone_sockaddr_attr
     },
     {
-	/* PJ_STUN_ATTR_REQUESTED_ADDR_TYPE, */
-	"REQUESTED-ADDRESS-TYPE",
+	/* PJ_STUN_ATTR_REQUESTED_ADDR_FAMILY, */
+	"REQUESTED-ADDRESS-FAMILY",
 	&decode_uint_attr,
 	&encode_uint_attr,
 	&clone_uint_attr

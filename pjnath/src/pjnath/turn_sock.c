@@ -428,6 +428,14 @@ PJ_DEF(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
 	sess_fail(turn_sock, "Error setting TURN server", status);
 	pj_grp_lock_release(turn_sock->grp_lock);
 	return status;
+    } else if (!turn_sock->sess) {
+	/* TURN session may have been destroyed here, i.e: when DNS resolution
+	 * completed synchronously and TURN allocation failed.
+	 */
+	PJ_LOG(4,(turn_sock->obj_name, "TURN session destroyed in setting "
+				       "TURN server"));
+	pj_grp_lock_release(turn_sock->grp_lock);
+	return PJ_EGONE;
     }
 
     /* Done for now. The next work will be done when session state moved

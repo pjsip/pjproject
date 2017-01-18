@@ -98,24 +98,28 @@ static char *ver_info(pj_uint32_t ver, char *buf)
 }
 
 static pj_uint32_t parse_version(char *str)
-{
-    char *tok;
-    int i, maxtok;
+{    
+    int i, maxtok, found_idx;
     pj_uint32_t version = 0;
+    pj_str_t in_str = pj_str(str);
+    pj_str_t token, delim;
     
     while (*str && !pj_isdigit(*str))
 	str++;
 
     maxtok = 4;
-    for (tok = strtok(str, ".-"), i=0; tok && i<maxtok;
-	 ++i, tok=strtok(NULL, ".-"))
+    delim = pj_str(".-");
+    for (found_idx = pj_strtok(&in_str, &delim, &token, 0), i=0; 
+	 found_idx != in_str.slen && i < maxtok;
+	 ++i, found_idx = pj_strtok(&in_str, &delim, &token, 
+	                            found_idx + token.slen))
     {
 	int n;
 
-	if (!pj_isdigit(*tok))
+	if (!pj_isdigit(*token.ptr))
 	    break;
 	
-	n = atoi(tok);
+	n = atoi(token.ptr);
 	version |= (n << ((3-i)*8));
     }
     

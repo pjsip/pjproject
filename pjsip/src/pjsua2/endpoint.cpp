@@ -44,6 +44,83 @@ Endpoint *Endpoint::instance_;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+TlsInfo::TlsInfo()
+	: empty(true)
+{
+}
+
+bool TlsInfo::isEmpty() const
+{
+    return empty;
+}
+
+void TlsInfo::fromPj(const pjsip_tls_state_info &info)
+{
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0
+    pj_ssl_sock_info *ssock_info = info.ssl_sock_info;
+    char straddr[PJ_INET6_ADDRSTRLEN+10];
+    const char *verif_msgs[32];
+    unsigned verif_msg_cnt;
+    
+    empty	= false;
+    established = PJ2BOOL(ssock_info->established);
+    protocol 	= ssock_info->proto;
+    cipher 	= ssock_info->cipher;
+    cipherName	= pj_ssl_cipher_name(ssock_info->cipher);
+    pj_sockaddr_print(&ssock_info->local_addr, straddr, sizeof(straddr), 3);
+    localAddr 	= straddr;
+    pj_sockaddr_print(&ssock_info->remote_addr, straddr, sizeof(straddr),3);
+    remoteAddr 	= straddr;
+    verifyStatus = ssock_info->verify_status;
+    if (ssock_info->local_cert_info)
+        localCertInfo.fromPj(*ssock_info->local_cert_info);
+    if (ssock_info->remote_cert_info)
+        remoteCertInfo.fromPj(*ssock_info->remote_cert_info);
+    
+    /* Dump server TLS certificate verification result */
+    verif_msg_cnt = PJ_ARRAY_SIZE(verif_msgs);
+    pj_ssl_cert_get_verify_status_strings(ssock_info->verify_status,
+    				      	  verif_msgs, &verif_msg_cnt);
+    for (unsigned i = 0; i < verif_msg_cnt; ++i) {
+        verifyMsgs.push_back(verif_msgs[i]);
+    }
+#endif
+}
+
+SslCertInfo::SslCertInfo()
+	: empty(true)
+{
+}
+
+bool SslCertInfo::isEmpty() const
+{
+    return empty;
+}
+
+void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
+{
+    empty 	= false;
+    version 	= info.version;
+    pj_memcpy(serialNo, info.serial_no, sizeof(info.serial_no));
+    subjectCn 	= pj2Str(info.subject.cn);
+    subjectInfo = pj2Str(info.subject.info);
+    issuerCn 	= pj2Str(info.issuer.cn);
+    issuerInfo 	= pj2Str(info.issuer.info);
+    validityStart.fromPj(info.validity.start);
+    validityEnd.fromPj(info.validity.end);
+    validityGmt = PJ2BOOL(info.validity.gmt);
+    raw 	= pj2Str(info.raw);
+
+    for (unsigned i = 0; i < info.subj_alt_name.cnt; i++) {
+    	SslCertName cname;
+    	cname.type = info.subj_alt_name.entry[i].type;
+    	cname.name = pj2Str(info.subj_alt_name.entry[i].name);
+    	subjectAltName.push_back(cname);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 UaConfig::UaConfig()
 : mainThreadOnly(false)
 {
@@ -558,8 +635,19 @@ void Endpoint::on_transport_state( pjsip_transport *tp,
     OnTransportStateParam prm;
 
     prm.hnd = (TransportHandle)tp;
+    prm.type = tp->type_name;
     prm.state = state;
     prm.lastError = info ? info->status : PJ_SUCCESS;
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
+	(state == PJSIP_TP_STATE_CONNECTED || 
+	 ((pjsip_tls_state_info*)info->ext_info)->
+			         ssl_sock_info->verify_status != PJ_SUCCESS))
+    {
+    	prm.tlsInfo.fromPj(*((pjsip_tls_state_info*)info->ext_info));
+    }
+#endif
 
     ep.onTransportState(prm);
 }
@@ -1692,6 +1780,11 @@ void Endpoint::transportSetEnable(TransportId id, bool enabled) throw(Error)
 void Endpoint::transportClose(TransportId id) throw(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_transport_close(id, PJ_FALSE) );
+}
+
+void Endpoint::transportShutdown(TransportHandle tp) throw(Error)
+{
+    PJSUA2_CHECK_EXPR( pjsip_transport_shutdown((pjsip_transport *)tp) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////

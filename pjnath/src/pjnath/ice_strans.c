@@ -376,7 +376,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 	cand->status = PJ_EPENDING;
 	cand->local_pref = RELAY_PREF;
-	cand->transport_id = CREATE_TP_ID(TP_TURN, idx);
+	cand->transport_id = tp_id;
 	cand->comp_id = (pj_uint8_t) comp->comp_id;
     }
 
@@ -413,8 +413,9 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
     comp->cand_cnt++;
 
     PJ_LOG(4,(ice_st->obj_name,
-		  "Comp %d: TURN relay candidate waiting for allocation",
-		  comp->comp_id));
+		  "Comp %d/%d: TURN relay candidate (tpid=%d) "
+		  "waiting for allocation",
+		  comp->comp_id, comp->cand_cnt-1, cand->transport_id));
 
     return PJ_SUCCESS;
 }
@@ -515,8 +516,9 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	///sess_add_ref(ice_st);
 
 	PJ_LOG(4,(ice_st->obj_name,
-		  "Comp %d: srflx candidate starts Binding discovery",
-		  comp->comp_id));
+		  "Comp %d: srflx candidate (tpid=%d) starts "
+		  "Binding discovery",
+		  comp->comp_id, cand->transport_id));
 
 	pj_log_push_indent();
 
@@ -622,9 +624,9 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 
 	    if (cand_duplicate) {
 		PJ_LOG(4, (ice_st->obj_name,
-		       "Comp %d: host candidate %s is a duplicate",
+		       "Comp %d: host candidate %s (tpid=%d) is a duplicate",
 		       comp->comp_id, pj_sockaddr_print(&cand->addr, addrinfo,
-		       sizeof(addrinfo), 3)));
+		       sizeof(addrinfo), 3), cand->transport_id));
 
 		pj_bzero(&cand->addr, sizeof(cand->addr));
 		pj_bzero(&cand->base_addr, sizeof(cand->base_addr));
@@ -637,9 +639,11 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 				   cand->type, &cand->base_addr);
 
 	    PJ_LOG(4,(ice_st->obj_name,
-		      "Comp %d: host candidate %s added",
-		      comp->comp_id, pj_sockaddr_print(&cand->addr, addrinfo,
-						      sizeof(addrinfo), 3)));
+		      "Comp %d/%d: host candidate %s (tpid=%d) added",
+		      comp->comp_id, comp->cand_cnt-1, 
+		      pj_sockaddr_print(&cand->addr, addrinfo,
+					sizeof(addrinfo), 3),
+					cand->transport_id));
 	}
     }
 
@@ -940,13 +944,22 @@ static void sess_init_update(pj_ice_strans *ice_st)
 	/* This function can be called when all components or candidates
 	 * have not been created.
 	 */
-	if (!comp || comp->creating) return;
+	if (!comp || comp->creating) {
+	    PJ_LOG(5, (ice_st->obj_name, "ICE init update: creating comp %d",
+		       (comp?comp->comp_id:(i+1)) ));
+	    return;
+	}
 
 	for (j=0; j<comp->cand_cnt; ++j) {
 	    pj_ice_sess_cand *cand = &comp->cand_list[j];
 
-	    if (cand->status == PJ_EPENDING)
+	    if (cand->status == PJ_EPENDING) {
+		PJ_LOG(5, (ice_st->obj_name, "ICE init update: "
+			   "comp %d/%d[%s] is pending",
+			   comp->comp_id, j,
+			   pj_ice_get_cand_type_name(cand->type)));
 		return;
+	    }
 	}
     }
 
@@ -1956,7 +1969,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	pj_turn_session_info rel_info;
 	char ipaddr[PJ_INET6_ADDRSTRLEN+8];
 	pj_ice_sess_cand *cand = NULL;
-	unsigned i;
+	unsigned i, cand_idx = 0xFF;
 
 	comp->turn[tp_idx].err_cnt = 0;
 
@@ -1972,6 +1985,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		comp->cand_list[i].transport_id == data->transport_id)
 	    {
 		cand = &comp->cand_list[i];
+		cand_idx = i;
 		break;
 	    }
 	}
@@ -2007,8 +2021,9 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	}
 
 	PJ_LOG(4,(comp->ice_st->obj_name,
-		  "Comp %d: TURN allocation complete, relay address is %s",
-		  comp->comp_id,
+		  "Comp %d/%d: TURN allocation (tpid=%d) complete, "
+		  "relay address is %s",
+		  comp->comp_id, cand_idx, cand->transport_id,
 		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
 
@@ -2019,7 +2034,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	       new_state == PJ_TURN_STATE_DESTROYING)
     {
 	pj_ice_sess_cand *cand = NULL;
-	unsigned i;
+	unsigned i, cand_idx = 0xFF;
 
 	/* DNS resolution or TURN transport creation/allocation
 	 * has failed.
@@ -2039,6 +2054,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		comp->cand_list[i].transport_id == data->transport_id)
 	    {
 		cand = &comp->cand_list[i];
+		cand_idx = i;
 		break;
 	    }
 	}
@@ -2049,7 +2065,12 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	 * pj_turn_sock_alloc(), the candidate hasn't been added
 	 * to the list.
 	 */
-	if (cand) cand->status = PJ_ERESOLVE;
+	if (cand) {
+	    cand->status = PJ_ERESOLVE;
+	    PJ_LOG(4,(comp->ice_st->obj_name,
+		      "Comp %d/%d: TURN resolving (tpid=%d) failed",
+		      comp->comp_id, cand_idx, cand->transport_id));
+	}
 
 	sess_init_update(comp->ice_st);
 

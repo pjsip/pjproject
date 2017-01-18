@@ -671,111 +671,109 @@ static pj_status_t parse_cand(const char *obj_name,
 			      const pj_str_t *orig_input,
 			      pj_ice_sess_cand *cand)
 {
-    pj_str_t input;
-    char *token, *host;
-    int af;
-    pj_str_t s;
+    pj_str_t token, delim, host;
+    int af, found_idx;    
     pj_status_t status = PJNATH_EICEINCANDSDP;
 
     pj_bzero(cand, sizeof(*cand));
-    pj_strdup_with_null(pool, &input, orig_input);
 
     PJ_UNUSED_ARG(obj_name);
 
     /* Foundation */
-    token = strtok(input.ptr, " ");
-    if (!token) {
+    delim = pj_str(" ");
+    found_idx = pj_strtok(orig_input, &delim, &token, 0);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE foundation in candidate"));
 	goto on_return;
     }
-    pj_strdup2(pool, &cand->foundation, token);
+    pj_strdup(pool, &cand->foundation, &token);
 
     /* Component ID */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE component ID in candidate"));
 	goto on_return;
     }
-    cand->comp_id = (pj_uint8_t) atoi(token);
+    cand->comp_id = (pj_uint8_t)pj_strtoul(&token);
 
     /* Transport */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE transport in candidate"));
 	goto on_return;
     }
-    if (pj_ansi_stricmp(token, "UDP") != 0) {
+    if (pj_stricmp2(&token, "UDP") != 0) {
 	TRACE__((obj_name, 
 		 "Expecting ICE UDP transport only in candidate"));
 	goto on_return;
     }
 
     /* Priority */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE priority in candidate"));
 	goto on_return;
     }
-    cand->prio = atoi(token);
+    cand->prio = pj_strtoul(&token);
 
     /* Host */
-    host = strtok(NULL, " ");
-    if (!host) {
+    found_idx = pj_strtok(orig_input, &delim, &host, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE host in candidate"));
 	goto on_return;
     }
     /* Detect address family */
-    if (pj_ansi_strchr(host, ':'))
+    if (pj_strchr(&host, ':'))
 	af = pj_AF_INET6();
     else
 	af = pj_AF_INET();
     /* Assign address */
-    if (pj_sockaddr_init(af, &cand->addr, pj_cstr(&s, host), 0)) {
+    if (pj_sockaddr_init(af, &cand->addr, &host, 0)) {
 	TRACE__((obj_name, "Invalid ICE candidate address"));
 	goto on_return;
     }
 
     /* Port */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + host.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE port number in candidate"));
 	goto on_return;
     }
-    pj_sockaddr_set_port(&cand->addr, (pj_uint16_t)atoi(token));
+    pj_sockaddr_set_port(&cand->addr, (pj_uint16_t)pj_strtoul(&token));
 
     /* typ */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
     }
-    if (pj_ansi_stricmp(token, "typ") != 0) {
+    if (pj_stricmp2(&token, "typ") != 0) {
 	TRACE__((obj_name, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
     }
 
     /* candidate type */
-    token = strtok(NULL, " ");
-    if (!token) {
+    found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
+    if (found_idx == orig_input->slen) {
 	TRACE__((obj_name, "Expecting ICE candidate type in candidate"));
 	goto on_return;
     }
 
-    if (pj_ansi_stricmp(token, "host") == 0) {
+    if (pj_stricmp2(&token, "host") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_HOST;
 
-    } else if (pj_ansi_stricmp(token, "srflx") == 0) {
+    } else if (pj_stricmp2(&token, "srflx") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_SRFLX;
 
-    } else if (pj_ansi_stricmp(token, "relay") == 0) {
+    } else if (pj_stricmp2(&token, "relay") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 
-    } else if (pj_ansi_stricmp(token, "prflx") == 0) {
+    } else if (pj_stricmp2(&token, "prflx") == 0) {
 	cand->type = PJ_ICE_CAND_TYPE_PRFLX;
 
     } else {
-	PJ_LOG(5,(obj_name, "Invalid ICE candidate type %s in candidate", 
-		  token));
+	PJ_LOG(5,(obj_name, "Invalid ICE candidate type %.*s in candidate", 
+		  token.slen, token.ptr));
 	goto on_return;
     }
 
@@ -1837,6 +1835,11 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     struct transport_ice *tp_ice;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
+
+    pj_perror(5, tp_ice->base.name, result, "ICE operation complete"
+	      " (op=%d%s)", op,
+	      (op==PJ_ICE_STRANS_OP_INIT? "/initialization" :
+	      (op==PJ_ICE_STRANS_OP_NEGOTIATION? "/negotiation":"")));
 
     /* Notify application */
     if (tp_ice->cb.on_ice_complete)

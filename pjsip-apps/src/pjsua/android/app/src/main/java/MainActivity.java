@@ -138,6 +138,17 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
 		ui.sendMessageDelayed(msg, 100);
 	    }
 	}
+
+        @Override
+        public void onCallVideoStart() {
+            MainActivity ma = ((MyHandler)ui_handler.get()).mTarget.get();
+            SurfaceView surfaceView = (SurfaceView)
+                ma.findViewById(R.id.surfaceViewIncomingCall);
+
+            WindowHandle wh = new WindowHandle();
+            wh.setWindow(surfaceView.getHolder().getSurface());
+            pjsua.setVideoWindow(wh);
+        }
     }
 
     private void updateStatus(String output) {
@@ -261,17 +272,21 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h)
     {
-	pjsua.setIncomingVideoRenderer(holder.getSurface());
+        WindowHandle wh = new WindowHandle();
+        wh.setWindow(holder.getSurface());
+        pjsua.setVideoWindow(wh);
     }
 
     public void surfaceCreated(SurfaceHolder holder)
     {
-	pjsua.setIncomingVideoRenderer(holder.getSurface());
+
     }
 
     public void surfaceDestroyed(SurfaceHolder holder)
     {
-	pjsua.setIncomingVideoRenderer(null);
+        WindowHandle wh = new WindowHandle();
+        wh.setWindow(null);
+        pjsua.setVideoWindow(wh);
     }
     
 }

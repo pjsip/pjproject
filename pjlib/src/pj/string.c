@@ -28,6 +28,113 @@
 #  include <pj/string_i.h>
 #endif
 
+PJ_DEF(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char)
+{
+    pj_ssize_t i, j, count = 0;
+    for (i = 0; i < str->slen; i++) {
+	if (count != i) 
+	    break;
+
+	for (j = 0; j < set_char->slen; j++) {
+	    if (str->ptr[i] == set_char->ptr[j])
+		count++;
+	}
+    }
+    return count;
+}
+
+
+PJ_DEF(pj_ssize_t) pj_strspn2(const pj_str_t *str, const char *set_char)
+{
+    pj_ssize_t i, j, count = 0;
+    for (i = 0; i < str->slen; i++) {
+	if (count != i)
+	    break;
+
+	for (j = 0; set_char[j] != 0; j++) {
+	    if (str->ptr[i] == set_char[j])
+		count++;
+	}
+    }
+    return count;
+}
+
+
+PJ_DEF(pj_ssize_t) pj_strcspn(const pj_str_t *str, const pj_str_t *set_char)
+{
+    pj_ssize_t i, j;
+    for (i = 0; i < str->slen; i++) {
+	for (j = 0; j < set_char->slen; j++) {
+	    if (str->ptr[i] == set_char->ptr[j])
+		return i;
+	}
+    }
+    return i;
+}
+
+
+PJ_DECL(pj_ssize_t) pj_strcspn2(const pj_str_t *str, const char *set_char)
+{
+    pj_ssize_t i, j;
+    for (i = 0; i < str->slen; i++) {
+	for (j = 0; set_char[j] != 0; j++) {
+	    if (str->ptr[i] == set_char[j])
+		return i;
+	}
+    }
+    return i;
+}
+
+
+PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
+			     pj_str_t *tok, pj_size_t start_idx)
+{    
+    pj_ssize_t str_idx;
+
+    tok->slen = 0;
+    if ((str->slen == 0) || ((pj_size_t)str->slen < start_idx)) {
+	return str->slen;
+    }
+    
+    tok->ptr = str->ptr + start_idx;
+    tok->slen = str->slen - start_idx;
+
+    str_idx = pj_strspn(tok, delim);
+    if (start_idx+str_idx == (pj_size_t)str->slen) {
+	return str->slen;
+    }    
+    tok->ptr += str_idx;
+    tok->slen -= str_idx;
+
+    tok->slen = pj_strcspn(tok, delim);
+    return start_idx + str_idx;
+}
+
+
+PJ_DECL(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
+			       pj_str_t *tok, pj_size_t start_idx)
+{
+    pj_ssize_t str_idx;
+
+    tok->slen = 0;
+    if ((str->slen == 0) || ((pj_size_t)str->slen < start_idx)) {
+	return str->slen;
+    }
+
+    tok->ptr = str->ptr + start_idx;
+    tok->slen = str->slen - start_idx;
+
+    str_idx = pj_strspn2(tok, delim);
+    if (start_idx + str_idx == (pj_size_t)str->slen) {
+	return str->slen;
+    }
+    tok->ptr += str_idx;
+    tok->slen -= str_idx;
+
+    tok->slen = pj_strcspn2(tok, delim);
+    return start_idx + str_idx;
+}
+
 
 PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 {

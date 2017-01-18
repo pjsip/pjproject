@@ -76,6 +76,7 @@ struct udp_transport
     pjsip_rx_data     **rdata;
     int			is_closing;
     pj_bool_t		is_paused;
+    int			read_loop_spin;
 
     /* Group lock to be used by UDP transport and ioqueue key */
     pj_grp_lock_t      *grp_lock;
@@ -129,15 +130,17 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
     int i;
     pj_status_t status;
 
+    ++tp->read_loop_spin;
+
     /* Don't do anything if transport is closing. */
     if (tp->is_closing) {
 	tp->is_closing++;
-	return;
+	goto on_return;
     }
 
     /* Don't do anything if transport is being paused. */
     if (tp->is_paused)
-	return;
+	goto on_return;
 
     /*
      * The idea of the loop is to process immediate data received by
@@ -227,7 +230,7 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	 * is still processing a SIP message.
 	 */
 	if (tp->is_paused)
-	    return;
+	    break;
 
 	/* Read next packet. */
 	bytes_read = sizeof(rdata->pkt_info.packet);
@@ -243,6 +246,10 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    pj_assert(i < MAX_IMMEDIATE_PACKET);
 
 	} else if (status == PJ_EPENDING) {
+	    break;
+
+	} else if (status == PJ_ECANCELLED) {
+	    /* Socket is closing, quit loop */
 	    break;
 
 	} else {
@@ -276,6 +283,9 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    }
 	}
     }
+
+on_return:
+    --tp->read_loop_spin;
 }
 
 /*
@@ -623,13 +633,16 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
     if (tp->key != NULL)
     	return PJ_SUCCESS;
 
-    /* Create group lock */
-    status = pj_grp_lock_create(tp->base.pool, NULL, &tp->grp_lock);
-    if (status != PJ_SUCCESS)
-	return status;
+    /* Create group lock if not yet (don't need to do so on UDP restart) */
+    if (!tp->grp_lock) {
+	status = pj_grp_lock_create(tp->base.pool, NULL, &tp->grp_lock);
+	if (status != PJ_SUCCESS)
+	    return status;
 
-    pj_grp_lock_add_ref(tp->grp_lock);
-    pj_grp_lock_add_handler(tp->grp_lock, tp->base.pool, tp, &udp_on_destroy);
+	pj_grp_lock_add_ref(tp->grp_lock);
+	pj_grp_lock_add_handler(tp->grp_lock, tp->base.pool, tp,
+				&udp_on_destroy);
+    }
     
     /* Register to ioqueue. */
     ioqueue = pjsip_endpt_get_ioqueue(tp->base.endpt);
@@ -1075,6 +1088,11 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 
     tp = (struct udp_transport*) transport;
 
+    /* Pause the transport first, so that any active read loop spin will
+     * quit as soon as possible.
+     */
+    tp->is_paused = PJ_TRUE;
+
     if (option & PJSIP_UDP_TRANSPORT_DESTROY_SOCKET) {
 	char addr_buf[PJ_INET6_ADDRSTRLEN];
 	pjsip_host_port bound_name;
@@ -1137,6 +1155,11 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 	if (a_name != NULL)
 	    udp_set_pub_name(tp, a_name);
     }
+
+    /* Make sure all udp_on_read_complete() loop spin are stopped */
+    do {
+	pj_thread_sleep(1);
+    } while (tp->read_loop_spin);
 
     /* Re-register new or existing socket to ioqueue. */
     status = register_to_ioqueue(tp);
