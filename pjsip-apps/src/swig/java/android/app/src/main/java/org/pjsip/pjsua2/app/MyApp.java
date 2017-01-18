@@ -393,6 +393,9 @@ class MyApp {
 	    System.out.println(e);
 	}
 
+        /* Set SIP port back to default for JSON saved config */
+        sipTpConfig.setPort(SIP_PORT);
+
 	/* Create accounts. */
 	for (int i = 0; i < accCfgs.size(); i++) {
 	    MyAccountConfig my_cfg = accCfgs.get(i);
