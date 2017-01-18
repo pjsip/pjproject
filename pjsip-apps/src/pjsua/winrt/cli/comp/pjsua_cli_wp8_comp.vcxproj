@@ -51,7 +51,7 @@
   </PropertyGroup>
   <Import Project="..\..\..\..\..\..\build\vs\pjproject-vs14-common-config.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Condition="'$(API_Family)'=='WinPhone8'">
+  <ImportGroup>
     <Import Project="pjsua_cli_shared_comp.vcxitems" Label="Shared" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
@@ -157,8 +157,10 @@
       <Project>{8310649e-a25e-4af0-91e8-9e3cc659bb89}</Project>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsPhone\v$(TargetPlatformVersion)\Microsoft.Cpp.WindowsPhone.$(TargetPlatformVersion).targets" />
+  <!--Don't build this project unless it's for WinPhone8-->
+  <Import Condition="'$(API_Family)'=='WinPhone8'" Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Condition="'$(API_Family)'=='WinPhone8'" Project="$(MSBuildExtensionsPath)\Microsoft\WindowsPhone\v$(TargetPlatformVersion)\Microsoft.Cpp.WindowsPhone.$(TargetPlatformVersion).targets" />
+  <Import Condition="'$(API_Family)'!='WinPhone8'" Project="..\..\..\..\..\..\build\vs\pjproject-vs14-build-targets.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
