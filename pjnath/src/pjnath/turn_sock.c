@@ -217,10 +217,8 @@ static void turn_sock_on_destroy(void *comp)
     pj_turn_sock *turn_sock = (pj_turn_sock*) comp;
 
     if (turn_sock->pool) {
-	pj_pool_t *pool = turn_sock->pool;
 	PJ_LOG(4,(turn_sock->obj_name, "TURN socket destroyed"));
-	turn_sock->pool = NULL;
-	pj_pool_release(pool);
+	pj_pool_safe_release(&turn_sock->pool);
     }
 }
 

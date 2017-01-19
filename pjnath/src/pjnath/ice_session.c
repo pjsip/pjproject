@@ -461,11 +461,8 @@ static void ice_on_destroy(void *obj)
 {
     pj_ice_sess *ice = (pj_ice_sess*) obj;
 
-    if (ice->pool) {
-	pj_pool_t *pool = ice->pool;
-	ice->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&ice->pool);
+
     LOG4((THIS_FILE, "ICE session %p destroyed", ice));
 }
 

@@ -1878,11 +1878,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 	tp_ice->ice_st = NULL;
     }
 
-    if (tp_ice->pool) {
-	pj_pool_t *pool = tp_ice->pool;
-	tp_ice->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&tp_ice->pool);
 
     return PJ_SUCCESS;
 }

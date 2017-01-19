@@ -474,11 +474,7 @@ static void stun_sock_destructor(void *obj)
     }
     */
 
-    if (stun_sock->pool) {
-	pj_pool_t *pool = stun_sock->pool;
-	stun_sock->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&stun_sock->pool);
 
     TRACE_(("", "STUN sock %p destroyed", stun_sock));
 

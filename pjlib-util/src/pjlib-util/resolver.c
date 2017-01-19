@@ -513,11 +513,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 	resolver->mutex = NULL;
     }
 
-    if (resolver->pool) {
-	pj_pool_t *pool = resolver->pool;
-	resolver->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&resolver->pool);
+
     return PJ_SUCCESS;
 }
 

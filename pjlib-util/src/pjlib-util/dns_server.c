@@ -124,11 +124,7 @@ PJ_DEF(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv)
 	srv->asock = NULL;
     }
 
-    if (srv->pool) {
-	pj_pool_t *pool = srv->pool;
-	srv->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&srv->pool);
 
     return PJ_SUCCESS;
 }

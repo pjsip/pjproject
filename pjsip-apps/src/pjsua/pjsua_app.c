@@ -2010,10 +2010,7 @@ static pj_status_t app_destroy()
 	pjsua_conf_remove_port(app_config.tone_slots[i]);
     }
 
-    if (app_config.pool) {
-	pj_pool_release(app_config.pool);
-	app_config.pool = NULL;
-    }
+    pj_pool_safe_release(&app_config.pool);
 
     status = pjsua_destroy();
 

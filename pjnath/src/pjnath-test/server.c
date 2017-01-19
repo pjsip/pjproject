@@ -254,11 +254,7 @@ void destroy_test_server(test_server *test_srv)
 	test_srv->dns_server = NULL;
     }
 
-    if (test_srv->pool) {
-	pj_pool_t *pool = test_srv->pool;
-	test_srv->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&test_srv->pool);
 }
 
 static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,

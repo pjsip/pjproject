@@ -402,11 +402,7 @@ static void destroy_sess(struct test_sess *sess, unsigned wait_msec)
 	sess->server2 = NULL;
     }
 
-    if (sess->pool) {
-	pj_pool_t *pool = sess->pool;
-	sess->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&sess->pool);
 }
 
 static void ice_on_rx_data(pj_ice_strans *ice_st,
