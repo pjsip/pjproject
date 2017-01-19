@@ -390,6 +390,15 @@ PJ_IDECL(pj_pool_t*) pj_pool_create(pj_pool_factory *factory,
  */
 PJ_IDECL(void) pj_pool_release( pj_pool_t *pool );
 
+
+/**
+ * Release the pool back to pool factory and set the pool pointer to zero.
+ *
+ * @param ppool	    Pointer to memory pool.
+ */
+PJ_IDECL(void) pj_pool_safe_release( pj_pool_t **ppool );
+
+
 /**
  * Get pool object name.
  *

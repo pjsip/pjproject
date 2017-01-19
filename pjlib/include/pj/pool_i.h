@@ -92,3 +92,10 @@ PJ_IDEF(void) pj_pool_release( pj_pool_t *pool )
 	(*pool->factory->release_pool)(pool->factory, pool);
 }
 
+
+PJ_IDEF(void) pj_pool_safe_release( pj_pool_t **ppool )
+{
+    pj_pool_t *pool = *ppool;
+    *ppool = NULL;
+    pj_pool_release(pool);
+}
