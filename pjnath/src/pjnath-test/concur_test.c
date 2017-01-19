@@ -288,6 +288,7 @@ static int stun_destroy_test(void)
 	                          0, 0, &test_sess.worker_threads[i]);
 	pj_assert(status == PJ_SUCCESS);
     }
+    PJ_UNUSED_ARG(status);
 
     /* Test 1: Main thread calls destroy while callback is processing response */
     PJ_LOG(3,(THIS_FILE, "    Destroy in main thread while callback is running"));

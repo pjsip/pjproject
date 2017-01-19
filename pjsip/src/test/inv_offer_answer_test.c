@@ -184,6 +184,7 @@ static pjmedia_sdp_session *create_sdp(pj_pool_t *pool, const char *body)
     pj_strdup2_with_null(pool, &dup, body);
     status = pjmedia_sdp_parse(pool, dup.ptr, dup.slen, &sdp);
     pj_assert(status == PJ_SUCCESS);
+    PJ_UNUSED_ARG(status);
 
     return sdp;
 }
@@ -335,7 +336,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 	status = pjsip_inv_send_msg(inv_test.uas, tdata);
 	pj_assert(status == PJ_SUCCESS);
 
-	return PJ_TRUE;
+	return (status == PJ_SUCCESS);
     }
 
     return PJ_FALSE;
@@ -392,6 +393,7 @@ static void run_job(job_t *j)
 	pj_assert(status == PJ_SUCCESS);
 	break;
     }
+    PJ_UNUSED_ARG(status);
 }
 
 
@@ -676,6 +678,7 @@ int inv_offer_answer_test(void)
 	pj_sockaddr_in_init(&addr, NULL, PORT);
 	status = pjsip_udp_transport_start(endpt, &addr, NULL, 1, &tp);
 	pj_assert(status == PJ_SUCCESS);
+	PJ_UNUSED_ARG(status);
     }
 
     /* Do tests */

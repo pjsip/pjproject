@@ -2252,6 +2252,8 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     if (call->inv && call->inv->neg)
 	sdp_neg_state = pjmedia_sdp_neg_get_state(call->inv->neg);
 
+    PJ_UNUSED_ARG(sdp_neg_state);
+
     /* Get one address to use in the origin field */
     pj_bzero(&origin, sizeof(origin));
     for (mi=0; mi<call->med_prov_cnt; ++mi) {

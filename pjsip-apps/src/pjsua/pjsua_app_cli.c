@@ -207,10 +207,6 @@ pj_status_t cli_init()
     /* Init telnet frontend */
     if (app_config.cli_cfg.cli_fe & CLI_FE_TELNET) {
 	pj_cli_telnet_cfg *fe_cfg = &app_config.cli_cfg.telnet_cfg;
-	pj_pool_t *pool;
-
-	pool = pj_pool_create(cfg->pf, "cli_cp", 128, 128, NULL);
-	pj_assert(pool);
 
 	status = pj_cli_telnet_create(cli, fe_cfg, &telnet_front_end);
 	if (status != PJ_SUCCESS)

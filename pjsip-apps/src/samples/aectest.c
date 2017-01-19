@@ -300,6 +300,7 @@ int main(int argc, char *argv[])
 	char s[10], *dummy;
 	puts("ENTER to quit");
 	dummy = fgets(s, sizeof(s), stdin);
+	PJ_UNUSED_ARG(dummy);
     }
 
     /* Done. */

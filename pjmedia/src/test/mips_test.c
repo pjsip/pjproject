@@ -715,7 +715,7 @@ static pj_status_t codec_put_frame(struct pjmedia_port *this_port,
 	}
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
@@ -1029,7 +1029,7 @@ static pj_status_t wsola_plc_get_frame(struct pjmedia_port *this_port,
 	wp->prev_lost = PJ_TRUE;
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static pj_status_t wsola_plc_on_destroy(struct pjmedia_port *this_port)
@@ -1202,7 +1202,7 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
 	pj_assert(status==PJ_SUCCESS);
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static pj_status_t wsola_discard_on_destroy(struct pjmedia_port *this_port)
@@ -2093,7 +2093,7 @@ static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port,
 	}
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port, 
@@ -2121,7 +2121,7 @@ static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port,
 	}
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 static pj_status_t delaybuf_on_destroy(struct pjmedia_port *this_port)
@@ -2365,6 +2365,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 	    pj_assert(status == PJ_SUCCESS);
 	}
     }
+    PJ_UNUSED_ARG(status);
     pj_get_timestamp(&t1);
 
     pj_sub_timestamp(&t1, &t0);

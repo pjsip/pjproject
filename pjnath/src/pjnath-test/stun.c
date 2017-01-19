@@ -318,6 +318,7 @@ static pj_stun_msg* create1(pj_pool_t *pool)
 				PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
 				&msg, NULL, &res);
     pj_assert(status != PJ_SUCCESS);
+    PJ_UNUSED_ARG(status);
     pj_assert(res != NULL);
 
     return res;

@@ -184,7 +184,7 @@ PJ_DEF(pj_status_t) pjnath_init(void)
 				  &pjnath_strerror2);
     pj_assert(status == PJ_SUCCESS);
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
