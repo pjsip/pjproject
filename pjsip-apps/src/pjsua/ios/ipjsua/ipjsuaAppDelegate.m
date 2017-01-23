@@ -40,6 +40,11 @@ static bool             isShuttingDown;
 static char           **restartArgv;
 static int              restartArgc;
 
+void displayLog(const char *msg, int len)
+{
+    NSLog(@"%.*s", len, msg);
+}
+
 static void displayMsg(const char *msg)
 {
     NSString *str = [NSString stringWithFormat:@"%s", msg];

@@ -151,6 +151,10 @@ static pj_cli_t		   *cli = NULL;
 static pj_cli_sess	   *cli_cons_sess = NULL;
 static pj_cli_front_end	   *telnet_front_end = NULL;
 
+#ifdef USE_GUI
+void displayLog(const char *msg, int len);
+#endif
+
 /** Forward declaration **/
 pj_status_t cli_setup_command(pj_cli_t *cli);
 void cli_destroy();
@@ -170,6 +174,9 @@ static void cli_log_writer(int level, const char *buffer, int len)
 {
     if (cli)
         pj_cli_write_log(cli, level, buffer, len);
+#ifdef USE_GUI
+    displayLog(buffer, len);
+#endif
 }
 
 pj_status_t cli_init()
