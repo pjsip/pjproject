@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets">
+    <Import Project="pjproject-vs14-api-def.props" />
+  </ImportGroup>  
+  <Choose>
+    <When Condition="'$(Platform)'=='ARM' ">
+      <PropertyGroup>
+        <API_Family Condition="'$(API_Family)'=='WinDesktop'">UWP</API_Family>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(Platform)'=='Win32' Or '$(Platform)'=='x64'">
+      <PropertyGroup>
+        <API_Family Condition="'$(API_Family)'=='WinPhone8'">UWP</API_Family>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  <PropertyGroup>    
+    <API_Family Condition="'$(API_Family)'==''">WinDesktop</API_Family>
+    <PreprocessorDef></PreprocessorDef>
+    <DefaultToolset>v140</DefaultToolset>
+  </PropertyGroup>  
+  <Choose>
+    <When Condition="'$(API_Family)'=='WinDesktop'">
+      <PropertyGroup>
+        <BuildToolset>v140</BuildToolset>
+        <PreprocessorDef Condition="'$(Platform)'=='Win32'">WIN32;PJ_WIN32=1;PJ_M_I386=1;</PreprocessorDef>
+        <PreprocessorDef Condition="'$(Platform)'=='x64'">WIN64;PJ_WIN64=1;PJ_M_X86_64=1;</PreprocessorDef>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(API_Family)'=='UWP'">
+      <PropertyGroup>
+        <BuildToolset>v140</BuildToolset>
+        <PreprocessorDef>PJ_WIN32_UWP;UNICODE;_UNICODE;</PreprocessorDef>
+        <PreprocessorDef Condition="'$(Platform)'=='ARM'">$(PreprocessorDef);PJ_M_ARMV7=1;</PreprocessorDef>
+        <PlatformVersion>10.0.10586.0</PlatformVersion>
+        <MinPlatformVersion>10.0.10240.0</MinPlatformVersion>
+        <AppTypeRev>10.0</AppTypeRev>
+        
+        <WindowsTargetPlatformVersion>$(PlatformVersion)</WindowsTargetPlatformVersion>
+        <WindowsTargetPlatformMinVersion>$(MinPlatformVersion)</WindowsTargetPlatformMinVersion>
+        <AppContainerApplication>true</AppContainerApplication>
+        <ApplicationType>Windows Store</ApplicationType>
+        <ApplicationTypeRevision>$(AppTypeRev)</ApplicationTypeRevision>
+        
+        <TargetPlatformIdentifier>UAP</TargetPlatformIdentifier>
+        <TargetPlatformVersion>$(PlatformVersion)</TargetPlatformVersion>
+        <TargetPlatformMinVersion>$(MinPlatformVersion)</TargetPlatformMinVersion>
+      </PropertyGroup>
+    </When>
+    <When Condition="'$(API_Family)'=='WinPhone8'">
+      <PropertyGroup>
+        <BuildToolset>v110_wp80</BuildToolset>
+        <PreprocessorDef>PJ_WIN32_WINPHONE8;PJ_M_ARMV7=1;UNICODE;_UNICODE;</PreprocessorDef>
+      </PropertyGroup>
+    </When>
+  </Choose>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>$(PreprocessorDef);%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild Condition="'$(API_Family)'=='UWP'">false</MinimalRebuild>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>

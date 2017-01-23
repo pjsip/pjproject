@@ -18,6 +18,12 @@
     <Filter Include="Inline Files">
       <UniqueIdentifier>{4befc994-9aa4-47c8-99e7-5a51301220dd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\winrt">
+      <UniqueIdentifier>{4a92fce6-2308-44cf-aa66-00ccd5b333bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\winrt">
+      <UniqueIdentifier>{3550aa38-c59d-4d5f-b458-1f93e0b16bbd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pj\activesock.c">
@@ -179,9 +185,6 @@
     <ClCompile Include="..\src\pj\ioqueue_epoll.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pj\ip_helper_generic.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pj\log_writer_printk.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
@@ -215,6 +218,18 @@
     <ClCompile Include="..\src\pj\symbols.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\third_party\threademulation\src\ThreadEmulation.cpp">
+      <Filter>Source Files\winrt</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_winphone8.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ip_helper_generic.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
@@ -245,9 +260,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\doxygen.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pj\equeue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\errno.h">
@@ -409,9 +421,6 @@
     <ClInclude Include="..\include\pj\compat\time.h">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pj\compat\vsprintf.h">
-      <Filter>Header Files\compat</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pj\list_i.h">
       <Filter>Inline Files</Filter>
     </ClInclude>
@@ -420,6 +429,15 @@
     </ClInclude>
     <ClInclude Include="..\include\pj\string_i.h">
       <Filter>Inline Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_winphone8.h">
+      <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\third_party\threademulation\include\ThreadEmulation.h">
+      <Filter>Header Files\winrt</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pj\compat\os_winuwp.h">
+      <Filter>Header Files\compat</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

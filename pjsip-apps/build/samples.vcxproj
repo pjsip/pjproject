@@ -50,10 +50,14 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E378A1FC-0C9C-4462-860F-7E60BC1BF84E}</ProjectGuid>
     <RootNamespace>samples</RootNamespace>
-    <Keyword>MakeFileProj</Keyword>
+    <Keyword>MakeFileProj</Keyword>    
+    <!-- Specific windows store/UWP property -->
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -116,6 +120,12 @@
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <!-- Override the PlatformToolset -->
+  <PropertyGroup>
+    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <ConfigurationType Condition="'$(API_Family)'=='UWP' Or '$(API_Family)'=='WinPhone8'">StaticLibrary</ConfigurationType>
+  </PropertyGroup>  
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -167,10 +177,22 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="UserMacros" />  
   <PropertyGroup>
-    <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
+    <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>        
   </PropertyGroup>
+  <!-- Compile and link option definition -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <CompileAsWinRT>false</CompileAsWinRT>
+      <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>      
+    </ClCompile>
+    <Lib>
+      <AdditionalOptions>/Ignore:4006 %(AdditionalOptions)</AdditionalOptions>
+    </Lib>
+  </ItemDefinitionGroup>    
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
     <IntDir>$(OutDir)</IntDir>
@@ -351,11 +373,15 @@
     <ClCompile Include="..\src\samples\simpleua.c" />
     <ClCompile Include="..\src\samples\simple_pjsua.c" />
     <ClCompile Include="..\src\samples\sipecho.c" />
-    <ClCompile Include="..\src\samples\siprtp.c" />
-    <ClCompile Include="..\src\samples\siprtp_report.c" />
+    <ClCompile Include="..\src\samples\siprtp.c">
+      <ExcludedFromBuild Condition="'$(API_Family)'!='WinDesktop'">true</ExcludedFromBuild>
+    </ClCompile>  
+    <ClCompile Include="..\src\samples\siprtp_report.c">    
+      <ExcludedFromBuild Condition="'$(API_Family)'!='WinDesktop'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\src\samples\sipstateless.c" />
-    <ClCompile Include="..\src\samples\sndinfo.c" />
-    <ClCompile Include="..\src\samples\sndtest.c" />
+    <!-- ClCompile Include="..\src\samples\sndinfo.c" / -->
+    <!-- ClCompile Include="..\src\samples\sndtest.c" / -->
     <ClCompile Include="..\src\samples\stateful_proxy.c" />
     <ClCompile Include="..\src\samples\stateless_proxy.c" />
     <ClCompile Include="..\src\samples\streamutil.c" />

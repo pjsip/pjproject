@@ -139,9 +139,13 @@
     <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\utility\delay_estimator_wrapper.c" />
     <ClCompile Include="..\..\webrtc\src\webrtc\system_wrappers\source\cpu_features.cc" />
   </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{5BCF2773-3825-4D91-9D72-3E2F650DF1DB}</ProjectGuid>
     <RootNamespace>libwebrtc</RootNamespace>
+    <!-- Specific UWP property -->
+    <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -216,6 +220,11 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
+  <!-- Override the PlatformToolset -->
+  <PropertyGroup>
+    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -284,6 +293,12 @@
     <_ProjectFileVersion>14.0.24730.2</_ProjectFileVersion>
     <OutDir>..\..\lib\</OutDir>
   </PropertyGroup>
+  <!-- Compile and link option definition -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+        <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>

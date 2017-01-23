@@ -115,10 +115,10 @@ static pj_status_t ioqueue_init_key( pj_pool_t *pool,
 
     /* Create mutex for the key. */
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
-    rc = pj_lock_create_simple_mutex(poll, NULL, &key->lock);
-#endif
+    rc = pj_lock_create_simple_mutex(pool, NULL, &key->lock);
     if (rc != PJ_SUCCESS)
 	return rc;
+#endif
 
     /* Group lock */
     key->grp_lock = grp_lock;

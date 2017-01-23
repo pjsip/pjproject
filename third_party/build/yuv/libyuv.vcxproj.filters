@@ -11,93 +11,93 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\libyuv\source\compare.cc">
+    <ClCompile Include="..\..\yuv\source\compare.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\compare_common.cc">
+    <ClCompile Include="..\..\yuv\source\compare_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\compare_win.cc">
+    <ClCompile Include="..\..\yuv\source\compare_win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert.cc">
+    <ClCompile Include="..\..\yuv\source\convert.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_argb.cc">
+    <ClCompile Include="..\..\yuv\source\convert_argb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_from.cc">
+    <ClCompile Include="..\..\yuv\source\convert_from.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_from_argb.cc">
+    <ClCompile Include="..\..\yuv\source\convert_from_argb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_jpeg.cc">
+    <ClCompile Include="..\..\yuv\source\convert_jpeg.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_to_argb.cc">
+    <ClCompile Include="..\..\yuv\source\convert_to_argb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\convert_to_i420.cc">
+    <ClCompile Include="..\..\yuv\source\convert_to_i420.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\cpu_id.cc">
+    <ClCompile Include="..\..\yuv\source\cpu_id.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\mjpeg_decoder.cc">
+    <ClCompile Include="..\..\yuv\source\mjpeg_decoder.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\mjpeg_validate.cc">
+    <ClCompile Include="..\..\yuv\source\mjpeg_validate.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\planar_functions.cc">
+    <ClCompile Include="..\..\yuv\source\planar_functions.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\rotate.cc">
+    <ClCompile Include="..\..\yuv\source\rotate.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\rotate_any.cc">
+    <ClCompile Include="..\..\yuv\source\rotate_any.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\rotate_argb.cc">
+    <ClCompile Include="..\..\yuv\source\rotate_argb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\rotate_common.cc">
+    <ClCompile Include="..\..\yuv\source\rotate_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\rotate_win.cc">
+    <ClCompile Include="..\..\yuv\source\rotate_win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\row_any.cc">
+    <ClCompile Include="..\..\yuv\source\row_any.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\row_common.cc">
+    <ClCompile Include="..\..\yuv\source\row_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\row_win.cc">
+    <ClCompile Include="..\..\yuv\source\row_win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\scale.cc">
+    <ClCompile Include="..\..\yuv\source\scale.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\scale_any.cc">
+    <ClCompile Include="..\..\yuv\source\scale_any.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\scale_argb.cc">
+    <ClCompile Include="..\..\yuv\source\scale_argb.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\scale_common.cc">
+    <ClCompile Include="..\..\yuv\source\scale_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\scale_win.cc">
+    <ClCompile Include="..\..\yuv\source\scale_win.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\libyuv\source\video_common.cc">
+    <ClCompile Include="..\..\yuv\source\video_common.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\libyuv\include\libyuv.h">
+    <ClInclude Include="..\..\yuv\include\libyuv.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

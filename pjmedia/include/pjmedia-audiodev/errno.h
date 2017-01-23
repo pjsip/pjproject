@@ -192,9 +192,12 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_EAUD_BADLATENCY	(PJMEDIA_AUDIODEV_ERRNO_START+12) /* 4200012 */
 
-
-
-
+ /**
+  * @hideinitializer
+  * General WASAPI error
+  */
+#define PJMEDIA_EAUD_WASAPI_ERROR \
+				(PJMEDIA_AUDIODEV_ERRNO_START+13) /* 4200013 */
 
 /**
  * Get error message for the specified error code. Note that this

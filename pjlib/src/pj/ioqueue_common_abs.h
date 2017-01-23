@@ -80,7 +80,7 @@ struct accept_operation
 
 union operation_key
 {
-    struct generic_operation generic;
+    struct generic_operation generic_op;
     struct read_operation    read;
     struct write_operation   write;
 #if PJ_HAS_TCP

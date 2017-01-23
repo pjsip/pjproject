@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ImportGroup Label="PropertySheets">    
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros">
+    <TargetCPU>ARMv7</TargetCPU>
+  </PropertyGroup>
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <TargetMachine>MachineARM</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <BuildMacro Include="TargetCPU">
+      <Value>$(TargetCPU)</Value>
+    </BuildMacro>
+  </ItemGroup>
+</Project>

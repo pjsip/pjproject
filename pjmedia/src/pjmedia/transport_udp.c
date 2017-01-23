@@ -752,6 +752,8 @@ static void transport_detach( pjmedia_transport *tp,
     pj_assert(tp);
 
     if (udp->attached) {
+	int i;
+
 	/* Lock the ioqueue keys to make sure that callbacks are
 	 * not executed. See ticket #460 for details.
 	 */
@@ -771,6 +773,13 @@ static void transport_detach( pjmedia_transport *tp,
 	udp->rtp_cb = NULL;
 	udp->rtcp_cb = NULL;
 	udp->user_data = NULL;
+
+	/* Cancel any outstanding send */
+	for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
+	    pj_ioqueue_post_completion(udp->rtp_key,
+				       &udp->rtp_pending_write[i].op_key, 0);
+	}
+	pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_write_op, 0);
 
 	/* Unlock keys */
 	pj_ioqueue_unlock_key(udp->rtcp_key);
