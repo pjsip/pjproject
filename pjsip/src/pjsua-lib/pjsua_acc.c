@@ -2599,6 +2599,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    d = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
 				uri, acc->cfg.reg_uri.slen+10);
 	    pj_assert(d > 0);
+	    PJ_UNUSED_ARG(d);
 
 	    h = pjsip_authorization_hdr_create(tdata->pool);
 	    h->scheme = pj_str("Digest");

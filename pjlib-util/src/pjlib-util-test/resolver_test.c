@@ -710,6 +710,7 @@ static int a_parser_test(void)
 
     rc = pj_dns_parse_a_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_UNUSED_ARG(rc);
 
     return 0;
 }
@@ -919,6 +920,7 @@ static int addr_parser_test(void)
 
     rc = pj_dns_parse_addr_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
+    PJ_UNUSED_ARG(rc);
 
     return 0;
 }
@@ -1468,7 +1470,7 @@ static int srv_resolver_test(void)
     pj_sem_wait(sem);
 
 
-    return 0;
+    return status;
 }
 
 
@@ -1838,7 +1840,7 @@ static int srv_resolver_many_test(void)
 
     pj_sem_wait(sem);
 
-    return 0;
+    return status;
 }
 
 

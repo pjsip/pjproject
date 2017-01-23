@@ -3316,6 +3316,7 @@ static pj_bool_t check_lock_codec(pjsua_call *call)
 
 	/* Verify that media must be active. */
 	pj_assert(loc_m->desc.port && rem_m->desc.port);
+	PJ_UNUSED_ARG(loc_m);
 
 	/* Count the formats in the answer. */
 	for (j=0; j<rem_m->desc.fmt_count && codec_cnt <= 1; ++j) {

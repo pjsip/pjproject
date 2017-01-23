@@ -1397,14 +1397,12 @@ static void call_on_media_update( pjsip_inv_session *inv,
 				  pj_status_t status)
 {
     struct call *call;
-    pj_pool_t *pool;
     struct media_stream *audio;
     const pjmedia_sdp_session *local_sdp, *remote_sdp;
     struct codec *codec_desc = NULL;
     unsigned i;
 
     call = inv->mod_data[mod_siprtp.id];
-    pool = inv->dlg->pool;
     audio = &call->media[0];
 
     /* If this is a mid-call media update, then destroy existing media */

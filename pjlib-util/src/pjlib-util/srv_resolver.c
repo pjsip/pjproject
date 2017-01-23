@@ -652,6 +652,7 @@ static void dns_callback(void *user_data,
 
     } else if (query_job->dns_state == PJ_DNS_TYPE_A) {
 	pj_bool_t is_type_a, srv_completed;
+        pj_dns_addr_record rec;
 
 	/* Clear outstanding job */
 	if (common->type == PJ_DNS_TYPE_A) {
@@ -668,15 +669,26 @@ static void dns_callback(void *user_data,
 
 	is_type_a = (common->type == PJ_DNS_TYPE_A);
 
+        /* Parse response */
+        if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
+            status = pj_dns_parse_addr_response(pkt, &rec);
+            if (status!=PJ_SUCCESS) {
+                char errmsg[PJ_ERR_MSG_SIZE];
+	        
+                PJ_LOG(4,(query_job->objname, 
+		          "DNS %s record parse error for '%.*s'."
+		          " Err=%d (%s)",
+                          (is_type_a ? "A" : "AAAA"),
+		          (int)query_job->domain_part.slen,
+		          query_job->domain_part.ptr,
+		          status,
+		          pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+            }
+        }
+
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
 	    char addr[PJ_INET6_ADDRSTRLEN];
-	    pj_dns_addr_record rec;
-
-	    /* Parse response */
-	    status = pj_dns_parse_addr_response(pkt, &rec);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
 
 	    pj_assert(rec.addr_count != 0);
 

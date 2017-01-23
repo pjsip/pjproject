@@ -603,12 +603,8 @@ static void lis_on_destroy(void *arg)
     }
 
     if (listener->factory.pool) {
-	pj_pool_t *pool = listener->factory.pool;
-
 	PJ_LOG(4,(listener->factory.obj_name,  "SIP TLS transport destroyed"));
-
-	listener->factory.pool = NULL;
-	pj_pool_release(pool);
+	pj_pool_safe_release(&listener->factory.pool);
     }
 }
 

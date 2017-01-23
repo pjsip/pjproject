@@ -184,5 +184,5 @@ PJ_DEF(pj_status_t) pjlib_util_init(void)
 				  &pjlib_util_strerror);
     pj_assert(status == PJ_SUCCESS);
 
-    return PJ_SUCCESS;
+    return status;
 }

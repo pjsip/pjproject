@@ -1804,11 +1804,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     }
 #endif
 
-    if (stream->own_pool) {
-	pj_pool_t *pool = stream->own_pool;
-	stream->own_pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&stream->own_pool);
 
     return PJ_SUCCESS;
 }

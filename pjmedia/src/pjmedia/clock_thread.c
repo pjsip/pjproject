@@ -415,11 +415,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 	clock->lock = NULL;
     }
 
-    if (clock->pool) {
-	pj_pool_t *pool = clock->pool;
-	clock->pool = NULL;
-	pj_pool_release(pool);
-    }
+    pj_pool_safe_release(&clock->pool);
+
     return PJ_SUCCESS;
 }
 

@@ -1475,6 +1475,7 @@ static int client_thread(void *arg)
 	} else {
 	    status = submit_job();
 	}
+	PJ_UNUSED_ARG(status);
 
 	++app.client.job_submitted;
 	++cycle;

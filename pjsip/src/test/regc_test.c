@@ -204,7 +204,7 @@ static pj_bool_t regs_rx_request(pjsip_rx_data *rdata)
 				 &hdr_list, NULL, NULL);
     pj_assert(status == PJ_SUCCESS);
 
-    return PJ_TRUE;
+    return (status == PJ_SUCCESS);
 }
 
 
@@ -242,6 +242,7 @@ static void client_cb(struct pjsip_regc_cbparam *param)
 
     status = pjsip_regc_get_info(param->regc, &info);
     pj_assert(status == PJ_SUCCESS);
+    PJ_UNUSED_ARG(status);
 
     client->error = (param->status != PJ_SUCCESS);
     client->code = param->code;

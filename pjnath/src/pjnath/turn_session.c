@@ -328,12 +328,8 @@ static void turn_sess_on_destroy(void *comp)
 
     /* Destroy pool */
     if (sess->pool) {
-	pj_pool_t *pool = sess->pool;
-
 	PJ_LOG(4,(sess->obj_name, "TURN client session destroyed"));
-
-	sess->pool = NULL;
-	pj_pool_release(pool);
+	pj_pool_safe_release(&sess->pool);
     }
 }
 

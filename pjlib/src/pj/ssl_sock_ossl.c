@@ -45,6 +45,7 @@
 /* 
  * Include OpenSSL headers 
  */
+#include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
@@ -110,9 +111,21 @@ static unsigned get_nid_from_cid(unsigned cid)
 
 #endif
 
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
+#  define M_ASN1_STRING_data(x)	    ASN1_STRING_get0_data(x)
+#  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
+#else
+#  define SSL_CIPHER_get_id(c)	    (c)->id
+#  define SSL_set_session(ssl, s)   (ssl)->session = (s)
+#endif
+
+
 #ifdef _MSC_VER
 #  pragma comment( lib, "libeay32")
 #  pragma comment( lib, "ssleay32")
+#  pragma comment( lib, "crypt32")
 #endif
 
 
@@ -431,12 +444,13 @@ static pj_status_t init_openssl(void)
 	    const SSL_CIPHER *c;
 	    c = sk_SSL_CIPHER_value(sk_cipher,i);
 	    openssl_ciphers[i].id = (pj_ssl_cipher)
-				    (pj_uint32_t)c->id & 0x00FFFFFF;
+				    (pj_uint32_t)SSL_CIPHER_get_id(c) &
+				    0x00FFFFFF;
 	    openssl_ciphers[i].name = SSL_CIPHER_get_name(c);
 	}
 	openssl_cipher_num = n;
 
-	ssl->session = SSL_SESSION_new();
+	SSL_set_session(ssl, SSL_SESSION_new());
 
 #if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 	openssl_curves_num = SSL_get_shared_curve(ssl,-1);
@@ -1013,7 +1027,8 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 	    const SSL_CIPHER *c;
 	    c = sk_SSL_CIPHER_value(sk_cipher, j);
 	    if (ssock->param.ciphers[i] == (pj_ssl_cipher)
-					   ((pj_uint32_t)c->id & 0x00FFFFFF))
+					   ((pj_uint32_t)SSL_CIPHER_get_id(c) &
+					   0x00FFFFFF))
 	    {
 		const char *c_name;
 
@@ -1066,7 +1081,7 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 	curves[cnt] = get_nid_from_cid(ssock->param.curves[cnt]);
     }
 
-    if( ssock->ossl_ssl->server ) {
+    if( SSL_is_server(ssock->ossl_ssl) ) {
 	ret = SSL_set1_curves(ssock->ossl_ssl, curves,
 			      ssock->param.curves_num);
 	if (ret < 1)
@@ -1225,7 +1240,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     pj_bool_t update_needed;
     char buf[512];
     pj_uint8_t serial_no[64] = {0}; /* should be >= sizeof(ci->serial_no) */
-    pj_uint8_t *q;
+    const pj_uint8_t *q;
     unsigned len;
     GENERAL_NAMES *names = NULL;
 
@@ -1235,7 +1250,7 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     X509_NAME_oneline(X509_get_issuer_name(x), buf, sizeof(buf));
 
     /* Get serial no */
-    q = (pj_uint8_t*) M_ASN1_STRING_data(X509_get_serialNumber(x));
+    q = (const pj_uint8_t*) M_ASN1_STRING_data(X509_get_serialNumber(x));
     len = M_ASN1_STRING_length(X509_get_serialNumber(x));
     if (len > sizeof(ci->serial_no)) 
 	len = sizeof(ci->serial_no);
@@ -2642,7 +2657,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 
 	/* Current cipher */
 	cipher = SSL_get_current_cipher(ssock->ossl_ssl);
-	info->cipher = (cipher->id & 0x00FFFFFF);
+	info->cipher = (SSL_CIPHER_get_id(cipher) & 0x00FFFFFF);
 
 	/* Remote address */
 	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);

@@ -192,10 +192,8 @@ static pj_status_t avi_factory_init(pjmedia_vid_dev_factory *f)
 static pj_status_t avi_factory_destroy(pjmedia_vid_dev_factory *f)
 {
     struct avi_factory *cf = (struct avi_factory*)f;
-    pj_pool_t *pool = cf->pool;
 
-    cf->pool = NULL;
-    pj_pool_release(pool);
+    pj_pool_safe_release(&cf->pool);
 
     return PJ_SUCCESS;
 }

@@ -296,6 +296,7 @@ static void record(unsigned rec_index, const char *filename)
 
     PJ_LOG(3,(THIS_FILE, "Recording started, press ENTER to stop"));
     dummy = fgets(line, sizeof(line), stdin);
+    PJ_UNUSED_ARG(dummy);
 
 on_return:
     if (strm) {
@@ -363,6 +364,7 @@ static void play_file(unsigned play_index, const char *filename)
 
     PJ_LOG(3,(THIS_FILE, "Playback started, press ENTER to stop"));
     dummy = fgets(line, sizeof(line), stdin);
+    PJ_UNUSED_ARG(dummy);
 
 on_return:
     if (strm) {

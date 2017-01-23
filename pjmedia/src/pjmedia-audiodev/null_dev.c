@@ -160,10 +160,8 @@ static pj_status_t null_factory_init(pjmedia_aud_dev_factory *f)
 static pj_status_t null_factory_destroy(pjmedia_aud_dev_factory *f)
 {
     struct null_audio_factory *nf = (struct null_audio_factory*)f;
-    pj_pool_t *pool = nf->pool;
 
-    nf->pool = NULL;
-    pj_pool_release(pool);
+    pj_pool_safe_release(&nf->pool);
 
     return PJ_SUCCESS;
 }
