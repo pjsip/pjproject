@@ -67,6 +67,7 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 	enum { CLEN_SPACE = 5 };
 	char *clen_pos;
 	const pjsip_hdr *hdr;
+	pj_bool_t ctype_printed = PJ_FALSE;
 
 	clen_pos = NULL;
 
@@ -82,19 +83,24 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 	hdr = part->hdr.next;
 	while (hdr != &part->hdr) {
 	    int printed = pjsip_hdr_print_on((pjsip_hdr*)hdr, p,
-	                                     SIZE_LEFT()-2);
+					     SIZE_LEFT()-2);
 	    if (printed < 0)
 		return -1;
 	    p += printed;
 	    *p++ = '\r';
 	    *p++ = '\n';
+
+	    if (!ctype_printed && hdr->type == PJSIP_H_CONTENT_TYPE)
+		ctype_printed = PJ_TRUE;	    
+
 	    hdr = hdr->next;
 	}
 
 	/* Automaticly adds Content-Type and Content-Length headers, only
-	 * if content_type is set in the message body.
+	 * if content_type is set in the message body and haven't been printed.
 	 */
-	if (part->body && part->body->content_type.type.slen) {
+	if (part->body && part->body->content_type.type.slen && !ctype_printed) 
+	{
 	    pj_str_t ctype_hdr = { "Content-Type: ", 14};
 	    const pjsip_media_type *media = &part->body->content_type;
 
