@@ -365,8 +365,6 @@
  */
 #if PJ_CONFIG_ANDROID
 
-    #define PJ_ANDROID                          1
-
     /*
      * PJLIB settings.
      */

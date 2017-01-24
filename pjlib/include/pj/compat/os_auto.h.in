@@ -37,6 +37,7 @@
 #undef PJ_LINUX
 #undef PJ_RTEMS
 #undef PJ_SUNOS
+#undef PJ_ANDROID
 
 #if defined(PJ_WIN32_WINNT) && !defined(_WIN32_WINNT)
 #  define _WIN32_WINNT	PJ_WIN32_WINNT
