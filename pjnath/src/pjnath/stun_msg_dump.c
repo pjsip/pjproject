@@ -256,6 +256,7 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
     char *p, *end;
     int len;
     unsigned i;
+    pj_uint32_t tsx_id[3];
 
     PJ_ASSERT_RETURN(msg && buffer && length, NULL);
 
@@ -269,14 +270,15 @@ PJ_DEF(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 			   pj_stun_get_class_name(msg->hdr.type));
     APPLY();
 
+    pj_memcpy(tsx_id, msg->hdr.tsx_id, sizeof(msg->hdr.tsx_id));
     len = pj_ansi_snprintf(p, end-p, 
 			   " Hdr: length=%d, magic=%08x, tsx_id=%08x%08x%08x\n"
 			   " Attributes:\n",
 			   msg->hdr.length,
 			   msg->hdr.magic,
-			   *(pj_uint32_t*)&msg->hdr.tsx_id[0],
-			   *(pj_uint32_t*)&msg->hdr.tsx_id[4],
-			   *(pj_uint32_t*)&msg->hdr.tsx_id[8]);
+			   tsx_id[0],
+			   tsx_id[1],
+			   tsx_id[2]);
     APPLY();
 
     for (i=0; i<msg->attr_count; ++i) {

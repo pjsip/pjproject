@@ -750,7 +750,7 @@ static pj_status_t and_factory_create_stream(
     const pjmedia_video_format_detail *vfd;
     const pjmedia_video_format_info *vfi;
     pjmedia_video_apply_fmt_param vafp;
-    pj_uint32_t and_fmt;
+    pj_uint32_t and_fmt = 0;
     unsigned convert_to_i420 = 0;
     pj_status_t status = PJ_SUCCESS;
 
@@ -1107,12 +1107,12 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jbyteArray data, jint length,
 			       jlong user_data)
 {
-    and_stream *strm = *(and_stream**)&user_data;
+    and_stream *strm = (and_stream*)(intptr_t)user_data;
     pjmedia_frame f;
     pj_uint8_t *Y, *U, *V;
     pj_status_t status; 
-    void *frame_buf, *data_buf;     
-
+    void *frame_buf, *data_buf;
+    
     strm->frame_ts.u64 += strm->ts_inc;
     if (!strm->vid_cb.capture_cb)
 	return;

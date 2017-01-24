@@ -1321,8 +1321,8 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
 		    type = PJ_SSL_CERT_NAME_URI;
                     break;
                 case GEN_IPADD:
-		    p = ASN1_STRING_data(name->d.ip);
-		    len = ASN1_STRING_length(name->d.ip);
+		    p = (unsigned char*)M_ASN1_STRING_data(name->d.ip);
+		    len = M_ASN1_STRING_length(name->d.ip);
 		    type = PJ_SSL_CERT_NAME_IP;
                     break;
 		default:

@@ -44,7 +44,9 @@
 
 #define AVI_EOF 0xFFEEFFEE
 
-#define COMPARE_TAG(doc_tag, tag) (doc_tag == *((pj_uint32_t *)avi_tags[tag]))
+//#define COMPARE_TAG(doc_tag, tag) (doc_tag==*((pj_uint32_t*)avi_tags[tag]))
+#define COMPARE_TAG(doc_tag, tag) \
+	    (pj_memcmp(&(doc_tag), &avi_tags[tag], 4)==0)
 
 #define SIGNATURE	    PJMEDIA_SIG_PORT_VID_AVI_PLAYER
 

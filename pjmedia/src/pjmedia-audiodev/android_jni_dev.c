@@ -544,7 +544,7 @@ static pj_status_t android_create_stream(pjmedia_aud_dev_factory *f,
     struct android_aud_stream *stream;
     pj_status_t status = PJ_SUCCESS;
     int state = 0;
-    int buffSize, inputBuffSizePlay, inputBuffSizeRec;
+    int buffSize, inputBuffSizePlay = 0, inputBuffSizeRec = 0;
     int channelInCfg, channelOutCfg, sampleFormat;
     jmethodID constructor_method=0, bufsize_method = 0;
     jmethodID method_id = 0;
@@ -931,7 +931,7 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
     {
         if (stream->track) {
             jmethodID vol_method = 0;
-            int retval;
+            int retval = 0;
             float vol = *(int *)value;
             
             attached = attach_jvm(&jni_env);
