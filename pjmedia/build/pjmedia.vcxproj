@@ -313,8 +313,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -338,8 +338,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -364,8 +364,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -390,8 +390,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -415,8 +415,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
@@ -441,8 +441,8 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">
     <ClCompile>
-      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>../include;../../pjlib/include;../../pjlib-util/include;../../pjnath/include;../../third_party/portaudio/include;../../third_party/speex/include;../../third_party/build/srtp;../../third_party/srtp/include;../../third_party/srtp/crypto/include;../../third_party/yuv/include;../../third_party/webrtc/src;../..;$(DXSDK_DIR)include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
     </ClCompile>
