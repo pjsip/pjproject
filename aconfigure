@@ -8489,7 +8489,11 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    	;;
 			esac
 		        ;;
-		     *mingw* | *cygw* | *win32* | *w32* | *darwin* | *linux*)
+		     *mingw* | *cygw*)
+			ac_webrtc_instset=sse2
+			ac_webrtc_cflags="-msse2"
+			;;
+		     *win32* | *w32* | *darwin* | *linux*)
 			ac_webrtc_instset=sse2
 			;;
 		     *)
