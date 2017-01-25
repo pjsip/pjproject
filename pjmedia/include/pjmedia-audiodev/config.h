@@ -117,7 +117,8 @@ PJ_BEGIN_DECL
   * This setting controls whether WMME support should be included.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WMME
-#  ifdef PJ_WIN32_UWP
+#  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
+      (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
 #    define PJMEDIA_AUDIO_DEV_HAS_WMME		0
 #  else
 #    define PJMEDIA_AUDIO_DEV_HAS_WMME		1
@@ -130,7 +131,8 @@ PJ_BEGIN_DECL
   * support should be included.
   */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WASAPI
-#  ifdef PJ_WIN32_UWP
+#  if (defined(PJ_WIN32_UWP) && PJ_WIN32_UWP!=0) || \
+      (defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8!=0)
 #    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	1
 #  else
 #    define PJMEDIA_AUDIO_DEV_HAS_WASAPI	0
