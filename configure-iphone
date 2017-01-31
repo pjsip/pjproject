@@ -119,11 +119,13 @@ fi
 export ARCH_VAL=`echo ${ARCH} | sed 's/\-arch //' | sed -e 's/^[ \t]*//;s/[ \t]*$//' `
 
 if test "${MIN_IOS}" = ""; then
-  MIN_IOS="7.0"
-  echo "$F: MIN_IOS is not specified, choosing ${MIN_IOS}"
-  CFLAGS="${CFLAGS} -miphoneos-version-min=${MIN_IOS}"
-  LDFLAGS="${LDFLAGS} -miphoneos-version-min=${MIN_IOS}"
+  MIN_IOS_VER="7.0"
+  echo "$F: MIN_IOS is not specified, choosing ${MIN_IOS_VER}"
+  MIN_IOS="-miphoneos-version-min=${MIN_IOS_VER}"
 fi
+CFLAGS="${CFLAGS} ${MIN_IOS}"
+LDFLAGS="${LDFLAGS} ${MIN_IOS}"
+
 
 # Set CXX if not set
 if test "${CXX}" = ""; then
@@ -145,6 +147,7 @@ export CPP="${CC} ${ARCH} -E -isysroot ${SDKPATH}"
 # Print settings
 if test "1" = "1"; then
   echo "$F: calling ./aconfigure with env vars:"
+  echo " MIN_IOS = ${MIN_IOS}"
   echo " CC = ${CC}"
   echo " CXX = ${CXX}"
   echo " SDKPATH = ${SDKPATH}"
