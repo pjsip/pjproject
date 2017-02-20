@@ -380,7 +380,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	pre += pj_utoa_pad(ptime.msec, pre, 3, '0');
     }
     if (log_decor & PJ_LOG_HAS_SENDER) {
-	enum { SENDER_WIDTH = 14 };
+	enum { SENDER_WIDTH = PJ_LOG_SENDER_WIDTH };
 	pj_size_t sender_len = strlen(sender);
 	if (pre!=log_buffer) *pre++ = ' ';
 	if (sender_len <= SENDER_WIDTH) {
@@ -395,7 +395,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	}
     }
     if (log_decor & PJ_LOG_HAS_THREAD_ID) {
-	enum { THREAD_WIDTH = 12 };
+	enum { THREAD_WIDTH = PJ_LOG_THREAD_WIDTH };
 	const char *thread_name = pj_thread_get_name(pj_thread_this());
 	pj_size_t thread_len = strlen(thread_name);
 	*pre++ = ' ';

@@ -472,6 +472,33 @@
 #endif
 
 /**
+ * Log sender width.
+ *
+ * Default: 22 (for 64-bit machines), 14 otherwise
+ */
+#ifndef PJ_LOG_SENDER_WIDTH
+#   if PJ_HAS_STDINT_H
+#       include <stdint.h>
+#       if (UINTPTR_MAX == 0xffffffffffffffff)
+#           define PJ_LOG_SENDER_WIDTH  22
+#       else
+#           define PJ_LOG_SENDER_WIDTH  14
+#       endif
+#   else
+#       define PJ_LOG_SENDER_WIDTH  14
+#   endif
+#endif
+
+/**
+ * Log thread name width.
+ *
+ * Default: 12
+ */
+#ifndef PJ_LOG_THREAD_WIDTH
+#   define PJ_LOG_THREAD_WIDTH	    12
+#endif
+
+/**
  * Colorfull terminal (for logging etc).
  *
  * Default: 1
