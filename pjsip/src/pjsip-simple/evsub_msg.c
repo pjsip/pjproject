@@ -179,7 +179,7 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     }
     if (hdr->retry_after >= 0) {
 	pj_memcpy(p, ";retry-after=", 13);
-	p += 9;
+	p += 13;
 	printed = pj_utoa(hdr->retry_after, p);
 	p += printed;
     }

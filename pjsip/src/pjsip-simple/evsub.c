@@ -509,10 +509,9 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
 	sub->timer.id = TIMER_TYPE_NONE;
     }
 
-    if (timer_id != TIMER_TYPE_NONE) {
+    if (timer_id != TIMER_TYPE_NONE && seconds > 0) {
 	pj_time_val timeout;
 
-	PJ_ASSERT_ON_FAIL(seconds > 0, return);
 	PJ_ASSERT_ON_FAIL(timer_id>TIMER_TYPE_NONE && timer_id<TIMER_TYPE_MAX,
 			  return);
 
@@ -526,6 +525,15 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
 	PJ_LOG(5,(sub->obj_name, "Timer %s scheduled in %d seconds", 
 		  timer_names[sub->timer.id], timeout.sec));
     }
+}
+
+
+/*
+ * Set event subscription UAS timout.
+ */
+PJ_DEF(void) pjsip_evsub_uas_set_timeout(pjsip_evsub *sub, pj_uint32_t seconds)
+{
+    set_timer(sub, TIMER_TYPE_UAS_TIMEOUT, (pj_int32_t)seconds);
 }
 
 
