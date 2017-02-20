@@ -1163,11 +1163,22 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
  */
 PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
 {
+    return pjsip_transport_shutdown2(tp, PJ_FALSE);
+}
+
+
+/*
+ * Start shutdown procedure for this transport. 
+ */
+PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
+					      pj_bool_t force)
+{
     pjsip_tpmgr *mgr;
     pj_status_t status;
     pjsip_tp_state_callback state_cb;
 
-    TRACE_((THIS_FILE, "Transport %s shutting down", tp->obj_name));
+    PJ_LOG(4, (THIS_FILE, "Transport %s shutting down, force=%d",
+			  tp->obj_name, force));
 
     pj_lock_acquire(tp->lock);
 
@@ -1187,18 +1198,19 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
     if (tp->do_shutdown)
 	status = tp->do_shutdown(tp);
 
+    if (status == PJ_SUCCESS)
+	tp->is_shutdown = PJ_TRUE;
+
     /* Notify application of transport shutdown */
     state_cb = pjsip_tpmgr_get_state_cb(tp->tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 
 	pj_bzero(&state_info, sizeof(state_info));
-	state_info.status = status;
-        (*state_cb)(tp, PJSIP_TP_STATE_SHUTDOWN, &state_info);
+	state_info.status = PJ_ECANCELLED;
+	(*state_cb)(tp, (force? PJSIP_TP_STATE_DISCONNECTED:
+		    PJSIP_TP_STATE_SHUTDOWN), &state_info);
     }
-
-    if (status == PJ_SUCCESS)
-	tp->is_shutdown = PJ_TRUE;
 
     /* If transport reference count is zero, start timer count-down */
     if (pj_atomic_get(tp->ref_cnt) == 0) {
