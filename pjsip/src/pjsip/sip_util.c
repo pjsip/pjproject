@@ -1214,8 +1214,13 @@ static void stateless_send_transport_cb( void *token,
 	}
 
 	via->transport = pj_str(stateless_data->cur_transport->type_name);
+	/* For Cancel request, do not update the Via address with
+	 * the new transport since it needs to match the original
+	 * request.
+	 */
         if (tdata->via_addr.host.slen > 0 &&
-            tdata->via_tp == (void *)stateless_data->cur_transport)
+            (tdata->via_tp == (void *)stateless_data->cur_transport ||
+             tdata->msg->line.req.method.id == PJSIP_CANCEL_METHOD))
         {
             via->sent_by = tdata->via_addr;
         } else {
