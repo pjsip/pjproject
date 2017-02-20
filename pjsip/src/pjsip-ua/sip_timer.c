@@ -970,20 +970,32 @@ PJ_DEF(pj_status_t)  pjsip_timer_handle_refresh_error(
 		    (pjsip_status_code)event->body.tsx_state.tsx->status_code;
 
 	    PJ_LOG(3, (inv->pool->obj_name, 
-			"Receive error %d for refresh request %.*s/cseq=%d, "
-			"stopping session now", st_code, 
-			event->body.tsx_state.tsx->method.name.slen,
+			"Receive error %d for refresh request %.*s/cseq=%d",
+			st_code, event->body.tsx_state.tsx->method.name.slen,
 			event->body.tsx_state.tsx->method.name.ptr,
 			event->body.tsx_state.tsx->cseq));
 
-	    status = pjsip_inv_end_session(inv, 
+	    if (st_code == 503 && PJSIP_SESS_TIMER_RETRY_DELAY >= 0) {
+	    	/* Retry the refresh after some delay */
+	    	pj_time_val delay = {PJSIP_SESS_TIMER_RETRY_DELAY, 0};
+
+	        PJ_LOG(3, (inv->pool->obj_name, "Scheduling to retry refresh "
+	        	   "request after %d second(s)", delay.sec));
+
+	    	inv->timer->timer.id = 1;
+	    	pjsip_endpt_schedule_timer(inv->dlg->endpt,
+	    				   &inv->timer->timer, &delay);
+	    } else {
+	        PJ_LOG(3, (inv->pool->obj_name, "Ending session now"));
+
+	    	status = pjsip_inv_end_session(inv, 
 				    event->body.tsx_state.tsx->status_code, 
 				    pjsip_get_status_text(st_code), 
 				    &bye);
 
-	    if (status == PJ_SUCCESS && bye)
-		status = pjsip_inv_send_msg(inv, bye);
-
+	    	if (status == PJ_SUCCESS && bye)
+		    status = pjsip_inv_send_msg(inv, bye);
+	    }
 	}
     }
 

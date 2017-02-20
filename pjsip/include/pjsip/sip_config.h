@@ -1242,6 +1242,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Default delay for retrying session refresh request upon
+ * receiving transport error (503). Set it to -1 to end the session
+ * immediately instead.
+ *
+ * Default: 10 seconds
+ */
+#ifndef PJSIP_SESS_TIMER_RETRY_DELAY
+#   define PJSIP_SESS_TIMER_RETRY_DELAY		10
+#endif
+
+
+/**
  * Specify whether the client publication session should queue the
  * PUBLISH request should there be another PUBLISH transaction still
  * pending. If this is set to false, the client will return error
