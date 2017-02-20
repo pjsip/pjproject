@@ -407,8 +407,9 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
     for (i=0; i<query_job->srv_cnt; ++i) {
 	pj_in_addr addr;
 	pj_in6_addr addr6;
+	unsigned cnt = query_job->srv[i].addr_cnt;
 
-	if (query_job->srv[i].addr_cnt != 0) {
+	if (cnt != 0) {
 	    /* IP address already resolved */
 	    continue;
 	}
@@ -417,7 +418,6 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	    pj_inet_pton(pj_AF_INET(), &query_job->srv[i].target_name,
 			 &addr) == PJ_SUCCESS)
 	{
-	    unsigned cnt = query_job->srv[i].addr_cnt;
 	    pj_sockaddr_init(pj_AF_INET(), &query_job->srv[i].addr[cnt],
 			     NULL, query_job->srv[i].port);
 	    query_job->srv[i].addr[cnt].ipv4.sin_addr = addr;
@@ -427,7 +427,6 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 		   pj_inet_pton(pj_AF_INET6(), &query_job->srv[i].target_name,
 				&addr6) == PJ_SUCCESS)
 	{
-	    unsigned cnt = query_job->srv[i].addr_cnt;
 	    pj_sockaddr_init(pj_AF_INET6(), &query_job->srv[i].addr[cnt],
 			     NULL, query_job->srv[i].port);
 	    query_job->srv[i].addr[cnt].ipv6.sin6_addr = addr6;
@@ -480,6 +479,15 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
     for (i=0; i<query_job->srv_cnt; ++i) {
 	struct srv_target *srv = &query_job->srv[i];
 
+	if (srv->addr_cnt != 0) {
+	    /*
+	     * This query is already counted as resolved because of the
+	     * additional records in the SRV response or the target name
+	     * is an IP address exception in build_server_entries().
+	     */
+	    continue;
+	}
+
 	PJ_LOG(5, (query_job->objname, 
 		   "Starting async DNS A query_job for %.*s",
 		   (int)srv->target_name.slen, 
@@ -493,7 +501,7 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 
 	status = PJ_SUCCESS;
 
-	/* Start DNA A record query */
+	/* Start DNS A record query */
 	if ((query_job->option & PJ_DNS_SRV_RESOLVE_AAAA_ONLY) == 0)
 	{
 	    if ((query_job->option & PJ_DNS_SRV_RESOLVE_AAAA) != 0) {
@@ -511,7 +519,7 @@ static pj_status_t resolve_hostnames(pj_dns_srv_async_query *query_job)
 						 &srv->common, &srv->q_a);
 	}
 
-	/* Start DNA AAAA record query */
+	/* Start DNS AAAA record query */
 	if (status == PJ_SUCCESS &&
 	    (query_job->option & PJ_DNS_SRV_RESOLVE_AAAA) != 0)
 	{
