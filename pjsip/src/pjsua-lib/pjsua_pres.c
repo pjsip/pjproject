@@ -1890,6 +1890,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     /* Set authentication preference */
     pjsip_auth_clt_set_prefs(&buddy->dlg->auth_sess, &acc->cfg.auth_pref);
 
+    pjsip_evsub_add_header(buddy->sub, &acc->cfg.sub_hdr_list);
     pjsip_evsub_set_mod_data(buddy->sub, pjsua_var.mod.id, buddy);
 
     status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
