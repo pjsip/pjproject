@@ -852,6 +852,21 @@ static pj_status_t create_ice_media_transport(
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
 
+    if (call_med->call->async_call.rem_sdp) {
+    	/* Match the default address family according to the offer */
+        const pj_str_t ID_IP6 = { "IP6", 3};
+    	const pjmedia_sdp_media *m;
+	const pjmedia_sdp_conn *c;
+
+    	m = call_med->call->async_call.rem_sdp->media[call_med->idx];
+	c = m->conn? m->conn : call_med->call->async_call.rem_sdp->conn;
+
+	if (pj_stricmp(&c->addr_type, &ID_IP6) == 0)
+	    ice_cfg.af = pj_AF_INET6();
+    } else if (use_ipv6) {
+    	ice_cfg.af = pj_AF_INET6();
+    }
+
     /* If STUN transport is configured, initialize STUN transport settings */
     if ((pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
 	 pjsua_media_acc_is_using_stun(call_med->call->acc_id)) ||

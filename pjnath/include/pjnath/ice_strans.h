@@ -338,9 +338,12 @@ typedef struct pj_ice_strans_turn_cfg
 typedef struct pj_ice_strans_cfg
 {
     /**
-     * Warning: this field is deprecated and will be ignored. Please specify
-     * transport address family in STUN and TURN transport setting, i.e:
-     * \a stun_tp and \a turn_tp.
+     * The address family which will be used as the default address
+     * in the SDP offer. Setting this to pj_AF_UNSPEC() means that
+     * the address family will not be considered during the process
+     * of default candidate selection.
+     *
+     * The default value is pj_AF_INET() (IPv4).
      */
     int			 af;
 
