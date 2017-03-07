@@ -69,8 +69,8 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     if (!jni_env)
         goto on_error;
 
-    uuid_class = (jclass)(*jni_env)->NewGlobalRef(jni_env,
-                 (*jni_env)->FindClass(jni_env, "java/util/UUID"));
+    uuid_class = (*jni_env)->FindClass(jni_env, "java/util/UUID");
+
     if (uuid_class == 0)
         goto on_error;
 
@@ -106,6 +106,9 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     pj_strncpy(str, &native_str, PJ_GUID_STRING_LENGTH);
 
     (*jni_env)->ReleaseStringUTFChars(jni_env, uuid_string, native_string);
+    (*jni_env)->DeleteLocalRef(jni_env, javaUuid);
+    (*jni_env)->DeleteLocalRef(jni_env, uuid_class);
+    (*jni_env)->DeleteLocalRef(jni_env, uuid_string);
     detach_jvm(attached);
 
     return str;
