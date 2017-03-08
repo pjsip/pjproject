@@ -253,6 +253,7 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
 						   int *p_tp_type)
 {
     unsigned i;
+    pjsip_transport_type_e parent = 0;
 
     PJ_ASSERT_RETURN(tp_flag && tp_name && def_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(pj_ansi_strlen(tp_name) < 
@@ -260,6 +261,11 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
 		     PJ_ENAMETOOLONG);
 
     for (i=1; i<PJ_ARRAY_SIZE(transport_names); ++i) {
+        if (tp_flag & PJSIP_TRANSPORT_IPV6 && 
+            pj_stricmp2(&transport_names[i].name, tp_name) == 0)
+        {
+	    parent = transport_names[i].type;
+        }
 	if (transport_names[i].type == 0)
 	    break;
     }
@@ -267,14 +273,19 @@ PJ_DEF(pj_status_t) pjsip_transport_register_type( unsigned tp_flag,
     if (i == PJ_ARRAY_SIZE(transport_names))
 	return PJ_ETOOMANY;
 
-    transport_names[i].type = (pjsip_transport_type_e)i;
+    if (tp_flag & PJSIP_TRANSPORT_IPV6 && parent) {
+        transport_names[i].type = parent | PJSIP_TRANSPORT_IPV6;
+    } else {
+        transport_names[i].type = (pjsip_transport_type_e)i;
+    }
+
     transport_names[i].port = (pj_uint16_t)def_port;
     pj_ansi_strcpy(transport_names[i].name_buf, tp_name);
     transport_names[i].name = pj_str(transport_names[i].name_buf);
     transport_names[i].flag = tp_flag;
 
     if (p_tp_type)
-	*p_tp_type = i;
+	*p_tp_type = transport_names[i].type;
 
     return PJ_SUCCESS;
 }
