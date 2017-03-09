@@ -32,6 +32,7 @@
 
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
 #  include <openssl/rand.h>
+#  include <openssl/opensslv.h>
 
 /* Suppress compile warning of OpenSSL deprecation (OpenSSL is deprecated
  * since MacOSX 10.7).
@@ -1151,8 +1152,12 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 
 /* Include OpenSSL libraries for MSVC */
 #  ifdef _MSC_VER
-#    pragma comment( lib, "libeay32")
-#    pragma comment( lib, "ssleay32")
+#    if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#      pragma comment(lib, "libcrypto")
+#    else
+#      pragma comment(lib, "libeay32")
+#      pragma comment(lib, "ssleay32")
+#    endif
 #  endif
 
 	    err = RAND_bytes((unsigned char*)key,
