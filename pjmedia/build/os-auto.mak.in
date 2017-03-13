@@ -100,7 +100,7 @@ else
 export CFLAGS += -I$(THIRD_PARTY)/build/speex -I$(THIRD_PARTY)/speex/include
 export CODEC_OBJS += speex_codec.o
 
-ifneq (@ac_no_speex_aec@,1)
+ifeq (@ac_no_speex_aec@,)
 export PJMEDIA_OBJS += echo_speex.o
 endif
 

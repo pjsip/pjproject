@@ -11,7 +11,15 @@ ifneq (@ac_no_ilbc_codec@,1)
 DIRS += ilbc
 endif
 
-ifneq (@ac_no_speex_codec@,1)
+# Exclude Speex?
+EXCLUDE_SPEEX = 0
+ifeq (@ac_no_speex_codec@,1)
+ifneq (@ac_no_speex_aec@,)
+EXCLUDE_SPEEX = 1
+endif
+endif
+
+ifneq ($(EXCLUDE_SPEEX),1)
 ifeq (@ac_external_speex@,1)
 # External speex
 else
