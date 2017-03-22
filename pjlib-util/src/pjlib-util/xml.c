@@ -248,6 +248,7 @@ static int xml_print_node( const pj_xml_node *node, int indent,
     if (node->content.slen==0 &&
 	node->node_head.next==(pj_xml_node*)&node->node_head)
     {
+        if (SIZE_LEFT() < 3) return -1;
 	*p++ = ' ';
 	*p++ = '/';
 	*p++ = '>';
