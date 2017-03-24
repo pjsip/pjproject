@@ -2549,11 +2549,17 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 static void stop_media_stream(pjsua_call *call, unsigned med_idx)
 {
-    pjsua_call_media *call_med = &call->media[med_idx];
-
-    /* Check if stream does not exist */
-    if (med_idx >= call->med_cnt)
-	return;
+    pjsua_call_media *call_med;
+    
+    if (pjsua_call_media_is_changing(call)) {
+    	call_med = &call->media_prov[med_idx];
+    	if (med_idx >= call->med_prov_cnt)
+	    return;
+    } else {
+    	call_med = &call->media[med_idx];
+        if (med_idx >= call->med_cnt)
+	    return;
+    }
 
     pj_log_push_indent();
 
