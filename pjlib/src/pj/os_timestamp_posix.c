@@ -163,12 +163,16 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 #elif defined(__ANDROID__)
 
 #include <errno.h>
-#include <linux/android_alarm.h>
-#include <fcntl.h>
 #include <time.h>
+
+#if defined(PJ_HAS_ANDROID_ALARM_H) && PJ_HAS_ANDROID_ALARM_H != 0
+#  include <linux/android_alarm.h>
+#  include <fcntl.h>
+#endif
 
 #define NSEC_PER_SEC	1000000000
 
+#if defined(ANDROID_ALARM_GET_TIME)
 static int s_alarm_fd = -1;
 
 void close_alarm_fd()
@@ -177,12 +181,14 @@ void close_alarm_fd()
 	close(s_alarm_fd);
     s_alarm_fd = -1;
 }
+#endif
 
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
     struct timespec tp;
     int err = -1;
 
+#if defined(ANDROID_ALARM_GET_TIME)
     if (s_alarm_fd == -1) {
         int fd = open("/dev/alarm", O_RDONLY);
         if (fd >= 0) {
@@ -195,10 +201,14 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
         err = ioctl(s_alarm_fd,
               ANDROID_ALARM_GET_TIME(ANDROID_ALARM_ELAPSED_REALTIME), &tp);
     }
+#elif defined(CLOCK_BOOTTIME)
+    err = clock_gettime(CLOCK_BOOTTIME, &tp);
+#endif
     
     if (err != 0) {
     	/* Fallback to CLOCK_MONOTONIC if /dev/alarm is not found, or
-    	 * getting ANDROID_ALARM_ELAPSED_REALTIME fails.
+    	 * getting ANDROID_ALARM_ELAPSED_REALTIME fails, or 
+         * CLOCK_BOOTTIME fails.
     	 */
         err = clock_gettime(CLOCK_MONOTONIC, &tp);
     }
