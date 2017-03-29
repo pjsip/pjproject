@@ -551,12 +551,12 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 			     pjsip_get_invite_method(), rdata);
 
 	/* Lookup the INVITE transaction */
-	tsx = pjsip_tsx_layer_find_tsx(&key, PJ_TRUE);
+	tsx = pjsip_tsx_layer_find_tsx2(&key, PJ_TRUE);
 
 	/* We should find the dialog attached to the INVITE transaction */
 	if (tsx) {
 	    dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
-	    pj_grp_lock_release(tsx->grp_lock);
+	    pj_grp_lock_dec_ref(tsx->grp_lock);
 
 	    /* Dlg may be NULL on some extreme condition
 	     * (e.g. during debugging where initially there is a dialog)

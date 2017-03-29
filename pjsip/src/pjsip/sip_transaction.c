@@ -641,8 +641,8 @@ PJ_DEF(unsigned) pjsip_tsx_layer_get_tsx_count(void)
 /*
  * Find a transaction.
  */
-PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
-						     pj_bool_t lock )
+static pjsip_transaction* find_tsx( const pj_str_t *key, pj_bool_t lock,
+				    pj_bool_t add_ref )
 {
     pjsip_transaction *tsx;
     pj_uint32_t hval = 0;
@@ -654,7 +654,7 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
     
     /* Prevent the transaction to get deleted before we have chance to lock it.
      */
-    if (tsx && lock)
+    if (tsx)
         pj_grp_lock_add_ref(tsx->grp_lock);
     
     pj_mutex_unlock(mod_tsx_layer.mutex);
@@ -666,12 +666,29 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
     /* Simulate race condition! */
     PJ_RACE_ME(5);
 
-    if (tsx && lock) {
-	pj_grp_lock_acquire(tsx->grp_lock);
-        pj_grp_lock_dec_ref(tsx->grp_lock);
+    if (tsx) {
+	if (lock)
+	    pj_grp_lock_acquire(tsx->grp_lock);
+
+        if (!add_ref)
+            pj_grp_lock_dec_ref(tsx->grp_lock);
     }
 
     return tsx;
+}
+
+
+PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
+						     pj_bool_t lock )
+{
+    return find_tsx(key, lock, PJ_FALSE);
+}
+
+
+PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx2( const pj_str_t *key,
+						      pj_bool_t add_ref )
+{
+    return find_tsx(key, PJ_FALSE, add_ref);
 }
 
 
