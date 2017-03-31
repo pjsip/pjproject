@@ -674,7 +674,6 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
     uri_str.ptr = tmp;
     uri_str.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, uri, tmp,sizeof(tmp));
     if (uri_str.slen < 1) {
-	pj_assert(!"URL is too long!");
 	return PJSIP_EURITOOLONG;
     }
 
@@ -695,7 +694,6 @@ static pj_status_t auth_respond( pj_pool_t *req_pool,
     else if (hdr->type == PJSIP_H_PROXY_AUTHENTICATE)
 	hauth = pjsip_proxy_authorization_hdr_create(pool);
     else {
-	pj_assert(!"Invalid response header!");
 	return PJSIP_EINVALIDHDR;
     }
 
