@@ -162,9 +162,9 @@ export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
 			       $(PJMEDIA_VIDEODEV_LDLIB) \
 			       $(PJMEDIA_AUDIODEV_LDLIB) \
 			       $(PJMEDIA_LDLIB) \
-			       $(PJLIB_LDLIB) \
-			       $(PJLIB_UTIL_LDLIB) \
 			       $(PJNATH_LDLIB) \
+			       $(PJLIB_UTIL_LDLIB) \
+			       $(PJLIB_LDLIB) \
 			       $(_LDFLAGS)
 export PJMEDIA_TEST_EXE:=pjmedia-test-$(TARGET_NAME)$(HOST_EXE)
 
