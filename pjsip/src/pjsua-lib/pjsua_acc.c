@@ -202,6 +202,20 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	acc->user_part = sip_uri->user;
 	acc->srv_domain = sip_uri->host;
 	acc->srv_port = 0;
+
+	/* Escape user part (ticket #2010) */
+	if (acc->user_part.slen) {
+	    const pjsip_parser_const_t *pconst;
+	    char buf[PJSIP_MAX_URL_SIZE];
+	    pj_str_t user_part;
+
+	    pconst = pjsip_parser_const();
+	    pj_strset(&user_part, buf, sizeof(buf));
+	    pj_strncpy_escape(&user_part, &sip_uri->user, sizeof(buf),
+			      &pconst->pjsip_USER_SPEC_LENIENT);
+	    if (user_part.slen > acc->user_part.slen)
+		pj_strdup(acc->pool, &acc->user_part, &user_part);
+	}
     }
     acc->is_sips = PJSIP_URI_SCHEME_IS_SIPS(name_addr);
 
