@@ -271,7 +271,7 @@
   </ItemDefinitionGroup>  
   <!--Don't build this project unless it's for UWP-->
   <Import Condition="'$(API_Family)'=='UWP'" Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Import Condition="'$(API_Family)'!='UWP'" Project="..\..\..\..\..\..\..\build\vs\pjproject-vs14-build-targets.targets" />      
+  <Import Condition="'$(API_Family)'!='UWP'" Project="..\..\..\..\..\..\build\vs\pjproject-vs14-build-targets.targets" />                                     
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
