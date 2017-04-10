@@ -108,7 +108,7 @@ struct MediaFormatVideo : public MediaFormat
 };
 
 /** Array of MediaFormat */
-typedef std::vector<MediaFormat*> MediaFormatVector;
+typedef std::vector<MediaFormat> MediaFormatVector;
 
 /**
  * This structure descibes information about a particular media port that

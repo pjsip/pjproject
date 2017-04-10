@@ -598,20 +598,15 @@ void AudioDevInfo::fromPj(const pjmedia_aud_dev_info &dev_info)
     routes = dev_info.routes;
 
     for (unsigned i=0; i<dev_info.ext_fmt_cnt;++i) {
-	MediaFormatAudio *format = new MediaFormatAudio;
-
-	format->fromPj(dev_info.ext_fmt[i]);
-	if (format->type == PJMEDIA_TYPE_AUDIO)
+	MediaFormatAudio format;
+	format.fromPj(dev_info.ext_fmt[i]);
+	if (format.type == PJMEDIA_TYPE_AUDIO)
 	    extFmt.push_back(format);
     }
 }
 
 AudioDevInfo::~AudioDevInfo()
 {
-    for(unsigned i=0;i<extFmt.size();++i) {
-	delete extFmt[i];
-    }
-    extFmt.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1264,10 +1259,9 @@ void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)
     caps = dev_info.caps;
 
     for (unsigned i = 0; i<dev_info.fmt_cnt;++i) {
-	MediaFormatVideo *format = new MediaFormatVideo;
-
-	format->fromPj(dev_info.fmt[i]);
-	if (format->type == PJMEDIA_TYPE_VIDEO)
+	MediaFormatVideo format;
+	format.fromPj(dev_info.fmt[i]);
+	if (format.type == PJMEDIA_TYPE_VIDEO)
 	    fmt.push_back(format);
     }
 #else
@@ -1277,12 +1271,6 @@ void VideoDevInfo::fromPj(const pjmedia_vid_dev_info &dev_info)
 
 VideoDevInfo::~VideoDevInfo()
 {
-#if PJSUA_HAS_VIDEO
-    for (unsigned i = 0;i<fmt.size();++i) {
-	delete fmt[i];
-    }
-    fmt.clear();
-#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
