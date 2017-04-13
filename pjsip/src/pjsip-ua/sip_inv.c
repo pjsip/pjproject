@@ -2797,7 +2797,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 	    if (op == PJSIP_REDIRECT_ACCEPT_REPLACE) {
 		pjsip_to_hdr *to;
 		pjsip_dialog *dlg = inv->dlg;
-		enum { TMP_LEN = 128 };
+		enum { TMP_LEN = PJSIP_MAX_URL_SIZE };
 		char tmp[TMP_LEN];
 		int len;
 

@@ -324,7 +324,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     pjsip_rr_hdr *rr;
     pjsip_transaction *tsx = NULL;
     pj_str_t tmp;
-    enum { TMP_LEN=128};
+    enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
     pj_ssize_t len;
     pjsip_dialog *dlg;
 
