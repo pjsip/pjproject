@@ -628,11 +628,15 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
 	    goto on_return;
 	}
 
+	/* Add reference before async DNS resolution */
+	pj_grp_lock_add_ref(sess->grp_lock);
+
 	status = pj_dns_srv_resolve(domain, &res_name, default_port, 
 				    sess->pool, resolver, opt, sess, 
 				    &dns_srv_resolver_cb, NULL);
 	if (status != PJ_SUCCESS) {
 	    set_state(sess, PJ_TURN_STATE_NULL);
+	    pj_grp_lock_dec_ref(sess->grp_lock);
 	    goto on_return;
 	}
 
@@ -1725,6 +1729,7 @@ static void dns_srv_resolver_cb(void *user_data,
     if (status != PJ_SUCCESS || sess->pending_destroy) {
 	set_state(sess, PJ_TURN_STATE_DESTROYING);
 	sess_shutdown(sess, status);
+	pj_grp_lock_dec_ref(sess->grp_lock);
 	return;
     }
 
@@ -1778,6 +1783,8 @@ static void dns_srv_resolver_cb(void *user_data,
 	if (status != PJ_SUCCESS)
 	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status, NULL);
     }
+
+    pj_grp_lock_dec_ref(sess->grp_lock);
 }
 
 
