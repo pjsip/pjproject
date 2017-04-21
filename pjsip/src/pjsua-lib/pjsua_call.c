@@ -1650,7 +1650,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	if (pjsua_var.ua_cfg.cb.on_incoming_call) {
 	    pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
 
-	    /* onIncomingCall() may be simulated by onCreateMediaTransport()
+            /* Notes:
+             * - the call might be reset when it's rejected or hangup
+             * by application from the callback.
+	    /* - onIncomingCall() may be simulated by onCreateMediaTransport()
 	     * when media init is done synchrounously (see #1916). And if app
 	     * happens to answer/hangup the call from the callback, the 
 	     * answer/hangup should have been delayed (see #1923), 
