@@ -130,6 +130,10 @@ static void reset_call(pjsua_call_id id)
     pjsua_call *call = &pjsua_var.calls[id];
     unsigned i;
 
+    if (call->incoming_data) {
+	pjsip_rx_data_free_cloned(call->incoming_data);
+	call->incoming_data = NULL;
+    }
     pj_bzero(call, sizeof(*call));
     call->index = id;
     call->last_text.ptr = call->last_text_buf_;
