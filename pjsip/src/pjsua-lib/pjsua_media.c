@@ -3021,7 +3021,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
 		call_med->dir = PJMEDIA_DIR_NONE;
 
-	    } else {
+	    } else if (call_med->tp) {
 		pjmedia_transport_info tp_info;
 		pjmedia_srtp_info *srtp_info;
 
@@ -3179,7 +3179,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
 		call_med->dir = PJMEDIA_DIR_NONE;
 
-	    } else {
+	    } else if (call_med->tp) {
 		pjmedia_transport_info tp_info;
 		pjmedia_srtp_info *srtp_info;
 

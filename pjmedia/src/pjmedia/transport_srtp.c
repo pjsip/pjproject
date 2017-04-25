@@ -1253,7 +1253,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting crypto suite"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    crypto->name = token;
+    pj_strdup(pool, &crypto->name, &token);    
 
     /* Key method */
     delim = pj_str(": ");
