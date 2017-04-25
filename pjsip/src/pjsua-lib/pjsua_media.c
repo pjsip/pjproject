@@ -2000,7 +2000,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	     */
 	    sort_media2(call->media_prov, call->med_prov_cnt,
 			PJMEDIA_TYPE_AUDIO, maudidx, &maudcnt, &mtotaudcnt);
-	    pj_assert(maudcnt > 0);
+
+	    /* No need to assert if there's no media. */
+	    //pj_assert(maudcnt > 0);
 
 	    sort_media2(call->media_prov, call->med_prov_cnt,
 			PJMEDIA_TYPE_VIDEO, mvididx, &mvidcnt, &mtotvidcnt);
