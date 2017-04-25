@@ -1617,6 +1617,41 @@ PROPAGATE_MEDIA_CREATE:
 }
 
 
+static pj_status_t fill_local_crypto(pj_pool_t *pool,
+			             const pjmedia_sdp_media *m_loc, 
+			             pjmedia_srtp_crypto loc_crypto[],
+			             int *count)
+{
+    int i;
+    int crypto_count = 0;
+    pj_status_t status = PJ_SUCCESS;
+    
+    for (i = 0; i < *count; ++i) {
+	pj_bzero(&loc_crypto[i], sizeof(loc_crypto[i]));
+    }
+
+    for (i = 0; i < (int)m_loc->attr_count; ++i) {	
+	pjmedia_srtp_crypto tmp_crypto;
+	int loc_tag;
+
+	if (pj_stricmp(&m_loc->attr[i]->name, &ID_CRYPTO) != 0)
+	    continue;
+
+	status = parse_attr_crypto(pool, m_loc->attr[i],
+				   &tmp_crypto, &loc_tag);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	if (loc_tag > *count)
+	    return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
+
+	loc_crypto[loc_tag-1] = tmp_crypto;
+	++crypto_count;
+    }
+    *count = crypto_count;
+    return status;
+}
+
 
 static pj_status_t transport_media_start(pjmedia_transport *tp,
 				         pj_pool_t *pool,
@@ -1628,6 +1663,8 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     pjmedia_sdp_media *m_rem, *m_loc;
     pj_status_t status;
     unsigned i;
+    pjmedia_srtp_crypto	loc_crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
+    int loc_cryto_cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local && sdp_remote, PJ_EINVAL);
 
@@ -1660,11 +1697,13 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 		//DEACTIVATE_MEDIA(pool, m_loc);
 		//return PJMEDIA_SDP_EINPROTO;
 	    //}
+	    fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
 	} else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
 	    if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP)) {
 		DEACTIVATE_MEDIA(pool, m_loc);
 		return PJMEDIA_SDP_EINPROTO;
 	    }
+	    fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
 	}
     }
 
@@ -1673,6 +1712,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	pjmedia_srtp_crypto tmp_tx_crypto;
 	pj_bool_t has_crypto_attr = PJ_FALSE;
 	int rem_tag;
+	int j;
 
 	for (i=0; i<m_rem->attr_count; ++i) {
 	    if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
@@ -1692,21 +1732,37 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 		return status;
 
 
-	    /* our offer tag is always ordered by setting */
-	    if (rem_tag < 1 || rem_tag > (int)srtp->setting.crypto_count) {
+	    /* Tag range check, our tags in the offer must be in the SRTP 
+	     * setting range, so does the remote answer's. The remote answer's 
+	     * tag must not exceed the tag range of the local offer.
+	     */
+	    if (rem_tag < 1 || rem_tag > (int)srtp->setting.crypto_count ||
+		rem_tag > loc_cryto_cnt) 
+	    
+	    {
 		DEACTIVATE_MEDIA(pool, m_loc);
 		return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 	    }
 
 	    /* match the crypto name */
-	    if (pj_stricmp(&tmp_tx_crypto.name,
-		&srtp->setting.crypto[rem_tag-1].name) != 0)
+	    if (pj_stricmp(&tmp_tx_crypto.name, 
+			   &loc_crypto[rem_tag-1].name) != 0)		
 	    {
 		DEACTIVATE_MEDIA(pool, m_loc);
 		return PJMEDIA_SRTP_ECRYPTONOTMATCH;
 	    }
 
-	    srtp->tx_policy_neg = srtp->setting.crypto[rem_tag-1];
+	    /* Find the crypto from the setting. */
+	    for (j = 0; j < (int)srtp->setting.crypto_count; ++j) {
+		if (pj_stricmp(&tmp_tx_crypto.name, 
+			       &srtp->setting.crypto[j].name) == 0) 
+		
+		{
+		    srtp->tx_policy_neg = srtp->setting.crypto[j];
+		    break;
+		}		
+	    }
+	    
 	    srtp->rx_policy_neg = tmp_tx_crypto;
 	}
 
