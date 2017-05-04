@@ -124,14 +124,16 @@ PJ_DEF(pj_status_t) pj_base64_encode(const pj_uint8_t *input, int in_len,
 PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input, 
 				     pj_uint8_t *out, int *out_len)
 {
-    const char *buf = input->ptr;
-    int len = (int)input->slen;
+    const char *buf;
+    int len;
     int i, j, k;
     int c[4];
 
     PJ_ASSERT_RETURN(input && out && out_len, PJ_EINVAL);
 
-    while (buf[len-1] == '=' && len)
+    buf = input->ptr;
+    len = (int)input->slen;
+    while (len && buf[len-1] == '=')
 	--len;
 
     PJ_ASSERT_RETURN(*out_len >= PJ_BASE64_TO_BASE256_LEN(len), 
@@ -161,7 +163,7 @@ PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
 	out[j++] = (pj_uint8_t)(((c[2] & 0x03)<<6) | (c[3] & 0x3F));
     }
 
-    pj_assert(j < *out_len);
+    pj_assert(j <= *out_len);
     *out_len = j;
 
     return PJ_SUCCESS;
