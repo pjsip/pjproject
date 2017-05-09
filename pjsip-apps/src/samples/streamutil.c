@@ -41,6 +41,11 @@
 
 #include "util.h"
 
+/* An experimental feature to add multicast option to this app for providing
+ * the capability to send IP datagrams from a single source to more than
+ * one receivers.
+ */
+#define HAVE_MULTICAST 1
 
 static const char *desc = 
  " streamutil								\n"
@@ -60,6 +65,15 @@ static const char *desc =
  "  --remote=IP:PORT      Set the remote peer. If this option is set,	\n"
  "                        the program will transmit RTP audio to the	\n"
  "                        specified address. (default: recv only)	\n"
+#if HAVE_MULTICAST
+ "  --mcast-add=IP   	  Joins the multicast group as specified by     \n"
+ "                        the address. Sample usage:			\n"
+ "			  Sender:					\n"
+ "			  streamutil --remote=[multicast_addr]:[port] 	\n"
+ "			  Receivers:					\n"
+ "			  streamutil --local-port=[port]		\n"
+ "				     --mcast-add=[multicast_addr]	\n"
+#endif
  "  --play-file=WAV       Send audio from the WAV file instead of from	\n"
  "                        the sound device.				\n"
  "  --record-file=WAV     Record incoming audio to WAV file instead of	\n"
@@ -113,6 +127,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
 				  pjmedia_dir dir,
 				  pj_uint16_t local_port,
 				  const pj_sockaddr_in *rem_addr,
+				  pj_bool_t mcast,
+				  const pj_sockaddr_in *mcast_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 				  pj_bool_t use_srtp,
 				  const pj_str_t *crypto_suite,
@@ -157,11 +173,103 @@ static pj_status_t create_stream( pj_pool_t *pool,
 	pj_sockaddr_in_init(&info.rem_addr.ipv4, &addr, 0);
     }
 
-    /* Create media transport */
-    status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
-					  0, &transport);
-    if (status != PJ_SUCCESS)
-	return status;
+    pj_sockaddr_cp(&info.rem_rtcp, &info.rem_addr);
+    pj_sockaddr_set_port(&info.rem_rtcp,
+    			 pj_sockaddr_get_port(&info.rem_rtcp)+1);
+
+    if (mcast) {
+     	pjmedia_sock_info si;
+    	int reuse = 1;
+
+    	pj_bzero(&si, sizeof(pjmedia_sock_info));
+    	si.rtp_sock = si.rtcp_sock = PJ_INVALID_SOCKET;
+
+    	/* Create RTP socket */
+    	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
+    				&si.rtp_sock);
+    	if (status != PJ_SUCCESS)
+	    return status;
+
+    	status = pj_sock_setsockopt(si.rtp_sock, pj_SOL_SOCKET(),
+    				    pj_SO_REUSEADDR(), &reuse, sizeof(reuse));
+    	if (status != PJ_SUCCESS)
+    	    return status;
+
+    	/* Bind RTP socket */
+    	status = pj_sockaddr_init(pj_AF_INET(), &si.rtp_addr_name,
+    				  NULL, local_port);
+    	if (status != PJ_SUCCESS)
+	    return status;
+    
+        status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name,
+			      pj_sockaddr_get_len(&si.rtp_addr_name));
+    	if (status != PJ_SUCCESS)
+	    return status;
+
+    	/* Create RTCP socket */
+    	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0,
+    				&si.rtcp_sock);
+    	if (status != PJ_SUCCESS)
+	    return status;
+
+    	status = pj_sock_setsockopt(si.rtcp_sock, pj_SOL_SOCKET(),
+    				    pj_SO_REUSEADDR(), &reuse, sizeof(reuse));
+    	if (status != PJ_SUCCESS)
+    	    return status;
+
+    	/* Bind RTCP socket */
+    	status = pj_sockaddr_init(pj_AF_INET(), &si.rtcp_addr_name,
+    				  NULL, local_port+1);
+    	if (status != PJ_SUCCESS)
+	    return status;
+    
+    	status = pj_sock_bind(si.rtcp_sock, &si.rtcp_addr_name,
+                              pj_sockaddr_get_len(&si.rtcp_addr_name));
+    	if (status != PJ_SUCCESS)
+	    return status;
+
+#ifdef HAVE_MULTICAST
+	{
+	    unsigned char loop;
+	    struct pj_ip_mreq imr;
+	
+	    pj_memset(&imr, 0, sizeof(struct pj_ip_mreq));
+	    imr.imr_multiaddr.s_addr = mcast_addr->sin_addr.s_addr;
+	    imr.imr_interface.s_addr = pj_htonl(PJ_INADDR_ANY);
+	    status = pj_sock_setsockopt(si.rtp_sock, pj_SOL_IP(),
+	    				pj_IP_ADD_MEMBERSHIP(),
+				   	&imr, sizeof(struct pj_ip_mreq));
+	    if (status != PJ_SUCCESS)
+	    	return status;
+
+	    status = pj_sock_setsockopt(si.rtcp_sock, pj_SOL_IP(),
+	    				pj_IP_ADD_MEMBERSHIP(),
+				   	&imr, sizeof(struct pj_ip_mreq));
+	    if (status != PJ_SUCCESS)
+	    	return status;
+
+	    /* Disable local reception of local sent packets */
+	    loop = 0;
+	    pj_sock_setsockopt(si.rtp_sock, pj_SOL_IP(),
+	    		       pj_IP_MULTICAST_LOOP(), &loop, sizeof(loop));
+	    pj_sock_setsockopt(si.rtcp_sock, pj_SOL_IP(),
+	    		       pj_IP_MULTICAST_LOOP(), &loop, sizeof(loop));
+	}
+#endif
+	
+    	/* Create media transport from existing sockets */
+    	status = pjmedia_transport_udp_attach( med_endpt, NULL, &si, 
+				PJMEDIA_UDP_NO_SRC_ADDR_CHECKING, &transport);
+    	if (status != PJ_SUCCESS)
+	    return status;	
+	
+    } else {
+        /* Create media transport */
+        status = pjmedia_transport_udp_create(med_endpt, NULL, local_port,
+					      0, &transport);
+        if (status != PJ_SUCCESS)
+	    return status;
+    }
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP enabled */
@@ -249,15 +357,18 @@ int main(int argc, char *argv[])
     pjmedia_codec_param codec_param;
     pjmedia_dir dir = PJMEDIA_DIR_DECODING;
     pj_sockaddr_in remote_addr;
+    pj_sockaddr_in mcast_addr;
     pj_uint16_t local_port = 4000;
     char *codec_id = NULL;
     char *rec_file = NULL;
     char *play_file = NULL;
+    int mcast = 0;
 
     enum {
 	OPT_CODEC	= 'c',
 	OPT_LOCAL_PORT	= 'p',
 	OPT_REMOTE	= 'r',
+	OPT_MCAST	= 'm',
 	OPT_PLAY_FILE	= 'w',
 	OPT_RECORD_FILE	= 'R',
 	OPT_SEND_RECV	= 'b',
@@ -275,6 +386,7 @@ int main(int argc, char *argv[])
 	{ "codec",	    1, 0, OPT_CODEC },
 	{ "local-port",	    1, 0, OPT_LOCAL_PORT },
 	{ "remote",	    1, 0, OPT_REMOTE },
+	{ "mcast-add",	    1, 0, OPT_MCAST },
 	{ "play-file",	    1, 0, OPT_PLAY_FILE },
 	{ "record-file",    1, 0, OPT_RECORD_FILE },
 	{ "send-recv",      0, 0, OPT_SEND_RECV },
@@ -326,6 +438,19 @@ int main(int argc, char *argv[])
 		status = pj_sockaddr_in_init(&remote_addr, &ip, port);
 		if (status != PJ_SUCCESS) {
 		    app_perror(THIS_FILE, "Invalid remote address", status);
+		    return 1;
+		}
+	    }
+	    break;
+
+	case OPT_MCAST:
+	    {
+	    	pj_str_t ip = pj_str(pj_optarg);
+
+	    	mcast = 1;
+		status = pj_sockaddr_in_init(&mcast_addr, &ip, 0);
+		if (status != PJ_SUCCESS) {
+		    app_perror(THIS_FILE, "Invalid mcast address", status);
 		    return 1;
 		}
 	    }
@@ -454,7 +579,7 @@ int main(int argc, char *argv[])
 
     /* Create stream based on program arguments */
     status = create_stream(pool, med_endpt, codec_info, dir, local_port, 
-			   &remote_addr, 
+			   &remote_addr, mcast, &mcast_addr,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 			   use_srtp, &srtp_crypto_suite, 
 			   &srtp_tx_key, &srtp_rx_key,
