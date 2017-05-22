@@ -1653,7 +1653,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
             /* Notes:
              * - the call might be reset when it's rejected or hangup
              * by application from the callback.
-	    /* - onIncomingCall() may be simulated by onCreateMediaTransport()
+	     * - onIncomingCall() may be simulated by onCreateMediaTransport()
 	     * when media init is done synchrounously (see #1916). And if app
 	     * happens to answer/hangup the call from the callback, the 
 	     * answer/hangup should have been delayed (see #1923), 
