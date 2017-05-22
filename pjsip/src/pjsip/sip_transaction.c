@@ -288,7 +288,8 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
     host = &rdata->msg_info.via->sent_by.host;
 
     /* Calculate length required. */
-    len_required = 9 +			    /* CSeq number */
+    len_required = method->name.slen +      /* Method */
+                   9 +			    /* CSeq number */
 		   rdata->msg_info.from->tag.slen +   /* From tag. */
 		   rdata->msg_info.cid->id.slen +    /* Call-ID */
 		   host->slen +		    /* Via host. */
