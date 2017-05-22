@@ -51,7 +51,6 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
-#include <openssl/engine.h>
 #include <openssl/opensslconf.h>
 
 #if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
