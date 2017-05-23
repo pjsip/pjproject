@@ -586,6 +586,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
     PJ_LOG(4,(THIS_FILE,
 	      "Device %s opened: format=%s, size=%dx%d @%d:%d fps",
 	      dev_name, fmt_name,
