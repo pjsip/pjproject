@@ -892,10 +892,15 @@ static void turn_on_state(pj_turn_session *sess,
 
 	/* Initiate non-blocking connect */
 #if PJ_HAS_TCP
-	status=pj_activesock_start_connect(turn_sock->active_sock, 
-					   turn_sock->pool,
-					   &info.server, 
-					   pj_sockaddr_get_len(&info.server));
+	if (turn_sock->conn_type != PJ_TURN_TP_UDP) {
+	    status=pj_activesock_start_connect(
+					turn_sock->active_sock, 
+					turn_sock->pool,
+					&info.server, 
+					pj_sockaddr_get_len(&info.server));
+	} else {
+	    status = PJ_SUCCESS;
+	}
 	if (status == PJ_SUCCESS) {
 	    on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
 	} else if (status != PJ_EPENDING) {
