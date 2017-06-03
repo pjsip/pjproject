@@ -46,6 +46,14 @@ struct sdp_state
     pj_ice_sess_role	local_role;	/* Our role			    */
 };
 
+/* ICE listener */
+typedef struct ice_listener
+{
+    PJ_DECL_LIST_MEMBER(struct ice_listener);
+    pjmedia_ice_cb	 cb;
+    void		*user_data;
+} ice_listener;
+
 struct transport_ice
 {
     pjmedia_transport	 base;
@@ -56,6 +64,8 @@ struct transport_ice
     pj_ice_strans	*ice_st;
 
     pjmedia_ice_cb	 cb;
+    ice_listener	 listener;
+    ice_listener	 listener_empty;
     unsigned		 media_option;
 
     pj_bool_t		 initial_sdp;
@@ -66,6 +76,7 @@ struct transport_ice
     pj_sockaddr		 remote_rtp;
     pj_sockaddr		 remote_rtcp;
     unsigned		 addr_len;	/**< Length of addresses.	    */
+    unsigned		 rem_rtp_cnt;	/**< How many pkt from this addr.   */
 
     pj_bool_t		 use_ice;
     pj_sockaddr		 rtp_src_addr;	/**< Actual source RTP address.	    */
@@ -243,6 +254,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     tp_ice->initial_sdp = PJ_TRUE;
     tp_ice->oa_role = ROLE_NONE;
     tp_ice->use_ice = PJ_FALSE;
+    pj_list_init(&tp_ice->listener);
+    pj_list_init(&tp_ice->listener_empty);
 
     pj_memcpy(&ice_st_cfg, cfg, sizeof(pj_ice_strans_cfg));
     if (cb)
@@ -285,6 +298,77 @@ PJ_DEF(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp)
 {
     PJ_ASSERT_RETURN(tp, NULL);
     return pj_ice_strans_get_grp_lock(((struct transport_ice *)tp)->ice_st);
+}
+
+
+/*
+ * Add application to receive ICE notifications from the specified ICE media
+ * transport.
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_add_ice_cb( pjmedia_transport *tp,
+					    const pjmedia_ice_cb *cb,
+					    void *user_data)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    ice_listener *il;
+    pj_grp_lock_t *grp_lock;
+
+    PJ_ASSERT_RETURN(tp && cb, PJ_EINVAL);
+    grp_lock = pjmedia_ice_get_grp_lock(tp);
+    PJ_ASSERT_RETURN(grp_lock, PJ_EINVAL);
+
+    pj_grp_lock_acquire(grp_lock);
+
+    if (!pj_list_empty(&tp_ice->listener_empty)) {
+	il = tp_ice->listener_empty.next;
+	pj_list_erase(il);
+	il->cb = *cb;
+	il->user_data = user_data;
+	pj_list_push_back(&tp_ice->listener, il);
+    } else {
+	il = PJ_POOL_ZALLOC_T(tp_ice->pool, ice_listener);
+	pj_list_init(il);
+	il->cb = *cb;
+	il->user_data = user_data;
+	pj_list_push_back(&tp_ice->listener, il);
+    }
+
+    pj_grp_lock_release(grp_lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Remove application to stop receiving ICE notifications the specified
+ * ICE media transport.
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_remove_ice_cb( pjmedia_transport *tp,
+					       const pjmedia_ice_cb *cb,
+					       void *user_data)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    ice_listener *il;
+    pj_grp_lock_t *grp_lock;
+
+    PJ_ASSERT_RETURN(tp && cb, PJ_EINVAL);
+    grp_lock = pjmedia_ice_get_grp_lock(tp);
+    PJ_ASSERT_RETURN(grp_lock, PJ_EINVAL);
+
+    pj_grp_lock_acquire(grp_lock);
+
+    for (il=tp_ice->listener.next; il!=&tp_ice->listener; il=il->next) {
+	if (pj_memcmp(&il->cb, cb, sizeof(cb))==0 && il->user_data==user_data)
+	    break;
+    }
+    if (il != &tp_ice->listener) {
+	pj_list_erase(il);
+	pj_list_push_back(&tp_ice->listener_empty, il);
+    }
+
+    pj_grp_lock_release(grp_lock);
+
+    return (il != &tp_ice->listener? PJ_SUCCESS : PJ_ENOTFOUND);
 }
 
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
@@ -1619,6 +1703,7 @@ static pj_status_t transport_attach  (pjmedia_transport *tp,
     pj_memcpy(&tp_ice->remote_rtp, rem_addr, addr_len);
     pj_memcpy(&tp_ice->remote_rtcp, rem_rtcp, addr_len);
     tp_ice->addr_len = addr_len;
+    tp_ice->rem_rtp_cnt = 0;
 
     /* Init source RTP & RTCP addresses and counter */
     tp_ice->rtp_src_addr = tp_ice->remote_rtp;
@@ -1730,6 +1815,7 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 	    {
 		/* Don't switch while we're receiving from remote_rtp */
 		tp_ice->rtp_src_cnt = 0;
+		tp_ice->rem_rtp_cnt++;
 	    } else {
 
 		++tp_ice->rtp_src_cnt;
@@ -1744,7 +1830,10 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 		}
 
 		if (tp_ice->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
-		    discard = PJ_TRUE;
+		    /* Only discard if we have ever received packet from
+		     * remote address (remote_rtp).
+		     */
+		    discard = (tp_ice->rem_rtp_cnt != 0);
 		} else {
 		    char addr_text[80];
 
@@ -1833,6 +1922,7 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_status_t result)
 {
     struct transport_ice *tp_ice;
+    ice_listener *il;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
 
@@ -1844,6 +1934,15 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     /* Notify application */
     if (tp_ice->cb.on_ice_complete)
 	(*tp_ice->cb.on_ice_complete)(&tp_ice->base, op, result);
+
+    for (il=tp_ice->listener.next; il!=&tp_ice->listener; il=il->next) {
+	if (il->cb.on_ice_complete2) {
+	    (*il->cb.on_ice_complete2)(&tp_ice->base, op, result,
+				       il->user_data);
+	} else if (il->cb.on_ice_complete) {
+	    (*il->cb.on_ice_complete)(&tp_ice->base, op, result);
+	}
+    }
 }
 
 

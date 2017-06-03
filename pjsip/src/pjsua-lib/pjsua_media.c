@@ -1274,6 +1274,7 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     for (i=0; i<sdp->media_count && count<PJSUA_MAX_CALL_MEDIA; ++i) {
 	const pjmedia_sdp_media *m = sdp->media[i];
 	const pjmedia_sdp_conn *c;
+	static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 
 	/* Skip different media */
 	if (pj_stricmp(&m->desc.media, type) != 0) {
@@ -1284,7 +1285,7 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 	c = m->conn? m->conn : sdp->conn;
 
 	/* Supported transports */
-	if (pj_stricmp2(&m->desc.transport, "RTP/SAVP")==0) {
+	if (pj_stristr(&m->desc.transport, &ID_RTP_SAVP)) {
 	    switch (use_srtp) {
 	    case PJMEDIA_SRTP_MANDATORY:
 	    case PJMEDIA_SRTP_OPTIONAL:
@@ -1493,6 +1494,34 @@ void pjsua_set_media_tp_state(pjsua_call_media *call_med,
     call_med->tp_st = tp_st;
 }
 
+
+/* This callback is called when SRTP negotiation completes */
+static void on_srtp_nego_complete(pjmedia_transport *tp, 
+				  pj_status_t result)
+{
+    pjsua_call_media *call_med = (pjsua_call_media*)tp->user_data;
+    pjsua_call *call;
+
+    if (!call_med)
+	return;
+
+    call = call_med->call;
+    PJ_PERROR(4,(THIS_FILE, result,
+		 "Call %d: Media %d: SRTP negotiation completes",
+	         call->index, call_med->idx));
+
+    if (result != PJ_SUCCESS) {
+	call_med->state = PJSUA_CALL_MEDIA_ERROR;
+	call_med->dir = PJMEDIA_DIR_NONE;
+	if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
+	    /* Defer the callback to a timer */
+	    pjsua_schedule_timer2(&ice_failed_nego_cb,
+				  (void*)(pj_ssize_t)call->index, 1);
+	}
+    }
+}
+
+
 /* Callback to resume pjsua_call_media_init() after media transport
  * creation is completed.
  */
@@ -1546,6 +1575,8 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	/* Always create SRTP adapter */
 	pjmedia_srtp_setting_default(&srtp_opt);
 	srtp_opt.close_member_tp = PJ_TRUE;
+	srtp_opt.cb.on_srtp_nego_complete = &on_srtp_nego_complete;
+	srtp_opt.user_data = call_med;
 
 	/* If media session has been ever established, let's use remote's 
 	 * preference in SRTP usage policy, especially when it is stricter.

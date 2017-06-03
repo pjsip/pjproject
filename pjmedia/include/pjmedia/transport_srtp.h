@@ -130,6 +130,48 @@ typedef enum pjmedia_srtp_use
 
 
 /**
+ * This enumeration specifies SRTP keying methods.
+ */
+typedef enum pjmedia_srtp_keying_method
+{
+    /**
+     * Session Description (SDES).
+     */
+    PJMEDIA_SRTP_KEYING_SDES,
+
+    /**
+     * DTLS-SRTP.
+     */
+    PJMEDIA_SRTP_KEYING_DTLS_SRTP,
+
+    /**
+     * Number of keying method.
+     */
+    PJMEDIA_SRTP_KEYINGS_COUNT
+
+} pjmedia_srtp_keying_method;
+
+
+/**
+ * Structure containing callbacks to receive SRTP notifications.
+ */
+typedef struct pjmedia_srtp_cb
+{
+    /**
+     * This callback will be called when SRTP negotiation completes. This
+     * callback will be invoked when the negotiation is done outside of
+     * the SDP signalling, such as in DTLS-SRTP.
+     *
+     * @param tp	PJMEDIA SRTP transport.
+     * @param status	Operation status.
+     */
+    void    (*on_srtp_nego_complete)(pjmedia_transport *tp,
+				     pj_status_t status);
+
+} pjmedia_srtp_cb;
+
+
+/**
  * Settings to be given when creating SRTP transport. Application should call
  * #pjmedia_srtp_setting_default() to initialize this structure with its 
  * default values.
@@ -139,23 +181,54 @@ typedef struct pjmedia_srtp_setting
     /**
      * Specify the usage policy. Default is PJMEDIA_SRTP_OPTIONAL.
      */
-    pjmedia_srtp_use		use;
+    pjmedia_srtp_use		 use;
 
     /**
      * Specify whether the SRTP transport should close the member transport 
      * when it is destroyed. Default: PJ_TRUE.
      */
-    pj_bool_t			close_member_tp;
+    pj_bool_t			 close_member_tp;
 
     /**
      * Specify the number of crypto suite settings.
      */
-    unsigned			crypto_count;
+    unsigned			 crypto_count;
 
     /**
      * Specify individual crypto suite setting.
+     * Notes for DTLS-SRTP keying:
+     *  - Currently only supports these cryptos: AES_CM_128_HMAC_SHA1_80,
+     *    AES_CM_128_HMAC_SHA1_32, AEAD_AES_256_GCM, and AEAD_AES_128_GCM.
+     *  - SRTP key is not configurable.
      */
-    pjmedia_srtp_crypto		crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
+    pjmedia_srtp_crypto		 crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
+
+    /**
+     * Specify the number of enabled keying methods.
+     * Default is PJMEDIA_SRTP_MAX_KEYINGS (all enabled).
+     */
+    unsigned			 keying_count;
+
+    /**
+     * Specify enabled keying methods and its priority order. Keying method
+     * with higher priority will be given earlier chance to process the SDP,
+     * for example as currently only one keying is supported in the SDP offer,
+     * keying with first priority will be likely used in the SDP offer.
+     *
+     * Default is that all supported keying methods (i.e: currently SDES and
+     * DTLS-SRTP) will be enabled and with priority order: SDES, DTLS-SRTP.
+     */
+    pjmedia_srtp_keying_method	 keying[PJMEDIA_SRTP_KEYINGS_COUNT];
+
+    /**
+     * Specify SRTP callback.
+     */
+    pjmedia_srtp_cb		 cb;
+
+    /**
+     * Specify SRTP transport user data.
+     */
+    void			*user_data;
 
 } pjmedia_srtp_setting;
 

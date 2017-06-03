@@ -59,6 +59,21 @@ typedef struct pjmedia_ice_cb
 			       pj_ice_strans_op op,
 			       pj_status_t status);
 
+    /**
+     * This callback will be called when ICE negotiation completes, with
+     * application user data. Note that if both callbacks are implemented,
+     * only this callback will be invoked.
+     *
+     * @param tp	PJMEDIA ICE transport.
+     * @param op	The operation
+     * @param status	Operation status.
+     * @param user_data	User data for this callback.
+     */
+    void    (*on_ice_complete2)(pjmedia_transport *tp,
+			        pj_ice_strans_op op,
+			        pj_status_t status,
+				void *user_data);
+
 } pjmedia_ice_cb;
 
 
@@ -229,6 +244,39 @@ PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
  * @return		The group lock.
  */
 PJ_DECL(pj_grp_lock_t *) pjmedia_ice_get_grp_lock(pjmedia_transport *tp);
+
+
+/**
+ * Add application to receive ICE notifications from the specified ICE media
+ * transport.
+ *
+ * @param tp	        The ICE media transport.
+ * @param cb	        The ICE specific callbacks.
+ * @param user_data     Optional application user data.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_add_ice_cb(pjmedia_transport *tp,
+					    const pjmedia_ice_cb *cb,
+					    void *user_data);
+
+
+/**
+ * Remove application to stop receiving ICE notifications from the specified
+ * ICE media transport.
+ *
+ * @param tp	        The ICE media transport.
+ * @param cb	        The ICE specific callbacks.
+ * @param user_data     Optional application user data. The same user data
+ *			passed to pjmedia_ice_add_ice_cb(), this is for
+ *			validation purpose.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
+					       const pjmedia_ice_cb *cb,
+					       void *user_data);
+
 
 PJ_END_DECL
 

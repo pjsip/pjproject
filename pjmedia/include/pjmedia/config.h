@@ -953,6 +953,36 @@
 
 
 /**
+ * Enable session description for SRTP keying.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_SRTP_HAS_SDES
+#   define PJMEDIA_SRTP_HAS_SDES		    1
+#endif
+
+
+/**
+ * Enable DTLS for SRTP keying.
+ *
+ * Default value: 0 (disabled)
+ */
+#ifndef PJMEDIA_SRTP_HAS_DTLS
+#   define PJMEDIA_SRTP_HAS_DTLS		    0
+#endif
+
+
+/**
+ * Set OpenSSL ciphers for DTLS-SRTP.
+ *
+ * Default value: "DEFAULT"
+ */
+#ifndef PJMEDIA_SRTP_DTLS_OSSL_CIPHERS
+#   define PJMEDIA_SRTP_DTLS_OSSL_CIPHERS	    "DEFAULT"
+#endif
+
+
+/**
  * Maximum number of SRTP cryptos.
  *
  * Default: 16

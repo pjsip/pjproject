@@ -125,6 +125,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #  if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #    pragma comment(lib, "libcrypto")
 #    pragma comment(lib, "libssl")
+#    pragma comment(lib, "crypt32")
 #  else
 #    pragma comment(lib, "libeay32")
 #    pragma comment(lib, "ssleay32")
