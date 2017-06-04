@@ -274,7 +274,7 @@ static pj_status_t ssl_get_fingerprint(X509 *cert, pj_bool_t is_sha256,
 /* Generate self-signed cert */
 static pj_status_t ssl_generate_cert(X509 **p_cert, EVP_PKEY **p_priv_key)
 {
-    BIGNUM *bne = ;
+    BIGNUM *bne = NULL;
     RSA *rsa_key = NULL;
     X509_NAME *cert_name = NULL;
     X509 *cert = NULL;
