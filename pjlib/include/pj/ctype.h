@@ -109,7 +109,7 @@ PJ_INLINE(int) pj_isupper(unsigned char c) { return isupper(c); }
  * @return      Non-zero value if c is a either a space (' ') or horizontal
  *              tab ('\\t') character.
  */
-PJ_INLINE(int) pj_isblank(unsigned char c) { return isblank(c); }
+PJ_INLINE(int) pj_isblank(unsigned char c) { return (c==' ' || c=='\t'); }
 
 /**
  * Converts character to lowercase.
