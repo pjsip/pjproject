@@ -77,9 +77,10 @@ PJ_DEF(pj_uint32_t) pj_hash_calc_tolower( pj_uint32_t hval,
     long i;
 
     for (i=0; i<key->slen; ++i) {
-        char lower = (char)pj_tolower(key->ptr[i]);
+        int lower = pj_tolower(key->ptr[i]);
 	if (result)
-            result[i] = lower;
+	    result[i] = (char)lower;
+
 	hval = hval * PJ_HASH_MULTIPLIER + lower;
     }
 
