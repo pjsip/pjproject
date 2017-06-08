@@ -1827,6 +1827,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 					       dlg->local.contact->uri,
 					       info->local_contact.ptr,
 					       sizeof(info->buf_.local_contact));
+    if (info->local_contact.slen < 0)
+	info->local_contact.slen = 0;
 
     /* remote info */
     info->remote_info.ptr = info->buf_.remote_info;

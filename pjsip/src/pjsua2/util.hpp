@@ -36,7 +36,7 @@ inline pj_str_t str2Pj(const string &input_str)
 
 inline string pj2Str(const pj_str_t &input_str)
 {
-    if (input_str.ptr)
+    if (input_str.ptr && input_str.slen>0)
 	return string(input_str.ptr, input_str.slen);
     return string();
 }

@@ -294,7 +294,7 @@ PJ_INLINE(pj_status_t) pjsip_uri_cmp(pjsip_uri_context_e context,
  * @param uri	    The URI to print.
  * @param buf	    The buffer.
  * @param size	    Size of the buffer.
- * @return	    Length printed.
+ * @return	    Length printed if successful, negative value if failed.
  */
 PJ_INLINE(int) pjsip_uri_print(pjsip_uri_context_e context,
 			       const void *uri,
