@@ -84,6 +84,13 @@ typedef struct pjmedia_h264_packetizer_cfg
      * Default: PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED
      */
     pjmedia_h264_packetizer_mode mode;
+
+    /**
+     * NAL start code size used for unpacketizing.
+     * Valid options are 3 (0, 0, 1) or 4 (0, 0, 0, 1).
+     * Default: 3 (0, 0, 1)
+     */
+    unsigned unpack_nal_start;
 }
 pjmedia_h264_packetizer_cfg;
 

@@ -75,6 +75,15 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
+    status = pjmedia_codec_vid_toolbox_init(NULL, &pjsua_var.cp.factory);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Error initializing Video Toolbox codec"));
+	goto on_error;
+    }
+#endif
+
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_OPENH264_CODEC
     status = pjmedia_codec_openh264_vid_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
@@ -142,6 +151,10 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     pjmedia_codec_ffmpeg_vid_deinit();
+#endif
+
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
+    pjmedia_codec_vid_toolbox_deinit();
 #endif
 
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0

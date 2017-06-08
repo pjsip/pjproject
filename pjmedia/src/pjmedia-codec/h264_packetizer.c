@@ -94,7 +94,9 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetizer_create(
 
     if (cfg &&
 	cfg->mode != PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED &&
-	cfg->mode != PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL)
+	cfg->mode != PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL &&
+	cfg->unpack_nal_start != 0 && cfg->unpack_nal_start != 3 &&
+	cfg->unpack_nal_start != 4)
     {
 	return PJ_ENOTSUP;
     }
@@ -102,9 +104,12 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetizer_create(
     p_ = PJ_POOL_ZALLOC_T(pool, pjmedia_h264_packetizer);
     if (cfg) {
 	pj_memcpy(&p_->cfg, cfg, sizeof(*cfg));
+	if (p_->cfg.unpack_nal_start == 0)
+	    p_->cfg.unpack_nal_start = 3;
     } else {
 	p_->cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
 	p_->cfg.mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
+	p_->cfg.unpack_nal_start = 3;
     }
 
     *p = p_;
@@ -347,11 +352,13 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
                                              pj_size_t   bits_len,
 					     unsigned   *bits_pos)
 {
-    const pj_uint8_t nal_start_code[3] = {0, 0, 1};
+    const pj_uint8_t nal_start[4] = {0, 0, 0, 1};
+    const pj_uint8_t *nal_start_code; 
     enum { MIN_PAYLOAD_SIZE = 2 };
     pj_uint8_t nal_type;
 
-    PJ_UNUSED_ARG(pktz);
+    nal_start_code = nal_start + PJ_ARRAY_SIZE(nal_start) -
+    		     pktz->cfg.unpack_nal_start;
 
 #if DBG_UNPACKETIZE
     if (*bits_pos == 0 && payload_len) {
@@ -384,15 +391,15 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	pj_uint8_t *p = bits + *bits_pos;
 
 	/* Validate bitstream length */
-	if (bits_len-*bits_pos < payload_len+PJ_ARRAY_SIZE(nal_start_code)) {
+	if (bits_len-*bits_pos < payload_len+pktz->cfg.unpack_nal_start) {
 	    /* Insufficient bistream buffer, discard this payload */
-	    pj_assert(!"Insufficient H.263 bitstream buffer");
+	    pj_assert(!"Insufficient H.264 bitstream buffer");
 	    return PJ_ETOOSMALL;
 	}
 
 	/* Write NAL unit start code */
-	pj_memcpy(p, &nal_start_code, PJ_ARRAY_SIZE(nal_start_code));
-	p += PJ_ARRAY_SIZE(nal_start_code);
+	pj_memcpy(p, nal_start_code, pktz->cfg.unpack_nal_start);
+	p += pktz->cfg.unpack_nal_start;
 
 	/* Write NAL unit */
 	pj_memcpy(p, payload, payload_len);
@@ -419,7 +426,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	/* Validate bitstream length */
 	if (bits_len - *bits_pos < payload_len + 32) {
 	    /* Insufficient bistream buffer, discard this payload */
-	    pj_assert(!"Insufficient H.263 bitstream buffer");
+	    pj_assert(!"Insufficient H.264 bitstream buffer");
 	    return PJ_ETOOSMALL;
 	}
 
@@ -432,8 +439,8 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	    pj_uint16_t tmp_nal_size;
 
 	    /* Write NAL unit start code */
-	    pj_memcpy(p, &nal_start_code, PJ_ARRAY_SIZE(nal_start_code));
-	    p += PJ_ARRAY_SIZE(nal_start_code);
+	    pj_memcpy(p, nal_start_code, pktz->cfg.unpack_nal_start);
+	    p += pktz->cfg.unpack_nal_start;
 
 	    /* Get NAL unit size */
 	    tmp_nal_size = (*q << 8) | *(q+1);
@@ -470,9 +477,9 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	p = bits + *bits_pos;
 
 	/* Validate bitstream length */
-	if (bits_len-*bits_pos < payload_len+PJ_ARRAY_SIZE(nal_start_code)) {
+	if (bits_len-*bits_pos < payload_len+pktz->cfg.unpack_nal_start) {
 	    /* Insufficient bistream buffer, drop this packet */
-	    pj_assert(!"Insufficient H.263 bitstream buffer");
+	    pj_assert(!"Insufficient H.264 bitstream buffer");
 	    pktz->unpack_prev_lost = PJ_TRUE;
 	    return PJ_ETOOSMALL;
 	}
@@ -486,8 +493,8 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	/* Fill bitstream */
 	if (S) {
 	    /* This is the first part, write NAL unit start code */
-	    pj_memcpy(p, &nal_start_code, PJ_ARRAY_SIZE(nal_start_code));
-	    p += PJ_ARRAY_SIZE(nal_start_code);
+	    pj_memcpy(p, nal_start_code, pktz->cfg.unpack_nal_start);
+	    p += pktz->cfg.unpack_nal_start;
 
 	    /* Write NAL unit octet */
 	    *p++ = (NRI << 5) | TYPE;
