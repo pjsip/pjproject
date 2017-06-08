@@ -333,16 +333,6 @@ static int srtp_crypto_cmp(const pjmedia_srtp_crypto* c1,
 /* Start SRTP */
 static pj_status_t start_srtp(transport_srtp *srtp);
 
-/* SRTP keying method: Session Description */
-#if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
-#  include "transport_srtp_sdes.c"
-#endif
-
-/* SRTP keying method: DTLS */
-#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
-#  include "transport_srtp_dtls.c"
-#endif
-
 
 /* This function may also be used by other module, e.g: pjmedia/errno.c,
  * it should have C compatible declaration.
@@ -397,6 +387,17 @@ const char* get_libsrtp_errstr(int err)
     return msg;
 #endif
 }
+
+/* SRTP keying method: Session Description */
+#if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
+#  include "transport_srtp_sdes.c"
+#endif
+
+/* SRTP keying method: DTLS */
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+#  include "transport_srtp_dtls.c"
+#endif
+
 
 static pj_bool_t libsrtp_initialized;
 static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt);
