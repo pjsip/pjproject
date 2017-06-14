@@ -862,6 +862,10 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 	      ice_st));
     pj_log_push_indent();
 
+    /* Reset callback and user data */
+    pj_bzero(&ice_st->cb, sizeof(ice_st->cb));
+    ice_st->user_data = NULL;
+
     pj_grp_lock_acquire(ice_st->grp_lock);
 
     if (ice_st->destroy_req) {
@@ -954,8 +958,8 @@ static void sess_init_update(pj_ice_strans *ice_st)
 {
     unsigned i;
 
-    /* Ignore if init callback has been called */
-    if (ice_st->cb_called)
+    /* Ignore if ICE is destroying or init callback has been called */
+    if (ice_st->destroy_req || ice_st->cb_called)
 	return;
 
     /* Notify application when all candidates have been gathered */

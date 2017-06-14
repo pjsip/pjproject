@@ -158,6 +158,11 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 				pj_ice_strans_op op,
 			        pj_status_t status);
 
+/*
+ * Clean up ICE resources.
+ */
+static void tp_ice_on_destroy(void *arg);
+
 
 static pjmedia_transport_op transport_ice_op = 
 {
@@ -288,6 +293,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 	pj_pool_release(pool);
 	*p_tp = NULL;
 	return status;
+    }
+
+    /* Sync to ICE */
+    {
+	pj_grp_lock_t *grp_lock = pj_ice_strans_get_grp_lock(tp_ice->ice_st);
+	pj_grp_lock_add_ref(grp_lock);
+	pj_grp_lock_add_handler(grp_lock, pool, tp_ice, &tp_ice_on_destroy);
     }
 
     /* Done */
@@ -1788,6 +1800,10 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
     pj_bool_t discard = PJ_FALSE;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
+    if (!tp_ice) {
+	/* Destroy on progress */
+	return;
+    }
 
     if (comp_id==1 && tp_ice->rtp_cb) {
 
@@ -1925,6 +1941,10 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     ice_listener *il;
 
     tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
+    if (!tp_ice) {
+	/* Destroy on progress */
+	return;
+    }
 
     pj_perror(5, tp_ice->base.name, result, "ICE operation complete"
 	      " (op=%d%s)", op,
@@ -1964,6 +1984,11 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
+static void tp_ice_on_destroy(void *arg)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)arg;
+    pj_pool_safe_release(&tp_ice->pool);
+}
 
 /*
  * Destroy ICE media transport.
@@ -1972,12 +1997,20 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
+    /* Reset callback and user data */
+    pj_bzero(&tp_ice->cb, sizeof(tp_ice->cb));
+    tp_ice->base.user_data = NULL;
+    tp_ice->rtp_cb = NULL;
+    tp_ice->rtcp_cb = NULL;
+
     if (tp_ice->ice_st) {
+	pj_grp_lock_t *grp_lock = pj_ice_strans_get_grp_lock(tp_ice->ice_st);
 	pj_ice_strans_destroy(tp_ice->ice_st);
 	tp_ice->ice_st = NULL;
+	pj_grp_lock_dec_ref(grp_lock);
+    } else {
+	tp_ice_on_destroy(tp);
     }
-
-    pj_pool_safe_release(&tp_ice->pool);
 
     return PJ_SUCCESS;
 }
