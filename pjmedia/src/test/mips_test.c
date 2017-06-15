@@ -1172,7 +1172,7 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
 					   pjmedia_frame *frame)
 {
     struct wsola_discard_port *wp = (struct wsola_discard_port*)this_port;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     while (pjmedia_circ_buf_get_len(wp->circbuf) <
 		PJMEDIA_PIA_SPF(&wp->base.info) * (CIRC_BUF_FRAME_CNT-1))
