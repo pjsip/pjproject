@@ -90,6 +90,8 @@ struct pj_pcap_file
     pj_pcap_filter  filter;
 };
 
+#pragma pack()
+
 /* Init default filter */
 PJ_DEF(void) pj_pcap_filter_default(pj_pcap_filter *filter)
 {
