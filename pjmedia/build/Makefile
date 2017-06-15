@@ -136,7 +136,7 @@ export PJSDP_LDFLAGS += $(PJMEDIA_LDLIB) \
 #
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o openh264.o \
-			vid_toolbox.o h263_packetizer.o h264_packetizer.o \
+			h263_packetizer.o h264_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o silk.o opus.o $(CODEC_OBJS) \
                         g7221_sdp_match.o amr_sdp_match.o

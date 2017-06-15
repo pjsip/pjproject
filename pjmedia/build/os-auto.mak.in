@@ -275,6 +275,13 @@ export PJMEDIA_VIDEODEV_OBJS += darwin_dev.o
 endif
 
 #
+# VideoToolbox codec
+#
+ifeq ($(AC_PJMEDIA_VIDEO_HAS_VTOOLBOX),yes)
+export CODEC_OBJS += vid_toolbox.o
+endif
+
+#
 # iOS OpenGL video device
 #
 ifeq ($(AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL),yes)

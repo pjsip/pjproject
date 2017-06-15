@@ -812,6 +812,7 @@ else
   *darwin*)
 	ac_pjmedia_video=darwin_os
 	AC_SUBST(ac_pjmedia_video_has_darwin)
+	AC_SUBST(ac_pjmedia_video_has_vtoolbox)
 	AC_SUBST(ac_pjmedia_video_has_ios_opengl)
 	AC_SUBST(ac_darwin_cflags)
 	SAVED_LIBS="$LIBS"
