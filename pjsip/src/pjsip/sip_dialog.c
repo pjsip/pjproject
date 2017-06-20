@@ -169,23 +169,25 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
 	param = uri->header_param.next;
 	while (param != &uri->header_param) {
-	    pjsip_hdr *hdr;
-	    int c;
+	    if (param->value.ptr) {
+		pjsip_hdr *hdr;
+		int c;
 
-	    c = param->value.ptr[param->value.slen];
-	    param->value.ptr[param->value.slen] = '\0';
+		c = param->value.ptr[param->value.slen];
+		param->value.ptr[param->value.slen] = '\0';
 
-	    hdr = (pjsip_hdr*)
-	    	  pjsip_parse_hdr(dlg->pool, &param->name, param->value.ptr,
-				  param->value.slen, NULL);
+		hdr = (pjsip_hdr*)
+		    pjsip_parse_hdr(dlg->pool, &param->name, param->value.ptr,
+				    param->value.slen, NULL);
 
-	    param->value.ptr[param->value.slen] = (char)c;
+		param->value.ptr[param->value.slen] = (char)c;
 
-	    if (hdr == NULL) {
-		status = PJSIP_EINVALIDURI;
-		goto on_error;
+		if (hdr == NULL) {
+		    status = PJSIP_EINVALIDURI;
+		    goto on_error;
+		}
+		pj_list_push_back(&dlg->inv_hdr, hdr);
 	    }
-	    pj_list_push_back(&dlg->inv_hdr, hdr);
 
 	    param = param->next;
 	}
