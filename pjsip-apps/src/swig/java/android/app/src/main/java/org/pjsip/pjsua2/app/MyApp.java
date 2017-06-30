@@ -66,6 +66,7 @@ class MyCall extends Call
 		if (ci.getState() == 
 		    pjsip_inv_state.PJSIP_INV_STATE_DISCONNECTED)
 		{
+		    MyApp.ep.utilLogWrite(3, "MyCall", this.dump(true, ""));
 		    this.delete();
 		}
 	    } catch (Exception e) {
@@ -352,12 +353,20 @@ class MyApp {
 			 ~(pj_log_decoration.PJ_LOG_HAS_CR.swigValue() | 
 			 pj_log_decoration.PJ_LOG_HAS_NEWLINE.swigValue()));
 
+	/* Write log to file (just uncomment whenever needed) */
+	//String log_path = android.os.Environment.getExternalStorageDirectory().toString();
+	//log_cfg.setFilename(log_path + "/pjsip.log");
+
 	/* Set ua config. */
 	UaConfig ua_cfg = epConfig.getUaConfig();
 	ua_cfg.setUserAgent("Pjsua2 Android " + ep.libVersion().getFull());
-	StringVector stun_servers = new StringVector();
-	stun_servers.add("stun.pjsip.org");
-	ua_cfg.setStunServer(stun_servers);
+
+	/* STUN server. */
+	//StringVector stun_servers = new StringVector();
+	//stun_servers.add("stun.pjsip.org");
+	//ua_cfg.setStunServer(stun_servers);
+
+	/* No worker thread */
 	if (own_worker_thread) {
 	    ua_cfg.setThreadCnt(0);
 	    ua_cfg.setMainThreadOnly(true);
