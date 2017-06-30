@@ -1237,7 +1237,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 
 	if (i != allow->count) {
 	    /* UPDATE is present in Allow */
-	    rem_option |= PJSIP_INV_SUPPORT_UPDATE;
+	    *options |= PJSIP_INV_SUPPORT_UPDATE;
 	}
 
     }
