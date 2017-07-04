@@ -106,8 +106,20 @@ static const char *desc =
 static void print_stream_stat(pjmedia_stream *stream, 
 			      const pjmedia_codec_param *codec_param);
 
-/* Prototype for LIBSRTP utility in file datatypes.c */
-int hex_string_to_octet_string(char *raw, char *hex, int len);
+/* Hexa string to octet array */
+int my_hex_string_to_octet_string(char *raw, char *hex, int len)
+{
+    int i;
+    for (i = 0; i < len; i+=2) {
+	int tmp;
+	if (i+1 >= len || !pj_isxdigit(hex[i]) || !pj_isxdigit(hex[i+1]))
+	    return i;
+	tmp  = pj_hex_digit_to_val((unsigned char)hex[i]) << 4;
+	tmp |= pj_hex_digit_to_val((unsigned char)hex[i+1]);
+	raw[i/2] = (char)(tmp & 0xFF);
+    }
+    return len;
+}
 
 /* 
  * Register all codecs. 
@@ -487,14 +499,14 @@ int main(int argc, char *argv[])
 	    break;
 
 	case OPT_SRTP_TX_KEY:
-	    tmp_key_len = hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
-						     (int)strlen(pj_optarg));
+	    tmp_key_len = my_hex_string_to_octet_string(tmp_tx_key, pj_optarg, 
+						        (int)strlen(pj_optarg));
 	    pj_strset(&srtp_tx_key, tmp_tx_key, tmp_key_len/2);
 	    break;
 
 	case OPT_SRTP_RX_KEY:
-	    tmp_key_len = hex_string_to_octet_string(tmp_rx_key, pj_optarg, 
-						     (int)strlen(pj_optarg));
+	    tmp_key_len = my_hex_string_to_octet_string(tmp_rx_key, pj_optarg, 
+						        (int)strlen(pj_optarg));
 	    pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
 	    break;
 #endif
