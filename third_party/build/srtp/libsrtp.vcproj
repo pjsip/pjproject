@@ -3137,10 +3137,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\srtp\include\rtp.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\srtp\include\srtp.h"
 				>
 			</File>
@@ -3162,14 +3158,224 @@
 				<File
 					RelativePath="..\..\srtp\crypto\cipher\aes.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
-					RelativePath="..\..\srtp\crypto\cipher\aes_cbc.c"
+					RelativePath="..\..\srtp\crypto\cipher\aes_gcm_ossl.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\cipher\aes_icm.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\srtp\crypto\cipher\aes_icm_ossl.c"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\cipher\cipher.c"
@@ -3190,6 +3396,113 @@
 				<File
 					RelativePath="..\..\srtp\crypto\hash\hmac.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\srtp\crypto\hash\hmac_ossl.c"
+					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|x64"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\hash\null_auth.c"
@@ -3198,6 +3511,13 @@
 				<File
 					RelativePath="..\..\srtp\crypto\hash\sha1.c"
 					>
+					<FileConfiguration
+						Name="Debug|Win32"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
 				</File>
 			</Filter>
 			<Filter
@@ -3221,10 +3541,6 @@
 				>
 				<File
 					RelativePath="..\..\srtp\crypto\math\datatypes.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\math\gf2_8.c"
 					>
 				</File>
 				<File
@@ -3252,10 +3568,6 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\srtp\crypto\include\aes_cbc.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\srtp\crypto\include\aes_icm.h"
 					>
 				</File>
@@ -3272,23 +3584,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\srtp\crypto\include\crypto.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\srtp\crypto\include\crypto_kernel.h"
 					>
 				</File>
 				<File
-					RelativePath="..\..\srtp\crypto\include\crypto_math.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\srtp\crypto\include\crypto_types.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\include\cryptoalg.h"
 					>
 				</File>
 				<File
@@ -3300,19 +3600,11 @@
 					>
 				</File>
 				<File
-					RelativePath="..\..\srtp\crypto\include\gf2_8.h"
-					>
-				</File>
-				<File
 					RelativePath="..\..\srtp\crypto\include\hmac.h"
 					>
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\include\integers.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\include\kernel_compat.h"
 					>
 				</File>
 				<File
@@ -3325,14 +3617,6 @@
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\include\null_cipher.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\include\prng.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\include\rand_source.h"
 					>
 				</File>
 				<File
@@ -3349,26 +3633,6 @@
 				</File>
 				<File
 					RelativePath="..\..\srtp\crypto\include\stat.h"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\include\xfm.h"
-					>
-				</File>
-			</Filter>
-			<Filter
-				Name="rng"
-				>
-				<File
-					RelativePath="..\..\srtp\crypto\rng\ctr_prng.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\rng\prng.c"
-					>
-				</File>
-				<File
-					RelativePath="..\..\srtp\crypto\rng\rand_source.c"
 					>
 				</File>
 			</Filter>

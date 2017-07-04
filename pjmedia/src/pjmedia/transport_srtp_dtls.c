@@ -892,6 +892,8 @@ static void on_ice_complete2(pjmedia_transport *tp,
     dtls_srtp *ds = (dtls_srtp*)user_data;
     pj_assert(ds);
 
+    PJ_UNUSED_ARG(tp);
+
     if (op == PJ_ICE_STRANS_OP_NEGOTIATION && status == PJ_SUCCESS &&
 	ds->setup == DTLS_SETUP_ACTIVE)
     {
@@ -981,6 +983,9 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
     PJ_LOG(2,(ds->base.name, "dtls_media_create()"));
 #endif
 
+    PJ_UNUSED_ARG(sdp_pool);
+    PJ_UNUSED_ARG(options);
+
     if (ds->srtp->offerer_side) {
 	/* As offerer: do nothing. */
     } else {
@@ -1032,6 +1037,8 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_encode_sdp()"));
 #endif
+
+    PJ_UNUSED_ARG(sdp_pool);
 
     m_rem = sdp_remote ? sdp_remote->media[media_index] : NULL;
     m_loc = sdp_local->media[media_index];
@@ -1183,6 +1190,8 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_media_start()"));
 #endif
+
+    PJ_UNUSED_ARG(tmp_pool);
 
     m_rem = sdp_remote->media[media_index];
     m_loc = sdp_local->media[media_index];

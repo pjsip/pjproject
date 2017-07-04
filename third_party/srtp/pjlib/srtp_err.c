@@ -21,16 +21,10 @@
 
 /* Redirect libsrtp error to PJ_LOG */
 
-err_reporting_level_t err_level = err_level_none;
+srtp_err_reporting_level_t err_level = srtp_err_level_error;
 
-err_status_t
-err_reporting_init(const char *ident) {
-    PJ_UNUSED_ARG(ident);
-    return err_status_ok;
-}
-
-void
-err_report(int priority, const char *format, ...) {
+void srtp_err_report(srtp_err_reporting_level_t priority, const char *format, ...)
+{
   va_list args;
 
 #if PJ_LOG_MAX_LEVEL >= 1
@@ -43,8 +37,18 @@ err_report(int priority, const char *format, ...) {
 #endif
 }
 
-void
-err_reporting_set_level(err_reporting_level_t lvl) { 
+void srtp_err_reporting_set_level(srtp_err_reporting_level_t lvl)
+{ 
   err_level = lvl;
 }
 
+srtp_err_status_t srtp_err_reporting_init(void)
+{
+    return srtp_err_status_ok;
+}
+
+srtp_err_status_t srtp_install_err_report_handler(srtp_err_report_handler_func_t func)
+{
+    PJ_UNUSED_ARG(func);
+    return srtp_err_status_ok;
+}

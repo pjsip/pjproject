@@ -74,86 +74,92 @@ static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 static const pj_str_t ID_INACTIVE = { "inactive", 8 };
 static const pj_str_t ID_CRYPTO   = { "crypto", 6 };
 
-typedef void (*crypto_method_t)(crypto_policy_t *policy);
+typedef void (*crypto_method_t)(srtp_crypto_policy_t *policy);
 
 typedef struct crypto_suite
 {
     char		*name;
-    cipher_type_id_t	 cipher_type;
+    srtp_cipher_type_id_t cipher_type;
     unsigned		 cipher_key_len;    /* key + salt length    */
     unsigned		 cipher_salt_len;   /* salt only length	    */
-    auth_type_id_t	 auth_type;
+    srtp_auth_type_id_t	 auth_type;
     unsigned		 auth_key_len;
     unsigned		 srtp_auth_tag_len;
     unsigned		 srtcp_auth_tag_len;
-    sec_serv_t		 service;
+    srtp_sec_serv_t	 service;
     /* This is an attempt to validate crypto support by libsrtp, i.e: it should
      * raise linking error if the libsrtp does not support the crypto. 
      */
-    cipher_type_t       *ext_cipher_type;
+    srtp_cipher_type_t  *ext_cipher_type;
     crypto_method_t      ext_crypto_method;
 } crypto_suite;
 
-extern cipher_type_t aes_gcm_256_openssl;
-extern cipher_type_t aes_gcm_128_openssl;
-extern cipher_type_t aes_icm_192;
+extern srtp_cipher_type_t srtp_aes_gcm_256_openssl;
+extern srtp_cipher_type_t srtp_aes_gcm_128_openssl;
+extern srtp_cipher_type_t srtp_aes_icm_192;
 
 /* https://www.iana.org/assignments/sdp-security-descriptions/sdp-security-descriptions.xhtml */
 static crypto_suite crypto_suites[] = {
     /* plain RTP/RTCP (no cipher & no auth) */
-    {"NULL", NULL_CIPHER, 0, NULL_AUTH, 0, 0, 0, sec_serv_none},
+    {"NULL", SRTP_NULL_CIPHER, 0, SRTP_NULL_AUTH, 0, 0, 0, sec_serv_none},
 
 #if defined(PJMEDIA_SRTP_HAS_AES_GCM_256)&&(PJMEDIA_SRTP_HAS_AES_GCM_256!=0)
 
     /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
-    {"AEAD_AES_256_GCM", AES_256_GCM, 44, 12,
-	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth, &aes_gcm_256_openssl},
+    {"AEAD_AES_256_GCM", SRTP_AES_GCM_256, 44, 12,
+	SRTP_NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth,
+	&srtp_aes_gcm_256_openssl},
 
     /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
-    {"AEAD_AES_256_GCM_8", AES_256_GCM, 44, 12,
-	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth, &aes_gcm_256_openssl},
+    {"AEAD_AES_256_GCM_8", SRTP_AES_GCM_256, 44, 12,
+	SRTP_NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth,
+	&srtp_aes_gcm_256_openssl},
 #endif
 #if defined(PJMEDIA_SRTP_HAS_AES_CM_256)&&(PJMEDIA_SRTP_HAS_AES_CM_256!=0)
 
-    /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_256_CM_HMAC_SHA1_80", AES_ICM, 46, 14, HMAC_SHA1, 20, 10, 10,
-	sec_serv_conf_and_auth, NULL, 
-        &crypto_policy_set_aes_cm_256_hmac_sha1_80},
+    /* cipher AES_CM_256, auth SRTP_HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_256_CM_HMAC_SHA1_80", SRTP_AES_ICM_256, 46, 14,
+	SRTP_HMAC_SHA1, 20, 10, 10, sec_serv_conf_and_auth,
+	NULL, &srtp_crypto_policy_set_aes_cm_256_hmac_sha1_80},
 
-    /* cipher AES_CM_256, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_256_CM_HMAC_SHA1_32", AES_ICM, 46, 14, HMAC_SHA1, 20, 4, 10,
-	sec_serv_conf_and_auth, NULL,
-        &crypto_policy_set_aes_cm_256_hmac_sha1_32},
+    /* cipher AES_CM_256, auth SRTP_HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_256_CM_HMAC_SHA1_32", SRTP_AES_ICM_256, 46, 14,
+	SRTP_HMAC_SHA1, 20, 4, 10, sec_serv_conf_and_auth,
+	NULL, &srtp_crypto_policy_set_aes_cm_256_hmac_sha1_32},
 #endif
 #if defined(PJMEDIA_SRTP_HAS_AES_CM_192)&&(PJMEDIA_SRTP_HAS_AES_CM_192!=0)
 
-    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_192_CM_HMAC_SHA1_80", AES_ICM, 38, 14, HMAC_SHA1, 20, 10, 10,
-	sec_serv_conf_and_auth, &aes_icm_192},
+    /* cipher AES_CM_192, auth SRTP_HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_192_CM_HMAC_SHA1_80", SRTP_AES_ICM_192, 38, 14,
+	SRTP_HMAC_SHA1, 20, 10, 10, sec_serv_conf_and_auth,
+	&srtp_aes_icm_192},
 
-    /* cipher AES_CM_192, auth HMAC_SHA1, auth tag len = 4 octets */
-    {"AES_192_CM_HMAC_SHA1_32", AES_ICM, 38, 14, HMAC_SHA1, 20, 4, 10,
-	sec_serv_conf_and_auth, &aes_icm_192},
+    /* cipher AES_CM_192, auth SRTP_HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_192_CM_HMAC_SHA1_32", SRTP_AES_ICM_192, 38, 14,
+	SRTP_HMAC_SHA1, 20, 4, 10, sec_serv_conf_and_auth,
+	&srtp_aes_icm_192},
 #endif
 #if defined(PJMEDIA_SRTP_HAS_AES_GCM_128)&&(PJMEDIA_SRTP_HAS_AES_GCM_128!=0)
 
     /* cipher AES_GCM, NULL auth, auth tag len = 16 octets */
-    {"AEAD_AES_128_GCM", AES_128_GCM, 28, 12,
-	NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth, &aes_gcm_128_openssl},
+    {"AEAD_AES_128_GCM", SRTP_AES_GCM_128, 28, 12,
+	SRTP_NULL_AUTH, 0, 16, 16, sec_serv_conf_and_auth,
+	&srtp_aes_gcm_128_openssl},
 
     /* cipher AES_GCM, NULL auth, auth tag len = 8 octets */
-    {"AEAD_AES_128_GCM_8", AES_128_GCM, 28, 12,
-	NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth, &aes_gcm_128_openssl},
+    {"AEAD_AES_128_GCM_8", SRTP_AES_GCM_128, 28, 12,
+	SRTP_NULL_AUTH, 0, 8, 8, sec_serv_conf_and_auth,
+	&srtp_aes_gcm_128_openssl},
 #endif
 #if defined(PJMEDIA_SRTP_HAS_AES_CM_128)&&(PJMEDIA_SRTP_HAS_AES_CM_128!=0)
 
-    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 10 octets */
-    {"AES_CM_128_HMAC_SHA1_80", AES_ICM, 30, 14, HMAC_SHA1, 20, 10, 10,
-	sec_serv_conf_and_auth},
+    /* cipher AES_CM_128, auth SRTP_HMAC_SHA1, auth tag len = 10 octets */
+    {"AES_CM_128_HMAC_SHA1_80", SRTP_AES_ICM_128, 30, 14,
+	SRTP_HMAC_SHA1, 20, 10, 10, sec_serv_conf_and_auth},
 
-    /* cipher AES_CM_128, auth HMAC_SHA1, auth tag len = 4 octets */
-    {"AES_CM_128_HMAC_SHA1_32", AES_ICM, 30, 14, HMAC_SHA1, 20, 4, 10,
-	sec_serv_conf_and_auth},
+    /* cipher AES_CM_128, auth SRTP_HMAC_SHA1, auth tag len = 4 octets */
+    {"AES_CM_128_HMAC_SHA1_32", SRTP_AES_ICM_128, 30, 14,
+	SRTP_HMAC_SHA1, 20, 4, 10, sec_serv_conf_and_auth},
 #endif
 
     /*
@@ -345,7 +351,7 @@ const char* get_libsrtp_errstr(int err)
 {
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
     static char *liberr[] = {
-	"ok",				    /* err_status_ok            = 0  */
+	"ok",				    /* srtp_err_status_ok       = 0  */
 	"unspecified failure",		    /* err_status_fail          = 1  */
 	"unsupported parameter",	    /* err_status_bad_param     = 2  */
 	"couldn't allocate memory",	    /* err_status_alloc_fail    = 3  */
@@ -412,10 +418,10 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
 #if PJMEDIA_LIBSRTP_AUTO_INIT_DEINIT
     /* Init libsrtp */
     {
-	err_status_t err;
+	srtp_err_status_t err;
 
 	err = srtp_init();
-	if (err != err_status_ok) {
+	if (err != srtp_err_status_ok) {
 	    PJ_LOG(4, (THIS_FILE, "Failed to initialize libsrtp: %s",
 		       get_libsrtp_errstr(err)));
 	    return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
@@ -444,7 +450,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
 
 static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 {
-    err_status_t err;
+    srtp_err_status_t err;
 
     /* Note that currently this SRTP init/deinit is not equipped with
      * reference counter, it should be safe as normally there is only
@@ -466,9 +472,9 @@ static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 # elif defined(PJMEDIA_SRTP_HAS_SHUTDOWN) && PJMEDIA_SRTP_HAS_SHUTDOWN!=0
     err = srtp_shutdown();
 # else
-    err = err_status_ok;
+    err = srtp_err_status_ok;
 # endif
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(4, (THIS_FILE, "Failed to deinitialize libsrtp: %s",
 		   get_libsrtp_errstr(err)));
     }
@@ -679,7 +685,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     transport_srtp  *srtp = (transport_srtp*) tp;
     srtp_policy_t    tx_;
     srtp_policy_t    rx_;
-    err_status_t     err;
+    srtp_err_status_t err;
     int		     cr_tx_idx = 0;
     int		     au_tx_idx = 0;
     int		     cr_rx_idx = 0;
@@ -752,7 +758,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     tx_.rtcp.auth_tag_len   = crypto_suites[au_tx_idx].srtcp_auth_tag_len;
     tx_.next		    = NULL;
     err = srtp_create(&srtp->srtp_tx_ctx, &tx_);
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	goto on_return;
     }
@@ -785,7 +791,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     rx_.rtcp.auth_tag_len   = crypto_suites[au_rx_idx].srtcp_auth_tag_len;
     rx_.next		    = NULL;
     err = srtp_create(&srtp->srtp_rx_ctx, &rx_);
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	srtp_dealloc(srtp->srtp_tx_ctx);
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	goto on_return;
@@ -850,7 +856,7 @@ on_return:
 PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 {
     transport_srtp *p_srtp = (transport_srtp*) srtp;
-    err_status_t err;
+    srtp_err_status_t err;
 
     PJ_ASSERT_RETURN(srtp, PJ_EINVAL);
 
@@ -862,13 +868,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
     }
 
     err = srtp_dealloc(p_srtp->srtp_rx_ctx);
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(4, (p_srtp->pool->obj_name,
 		   "Failed to dealloc RX SRTP context: %s",
 		   get_libsrtp_errstr(err)));
     }
     err = srtp_dealloc(p_srtp->srtp_tx_ctx);
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(4, (p_srtp->pool->obj_name,
 		   "Failed to dealloc TX SRTP context: %s",
 		   get_libsrtp_errstr(err)));
@@ -1031,7 +1037,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     pj_status_t status;
     transport_srtp *srtp = (transport_srtp*) tp;
     int len = (int)size;
-    err_status_t err;
+    srtp_err_status_t err;
 
     if (srtp->bypass_srtp)
 	return pjmedia_transport_send_rtp(srtp->member_tp, pkt, size);
@@ -1049,7 +1055,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     err = srtp_protect(srtp->srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
 
-    if (err == err_status_ok) {
+    if (err == srtp_err_status_ok) {
 	status = pjmedia_transport_send_rtp(srtp->member_tp,
 					    srtp->rtp_tx_buffer, len);
     } else {
@@ -1075,7 +1081,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     pj_status_t status;
     transport_srtp *srtp = (transport_srtp*) tp;
     int len = (int)size;
-    err_status_t err;
+    srtp_err_status_t err;
 
     if (srtp->bypass_srtp) {
 	return pjmedia_transport_send_rtcp2(srtp->member_tp, addr, addr_len,
@@ -1095,7 +1101,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->rtcp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
 
-    if (err == err_status_ok) {
+    if (err == srtp_err_status_ok) {
 	status = pjmedia_transport_send_rtcp2(srtp->member_tp, addr, addr_len,
 					      srtp->rtcp_tx_buffer, len);
     } else {
@@ -1153,7 +1159,7 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
-    err_status_t err;
+    srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;
 
@@ -1200,7 +1206,8 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
     }
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
     if (srtp->probation_cnt > 0 &&
-	(err == err_status_replay_old || err == err_status_replay_fail))
+	(err == srtp_err_status_replay_old ||
+	 err == srtp_err_status_replay_fail))
     {
 	/* Handle such condition that stream is updated (RTP seq is reinited
 	 * & SRTP is restarted), but some old packets are still coming
@@ -1223,7 +1230,7 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 	}
     }
 
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name,
 		  "Failed to unprotect SRTP, pkt size=%d, err=%s",
 		  size, get_libsrtp_errstr(err)));
@@ -1246,7 +1253,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
-    err_status_t err;
+    srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;
 
@@ -1269,7 +1276,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
 	return;
     }
     err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name,
 		  "Failed to unprotect SRTCP, pkt size=%d, err=%s",
 		  size, get_libsrtp_errstr(err)));
@@ -1510,7 +1517,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
 						       int *pkt_len)
 {
     transport_srtp *srtp = (transport_srtp *)tp;
-    err_status_t err;
+    srtp_err_status_t err;
 
     if (srtp->bypass_srtp)
 	return PJ_SUCCESS;
@@ -1533,7 +1540,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
     else
 	err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, pkt, pkt_len);
 
-    if (err != err_status_ok) {
+    if (err != srtp_err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name,
 		  "Failed to unprotect SRTP, pkt size=%d, err=%s",
 		  *pkt_len, get_libsrtp_errstr(err)));
@@ -1541,7 +1548,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
 
     pj_lock_release(srtp->mutex);
 
-    return (err==err_status_ok) ? PJ_SUCCESS : PJMEDIA_ERRNO_FROM_LIBSRTP(err);
+    return (err==srtp_err_status_ok) ? PJ_SUCCESS :
+				       PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 }
 
 #endif

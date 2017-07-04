@@ -225,10 +225,10 @@
 /* #undef size_t */
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "libsrtp 1.5.4"
+#define PACKAGE_STRING "libsrtp 2.1.0"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.5.4"
+#define PACKAGE_VERSION "2.1.0"
 
 
 #endif	/* __SRTP_CONFIG_H__ */

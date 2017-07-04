@@ -9,7 +9,7 @@
  */
 /*
  *	
- * Copyright (c) 2001-2006 Cisco Systems, Inc.
+ * Copyright (c) 2001-2017 Cisco Systems, Inc.
  * All rights reserved.
  * 
  * Redistribution and use in source and binary forms, with or without
@@ -45,6 +45,10 @@
 
 #ifdef HAVE_CONFIG_H
     #include <config.h>
+#endif
+
+#ifdef OPENSSL
+#include <openssl/crypto.h>
 #endif
 
 #include "datatypes.h"
@@ -102,14 +106,13 @@ octet_get_weight(uint8_t octet) {
 char bit_string[MAX_PRINT_STRING_LEN];
 
 uint8_t
-nibble_to_hex_char(uint8_t nibble) {
+srtp_nibble_to_hex_char(uint8_t nibble) {
   char buf[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
 		  '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
   return buf[nibble & 0xF];
 }
 
-char *
-octet_string_hex_string(const void *s, int length) {
+char * srtp_octet_string_hex_string(const void *s, int length) {
   const uint8_t *str = (const uint8_t *)s;
   int i;
   
@@ -118,82 +121,14 @@ octet_string_hex_string(const void *s, int length) {
 
   /* truncate string if it would be too long */
   if (length > MAX_PRINT_STRING_LEN)
-    length = MAX_PRINT_STRING_LEN-1;
+    length = MAX_PRINT_STRING_LEN-2;
   
   for (i=0; i < length; i+=2) {
-    bit_string[i]   = nibble_to_hex_char(*str >> 4);
-    bit_string[i+1] = nibble_to_hex_char(*str++ & 0xF);
+    bit_string[i]   = srtp_nibble_to_hex_char(*str >> 4);
+    bit_string[i+1] = srtp_nibble_to_hex_char(*str++ & 0xF);
   }
   bit_string[i] = 0; /* null terminate string */
   return bit_string;
-}
-
-static inline int
-hex_char_to_nibble(uint8_t c) {
-  switch(c) {
-  case ('0'): return 0x0;
-  case ('1'): return 0x1;
-  case ('2'): return 0x2;
-  case ('3'): return 0x3;
-  case ('4'): return 0x4;
-  case ('5'): return 0x5;
-  case ('6'): return 0x6;
-  case ('7'): return 0x7;
-  case ('8'): return 0x8;
-  case ('9'): return 0x9;
-  case ('a'): return 0xa;
-  case ('A'): return 0xa;
-  case ('b'): return 0xb;
-  case ('B'): return 0xb;
-  case ('c'): return 0xc;
-  case ('C'): return 0xc;
-  case ('d'): return 0xd;
-  case ('D'): return 0xd;
-  case ('e'): return 0xe;
-  case ('E'): return 0xe;
-  case ('f'): return 0xf;
-  case ('F'): return 0xf;
-  default: return -1;   /* this flags an error */
-  }
-  /* NOTREACHED */
-  return -1;  /* this keeps compilers from complaining */
-}
-
-int
-is_hex_string(char *s) {
-  while(*s != 0)
-    if (hex_char_to_nibble(*s++) == -1)
-      return 0;
-  return 1;
-}
-
-/*
- * hex_string_to_octet_string converts a hexadecimal string
- * of length 2 * len to a raw octet string of length len
- */
-
-int
-hex_string_to_octet_string(char *raw, char *hex, int len) {
-  uint8_t x;
-  int tmp;
-  int hex_len;
-
-  hex_len = 0;
-  while (hex_len < len) {
-    tmp = hex_char_to_nibble(hex[0]);
-    if (tmp == -1)
-      return hex_len;
-    x = (tmp << 4);
-    hex_len++;
-    tmp = hex_char_to_nibble(hex[1]);
-    if (tmp == -1)
-      return hex_len;
-    x |= (tmp & 0xff);
-    hex_len++;
-    *raw++ = x;
-    hex += 2;
-  }
-  return hex_len;
 }
 
 char *
@@ -201,8 +136,8 @@ v128_hex_string(v128_t *x) {
   int i, j;
 
   for (i=j=0; i < 16; i++) {
-    bit_string[j++]  = nibble_to_hex_char(x->v8[i] >> 4);
-    bit_string[j++]  = nibble_to_hex_char(x->v8[i] & 0xF);
+    bit_string[j++]  = srtp_nibble_to_hex_char(x->v8[i] >> 4);
+    bit_string[j++]  = srtp_nibble_to_hex_char(x->v8[i] & 0xF);
   }
   
   bit_string[j] = 0; /* null terminate string */
@@ -429,7 +364,7 @@ bitvector_alloc(bitvector_t *v, unsigned long length) {
   if (l == 0)
     v->word = NULL;
   else {
-    v->word = (uint32_t*)crypto_alloc(l);
+    v->word = (uint32_t*)srtp_crypto_alloc(l);
     if (v->word == NULL) {
       v->word = NULL;
       v->length = 0;
@@ -448,7 +383,7 @@ bitvector_alloc(bitvector_t *v, unsigned long length) {
 void
 bitvector_dealloc(bitvector_t *v) {
   if (v->word != NULL)
-    crypto_free(v->word);
+    srtp_crypto_free(v->word);
   v->word = NULL;
   v->length = 0;
 }
@@ -509,24 +444,38 @@ bitvector_left_shift(bitvector_t *x, int shift) {
 
 }
 
-
 int
 octet_string_is_eq(uint8_t *a, uint8_t *b, int len) {
   uint8_t *end = b + len;
+  uint8_t accumulator = 0;
+
+  /*
+   * We use this somewhat obscure implementation to try to ensure the running
+   * time only depends on len, even accounting for compiler optimizations.
+   * The accumulator ends up zero iff the strings are equal.
+   */
   while (b < end)
-    if (*a++ != *b++)
-      return 1;
-  return 0;
+    accumulator |= (*a++ ^ *b++);
+
+  /* Return 1 if *not* equal. */
+  return accumulator != 0;
 }
 
 void
-octet_string_set_to_zero(uint8_t *s, int len) {
-  uint8_t *end = s + len;
+srtp_cleanse(void *s, size_t len)
+{
+  volatile unsigned char *p = (volatile unsigned char *)s;
+  while(len--) *p++ = 0;
+}
 
-  do {
-    *s = 0;
-  } while (++s < end);
-  
+void
+octet_string_set_to_zero(void *s, size_t len)
+{
+#ifdef OPENSSL
+  OPENSSL_cleanse(s, len);
+#else
+  srtp_cleanse(s, len);
+#endif
 }
 
 #ifdef TESTAPP_SOURCE

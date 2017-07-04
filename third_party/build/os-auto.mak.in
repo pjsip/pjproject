@@ -46,15 +46,15 @@ DIRS += srtp
 
 ifeq (@ac_ssl_has_aes_gcm@,0)
 CIPHERS_SRC = crypto/cipher/aes.o crypto/cipher/aes_icm.o       \
-              crypto/cipher/aes_cbc.o
+              # crypto/cipher/aes_cbc.o
 HASHES_SRC  = crypto/hash/sha1.o crypto/hash/hmac.o 		\
 	      # crypto/hash/tmmhv2.o
-RNG_SRC     = crypto/rng/rand_source.o crypto/rng/prng.o 	\
-	      crypto/rng/ctr_prng.o
+RNG_SRC     = # crypto/rng/rand_source.o crypto/rng/prng.o 	\
+	      # crypto/rng/ctr_prng.o
 else
 CIPHERS_SRC = crypto/cipher/aes_icm_ossl.o crypto/cipher/aes_gcm_ossl.o
 HASHES_SRC  = crypto/hash/hmac_ossl.o
-RNG_SRC     = crypto/rng/rand_source_ossl.o
+RNG_SRC     = # crypto/rng/rand_source_ossl.o
 SRTP_OTHER_CFLAGS = -DOPENSSL
 endif
 

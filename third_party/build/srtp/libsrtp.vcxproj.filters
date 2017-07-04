@@ -30,9 +30,6 @@
     <Filter Include="crypto\include">
       <UniqueIdentifier>{b4cf0314-f1bd-44d6-ad75-187c4b03c5c3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="crypto\rng">
-      <UniqueIdentifier>{101639e1-fe64-435f-8428-4c647132ad40}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\srtp\srtp\srtp.c">
@@ -42,9 +39,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\cipher\aes.c">
-      <Filter>crypto\cipher</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\cipher\aes_cbc.c">
       <Filter>crypto\cipher</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\cipher\aes_icm.c">
@@ -80,9 +74,6 @@
     <ClCompile Include="..\..\srtp\crypto\math\datatypes.c">
       <Filter>crypto\math</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\math\gf2_8.c">
-      <Filter>crypto\math</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\math\stat.c">
       <Filter>crypto\math</Filter>
     </ClCompile>
@@ -91,15 +82,6 @@
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\replay\rdbx.c">
       <Filter>crypto\replay</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\rng\ctr_prng.c">
-      <Filter>crypto\rng</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\rng\prng.c">
-      <Filter>crypto\rng</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\rng\rand_source.c">
-      <Filter>crypto\rng</Filter>
     </ClCompile>
     <ClCompile Include="..\..\srtp\srtp\ekt.c">
       <Filter>Source Files</Filter>
@@ -113,14 +95,8 @@
     <ClCompile Include="..\..\srtp\crypto\hash\hmac_ossl.c">
       <Filter>crypto\hash</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\srtp\crypto\rng\rand_source_ossl.c">
-      <Filter>crypto\rng</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\srtp\include\rtp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\srtp\include\srtp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -131,9 +107,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\aes.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\aes_cbc.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\aes_icm.h">
@@ -148,19 +121,10 @@
     <ClInclude Include="..\..\srtp\crypto\include\cipher.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\crypto.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\crypto_kernel.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\crypto_math.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\crypto_types.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\cryptoalg.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\datatypes.h">
@@ -169,16 +133,10 @@
     <ClInclude Include="..\..\srtp\crypto\include\err.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\gf2_8.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\hmac.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\integers.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\kernel_compat.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\key.h">
@@ -188,12 +146,6 @@
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\null_cipher.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\prng.h">
-      <Filter>crypto\include</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\srtp\crypto\include\rand_source.h">
       <Filter>crypto\include</Filter>
     </ClInclude>
     <ClInclude Include="..\..\srtp\crypto\include\rdb.h">

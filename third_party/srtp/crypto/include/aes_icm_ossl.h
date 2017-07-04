@@ -9,7 +9,7 @@
  */
 /*
  *
- * Copyright (c) 2001-2005,2012, Cisco Systems, Inc.
+ * Copyright (c) 2001-2017, Cisco Systems, Inc.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -47,39 +47,16 @@
 #define AES_ICM_H
 
 #include "cipher.h"
+#include "datatypes.h"
 #include <openssl/evp.h>
 #include <openssl/aes.h>
-
-#ifdef OPENSSL_IS_BORINGSSL
-// BoringSSL doesn't support AES-192, cipher will be disabled
-#define SRTP_NO_AES192
-#endif
-
-#define     SALT_SIZE               14
-#define     AES_128_KEYSIZE         AES_BLOCK_SIZE
-#ifndef SRTP_NO_AES192
-#define     AES_192_KEYSIZE         AES_BLOCK_SIZE + AES_BLOCK_SIZE / 2
-#endif
-#define     AES_256_KEYSIZE         AES_BLOCK_SIZE * 2
-#define     AES_128_KEYSIZE_WSALT   AES_128_KEYSIZE + SALT_SIZE
-#ifndef SRTP_NO_AES192
-#define     AES_192_KEYSIZE_WSALT   AES_192_KEYSIZE + SALT_SIZE
-#endif
-#define     AES_256_KEYSIZE_WSALT   AES_256_KEYSIZE + SALT_SIZE
 
 typedef struct {
     v128_t counter;                /* holds the counter value          */
     v128_t offset;                 /* initial offset value             */
-    v256_t key;
     int key_size;
-    EVP_CIPHER_CTX ctx;
-} aes_icm_ctx_t;
-
-err_status_t aes_icm_openssl_set_iv(aes_icm_ctx_t *c, void *iv, int dir);
-err_status_t aes_icm_openssl_context_init(aes_icm_ctx_t *c, const uint8_t *key, int len);
-err_status_t aes_icm_output(aes_icm_ctx_t *c, uint8_t *buffer, int num_octets_to_output);
-uint16_t aes_icm_bytes_encrypted(aes_icm_ctx_t *c);
-
+    EVP_CIPHER_CTX* ctx;
+} srtp_aes_icm_ctx_t;
 
 #endif /* AES_ICM_H */
 

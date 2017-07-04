@@ -493,7 +493,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\srtp\crypto\cipher\aes.c" />
-    <ClCompile Include="..\..\srtp\crypto\cipher\aes_cbc.c" />
     <ClCompile Include="..\..\srtp\crypto\cipher\aes_gcm_ossl.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
@@ -568,66 +567,33 @@
     </ClCompile>
     <ClCompile Include="..\..\srtp\crypto\kernel\key.c" />
     <ClCompile Include="..\..\srtp\crypto\math\datatypes.c" />
-    <ClCompile Include="..\..\srtp\crypto\math\gf2_8.c" />
     <ClCompile Include="..\..\srtp\crypto\math\stat.c" />
     <ClCompile Include="..\..\srtp\crypto\replay\rdb.c" />
     <ClCompile Include="..\..\srtp\crypto\replay\rdbx.c" />
-    <ClCompile Include="..\..\srtp\crypto\rng\ctr_prng.c" />
-    <ClCompile Include="..\..\srtp\crypto\rng\prng.c" />
-    <ClCompile Include="..\..\srtp\crypto\rng\rand_source.c" />
-    <ClCompile Include="..\..\srtp\crypto\rng\rand_source_ossl.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\..\srtp\pjlib\srtp_err.c" />
     <ClCompile Include="..\..\srtp\srtp\srtp.c" />
     <ClCompile Include="..\..\srtp\srtp\ekt.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\srtp\crypto\include\aes.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\aes_cbc.h" />
     <ClInclude Include="..\..\srtp\crypto\include\aes_icm.h" />
     <ClInclude Include="..\..\srtp\crypto\include\alloc.h" />
     <ClInclude Include="..\..\srtp\crypto\include\auth.h" />
     <ClInclude Include="..\..\srtp\crypto\include\cipher.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\crypto.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\cryptoalg.h" />
     <ClInclude Include="..\..\srtp\crypto\include\crypto_kernel.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\crypto_math.h" />
     <ClInclude Include="..\..\srtp\crypto\include\crypto_types.h" />
     <ClInclude Include="..\..\srtp\crypto\include\datatypes.h" />
     <ClInclude Include="..\..\srtp\crypto\include\err.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\gf2_8.h" />
     <ClInclude Include="..\..\srtp\crypto\include\hmac.h" />
     <ClInclude Include="..\..\srtp\crypto\include\integers.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\kernel_compat.h" />
     <ClInclude Include="..\..\srtp\crypto\include\key.h" />
     <ClInclude Include="..\..\srtp\crypto\include\null_auth.h" />
     <ClInclude Include="..\..\srtp\crypto\include\null_cipher.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\prng.h" />
-    <ClInclude Include="..\..\srtp\crypto\include\rand_source.h" />
     <ClInclude Include="..\..\srtp\crypto\include\rdb.h" />
     <ClInclude Include="..\..\srtp\crypto\include\rdbx.h" />
     <ClInclude Include="..\..\srtp\crypto\include\sha1.h" />
     <ClInclude Include="..\..\srtp\crypto\include\stat.h" />
     <ClInclude Include="..\..\srtp\include\ekt.h" />
-    <ClInclude Include="..\..\srtp\include\rtp.h" />
     <ClInclude Include="..\..\srtp\include\srtp.h" />
     <ClInclude Include="..\..\srtp\include\ut_sim.h" />
     <ClInclude Include="srtp_config.h" />

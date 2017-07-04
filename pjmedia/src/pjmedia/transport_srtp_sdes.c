@@ -31,6 +31,10 @@
 
 #endif
 
+
+#include <pj/rand.h>
+
+
 static pj_status_t sdes_media_create(pjmedia_transport *tp,
 				     pj_pool_t *sdp_pool,
 				     unsigned options,
@@ -111,32 +115,27 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
     if (crypto->key.slen == 0) {
 	pj_bool_t key_ok;
 	char key[MAX_KEY_LEN];
-	err_status_t err;
 	unsigned i;
 
 	PJ_ASSERT_RETURN(MAX_KEY_LEN >= crypto_suites[cs_idx].cipher_key_len,
 			 PJ_ETOOSMALL);
 
 	do {
-	    key_ok = PJ_TRUE;
-
-
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
-	    err = RAND_bytes((unsigned char*)key,
-			     crypto_suites[cs_idx].cipher_key_len);
+	    int err = RAND_bytes((unsigned char*)key,
+				 crypto_suites[cs_idx].cipher_key_len);
 	    if (err != 1) {
 		PJ_LOG(5,(THIS_FILE, "Failed generating random key"));
 		return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
 	    }
-#else	    
-	    err = crypto_get_random((unsigned char*)key,
-				     crypto_suites[cs_idx].cipher_key_len);
-	    if (err != err_status_ok) {
-		PJ_LOG(5,(THIS_FILE, "Failed generating random key: %s",
-			  get_libsrtp_errstr(err)));
-		return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
-	    }
+#else
+	    PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is used "
+				 "for generating SRTP key"));
+	    for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i)
+		key[i] = (char)(pj_rand() & 0xFF);
 #endif
+
+	    key_ok = PJ_TRUE;
 	    for (i=0; i<crypto_suites[cs_idx].cipher_key_len && key_ok; ++i)
 		if (key[i] == 0) key_ok = PJ_FALSE;
 
@@ -266,6 +265,9 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
 				      unsigned media_index)
 {
     struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
+
+    PJ_UNUSED_ARG(options);
+    PJ_UNUSED_ARG(sdp_pool);
 
     /* Validations */
     if (srtp->offerer_side) {
