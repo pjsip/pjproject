@@ -766,8 +766,10 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 	}
     }
 
-    if (send_cnt == 0)
+    if (send_cnt == 0) {
+        pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
 	return PJLIB_UTIL_EDNSNOWORKINGNS;
+    }
 
     ++q->transmit_cnt;
 
