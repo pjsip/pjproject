@@ -1848,8 +1848,12 @@ static void send_msg_callback( pjsip_send_state *send_state,
     {
 	*cont = PJ_FALSE;
 
-	/* Decrease pending send counter */
-	pj_grp_lock_dec_ref(tsx->grp_lock);
+	/* Decrease pending send counter, but only if the transaction layer
+	 * hasn't been shutdown.
+	 */
+	if (mod_tsx_layer.mod.id >= 0)
+	    pj_grp_lock_dec_ref(tsx->grp_lock);
+
 	return;
     }
 
