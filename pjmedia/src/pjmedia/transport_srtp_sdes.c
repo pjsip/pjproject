@@ -131,8 +131,13 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 #else
 	    PJ_LOG(3,(THIS_FILE, "Warning: simple random generator is used "
 				 "for generating SRTP key"));
-	    for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i)
-		key[i] = (char)(pj_rand() & 0xFF);
+	    for (i=0; i<crypto_suites[cs_idx].cipher_key_len; ++i) {
+		pj_timestamp ts;
+		if (pj_rand() % 7 < 2)
+		    pj_thread_sleep(pj_rand() % 11);
+		pj_get_timestamp(&ts);
+		key[i] = (char)((pj_rand() + ts.u32.lo) & 0xFF);
+	    }
 #endif
 
 	    key_ok = PJ_TRUE;
