@@ -87,9 +87,11 @@ static const char *desc =
  "                        e.g: AES_CM_128_HMAC_SHA1_80 (default),       \n"
  "                             AES_CM_128_HMAC_SHA1_32                  \n"
  "                        Use this option along with the TX & RX keys,  \n"
- "                        formated of 60 hex digits (e.g: E148DA..)      \n"
+ "                        formated of 60 hex digits (e.g: E148DA..)     \n"
  "  --srtp-tx-key         SRTP key for transmiting                      \n"
  "  --srtp-rx-key         SRTP key for receiving                        \n"
+ "  --srtp-dtls-client    Use DTLS for SRTP keying, as DTLS client      \n"
+ "  --srtp-dtls-server    Use DTLS for SRTP keying, as DTLS server      \n"
 #endif
 
  "\n"
@@ -146,6 +148,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
 				  const pj_str_t *crypto_suite,
 				  const pj_str_t *srtp_tx_key,
 				  const pj_str_t *srtp_rx_key,
+				  pj_bool_t is_dtls_client,
+				  pj_bool_t is_dtls_server,
 #endif
 				  pjmedia_stream **p_stream )
 {
@@ -286,24 +290,42 @@ static pj_status_t create_stream( pj_pool_t *pool,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP enabled */
     if (use_srtp) {
-	pjmedia_srtp_crypto tx_plc, rx_plc;
-
 	status = pjmedia_transport_srtp_create(med_endpt, transport, 
 					       NULL, &srtp_tp);
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	pj_bzero(&tx_plc, sizeof(pjmedia_srtp_crypto));
-	pj_bzero(&rx_plc, sizeof(pjmedia_srtp_crypto));
+	if (is_dtls_client || is_dtls_server) {
+	    char fp[128];
+	    pj_size_t fp_len = sizeof(fp);
+	    pjmedia_srtp_dtls_nego_param dtls_param;
+	    
+	    pjmedia_transport_srtp_dtls_get_fingerprint(srtp_tp, "SHA-256", fp, &fp_len);
+	    PJ_LOG(3, (THIS_FILE, "Local cert fingerprint: %s", fp));
 
-	tx_plc.key = *srtp_tx_key;
-	tx_plc.name = *crypto_suite;
-	rx_plc.key = *srtp_rx_key;
-	rx_plc.name = *crypto_suite;
-	
-	status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
-	if (status != PJ_SUCCESS)
-	    return status;
+	    pj_bzero(&dtls_param, sizeof(dtls_param));
+	    pj_sockaddr_cp(&dtls_param.rem_addr, rem_addr);
+	    pj_sockaddr_cp(&dtls_param.rem_rtcp, rem_addr);
+	    dtls_param.is_role_active = is_dtls_client;
+
+	    status = pjmedia_transport_srtp_dtls_start_nego(srtp_tp, &dtls_param);
+	    if (status != PJ_SUCCESS)
+		return status;
+	} else {
+	    pjmedia_srtp_crypto tx_plc, rx_plc;
+
+	    pj_bzero(&tx_plc, sizeof(pjmedia_srtp_crypto));
+	    pj_bzero(&rx_plc, sizeof(pjmedia_srtp_crypto));
+
+	    tx_plc.key = *srtp_tx_key;
+	    tx_plc.name = *crypto_suite;
+	    rx_plc.key = *srtp_rx_key;
+	    rx_plc.name = *crypto_suite;
+    	
+	    status = pjmedia_transport_srtp_start(srtp_tp, &tx_plc, &rx_plc);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
 
 	transport = srtp_tp;
     }
@@ -361,6 +383,8 @@ int main(int argc, char *argv[])
     pj_str_t  srtp_tx_key = {NULL, 0};
     pj_str_t  srtp_rx_key = {NULL, 0};
     pj_str_t  srtp_crypto_suite = {NULL, 0};
+    pj_bool_t is_dtls_client = PJ_FALSE;
+    pj_bool_t is_dtls_server = PJ_FALSE;
     int	tmp_key_len;
 #endif
 
@@ -391,6 +415,8 @@ int main(int argc, char *argv[])
 #endif
 	OPT_SRTP_TX_KEY	= 'x',
 	OPT_SRTP_RX_KEY	= 'y',
+	OPT_SRTP_DTLS_CLIENT = 'd',
+	OPT_SRTP_DTLS_SERVER = 'D',
 	OPT_HELP	= 'h',
     };
 
@@ -408,6 +434,8 @@ int main(int argc, char *argv[])
 	{ "use-srtp",	    2, 0, OPT_USE_SRTP },
 	{ "srtp-tx-key",    1, 0, OPT_SRTP_TX_KEY },
 	{ "srtp-rx-key",    1, 0, OPT_SRTP_RX_KEY },
+	{ "srtp-dtls-client", 0, 0, OPT_SRTP_DTLS_CLIENT },
+	{ "srtp-dtls-server", 0, 0, OPT_SRTP_DTLS_SERVER },
 #endif
 	{ "help",	    0, 0, OPT_HELP },
 	{ NULL, 0, 0, 0 },
@@ -509,6 +537,20 @@ int main(int argc, char *argv[])
 						        (int)strlen(pj_optarg));
 	    pj_strset(&srtp_rx_key, tmp_rx_key, tmp_key_len/2);
 	    break;
+	case OPT_SRTP_DTLS_CLIENT:
+	    is_dtls_client = PJ_TRUE;
+	    if (is_dtls_server) {
+		printf("Error: Cannot be as both DTLS server & client\n");
+		return 1;
+	    }
+	    break;
+	case OPT_SRTP_DTLS_SERVER:
+	    is_dtls_server = PJ_TRUE;
+	    if (is_dtls_client) {
+		printf("Error: Cannot be as both DTLS server & client\n");
+		return 1;
+	    }
+	    break;
 #endif
 
 	case OPT_HELP:
@@ -524,7 +566,7 @@ int main(int argc, char *argv[])
 
 
     /* Verify arguments. */
-    if (dir & PJMEDIA_DIR_ENCODING) {
+    if (dir & PJMEDIA_DIR_ENCODING || is_dtls_client || is_dtls_server) {
 	if (remote_addr.sin_addr.s_addr == 0) {
 	    printf("Error: remote address must be set\n");
 	    return 1;
@@ -539,7 +581,8 @@ int main(int argc, char *argv[])
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP validation */
     if (use_srtp) {
-	if (!srtp_tx_key.slen || !srtp_rx_key.slen)
+	if (!is_dtls_client && !is_dtls_server && 
+	    (!srtp_tx_key.slen || !srtp_rx_key.slen))
 	{
 	    printf("Error: Key for each SRTP stream direction must be set\n");
 	    return 1;
@@ -595,6 +638,7 @@ int main(int argc, char *argv[])
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 			   use_srtp, &srtp_crypto_suite, 
 			   &srtp_tx_key, &srtp_rx_key,
+			   is_dtls_client, is_dtls_server,
 #endif
 			   &stream);
     if (status != PJ_SUCCESS)

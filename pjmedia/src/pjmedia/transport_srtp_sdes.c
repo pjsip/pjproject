@@ -76,13 +76,14 @@ static pj_status_t sdes_create(transport_srtp *srtp,
     pjmedia_transport *sdes;
 
     sdes = PJ_POOL_ZALLOC_T(srtp->pool, pjmedia_transport);
-    pj_ansi_strncpy(sdes->name, "SDES", PJ_MAX_OBJ_NAME);
+    pj_ansi_strncpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
+    pj_memcpy(sdes->name, "sdes", 4);
     sdes->type = PJMEDIA_TRANSPORT_TYPE_SRTP;
     sdes->op = &sdes_op;
     sdes->user_data = srtp;
 
     *p_keying = sdes;
-    PJ_LOG(5,(THIS_FILE, "SRTP keying SDES created"));
+    PJ_LOG(5,(srtp->pool->obj_name, "SRTP keying SDES created"));
     return PJ_SUCCESS;
 }
 

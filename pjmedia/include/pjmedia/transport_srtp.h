@@ -268,6 +268,39 @@ typedef struct pjmedia_srtp_info
 
 
 /**
+ * This structure specifies DTLS-SRTP negotiation parameters.
+ */
+typedef struct pjmedia_srtp_dtls_nego_param
+{
+    /**
+     * Fingerprint of remote certificate, should be formatted as
+     * "SHA-256/1 XX:XX:XX...". If this is not set, fingerprint verification
+     * will not be performed.
+     */
+    pj_str_t		 rem_fingerprint;
+
+    /**
+     * Remote address and port.
+     */
+    pj_sockaddr		 rem_addr;
+
+    /**
+     * Remote RTCP address and port.
+     */
+    pj_sockaddr		 rem_rtcp;
+
+    /**
+     * Set to PJ_TRUE if our role is active. Active role will initiates
+     * the DTLS negotiation. Passive role will wait for incoming DTLS
+     * negotiation packet.
+     */
+    pj_bool_t		 is_role_active;
+
+} pjmedia_srtp_dtls_nego_param;
+
+
+
+/**
  * Initialize SRTP library. This function should be called before
  * any SRTP functions, however calling #pjmedia_transport_srtp_create() 
  * will also invoke this function. This function will also register SRTP
@@ -307,6 +340,50 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_create(
 				       pjmedia_transport *tp,
 				       const pjmedia_srtp_setting *opt,
 				       pjmedia_transport **p_tp);
+
+/**
+ * Get fingerprint of local DTLS-SRTP certificate.
+ *
+ * @param srtp	    The SRTP transport.
+ * @param hash	    Fingerprint hash algorithm, currently valid values are
+ *		    "SHA-256" and "SHA-1".
+ * @param buf	    Buffer for fingerprint output. The output will be
+ *		    formatted as "SHA-256/1 XX:XX:XX..." and null terminated.
+ * @param len	    On input, the size of the buffer.
+ *		    On output, the length of the fingerprint.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_dtls_get_fingerprint(
+				pjmedia_transport *srtp,
+				const char *hash,
+				char *buf, pj_size_t *len);
+
+
+/**
+ * Manually start DTLS-SRTP negotiation with the given parameters. Application
+ * only needs to call this function when the SRTP transport is used without
+ * SDP offer/answer. When SDP offer/answer framework is used, the DTLS-SRTP
+ * negotiation will be handled by pjmedia_transport_media_create(),
+ * pjmedia_transport_media_start(), pjmedia_transport_media_encode_sdp(), and
+ * pjmedia_transport_media_stop().
+ *
+ * When the negotiation completes, application will be notified via SRTP
+ * callback on_srtp_nego_complete(), if set. If the negotiation is successful,
+ * SRTP will be automatically started.
+ *
+ * Note that if the SRTP member transport is an ICE transport, application
+ * should only call this function after ICE negotiation is completed
+ * successfully.
+ *
+ * @param srtp	    The SRTP transport.
+ * @param param	    DTLS-SRTP nego parameter.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
+				pjmedia_transport *srtp,
+				const pjmedia_srtp_dtls_nego_param *param);
 
 
 /**

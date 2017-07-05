@@ -187,7 +187,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
     ds->srtp = srtp;
 
     *p_keying = &ds->base;
-    PJ_LOG(5,(THIS_FILE, "SRTP keying DTLS-SRTP created"));
+    PJ_LOG(5,(srtp->pool->obj_name, "SRTP keying DTLS-SRTP created"));
     return PJ_SUCCESS;
 }
 
@@ -548,8 +548,8 @@ static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
     else if (!pj_strncmp2(&ds->rem_fingerprint, "SHA-1 ", 6))
 	is_sha256 = PJ_FALSE;
     else {
-	PJ_LOG(4,(ds->base.name, "Remote hash algo in SDP for "
-		  "DTLS-SRTP is not supported"));
+	PJ_LOG(4,(ds->base.name, "Hash algo specified in remote SDP for "
+		  "its DTLS certificate fingerprint is not supported"));
 	return PJ_ENOTSUP;
     }
 
@@ -640,8 +640,10 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
 	ds->pending_start = PJ_FALSE;
 	ds->srtp->keying_pending_cnt--;
 
+	/* Copy negotiated policy to SRTP */
 	ds->srtp->tx_policy_neg = ds->tx_crypto;
 	ds->srtp->rx_policy_neg = ds->rx_crypto;
+
 	status = start_srtp(ds->srtp);
 	if (status != PJ_SUCCESS)
 	    pj_perror(4, ds->base.name, status, "Failed starting SRTP");
@@ -715,7 +717,7 @@ static pj_status_t ssl_handshake(dtls_srtp *ds)
 
     /* Finally, DTLS nego started! */
     ds->nego_started = PJ_TRUE;
-    PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation initiated as %s",
+    PJ_LOG(4,(ds->base.name, "DTLS-SRTP negotiation initiated as %s",
 	      (ds->setup==DTLS_SETUP_ACTIVE? "client":"server")));
 
 on_return:
@@ -1247,14 +1249,16 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	ds->srtp->tx_policy_neg = ds->tx_crypto;
 	ds->srtp->rx_policy_neg = ds->rx_crypto;
 
-	/* Verify remote fingerprint if not yet */
+	/* Verify remote fingerprint (if available) */
 	if (ds->rem_fingerprint.slen && ds->rem_fprint_status == PJ_EPENDING)
+	{
 	    ds->rem_fprint_status = ssl_match_fingerprint(ds);
-	if (ds->rem_fprint_status != PJ_SUCCESS) {
-	    pj_perror(4, ds->base.name, ds->rem_fprint_status,
-		      "Fingerprint specified in remote SDP doesn't match "
-		      "to actual remote certificate fingerprint!");
-	    return ds->rem_fprint_status;
+	    if (ds->rem_fprint_status != PJ_SUCCESS) {
+		pj_perror(4, ds->base.name, ds->rem_fprint_status,
+			  "Fingerprint specified in remote SDP doesn't match "
+			  "to actual remote certificate fingerprint!");
+		return ds->rem_fprint_status;
+	    }
 	}
 
 	return PJ_SUCCESS;
@@ -1343,4 +1347,93 @@ static pj_status_t dtls_destroy(pjmedia_transport *tp)
     pj_pool_safe_release(&ds->pool);
 
     return PJ_SUCCESS;
+}
+
+
+/* Get fingerprint of local DTLS-SRTP certificate. */
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_get_fingerprint(
+				pjmedia_transport *tp,
+				const char *hash,
+				char *buf, pj_size_t *len)
+{
+    PJ_ASSERT_RETURN(dtls_cert, PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(tp && hash && buf && len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pj_ansi_strcmp(hash, "SHA-256")==0 ||
+		     pj_ansi_strcmp(hash, "SHA-1")==0, PJ_EINVAL);
+    PJ_UNUSED_ARG(tp);
+
+    return ssl_get_fingerprint(dtls_cert,
+			       pj_ansi_strcmp(hash, "SHA-256")==0,
+			       buf, len);
+}
+
+
+/* Manually start DTLS-SRTP negotiation (without SDP offer/answer) */
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
+				pjmedia_transport *tp,
+				const pjmedia_srtp_dtls_nego_param *param)
+{
+    transport_srtp *srtp = (transport_srtp*)tp;
+    dtls_srtp *ds = NULL;
+    unsigned j;
+    pjmedia_transport_attach_param ap;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(tp && param, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pj_sockaddr_has_addr(&param->rem_addr), PJ_EINVAL);
+
+    /* Find DTLS keying and destroy any other keying. */
+    for (j = 0; j < srtp->keying_cnt; ++j) {
+	if (srtp->keying[j]->op == &dtls_op)
+	    ds = (dtls_srtp*)srtp->keying[j];
+	else
+	    pjmedia_transport_close(srtp->keying[j]);
+    }
+
+    /* DTLS-SRTP is not enabled */
+    if (!ds)
+	return PJ_ENOTSUP;
+
+    /* Set SRTP keying to DTLS-SRTP only */
+    srtp->keying_cnt = 1;
+    srtp->keying[0] = &ds->base;
+    srtp->keying_pending_cnt = 1;
+
+    /* Apply param to DTLS-SRTP internal states */
+    pj_strdup(ds->pool, &ds->rem_fingerprint, &param->rem_fingerprint);
+    ds->rem_fprint_status = PJ_EPENDING;
+    ds->rem_addr = param->rem_addr;
+    ds->rem_rtcp = param->rem_rtcp;
+    ds->setup = param->is_role_active? DTLS_SETUP_ACTIVE:DTLS_SETUP_PASSIVE;
+
+    /* Pending start SRTP */
+    ds->pending_start = PJ_TRUE;
+    srtp->keying_pending_cnt++;
+
+    /* Create SSL */
+    status = ssl_create(ds);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Attach member transport, so we can send/receive DTLS init packets */
+    pj_bzero(&ap, sizeof(ap));
+    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
+    pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
+    ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
+    status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Start DTLS handshake */
+    pj_bzero(&srtp->rx_policy_neg, sizeof(srtp->rx_policy_neg));
+    pj_bzero(&srtp->tx_policy_neg, sizeof(srtp->tx_policy_neg));
+    status = ssl_handshake(ds);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+on_return:
+    if (status != PJ_SUCCESS) {
+	ssl_destroy(ds);
+    }
+    return status;
 }

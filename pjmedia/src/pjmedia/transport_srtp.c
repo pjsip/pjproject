@@ -402,6 +402,26 @@ const char* get_libsrtp_errstr(int err)
 /* SRTP keying method: DTLS */
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
 #  include "transport_srtp_dtls.c"
+#else
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
+				pjmedia_transport *srtp,
+				const pjmedia_srtp_dtls_nego_param *param)
+{
+    PJ_UNUSED_ARG(srtp);
+    PJ_UNUSED_ARG(param);
+    return PJ_ENOTSUP;
+}
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_get_fingerprint(
+				pjmedia_transport *srtp,
+				const char *hash,
+				char *buf, pj_size_t *len)
+{
+    PJ_UNUSED_ARG(srtp);
+    PJ_UNUSED_ARG(hash);
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(len);
+    return PJ_ENOTSUP;
+}
 #endif
 
 
