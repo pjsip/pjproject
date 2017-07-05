@@ -26,7 +26,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "  IGNORE_CFLAGS    Optionally specify compilation flags to be ignored."
   echo "                   Each grepped flag that satisfies the criteria will"
   echo "                   be ignored. Default:"
-  echo "                   IGNORE_CFLAGS=\"\-M\|\-f*stack\|\-f*alias\""
+  echo "                   IGNORE_CFLAGS=\"\-M\|\-f*stack\|\-f*alias\|\-\<g\>\""
   echo "                   Only used when --use-ndk-cflags is specified."
   echo ""
   exit 0
@@ -58,8 +58,10 @@ fi
 if test "$1" = "--use-ndk-cflags"; then
   shift
   ADD_CFLAGS="1"
+  ADD_NDK_TOOLCHAIN="0"
+  ADD_NDK_TARGET="0"
   if test "x${IGNORE_CFLAGS}" = "x"; then
-    IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias"
+    IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias\|\-\<g\>"
   fi
   
   if test -f ${ANDROID_NDK_ROOT}/build/ndk-build; then    
@@ -74,6 +76,10 @@ if test "$1" = "--use-ndk-cflags"; then
     exit 1
   fi
 
+  echo "====="
+  echo "NDK_OUT : ${NDK_OUT}"
+  echo "====="
+
   for i in $NDK_OUT; do
     if test "x${NDK_CXX}" != "x" -a "$i" = "-o"; then break; fi
 
@@ -84,25 +90,38 @@ if test "$1" = "--use-ndk-cflags"; then
       fi
       NDK_CXXFLAGS="${NDK_CXXFLAGS} $i"
     fi
-
     # Parse NDK CFLAGS
     if test "x${NDK_CC}" != "x" -a "x`echo $i|grep 'dummy'`" = "x" -a "${ADD_CFLAGS}" = "1"; then
       if test "$i" = "-c"; then ADD_CFLAGS="0"; else
         if test "x`echo $i|grep ${IGNORE_CFLAGS}`" = "x"; then
+          if test "${ADD_NDK_TOOLCHAIN}" = "0" -a "x`echo $i|grep '\-gcc-toolchain'`" != "x"; then
+            ADD_NDK_TOOLCHAIN="1"
+          elif test "${ADD_NDK_TARGET}" = "0" -a "x`echo $i|grep '\-target'`" != "x"; then          
+            ADD_NDK_TARGET="1"
+          elif test "${ADD_NDK_TOOLCHAIN}" = "1"; then
+            NDK_TOOLCHAIN="$i"
+            ADD_NDK_TOOLCHAIN="2"
+          elif test "${ADD_NDK_TARGET}" = "1"; then
+            NDK_TARGET="$i"
+            ADD_NDK_TARGET="2"
+          fi
           NDK_CFLAGS="${NDK_CFLAGS} $i"
         fi
       fi
     fi
-
-    # Find gcc toolchain
-    if test "x${NDK_CC}" = "x" -a "x`echo $i | grep 'gcc'`" != "x"; then
-      NDK_CC=$i
+    # Find gcc or clang toolchain
+    if test "x${NDK_CC}" = "x"; then
+      if test "x`echo $i | grep 'gcc'`" != "x" -o "x`echo $i | grep 'clang'`" != "x"; then
+        NDK_CC=$i
+      fi
     fi
     # Find g++ toolchain
     if test "x`echo $i | grep 'g++'`" != "x"; then
       NDK_CXX=$i
     fi
   done
+
+  echo "NDK_CC : ${NDK_CC}"
 
   # Get target host from NDK toolchain dir name
   TARGET_HOST=`echo ${NDK_CC} | sed -e 's/.*\/toolchains\/\([^\/]*\).*/\1/'`
@@ -116,13 +135,22 @@ if test "$1" = "--use-ndk-cflags"; then
     TARGET_HOST="${TARGET_HOST}-linux-android"
   fi
 
+  # Set the binutils
+  if test "x${NDK_TOOLCHAIN}" = "x"; then
+    export AR=`echo ${NDK_CXX}|sed 's/-g++/-ar/'`;
+    export RANLIB=`echo ${NDK_CXX}|sed 's/-g++/-ranlib/'`;
+    export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT}"
+  else
+    #export AR="${NDK_TOOLCHAIN}/bin/${NDK_TARGET}-ar"
+    #export RANLIB="${NDK_TOOLCHAIN}/bin/${NDK_TARGET}-ranlib"
+    TARGET_HOST="arm-linux-androideabi"
+    export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT} -target ${NDK_TARGET} -gcc-toolchain ${NDK_TOOLCHAIN}"
+  fi  
+
   export TARGET_ABI="${TARGET_ABI}"
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
-  export AR=`echo ${NDK_CXX}|sed 's/-g++/-ar/'`;
-  export RANLIB=`echo ${NDK_CXX}|sed 's/-g++/-ranlib/'`;
 
-  export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT}"
   export LIBS="${LIBS} -lc -lgcc -ldl"
   export CFLAGS="${NDK_CFLAGS} ${CFLAGS}"
   export CPPFLAGS="${CFLAGS} -fexceptions -frtti"
@@ -172,11 +200,19 @@ fi
 # C++ STL
 # Note: STL for pjsua2 sample app is specified in pjsip-apps/src/swig/java/android/jni/Application.mk
 
-# gnustl
-STDCPP_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/[0-9]* | sort -gr | head -1`
-STDCPP_CFLAGS="-I${STDCPP_TC_VER}/include -I${STDCPP_TC_VER}/libs/${TARGET_ABI}/include"
-STDCPP_LIBS="-lgnustl_static"
-STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/${TARGET_ABI}/"
+if test "x${NDK_TOOLCHAIN}" = "x"; then
+  # gnustl
+  STDCPP_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/[0-9]* | sort -gr | head -1`
+  STDCPP_CFLAGS="-I${STDCPP_TC_VER}/include -I${STDCPP_TC_VER}/libs/${TARGET_ABI}/include"
+  STDCPP_LIBS="-lgnustl_static"
+  STDCPP_LDFLAGS="-L${STDCPP_TC_VER}/libs/${TARGET_ABI}/"
+else
+  # llvm
+  STDCPP_TC="${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++"
+  STDCPP_CFLAGS="-I${STDCPP_TC}/include"
+  STDCPP_LIBS="-lc++_static -lc++abi"
+  STDCPP_LDFLAGS="-L${STDCPP_TC}/libs/${TARGET_ABI}/"
+fi
 
 # stlport
 #STDCPP_CFLAGS="-I${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/stlport"
