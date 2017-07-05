@@ -661,7 +661,11 @@ static struct test
 	    NULL,
 	    /* This is how Bob's answer should look like: */
 	    "v=0\r\n"
+#if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
+	    "o=bob 2808844564 2808844564 IN IP4 host.biloxi.example.com\r\n"
+#else
 	    "o=bob 2808844564 2808844565 IN IP4 host.biloxi.example.com\r\n"
+#endif
 	    "s=bob\r\n"
 	    "c=IN IP4 host.biloxi.example.com\r\n"
 	    "t=0 0\r\n"

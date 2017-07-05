@@ -743,6 +743,20 @@
 
 
 /**
+ * This specifies if the SDP negotiator should compare its content before 
+ * incrementing the origin version on the subsequent offer/answer. 
+ * If this is set to 1, origin version will only by incremented if the 
+ * new offer/answer is different than the previous one. For backward 
+ * compatibility and performance this is set to 0.
+ *
+ * Default is 0 (No)
+ */
+#ifndef PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
+#   define PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION	0
+#endif
+
+
+/**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
  * Default is equal to PJMEDIA_ADVERTISE_RTCP setting.
  */
