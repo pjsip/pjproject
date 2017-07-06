@@ -1581,8 +1581,10 @@ AC_ARG_ENABLE(ssl,
 			# support, to enable cryptos such as AES GCM.
 			
 			# EVP_CIPHER_CTX is now opaque in OpenSSL 1.1.0, libsrtp 1.5.4 uses it as a transparent type.
+			# Update 2.7: our bundled libsrtp has been upgraded to 2.1.0,
+			# so we can omit EVP_CIPHER_CTX definition check now.
 			AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <openssl/evp.h>]],
-							  [EVP_CIPHER_CTX ctx;EVP_aes_128_gcm();])],
+							  [EVP_CIPHER_CTX *ctx;EVP_aes_128_gcm();])],
 					  [AC_CHECK_LIB(crypto,EVP_aes_128_gcm,[ac_ssl_has_aes_gcm=1])])
 			if test "x$ac_ssl_has_aes_gcm" = "x1"; then
 				AC_MSG_RESULT([OpenSSL has AES GCM support, SRTP will use OpenSSL])
