@@ -6516,7 +6516,7 @@ $as_echo "Checking if AVFoundation framework is available... yes" >&6; }
 $as_echo "Checking if AVFoundation framework is available... no" >&6; }
 	fi
 	if test "$ac_pjmedia_video_has_vtoolbox" = "yes"; then
-	  ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"
+	  #ac_darwin_cflags+=" -DPJMEDIA_HAS_VID_TOOLBOX_CODEC=1"
 	  LIBS="$LIBS -framework VideoToolbox"
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if VideoToolbox framework is available... yes" >&5
 $as_echo "Checking if VideoToolbox framework is available... yes" >&6; }

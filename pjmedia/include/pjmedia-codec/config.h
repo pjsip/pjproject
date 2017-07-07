@@ -500,10 +500,15 @@
 /**
  * Enable FFMPEG H264 codec (requires libx264).
  *
- * Default: 0
+ * Default: disabled when OpenH264 is used, otherwise it is set to
+ * PJMEDIA_HAS_FFMPEG_VID_CODEC
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_H264
-#   define PJMEDIA_HAS_FFMPEG_CODEC_H264	PJMEDIA_HAS_FFMPEG_VID_CODEC
+#   if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
+#	define PJMEDIA_HAS_FFMPEG_CODEC_H264	0
+#   else
+#	define PJMEDIA_HAS_FFMPEG_CODEC_H264	PJMEDIA_HAS_FFMPEG_VID_CODEC
+#   endif
 #endif
 
 /**
