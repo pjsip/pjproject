@@ -27,9 +27,15 @@
 /* 
  * Include OpenSSL headers
  */
-#include <openssl/ssl.h>
+#include <openssl/bn.h>
 #include <openssl/err.h>
+#include <openssl/rsa.h>
+#include <openssl/ssl.h>
 
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#  define X509_get_notBefore(x)	    X509_getm_notBefore(x)
+#  define X509_get_notAfter(x)	    X509_getm_notAfter(x)
+#endif
 
 /* Set to 1 to enable DTLS-SRTP debugging */
 #define DTLS_DEBUG  0
@@ -369,7 +375,7 @@ static pj_status_t ssl_create(dtls_srtp *ds)
     int mode, rc;
         
     /* Create DTLS context */
-    ctx = SSL_CTX_new(DTLSv1_method());
+    ctx = SSL_CTX_new(DTLS_method());
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ds);
     }
@@ -1031,7 +1037,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 				    unsigned media_index)
 {
     dtls_srtp *ds = (dtls_srtp *)tp;
-    pjmedia_sdp_media *m_rem, *m_loc;
+    pjmedia_sdp_media *m_loc;
     pjmedia_sdp_attr *a;
     pj_bool_t use_ice = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
@@ -1042,7 +1048,6 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 
     PJ_UNUSED_ARG(sdp_pool);
 
-    m_rem = sdp_remote ? sdp_remote->media[media_index] : NULL;
     m_loc = sdp_local->media[media_index];
     if (ds->srtp->offerer_side) {
 	/* As offerer */
@@ -1185,7 +1190,6 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 				     unsigned media_index)
 {
     dtls_srtp *ds = (dtls_srtp *)tp;
-    pjmedia_sdp_media *m_rem, *m_loc;
     pj_ice_strans_state ice_state;
     pj_status_t status = PJ_SUCCESS;
 
@@ -1194,9 +1198,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 #endif
 
     PJ_UNUSED_ARG(tmp_pool);
-
-    m_rem = sdp_remote->media[media_index];
-    m_loc = sdp_local->media[media_index];
+    PJ_UNUSED_ARG(sdp_local);
 
     if (ds->srtp->offerer_side) {
 	/* As offerer */

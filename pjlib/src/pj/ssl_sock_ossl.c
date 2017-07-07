@@ -115,6 +115,8 @@ static unsigned get_nid_from_cid(unsigned cid)
 #  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
 #  define M_ASN1_STRING_data(x)	    ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
+#  define X509_get_notBefore(x)	    X509_get0_notBefore(x)
+#  define X509_get_notAfter(x)	    X509_get0_notAfter(x)
 #else
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
@@ -404,8 +406,12 @@ static pj_status_t init_openssl(void)
     pj_assert(status == PJ_SUCCESS);
 
     /* Init OpenSSL lib */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
+#else
+    OPENSSL_init_ssl(0, NULL);
+#endif
 #if OPENSSL_VERSION_NUMBER < 0x009080ffL
     /* This is now synonym of SSL_library_init() */
     OpenSSL_add_all_algorithms();
@@ -421,6 +427,7 @@ static pj_status_t init_openssl(void)
 	int nid;
 	const char *cname;
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	meth = (SSL_METHOD*)SSLv23_server_method();
 	if (!meth)
 	    meth = (SSL_METHOD*)TLSv1_server_method();
@@ -432,6 +439,12 @@ static pj_status_t init_openssl(void)
 	if (!meth)
 	    meth = (SSL_METHOD*)SSLv2_server_method();
 #endif
+
+#else
+	/* Specific version methods are deprecated in 1.1.0 */
+	meth = (SSL_METHOD*)TLS_method();
+#endif
+
 	pj_assert(meth);
 
 	ctx=SSL_CTX_new(meth);
@@ -649,6 +662,7 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     switch (ssock->param.proto) {
     case PJ_SSL_SOCK_PROTO_TLS1:
 	ssl_method = (SSL_METHOD*)TLSv1_method();
@@ -664,6 +678,10 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 #endif
 	break;
     }
+#else
+    /* Specific version methods are deprecated in 1.1.0 */
+    ssl_method = (SSL_METHOD*)TLS_method();
+#endif
 
     if (!ssl_method) {
 	ssl_method = (SSL_METHOD*)SSLv23_method();
