@@ -26,6 +26,7 @@
             PJMEDIA_HAS_VID_TOOLBOX_CODEC != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
+#import <Foundation/Foundation.h>
 #import <VideoToolbox/VideoToolbox.h>
 
 #include "TargetConditionals.h"
@@ -358,10 +359,6 @@ static pj_status_t vtool_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     *p_codec = codec;
     return PJ_SUCCESS;
-
-on_error:
-    vtool_dealloc_codec(factory, codec);
-    return PJMEDIA_CODEC_EFAILED;
 }
 
 static pj_status_t vtool_dealloc_codec(pjmedia_vid_codec_factory *factory,
