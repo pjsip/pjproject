@@ -793,17 +793,25 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 #if !defined(PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION) || \
     PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION == 0
     /* Get hostname's IP address */
-    count = 1;
-    status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
-    if (status == PJ_SUCCESS) {
-    	pj_assert(ai.ai_addr.addr.sa_family == (pj_uint16_t)af);
-    	pj_sockaddr_copy_addr(&cand_addr[cand_cnt], &ai.ai_addr);
-	pj_sockaddr_set_port(&cand_addr[cand_cnt], 0);
-	cand_weight[cand_cnt] += WEIGHT_HOSTNAME;
-	++cand_cnt;
+    {
+	const pj_str_t *hostname = pj_gethostname();
+	count = 1;
 
-	TRACE_((THIS_FILE, "hostname IP is %s",
-		pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 0)));
+	if (hostname->slen > 0)
+	    status = pj_getaddrinfo(af, hostname, &count, &ai);
+	else
+	    status = PJ_ERESOLVE;
+
+	if (status == PJ_SUCCESS) {
+    	    pj_assert(ai.ai_addr.addr.sa_family == (pj_uint16_t)af);
+    	    pj_sockaddr_copy_addr(&cand_addr[cand_cnt], &ai.ai_addr);
+	    pj_sockaddr_set_port(&cand_addr[cand_cnt], 0);
+	    cand_weight[cand_cnt] += WEIGHT_HOSTNAME;
+	    ++cand_cnt;
+
+	    TRACE_((THIS_FILE, "hostname IP is %s",
+		    pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 0)));
+	}
     }
 #else
     PJ_UNUSED_ARG(ai);
