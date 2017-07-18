@@ -890,9 +890,9 @@ static pj_status_t darwin_factory_create_stream(
 #if TARGET_OS_IPHONE
         /* Create renderer stream here */
         
-        status = darwin_init_view(strm);
-        if (status != PJ_SUCCESS)
-            goto on_error;
+        dispatch_sync_on_main_queue(^{
+            darwin_init_view(strm);
+        });
         
 	if (!strm->vout_delegate) {
 	    strm->vout_delegate = [VOutDelegate alloc];
@@ -999,12 +999,12 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
 		return PJ_EINVALIDOP;
             
 #if TARGET_OS_IPHONE
-            /* Create view, if none */
-	    if (!strm->render_view)
-	        darwin_init_view(strm);
-            
             /* Preview layer instantiation should be in main thread! */
             dispatch_sync_on_main_queue(^{
+            	/* Create view, if none */
+	    	if (!strm->render_view)
+	            darwin_init_view(strm);
+            
                 /* Create preview layer */
                 AVCaptureVideoPreviewLayer *prev_layer =
                             [[AVCaptureVideoPreviewLayer alloc]

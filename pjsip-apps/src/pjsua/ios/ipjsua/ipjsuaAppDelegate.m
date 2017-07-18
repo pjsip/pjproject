@@ -189,7 +189,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     
     if (dev_ori == prev_ori) return;
     
-    NSLog(@"Device orientation changed: %d", (prev_ori = dev_ori));
+    NSLog(@"Device orientation changed: %ld", (prev_ori = dev_ori));
     
     if (dev_ori >= UIDeviceOrientationPortrait &&
         dev_ori <= UIDeviceOrientationLandscapeRight)
@@ -271,7 +271,9 @@ pj_bool_t showNotification(pjsua_call_id call_id)
          */
 	alert.alertAction = @"Activate app";
 	
-	[[UIApplication sharedApplication] presentLocalNotificationNow:alert];
+        dispatch_async(dispatch_get_main_queue(),
+                       ^{[[UIApplication sharedApplication]
+                          presentLocalNotificationNow:alert];});
     }
     
     return PJ_FALSE;
