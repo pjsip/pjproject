@@ -89,6 +89,11 @@
 #undef PJMEDIA_HAS_OPUS_CODEC
 #endif
 
+/* G.729 codec with BCG729 backend */
+#ifndef PJMEDIA_HAS_BCG729
+#undef PJMEDIA_HAS_BCG729
+#endif
+
 #endif	/* __PJMEDIA_CODEC_CONFIG_AUTO_H_ */
 
 

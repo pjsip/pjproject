@@ -71,6 +71,7 @@ AC_NO_G722_CODEC=@ac_no_g722_codec@
 AC_NO_G7221_CODEC=@ac_no_g7221_codec@
 AC_NO_OPENCORE_AMRNB=@ac_no_opencore_amrnb@
 AC_NO_OPENCORE_AMRWB=@ac_no_opencore_amrwb@
+AC_NO_BCG729=@ac_no_bcg729@
 
 export CODEC_OBJS=
 
@@ -137,6 +138,10 @@ else
 ifeq ($(AC_NO_OPENCORE_AMRNB),1)
 export CODEC_OBJS += opencore_amr.o
 endif
+endif
+
+ifeq ($(AC_NO_BCG729),)
+export CODEC_OBJS += bcg729.o
 endif
 
 

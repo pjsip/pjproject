@@ -1787,6 +1787,75 @@ AC_ARG_ENABLE(opus,
 		fi
 	      ])
 
+dnl # bcg729 prefix
+AC_ARG_WITH(bcg729,
+            AS_HELP_STRING([--with-bcg729=DIR],
+		           [Specify alternate bcg729 prefix]),
+            [],
+            [with_bcg729=no]
+            )
+
+dnl # Do not use default bcg729 installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_bcg729" = "xno"; then
+    enable_bcg729=no
+fi
+
+dnl # bcg729
+AC_SUBST(ac_no_bcg729)
+AC_ARG_ENABLE(bcg729,
+	      AS_HELP_STRING([--disable-bcg729],
+			     [Disable bcg729 (default: not disabled)]),
+	      [
+		if test "$enable_bcg729" = "no"; then
+		  [ac_no_bcg729=1]
+		  AC_DEFINE(PJMEDIA_HAS_BCG729,0)
+		  AC_MSG_RESULT([Checking if bcg729 is disabled... yes])
+		fi
+	      ],
+	      [
+		  if test "x$with_bcg729" != "xno" -a "x$with_bcg729" != "x"; then
+		        BCG729_PREFIX=$with_bcg729
+		  	BCG729_CFLAGS="-I$BCG729_PREFIX/include"
+			BCG729_LDFLAGS="-L$BCG729_PREFIX/lib" 
+			AC_MSG_RESULT([Using bcg729 prefix... $with_bcg729])
+		  else
+		  	BCG729_CFLAGS=""
+			BCG729_LDFLAGS="" 
+		  fi
+
+		  AC_MSG_CHECKING([bcg729 usability])
+
+		  BCG729_LIBS="-lbcg729"
+		  
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+		  
+		  LIBS="$BCG729_LIBS $LIBS"
+		  LDFLAGS="$BCG729_LDFLAGS $LDFLAGS"
+		  CFLAGS="$BCG729_CFLAGS $CFLAGS"
+		  
+		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <bcg729/encoder.h>
+		                                    #include <bcg729/decoder.h>
+					          ]],
+					          [initBcg729EncoderChannel(0);]
+					         )],
+		  		 [ 
+				   AC_DEFINE(PJMEDIA_HAS_BCG729,1)
+		  		   AC_MSG_RESULT(ok)
+		  		  ],
+		  		 [
+				   [ac_no_bcg729=1]
+				   AC_DEFINE(PJMEDIA_HAS_BCG729,0)
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   AC_MSG_RESULT(no)
+		  		 ])
+
+	      ])
+		  
+
 dnl # Include libyuv
 AC_SUBST(ac_no_yuv)
 AC_ARG_ENABLE(libyuv,

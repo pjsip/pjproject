@@ -194,8 +194,9 @@
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
     <PlatformToolset>$(BuildToolset)</PlatformToolset>
-    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
-  </PropertyGroup>  
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
+    </CharacterSet>
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
@@ -510,6 +511,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\pjmedia-codec\amr_sdp_match.c" />
     <ClCompile Include="..\src\pjmedia-codec\audio_codecs.c" />
+    <ClCompile Include="..\src\pjmedia-codec\bcg729.c" />
     <ClCompile Include="..\src\pjmedia-codec\ffmpeg_vid_codecs.c" />
     <ClCompile Include="..\src\pjmedia-codec\g722.c" />
     <ClCompile Include="..\src\pjmedia-codec\g7221.c" />
@@ -534,6 +536,7 @@
     <ClInclude Include="..\include\pjmedia-codec\amr_helper.h" />
     <ClInclude Include="..\include\pjmedia-codec\amr_sdp_match.h" />
     <ClInclude Include="..\include\pjmedia-codec\audio_codecs.h" />
+    <ClInclude Include="..\include\pjmedia-codec\bcg729.h" />
     <ClInclude Include="..\include\pjmedia-codec\config.h" />
     <ClInclude Include="..\include\pjmedia-codec\ffmpeg_vid_codecs.h" />
     <ClInclude Include="..\include\pjmedia-codec\g722.h" />

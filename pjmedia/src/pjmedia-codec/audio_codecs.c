@@ -128,6 +128,13 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 	return status;
 #endif
 
+#if PJMEDIA_HAS_BCG729
+    /* Register BCG729 */
+    status = pjmedia_codec_bcg729_init(endpt);
+    if (status != PJ_SUCCESS)
+	return status;
+#endif
+
     return PJ_SUCCESS;
 }
 

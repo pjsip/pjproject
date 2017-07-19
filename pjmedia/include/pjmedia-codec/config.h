@@ -469,6 +469,17 @@
 #   define PJMEDIA_CODEC_OPUS_DEFAULT_CBR 		PJ_FALSE
 #endif
 
+
+/**
+ * Enable G.729 codec using BCG729 backend.
+ *
+ * Default: 0 
+ */
+#ifndef PJMEDIA_HAS_BCG729
+#   define PJMEDIA_HAS_BCG729				0
+#endif
+
+
 /**
  * Specify if FFMPEG codecs are available.
  *

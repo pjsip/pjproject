@@ -40,6 +40,7 @@
 #include <pjmedia-codec/passthrough.h>
 #include <pjmedia-codec/silk.h>
 #include <pjmedia-codec/opus.h>
+#include <pjmedia-codec/bcg729.h>
 
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

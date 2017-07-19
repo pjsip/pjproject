@@ -627,6 +627,7 @@ ac_webrtc_cflags
 ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
+ac_no_bcg729
 opus_present
 opus_h_present
 ac_no_opus
@@ -826,6 +827,8 @@ with_silk
 enable_silk
 with_opus
 enable_opus
+with_bcg729
+enable_bcg729
 enable_libyuv
 enable_libwebrtc
 '
@@ -1506,6 +1509,7 @@ Optional Features:
   --disable-opus          Exclude OPUS support from the build (default:
                           autodetect)
 
+  --disable-bcg729        Disable bcg729 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
 
@@ -1558,6 +1562,7 @@ Optional Packages:
                           Specify alternate libvo-amrwbenc prefix
   --with-silk=DIR         Specify alternate SILK prefix
   --with-opus=DIR         Specify alternate OPUS prefix
+  --with-bcg729=DIR       Specify alternate bcg729 prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -8469,6 +8474,99 @@ $as_echo "OPUS library not found, OPUS support disabled" >&6; }
 		fi
 
 fi
+
+
+
+# Check whether --with-bcg729 was given.
+if test "${with_bcg729+set}" = set; then :
+  withval=$with_bcg729;
+else
+  with_bcg729=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_bcg729" = "xno"; then
+    enable_bcg729=no
+fi
+
+
+# Check whether --enable-bcg729 was given.
+if test "${enable_bcg729+set}" = set; then :
+  enableval=$enable_bcg729;
+		if test "$enable_bcg729" = "no"; then
+		  ac_no_bcg729=1
+		  $as_echo "#define PJMEDIA_HAS_BCG729 0" >>confdefs.h
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if bcg729 is disabled... yes" >&5
+$as_echo "Checking if bcg729 is disabled... yes" >&6; }
+		fi
+
+else
+
+		  if test "x$with_bcg729" != "xno" -a "x$with_bcg729" != "x"; then
+		        BCG729_PREFIX=$with_bcg729
+		  	BCG729_CFLAGS="-I$BCG729_PREFIX/include"
+			BCG729_LDFLAGS="-L$BCG729_PREFIX/lib"
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using bcg729 prefix... $with_bcg729" >&5
+$as_echo "Using bcg729 prefix... $with_bcg729" >&6; }
+		  else
+		  	BCG729_CFLAGS=""
+			BCG729_LDFLAGS=""
+		  fi
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking bcg729 usability" >&5
+$as_echo_n "checking bcg729 usability... " >&6; }
+
+		  BCG729_LIBS="-lbcg729"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$BCG729_LIBS $LIBS"
+		  LDFLAGS="$BCG729_LDFLAGS $LDFLAGS"
+		  CFLAGS="$BCG729_CFLAGS $CFLAGS"
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <bcg729/encoder.h>
+		                                    #include <bcg729/decoder.h>
+
+int
+main ()
+{
+initBcg729EncoderChannel(0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+
+				   $as_echo "#define PJMEDIA_HAS_BCG729 1" >>confdefs.h
+
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+
+else
+
+				   ac_no_bcg729=1
+				   $as_echo "#define PJMEDIA_HAS_BCG729 0" >>confdefs.h
+
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+
 
 
 
