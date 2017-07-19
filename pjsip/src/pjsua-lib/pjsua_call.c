@@ -2722,7 +2722,10 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    if (pjsua_call_media_is_changing(call)) {
+    /* Don't check media changing if UPDATE is sent without SDP */
+    if (pjsua_call_media_is_changing(call) &&
+	(opt && opt->flag & PJSUA_CALL_NO_SDP_OFFER) == 0)
+    {
 	PJ_LOG(1,(THIS_FILE, "Unable to send UPDATE" ERR_MEDIA_CHANGING));
 	status = PJ_EINVALIDOP;
 	goto on_return;
