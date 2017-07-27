@@ -51,6 +51,38 @@
 
 
 /**
+ * Settings to enable L16 codec 8KHz, mono. By default it is disabled.
+ */
+#ifndef PJMEDIA_CODEC_L16_HAS_8KHZ_MONO
+#   define PJMEDIA_CODEC_L16_HAS_8KHZ_MONO	0
+#endif
+
+
+/**
+ * Settings to enable L16 codec 8KHz, stereo. By default it is disabled.
+ */
+#ifndef PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO
+#   define PJMEDIA_CODEC_L16_HAS_8KHZ_STEREO	0
+#endif
+
+
+/**
+ * Settings to enable L16 codec 16KHz, mono. By default it is disabled.
+ */
+#ifndef PJMEDIA_CODEC_L16_HAS_16KHZ_MONO
+#   define PJMEDIA_CODEC_L16_HAS_16KHZ_MONO	0
+#endif
+
+
+/**
+ * Settings to enable L16 codec 16KHz, stereo. By default it is disabled.
+ */
+#ifndef PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO
+#   define PJMEDIA_CODEC_L16_HAS_16KHZ_STEREO	0
+#endif
+
+
+/**
  * Unless specified otherwise, GSM codec is included by default.
  */
 #ifndef PJMEDIA_HAS_GSM_CODEC
