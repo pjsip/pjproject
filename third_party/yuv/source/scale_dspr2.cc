@@ -17,168 +17,167 @@ extern "C" {
 #endif
 
 // This module is for GCC MIPS DSPR2
-#if !defined(LIBYUV_DISABLE_MIPS) && \
-    defined(__mips_dsp) && (__mips_dsp_rev >= 2) && \
-    (_MIPS_SIM == _MIPS_SIM_ABI32)
+#if !defined(LIBYUV_DISABLE_DSPR2) && defined(__mips_dsp) && \
+    (__mips_dsp_rev >= 2) && (_MIPS_SIM == _MIPS_SIM_ABI32)
 
-void ScaleRowDown2_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                         uint8* dst, int dst_width) {
+void ScaleRowDown2_DSPR2(const uint8* src_ptr,
+                         ptrdiff_t src_stride,
+                         uint8* dst,
+                         int dst_width) {
   __asm__ __volatile__(
-    ".set push                                     \n"
-    ".set noreorder                                \n"
+      ".set push                                     \n"
+      ".set noreorder                                \n"
 
-    "srl            $t9, %[dst_width], 4           \n"  // iterations -> by 16
-    "beqz           $t9, 2f                        \n"
-    " nop                                          \n"
+      "srl            $t9, %[dst_width], 4           \n"  // iterations -> by 16
+      "beqz           $t9, 2f                        \n"
+      " nop                                          \n"
 
-  "1:                                              \n"
-    "lw             $t0, 0(%[src_ptr])             \n"  // |3|2|1|0|
-    "lw             $t1, 4(%[src_ptr])             \n"  // |7|6|5|4|
-    "lw             $t2, 8(%[src_ptr])             \n"  // |11|10|9|8|
-    "lw             $t3, 12(%[src_ptr])            \n"  // |15|14|13|12|
-    "lw             $t4, 16(%[src_ptr])            \n"  // |19|18|17|16|
-    "lw             $t5, 20(%[src_ptr])            \n"  // |23|22|21|20|
-    "lw             $t6, 24(%[src_ptr])            \n"  // |27|26|25|24|
-    "lw             $t7, 28(%[src_ptr])            \n"  // |31|30|29|28|
-    // TODO(fbarchard): Use odd pixels instead of even.
-    "precr.qb.ph    $t8, $t1, $t0                  \n"  // |6|4|2|0|
-    "precr.qb.ph    $t0, $t3, $t2                  \n"  // |14|12|10|8|
-    "precr.qb.ph    $t1, $t5, $t4                  \n"  // |22|20|18|16|
-    "precr.qb.ph    $t2, $t7, $t6                  \n"  // |30|28|26|24|
-    "addiu          %[src_ptr], %[src_ptr], 32     \n"
-    "addiu          $t9, $t9, -1                   \n"
-    "sw             $t8, 0(%[dst])                 \n"
-    "sw             $t0, 4(%[dst])                 \n"
-    "sw             $t1, 8(%[dst])                 \n"
-    "sw             $t2, 12(%[dst])                \n"
-    "bgtz           $t9, 1b                        \n"
-    " addiu         %[dst], %[dst], 16             \n"
+      "1:                                            \n"
+      "lw             $t0, 0(%[src_ptr])             \n"  // |3|2|1|0|
+      "lw             $t1, 4(%[src_ptr])             \n"  // |7|6|5|4|
+      "lw             $t2, 8(%[src_ptr])             \n"  // |11|10|9|8|
+      "lw             $t3, 12(%[src_ptr])            \n"  // |15|14|13|12|
+      "lw             $t4, 16(%[src_ptr])            \n"  // |19|18|17|16|
+      "lw             $t5, 20(%[src_ptr])            \n"  // |23|22|21|20|
+      "lw             $t6, 24(%[src_ptr])            \n"  // |27|26|25|24|
+      "lw             $t7, 28(%[src_ptr])            \n"  // |31|30|29|28|
+      // TODO(fbarchard): Use odd pixels instead of even.
+      "precrq.qb.ph   $t8, $t1, $t0                  \n"  // |7|5|3|1|
+      "precrq.qb.ph   $t0, $t3, $t2                  \n"  // |15|13|11|9|
+      "precrq.qb.ph   $t1, $t5, $t4                  \n"  // |23|21|19|17|
+      "precrq.qb.ph   $t2, $t7, $t6                  \n"  // |31|29|27|25|
+      "addiu          %[src_ptr], %[src_ptr], 32     \n"
+      "addiu          $t9, $t9, -1                   \n"
+      "sw             $t8, 0(%[dst])                 \n"
+      "sw             $t0, 4(%[dst])                 \n"
+      "sw             $t1, 8(%[dst])                 \n"
+      "sw             $t2, 12(%[dst])                \n"
+      "bgtz           $t9, 1b                        \n"
+      " addiu         %[dst], %[dst], 16             \n"
 
-  "2:                                              \n"
-    "andi           $t9, %[dst_width], 0xf         \n"  // residue
-    "beqz           $t9, 3f                        \n"
-    " nop                                          \n"
+      "2:                                            \n"
+      "andi           $t9, %[dst_width], 0xf         \n"  // residue
+      "beqz           $t9, 3f                        \n"
+      " nop                                          \n"
 
-  "21:                                             \n"
-    "lbu            $t0, 0(%[src_ptr])             \n"
-    "addiu          %[src_ptr], %[src_ptr], 2      \n"
-    "addiu          $t9, $t9, -1                   \n"
-    "sb             $t0, 0(%[dst])                 \n"
-    "bgtz           $t9, 21b                       \n"
-    " addiu         %[dst], %[dst], 1              \n"
+      "21:                                           \n"
+      "lbu            $t0, 1(%[src_ptr])             \n"
+      "addiu          %[src_ptr], %[src_ptr], 2      \n"
+      "addiu          $t9, $t9, -1                   \n"
+      "sb             $t0, 0(%[dst])                 \n"
+      "bgtz           $t9, 21b                       \n"
+      " addiu         %[dst], %[dst], 1              \n"
 
-  "3:                                              \n"
-    ".set pop                                      \n"
-  : [src_ptr] "+r" (src_ptr),
-    [dst] "+r" (dst)
-  : [dst_width] "r" (dst_width)
-  : "t0", "t1", "t2", "t3", "t4", "t5",
-    "t6", "t7", "t8", "t9"
-  );
+      "3:                                            \n"
+      ".set pop                                      \n"
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst)
+      : [dst_width] "r"(dst_width)
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9");
 }
 
-void ScaleRowDown2Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                            uint8* dst, int dst_width) {
+void ScaleRowDown2Box_DSPR2(const uint8* src_ptr,
+                            ptrdiff_t src_stride,
+                            uint8* dst,
+                            int dst_width) {
   const uint8* t = src_ptr + src_stride;
 
-  __asm__ __volatile__ (
-    ".set push                                    \n"
-    ".set noreorder                               \n"
+  __asm__ __volatile__(
+      ".set push                                    \n"
+      ".set noreorder                               \n"
 
-    "srl            $t9, %[dst_width], 3          \n"  // iterations -> step 8
-    "bltz           $t9, 2f                       \n"
-    " nop                                         \n"
+      "srl            $t9, %[dst_width], 3          \n"  // iterations -> step 8
+      "bltz           $t9, 2f                       \n"
+      " nop                                         \n"
 
-  "1:                                             \n"
-    "lw             $t0, 0(%[src_ptr])            \n"  // |3|2|1|0|
-    "lw             $t1, 4(%[src_ptr])            \n"  // |7|6|5|4|
-    "lw             $t2, 8(%[src_ptr])            \n"  // |11|10|9|8|
-    "lw             $t3, 12(%[src_ptr])           \n"  // |15|14|13|12|
-    "lw             $t4, 0(%[t])                  \n"  // |19|18|17|16|
-    "lw             $t5, 4(%[t])                  \n"  // |23|22|21|20|
-    "lw             $t6, 8(%[t])                  \n"  // |27|26|25|24|
-    "lw             $t7, 12(%[t])                 \n"  // |31|30|29|28|
-    "addiu          $t9, $t9, -1                  \n"
-    "srl            $t8, $t0, 16                  \n"  // |X|X|3|2|
-    "ins            $t0, $t4, 16, 16              \n"  // |17|16|1|0|
-    "ins            $t4, $t8, 0, 16               \n"  // |19|18|3|2|
-    "raddu.w.qb     $t0, $t0                      \n"  // |17+16+1+0|
-    "raddu.w.qb     $t4, $t4                      \n"  // |19+18+3+2|
-    "shra_r.w       $t0, $t0, 2                   \n"  // |t0+2|>>2
-    "shra_r.w       $t4, $t4, 2                   \n"  // |t4+2|>>2
-    "srl            $t8, $t1, 16                  \n"  // |X|X|7|6|
-    "ins            $t1, $t5, 16, 16              \n"  // |21|20|5|4|
-    "ins            $t5, $t8, 0, 16               \n"  // |22|23|7|6|
-    "raddu.w.qb     $t1, $t1                      \n"  // |21+20+5+4|
-    "raddu.w.qb     $t5, $t5                      \n"  // |23+22+7+6|
-    "shra_r.w       $t1, $t1, 2                   \n"  // |t1+2|>>2
-    "shra_r.w       $t5, $t5, 2                   \n"  // |t5+2|>>2
-    "srl            $t8, $t2, 16                  \n"  // |X|X|11|10|
-    "ins            $t2, $t6, 16, 16              \n"  // |25|24|9|8|
-    "ins            $t6, $t8, 0, 16               \n"  // |27|26|11|10|
-    "raddu.w.qb     $t2, $t2                      \n"  // |25+24+9+8|
-    "raddu.w.qb     $t6, $t6                      \n"  // |27+26+11+10|
-    "shra_r.w       $t2, $t2, 2                   \n"  // |t2+2|>>2
-    "shra_r.w       $t6, $t6, 2                   \n"  // |t5+2|>>2
-    "srl            $t8, $t3, 16                  \n"  // |X|X|15|14|
-    "ins            $t3, $t7, 16, 16              \n"  // |29|28|13|12|
-    "ins            $t7, $t8, 0, 16               \n"  // |31|30|15|14|
-    "raddu.w.qb     $t3, $t3                      \n"  // |29+28+13+12|
-    "raddu.w.qb     $t7, $t7                      \n"  // |31+30+15+14|
-    "shra_r.w       $t3, $t3, 2                   \n"  // |t3+2|>>2
-    "shra_r.w       $t7, $t7, 2                   \n"  // |t7+2|>>2
-    "addiu          %[src_ptr], %[src_ptr], 16    \n"
-    "addiu          %[t], %[t], 16                \n"
-    "sb             $t0, 0(%[dst])                \n"
-    "sb             $t4, 1(%[dst])                \n"
-    "sb             $t1, 2(%[dst])                \n"
-    "sb             $t5, 3(%[dst])                \n"
-    "sb             $t2, 4(%[dst])                \n"
-    "sb             $t6, 5(%[dst])                \n"
-    "sb             $t3, 6(%[dst])                \n"
-    "sb             $t7, 7(%[dst])                \n"
-    "bgtz           $t9, 1b                       \n"
-    " addiu         %[dst], %[dst], 8             \n"
+      "1:                                           \n"
+      "lw             $t0, 0(%[src_ptr])            \n"  // |3|2|1|0|
+      "lw             $t1, 4(%[src_ptr])            \n"  // |7|6|5|4|
+      "lw             $t2, 8(%[src_ptr])            \n"  // |11|10|9|8|
+      "lw             $t3, 12(%[src_ptr])           \n"  // |15|14|13|12|
+      "lw             $t4, 0(%[t])                  \n"  // |19|18|17|16|
+      "lw             $t5, 4(%[t])                  \n"  // |23|22|21|20|
+      "lw             $t6, 8(%[t])                  \n"  // |27|26|25|24|
+      "lw             $t7, 12(%[t])                 \n"  // |31|30|29|28|
+      "addiu          $t9, $t9, -1                  \n"
+      "srl            $t8, $t0, 16                  \n"  // |X|X|3|2|
+      "ins            $t0, $t4, 16, 16              \n"  // |17|16|1|0|
+      "ins            $t4, $t8, 0, 16               \n"  // |19|18|3|2|
+      "raddu.w.qb     $t0, $t0                      \n"  // |17+16+1+0|
+      "raddu.w.qb     $t4, $t4                      \n"  // |19+18+3+2|
+      "shra_r.w       $t0, $t0, 2                   \n"  // |t0+2|>>2
+      "shra_r.w       $t4, $t4, 2                   \n"  // |t4+2|>>2
+      "srl            $t8, $t1, 16                  \n"  // |X|X|7|6|
+      "ins            $t1, $t5, 16, 16              \n"  // |21|20|5|4|
+      "ins            $t5, $t8, 0, 16               \n"  // |22|23|7|6|
+      "raddu.w.qb     $t1, $t1                      \n"  // |21+20+5+4|
+      "raddu.w.qb     $t5, $t5                      \n"  // |23+22+7+6|
+      "shra_r.w       $t1, $t1, 2                   \n"  // |t1+2|>>2
+      "shra_r.w       $t5, $t5, 2                   \n"  // |t5+2|>>2
+      "srl            $t8, $t2, 16                  \n"  // |X|X|11|10|
+      "ins            $t2, $t6, 16, 16              \n"  // |25|24|9|8|
+      "ins            $t6, $t8, 0, 16               \n"  // |27|26|11|10|
+      "raddu.w.qb     $t2, $t2                      \n"  // |25+24+9+8|
+      "raddu.w.qb     $t6, $t6                      \n"  // |27+26+11+10|
+      "shra_r.w       $t2, $t2, 2                   \n"  // |t2+2|>>2
+      "shra_r.w       $t6, $t6, 2                   \n"  // |t5+2|>>2
+      "srl            $t8, $t3, 16                  \n"  // |X|X|15|14|
+      "ins            $t3, $t7, 16, 16              \n"  // |29|28|13|12|
+      "ins            $t7, $t8, 0, 16               \n"  // |31|30|15|14|
+      "raddu.w.qb     $t3, $t3                      \n"  // |29+28+13+12|
+      "raddu.w.qb     $t7, $t7                      \n"  // |31+30+15+14|
+      "shra_r.w       $t3, $t3, 2                   \n"  // |t3+2|>>2
+      "shra_r.w       $t7, $t7, 2                   \n"  // |t7+2|>>2
+      "addiu          %[src_ptr], %[src_ptr], 16    \n"
+      "addiu          %[t], %[t], 16                \n"
+      "sb             $t0, 0(%[dst])                \n"
+      "sb             $t4, 1(%[dst])                \n"
+      "sb             $t1, 2(%[dst])                \n"
+      "sb             $t5, 3(%[dst])                \n"
+      "sb             $t2, 4(%[dst])                \n"
+      "sb             $t6, 5(%[dst])                \n"
+      "sb             $t3, 6(%[dst])                \n"
+      "sb             $t7, 7(%[dst])                \n"
+      "bgtz           $t9, 1b                       \n"
+      " addiu         %[dst], %[dst], 8             \n"
 
-  "2:                                             \n"
-    "andi           $t9, %[dst_width], 0x7        \n"  // x = residue
-    "beqz           $t9, 3f                       \n"
-    " nop                                         \n"
+      "2:                                           \n"
+      "andi           $t9, %[dst_width], 0x7        \n"  // x = residue
+      "beqz           $t9, 3f                       \n"
+      " nop                                         \n"
 
-    "21:                                          \n"
-    "lwr            $t1, 0(%[src_ptr])            \n"
-    "lwl            $t1, 3(%[src_ptr])            \n"
-    "lwr            $t2, 0(%[t])                  \n"
-    "lwl            $t2, 3(%[t])                  \n"
-    "srl            $t8, $t1, 16                  \n"
-    "ins            $t1, $t2, 16, 16              \n"
-    "ins            $t2, $t8, 0, 16               \n"
-    "raddu.w.qb     $t1, $t1                      \n"
-    "raddu.w.qb     $t2, $t2                      \n"
-    "shra_r.w       $t1, $t1, 2                   \n"
-    "shra_r.w       $t2, $t2, 2                   \n"
-    "sb             $t1, 0(%[dst])                \n"
-    "sb             $t2, 1(%[dst])                \n"
-    "addiu          %[src_ptr], %[src_ptr], 4     \n"
-    "addiu          $t9, $t9, -2                  \n"
-    "addiu          %[t], %[t], 4                 \n"
-    "bgtz           $t9, 21b                      \n"
-    " addiu         %[dst], %[dst], 2             \n"
+      "21:                                          \n"
+      "lwr            $t1, 0(%[src_ptr])            \n"
+      "lwl            $t1, 3(%[src_ptr])            \n"
+      "lwr            $t2, 0(%[t])                  \n"
+      "lwl            $t2, 3(%[t])                  \n"
+      "srl            $t8, $t1, 16                  \n"
+      "ins            $t1, $t2, 16, 16              \n"
+      "ins            $t2, $t8, 0, 16               \n"
+      "raddu.w.qb     $t1, $t1                      \n"
+      "raddu.w.qb     $t2, $t2                      \n"
+      "shra_r.w       $t1, $t1, 2                   \n"
+      "shra_r.w       $t2, $t2, 2                   \n"
+      "sb             $t1, 0(%[dst])                \n"
+      "sb             $t2, 1(%[dst])                \n"
+      "addiu          %[src_ptr], %[src_ptr], 4     \n"
+      "addiu          $t9, $t9, -2                  \n"
+      "addiu          %[t], %[t], 4                 \n"
+      "bgtz           $t9, 21b                      \n"
+      " addiu         %[dst], %[dst], 2             \n"
 
-  "3:                                             \n"
-    ".set pop                                     \n"
+      "3:                                           \n"
+      ".set pop                                     \n"
 
-  : [src_ptr] "+r" (src_ptr),
-    [dst] "+r" (dst), [t] "+r" (t)
-  : [dst_width] "r" (dst_width)
-  : "t0", "t1", "t2", "t3", "t4", "t5",
-    "t6", "t7", "t8", "t9"
-  );
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst), [t] "+r"(t)
+      : [dst_width] "r"(dst_width)
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9");
 }
 
-void ScaleRowDown4_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                         uint8* dst, int dst_width) {
-  __asm__ __volatile__ (
+void ScaleRowDown4_DSPR2(const uint8* src_ptr,
+                         ptrdiff_t src_stride,
+                         uint8* dst,
+                         int dst_width) {
+  __asm__ __volatile__(
       ".set push                                    \n"
       ".set noreorder                               \n"
 
@@ -186,7 +185,7 @@ void ScaleRowDown4_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "beqz           $t9, 2f                       \n"
       " nop                                         \n"
 
-     "1:                                            \n"
+      "1:                                           \n"
       "lw             $t1, 0(%[src_ptr])            \n"  // |3|2|1|0|
       "lw             $t2, 4(%[src_ptr])            \n"  // |7|6|5|4|
       "lw             $t3, 8(%[src_ptr])            \n"  // |11|10|9|8|
@@ -199,8 +198,8 @@ void ScaleRowDown4_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "precr.qb.ph    $t2, $t4, $t3                 \n"  // |14|12|10|8|
       "precr.qb.ph    $t5, $t6, $t5                 \n"  // |22|20|18|16|
       "precr.qb.ph    $t6, $t8, $t7                 \n"  // |30|28|26|24|
-      "precr.qb.ph    $t1, $t2, $t1                 \n"  // |12|8|4|0|
-      "precr.qb.ph    $t5, $t6, $t5                 \n"  // |28|24|20|16|
+      "precrq.qb.ph   $t1, $t2, $t1                 \n"  // |14|10|6|2|
+      "precrq.qb.ph   $t5, $t6, $t5                 \n"  // |30|26|22|18|
       "addiu          %[src_ptr], %[src_ptr], 32    \n"
       "addiu          $t9, $t9, -1                  \n"
       "sw             $t1, 0(%[dst])                \n"
@@ -208,44 +207,43 @@ void ScaleRowDown4_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "bgtz           $t9, 1b                       \n"
       " addiu         %[dst], %[dst], 8             \n"
 
-    "2:                                             \n"
+      "2:                                           \n"
       "andi           $t9, %[dst_width], 7          \n"  // residue
       "beqz           $t9, 3f                       \n"
       " nop                                         \n"
 
-    "21:                                            \n"
-      "lbu            $t1, 0(%[src_ptr])            \n"
+      "21:                                          \n"
+      "lbu            $t1, 2(%[src_ptr])            \n"
       "addiu          %[src_ptr], %[src_ptr], 4     \n"
       "addiu          $t9, $t9, -1                  \n"
       "sb             $t1, 0(%[dst])                \n"
       "bgtz           $t9, 21b                      \n"
       " addiu         %[dst], %[dst], 1             \n"
 
-    "3:                                             \n"
+      "3:                                           \n"
       ".set pop                                     \n"
-      : [src_ptr] "+r" (src_ptr),
-        [dst] "+r" (dst)
-      : [dst_width] "r" (dst_width)
-      : "t1", "t2", "t3", "t4", "t5",
-        "t6", "t7", "t8", "t9"
-  );
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst)
+      : [dst_width] "r"(dst_width)
+      : "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9");
 }
 
-void ScaleRowDown4Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                            uint8* dst, int dst_width) {
+void ScaleRowDown4Box_DSPR2(const uint8* src_ptr,
+                            ptrdiff_t src_stride,
+                            uint8* dst,
+                            int dst_width) {
   intptr_t stride = src_stride;
   const uint8* s1 = src_ptr + stride;
   const uint8* s2 = s1 + stride;
   const uint8* s3 = s2 + stride;
 
-  __asm__ __volatile__ (
+  __asm__ __volatile__(
       ".set push                                  \n"
       ".set noreorder                             \n"
 
       "srl           $t9, %[dst_width], 1         \n"
       "andi          $t8, %[dst_width], 1         \n"
 
-     "1:                                          \n"
+      "1:                                         \n"
       "lw            $t0, 0(%[src_ptr])           \n"  // |3|2|1|0|
       "lw            $t1, 0(%[s1])                \n"  // |7|6|5|4|
       "lw            $t2, 0(%[s2])                \n"  // |11|10|9|8|
@@ -299,23 +297,20 @@ void ScaleRowDown4Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "2:                                         \n"
       ".set pop                                   \n"
 
-      : [src_ptr] "+r" (src_ptr),
-        [dst] "+r" (dst),
-        [s1] "+r" (s1),
-        [s2] "+r" (s2),
-        [s3] "+r" (s3)
-      : [dst_width] "r" (dst_width)
-      : "t0", "t1", "t2", "t3", "t4", "t5",
-        "t6","t7", "t8", "t9"
-  );
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst), [s1] "+r"(s1), [s2] "+r"(s2),
+        [s3] "+r"(s3)
+      : [dst_width] "r"(dst_width)
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9");
 }
 
-void ScaleRowDown34_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                          uint8* dst, int dst_width) {
-  __asm__ __volatile__ (
+void ScaleRowDown34_DSPR2(const uint8* src_ptr,
+                          ptrdiff_t src_stride,
+                          uint8* dst,
+                          int dst_width) {
+  __asm__ __volatile__(
       ".set push                                          \n"
       ".set noreorder                                     \n"
-    "1:                                                   \n"
+      "1:                                                 \n"
       "lw              $t1, 0(%[src_ptr])                 \n"  // |3|2|1|0|
       "lw              $t2, 4(%[src_ptr])                 \n"  // |7|6|5|4|
       "lw              $t3, 8(%[src_ptr])                 \n"  // |11|10|9|8|
@@ -347,23 +342,21 @@ void ScaleRowDown34_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "bnez            %[dst_width], 1b                   \n"
       " addiu          %[dst], %[dst], 24                 \n"
       ".set pop                                           \n"
-      : [src_ptr] "+r" (src_ptr),
-        [dst] "+r" (dst),
-        [dst_width] "+r" (dst_width)
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst), [dst_width] "+r"(dst_width)
       :
-      : "t0", "t1", "t2", "t3", "t4", "t5",
-        "t6","t7", "t8", "t9"
-  );
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9");
 }
 
-void ScaleRowDown34_0_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                                uint8* d, int dst_width) {
-  __asm__ __volatile__ (
+void ScaleRowDown34_0_Box_DSPR2(const uint8* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint8* d,
+                                int dst_width) {
+  __asm__ __volatile__(
       ".set push                                         \n"
       ".set noreorder                                    \n"
       "repl.ph           $t3, 3                          \n"  // 0x00030003
 
-    "1:                                                  \n"
+      "1:                                                \n"
       "lw                $t0, 0(%[src_ptr])              \n"  // |S3|S2|S1|S0|
       "lwx               $t1, %[src_stride](%[src_ptr])  \n"  // |T3|T2|T1|T0|
       "rotr              $t2, $t0, 8                     \n"  // |S0|S3|S2|S1|
@@ -400,26 +393,24 @@ void ScaleRowDown34_0_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "sb                $t6, 2(%[d])                    \n"
       "bgtz              %[dst_width], 1b                \n"
       " addiu            %[d], %[d], 3                   \n"
-    "3:                                                  \n"
+      "3:                                                \n"
       ".set pop                                          \n"
-      : [src_ptr] "+r" (src_ptr),
-        [src_stride] "+r" (src_stride),
-        [d] "+r" (d),
-        [dst_width] "+r" (dst_width)
+      : [src_ptr] "+r"(src_ptr), [src_stride] "+r"(src_stride), [d] "+r"(d),
+        [dst_width] "+r"(dst_width)
       :
-      : "t0", "t1", "t2", "t3",
-        "t4", "t5", "t6"
-  );
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6");
 }
 
-void ScaleRowDown34_1_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                                uint8* d, int dst_width) {
-  __asm__ __volatile__ (
+void ScaleRowDown34_1_Box_DSPR2(const uint8* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint8* d,
+                                int dst_width) {
+  __asm__ __volatile__(
       ".set push                                           \n"
       ".set noreorder                                      \n"
       "repl.ph           $t2, 3                            \n"  // 0x00030003
 
-    "1:                                                    \n"
+      "1:                                                  \n"
       "lw                $t0, 0(%[src_ptr])                \n"  // |S3|S2|S1|S0|
       "lwx               $t1, %[src_stride](%[src_ptr])    \n"  // |T3|T2|T1|T0|
       "rotr              $t4, $t0, 8                       \n"  // |S0|S3|S2|S1|
@@ -452,25 +443,23 @@ void ScaleRowDown34_1_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "sb                $t6, 2(%[d])                      \n"
       "bgtz              %[dst_width], 1b                  \n"
       " addiu            %[d], %[d], 3                     \n"
-    "3:                                                    \n"
+      "3:                                                  \n"
       ".set pop                                            \n"
-      : [src_ptr] "+r" (src_ptr),
-        [src_stride] "+r" (src_stride),
-        [d] "+r" (d),
-        [dst_width] "+r" (dst_width)
+      : [src_ptr] "+r"(src_ptr), [src_stride] "+r"(src_stride), [d] "+r"(d),
+        [dst_width] "+r"(dst_width)
       :
-      : "t0", "t1", "t2", "t3",
-        "t4", "t5", "t6"
-  );
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6");
 }
 
-void ScaleRowDown38_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                          uint8* dst, int dst_width) {
-  __asm__ __volatile__ (
+void ScaleRowDown38_DSPR2(const uint8* src_ptr,
+                          ptrdiff_t src_stride,
+                          uint8* dst,
+                          int dst_width) {
+  __asm__ __volatile__(
       ".set push                                     \n"
       ".set noreorder                                \n"
 
-    "1:                                              \n"
+      "1:                                            \n"
       "lw         $t0, 0(%[src_ptr])                 \n"  // |3|2|1|0|
       "lw         $t1, 4(%[src_ptr])                 \n"  // |7|6|5|4|
       "lw         $t2, 8(%[src_ptr])                 \n"  // |11|10|9|8|
@@ -501,26 +490,24 @@ void ScaleRowDown38_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "bgez       $t8, 1b                            \n"
       " addiu     %[dst], %[dst], 12                 \n"
       ".set pop                                      \n"
-      : [src_ptr] "+r" (src_ptr),
-        [dst] "+r" (dst),
-        [dst_width] "+r" (dst_width)
+      : [src_ptr] "+r"(src_ptr), [dst] "+r"(dst), [dst_width] "+r"(dst_width)
       :
-      : "t0", "t1", "t2", "t3", "t4",
-        "t5", "t6", "t7", "t8"
-  );
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8");
 }
 
-void ScaleRowDown38_2_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
-                                uint8* dst_ptr, int dst_width) {
+void ScaleRowDown38_2_Box_DSPR2(const uint8* src_ptr,
+                                ptrdiff_t src_stride,
+                                uint8* dst_ptr,
+                                int dst_width) {
   intptr_t stride = src_stride;
   const uint8* t = src_ptr + stride;
   const int c = 0x2AAA;
 
-  __asm__ __volatile__ (
+  __asm__ __volatile__(
       ".set push                                         \n"
       ".set noreorder                                    \n"
 
-    "1:                                                  \n"
+      "1:                                                \n"
       "lw              $t0, 0(%[src_ptr])                \n"  // |S3|S2|S1|S0|
       "lw              $t1, 4(%[src_ptr])                \n"  // |S7|S6|S5|S4|
       "lw              $t2, 0(%[t])                      \n"  // |T3|T2|T1|T0|
@@ -554,18 +541,16 @@ void ScaleRowDown38_2_Box_DSPR2(const uint8* src_ptr, ptrdiff_t src_stride,
       "bgtz            %[dst_width], 1b                  \n"
       " sb             $t0, -3(%[dst_ptr])               \n"
       ".set pop                                          \n"
-      : [src_ptr] "+r" (src_ptr),
-        [dst_ptr] "+r" (dst_ptr),
-        [t] "+r" (t),
-        [dst_width] "+r" (dst_width)
-      : [c] "r" (c)
-      : "t0", "t1", "t2", "t3", "t4", "t5", "t6"
-  );
+      : [src_ptr] "+r"(src_ptr), [dst_ptr] "+r"(dst_ptr), [t] "+r"(t),
+        [dst_width] "+r"(dst_width)
+      : [c] "r"(c)
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6");
 }
 
 void ScaleRowDown38_3_Box_DSPR2(const uint8* src_ptr,
                                 ptrdiff_t src_stride,
-                                uint8* dst_ptr, int dst_width) {
+                                uint8* dst_ptr,
+                                int dst_width) {
   intptr_t stride = src_stride;
   const uint8* s1 = src_ptr + stride;
   stride += stride;
@@ -573,11 +558,11 @@ void ScaleRowDown38_3_Box_DSPR2(const uint8* src_ptr,
   const int c1 = 0x1C71;
   const int c2 = 0x2AAA;
 
-  __asm__ __volatile__ (
+  __asm__ __volatile__(
       ".set push                                         \n"
       ".set noreorder                                    \n"
 
-    "1:                                                  \n"
+      "1:                                                \n"
       "lw              $t0, 0(%[src_ptr])                \n"  // |S3|S2|S1|S0|
       "lw              $t1, 4(%[src_ptr])                \n"  // |S7|S6|S5|S4|
       "lw              $t2, 0(%[s1])                     \n"  // |T3|T2|T1|T0|
@@ -624,15 +609,55 @@ void ScaleRowDown38_3_Box_DSPR2(const uint8* src_ptr,
       "bgtz            %[dst_width], 1b                  \n"
       " sb             $t0, -3(%[dst_ptr])               \n"
       ".set pop                                          \n"
-      : [src_ptr] "+r" (src_ptr),
-        [dst_ptr] "+r" (dst_ptr),
-        [s1] "+r" (s1),
-        [s2] "+r" (s2),
-        [dst_width] "+r" (dst_width)
-      : [c1] "r" (c1), [c2] "r" (c2)
-      : "t0", "t1", "t2", "t3", "t4",
-        "t5", "t6", "t7", "t8"
-  );
+      : [src_ptr] "+r"(src_ptr), [dst_ptr] "+r"(dst_ptr), [s1] "+r"(s1),
+        [s2] "+r"(s2), [dst_width] "+r"(dst_width)
+      : [c1] "r"(c1), [c2] "r"(c2)
+      : "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8");
+}
+
+void ScaleAddRow_DSPR2(const uint8* src_ptr, uint16* dst_ptr, int src_width) {
+  int x;
+  for (x = 0; x < ((src_width - 1)); x += 8) {
+    uint32 tmp_t1, tmp_t2, tmp_t3, tmp_t4;
+    uint32 tmp_t5, tmp_t6, tmp_t7, tmp_t8;
+    __asm__ __volatile__(
+        ".set push                                                \n"
+        ".set noreorder                                           \n"
+        "lw                %[tmp_t5],   0(%[src_ptr])             \n"
+        "lw                %[tmp_t6],   4(%[src_ptr])             \n"
+        "lw                %[tmp_t1],   0(%[dst_ptr])             \n"
+        "lw                %[tmp_t2],   4(%[dst_ptr])             \n"
+        "lw                %[tmp_t3],   8(%[dst_ptr])             \n"
+        "lw                %[tmp_t4],   12(%[dst_ptr])            \n"
+        "preceu.ph.qbr     %[tmp_t7],   %[tmp_t5]                 \n"
+        "preceu.ph.qbl     %[tmp_t8],   %[tmp_t5]                 \n"
+        "addu.ph           %[tmp_t1],   %[tmp_t1],     %[tmp_t7]  \n"
+        "addu.ph           %[tmp_t2],   %[tmp_t2],     %[tmp_t8]  \n"
+        "preceu.ph.qbr     %[tmp_t7],   %[tmp_t6]                 \n"
+        "preceu.ph.qbl     %[tmp_t8],   %[tmp_t6]                 \n"
+        "addu.ph           %[tmp_t3],   %[tmp_t3],     %[tmp_t7]  \n"
+        "addu.ph           %[tmp_t4],   %[tmp_t4],     %[tmp_t8]  \n"
+        "sw                %[tmp_t1],   0(%[dst_ptr])             \n"
+        "sw                %[tmp_t2],   4(%[dst_ptr])             \n"
+        "sw                %[tmp_t3],   8(%[dst_ptr])             \n"
+        "sw                %[tmp_t4],   12(%[dst_ptr])            \n"
+        ".set pop                                                 \n"
+        :
+        [tmp_t1] "=&r"(tmp_t1), [tmp_t2] "=&r"(tmp_t2), [tmp_t3] "=&r"(tmp_t3),
+        [tmp_t4] "=&r"(tmp_t4), [tmp_t5] "=&r"(tmp_t5), [tmp_t6] "=&r"(tmp_t6),
+        [tmp_t7] "=&r"(tmp_t7), [tmp_t8] "=&r"(tmp_t8), [src_ptr] "+r"(src_ptr)
+        : [dst_ptr] "r"(dst_ptr));
+    src_ptr += 8;
+    dst_ptr += 8;
+  }
+
+  if ((src_width)&7) {
+    for (x = 0; x < ((src_width - 1) & 7); x += 1) {
+      dst_ptr[0] += src_ptr[0];
+      src_ptr += 1;
+      dst_ptr += 1;
+    }
+  }
 }
 
 #endif  // defined(__mips_dsp) && (__mips_dsp_rev >= 2)
@@ -641,4 +666,3 @@ void ScaleRowDown38_3_Box_DSPR2(const uint8* src_ptr,
 }  // extern "C"
 }  // namespace libyuv
 #endif
-

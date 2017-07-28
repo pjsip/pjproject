@@ -8,7 +8,7 @@
  *  be found in the AUTHORS file in the root of the source tree.
  */
 
-#ifndef INCLUDE_LIBYUV_MJPEG_DECODER_H_  // NOLINT
+#ifndef INCLUDE_LIBYUV_MJPEG_DECODER_H_
 #define INCLUDE_LIBYUV_MJPEG_DECODER_H_
 
 #include "libyuv/basic_types.h"
@@ -37,7 +37,6 @@ static const uint32 kUnknownDataSize = 0xFFFFFFFF;
 enum JpegSubsamplingType {
   kJpegYuv420,
   kJpegYuv422,
-  kJpegYuv411,
   kJpegYuv444,
   kJpegYuv400,
   kJpegUnknown
@@ -145,12 +144,16 @@ class LIBYUV_API MJpegDecoder {
   // callback function. Each call will get the data for a whole number of
   // image scanlines.
   // TODO(fbarchard): Add dst_x, dst_y to allow specific rect to be decoded.
-  LIBYUV_BOOL DecodeToCallback(CallbackFunction fn, void* opaque,
-                        int dst_width, int dst_height);
+  LIBYUV_BOOL DecodeToCallback(CallbackFunction fn,
+                               void* opaque,
+                               int dst_width,
+                               int dst_height);
 
   // The helper function which recognizes the jpeg sub-sampling type.
   static JpegSubsamplingType JpegSubsamplingTypeHelper(
-     int* subsample_x, int* subsample_y, int number_of_components);
+      int* subsample_x,
+      int* subsample_y,
+      int number_of_components);
 
  private:
   void AllocOutputBuffers(int num_outbufs);
@@ -189,4 +192,4 @@ class LIBYUV_API MJpegDecoder {
 }  // namespace libyuv
 
 #endif  //  __cplusplus
-#endif  // INCLUDE_LIBYUV_MJPEG_DECODER_H_  NOLINT
+#endif  // INCLUDE_LIBYUV_MJPEG_DECODER_H_

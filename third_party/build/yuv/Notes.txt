@@ -1,5 +1,7 @@
 Notes:
-* Source code for libyuv from https://chromium.googlesource.com/libyuv/libyuv/ dated 23 June 2016.
+
+* Source code for libyuv from https://chromium.googlesource.com/libyuv/libyuv/ dated 27 July 2017.
+
 * All code is compilable, except for compare_win.cc
   - Use older version (https://chromium.googlesource.com/libyuv/libyuv/+/baf6a3c1bd385e7ffe6b7634560e71fb49e4f589%5E%21/)
     Since there's a compiler error on:
@@ -15,7 +17,14 @@ Notes:
 
     __declspec(naked)
     --------------------------------------------------------------------------------------
-* Disable some compiler warning which apear alot:
-  - warning C4100: unreferenced formal parameter
-  - warning C4127: conditional expression is constant
-  - warning C4244: '=' : conversion from 'uint32' to 'uint8', possible loss of data
+
+* Added these lines to file include/libyuv/basic_types.h:
+  --
+  #if _MSC_VER==1400
+  #   include <stdint.h>  // for uint8_t
+  #endif
+  ...
+  #if defined(_MSC_VER)
+  #  pragma warning(disable:4996) // This function or variable may be unsafe.
+  #endif
+  --

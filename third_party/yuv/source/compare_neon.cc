@@ -21,8 +21,42 @@ extern "C" {
 #if !defined(LIBYUV_DISABLE_NEON) && defined(__ARM_NEON__) && \
     !defined(__aarch64__)
 
+// 256 bits at a time
+// uses short accumulator which restricts count to 131 KB
+uint32 HammingDistance_NEON(const uint8* src_a, const uint8* src_b, int count) {
+  uint32 diff;
+
+  asm volatile (
+    "vmov.u16   q4, #0                         \n"  // accumulator
+
+  "1:                                          \n"
+    "vld1.8     {q0, q1}, [%0]!                \n"
+    "vld1.8     {q2, q3}, [%1]!                \n"
+    "veor.32    q0, q0, q2                     \n"
+    "veor.32    q1, q1, q3                     \n"
+    "vcnt.i8    q0, q0                         \n"
+    "vcnt.i8    q1, q1                         \n"
+    "subs       %2, %2, #32                    \n"
+    "vadd.u8    q0, q0, q1                     \n"  // 16 byte counts
+    "vpadal.u8  q4, q0                         \n"  // 8 shorts
+    "bgt        1b                             \n"
+
+    "vpaddl.u16 q0, q4                         \n"  // 4 ints
+    "vpadd.u32  d0, d0, d1                     \n"
+    "vpadd.u32  d0, d0, d0                     \n"
+    "vmov.32    %3, d0[0]                      \n"
+ 
+    : "+r"(src_a),
+      "+r"(src_b),
+      "+r"(count),
+      "=r"(diff)
+    :
+    :  "cc", "q0", "q1", "q2", "q3", "q4");
+  return diff;
+}
+
 uint32 SumSquareError_NEON(const uint8* src_a, const uint8* src_b, int count) {
-  volatile uint32 sse;
+  uint32 sse;
   asm volatile (
     "vmov.u8    q8, #0                         \n"
     "vmov.u8    q10, #0                        \n"
@@ -30,9 +64,7 @@ uint32 SumSquareError_NEON(const uint8* src_a, const uint8* src_b, int count) {
     "vmov.u8    q11, #0                        \n"
 
   "1:                                          \n"
-    MEMACCESS(0)
     "vld1.8     {q0}, [%0]!                    \n"
-    MEMACCESS(1)
     "vld1.8     {q1}, [%1]!                    \n"
     "subs       %2, %2, #16                    \n"
     "vsubl.u8   q2, d0, d2                     \n"

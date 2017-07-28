@@ -48,14 +48,14 @@ export YUV_OBJS = \
 	rotate.o            \
 	rotate_common.o     \
 	rotate_gcc.o        \
-	rotate_mips.o       \
+	rotate_dspr2.o      \
 	rotate_neon64.o     \
 	rotate_neon.o       \
 	rotate_win.o        \
 	row_any.o           \
 	row_common.o        \
 	row_gcc.o           \
-	row_mips.o          \
+	row_dspr2.o         \
 	row_neon64.o        \
 	row_neon.o          \
 	row_win.o           \
@@ -64,7 +64,7 @@ export YUV_OBJS = \
 	scale.o             \
 	scale_common.o      \
 	scale_gcc.o         \
-	scale_mips.o        \
+	scale_dspr2.o       \
 	scale_neon64.o      \
 	scale_neon.o        \
 	scale_win.o         \
