@@ -1092,13 +1092,13 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     }
 
     /* Detect our role */
-    if (current_ice_role==PJ_ICE_SESS_ROLE_CONTROLLING) {
+    if (pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+			      &STR_ICE_LITE, NULL) != NULL)
+    {
+	/* Remote is ICE lite, set our role as controlling */
 	sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLING;
     } else {
-	if (pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
-				  &STR_ICE_LITE, NULL) != NULL)
-	{
-	    /* Remote is ICE Lite */
+	if (current_ice_role==PJ_ICE_SESS_ROLE_CONTROLLING) {
 	    sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLING;
 	} else {
 	    sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLED;
@@ -1586,8 +1586,24 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				      PJ_ICE_SESS_ROLE_CONTROLLING);
 	}
 
-
 	/* start ICE */
+    }
+
+    /* RFC 5245 section 8.1.1:
+     * If its peer has a lite implementation, an agent MUST use
+     * a regular nomination algorithm.
+     */
+    if (pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+			      &STR_ICE_LITE, NULL) != NULL)
+    {
+        pj_ice_sess_options opt;
+	pj_ice_strans_get_options(tp_ice->ice_st, &opt);
+	if (opt.aggressive) {
+	    opt.aggressive = PJ_FALSE;
+	    pj_ice_strans_set_options(tp_ice->ice_st, &opt);
+	    PJ_LOG(4,(tp_ice->base.name, "Forcefully set ICE to use regular "
+		      "nomination as remote is lite implementation"));
+	}
     }
 
     /* Now start ICE */
