@@ -1778,10 +1778,10 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Run pending allocation */
     if (sess->pending_alloc) {
-	pj_status_t status;
-	status = pj_turn_session_alloc(sess, NULL);
-	if (status != PJ_SUCCESS)
-	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status, NULL);
+	pj_status_t status2;
+	status2 = pj_turn_session_alloc(sess, NULL);
+	if (status2 != PJ_SUCCESS)
+	    on_session_fail(sess, PJ_STUN_ALLOCATE_METHOD, status2, NULL);
     }
 
     pj_grp_lock_dec_ref(sess->grp_lock);

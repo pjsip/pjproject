@@ -84,6 +84,8 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
     for (unsigned i = 0; i < verif_msg_cnt; ++i) {
         verifyMsgs.push_back(verif_msgs[i]);
     }
+#else
+    PJ_UNUSED_ARG(info);
 #endif
 }
 
@@ -1393,7 +1395,7 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     call->onCreateMediaTransportSrtp(prm);
     
     srtp_opt->use = prm.srtpUse;
-    srtp_opt->crypto_count = prm.cryptos.size();
+    srtp_opt->crypto_count = (unsigned)prm.cryptos.size();
     for (unsigned i = 0; i < srtp_opt->crypto_count; i++) {
     	srtp_opt->crypto[i].key   = str2Pj(prm.cryptos[i].key);
     	srtp_opt->crypto[i].name  = str2Pj(prm.cryptos[i].name);

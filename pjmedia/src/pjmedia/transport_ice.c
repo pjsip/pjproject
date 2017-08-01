@@ -768,7 +768,8 @@ static pj_status_t parse_cand(const char *obj_name,
 			      pj_ice_sess_cand *cand)
 {
     pj_str_t token, delim, host;
-    int af, found_idx;    
+    int af;
+    pj_ssize_t found_idx;
     pj_status_t status = PJNATH_EICEINCANDSDP;
 
     pj_bzero(cand, sizeof(*cand));

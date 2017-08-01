@@ -157,7 +157,7 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 	return PJMEDIA_SRTP_EINKEYLEN;
 
     /* Key transmitted via SDP should be base64 encoded. */
-    status = pj_base64_encode((pj_uint8_t*)crypto->key.ptr, crypto->key.slen,
+    status = pj_base64_encode((pj_uint8_t*)crypto->key.ptr, (int)crypto->key.slen,
 			      b64_key, &b64_key_len);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(5,(THIS_FILE, "Failed encoding plain key to base64"));
@@ -191,7 +191,8 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 {
     pj_str_t token, delim;
     pj_status_t status;
-    int itmp, found_idx;
+    int itmp;
+    pj_ssize_t found_idx;
 
     pj_bzero(crypto, sizeof(*crypto));
 

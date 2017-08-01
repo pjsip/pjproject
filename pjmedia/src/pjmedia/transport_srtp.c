@@ -831,7 +831,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 
 	/* TX crypto and key */
 	b64_len = sizeof(b64);
-	status = pj_base64_encode((pj_uint8_t*)tx->key.ptr, tx->key.slen,
+	status = pj_base64_encode((pj_uint8_t*)tx->key.ptr, (int)tx->key.slen,
 				  b64, &b64_len);
 	if (status != PJ_SUCCESS)
 	    b64_len = pj_ansi_sprintf(b64, "--key too long--");
@@ -848,7 +848,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 
 	/* RX crypto and key */
 	b64_len = sizeof(b64);
-	status = pj_base64_encode((pj_uint8_t*)rx->key.ptr, rx->key.slen,
+	status = pj_base64_encode((pj_uint8_t*)rx->key.ptr, (int)rx->key.slen,
 				  b64, &b64_len);
 	if (status != PJ_SUCCESS)
 	    b64_len = pj_ansi_sprintf(b64, "--key too long--");
@@ -1178,7 +1178,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
-    int len = size;
+    int len = (int)size;
     srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;
@@ -1272,7 +1272,7 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
-    int len = size;
+    int len = (int)size;
     srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
     void *cb_data = NULL;

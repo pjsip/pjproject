@@ -176,7 +176,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	    continue;
 	}
 	
-	bitstream_size += frm_bit.size;
+	bitstream_size += (unsigned)frm_bit.size;
 
 	/* Parse the bitstream (not really necessary for this case
 	 * since we always decode 1 frame, but it's still good

@@ -662,6 +662,10 @@ static void dns_callback(void *user_data,
 	pj_bool_t is_type_a, srv_completed;
         pj_dns_addr_record rec;
 
+	/* Avoid warning: potentially uninitialized local variable 'rec' */
+	rec.alias.slen = 0;
+	rec.addr_count = 0;
+
 	/* Clear outstanding job */
 	if (common->type == PJ_DNS_TYPE_A) {
 	    srv_completed = (srv->q_aaaa == NULL);
@@ -691,8 +695,8 @@ static void dns_callback(void *user_data,
 		          query_job->domain_part.ptr,
 		          status,
 		          pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
-            }
-        }
+	    }
+	}
 
 	/* Check that we really have answer */
 	if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {

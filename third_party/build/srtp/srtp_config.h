@@ -137,15 +137,16 @@
 #	define inline _inline
 #   endif
 
-//#   pragma warning(disable:4311)
+#   pragma warning(disable:4311) // 'type cast': pointer truncation from 'unsigned char *' to 'unsigned long'
 //#   pragma warning(disable:4761) // integral mismatch
-//#   pragma warning(disable:4018) // signed/unsigned mismatch
+#   pragma warning(disable:4018) // '<' : signed/unsigned mismatch
 #   pragma warning(disable:4244) // conversion from int64 to int
 #   pragma warning(disable:4100) // unreferenced formal parameter
 #   pragma warning(disable:4214) // bit field types other than int
 #   pragma warning(disable:4389) // '!=' : signed/unsigned mismatch
 #   pragma warning(disable:4701) // potentially uninitialized local variable used
 #   pragma warning(disable:4702) // unreachable code
+#   pragma warning(disable:4703) // potentially uninitialized local pointer variable used
 #endif
 
 /* clock()  */

@@ -103,7 +103,7 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
 					   pj_qos_params *p_param)
 {
     pj_status_t last_err = PJ_ENOTSUP;
-    int val, optlen;
+    int val = 0, optlen;
     pj_sockaddr sa;
     int salen = sizeof(salen);
     pj_status_t status;

@@ -2939,9 +2939,9 @@ PJ_DEF(pj_status_t) pjsua_call_xfer_replaces( pjsua_call_id call_id,
      * URL escape it based off of the allowed characters for header values.
     */
     pconst = pjsip_parser_const();	
-    call_id_len = pj_strncpy2_escape(call_id_dest_buf, &dest_dlg->call_id->id,
-     				     PJ_ARRAY_SIZE(call_id_dest_buf),
-     				     &pconst->pjsip_HDR_CHAR_SPEC);
+    call_id_len = (int)pj_strncpy2_escape(call_id_dest_buf, &dest_dlg->call_id->id,
+     					  PJ_ARRAY_SIZE(call_id_dest_buf),
+     					  &pconst->pjsip_HDR_CHAR_SPEC);
     if (call_id_len < 0) {
     	status = PJSIP_EURITOOLONG;
     	goto on_error;

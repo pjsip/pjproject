@@ -351,7 +351,7 @@ pj_uint32_t AudioMediaPlayer::getPos() const throw(Error)
 {
     pj_ssize_t pos = pjsua_player_get_pos(playerId);
     if (pos < 0) {
-	PJSUA2_RAISE_ERROR2(-pos, "AudioMediaPlayer::getPos()");
+	PJSUA2_RAISE_ERROR2((pj_status_t)-pos, "AudioMediaPlayer::getPos()");
     }
     return (pj_uint32_t)pos;
 }
@@ -508,7 +508,7 @@ void ToneGenerator::play(const ToneDescVector &tones,
 	PJSUA2_RAISE_ERROR(PJ_EINVAL);
     }
 
-    status = pjmedia_tonegen_play(tonegen, tones.size(), &tones[0],
+    status = pjmedia_tonegen_play(tonegen, (unsigned)tones.size(), &tones[0],
 				  loop? PJMEDIA_TONEGEN_LOOP : 0);
     PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::play()");
 }
@@ -525,7 +525,7 @@ void ToneGenerator::playDigits(const ToneDigitVector &digits,
 	PJSUA2_RAISE_ERROR(PJ_EINVAL);
     }
 
-    status = pjmedia_tonegen_play_digits(tonegen, digits.size(), &digits[0],
+    status = pjmedia_tonegen_play_digits(tonegen, (unsigned)digits.size(), &digits[0],
 					 loop? PJMEDIA_TONEGEN_LOOP : 0);
     PJSUA2_CHECK_RAISE_ERROR2(status, "ToneGenerator::playDigits()");
 }
@@ -571,7 +571,7 @@ void ToneGenerator::setDigitMap(const ToneDigitMapVector &digit_map)
 	PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
     }
 
-    digitMap.count = digit_map.size();
+    digitMap.count = (unsigned)digit_map.size();
     if (digitMap.count > PJ_ARRAY_SIZE(digitMap.digits))
 	digitMap.count = PJ_ARRAY_SIZE(digitMap.digits);
 

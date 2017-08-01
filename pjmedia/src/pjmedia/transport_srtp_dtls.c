@@ -32,7 +32,8 @@
 #include <openssl/rsa.h>
 #include <openssl/ssl.h>
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L && \
+    defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L
 #  define X509_get_notBefore(x)	    X509_getm_notBefore(x)
 #  define X509_get_notAfter(x)	    X509_getm_notAfter(x)
 #endif

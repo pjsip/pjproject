@@ -455,7 +455,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_get_info(
 	return PJ_ENOTSUP;
     }
 
-    info->size_bytes = pjmedia_wav_player_get_len(port);
+    info->size_bytes = (pj_uint32_t)pjmedia_wav_player_get_len(port);
     info->size_samples = info->size_bytes /
 			 (info->payload_bits_per_sample / 8);
 

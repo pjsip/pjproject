@@ -115,8 +115,10 @@ static unsigned get_nid_from_cid(unsigned cid)
 #  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
 #  define M_ASN1_STRING_data(x)	    ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
-#  define X509_get_notBefore(x)	    X509_get0_notBefore(x)
-#  define X509_get_notAfter(x)	    X509_get0_notAfter(x)
+#  if defined(OPENSSL_API_COMPAT) && OPENSSL_API_COMPAT >= 0x10100000L
+#     define X509_get_notBefore(x)  X509_get0_notBefore(x)
+#     define X509_get_notAfter(x)   X509_get0_notAfter(x)
+#  endif
 #else
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
@@ -132,6 +134,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #    pragma comment(lib, "libeay32")
 #    pragma comment(lib, "ssleay32")
 #  endif
+#  define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
 #endif
 
 

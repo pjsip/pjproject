@@ -280,11 +280,11 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	            /* Generate a synthesized IPv6 address, if possible. */
 		    unsigned int count = 1;
 		    pj_addrinfo ai[1];
-		    pj_status_t status;
+		    pj_status_t status2;
 
-                    status = pj_getaddrinfo(pj_AF_INET6(),
+                    status2 = pj_getaddrinfo(pj_AF_INET6(),
                     			    &target->addr.host, &count, ai);
-		    if (status == PJ_SUCCESS && count > 0 &&
+		    if (status2 == PJ_SUCCESS && count > 0 &&
 		    	ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
 		    {
 			pj_sockaddr_init(pj_AF_INET6(),
