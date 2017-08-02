@@ -1114,7 +1114,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 	                                    pkt, size);
     }
 
-    if (size > sizeof(srtp->rtcp_tx_buffer) - MAX_TRAILER_LEN)
+    if (size > sizeof(srtp->rtcp_tx_buffer) - (MAX_TRAILER_LEN+4))
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtcp_tx_buffer, pkt, size);
