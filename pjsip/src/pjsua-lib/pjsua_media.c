@@ -893,7 +893,10 @@ static pj_status_t create_ice_media_transport(
     if (ice_cfg.stun_tp_cnt) {
 	unsigned i;
 
-	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
+	if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
+	    pj_sockaddr_print(&pjsua_var.stun_srv, stunip,
+			      sizeof(stunip), 0);
+	}
 
 	for (i = 0; i < ice_cfg.stun_tp_cnt; ++i) {
 	    pj_str_t IN6_ADDR_ANY = {"0", 1};
