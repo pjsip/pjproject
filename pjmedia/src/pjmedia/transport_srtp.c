@@ -69,6 +69,12 @@
 
 #define DEACTIVATE_MEDIA(pool, m)   pjmedia_sdp_media_deactivate(pool, m)
 
+#ifdef SRTP_MAX_TRAILER_LEN
+#   define MAX_TRAILER_LEN SRTP_MAX_TRAILER_LEN
+#else
+#   define MAX_TRAILER_LEN 10
+#endif
+
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 static const pj_str_t ID_INACTIVE = { "inactive", 8 };
@@ -1062,7 +1068,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     if (srtp->bypass_srtp)
 	return pjmedia_transport_send_rtp(srtp->member_tp, pkt, size);
 
-    if (size > sizeof(srtp->rtp_tx_buffer) - 10)
+    if (size > sizeof(srtp->rtp_tx_buffer) - MAX_TRAILER_LEN)
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtp_tx_buffer, pkt, size);
@@ -1108,7 +1114,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 	                                    pkt, size);
     }
 
-    if (size > sizeof(srtp->rtcp_tx_buffer) - 10)
+    if (size > sizeof(srtp->rtcp_tx_buffer) - MAX_TRAILER_LEN)
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtcp_tx_buffer, pkt, size);
