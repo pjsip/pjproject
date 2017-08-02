@@ -20,34 +20,34 @@
 #
 import sys
 if sys.version_info[0] >= 3: # Python 3
-	import tkinter as tk
-	from tkinter import ttk
-	from tkinter import messagebox as msgbox
+    import tkinter as tk
+    from tkinter import ttk
+    from tkinter import messagebox as msgbox
 else:
-	import Tkinter as tk
-	import tkMessageBox as msgbox
-	import ttk
+    import Tkinter as tk
+    import tkMessageBox as msgbox
+    import ttk
 
 import pjsua2 as pj
 import application
 
 
 class Endpoint(pj.Endpoint):
-	"""
-	This is high level Python object inherited from pj.Endpoint
-	"""
-	instance = None
-	def __init__(self):
-		pj.Endpoint.__init__(self)
-		Endpoint.instance = self
-	
-	
+    """
+    This is high level Python object inherited from pj.Endpoint
+    """
+    instance = None
+    def __init__(self):
+        pj.Endpoint.__init__(self)
+        Endpoint.instance = self
+
+
 def validateUri(uri):
-	return Endpoint.instance.utilVerifyUri(uri) == pj.PJ_SUCCESS
+    return Endpoint.instance.utilVerifyUri(uri) == pj.PJ_SUCCESS
 
 def validateSipUri(uri):
-	return Endpoint.instance.utilVerifySipUri(uri) == pj.PJ_SUCCESS
+    return Endpoint.instance.utilVerifySipUri(uri) == pj.PJ_SUCCESS
 
 
 if __name__ == '__main__':
-	application.main()
+    application.main()

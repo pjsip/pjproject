@@ -1,5 +1,15 @@
 PYTHON_SO=_pjsua2.so
 
+USE_PYTHON3=1
+
+ifeq ($(USE_PYTHON3),1)
+  PYTHON_EXE=python3
+  PYTHON_PKG_DIR=$(HOME)/.local/lib/python3.6/site-packages
+else
+  PYTHON_EXE=python
+  PYTHON_PKG_DIR=$(HOME)/.local/lib/python2.7/site-packages
+endif
+
 #PYTHON_SETUP_FLAGS = --inplace 
 ifeq ($(OS),Windows_NT)
   PYTHON_SETUP_FLAGS += --compiler=mingw32
@@ -16,7 +26,7 @@ SWIG_FLAGS += -w312 $(USE_THREADS)
 all: $(PYTHON_SO)
 
 $(PYTHON_SO): pjsua2_wrap.cpp setup.py $(GCC_EXE)
-	python setup.py build $(PYTHON_SETUP_FLAGS)
+	$(PYTHON_EXE) setup.py build $(PYTHON_SETUP_FLAGS)
 
 gcc.exe: cc_mingw.c
 	gcc -o gcc.exe cc_mingw.c
@@ -30,9 +40,9 @@ clean distclean realclean:
 	rm -f gcc.exe g++.exe
 
 install:
-	python setup.py install --user
+	$(PYTHON_EXE) setup.py install --user
 
 uninstall:
-	rm -f $(HOME)/.local/lib/python2.7/site-packages/pjsua2*
-	rm -f $(HOME)/.local/lib/python2.7/site-packages/_pjsua2*
+	rm -f $(PYTHON_PKG_DIR)/pjsua2*
+	rm -f $(PYTHON_PKG_DIR)/_pjsua2*
 
