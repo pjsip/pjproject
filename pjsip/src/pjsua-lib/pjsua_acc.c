@@ -32,6 +32,7 @@ enum
 };
 
 
+static int get_ip_addr_ver(const pj_str_t *host);
 static void schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
@@ -547,7 +548,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     --cfg.priority;
 
     /* Enclose IPv6 address in square brackets */
-    if (t->type & PJSIP_TRANSPORT_IPV6) {
+    if (get_ip_addr_ver(&t->local_name.host) == 6) {
 	beginquote = "[";
 	endquote = "]";
     } else {
@@ -1325,6 +1326,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	acc->cfg.rtp_cfg.bound_addr = b_addr;
     }
 
+    acc->cfg.nat64_opt = cfg->nat64_opt;
     acc->cfg.ipv6_media_use = cfg->ipv6_media_use;
 
     /* STUN and Media customization */
@@ -1696,9 +1698,12 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (status == PJ_SUCCESS) {
 	/* Compare the addresses as sockaddr according to the ticket above,
 	 * but only if they have the same family (ipv4 vs ipv4, or
-	 * ipv6 vs ipv6)
+	 * ipv6 vs ipv6).
+	 * Checking for the same address family is currently disabled,
+	 * since it can be useful in cases such as when on NAT64,
+	 * in order to get the IPv4-mapped address from IPv6.
 	 */
-	matched = (contact_addr.addr.sa_family != recv_addr.addr.sa_family) ||
+	matched = //(contact_addr.addr.sa_family != recv_addr.addr.sa_family)||
 	          (uri->port == rport &&
 		   pj_sockaddr_cmp(&contact_addr, &recv_addr)==0);
     } else {
@@ -3114,6 +3119,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     pjsip_tpselector tp_sel;
     pjsip_tpmgr *tpmgr;
     pjsip_tpmgr_fla2_param tfla2_prm;
+    pj_bool_t update_addr = PJ_TRUE;
 
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
     acc = &pjsua_var.acc[acc_id];
@@ -3182,6 +3188,25 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
      */
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
+
+    /* If we are behind NAT64, use the Contact and Via address from
+     * the UDP6 transport, which should be obtained from STUN.
+     */
+    if (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED) {
+        pjsip_tpmgr_fla2_param tfla2_prm2 = tfla2_prm;
+        
+        tfla2_prm2.tp_type = PJSIP_TRANSPORT_UDP6;
+        tfla2_prm2.tp_sel = NULL;
+        tfla2_prm2.local_if = (!pjsua_sip_acc_is_using_stun(acc_id));
+        status = pjsip_tpmgr_find_local_addr2(tpmgr, pool, &tfla2_prm2);
+    	if (status == PJ_SUCCESS) {
+    	    update_addr = PJ_FALSE;
+	    addr->host = tfla2_prm2.ret_addr;
+	    pj_strdup(acc->pool, &acc->via_addr.host, &addr->host);
+	    acc->via_addr.port = addr->port;
+	    acc->via_tp = (pjsip_transport *)tfla2_prm.ret_tp;
+	}
+    }
 
     /* For TCP/TLS, acc may request to specify source port */
     if (acc->cfg.contact_use_src_port) {
@@ -3276,8 +3301,12 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 	}
 
 	if (status == PJ_SUCCESS) {
-	    /* Got the local transport address */
-	    pj_strdup(pool, &addr->host, &tp->local_name.host);
+	    /* Got the local transport address, don't update if
+	     * we are on NAT64 and already obtained the address
+	     * from STUN above.
+	     */
+	    if (update_addr)
+	        pj_strdup(pool, &addr->host, &tp->local_name.host);
 	    addr->port = tp->local_name.port;
 	}
 

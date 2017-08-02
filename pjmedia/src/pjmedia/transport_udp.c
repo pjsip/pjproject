@@ -652,6 +652,9 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 {
     struct transport_udp *udp = (struct transport_udp*) tp;
     const pj_sockaddr *rtcp_addr;
+    pj_sockaddr sock_addr, remote_addr, remote_rtcp;
+    int rem_addr_len;
+    pj_status_t status;
 
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
@@ -667,19 +670,39 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 
     /* "Attach" the application: */
 
+    rem_addr_len = sizeof(pj_sockaddr);
+    pj_sock_getsockname(udp->rtp_sock, &sock_addr, &rem_addr_len);
+
+    /* Synthesize address, if necessary. */
+    status = pj_sockaddr_synthesize(sock_addr.addr.sa_family,
+    				    &remote_addr, rem_addr);
+    if (status != PJ_SUCCESS) {
+    	pj_perror(3, tp->name, status, "Failed to synthesize the correct"
+    				       "IP address for RTP");
+    }
+    rem_addr_len = pj_sockaddr_get_len(&remote_addr);
+
     /* Copy remote RTP address */
-    pj_memcpy(&udp->rem_rtp_addr, rem_addr, addr_len);
+    pj_memcpy(&udp->rem_rtp_addr, &remote_addr, rem_addr_len);
 
     /* Copy remote RTP address, if one is specified. */
     rtcp_addr = (const pj_sockaddr*) rem_rtcp;
     if (rtcp_addr && pj_sockaddr_has_addr(rtcp_addr)) {
-	pj_memcpy(&udp->rem_rtcp_addr, rem_rtcp, addr_len);
+    	pj_status_t status;
+
+        status = pj_sockaddr_synthesize(sock_addr.addr.sa_family,
+        		       		&remote_rtcp, rem_rtcp);
+        if (status != PJ_SUCCESS) {
+    	    pj_perror(3, tp->name, status, "Failed to synthesize the correct"
+    				       	   "IP address for RTCP");
+        }
+	pj_memcpy(&udp->rem_rtcp_addr, &remote_rtcp, rem_addr_len);
 
     } else {
 	unsigned rtcp_port;
 
 	/* Otherwise guess the RTCP address from the RTP address */
-	pj_memcpy(&udp->rem_rtcp_addr, rem_addr, addr_len);
+	pj_memcpy(&udp->rem_rtcp_addr, &udp->rem_rtp_addr, rem_addr_len);
 	rtcp_port = pj_sockaddr_get_port(&udp->rem_rtp_addr) + 1;
 	pj_sockaddr_set_port(&udp->rem_rtcp_addr, (pj_uint16_t)rtcp_port);
     }
@@ -690,7 +713,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     udp->user_data = user_data;
 
     /* Save address length */
-    udp->addr_len = addr_len;
+    udp->addr_len = rem_addr_len;
 
     /* Last, mark transport as attached */
     //udp->attached = PJ_TRUE;

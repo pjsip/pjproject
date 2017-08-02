@@ -148,6 +148,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
 	this->stunServer.push_back(pj2Str(ua_cfg.stun_srv[i]));
     }
 
+    this->stunTryIpv6 = PJ2BOOL(ua_cfg.stun_try_ipv6);
     this->stunIgnoreFailure = PJ2BOOL(ua_cfg.stun_ignore_failure);
     this->natTypeInSdp = ua_cfg.nat_type_in_sdp;
     this->mwiUnsolicitedEnabled = PJ2BOOL(ua_cfg.enable_unsolicited_mwi);
@@ -194,6 +195,7 @@ void UaConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_STRINGV ( this_node, nameserver);
     NODE_READ_STRING  ( this_node, userAgent);
     NODE_READ_STRINGV ( this_node, stunServer);
+    NODE_READ_BOOL    ( this_node, stunTryIpv6);
     NODE_READ_BOOL    ( this_node, stunIgnoreFailure);
     NODE_READ_INT     ( this_node, natTypeInSdp);
     NODE_READ_BOOL    ( this_node, mwiUnsolicitedEnabled);
@@ -209,6 +211,7 @@ void UaConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_STRINGV ( this_node, nameserver);
     NODE_WRITE_STRING  ( this_node, userAgent);
     NODE_WRITE_STRINGV ( this_node, stunServer);
+    NODE_WRITE_BOOL    ( this_node, stunTryIpv6);
     NODE_WRITE_BOOL    ( this_node, stunIgnoreFailure);
     NODE_WRITE_INT     ( this_node, natTypeInSdp);
     NODE_WRITE_BOOL    ( this_node, mwiUnsolicitedEnabled);

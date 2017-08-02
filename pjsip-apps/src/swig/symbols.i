@@ -153,6 +153,8 @@ typedef enum pjsua_sip_timer_use {PJSUA_SIP_TIMER_INACTIVE, PJSUA_SIP_TIMER_OPTI
 
 typedef enum pjsua_ipv6_use {PJSUA_IPV6_DISABLED, PJSUA_IPV6_ENABLED} pjsua_ipv6_use;
 
+typedef enum pjsua_nat64_opt {PJSUA_NAT64_DISABLED, PJSUA_NAT64_ENABLED} pjsua_nat64_opt;
+
 typedef enum pjsua_buddy_status {PJSUA_BUDDY_STATUS_UNKNOWN, PJSUA_BUDDY_STATUS_ONLINE, PJSUA_BUDDY_STATUS_OFFLINE} pjsua_buddy_status;
 
 typedef enum pjsua_call_media_status {PJSUA_CALL_MEDIA_NONE, PJSUA_CALL_MEDIA_ACTIVE, PJSUA_CALL_MEDIA_LOCAL_HOLD, PJSUA_CALL_MEDIA_REMOTE_HOLD, PJSUA_CALL_MEDIA_ERROR} pjsua_call_media_status;

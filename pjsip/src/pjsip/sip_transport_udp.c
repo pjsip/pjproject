@@ -700,7 +700,7 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
 {
     pj_pool_t *pool;
     struct udp_transport *tp;
-    const char *format, *ipv6_quoteb, *ipv6_quotee;
+    const char *format, *ipv6_quoteb = "", *ipv6_quotee = "";
     unsigned i;
     pj_status_t status;
 
@@ -709,12 +709,18 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
 
     /* Object name. */
     if (type & PJSIP_TRANSPORT_IPV6) {
+        pj_in6_addr dummy6;
+
 	format = "udpv6%p";
-	ipv6_quoteb = "[";
-	ipv6_quotee = "]";
+	/* We don't need to add quote if the transport type is IPv6, but
+	 * actually translated to IPv4.
+	 */
+        if (pj_inet_pton(pj_AF_INET6(), &a_name->host, &dummy6)==PJ_SUCCESS) {
+	    ipv6_quoteb = "[";
+	    ipv6_quotee = "]";
+	}
     } else {
 	format = "udp%p";
-	ipv6_quoteb = ipv6_quotee = "";
     }
 
     /* Create pool. */

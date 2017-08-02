@@ -469,6 +469,13 @@ struct AccountNatConfig : public PersistentObject
     pjsua_stun_use 	mediaStunUse;
 
     /**
+     * Specify NAT64 options.
+     *
+     * Default: PJSUA_NAT64_DISABLED
+     */
+    pjsua_nat64_opt 	nat64Opt;
+
+    /**
      * Enable ICE for the media transport.
      *
      * Default: False

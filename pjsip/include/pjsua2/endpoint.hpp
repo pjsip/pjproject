@@ -391,6 +391,15 @@ struct UaConfig : public PersistentObject
     StringVector	stunServer;
 
     /**
+     * This specifies if the library should try to do an IPv6 resolution of
+     * the STUN servers if the IPv4 resolution fails. It can be useful
+     * in an IPv6-only environment, including on NAT64.
+     *
+     * Default: FALSE
+     */
+
+    bool	    	stunTryIpv6;
+    /**
      * This specifies if the library startup should ignore failure with the
      * STUN servers. If this is set to PJ_FALSE, the library will refuse to
      * start if it fails to resolve or contact any of the STUN servers.

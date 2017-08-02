@@ -677,7 +677,7 @@ PJ_DEF(pj_status_t) pj_turn_session_set_server( pj_turn_session *sess,
 	    pj_sockaddr *addr = &sess->srv_addr_list[i];
 	    pj_memcpy(addr, &ai[i].ai_addr, sizeof(pj_sockaddr));
 	    addr->addr.sa_family = sess->af;
-	    addr->ipv4.sin_port = pj_htons(sess->default_port);
+	    pj_sockaddr_set_port(addr, sess->default_port);
 	}
 
 	sess->srv_addr = &sess->srv_addr_list[0];

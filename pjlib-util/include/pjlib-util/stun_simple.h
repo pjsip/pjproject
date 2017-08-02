@@ -210,6 +210,11 @@ typedef struct pjstun_setting
      * insert magic cookie (specified in RFC 5389) in the transaction ID.
      */
     pj_bool_t	use_stun2;
+    
+    /**
+     * Address family of the STUN servers.
+     */
+    int af;
 
     /**
      * Host name or IP address string of the first STUN server.

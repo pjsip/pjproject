@@ -416,6 +416,40 @@ PJ_DEF(void) pj_sockaddr_cp(pj_sockaddr_t *dst, const pj_sockaddr_t *src)
 }
 
 /*
+ * Synthesize address.
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_synthesize(int dst_af,
+				           pj_sockaddr_t *dst,
+				           const pj_sockaddr_t *src)
+{
+    char ip_addr_buf[PJ_INET6_ADDRSTRLEN];
+    unsigned int count = 1;
+    pj_addrinfo ai[1];
+    pj_str_t ip_addr;
+    pj_status_t status;
+
+    /* Validate arguments */
+    PJ_ASSERT_RETURN(src && dst, PJ_EINVAL);
+
+    if (dst_af == ((const pj_sockaddr *)src)->addr.sa_family) {
+        pj_sockaddr_cp(dst, src);
+        return PJ_SUCCESS;
+    }
+
+    pj_sockaddr_print(src, ip_addr_buf, sizeof(ip_addr_buf), 0);
+    ip_addr = pj_str(ip_addr_buf);
+    
+    /* Try to synthesize address using pj_getaddrinfo(). */
+    status = pj_getaddrinfo(dst_af, &ip_addr, &count, ai); 
+    if (status == PJ_SUCCESS && count > 0) {
+    	pj_sockaddr_cp(dst, &ai[0].ai_addr);
+    	pj_sockaddr_set_port(dst, pj_sockaddr_get_port(src));
+    }
+    
+    return status;
+}
+
+/*
  * Set port number of pj_sockaddr_in
  */
 PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 

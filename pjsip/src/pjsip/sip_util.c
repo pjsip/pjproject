@@ -1219,7 +1219,8 @@ static void stateless_send_transport_cb( void *token,
 	 * request.
 	 */
         if (tdata->via_addr.host.slen > 0 &&
-            (tdata->via_tp == (void *)stateless_data->cur_transport ||
+            (!tdata->via_tp ||
+             tdata->via_tp == (void *)stateless_data->cur_transport ||
              tdata->msg->line.req.method.id == PJSIP_CANCEL_METHOD))
         {
             via->sent_by = tdata->via_addr;

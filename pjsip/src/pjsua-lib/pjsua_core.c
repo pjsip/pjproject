@@ -1297,9 +1297,14 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 
 	stun_resolve_add_ref(sess);
 
-	++sess->idx;
-	if (sess->idx >= sess->count)
-            sess->status = status;
+	if (pjsua_var.ua_cfg.stun_try_ipv6 && sess->af == pj_AF_INET()) {
+	    sess->af = pj_AF_INET6();
+	} else {
+	    ++sess->idx;
+	    sess->af = pj_AF_INET();
+	    if (sess->idx >= sess->count)
+                sess->status = status;
+        }
 
 	resolve_stun_entry(sess);
 
@@ -1339,7 +1344,10 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
     pj_status_t status = PJ_EUNKNOWN;
 
     /* Loop while we have entry to try */
-    for (; sess->idx < sess->count; ++sess->idx) {
+    for (; sess->idx < sess->count;
+    	 (pjsua_var.ua_cfg.stun_try_ipv6 && sess->af == pj_AF_INET())?
+	 sess->af = pj_AF_INET6(): (++sess->idx, sess->af = pj_AF_INET()))
+    {
 	int af;
 	char target[64];
 	pj_str_t hostpart;
@@ -1358,14 +1366,6 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	if (status != PJ_SUCCESS) {
     	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %s", target));
 	    continue;
-	} else if (af != pj_AF_INET()) {
-	    /* Ignore IPv6 STUN server for now */
-	    status = PJ_EAFNOTSUP;
-	    PJ_LOG(3,(THIS_FILE, "Ignored STUN server entry %s, currently "
-				 "only IPv4 STUN server is supported (does "
-				 "IPv6 still need a mapped address?)",
-		      target));
-	    continue;
 	}
 	
 	/* Use default port if not specified */
@@ -1374,15 +1374,16 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 
 	pj_assert(sess->stun_sock == NULL);
 
-	PJ_LOG(4,(THIS_FILE, "Trying STUN server %s (%d of %d)..",
-		  target, sess->idx+1, sess->count));
+	PJ_LOG(4,(THIS_FILE, "Trying STUN server %s %s (%d of %d)..",
+		  target, (sess->af == pj_AF_INET()? "IPv4": "IPv6"),
+		  sess->idx+1, sess->count));
 
 	/* Use STUN_sock to test this entry */
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
 	stun_sock_cb.on_status = &test_stun_on_status;
 	sess->async_wait = PJ_FALSE;
 	status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
-				     pj_AF_INET(), &stun_sock_cb,
+				     sess->af, &stun_sock_cb,
 				     NULL, sess, &sess->stun_sock);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
@@ -1488,6 +1489,7 @@ PJ_DEF(pj_status_t) pjsua_resolve_stun_servers( unsigned count,
     sess->blocking = wait;
     sess->waiter = pj_thread_this();
     sess->status = PJ_EPENDING;
+    sess->af = pj_AF_INET();
     sess->srv = (pj_str_t*) pj_pool_calloc(pool, count, sizeof(pj_str_t));
     for (i=0; i<count; ++i) {
 	pj_strdup(pool, &sess->srv[i], &srv[i]);
@@ -2157,18 +2159,22 @@ static pj_status_t create_sip_udp_sock(int af,
 	if (pj_sockaddr_get_port(p_pub_addr) == 0)
 	    pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
 
-    } else if (stun_srv.slen && af == pj_AF_INET()) {
+    } else if (stun_srv.slen &&
+               (af == pj_AF_INET() || pjsua_var.ua_cfg.stun_try_ipv6))
+    {
 	pjstun_setting stun_opt;
 
 	/*
 	 * STUN is specified, resolve the address with STUN.
-	 * Currently, this is available for IPv4 address only.
+	 * Currently, this is only to get IPv4 mapped address
+	 * (does IPv6 still need a mapped address?).
 	 */
 	pj_bzero(&stun_opt, sizeof(stun_opt));
 	stun_opt.use_stun2 = pjsua_var.ua_cfg.stun_map_use_stun2;
+	stun_opt.af = pjsua_var.stun_srv.addr.sa_family;
 	stun_opt.srv1  = stun_opt.srv2  = stun_srv;
 	stun_opt.port1 = stun_opt.port2 = 
-			 pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
+			 pj_sockaddr_get_port(&pjsua_var.stun_srv);
 	status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
 					 1, &sock, &p_pub_addr->ipv4);
 	if (status != PJ_SUCCESS) {
@@ -2894,14 +2900,14 @@ PJ_DEF(pj_status_t) pjsua_detect_nat_type()
     }
 
     /* Make sure we have STUN */
-    if (pjsua_var.stun_srv.ipv4.sin_family == 0) {
+    if (pjsua_var.stun_srv.addr.sa_family == 0) {
 	pjsua_var.nat_status = PJNATH_ESTUNINSERVER;
 	return PJNATH_ESTUNINSERVER;
     }
 
-    status = pj_stun_detect_nat_type(&pjsua_var.stun_srv.ipv4, 
-				     &pjsua_var.stun_cfg, 
-				     NULL, &nat_detect_cb);
+    status = pj_stun_detect_nat_type2(&pjsua_var.stun_srv, 
+				      &pjsua_var.stun_cfg, 
+				      NULL, &nat_detect_cb);
 
     if (status != PJ_SUCCESS) {
 	pjsua_var.nat_status = status;

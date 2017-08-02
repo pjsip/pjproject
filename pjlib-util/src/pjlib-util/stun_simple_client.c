@@ -63,7 +63,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     unsigned srv_cnt;
     const pj_str_t *srv1, *srv2;
     int port1, port2;
-    pj_sockaddr_in srv_addr[2];
+    pj_sockaddr srv_addr[2];
     int i, send_cnt = 0, nfds;
     pj_pool_t *pool;
     struct query_rec {
@@ -116,20 +116,19 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     TRACE_((THIS_FILE, "  Binding request created."));
 
     /* Resolve servers. */
-    status = pj_sockaddr_in_init(&srv_addr[0], srv1, (pj_uint16_t)port1);
+    status = pj_sockaddr_init(opt->af, &srv_addr[0], srv1, (pj_uint16_t)port1);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     srv_cnt = 1;
 
     if (srv2 && port2) {
-	status = pj_sockaddr_in_init(&srv_addr[1], srv2, (pj_uint16_t)port2);
+	status = pj_sockaddr_init(opt->af, &srv_addr[1], srv2,
+				  (pj_uint16_t)port2);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	if (srv_addr[1].sin_addr.s_addr != srv_addr[0].sin_addr.s_addr &&
-	    srv_addr[1].sin_port != srv_addr[0].sin_port)
-	{
+	if (pj_sockaddr_cmp(&srv_addr[1], &srv_addr[0]) != 0) {
 	    srv_cnt++;
 	}
     }
@@ -181,7 +180,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
                 sent_len = out_msg_len;
 		status = pj_sock_sendto(sock[i], out_msg, &sent_len, 0,
 					(pj_sockaddr_t*)&srv_addr[j],
-					sizeof(pj_sockaddr_in));
+					pj_sockaddr_get_len(&srv_addr[j]));
 	    }
 	}
 
@@ -221,7 +220,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 		int sock_idx, srv_idx;
                 pj_ssize_t len;
 		pjstun_msg msg;
-		pj_sockaddr_in addr;
+		pj_sockaddr addr;
 		int addrlen = sizeof(addr);
 		pjstun_mapped_addr_attr *attr;
 		char recv_buf[128];

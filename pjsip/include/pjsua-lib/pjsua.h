@@ -1595,6 +1595,15 @@ typedef struct pjsua_config
     pj_str_t	    stun_srv[8];
 
     /**
+     * This specifies if the library should try to do an IPv6 resolution of
+     * the STUN servers if the IPv4 resolution fails. It can be useful
+     * in an IPv6-only environment, including on NAT64.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    stun_try_ipv6;
+
+    /**
      * This specifies if the library should ignore failure with the
      * STUN servers. If this is set to PJ_FALSE, the library will refuse to
      * start if it fails to resolve or contact any of the STUN servers.
@@ -2910,6 +2919,23 @@ typedef enum pjsua_ipv6_use
 } pjsua_ipv6_use;
 
 /**
+ * Specify NAT64 options to be used in account config.
+ */
+typedef enum pjsua_nat64_opt
+{
+    /**
+     * NAT64 is not used.
+     */
+    PJSUA_NAT64_DISABLED,
+
+    /**
+     * NAT64 is enabled.
+     */
+    PJSUA_NAT64_ENABLED
+    
+} pjsua_nat64_opt;
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -3345,6 +3371,13 @@ typedef struct pjsua_acc_config
      * Media transport config.
      */
     pjsua_transport_config rtp_cfg;
+
+    /**
+     * Specify NAT64 options.
+     *
+     * Default: PJSUA_NAT64_DISABLED
+     */
+    pjsua_nat64_opt 		nat64_opt;
 
     /**
      * Specify whether IPv6 should be used on media.

@@ -2185,6 +2185,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     pj_ice_sess_cand *lcand;
     pj_ice_sess_checklist *clist;
     pj_stun_xor_mapped_addr_attr *xaddr;
+    const pj_sockaddr_t *source_addr = src_addr;
     unsigned i;
 
     PJ_UNUSED_ARG(stun_sess);
@@ -2286,8 +2287,26 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * the response match the source IP address and port that the Binding
      * Request was sent from.
      */
-    if (pj_sockaddr_cmp(&check->rcand->addr, (const pj_sockaddr*)src_addr)!=0)
+    if (check->rcand->addr.addr.sa_family == pj_AF_INET() &&
+        ((pj_sockaddr *)src_addr)->addr.sa_family == pj_AF_INET6())
     {
+        /* If the address family is different, we need to check
+         * whether the two addresses are equivalent (i.e. the IPv6
+         * is synthesized from IPv4).
+         */
+        pj_sockaddr synth_addr;
+    	pj_status_t status;
+    	
+    	status = pj_sockaddr_synthesize(pj_AF_INET6(), &synth_addr,
+    					&check->rcand->addr);
+    	if (status == PJ_SUCCESS &&
+    	    pj_sockaddr_cmp(&synth_addr, src_addr) == 0)
+    	{
+    	    source_addr = &check->rcand->addr;
+    	}
+    }
+
+    if (pj_sockaddr_cmp(&check->rcand->addr, source_addr) != 0) {
 	status = PJNATH_EICEINSRCADDR;
 	LOG4((ice->obj_name, 
 	     "Check %s%s: connectivity check FAILED: source address mismatch",
@@ -2474,6 +2493,8 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     pj_stun_uint64_attr *role_attr;
     pj_stun_tx_data *tdata;
     pj_ice_rx_check *rcheck, tmp_rcheck;
+    const pj_sockaddr_t *source_addr = src_addr;
+    unsigned source_addr_len = src_addr_len;
     pj_status_t status;
 
     PJ_UNUSED_ARG(pkt);
@@ -2587,10 +2608,54 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	return status;
     }
 
+    if (((pj_sockaddr *)src_addr)->addr.sa_family == pj_AF_INET6()) {
+        unsigned i;
+        unsigned transport_id = ((pj_ice_msg_data*)token)->transport_id;
+        pj_ice_sess_cand *lcand = NULL;
+
+    	for (i = 0; i < ice->clist.count; ++i) {
+	    pj_ice_sess_check *c = &ice->clist.checks[i];
+	    if (c->lcand->comp_id == sd->comp_id &&
+	        c->lcand->transport_id == transport_id) 
+	    {
+	    	lcand = c->lcand;
+	    	break;
+	    }
+    	}
+
+	if (lcand != NULL && lcand->addr.addr.sa_family == pj_AF_INET()) {
+	    /* We are behind NAT64, so src_addr is a synthesized IPv6
+	     * address. Instead of putting this synth IPv6 address as
+             * the XOR-MAPPED-ADDRESS, we need to find its original
+             * IPv4 address.
+             */
+            for (i = 0; i < ice->rcand_cnt; ++i) {
+            	pj_status_t status;
+            	pj_sockaddr synth_addr;
+            
+            	if (ice->rcand[i].addr.addr.sa_family != pj_AF_INET())
+                    continue;
+
+            	status = pj_sockaddr_synthesize(pj_AF_INET6(), &synth_addr,
+            				    	&ice->rcand[i].addr);
+	    	if (status == PJ_SUCCESS &&
+	            pj_sockaddr_cmp(src_addr, &synth_addr) == 0)
+	    	{
+	            /* We find the original IPv4 address. */
+	            source_addr = &ice->rcand[i].addr;
+	            source_addr_len = pj_sockaddr_get_len(source_addr);
+	            break;
+	    	}
+            }
+        }
+    }
+
+
     /* Add XOR-MAPPED-ADDRESS attribute */
     status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
 					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-					   PJ_TRUE, src_addr, src_addr_len);
+					   PJ_TRUE, source_addr,
+					   source_addr_len);
 
     /* Create a msg_data to be associated with this response */
     msg_data = PJ_POOL_ZALLOC_T(tdata->pool, pj_ice_msg_data);
@@ -2619,8 +2684,8 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     /* Init rcheck */
     rcheck->comp_id = sd->comp_id;
     rcheck->transport_id = ((pj_ice_msg_data*)token)->transport_id;
-    rcheck->src_addr_len = src_addr_len;
-    pj_sockaddr_cp(&rcheck->src_addr, src_addr);
+    rcheck->src_addr_len = source_addr_len;
+    pj_sockaddr_cp(&rcheck->src_addr, source_addr);
     rcheck->use_candidate = (uc_attr != NULL);
     rcheck->priority = prio_attr->value;
     rcheck->role_attr = role_attr;

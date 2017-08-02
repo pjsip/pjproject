@@ -88,6 +88,7 @@ typedef struct nat_detect_session
     pj_ioqueue_key_t	    *key;
     pj_sockaddr	     	     server;
     pj_sockaddr	    	    *cur_server;
+    pj_sockaddr		     cur_addr;
     pj_stun_session	    *stun_sess;
 
     pj_ioqueue_op_key_t	     read_op, write_op;
@@ -854,11 +855,17 @@ static pj_status_t send_test(nat_detect_session *sess,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    /* Configure alternate address */
-    if (alt_addr)
-	sess->cur_server = (pj_sockaddr*) alt_addr;
-    else
+    /* Configure alternate address, synthesize it if necessary */
+    if (alt_addr) {
+        status = pj_sockaddr_synthesize(sess->server.addr.sa_family,
+        				&sess->cur_addr, alt_addr);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+	sess->cur_server = &sess->cur_addr;
+    } else {
 	sess->cur_server = &sess->server;
+    }
 
     PJ_LOG(5,(sess->pool->obj_name, 
               "Performing %s to %s:%d", 
