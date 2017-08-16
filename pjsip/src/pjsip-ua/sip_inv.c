@@ -2103,10 +2103,14 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	}
 
 	/* Inform application about remote offer. */
-	if (mod_inv.cb.on_rx_offer && inv->notify) {
+	if (mod_inv.cb.on_rx_offer2 && inv->notify) {
+	    struct pjsip_inv_on_rx_offer_cb_param param;
 
-	    (*mod_inv.cb.on_rx_offer)(inv, sdp_info->sdp);
-
+	    param.offer = sdp_info->sdp;
+	    param.rdata = rdata;
+            (*mod_inv.cb.on_rx_offer2)(inv, &param);
+	} else if (mod_inv.cb.on_rx_offer && inv->notify) {
+            (*mod_inv.cb.on_rx_offer)(inv, sdp_info->sdp);
 	}
 
 	/* application must have supplied an answer at this point. */
