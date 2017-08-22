@@ -1379,23 +1379,17 @@
  * Maximum video payload size. Note that this must not be greater than
  * PJMEDIA_MAX_MTU.
  *
- * Default: (PJMEDIA_MAX_MTU - SRTP_MAX_TRAILER_LEN) if SRTP is enabled, 
- *	    otherwise (PJMEDIA_MAX_MTU - 100)
+ * Default: (PJMEDIA_MAX_MTU - 20 - (128+16)) if SRTP is enabled, 
+ *	    otherwise (PJMEDIA_MAX_MTU - 20). 
+ *          Note that (128+16) constant value is taken from libSRTP macro 
+ *          SRTP_MAX_TRAILER_LEN.
  */
 #ifndef PJMEDIA_MAX_VID_PAYLOAD_SIZE
-/* Include SRTP_MAX_TRAILER_LEN definition. */
-#   if defined(PJMEDIA_EXTERNAL_SRTP) && (PJMEDIA_EXTERNAL_SRTP != 0)
-#       include "srtp/srtp.h"
-#   elif (defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0))
-#       include "../../third_party/srtp/include/srtp.h"
-#   endif
-
-#   if defined(SRTP_MAX_TRAILER_LEN)
-#	define PJMEDIA_MAX_VID_PAYLOAD_SIZE	(PJMEDIA_MAX_MTU - \
-						 SRTP_MAX_TRAILER_LEN)
-#   else
-#	define PJMEDIA_MAX_VID_PAYLOAD_SIZE	(PJMEDIA_MAX_MTU - 100)
-#   endif
+#  if PJMEDIA_HAS_SRTP
+#     define PJMEDIA_MAX_VID_PAYLOAD_SIZE     (PJMEDIA_MAX_MTU - 20 - (128+16))
+#  else
+#     define PJMEDIA_MAX_VID_PAYLOAD_SIZE     (PJMEDIA_MAX_MTU - 20)
+#  endif
 #endif
 
 
