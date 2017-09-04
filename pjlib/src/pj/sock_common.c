@@ -134,15 +134,16 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
     if (str_addr && str_addr->slen) {
 	addr->sin_addr = pj_inet_addr(str_addr);
 	if (addr->sin_addr.s_addr == PJ_INADDR_NONE) {
-    	    pj_hostent he;
-	    pj_status_t rc;
+    	    pj_addrinfo ai;
+	    unsigned count = 1;
+	    pj_status_t status;
 
-	    rc = pj_gethostbyname(str_addr, &he);
-	    if (rc == 0) {
-		addr->sin_addr.s_addr = *(pj_uint32_t*)he.h_addr;
+	    status = pj_getaddrinfo(pj_AF_INET(), str_addr, &count, &ai);
+	    if (status==PJ_SUCCESS) {
+		pj_memcpy(&addr->sin_addr, &ai.ai_addr.ipv4.sin_addr,
+			  sizeof(addr->sin_addr));
 	    } else {
-		addr->sin_addr.s_addr = PJ_INADDR_NONE;
-		return rc;
+		return status;
 	    }
 	}
 
