@@ -296,7 +296,7 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         rxPt = info.info.aud.rx_pt;
         codecName = pj2Str(info.info.aud.fmt.encoding_name);
         codecClockRate = info.info.aud.fmt.clock_rate;
-        codecParam = info.info.aud.param;
+        audCodecParam.fromPj(*info.info.aud.param);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
         proto = info.info.vid.proto;
         dir = info.info.vid.dir;
@@ -307,8 +307,8 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         txPt = info.info.vid.tx_pt;
         rxPt = info.info.vid.rx_pt;
         codecName = pj2Str(info.info.vid.codec_info.encoding_name);
-        codecClockRate = info.info.vid.codec_info.clock_rate;
-        codecParam = info.info.vid.codec_param;
+        codecClockRate = info.info.vid.codec_info.clock_rate;        
+	vidCodecParam.fromPj(*info.info.vid.codec_param);
     }
 }
 

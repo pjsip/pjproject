@@ -601,9 +601,14 @@ struct StreamInfo
     unsigned            codecClockRate;
     
     /**
-     * Optional codec param.
+     * Optional audio codec param.
      */
-    CodecParam          codecParam;
+    CodecParam          audCodecParam;
+
+    /**
+     * Optional video codec param.
+     */
+    VidCodecParam       vidCodecParam;
 
 public:
     /**

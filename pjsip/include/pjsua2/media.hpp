@@ -1954,11 +1954,6 @@ struct CodecInfo
 typedef std::vector<CodecInfo*> CodecInfoVector;
 
 /**
- * Codec parameters, corresponds to pjmedia_codec_param.
- */
-typedef void *CodecParam;
-
-/**
  * Structure of codec specific parameters which contains name=value pairs.
  * The codec specific parameters are to be used with SDP according to
  * the standards (e.g: RFC 3555) in SDP 'a=fmtp' attribute.
@@ -1973,8 +1968,60 @@ typedef struct CodecFmtp
 typedef std::vector<CodecFmtp> CodecFmtpVector;
 
 /**
- * Detailed codec attributes used in configuring a codec and in querying
- * the capability of codec factories. 
+ * Audio codec parameters info.
+ */
+struct CodecParamInfo
+{
+    unsigned	clockRate;		/**< Sampling rate in Hz	    */
+    unsigned	channelCnt;		/**< Channel count.		    */
+    unsigned 	avgBps;			/**< Average bandwidth in bits/sec  */
+    unsigned	maxBps;			/**< Maximum bandwidth in bits/sec  */
+    unsigned    maxRxFrameSize;		/**< Maximum frame size             */
+    unsigned 	frameLen;		/**< Decoder frame ptime in msec.   */
+    unsigned  	pcmBitsPerSample;	/**< Bits/sample in the PCM side    */
+    unsigned  	pt;			/**< Payload type.		    */
+    pjmedia_format_id fmtId;		/**< Source format, it's format of
+					     encoder input and decoder
+					     output.			    */
+};
+
+/**
+ * Audio codec parameters setting.
+ */
+struct CodecParamSetting
+{
+    unsigned  	frmPerPkt;	    /**< Number of frames per packet.	*/
+    bool	vad;		    /**< Voice Activity Detector.	*/
+    bool	cng;		    /**< Comfort Noise Generator.	*/
+    bool	penh;		    /**< Perceptual Enhancement		*/
+    bool	plc;		    /**< Packet loss concealment	*/
+    bool	reserved;	    /**< Reserved, must be zero.	*/
+    CodecFmtpVector encFmtp;	    /**< Encoder's fmtp params.		*/
+    CodecFmtpVector decFmtp;	    /**< Decoder's fmtp params.		*/
+};
+
+/**
+ * Detailed codec attributes used in configuring an audio codec and in querying
+ * the capability of audio codec factories.
+ *
+ * Please note that codec parameter also contains SDP specific setting,
+ * #setting::decFmtp and #setting::encFmtp, which may need to be set 
+ * appropriately based on the effective setting. 
+ * See each codec documentation for more detail.
+ */
+struct CodecParam
+{
+    struct CodecParamInfo info;
+    struct CodecParamSetting setting;
+
+    void fromPj(const pjmedia_codec_param &param);
+
+    pjmedia_codec_param toPj() const;
+};
+
+/**
+ * Detailed codec attributes used in configuring a video codec and in querying
+ * the capability of video codec factories. 
  *
  * Please note that codec parameter also contains SDP specific setting,
  * #decFmtp and #encFmtp, which may need to be set appropriately based on
@@ -2002,14 +2049,6 @@ struct VidCodecParam
     void fromPj(const pjmedia_vid_codec_param &param);
 
     pjmedia_vid_codec_param toPj() const;
-
-private:
-    void setCodecFmtp(const pjmedia_codec_fmtp &in_fmtp, 
-		      CodecFmtpVector &out_fmtp);
-
-    void getCodecFmtp(const CodecFmtpVector &in_fmtp,
-		      pjmedia_codec_fmtp &out_fmtp) const;
-
 };
 
 

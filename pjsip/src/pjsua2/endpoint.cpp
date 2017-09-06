@@ -1882,21 +1882,23 @@ void Endpoint::codecSetPriority(const string &codec_id,
 
 CodecParam Endpoint::codecGetParam(const string &codec_id) const throw(Error)
 {
-    pjmedia_codec_param *pj_param = NULL;
+    CodecParam param;
+    pjmedia_codec_param pj_param;
     pj_str_t codec_str = str2Pj(codec_id);
 
-    PJSUA2_CHECK_EXPR( pjsua_codec_get_param(&codec_str, pj_param) );
+    PJSUA2_CHECK_EXPR( pjsua_codec_get_param(&codec_str, &pj_param) );
 
-    return pj_param;
+    param.fromPj(pj_param);
+    return param;
 }
 
 void Endpoint::codecSetParam(const string &codec_id,
 			     const CodecParam param) throw(Error)
 {
     pj_str_t codec_str = str2Pj(codec_id);
-    pjmedia_codec_param *pj_param = (pjmedia_codec_param*)param;
+    pjmedia_codec_param pj_param = param.toPj();
 
-    PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, pj_param) );
+    PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, &pj_param) );
 }
 
 void Endpoint::clearCodecInfoList(CodecInfoVector &codec_list)

@@ -1515,6 +1515,43 @@ VidDevManager::~VidDevManager()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+/** 
+ * Utility class for converting CodecFmtpVector to and from pjmedia_codec_fmtp. 
+ */
+class CodecFmtpUtil
+{
+public:
+    static void fromPj(const pjmedia_codec_fmtp &in_fmtp,
+		       CodecFmtpVector &out_fmtp)
+    {
+        unsigned i = 0;
+        for (; i<in_fmtp.cnt; ++i) {
+	    CodecFmtp fmtp;
+	    fmtp.name = pj2Str(in_fmtp.param[i].name);
+	    fmtp.val = pj2Str(in_fmtp.param[i].val);
+	
+            out_fmtp.push_back(fmtp);
+       }
+    }
+
+    static void toPj(const CodecFmtpVector &in_fmtp,
+		     pjmedia_codec_fmtp &out_fmtp)
+    {
+        CodecFmtpVector::const_iterator i;
+        out_fmtp.cnt = 0;
+        for (i = in_fmtp.begin(); i != in_fmtp.end(); ++i) {
+	    if (out_fmtp.cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
+	        break;
+    	    }
+	    out_fmtp.param[out_fmtp.cnt].name = str2Pj((*i).name);
+	    out_fmtp.param[out_fmtp.cnt].val = str2Pj((*i).val);
+	    ++out_fmtp.cnt;
+        }
+    }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 void CodecInfo::fromPj(const pjsua_codec_info &codec_info)
 {
     codecId = pj2Str(codec_info.codec_id);
@@ -1522,6 +1559,59 @@ void CodecInfo::fromPj(const pjsua_codec_info &codec_info)
     desc = pj2Str(codec_info.desc);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+void CodecParam::fromPj(const pjmedia_codec_param &param)
+{
+    /* info part. */
+    info.clockRate = param.info.clock_rate;
+    info.channelCnt = param.info.channel_cnt;
+    info.avgBps = param.info.avg_bps;
+    info.maxBps = param.info.max_bps;
+    info.maxRxFrameSize = param.info.max_rx_frame_size;
+    info.frameLen = param.info.frm_ptime;
+    info.pcmBitsPerSample = param.info.pcm_bits_per_sample;
+    info.pt = param.info.pt;
+    info.fmtId = param.info.fmt_id;
+
+    /* setting part. */
+    setting.frmPerPkt = param.setting.frm_per_pkt;
+    setting.vad = param.setting.vad;
+    setting.cng = param.setting.cng;
+    setting.penh = param.setting.penh;
+    setting.plc = param.setting.plc;
+    setting.reserved = param.setting.reserved;
+    CodecFmtpUtil::fromPj(param.setting.enc_fmtp, setting.encFmtp);
+    CodecFmtpUtil::fromPj(param.setting.dec_fmtp, setting.decFmtp);
+}
+
+pjmedia_codec_param CodecParam::toPj() const
+{
+    pjmedia_codec_param param;
+
+    /* info part. */
+    param.info.clock_rate = info.clockRate;
+    param.info.channel_cnt = info.channelCnt;
+    param.info.avg_bps = info.avgBps;
+    param.info.max_bps= info.maxBps;
+    param.info.max_rx_frame_size = info.maxRxFrameSize;
+    param.info.frm_ptime = info.frameLen;
+    param.info.pcm_bits_per_sample = info.pcmBitsPerSample;
+    param.info.pt = info.pt;
+    param.info.fmt_id = info.fmtId;
+
+    /* setting part. */
+    param.setting.frm_per_pkt = setting.frmPerPkt;
+    param.setting.vad = setting.vad;
+    param.setting.cng = setting.cng;
+    param.setting.penh = setting.penh;
+    param.setting.plc = setting.plc;
+    param.setting.reserved = setting.reserved;
+    CodecFmtpUtil::toPj(setting.encFmtp, param.setting.enc_fmtp);
+    CodecFmtpUtil::toPj(setting.decFmtp, param.setting.dec_fmtp);
+    return param;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
 {
     dir = param.dir;
@@ -1530,8 +1620,8 @@ void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
     encMtu = param.enc_mtu;
     encFmt.fromPj(param.enc_fmt);
     decFmt.fromPj(param.dec_fmt);
-    setCodecFmtp(param.enc_fmtp, encFmtp);
-    setCodecFmtp(param.dec_fmtp, decFmtp);
+    CodecFmtpUtil::fromPj(param.enc_fmtp, encFmtp);
+    CodecFmtpUtil::fromPj(param.dec_fmtp, decFmtp);
 }
 
 pjmedia_vid_codec_param VidCodecParam::toPj() const
@@ -1544,35 +1634,8 @@ pjmedia_vid_codec_param VidCodecParam::toPj() const
     param.enc_mtu = encMtu;
     param.enc_fmt = encFmt.toPj();
     param.dec_fmt = decFmt.toPj();
-    getCodecFmtp(encFmtp, param.enc_fmtp);    
-    getCodecFmtp(decFmtp, param.dec_fmtp);
+    CodecFmtpUtil::toPj(encFmtp, param.enc_fmtp);
+    CodecFmtpUtil::toPj(decFmtp, param.dec_fmtp);
     return param;
 }
 
-void VidCodecParam::setCodecFmtp(const pjmedia_codec_fmtp &in_fmtp, 
-				 CodecFmtpVector &out_fmtp)
-{
-    unsigned i = 0;
-    for ( ; i<in_fmtp.cnt; ++i) {
-	CodecFmtp fmtp;
-	fmtp.name = pj2Str(in_fmtp.param[i].name);
-	fmtp.val = pj2Str(in_fmtp.param[i].val);
-
-	out_fmtp.push_back(fmtp);
-    }
-}
-
-void VidCodecParam::getCodecFmtp(const CodecFmtpVector &in_fmtp,
-				 pjmedia_codec_fmtp &out_fmtp) const
-{
-    CodecFmtpVector::const_iterator i;
-    out_fmtp.cnt = 0;    
-    for (i=in_fmtp.begin(); i!=in_fmtp.end();++i) {
-	if (out_fmtp.cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
-	    break;
-	}
-	out_fmtp.param[out_fmtp.cnt].name = str2Pj((*i).name);
-	out_fmtp.param[out_fmtp.cnt].val = str2Pj((*i).val);
-	++out_fmtp.cnt;
-    }
-}
