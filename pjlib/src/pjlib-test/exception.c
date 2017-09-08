@@ -168,9 +168,11 @@ static int test(void)
     PJ_CATCH_ANY {
 	switch (PJ_GET_EXCEPTION()) {
 	case ID_1:
-	    if (!rc) rc = -30; break;
+	    if (!rc) rc = -30;
+	    break;
 	case ID_2:
-	    if (!rc) rc = 0; break;
+	    if (!rc) rc = 0;
+	    break;
 	default:
 	    if (!rc) rc = -40;
 	    break;

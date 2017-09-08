@@ -128,7 +128,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
-    std::auto_ptr<MyAccount> acc(new MyAccount);
+    std::unique_ptr<MyAccount> acc(new MyAccount);
     acc->create(acc_cfg);
     
     pj_thread_sleep(2000);
@@ -307,7 +307,7 @@ static void mainProg4(Endpoint &ep) throw(Error)
     // Add account
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:localhost";
-    std::auto_ptr<MyAccount> acc(new MyAccount);
+    std::unique_ptr<MyAccount> acc(new MyAccount);
     acc->create(acc_cfg);
 
     // Start library
