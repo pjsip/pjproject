@@ -1491,13 +1491,14 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     switch (sess->parse_state) {
 	case ST_CR:
 	    sess->parse_state = ST_NORMAL;
-	    if (*cdata == 0 || *cdata == '\n')
+	    if (*cdata == 0 || *cdata == '\n') {		
 		pj_mutex_unlock(sess->smutex);
 		is_valid = handle_return(sess);
 		if (!is_valid)
 		    return PJ_FALSE;
 		pj_mutex_lock(sess->smutex);
-		break;
+	    }
+	    break;
 	case ST_NORMAL:
 	    if (*cdata == IAC) {
 		sess->parse_state = ST_IAC;
