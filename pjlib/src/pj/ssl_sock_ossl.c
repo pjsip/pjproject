@@ -1070,7 +1070,14 @@ static void destroy_ssl(pj_ssl_sock_t *ssock)
 {
     /* Destroy SSL instance */
     if (ssock->ossl_ssl) {
-	SSL_shutdown(ssock->ossl_ssl);
+	/**
+	 * Avoid calling SSL_shutdown() if handshake wasn't completed.
+	 * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
+	 * SSL handshake, while previous versions always return 0.	 
+	 */
+	if (SSL_in_init(ssock->ossl_ssl) == 0) {
+	    SSL_shutdown(ssock->ossl_ssl);
+	}   	
 	SSL_free(ssock->ossl_ssl); /* this will also close BIOs */
 	ssock->ossl_ssl = NULL;
     }
