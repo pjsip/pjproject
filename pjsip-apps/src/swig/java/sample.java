@@ -63,6 +63,9 @@ class MyObserver implements MyAppObserver {
 	
 	@Override
 	public void notifyBuddyState(MyBuddy buddy) {}	
+
+	@Override
+	public void notifyChangeNetwork() {}
 }
 
 class MyShutdownHook extends Thread {

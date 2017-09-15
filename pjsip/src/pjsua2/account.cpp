@@ -299,6 +299,25 @@ void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
 }
+///////////////////////////////////////////////////////////////////////////////
+
+void AccountIpChangeConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("AccountIpChangeConfig");
+
+    NODE_READ_BOOL    ( this_node, shutdownTp);
+    NODE_READ_BOOL    ( this_node, hangupCalls);
+    NODE_READ_UNSIGNED( this_node, reinviteFlags);
+}
+
+void AccountIpChangeConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("AccountIpChangeConfig");
+
+    NODE_WRITE_BOOL    ( this_node, shutdownTp);
+    NODE_WRITE_BOOL    ( this_node, hangupCalls);
+    NODE_WRITE_UNSIGNED( this_node, reinviteFlags);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -445,6 +464,11 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.vid_stream_rc_cfg.bandwidth = videoConfig.rateControlBandwidth;
     ret.vid_stream_sk_cfg.count = videoConfig.startKeyframeCount;
     ret.vid_stream_sk_cfg.interval = videoConfig.startKeyframeInterval;
+
+    // AccountIpChangeConfig
+    ret.ip_change_cfg.shutdown_tp = ipChangeConfig.shutdownTp;
+    ret.ip_change_cfg.hangup_calls = ipChangeConfig.hangupCalls;
+    ret.ip_change_cfg.reinvite_flags = ipChangeConfig.reinviteFlags;
 }
 
 /* Initialize from pjsip. */
@@ -614,6 +638,11 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     videoConfig.rateControlBandwidth	= prm.vid_stream_rc_cfg.bandwidth;
     videoConfig.startKeyframeCount	= prm.vid_stream_sk_cfg.count;
     videoConfig.startKeyframeInterval	= prm.vid_stream_sk_cfg.interval;
+
+    // AccountIpChangeConfig
+    ipChangeConfig.shutdownTp = PJ2BOOL(prm.ip_change_cfg.shutdown_tp);
+    ipChangeConfig.hangupCalls = PJ2BOOL(prm.ip_change_cfg.hangup_calls);
+    ipChangeConfig.reinviteFlags = prm.ip_change_cfg.reinvite_flags;
 }
 
 void AccountConfig::readObject(const ContainerNode &node) throw(Error)

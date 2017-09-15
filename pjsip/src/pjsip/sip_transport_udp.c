@@ -1080,10 +1080,21 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
  *  - if socket is not specified, create and replace.
  */
 PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
-					        unsigned option,
+						unsigned option,
 						pj_sock_t sock,
 						const pj_sockaddr_in *local,
 						const pjsip_host_port *a_name)
+{
+    return pjsip_udp_transport_restart2(transport, option, sock, 
+					(pj_sockaddr*)local, a_name);
+}
+
+
+PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
+					         unsigned option,
+					         pj_sock_t sock,
+					         const pj_sockaddr *local,
+					         const pjsip_host_port *a_name)
 {
     struct udp_transport *tp;
     pj_status_t status;
@@ -1098,7 +1109,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
      * quit as soon as possible.
      */
     tp->is_paused = PJ_TRUE;
-
+    
     if (option & PJSIP_UDP_TRANSPORT_DESTROY_SOCKET) {
 	char addr_buf[PJ_INET6_ADDRSTRLEN];
 	pjsip_host_port bound_name;
@@ -1121,8 +1132,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 
 	/* Create the socket if it's not specified */
 	if (sock == PJ_INVALID_SOCKET) {
-	    status = create_socket(pj_AF_INET(), local, 
-				   sizeof(pj_sockaddr_in), &sock);
+	    status = create_socket(local->addr.sa_family, local, 
+				   pj_sockaddr_get_len(local), &sock);
 	    if (status != PJ_SUCCESS)
 		return status;
 	}
@@ -1189,4 +1200,3 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 
     return PJ_SUCCESS;
 }
-

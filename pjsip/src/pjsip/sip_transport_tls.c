@@ -57,7 +57,8 @@ struct tls_listener
     pj_ssl_sock_t	    *ssock;
     pj_sockaddr		     bound_addr;
     pj_ssl_cert_t	    *cert;
-    pjsip_tls_setting	     tls_setting;
+    pjsip_tls_setting	     tls_setting;    
+    unsigned		     async_cnt;    
 
     /* Group lock to be used by TLS transport and ioqueue key */
     pj_grp_lock_t	    *grp_lock;
@@ -282,25 +283,243 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
  * The TLS listener/transport factory.
  */
 
+
+static void set_ssock_param(pj_ssl_sock_param *ssock_param,
+    struct tls_listener *listener)
+{
+    int af, sip_ssl_method;
+    pj_uint32_t sip_ssl_proto;
+
+    /* Build SSL socket param */
+    af = pjsip_transport_type_get_af(listener->factory.type);
+    pj_ssl_sock_param_default(ssock_param);
+    ssock_param->sock_af = af;
+    ssock_param->cb.on_accept_complete = &on_accept_complete;
+    ssock_param->async_cnt = listener->async_cnt;
+    ssock_param->ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
+    ssock_param->timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
+    ssock_param->require_client_cert = listener->tls_setting.require_client_cert;
+    ssock_param->timeout = listener->tls_setting.timeout;
+    ssock_param->user_data = listener;
+    ssock_param->verify_peer = PJ_FALSE; /* avoid SSL socket closing the socket
+					  * due to verification error */
+    if (ssock_param->send_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param->send_buffer_size = PJSIP_MAX_PKT_LEN;
+    if (ssock_param->read_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param->read_buffer_size = PJSIP_MAX_PKT_LEN;
+    ssock_param->ciphers_num = listener->tls_setting.ciphers_num;
+    ssock_param->ciphers = listener->tls_setting.ciphers;
+    ssock_param->curves_num = listener->tls_setting.curves_num;
+    ssock_param->curves = listener->tls_setting.curves;
+    ssock_param->sigalgs = listener->tls_setting.sigalgs;
+    ssock_param->entropy_type = listener->tls_setting.entropy_type;
+    ssock_param->entropy_path = listener->tls_setting.entropy_path;
+    ssock_param->reuse_addr = listener->tls_setting.reuse_addr;
+    ssock_param->qos_type = listener->tls_setting.qos_type;
+    ssock_param->qos_ignore_error = listener->tls_setting.qos_ignore_error;
+    pj_memcpy(&ssock_param->qos_params, &listener->tls_setting.qos_params,
+	      sizeof(ssock_param->qos_params));
+
+    ssock_param->sockopt_ignore_error =
+				    listener->tls_setting.sockopt_ignore_error;
+    /* Copy the sockopt */
+    pj_memcpy(&ssock_param->sockopt_params,
+	      &listener->tls_setting.sockopt_params,
+	      sizeof(listener->tls_setting.sockopt_params));
+
+    sip_ssl_method = listener->tls_setting.method;
+    sip_ssl_proto = listener->tls_setting.proto;
+    ssock_param->proto = ssl_get_proto(sip_ssl_method, sip_ssl_proto);
+}
+
+static void update_bound_addr(struct tls_listener *listener,
+			      const pj_sockaddr *local)
+{
+    pj_sockaddr *listener_addr = &listener->factory.local_addr;
+    int af = pjsip_transport_type_get_af(listener->factory.type);
+
+    /* Bind address may be different than factory.local_addr because
+     * factory.local_addr will be resolved.
+     */
+    if (local) {
+	pj_sockaddr_cp(&listener->bound_addr, local);
+    } else {
+	pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
+    }
+    pj_sockaddr_cp(listener_addr, &listener->bound_addr);    
+}
+
+static pj_status_t update_factory_addr(struct tls_listener *listener,
+				       const pjsip_host_port *addr_name)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_sockaddr *listener_addr = &listener->factory.local_addr;
+
+    if (addr_name && addr_name->host.slen) {
+	pj_sockaddr tmp;
+	int af = pjsip_transport_type_get_af(listener->factory.type);
+
+	status = pj_sockaddr_init(af, &tmp, &addr_name->host,
+				  (pj_uint16_t)addr_name->port);
+	if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+	    (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+	{
+	    /* Invalid address */
+	    return PJ_EINVAL;
+	}
+
+	/* Copy the address */
+	listener->factory.addr_name = *addr_name;
+	pj_strdup(listener->factory.pool, &listener->factory.addr_name.host,
+		  &addr_name->host);
+	listener->factory.addr_name.port = addr_name->port;
+
+    }
+    else {
+	/* No published address is given, use the bound address */
+
+	/* If the address returns 0.0.0.0, use the default
+	* interface address as the transport's address.
+	*/
+	if (!pj_sockaddr_has_addr(listener_addr)) {
+	    pj_sockaddr hostip;
+
+	    status = pj_gethostip(listener->bound_addr.addr.sa_family,
+				  &hostip);
+	    if (status != PJ_SUCCESS)
+		return status;
+
+	    pj_sockaddr_copy_addr(listener_addr, &hostip);
+	}
+
+	/* Save the address name */
+	sockaddr_to_host_port(listener->factory.pool,
+			      &listener->factory.addr_name, listener_addr);
+    }
+
+    /* If port is zero, get the bound port */
+    if (listener->factory.addr_name.port == 0) {
+	listener->factory.addr_name.port = pj_sockaddr_get_port(listener_addr);
+    }
+
+    pj_ansi_snprintf(listener->factory.obj_name,
+		     sizeof(listener->factory.obj_name),
+		     "tlstp:%d", listener->factory.addr_name.port);
+    return status;
+}
+
+static void update_transport_info(struct tls_listener *listener)
+{
+    enum { INFO_LEN = 100 };
+    char local_addr[PJ_INET6_ADDRSTRLEN + 10];
+    pj_sockaddr *listener_addr = &listener->factory.local_addr;
+
+    if (listener->factory.info == NULL) {
+	listener->factory.info = (char*)pj_pool_alloc(listener->factory.pool,
+						      INFO_LEN);
+    }
+    pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
+    pj_ansi_snprintf(
+	    listener->factory.info, INFO_LEN, "tls %s [published as %.*s:%d]",
+	    local_addr,
+	    (int)listener->factory.addr_name.host.slen,
+	    listener->factory.addr_name.host.ptr,
+	    listener->factory.addr_name.port);
+
+    if (listener->ssock) {
+	PJ_LOG(4, (listener->factory.obj_name,
+	       "SIP TLS listener is ready for incoming connections "
+	       "at %.*s:%d",
+	       (int)listener->factory.addr_name.host.slen,
+	       listener->factory.addr_name.host.ptr,
+	       listener->factory.addr_name.port));
+    } else {
+	PJ_LOG(4, (listener->factory.obj_name, "SIP TLS is ready "
+	       "(client only)"));
+    }
+}
+
+
 /*
  * This is the public API to create, initialize, register, and start the
  * TLS listener.
  */
-PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
-					       const pjsip_tls_setting *opt,
-					       const pj_sockaddr_in *local_in,
-					       const pjsip_host_port *a_name,
-					       unsigned async_cnt,
-					       pjsip_tpfactory **p_factory)
+PJ_DEF(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
+    const pjsip_tls_setting *opt,
+    const pj_sockaddr_in *local_in,
+    const pjsip_host_port *a_name,
+    unsigned async_cnt,
+    pjsip_tpfactory **p_factory)
 {
     pj_sockaddr local;
 
     if (local_in)
 	pj_sockaddr_cp(&local, local_in);
 
-    return pjsip_tls_transport_start2(endpt, opt, (local_in? &local : NULL),
-                                      a_name, async_cnt, p_factory);
+    return pjsip_tls_transport_start2(endpt, opt, (local_in ? &local : NULL),
+				      a_name, async_cnt, p_factory);
 }
+
+
+PJ_DEF(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
+						const pj_sockaddr *local,
+						const pjsip_host_port *a_name)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_ssl_sock_param ssock_param, newsock_param;
+    struct tls_listener *listener = (struct tls_listener *)factory;
+    pj_sockaddr *listener_addr = &listener->factory.local_addr;
+
+    if (listener->ssock)
+	return PJ_SUCCESS;
+
+    set_ssock_param(&ssock_param, listener);
+    update_bound_addr(listener, local);
+    ssock_param.grp_lock = listener->grp_lock;
+
+    /* Create SSL socket */
+    status = pj_ssl_sock_create(listener->factory.pool, &ssock_param, 
+				&listener->ssock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (listener->cert) {
+	status = pj_ssl_sock_set_certificate(listener->ssock, 
+				       listener->factory.pool, listener->cert);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Start accepting incoming connections. Note that some TLS/SSL
+     * backends may not support for SSL socket server.
+     */    
+    pj_memcpy(&newsock_param, &ssock_param, sizeof(newsock_param));
+    newsock_param.async_cnt = 1;
+    newsock_param.cb.on_data_read = &on_data_read;
+    newsock_param.cb.on_data_sent = &on_data_sent;
+    status = pj_ssl_sock_start_accept2(listener->ssock, listener->factory.pool,
+			    (pj_sockaddr_t*)listener_addr,
+			    pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr),
+			    &newsock_param);
+
+    if (status == PJ_SUCCESS || status == PJ_EPENDING) {
+	pj_ssl_sock_info info;	
+
+	/* Retrieve the bound address */
+	status = pj_ssl_sock_get_info(listener->ssock, &info);
+	if (status == PJ_SUCCESS)
+	    pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
+
+    }
+    status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    update_transport_info(listener);
+
+    return status;    
+}
+
 
 PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
  					        const pjsip_tls_setting *opt,
@@ -308,38 +527,16 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 					        const pjsip_host_port *a_name,
 					        unsigned async_cnt,
 					        pjsip_tpfactory **p_factory)
-{
-    enum { INFO_LEN = 100 };
-    char local_addr[PJ_INET6_ADDRSTRLEN+10];
+{        
     pj_pool_t *pool;
-    pj_bool_t is_ipv6;
-    int af, sip_ssl_method;
-    pj_uint32_t sip_ssl_proto;
-    struct tls_listener *listener;
-    pj_ssl_sock_param ssock_param, newsock_param;
-    pj_sockaddr *listener_addr;
-    pj_bool_t has_listener;
+    pj_bool_t is_ipv6;    
+    struct tls_listener *listener;    
     pj_status_t status;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
-    is_ipv6 = (local && local->addr.sa_family == pj_AF_INET6());
-    af = is_ipv6 ? pj_AF_INET6() : pj_AF_INET();
-
-    /* Verify that address given in a_name (if any) is valid */
-    if (a_name && a_name->host.slen) {
-	pj_sockaddr tmp;
-
-	status = pj_sockaddr_init(af, &tmp, &a_name->host,
-				  (pj_uint16_t)a_name->port);
-	if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-	    (!is_ipv6 && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
-	{
-	    /* Invalid address */
-	    return PJ_EINVAL;
-	}
-    }
+    is_ipv6 = (local && local->addr.sa_family == pj_AF_INET6());    
 
     pool = pjsip_endpt_create_pool(endpt, "tlstp", POOL_LIS_INIT, 
 				   POOL_LIS_INC);
@@ -354,7 +551,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     listener->factory.type_name = (char*)
 		pjsip_transport_get_type_name(listener->factory.type);
     listener->factory.flag = 
-	pjsip_transport_get_flag_from_type(listener->factory.type);
+		pjsip_transport_get_flag_from_type(listener->factory.type);
+    listener->endpt = endpt;
 
     pj_ansi_strcpy(listener->factory.obj_name, "tlstp");
     if (is_ipv6)
@@ -373,82 +571,17 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
     if (async_cnt > MAX_ASYNC_CNT) 
 	async_cnt = MAX_ASYNC_CNT;
 
-    /* Build SSL socket param */
-    pj_ssl_sock_param_default(&ssock_param);
-    ssock_param.sock_af = af;
-    ssock_param.cb.on_accept_complete = &on_accept_complete;
-    ssock_param.async_cnt = async_cnt;
-    ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
-    ssock_param.timer_heap = pjsip_endpt_get_timer_heap(endpt);    
-    ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
-    ssock_param.timeout = listener->tls_setting.timeout;
-    ssock_param.user_data = listener;
-    ssock_param.verify_peer = PJ_FALSE; /* avoid SSL socket closing the socket
-					 * due to verification error */
-    if (ssock_param.send_buffer_size < PJSIP_MAX_PKT_LEN)
-	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
-    if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
-	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
-    ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
-    ssock_param.ciphers = listener->tls_setting.ciphers;
-    ssock_param.curves_num = listener->tls_setting.curves_num;
-    ssock_param.curves = listener->tls_setting.curves;
-    ssock_param.sigalgs = listener->tls_setting.sigalgs;
-    ssock_param.entropy_type = listener->tls_setting.entropy_type;
-    ssock_param.entropy_path = listener->tls_setting.entropy_path;
-    ssock_param.reuse_addr = listener->tls_setting.reuse_addr;
-    ssock_param.qos_type = listener->tls_setting.qos_type;
-    ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
-    pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
-	      sizeof(ssock_param.qos_params));
-
-    ssock_param.sockopt_ignore_error = 
-				     listener->tls_setting.sockopt_ignore_error;
-    /* Copy the sockopt */
-    pj_memcpy(&ssock_param.sockopt_params, 
-	      &listener->tls_setting.sockopt_params,
-	      sizeof(listener->tls_setting.sockopt_params));
-
-    has_listener = PJ_FALSE;
-
-    sip_ssl_method = listener->tls_setting.method;
-    sip_ssl_proto = listener->tls_setting.proto;
-    ssock_param.proto = ssl_get_proto(sip_ssl_method, sip_ssl_proto); 
+    listener->async_cnt = async_cnt;    
 
     /* Create group lock */
     status = pj_grp_lock_create(pool, NULL, &listener->grp_lock);
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_error;
 
     /* Setup group lock handler */
     pj_grp_lock_add_ref(listener->grp_lock);
     pj_grp_lock_add_handler(listener->grp_lock, pool, listener,
 			    &lis_on_destroy);
-
-#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
-      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
-
-    ssock_param.grp_lock = listener->grp_lock;
-
-    /* Create SSL socket */
-    status = pj_ssl_sock_create(pool, &ssock_param, &listener->ssock);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-#endif
-
-    /* Bind address may be different than factory.local_addr because
-     * factory.local_addr will be resolved below.
-     */
-    listener_addr = &listener->factory.local_addr;
-    if (local) {
-	pj_sockaddr_cp((pj_sockaddr_t*)listener_addr, 
-		       (const pj_sockaddr_t*)local);
-	pj_sockaddr_cp(&listener->bound_addr, local);
-    } else {
-	pj_sockaddr_init(af, listener_addr, NULL, 0);
-	pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
-    }
 
     /* Check if certificate/CA list for SSL socket is set */
     if (listener->tls_setting.cert_file.slen ||
@@ -464,121 +597,39 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 			&listener->cert);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-     }
-
-#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
-      PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
-
-     if (listener->cert) {
-	status = pj_ssl_sock_set_certificate(listener->ssock, pool, 
-					     listener->cert);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
     }
-
-    /* Start accepting incoming connections. Note that some TLS/SSL backends
-     * may not support for SSL socket server.
-     */
-    has_listener = PJ_FALSE;
-
-    pj_memcpy(&newsock_param, &ssock_param, sizeof(newsock_param));
-    newsock_param.async_cnt = 1;
-    newsock_param.cb.on_data_read = &on_data_read;
-    newsock_param.cb.on_data_sent = &on_data_sent;
-    status = pj_ssl_sock_start_accept2(listener->ssock, pool, 
-			  (pj_sockaddr_t*)listener_addr, 
-			  pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr),
-			  &newsock_param);
-    if (status == PJ_SUCCESS || status == PJ_EPENDING) {
-	pj_ssl_sock_info info;
-	has_listener = PJ_TRUE;
-
-	/* Retrieve the bound address */
-	status = pj_ssl_sock_get_info(listener->ssock, &info);
-	if (status == PJ_SUCCESS)
-	    pj_sockaddr_cp(listener_addr, (pj_sockaddr_t*)&info.local_addr);
-    } else if (status != PJ_ENOTSUP) {
-	goto on_error;
-    }
-
-#endif
-
-    /* If published host/IP is specified, then use that address as the
-     * listener advertised address.
-     */
-    if (a_name && a_name->host.slen) {
-	/* Copy the address */
-	listener->factory.addr_name = *a_name;
-	pj_strdup(listener->factory.pool, &listener->factory.addr_name.host, 
-		  &a_name->host);
-	listener->factory.addr_name.port = a_name->port;
-
-    } else {
-	/* No published address is given, use the bound address */
-
-	/* If the address returns 0.0.0.0, use the default
-	 * interface address as the transport's address.
-	 */
-	if (!pj_sockaddr_has_addr(listener_addr)) {
-	    pj_sockaddr hostip;
-
-	    status = pj_gethostip(af, &hostip);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
-
-	    pj_sockaddr_copy_addr(listener_addr, &hostip);
-	}
-
-	/* Save the address name */
-	sockaddr_to_host_port(listener->factory.pool, 
-			      &listener->factory.addr_name, listener_addr);
-    }
-
-    /* If port is zero, get the bound port */
-    if (listener->factory.addr_name.port == 0) {
-	listener->factory.addr_name.port = pj_sockaddr_get_port(listener_addr);
-    }
-
-    pj_ansi_snprintf(listener->factory.obj_name, 
-		     sizeof(listener->factory.obj_name),
-		     "tlstp:%d",  listener->factory.addr_name.port);
 
     /* Register to transport manager */
     listener->endpt = endpt;
     listener->tpmgr = pjsip_endpt_get_tpmgr(endpt);
     listener->factory.create_transport2 = lis_create_transport;
     listener->factory.destroy = lis_destroy;
+
+#if !(defined(PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER) && \
+    PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER != 0)
+    /* Start listener. */
+    status = pjsip_tls_transport_lis_start(&listener->factory, local, a_name);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+#else
+    update_bound_addr(listener, local);
+    /* If published host/IP is specified, then use that address as the
+     * listener advertised address.
+     */
+    status = update_factory_addr(listener, a_name);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Set transport info. */
+    update_transport_info(listener);
+#endif
+
     listener->is_registered = PJ_TRUE;
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
 					    &listener->factory);
     if (status != PJ_SUCCESS) {
 	listener->is_registered = PJ_FALSE;
 	goto on_error;
-    }
-
-    /* Set transport info. */
-    if (listener->factory.info == NULL) {
-	listener->factory.info = (char*) pj_pool_alloc(listener->factory.pool,
-						       INFO_LEN);
-    }
-    pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
-    pj_ansi_snprintf( 
-	listener->factory.info, INFO_LEN, "tls %s [published as %.*s:%d]",
-	local_addr,
-	(int)listener->factory.addr_name.host.slen,
-	listener->factory.addr_name.host.ptr,
-	listener->factory.addr_name.port);
-
-    if (has_listener) {
-	PJ_LOG(4,(listener->factory.obj_name, 
-		 "SIP TLS listener is ready for incoming connections "
-		 "at %.*s:%d",
-		 (int)listener->factory.addr_name.host.slen,
-		 listener->factory.addr_name.host.ptr,
-		 listener->factory.addr_name.port));
-    } else {
-	PJ_LOG(4,(listener->factory.obj_name, "SIP TLS is ready "
-		  "(client only)"));
     }
 
     /* Return the pointer to user */
@@ -609,11 +660,8 @@ static void lis_on_destroy(void *arg)
 }
 
 
-/* This callback is called by transport manager to destroy listener */
-static pj_status_t lis_destroy(pjsip_tpfactory *factory)
+static void lis_close(struct tls_listener *listener)
 {
-    struct tls_listener *listener = (struct tls_listener *)factory;
-
     if (listener->is_registered) {
 	pjsip_tpmgr_unregister_tpfactory(listener->tpmgr, &listener->factory);
 	listener->is_registered = PJ_FALSE;
@@ -623,6 +671,15 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
 	pj_ssl_sock_close(listener->ssock);
 	listener->ssock = NULL;
     }
+}
+
+
+/* This callback is called by transport manager to destroy listener */
+static pj_status_t lis_destroy(pjsip_tpfactory *factory)
+{
+    struct tls_listener *listener = (struct tls_listener *)factory;
+
+    lis_close(listener);
 
     if (listener->grp_lock) {
 	pj_grp_lock_t *grp_lock = listener->grp_lock;
@@ -634,6 +691,38 @@ static pj_status_t lis_destroy(pjsip_tpfactory *factory)
     }
 
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
+						const pj_sockaddr *local,
+						const pjsip_host_port *a_name)
+{
+    pj_status_t status = PJ_SUCCESS;
+    struct tls_listener *listener = (struct tls_listener *)factory;
+
+    lis_close(listener);
+
+    status = pjsip_tls_transport_lis_start(factory, local, a_name);
+    if (status != PJ_SUCCESS) {	
+	tls_perror(listener->factory.obj_name, 
+		   "Unable to start listener after closing it", status);
+
+	return status;
+    }
+    
+    status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
+					    &listener->factory);
+    if (status != PJ_SUCCESS) {
+	tls_perror(listener->factory.obj_name,
+		    "Unable to register the transport listener", status);
+
+	listener->is_registered = PJ_FALSE;	
+    } else {
+	listener->is_registered = PJ_TRUE;	
+    }    
+
+    return status;
 }
 
 

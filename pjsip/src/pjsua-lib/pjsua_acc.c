@@ -401,6 +401,8 @@ static pj_status_t initialize_acc(unsigned acc_id)
     if (acc_cfg->transport_id != PJSUA_INVALID_ID)
 	acc->tp_type = pjsua_var.tpdata[acc_cfg->transport_id].type;
 
+    acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+
     return PJ_SUCCESS;
 }
 
@@ -687,6 +689,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
     acc->next_rtp_port = 0;
+    acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;    
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -1416,6 +1419,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 			 "new account setting in modifying account", status);
 	}
     }
+
+    /* IP Change config */
+    acc->cfg.ip_change_cfg.shutdown_tp = cfg->ip_change_cfg.shutdown_tp;
+    acc->cfg.ip_change_cfg.hangup_calls = cfg->ip_change_cfg.hangup_calls;    
+    acc->cfg.ip_change_cfg.reinvite_flags = cfg->ip_change_cfg.reinvite_flags;
 
 on_return:
     PJSUA_UNLOCK();
@@ -2199,6 +2207,15 @@ static void regc_tsx_cb(struct pjsip_regc_tsx_cb_param *param)
 }
 
 /*
+ * Timer callback to handle call on IP change process.
+ */
+static void handle_call_on_ip_change_cb(void *user_data)
+{
+    pjsua_acc *acc = (pjsua_acc*)user_data;
+    pjsua_acc_handle_call_on_ip_change(acc);
+}
+
+/*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
  */
@@ -2265,7 +2282,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
 	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
 		      pjsua_var.acc[acc->index].cfg.id.ptr));
-	} else {
+
+	} else {	    
 	    /* Check and update SIP outbound status first, since the result
 	     * will determine if we should update re-registration
 	     */
@@ -2305,8 +2323,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    /* Subscribe to MWI, if it's enabled */
 	    if (acc->cfg.mwi_enabled)
 		pjsua_start_mwi(acc->index, PJ_FALSE);
-	}
 
+	}
     } else {
 	PJ_LOG(4, (THIS_FILE, "SIP registration updated status=%d", param->code));
     }
@@ -2348,6 +2366,51 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	reg_info.regc = param->regc;
 	reg_info.renew = !param->is_unreg;
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
+    }
+
+    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT) {
+	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+	    pjsua_ip_change_op_info ip_chg_info;
+	    pjsip_regc_info rinfo;
+
+	    pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
+	    pjsip_regc_get_info(param->regc, &rinfo);	    
+	    ip_chg_info.acc_update_contact.acc_id = acc->index;
+	    ip_chg_info.acc_update_contact.code = param->code;
+	    ip_chg_info.acc_update_contact.is_register = !param->is_unreg;
+	    (*pjsua_var.ua_cfg.cb.on_ip_change_progress)(acc->ip_change_op, 
+							 param->status, 
+							 &ip_chg_info);
+	}
+
+	if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
+	    if (param->expiration < 1) {
+		pj_status_t status;
+		/* Send re-register. */
+		PJ_LOG(3, (THIS_FILE, "%.*s: send registration triggered by IP"
+			   " change", pjsua_var.acc[acc->index].cfg.id.slen,
+			   pjsua_var.acc[acc->index].cfg.id.ptr));
+
+		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
+		if ((status != PJ_SUCCESS) && 
+		    pjsua_var.ua_cfg.cb.on_ip_change_progress) 
+		{
+		    pjsua_ip_change_op_info ip_chg_info;
+
+		    pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
+		    ip_chg_info.acc_update_contact.acc_id = acc->index;
+		    ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
+		    (*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
+							    acc->ip_change_op, 
+							    status, 
+							    &ip_chg_info);
+		}
+	    } else {
+                /* Avoid deadlock issue when sending BYE or Re-INVITE.  */
+		pjsua_schedule_timer2(&handle_call_on_ip_change_cb, 
+				      (void*)acc, 0);
+	    }
+	} 
     }
     
     PJSUA_UNLOCK();
@@ -2675,7 +2738,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 
 	//pjsip_regc_get_info(pjsua_var.acc[acc_id].regc, &reg_info);
 	//pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
-        
+
         if (pjsua_var.ua_cfg.cb.on_reg_started) {
             (*pjsua_var.ua_cfg.cb.on_reg_started)(acc_id, renew);
         }
@@ -3769,8 +3832,16 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 
 	    pjsip_regc_release_transport(pjsua_var.acc[i].regc);
 
-	    /* Schedule reregistration for this account */
-	    if (acc->cfg.reg_retry_interval) {
+	    if (pjsua_var.acc[i].ip_change_op == 
+					    PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP)
+	    {
+		if (acc->cfg.allow_contact_rewrite) {
+		    pjsua_acc_update_contact_on_ip_change(acc);
+		} else {
+		    pjsua_acc_handle_call_on_ip_change(acc);
+		}
+	    } else if (acc->cfg.reg_retry_interval) {
+		/* Schedule reregistration for this account */
 	        schedule_reregistration(acc);
 	    }
 	}
@@ -3778,4 +3849,116 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 
     PJSUA_UNLOCK();
     pj_log_pop_indent();
+}
+
+
+/*
+ * Internal function to update contact on ip change process.
+ */
+pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
+{
+    pj_status_t status;
+    pj_bool_t need_unreg = ((acc->cfg.contact_rewrite_method &
+			     PJSUA_CONTACT_REWRITE_UNREGISTER) != 0);
+
+    acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT;
+
+    PJ_LOG(3, (THIS_FILE, "%.*s: send %sregistration triggered "
+	       "by IP change", acc->cfg.id.slen,
+	       acc->cfg.id.ptr, (need_unreg ? "un-" : "")));
+
+    status = pjsua_acc_set_registration(acc->index, !need_unreg);
+
+    if ((status != PJ_SUCCESS) && (pjsua_var.ua_cfg.cb.on_ip_change_progress)) 
+    {
+	pjsua_ip_change_op_info info;
+	
+	pj_bzero(&info, sizeof(info));
+	info.acc_update_contact.acc_id = acc->index;
+	info.acc_update_contact.is_register = !need_unreg;	
+
+	pjsua_var.ua_cfg.cb.on_ip_change_progress(acc->ip_change_op,
+						  status,
+						  &info);
+    }
+    return status;
+}
+
+
+/*
+ * Internal function to handle call on ip change process.
+ */
+pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
+{
+    pj_status_t status = PJ_SUCCESS;
+    unsigned i = 0;
+
+    if (acc->cfg.ip_change_cfg.hangup_calls || 
+	acc->cfg.ip_change_cfg.reinvite_flags)
+    {
+	for (i = 0; i < (int)pjsua_var.ua_cfg.max_calls; ++i) {
+	    pjsua_call_info call_info;
+	    pjsua_call_get_info(i, &call_info);
+
+	    if (pjsua_var.calls[i].acc_id != acc->index)
+	    {
+		continue;
+	    }
+
+	    if (acc->cfg.ip_change_cfg.hangup_calls) {
+		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS;
+		PJ_LOG(3, (THIS_FILE, "call to %.*s: hangup "
+			   "triggered by IP change",
+			   call_info.remote_info.slen,
+			   call_info.remote_info.ptr));
+
+		status = pjsua_call_hangup(i, PJSIP_SC_GONE, NULL, NULL);
+
+		if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+		    pjsua_ip_change_op_info info;
+
+		    pj_bzero(&info, sizeof(info));
+		    info.acc_hangup_calls.acc_id = acc->index;
+		    info.acc_hangup_calls.call_id = call_info.id;
+
+		    pjsua_var.ua_cfg.cb.on_ip_change_progress(
+							     acc->ip_change_op,
+							     status,
+							     &info);
+		}
+	    } else if ((acc->cfg.ip_change_cfg.reinvite_flags) &&
+		(call_info.state == PJSIP_INV_STATE_CONFIRMED))
+	    {
+		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
+
+		call_info.setting.flag |=
+					 acc->cfg.ip_change_cfg.reinvite_flags;
+
+		PJ_LOG(3, (THIS_FILE, "call to %.*s: send "
+			   "re-INVITE with flags 0x%x triggered "
+			   "by IP change",
+			   call_info.remote_info.slen,
+			   call_info.remote_info.ptr,
+			   acc->cfg.ip_change_cfg.reinvite_flags));
+
+		status = pjsua_call_reinvite(i, call_info.setting.flag, NULL);
+
+		if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+		    pjsua_ip_change_op_info info;
+
+		    pj_bzero(&info, sizeof(info));
+		    info.acc_reinvite_calls.acc_id = acc->index;
+		    info.acc_reinvite_calls.call_id = call_info.id;
+
+		    pjsua_var.ua_cfg.cb.on_ip_change_progress(
+							     acc->ip_change_op,
+							     status,
+							     &info);
+		}
+
+	    }
+	}
+    }    
+    acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    return status;
 }

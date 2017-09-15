@@ -38,6 +38,7 @@
 #define CMD_NETWORK		    900
 #define CMD_QUIT		    110
 #define CMD_RESTART		    120
+#define CMD_HANDLE_IP_CHANGE	    130
 
 /* call level 2 command */
 #define CMD_CALL_NEW		    ((CMD_CALL*10)+1)
@@ -2587,6 +2588,18 @@ static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
+static pj_status_t cmd_ip_change_handler(pj_cli_cmd_val *cval)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pjsua_ip_change_param param;
+    PJ_UNUSED_ARG(cval);
+
+    pjsua_ip_change_param_default(&param);
+    pjsua_handle_ip_change(&param);    
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Syntax error handler for parser.
  */
@@ -3068,11 +3081,15 @@ static pj_status_t add_other_command(pj_cli_t *c)
 	"  <ARG name='options4' type='string' desc='Options' optional='1'/>"
 	"</CMD>";
 
+    char* ip_change_command =
+	"<CMD name='ip_change' id='130' desc='Handle IP change'/>";
+
     pj_status_t status;
     pj_str_t sleep_xml = pj_str(sleep_command);
     pj_str_t network_xml = pj_str(network_command);
     pj_str_t shutdown_xml = pj_str(shutdown_command);
     pj_str_t restart_xml = pj_str(restart_command);
+    pj_str_t ip_change_xml = pj_str(ip_change_command);
 
     status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &sleep_xml, cmd_sleep_handler,
@@ -3095,6 +3112,13 @@ static pj_status_t add_other_command(pj_cli_t *c)
 
     status = pj_cli_add_cmd_from_xml(c, NULL,
 				     &restart_xml, cmd_restart_handler,
+				     NULL, NULL);
+
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_cli_add_cmd_from_xml(c, NULL,
+				     &ip_change_xml, cmd_ip_change_handler,
 				     NULL, NULL);
 
     return status;

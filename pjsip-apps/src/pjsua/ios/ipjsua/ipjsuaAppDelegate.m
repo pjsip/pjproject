@@ -27,6 +27,7 @@
 #include "../../pjsua_app_config.h"
 
 #import "ipjsuaViewController.h"
+#import "Reachability.h"
 
 @implementation ipjsuaAppDelegate
 
@@ -39,6 +40,46 @@ static pjsua_app_cfg_t  app_cfg;
 static bool             isShuttingDown;
 static char           **restartArgv;
 static int              restartArgc;
+Reachability            *internetReach;
+
+- (void) updateWithReachability: (Reachability *)curReach
+{
+    NetworkStatus netStatus = [curReach currentReachabilityStatus];
+    BOOL connectionRequired = [curReach connectionRequired];
+    switch (netStatus) {
+        case NotReachable:
+            PJ_LOG(3,("", "Access Not Available.."));
+            connectionRequired= NO;
+            break;
+        case ReachableViaWiFi:
+            PJ_LOG(3,("", "Reachable WiFi.."));
+            break;
+        case ReachableViaWWAN:
+            PJ_LOG(3,("", "Reachable WWAN.."));
+        break;
+    }
+    if (connectionRequired) {
+        PJ_LOG(3,("", "Connection Required"));
+    }
+}
+
+/* Called by Reachability whenever status changes. */
+- (void)reachabilityChanged: (NSNotification *)note
+{
+    Reachability* curReach = [note object];
+    NSParameterAssert([curReach isKindOfClass: [Reachability class]]);
+    PJ_LOG(3,("", "reachability changed.."));
+    [self updateWithReachability: curReach];
+    
+    if ([curReach currentReachabilityStatus] != NotReachable &&
+        ![curReach connectionRequired])
+    {
+        pjsua_ip_change_param param;
+        pjsua_ip_change_param_default(&param);
+        pjsua_handle_ip_change(&param);
+    }
+}
+
 
 void displayLog(const char *msg, int len)
 {
@@ -154,6 +195,17 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     }
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
+    
+    /* Observe the kNetworkReachabilityChangedNotification. When that
+     * notification is posted, the method "reachabilityChanged" will be called.
+     */
+    [[NSNotificationCenter defaultCenter] addObserver: self
+          selector: @selector(reachabilityChanged:)
+          name: kReachabilityChangedNotification object: nil];
+    
+    internetReach = [Reachability reachabilityForInternetConnection];
+    [internetReach startNotifier];
+    [self updateWithReachability: internetReach];
     
     app = self;
     

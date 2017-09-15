@@ -319,6 +319,51 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
 						 const pj_sockaddr_in *local,
 						 const pjsip_host_port *a_name);
 
+/**
+ * Restart the transport. Several operations are supported by this function:
+ *  - if transport was made temporarily unavailable to SIP stack with
+ *    pjsip_udp_transport_pause() and PJSIP_UDP_TRANSPORT_KEEP_SOCKET,
+ *    application can make the transport available to the SIP stack
+ *    again, by specifying PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag here.
+ *  - if application wants to replace the internal socket with a new
+ *    socket, it must specify PJSIP_UDP_TRANSPORT_DESTROY_SOCKET when
+ *    calling this function, so that the internal socket will be destroyed
+ *    if it hasn't been closed. In this case, application has two choices
+ *    on how to create the new socket: 1) to let the transport create
+ *    the new socket, in this case the \a sock option should be set
+ *    to \a PJ_INVALID_SOCKET and optionally the \a local parameter can be
+ *    filled with the desired address and port where the new socket 
+ *    should be bound to, or 2) to specify its own socket to be used
+ *    by this transport, by specifying a valid socket in \a sock argument
+ *    and set the \a local argument to NULL. In both cases, application
+ *    may specify the published address of the socket in \a a_name
+ *    argument. This is another version of pjsip_udp_transport_restart() 
+ *    able to restart IPv6 transport.
+ *
+ * @param transport	The UDP transport.
+ * @param option	Restart option.
+ * @param sock		Optional socket to be used by the transport.
+ * @param local		The address where the socket should be bound to.
+ *			If this argument is NULL, socket will be bound
+ *			to any available port.
+ * @param a_name	Optionally specify the published address for
+ *			this transport. If the socket is not replaced
+ *			(PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
+ *			specified), then if this argument is NULL, the
+ *			previous value will be used. If the socket is
+ *			replaced and this argument is NULL, the bound
+ *			address will be used as the published address 
+ *			of the transport.
+ *
+ * @return		PJ_SUCCESS if transport can be restarted, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
+					        unsigned option,
+					        pj_sock_t sock,
+					        const pj_sockaddr *local,
+					        const pjsip_host_port *a_name);
+
 
 PJ_END_DECL
 

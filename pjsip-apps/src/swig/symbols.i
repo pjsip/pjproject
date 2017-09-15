@@ -175,3 +175,5 @@ typedef enum pjsua_create_media_transport_flag {PJSUA_MED_TP_CLOSE_MEMBER = 1} p
 
 typedef enum pjsua_snd_dev_mode {PJSUA_SND_DEV_SPEAKER_ONLY = 1, PJSUA_SND_DEV_NO_IMMEDIATE_OPEN = 2} pjsua_snd_dev_mode;
 
+typedef enum pjsua_ip_change_op {PJSUA_IP_CHANGE_OP_NULL, PJSUA_IP_CHANGE_OP_RESTART_LIS, PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP, PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT, PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS, PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS} pjsua_ip_change_op;
+

@@ -39,6 +39,8 @@
 		3AF0582816F050780046B835 /* ipjsuaViewController_iPad.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3AF0582616F050780046B835 /* ipjsuaViewController_iPad.xib */; };
 		3AF253001EFBD15E00213893 /* libyuv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF252FF1EFBD15E00213893 /* libyuv.a */; };
 		3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF253011EFBD36E00213893 /* VideoToolbox.framework */; };
+		7485A6AF1F09AAE500122F1A /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 7485A6AE1F09AAE500122F1A /* Reachability.m */; };
+		7485A6B11F09B2D500122F1A /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */; };
 		E5E991E61B67A45500017E67 /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D41B67A45500017E67 /* libg7221codec.a */; };
 		E5E991E71B67A45500017E67 /* libgsmcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D51B67A45500017E67 /* libgsmcodec.a */; };
 		E5E991E81B67A45500017E67 /* libilbccodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5E991D61B67A45500017E67 /* libilbccodec.a */; };
@@ -97,6 +99,10 @@
 		3AF0582716F050780046B835 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ipjsuaViewController_iPad.xib; sourceTree = "<group>"; };
 		3AF252FF1EFBD15E00213893 /* libyuv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libyuv.a; sourceTree = "<group>"; };
 		3AF253011EFBD36E00213893 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		741C73BA1F0E64AF00887FB6 /* libopenh264.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopenh264.a; path = "../../../../../../../../../../openh264-1.6.0/lib_armv7/lib/libopenh264.a"; sourceTree = "<group>"; };
+		7485A6AD1F09AAE500122F1A /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
+		7485A6AE1F09AAE500122F1A /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
+		7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		E5E991D41B67A45500017E67 /* libg7221codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libg7221codec.a; sourceTree = "<group>"; };
 		E5E991D51B67A45500017E67 /* libgsmcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libgsmcodec.a; sourceTree = "<group>"; };
 		E5E991D61B67A45500017E67 /* libilbccodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libilbccodec.a; sourceTree = "<group>"; };
@@ -122,6 +128,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7485A6B11F09B2D500122F1A /* SystemConfiguration.framework in Frameworks */,
 				3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */,
 				3AB0EC581DA76B39008A0F62 /* libc++.tbd in Frameworks */,
 				E5E991EC1B67A45500017E67 /* libpjmedia-codec.a in Frameworks */,
@@ -196,6 +203,8 @@
 		3AF0580716F050770046B835 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				741C73BA1F0E64AF00887FB6 /* libopenh264.a */,
+				7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */,
 				3AF253011EFBD36E00213893 /* VideoToolbox.framework */,
 				3AB0EC571DA76B39008A0F62 /* libc++.tbd */,
 				3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */,
@@ -223,6 +232,8 @@
 				3AF0581816F050780046B835 /* ipjsuaAppDelegate.m */,
 				3AF0582016F050780046B835 /* ipjsuaViewController.h */,
 				3AF0582116F050780046B835 /* ipjsuaViewController.m */,
+				7485A6AD1F09AAE500122F1A /* Reachability.h */,
+				7485A6AE1F09AAE500122F1A /* Reachability.m */,
 				3AF0582316F050780046B835 /* ipjsuaViewController_iPhone.xib */,
 				3AF0582616F050780046B835 /* ipjsuaViewController_iPad.xib */,
 				3AF0580F16F050780046B835 /* Supporting Files */,
@@ -353,6 +364,7 @@
 				3ADCCD2E172E40120007BE8E /* pjsua_app_common.c in Sources */,
 				3ADCCD2F172E40120007BE8E /* pjsua_app_config.c in Sources */,
 				3ADCCD30172E40120007BE8E /* pjsua_app_legacy.c in Sources */,
+				7485A6AF1F09AAE500122F1A /* Reachability.m in Sources */,
 				3ADCCD31172E40120007BE8E /* pjsua_app.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

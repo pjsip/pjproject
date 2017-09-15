@@ -33,6 +33,7 @@ interface MyAppObserver
     abstract void notifyCallState(MyCall call);
     abstract void notifyCallMediaState(MyCall call);
     abstract void notifyBuddyState(MyBuddy buddy);
+    abstract void notifyChangeNetwork();
 }
 
 
@@ -532,6 +533,17 @@ class MyApp {
 	* after lib has been destroyed and from non-registered thread.
 	*/
 	json.delete();
+    }
+
+    public void handleNetworkChange()
+    {
+	try{
+	    System.out.println("Network change detected");
+	    IpChangeParam changeParam = new IpChangeParam();
+	    ep.handleIpChange(changeParam);
+	} catch (Exception e) {
+	    System.out.println(e);
+	}
     }
 
     public void deinit()

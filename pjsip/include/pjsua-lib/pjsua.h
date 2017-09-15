@@ -619,6 +619,88 @@ typedef enum pjsua_contact_rewrite_method
 
 
 /**
+ * This enumeration specifies the operation when handling IP change.
+ */
+typedef enum pjsua_ip_change_op {
+    /**
+     * Hasn't start ip change process.
+     */
+    PJSUA_IP_CHANGE_OP_NULL,
+
+    /**
+     * The restart listener process.
+     */
+    PJSUA_IP_CHANGE_OP_RESTART_LIS,
+
+    /**
+     * The shutdown transport process.
+     */
+    PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP,
+
+    /**
+     * The update contact process.
+     */
+    PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT,
+
+    /**
+     * The hanging up call process.
+     */
+    PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS,
+
+    /**
+     * The re-INVITE call process.
+     */
+    PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+
+} pjsua_ip_change_op;
+
+
+/**
+ * This will contain the information of the callback \a on_ip_change_progress.
+ */
+typedef union pjsua_ip_change_op_info {
+    /**
+     * The information from listener restart operation.
+     */
+    struct {
+	int transport_id;
+    } lis_restart;
+
+    /**
+     * The information from shutdown transport.
+     */
+    struct {
+	int acc_id;
+    } acc_shutdown_tp;
+
+    /**
+     * The information from updating contact.
+     */
+    struct {
+	pjsua_acc_id acc_id;
+	pj_bool_t is_register;	/**< SIP Register if PJ_TRUE.	    */
+	int code;		/**< SIP status code received.	    */
+    } acc_update_contact;
+
+    /**
+     * The information from hanging up call operation.
+     */
+    struct {
+	pjsua_acc_id acc_id;
+	pjsua_call_id call_id;
+    } acc_hangup_calls;
+
+    /**
+     * The information from re-Invite call operation.
+     */
+    struct {
+	pjsua_acc_id acc_id;
+	pjsua_call_id call_id;
+    } acc_reinvite_calls;
+} pjsua_ip_change_op_info;
+
+
+/**
  * Call settings.
  */
 typedef struct pjsua_call_setting
@@ -1416,6 +1498,19 @@ typedef struct pjsua_callback
      */
     pj_stun_resolve_cb on_stun_resolution_complete;
 
+    /** 
+     * Calling #pjsua_handle_ip_change() may involve different operation. This 
+     * callback is called to report the progress of each enabled operation.
+     *
+     * @param op	The operation.
+     * @param status	The status of operation.
+     * @param info	The info from the operation
+     * 
+     */
+    void (*on_ip_change_progress)(pjsua_ip_change_op op,
+				  pj_status_t status,
+				  const pjsua_ip_change_op_info *info);
+
 } pjsua_callback;
 
 
@@ -2083,6 +2178,74 @@ struct pj_stun_resolve_result
 
 
 /**
+ * This structure describe the parameter passed to #pjsua_handle_ip_change().
+ */
+typedef struct pjsua_ip_change_param
+{
+    /**
+     * If set to PJ_TRUE, this will restart the transport listener.
+     * 
+     * Default : PJ_TRUE
+     */
+    pj_bool_t	    restart_listener;
+
+    /** 
+     * If \a restart listener is set to PJ_TRUE, some delay might be needed 
+     * for the listener to be restarted. Use this to set the delay.
+     * 
+     * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
+     */
+    unsigned	    restart_lis_delay;
+
+} pjsua_ip_change_param;
+
+
+/**
+ * This structure describe the account config specific to IP address change.
+ */
+typedef struct pjsua_ip_change_acc_cfg
+{    
+    /**
+     * Shutdown the transport used for account registration. If this is set to
+     * PJ_TRUE, the transport will be shutdown altough it's used by multiple
+     * account. Shutdown transport will be followed by re-Registration if
+     * pjsua_acc_config.allow_contact_rewrite is enabled.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t		shutdown_tp;
+
+    /**
+     * Hangup active calls associated with the account. If this is set to 
+     * PJ_TRUE, then the calls will be hang up.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t		hangup_calls;
+
+    /**
+     * Specify the call flags used in the re-INVITE when \a hangup_calls is set 
+     * to PJ_FALSE. If this is set to 0, no re-INVITE will be sent. The 
+     * re-INVITE will be sent after re-Registration is finished.
+     *
+     * Default: PJSUA_CALL_REINIT_MEDIA | PJSUA_CALL_UPDATE_CONTACT |
+     *          PJSUA_CALL_UPDATE_VIA
+     */
+    unsigned		reinvite_flags;
+    
+} pjsua_ip_change_acc_cfg;
+
+
+/**
+ * Call this function to initialize \a pjsua_ip_change_param with default 
+ * values.
+ *
+ * @param param	    The IP change param to be initialized.
+ */
+PJ_DECL(void) pjsua_ip_change_param_default(pjsua_ip_change_param *param);
+
+
+/**
  * This is a utility function to detect NAT type in front of this
  * endpoint. Once invoked successfully, this function will complete 
  * asynchronously and report the result in \a on_nat_detect() callback
@@ -2301,6 +2464,31 @@ PJ_DECL(void) pjsua_perror(const char *sender, const char *title,
  *			SIP transactions) when non-zero.
  */
 PJ_DECL(void) pjsua_dump(pj_bool_t detail);
+
+
+/**
+ * Inform the stack that IP address change event was detected. 
+ * The stack will:
+ * 1. Restart the listener (this step is configurable via 
+ *    \a pjsua_ip_change_param.restart_listener).
+ * 2. Shutdown the transport used by account registration (this step is 
+ *    configurable via \a pjsua_acc_config.ip_change_cfg.shutdown_tp).
+ * 3. Update contact URI by sending re-Registration (this step is configurable 
+ *    via a\ pjsua_acc_config.allow_contact_rewrite and 
+ *    a\ pjsua_acc_config.contact_rewrite_method)
+ * 4. Hangup active calls (this step is configurable via 
+ *    a\ pjsua_acc_config.ip_change_cfg.hangup_calls) or 
+ *    continue the call by sending re-INVITE 
+ *    (configurable via \a pjsua_acc_config.ip_change_cfg.reinvite_flags).
+ *
+ * @param param		The IP change parameter, have a look at 
+ *			#pjsua_ip_change_param.
+ *
+ * @return		PJ_SUCCESS on success, other on error.
+ */
+PJ_DECL(pj_status_t) pjsua_handle_ip_change(
+					   const pjsua_ip_change_param *param);
+
 
 /**
  * @}
@@ -2576,6 +2764,22 @@ PJ_DECL(pj_status_t) pjsua_transport_set_enable(pjsua_transport_id id,
  */
 PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 					    pj_bool_t force );
+
+
+/**
+ * Start the listener of the transport. This is useful when listener is not 
+ * automatically started when creating the transport.
+ *
+ * @param id		Transport ID.
+ * @param cfg		The new transport config used by the listener. 
+ *			Only port, public_addr and bound_addr are used at the 
+ *			moment.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_transport_lis_start( pjsua_transport_id id,
+					    const pjsua_transport_config *cfg);
+
 
 /**
  * @}
@@ -3541,7 +3745,13 @@ typedef struct pjsua_acc_config
      *
      * Default: PJ_TRUE
      */
-    pj_bool_t         register_on_acc_add;
+    pj_bool_t		register_on_acc_add;
+
+    /**
+     * Specify account configuration specific to IP address change used when
+     * calling #pjsua_handle_ip_change().
+     */
+    pjsua_ip_change_acc_cfg ip_change_cfg;
 
 } pjsua_acc_config;
 
@@ -5724,6 +5934,15 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  */
 #ifndef PJSUA_SDP_SESS_HAS_CONN
 #   define PJSUA_SDP_SESS_HAS_CONN	0
+#endif
+
+
+/**
+ * Specify the delay needed when restarting the transport/listener.
+ * e.g: 10 msec on Linux or Android, and 0 on the other platforms.
+ */
+#ifndef PJSUA_TRANSPORT_RESTART_DELAY_TIME
+#   define PJSUA_TRANSPORT_RESTART_DELAY_TIME	10
 #endif
 
 

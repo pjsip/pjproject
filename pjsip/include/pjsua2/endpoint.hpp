@@ -319,6 +319,103 @@ struct OnSelectAccountParam
     int			accountIndex;
 };
 
+/**
+ * Parameter of Endpoint::handleIpChange().
+ */
+struct IpChangeParam {
+    /**
+     * If set to PJ_TRUE, this will restart the transport listener.
+     * 
+     * Default : PJ_TRUE
+     */
+    bool	    restartListener;
+
+    /** 
+     * If \a restartListener is set to PJ_TRUE, some delay might be needed 
+     * for the listener to be restarted. Use this to set the delay.
+     * 
+     * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
+     */
+    unsigned	    restartLisDelay;
+public:
+    /**
+     * Constructor.
+     */
+    IpChangeParam();
+
+    /**
+     * Export to pjsua_ip_change_param.
+     */
+    pjsua_ip_change_param toPj() const;
+
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjsua_ip_change_param &param);
+};
+
+/**
+ * Information of Update contact on IP change progress.
+ */
+struct RegProgressParam
+{
+    /**
+     * Indicate if this is a Register or Un-Register message.
+     */
+    bool    isRegister;
+
+    /**
+     * SIP status code received.
+     */
+    int	    code;
+};
+
+/**
+ * Parameter of Endpoint::onIpChangeProgress().
+ */
+struct OnIpChangeProgressParam
+{
+    /**
+     * The IP change progress operation.
+     */
+    pjsua_ip_change_op	op;
+
+    /**
+     * The operation progress status.
+     */
+    pj_status_t		status;
+
+    /**
+     * Information of the transport id. This is only available when the 
+     * operation is PJSUA_IP_CHANGE_OP_RESTART_LIS.
+     */
+    TransportId		transportId;
+
+    /**
+     * Information of the account id. This is only available when the 
+     * operation is:
+     * - PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP 
+     * - PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT 
+     * - PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS
+     * - PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+     */
+    int			accId;
+
+    /**
+     * Information of the call id. This is only available when the operation is
+     * PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS or 
+     * PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+     */
+    int			callId;
+
+    /**
+     * Registration information. This is only available when the operation is
+     * PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT
+     */
+    RegProgressParam	regInfo;
+};
+
+
 //////////////////////////////////////////////////////////////////////////////
 /**
  * SIP User Agent related settings.
@@ -1376,6 +1473,31 @@ public:
      */
     void resetVideoCodecParam(const string &codec_id) throw(Error);
 
+    /*************************************************************************
+     * IP Change
+     */
+
+    /**
+     * Inform the stack that IP address change event was detected.
+     * The stack will:
+     * 1. Restart the listener (this step is configurable via
+     *    \a IpChangeParam.restartListener).
+     * 2. Shutdown the transport used by account registration (this step is
+     *    configurable via \a AccountConfig.ipChangeConfig.shutdownTp).
+     * 3. Update contact URI by sending re-Registration (this step is 
+     *    configurable via a\ AccountConfig.natConfig.contactRewriteUse and
+     *    a\ AccountConfig.natConfig.contactRewriteMethod)
+     * 4. Hangup active calls (this step is configurable via
+     *    a\ AccountConfig.ipChangeConfig.hangupCalls) or
+     *    continue the call by sending re-INVITE
+     *    (configurable via \a AccountConfig.ipChangeConfig.reinviteFlags).
+     *
+     * @param param	The IP change parameter, have a look at #IpChangeParam.
+     *
+     * @return		PJ_SUCCESS on success, other on error.
+     */
+    void handleIpChange(const IpChangeParam &param) throw(Error);
+
 public:
     /*
      * Overrideables callbacks
@@ -1437,6 +1559,16 @@ public:
      * @param prm	Callback parameters.
      */
     virtual void onSelectAccount(OnSelectAccountParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Calling #handleIpChange() may involve different operation. This 
+     * callback is called to report the progress of each enabled operation.
+     *
+     * @param prm	Callback parameters.
+     * 
+     */
+    virtual void onIpChangeProgress(OnIpChangeProgressParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
 private:
@@ -1586,6 +1718,11 @@ private:
     on_create_media_transport_srtp(pjsua_call_id call_id,
                                    unsigned media_idx,
                                    pjmedia_srtp_setting *srtp_opt);
+
+    static void
+    on_ip_change_progress(pjsua_ip_change_op op,
+			  pj_status_t status,
+			  const pjsua_ip_change_op_info *info);
 
 private:
     void clearCodecInfoList(CodecInfoVector &codec_list);

@@ -881,6 +881,56 @@ public:
 };
 
 /**
+ * Account config specific to IP address change.
+ */
+typedef struct AccountIpChangeConfig
+{    
+    /**
+     * Shutdown the transport used for account registration. If this is set to
+     * PJ_TRUE, the transport will be shutdown altough it's used by multiple
+     * account. Shutdown transport will be followed by re-Registration if
+     * AccountConfig.natConfig.contactRewriteUse is enabled.
+     *
+     * Default: true
+     */
+    bool    		shutdownTp;
+
+    /**
+     * Hangup active calls associated with the acount. If this is set to true, 
+     * then the calls will be hang up.
+     *
+     * Default: false
+     */
+    bool		hangupCalls;
+
+    /**
+     * Specify the call flags used in the re-INVITE when \a hangupCalls is set 
+     * to false. If this is set to 0, no re-INVITE will be sent. The 
+     * re-INVITE will be sent after re-Registration is finished.
+     *
+     * Default: PJSUA_CALL_REINIT_MEDIA | PJSUA_CALL_UPDATE_CONTACT |
+     *          PJSUA_CALL_UPDATE_VIA
+     */
+    unsigned		reinviteFlags;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
+    
+} AccountIpChangeConfig;
+
+/**
  * Account configuration.
  */
 struct AccountConfig : public PersistentObject
@@ -940,6 +990,11 @@ struct AccountConfig : public PersistentObject
      * Video settings.
      */
     AccountVideoConfig	videoConfig;
+
+    /**
+     * IP Change settings.
+     */
+    AccountIpChangeConfig ipChangeConfig;
 
 public:
     /**

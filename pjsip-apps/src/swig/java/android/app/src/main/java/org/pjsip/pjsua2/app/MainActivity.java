@@ -18,6 +18,7 @@
  */
 package org.pjsip.pjsua2.app;
 
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -26,6 +27,8 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,6 +39,8 @@ import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.SimpleAdapter;
 import android.widget.TextView;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +55,8 @@ public class MainActivity extends Activity
     public static MyCall currentCall = null;
     public static MyAccount account = null;
     public static AccountConfig accCfg = null;
+    public static MyBroadcastReceiver receiver = null;
+    public static IntentFilter intentFilter = null;
 
     private ListView buddyListView;
     private SimpleAdapter buddyListAdapter;
@@ -65,6 +72,39 @@ public class MainActivity extends Activity
 	public final static int REG_STATE = 3;
 	public final static int BUDDY_STATE = 4;
 	public final static int CALL_MEDIA_STATE = 5;
+	public final static int CHANGE_NETWORK = 6;
+    }
+
+    private class MyBroadcastReceiver extends BroadcastReceiver {
+	private String conn_name = "";
+
+	@Override
+	public void onReceive(Context context, Intent intent) {
+	    if (isNetworkChange(context))
+		notifyChangeNetwork();
+	}
+
+	private boolean isNetworkChange(Context context) {
+	    boolean network_changed = false;
+	    ConnectivityManager connectivity_mgr =
+		((ConnectivityManager)context.getSystemService(
+		    				 Context.CONNECTIVITY_SERVICE));
+
+	    NetworkInfo net_info = connectivity_mgr.getActiveNetworkInfo();
+	    if(net_info != null && net_info.isConnectedOrConnecting() &&
+	       !conn_name.equalsIgnoreCase(""))
+	    {
+		String new_con = net_info.getExtraInfo();
+		if (new_con != null && !new_con.equalsIgnoreCase(conn_name))
+		    network_changed = true;
+
+		conn_name = (new_con == null)?"":new_con;
+	    } else {
+		if (conn_name.equalsIgnoreCase(""))
+		    conn_name = net_info.getExtraInfo();
+	    }
+	    return network_changed;
+	}
     }
 
     private HashMap<String, String> putData(String uri, String status)
@@ -143,7 +183,12 @@ public class MainActivity extends Activity
 		}
 	    }
 	);
-
+	if (receiver == null) {
+	    receiver = new MyBroadcastReceiver();
+	    intentFilter = new IntentFilter(
+			               ConnectivityManager.CONNECTIVITY_ACTION);
+	    registerReceiver(receiver, intentFilter);
+	}
     }
 
     @Override
@@ -263,6 +308,8 @@ public class MainActivity extends Activity
 	    currentCall = call;
 	    showCallActivity();
 
+	} else if (m.what == MSG_TYPE.CHANGE_NETWORK) {
+	    app.handleNetworkChange();
 	} else {
 
 	    /* Message not handled */
@@ -573,6 +620,12 @@ public class MainActivity extends Activity
     public void notifyBuddyState(MyBuddy buddy)
     {
 	Message m = Message.obtain(handler, MSG_TYPE.BUDDY_STATE, buddy);
+	m.sendToTarget();
+    }
+
+    public void notifyChangeNetwork()
+    {
+	Message m = Message.obtain(handler, MSG_TYPE.CHANGE_NETWORK, null);
 	m.sendToTarget();
     }
 

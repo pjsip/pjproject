@@ -429,11 +429,62 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
  *			the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tls_transport_start2(pjsip_endpoint *endpt,
- 					        const pjsip_tls_setting *opt,
-					        const pj_sockaddr *local,
-					        const pjsip_host_port *a_name,
-					        unsigned async_cnt,
-					        pjsip_tpfactory **p_factory);
+						const pjsip_tls_setting *opt,
+						const pj_sockaddr *local,
+						const pjsip_host_port *a_name,
+						unsigned async_cnt,
+						pjsip_tpfactory **p_factory);
+
+/**
+ * Start the TLS listener, if the listener is not started yet. This is useful
+ * to start the listener manually, if listener was not started when
+ * PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER is set to 0.
+ *
+ * @param factory	The SIP TLS transport factory.
+ *
+ * @param local		The address where the listener should be bound to.
+ *			Both IP interface address and port fields are optional.
+ *			If IP interface address is not specified, socket
+ *			will be bound to PJ_INADDR_ANY. If port is not
+ *			specified, socket will be bound to any port
+ *			selected by the operating system.
+ *
+ * @param a_name	The published address for the listener.
+ *			If this argument is NULL, then the bound address will
+ *			be used as the published address.
+ *
+ * @return		PJ_SUCCESS when the listener has been successfully
+ *			started.
+ */
+PJ_DECL(pj_status_t) pjsip_tls_transport_lis_start(pjsip_tpfactory *factory,
+						const pj_sockaddr *local,
+						const pjsip_host_port *a_name);
+
+
+/**
+ * Restart the TLS listener. This will close the listener socket and recreate
+ * the socket based on the config used when starting the transport.
+ *
+ * @param factory	The SIP TLS transport factory.
+ *
+ * @param local		The address where the listener should be bound to.
+ *			Both IP interface address and port fields are optional.
+ *			If IP interface address is not specified, socket
+ *			will be bound to PJ_INADDR_ANY. If port is not
+ *			specified, socket will be bound to any port
+ *			selected by the operating system.
+ *
+ * @param a_name	The published address for the listener.
+ *			If this argument is NULL, then the bound address will
+ *			be used as the published address.
+ *
+ * @return		PJ_SUCCESS when the listener has been successfully
+ *			restarted.
+ *
+ */
+PJ_DECL(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
+						const pj_sockaddr *local,
+						const pjsip_host_port *a_name);
 
 PJ_END_DECL
 

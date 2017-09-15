@@ -122,7 +122,33 @@ void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+IpChangeParam::IpChangeParam()
+{
+    pjsua_ip_change_param param;    
+    pjsua_ip_change_param_default(&param);
+    fromPj(param);
+}
 
+
+pjsua_ip_change_param IpChangeParam::toPj() const
+{
+    pjsua_ip_change_param param;
+    pjsua_ip_change_param_default(&param);
+
+    param.restart_listener = restartListener;
+    param.restart_lis_delay = restartLisDelay;
+
+    return param;
+}
+
+
+void IpChangeParam::fromPj(const pjsua_ip_change_param &param)
+{
+    restartListener = PJ2BOOL(param.restart_listener);
+    restartLisDelay = param.restart_lis_delay;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 UaConfig::UaConfig()
 : mainThreadOnly(false)
 {
@@ -1406,6 +1432,43 @@ void Endpoint::on_create_media_transport_srtp(pjsua_call_id call_id,
     }
 }
 
+void Endpoint::on_ip_change_progress(pjsua_ip_change_op op,
+				     pj_status_t status,
+				     const pjsua_ip_change_op_info *info)
+{
+    Endpoint &ep = Endpoint::instance();
+    OnIpChangeProgressParam param;
+
+    param.op = op;
+    param.status = status;
+    switch (op) {
+    case PJSUA_IP_CHANGE_OP_RESTART_LIS:		
+	param.transportId = info->lis_restart.transport_id;	
+	break;
+    case PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP:
+	param.accId = info->acc_shutdown_tp.acc_id;
+	break;
+    case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT:	
+	param.accId = info->acc_update_contact.acc_id;	
+	param.regInfo.code = info->acc_update_contact.code;
+	param.regInfo.isRegister = 
+				 PJ2BOOL(info->acc_update_contact.is_register);
+	break;
+    case PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS:
+	param.accId = info->acc_hangup_calls.acc_id;
+	param.callId = info->acc_hangup_calls.call_id;
+	break;
+    case PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS:
+	param.accId = info->acc_reinvite_calls.acc_id;
+	param.callId = info->acc_reinvite_calls.call_id;
+	break;
+    default:
+        param.accId = PJSUA_INVALID_ID;
+        break;
+    }
+    ep.onIpChangeProgress(param);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /*
  * Endpoint library operations
@@ -1468,6 +1531,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_mwi_info	= &Endpoint::on_mwi_info;
     ua_cfg.cb.on_buddy_state	= &Endpoint::on_buddy_state;
     ua_cfg.cb.on_acc_find_for_incoming  = &Endpoint::on_acc_find_for_incoming;
+    ua_cfg.cb.on_ip_change_progress	= &Endpoint::on_ip_change_progress;
 
     /* Call callbacks */
     ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
@@ -1987,4 +2051,10 @@ void Endpoint::resetVideoCodecParam(const string &codec_id) throw(Error)
 #else
     PJ_UNUSED_ARG(codec_id);    
 #endif	
+}
+
+void Endpoint::handleIpChange(const IpChangeParam &param) throw(Error)
+{
+    pjsua_ip_change_param ip_change_param = param.toPj();
+    PJSUA2_CHECK_EXPR(pjsua_handle_ip_change(&ip_change_param));
 }
