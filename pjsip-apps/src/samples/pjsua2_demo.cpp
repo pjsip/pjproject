@@ -18,7 +18,6 @@
  */
 #include <pjsua2.hpp>
 #include <iostream>
-#include <memory>
 #include <pj/file_access.h>
 
 #define THIS_FILE 	"pjsua2_demo.cpp"
@@ -128,7 +127,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
-    std::unique_ptr<MyAccount> acc(new MyAccount);
+    MyAccount *acc(new MyAccount);
     acc->create(acc_cfg);
     
     pj_thread_sleep(2000);
@@ -148,6 +147,8 @@ static void mainProg1(Endpoint &ep) throw(Error)
     
     // Destroy library
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
+    delete call;
+    delete acc;
 }
 
 static void mainProg2() throw(Error)
@@ -307,7 +308,7 @@ static void mainProg4(Endpoint &ep) throw(Error)
     // Add account
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:localhost";
-    std::unique_ptr<MyAccount> acc(new MyAccount);
+    MyAccount *acc(new MyAccount);
     acc->create(acc_cfg);
 
     // Start library
@@ -317,6 +318,8 @@ static void mainProg4(Endpoint &ep) throw(Error)
     // Just wait for ENTER key
     std::cout << "Press ENTER to quit..." << std::endl;
     std::cin.get();
+
+    delete acc;
 }
 
 
