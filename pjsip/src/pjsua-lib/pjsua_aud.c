@@ -512,7 +512,8 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 	}
 
 	if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
-	    (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS))
+	    (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
+	    stat.tx.pkt)
 	{
 	    /* Save RTP timestamp & sequence, so when media session is
 	     * restarted, those values will be restored as the initial
