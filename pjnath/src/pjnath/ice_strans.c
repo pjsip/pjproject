@@ -1559,6 +1559,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
     pj_ice_strans *ice_st = (pj_ice_strans*)ice->user_data;
     pj_time_val t;
     unsigned msec;
+    pj_ice_strans_cb cb = ice_st->cb;
 
     pj_grp_lock_add_ref(ice_st->grp_lock);
 
@@ -1566,7 +1567,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
     PJ_TIME_VAL_SUB(t, ice_st->start_time);
     msec = PJ_TIME_VAL_MSEC(t);
 
-    if (ice_st->cb.on_ice_complete) {
+    if (cb.on_ice_complete) {
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1639,8 +1640,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 					       PJ_ICE_STRANS_STATE_FAILED;
 
 	pj_log_push_indent();
-	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_NEGOTIATION,
-				      status);
+	(*cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_NEGOTIATION, status);
 	pj_log_pop_indent();
 
     }

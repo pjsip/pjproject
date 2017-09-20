@@ -430,6 +430,9 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     struct ice_ept *ept;
 
     ept = (struct ice_ept*) pj_ice_strans_get_user_data(ice_st);
+    if (!ept)
+	return;
+
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
 	ept->result.init_status = status;
