@@ -688,8 +688,6 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     /* Copy remote RTP address, if one is specified. */
     rtcp_addr = (const pj_sockaddr*) rem_rtcp;
     if (rtcp_addr && pj_sockaddr_has_addr(rtcp_addr)) {
-    	pj_status_t status;
-
         status = pj_sockaddr_synthesize(sock_addr.addr.sa_family,
         		       		&remote_rtcp, rem_rtcp);
         if (status != PJ_SUCCESS) {
@@ -729,7 +727,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
     {
 	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
-	pj_status_t status;
+	
 	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
 					  PJ_TRUE, &sobuf_size);
 	if (status != PJ_SUCCESS) {
@@ -749,7 +747,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 #if PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE
     {
 	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
-	pj_status_t status;
+
 	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(),
 					  PJ_TRUE, &sobuf_size);
 	if (status != PJ_SUCCESS) {

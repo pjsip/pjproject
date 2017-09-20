@@ -1591,16 +1591,16 @@ pjmedia_codec_param CodecParam::toPj() const
     /* info part. */
     param.info.clock_rate = info.clockRate;
     param.info.channel_cnt = info.channelCnt;
-    param.info.avg_bps = info.avgBps;
-    param.info.max_bps= info.maxBps;
+    param.info.avg_bps = (pj_uint32_t)info.avgBps;
+    param.info.max_bps= (pj_uint32_t)info.maxBps;
     param.info.max_rx_frame_size = info.maxRxFrameSize;
-    param.info.frm_ptime = info.frameLen;
-    param.info.pcm_bits_per_sample = info.pcmBitsPerSample;
-    param.info.pt = info.pt;
+    param.info.frm_ptime = (pj_uint16_t)info.frameLen;
+    param.info.pcm_bits_per_sample = (pj_uint8_t)info.pcmBitsPerSample;
+    param.info.pt = (pj_uint8_t)info.pt;
     param.info.fmt_id = info.fmtId;
 
     /* setting part. */
-    param.setting.frm_per_pkt = setting.frmPerPkt;
+    param.setting.frm_per_pkt = (pj_uint8_t)setting.frmPerPkt;
     param.setting.vad = setting.vad;
     param.setting.cng = setting.cng;
     param.setting.penh = setting.penh;

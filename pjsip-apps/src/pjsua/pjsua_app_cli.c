@@ -2590,7 +2590,6 @@ static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_ip_change_handler(pj_cli_cmd_val *cval)
 {
-    pj_status_t status = PJ_SUCCESS;
     pjsua_ip_change_param param;
     PJ_UNUSED_ARG(cval);
 

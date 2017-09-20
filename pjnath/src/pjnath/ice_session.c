@@ -2295,7 +2295,6 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
          * is synthesized from IPv4).
          */
         pj_sockaddr synth_addr;
-    	pj_status_t status;
     	
     	status = pj_sockaddr_synthesize(pj_AF_INET6(), &synth_addr,
     					&check->rcand->addr);
@@ -2630,7 +2629,6 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
              * IPv4 address.
              */
             for (i = 0; i < ice->rcand_cnt; ++i) {
-            	pj_status_t status;
             	pj_sockaddr synth_addr;
             
             	if (ice->rcand[i].addr.addr.sa_family != pj_AF_INET())
