@@ -10,6 +10,7 @@
 #if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 402
 #  pragma GCC diagnostic ignored "-Wpragmas"
 #  pragma GCC diagnostic ignored "-Wunused-const-variable"
+#  pragma GCC diagnostic ignored "-Wshift-negative-value"
 #endif
 
 #include <string.h>
