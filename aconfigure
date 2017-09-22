@@ -690,6 +690,7 @@ ac_external_webrtc
 ac_external_yuv
 ac_srtp_shutdown_present
 ac_srtp_deinit_present
+ac_external_srtp_lib
 ac_external_srtp
 ac_external_gsm
 ac_external_speex
@@ -757,7 +758,6 @@ infodir
 docdir
 oldincludedir
 includedir
-runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -882,7 +882,6 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
-runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1135,15 +1134,6 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
-  -runstatedir | --runstatedir | --runstatedi | --runstated \
-  | --runstate | --runstat | --runsta | --runst | --runs \
-  | --run | --ru | --r)
-    ac_prev=runstatedir ;;
-  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
-  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
-  | --run=* | --ru=* | --r=*)
-    runstatedir=$ac_optarg ;;
-
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1281,7 +1271,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir runstatedir
+		libdir localedir mandir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1434,7 +1424,6 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
-  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -6009,6 +5998,7 @@ fi
 ac_external_srtp=0
 
 
+
 # Check whether --with-external-srtp was given.
 if test "${with_external_srtp+set}" = set; then :
   withval=$with_external_srtp;
@@ -6017,6 +6007,25 @@ if test "${with_external_srtp+set}" = set; then :
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external SRTP devkit is installed" >&5
 $as_echo_n "checking if external SRTP devkit is installed... " >&6; }
 		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <srtp2/srtp.h>
+
+int
+main ()
+{
+srtp_init();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: version 2.x" >&5
+$as_echo "yes: version 2.x" >&6; }
+				   ac_external_srtp="2"
+				   ac_external_srtp_lib="srtp2"
+
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 #include <srtp/srtp.h>
 
@@ -6029,12 +6038,15 @@ srtp_init();
 }
 _ACEOF
 if ac_fn_c_try_compile "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
-$as_echo "yes!!" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes: version 1.x" >&5
+$as_echo "yes: version 1.x" >&6; }
 				   ac_external_srtp="1"
+				   ac_external_srtp_lib="srtp"
 
 else
   as_fn_error $? "Unable to use SRTP. If SRTP development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 	fi
@@ -6043,18 +6055,19 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 fi
 
 
-if test "x$ac_external_srtp" = "x1"; then
+if test "x$ac_external_srtp" != "x0"; then
 	ac_srtp_deinit_present=0
 
 	ac_srtp_shutdown_present=0
 
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_deinit in -lsrtp" >&5
-$as_echo_n "checking for srtp_deinit in -lsrtp... " >&6; }
-if ${ac_cv_lib_srtp_srtp_deinit+:} false; then :
+	as_ac_Lib=`$as_echo "ac_cv_lib_$ac_external_srtp_lib''_srtp_deinit" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_deinit in -l$ac_external_srtp_lib" >&5
+$as_echo_n "checking for srtp_deinit in -l$ac_external_srtp_lib... " >&6; }
+if eval \${$as_ac_Lib+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsrtp  $LIBS"
+LIBS="-l$ac_external_srtp_lib  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -6074,28 +6087,30 @@ return srtp_deinit ();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_srtp_srtp_deinit=yes
+  eval "$as_ac_Lib=yes"
 else
-  ac_cv_lib_srtp_srtp_deinit=no
+  eval "$as_ac_Lib=no"
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_srtp_srtp_deinit" >&5
-$as_echo "$ac_cv_lib_srtp_srtp_deinit" >&6; }
-if test "x$ac_cv_lib_srtp_srtp_deinit" = xyes; then :
+eval ac_res=\$$as_ac_Lib
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
   ac_srtp_deinit_present=1
 fi
 
 	if test "x$ac_srtp_deinit_present" != "x1"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_shutdown in -lsrtp" >&5
-$as_echo_n "checking for srtp_shutdown in -lsrtp... " >&6; }
-if ${ac_cv_lib_srtp_srtp_shutdown+:} false; then :
+		as_ac_Lib=`$as_echo "ac_cv_lib_$ac_external_srtp_lib''_srtp_shutdown" | $as_tr_sh`
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for srtp_shutdown in -l$ac_external_srtp_lib" >&5
+$as_echo_n "checking for srtp_shutdown in -l$ac_external_srtp_lib... " >&6; }
+if eval \${$as_ac_Lib+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
-LIBS="-lsrtp  $LIBS"
+LIBS="-l$ac_external_srtp_lib  $LIBS"
 cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -6115,17 +6130,18 @@ return srtp_shutdown ();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_srtp_srtp_shutdown=yes
+  eval "$as_ac_Lib=yes"
 else
-  ac_cv_lib_srtp_srtp_shutdown=no
+  eval "$as_ac_Lib=no"
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_srtp_srtp_shutdown" >&5
-$as_echo "$ac_cv_lib_srtp_srtp_shutdown" >&6; }
-if test "x$ac_cv_lib_srtp_srtp_shutdown" = xyes; then :
+eval ac_res=\$$as_ac_Lib
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+if eval test \"x\$"$as_ac_Lib"\" = x"yes"; then :
   ac_srtp_shutdown_present=1
 fi
 

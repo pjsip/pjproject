@@ -44,10 +44,36 @@
 
 #endif
 
-#if defined(PJMEDIA_EXTERNAL_SRTP) && (PJMEDIA_EXTERNAL_SRTP != 0)
+#if defined(PJMEDIA_EXTERNAL_SRTP)
+
+#if (PJMEDIA_EXTERNAL_SRTP == 1) 	/* External SRTP 1.x */
 #  include <srtp/srtp.h>
 #  include <srtp/crypto_kernel.h>
-#else
+#define srtp_crypto_policy_t 		crypto_policy_t
+#define srtp_cipher_type_id_t 		cipher_type_id_t
+#define srtp_cipher_type_t		cipher_type_t
+#define srtp_auth_type_id_t 		auth_type_id_t
+#define srtp_sec_serv_t			sec_serv_t
+#define srtp_err_status_t		err_status_t
+#define srtp_err_status_ok		err_status_ok
+#define srtp_err_status_replay_old	err_status_replay_old
+#define srtp_err_status_replay_fail	err_status_replay_fail
+#define srtp_crypto_policy_set_aes_cm_256_hmac_sha1_32 \
+	     crypto_policy_set_aes_cm_256_hmac_sha1_32
+#define srtp_crypto_policy_set_aes_cm_256_hmac_sha1_80 \
+	     crypto_policy_set_aes_cm_256_hmac_sha1_80
+#define SRTP_NULL_CIPHER		NULL_CIPHER
+#define SRTP_NULL_AUTH			NULL_AUTH
+#define SRTP_AES_ICM_128		AES_ICM
+#define SRTP_AES_ICM_256		AES_ICM
+#define SRTP_HMAC_SHA1			HMAC_SHA1
+
+#else				 	/* External SRTP 2.x */
+#  include <srtp2/srtp.h>
+#  include <srtp2/cipher.h>
+#endif
+
+#else					/* Bundled SRTP */
 #  include <srtp.h>
 #  include <crypto_kernel.h>
 #endif

@@ -39,7 +39,7 @@ else
 endif
 endif
 
-ifeq (@ac_external_srtp@,1)
+ifneq (@ac_external_srtp@,0)
 # External SRTP
 else
 DIRS += srtp

@@ -148,9 +148,9 @@ endif
 #
 # SRTP
 #
-ifeq (@ac_external_srtp@,1)
+ifneq (@ac_external_srtp@,0)
 # External SRTP
-export CFLAGS += -DPJMEDIA_EXTERNAL_SRTP=1
+export CFLAGS += -DPJMEDIA_EXTERNAL_SRTP=@ac_external_srtp@
 # SRTP srtp_deinit()/srtp_shutdown() API availability settings
 export CFLAGS += -DPJMEDIA_SRTP_HAS_DEINIT=@ac_srtp_deinit_present@ \
 		 -DPJMEDIA_SRTP_HAS_SHUTDOWN=@ac_srtp_shutdown_present@

@@ -28,9 +28,9 @@ export APP_THIRD_PARTY_EXT :=
 export APP_THIRD_PARTY_LIBS :=
 export APP_THIRD_PARTY_LIB_FILES :=
 
-ifeq (@ac_external_srtp@,1)
+ifneq (@ac_external_srtp@,0)
 # External SRTP library
-APP_THIRD_PARTY_EXT += -lsrtp
+APP_THIRD_PARTY_EXT += -l@ac_external_srtp_lib@
 else
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
 ifeq ($(PJ_SHARED_LIBRARIES),)
