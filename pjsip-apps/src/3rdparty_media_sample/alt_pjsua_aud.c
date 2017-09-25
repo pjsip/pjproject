@@ -255,7 +255,9 @@ static void timer_to_send_aud_rtcp(void *user_data)
 void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 {
     /* Detach our RTP/RTCP callbacks from transport */
-    pjmedia_transport_detach(call_med->tp, call_med);
+    if (call_med->tp) {
+    	pjmedia_transport_detach(call_med->tp, call_med);
+    }
 
     /* TODO: destroy your audio stream here */
 }
