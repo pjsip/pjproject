@@ -26,7 +26,7 @@
  * using Darwin-specific SO_NET_SERVICE_TYPE if available, and IP_TOS/
  * IPV6_TCLASS as fallback.
  */
-#if !defined(PJ_QOS_IMPLEMENTATION) || PJ_QOS_IMPLEMENTATION==PJ_QOS_IOS
+#if defined(PJ_QOS_IMPLEMENTATION) && PJ_QOS_IMPLEMENTATION==PJ_QOS_DARWIN
 
 #include <sys/socket.h>
 

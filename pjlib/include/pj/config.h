@@ -909,6 +909,9 @@
 #   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE && _WIN32_WCE >= 0x502
 	/* Windows Mobile 6 or later */
 #	define PJ_QOS_IMPLEMENTATION    PJ_QOS_WM
+#   elif defined(PJ_DARWINOS)
+	/* Darwin OS (e.g: iOS, MacOS, tvOS) */
+#	define PJ_QOS_IMPLEMENTATION    PJ_QOS_DARWIN
 #   endif
 #endif
 
