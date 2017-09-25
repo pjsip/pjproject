@@ -429,7 +429,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 		const pj_uint8_t start_code[3] = {0, 0, 1};
 		char *p;
 		pj_uint8_t *nal;
-		pj_status_t status;
 
 		/* Find field separator ',' */
 		tmp_st = sps_st;

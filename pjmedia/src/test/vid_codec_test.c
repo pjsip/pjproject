@@ -278,8 +278,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     /* Prepare codec */
     {
         pj_str_t codec_id_st;
-        unsigned info_cnt = 1;
-        const pjmedia_vid_codec_info *codec_info;
+        unsigned info_cnt = 1;        
 
         /* Lookup codec */
         pj_cstr(&codec_id_st, codec_id);

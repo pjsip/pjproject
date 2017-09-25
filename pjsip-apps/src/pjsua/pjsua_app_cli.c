@@ -2914,7 +2914,7 @@ static pj_status_t add_config_command(pj_cli_t *c)
 }
 
 #if PJSUA_HAS_VIDEO
-static pj_status_t add_video_command(pj_cli_t *cli)
+static pj_status_t add_video_command(pj_cli_t *c)
 {
     char* video_command =
 	"<CMD name='video' id='600' desc='Video commands'>"
@@ -3053,7 +3053,7 @@ static pj_status_t add_video_command(pj_cli_t *cli)
 	"</CMD>";
 
     pj_str_t xml = pj_str(video_command);
-    return pj_cli_add_cmd_from_xml(cli, NULL,
+    return pj_cli_add_cmd_from_xml(c, NULL,
 				   &xml, cmd_video_handler,
 				   NULL, get_choice_value);
 }

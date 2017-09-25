@@ -105,8 +105,6 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 
     /* Subject alternative name extension */
     if (ci->subj_alt_name.cnt) {
-	unsigned i;
-
 	len = pj_ansi_snprintf(p, end-p, "%ssubjectAltName extension\n", 
 			       indent);
 	CHECK_BUF_LEN();

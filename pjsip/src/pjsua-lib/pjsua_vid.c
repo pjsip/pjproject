@@ -1042,7 +1042,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	/* Setup encoding direction */
 	if (si->dir & PJMEDIA_DIR_ENCODING && !call->local_hold)
 	{
-            pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+            pjsua_acc *acc_enc = &pjsua_var.acc[call_med->call->acc_id];
 	    pjsua_vid_win *w;
 	    pjsua_vid_win_id wid;
 	    pj_bool_t just_created = PJ_FALSE;
@@ -1073,7 +1073,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 					//acc->cfg.vid_rend_dev,
 					//acc->cfg.vid_cap_dev,
 					PJSUA_HIDE_WINDOW,
-                                        acc->cfg.vid_wnd_flags,
+                                        acc_enc->cfg.vid_wnd_flags,
                                         NULL,
 					&wid);
 		if (status != PJ_SUCCESS) {

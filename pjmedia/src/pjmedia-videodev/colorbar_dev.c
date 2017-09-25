@@ -599,7 +599,6 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
 
         if (d->vfi->plane_cnt == 1) {
             for (i = 0; i < 3; ++i) {
-                pj_uint8_t *ptr;
                 unsigned j, k, inc_ptr;
                 pj_size_t dot_size = DOT_SIZE;
 
@@ -621,7 +620,7 @@ static pj_status_t spectrum_run(struct cbar_stream *d, pj_uint8_t *p,
             pj_size_t offset_p = 0;
 
             for (i = 0; i < 3; ++i) {
-                pj_uint8_t *ptr, c;
+                pj_uint8_t c;
                 unsigned j;
                 pj_size_t dot_size = DOT_SIZE;
 

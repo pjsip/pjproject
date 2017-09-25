@@ -612,15 +612,13 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
 			         pjmedia_frame *frame)
 {
     struct avi_reader_port *fport = (struct avi_reader_port*)this_port;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     pj_ssize_t size_read = 0, size_to_read = 0;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
 
     /* We encountered end of file */
     if (fport->eof) {
-	pj_status_t status = PJ_SUCCESS;
-
 	PJ_LOG(5,(THIS_FILE, "File port %.*s EOF",
 		  (int)fport->base.info.name.slen,
 		  fport->base.info.name.ptr));

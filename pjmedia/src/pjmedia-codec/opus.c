@@ -457,6 +457,7 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
 					 const pjmedia_codec_info *ci, 
 					 pjmedia_codec_param *attr )
 {
+    PJ_UNUSED_ARG(factory);
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
 
     pj_bzero(attr, sizeof(pjmedia_codec_param));
@@ -520,6 +521,7 @@ static pj_status_t factory_alloc_codec( pjmedia_codec_factory *factory,
     struct opus_data *opus_data;
     struct opus_codec_factory *f = (struct opus_codec_factory*) factory;
 
+    PJ_UNUSED_ARG(ci);
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
 
     pool = pjmedia_endpt_create_pool(f->endpt, "opus", 512, 512);
@@ -931,6 +933,8 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
     pjmedia_frame *inframe;
     int fec = 0;
 
+    PJ_UNUSED_ARG(output_buf_len);
+
     pj_mutex_lock (opus_data->mutex);
 
     if (opus_data->dec_frame_index == -1) {
@@ -1018,13 +1022,14 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     int decoded_samples;
     pjmedia_frame *inframe;
 
+    PJ_UNUSED_ARG(output_buf_len);
     pj_mutex_lock (opus_data->mutex);
 
     if (opus_data->dec_frame_index == -1) {
         /* Recover the first packet? Don't think so, fill it with zeroes. */
 	pj_uint16_t samples_per_frame;
-	samples_per_frame = (opus_data->cfg.sample_rate * 
-			     opus_data->ptime) / 1000;
+	samples_per_frame = (pj_uint16_t)(opus_data->cfg.sample_rate * 
+					  opus_data->ptime) / 1000;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 	output->size = samples_per_frame << 1;
 	pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
