@@ -1217,10 +1217,12 @@ static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now)
 	msg_data = PJ_POOL_ZALLOC_T(tdata->pool, pj_ice_msg_data);
 	msg_data->transport_id = the_check->lcand->transport_id;
 
-	/* Temporarily disable FINGERPRINT. The Binding Indication 
-	 * SHOULD NOT contain any attributes.
+	/* RFC 5245 Section 10:
+	 * The Binding Indication SHOULD contain the FINGERPRINT attribute
+	 * to aid in demultiplexing, but SHOULD NOT contain any other
+	 * attributes.
 	 */
-	saved = pj_stun_session_use_fingerprint(comp->stun_sess, PJ_FALSE);
+	saved = pj_stun_session_use_fingerprint(comp->stun_sess, PJ_TRUE);
 
 	/* Send to session */
 	addr_len = pj_sockaddr_get_len(&the_check->rcand->addr);
