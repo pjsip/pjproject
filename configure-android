@@ -76,9 +76,9 @@ if test "$1" = "--use-ndk-cflags"; then
     exit 1
   fi
 
-  echo "====="
-  echo "NDK_OUT : ${NDK_OUT}"
-  echo "====="
+  # echo "====="
+  # echo "NDK_OUT : ${NDK_OUT}"
+  # echo "====="
 
   for i in $NDK_OUT; do
     if test "x${NDK_CXX}" != "x" -a "$i" = "-o"; then break; fi
@@ -141,8 +141,13 @@ if test "$1" = "--use-ndk-cflags"; then
     export RANLIB=`echo ${NDK_CXX}|sed 's/-g++/-ranlib/'`;
     export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT}"
   else
-    #export AR="${NDK_TOOLCHAIN}/bin/${NDK_TARGET}-ar"
-    #export RANLIB="${NDK_TOOLCHAIN}/bin/${NDK_TARGET}-ranlib"
+    # find ar and ranlib
+    TC_AR=`find ${NDK_TOOLCHAIN}/bin/ -name "*-ar" | grep -v "gcc"`
+    TC_RANLIB=`find ${NDK_TOOLCHAIN}/bin/ -name "*-ranlib" | grep -v "gcc"`
+    if test "x${TC_AR}" != "x" -a "x${TC_RANLIB}" != "x"; then
+      export AR=$TC_AR
+      export RANLIB=$TC_RANLIB
+    fi 
     TARGET_HOST="arm-linux-androideabi"
     export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT} -target ${NDK_TARGET} -gcc-toolchain ${NDK_TOOLCHAIN}"
   fi  
