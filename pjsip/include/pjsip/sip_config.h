@@ -376,6 +376,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_DONT_SWITCH_TO_TLS	0
 #endif
 
+/**
+ * Specify if #pjsip_endpt_handle_events() should sleep if ioqueue poll
+ * returns error.
+ *
+ * Default is 1 (yes).
+ */
+
+#ifndef PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR
+#   define PJSIP_HANDLE_EVENTS_HAS_SLEEP_ON_ERR	    1
+#endif
 
 /**
  * Specify whether the call media session should be updated to the latest
