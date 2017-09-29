@@ -2223,6 +2223,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* How many consecutive PLC frames can be generated */
     stream->max_plc_cnt = (MAX_PLC_MSEC+stream->codec_param.info.frm_ptime-1)/
 			    stream->codec_param.info.frm_ptime;
+    /* Disable PLC until a "NORMAL" frame is gotten from the jitter buffer. */
+    stream->plc_cnt = stream->max_plc_cnt;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     stream->rtp_rx_check_cnt = 50;
