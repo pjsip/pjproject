@@ -363,16 +363,36 @@ pjsip_media_type SipMediaType::toPj() const
 
 void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
 {
-    char buf[256];
+    char *buf = NULL;
+    int len = 0;
+    unsigned buf_size = 256>>1;
 
-    int len = pjsip_hdr_print_on((void*)hdr, buf, sizeof(buf)-1);
-    if (len <= 0)
+    /* Print header to a 256 bytes buffer first.
+     * If buffer is not sufficient, try 512, 1024, soon
+     * until > PJSIP_MAX_PKT_LEN
+     */
+    do {
+        buf_size <<= 1;
+	buf = (char*)malloc(buf_size);
+	if (!buf)
+	    PJSUA2_RAISE_ERROR(PJ_ENOMEM);
+
+	len = pjsip_hdr_print_on((void*)hdr, buf, buf_size-1);
+        if (len < 0)
+            free(buf);
+
+    } while ((buf_size < PJSIP_MAX_PKT_LEN) && (len < 0));
+    
+    if (len < 0)
 	PJSUA2_RAISE_ERROR(PJ_ETOOSMALL);
+
     buf[len] = '\0';
 
     char *pos = strchr(buf, ':');
-    if (!pos)
+    if (!pos) {
+	free(buf);
 	PJSUA2_RAISE_ERROR(PJSIP_EINVALIDHDR);
+    }
 
     // Trim white space after header name
     char *end_name = pos;
@@ -384,6 +404,7 @@ void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
 
     hName = string(buf, end_name);
     hValue = string(start_val);
+    free(buf);
 }
 
 pjsip_generic_string_hdr &SipHeader::toPj() const
