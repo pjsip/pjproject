@@ -65,12 +65,29 @@
 #define SRTP_NULL_CIPHER		NULL_CIPHER
 #define SRTP_NULL_AUTH			NULL_AUTH
 #define SRTP_AES_ICM_128		AES_ICM
+#define SRTP_AES_ICM_192		AES_ICM
 #define SRTP_AES_ICM_256		AES_ICM
+#define SRTP_AES_GCM_128		AES_128_GCM
+#define SRTP_AES_GCM_256		AES_256_GCM
 #define SRTP_HMAC_SHA1			HMAC_SHA1
+#define srtp_aes_gcm_256_openssl        aes_gcm_256_openssl
+#define srtp_aes_gcm_128_openssl        aes_gcm_128_openssl
 
 #else				 	/* External SRTP 2.x */
 #  include <srtp2/srtp.h>
 #  include <srtp2/cipher.h>
+
+/* In libsrtp 2.0.0, the macro SRTP_AES_ICM_128 is not available. 
+ * Instead it was named with ICM at the end: SRTP_AES_128_ICM. 
+ */
+#  ifdef SRTP_AES_128_ICM
+#    define SRTP_AES_ICM_128		SRTP_AES_128_ICM
+#    define SRTP_AES_ICM_192		SRTP_AES_192_ICM
+#    define SRTP_AES_ICM_256		SRTP_AES_256_ICM
+#    define SRTP_AES_GCM_128		SRTP_AES_128_GCM
+#    define SRTP_AES_GCM_256		SRTP_AES_256_GCM
+#  endif
+
 #endif
 
 #else					/* Bundled SRTP */
