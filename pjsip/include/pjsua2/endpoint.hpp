@@ -1651,6 +1651,9 @@ private:
     static void on_acc_find_for_incoming(const pjsip_rx_data *rdata,
 				     	 pjsua_acc_id* acc_id);
     static void on_buddy_state(pjsua_buddy_id buddy_id);
+    static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
+				     pjsip_evsub *sub,
+				     pjsip_event *event);
     // Call callbacks
     static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
     static void on_call_tsx_state(pjsua_call_id call_id,
