@@ -241,7 +241,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_deinit(void)
     /* Unregister iLBC codec factory. */
     status = pjmedia_codec_mgr_unregister_factory(codec_mgr,
 						  &ilbc_factory.base);
-    
+    ilbc_factory.endpt = NULL;
+
     return status;
 }
 
