@@ -177,6 +177,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
     PJ_ASSERT_RETURN(endpt != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(mode==0 || mode==20 || mode==30, PJ_EINVAL);
 
+    if (ilbc_factory.endpt != NULL) {
+	/* Already initialized. */
+	return PJ_SUCCESS;
+    }
+
     /* Create iLBC codec factory. */
     ilbc_factory.base.op = &ilbc_factory_op;
     ilbc_factory.base.factory_data = NULL;
@@ -188,22 +193,25 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_init( pjmedia_endpt *endpt,
     ilbc_factory.mode = mode;
 
     if (mode == 20) {
-	ilbc_factory.bps = 15200;	
+	ilbc_factory.bps = 15200;
     } else {
 	ilbc_factory.bps = 13333;
     }
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
-    if (!codec_mgr)
+    if (!codec_mgr) {
+	ilbc_factory.endpt = NULL;
 	return PJ_EINVALIDOP;
+    }
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr, 
 						&ilbc_factory.base);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	ilbc_factory.endpt = NULL;
 	return status;
-
+    }
 
     /* Done. */
     return PJ_SUCCESS;
@@ -220,6 +228,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_ilbc_deinit(void)
     pjmedia_codec_mgr *codec_mgr;
     pj_status_t status;
 
+    if (ilbc_factory.endpt == NULL) {
+	/* Not registered. */
+	return PJ_SUCCESS;
+    }
 
     /* Get the codec manager. */
     codec_mgr = pjmedia_endpt_get_codec_mgr(ilbc_factory.endpt);
