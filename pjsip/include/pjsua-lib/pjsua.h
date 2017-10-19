@@ -3658,14 +3658,19 @@ typedef struct pjsua_acc_config
     pj_bool_t	     srtp_optional_dup_offer;
 
     /**
-     * Specify interval of auto registration retry upon registration failure
-     * (including caused by transport problem), in second. Set to 0 to
-     * disable auto re-registration. Note that if the registration retry
-     * occurs because of transport failure, the first retry will be done
-     * after \a reg_first_retry_interval seconds instead. Also note that
-     * the interval will be randomized slightly by some seconds (specified
-     * in \a reg_retry_random_interval) to avoid all clients re-registering
-     * at the same time.
+     * Specify interval of auto registration retry upon registration failure,
+     * in seconds. Set to 0 to disable auto re-registration. Note that
+     * registration will only be automatically retried for temporal failures
+     * considered to be recoverable in relatively short term, such as:
+     * 408 (Request Timeout), 480 (Temporarily Unavailable),
+     * 500 (Internal Server Error), 502 (Bad Gateway),
+     * 503 (Service Unavailable), 504 (Server Timeout),
+     * 6xx (global failure), and failure caused by transport problem.
+     * For registration retry caused by transport failure, the first retry
+     * will be done after \a reg_first_retry_interval seconds instead.
+     * Note that the interval will be randomized slightly by some seconds
+     * (specified in \a reg_retry_random_interval) to avoid all clients
+     * re-registering at the same time.
      *
      * See also \a reg_first_retry_interval setting.
      *
