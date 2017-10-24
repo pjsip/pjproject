@@ -51,6 +51,8 @@ struct pjsua_call_media
 	/** Audio stream */
 	struct {
 	    pjmedia_stream *stream;    /**< The audio stream.		    */
+	    pjmedia_port   *media_port;/**< The media port.                 */
+	    pj_bool_t	    destroy_port;/**< Destroy the media port?	    */
 	    int		    conf_slot; /**< Slot # in conference bridge.    */
 	} a;
 

@@ -1664,10 +1664,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
-    static void on_stream_created(pjsua_call_id call_id,
-                                  pjmedia_stream *strm,
-                                  unsigned stream_idx,
-                                  pjmedia_port **p_port);
+    static void on_stream_created2(pjsua_call_id call_id,
+				   pjsua_on_stream_created_param *param);
     static void on_stream_destroyed(pjsua_call_id call_id,
                                     pjmedia_stream *strm,
                                     unsigned stream_idx);

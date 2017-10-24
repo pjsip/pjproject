@@ -531,6 +531,12 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 	                                            strm, call_med->idx);
 	}
 
+	if (call_med->strm.a.media_port) {
+	    if (call_med->strm.a.destroy_port)
+		pjmedia_port_destroy(call_med->strm.a.media_port);
+	    call_med->strm.a.media_port = NULL;
+	}
+
 	pjmedia_stream_destroy(strm);
 	call_med->strm.a.stream = NULL;
     }
@@ -575,7 +581,6 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 				     const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = call_med->call;
-    pjmedia_port *media_port;
     unsigned strm_idx = call_med->idx;
     pj_status_t status = PJ_SUCCESS;
 
@@ -645,16 +650,30 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	/* Get the port interface of the first stream in the session.
 	 * We need the port interface to add to the conference bridge.
 	 */
-	pjmedia_stream_get_port(call_med->strm.a.stream, &media_port);
+	pjmedia_stream_get_port(call_med->strm.a.stream,
+				&call_med->strm.a.media_port);
 
 	/* Notify application about stream creation.
 	 * Note: application may modify media_port to point to different
 	 * media port
 	 */
-	if (pjsua_var.ua_cfg.cb.on_stream_created) {
-	    pjsua_var.ua_cfg.cb.on_stream_created(call->index,
+	if (pjsua_var.ua_cfg.cb.on_stream_created2) {
+	    pjsua_on_stream_created_param prm;
+	    
+	    prm.stream = call_med->strm.a.stream;
+	    prm.stream_idx = strm_idx;
+	    prm.destroy_port = PJ_FALSE;
+	    prm.port = call_med->strm.a.media_port;
+	    (*pjsua_var.ua_cfg.cb.on_stream_created2)(call->index, &prm);
+	    
+	    call_med->strm.a.destroy_port = prm.destroy_port;
+	    call_med->strm.a.media_port = prm.port;
+
+	} else if (pjsua_var.ua_cfg.cb.on_stream_created) {
+	    (*pjsua_var.ua_cfg.cb.on_stream_created)(call->index,
 						  call_med->strm.a.stream,
-						  strm_idx, &media_port);
+						  strm_idx,
+						  &call_med->strm.a.media_port);
 	}
 
 	/*
@@ -671,12 +690,12 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	    if (port_name.slen < 1) {
 		port_name = pj_str("call");
 	    }
-	    status = pjmedia_conf_add_port( pjsua_var.mconf,
-					    call->inv->pool,
-					    media_port,
-					    &port_name,
-					    (unsigned*)
-					    &call_med->strm.a.conf_slot);
+	    status = pjmedia_conf_add_port(pjsua_var.mconf,
+					   call->inv->pool,
+					   call_med->strm.a.media_port,
+					   &port_name,
+					   (unsigned*)
+					   &call_med->strm.a.conf_slot);
 	    if (status != PJ_SUCCESS) {
 		goto on_return;
 	    }

@@ -487,6 +487,42 @@ typedef struct pjsua_reg_info
 } pjsua_reg_info;
 
 
+/**
+ * Structure to be passed to on stream created callback.
+ * See #on_stream_created2().
+ */
+typedef struct pjsua_on_stream_created_param
+{
+    /**
+     * The media stream, read-only.
+     */
+    pjmedia_stream 	*stream;
+
+    /**
+     * Stream index in the media session, read-only.
+     */
+    unsigned 		 stream_idx;
+
+    /**
+     * Specify if PJSUA should take ownership of the port returned in
+     * the port parameter below. If set to PJ_TRUE,
+     * pjmedia_port_destroy() will be called on the port when it is
+     * no longer needed.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t 		 destroy_port;
+
+    /**
+     * On input, it specifies the media port of the stream. Application
+     * may modify this pointer to point to different media port to be
+     * registered to the conference bridge.
+     */
+    pjmedia_port        *port;
+
+} pjsua_on_stream_created_param;
+
+
 /** 
  * Enumeration of media transport state types.
  */
@@ -821,6 +857,9 @@ typedef struct pjsua_callback
      * media port if it has added media processing port to the stream. This
      * media port then will be added to the conference bridge instead.
      *
+     * Note: if implemented, #on_stream_created2() callback will be called
+     * instead of this one. 
+     *
      * @param call_id	    Call identification.
      * @param strm	    Media stream.
      * @param stream_idx    Stream index in the media session.
@@ -833,6 +872,18 @@ typedef struct pjsua_callback
 			      pjmedia_stream *strm,
                               unsigned stream_idx,
 			      pjmedia_port **p_port);
+
+    /**
+     * Notify application when media session is created and before it is
+     * registered to the conference bridge. Application may return different
+     * media port if it has added media processing port to the stream. This
+     * media port then will be added to the conference bridge instead.
+     *
+     * @param call_id	    Call identification.
+     * @param param	    The on stream created callback parameter.
+     */
+    void (*on_stream_created2)(pjsua_call_id call_id,
+			       pjsua_on_stream_created_param *param);
 
     /**
      * Notify application when media session has been unregistered from the

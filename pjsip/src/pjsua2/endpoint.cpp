@@ -1070,10 +1070,8 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     }
 }
 
-void Endpoint::on_stream_created(pjsua_call_id call_id,
-                                 pjmedia_stream *strm,
-                                 unsigned stream_idx,
-                                 pjmedia_port **p_port)
+void Endpoint::on_stream_created2(pjsua_call_id call_id,
+				  pjsua_on_stream_created_param *param)
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
@@ -1081,14 +1079,15 @@ void Endpoint::on_stream_created(pjsua_call_id call_id,
     }
     
     OnStreamCreatedParam prm;
-    prm.stream = strm;
-    prm.streamIdx = stream_idx;
-    prm.pPort = (void *)*p_port;
+    prm.stream = param->stream;
+    prm.streamIdx = param->stream_idx;
+    prm.destroyPort = param->destroy_port;
+    prm.pPort = (MediaPort)param->port;
     
     call->onStreamCreated(prm);
     
-    if (prm.pPort != (void *)*p_port)
-        *p_port = (pjmedia_port *)prm.pPort;
+    param->destroy_port = prm.destroyPort;
+    param->port = (pjmedia_port *)prm.pPort;
 }
 
 void Endpoint::on_stream_destroyed(pjsua_call_id call_id,
@@ -1557,7 +1556,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_call_tsx_state         = &Endpoint::on_call_tsx_state;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
-    ua_cfg.cb.on_stream_created         = &Endpoint::on_stream_created;
+    ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
     ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
     ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
