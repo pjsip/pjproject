@@ -49,7 +49,7 @@ typedef pj_int32_t pjmedia_aud_dev_index;
 /**
  * Device index constants.
  */
-enum
+typedef enum pjmedia_aud_dev_id
 {
     /** 
      * Constant to denote default capture device 
@@ -65,7 +65,7 @@ enum
      * Constant to denote invalid device index.
      */
     PJMEDIA_AUD_INVALID_DEV = -3
-};
+} pjmedia_aud_dev_id;
 
 
 #define PJMEDIA_AUD_MAX_DRIVERS	16

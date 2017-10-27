@@ -1446,7 +1446,10 @@ typedef struct pjsua_callback
      * This callback will be called even when null sound device or no
      * sound device is configured by the application (i.e. the
      * #pjsua_set_null_snd_dev() and #pjsua_set_no_snd_dev() APIs).
-     * This API is mostly useful when the application wants to manage
+     * Application can use the API #pjsua_get_snd_dev() to get the info
+     * about which sound device is going to be opened/closed.
+     *
+     * This callback is mostly useful when the application wants to manage
      * the sound device by itself (i.e. with #pjsua_set_no_snd_dev()),
      * to get notified when it should open or close the sound device.
      *
@@ -6406,6 +6409,34 @@ typedef struct pjsua_media_transport
 
 } pjsua_media_transport;
 
+
+/**
+ * Sound device index constants.
+ */
+typedef enum pjsua_snd_dev_id
+{
+    /** 
+     * Constant to denote default capture device.
+     */
+    PJSUA_SND_DEFAULT_CAPTURE_DEV = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV,
+
+    /** 
+     * Constant to denote default playback device.
+     */
+    PJSUA_SND_DEFAULT_PLAYBACK_DEV = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV,
+
+    /**
+     * Constant to denote that no sound device is being used.
+     */
+    PJSUA_SND_NO_DEV = PJMEDIA_AUD_INVALID_DEV,
+
+    /**
+     * Constant to denote null sound device.
+     */
+    PJSUA_SND_NULL_DEV = -99
+
+} pjsua_snd_dev_id;
+
 /**
  * This enumeration specifies the sound device mode.
  */
@@ -6825,6 +6856,7 @@ PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_snd_dev_info info[],
  * Get currently active sound devices. If sound devices has not been created
  * (for example when pjsua_start() is not called), it is possible that
  * the function returns PJ_SUCCESS with -1 as device IDs.
+ * See also #pjsua_snd_dev_id constants.
  *
  * @param capture_dev   On return it will be filled with device ID of the 
  *			capture device.

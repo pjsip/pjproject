@@ -23,7 +23,6 @@
 #if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
 
 #define THIS_FILE		"pjsua_aud.c"
-#define NULL_SND_DEV_ID		-99
 
 /*****************************************************************************
  *
@@ -880,7 +879,7 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	}
 
 	if (need_reopen) {
-	    if (pjsua_var.cap_dev != NULL_SND_DEV_ID) {
+	    if (pjsua_var.cap_dev != PJSUA_SND_NULL_DEV) {
 		pjmedia_snd_port_param param;
 
 		pjmedia_snd_port_param_default(&param);
@@ -1727,14 +1726,18 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
     /* Check if NULL sound device is used */
-    if (NULL_SND_DEV_ID==param->base.rec_id ||
-	NULL_SND_DEV_ID==param->base.play_id)
+    if (PJSUA_SND_NULL_DEV==param->base.rec_id ||
+	PJSUA_SND_NULL_DEV==param->base.play_id)
     {
 	return pjsua_set_null_snd_dev();
     }
 
     /* Close existing sound port */
     close_snd_dev();
+
+    /* Save the device IDs */
+    pjsua_var.cap_dev = param->base.rec_id;
+    pjsua_var.play_dev = param->base.play_id;
 
     /* Notify app */
     if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
@@ -1851,10 +1854,6 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 	pjsua_var.snd_port = NULL;
 	goto on_error;
     }
-
-    /* Save the device IDs */
-    pjsua_var.cap_dev = param->base.rec_id;
-    pjsua_var.play_dev = param->base.play_id;
 
     /* Update sound device name. */
     {
@@ -2009,8 +2008,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
     }
     
     /* Null-sound */
-    if (snd_param->capture_dev == NULL_SND_DEV_ID && 
-	snd_param->playback_dev == NULL_SND_DEV_ID) 
+    if (snd_param->capture_dev == PJSUA_SND_NULL_DEV && 
+	snd_param->playback_dev == PJSUA_SND_NULL_DEV) 
     {
 	PJSUA_UNLOCK();
 	status = pjsua_set_null_snd_dev();
@@ -2129,6 +2128,9 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     /* Close existing sound device */
     close_snd_dev();
 
+    pjsua_var.cap_dev = PJSUA_SND_NULL_DEV;
+    pjsua_var.play_dev = PJSUA_SND_NULL_DEV;
+
     /* Notify app */
     if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
 	(*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
@@ -2161,9 +2163,6 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     status = pjmedia_master_port_start(pjsua_var.null_snd);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
-    pjsua_var.cap_dev = NULL_SND_DEV_ID;
-    pjsua_var.play_dev = NULL_SND_DEV_ID;
-
     pjsua_var.no_snd = PJ_FALSE;
     pjsua_var.snd_is_on = PJ_TRUE;
 
@@ -2184,6 +2183,8 @@ PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
     /* Close existing sound device */
     close_snd_dev();
     pjsua_var.no_snd = PJ_TRUE;
+    pjsua_var.cap_dev = PJSUA_SND_NO_DEV;
+    pjsua_var.play_dev = PJSUA_SND_NO_DEV;
 
     PJSUA_UNLOCK();
 

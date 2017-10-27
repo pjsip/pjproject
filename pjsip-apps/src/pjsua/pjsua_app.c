@@ -959,7 +959,11 @@ static void on_ice_transport_error(int index, pj_ice_strans_op op,
  */
 static pj_status_t on_snd_dev_operation(int operation)
 {
-    PJ_LOG(3,(THIS_FILE, "Turning sound device %s", (operation? "ON":"OFF")));
+    int cap_dev, play_dev;
+
+    pjsua_get_snd_dev(&cap_dev, &play_dev);
+    PJ_LOG(3,(THIS_FILE, "Turning sound device %d %d %s", cap_dev, play_dev,
+    	      (operation? "ON":"OFF")));
     return PJ_SUCCESS;
 }
 
