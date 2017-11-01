@@ -10,7 +10,7 @@ include ../../build/common.mak
 # Gather all flags.
 #
 export _CFLAGS 	:= $(APP_CFLAGS) $(CFLAGS)
-export _CXXFLAGS:= $(_CFLAGS)
+export _CXXFLAGS:= $(APP_CXXFLAGS) $(CXXFLAGS)
 
 export _LDFLAGS := $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
 

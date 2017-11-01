@@ -140,7 +140,7 @@ export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   account.o endpoint.o json.o persistent.o types.o \
 			   siptypes.o call.o presence.o media.o
 export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_LIB_CXXFLAGS = $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
 export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 			     $(PJSIP_UA_LDLIB) \
 			     $(PJSIP_SIMPLE_LDLIB) \
@@ -163,7 +163,7 @@ export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   main.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_TEST_CXXFLAGS = $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
 export PJSUA2_TEST_EXE := pjsua2-test-$(TARGET_NAME)$(HOST_EXE)
 

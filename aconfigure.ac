@@ -27,11 +27,7 @@ dnl Setup default CFLAGS
 dnl
 if test "$CFLAGS" = ""; then
   CFLAGS="-O2"
-else
-  CFLAGS="$CFLAGS"
 fi
-
-CXXFLAGS="$CFLAGS $CXXFLAGS"
 
 dnl #
 dnl # Configure tools
