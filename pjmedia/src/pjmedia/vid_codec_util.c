@@ -173,7 +173,7 @@ static unsigned fps_to_mpi(const pjmedia_ratio *fps)
     if (mpi < 1) mpi = 1;
 
     return mpi;
-};
+}
 
 PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 				pjmedia_vid_codec_param *param)

@@ -482,7 +482,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 {
     pjmedia_vid_port *vp;
     pjmedia_video_format_detail *vfd;
-    char dev_name[64];
     char fmt_name[5];
     pjmedia_vid_dev_cb vid_cb;
     pj_bool_t need_frame_buf = PJ_FALSE;
@@ -490,6 +489,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     unsigned ptime_usec;
     pjmedia_vid_dev_param vparam;
     pjmedia_vid_dev_info di;
+    char dev_name[sizeof(di.name) + sizeof(di.driver) + 4];
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -522,8 +522,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     vparam = prm->vidparam;
     dev_name[0] = '\0';
 
-    pj_ansi_snprintf(dev_name, sizeof(dev_name), "%s [%s]",
-                     di.name, di.driver);
+    pj_ansi_snprintf(dev_name, sizeof(dev_name), "%s [%s]", di.name, di.driver);
     pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
     PJ_LOG(4,(THIS_FILE,
 	      "Opening device %s for %s: format=%s, size=%dx%d @%d:%d fps",

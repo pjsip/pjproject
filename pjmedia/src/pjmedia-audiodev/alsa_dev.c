@@ -937,7 +937,9 @@ static pj_status_t alsa_stream_set_cap(pjmedia_aud_stream *strm,
 {
     struct alsa_factory *af = ((struct alsa_stream*)strm)->af;
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING && af->pb_mixer_name) {
+    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING && 
+	pj_ansi_strlen(af->pb_mixer_name)) 
+    {
 	pj_ssize_t min, max;
 	snd_mixer_t *handle;
 	snd_mixer_selem_id_t *sid;

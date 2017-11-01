@@ -136,7 +136,7 @@ PJ_DEF(const char*) pj_stun_sock_op_name(pj_stun_sock_op op)
     };
 
     return op < PJ_ARRAY_SIZE(names) ? names[op] : "???";
-};
+}
 
 
 /*

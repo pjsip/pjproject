@@ -98,7 +98,7 @@ static unsigned get_cid_from_nid(unsigned nid)
 	}
     }
     return cid;
-};
+}
 
 static unsigned get_nid_from_cid(unsigned cid)
 {

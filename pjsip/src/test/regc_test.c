@@ -64,7 +64,7 @@ static pj_status_t mod_send_on_tx_request(pjsip_tx_data *tdata)
 	return PJ_ECANCELLED;
     else
 	return PJ_SUCCESS;
-};
+}
 
 
 /************************************************************************/
@@ -525,7 +525,7 @@ static int refresh_error(const pj_str_t *registrar_uri,
     }
 
     return PJ_SUCCESS;
-};
+}
 
 
 /* Send error on refresh */
@@ -700,7 +700,7 @@ on_return:
     if (tdata) pjsip_tx_data_dec_ref(tdata);
     pjsip_regc_destroy(regc);
     return ret;
-};
+}
 
 
 /* send error on authentication */
@@ -731,7 +731,7 @@ static int auth_send_error(const pj_str_t *registrar_uri,
     send_mod.count_before_reject = 0xFFFF;
 
     return ret;
-};
+}
 
 
 
