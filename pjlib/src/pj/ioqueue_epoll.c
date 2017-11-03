@@ -516,11 +516,26 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
      */
     pj_ioqueue_lock_key(key);
 
+    /* Best effort to avoid double key-unregistration */
+    if (IS_CLOSING(key)) {
+	pj_ioqueue_unlock_key(key);
+	return PJ_SUCCESS;
+    }
+
     /* Also lock ioqueue */
     pj_lock_acquire(ioqueue->lock);
 
-    pj_assert(ioqueue->count > 0);
-    --ioqueue->count;
+    /* Avoid "negative" ioqueue count */
+    if (ioqueue->count > 0) {
+	--ioqueue->count;
+    } else {
+	/* If this happens, very likely there is double unregistration
+	 * of a key.
+	 */
+	pj_assert(!"Bad ioqueue count in key unregistration!");
+	PJ_LOG(1,(THIS_FILE, "Bad ioqueue count in key unregistration!"));
+    }
+
 #if !PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_list_erase(key);
 #endif
@@ -531,6 +546,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     if (status != 0) {
 	pj_status_t rc = pj_get_os_error();
 	pj_lock_release(ioqueue->lock);
+	pj_ioqueue_unlock_key(key);
 	return rc;
     }
 
