@@ -566,7 +566,11 @@ int main(int argc, char *argv[])
 
 
     /* Verify arguments. */
-    if (dir & PJMEDIA_DIR_ENCODING || is_dtls_client || is_dtls_server) {
+    if (dir & PJMEDIA_DIR_ENCODING
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+        || is_dtls_client || is_dtls_server
+#endif
+       ) {
 	if (remote_addr.sin_addr.s_addr == 0) {
 	    printf("Error: remote address must be set\n");
 	    return 1;
