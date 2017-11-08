@@ -494,7 +494,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\src\pj\file_io_win32.c" />    
+    <ClCompile Include="..\src\pj\file_io_win32.c" />
     <ClCompile Include="..\src\pj\guid.c" />
     <ClCompile Include="..\src\pj\guid_simple.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>
@@ -890,6 +890,7 @@
     <ClInclude Include="..\include\pj\compat\ctype.h" />
     <ClInclude Include="..\include\pj\compat\errno.h" />
     <ClInclude Include="..\include\pj\compat\high_precision.h" />
+    <ClInclude Include="..\include\pj\compat\limits.h" />
     <ClInclude Include="..\include\pj\compat\malloc.h" />
     <ClInclude Include="..\include\pj\compat\m_alpha.h" />
     <ClInclude Include="..\include\pj\compat\m_i386.h" />
@@ -925,6 +926,7 @@
     <ClInclude Include="..\include\pj\hash.h" />
     <ClInclude Include="..\include\pj\ioqueue.h" />
     <ClInclude Include="..\include\pj\ip_helper.h" />
+    <ClInclude Include="..\include\pj\limits.h" />
     <ClInclude Include="..\include\pj\list.h" />
     <ClInclude Include="..\include\pj\list_i.h" />
     <ClInclude Include="..\include\pj\lock.h" />

@@ -23,10 +23,13 @@
 #include <pj/ctype.h>
 #include <pj/rand.h>
 #include <pj/os.h>
+#include <pj/errno.h>
+#include <pj/limits.h>
 
 #if PJ_FUNCTIONS_ARE_INLINED==0
 #  include <pj/string_i.h>
 #endif
+
 
 PJ_DEF(pj_ssize_t) pj_strspn(const pj_str_t *str, const pj_str_t *set_char)
 {
@@ -230,6 +233,55 @@ PJ_DEF(long) pj_strtol(const pj_str_t *str)
         return pj_strtoul(str);
 }
 
+
+PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
+{
+    pj_str_t s;
+    unsigned long retval = 0;
+    pj_bool_t is_negative = PJ_FALSE;
+    int rc = 0;
+
+    PJ_CHECK_STACK();
+
+    if (!str || !value) {
+        return PJ_EINVAL;
+    }
+
+    s = *str;
+    pj_strltrim(&s);
+
+    if (s.slen == 0)
+        return PJ_EINVAL;
+
+    if (s.ptr[0] == '+' || s.ptr[0] == '-') {
+        is_negative = (s.ptr[0] == '-');
+        s.ptr += 1;
+        s.slen -= 1;
+    }
+
+    rc = pj_strtoul3(&s, &retval, 10);
+    if (rc == PJ_EINVAL) {
+        return rc;
+    } else if (rc != PJ_SUCCESS) {
+        *value = is_negative ? PJ_MINLONG : PJ_MAXLONG;
+        return is_negative ? PJ_ETOOSMALL : PJ_ETOOBIG;
+    }
+
+    if (retval > PJ_MAXLONG && !is_negative) {
+        *value = PJ_MAXLONG;
+        return PJ_ETOOBIG;
+    }
+
+    if (retval > (PJ_MAXLONG + 1UL) && is_negative) {
+        *value = PJ_MINLONG;
+        return PJ_ETOOSMALL;
+    }
+
+    *value = is_negative ? -(long)retval : retval;
+
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 {
     unsigned long value;
@@ -280,6 +332,71 @@ PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
     }
 
     return value;
+}
+
+PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
+				unsigned base)
+{
+    pj_str_t s;
+    unsigned i;
+
+    PJ_CHECK_STACK();
+
+    if (!str || !value) {
+        return PJ_EINVAL;
+    }
+
+    s = *str;
+    pj_strltrim(&s);
+
+    if (s.slen == 0 || s.ptr[0] < '0' ||
+	(base <= 10 && (unsigned)s.ptr[0] > ('0' - 1) + base) ||
+	(base == 16 && !pj_isxdigit(s.ptr[0])))
+    {
+        return PJ_EINVAL;
+    }
+
+    *value = 0;
+    if (base <= 10) {
+	for (i=0; i<(unsigned)s.slen; ++i) {
+	    unsigned c = s.ptr[i] - '0';
+	    if (s.ptr[i] < '0' || (unsigned)s.ptr[i] > ('0' - 1) + base) {
+		break;
+	    }
+	    if (*value > PJ_MAXULONG / base) {
+		*value = PJ_MAXULONG;
+		return PJ_ETOOBIG;
+	    }
+
+	    *value *= base;
+	    if ((PJ_MAXULONG - *value) < c) {
+		*value = PJ_MAXULONG;
+		return PJ_ETOOBIG;
+	    }
+	    *value += c;
+	}
+    } else if (base == 16) {
+	for (i=0; i<(unsigned)s.slen; ++i) {
+	    unsigned c = pj_hex_digit_to_val(s.ptr[i]);
+	    if (!pj_isxdigit(s.ptr[i]))
+		break;
+
+	    if (*value > PJ_MAXULONG / base) {
+		*value = PJ_MAXULONG;
+		return PJ_ETOOBIG;
+	    }
+	    *value *= base;
+	    if ((PJ_MAXULONG - *value) < c) {
+		*value = PJ_MAXULONG;
+		return PJ_ETOOBIG;
+	    }
+	    *value += c;
+	}
+    } else {
+	pj_assert(!"Unsupported base");
+	return PJ_EINVAL;
+    }
+    return PJ_SUCCESS;
 }
 
 PJ_DEF(float) pj_strtof(const pj_str_t *str)
@@ -356,5 +473,3 @@ PJ_DEF(int) pj_utoa_pad( unsigned long val, char *buf, int min_dig, int pad)
 
     return len;
 }
-
-

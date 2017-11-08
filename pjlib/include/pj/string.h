@@ -28,7 +28,6 @@
 #include <pj/types.h>
 #include <pj/compat/string.h>
 
-
 PJ_BEGIN_DECL
 
 /**
@@ -636,6 +635,29 @@ PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
 PJ_DECL(long) pj_strtol(const pj_str_t *str);
 
 /**
+ * Convert string to signed long integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
+ *
+ * @param str   the string.
+ * @param value Pointer to a long to receive the value.
+ *
+ * @return PJ_SUCCESS if successful.  Otherwise:
+ *         PJ_ETOOSMALL if the value was an impossibly long negative number.
+ *         In this case *value will be set to LONG_MIN.
+ *         \n
+ *         PJ_ETOOBIG if the value was an impossibly long positive number.
+ *         In this case, *value will be set to LONG_MAX.
+ *         \n
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
+ *         or the input string could not be parsed at all such as starting with
+ *         a character other than a '+', '-' or not in the '0' - '9' range.
+ *         In this case, *value will be left untouched.
+ */
+PJ_DECL(pj_status_t) pj_strtol2(const pj_str_t *str, long *value);
+
+
+/**
  * Convert string to unsigned integer. The conversion will stop as
  * soon as non-digit character is found or all the characters have
  * been processed.
@@ -662,6 +684,27 @@ PJ_DECL(unsigned long) pj_strtoul(const pj_str_t *str);
  */
 PJ_DECL(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
 				   unsigned base);
+
+/**
+ * Convert string to unsigned long integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
+ *
+ * @param str       The input string.
+ * @param value     Pointer to an unsigned long to receive the value.
+ * @param base	    Number base to use.
+ *
+ * @return PJ_SUCCESS if successful.  Otherwise:
+ *         PJ_ETOOBIG if the value was an impossibly long positive number.
+ *         In this case, *value will be set to ULONG_MAX.
+ *         \n
+ *         PJ_EINVAL if the input string was NULL, the value pointer was NULL 
+ *         or the input string could not be parsed at all such as starting 
+ *         with a character outside the base character range.  In this case,
+ *         *value will be left untouched.
+ */
+PJ_DECL(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
+				 unsigned base);
 
 /**
  * Convert string to float.
@@ -785,7 +828,6 @@ PJ_INLINE(void*) pj_memchr(const void *buf, int c, pj_size_t size)
 {
     return (void*)memchr((void*)buf, c, size);
 }
-
 
 /**
  * @}

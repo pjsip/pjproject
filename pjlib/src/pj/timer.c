@@ -36,6 +36,7 @@
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/rand.h>
+#include <pj/limits.h>
 
 #define THIS_FILE	"timer.c"
 

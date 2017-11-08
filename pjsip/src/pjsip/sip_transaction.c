@@ -289,11 +289,11 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
 
     /* Calculate length required. */
     len_required = method->name.slen +      /* Method */
-                   9 +			    /* CSeq number */
+                   11 +			    /* CSeq number */
 		   rdata->msg_info.from->tag.slen +   /* From tag. */
 		   rdata->msg_info.cid->id.slen +    /* Call-ID */
 		   host->slen +		    /* Via host. */
-		   9 +			    /* Via port. */
+		   11 +			    /* Via port. */
 		   16;			    /* Separator+Allowance. */
     key = p = (char*) pj_pool_alloc(pool, len_required);
 

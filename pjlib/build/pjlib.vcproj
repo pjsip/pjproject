@@ -14970,6 +14970,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pj\limits.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pj\list.h"
 				>
 			</File>
@@ -15070,6 +15074,10 @@
 				</File>
 				<File
 					RelativePath="..\include\pj\compat\high_precision.h"
+					>
+				</File>
+				<File
+					RelativePath="..\include\pj\compat\limits.h"
 					>
 				</File>
 				<File

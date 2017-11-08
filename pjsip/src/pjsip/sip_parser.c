@@ -34,6 +34,7 @@
 #include <pj/string.h>
 #include <pj/ctype.h>
 #include <pj/assert.h>
+#include <pj/limits.h>
 
 #define THIS_FILE	    "sip_parser.c"
 
@@ -93,6 +94,7 @@ static unsigned uri_handler_count;
  * Global vars (also extern).
  */
 int PJSIP_SYN_ERR_EXCEPTION = -1;
+int PJSIP_EINVAL_ERR_EXCEPTION = -2;
 
 /* Parser constants */
 static pjsip_parser_const_t pconst =
@@ -205,7 +207,6 @@ static unsigned long pj_strtoul_mindigit(const pj_str_t *str,
 /* Case insensitive comparison */
 #define parser_stricmp(s1, s2)  (s1.slen!=s2.slen || pj_stricmp_alnum(&s1, &s2))
 
-
 /* Get a token and unescape */
 PJ_INLINE(void) parser_get_and_unescape(pj_scanner *scanner, pj_pool_t *pool,
 					const pj_cis_t *spec, 
@@ -223,13 +224,65 @@ PJ_INLINE(void) parser_get_and_unescape(pj_scanner *scanner, pj_pool_t *pool,
 #endif
 }
 
-
-
 /* Syntax error handler for parser. */
 static void on_syntax_error(pj_scanner *scanner)
 {
     PJ_UNUSED_ARG(scanner);
     PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+}
+
+/* Syntax error handler for parser. */
+static void on_str_parse_error(const pj_str_t *str, int rc)
+{
+    char *s;
+
+    switch(rc) {
+    case PJ_EINVAL:
+        s = "NULL input string, invalid input string, or NULL return "\
+	    "value pointer";
+        break;
+    case PJ_ETOOSMALL:
+        s = "String value was less than the minimum allowed value.";
+        break;
+    case PJ_ETOOBIG:
+        s = "String value was greater than the maximum allowed value.";
+        break;
+    default:
+        s = "Unknown error";
+    }
+
+    if (str) {
+        PJ_LOG(1, (THIS_FILE, "Error parsing '%.*s': %s",
+                   (int)str->slen, str->ptr, s));
+    } else {
+        PJ_LOG(1, (THIS_FILE, "Can't parse input string: %s", s));
+    }
+    PJ_THROW(PJSIP_EINVAL_ERR_EXCEPTION);
+}
+
+static void strtoi_validate(const pj_str_t *str, int min_val,
+			    int max_val, int *value)
+{ 
+    long retval;
+    pj_status_t status;
+
+    if (!str || !value) {
+        on_str_parse_error(str, PJ_EINVAL);
+    }
+    status = pj_strtol2(str, &retval);
+    if (status != PJ_EINVAL) {
+	if (min_val > retval) {
+	    *value = min_val;
+	    status = PJ_ETOOSMALL;
+	} else if (retval > max_val) {
+	    *value = max_val;
+	    status = PJ_ETOOBIG;
+	} else
+	    *value = (int)retval;
+    }
+
+    if (status != PJ_SUCCESS)
+	on_str_parse_error(str, status);
 }
 
 /* Get parser constants. */
@@ -282,6 +335,14 @@ static pj_status_t init_parser()
     pj_assert (PJSIP_SYN_ERR_EXCEPTION == -1);
     status = pj_exception_id_alloc("PJSIP syntax error", 
 				   &PJSIP_SYN_ERR_EXCEPTION);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /*
+     * Invalid value exception.
+     */
+    pj_assert (PJSIP_EINVAL_ERR_EXCEPTION == -2);
+    status = pj_exception_id_alloc("PJSIP invalid value error", 
+				   &PJSIP_EINVAL_ERR_EXCEPTION);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /*
@@ -502,6 +563,9 @@ void deinit_sip_parser(void)
 	/* Deregister exception ID */
 	pj_exception_id_free(PJSIP_SYN_ERR_EXCEPTION);
 	PJSIP_SYN_ERR_EXCEPTION = -1;
+
+	pj_exception_id_free(PJSIP_EINVAL_ERR_EXCEPTION);
+	PJSIP_EINVAL_ERR_EXCEPTION = -2;
     }
     pj_leave_critical_section();
 }
@@ -766,7 +830,7 @@ PJ_DEF(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
 }
 
 /* Determine if a message has been received. */
-PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size, 
+PJ_DEF(pj_status_t) pjsip_find_msg( const char *buf, pj_size_t size, 
 				  pj_bool_t is_datagram, pj_size_t *msg_size)
 {
 #if PJ_HAS_TCP
@@ -776,6 +840,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     const char *line;
     int content_length = -1;
     pj_str_t cur_msg;
+    pj_status_t status = PJ_SUCCESS;
     const pj_str_t end_hdr = { "\n\r\n", 3};
 
     *msg_size = size;
@@ -836,9 +901,16 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 		pj_scan_get_newline(&scanner);
 
 		/* Found a valid Content-Length header. */
-		content_length = pj_strtoul(&str_clen);
+		strtoi_validate(&str_clen, PJSIP_MIN_CONTENT_LENGTH,
+				PJSIP_MAX_CONTENT_LENGTH, &content_length);
 	    }
 	    PJ_CATCH_ANY {
+		int eid = PJ_GET_EXCEPTION();
+		if (eid == PJSIP_SYN_ERR_EXCEPTION) {
+		    status = PJSIP_EMISSINGHDR;
+		} else if (eid == PJSIP_EINVAL_ERR_EXCEPTION) {
+		    status = PJSIP_EINVALIDHDR;
+		}
 		content_length = -1;
 	    }
 	    PJ_END
@@ -858,7 +930,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 
     /* Found Content-Length? */
     if (content_length == -1) {
-	return PJSIP_EMISSINGHDR;
+	return status;
     }
 
     /* Enough packet received? */
@@ -938,10 +1010,14 @@ static pj_bool_t is_next_sip_version(pj_scanner *scanner)
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
 {
-    pj_bool_t parsing_headers;
-    pjsip_msg *msg = NULL;
+    /* These variables require "volatile" so their values get
+     * preserved when re-entering the PJ_TRY block after an error.
+     */
+    volatile pj_bool_t parsing_headers;
+    pjsip_msg *volatile msg = NULL;
+    pjsip_ctype_hdr *volatile ctype_hdr = NULL;
+
     pj_str_t hname;
-    pjsip_ctype_hdr *ctype_hdr = NULL;
     pj_scanner *scanner = ctx->scanner;
     pj_pool_t *pool = ctx->pool;
     PJ_USE_EXCEPTION;
@@ -1023,7 +1099,6 @@ parse_headers:
 		hdr->name = hdr->sname = hname;
 	    }
 	    
-	
 	    /* Single parse of header line can produce multiple headers.
 	     * For example, if one Contact: header contains Contact list
 	     * separated by comma, then these Contacts will be split into
@@ -1267,7 +1342,7 @@ static void int_parse_uri_host_port( pj_scanner *scanner,
 	pj_str_t port;
 	pj_scan_get_char(scanner);
 	pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &port);
-	*p_port = pj_strtoul(&port);
+	strtoi_validate(&port, PJSIP_MIN_PORT, PJSIP_MAX_PORT, p_port);
     } else {
 	*p_port = 0;
     }
@@ -1458,8 +1533,8 @@ static void* int_parse_sip_url( pj_scanner *scanner,
 	    url->transport_param = pvalue;
 
 	} else if (!parser_stricmp(pname, pconst.pjsip_TTL_STR) && pvalue.slen) {
-	    url->ttl_param = pj_strtoul(&pvalue);
-
+	    strtoi_validate(&pvalue, PJSIP_MIN_TTL, PJSIP_MAX_TTL,
+			    &url->ttl_param);
 	} else if (!parser_stricmp(pname, pconst.pjsip_MADDR_STR) && pvalue.slen) {
 	    url->maddr_param = pvalue;
 
@@ -1595,7 +1670,8 @@ static void int_parse_status_line( pj_scanner *scanner,
 
     parse_sip_version(scanner);
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &token);
-    status_line->code = pj_strtoul(&token);
+    strtoi_validate(&token, PJSIP_MIN_STATUS_CODE, PJSIP_MAX_STATUS_CODE,
+                    &status_line->code);
     if (*scanner->curptr != '\r' && *scanner->curptr != '\n')
 	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &status_line->reason);
     else
@@ -1780,20 +1856,34 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	if (!parser_stricmp(pname, pconst.pjsip_Q_STR) && pvalue.slen) {
 	    char *dot_pos = (char*) pj_memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
-		hdr->q1000 = pj_strtoul(&pvalue) * 1000;
+		strtoi_validate(&pvalue, PJSIP_MIN_Q1000, PJSIP_MAX_Q1000,
+                                &hdr->q1000);
+		hdr->q1000 *= 1000;
 	    } else {
 		pj_str_t tmp = pvalue;
+		unsigned long qval_frac;
 
 		tmp.slen = dot_pos - pvalue.ptr;
-		hdr->q1000 = pj_strtoul(&tmp) * 1000;
+		strtoi_validate(&tmp, PJSIP_MIN_Q1000, PJSIP_MAX_Q1000,
+                                &hdr->q1000);
+                hdr->q1000 *= 1000;
 
 		pvalue.slen = (pvalue.ptr+pvalue.slen) - (dot_pos+1);
 		pvalue.ptr = dot_pos + 1;
-		hdr->q1000 += pj_strtoul_mindigit(&pvalue, 3);
+		if (pvalue.slen > 3) {
+		    pvalue.slen = 3;
+		}
+		qval_frac = pj_strtoul_mindigit(&pvalue, 3);
+		if ((unsigned)hdr->q1000 > (PJ_MAXINT32 - qval_frac)) {
+		    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+		}
+		hdr->q1000 += qval_frac;
 	    }    
-	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && pvalue.slen) {
-	    hdr->expires = pj_strtoul(&pvalue);
-
+	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && 
+                   pvalue.slen) 
+        {
+	    strtoi_validate(&pvalue, PJSIP_MIN_EXPIRES, PJSIP_MAX_EXPIRES,
+                            &hdr->expires);
 	} else {
 	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	    p->name = pname;
@@ -1890,19 +1980,22 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_cseq( pjsip_parse_ctx *ctx )
 {
     pj_str_t cseq, method;
-    pjsip_cseq_hdr *hdr;
+    pjsip_cseq_hdr *hdr = NULL;
+    int cseq_val = 0;
+
+    pj_scan_get( ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &cseq);
+    strtoi_validate(&cseq, PJSIP_MIN_CSEQ, PJSIP_MAX_CSEQ, &cseq_val);
 
     hdr = pjsip_cseq_hdr_create(ctx->pool);
-    pj_scan_get( ctx->scanner, &pconst.pjsip_DIGIT_SPEC, &cseq);
-    hdr->cseq = pj_strtoul(&cseq);
+    hdr->cseq = cseq_val;
 
     pj_scan_get( ctx->scanner, &pconst.pjsip_TOKEN_SPEC, &method);
-    pjsip_method_init_np(&hdr->method, &method);
-
     parse_hdr_end( ctx->scanner );
 
-    if (ctx->rdata)
+    pjsip_method_init_np(&hdr->method, &method);
+    if (ctx->rdata) {
         ctx->rdata->msg_info.cseq = hdr;
+    }
 
     return (pjsip_hdr*)hdr;
 }
@@ -1984,7 +2077,8 @@ static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
     hdr = pjsip_retry_after_hdr_create(ctx->pool, 0);
     
     pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
-    hdr->ivalue = pj_strtoul(&tmp);
+    strtoi_validate(&tmp, PJSIP_MIN_RETRY_AFTER, PJSIP_MAX_RETRY_AFTER,
+                    &hdr->ivalue);
 
     while (!pj_scan_is_eof(scanner) && *scanner->curptr!='\r' &&
 	   *scanner->curptr!='\n')
@@ -2073,7 +2167,8 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	    hdr->branch_param = pvalue;
 
 	} else if (!parser_stricmp(pname, pconst.pjsip_TTL_STR) && pvalue.slen) {
-	    hdr->ttl_param = pj_strtoul(&pvalue);
+	    strtoi_validate(&pvalue, PJSIP_MIN_TTL, PJSIP_MAX_TTL,
+                            &hdr->ttl_param);
 	    
 	} else if (!parser_stricmp(pname, pconst.pjsip_MADDR_STR) && pvalue.slen) {
 	    hdr->maddr_param = pvalue;
@@ -2082,9 +2177,10 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	    hdr->recvd_param = pvalue;
 
 	} else if (!parser_stricmp(pname, pconst.pjsip_RPORT_STR)) {
-	    if (pvalue.slen)
-		hdr->rport_param = pj_strtoul(&pvalue);
-	    else
+	    if (pvalue.slen) {
+		strtoi_validate(&pvalue, PJSIP_MIN_PORT, PJSIP_MAX_PORT,
+			        &hdr->rport_param);
+            } else
 		hdr->rport_param = 0;
 	} else {
 	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
@@ -2213,7 +2309,8 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	    pj_str_t digit;
 	    pj_scan_get_char(scanner);
 	    pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &digit);
-	    hdr->sent_by.port = pj_strtoul(&digit);
+	    strtoi_validate(&digit, PJSIP_MIN_PORT, PJSIP_MAX_PORT,
+                            &hdr->sent_by.port);
 	}
 	
 	int_parse_via_param(hdr, scanner, ctx->pool);
@@ -2298,9 +2395,10 @@ PJ_DEF(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
 				         unsigned options)
 {
     enum { STOP_ON_ERROR = 1 };
+    pj_str_t hname;
     pj_scanner scanner;
     pjsip_parse_ctx ctx;
-    pj_str_t hname;
+
     PJ_USE_EXCEPTION;
 
     pj_scan_init(&scanner, input, size, PJ_SCAN_AUTOSKIP_WS_HEADER,
@@ -2323,7 +2421,7 @@ retry_parse:
 	     */
 	    hname.slen = 0;
 
-	    /* Get hname. */
+	    /* Get hname. */            
 	    pj_scan_get( &scanner, &pconst.pjsip_TOKEN_SPEC, &hname);
 	    if (pj_scan_get_char( &scanner ) != ':') {
 		PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);

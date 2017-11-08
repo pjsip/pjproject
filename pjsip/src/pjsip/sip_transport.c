@@ -1848,7 +1848,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	/* Check for parsing syntax error */
 	if (msg==NULL || !pj_list_empty(&rdata->msg_info.parse_err)) {
 	    pjsip_parser_err_report *err;
-	    char buf[128];
+	    char buf[256];
 	    pj_str_t tmp;
 
 	    /* Gather syntax error information */
@@ -1862,7 +1862,10 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 				       pj_exception_id_name(err->except_code),
 				       (int)err->hname.slen, err->hname.ptr,
 				       err->line, err->col);
-		if (len > 0 && len < (int) (sizeof(buf)-tmp.slen)) {
+		if (len >= (int)sizeof(buf)-tmp.slen) {
+		    len = (int)sizeof(buf)-tmp.slen;
+		}
+		if (len > 0) {
 		    tmp.slen += len;
 		}
 		err = err->next;

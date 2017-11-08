@@ -280,9 +280,6 @@ typedef int pj_exception_id_t;
 /** Utility macro to compute the number of elements in static array. */
 #define PJ_ARRAY_SIZE(a)    (sizeof(a)/sizeof(a[0]))
 
-/** Maximum value for signed 32-bit integer. */
-#define PJ_MAXINT32  0x7FFFFFFFL
-
 /**
  * Length of object names.
  */
