@@ -1941,7 +1941,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	{
 	    struct conf_port *listener;
 	    pj_int32_t *mix_buf;
-	    unsigned k;
 
 	    listener = conf->ports[conf_port->listener_slots[cj]];
 
@@ -1956,25 +1955,36 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		 * and calculate appropriate level adjustment if there is
 		 * any overflowed level in the mixed signal.
 		 */
-		for (k=0; k < conf->samples_per_frame; ++k) {
+		unsigned k, samples_per_frame = conf->samples_per_frame;
+		pj_int32_t mix_buf_min = 0;
+		pj_int32_t mix_buf_max = 0;
+
+		for (k = 0; k < samples_per_frame; ++k) {
 		    mix_buf[k] += p_in[k];
-		    /* Check if normalization adjustment needed. */
-		    if (IS_OVERFLOW(mix_buf[k])) {
-			/* NORMAL_LEVEL * MAX_LEVEL / mix_buf[k]; */
-			int tmp_adj = (MAX_LEVEL<<7) / mix_buf[k];
-			if (tmp_adj<0) tmp_adj = -tmp_adj;
+		    if (mix_buf[k] < mix_buf_min)
+			mix_buf_min = mix_buf[k];
+		    if (mix_buf[k] > mix_buf_max)
+			mix_buf_max = mix_buf[k];
+		}
 
-			if (tmp_adj<listener->mix_adj)
-			    listener->mix_adj = tmp_adj;
+		/* Check if normalization adjustment needed. */
+		if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+		    if (-mix_buf_min > mix_buf_max)
+			mix_buf_max = -mix_buf_min;
 
-		    } /* if any overflow in the mixed signals */
-		} /* loop mixing signals */
+		    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
+		    int tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
+		    if (tmp_adj < listener->mix_adj)
+			listener->mix_adj = tmp_adj;
+		}
 	    } else {
 		/* Only 1 transmitter:
 		 * just copy the samples to the mix buffer
 		 * no mixing and level adjustment needed
 		 */
-		for (k=0; k<conf->samples_per_frame; ++k) {
+		unsigned k, samples_per_frame = conf->samples_per_frame;
+
+		for (k = 0; k < samples_per_frame; ++k) {
 		    mix_buf[k] = p_in[k];
 		}
 	    }
