@@ -2070,6 +2070,21 @@ static void on_tp_state_callback(pjsip_transport *tp,
     pjsua_acc_on_tp_state_changed(tp, state, info);
 }
 
+/* Set transport state callback */
+static void set_tp_state_cb()
+{
+    pjsip_tp_state_callback tpcb;
+    pjsip_tpmgr *tpmgr;
+
+    tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
+    tpcb = pjsip_tpmgr_get_state_cb(tpmgr);
+
+    if (tpcb != &on_tp_state_callback) {
+	pjsua_var.old_tp_cb = tpcb;
+	pjsip_tpmgr_set_state_cb(tpmgr, &on_tp_state_callback);
+    }
+}
+
 /*
  * Create and initialize SIP socket (and possibly resolve public
  * address via STUN, depending on config).
@@ -2451,18 +2466,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
     }
 
     /* Set transport state callback */
-    {
-	pjsip_tp_state_callback tpcb;
-	pjsip_tpmgr *tpmgr;
-
-	tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
-	tpcb = pjsip_tpmgr_get_state_cb(tpmgr);
-
-	if (tpcb != &on_tp_state_callback) {
-	    pjsua_var.old_tp_cb = tpcb;
-	    pjsip_tpmgr_set_state_cb(tpmgr, &on_tp_state_callback);
-	}
-    }
+    set_tp_state_cb();
 
     /* Return the ID */
     if (p_id) *p_id = id;
@@ -2503,6 +2507,48 @@ PJ_DEF(pj_status_t) pjsua_transport_register( pjsip_transport *tp,
     pjsua_var.tpdata[id].type = (pjsip_transport_type_e) tp->key.type;
     pjsua_var.tpdata[id].local_name = tp->local_name;
     pjsua_var.tpdata[id].data.tp = tp;
+
+    /* Set transport state callback */
+    set_tp_state_cb();
+
+    /* Return the ID */
+    if (p_id) *p_id = id;
+
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Register transport factory that has been created by application.
+ */
+PJ_DEF(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
+					      pjsua_transport_id *p_id)
+{
+    unsigned id;
+
+    PJSUA_LOCK();
+
+    /* Find empty transport slot */
+    for (id=0; id < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++id) {
+	if (pjsua_var.tpdata[id].data.ptr == NULL)
+	    break;
+    }
+
+    if (id == PJ_ARRAY_SIZE(pjsua_var.tpdata)) {
+	pjsua_perror(THIS_FILE, "Error creating transport", PJ_ETOOMANY);
+	PJSUA_UNLOCK();
+	return PJ_ETOOMANY;
+    }
+
+    /* Save the transport */
+    pjsua_var.tpdata[id].type = (pjsip_transport_type_e) tf->type;
+    pjsua_var.tpdata[id].local_name = tf->addr_name;
+    pjsua_var.tpdata[id].data.factory = tf;
+
+    /* Set transport state callback */
+    set_tp_state_cb();
 
     /* Return the ID */
     if (p_id) *p_id = id;

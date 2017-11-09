@@ -2760,6 +2760,19 @@ PJ_DECL(pj_status_t) pjsua_transport_register(pjsip_transport *tp,
 
 
 /**
+ * Register transport factory that has been created by application.
+ * This function is useful if application wants to implement custom SIP
+ * transport and use it with pjsua.
+ *
+ * @param tf		Transport factory instance.
+ * @param p_id		Optional pointer to receive transport ID.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DEF(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
+					      pjsua_transport_id *p_id);
+
+/**
  * Enumerate all transports currently created in the system. This function
  * will return all transport IDs, and application may then call 
  * #pjsua_transport_get_info() function to retrieve detailed information
