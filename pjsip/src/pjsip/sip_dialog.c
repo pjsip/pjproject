@@ -329,6 +329,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     enum { TMP_LEN=PJSIP_MAX_URL_SIZE };
     pj_ssize_t len;
     pjsip_dialog *dlg;
+    pj_bool_t lock_incremented = PJ_FALSE;
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(ua && rdata && p_dlg, PJ_EINVAL);
@@ -511,8 +512,10 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
     /* Increment the dialog's lock since tsx may cause the dialog to be
      * destroyed prematurely (such as in case of transport error).
      */
-    if (inc_lock)
+    if (inc_lock) {
         pjsip_dlg_inc_lock(dlg);
+        lock_incremented = PJ_TRUE;
+    }
 
     /* Create UAS transaction for this request. */
     status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
@@ -556,7 +559,7 @@ on_error:
 	--dlg->tsx_count;
     }
 
-    if (inc_lock) {
+    if (lock_incremented) {
         pjsip_dlg_dec_lock(dlg);
     } else {
         destroy_dialog(dlg, PJ_FALSE);
