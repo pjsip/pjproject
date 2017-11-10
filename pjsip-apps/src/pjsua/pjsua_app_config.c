@@ -267,9 +267,9 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 
 	// Trim ending newlines
 	len = strlen(line);
-	if (line[len-1]=='\n')
+	if (len > 0 && line[len-1]=='\n')
 	    line[--len] = '\0';
-	if (line[len-1]=='\r')
+	if (len > 0 && line[len-1]=='\r')
 	    line[--len] = '\0';
 
 	if (len==0) continue;
