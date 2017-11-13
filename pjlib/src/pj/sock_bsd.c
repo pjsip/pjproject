@@ -229,7 +229,7 @@ PJ_DEF(pj_uint32_t) pj_htonl(pj_uint32_t hostlong)
  */
 PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
 {
-#if 0 //!defined(PJ_LINUX) && !defined(PJ_LINUX_KERNEL)
+#if 0
     return inet_ntoa(*(struct in_addr*)&inaddr);
 #else
     struct in_addr addr;

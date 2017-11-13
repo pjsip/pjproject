@@ -546,9 +546,6 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 #           elif (defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0)
                 bytes_read = read(h->fd, read_op->buf, bytes_read);
                 rc = (bytes_read >= 0) ? PJ_SUCCESS : pj_get_os_error();
-#	    elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
-                bytes_read = sys_read(h->fd, read_op->buf, bytes_read);
-                rc = (bytes_read >= 0) ? PJ_SUCCESS : -bytes_read;
 #           else
 #               error "Implement read() for this platform!"
 #           endif

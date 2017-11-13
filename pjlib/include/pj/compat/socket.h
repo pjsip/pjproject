@@ -185,34 +185,6 @@
 #undef sin_zero
 
 /*
- * Linux kernel specifics
- */
-#if defined(PJ_LINUX_KERNEL)
-#   include <linux/net.h>
-#   include <asm/ioctls.h>		/* FIONBIO	*/
-#   include <linux/syscalls.h>	/* sys_select() */
-#   include <asm/uaccess.h>	/* set/get_fs()	*/
-
-    typedef int socklen_t;
-#   define getsockopt  sys_getsockopt
-
-    /*
-     * Wrapper for select() in Linux kernel.
-     */
-    PJ_INLINE(int) select(int n, fd_set *inp, fd_set *outp, fd_set *exp,
-		          struct timeval *tvp)
-    {
-        int count;
-        mm_segment_t oldfs = get_fs();
-        set_fs(KERNEL_DS);
-        count = sys_select(n, inp, outp, exp, tvp);
-        set_fs(oldfs);
-        return count;
-    }
-#endif	/* PJ_LINUX_KERNEL */
-
-
-/*
  * This will finally be obsoleted, since it should be declared in
  * os_auto.h
  */

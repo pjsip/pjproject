@@ -28,13 +28,6 @@
 #if defined(PJ_HAS_ASSERT_H) && PJ_HAS_ASSERT_H != 0
 #  include <assert.h>
 
-#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
-#  define assert(expr) do { \
-			if (!(expr)) \
-			  printk("!!ASSERTION FAILED: [%s:%d] \"" #expr "\"\n",\
-				 __FILE__, __LINE__); \
-		       } while (0)
-
 #else
 #  warning "assert() is not implemented"
 #  define assert(expr)

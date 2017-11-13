@@ -115,12 +115,6 @@
 #   define PJ_WIN32 1
 #   include <pj/compat/os_win32.h>
 
-#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
-    /*
-     * Linux kernel
-     */
-#  include <pj/compat/os_linux_kernel.h>
-
 #elif defined(PJ_LINUX) || defined(linux) || defined(__linux)
     /*
      * Linux

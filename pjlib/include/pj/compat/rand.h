@@ -44,20 +44,6 @@
 #      define platform_rand rand
 #  endif
 
-#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
-   /*
-    * Linux kernel mode random number generator.
-    */
-#  include <linux/random.h>
-#  define platform_srand(seed)
-
-   PJ_INLINE(int) platform_rand(void)
-   {
-     int value;
-     get_random_bytes((void*)&value, sizeof(value));
-     return value;
-   }
-
 #else
 #  warning "platform_rand() is not implemented"
 #  define platform_rand()	1

@@ -31,21 +31,6 @@
 #   define PJ_HIGHPREC_VALUE_IS_ZERO(a)     (a==0)
 #   define pj_highprec_mod(a,b)             (a=fmod(a,b))
 
-#elif defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL != 0
-
-#   include <asm/div64.h>
-    
-    typedef pj_int64_t pj_highprec_t;
-
-#   define pj_highprec_div(a1,a2)   do_div(a1,a2)
-#   define pj_highprec_mod(a1,a2)   (a1=do_mod(a1, a2))
-
-    PJ_INLINE(pj_int64_t) do_mod( pj_int64_t a1, pj_int64_t a2)
-    {
-	return do_div(a1,a2);
-    }
-    
-    
 #elif defined(PJ_HAS_INT64) && PJ_HAS_INT64 != 0
     /*
      * Next choice is to use 64-bit arithmatics.

@@ -37,109 +37,21 @@
 #include <pj/compat/socket.h>
 #include <pj/rand.h>
 
-#if !defined(PJ_LINUX_KERNEL) || PJ_LINUX_KERNEL==0
-    /*
-     * Linux user mode
-     */
-#   include <sys/epoll.h>
-#   include <errno.h>
-#   include <unistd.h>
+#include <sys/epoll.h>
+#include <errno.h>
+#include <unistd.h>
 
-#   define epoll_data		data.ptr
-#   define epoll_data_type	void*
-#   define ioctl_val_type	unsigned long
-#   define getsockopt_val_ptr	int*
-#   define os_getsockopt	getsockopt
-#   define os_ioctl		ioctl
-#   define os_read		read
-#   define os_close		close
-#   define os_epoll_create	epoll_create
-#   define os_epoll_ctl		epoll_ctl
-#   define os_epoll_wait	epoll_wait
-#else
-    /*
-     * Linux kernel mode.
-     */
-#   include <linux/config.h>
-#   include <linux/version.h>
-#   if defined(MODVERSIONS)
-#	include <linux/modversions.h>
-#   endif
-#   include <linux/kernel.h>
-#   include <linux/poll.h>
-#   include <linux/eventpoll.h>
-#   include <linux/syscalls.h>
-#   include <linux/errno.h>
-#   include <linux/unistd.h>
-#   include <asm/ioctls.h>
-    enum EPOLL_EVENTS
-    {
-	EPOLLIN = 0x001,
-	EPOLLOUT = 0x004,
-	EPOLLERR = 0x008,
-    };
-#   define os_epoll_create		sys_epoll_create
-    static int os_epoll_ctl(int epfd, int op, int fd, struct epoll_event *event)
-    {
-	long rc;
-	mm_segment_t oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	rc = sys_epoll_ctl(epfd, op, fd, event);
-	set_fs(oldfs);
-	if (rc) {
-	    errno = -rc;
-	    return -1;
-	} else {
-	    return 0;
-	}
-    }
-    static int os_epoll_wait(int epfd, struct epoll_event *events,
-			  int maxevents, int timeout)
-    {
-	int count;
-	mm_segment_t oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	count = sys_epoll_wait(epfd, events, maxevents, timeout);
-	set_fs(oldfs);
-	return count;
-    }
-#   define os_close		sys_close
-#   define os_getsockopt	pj_sock_getsockopt
-    static int os_read(int fd, void *buf, size_t len)
-    {
-	long rc;
-	mm_segment_t oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	rc = sys_read(fd, buf, len);
-	set_fs(oldfs);
-	if (rc) {
-	    errno = -rc;
-	    return -1;
-	} else {
-	    return 0;
-	}
-    }
-#   define socklen_t		unsigned
-#   define ioctl_val_type	unsigned long
-    int ioctl(int fd, int opt, ioctl_val_type value);
-    static int os_ioctl(int fd, int opt, ioctl_val_type value)
-    {
-	int rc;
-        mm_segment_t oldfs = get_fs();
-	set_fs(KERNEL_DS);
-	rc = ioctl(fd, opt, value);
-	set_fs(oldfs);
-	if (rc < 0) {
-	    errno = -rc;
-	    return rc;
-	} else
-	    return rc;
-    }
-#   define getsockopt_val_ptr	char*
-
-#   define epoll_data		data
-#   define epoll_data_type	__u32
-#endif
+#define epoll_data		data.ptr
+#define epoll_data_type		void*
+#define ioctl_val_type		unsigned long
+#define getsockopt_val_ptr	int*
+#define os_getsockopt		getsockopt
+#define os_ioctl		ioctl
+#define os_read			read
+#define os_close		close
+#define os_epoll_create		epoll_create
+#define os_epoll_ctl		epoll_ctl
+#define os_epoll_wait		epoll_wait
 
 #define THIS_FILE   "ioq_epoll"
 
@@ -201,11 +113,7 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
  */
 PJ_DEF(const char*) pj_ioqueue_name(void)
 {
-#if defined(PJ_LINUX_KERNEL) && PJ_LINUX_KERNEL!=0
-	return "epoll-kernel";
-#else
-	return "epoll";
-#endif
+    return "epoll";
 }
 
 /*
