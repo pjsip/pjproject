@@ -120,17 +120,17 @@ PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart,
 {
     PJ_CHECK_STACK();
 
-    /* Buffer validation. Must be NULL terminated.
-     * See ticket #2063.
-     */
-    pj_assert(*scanner->end == 0);
-
     scanner->begin = scanner->curptr = bufstart;
     scanner->end = bufstart + buflen;
     scanner->line = 1;
     scanner->start_line = scanner->begin;
     scanner->callback = callback;
     scanner->skip_ws = options;
+
+    /* Buffer validation. Must be NULL terminated.
+     * See ticket #2063.
+     */
+    // pj_assert(*(scanner->end) == 0);
 
     if (scanner->skip_ws) 
 	pj_scan_skip_whitespace(scanner);
