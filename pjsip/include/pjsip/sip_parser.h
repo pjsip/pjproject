@@ -196,6 +196,8 @@ PJ_DECL(pj_status_t) pjsip_unregister_uri_parser( const char *scheme,
 
 /**
  * Parse an URI in the input and return the correct instance of URI.
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
  *
  * @param pool		The pool to get memory allocations.
  * @param buf		The input buffer, which MUST be NULL terminated.
@@ -216,6 +218,8 @@ PJ_DECL(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
 
 /**
  * Parse SIP status line.
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
  *
  * @param buf		Text buffer to parse, which MUST be NULL terminated.
  * @param size		The size of the buffer, excluding the NULL character.
@@ -233,6 +237,9 @@ PJ_DECL(pj_status_t) pjsip_parse_status_line(char *buf, pj_size_t size,
  * all headers, and the message body. The message body however is only 
  * treated as a text block, ie. the function will not try to parse the content
  * of the body.
+ *
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
  *
  * @param pool		The pool to allocate memory.
  * @param buf		The input buffer, which MUST be NULL terminated.
@@ -256,6 +263,9 @@ PJ_DECL(pjsip_msg *) pjsip_parse_msg( pj_pool_t *pool,
  *
  * This function is normally called by the transport layer.
  *
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
+ *
  * @param buf		The input buffer, which MUST be NULL terminated.
  * @param size		The length of the string (not counting NULL terminator).
  * @param rdata         The receive data buffer to store the message and
@@ -269,6 +279,7 @@ PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
 /**
  * Check incoming packet to see if a (probably) valid SIP message has been 
  * received.
+ * Note that the input string buffer MUST be NULL terminated.
  *
  * @param buf		The input buffer, which must be NULL terminated.
  * @param size		The buffer size.
@@ -287,6 +298,9 @@ PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf,
  * Parse the content of a header and return the header instance.
  * This function parses the content of a header (ie. part after colon) according
  * to the expected name, and will return the correct instance of header.
+ *
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator). 
  *
  * @param pool		Pool to allocate memory for the header.
  * @param hname		Header name which is used to find the correct function
@@ -314,9 +328,12 @@ PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
  * a newline (as in SIP message) or ampersand mark (as in URI). This separator
  * is optional for the last header.
  *
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
+ *
  * @param pool		The pool.
  * @param input		The input text to parse, which must be NULL terminated.
- * @param size		The text length.
+ * @param size		The text length (not counting NULL terminator).
  * @param hlist		The header list to store the parsed headers.
  *			This list must have been initialized before calling 
  *			this function.

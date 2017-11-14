@@ -22,8 +22,11 @@
 #include <pj/string.h>
 #include <pj/except.h>
 #include <pj/os.h>
+#include <pj/log.h>
 #include <pj/errno.h>
 #include <pj/assert.h>
+
+#define THIS_FILE   "scanner.c"
 
 #define PJ_SCAN_IS_SPACE(c)		((c)==' ' || (c)=='\t')
 #define PJ_SCAN_IS_NEWLINE(c)		((c)=='\r' || (c)=='\n')
@@ -116,6 +119,11 @@ PJ_DEF(void) pj_scan_init( pj_scanner *scanner, char *bufstart,
 			   pj_syn_err_func_ptr callback )
 {
     PJ_CHECK_STACK();
+
+    /* Buffer validation. Must be NULL terminated.
+     * See ticket #2063.
+     */
+    pj_assert(*scanner->end == 0);
 
     scanner->begin = scanner->curptr = bufstart;
     scanner->end = bufstart + buflen;

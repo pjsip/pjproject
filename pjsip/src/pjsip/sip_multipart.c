@@ -662,7 +662,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 	     */
 	    if (*(end_body-1) == '\n')
 	        --end_body;
-	    if (*(end_body-1) == '\r')
+	    if (end_body > start_body && *(end_body-1) == '\r')
 	        --end_body;
         }
 
