@@ -1855,8 +1855,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	
 	    status = pjmedia_delay_buf_get(conf_port->delay_buf,
 				  (pj_int16_t*)frame->buf);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		conf_port->rx_level = 0;
 		continue;
+	    }		
 
 	} else {
 
@@ -1876,16 +1878,22 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 				     status));
 		conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 		 */
+		conf_port->rx_level = 0;
 		continue;
 	    }
 
 	    /* Check that the port is not removed when we call get_frame() */
-	    if (conf->ports[i] == NULL)
+	    if (conf->ports[i] == NULL) {
+		conf_port->rx_level = 0;
 		continue;
+	    }
+		
 
 	    /* Ignore if we didn't get any frame */
-	    if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO)
+	    if (frame_type != PJMEDIA_FRAME_TYPE_AUDIO) {
+		conf_port->rx_level = 0;
 		continue;
+	    }		
 	}
 
 	p_in = (pj_int16_t*) frame->buf;
