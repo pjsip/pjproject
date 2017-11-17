@@ -279,10 +279,11 @@ PJ_DECL(pjsip_msg *) pjsip_parse_rdata( char *buf, pj_size_t size,
 /**
  * Check incoming packet to see if a (probably) valid SIP message has been 
  * received.
- * Note that the input string buffer MUST be NULL terminated.
+ * Note that the input string buffer MUST be NULL terminated and have
+ * length at least size+1 (size MUST NOT include the NULL terminator).
  *
  * @param buf		The input buffer, which must be NULL terminated.
- * @param size		The buffer size.
+ * @param size		The length of the string (not counting NULL terminator).
  * @param is_datagram	Put non-zero if transport is datagram oriented.
  * @param msg_size	[out] If message is valid, this parameter will contain
  *			the size of the SIP message (including body, if any).

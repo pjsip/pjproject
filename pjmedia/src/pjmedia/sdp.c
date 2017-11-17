@@ -275,6 +275,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 	attr->value.ptr[attr->value.slen] = '\0';
     }
 
+    /* The buffer passed to the scanner is not guaranteed to be NULL
+     * terminated, but should be safe. See ticket #2063.
+     */    
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
 		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 
@@ -385,6 +388,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
      *	a=rtcp:<port> [nettype addrtype address]
      */
 
+    /* The buffer passed to the scanner is not guaranteed to be NULL
+     * terminated, but should be safe. See ticket #2063.
+     */
     pj_scan_init(&scanner, (char*)attr->value.ptr, attr->value.slen,
 		 PJ_SCAN_AUTOSKIP_WS, &on_scanner_error);
 

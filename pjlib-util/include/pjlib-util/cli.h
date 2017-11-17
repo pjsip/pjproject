@@ -400,12 +400,14 @@ PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
  * Create a new complete command specification from an XML node text and
  * register it to the CLI application.
  *
+ * Note that the input string MUST be NULL terminated.
+ *
  * @param cli		The CLI application.
  * @param group		Optional group to which this command will be added
  * 			to, or specify NULL if this command is a root
  * 			command.
  * @param xml		Input string containing XML node text for the
- * 			command.
+ * 			command, MUST be NULL terminated.
  * @param handler	Function handler for the command. This must be NULL
  * 			if the command specifies a command group.
  * @param p_cmd		Optional pointer to store the newly created

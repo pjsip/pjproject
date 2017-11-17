@@ -877,6 +877,9 @@ PJ_DEF(pj_status_t) pjsip_find_msg( const char *buf, pj_size_t size,
 	    pj_scanner scanner;
 	    PJ_USE_EXCEPTION;
 
+	    /* The buffer passed to the scanner is not NULL terminated,
+             * but should be safe. See ticket #2063.
+	     */ 
 	    pj_scan_init(&scanner, (char*)line, hdr_end-line, 
 			 PJ_SCAN_AUTOSKIP_WS_HEADER, &on_syntax_error);
 

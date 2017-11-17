@@ -73,9 +73,12 @@ struct pj_xml_node
  * XML comments ("<!--"), however such constructs will be ignored and will not 
  * be included in the resulted XML node tree.
  *
+ * Note that the XML message input buffer MUST be NULL terminated and have
+ * length at least len+1 (len MUST NOT include the NULL terminator).
+ *
  * @param pool	    Pool to allocate memory from.
- * @param msg	    The XML message to parse.
- * @param len	    The length of the message.
+ * @param msg	    The XML message to parse, MUST be NULL terminated.
+ * @param len	    The length of the message, not including NULL terminator.
  *
  * @return	    XML root node, or NULL if the XML document can not be parsed.
  */

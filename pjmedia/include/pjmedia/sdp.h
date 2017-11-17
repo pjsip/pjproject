@@ -645,9 +645,12 @@ typedef struct pjmedia_sdp_session pjmedia_sdp_session;
 /**
  * Parse SDP message.
  *
+ * Note that the input message buffer MUST be NULL terminated and have
+ * length at least len+1 (len MUST NOT include the NULL terminator).
+ *
  * @param pool	    The pool to allocate SDP session description.
- * @param buf	    The message buffer.
- * @param len	    The length of the message.
+ * @param buf	    The message buffer, MUST be NULL terminated.
+ * @param len	    The length of the message, excluding NULL terminator.
  * @param p_sdp	    Pointer to receive the SDP session descriptor.
  *
  * @return	    PJ_SUCCESS if message was successfully parsed into

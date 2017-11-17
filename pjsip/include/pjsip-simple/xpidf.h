@@ -60,9 +60,12 @@ PJ_DECL(pjxpidf_pres*) pjxpidf_create(pj_pool_t *pool, const pj_str_t *uri);
 /**
  * Parse XPIDF document.
  *
+ * Note that the input text buffer MUST be NULL terminated and have
+ * length at least len+1 (len MUST NOT include the NULL terminator).
+ *
  * @param pool	    Pool.
- * @param text	    Input text.
- * @param len	    Length of input text.
+ * @param text	    Input text, MUST be NULL terminated.
+ * @param len	    Length of input text, NOT including the NULL terminator.
  *
  * @return	    XPIDF document.
  */
