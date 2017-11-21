@@ -1,30 +1,4 @@
 Notes:
 
-* Source code for libyuv from https://chromium.googlesource.com/libyuv/libyuv/ dated 27 July 2017.
+* Source code for libyuv from https://chromium.googlesource.com/libyuv/libyuv/ dated 17 November 2017.
 
-* All code is compilable, except for compare_win.cc
-  - Use older version (https://chromium.googlesource.com/libyuv/libyuv/+/baf6a3c1bd385e7ffe6b7634560e71fb49e4f589%5E%21/)
-    Since there's a compiler error on:
-    --------------------------------------------------------------------------------------
-    pmulld      xmm0,xmm6
-    --------------------------------------------------------------------------------------
-
-  - On VS2015, error C2024: 'alignas' attribute applies to variables, data members and tag types only
-    --------------------------------------------------------------------------------------
-    __declspec(naked) __declspec(align(16))
-
-    Change to :
-
-    __declspec(naked)
-    --------------------------------------------------------------------------------------
-
-* Added these lines to file include/libyuv/basic_types.h:
-  --
-  #if _MSC_VER==1400
-  #   include <stdint.h>  // for uint8_t
-  #endif
-  ...
-  #if defined(_MSC_VER)
-  #  pragma warning(disable:4996) // This function or variable may be unsafe.
-  #endif
-  --

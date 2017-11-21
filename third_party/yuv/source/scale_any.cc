@@ -33,8 +33,14 @@ extern "C" {
 #ifdef HAS_SCALEFILTERCOLS_NEON
 CANY(ScaleFilterCols_Any_NEON, ScaleFilterCols_NEON, ScaleFilterCols_C, 1, 7)
 #endif
+#ifdef HAS_SCALEFILTERCOLS_MSA
+CANY(ScaleFilterCols_Any_MSA, ScaleFilterCols_MSA, ScaleFilterCols_C, 1, 15)
+#endif
 #ifdef HAS_SCALEARGBCOLS_NEON
 CANY(ScaleARGBCols_Any_NEON, ScaleARGBCols_NEON, ScaleARGBCols_C, 4, 7)
+#endif
+#ifdef HAS_SCALEARGBCOLS_MSA
+CANY(ScaleARGBCols_Any_MSA, ScaleARGBCols_MSA, ScaleARGBCols_C, 4, 3)
 #endif
 #ifdef HAS_SCALEARGBFILTERCOLS_NEON
 CANY(ScaleARGBFilterCols_Any_NEON,
@@ -42,6 +48,13 @@ CANY(ScaleARGBFilterCols_Any_NEON,
      ScaleARGBFilterCols_C,
      4,
      3)
+#endif
+#ifdef HAS_SCALEARGBFILTERCOLS_MSA
+CANY(ScaleARGBFilterCols_Any_MSA,
+     ScaleARGBFilterCols_MSA,
+     ScaleARGBFilterCols_C,
+     4,
+     7)
 #endif
 #undef CANY
 
@@ -227,6 +240,26 @@ SDANY(ScaleRowDown34_1_Box_Any_NEON,
       4 / 3,
       1,
       23)
+#endif
+#ifdef HAS_SCALEROWDOWN34_MSA
+SDANY(ScaleRowDown34_Any_MSA,
+      ScaleRowDown34_MSA,
+      ScaleRowDown34_C,
+      4 / 3,
+      1,
+      47)
+SDANY(ScaleRowDown34_0_Box_Any_MSA,
+      ScaleRowDown34_0_Box_MSA,
+      ScaleRowDown34_0_Box_C,
+      4 / 3,
+      1,
+      47)
+SDANY(ScaleRowDown34_1_Box_Any_MSA,
+      ScaleRowDown34_1_Box_MSA,
+      ScaleRowDown34_1_Box_C,
+      4 / 3,
+      1,
+      47)
 #endif
 #ifdef HAS_SCALEROWDOWN38_SSSE3
 SDANY(ScaleRowDown38_Any_SSSE3,
