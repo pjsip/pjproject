@@ -1977,11 +1977,13 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 		/* Check if normalization adjustment needed. */
 		if (mix_buf_min < MIN_LEVEL || mix_buf_max > MAX_LEVEL) {
+		    int tmp_adj;
+
 		    if (-mix_buf_min > mix_buf_max)
 			mix_buf_max = -mix_buf_min;
 
 		    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf_max; */
-		    int tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
+		    tmp_adj = (MAX_LEVEL<<7) / mix_buf_max;
 		    if (tmp_adj < listener->mix_adj)
 			listener->mix_adj = tmp_adj;
 		}
