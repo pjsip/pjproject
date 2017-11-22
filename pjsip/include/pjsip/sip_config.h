@@ -157,6 +157,19 @@ typedef struct pjsip_cfg_t
 	 */
 	pj_bool_t disable_secure_dlg_check;
 
+	/**
+	 * Encode SIP headers in their short forms to reduce size. By default,
+	 * SIP headers in outgoing messages will be encoded in their full names.
+	 * If this option is enabled, then SIP headers for outgoing messages
+	 * will be encoded in their short forms, to reduce message size. 
+	 * Note that this does not affect the ability of PJSIP to parse incoming
+	 * SIP messages, as the parser always supports parsing both the long
+	 * and short version of the headers.
+	 *
+	 * Default is PJSIP_ENCODE_SHORT_HNAME
+	 */
+	pj_bool_t use_compact_form;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -464,18 +477,8 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * SIP messages, as the parser always supports parsing both the long
  * and short version of the headers.
  *
- * Note that there is also an undocumented variable defined in sip_msg.c
- * to control whether compact form should be used for encoding SIP
- * headers. The default value of this variable is PJSIP_ENCODE_SHORT_HNAME.
- * To change PJSIP behavior during run-time, application can use the 
- * following construct:
- *
- \verbatim
-   extern pj_bool_t pjsip_use_compact_form;
- 
-   // enable compact form
-   pjsip_use_compact_form = PJ_TRUE;
- \endverbatim
+ * This option can also be controlled at run-time by the
+ * \a use_compact_form setting in pjsip_cfg_t.
  *
  * Default is 0 (no)
  */

@@ -1423,7 +1423,7 @@ static pj_status_t get_net_interface(pjsip_transport_type_e tp_type,
     pj_sockaddr itf_addr;
     pj_status_t status = -1;
 
-    af = (tp_type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
+    af = (tp_type & PJSIP_TRANSPORT_IPV6)? pj_AF_INET6() : pj_AF_INET();
 
     if (pjsip_cfg()->endpt.resolve_hostname_to_get_interface) {
 	status = pj_getipinterface(af, dst, &itf_addr, PJ_TRUE, NULL);

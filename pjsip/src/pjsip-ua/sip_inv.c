@@ -4664,7 +4664,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
 	       tsx->state == PJSIP_TSX_STATE_TRYING &&
-	       pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0)
+	       pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0)
     {
 	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 	pjsip_tx_data *tdata;

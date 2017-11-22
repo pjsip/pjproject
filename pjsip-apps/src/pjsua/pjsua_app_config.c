@@ -820,11 +820,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_USE_COMPACT_FORM:
 	    /* enable compact form - from Ticket #342 */
             {
-		extern pj_bool_t pjsip_use_compact_form;
 		extern pj_bool_t pjsip_include_allow_hdr_in_dlg;
 		extern pj_bool_t pjmedia_add_rtpmap_for_static_pt;
 
-		pjsip_use_compact_form = PJ_TRUE;
+		pjsip_cfg()->endpt.use_compact_form = PJ_TRUE;
 		/* do not transmit Allow header */
 		pjsip_include_allow_hdr_in_dlg = PJ_FALSE;
 		/* Do not include rtpmap for static payload types (<96) */
@@ -1747,7 +1746,6 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     unsigned i;
     pj_str_t cfg;
     char line[128];
-    extern pj_bool_t pjsip_use_compact_form;
 
     PJ_UNUSED_ARG(max);
 
@@ -2147,7 +2145,7 @@ int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 	pj_strcat2(&cfg, "--norefersub\n");
     }
 
-    if (pjsip_use_compact_form)
+    if (pjsip_cfg()->endpt.use_compact_form)
     {
 	pj_strcat2(&cfg, "--use-compact-form\n");
     }

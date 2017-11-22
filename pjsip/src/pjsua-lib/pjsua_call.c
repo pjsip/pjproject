@@ -3872,7 +3872,7 @@ pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
 	pjsip_dlg_inc_lock(forked_dlg);
 
 	/* Disconnect the call */
-	status = pjsip_dlg_create_request(forked_dlg, &pjsip_bye_method,
+	status = pjsip_dlg_create_request(forked_dlg, pjsip_get_bye_method(),
 					  -1, &bye);
 	if (status == PJ_SUCCESS) {
 	    status = pjsip_dlg_send_request(forked_dlg, bye, -1, NULL);
@@ -4498,7 +4498,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	if (status_line.code/100 == 2 && !is_last) {
 	    pjsip_tx_data *tdata;
 
-	    status = pjsip_evsub_initiate(sub, &pjsip_subscribe_method,
+	    status = pjsip_evsub_initiate(sub, pjsip_get_subscribe_method(),
 					  0, &tdata);
 	    if (status == PJ_SUCCESS)
 		status = pjsip_evsub_send_request(sub, tdata);
@@ -4891,7 +4891,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    }
 	}
     } else if (tsx->role == PJSIP_ROLE_UAC &&
-               pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0 &&
+               pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0 &&
                tsx->state >= PJSIP_TSX_STATE_COMPLETED &&
 	       e->body.tsx_state.prev_state < PJSIP_TSX_STATE_COMPLETED &&
                (!PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300) &&

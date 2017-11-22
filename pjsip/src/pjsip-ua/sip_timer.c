@@ -70,9 +70,6 @@ struct pjsip_timer
 						     refresher		    */
 };
 
-/* External global vars */
-extern pj_bool_t pjsip_use_compact_form;
-
 /* Local functions & vars */
 static void stop_timer(pjsip_inv_session *inv);
 static void start_timer(pjsip_inv_session *inv);
@@ -124,7 +121,8 @@ static int se_hdr_print(pjsip_sess_expires_hdr *hdr,
     char *endbuf = buf+size;
     pj_ssize_t printed;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
-    const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
+    const pj_str_t *hname = pjsip_cfg()->endpt.use_compact_form? 
+			    &hdr->sname : &hdr->name;
 
     /* Print header name and value */
     if ((endbuf - p) < (hname->slen + 16))

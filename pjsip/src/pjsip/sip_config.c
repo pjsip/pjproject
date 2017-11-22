@@ -34,7 +34,8 @@ pjsip_cfg_t pjsip_sip_cfg_var =
        PJSIP_FOLLOW_EARLY_MEDIA_FORK,
        PJSIP_REQ_HAS_VIA_ALIAS,
        PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE,
-       0
+       0,
+       PJSIP_ENCODE_SHORT_HNAME
     },
 
     /* Transaction settings */

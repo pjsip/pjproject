@@ -1577,7 +1577,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 	    if (event && event->type==PJSIP_EVENT_TSX_STATE) {
 		const pjsip_transaction *tsx = event->body.tsx_state.tsx;
 		if (pjsip_method_cmp(&tsx->method, 
-				     &pjsip_subscribe_method)==0)
+				     pjsip_get_subscribe_method())==0)
 		{
 		    buddy->term_code = tsx->status_code;
 		    switch (tsx->status_code) {
@@ -1596,7 +1596,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 			break;
 		    }
 		} else if (pjsip_method_cmp(&tsx->method,
-					    &pjsip_notify_method)==0)
+					    pjsip_get_notify_method())==0)
 		{
 		    if (pj_stricmp2(&buddy->term_reason, "deactivated")==0 ||
 			pj_stricmp2(&buddy->term_reason, "timeout")==0) {
@@ -2275,7 +2275,8 @@ static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
     pj_str_t MWI = { "message-summary", 15 };
     pjsip_event_hdr *eh;
 
-    if (pjsip_method_cmp(&msg->line.req.method, &pjsip_notify_method)!=0) {
+    if (pjsip_method_cmp(&msg->line.req.method, pjsip_get_notify_method())!=0) 
+    {
 	/* Only interested with NOTIFY request */
 	return PJ_FALSE;
     }
