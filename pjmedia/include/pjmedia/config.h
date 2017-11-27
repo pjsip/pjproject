@@ -74,6 +74,16 @@
 #   define PJMEDIA_CONF_SWITCH_BOARD_BUF_SIZE    PJMEDIA_MAX_MTU
 #endif
 
+/**
+ * Specify whether the conference bridge uses AGC, an automatic adjustment to
+ * avoid dramatic change in the signal level which can cause noise.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJMEDIA_CONF_USE_AGC
+#   define PJMEDIA_CONF_USE_AGC    	    1
+#endif
+
 
 /*
  * Types of sound stream backends.

@@ -75,16 +75,20 @@ static FILE *fhnd_rec;
  * signal level of the ports, so that sudden change in signal level
  * in the port does not cause misaligned signal (which causes noise).
  */
-#define ATTACK_A    (conf->clock_rate / conf->samples_per_frame)
-#define ATTACK_B    1
-#define DECAY_A	    0
-#define DECAY_B	    1
+#if defined(PJMEDIA_CONF_USE_AGC) && PJMEDIA_CONF_USE_AGC != 0
+#   define ATTACK_A     ((conf->clock_rate / conf->samples_per_frame) >> 4)
+#   define ATTACK_B	1
+#   define DECAY_A	0
+#   define DECAY_B	1
 
-#define SIMPLE_AGC(last, target) \
+#   define SIMPLE_AGC(last, target) \
     if (target >= last) \
 	target = (ATTACK_A*(last+1)+ATTACK_B*target)/(ATTACK_A+ATTACK_B); \
     else \
 	target = (DECAY_A*last+DECAY_B*target)/(DECAY_A+DECAY_B)
+#else
+#   define SIMPLE_AGC(last, target)
+#endif
 
 #define MAX_LEVEL   (32767)
 #define MIN_LEVEL   (-32768)
