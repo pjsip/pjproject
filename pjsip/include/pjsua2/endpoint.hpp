@@ -466,7 +466,7 @@ struct UaConfig : public PersistentObject
      * route set for outgoing requests will consists of the outbound proxies
      * and the proxy configured in the account.
      */
-    StringVector	outboundProxy;
+    StringVector	outboundProxies;
 
     /**
      * Optional user agent string (default empty). If it's empty, no
@@ -503,7 +503,6 @@ struct UaConfig : public PersistentObject
      *
      * Default: FALSE
      */
-
     bool	    	stunTryIpv6;
 
     /**

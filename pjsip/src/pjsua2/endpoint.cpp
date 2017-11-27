@@ -174,7 +174,7 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
 	this->stunServer.push_back(pj2Str(ua_cfg.stun_srv[i]));
     }
     for (i=0; i<ua_cfg.outbound_proxy_cnt; ++i) {
-	this->outboundProxy.push_back(pj2Str(ua_cfg.outbound_proxy[i]));
+	this->outboundProxies.push_back(pj2Str(ua_cfg.outbound_proxy[i]));
     }
 
     this->stunTryIpv6 = PJ2BOOL(ua_cfg.stun_try_ipv6);
@@ -208,10 +208,10 @@ pjsua_config UaConfig::toPj() const
     }
     pua_cfg.stun_srv_cnt = i;
 
-    for (i=0; i<this->outboundProxy.size() &&
+    for (i=0; i<this->outboundProxies.size() &&
     	      i<PJ_ARRAY_SIZE(pua_cfg.outbound_proxy); ++i)
     {
-	pua_cfg.outbound_proxy[i] = str2Pj(this->outboundProxy[i]);
+	pua_cfg.outbound_proxy[i] = str2Pj(this->outboundProxies[i]);
     }
     pua_cfg.outbound_proxy_cnt= i;
 
