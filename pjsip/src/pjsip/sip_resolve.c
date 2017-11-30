@@ -34,8 +34,6 @@
 
 #define THIS_FILE   "sip_resolve.c"
 
-#define ADDR_MAX_COUNT	    8
-
 struct naptr_target
 {
     pj_str_t		    res_type;	    /**< e.g. "_sip._udp"   */
@@ -272,9 +270,11 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
     if (ip_addr_ver || resolver->res == NULL) {
 	char addr_str[PJ_INET6_ADDRSTRLEN+10];
 	pj_uint16_t srv_port;
+	unsigned i;
 
 	if (ip_addr_ver != 0) {
 	    /* Target is an IP address, no need to resolve */
+	    svr_addr.count = 1;
 	    if (ip_addr_ver == 4) {
 	        if (af == pj_AF_INET6()) {
 	            /* Generate a synthesized IPv6 address, if possible. */
@@ -311,7 +311,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 			     &svr_addr.entry[0].addr.ipv6.sin6_addr);
 	    }
 	} else {
-	    pj_addrinfo ai;
+	    pj_addrinfo ai[PJSIP_MAX_RESOLVED_ADDRESSES];
 	    unsigned count;
 
 	    PJ_LOG(5,(THIS_FILE,
@@ -323,8 +323,8 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		      pjsip_transport_get_type_name(target->type)));
 
 	    /* Resolve */
-	    count = 1;
-	    status = pj_getaddrinfo(af, &target->addr.host, &count, &ai);
+	    count = PJSIP_MAX_RESOLVED_ADDRESSES;
+	    status = pj_getaddrinfo(af, &target->addr.host, &count, ai);
 	    if (status != PJ_SUCCESS) {
 		/* "Normalize" error to PJ_ERESOLVE. This is a special error
 		 * because it will be translated to SIP status 502 by
@@ -334,42 +334,52 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		goto on_error;
 	    }
 
-	    pj_sockaddr_cp(&svr_addr.entry[0].addr, &ai.ai_addr);
-	    if (af == pj_AF_UNSPEC())
-		af = ai.ai_addr.addr.sa_family;
+	    svr_addr.count = count;
+	    for (i = 0; i < count; i++) {
+	        pj_sockaddr_cp(&svr_addr.entry[i].addr, &ai[i].ai_addr);
+	    }
 	}
 
-	/* After address resolution, update IPv6 bitflag in transport type. */
-	if (af == pj_AF_INET6())
-	    type |= PJSIP_TRANSPORT_IPV6;
+	for (i = 0; i < svr_addr.count; i++) {
+	    /* After address resolution, update IPv6 bitflag in
+	     * transport type.
+	     */
+	    af = svr_addr.entry[i].addr.addr.sa_family;
+	    if (af == pj_AF_INET6()) {
+	        type |= PJSIP_TRANSPORT_IPV6;
+	    } else {
+	        type &= ~PJSIP_TRANSPORT_IPV6;
+	    }
 
-	/* Set the port number */
-	if (target->addr.port == 0) {
-	   srv_port = (pj_uint16_t)
-		      pjsip_transport_get_default_port_for_type(type);
-	} else {
-	   srv_port = (pj_uint16_t)target->addr.port;
+	    /* Set the port number */
+	    if (target->addr.port == 0) {
+	       srv_port = (pj_uint16_t)
+		          pjsip_transport_get_default_port_for_type(type);
+	    } else {
+	       srv_port = (pj_uint16_t)target->addr.port;
+	    }
+	    pj_sockaddr_set_port(&svr_addr.entry[i].addr, srv_port);
+
+	    PJ_LOG(5,(THIS_FILE, 
+		      "Target '%.*s:%d' type=%s resolved to "
+		      "'%s' type=%s (%s)",
+		      (int)target->addr.host.slen,
+		      target->addr.host.ptr,
+		      target->addr.port,
+		      pjsip_transport_get_type_name(target->type),
+		      pj_sockaddr_print(&svr_addr.entry[i].addr, addr_str,
+				        sizeof(addr_str), 3),
+		      pjsip_transport_get_type_name(type),
+		      pjsip_transport_get_type_desc(type)));
+
+	    svr_addr.entry[i].priority = 0;
+	    svr_addr.entry[i].weight = 0;
+	    svr_addr.entry[i].type = type;
+	    svr_addr.entry[i].addr_len = 
+				pj_sockaddr_get_len(&svr_addr.entry[i].addr);
 	}
-	pj_sockaddr_set_port(&svr_addr.entry[0].addr, srv_port);
 
 	/* Call the callback. */
-	PJ_LOG(5,(THIS_FILE, 
-		  "Target '%.*s:%d' type=%s resolved to "
-		  "'%s' type=%s (%s)",
-		  (int)target->addr.host.slen,
-		  target->addr.host.ptr,
-		  target->addr.port,
-		  pjsip_transport_get_type_name(target->type),
-		  pj_sockaddr_print(&svr_addr.entry[0].addr, addr_str,
-				    sizeof(addr_str), 3),
-		  pjsip_transport_get_type_name(type),
-		  pjsip_transport_get_type_desc(type)));
-	svr_addr.count = 1;
-	svr_addr.entry[0].priority = 0;
-	svr_addr.entry[0].weight = 0;
-	svr_addr.entry[0].type = type;
-	svr_addr.entry[0].addr_len = 
-				pj_sockaddr_get_len(&svr_addr.entry[0].addr);
 	(*cb)(status, token, &svr_addr);
 
 	/* Done. */
