@@ -53,7 +53,10 @@ extern "C" {
     (defined(__x86_64__) || defined(__i386__) || defined(_M_IX86))
 #define HAS_HASHDJB2_SSE41
 #define HAS_SUMSQUAREERROR_SSE2
-#define HAS_HAMMINGDISTANCE_SSE42
+#  if (MSC_VER >= 1400)
+// Visual Studio 2005 doesn't support sse42
+#    define HAS_HAMMINGDISTANCE_SSE42
+#  endif
 #endif
 
 // The following are available for Visual C and clangcl 32 bit:

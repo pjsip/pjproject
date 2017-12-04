@@ -14,9 +14,16 @@
 #include <stddef.h>  // for NULL, size_t
 
 #if defined(_MSC_VER) && (_MSC_VER < 1600)
+#if _MSC_VER==1400
+#   include <stdint.h>  // for uint8_t
+#endif
 #include <sys/types.h>  // for uintptr_t on x86
 #else
 #include <stdint.h>  // for uintptr_t
+#endif
+
+#if defined(_MSC_VER)
+#  pragma warning(disable:4996) // This function or variable may be unsafe.
 #endif
 
 #ifndef GG_LONGLONG
