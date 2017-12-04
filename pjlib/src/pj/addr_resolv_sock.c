@@ -178,6 +178,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = af;
+    hint.ai_socktype = pj_SOCK_DGRAM() | pj_SOCK_STREAM();
 
     rc = getaddrinfo(nodecopy, NULL, &hint, &res);
     if (rc != 0)
