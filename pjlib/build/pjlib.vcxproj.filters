@@ -188,31 +188,16 @@
     <ClCompile Include="..\src\pj\log_writer_printk.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pj\os_core_linux_kernel.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pj\os_core_unix.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\pj\os_error_linux_kernel.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pj\os_error_unix.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pj\os_time_linux_kernel.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pj\os_timestamp_linux.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pj\os_timestamp_linux_kernel.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\pj\pool_policy_kmalloc.c">
-      <Filter>Source Files\Other Targets</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\pj\sock_linux_kernel.c">
       <Filter>Source Files\Other Targets</Filter>
     </ClCompile>
     <ClCompile Include="..\src\pj\symbols.c">
@@ -380,9 +365,6 @@
       <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\compat\os_linux.h">
-      <Filter>Header Files\compat</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pj\compat\os_linux_kernel.h">
       <Filter>Header Files\compat</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pj\compat\os_palmos.h">
