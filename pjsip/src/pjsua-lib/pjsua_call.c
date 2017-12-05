@@ -4409,7 +4409,8 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	}
     }
     /*
-     * On incoming NOTIFY, notify application about call transfer progress.
+     * On incoming NOTIFY or an error response, notify application about call 
+     * transfer progress.
      */
     else if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_ACTIVE ||
 	     pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED)
@@ -4437,44 +4438,51 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    /* Application is not interested with call progress status */
 	    goto on_return;
 	}
-
-	/* This better be a NOTIFY request */
+	
 	if (event->type == PJSIP_EVENT_TSX_STATE &&
 	    event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
 	{
 	    pjsip_rx_data *rdata;
 
 	    rdata = event->body.tsx_state.src.rdata;
-
-	    /* Check if there's body */
 	    msg = rdata->msg_info.msg;
-	    body = msg->body;
-	    if (!body) {
-		PJ_LOG(2,(THIS_FILE,
-			  "Warning: received NOTIFY without message body"));
-		goto on_return;
-	    }
 
-	    /* Check for appropriate content */
-	    if (pj_stricmp2(&body->content_type.type, "message") != 0 ||
-		pj_stricmp2(&body->content_type.subtype, "sipfrag") != 0)
+	    /* This better be a NOTIFY request */
+	    if (pjsip_method_cmp(&msg->line.req.method, 
+				 pjsip_get_notify_method()) == 0) 
 	    {
-		PJ_LOG(2,(THIS_FILE,
-			  "Warning: received NOTIFY with non message/sipfrag "
-			  "content"));
-		goto on_return;
-	    }
+		/* Check if there's body */
+		body = msg->body;
+		if (!body) {
+		    PJ_LOG(2, (THIS_FILE,
+			       "Warning: received NOTIFY without message "
+			       "body"));
+		    goto on_return;
+		}
 
-	    /* Try to parse the content */
-	    status = pjsip_parse_status_line((char*)body->data, body->len,
-					     &status_line);
-	    if (status != PJ_SUCCESS) {
-		PJ_LOG(2,(THIS_FILE,
-			  "Warning: received NOTIFY with invalid "
-			  "message/sipfrag content"));
-		goto on_return;
-	    }
+		/* Check for appropriate content */
+		if (pj_stricmp2(&body->content_type.type, "message") != 0 ||
+		    pj_stricmp2(&body->content_type.subtype, "sipfrag") != 0)
+		{
+		    PJ_LOG(2, (THIS_FILE,
+			       "Warning: received NOTIFY with non "
+			       "message/sipfrag content"));
+		    goto on_return;
+		}
 
+		/* Try to parse the content */
+		status = pjsip_parse_status_line((char*)body->data, body->len,
+						 &status_line);
+		if (status != PJ_SUCCESS) {
+		    PJ_LOG(2, (THIS_FILE,
+			       "Warning: received NOTIFY with invalid "
+			       "message/sipfrag content"));
+		    goto on_return;
+		}
+	    } else {
+		status_line.code = msg->line.status.code;
+		status_line.reason = msg->line.status.reason;
+	    }
 	} else {
 	    status_line.code = 500;
 	    status_line.reason = *pjsip_get_status_text(500);
