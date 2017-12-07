@@ -66,6 +66,8 @@ struct playlist_port
 
     pj_off_t        *fsize_list;
     unsigned        *start_data_list;
+    unsigned        *data_len_list;
+    unsigned        *data_left_list;
     pj_off_t        *fpos_list;
     pj_oshandle_t   *fd_list;	    /* list of file descriptors	*/
     int              current_file;  /* index of current file.	*/
@@ -132,9 +134,17 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 	    /* Should return more appropriate error code here.. */
 	    return PJ_ECANCELLED;
 	}
+
+        if (size > (pj_ssize_t)fport->data_left_list[current_file]) {
+            /* We passed the end of the data chunk,
+             * only count the portion read from the data chunk.
+             */
+            size = (pj_ssize_t)fport->data_left_list[current_file];
+        }
 	
 	size_left -= (pj_uint32_t)size;
-	fport->fpos_list[current_file] += size;
+	fport->data_left_list[current_file] -= (pj_uint32_t)size;
+	fport->fpos_list[current_file] += size;	
 	
 	/* If size is less than size_to_read, it indicates that we've
 	 * encountered EOF. Rewind the file.
@@ -146,6 +156,8 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 		fport->start_data_list[current_file];
 	    pj_file_setpos(fport->fd_list[current_file], 
 			   fport->fpos_list[current_file], PJ_SEEK_SET);
+	    fport->data_left_list[current_file] = 
+					    fport->data_len_list[current_file];
 
 	    /* Move to next file */
 	    current_file++;
@@ -208,6 +220,7 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 		    fport->fpos_list[0] = fport->start_data_list[0];
 		    pj_file_setpos(fport->fd_list[0], fport->fpos_list[0],
 				   PJ_SEEK_SET);
+		    fport->data_left_list[0] = fport->data_len_list[0];
 		}		
 		
 	    } /* if current_file == max_file */
@@ -305,6 +318,20 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     fport->start_data_list = (unsigned*)
 			     pj_pool_alloc(pool, sizeof(unsigned)*file_count);
     if (!fport->start_data_list) {
+	return PJ_ENOMEM;
+    }
+
+    /* Create data len list */
+    fport->data_len_list = (unsigned*)
+			     pj_pool_alloc(pool, sizeof(unsigned)*file_count);
+    if (!fport->data_len_list) {
+	return PJ_ENOMEM;
+    }
+
+    /* Create data left list */
+    fport->data_left_list = (unsigned*)
+			     pj_pool_alloc(pool, sizeof(unsigned)*file_count);
+    if (!fport->data_left_list) {
 	return PJ_ENOMEM;
     }
 
@@ -450,15 +477,19 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	/* Current file position now points to start of data */
 	status = pj_file_getpos(fport->fd_list[index], &pos);
 	fport->start_data_list[index] = (unsigned)pos;
+	fport->data_len_list[index] = wavehdr.data_hdr.len;
+	fport->data_left_list[index] = wavehdr.data_hdr.len;
 	
 	/* Validate length. */
-	if (wavehdr.data_hdr.len != fport->fsize_list[index] - 
+	if (wavehdr.data_hdr.len > fport->fsize_list[index] - 
 				       fport->start_data_list[index]) 
 	{
 	    status = PJMEDIA_EWAVEUNSUPP;
 	    goto on_error;
 	}
-	if (wavehdr.data_hdr.len < 400) {
+	if (wavehdr.data_hdr.len < ptime * wavehdr.fmt_hdr.sample_rate *
+				    wavehdr.fmt_hdr.nchan / 1000)
+	{
 	    status = PJMEDIA_EWAVETOOSHORT;
 	    goto on_error;
 	}
@@ -500,7 +531,17 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	    }
 
 	}
-	
+
+	/* If file is shorter than buffer size, adjust buffer size to file
+	 * size. Otherwise EOF callback will be called multiple times when
+	 * file_fill_buffer() is called.
+	 */
+	if (wavehdr.data_hdr.len < (unsigned)buff_size)
+	    buff_size = wavehdr.data_hdr.len;
+
+	/* Create file buffer.
+	 */
+	fport->bufsize = (pj_uint32_t)buff_size;	
 	
 	/* Set initial position of the file. */
 	fport->fpos_list[index] = fport->start_data_list[index];
