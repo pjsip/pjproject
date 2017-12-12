@@ -411,6 +411,9 @@
     #define PJSIP_MAX_DIALOG_COUNT 		31
     #define PJSUA_MAX_CALLS			4
 
+    /* Separate worker thread for timer and ioqueue */
+    #define PJSUA_SEPARATE_WORKER_FOR_TIMER	1
+
     /* Other pjsua settings */
     #define PJSUA_MAX_ACC			4
     #define PJSUA_MAX_PLAYERS			4

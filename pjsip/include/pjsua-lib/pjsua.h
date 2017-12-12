@@ -352,6 +352,22 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Specify whether timer heap events will be polled by a separate worker
+ * thread. If this is set/enabled, a worker thread will be dedicated to
+ * poll timer heap events only, and the rest worker thread(s) will poll
+ * ioqueue/network events only.
+ *
+ * Note that if worker thread count setting (i.e: pjsua_config.thread_cnt)
+ * is set to zero, this setting will be ignored.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSUA_SEPARATE_WORKER_FOR_TIMER
+#   define PJSUA_SEPARATE_WORKER_FOR_TIMER	0
+#endif
+
+
+/**
  * This enumeration represents pjsua state.
  */
 typedef enum pjsua_state

@@ -103,7 +103,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->max_calls = ((PJSUA_MAX_CALLS) < 4) ? (PJSUA_MAX_CALLS) : 4;
-    cfg->thread_cnt = 1;
+    cfg->thread_cnt = PJSUA_SEPARATE_WORKER_FOR_TIMER? 2 : 1;
     cfg->nat_type_in_sdp = 1;
     cfg->stun_ignore_failure = PJ_TRUE;
     cfg->force_lr = PJ_TRUE;
@@ -709,6 +709,46 @@ static int worker_thread(void *arg)
     return 0;
 }
 
+/* Timer heap worker thread function. */
+static int worker_thread_timer(void *arg)
+{
+    pj_timer_heap_t *th;
+
+    PJ_UNUSED_ARG(arg);
+
+    th = pjsip_endpt_get_timer_heap(pjsua_var.endpt);
+    while (!pjsua_var.thread_quit_flag) {
+	pj_time_val timeout = {0, 0};
+	int c;
+
+	c = pj_timer_heap_poll(th, &timeout);
+	if (c == 0) {
+	    /* Sleep if no event */
+	    enum { MAX_SLEEP_MS = 100 };
+	    if (PJ_TIME_VAL_MSEC(timeout) < MAX_SLEEP_MS)
+		pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
+	    else
+		pj_thread_sleep(MAX_SLEEP_MS);
+	}
+    }
+    return 0;
+}
+
+/* Ioqueue worker thread function. */
+static int worker_thread_ioqueue(void *arg)
+{
+    pj_ioqueue_t *ioq;
+
+    PJ_UNUSED_ARG(arg);
+
+    ioq = pjsip_endpt_get_ioqueue(pjsua_var.endpt);
+    while (!pjsua_var.thread_quit_flag) {
+	pj_time_val timeout = {0, 100};
+	pj_ioqueue_poll(ioq, &timeout);
+    }
+    return 0;
+}
+
 
 PJ_DEF(void) pjsua_stop_worker_threads(void)
 {
@@ -1112,11 +1152,30 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	if (pjsua_var.ua_cfg.thread_cnt > PJ_ARRAY_SIZE(pjsua_var.thread))
 	    pjsua_var.ua_cfg.thread_cnt = PJ_ARRAY_SIZE(pjsua_var.thread);
 
+#if PJSUA_SEPARATE_WORKER_FOR_TIMER
+	if (pjsua_var.ua_cfg.thread_cnt < 2)
+	    pjsua_var.ua_cfg.thread_cnt = 2;
+#endif
+
 	for (ii=0; ii<pjsua_var.ua_cfg.thread_cnt; ++ii) {
-	    char thread_name[16];
-	    pj_ansi_snprintf(thread_name, 16, "pjsua_%d", ii);
-	    status = pj_thread_create(pjsua_var.pool, thread_name, &worker_thread,
+	    char tname[16];
+	    
+	    pj_ansi_snprintf(tname, sizeof(tname), "pjsua_%d", ii);
+
+#if PJSUA_SEPARATE_WORKER_FOR_TIMER
+	    if (ii == 0) {
+		status = pj_thread_create(pjsua_var.pool, tname,
+					  &worker_thread_timer,
+					  NULL, 0, 0, &pjsua_var.thread[ii]);
+	    } else {
+		status = pj_thread_create(pjsua_var.pool, tname,
+					  &worker_thread_ioqueue,
+					  NULL, 0, 0, &pjsua_var.thread[ii]);
+	    }
+#else
+	    status = pj_thread_create(pjsua_var.pool, tname, &worker_thread,
 				      NULL, 0, 0, &pjsua_var.thread[ii]);
+#endif
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}
