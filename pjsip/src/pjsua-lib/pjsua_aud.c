@@ -2019,7 +2019,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
 
     pjsua_var.snd_mode = snd_param->mode;
 
-    if (!pjsua_var.no_snd &&
+    if (!pjsua_var.no_snd && !pjsua_var.snd_is_on &&
 	(snd_param->mode & PJSUA_SND_DEV_NO_IMMEDIATE_OPEN))
     {
 	pjsua_var.cap_dev = snd_param->capture_dev;
