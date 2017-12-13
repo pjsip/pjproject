@@ -2044,9 +2044,14 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	 */
 	lock_timer(tsx);
 	tsx->transport_err = (pj_status_t)-sent;
-	tsx_cancel_timer(tsx, &tsx->timeout_timer);
-	tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
-	                   TRANSPORT_ERR_TIMER);
+	/* Don't cancel timeout timer if tsx state is already
+	 * PJSIP_TSX_STATE_COMPLETED (see #2076).
+	 */
+	if (tsx->state < PJSIP_TSX_STATE_COMPLETED) {
+	    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+			       TRANSPORT_ERR_TIMER);
+	}
 	unlock_timer(tsx);
    }
 
@@ -2077,9 +2082,14 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 	 */
 	lock_timer(tsx);
 	tsx->transport_err = info->status;
-	tsx_cancel_timer(tsx, &tsx->timeout_timer);
-	tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
-	                   TRANSPORT_ERR_TIMER);
+	/* Don't cancel timeout timer if tsx state is already
+	 * PJSIP_TSX_STATE_COMPLETED (see #2076).
+	 */
+	if (tsx->state < PJSIP_TSX_STATE_COMPLETED) {
+	    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+			       TRANSPORT_ERR_TIMER);
+	}
 	unlock_timer(tsx);
     }
 }

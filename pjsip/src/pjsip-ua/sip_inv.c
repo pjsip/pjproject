@@ -4254,8 +4254,7 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
 		tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
-	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
-	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
+	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT)
 	{
 	    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
