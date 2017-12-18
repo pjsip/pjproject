@@ -802,12 +802,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * will slightly affect stack usage, since each entry will occupy about
  * 32 bytes of stack memory.
  *
- * Default: 8
+ * Default: 16 (or 32 if IPv6 support is enabled)
  *
  * @see PJSIP_HAS_RESOLVER
  */
 #ifndef PJSIP_MAX_RESOLVED_ADDRESSES
-#   define PJSIP_MAX_RESOLVED_ADDRESSES	    8
+#   if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+#       define PJSIP_MAX_RESOLVED_ADDRESSES	    32
+#   else
+#       define PJSIP_MAX_RESOLVED_ADDRESSES	    16
+#   endif
 #endif
 
 
