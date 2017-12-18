@@ -412,7 +412,7 @@
     #define PJSUA_MAX_CALLS			4
 
     /* Separate worker thread for timer and ioqueue */
-    #define PJSUA_SEPARATE_WORKER_FOR_TIMER	1
+    // #define PJSUA_SEPARATE_WORKER_FOR_TIMER	1
 
     /* Other pjsua settings */
     #define PJSUA_MAX_ACC			4
