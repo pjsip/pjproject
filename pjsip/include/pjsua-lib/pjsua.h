@@ -7044,6 +7044,69 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
 					   void *pval);
 
 
+/**
+ * Opaque type of extra sound device, an additional sound device
+ * beside the primary sound device (the one instantiated via
+ * pjsua_set_snd_dev() or pjsua_set_snd_dev2()). This sound device is
+ * also registered to conference bridge so it can be used as a normal
+ * conference bridge port, e.g: connect it to/from other ports,
+ * adjust/check audio level, etc. The conference bridge port ID can be
+ * queried using pjsua_ext_snd_dev_get_conf_port().
+ *
+ * Application may also use this API to improve media clock. Normally
+ * media clock is driven by sound device in master port, but unfortunately
+ * some sound devices may produce jittery clock. To improve media clock,
+ * application can install Null Sound Device (i.e: using
+ * pjsua_set_null_snd_dev()), which will act as a master port, and instantiate
+ * the sound device as extra sound device. But note that extra sound device
+ * will not have auto-close upon idle feature.
+ */
+typedef struct pjsua_ext_snd_dev pjsua_ext_snd_dev;
+
+
+/**
+ * Create an extra sound device and register it to conference bridge.
+ *
+ * @param snd_param	Sound device port param.
+ * @param p_snd		The extra sound device instance.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_ext_snd_dev_create(pjmedia_snd_port_param *param,
+					      pjsua_ext_snd_dev **p_snd);
+
+
+/**
+ * Destroy an extra sound device and unregister it from conference bridge.
+ *
+ * @param p_snd		The extra sound device instance.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_ext_snd_dev_destroy(pjsua_ext_snd_dev *snd);
+
+
+/**
+ * Get sound port instance of an extra sound device.
+ *
+ * @param snd		The extra sound device instance.
+ *
+ * @return		The sound port instance.
+ */
+PJ_DECL(pjmedia_snd_port*) pjsua_ext_snd_dev_get_snd_port(
+					    pjsua_ext_snd_dev *snd);
+
+/**
+ * Get conference port ID of an extra sound device.
+ *
+ * @param snd		The extra sound device instance.
+ *
+ * @return		The conference port ID.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_ext_snd_dev_get_conf_port(
+					    pjsua_ext_snd_dev *snd);
+
+
 /*****************************************************************************
  * Codecs.
  */

@@ -2309,4 +2309,152 @@ PJ_DEF(pj_status_t) pjsua_snd_get_setting( pjmedia_aud_dev_cap cap,
     return status;
 }
 
+
+/*
+ * Extra sound device
+ */
+struct pjsua_ext_snd_dev
+{
+    pj_pool_t		*pool;
+    pjmedia_port	*splitcomb;
+    pjmedia_port	*rev_port;
+    pjmedia_snd_port	*snd_port;
+    pjsua_conf_port_id	 port_id;
+};
+
+
+/*
+ * Create an extra sound device and register it to conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
+					      pjsua_ext_snd_dev **p_snd)
+{
+    pjsua_ext_snd_dev *snd = NULL;
+    pj_pool_t *pool;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(param && p_snd, PJ_EINVAL);
+
+    pool = pjsua_pool_create("extsnd%p", 512, 512);
+    if (!pool)
+	return PJ_ENOMEM;
+
+    snd = PJ_POOL_ZALLOC_T(pool, pjsua_ext_snd_dev);
+    if (!snd) {
+	pj_pool_release(pool);
+	return PJ_ENOMEM;
+    }
+
+    snd->pool = pool;
+    snd->port_id = PJSUA_INVALID_ID;
+
+    /* Create mono splitter/combiner */
+    status = pjmedia_splitcomb_create(
+				    pool, 
+				    param->base.clock_rate,
+				    param->base.channel_count,
+				    param->base.samples_per_frame,
+				    param->base.bits_per_sample,
+				    0,	/* options */
+				    &snd->splitcomb);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Create reverse channel */
+    status = pjmedia_splitcomb_create_rev_channel(
+				    pool,
+				    snd->splitcomb,
+				    0	/* channel #1 */,
+				    0	/* options */,
+				    &snd->rev_port);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* And register it to conference bridge */
+    status = pjsua_conf_add_port(pool, snd->rev_port, &snd->port_id);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Create sound device */
+    status = pjmedia_snd_port_create2(pool, param, &snd->snd_port);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Connect the splitter to the sound device */
+    status = pjmedia_snd_port_connect(snd->snd_port, snd->splitcomb);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Finally */
+    *p_snd = snd;
+    PJ_LOG(4,(THIS_FILE, "Extra sound device created"));
+
+on_return:
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(3,(THIS_FILE, "Failed creating extra sound device"));
+	pjsua_ext_snd_dev_destroy(snd);
+    }
+
+    return status;
+}
+
+
+/*
+ * Destroy an extra sound device and unregister it from conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_ext_snd_dev_destroy(pjsua_ext_snd_dev *snd)
+{
+    PJ_ASSERT_RETURN(snd, PJ_EINVAL);
+
+    /* Unregister from the conference bridge */
+    if (snd->port_id != PJSUA_INVALID_ID) {
+	pjsua_conf_remove_port(snd->port_id);
+	snd->port_id = PJSUA_INVALID_ID;
+    }
+
+    /* Destroy all components */
+    if (snd->snd_port) {
+	pjmedia_snd_port_disconnect(snd->snd_port);
+	pjmedia_snd_port_destroy(snd->snd_port);
+	snd->snd_port = NULL;
+    }
+    if (snd->rev_port) {
+	pjmedia_port_destroy(snd->rev_port);
+	snd->rev_port = NULL;
+    }
+    if (snd->splitcomb) {
+	pjmedia_port_destroy(snd->splitcomb);
+	snd->splitcomb = NULL;
+    }
+
+    /* Finally */
+    pj_pool_safe_release(&snd->pool);
+
+    PJ_LOG(4,(THIS_FILE, "Extra sound device destroyed"));
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get sound port instance of an extra sound device.
+ */
+PJ_DEF(pjmedia_snd_port*) pjsua_ext_snd_dev_get_snd_port(
+					    pjsua_ext_snd_dev *snd)
+{
+    PJ_ASSERT_RETURN(snd, NULL);
+    return snd->snd_port;
+}
+
+/*
+ * Get conference port ID of an extra sound device.
+ */
+PJ_DEF(pjsua_conf_port_id) pjsua_ext_snd_dev_get_conf_port(
+					    pjsua_ext_snd_dev *snd)
+{
+    PJ_ASSERT_RETURN(snd, PJSUA_INVALID_ID);
+    return snd->port_id;
+}
+
+
 #endif /* PJSUA_MEDIA_HAS_PJMEDIA */

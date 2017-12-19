@@ -225,6 +225,20 @@ static void mainProg3(Endpoint &ep) throw(Error)
     ep.libStart();
     std::cout << "*** PJSUA2 STARTED ***" << std::endl;
 
+    /* Use Null Audio Device as main media clock. This is useful for improving
+     * media clock (see also https://trac.pjsip.org/repos/wiki/FAQ#tx-timing)
+     * especially when sound device clock is jittery.
+     */
+    ep.audDevManager().setNullDev();
+
+    /* And install sound device using Extra Audio Device */
+    ExtraAudioDevice auddev2(-1, -1);
+    try {
+	auddev2.open();
+    } catch (...) {
+	std::cout << "Extra sound device failed" << std::endl;
+    }
+
     // Create player and recorder
     {
 	AudioMediaPlayer amp;
@@ -233,8 +247,9 @@ static void mainProg3(Endpoint &ep) throw(Error)
 	AudioMediaRecorder amr;
 	amr.createRecorder("recorder_test_output.wav");
 
-	amp.startTransmit(ep.audDevManager().getPlaybackDevMedia());
 	amp.startTransmit(amr);
+	if (auddev2.isOpened())
+	    amp.startTransmit(auddev2);
 
 	pj_thread_sleep(5000);
     }
@@ -331,7 +346,7 @@ int main()
     try {
 	ep.libCreate();
 
-	mainProg4(ep);
+	mainProg3(ep);
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;
