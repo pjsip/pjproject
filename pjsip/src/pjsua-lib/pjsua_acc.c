@@ -1045,6 +1045,12 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
 	acc->cfg.transport_id = cfg->transport_id;
+
+	if (acc->cfg.transport_id != PJSUA_INVALID_ID)
+	    acc->tp_type = pjsua_var.tpdata[acc->cfg.transport_id].type;
+	else
+	    acc->tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+
 	update_reg = PJ_TRUE;
 	unreg_first = PJ_TRUE;
     }
