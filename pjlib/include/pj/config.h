@@ -965,6 +965,17 @@
 #endif
 
 
+/**
+ * Maximum number of socket options in pj_sockopt_params.
+ *
+ * Default: 4
+ */
+#ifndef PJ_MAX_SOCKOPT_PARAMS
+#   define PJ_MAX_SOCKOPT_PARAMS	    4
+#endif
+
+
+
 /** @} */
 
 /********************************************************************
