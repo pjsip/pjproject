@@ -2000,6 +2000,12 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     acc = (pjsua_acc*) te->user_data;
 
+    /* Check if the account is still active. It might have just been deleted
+     * while the keep-alive timer was about to be called (race condition).
+     */
+    if (acc->ka_transport == NULL)
+	goto on_return;
+
     /* Select the transport to send the packet */
     pj_bzero(&tp_sel, sizeof(tp_sel));
     tp_sel.type = PJSIP_TPSELECTOR_TRANSPORT;
