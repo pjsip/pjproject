@@ -664,6 +664,64 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
     }
 }
 
+
+static pj_status_t dlg_set_target(pjsip_dialog *dlg, const pj_str_t *target)
+{
+    pjsip_uri *target_uri;
+    pj_str_t tmp;
+    pj_status_t status;
+
+    /* Parse target & verify */
+    pj_strdup_with_null(dlg->pool, &tmp, target);
+    target_uri = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen, 0);
+    if (!target_uri) {
+	return PJSIP_EINVALIDURI;
+    }
+    if (!PJSIP_URI_SCHEME_IS_SIP(target_uri) &&
+	!PJSIP_URI_SCHEME_IS_SIPS(target_uri))
+    {
+	return PJSIP_EINVALIDSCHEME;
+    }
+
+    /* Add the new target */
+    status = pjsip_target_set_add_uri(&dlg->target_set, dlg->pool,
+				      target_uri, 0);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Set it as current target */
+    status = pjsip_target_set_set_current(&dlg->target_set,
+			    pjsip_target_set_get_next(&dlg->target_set));
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Update dialog target URI */
+    dlg->target = target_uri;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Get account contact for call and update dialog transport */
+void call_update_contact(pjsua_call *call, pj_str_t **new_contact)
+{
+    pjsip_tpselector tp_sel;
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+
+    if (acc->cfg.force_contact.slen)
+	*new_contact = &acc->cfg.force_contact;
+    else if (acc->contact.slen)
+	*new_contact = &acc->contact;
+
+    /* When contact is changed, the account transport may have been
+     * changed too, so let's update the dialog's transport too.
+     */
+    pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+    pjsip_dlg_set_transport(call->inv->dlg, &tp_sel);
+}
+
+
+
 /*
  * Make outgoing call to the specified URI using the specified account.
  */
@@ -2511,13 +2569,23 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
     if ((options & PJSUA_CALL_UPDATE_CONTACT) &&
 	pjsua_acc_is_valid(call->acc_id))
     {
-	new_contact = &pjsua_var.acc[call->acc_id].contact;
+	call_update_contact(call, &new_contact);
     }
 
     if ((options & PJSUA_CALL_UPDATE_VIA) &&
 	pjsua_acc_is_valid(call->acc_id))
     {
     	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
+    }
+
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_TARGET) &&
+	msg_data && msg_data->target_uri.slen)
+    {
+	status = dlg_set_target(dlg, &msg_data->target_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to set new target", status);
+	    goto on_return;
+	}
     }
 
     /* Create re-INVITE with new offer */
@@ -2638,13 +2706,23 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &&
 	    pjsua_acc_is_valid(call->acc_id))
     {
-	new_contact = &pjsua_var.acc[call->acc_id].contact;
+	call_update_contact(call, &new_contact);
     }
 
     if ((call->opt.flag & PJSUA_CALL_UPDATE_VIA) &&
 	pjsua_acc_is_valid(call->acc_id))
     {
     	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
+    }
+
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_TARGET) &&
+	msg_data && msg_data->target_uri.slen)
+    {
+	status = dlg_set_target(dlg, &msg_data->target_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to set new target", status);
+	    goto on_return;
+	}
     }
 
     /* Create re-INVITE with new offer */
@@ -2756,13 +2834,23 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &&
 	    pjsua_acc_is_valid(call->acc_id))
     {
-	new_contact = &pjsua_var.acc[call->acc_id].contact;
+	call_update_contact(call, &new_contact);
     }
 
     if ((call->opt.flag & PJSUA_CALL_UPDATE_VIA) &&
 	pjsua_acc_is_valid(call->acc_id))
     {
 	dlg_set_via(call->inv->dlg, &pjsua_var.acc[call->acc_id]);
+    }
+
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_TARGET) &&
+	msg_data && msg_data->target_uri.slen)
+    {
+	status = dlg_set_target(dlg, &msg_data->target_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to set new target", status);
+	    goto on_return;
+	}
     }
 
     /* Create UPDATE with new offer */

@@ -1984,8 +1984,9 @@ struct pjsua_msg_data
 {
     /**
      * Optional remote target URI (i.e. Target header). If NULL, the target
-     * will be set to the remote URI (To header). At the moment this field
-     * is only used by #pjsua_call_make_call() and #pjsua_im_send().
+     * will be set to the remote URI (To header). This field is used by
+     * pjsua_call_make_call(), pjsua_im_send(), pjsua_call_reinvite(),
+     * pjsua_call_set_hold(), and pjsua_call_update().
      */
     pj_str_t    target_uri;
 
@@ -4639,7 +4640,16 @@ typedef enum pjsua_call_flag
      * in IP address change situation, after the local account's Via has
      * been updated (typically with re-registration).
      */
-    PJSUA_CALL_UPDATE_VIA = 32
+    PJSUA_CALL_UPDATE_VIA = 32,
+
+    /**
+     * Update dialog target to URI specified in pjsua_msg_data.target_uri.
+     * This flag is only valid for pjsua_call_set_hold(),
+     * pjsua_call_reinvite(), and pjsua_call_update(). This flag can be
+     * useful in IP address change scenario where IP version has been changed
+     * and application needs to update target IP address.
+     */
+    PJSUA_CALL_UPDATE_TARGET = 64
 
 } pjsua_call_flag;
 
