@@ -508,7 +508,6 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 #else /* PJSIP_HAS_RESOLVER */
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(query);
-    PJ_UNUSED_ARG(srv_name);
 #endif /* PJSIP_HAS_RESOLVER */
 
 on_error:
