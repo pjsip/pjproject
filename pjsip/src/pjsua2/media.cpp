@@ -679,7 +679,9 @@ void AudDevManager::setCaptureDev(int capture_dev) const throw(Error)
     pjsua_snd_dev_param_default(&param);    
 
     param.capture_dev = capture_dev;
-    param.playback_dev = getPlaybackDev();    
+    param.playback_dev = getPlaybackDev();
+    if (param.playback_dev == PJMEDIA_AUD_INVALID_DEV)
+        param.playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
 
@@ -692,6 +694,8 @@ void AudDevManager::setPlaybackDev(int playback_dev) const throw(Error)
     pjsua_snd_dev_param_default(&param);    
 
     param.capture_dev = getCaptureDev();
+    if (param.capture_dev == PJMEDIA_AUD_INVALID_DEV)
+        param.capture_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
     param.playback_dev = playback_dev;
 
     param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
