@@ -912,13 +912,36 @@
 
 /**
  * Enable secure socket. For most platforms, this is implemented using
- * OpenSSL, so this will require OpenSSL to be installed. For Symbian
- * platform, this is implemented natively using CSecureSocket.
+ * OpenSSL or GnuTLS, so this will require one of those libraries to
+ * be installed. For Symbian platform, this is implemented natively
+ * using CSecureSocket.
  *
  * Default: 0 (for now)
  */
 #ifndef PJ_HAS_SSL_SOCK
 #  define PJ_HAS_SSL_SOCK	    0
+#endif
+
+
+/*
+ * Secure socket implementation.
+ * Select one of these implementations in PJ_SSL_SOCK_IMP.
+ */
+#define PJ_SSL_SOCK_IMP_NONE 	    0	/**< Disable SSL socket.    */
+#define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
+#define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
+
+
+/**
+ * Select which SSL socket implementation to use. Currently pjlib supports
+ * PJ_SSL_SOCK_IMP_OPENSSL, which uses OpenSSL, and PJ_SSL_SOCK_IMP_GNUTLS,
+ * which uses GnuTLS. Setting this to PJ_SSL_SOCK_IMP_NONE will disable
+ * secure socket.
+ *
+ * Default is PJ_SSL_SOCK_IMP_NONE
+ */
+#ifndef PJ_SSL_SOCK_IMP
+#   define PJ_SSL_SOCK_IMP		    PJ_SSL_SOCK_IMP_NONE
 #endif
 
 

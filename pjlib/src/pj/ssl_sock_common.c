@@ -35,7 +35,12 @@ PJ_DEF(void) pj_ssl_sock_param_default(pj_ssl_sock_param *param)
     param->async_cnt = 1;
     param->concurrency = -1;
     param->whole_data = PJ_TRUE;
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_GNUTLS)
+    /* GnuTLS is allowed to send bigger chunks.*/
+    param->send_buffer_size = 65536;
+#else
     param->send_buffer_size = 8192;
+#endif
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     param->read_buffer_size = 1500;
 #endif

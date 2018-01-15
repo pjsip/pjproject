@@ -31,7 +31,8 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
-#if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #  include <openssl/rand.h>
 #  include <openssl/opensslv.h>
 

@@ -32,8 +32,11 @@
 #include <pj/timer.h>
 
 
-/* Only build when PJ_HAS_SSL_SOCK is enabled */
-#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK!=0
+/* Only build when PJ_HAS_SSL_SOCK is enabled and when the backend is
+ * OpenSSL.
+ */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 
 #define THIS_FILE		"ssl_sock_ossl.c"
 

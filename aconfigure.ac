@@ -1541,19 +1541,30 @@ dnl #
 dnl # SSL alt prefix
 AC_ARG_WITH(ssl,
     AS_HELP_STRING([--with-ssl=DIR],
-		   [Specify alternate libssl prefix]),
+		   [Specify alternate SSL library prefix. This option will try
+		    to find OpenSSL first, then if not found, GnuTLS. To skip
+		    OpenSSL finding, use --with-gnutls option instead.]),
     [],
     [with_ssl=no]
     )
 
+dnl # GnuTLS alt prefix
+AC_ARG_WITH(gnutls,
+    AS_HELP_STRING([--with-gnutls=DIR],
+		   [Specify alternate GnuTLS prefix]),
+    [],
+    [with_gnutls=no]
+    )
+
 dnl # Do not use default SSL installation if we are cross-compiling
-if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno"; then
+if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno" -a "x$with_gnutls" = "xno"; then
     enable_ssl=no
 fi
 
 dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_SUBST(ac_ssl_has_aes_gcm,0)
+AC_SUBST(ac_ssl_backend)
 AC_ARG_ENABLE(ssl,
 	      AS_HELP_STRING([--disable-ssl],
 			     [Exclude SSL support the build (default: autodetect)])
@@ -1565,19 +1576,22 @@ AC_ARG_ENABLE(ssl,
 	        fi
 	      ],
 	      [
-		AC_MSG_RESULT([checking for OpenSSL installations..])
                 if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
                     AC_MSG_RESULT([Using SSL prefix... $with_ssl])
                 fi
-		AC_SUBST(openssl_h_present)
-		AC_SUBST(libssl_present)
-		AC_SUBST(libcrypto_present)
-		AC_CHECK_HEADER(openssl/ssl.h,[openssl_h_present=1])
-		AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[libcrypto_present=1 && LIBS="-lcrypto $LIBS"])
-		AC_CHECK_LIB(ssl,SSL_CTX_new,[libssl_present=1 && LIBS="-lssl $LIBS"])
-		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
+
+	        if test "x$with_gnutls" = "xno"; then
+
+		    AC_MSG_RESULT([checking for OpenSSL installations..])
+		    AC_SUBST(openssl_h_present)
+		    AC_SUBST(libssl_present)
+		    AC_SUBST(libcrypto_present)
+		    AC_CHECK_HEADER(openssl/ssl.h,[openssl_h_present=1])
+		    AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[libcrypto_present=1 && LIBS="-lcrypto $LIBS"])
+		    AC_CHECK_LIB(ssl,SSL_CTX_new,[libssl_present=1 && LIBS="-lssl $LIBS"])
+		    if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
 			
 			# Check if SRTP should be compiled with OpenSSL
@@ -1598,9 +1612,54 @@ AC_ARG_ENABLE(ssl,
 			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
 			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
 			AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-		else
-			AC_MSG_RESULT([** OpenSSL libraries not found, disabling SSL support **])
+			AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_OPENSSL)
+			ac_ssl_backend="openssl"
+		    else
+			AC_MSG_RESULT([** OpenSSL libraries not found **])
+		    fi
+		
 		fi
+		
+    		if test "x$ac_ssl_backend" = "x"; then
+
+		    if test "x$with_gnutls" != "xno" -a "x$with_gnutls" != "x"; then
+        	        CFLAGS="$CFLAGS -I$with_gnutls/include"
+        	        LDFLAGS="$LDFLAGS -L$with_gnutls/lib"
+        	        AC_MSG_RESULT([Using GnuTLS prefix... $with_gnutls])
+    		    fi
+
+        	    AC_CHECK_PROGS(PKG_CONFIG,
+                       $host-pkg-config pkg-config "python pkgconfig.py",
+                       none)
+        	    AC_MSG_RESULT([checking for GnuTLS installations..])
+        	    AC_SUBST(gnutls_h_present)
+        	    AC_SUBST(libgnutls_present)
+        	    AC_CHECK_HEADER(gnutls/gnutls.h, [gnutls_h_present=1])
+
+        	    if test "$PKG_CONFIG" != "none"; then
+            	    	if $PKG_CONFIG --exists gnutls; then
+                	    LIBS="$LIBS `$PKG_CONFIG --libs gnutls`"
+                	    libgnutls_present=1
+            		else
+                	    AC_CHECK_LIB(gnutls,
+                             gnutls_certificate_set_x509_system_trust,
+                             [libgnutls_present=1 &&
+                              LIBS="$LIBS -lgnutls"])
+            		fi
+        	    else
+            		AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, disabling gnutls. ***])
+        	    fi
+
+        	    if test "x$gnutls_h_present" = "x1" -a "x$libgnutls_present" = "x1"; then
+           		AC_MSG_RESULT([GnuTLS library found, SSL support enabled])
+			AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+			AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_GNUTLS)
+            		ac_ssl_backend="gnutls"
+        	    else
+            		AC_MSG_RESULT([** No GnuTLS libraries found, disabling SSL support **])
+        	    fi
+        	
+        	fi
 	      ])
 
 dnl # Obsolete option --with-opencore-amrnb

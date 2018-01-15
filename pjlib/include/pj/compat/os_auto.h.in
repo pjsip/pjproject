@@ -219,6 +219,9 @@
 #ifndef PJ_HAS_SSL_SOCK
 #undef PJ_HAS_SSL_SOCK
 #endif
+#ifndef PJ_SSL_SOCK_IMP
+#   define PJ_SSL_SOCK_IMP	PJ_SSL_SOCK_IMP_NONE
+#endif
 
 
 #endif	/* __PJ_COMPAT_OS_AUTO_H__ */

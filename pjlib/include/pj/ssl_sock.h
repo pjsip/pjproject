@@ -184,6 +184,11 @@ typedef struct pj_ssl_cert_info {
     pj_str_t raw;		    /**< Raw certificate in PEM format, only
 					 available for remote certificate. */
 
+    struct {
+        unsigned    	cnt;        /**< # of entry     */
+        pj_str_t       *cert_raw;
+    } raw_chain;
+
 } pj_ssl_cert_info;
 
 
