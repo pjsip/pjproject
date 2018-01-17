@@ -55,8 +55,12 @@
 #include <openssl/x509v3.h>
 #include <openssl/rand.h>
 #include <openssl/opensslconf.h>
+#include <openssl/opensslv.h>
 
-#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
+#define USING_LIBRESSL (defined(LIBRESSL_VERSION_NUMBER))
+
+#if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
+	&& OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
 #   include <openssl/obj_mac.h>
 
@@ -114,7 +118,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #endif
 
 
-#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#if !USING_LIBRESSL && OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
 #  define M_ASN1_STRING_data(x)	    ASN1_STRING_get0_data(x)
 #  define M_ASN1_STRING_length(x)   ASN1_STRING_length(x)
@@ -538,7 +542,7 @@ static pj_status_t init_openssl(void)
     pj_assert(status == PJ_SUCCESS);
 
     /* Init OpenSSL lib */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if USING_LIBRESSL || OPENSSL_VERSION_NUMBER < 0x10100000L
     SSL_library_init();
     SSL_load_error_strings();
 #else
@@ -559,7 +563,9 @@ static pj_status_t init_openssl(void)
 	int nid;
 	const char *cname;
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
+    || OPENSSL_VERSION_NUMBER < 0x10100000L
+
 	meth = (SSL_METHOD*)SSLv23_server_method();
 	if (!meth)
 	    meth = (SSL_METHOD*)TLSv1_server_method();
@@ -602,7 +608,8 @@ static pj_status_t init_openssl(void)
 
 	SSL_set_session(ssl, SSL_SESSION_new());
 
-#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
+#if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
+    && OPENSSL_VERSION_NUMBER >= 0x1000200fL
 	openssl_curves_num = SSL_get_shared_curve(ssl,-1);
 	if (openssl_curves_num > PJ_ARRAY_SIZE(openssl_curves))
 	    openssl_curves_num = PJ_ARRAY_SIZE(openssl_curves);
@@ -794,7 +801,8 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
+#if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
+    || OPENSSL_VERSION_NUMBER < 0x10100000L
     switch (ssock->param.proto) {
     case PJ_SSL_SOCK_PROTO_TLS1:
 	ssl_method = (SSL_METHOD*)TLSv1_method();
@@ -1231,7 +1239,8 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
 static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 {
-#if !defined(OPENSSL_NO_EC) && OPENSSL_VERSION_NUMBER >= 0x1000200fL
+#if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
+    && OPENSSL_VERSION_NUMBER >= 0x1000200fL
     int ret;
     int curves[PJ_SSL_SOCK_MAX_CURVES];
     unsigned cnt;
@@ -1262,7 +1271,7 @@ static pj_status_t set_curves_list(pj_ssl_sock_t *ssock)
 
 static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 {
-#if OPENSSL_VERSION_NUMBER >= 0x1000200fL
+#if !USING_LIBRESSL && OPENSSL_VERSION_NUMBER >= 0x1000200fL
     int ret;
 
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
