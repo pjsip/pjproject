@@ -35,7 +35,7 @@ static void print_call(int call_index)
     pjsip_inv_session *inv = call->inv;
     pjsip_dialog *dlg = inv->dlg;
     struct media_stream *audio = &call->media[0];
-    char userinfo[128];
+    char userinfo[PJSIP_MAX_URL_SIZE];
     char duration[80], last_update[80];
     char bps[16], ipbps[16], packets[16], bytes[16], ipbytes[16];
     unsigned decor;

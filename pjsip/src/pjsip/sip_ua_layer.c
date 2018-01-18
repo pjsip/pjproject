@@ -925,7 +925,7 @@ static void print_dialog( const char *title,
 			  pjsip_dialog *dlg, char *buf, pj_size_t size)
 {
     int len;
-    char userinfo[128];
+    char userinfo[PJSIP_MAX_URL_SIZE];
 
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 0)
