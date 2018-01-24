@@ -2058,7 +2058,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
 }
 
 /* Load credentials from files. */
-PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(
                         pj_pool_t *pool,
                         const pj_str_t *CA_file,
                         const pj_str_t *CA_path,
@@ -2090,7 +2090,7 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
 }
 
 /* Store credentials. */
-PJ_DECL(pj_status_t) pj_ssl_sock_set_certificate(pj_ssl_sock_t *ssock,
+PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate( pj_ssl_sock_t *ssock,
                                                  pj_pool_t *pool,
                                                  const pj_ssl_cert_t *cert)
 {
@@ -2774,7 +2774,7 @@ on_error:
 /**
  * Starts asynchronous socket connect() operation.
  */
-PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
+PJ_DEF(pj_status_t) pj_ssl_sock_start_connect( pj_ssl_sock_t *ssock,
                                                pj_pool_t *pool,
                                                const pj_sockaddr_t *localaddr,
                                                const pj_sockaddr_t *remaddr,
