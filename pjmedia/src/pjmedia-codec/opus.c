@@ -25,6 +25,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
 #include <pj/log.h>
+#include <pj/math.h>
 
 #if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
 
@@ -975,11 +976,12 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
      * then frame_size needs to be exactly the duration of audio that
      * is missing.
      */
+    frm_size = output->size / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO || fec) {
-	frm_size = opus_data->cfg.sample_rate * opus_data->ptime / 1000;
-    } else {
-	frm_size = output->size / (sizeof(opus_int16) *
-         	   opus_data->cfg.channel_cnt);
+	frm_size = PJ_MIN(frm_size,
+			  opus_data->cfg.sample_rate *
+			  opus_data->ptime / 1000);
     }
     decoded_samples = opus_decode( opus_data->dec,
                                    inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
@@ -1050,11 +1052,11 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     }
 
     inframe = &opus_data->dec_frame[opus_data->dec_frame_index];
+    frm_size = output->size / (sizeof(opus_int16) *
+               opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	frm_size = opus_data->cfg.sample_rate * opus_data->ptime/1000;
-    } else {
-        frm_size = output->size / (sizeof(opus_int16) *
-         	   opus_data->cfg.channel_cnt);
+	frm_size = PJ_MIN(frm_size, opus_data->cfg.sample_rate *
+			  opus_data->ptime/1000);
     }
     decoded_samples = opus_decode(opus_data->dec,
 				  inframe->type==PJMEDIA_FRAME_TYPE_AUDIO ?
