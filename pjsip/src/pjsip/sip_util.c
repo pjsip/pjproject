@@ -1213,41 +1213,54 @@ static void stateless_send_transport_cb( void *token,
 	    pj_generate_unique_string(&tmp);
 	}
 
-	via->transport = pj_str(stateless_data->cur_transport->type_name);
-	/* For Cancel request, do not update the Via address with
-	 * the new transport since it needs to match the original
-	 * request.
+	/* For CANCEL request, do not update the Via header since it needs
+	 * to match the original request.
 	 */
-        if (tdata->via_addr.host.slen > 0 &&
-            (!tdata->via_tp ||
-             tdata->via_tp == (void *)stateless_data->cur_transport ||
-             tdata->msg->line.req.method.id == PJSIP_CANCEL_METHOD))
-        {
-            via->sent_by = tdata->via_addr;
-        } else {
-	    via->sent_by = stateless_data->cur_transport->local_name;
-        }
-	via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
+	if (tdata->msg->line.req.method.id != PJSIP_CANCEL_METHOD) {
+	    via->transport = pj_str(stateless_data->cur_transport->type_name);
 
-	/* Add/remove "alias" param to/from Via header on connection 
-	 * oriented/less transport, if configured.
-	 */
-	if (pjsip_cfg()->endpt.req_has_via_alias &&
-	    tdata->msg->type == PJSIP_REQUEST_MSG)
-	{
-	    const pj_str_t ALIAS_STR = {"alias", 5};
-	    pjsip_param *alias_param;
-	    pj_bool_t is_datagram;
+	    if (tdata->via_addr.host.slen > 0 &&
+		(!tdata->via_tp ||
+		 tdata->via_tp == (void *)stateless_data->cur_transport))
+	    {
+		via->sent_by = tdata->via_addr;
 
-	    alias_param = pjsip_param_find(&via->other_param, &ALIAS_STR);
-	    is_datagram = (stateless_data->cur_transport->flag & 
-			   PJSIP_TRANSPORT_DATAGRAM);
-	    if (!is_datagram && !alias_param) {
-		alias_param = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_param);
-		alias_param->name = ALIAS_STR;
-		pj_list_push_back(&via->other_param, alias_param);
-	    } else if (is_datagram && alias_param) {
-		pj_list_erase(alias_param);
+		/* Better also update tdata via_tp, e.g: CANCEL may need to
+		 * refer to original INVITE tdata.
+		 */
+		tdata->via_tp = stateless_data->cur_transport;
+	    } else {
+		via->sent_by = stateless_data->cur_transport->local_name;
+
+		/* Better also update tdata via_tp & via_addr, e.g: CANCEL
+		 * may need to refer to original INVITE tdata.
+		 */
+		tdata->via_tp = stateless_data->cur_transport;
+		tdata->via_addr = via->sent_by;
+	    }
+	    
+	    via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
+
+	    /* Add/remove "alias" param to/from Via header on connection 
+	     * oriented/less transport, if configured.
+	     */
+	    if (pjsip_cfg()->endpt.req_has_via_alias &&
+		tdata->msg->type == PJSIP_REQUEST_MSG)
+	    {
+		const pj_str_t ALIAS_STR = {"alias", 5};
+		pjsip_param *alias_param;
+		pj_bool_t is_datagram;
+
+		alias_param = pjsip_param_find(&via->other_param, &ALIAS_STR);
+		is_datagram = (stateless_data->cur_transport->flag & 
+			       PJSIP_TRANSPORT_DATAGRAM);
+		if (!is_datagram && !alias_param) {
+		    alias_param = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_param);
+		    alias_param->name = ALIAS_STR;
+		    pj_list_push_back(&via->other_param, alias_param);
+		} else if (is_datagram && alias_param) {
+		    pj_list_erase(alias_param);
+		}
 	    }
 	}
 

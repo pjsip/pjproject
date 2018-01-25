@@ -3832,6 +3832,12 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 	if (!acc->valid)
 	    continue;
 
+	/* Reset Account's via transport and via address */
+	if (acc->via_tp == (void*)tp) {
+	    pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
+	    acc->via_tp = NULL;
+	}
+
 	/* Release transport immediately if regc is using it
 	 * See https://trac.pjsip.org/repos/ticket/1481
 	 */
