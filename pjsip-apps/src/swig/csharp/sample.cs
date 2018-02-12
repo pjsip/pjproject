@@ -24,6 +24,11 @@ namespace pjsua2xamarin
 {
     public class MyAccount : Account
     {
+    	~MyAccount()
+    	{
+            Console.WriteLine("*** Account is being deleted");
+    	}
+
         override public void onRegState(OnRegStateParam prm)
         {
 	    AccountInfo ai = getInfo();
@@ -80,6 +85,9 @@ namespace pjsua2xamarin
                 MyAccount acc = new MyAccount();
                 acc.create(accCfg);
 
+                Console.WriteLine("*** DESTROYING PJSUA2 ***");
+                // Explicitly delete account when unused
+                acc.Dispose();
                 ep.libDestroy();
             } catch (Exception err) {
                 Console.WriteLine("Exception: " + err.Message);
