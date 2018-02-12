@@ -146,9 +146,11 @@ fi
 dnl
 dnl Legacy macros
 dnl
+AC_SUBST(ac_target_arch)
 case $target in
     *android*)
 	AC_DEFINE(PJ_ANDROID,1)
+	ac_target_arch=$TARGET_ABI
 	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	AC_DEFINE(PJ_WIN32,1)
@@ -157,6 +159,7 @@ case $target in
 	;;
     *darwin*)
 	AC_DEFINE(PJ_DARWINOS,1)
+    	ac_target_arch=$ARCH_VAL
 	;;
     *linux*)
 	AC_DEFINE(PJ_LINUX,1)

@@ -700,6 +700,7 @@ ac_external_speex
 ac_shared_libraries
 ac_linux_poll
 ac_os_objs
+ac_target_arch
 EGREP
 GREP
 CPP
@@ -5060,10 +5061,12 @@ else
   CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
 fi
 
+
 case $target in
     *android*)
 	$as_echo "#define PJ_ANDROID 1" >>confdefs.h
 
+	ac_target_arch=$TARGET_ABI
 	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	$as_echo "#define PJ_WIN32 1" >>confdefs.h
@@ -5076,6 +5079,7 @@ case $target in
     *darwin*)
 	$as_echo "#define PJ_DARWINOS 1" >>confdefs.h
 
+    	ac_target_arch=$ARCH_VAL
 	;;
     *linux*)
 	$as_echo "#define PJ_LINUX 1" >>confdefs.h

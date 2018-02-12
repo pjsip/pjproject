@@ -1,10 +1,14 @@
 include ../../../build.mak
 
 ifneq ($(findstring android,$(TARGET_NAME)),)
-  # no python for android
-  DIRS = java
+    # no python for android
+    DIRS = java csharp
 else
-  DIRS = python java
+    ifneq ($(findstring ios,$(TARGET_NAME)),)
+  	DIRS = csharp
+    else
+  	DIRS = python java
+    endif
 endif
 
 export SWIG_FLAGS=-I../../../../pjlib/include \
@@ -27,6 +31,9 @@ all clean dep depend distclean print realclean install uninstall:
 		    exit 1; \
 		fi; \
 	done
+
+csharp:
+	$(MAKE) $(MAKE_FLAGS) -C csharp $@
 
 symbols.i: symbols.lst
 	@echo ** Warning **: file symbols.i is out of date. Run 'make symbol'.
