@@ -168,6 +168,18 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 					 pjmedia_jbuf **p_jb);
 
 /**
+ * Set the jitter buffer's frame duration.
+ *
+ * @param jb		The jitter buffer
+ * @param ptime		Frame duration.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
+					     unsigned ptime);
+
+
+/**
  * Set the jitter buffer to fixed delay mode. The default behavior
  * is to adapt the delay with actual packet delay.
  *

@@ -585,6 +585,20 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
 }
 
 
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
+					    unsigned ptime)
+{
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+
+    jb->jb_frame_ptime    = ptime;
+    jb->jb_min_shrink_gap = PJMEDIA_JBUF_DISC_MIN_GAP / ptime;
+    jb->jb_max_burst	  = PJ_MAX(MAX_BURST_MSEC / ptime,
+    				   jb->jb_max_count*3/4);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Set the jitter buffer to fixed delay mode. The default behavior
  * is to adapt the delay with actual packet delay.

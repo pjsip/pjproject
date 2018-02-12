@@ -135,6 +135,17 @@ struct pjmedia_stream
     unsigned		     enc_buf_count; /**< Number of samples in the
 						 encoding buffer.	    */
 
+    pj_int16_t		    *dec_buf;	    /**< Decoding buffer.	    */
+    unsigned		     dec_buf_size;  /**< Decoding buffer size, in
+						 samples.		    */
+    unsigned		     dec_buf_pos;   /**< First position in buf.	    */
+    unsigned		     dec_buf_count; /**< Number of samples in the
+						 decoding buffer.	    */
+
+    pj_uint16_t		     dec_ptime;	    /**< Decoder frame ptime in ms. */
+    pj_bool_t		     detect_ptime_change;
+    					    /**< Detect decode ptime change */
+
     unsigned		     plc_cnt;	    /**< # of consecutive PLC frames*/
     unsigned		     max_plc_cnt;   /**< Max # of PLC frames	    */
 
@@ -499,18 +510,30 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     pj_mutex_lock( stream->jb_mutex );
 
     samples_required = PJMEDIA_PIA_SPF(&stream->port.info);
-    samples_per_frame = stream->codec_param.info.frm_ptime *
+    samples_per_frame = stream->dec_ptime *
 			stream->codec_param.info.clock_rate *
 			stream->codec_param.info.channel_cnt /
 			1000;
     p_out_samp = (pj_int16_t*) frame->buf;
 
-    for (samples_count=0; samples_count < samples_required;
-	 samples_count += samples_per_frame)
-    {
+    for (samples_count=0; samples_count < samples_required;) {
 	char frame_type;
 	pj_size_t frame_size;
 	pj_uint32_t bit_info;
+
+	if (stream->dec_buf && stream->dec_buf_pos < stream->dec_buf_count) {
+	    unsigned nsamples_req = samples_required - samples_count;
+	    unsigned nsamples_avail = stream->dec_buf_count -
+	    			      stream->dec_buf_pos;
+	    unsigned nsamples_copy = PJ_MIN(nsamples_req, nsamples_avail);
+	    
+	    pjmedia_copy_samples(p_out_samp + samples_count,
+		      		 stream->dec_buf + stream->dec_buf_pos,
+	    	      		 nsamples_copy);
+	    samples_count += nsamples_copy;
+	    stream->dec_buf_pos += nsamples_copy;
+	    continue;
+	}
 
 	/* Get frame from jitter buffer. */
 	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
@@ -558,6 +581,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		stream->jb_last_frm_cnt++;
 	    }
 
+	    samples_count += samples_per_frame;
 	} else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 
 	    const char *with_plc = "";
@@ -675,6 +699,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	} else {
 	    /* Got "NORMAL" frame from jitter buffer */
 	    pjmedia_frame frame_in, frame_out;
+	    pj_bool_t use_dec_buf = PJ_FALSE;
 
 	    stream->plc_cnt = 0;
 
@@ -686,6 +711,17 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 	    frame_out.buf = p_out_samp + samples_count;
 	    frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
+	    if (stream->dec_buf &&
+	    	bit_info * sizeof(pj_int16_t) > frame_out.size)
+	    {
+	    	stream->dec_buf_pos = 0;
+	    	stream->dec_buf_count = bit_info;
+
+	    	use_dec_buf = PJ_TRUE;
+	    	frame_out.buf = stream->dec_buf;
+	    	frame_out.size = stream->dec_buf_size;
+	    }
+
 	    status = pjmedia_codec_decode( stream->codec, &frame_in,
 					   (unsigned)frame_out.size,
 					   &frame_out);
@@ -693,8 +729,15 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		LOGERR_((port->info.name.ptr, "codec decode() error",
 			 status));
 
-		pjmedia_zero_samples(p_out_samp + samples_count,
-				     samples_per_frame);
+		if (use_dec_buf) {
+		    pjmedia_zero_samples(p_out_samp + samples_count,
+				     	 samples_per_frame);
+		} else {
+		    pjmedia_zero_samples(stream->dec_buf,
+				     	 stream->dec_buf_count);
+		}
+	    } else if (use_dec_buf) {
+	    	stream->dec_buf_count = frame_out.size / sizeof(pj_int16_t);
 	    }
 
 	    if (stream->jb_last_frm != frame_type) {
@@ -709,6 +752,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    } else {
 		stream->jb_last_frm_cnt++;
 	    }
+	    if (!use_dec_buf)
+	    	samples_count += samples_per_frame;
 	}
     }
 
@@ -1754,6 +1799,20 @@ static void on_rx_rtp( void *data,
 		     "Codec parse() error",
 		     status));
 	    count = 0;
+	} else if (stream->detect_ptime_change &&
+		   frames[0].bit_info > 0xFFFF)
+	{
+	    unsigned dec_ptime;
+	    
+	    PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
+	               "ptime change detected"));
+	    frames[0].bit_info &= 0xFFFF;
+	    dec_ptime = frames[0].bit_info * 1000 /
+	    		stream->codec_param.info.clock_rate;
+	    stream->rtp_rx_ts_len_per_frame= stream->rtp_rx_ts_len_per_frame *
+	    				     dec_ptime / stream->dec_ptime;
+	    stream->dec_ptime = dec_ptime;
+	    pjmedia_jbuf_set_ptime(stream->jb, stream->dec_ptime);
 	}
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
@@ -1824,12 +1883,12 @@ static void on_rx_rtp( void *data,
 	    }
 
 	} else {
-	    ts_span = stream->codec_param.info.frm_ptime *
+	    ts_span = stream->dec_ptime *
 		      stream->codec_param.info.clock_rate /
 		      1000;
 	}
 #else
-	ts_span = stream->codec_param.info.frm_ptime *
+	ts_span = stream->dec_ptime *
 		  stream->codec_param.info.clock_rate /
 		  1000;
 #endif
@@ -2123,6 +2182,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
 	stream->codec_param.info.clock_rate = info->fmt.clock_rate;
 	stream->codec_param.info.channel_cnt = info->fmt.channel_cnt;
+
+	/* Allocate decoding buffer as Opus can send a packet duration of
+	 * up to 120 ms.
+	 */
+	stream->dec_buf_size = stream->codec_param.info.clock_rate * 120 /
+			       1000;
+	stream->dec_buf = (pj_int16_t*)pj_pool_alloc(pool,
+			    	      		     stream->dec_buf_size *
+			    	      		     sizeof(pj_int16_t));
     }
 
     status = pjmedia_codec_open(stream->codec, &stream->codec_param);
@@ -2130,6 +2198,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	goto err_cleanup;
 
     /* Set additional info and callbacks. */
+    stream->dec_ptime = stream->codec_param.info.frm_ptime;
     afd->bits_per_sample = 16;
     afd->frame_time_usec = stream->codec_param.info.frm_ptime *
 		           stream->codec_param.setting.frm_per_pkt * 1000;
@@ -2247,6 +2316,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	stream->rtp_tx_ts_len_per_pkt *= opus_ts_modifier;
 	stream->rtp_rx_ts_len_per_frame *= opus_ts_modifier;
+	stream->detect_ptime_change = PJ_TRUE;
     }
 #endif
 
