@@ -727,66 +727,107 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 
     PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %d", old_sock));
 
-    /* Investigate the old socket */
-    addr_len = sizeof(local_addr);
-    status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    for (msec=20; (msec<1000 && status != PJ_SUCCESS) ;
+         msec<1000? msec=msec*2 : 1000)
+    {
+        if (msec > 20) {
+            PJ_LOG(4,(THIS_FILE, "Retry to replace UDP socket %d", old_sock));
+            pj_thread_sleep(msec);
+        }
+        
+        /* Investigate the old socket */
+        addr_len = sizeof(local_addr);
+        status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5,(THIS_FILE, "Error get socket name %d", status));
+            continue;
+        }
+        
+        addr_len = sizeof(rem_addr);
+        status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5,(THIS_FILE, "Error get peer name %d", status));
+        } else {
+            flags |= HAS_PEER_ADDR;
+        }
+
+        status = pj_sock_get_qos_params(old_sock, &qos_params);
+        if (status == PJ_STATUS_FROM_OS(EBADF) ||
+            status == PJ_STATUS_FROM_OS(EINVAL))
+        {
+            PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+            continue;
+        }
+        
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+        } else {
+            flags |= HAS_QOS;
+        }
+
+        /* We're done with the old socket, close it otherwise we'll get
+         * error in bind()
+         */
+        status = pj_sock_close(old_sock);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5,(THIS_FILE, "Error closing socket %d", status));
+        }
+
+        /* Prepare the new socket */
+        status = pj_sock_socket(local_addr.addr.sa_family, PJ_SOCK_DGRAM, 0,
+                                &new_sock);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(5,(THIS_FILE, "Error create socket %d", status));
+            continue;
+        }
+
+        /* Even after the socket is closed, we'll still get "Address in use"
+         * errors, so force it with SO_REUSEADDR
+         */
+        val = 1;
+        status = pj_sock_setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR,
+                                    &val, sizeof(val));
+        if (status == PJ_STATUS_FROM_OS(EBADF) ||
+            status == PJ_STATUS_FROM_OS(EINVAL))
+        {
+            PJ_LOG(5,(THIS_FILE, "Error set socket option %d",
+                      status));
+            continue;
+        }
+
+        /* The loop is silly, but what else can we do? */
+        addr_len = pj_sockaddr_get_len(&local_addr);
+        for (msec=20; msec<1000 ; msec<1000? msec=msec*2 : 1000) {
+            status = pj_sock_bind(new_sock, &local_addr, addr_len);
+            if (status != PJ_STATUS_FROM_OS(EADDRINUSE))
+                break;
+            PJ_LOG(4,(THIS_FILE, "Address is still in use, retrying.."));
+            pj_thread_sleep(msec);
+        }
+
+        if (status != PJ_SUCCESS)
+            continue;
+
+        if (flags & HAS_QOS) {
+            status = pj_sock_set_qos_params(new_sock, &qos_params);
+            if (status == PJ_STATUS_FROM_OS(EINVAL)) {
+                PJ_LOG(5,(THIS_FILE, "Error set qos param %d", status));
+                continue;
+            }
+        }
+
+        if (flags & HAS_PEER_ADDR) {
+            status = pj_sock_connect(new_sock, &rem_addr, addr_len);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(5,(THIS_FILE, "Error connect socket %d", status));
+                continue;
+            }
+        }
+    }
     
-    addr_len = sizeof(rem_addr);
-    status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
-    if (status == PJ_SUCCESS)
-	flags |= HAS_PEER_ADDR;
-
-    status = pj_sock_get_qos_params(old_sock, &qos_params);
-    if (status == PJ_SUCCESS)
-	flags |= HAS_QOS;
-
-    /* We're done with the old socket, close it otherwise we'll get
-     * error in bind()
-     */
-    pj_sock_close(old_sock);
-
-    /* Prepare the new socket */
-    status = pj_sock_socket(local_addr.addr.sa_family, PJ_SOCK_DGRAM, 0,
-			    &new_sock);
     if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Even after the socket is closed, we'll still get "Address in use"
-     * errors, so force it with SO_REUSEADDR
-     */
-    val = 1;
-    status = pj_sock_setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR,
-				&val, sizeof(val));
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* The loop is silly, but what else can we do? */
-    addr_len = pj_sockaddr_get_len(&local_addr);
-    for (msec=20; ; msec<1000? msec=msec*2 : 1000) {
-	status = pj_sock_bind(new_sock, &local_addr, addr_len);
-	if (status != PJ_STATUS_FROM_OS(EADDRINUSE))
-	    break;
-	PJ_LOG(4,(THIS_FILE, "Address is still in use, retrying.."));
-	pj_thread_sleep(msec);
-    }
-
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    if (flags & HAS_QOS) {
-	status = pj_sock_set_qos_params(new_sock, &qos_params);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
-
-    if (flags & HAS_PEER_ADDR) {
-	status = pj_sock_connect(new_sock, &rem_addr, addr_len);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
-
+        goto on_error;
+    
     /* Set socket to nonblocking. */
     val = 1;
 #if defined(PJ_WIN32) && PJ_WIN32!=0 || \
@@ -829,9 +870,9 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 on_error:
     if (new_sock != PJ_INVALID_SOCKET)
 	pj_sock_close(new_sock);
-    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket"));
+    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket [%d]", status));
     pj_lock_release(h->ioqueue->lock);
-    return status;
+    return PJ_ESOCKETSTOP;
 }
 #endif
 

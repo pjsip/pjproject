@@ -343,7 +343,7 @@ pj_bool_t ioqueue_dispatch_write_event( pj_ioqueue_t *ioqueue,
 		    PJ_PERROR(4,(THIS_FILE, send_rc,
 				 "Send error for socket %d, retrying",
 				 h->fd));
-		    replace_udp_sock(h);
+		    send_rc = replace_udp_sock(h);
 		    continue;
 		}
 #endif
@@ -578,7 +578,10 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
 	    if (rc == PJ_STATUS_FROM_OS(ENOTCONN) && !IS_CLOSING(h) &&
 		h->fd_type==pj_SOCK_DGRAM())
 	    {
-		replace_udp_sock(h);
+		rc = replace_udp_sock(h);
+		if (rc != PJ_SUCCESS) {
+		    bytes_read = -rc;
+		}
 	    }
 #endif
 	}
