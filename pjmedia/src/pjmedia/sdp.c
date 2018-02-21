@@ -1529,11 +1529,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
 	     * RTC based programs sends "null" for instant messaging!
 	     */
 	    if (pj_isdigit(*m->desc.fmt[j].ptr)) {
-		unsigned pt = pj_strtoul(&m->desc.fmt[j]);
+		unsigned long pt;
+		pj_status_t status = pj_strtoul3(&m->desc.fmt[j], &pt, 10);
 
 		/* Payload type is between 0 and 127. 
 		 */
-		CHECK( pt <= 127, PJMEDIA_SDP_EINPT);
+		CHECK( status == PJ_SUCCESS && pt <= 127, PJMEDIA_SDP_EINPT);
 
 		/* If port is not zero, then for each dynamic payload type, an
 		 * rtpmap attribute must be specified.
