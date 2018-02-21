@@ -256,7 +256,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtpmap")==0, PJ_EINVALIDOP);
 
-    PJ_ASSERT_RETURN(attr->value.slen != 0, PJMEDIA_SDP_EINATTR);
+    if (attr->value.slen == 0)
+        return PJMEDIA_SDP_EINATTR;
 
     init_sdp_parser();
 
@@ -344,6 +345,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_fmtp( const pjmedia_sdp_attr *attr,
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "fmtp")==0, PJ_EINVALIDOP);
 
+    if (attr->value.slen == 0)
+        return PJMEDIA_SDP_EINATTR;
+
     /* fmtp BNF:
      *	a=fmtp:<format> <format specific parameter>
      */
@@ -381,6 +385,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
     PJ_USE_EXCEPTION;
 
     PJ_ASSERT_RETURN(pj_strcmp2(&attr->name, "rtcp")==0, PJ_EINVALIDOP);
+
+    if (attr->value.slen == 0)
+        return PJMEDIA_SDP_EINATTR;
 
     init_sdp_parser();
 
