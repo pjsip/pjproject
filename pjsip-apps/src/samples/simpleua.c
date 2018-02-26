@@ -870,6 +870,9 @@ static void call_on_media_update( pjsip_inv_session *inv,
 	return;
     }
 
+    /* Start the UDP media transport */
+    pjmedia_transport_media_start(g_med_transport[0], 0, 0, 0, 0);
+
     /* Get the media port interface of the audio stream. 
      * Media port interface is basicly a struct containing get_frame() and
      * put_frame() function. With this media port interface, we can attach
@@ -945,6 +948,9 @@ static void call_on_media_update( pjsip_inv_session *inv,
 	    app_perror( THIS_FILE, "Unable to start video stream", status);
 	    return;
 	}
+
+	/* Start the UDP media transport */
+	pjmedia_transport_media_start(g_med_transport[1], 0, 0, 0, 0);
 
 	if (vstream_info.dir & PJMEDIA_DIR_DECODING) {
 	    status = pjmedia_vid_dev_default_param(

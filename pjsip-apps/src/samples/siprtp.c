@@ -1470,6 +1470,9 @@ static void call_on_media_update( pjsip_inv_session *inv,
 	return;
     }
 
+    /* Start media transport */
+    pjmedia_transport_media_start(audio->transport, 0, 0, 0, 0);
+
     /* Start media thread. */
     audio->thread_quit_flag = 0;
 #if PJ_HAS_THREADS

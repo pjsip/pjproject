@@ -56,6 +56,7 @@ struct transport_udp
     unsigned		media_options;	/**< Transport media options.	    */
     void	       *user_data;	/**< Only valid when attached	    */
     //pj_bool_t		attached;	/**< Has attachment?		    */
+    pj_bool_t		started;	/**< Has started?		    */
     pj_sockaddr		rem_rtp_addr;	/**< Remote RTP address		    */
     unsigned		rem_rtp_cnt;	/**< How many pkt from this addr.   */
     pj_sockaddr		rem_rtcp_addr;	/**< Remote RTCP address	    */
@@ -281,7 +282,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback rtp_cb, rtcp_cb;
-    pj_ssize_t size;
     unsigned i;
     pj_status_t status;
 
@@ -354,6 +354,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 	pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
 			       sizeof(tp->rtp_pending_write[i].op_key));
 
+#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTP read from the ioqueue */
     tp->rtp_addrlen = sizeof(tp->rtp_src_addr);
     size = sizeof(tp->rtp_pkt);
@@ -362,6 +363,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 				 &tp->rtp_src_addr, &tp->rtp_addrlen);
     if (status != PJ_EPENDING)
 	goto on_error;
+#endif
 
 
     /* Setup RTCP socket with ioqueue */
@@ -381,6 +383,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_ioqueue_op_key_init(&tp->rtcp_write_op, sizeof(tp->rtcp_write_op));
 
 
+#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTCP read from the ioqueue */
     size = sizeof(tp->rtcp_pkt);
     tp->rtcp_addr_len = sizeof(tp->rtcp_src_addr);
@@ -389,6 +392,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 				  &tp->rtcp_src_addr, &tp->rtcp_addr_len);
     if (status != PJ_EPENDING)
 	goto on_error;
+#endif    
 
     tp->ioqueue = ioqueue;
 
@@ -570,7 +574,8 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    bytes_read = -status;
 
-    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
+	     udp->started);
 }
 
 
@@ -580,7 +585,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                        pj_ssize_t bytes_read)
 {
     struct transport_udp *udp;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_UNUSED_ARG(op_key);
 
@@ -650,7 +655,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    bytes_read = -status;
 
-    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
+	     udp->started);
 }
 
 
@@ -997,20 +1003,62 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				  const pjmedia_sdp_session *sdp_remote,
 				  unsigned media_index)
 {
-    PJ_ASSERT_RETURN(tp && pool && sdp_local, PJ_EINVAL);
+    struct transport_udp *udp = (struct transport_udp*)tp;
+    pj_ssize_t size;
+    pj_status_t status;
 
-    PJ_UNUSED_ARG(tp);
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(sdp_local);
     PJ_UNUSED_ARG(sdp_remote);
     PJ_UNUSED_ARG(media_index);
+
+    /* Just return success if there is already pending read */
+    if (udp->started)
+	return PJ_SUCCESS;
+
+    /* Kick off pending RTP read from the ioqueue */
+    udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
+    size = sizeof(udp->rtp_pkt);
+    status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
+			         udp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
+				 &udp->rtp_src_addr, &udp->rtp_addrlen);
+    if (status != PJ_EPENDING)
+	return status;
+
+    /* Kick off pending RTCP read from the ioqueue */
+    udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
+    size = sizeof(udp->rtcp_pkt);
+    status = pj_ioqueue_recvfrom(udp->rtcp_key, &udp->rtcp_read_op,
+				 udp->rtcp_pkt, &size,
+				 PJ_IOQUEUE_ALWAYS_ASYNC,
+				 &udp->rtcp_src_addr, &udp->rtcp_addr_len);
+    if (status != PJ_EPENDING)
+	return status;
+
+    udp->started = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
 
 static pj_status_t transport_media_stop(pjmedia_transport *tp)
 {
-    PJ_UNUSED_ARG(tp);
+    struct transport_udp *udp = (struct transport_udp*)tp;
+
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
+    /* Just return success if there is no pending read */
+    if (!udp->started)
+	return PJ_SUCCESS;
+
+    pj_ioqueue_post_completion(udp->rtp_key, &udp->rtp_read_op,
+			       -PJ_ECANCELLED);
+
+    pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_read_op,
+			       -PJ_ECANCELLED);
+
+    udp->started = PJ_FALSE;
 
     return PJ_SUCCESS;
 }

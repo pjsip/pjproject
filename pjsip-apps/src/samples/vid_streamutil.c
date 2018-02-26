@@ -285,6 +285,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
 	return status;
     }
 
+    /* Start media transport */
+    pjmedia_transport_media_start(transport, 0, 0, 0, 0);
 
     return PJ_SUCCESS;
 }
