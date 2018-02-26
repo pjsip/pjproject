@@ -119,6 +119,9 @@
 #   define MAX_TRAILER_LEN 10
 #endif
 
+/* Maximum number of SRTP keying method */
+#define MAX_KEYING		    2
+
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 static const pj_str_t ID_INACTIVE = { "inactive", 8 };
@@ -283,8 +286,12 @@ typedef struct transport_srtp
      * removed from the session. And once SRTP key is obtained via a keying
      * method, any other keying methods will be stopped and destroyed.
      */
+    unsigned		 all_keying_cnt;
+    pjmedia_transport	*all_keying[MAX_KEYING];
+
+    /* Current active SRTP keying methods. */
     unsigned		 keying_cnt;
-    pjmedia_transport	*keying[2];
+    pjmedia_transport	*keying[MAX_KEYING];
 
     /* If not zero, keying nego is ongoing (async-ly, e.g: by DTLS-SRTP).
      * This field may be updated by keying method.
@@ -717,18 +724,18 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     srtp->peer_use = srtp->setting.use;
 
     /* Initialize SRTP keying method. */
-    for (i = 0; i < srtp->setting.keying_count; ++i) {
+    for (i = 0; i < srtp->setting.keying_count && i < MAX_KEYING; ++i) {
 	switch(srtp->setting.keying[i]) {
 
 	case PJMEDIA_SRTP_KEYING_SDES:
 #if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
-	    sdes_create(srtp, &srtp->keying[srtp->keying_cnt++]);
+	    sdes_create(srtp, &srtp->all_keying[srtp->all_keying_cnt++]);
 #endif
 	    break;
 
 	case PJMEDIA_SRTP_KEYING_DTLS_SRTP:
 #if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
-	    dtls_create(srtp, &srtp->keying[srtp->keying_cnt++]);
+	    dtls_create(srtp, &srtp->all_keying[srtp->all_keying_cnt++]);
 #endif
 	    break;
 
@@ -1038,7 +1045,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &srtp_info,
 	      sizeof(srtp_info));
 
-    /* Invoke get_info() of all keying methods */
+    /* Invoke get_info() from any active keying method */
     for (i=0; i < srtp->keying_cnt; i++)
 	pjmedia_transport_get_info(srtp->keying[i], info);
 
@@ -1371,7 +1378,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 {
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
     unsigned member_tp_option;
-    pj_status_t last_err_st = PJ_EBUG;
+    pj_status_t keying_status = PJ_SUCCESS;
     pj_status_t status;
     unsigned i;
 
@@ -1383,15 +1390,22 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     srtp->media_option = member_tp_option = options;
     srtp->offerer_side = (sdp_remote == NULL);
 
-    if (srtp->offerer_side && srtp->setting.use == PJMEDIA_SRTP_DISABLED)
+    if (srtp->offerer_side && srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
 	srtp->bypass_srtp = PJ_TRUE;
-    else
+	srtp->keying_cnt = 0;
+    } else {
+	srtp->bypass_srtp = PJ_FALSE;
+	srtp->keying_cnt = srtp->all_keying_cnt;
+	for (i = 0; i < srtp->all_keying_cnt; ++i)
+	    srtp->keying[i] = srtp->all_keying[i];
+
 	member_tp_option |= PJMEDIA_TPMED_NO_TRANSPORT_CHECKING;
+    }
 
     status = pjmedia_transport_media_create(srtp->member_tp, sdp_pool,
 					    member_tp_option, sdp_remote,
 					    media_index);
-    if (status != PJ_SUCCESS || srtp->bypass_srtp)
+    if (status != PJ_SUCCESS)
 	return status;
 
     /* Invoke media_create() of all keying methods */
@@ -1405,7 +1419,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 	    pj_array_erase(srtp->keying, sizeof(srtp->keying[0]),
 			   srtp->keying_cnt, i);
 	    srtp->keying_cnt--;
-	    last_err_st = st;
+	    keying_status = st;
 	    continue;
 	} else if (srtp->offerer_side) {
 	    /* Currently we can send one keying only in outgoing offer */
@@ -1419,7 +1433,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 
     /* All keying method failed to process remote SDP? */
     if (srtp->keying_cnt == 0)
-	return last_err_st;
+	return keying_status;
 
     return PJ_SUCCESS;
 }
@@ -1431,7 +1445,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 					unsigned media_index)
 {
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
-    pj_status_t last_err_st = PJ_EBUG;
+    pj_status_t keying_status = PJ_SUCCESS;
     pj_status_t status;
     unsigned i;
 
@@ -1444,7 +1458,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     status = pjmedia_transport_encode_sdp(srtp->member_tp, sdp_pool,
 					  sdp_local, sdp_remote, media_index);
-    if (status != PJ_SUCCESS || srtp->bypass_srtp)
+    if (status != PJ_SUCCESS)
 	return status;
 
     /* Invoke encode_sdp() of all keying methods */
@@ -1458,7 +1472,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    pj_array_erase(srtp->keying, sizeof(srtp->keying[0]),
 			   srtp->keying_cnt, i);
 	    srtp->keying_cnt--;
-	    last_err_st = st;
+	    keying_status = st;
 	    continue;
 	}
 
@@ -1482,7 +1496,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     /* All keying method failed to process remote SDP? */
     if (srtp->keying_cnt == 0)
-	return last_err_st;
+	return keying_status;
 
     return PJ_SUCCESS;
 }
@@ -1495,7 +1509,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				         unsigned media_index)
 {
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
-    pj_status_t last_err_st = PJ_EBUG;
+    pj_status_t keying_status = PJ_SUCCESS;
     pj_status_t status;
     unsigned i;
 
@@ -1504,7 +1518,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     status = pjmedia_transport_media_start(srtp->member_tp, pool,
 					   sdp_local, sdp_remote,
 				           media_index);
-    if (status != PJ_SUCCESS || srtp->bypass_srtp)
+    if (status != PJ_SUCCESS)
 	return status;
 
     /* Invoke media_start() of all keying methods */
@@ -1517,7 +1531,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	    pj_array_erase(srtp->keying, sizeof(srtp->keying[0]),
 			   srtp->keying_cnt, i);
 	    srtp->keying_cnt--;
-	    last_err_st = status;
+	    keying_status = status;
 	    continue;
 	}
 
@@ -1541,7 +1555,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
     /* All keying method failed to process remote SDP? */
     if (srtp->keying_cnt == 0)
-	return last_err_st;
+	return keying_status;
 
     /* If SRTP key is being negotiated, just return now.
      * The keying method should start the SRTP once keying nego is done.
@@ -1623,5 +1637,3 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
 }
 
 #endif
-
-

@@ -242,7 +242,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 
 	si->proto = PJMEDIA_TP_PROTO_RTP_AVP;
 
-    } else if (pj_stricmp(&local_m->desc.transport, &ID_RTP_SAVP) == 0) {
+    } else if (pj_stristr(&local_m->desc.transport, &ID_RTP_SAVP)) {
 
 	si->proto = PJMEDIA_TP_PROTO_RTP_SAVP;
 

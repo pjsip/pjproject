@@ -279,8 +279,7 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
 
     /* Validations */
     if (srtp->offerer_side) {
-	if (srtp->setting.use == PJMEDIA_SRTP_DISABLED)
-	    srtp->bypass_srtp = PJ_TRUE;
+	/* As offerer: do nothing. */
     } else {
 	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
 

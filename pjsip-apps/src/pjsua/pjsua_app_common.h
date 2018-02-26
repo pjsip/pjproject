@@ -84,6 +84,7 @@ typedef struct pjsua_app_config
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
     pjsip_redirect_op	    redir_op;
+    int			    srtp_keying;
 
     unsigned		    acc_cnt;
     pjsua_acc_config	    acc_cfg[PJSUA_MAX_ACC];

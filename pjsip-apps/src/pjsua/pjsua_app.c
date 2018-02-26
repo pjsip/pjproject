@@ -1010,6 +1010,25 @@ static void on_call_media_event(pjsua_call_id call_id,
 #endif
 }
 
+/*
+ * This callback is called when media transport SRTP needs to be created.
+ */
+static void on_create_media_transport_srtp(pjsua_call_id call_id,
+					   unsigned media_idx,
+					   pjmedia_srtp_setting *srtp_opt)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(media_idx);
+
+    /* Set SRTP keying to use DTLS over SDES */
+    if (app_config.srtp_keying == 1) {
+	srtp_opt->keying_count = 2;
+	srtp_opt->keying[0] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+	srtp_opt->keying[1] = PJMEDIA_SRTP_KEYING_SDES;
+    }
+}
+
+
 #ifdef TRANSPORT_ADAPTER_SAMPLE
 /*
  * This callback is called when media transport needs to be created.
@@ -1343,6 +1362,8 @@ static pj_status_t app_init()
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
+    app_config.cfg.cb.on_create_media_transport_srtp =
+					    &on_create_media_transport_srtp;
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif
