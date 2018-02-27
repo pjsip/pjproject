@@ -406,7 +406,6 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 	/* Generate transport */
 	switch (srtp->setting.use) {
 	    case PJMEDIA_SRTP_DISABLED:
-		pj_assert(!"Shouldn't reach here");
 		if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) == 0)
 		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 		return PJ_SUCCESS;
