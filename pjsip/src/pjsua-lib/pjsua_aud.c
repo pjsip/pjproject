@@ -603,8 +603,9 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
 	si->jb_max = pjsua_var.media_cfg.jb_max;
 
-	/* Set SSRC */
+	/* Set SSRC and CNAME */
 	si->ssrc = call_med->ssrc;
+	si->cname = call->cname;
 
 	/* Set RTP timestamp & sequence, normally these value are intialized
 	 * automatically when stream session created, but for some cases (e.g:

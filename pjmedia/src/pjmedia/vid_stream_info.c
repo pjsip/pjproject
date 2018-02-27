@@ -195,6 +195,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
     const pjmedia_sdp_conn *rem_conn;
     int rem_af, local_af;
     pj_sockaddr local_addr;
+    unsigned i;
     pj_status_t status;
 
     PJ_UNUSED_ARG(endpt);
@@ -375,6 +376,24 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr));
 	rtcp_port = pj_sockaddr_get_port(&si->rem_addr) + 1;
 	pj_sockaddr_set_port(&si->rem_rtcp, (pj_uint16_t)rtcp_port);
+    }
+
+    /* Check if "ssrc" attribute is present in the SDP. */
+    for (i = 0; i < rem_m->attr_count; i++) {
+	if (pj_strcmp2(&rem_m->attr[i]->name, "ssrc") == 0) {
+	    pjmedia_sdp_ssrc_attr ssrc;
+
+	    status = pjmedia_sdp_attr_get_ssrc(
+	    		(const pjmedia_sdp_attr *)rem_m->attr[i], &ssrc);
+	    if (status == PJ_SUCCESS) {
+	        si->has_rem_ssrc = PJ_TRUE;
+	    	si->rem_ssrc = ssrc.ssrc;
+	    	if (ssrc.cname.slen > 0) {
+	    	    pj_strdup(pool, &si->rem_cname, &ssrc.cname);
+	    	    break;
+	    	}
+	    }
+	}
     }
 
     /* Get codec info and param */

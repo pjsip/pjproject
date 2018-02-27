@@ -176,6 +176,11 @@ PJ_BEGIN_DECL
  * Invalid SDP bandwidth info (b=) line.
  */
 #define PJMEDIA_SDP_EINBANDW	    (PJMEDIA_ERRNO_START+37)    /* 220037 */
+/**
+ * @hideinitializer
+ * Invalid SDP "ssrc" attribute.
+ */
+#define PJMEDIA_SDP_EINSSRC	    (PJMEDIA_ERRNO_START+38)    /* 220038 */
 
 
 /************************************************************

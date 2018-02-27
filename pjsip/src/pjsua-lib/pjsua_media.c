@@ -2415,6 +2415,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	if (status != PJ_SUCCESS)
 	    return status;
 
+    	/* Add ssrc and cname attribute */
+    	m->attr[m->attr_count++] = pjmedia_sdp_attr_create_ssrc(pool,
+    								call_med->ssrc,
+    								&call->cname);
+
 	sdp->media[sdp->media_count++] = m;
 
 	/* Give to transport */

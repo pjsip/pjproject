@@ -333,6 +333,43 @@ PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
 							const pj_sockaddr *a);
 
 
+/**
+ * This structure describes SDP \a ssrc attribute.
+ */
+typedef struct pjmedia_sdp_ssrc_attr
+{
+    pj_uint32_t	ssrc;	    /**< RTP SSRC.	*/
+    pj_str_t	cname; 	    /**< RTCP CNAME.	*/
+} pjmedia_sdp_ssrc_attr;
+
+
+/**
+ * Parse a generic SDP attribute to get SDP ssrc attribute values.
+ *
+ * @param attr		Generic attribute to be converted to ssrc, which
+ *			name must be "ssrc".
+ * @param ssrc		SDP ssrc attribute to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
+					       pjmedia_sdp_ssrc_attr *rtcp);
+
+
+/**
+ * Create a=ssrc attribute.
+ *
+ * @param pool		Pool to create the attribute.
+ * @param ssrc		SSRC identifier.
+ * @param cname		CNAME.
+ *
+ * @return		SDP SSRC attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc(pj_pool_t *pool,
+							pj_uint32_t ssrc,
+							const pj_str_t *cname);
+
+
 /* **************************************************************************
  * SDP CONNECTION INFO
  ****************************************************************************

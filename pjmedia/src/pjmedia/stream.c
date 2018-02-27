@@ -2022,15 +2022,14 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
 
     /* Create RTP and RTCP sessions: */
-
-    if (param->rtp_seq_ts_set == 0) {
-	status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
-    } else {
+    {
 	pjmedia_rtp_session_setting settings;
 
-	settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) | 3);
+	settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) |
+				      (param->has_rem_ssrc << 4) | 3);
 	settings.default_pt = pt;
 	settings.sender_ssrc = param->ssrc;
+	settings.peer_ssrc = param->rem_ssrc;
 	settings.seq = param->rtp_seq;
 	settings.ts = param->rtp_ts;
 	status = pjmedia_rtp_session_init2(&channel->rtp, settings);
@@ -2124,16 +2123,18 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->use_ka = info->use_ka;
 #endif
 
-    /* Build random RTCP CNAME. CNAME has user@host format */
-    stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
-    pj_create_random_string(p, 5);
-    p += 5;
-    *p++ = '@'; *p++ = 'p'; *p++ = 'j';
-    pj_create_random_string(p, 6);
-    p += 6;
-    *p++ = '.'; *p++ = 'o'; *p++ = 'r'; *p++ = 'g';
-    stream->cname.slen = p - stream->cname.ptr;
-
+    stream->cname = info->cname;
+    if (stream->cname.slen == 0) {
+	/* Build random RTCP CNAME. CNAME has user@host format */
+    	stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
+    	pj_create_random_string(p, 5);
+    	p += 5;
+    	*p++ = '@'; *p++ = 'p'; *p++ = 'j';
+    	pj_create_random_string(p, 6);
+    	p += 6;
+    	*p++ = '.'; *p++ = 'o'; *p++ = 'r'; *p++ = 'g';
+    	stream->cname.slen = p - stream->cname.ptr;
+    }
 
     /* Create mutex to protect jitter buffer: */
 

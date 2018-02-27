@@ -189,6 +189,7 @@ struct pjmedia_rtp_session
     pjmedia_rtp_seq_session seq_ctrl;   /**< Sequence number management.    */
     pj_uint16_t		    out_pt;	/**< Default outgoing payload type. */
     pj_uint32_t		    out_extseq; /**< Outgoing extended seq #.	    */
+    pj_bool_t		    has_peer_ssrc;/**< Has peer SSRC?		    */
     pj_uint32_t		    peer_ssrc;  /**< Peer SSRC.			    */
     pj_uint32_t		    received;   /**< Number of received packets.    */
 };
@@ -248,9 +249,11 @@ typedef struct pjmedia_rtp_session_setting
 					 bit #0: default payload type
 					 bit #1: sender SSRC
 					 bit #2: sequence
-					 bit #3: timestamp		    */
+					 bit #3: timestamp
+					 bit #4: peer SSRC		    */
     int		     default_pt;    /**< Default payload type.		    */
     pj_uint32_t	     sender_ssrc;   /**< Sender SSRC.			    */
+    pj_uint32_t	     peer_ssrc;     /**< Peer SSRC.			    */
     pj_uint16_t	     seq;	    /**< Sequence.			    */
     pj_uint32_t	     ts;	    /**< Timestamp.			    */
 } pjmedia_rtp_session_setting;

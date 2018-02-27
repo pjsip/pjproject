@@ -108,6 +108,10 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init2(
     }
     if (settings.flags & 8)
 	ses->out_hdr.ts = pj_htonl(settings.ts);
+    if (settings.flags & 16) {
+        ses->has_peer_ssrc = PJ_TRUE;
+	ses->peer_ssrc = settings.peer_ssrc;
+    }
 
     return PJ_SUCCESS;
 }
@@ -237,7 +241,8 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
     seq_st.diff = 0;
 
     /* Check SSRC. */
-    if (ses->peer_ssrc == 0) ses->peer_ssrc = pj_ntohl(hdr->ssrc);
+    if (!ses->has_peer_ssrc && ses->peer_ssrc == 0)
+        ses->peer_ssrc = pj_ntohl(hdr->ssrc);
 
     if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
 	seq_st.status.flag.badssrc = 1;

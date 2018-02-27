@@ -137,6 +137,8 @@ static void reset_call(pjsua_call_id id)
     pj_bzero(call, sizeof(*call));
     call->index = id;
     call->last_text.ptr = call->last_text_buf_;
+    call->cname.ptr = call->cname_buf;
+    call->cname.slen = sizeof(call->cname_buf);
     for (i=0; i<PJ_ARRAY_SIZE(call->media); ++i) {
 	pjsua_call_media *call_med = &call->media[i];
 	call_med->ssrc = pj_rand();
@@ -793,6 +795,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     call->acc_id = acc_id;
     call->call_hold_type = acc->cfg.call_hold_type;
 
+    /* Generate per-session RTCP CNAME, according to RFC 7022. */
+    pj_create_random_string(call->cname_buf, call->cname.slen);
+
     /* Apply call setting */
     status = apply_call_setting(call, opt, NULL);
     if (status != PJ_SUCCESS) {
@@ -1222,6 +1227,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     reset_call(call_id);
 
     call = &pjsua_var.calls[call_id];
+
+    /* Generate per-session RTCP CNAME, according to RFC 7022. */
+    pj_create_random_string(call->cname_buf, call->cname.slen);
 
     /* Mark call start time. */
     pj_gettimeofday(&call->start_time);
