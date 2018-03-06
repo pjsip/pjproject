@@ -956,6 +956,7 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
 	    pjmedia_transport_attach_param ap;
 
 	    pj_bzero(&ap, sizeof(ap));
+	    ap.user_data = ds->srtp;
 	    pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
 	    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
 	    ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
@@ -1142,6 +1143,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
     {
 	pjmedia_transport_attach_param ap;
 	pj_bzero(&ap, sizeof(ap));
+	ap.user_data = ds->srtp;
 
 	if (sdp_remote)
 	    get_rem_addrs(ds, sdp_remote, media_index);
@@ -1293,6 +1295,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	     */
 	    pjmedia_transport_attach_param ap;
 	    pj_bzero(&ap, sizeof(ap));
+	    ap.user_data = ds->srtp;
 
 	    /* Attach ourselves to member transport for DTLS nego. */
 	    if (!pj_sockaddr_has_addr(&ds->rem_addr))
@@ -1420,6 +1423,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
 
     /* Attach member transport, so we can send/receive DTLS init packets */
     pj_bzero(&ap, sizeof(ap));
+    ap.user_data = ds->srtp;
     pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
     pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
     ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);

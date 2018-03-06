@@ -838,7 +838,7 @@ static void transport_detach( pjmedia_transport *tp,
 	PJ_UNUSED_ARG(user_data);
 
 	/* As additional checking, check if the same user data is specified */
-	pj_assert(user_data == udp->user_data);
+	pj_assert(!udp->user_data || user_data == udp->user_data);
 
 	/* First, mark transport as unattached */
 	//udp->attached = PJ_FALSE;
