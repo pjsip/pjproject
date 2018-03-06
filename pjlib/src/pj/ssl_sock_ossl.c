@@ -263,6 +263,8 @@ struct pj_ssl_sock_t
     write_data_t	  write_pending_empty; /* cache for write_pending   */
     pj_bool_t		  flushing_write_pend; /* flag of flushing is ongoing*/
     send_buf_t		  send_buf;
+    write_data_t 	  send_buf_pending; /* send buffer is full but some
+					     * data is queuing in wbio.     */
     write_data_t	  send_pending;	/* list of pending write to network */
     pj_lock_t		 *write_mutex;	/* protect write BIO and send_buf   */
 
@@ -1889,8 +1891,15 @@ static pj_status_t flush_write_bio(pj_ssl_sock_t *ssock,
     /* Allocate buffer for send data */
     wdata = alloc_send_data(ssock, needed_len);
     if (wdata == NULL) {
+	/* Oops, write BIO is ready but the send buffer is full, let's just
+	 * queue it for sending and return PJ_EPENDING.
+	 */
+	ssock->send_buf_pending.data_len = needed_len;
+	ssock->send_buf_pending.app_key = send_key;
+	ssock->send_buf_pending.flags = flags;
+	ssock->send_buf_pending.plain_data_len = orig_len;
 	pj_lock_release(ssock->write_mutex);
-	return PJ_ENOMEM;
+	return PJ_EPENDING;
     }
 
     /* Copy the data and set its properties into the send data */
@@ -2192,9 +2201,17 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)
 			   pj_activesock_get_user_data(asock);
+    write_data_t *wdata = (write_data_t*)send_key->user_data;
+    pj_ioqueue_op_key_t *app_key = wdata->app_key;
+    pj_ssize_t sent_len;
 
-    PJ_UNUSED_ARG(send_key);
-    PJ_UNUSED_ARG(sent);
+    sent_len = (sent > 0)? wdata->plain_data_len : sent;
+    
+    /* Update write buffer state */
+    pj_lock_acquire(ssock->write_mutex);
+    free_send_data(ssock, wdata);
+    pj_lock_release(ssock->write_mutex);
+    wdata = NULL;
 
     if (ssock->ssl_state == SSL_STATE_HANDSHAKING) {
 	/* Initial handshaking */
@@ -2207,27 +2224,28 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
 
     } else if (send_key != &ssock->handshake_op_key) {
 	/* Some data has been sent, notify application */
-	write_data_t *wdata = (write_data_t*)send_key->user_data;
 	if (ssock->param.cb.on_data_sent) {
 	    pj_bool_t ret;
-	    pj_ssize_t sent_len;
-
-	    sent_len = (sent > 0)? wdata->plain_data_len : sent;
-	    ret = (*ssock->param.cb.on_data_sent)(ssock, wdata->app_key, 
+	    ret = (*ssock->param.cb.on_data_sent)(ssock, app_key, 
 						  sent_len);
 	    if (!ret) {
 		/* We've been destroyed */
 		return PJ_FALSE;
 	    }
 	}
-
-	/* Update write buffer state */
-	pj_lock_acquire(ssock->write_mutex);
-	free_send_data(ssock, wdata);
-	pj_lock_release(ssock->write_mutex);
-
     } else {
 	/* SSL re-negotiation is on-progress, just do nothing */
+    }
+
+    /* Send buffer has been updated, let's try to send any pending data */
+    if (ssock->send_buf_pending.data_len) {
+	pj_status_t status;
+	status = flush_write_bio(ssock, ssock->send_buf_pending.app_key,
+				 ssock->send_buf_pending.plain_data_len,
+				 ssock->send_buf_pending.flags);
+	if (status == PJ_SUCCESS || status == PJ_EPENDING) {
+	    ssock->send_buf_pending.data_len = 0;
+	}
     }
 
     return PJ_TRUE;
@@ -2997,6 +3015,13 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock,
      * until re-negotiation is completed.
      */
     pj_lock_acquire(ssock->write_mutex);
+    /* Don't write to SSL if send buffer is full and some data is in
+     * write BIO already, just return PJ_ENOMEM.
+     */
+    if (ssock->send_buf_pending.data_len) {
+	pj_lock_release(ssock->write_mutex);
+	return PJ_ENOMEM;
+    }
     nwritten = SSL_write(ssock->ossl_ssl, data, (int)size);
     pj_lock_release(ssock->write_mutex);
     
