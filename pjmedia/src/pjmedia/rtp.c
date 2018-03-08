@@ -246,7 +246,8 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
 
     if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
 	seq_st.status.flag.badssrc = 1;
-	ses->peer_ssrc = pj_ntohl(hdr->ssrc);
+	if (!ses->has_peer_ssrc)
+	    ses->peer_ssrc = pj_ntohl(hdr->ssrc);
     }
 
     /* Check payload type. */

@@ -58,12 +58,12 @@ struct transport_udp
     //pj_bool_t		attached;	/**< Has attachment?		    */
     pj_bool_t		started;	/**< Has started?		    */
     pj_sockaddr		rem_rtp_addr;	/**< Remote RTP address		    */
-    unsigned		rem_rtp_cnt;	/**< How many pkt from this addr.   */
     pj_sockaddr		rem_rtcp_addr;	/**< Remote RTCP address	    */
     int			addr_len;	/**< Length of addresses.	    */
     void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
 			void*,
 			pj_ssize_t);
+    void  (*rtp_cb2)(pjmedia_tp_cb_param*); /**< To report incoming RTP.    */
     void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
 			void*,
 			pj_ssize_t);
@@ -79,7 +79,6 @@ struct transport_udp
     unsigned		rtp_write_op_id;/**< Next write_op to use	    */
     pending_write	rtp_pending_write[MAX_PENDING];  /**< Pending write */
     pj_sockaddr		rtp_src_addr;	/**< Actual packet src addr.	    */
-    unsigned		rtp_src_cnt;	/**< How many pkt from this addr.   */
     int			rtp_addrlen;	/**< Address length.		    */
     char		rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
 
@@ -119,6 +118,9 @@ static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void (*rtcp_cb)(void*,
 						       void*,
 						       pj_ssize_t));
+static pj_status_t transport_attach2  (pjmedia_transport *tp,
+				       pjmedia_transport_attach_param
+				           *att_param);
 static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
@@ -170,7 +172,8 @@ static pjmedia_transport_op transport_udp_op =
     &transport_media_start,
     &transport_media_stop,
     &transport_simulate_lost,
-    &transport_destroy
+    &transport_destroy,
+    &transport_attach2
 };
 
 
@@ -455,6 +458,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 {
     struct transport_udp *udp;
     pj_status_t status;
+    pj_bool_t rem_switch = PJ_FALSE;
 
     PJ_UNUSED_ARG(op_key);
 
@@ -478,10 +482,12 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 
     do {
 	void (*cb)(void*,void*,pj_ssize_t);
+	void (*cb2)(pjmedia_tp_cb_param*);
 	void *user_data;
 	pj_bool_t discard = PJ_FALSE;
 
 	cb = udp->rtp_cb;
+	cb2 = udp->rtp_cb2;
 	user_data = udp->user_data;
 
 	/* Simulate packet lost on RX direction */
@@ -494,75 +500,59 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 	    }
 	}
 
-	/* See if source address of RTP packet is different than the 
-	 * configured address, and switch RTP remote address to 
-	 * source packet address after several consecutive packets
-	 * have been received.
-	 */
-	if (bytes_read>0 && 
-	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0) 
-	{
-	    if (pj_sockaddr_cmp(&udp->rem_rtp_addr, &udp->rtp_src_addr) == 0) {
-		/* We're still receiving from rem_rtp_addr. Don't switch. */
-		udp->rtp_src_cnt = 0;
-		udp->rem_rtp_cnt++;
-	    } else {
-		udp->rtp_src_cnt++;
+	//if (!discard && udp->attached && cb)
+	if (!discard) {
+	    if (cb2) {
+		pjmedia_tp_cb_param param;
 
-		if (udp->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
-		    /* Only discard if we have ever received packet from
-		     * remote address (rem_rtp_addr).
-		     */
-		    //discard = PJ_TRUE;
-		    discard = (udp->rem_rtp_cnt != 0);
-		} else {
-		
-		    char addr_text[80];
-
-		    /* Set remote RTP address to source address */
-		    pj_memcpy(&udp->rem_rtp_addr, &udp->rtp_src_addr,
-			      sizeof(pj_sockaddr));
-
-		    /* Reset counter */
-		    udp->rtp_src_cnt = 0;
-
-		    PJ_LOG(4,(udp->base.name,
-			      "Remote RTP address switched to %s",
-			      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
-						sizeof(addr_text), 3)));
-
-		    /* Also update remote RTCP address if actual RTCP source
-		     * address is not heard yet.
-		     */
-		    if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
-			pj_uint16_t port;
-
-			pj_memcpy(&udp->rem_rtcp_addr, &udp->rem_rtp_addr, 
-				  sizeof(pj_sockaddr));
-			pj_sockaddr_copy_addr(&udp->rem_rtcp_addr,
-					      &udp->rem_rtp_addr);
-			port = (pj_uint16_t)
-			       (pj_sockaddr_get_port(&udp->rem_rtp_addr)+1);
-			pj_sockaddr_set_port(&udp->rem_rtcp_addr, port);
-
-			pj_memcpy(&udp->rtcp_src_addr, &udp->rem_rtcp_addr, 
-				  sizeof(pj_sockaddr));
-
-			PJ_LOG(4,(udp->base.name,
-				  "Remote RTCP address switched to predicted"
-				  " address %s",
-				  pj_sockaddr_print(&udp->rtcp_src_addr, 
-						    addr_text,
-						    sizeof(addr_text), 3)));
-
-		    }
-		}
+	    	param.user_data = user_data;
+	    	param.pkt = udp->rtp_pkt;
+	    	param.size = bytes_read;
+	    	param.src_addr = &udp->rtp_src_addr;
+	    	param.rem_switch = PJ_FALSE;
+	    	(*cb2)(&param);
+	    	rem_switch = param.rem_switch;
+	    } else if (cb) {
+	    	(*cb)(user_data, udp->rtp_pkt, bytes_read);
 	    }
 	}
 
-	//if (!discard && udp->attached && cb)
-	if (!discard && cb)
-	    (*cb)(user_data, udp->rtp_pkt, bytes_read);
+#if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
+    (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
+	if (rem_switch &&
+	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
+	{
+	    char addr_text[PJ_INET6_ADDRSTRLEN+10];
+
+	    /* Set remote RTP address to source address */
+	    pj_sockaddr_cp(&udp->rem_rtp_addr, &udp->rtp_src_addr);
+
+	    PJ_LOG(4,(udp->base.name,
+		      "Remote RTP address switched to %s",
+		      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
+					sizeof(addr_text), 3)));
+
+	    /* Also update remote RTCP address if actual RTCP source
+	     * address is not heard yet.
+	     */
+	    if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
+		pj_uint16_t port;
+
+		pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
+		port = (pj_uint16_t)
+		       (pj_sockaddr_get_port(&udp->rem_rtp_addr)+1);
+		pj_sockaddr_set_port(&udp->rem_rtcp_addr, port);
+
+		pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
+
+		PJ_LOG(4,(udp->base.name,
+			  "Remote RTCP address switched to predicted"
+			  " address %s",
+			  pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
+					    sizeof(addr_text), 3)));
+	    }
+	}
+#endif
 
 	bytes_read = sizeof(udp->rtp_pkt);
 	udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
@@ -618,6 +608,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	if (cb)
 	    (*cb)(user_data, udp->rtcp_pkt, bytes_read);
 
+#if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
+    (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
 	/* Check if RTCP source address is the same as the configured
 	 * remote address, and switch the address when they are
 	 * different.
@@ -632,7 +624,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 		++udp->rtcp_src_cnt;
 
 		if (udp->rtcp_src_cnt >= PJMEDIA_RTCP_NAT_PROBATION_CNT	) {
-		    char addr_text[80];
+		    char addr_text[PJ_INET6_ADDRSTRLEN+10];
 
 		    udp->rtcp_src_cnt = 0;
 		    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
@@ -645,6 +637,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 		}
 	    }
 	}
+#endif
 
 	bytes_read = sizeof(udp->rtcp_pkt);
 	udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
@@ -680,8 +673,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 }
 
 
-/* Called by application to initialize the transport */
-static pj_status_t transport_attach(   pjmedia_transport *tp,
+static pj_status_t tp_attach  	      (pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
 				       const pj_sockaddr_t *rem_rtcp,
@@ -689,6 +681,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       void (*rtp_cb)(void*,
 						      void*,
 						      pj_ssize_t),
+				       void (*rtp_cb2)(pjmedia_tp_cb_param*),
 				       void (*rtcp_cb)(void*,
 						       void*,
 						       pj_ssize_t))
@@ -750,6 +743,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 
     /* Save the callbacks */
     udp->rtp_cb = rtp_cb;
+    udp->rtp_cb2 = rtp_cb2;
     udp->rtcp_cb = rtcp_cb;
     udp->user_data = user_data;
 
@@ -762,9 +756,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     /* Reset source RTP & RTCP addresses and counter */
     pj_bzero(&udp->rtp_src_addr, sizeof(udp->rtp_src_addr));
     pj_bzero(&udp->rtcp_src_addr, sizeof(udp->rtcp_src_addr));
-    udp->rtp_src_cnt = 0;
     udp->rtcp_src_cnt = 0;
-    udp->rem_rtp_cnt = 0;
 
     /* Set buffer size for RTP socket */
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
@@ -816,6 +808,36 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 }
 
 
+/* Called by application to initialize the transport */
+static pj_status_t transport_attach(   pjmedia_transport *tp,
+				       void *user_data,
+				       const pj_sockaddr_t *rem_addr,
+				       const pj_sockaddr_t *rem_rtcp,
+				       unsigned addr_len,
+				       void (*rtp_cb)(void*,
+						      void*,
+						      pj_ssize_t),
+				       void (*rtcp_cb)(void*,
+						       void*,
+						       pj_ssize_t))
+{
+    return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
+    		     rtp_cb, NULL, rtcp_cb);
+}
+
+
+static pj_status_t transport_attach2(pjmedia_transport *tp,
+				     pjmedia_transport_attach_param *att_param)
+{
+    return tp_attach(tp, att_param->user_data, 
+			    (pj_sockaddr_t*)&att_param->rem_addr, 
+			    (pj_sockaddr_t*)&att_param->rem_rtcp, 
+			    att_param->addr_len, att_param->rtp_cb,
+			    att_param->rtp_cb2, 
+			    att_param->rtcp_cb);
+}
+
+
 /* Called by application when it no longer needs the transport */
 static void transport_detach( pjmedia_transport *tp,
 			      void *user_data)
@@ -845,6 +867,7 @@ static void transport_detach( pjmedia_transport *tp,
 
 	/* Clear up application infos from transport */
 	udp->rtp_cb = NULL;
+	udp->rtp_cb2 = NULL;
 	udp->rtcp_cb = NULL;
 	udp->user_data = NULL;
 

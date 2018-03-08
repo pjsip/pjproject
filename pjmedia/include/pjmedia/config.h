@@ -1107,6 +1107,16 @@
 #endif
 
 
+/* Setting to determine if media transport should switch RTP and RTCP
+ * remote address to the source address of the packets it receives.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR
+#   define PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR	    1
+#endif
+
+
 /**
  * Transport info (pjmedia_transport_info) contains a socket info and list
  * of transport specific info, since transports can be chained together 

@@ -230,6 +230,14 @@ struct pjmedia_stream
 					            packet		    */
 #endif
 
+    pj_sockaddr		     rem_rtp_addr;     /**< Remote RTP address	    */
+    unsigned		     rem_rtp_flag;     /**< Indicator flag about
+						    packet from this addr. 
+						    0=no pkt, 1=good ssrc, 
+						    2=bad ssrc pkts	    */
+    unsigned		     rtp_src_cnt;      /**< How many pkt from
+    						    this addr.   	    */
+
 #if TRACE_JB
     pj_oshandle_t	    trace_jb_fd;	    /**< Jitter tracing file handle.*/
     char		   *trace_jb_buf;	    /**< Jitter tracing buffer.	    */
@@ -1662,12 +1670,11 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
  * This callback is called by stream transport on receipt of packets
  * in the RTP socket.
  */
-static void on_rx_rtp( void *data,
-		       void *pkt,
-                       pj_ssize_t bytes_read)
-
+static void on_rx_rtp( pjmedia_tp_cb_param *param)
 {
-    pjmedia_stream *stream = (pjmedia_stream*) data;
+    pjmedia_stream *stream = (pjmedia_stream*) param->user_data;
+    void *pkt = param->pkt;
+    pj_ssize_t bytes_read = param->size;
     pjmedia_channel *channel = stream->dec;
     const pjmedia_rtp_hdr *hdr;
     const void *payload;
@@ -1734,7 +1741,7 @@ static void on_rx_rtp( void *data,
 		      hdr->pt, channel->rtp.out_pt));
 	}
 
-	if (seq_st.status.flag.badssrc) {
+	if (!stream->si.has_rem_ssrc && seq_st.status.flag.badssrc) {
 	    PJ_LOG(4,(stream->port.info.name.ptr,
 		      "Changed RTP peer SSRC %d (previously %d)",
 		      channel->rtp.peer_ssrc, stream->rtcp.peer_ssrc));
@@ -1767,6 +1774,62 @@ static void on_rx_rtp( void *data,
 
 	handle_incoming_dtmf(stream, payload, payloadlen);
 	goto on_return;
+    }
+
+    /* See if source address of RTP packet is different than the 
+     * configured address, and check if we need to tell the
+     * media transport to switch RTP remote address.
+     */
+    if (param->src_addr) {
+        pj_bool_t badssrc = (stream->si.has_rem_ssrc &&
+        		     seq_st.status.flag.badssrc);
+
+	if (pj_sockaddr_cmp(&stream->rem_rtp_addr, param->src_addr) == 0) {
+	    /* We're still receiving from rem_rtp_addr. */
+	    stream->rtp_src_cnt = 0;
+	    stream->rem_rtp_flag = badssrc? 2: 1;
+	} else {
+	    stream->rtp_src_cnt++;
+	    
+	    if (stream->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
+	    	if (stream->rem_rtp_flag == 1 ||
+	    	    (stream->rem_rtp_flag == 2 && badssrc))
+	    	{
+		    /* Only discard if:
+		     * - we have ever received packet with good ssrc from
+		     *   remote address (rem_rtp_addr), or
+		     * - we have ever received packet with bad ssrc from
+		     *   remote address and this packet also has bad ssrc.
+		     */
+	    	    pkt_discarded = PJ_TRUE;
+	    	    goto on_return;
+	    	}	    	
+	    	if (stream->si.has_rem_ssrc && !seq_st.status.flag.badssrc &&
+	    	    stream->rem_rtp_flag != 1)
+	    	{
+	    	    /* Immediately switch if we receive packet with the
+	    	     * correct ssrc AND we never receive packets with
+	    	     * good ssrc from rem_rtp_addr.
+	    	     */
+	    	    param->rem_switch = PJ_TRUE;
+	    	}
+	    } else {
+	        /* Switch. We no longer receive packets from rem_rtp_addr. */
+	        param->rem_switch = PJ_TRUE;
+	    }
+
+	    if (param->rem_switch) {
+		/* Set remote RTP address to source address */
+		pj_sockaddr_cp(&stream->rem_rtp_addr, param->src_addr);
+
+		/* Reset counter and flag */
+		stream->rtp_src_cnt = 0;
+		stream->rem_rtp_flag = badssrc? 2: 1;
+
+		/* Update RTCP peer ssrc */
+	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
+	    }
+	}
     }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
@@ -2424,10 +2487,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.media_type = PJMEDIA_TYPE_AUDIO;
     att_param.user_data = stream;
     pj_sockaddr_cp(&att_param.rem_addr, &info->rem_addr);
+    pj_sockaddr_cp(&stream->rem_rtp_addr, &info->rem_addr);
     if (pj_sockaddr_has_addr(&info->rem_rtcp.addr))
 	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
-    att_param.rtp_cb = &on_rx_rtp;
+    att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Only attach transport when stream is ready. */

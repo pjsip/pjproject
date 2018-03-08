@@ -256,6 +256,7 @@ typedef struct transport_srtp
     void		(*rtp_cb)( void *user_data,
 				   void *pkt,
 				   pj_ssize_t size);
+    void  		(*rtp_cb2)(pjmedia_tp_cb_param*);
     void		(*rtcp_cb)(void *user_data,
 				   void *pkt,
 				   pj_ssize_t size);
@@ -304,7 +305,7 @@ typedef struct transport_srtp
 /*
  * This callback is called by transport when incoming rtp is received
  */
-static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size);
+static void srtp_rtp_cb(pjmedia_tp_cb_param *param);
 
 /*
  * This callback is called by transport when incoming rtcp is received
@@ -1064,6 +1065,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     /* Save the callbacks */
     pj_lock_acquire(srtp->mutex);
     srtp->rtp_cb = param->rtp_cb;
+    srtp->rtp_cb2 = param->rtp_cb2;
     srtp->rtcp_cb = param->rtcp_cb;
     srtp->user_data = param->user_data;
     pj_lock_release(srtp->mutex);
@@ -1071,7 +1073,8 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     /* Attach self to member transport */
     member_param = *param;
     member_param.user_data = srtp;
-    member_param.rtp_cb = &srtp_rtp_cb;
+    member_param.rtp_cb = NULL;
+    member_param.rtp_cb2 = &srtp_rtp_cb;
     member_param.rtcp_cb = &srtp_rtcp_cb;
     status = pjmedia_transport_attach2(srtp->member_tp, &member_param);
     if (status != PJ_SUCCESS) {
@@ -1101,6 +1104,7 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
     /* Clear up application infos from transport */
     pj_lock_acquire(srtp->mutex);
     srtp->rtp_cb = NULL;
+    srtp->rtp_cb2 = NULL;
     srtp->rtcp_cb = NULL;
     srtp->user_data = NULL;
     pj_lock_release(srtp->mutex);
@@ -1232,16 +1236,26 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 /*
  * This callback is called by transport when incoming rtp is received
  */
-static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
+static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 {
-    transport_srtp *srtp = (transport_srtp *) user_data;
+    transport_srtp *srtp = (transport_srtp *) param->user_data;
+    void *pkt = param->pkt;
+    pj_ssize_t size = param->size;
     int len = (int)size;
     srtp_err_status_t err;
     void (*cb)(void*, void*, pj_ssize_t) = NULL;
+    void (*cb2)(pjmedia_tp_cb_param*) = NULL;
     void *cb_data = NULL;
 
     if (srtp->bypass_srtp) {
-	srtp->rtp_cb(srtp->user_data, pkt, size);
+        if (srtp->rtp_cb2) {
+            pjmedia_tp_cb_param param2 = *param;
+            param2.user_data = srtp->user_data;
+            srtp->rtp_cb2(&param2);
+            param->rem_switch = param2.rem_switch;
+        } else if (srtp->rtp_cb) {
+	    srtp->rtp_cb(srtp->user_data, pkt, size);
+	}
 	return;
     }
 
@@ -1313,12 +1327,20 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 		  size, get_libsrtp_errstr(err)));
     } else {
 	cb = srtp->rtp_cb;
+	cb2 = srtp->rtp_cb2;
 	cb_data = srtp->user_data;
     }
 
     pj_lock_release(srtp->mutex);
 
-    if (cb) {
+    if (cb2) {
+        pjmedia_tp_cb_param param2 = *param;
+        param2.user_data = cb_data;
+        param2.pkt = pkt;
+        param2.size = len;
+        (*cb2)(&param2);
+        param->rem_switch = param2.rem_switch;
+    } else if (cb) {
 	(*cb)(cb_data, pkt, len);
     }
 }

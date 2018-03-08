@@ -563,6 +563,39 @@ struct pjmedia_transport_info
 
 };
 
+/**
+ * This structure describes the data passed when calling #rtp_cb2().
+ */
+typedef struct pjmedia_tp_cb_param
+{
+    /**
+     * User data.
+     */
+    void 	       *user_data;
+
+    /**
+     * Packet buffer.
+     */
+    void 	       *pkt;
+
+    /**
+     * Packet size.
+     */
+    pj_ssize_t 		size;
+
+    /**
+     * Packet's source address.
+     */
+    pj_sockaddr	       *src_addr;
+
+    /**
+     * Should media transport switch remote address to \a rtp_src_addr?
+     * Media transport should initialize it to PJ_FALSE, and application
+     * can change the value as necessary.
+     */
+    pj_bool_t	        rem_switch;
+
+} pjmedia_tp_cb_param;
 
 /**
  * This structure describes the data passed when calling
@@ -612,6 +645,12 @@ struct pjmedia_transport_attach_param
      * Callback to be called when RTCP packet is received on the transport.
      */
     void (*rtcp_cb)(void *user_data, void *pkt, pj_ssize_t);
+
+    /**
+     * Callback to be called when RTP packet is received on the transport.
+     */
+    void (*rtp_cb2)(pjmedia_tp_cb_param *param);
+
 };
 
 /**
