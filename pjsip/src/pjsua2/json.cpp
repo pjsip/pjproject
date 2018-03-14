@@ -310,11 +310,10 @@ static void json_verify(struct json_node_data *jdat,
      * an array, then ignore the checking (JSON doesn't allow array
      * elements to have name).
      */
-    if (name.size() && name.compare(0, name.size(),
-                                    jdat->childPtr->name.ptr,
-                                    jdat->childPtr->name.slen) &&
-        jdat->childPtr->name.slen &&
-        jdat->jnode->type != PJ_JSON_VAL_ARRAY)
+    if (jdat->jnode->type != PJ_JSON_VAL_ARRAY &&
+	name.size() && jdat->childPtr->name.slen &&
+	name.compare(0, name.size(), jdat->childPtr->name.ptr,
+                                     jdat->childPtr->name.slen))
     {
 	char err_msg[80];
 	pj_ansi_snprintf(err_msg, sizeof(err_msg),
