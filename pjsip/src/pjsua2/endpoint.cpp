@@ -1091,7 +1091,7 @@ void Endpoint::on_stream_created2(pjsua_call_id call_id,
     OnStreamCreatedParam prm;
     prm.stream = param->stream;
     prm.streamIdx = param->stream_idx;
-    prm.destroyPort = param->destroy_port;
+    prm.destroyPort = (param->destroy_port != PJ_FALSE);
     prm.pPort = (MediaPort)param->port;
     
     call->onStreamCreated(prm);
@@ -2079,6 +2079,23 @@ void Endpoint::resetVideoCodecParam(const string &codec_id) throw(Error)
 #else
     PJ_UNUSED_ARG(codec_id);    
 #endif	
+}
+
+/*
+ * Enumerate all SRTP crypto-suite names.
+ */
+StringVector Endpoint::srtpCryptoEnum() throw(Error)
+{
+    unsigned cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
+    pjmedia_srtp_crypto cryptos[PJMEDIA_SRTP_MAX_CRYPTOS];
+    StringVector result;
+
+    PJSUA2_CHECK_EXPR(pjmedia_srtp_enum_crypto(&cnt, cryptos));
+
+    for (unsigned i = 0; i < cnt; ++i)
+	result.push_back(pj2Str(cryptos[i].name));
+
+    return result;
 }
 
 void Endpoint::handleIpChange(const IpChangeParam &param) throw(Error)

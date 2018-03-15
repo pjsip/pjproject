@@ -638,6 +638,52 @@ typedef enum pjsua_create_media_transport_flag
 
 
 /**
+ * Specify SRTP media transport settings.
+ */
+typedef struct pjsua_srtp_opt
+{
+    /**
+     * Specify the number of crypto suite settings. If set to zero, all
+     * available cryptos will be enabled. Note that available crypto names
+     * can be enumerated using pjmedia_srtp_enum_crypto().
+     *
+     * Default is zero.
+     */
+    unsigned			 crypto_count;
+
+    /**
+     * Specify individual crypto suite setting and its priority order.
+     *
+     * Notes for DTLS-SRTP keying:
+     *  - Currently only supports these cryptos: AES_CM_128_HMAC_SHA1_80,
+     *    AES_CM_128_HMAC_SHA1_32, AEAD_AES_256_GCM, and AEAD_AES_128_GCM.
+     *  - SRTP key is not configurable.
+     */
+    pjmedia_srtp_crypto		 crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
+
+    /**
+     * Specify the number of enabled keying methods. If set to zero, all
+     * keyings will be enabled. Maximum value is PJMEDIA_SRTP_MAX_KEYINGS.
+     * Note that available keying methods can be enumerated using
+     * pjmedia_srtp_enum_keying().
+     *
+     * Default is zero (all keyings are enabled with priority order:
+     * SDES, DTLS-SRTP).
+     */
+    unsigned			 keying_count;
+
+    /**
+     * Specify enabled keying methods and its priority order. Keying method
+     * with higher priority will be given earlier chance to process the SDP,
+     * for example as currently only one keying is supported in the SDP offer,
+     * keying with first priority will be likely used in the SDP offer.
+     */
+    pjmedia_srtp_keying_method	 keying[PJMEDIA_SRTP_KEYINGS_COUNT];
+
+} pjsua_srtp_opt;
+
+
+/**
  * This enumeration specifies the contact rewrite method.
  */
 typedef enum pjsua_contact_rewrite_method
@@ -1519,12 +1565,18 @@ typedef struct pjsua_callback
                                                     unsigned flags);
 
     /**
-     * This callback is called when SRTP media transport is created.
+     * Warning: deprecated and may be removed in future release. Application
+     * can set SRTP crypto settings (including keys) and keying methods
+     * via pjsua_srtp_opt in pjsua_config and pjsua_acc_config.
+     * See also ticket #2100.
+     *
+     * This callback is called before SRTP media transport is created.
      * Application can modify the SRTP setting \a srtp_opt to specify
-     * the cryptos and keys which are going to be used. Note that
-     * application should not modify the field
-     * \a pjmedia_srtp_setting.close_member_tp and can only modify
-     * the field \a pjmedia_srtp_setting.use for initial INVITE.
+     * the cryptos & keys and keying methods which are going to be used.
+     * Note that only some fields of pjmedia_srtp_setting can be overriden
+     * from this callback, i.e: "crypto_count", "crypto", "keying_count",
+     * "keying", and "use" (only for initial INVITE), any modification in
+     * other fields will be ignored.
      *
      * @param call_id       Call ID
      * @param media_idx     The media index in the SDP for which this SRTP
@@ -1900,6 +1952,12 @@ typedef struct pjsua_config
      * This setting has been deprecated and will be ignored.
      */
     pj_bool_t	     srtp_optional_dup_offer;
+
+    /**
+     * Specify SRTP transport setting. Application can initialize it with
+     * default values using pjsua_srtp_opt_default().
+     */
+    pjsua_srtp_opt   srtp_opt;
 
     /**
      * Disconnect other call legs when more than one 2xx responses for 
@@ -3223,6 +3281,7 @@ typedef enum pjsua_nat64_opt
     
 } pjsua_nat64_opt;
 
+
 /**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
@@ -3742,6 +3801,12 @@ typedef struct pjsua_acc_config
     pj_bool_t	     srtp_optional_dup_offer;
 
     /**
+     * Specify SRTP transport setting. Application can initialize it with
+     * default values using pjsua_srtp_opt_default().
+     */
+    pjsua_srtp_opt   srtp_opt;
+
+    /**
      * Specify interval of auto registration retry upon registration failure,
      * in seconds. Set to 0 to disable auto re-registration. Note that
      * registration will only be automatically retried for temporal failures
@@ -3890,6 +3955,15 @@ PJ_DECL(void) pjsua_turn_config_from_media_config(pj_pool_t *pool,
 PJ_DECL(void) pjsua_turn_config_dup(pj_pool_t *pool,
                                     pjsua_turn_config *dst,
                                     const pjsua_turn_config *src);
+
+
+/**
+ * Call this function to initialize SRTP config with default values.
+ *
+ * @param cfg	    The SRTP config to be initialized.
+ */
+PJ_DECL(void) pjsua_srtp_opt_default(pjsua_srtp_opt *cfg);
+
 
 /**
  * Call this function to initialize account config with default values.

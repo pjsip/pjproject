@@ -29,6 +29,109 @@ using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SrtpCrypto::fromPj(const pjmedia_srtp_crypto &prm)
+{
+    this->key	    = pj2Str(prm.key);
+    this->name	    = pj2Str(prm.name);
+    this->flags	    = prm.flags;
+}
+
+pjmedia_srtp_crypto SrtpCrypto::toPj() const
+{
+    pjmedia_srtp_crypto crypto;
+    
+    crypto.key	    = str2Pj(this->key);
+    crypto.name	    = str2Pj(this->name);
+    crypto.flags    = this->flags;
+
+    return crypto;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+SrtpOpt::SrtpOpt()
+{
+    pjsua_srtp_opt opt;
+    pjsua_srtp_opt_default(&opt);
+    fromPj(opt);
+}
+
+void SrtpOpt::fromPj(const pjsua_srtp_opt &prm)
+{
+    this->cryptos.clear();
+    for (unsigned i = 0; i < prm.crypto_count; ++i) {
+	SrtpCrypto crypto;
+	crypto.fromPj(prm.crypto[i]);
+	this->cryptos.push_back(crypto);
+    }
+
+    this->keyings.clear();
+    for (unsigned i = 0; i < prm.keying_count; ++i) {
+	this->keyings.push_back(prm.keying[i]);
+    }
+}
+
+pjsua_srtp_opt SrtpOpt::toPj() const
+{
+    pjsua_srtp_opt opt;
+
+    pj_bzero(&opt, sizeof(opt));
+
+    opt.crypto_count = this->cryptos.size();
+    for (unsigned i = 0; i < opt.crypto_count; ++i) {
+	opt.crypto[i] = this->cryptos[i].toPj();
+    }
+
+    opt.keying_count = this->keyings.size();
+    for (unsigned i = 0; i < opt.keying_count; ++i) {
+	opt.keying[i] = (pjmedia_srtp_keying_method)this->keyings[i];
+    }
+
+    return opt;
+}
+
+void SrtpOpt::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("SrtpOpt");
+
+    ContainerNode crypto_node = this_node.readArray("cryptos");
+    this->cryptos.clear();
+    while (crypto_node.hasUnread()) {
+	SrtpCrypto crypto;
+	NODE_READ_STRING	(crypto_node, crypto.key);
+	NODE_READ_STRING	(crypto_node, crypto.name);
+	NODE_READ_UNSIGNED	(crypto_node, crypto.flags);
+	this->cryptos.push_back(crypto);
+    }
+
+    ContainerNode keying_node = this_node.readArray("keyings");
+    this->keyings.clear();
+    while (keying_node.hasUnread()) {
+	unsigned keying;
+	NODE_READ_UNSIGNED	(keying_node, keying);
+	this->keyings.push_back(keying);
+    }
+}
+
+void SrtpOpt::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("SrtpOpt");
+
+    ContainerNode crypto_node = this_node.writeNewArray("cryptos");
+    for (unsigned i=0; i<this->cryptos.size(); ++i) {
+	NODE_WRITE_STRING	(crypto_node, this->cryptos[i].key);
+	NODE_WRITE_STRING	(crypto_node, this->cryptos[i].name);
+	NODE_WRITE_UNSIGNED	(crypto_node, this->cryptos[i].flags);
+    }
+
+    ContainerNode keying_node = this_node.writeNewArray("keyings");
+    for (unsigned i=0; i<this->keyings.size(); ++i) {
+	NODE_WRITE_UNSIGNED	(keying_node, this->keyings[i]);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
 {
     ContainerNode this_node = node.readContainer("AccountRegConfig");
@@ -252,6 +355,7 @@ void AccountMediaConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_BOOL    ( this_node, streamKaEnabled);
     NODE_READ_NUM_T   ( this_node, pjmedia_srtp_use, srtpUse);
     NODE_READ_INT     ( this_node, srtpSecureSignaling);
+    NODE_READ_OBJ     ( this_node, srtpOpt);
     NODE_READ_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_READ_OBJ     ( this_node, transportConfig);
 }
@@ -264,6 +368,7 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_BOOL    ( this_node, streamKaEnabled);
     NODE_WRITE_NUM_T   ( this_node, pjmedia_srtp_use, srtpUse);
     NODE_WRITE_INT     ( this_node, srtpSecureSignaling);
+    NODE_WRITE_OBJ     ( this_node, srtpOpt);
     NODE_WRITE_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_WRITE_OBJ     ( this_node, transportConfig);
 }
@@ -452,6 +557,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
 #endif
     ret.use_srtp		= mediaConfig.srtpUse;
     ret.srtp_secure_signaling	= mediaConfig.srtpSecureSignaling;
+    ret.srtp_opt		= mediaConfig.srtpOpt.toPj();
     ret.ipv6_media_use		= mediaConfig.ipv6Use;
 
     // AccountVideoConfig
@@ -626,6 +732,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 #endif
     mediaConfig.srtpUse		= prm.use_srtp;
     mediaConfig.srtpSecureSignaling = prm.srtp_secure_signaling;
+    mediaConfig.srtpOpt.fromPj(prm.srtp_opt);
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
 
     // AccountVideoConfig

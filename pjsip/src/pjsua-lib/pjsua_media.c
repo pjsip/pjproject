@@ -1535,7 +1535,9 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
      */
     if (!call_med->tp_orig) {
 	pjmedia_srtp_setting srtp_opt;
+	pjsua_srtp_opt *acc_srtp_opt = &acc->cfg.srtp_opt;
 	pjmedia_transport *srtp = NULL;
+	unsigned i;
 
 	/* Check if SRTP requires secure signaling */
 	if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
@@ -1552,6 +1554,14 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	srtp_opt.cb.on_srtp_nego_complete = &on_srtp_nego_complete;
 	srtp_opt.user_data = call_med;
 
+	/* Get crypto and keying settings from account settings */
+	srtp_opt.crypto_count = acc_srtp_opt->crypto_count;
+	for (i = 0; i < srtp_opt.crypto_count; ++i)
+	    srtp_opt.crypto[i] = acc_srtp_opt->crypto[i];
+	srtp_opt.keying_count = acc_srtp_opt->keying_count;
+	for (i = 0; i < srtp_opt.keying_count; ++i)
+	    srtp_opt.keying[i] = acc_srtp_opt->keying[i];
+
 	/* If media session has been ever established, let's use remote's 
 	 * preference in SRTP usage policy, especially when it is stricter.
 	 */
@@ -1559,21 +1569,31 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	    srtp_opt.use = call_med->rem_srtp_use;
 	else
 	    srtp_opt.use = acc->cfg.use_srtp;
-	    
+
 	if (pjsua_var.ua_cfg.cb.on_create_media_transport_srtp) {
+	    pjmedia_srtp_setting srtp_opt2 = srtp_opt;
 	    pjsua_call *call = call_med->call;
-	    pjmedia_srtp_use srtp_use = srtp_opt.use;
+
+	    /* Warn that this callback is deprecated (see also #2100) */
+	    PJ_LOG(1,(THIS_FILE, "Warning: on_create_media_transport_srtp "
+				 "is deprecated and will be removed in the "
+				 "future release"));
 
 	    (*pjsua_var.ua_cfg.cb.on_create_media_transport_srtp)
-		(call->index, call_med->idx, &srtp_opt);
+		(call->index, call_med->idx, &srtp_opt2);
 
-	    /* Close_member_tp must not be overwritten by app */
-	    srtp_opt.close_member_tp = PJ_TRUE;
-
-	    /* Revert SRTP usage policy if media is reinitialized */
-	    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
-		srtp_opt.use = srtp_use;
+	    /* Only apply SRTP usage policy if this is initial INVITE */
+	    if (call->inv && call->inv->state < PJSIP_INV_STATE_CONFIRMED) {
+		srtp_opt.use = srtp_opt2.use;
 	    }
+
+	    /* Apply crypto and keying settings from callback */
+	    srtp_opt.crypto_count = srtp_opt2.crypto_count;
+	    for (i = 0; i < srtp_opt.crypto_count; ++i)
+		srtp_opt.crypto[i] = srtp_opt2.crypto[i];
+	    srtp_opt.keying_count = srtp_opt2.keying_count;
+	    for (i = 0; i < srtp_opt.keying_count; ++i)
+		srtp_opt.keying[i] = srtp_opt2.keying[i];
     	}
 
 	status = pjmedia_transport_srtp_create(pjsua_var.med_endpt,

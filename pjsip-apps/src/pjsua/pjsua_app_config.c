@@ -1054,6 +1054,17 @@ static pj_status_t parse_args(int argc, char *argv[],
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --srtp-keying option"));
 		return -1;
 	    }
+	    /* Set SRTP keying to use DTLS over SDES */
+	    if (app_config.srtp_keying == 1) {
+		pjsua_srtp_opt *srtp_opt = &app_config.cfg.srtp_opt;
+		srtp_opt->keying_count = 2;
+		srtp_opt->keying[0] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+		srtp_opt->keying[1] = PJMEDIA_SRTP_KEYING_SDES;
+
+		cur_acc->srtp_opt.keying_count = 2;
+		cur_acc->srtp_opt.keying[0] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+		cur_acc->srtp_opt.keying[1] = PJMEDIA_SRTP_KEYING_SDES;
+	    }
 	    break;
 #endif
 

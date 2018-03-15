@@ -190,12 +190,14 @@ typedef struct pjmedia_srtp_setting
     pj_bool_t			 close_member_tp;
 
     /**
-     * Specify the number of crypto suite settings.
+     * Specify the number of crypto suite settings. If set to zero, all
+     * available cryptos will be enabled. Default: zero.
      */
     unsigned			 crypto_count;
 
     /**
-     * Specify individual crypto suite setting.
+     * Specify individual crypto suite setting and its priority order.
+     *
      * Notes for DTLS-SRTP keying:
      *  - Currently only supports these cryptos: AES_CM_128_HMAC_SHA1_80,
      *    AES_CM_128_HMAC_SHA1_32, AEAD_AES_256_GCM, and AEAD_AES_128_GCM.
@@ -204,8 +206,11 @@ typedef struct pjmedia_srtp_setting
     pjmedia_srtp_crypto		 crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
 
     /**
-     * Specify the number of enabled keying methods.
-     * Default is PJMEDIA_SRTP_MAX_KEYINGS (all enabled).
+     * Specify the number of enabled keying methods. If set to zero, all
+     * keyings will be enabled. Maximum value is PJMEDIA_SRTP_MAX_KEYINGS.
+     *
+     * Default is zero (all keyings are enabled with priority order:
+     * SDES, DTLS-SRTP).
      */
     unsigned			 keying_count;
 
@@ -214,9 +219,6 @@ typedef struct pjmedia_srtp_setting
      * with higher priority will be given earlier chance to process the SDP,
      * for example as currently only one keying is supported in the SDP offer,
      * keying with first priority will be likely used in the SDP offer.
-     *
-     * Default is that all supported keying methods (i.e: currently SDES and
-     * DTLS-SRTP) will be enabled and with priority order: SDES, DTLS-SRTP.
      */
     pjmedia_srtp_keying_method	 keying[PJMEDIA_SRTP_KEYINGS_COUNT];
 
@@ -320,6 +322,34 @@ PJ_DECL(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt);
  * @param opt	SRTP setting to be initialized.
  */
 PJ_DECL(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt);
+
+
+/**
+ * Enumerate available SRTP crypto name.
+ *
+ * @param count	    On input, specifies the maximum length of crypto
+ *		    array. On output, the number of available crypto
+ *		    initialized by this function.
+ * @param crypto    The SRTP crypto array output.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_srtp_enum_crypto(unsigned *count,
+					      pjmedia_srtp_crypto crypto[]);
+
+
+/**
+ * Enumerate available SRTP keying methods.
+ *
+ * @param count	    On input, specifies the maximum length of keying method
+ *		    array. On output, the number of available keying method
+ *		    initialized by this function.
+ * @param crypto    The SRTP keying method array output.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
+				      pjmedia_srtp_keying_method keying[]);
 
 
 /**

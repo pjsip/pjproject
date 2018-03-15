@@ -8,7 +8,7 @@ pjnath/nat_detect.h          	pj_stun_nat_type
 pjnath/turn_session.h          	pj_turn_tp_type
 
 pjmedia/event.h                 pjmedia_event_type
-pjmedia/transport_srtp.h	pjmedia_srtp_use pjmedia_srtp_crypto_option
+pjmedia/transport_srtp.h	pjmedia_srtp_use pjmedia_srtp_crypto_option pjmedia_srtp_keying_method
 pjmedia/vid_stream.h		pjmedia_vid_stream_rc_method
 pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index pjmedia_vid_dev_cap
 pjmedia-audiodev/audiodev.h 	pjmedia_aud_dev_id pjmedia_aud_dev_route pjmedia_aud_dev_cap

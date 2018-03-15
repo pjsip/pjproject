@@ -609,26 +609,59 @@ static pj_bool_t srtp_crypto_empty(const pjmedia_srtp_crypto* c)
 
 PJ_DEF(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt)
 {
-    unsigned i;
-
     pj_assert(opt);
 
     pj_bzero(opt, sizeof(pjmedia_srtp_setting));
     opt->close_member_tp = PJ_TRUE;
     opt->use = PJMEDIA_SRTP_OPTIONAL;
+}
 
-    /* Copy default crypto-suites, but skip crypto 'NULL' */
-    opt->crypto_count = sizeof(crypto_suites)/sizeof(crypto_suites[0]) - 1;
-    for (i=0; i<opt->crypto_count; ++i)
-	opt->crypto[i].name = pj_str(crypto_suites[i+1].name);
+/*
+ * Enumerate all SRTP cryptos, except "NULL".
+ */
+PJ_DEF(pj_status_t) pjmedia_srtp_enum_crypto(unsigned *count,
+					     pjmedia_srtp_crypto crypto[])
+{
+    unsigned i, max;
 
-    /* Keying method */
-    opt->keying_count = PJMEDIA_SRTP_KEYINGS_COUNT;
-    opt->keying[0] = PJMEDIA_SRTP_KEYING_SDES;
-    opt->keying[1] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+    PJ_ASSERT_RETURN(count && crypto, PJ_EINVAL);
 
-    /* Just for reminder to add any new keying to the array above */
-    pj_assert(PJMEDIA_SRTP_KEYINGS_COUNT == 2);
+    max = sizeof(crypto_suites) / sizeof(crypto_suites[0]) - 1;
+    if (*count > max)
+	*count = max;
+
+    for (i=0; i<*count; ++i) {
+	pj_bzero(&crypto[i], sizeof(crypto[0]));
+	crypto[i].name = pj_str(crypto_suites[i+1].name);
+    }
+    
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Enumerate available SRTP keying methods.
+ */
+PJ_DEF(pj_status_t) pjmedia_srtp_enum_keying(unsigned *count,
+				      pjmedia_srtp_keying_method keying[])
+{
+    unsigned max;
+
+    PJ_ASSERT_RETURN(count && keying, PJ_EINVAL);
+
+    max = *count;
+    *count = 0;
+
+#if defined(PJMEDIA_SRTP_HAS_SDES) && (PJMEDIA_SRTP_HAS_SDES != 0)
+    if (*count < max)
+	keying[(*count)++] = PJMEDIA_SRTP_KEYING_SDES;
+#endif
+#if defined(PJMEDIA_SRTP_HAS_DTLS) && (PJMEDIA_SRTP_HAS_DTLS != 0)
+    if (*count < max)
+	keying[(*count)++] = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+#endif
+    
+    return PJ_SUCCESS;
 }
 
 
@@ -703,7 +736,17 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 	pjmedia_srtp_setting_default(&srtp->setting);
     }
 
-    status = pj_lock_create_recursive_mutex(pool, pool->obj_name, &srtp->mutex);
+    /* If crypto count is set to zero, setup default crypto-suites,
+     * i.e: all available crypto but 'NULL'.
+     */
+    if (srtp->setting.crypto_count == 0) {
+	srtp->setting.crypto_count = PJMEDIA_SRTP_MAX_CRYPTOS;
+	pjmedia_srtp_enum_crypto(&srtp->setting.crypto_count,
+				 srtp->setting.crypto);
+    }
+
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
+					    &srtp->mutex);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);
 	return status;
@@ -723,6 +766,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
     /* Initialize peer's SRTP usage mode. */
     srtp->peer_use = srtp->setting.use;
+
+    /* If keying count set to zero, setup default keying count & priorities */
+    if (srtp->setting.keying_count == 0) {
+	srtp->setting.keying_count = PJMEDIA_SRTP_KEYINGS_COUNT;
+	pjmedia_srtp_enum_keying(&srtp->setting.keying_count,
+				 srtp->setting.keying);
+    }
 
     /* Initialize SRTP keying method. */
     for (i = 0; i < srtp->setting.keying_count && i < MAX_KEYING; ++i) {
@@ -1413,9 +1463,15 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     srtp->offerer_side = (sdp_remote == NULL);
 
     if (srtp->offerer_side && srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
+	/* If we are offerer and SRTP is disabled, simply bypass SRTP and
+	 * skip keying.
+	 */
 	srtp->bypass_srtp = PJ_TRUE;
 	srtp->keying_cnt = 0;
     } else {
+	/* If we are answerer and SRTP is disabled, we need to verify that
+	 * SRTP is disabled too in remote SDP, so we can't just skip keying.
+	 */
 	srtp->bypass_srtp = PJ_FALSE;
 	srtp->keying_cnt = srtp->all_keying_cnt;
 	for (i = 0; i < srtp->all_keying_cnt; ++i)
@@ -1430,7 +1486,19 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Invoke media_create() of all keying methods */
+    /* Invoke media_create() of all keying methods, keying actions for each
+     * SRTP mode:
+     * - DISABLED:
+     *   - as offerer, nothing (keying is skipped).
+     *   - as answerer, verify remote SDP, make sure it has SRTP disabled too,
+     *     if not, return error.
+     * - OPTIONAL:
+     *   - as offerer, general initialization.
+     *   - as answerer, optionally verify SRTP attr in remote SDP (if any).
+     * - MANDATORY:
+     *   - as offerer, general initialization.
+     *   - as answerer, verify SRTP attr in remote SDP.
+     */
     for (i=0; i < srtp->keying_cnt; ) {
 	pj_status_t st;
 	st = pjmedia_transport_media_create(srtp->keying[i], sdp_pool,
@@ -1456,6 +1524,14 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     /* All keying method failed to process remote SDP? */
     if (srtp->keying_cnt == 0)
 	return keying_status;
+
+    /* Bypass SRTP & skip keying as SRTP is disabled and verification on
+     * remote SDP has been done.
+     */
+    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
+	srtp->bypass_srtp = PJ_TRUE;
+	srtp->keying_cnt = 0;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1483,7 +1559,21 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Invoke encode_sdp() of all keying methods */
+    /* Invoke encode_sdp() of all keying methods, keying actions for each
+     * SRTP mode:
+     * - DISABLED: nothing (keying is skipped)
+     * - OPTIONAL:
+     *   - as offerer, generate offer.
+     *   - as answerer, if remote has the same SRTP keying in SDP, verify it,
+     *     generate answer, start crypto nego.
+     * - MANDATORY:
+     *   - as offerer, generate offer.
+     *   - as answerer, verify remote SDP, generate answer, start crypto nego.
+     *
+     * Note: because the SDP will be processed by other keying/components,
+     *       keying must do verification on remote SDP first (e.g: keying
+     *       is being used) before touching local SDP.
+     */
     for (i=0; i < srtp->keying_cnt; ) {
 	pj_status_t st;
 	st = pjmedia_transport_encode_sdp(srtp->keying[i], sdp_pool,
@@ -1543,7 +1633,19 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Invoke media_start() of all keying methods */
+    /* Invoke media_start() of all keying methods, keying actions for each
+     * SRTP mode:
+     * - DISABLED: nothing (keying is skipped)
+     * - OPTIONAL:
+     *   - as offerer, if remote answer has the same SRTP keying in SDP,
+     *     verify it and start crypto nego.
+     *   - as answerer, start crypto nego if not yet (usually initated in
+     *     encode_sdp()).
+     * - MANDATORY:
+     *   - as offerer, verify remote answer and start crypto nego.
+     *   - as answerer, start crypto nego if not yet (usually initated in
+     *     encode_sdp()).
+     */
     for (i=0; i < srtp->keying_cnt; ) {
 	status = pjmedia_transport_media_start(srtp->keying[i], pool,
 					       sdp_local, sdp_remote,

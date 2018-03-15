@@ -48,6 +48,8 @@ typedef enum pjmedia_srtp_use {PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, PJM
 
 typedef enum pjmedia_srtp_crypto_option {PJMEDIA_SRTP_NO_ENCRYPTION = 1, PJMEDIA_SRTP_NO_AUTHENTICATION = 2} pjmedia_srtp_crypto_option;
 
+typedef enum pjmedia_srtp_keying_method {PJMEDIA_SRTP_KEYING_SDES = 0, PJMEDIA_SRTP_KEYING_DTLS_SRTP = 1, PJMEDIA_SRTP_KEYINGS_COUNT = 2} pjmedia_srtp_keying_method;
+
 typedef enum pjmedia_vid_stream_rc_method {PJMEDIA_VID_STREAM_RC_NONE = 0, PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING = 1} pjmedia_vid_stream_rc_method;
 
 typedef pj_int32_t pjmedia_vid_dev_index;

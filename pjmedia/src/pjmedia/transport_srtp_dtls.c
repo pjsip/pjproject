@@ -1015,11 +1015,30 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	 *    in m= line.
 	 */
 	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
+	pjmedia_sdp_attr *attr_setup;
 
 	if (pj_stricmp(&m_rem->desc.transport, &ID_TP_DTLS_SRTP)!=0) {
 	    /* Remote doesn't signal DTLS-SRTP */
 	    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
 	    goto on_return;
+	}
+
+	/* Check for a=setup in remote SDP. */
+	attr_setup = pjmedia_sdp_media_find_attr(m_rem, &ID_SETUP, NULL);
+	if (!attr_setup)
+	    attr_setup = pjmedia_sdp_attr_find(sdp_remote->attr_count,
+				      sdp_remote->attr, &ID_SETUP, NULL);
+	switch (ds->srtp->setting.use) {
+	    case PJMEDIA_SRTP_DISABLED:
+		if (attr_setup)
+		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		break;
+	    case PJMEDIA_SRTP_OPTIONAL:
+		break;
+	    case PJMEDIA_SRTP_MANDATORY:
+		if (!attr_setup)
+		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		break;
 	}
     }
 

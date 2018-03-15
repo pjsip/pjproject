@@ -114,6 +114,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
     pjsip_timer_setting_default(&cfg->timer_setting);
+    pjsua_srtp_opt_default(&cfg->srtp_opt);
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -253,6 +254,13 @@ PJ_DEF(void) pjsua_turn_config_dup(pj_pool_t *pool,
     }
 }
 
+
+PJ_DEF(void) pjsua_srtp_opt_default(pjsua_srtp_opt *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+}
+
+
 PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 {
     pjsua_media_config med_cfg;
@@ -288,6 +296,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
     cfg->srtp_optional_dup_offer = pjsua_var.ua_cfg.srtp_optional_dup_offer;
+    cfg->srtp_opt = pjsua_var.ua_cfg.srtp_opt;
     cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
     cfg->reg_retry_random_interval = 10;
     cfg->contact_rewrite_method = PJSUA_CONTACT_REWRITE_METHOD;

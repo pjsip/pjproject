@@ -1482,6 +1482,13 @@ public:
      */
     void resetVideoCodecParam(const string &codec_id) throw(Error);
 
+    /**
+     * Enumerate all SRTP crypto-suite names.
+     *
+     * @return		The list of SRTP crypto-suite name.
+     */
+    StringVector srtpCryptoEnum() throw(Error);
+
     /*************************************************************************
      * IP Change
      */
