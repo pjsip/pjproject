@@ -45,8 +45,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjmedia/include \
 		   $(CC_INC)../../pjnath/include \
 		   $(CC_INC)../..
-export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS) 
 
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
