@@ -750,6 +750,7 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *var )
 PJ_DEF(void) pj_atomic_set( pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
     PJ_CHECK_STACK();
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
 
     InterlockedExchange(&atomic_var->value, value);
 }
@@ -784,6 +785,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
     pj_atomic_inc_and_get(atomic_var);
 }
 
@@ -806,6 +808,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
     pj_atomic_dec_and_get(atomic_var);
 }
 
@@ -815,6 +818,7 @@ PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
 			    pj_atomic_value_t value )
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
 #if defined(PJ_WIN32_WINNT) && PJ_WIN32_WINNT >= 0x0400
     InterlockedExchangeAdd( &atomic_var->value, value );
 #else

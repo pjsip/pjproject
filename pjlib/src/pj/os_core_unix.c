@@ -879,9 +879,16 @@ PJ_DEF(pj_status_t) pj_atomic_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(atomic_var, PJ_EINVAL);
+    
 #if PJ_HAS_THREADS
-    return pj_mutex_destroy( atomic_var->mutex );
+    status = pj_mutex_destroy( atomic_var->mutex );
+    if (status == PJ_SUCCESS) {
+        atomic_var->mutex = NULL;
+    }
+    return status;
 #else
     return 0;
 #endif
@@ -892,10 +899,16 @@ PJ_DEF(pj_status_t) pj_atomic_destroy( pj_atomic_t *atomic_var )
  */
 PJ_DEF(void) pj_atomic_set(pj_atomic_t *atomic_var, pj_atomic_value_t value)
 {
+    pj_status_t status;
+
     PJ_CHECK_STACK();
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
 
 #if PJ_HAS_THREADS
-    pj_mutex_lock( atomic_var->mutex );
+    status = pj_mutex_lock( atomic_var->mutex );
+    if (status != PJ_SUCCESS) {
+        return;
+    }
 #endif
     atomic_var->value = value;
 #if PJ_HAS_THREADS
@@ -946,6 +959,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_inc_and_get(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_inc(pj_atomic_t *atomic_var)
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
     pj_atomic_inc_and_get(atomic_var);
 }
 
@@ -974,6 +988,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_dec_and_get(pj_atomic_t *atomic_var)
  */
 PJ_DEF(void) pj_atomic_dec(pj_atomic_t *atomic_var)
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
     pj_atomic_dec_and_get(atomic_var);
 }
 
@@ -1005,6 +1020,7 @@ PJ_DEF(pj_atomic_value_t) pj_atomic_add_and_get( pj_atomic_t *atomic_var,
 PJ_DEF(void) pj_atomic_add( pj_atomic_t *atomic_var,
                             pj_atomic_value_t value )
 {
+    PJ_ASSERT_ON_FAIL(atomic_var, return);
     pj_atomic_add_and_get(atomic_var, value);
 }
 
