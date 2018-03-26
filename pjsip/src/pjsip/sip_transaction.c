@@ -1119,6 +1119,11 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
     PJ_UNUSED_ARG(theap);
 
+    /* Just return if transaction is already destroyed (see also #2102). */
+    if (tsx->state >= PJSIP_TSX_STATE_DESTROYED) {
+        return;
+    }
+
     if (entry->id == TRANSPORT_ERR_TIMER) {
 	/* Posted transport error event */
 	entry->id = 0;
