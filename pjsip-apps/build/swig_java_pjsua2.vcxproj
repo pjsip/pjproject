@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}</ProjectGuid>
+    <TargetName>pjsua2</TargetName>
+    <OutDir>..\src\swig\java\output\</OutDir>
+    <RootNamespace>swig_java_pjsua2</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.25431.1</_ProjectFileVersion>    
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <CodeAnalysisRules />
+    <CodeAnalysisRuleAssemblies />
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Iphlpapi.lib;dsound.lib;dxguid.lib;netapi32.lib;mswsock.lib;ws2_32.lib;odbc32.lib;odbccp32.lib;ole32.lib;user32.lib;gdi32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>..\src\swig\java\output\pjsua2.dll</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Iphlpapi.lib;dsound.lib;dxguid.lib;netapi32.lib;mswsock.lib;ws2_32.lib;odbc32.lib;odbccp32.lib;ole32.lib;user32.lib;gdi32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>..\src\swig\java\output\pjsua2.dll</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Iphlpapi.lib;dsound.lib;dxguid.lib;netapi32.lib;mswsock.lib;ws2_32.lib;odbc32.lib;odbccp32.lib;ole32.lib;user32.lib;gdi32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>..\src\swig\java\output\pjsua2.dll</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>Iphlpapi.lib;dsound.lib;dxguid.lib;netapi32.lib;mswsock.lib;ws2_32.lib;odbc32.lib;odbccp32.lib;ole32.lib;user32.lib;gdi32.lib;advapi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>..\src\swig\java\output\pjsua2.dll</OutputFile>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX64</TargetMachine>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\swig\java\output\pjsua2_wrap.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\swig\java\output\pjsua2_wrap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\src\swig\pjsua2.i">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%40echo off
+%40echo **************************************************************
+%40echo  - Make sure %27swig%27 and %27javac%27 locations are in your PATH environment vars.
+%40echo  - Make sure Java SDK header file directories
+%40echo    (e.g: C:\Program Files (x86)\Java\jdk1.7.0_79\include and C:\Program Files (x86)\Java\jdk1.7.0_79\include\win32)
+%40echo    are in your MSVC header search path
+%40echo **************************************************************
+
+%40echo on
+%40echo Building pjsua2.dll to $(OutputDir)
+mkdir $(OutDir)org\pjsip\pjsua2
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
+%40echo Building sample app
+javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\test.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
+
+%40echo **************************************************************
+%40echo  After the build completed succesfully, try to run the test app, e.g:
+%40echo  java -cp D:\projects\pjproject\pjsip-apps\src\swig\java\output -Djava.library.path="D:\projects\pjproject\pjsip-apps\src\swig\java\output" org.pjsip.pjsua2.app.sample
+%40echo **************************************************************
+%40echo off
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(OutDir)pjsua2_wrap.cpp;$(OutDir)pjsua2_wrap.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%40echo off
+%40echo **************************************************************
+%40echo  - Make sure %27swig%27 and %27javac%27 locations are in your PATH environment vars.
+%40echo  - Make sure Java SDK header file directories
+%40echo    (e.g: C:\Program Files (x86)\Java\jdk1.7.0_79\include and C:\Program Files (x86)\Java\jdk1.7.0_79\include\win32)
+%40echo    are in your MSVC header search path
+%40echo **************************************************************
+
+%40echo on
+%40echo Building pjsua2.dll to $(OutDir)
+mkdir $(OutDir)org\pjsip\pjsua2
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
+%40echo Building sample app
+javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\test.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
+
+%40echo **************************************************************
+%40echo  After the build completed succesfully, try to run the test app, e.g:
+%40echo  java -cp D:\projects\pjproject\pjsip-apps\src\swig\java\output -Djava.library.path="D:\projects\pjproject\pjsip-apps\src\swig\java\output" org.pjsip.pjsua2.app.sample
+%40echo **************************************************************
+%40echo off
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_wrap.cxx;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%40echo off
+%40echo **************************************************************
+%40echo  - Make sure %27swig%27 and %27javac%27 locations are in your PATH environment vars.
+%40echo  - Make sure Java SDK header file directories
+%40echo    (e.g: C:\Program Files (x86)\Java\jdk1.7.0_79\include and C:\Program Files (x86)\Java\jdk1.7.0_79\include\win32)
+%40echo    are in your MSVC header search path
+%40echo **************************************************************
+
+%40echo on
+%40echo Building pjsua2.dll to $(OutDir)
+mkdir $(OutDir)org\pjsip\pjsua2
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
+%40echo Building sample app
+javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\test.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
+
+%40echo **************************************************************
+%40echo  After the build completed succesfully, try to run the test app, e.g:
+%40echo  java -cp D:\projects\pjproject\pjsip-apps\src\swig\java\output -Djava.library.path="D:\projects\pjproject\pjsip-apps\src\swig\java\output" org.pjsip.pjsua2.app.sample
+%40echo **************************************************************
+%40echo off
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(OutDir)pjsua2_wrap.cpp;$(OutDir)pjsua2_wrap.h;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%40echo off
+%40echo **************************************************************
+%40echo  - Make sure %27swig%27 and %27javac%27 locations are in your PATH environment vars.
+%40echo  - Make sure Java SDK header file directories
+%40echo    (e.g: C:\Program Files (x86)\Java\jdk1.7.0_79\include and C:\Program Files (x86)\Java\jdk1.7.0_79\include\win32)
+%40echo    are in your MSVC header search path
+%40echo **************************************************************
+
+%40echo on
+%40echo Building pjsua2.dll to $(OutDir)
+mkdir $(OutDir)org\pjsip\pjsua2
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
+%40echo Building sample app
+javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\test.java
+javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
+
+%40echo **************************************************************
+%40echo  After the build completed succesfully, try to run the test app, e.g:
+%40echo  java -cp D:\projects\pjproject\pjsip-apps\src\swig\java\output -Djava.library.path="D:\projects\pjproject\pjsip-apps\src\swig\java\output" org.pjsip.pjsua2.app.sample
+%40echo **************************************************************
+%40echo off
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(OutDir)pjsua2_wrap.cpp;$(OutDir)pjsua2_wrap.h;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\pjsip\build\pjsua2_lib.vcxproj">
+      <Project>{b82cdd25-6903-430e-bd38-d8129a2015c1}</Project>
+    </ProjectReference>
+    <ProjectReference Include="libpjproject.vcxproj">
+      <Project>{23d7679c-764c-4e02-8b29-bb882ceeefe2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
