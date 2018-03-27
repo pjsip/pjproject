@@ -54,8 +54,9 @@ export UTIL_TEST_OBJS += xml.o encryption.o stun.o resolver_test.o test.o \
 export UTIL_TEST_CFLAGS += $(_CFLAGS)
 export UTIL_TEST_CXXFLAGS += $(_CXXFLAGS)
 export UTIL_TEST_LDFLAGS += $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export UTIL_TEST_EXE:=pjlib-util-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################

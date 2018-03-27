@@ -31,8 +31,9 @@ export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSUA_CFLAGS += $(PJ_CFLAGS) $(CFLAGS)
 export PJSUA_CXXFLAGS += $(PJ_CXXFLAGS) $(CFLAGS)
 export PJSUA_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJSUA_EXE:=pjsua-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 
 ###############################################################################
 # Defines for building pjsystest
@@ -43,8 +44,9 @@ export PJSYSTEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSYSTEST_CFLAGS += $(PJ_CFLAGS) $(CFLAGS)
 export PJSYSTEST_CXXFLAGS += $(PJ_CXXFLAGS) $(CFLAGS)
 export PJSYSTEST_LDFLAGS += $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJSYSTEST_EXE:=pjsystest-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 

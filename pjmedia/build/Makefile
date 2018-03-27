@@ -166,8 +166,9 @@ export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
 			       $(PJLIB_UTIL_LDLIB) \
 			       $(PJLIB_LDLIB) \
 			       $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJMEDIA_TEST_EXE:=pjmedia-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################

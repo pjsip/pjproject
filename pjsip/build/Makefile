@@ -165,8 +165,9 @@ export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJSUA2_TEST_EXE := pjsua2-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 
 
@@ -195,8 +196,9 @@ export TEST_LDFLAGS += $(PJSIP_LDLIB) \
 		       $(PJNATH_LDLIB) \
 		       $(PJLIB_LDLIB) \
 		       $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export TEST_EXE := pjsip-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################

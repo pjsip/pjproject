@@ -50,7 +50,7 @@ SAMPLES := auddemo \
 
 PJSUA2_SAMPLES := pjsua2_demo
 
-ifeq ($(findstring android,$(TARGET_NAME)),)
+ifeq ($(EXCLUDE_APP),0)
 EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
 PJSUA2_EXES := $(foreach file, $(PJSUA2_SAMPLES), $(file)$(HOST_EXE))
 endif

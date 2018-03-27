@@ -54,8 +54,9 @@ export PJNATH_TEST_OBJS += ice_test.o stun.o sess_auth.o server.o concur_test.o 
 export PJNATH_TEST_CFLAGS += $(_CFLAGS)
 export PJNATH_TEST_CXXFLAGS += $(_CXXFLAGS)
 export PJNATH_TEST_LDFLAGS += $(PJNATH_LDLIB) $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJNATH_TEST_EXE:=pjnath-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 	
 ###############################################################################
 # Defines for building TURN client application
@@ -65,7 +66,9 @@ export PJTURN_CLIENT_OBJS += client_main.o
 export PJTURN_CLIENT_CFLAGS += $(_CFLAGS)
 export PJTURN_CLIENT_CXXFLAGS += $(_CXXFLAGS)
 export PJTURN_CLIENT_LDFLAGS += $(PJNATH_LDLIB) $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJTURN_CLIENT_EXE:=pjturn-client-$(TARGET_NAME)$(HOST_EXE)
+endif
 
 ###############################################################################
 # Defines for building TURN server application
@@ -76,8 +79,9 @@ export PJTURN_SRV_OBJS += allocation.o auth.o listener_udp.o \
 export PJTURN_SRV_CFLAGS += $(_CFLAGS)
 export PJTURN_SRV_CXXFLAGS += $(_CXXFLAGS)
 export PJTURN_SRV_LDFLAGS += $(PJNATH_LDLIB) $(PJLIB_UTIL_LDLIB) $(PJLIB_LDLIB) $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export PJTURN_SRV_EXE:=pjturn-srv-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 	
 	
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

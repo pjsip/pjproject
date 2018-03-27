@@ -24,6 +24,14 @@ ifeq (@ac_shared_libraries@,1)
 export PJ_SHARED_LIBRARIES := 1
 endif
 
+ifndef EXCLUDE_APP
+ifeq ($(findstring android,$(TARGET_NAME)),)
+export EXCLUDE_APP := 0
+else
+export EXCLUDE_APP := 1
+endif
+endif
+
 # Determine which party libraries to use
 export APP_THIRD_PARTY_EXT :=
 export APP_THIRD_PARTY_LIBS :=

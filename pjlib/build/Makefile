@@ -56,8 +56,9 @@ export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 export TEST_CFLAGS += $(_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
 export TEST_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)
+ifeq ($(EXCLUDE_APP),0)
 export TEST_EXE := pjlib-test-$(TARGET_NAME)$(HOST_EXE)
-
+endif
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
