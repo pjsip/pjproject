@@ -1233,11 +1233,8 @@ static void stun_resolve_add_ref(pjsua_stun_resolve *sess)
 }
 
 
-static void destroy_stun_resolve_cb(pj_timer_heap_t *t, pj_timer_entry *e)
+static void release_stun_session(pjsua_stun_resolve *sess)
 {
-    pjsua_stun_resolve *sess = (pjsua_stun_resolve*)e->user_data;
-    PJ_UNUSED_ARG(t);
-
     PJSUA_LOCK();
     pj_list_erase(sess);
     PJSUA_UNLOCK();
@@ -1246,8 +1243,16 @@ static void destroy_stun_resolve_cb(pj_timer_heap_t *t, pj_timer_entry *e)
     pj_pool_release(sess->pool);
 }
 
+static void destroy_stun_resolve_cb(pj_timer_heap_t *t, pj_timer_entry *e)
+{
+    pjsua_stun_resolve *sess = (pjsua_stun_resolve*)e->user_data;
+    PJ_UNUSED_ARG(t);
 
-static void destroy_stun_resolve(pjsua_stun_resolve *sess)
+    release_stun_session(sess);
+}
+
+
+static void destroy_stun_resolve(pjsua_stun_resolve *sess, pj_bool_t forced)
 {
     pj_time_val timeout = {0, 0};
 
@@ -1265,15 +1270,19 @@ static void destroy_stun_resolve(pjsua_stun_resolve *sess)
     {
         pjsua_var.stun_status = PJNATH_ESTUNDESTROYED;
     }
-    
-    /* Schedule session clean up, it needs PJSUA lock and locking it here
-     * may cause deadlock as this function may be called by STUN socket
-     * while holding STUN socket lock, while application may wait for STUN
-     * resolution while holding PJSUA lock.
-     */
-    pj_timer_entry_init(&sess->timer, 0, (void*)sess,
-			&destroy_stun_resolve_cb);
-    pjsua_schedule_timer(&sess->timer, &timeout);
+
+    if (forced) {
+	release_stun_session(sess);
+    } else {
+	/* Schedule session clean up, it needs PJSUA lock and locking it here
+	 * may cause deadlock as this function may be called by STUN socket
+	 * while holding STUN socket lock, while application may wait for STUN
+	 * resolution while holding PJSUA lock.
+	 */
+	pj_timer_entry_init(&sess->timer, 0, (void*)sess,
+			    &destroy_stun_resolve_cb);
+	pjsua_schedule_timer(&sess->timer, &timeout);
+    }
 }
 
 static void stun_resolve_dec_ref(pjsua_stun_resolve *sess)
@@ -1288,7 +1297,7 @@ static void stun_resolve_dec_ref(pjsua_stun_resolve *sess)
 	return;
     }
 
-    destroy_stun_resolve(sess);
+    destroy_stun_resolve(sess, PJ_FALSE);
 }
 
 
@@ -1848,16 +1857,6 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    }
 	}
 
-	/* Terminate any pending STUN resolution */
-	if (!pj_list_empty(&pjsua_var.stun_res)) {
-	    pjsua_stun_resolve *sess = pjsua_var.stun_res.next;
-	    while (sess != &pjsua_var.stun_res) {
-		pjsua_stun_resolve *next = sess->next;
-		destroy_stun_resolve(sess);
-		sess = next;
-	    }
-	}
-
 	/* Wait until all unregistrations are done (ticket #364) */
 	/* First stage, get the maximum wait time */
 	max_wait = 100;
@@ -1898,6 +1897,16 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	}
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
+	
+	/* Terminate any pending STUN resolution */
+	if (!pj_list_empty(&pjsua_var.stun_res)) {
+	    pjsua_stun_resolve *sess = pjsua_var.stun_res.next;
+	    while (sess != &pjsua_var.stun_res) {
+		pjsua_stun_resolve *next = sess->next;
+		destroy_stun_resolve(sess, PJ_TRUE);
+		sess = next;
+	    }
+	}
 
 	/* Destroy media (to shutdown media endpoint, etc) */
 	pjsua_media_subsys_destroy(flags);
