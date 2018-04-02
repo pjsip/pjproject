@@ -34,7 +34,7 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
                                     const pjmedia_audio_codec_config *c)
 {
     pjmedia_audio_codec_config default_cfg;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
     if (!c) {
