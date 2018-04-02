@@ -59,7 +59,7 @@ if sys.platform == 'win32':
 elif sys.platform == "linux2":
 	PYCPARSER_DIR="/home/bennylp/Desktop/opt/src/pycparser-master"
 else:
-	PYCPARSER_DIR="/Library/Python/2.7/site-packages/pycparser"
+	PYCPARSER_DIR="/Users/ming/Downloads/pycparser-2.18"
 
 if not os.path.exists(PYCPARSER_DIR + '/utils/fake_libc_include'):
 	print "Error: couldn't find pycparser utils in '%s'" % PYCPARSER_DIR 
@@ -168,7 +168,7 @@ class SymbolImporter:
 		for name in names:
 			node = visitor.nodeDict[name]
 			if not node:
-				print "  ** Warning: declaration for '%s' is not found **" % k
+				print "  warning: declaration for '%s' is not found **" % k
 			else:
 				print "  writing '%s'.." % name
 				output = gen.visit(node) + ";\n\n"
