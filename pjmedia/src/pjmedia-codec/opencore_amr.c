@@ -895,7 +895,9 @@ static pj_status_t amr_codec_encode( pjmedia_codec *codec,
 	/* Count the number of SID and DTX frames */
 	if (info->frame_type == 15) /* DTX*/
 	    ++dtx_cnt;
-	else if (info->frame_type == 8) /* SID */
+	else if (info->frame_type == 8 && amr_data->enc_setting.amr_nb) /* SID */
+	    ++sid_cnt;
+	else if (info->frame_type == 9 && !amr_data->enc_setting.amr_nb) /* SID */
 	    ++sid_cnt;
     }
 
