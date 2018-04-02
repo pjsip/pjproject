@@ -718,6 +718,8 @@ static int worker_thread(void *arg)
     return 0;
 }
 
+#if PJSUA_SEPARATE_WORKER_FOR_TIMER
+
 /* Timer heap worker thread function. */
 static int worker_thread_timer(void *arg)
 {
@@ -758,6 +760,7 @@ static int worker_thread_ioqueue(void *arg)
     return 0;
 }
 
+#endif
 
 PJ_DEF(void) pjsua_stop_worker_threads(void)
 {
