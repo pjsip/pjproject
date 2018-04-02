@@ -1199,7 +1199,6 @@ static PyObject *py_pjsua_transport_create(PyObject *pSelf, PyObject *pArgs)
  */
 static PyObject *py_pjsua_enum_transports(PyObject *pSelf, PyObject *pArgs)
 {
-    pj_status_t status;
     PyObject *list;
     pjsua_transport_id id[PJSIP_MAX_TRANSPORTS];
     unsigned c, i;
@@ -1208,7 +1207,7 @@ static PyObject *py_pjsua_enum_transports(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pArgs);
 
     c = PJ_ARRAY_SIZE(id);
-    status = pjsua_enum_transports(id, &c);
+    pjsua_enum_transports(id, &c);
     
     list = PyList_New(c);
     for (i = 0; i < c; i++) {     
@@ -2335,7 +2334,6 @@ static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
     int id;
     PyObj_pjsua_conf_port_info *ret;
     pjsua_conf_port_info info;
-    int status;	
     unsigned i;
 
     PJ_UNUSED_ARG(pSelf);
@@ -2344,7 +2342,7 @@ static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     
-    status = pjsua_conf_get_port_info(id, &info);
+    pjsua_conf_get_port_info(id, &info);
     ret = (PyObj_pjsua_conf_port_info *)
 	  conf_port_info_new(&PyTyp_pjsua_conf_port_info, NULL, NULL);
     ret->bits_per_sample = info.bits_per_sample;
@@ -2711,12 +2709,11 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
 static PyObject *py_pjsua_get_snd_dev(PyObject *pSelf, PyObject *pArgs)
 {    	
     int capture_dev, playback_dev;
-    int status;	
     
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
-    status = pjsua_get_snd_dev(&capture_dev, &playback_dev);
+    pjsua_get_snd_dev(&capture_dev, &playback_dev);
     
     return Py_BuildValue("ii", capture_dev, playback_dev);
 }
