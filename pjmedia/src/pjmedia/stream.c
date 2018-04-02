@@ -2983,8 +2983,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
 {
     PJ_ASSERT_RETURN(stream && digits && size, PJ_EINVAL);
 
-    pj_assert(sizeof(stream->rx_dtmf_buf[0]) == 0);
-
     /* By convention, we use jitter buffer's mutex to access DTMF
      * digits resources.
      */
