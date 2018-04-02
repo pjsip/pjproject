@@ -155,9 +155,11 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 				       unsigned pct_lost);
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 static pj_status_t transport_restart  (pj_bool_t is_rtp, 
 				       struct transport_udp *udp);
-
+#endif
 
 static pjmedia_transport_op transport_udp_op = 
 {
@@ -1103,6 +1105,8 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 static pj_status_t transport_restart(pj_bool_t is_rtp,
 				     struct transport_udp *udp)
 {
@@ -1225,3 +1229,4 @@ on_error:
     }
     return status;
 }
+#endif
