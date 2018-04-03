@@ -734,6 +734,9 @@ public:
     pjmedia_srtp_crypto toPj() const;
 };
 
+/* Array of SRTP cryptos. */
+typedef std::vector<SrtpCrypto> SrtpCryptoVector;
+
 struct SrtpOpt : public PersistentObject
 {
     /**
@@ -742,7 +745,7 @@ struct SrtpOpt : public PersistentObject
      *
      * Default: empty.
      */
-    vector<SrtpCrypto>		cryptos;
+    SrtpCryptoVector		cryptos;
 
     /**
      * Specify SRTP keying methods, valid keying method is defined in
