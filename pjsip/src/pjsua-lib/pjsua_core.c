@@ -23,6 +23,8 @@
 
 #define THIS_FILE   "pjsua_core.c"
 
+#define DEFAULT_RTP_PORT	4000
+
 
 /* Internal prototypes */
 static void resolve_stun_entry(pjsua_stun_resolve *sess);
@@ -288,6 +290,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pjmedia_vid_stream_sk_config_default(&cfg->vid_stream_sk_cfg);
 #endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
+    cfg->rtp_cfg.port = DEFAULT_RTP_PORT;
 
     pjsua_media_config_default(&med_cfg);
     pjsua_ice_config_from_media_config(NULL, &cfg->ice_cfg, &med_cfg);

@@ -23,8 +23,6 @@
 
 #define THIS_FILE		"pjsua_media.c"
 
-#define DEFAULT_RTP_PORT	4000
-
 #ifndef PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT
 #   define PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT	0
 #endif
@@ -267,11 +265,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	}
     }
 
-    if (acc->next_rtp_port == 0)
+    if (acc->next_rtp_port == 0 || cfg->port == 0)
 	acc->next_rtp_port = (pj_uint16_t)cfg->port;
-
-    if (acc->next_rtp_port == 0)
-	acc->next_rtp_port = (pj_uint16_t)DEFAULT_RTP_PORT;
 
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
@@ -320,6 +315,20 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    pj_sock_close(sock[0]);
 	    sock[0] = PJ_INVALID_SOCKET;
 	    continue;
+	}
+	
+	/* If bound to random port, find out the port number. */
+	if (acc->next_rtp_port == 0) {
+	    pj_sockaddr sock_addr;
+	    int addr_len = sizeof(pj_sockaddr);
+
+            status = pj_sock_getsockname(sock[0], &sock_addr, &addr_len);
+	    if (status != PJ_SUCCESS) {
+	    	pjsua_perror(THIS_FILE, "getsockname() error", status);
+	    	pj_sock_close(sock[0]);
+	    	return status;
+	    }
+	    acc->next_rtp_port = pj_sockaddr_get_port(&sock_addr);
 	}
 
 	/* Create RTCP socket. */
