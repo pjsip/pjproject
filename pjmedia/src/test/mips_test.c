@@ -66,6 +66,12 @@
 
 #endif
 
+#define HAS_AUDIO_CODECS (PJMEDIA_HAS_G711_CODEC || PJMEDIA_HAS_G722_CODEC ||\
+	 		  PJMEDIA_HAS_GSM_CODEC || PJMEDIA_HAS_ILBC_CODEC || \
+			  PJMEDIA_HAS_SPEEX_CODEC|| PJMEDIA_HAS_G7221_CODEC||\
+			  PJMEDIA_HAS_OPENCORE_AMRNB_CODEC ||\
+			  PJMEDIA_HAS_OPENCORE_AMRWB_CODEC ||\
+			  PJMEDIA_HAS_L16_CODEC)
 
 
 /* Sample speech data, 360ms length, encoded at 8Khz */
@@ -730,6 +736,7 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
     return PJ_SUCCESS;
 }
 
+#if HAS_AUDIO_CODECS
 static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
 					  const char *codec,
 					  pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -792,6 +799,7 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
 
     return &cp->base;
 }
+#endif
 
 #if PJMEDIA_HAS_G711_CODEC
 /* G.711 benchmark */
@@ -1696,6 +1704,7 @@ static void stream_port_custom_deinit(struct test_entry *te)
 
 }
 
+#if HAS_AUDIO_CODECS
 static pjmedia_port* create_stream( pj_pool_t *pool,
 				    const char *codec,
 				    pj_status_t (*codec_init)(pjmedia_endpt*),
@@ -1822,6 +1831,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
 
     return port;
 }
+#endif
 
 #if PJMEDIA_HAS_G711_CODEC
 /* G.711 stream, no SRTP */
