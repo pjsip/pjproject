@@ -124,7 +124,7 @@
 
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
-static const pj_str_t ID_INACTIVE = { "inactive", 8 };
+// static const pj_str_t ID_INACTIVE = { "inactive", 8 };
 static const pj_str_t ID_CRYPTO   = { "crypto", 6 };
 
 typedef void (*crypto_method_t)(srtp_crypto_policy_t *policy);
