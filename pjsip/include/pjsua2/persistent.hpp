@@ -58,6 +58,12 @@ class PersistentObject
 {
 public:
     /**
+     * Virtual destructor
+     */
+    virtual ~PersistentObject()
+    {}
+
+    /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.

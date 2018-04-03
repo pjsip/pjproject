@@ -1003,6 +1003,12 @@ typedef struct AccountIpChangeConfig
 
 public:
     /**
+     * Virtual destructor
+     */
+    virtual ~AccountIpChangeConfig()
+    {}
+
+    /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.
