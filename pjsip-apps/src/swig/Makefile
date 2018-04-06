@@ -36,7 +36,7 @@ csharp:
 	$(MAKE) $(MAKE_FLAGS) -C csharp $@
 
 symbols.i: symbols.lst
-	@echo ** Warning **: file symbols.i is out of date. Run 'make symbol'.
+	@echo warning: file symbols.i is out of date. Run 'make symbol'.
 
 symbol symbols:
 	python importsym.py
