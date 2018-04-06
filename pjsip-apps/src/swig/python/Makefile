@@ -1,12 +1,12 @@
 PYTHON_SO=_pjsua2.so
 
-USE_PYTHON3=1
+USE_PYTHON3?=1
 
 ifeq ($(USE_PYTHON3),1)
-  PYTHON_EXE=python3
+  PYTHON_EXE=python3.6
   PYTHON_PKG_DIR=$(HOME)/.local/lib/python3.6/site-packages
 else
-  PYTHON_EXE=python
+  PYTHON_EXE=python2.7
   PYTHON_PKG_DIR=$(HOME)/.local/lib/python2.7/site-packages
 endif
 
