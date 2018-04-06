@@ -509,7 +509,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 #endif
 
     /* Close socket. */
-    pj_sock_close(key->fd);
+    if (key->fd != PJ_INVALID_SOCKET) {
+        pj_sock_close(key->fd);
+        key->fd = PJ_INVALID_SOCKET;
+    }
 
     /* Clear callback */
     key->cb.on_accept_complete = NULL;
@@ -722,6 +725,13 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 
     old_sock = h->fd;
 
+    fds_cnt = 0;
+    fds[fds_cnt++] = &h->ioqueue->rfdset;
+    fds[fds_cnt++] = &h->ioqueue->wfdset;
+#if PJ_HAS_TCP
+    fds[fds_cnt++] = &h->ioqueue->xfdset;
+#endif
+
     /* Can only replace UDP socket */
     pj_assert(h->fd_type == pj_SOCK_DGRAM());
 
@@ -735,42 +745,46 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             pj_thread_sleep(msec);
         }
         
-        /* Investigate the old socket */
-        addr_len = sizeof(local_addr);
-        status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(THIS_FILE, "Error get socket name %d", status));
-            continue;
-        }
+        if (old_sock != PJ_INVALID_SOCKET) {
+            /* Investigate the old socket */
+            addr_len = sizeof(local_addr);
+            status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(5,(THIS_FILE, "Error get socket name %d", status));
+            	continue;
+            }
         
-        addr_len = sizeof(rem_addr);
-        status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(THIS_FILE, "Error get peer name %d", status));
-        } else {
-            flags |= HAS_PEER_ADDR;
-        }
+            addr_len = sizeof(rem_addr);
+            status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(5,(THIS_FILE, "Error get peer name %d", status));
+            } else {
+            	flags |= HAS_PEER_ADDR;
+            }
 
-        status = pj_sock_get_qos_params(old_sock, &qos_params);
-        if (status == PJ_STATUS_FROM_OS(EBADF) ||
-            status == PJ_STATUS_FROM_OS(EINVAL))
-        {
-            PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
-            continue;
-        }
+            status = pj_sock_get_qos_params(old_sock, &qos_params);
+            if (status == PJ_STATUS_FROM_OS(EBADF) ||
+                status == PJ_STATUS_FROM_OS(EINVAL))
+            {
+            	PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+            	continue;
+            }
         
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
-        } else {
-            flags |= HAS_QOS;
-        }
+            if (status != PJ_SUCCESS) {
+            	PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+            } else {
+            	flags |= HAS_QOS;
+            }
 
-        /* We're done with the old socket, close it otherwise we'll get
-         * error in bind()
-         */
-        status = pj_sock_close(old_sock);
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(THIS_FILE, "Error closing socket %d", status));
+            /* We're done with the old socket, close it otherwise we'll get
+             * error in bind()
+             */
+            status = pj_sock_close(old_sock);
+       	    if (status != PJ_SUCCESS) {
+                PJ_LOG(5,(THIS_FILE, "Error closing socket %d", status));
+            }
+            
+            old_sock = PJ_INVALID_SOCKET;
         }
 
         /* Prepare the new socket */
@@ -844,16 +858,9 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
     /* Replace the occurrence of old socket with new socket in the
      * fd sets.
      */
-    fds_cnt = 0;
-    fds[fds_cnt++] = &h->ioqueue->rfdset;
-    fds[fds_cnt++] = &h->ioqueue->wfdset;
-#if PJ_HAS_TCP
-    fds[fds_cnt++] = &h->ioqueue->xfdset;
-#endif
-
     for (i=0; i<fds_cnt; ++i) {
-	if (PJ_FD_ISSET(old_sock, fds[i])) {
-	    PJ_FD_CLR(old_sock, fds[i]);
+	if (PJ_FD_ISSET(h->fd, fds[i])) {
+	    PJ_FD_CLR(h->fd, fds[i]);
 	    PJ_FD_SET(new_sock, fds[i]);
 	}
     }
@@ -870,6 +877,17 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
 on_error:
     if (new_sock != PJ_INVALID_SOCKET)
 	pj_sock_close(new_sock);
+    if (old_sock != PJ_INVALID_SOCKET)
+    	pj_sock_close(old_sock);
+
+    /* Clear the occurrence of old socket in the fd sets. */
+    for (i=0; i<fds_cnt; ++i) {
+	if (PJ_FD_ISSET(h->fd, fds[i])) {
+	    PJ_FD_CLR(h->fd, fds[i]);
+	}
+    }
+
+    h->fd = PJ_INVALID_SOCKET;
     PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket [%d]", status));
     pj_lock_release(h->ioqueue->lock);
     return PJ_ESOCKETSTOP;
