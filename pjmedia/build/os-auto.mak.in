@@ -189,7 +189,8 @@ endif
 #
 ifeq (@ac_external_pa@,1)
 # External PA
-export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1 \
+		 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #

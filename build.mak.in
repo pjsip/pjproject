@@ -115,19 +115,9 @@ APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec.$(SHLIB_SUF
 endif
 endif
 
-ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 ifeq (@ac_external_pa@,1)
 # External PA
 APP_THIRD_PARTY_EXT += -lportaudio
-else
-APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)
-ifeq ($(PJ_SHARED_LIBRARIES),)
-APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
-else
-APP_THIRD_PARTY_LIBS += -lportaudio
-APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libportaudio.$(SHLIB_SUFFIX)
-endif
-endif
 endif
 
 ifneq (@ac_no_yuv@,1)

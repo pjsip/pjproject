@@ -20,8 +20,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/types.h>
 #include <pj/string.h>
-#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
-    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 #   include <portaudio.h>
 #endif
 
@@ -189,8 +188,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     /* See if the error comes from PortAudio. */
-#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
-    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     if (statcode >= PJMEDIA_PORTAUDIO_ERRNO_START &&
 	statcode <= PJMEDIA_PORTAUDIO_ERRNO_END)
     {
@@ -207,7 +205,7 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 	return errstr;
 
     } else 
-#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
+#endif	/* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* LIBSRTP error */

@@ -349,7 +349,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	 */
 	est_extra_delay = 30;
 
-#if PJMEDIA_SOUND_IMPLEMENTATION!=PJMEDIA_SOUND_NULL_SOUND
+#if !PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
 	est_extra_delay += PJMEDIA_SND_DEFAULT_REC_LATENCY + 
 			   PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 #endif

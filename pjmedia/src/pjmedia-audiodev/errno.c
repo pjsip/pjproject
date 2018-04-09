@@ -109,7 +109,7 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 	return errstr;
 
     } else 
-#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
+#endif	/* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
     /* See if the error comes from WMME */
 #if PJMEDIA_AUDIO_DEV_HAS_WMME
