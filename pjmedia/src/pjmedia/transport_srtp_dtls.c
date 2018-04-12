@@ -554,9 +554,9 @@ static pj_status_t ssl_match_fingerprint(dtls_srtp *ds)
     pj_status_t status;
 
     /* Check hash algo, currently we only support SHA-256 & SHA-1 */
-    if (!pj_strncmp2(&ds->rem_fingerprint, "SHA-256 ", 8))
+    if (!pj_strnicmp2(&ds->rem_fingerprint, "SHA-256 ", 8))
 	is_sha256 = PJ_TRUE;
-    else if (!pj_strncmp2(&ds->rem_fingerprint, "SHA-1 ", 6))
+    else if (!pj_strnicmp2(&ds->rem_fingerprint, "SHA-1 ", 6))
 	is_sha256 = PJ_FALSE;
     else {
 	PJ_LOG(4,(ds->base.name, "Hash algo specified in remote SDP for "
