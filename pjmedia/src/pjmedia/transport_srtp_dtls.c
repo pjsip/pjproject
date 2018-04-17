@@ -356,15 +356,15 @@ static char* ossl_profiles[] =
 {
      "SRTP_AES128_CM_SHA1_80",
      "SRTP_AES128_CM_SHA1_32",
-     "SRTP_AEAD_AES_256_GCM"
-     "SRTP_AEAD_AES_128_GCM",
+     "SRTP_AEAD_AES_256_GCM",
+     "SRTP_AEAD_AES_128_GCM"
 };
 static char* pj_profiles[] =
 {
     "AES_CM_128_HMAC_SHA1_80",
     "AES_CM_128_HMAC_SHA1_32",
-    "AEAD_AES_256_GCM"
-    "AEAD_AES_128_GCM",
+    "AEAD_AES_256_GCM",
+    "AEAD_AES_128_GCM"
 };
 
 
@@ -472,7 +472,7 @@ static void ssl_destroy(dtls_srtp *ds)
 
 static pj_status_t ssl_get_srtp_material(dtls_srtp *ds)
 {
-    unsigned char material[SRTP_MAX_KEY_LEN];
+    unsigned char material[SRTP_MAX_KEY_LEN * 2];
     SRTP_PROTECTION_PROFILE *profile;
     int rc, i, crypto_idx = -1;
     pjmedia_srtp_crypto *tx, *rx;

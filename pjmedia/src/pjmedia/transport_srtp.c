@@ -681,11 +681,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
     PJ_ASSERT_RETURN(endpt && tp && p_tp, PJ_EINVAL);
 
-    /* Check crypto availability */
-    if (opt && opt->crypto_count == 0 &&
-	opt->use == PJMEDIA_SRTP_MANDATORY)
-	return PJMEDIA_SRTP_ESDPREQCRYPTO;
-
     /* Check crypto */
     if (opt && opt->use != PJMEDIA_SRTP_DISABLED) {
 	for (i=0; i < opt->crypto_count; ++i) {
@@ -739,7 +734,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     /* If crypto count is set to zero, setup default crypto-suites,
      * i.e: all available crypto but 'NULL'.
      */
-    if (srtp->setting.crypto_count == 0) {
+    if (srtp->setting.crypto_count == 0 && opt->use != PJMEDIA_SRTP_DISABLED)
+    {
 	srtp->setting.crypto_count = PJMEDIA_SRTP_MAX_CRYPTOS;
 	pjmedia_srtp_enum_crypto(&srtp->setting.crypto_count,
 				 srtp->setting.crypto);
@@ -1114,10 +1110,15 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
 
     /* Save the callbacks */
     pj_lock_acquire(srtp->mutex);
-    srtp->rtp_cb = param->rtp_cb;
-    srtp->rtp_cb2 = param->rtp_cb2;
-    srtp->rtcp_cb = param->rtcp_cb;
-    srtp->user_data = param->user_data;
+    if (param->rtp_cb || param->rtp_cb2) {
+	/* Do not update rtp_cb if not set, as attach() is called by
+	 * keying method.
+	 */
+	srtp->rtp_cb = param->rtp_cb;
+	srtp->rtp_cb2 = param->rtp_cb2;
+	srtp->rtcp_cb = param->rtcp_cb;
+	srtp->user_data = param->user_data;
+    }
     pj_lock_release(srtp->mutex);
 
     /* Attach self to member transport */
