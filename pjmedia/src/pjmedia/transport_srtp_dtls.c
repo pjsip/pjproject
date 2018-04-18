@@ -594,6 +594,30 @@ static pj_status_t send_raw(dtls_srtp *ds, const void *buf, pj_size_t len)
 }
 
 
+/* Start socket if member transport is UDP */
+static pj_status_t udp_member_transport_media_start(dtls_srtp *ds)
+{
+    pjmedia_transport_info info;
+    pj_status_t status;
+
+    if (!ds->srtp->member_tp)
+	return PJ_SUCCESS;
+
+    pjmedia_transport_info_init(&info);
+    status = pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (info.specific_info_cnt == 1 &&
+	info.spc_info[0].type == PJMEDIA_TRANSPORT_TYPE_UDP)
+    {
+	return pjmedia_transport_media_start(ds->srtp->member_tp, 0, 0, 0, 0);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /* Flush write BIO */
 static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
 {
@@ -1182,6 +1206,11 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
 	if (status != PJ_SUCCESS)
 	    goto on_return;
+
+	/* Start member transport if it is UDP, so we can receive packet
+	 * (see also #2097).
+	 */
+	udp_member_transport_media_start(ds);
     }
 
     /* If our setup is ACTIVE and member transport is not ICE,

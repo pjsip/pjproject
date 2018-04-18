@@ -671,6 +671,15 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->src_rtp_name  = udp->rtp_src_addr;
     info->src_rtcp_name = udp->rtcp_src_addr;
 
+    /* Add empty specific info */
+    if (info->specific_info_cnt < PJ_ARRAY_SIZE(info->spc_info)) {
+	pjmedia_transport_specific_info *tsi;
+
+	tsi = &info->spc_info[info->specific_info_cnt++];
+	tsi->type = PJMEDIA_TRANSPORT_TYPE_UDP;
+	tsi->cbsize = 0;
+    }
+
     return PJ_SUCCESS;
 }
 
