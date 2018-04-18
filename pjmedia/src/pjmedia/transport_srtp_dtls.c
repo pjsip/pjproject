@@ -405,6 +405,7 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 
 	}
 	rc = SSL_CTX_set_tlsext_use_srtp(ctx, buf+1);
+	PJ_LOG(4,(ds->base.name, "Setting crypto [%s], errcode=%d", buf, rc));
 	pj_assert(rc == 0);
     }
 
