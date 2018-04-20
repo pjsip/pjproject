@@ -577,6 +577,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 		     transport_param);
 
     cfg.id = pj_str(uri);
+    cfg.transport_id = tid;
     
     status = pjsua_acc_add(&cfg, is_default, &acc_id);
     if (status == PJ_SUCCESS) {
