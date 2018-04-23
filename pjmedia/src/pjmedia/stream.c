@@ -954,7 +954,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 	*first = 1;
     }
 
-    digit->duration += PJMEDIA_PIA_SPF(&stream->port.info);
+    digit->duration += stream->rtp_tx_ts_len_per_pkt;
     if (digit->duration >= PJMEDIA_DTMF_DURATION)
 	digit->duration = PJMEDIA_DTMF_DURATION;
 
@@ -1304,7 +1304,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	     * RTP packets.
 	     */
 	    inc_timestamp = PJMEDIA_DTMF_DURATION +
-		            ((DTMF_EBIT_RETRANSMIT_CNT-1) * samples_per_frame)
+		            ((DTMF_EBIT_RETRANSMIT_CNT-1) *
+		             stream->rtp_tx_ts_len_per_pkt)
 		            - rtp_ts_len;
 	}
 
