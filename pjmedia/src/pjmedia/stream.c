@@ -173,6 +173,7 @@ struct pjmedia_stream
 					    /**< Outgoing RTCP packet size. */
 
     /* RFC 2833 DTMF transmission queue: */
+    unsigned		     dtmf_duration; /**< DTMF duration(in timestamp)*/
     int			     tx_event_pt;   /**< Outgoing pt for dtmf.	    */
     int			     tx_dtmf_count; /**< # of digits in tx dtmf buf.*/
     struct dtmf		     tx_dtmf_buf[32];/**< Outgoing dtmf queue.	    */
@@ -955,18 +956,18 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     }
 
     digit->duration += stream->rtp_tx_ts_len_per_pkt;
-    if (digit->duration >= PJMEDIA_DTMF_DURATION)
-	digit->duration = PJMEDIA_DTMF_DURATION;
+    if (digit->duration >= stream->dtmf_duration)
+	digit->duration = stream->dtmf_duration;
 
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
     if (forced_last) {
-	digit->duration = PJMEDIA_DTMF_DURATION;
+	digit->duration = stream->dtmf_duration;
     }
 
-    if (digit->duration >= PJMEDIA_DTMF_DURATION) {
+    if (digit->duration >= stream->dtmf_duration) {
 
 	event->e_vol |= 0x80;
 
@@ -1303,7 +1304,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	     * Increment the RTP timestamp of the RTP session, for next
 	     * RTP packets.
 	     */
-	    inc_timestamp = PJMEDIA_DTMF_DURATION +
+	    inc_timestamp = stream->dtmf_duration +
 		            ((DTMF_EBIT_RETRANSMIT_CNT-1) *
 		             stream->rtp_tx_ts_len_per_pkt)
 		            - rtp_ts_len;
@@ -2360,6 +2361,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Disable PLC until a "NORMAL" frame is gotten from the jitter buffer. */
     stream->plc_cnt = stream->max_plc_cnt;
 
+#if defined(PJMEDIA_DTMF_DURATION_MSEC) && (PJMEDIA_DTMF_DURATION_MSEC > 0)
+    stream->dtmf_duration = PJMEDIA_DTMF_DURATION_MSEC *
+    			    afd->clock_rate / 1000;
+#else
+    stream->dtmf_duration = PJMEDIA_DTMF_DURATION;
+#endif
+
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     stream->rtp_rx_check_cnt = 50;
     stream->has_g722_mpeg_bug = PJ_FALSE;
@@ -2375,6 +2383,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	/* RTP clock rate = 1/2 real clock rate */
 	stream->rtp_tx_ts_len_per_pkt >>= 1;
+#if defined(PJMEDIA_DTMF_DURATION_MSEC) && (PJMEDIA_DTMF_DURATION_MSEC > 0)
+	stream->dtmf_duration >>= 1;
+#endif
     } else if (!pj_stricmp2(&info->fmt.encoding_name, "opus")) {
 	unsigned opus_ts_modifier = 48000 / afd->clock_rate;
 	stream->rtp_rx_check_cnt = 0;
@@ -2382,6 +2393,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->rtp_tx_ts_len_per_pkt *= opus_ts_modifier;
 	stream->rtp_rx_ts_len_per_frame *= opus_ts_modifier;
 	stream->detect_ptime_change = PJ_TRUE;
+#if defined(PJMEDIA_DTMF_DURATION_MSEC) && (PJMEDIA_DTMF_DURATION_MSEC > 0)
+	stream->dtmf_duration *= opus_ts_modifier;
+#endif
     }
 #endif
 

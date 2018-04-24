@@ -412,10 +412,23 @@
 
 
 /**
- * DTMF/telephone-event duration, in timestamp.
+ * DTMF/telephone-event duration, in timestamp. To specify the duration in
+ * milliseconds, use the setting PJMEDIA_DTMF_DURATION_MSEC instead.
  */
 #ifndef PJMEDIA_DTMF_DURATION		
 #  define PJMEDIA_DTMF_DURATION			1600	/* in timestamp */
+#endif
+
+
+/**
+ * DTMF/telephone-event duration, in milliseconds. If the value is greater
+ * than zero, than this setting will be used instead of PJMEDIA_DTMF_DURATION.
+ *
+ * Note that for a clockrate of 8 KHz, a dtmf duration of 1600 timestamp
+ * units (the default value of PJMEDIA_DTMF_DURATION) is equivalent to 200 ms. 
+ */
+#ifndef PJMEDIA_DTMF_DURATION_MSEC		
+#  define PJMEDIA_DTMF_DURATION_MSEC		0
 #endif
 
 
