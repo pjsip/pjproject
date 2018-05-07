@@ -1000,6 +1000,7 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    pj_memcpy(p, "rsa", CERT_TYPE_LEN);
 	}
 
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
     #ifndef SSL_CTRL_SET_ECDH_AUTO
 	#define SSL_CTRL_SET_ECDH_AUTO 94
     #endif
@@ -1021,6 +1022,10 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    }
     #endif
 	}
+#else // OPENSSL_VERSION_NUMBER < 0x10100000L
+    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH already initialized "
+              "(OpenSSL 1.1.0+), faster PFS cipher-suites enabled"));
+#endif // OPENSSL_VERSION_NUMBER < 0x10100000L
     } else {
 	X509_STORE *pkix_validation_store = SSL_CTX_get_cert_store(ctx);
 	if (NULL != pkix_validation_store) {
