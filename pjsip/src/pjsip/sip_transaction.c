@@ -349,7 +349,7 @@ static pj_status_t create_tsx_key_2543( pj_pool_t *pool,
 }
 
 /*
- * Create transaction key for RFC3161 compliant system.
+ * Create transaction key for RFC3261 compliant system.
  */
 static pj_status_t create_tsx_key_3261( pj_pool_t *pool,
 		                        pj_str_t *key,
