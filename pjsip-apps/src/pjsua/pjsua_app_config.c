@@ -191,6 +191,7 @@ static void usage(void)
     puts  ("  --turn-tcp          Use TCP connection to TURN server (default no)");
     puts  ("  --turn-user         TURN username");
     puts  ("  --turn-passwd       TURN password");
+    puts  ("  --rtcp-mux          Enable RTP & RTCP multiplexing (default: no)");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     puts  ("  --srtp-keying       SRTP keying method for outgoing SDP offer.");
     puts  ("                      0=SDES (default), 1=DTLS");
@@ -359,7 +360,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV,
-	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_SRTP_KEYING,
+	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_RTCP_MUX,
+	   OPT_SRTP_KEYING,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -452,6 +454,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
 	{ "turn-user",	1, 0, OPT_TURN_USER},
 	{ "turn-passwd",1, 0, OPT_TURN_PASSWD},
+	{ "rtcp-mux",	0, 0, OPT_RTCP_MUX},
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	{ "use-srtp",   1, 0, OPT_USE_SRTP},
@@ -1019,6 +1022,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
 	    cfg->media_cfg.turn_auth_cred.data.static_cred.data =
 		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.data = pj_str(pj_optarg);
+	    break;
+
+	case OPT_RTCP_MUX:
+	    cur_acc->enable_rtcp_mux = PJ_TRUE;
 	    break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1760,6 +1767,9 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 			acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.ptr);
 	pj_strcat2(result, line);
     }
+
+    if (acc_cfg->enable_rtcp_mux)
+	pj_strcat2(result, "--rtcp-mux\n");
 }
 
 /*

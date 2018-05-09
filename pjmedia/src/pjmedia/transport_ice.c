@@ -81,6 +81,8 @@ struct transport_ice
     pj_sockaddr		 rtp_src_addr;	/**< Actual source RTP address.	    */
     pj_sockaddr		 rtcp_src_addr;	/**< Actual source RTCP address.    */
     unsigned		 rtcp_src_cnt;  /**< How many pkt from this addr.   */
+    pj_bool_t		 enable_rtcp_mux;/**< Enable RTP& RTCP multiplexing?*/
+    pj_bool_t		 use_rtcp_mux;	/**< Use RTP & RTCP multiplexing?   */
 
     unsigned		 tx_drop_pct;	/**< Percent of tx pkts to drop.    */
     unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
@@ -193,6 +195,7 @@ static const pj_str_t STR_ICE_PWD	= { "ice-pwd", 7 };
 static const pj_str_t STR_IP4		= { "IP4", 3 };
 static const pj_str_t STR_IP6		= { "IP6", 3 };
 static const pj_str_t STR_RTCP		= { "rtcp", 4 };
+static const pj_str_t STR_RTCP_MUX	= { "rtcp-mux", 8 };
 static const pj_str_t STR_BANDW_RR	= { "RR", 2 };
 static const pj_str_t STR_BANDW_RS	= { "RS", 2 };
 
@@ -504,7 +507,8 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 					 pjmedia_sdp_session *sdp_local,
 					 unsigned media_index,
 					 unsigned comp_cnt,
-					 pj_bool_t restart_session)
+					 pj_bool_t restart_session,
+					 pj_bool_t rtcp_mux)
 {
     enum { 
 	ATTR_BUF_LEN = 160,	/* Max len of a=candidate attr */
@@ -758,7 +762,15 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
             m->bandw_count++;
         }
     }
-    
+
+    /* Add a=rtcp-mux attribute */
+    if (rtcp_mux) {
+	pjmedia_sdp_attr *attr;
+
+	attr = PJ_POOL_ZALLOC_T(sdp_pool, pjmedia_sdp_attr);
+    	attr->name = STR_RTCP_MUX;
+    	m->attr[m->attr_count++] = attr;
+    }
 
     return PJ_SUCCESS;
 }
@@ -894,7 +906,8 @@ static pj_status_t create_initial_offer(struct transport_ice *tp_ice,
 
     /* Encode ICE in SDP */
     status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
-				   tp_ice->comp_cnt, PJ_FALSE);
+				   tp_ice->comp_cnt, PJ_FALSE,
+				   tp_ice->enable_rtcp_mux);
     if (status != PJ_SUCCESS) {
 	set_no_ice(tp_ice, "Error encoding SDP answer", status);
 	return status;
@@ -922,6 +935,15 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     pj_status_t status;
 
     rem_m = rem_sdp->media[media_index];
+
+    /* Check if remote wants RTCP mux */
+    if (tp_ice->enable_rtcp_mux) {
+        pjmedia_sdp_attr *attr;
+
+	attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				     &STR_RTCP_MUX, NULL);
+	tp_ice->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
+    }
 
     /* Get the "ice-ufrag" and "ice-pwd" attributes */
     get_ice_attr(rem_sdp, rem_m, &ufrag_attr, &pwd_attr);
@@ -1063,7 +1085,9 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     }
 
     /* Check matched component count and ice_mismatch */
-    if (comp1_found && (tp_ice->comp_cnt==1 || !has_rtcp)) {
+    if (comp1_found &&
+        (tp_ice->comp_cnt==1 || !has_rtcp || tp_ice->use_rtcp_mux))
+    {
 	sdp_state->match_comp_cnt = 1;
 	sdp_state->ice_mismatch = PJ_FALSE;
     } else if (comp1_found && comp2_found) {
@@ -1122,6 +1146,60 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 
 }
 
+/* Encode information in SDP if ICE is not used */
+static pj_status_t encode_no_ice_in_sdp( struct transport_ice *tp_ice,
+					 pj_pool_t *pool,
+					 pjmedia_sdp_session *sdp_local,
+					 const pjmedia_sdp_session *rem_sdp,
+					 unsigned media_index)
+{
+    if (tp_ice->enable_rtcp_mux) {
+        pjmedia_sdp_media *m = sdp_local->media[media_index];
+        pjmedia_sdp_attr *attr;
+        pj_bool_t add_rtcp_mux = PJ_TRUE;
+
+	if (rem_sdp)
+	    add_rtcp_mux = tp_ice->use_rtcp_mux;
+	else {
+	    /* For subsequent offer, set it to false first since
+	     * we are still waiting for remote answer.
+	     */
+	    tp_ice->use_rtcp_mux = PJ_FALSE;
+	}
+
+        /* Remove RTCP attribute because for subsequent offers/answers,
+         * the address (obtained from transport_get_info() ) may be
+         * incorrect if we are not yet confirmed to use RTCP mux
+         * (because we are still waiting for remote answer) or
+         * if remote rejects it.
+         */
+        pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, "rtcp");
+	
+	if (!tp_ice->use_rtcp_mux && tp_ice->comp_cnt > 1) {
+	    pj_ice_sess_cand cand;
+	    pj_status_t status;
+	    
+	    status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
+	    if (status == PJ_SUCCESS) {
+	   	/* Add RTCP attribute if the remote doesn't offer or
+	    	 * rejects it.
+	    	 */
+	    	attr = pjmedia_sdp_attr_create_rtcp(pool, &cand.addr);	
+	    	if (attr)
+	            pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	    }
+	}
+
+	/* Add a=rtcp-mux attribute. */
+	if (add_rtcp_mux) {
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    	    attr->name = STR_RTCP_MUX;
+    	    m->attr[m->attr_count++] = attr;
+	}
+    }
+    return PJ_SUCCESS;
+}
+
 
 /* Verify incoming offer and create initial answer */
 static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
@@ -1150,6 +1228,8 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
     /* Does remote support ICE? */
     if (tp_ice->rem_offer_state.match_comp_cnt==0) {
 	set_no_ice(tp_ice, "No ICE found in SDP offer", PJ_SUCCESS);
+	encode_no_ice_in_sdp(tp_ice, sdp_pool, loc_sdp, rem_sdp,
+			     media_index);
 	return PJ_SUCCESS;
     }
 
@@ -1163,7 +1243,7 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
     /* Encode ICE in SDP */
     status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
 				   tp_ice->rem_offer_state.match_comp_cnt,
-				   PJ_FALSE);
+				   PJ_FALSE, tp_ice->use_rtcp_mux);
     if (status != PJ_SUCCESS) {
 	set_no_ice(tp_ice, "Error encoding SDP answer", status);
 	return status;
@@ -1183,12 +1263,13 @@ static pj_status_t create_subsequent_offer(struct transport_ice *tp_ice,
 
     if (pj_ice_strans_has_sess(tp_ice->ice_st) == PJ_FALSE) {
 	/* We don't have ICE */
+	encode_no_ice_in_sdp(tp_ice, sdp_pool, loc_sdp, NULL, media_index);
 	return PJ_SUCCESS;
     }
 
     comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
     return encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
-				 comp_cnt, PJ_FALSE);
+				 comp_cnt, PJ_FALSE, tp_ice->enable_rtcp_mux);
 }
 
 
@@ -1217,6 +1298,8 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 
 	if (tp_ice->rem_offer_state.match_comp_cnt == 0) {
 	    /* Remote no longer offers ICE */
+	    encode_no_ice_in_sdp(tp_ice, sdp_pool, loc_sdp, rem_sdp,
+			     	 media_index);
 	    return PJ_SUCCESS;
 	}
 
@@ -1227,7 +1310,8 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 
 	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
 				       tp_ice->rem_offer_state.match_comp_cnt,
-				       tp_ice->rem_offer_state.ice_restart);
+				       tp_ice->rem_offer_state.ice_restart,
+				       tp_ice->use_rtcp_mux);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -1240,6 +1324,8 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 
 	if (tp_ice->rem_offer_state.match_comp_cnt == 0) {
 	    /* Remote does not support ICE */
+	    encode_no_ice_in_sdp(tp_ice, sdp_pool, loc_sdp, rem_sdp,
+			     	 media_index);
 	    return PJ_SUCCESS;
 	}
 
@@ -1261,7 +1347,8 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 
 	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
 				       tp_ice->rem_offer_state.match_comp_cnt,
-				       tp_ice->rem_offer_state.ice_restart);
+				       tp_ice->rem_offer_state.ice_restart,
+				       tp_ice->use_rtcp_mux);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -1290,6 +1377,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     PJ_UNUSED_ARG(sdp_pool);
 
     tp_ice->media_option = options;
+    tp_ice->enable_rtcp_mux = ((options & PJMEDIA_TPMED_RTCP_MUX) != 0);
     tp_ice->oa_role = ROLE_NONE;
     tp_ice->initial_sdp = PJ_TRUE;
 
@@ -1401,7 +1489,8 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
 	    continue;
 	}
 
-	cand_cnt++;
+	if (!tp_ice->use_rtcp_mux || cand[cand_cnt].comp_id < 2)
+	    cand_cnt++;
     }
 
     /* Start ICE */
@@ -1654,7 +1743,9 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     pj_sockaddr_cp(&info->sock_info.rtp_addr_name, &cand.addr);
 
     /* Get RTCP default address */
-    if (tp_ice->comp_cnt > 1) {
+    if (tp_ice->use_rtcp_mux) {
+	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, &cand.addr);
+    } else if (tp_ice->comp_cnt > 1) {
 	status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -1749,6 +1840,11 @@ static pj_status_t transport_attach2  (pjmedia_transport *tp,
     tp_ice->rtp_cb2 = att_param->rtp_cb2;
     tp_ice->rtcp_cb = att_param->rtcp_cb;
 
+    /* Check again if we are multiplexing RTP & RTCP. */
+    tp_ice->use_rtcp_mux = (pj_sockaddr_has_addr(&att_param->rem_addr) &&
+    			    pj_sockaddr_cmp(&att_param->rem_addr,
+					    &att_param->rem_rtcp) == 0);
+
     pj_memcpy(&tp_ice->remote_rtp, &att_param->rem_addr, att_param->addr_len);
     pj_memcpy(&tp_ice->remote_rtcp, &att_param->rem_rtcp, att_param->addr_len);
     tp_ice->addr_len = att_param->addr_len;
@@ -1814,12 +1910,14 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 				        pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    if (tp_ice->comp_cnt > 1) {
+
+    if (tp_ice->comp_cnt > 1 || tp_ice->use_rtcp_mux) {
+        unsigned comp_id = (tp_ice->use_rtcp_mux? 1: 2);
 	if (addr == NULL) {
 	    addr = &tp_ice->remote_rtcp;
 	    addr_len = pj_sockaddr_get_len(addr);
-	}
-	return pj_ice_strans_sendto(tp_ice->ice_st, 2, pkt, size, 
+	}	  
+	return pj_ice_strans_sendto(tp_ice->ice_st, comp_id, pkt, size,
 				    addr, addr_len);
     } else {
 	return PJ_SUCCESS;
@@ -1888,10 +1986,12 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 		      pj_sockaddr_print(&tp_ice->remote_rtp, addr_text,
 					sizeof(addr_text), 3)));
 
-	    /* Also update remote RTCP address if actual RTCP source
-	     * address is not heard yet.
-	     */
-	    if (!pj_sockaddr_has_addr(&tp_ice->rtcp_src_addr)) {
+	    if (tp_ice->use_rtcp_mux) {
+	    	pj_sockaddr_cp(&tp_ice->remote_rtcp, &tp_ice->remote_rtp);
+	    } else if (!pj_sockaddr_has_addr(&tp_ice->rtcp_src_addr)) {
+	        /* Also update remote RTCP address if actual RTCP source
+	         * address is not heard yet.
+	         */
 		pj_uint16_t port;
 
 		pj_sockaddr_cp(&tp_ice->remote_rtcp, &tp_ice->remote_rtp);

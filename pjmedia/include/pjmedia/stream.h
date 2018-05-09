@@ -98,6 +98,7 @@ typedef struct pjmedia_stream_info
     pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
+    pj_bool_t		rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     pj_bool_t		rtcp_xr_enabled;
 				    /**< Specify whether RTCP XR is enabled.*/

@@ -1719,6 +1719,7 @@ static pj_status_t call_add_video(pjsua_call *call,
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *sdp_m;
     pjmedia_transport_info tpinfo;
+    unsigned options;
     pj_status_t status;
 
     /* Verify media slot availability */
@@ -1757,7 +1758,8 @@ static pj_status_t call_add_video(pjsua_call *call,
     call_med->strm.v.cap_dev = cap_dev;
 
     /* Init transport media */
-    status = pjmedia_transport_media_create(call_med->tp, pool, 0,
+    options = (call_med->enable_rtcp_mux? PJMEDIA_TPMED_RTCP_MUX: 0);
+    status = pjmedia_transport_media_create(call_med->tp, pool, options,
 					    NULL, call_med->idx);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -1908,8 +1910,11 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 	/* Init transport media */
 	if (call_med->tp && call_med->tp_st == PJSUA_MED_TP_IDLE) {
-	    status = pjmedia_transport_media_create(call_med->tp, pool, 0,
-						    NULL, call_med->idx);
+	    unsigned options = (call_med->enable_rtcp_mux?
+            			PJMEDIA_TPMED_RTCP_MUX: 0);
+	    status = pjmedia_transport_media_create(call_med->tp, pool,
+						    options, NULL,
+						    call_med->idx);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}

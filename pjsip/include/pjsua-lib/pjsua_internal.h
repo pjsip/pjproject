@@ -83,6 +83,7 @@ struct pjsua_call_media
     pj_bool_t		 tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
     pj_bool_t            use_custom_med_tp;/**< Use custom media transport? */
+    pj_bool_t		 enable_rtcp_mux;/**< Enable RTP& RTCP multiplexing?*/
     pj_sockaddr		 rtp_addr;  /**< Current RTP source address
 					    (used to update ICE default
 					    address)			    */

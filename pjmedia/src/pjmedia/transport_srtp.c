@@ -233,6 +233,7 @@ typedef struct transport_srtp
     char		 rtcp_tx_buffer[MAX_RTCP_BUFFER_LEN];
     pjmedia_srtp_setting setting;
     unsigned		 media_option;
+    pj_bool_t		 use_rtcp_mux;	    /**< Use RTP& RTCP multiplexing?*/
 
     /* SRTP policy */
     pj_bool_t		 session_inited;
@@ -1137,6 +1138,10 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
 	return status;
     }
 
+    /* Check if we are multiplexing RTP & RTCP. */
+    srtp->use_rtcp_mux = (pj_sockaddr_has_addr(&param->rem_addr) &&
+    			  pj_sockaddr_cmp(&param->rem_addr,
+    					  &param->rem_rtcp) == 0);
     srtp->member_tp_attached = PJ_TRUE;
     return PJ_SUCCESS;
 }
@@ -1346,7 +1351,20 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	pj_lock_release(srtp->mutex);
 	return;
     }
+
+    /* Check if multiplexing is allowed and the payload indicates RTCP. */
+    if (srtp->use_rtcp_mux) {
+    	pjmedia_rtp_hdr *hdr = (pjmedia_rtp_hdr *)pkt;
+  
+	if (hdr->pt >= 64 && hdr->pt <= 95) {   
+	    pj_lock_release(srtp->mutex);
+	    srtp_rtcp_cb(srtp, pkt, size);
+    	    return;
+    	}
+    }
+    
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
+    
     if (srtp->probation_cnt > 0 &&
 	(err == srtp_err_status_replay_old ||
 	 err == srtp_err_status_replay_fail))

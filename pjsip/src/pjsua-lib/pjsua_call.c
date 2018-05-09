@@ -4388,7 +4388,9 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
          */
         pjmedia_transport_media_stop(call_med->tp);
         pjmedia_transport_media_create(call_med->tp, call->inv->pool_prov,
-                                       0, NULL, mi);
+                                       (call_med->enable_rtcp_mux?
+            			    	PJMEDIA_TPMED_RTCP_MUX: 0),
+            			       NULL, mi);
 
         PJ_LOG(4, (THIS_FILE, "Restarting ICE for media %d", mi));
     }

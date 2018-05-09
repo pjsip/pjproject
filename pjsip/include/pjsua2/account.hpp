@@ -849,6 +849,11 @@ struct AccountMediaConfig : public PersistentObject
      */
     pjsua_ipv6_use	ipv6Use;
 
+    /**
+     * Enable RTP and RTCP multiplexing.
+     */
+    pj_bool_t		rtcpMuxEnabled;
+
 public:
     /**
      * Read this object from a container node.

@@ -578,7 +578,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     skinfo->rtcp_sock = sock[1];
     pj_sockaddr_cp(&skinfo->rtcp_addr_name, &mapped_addr[1]);
 
-    PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s",
+    PJ_LOG(4,(THIS_FILE, "RTP%s socket reachable at %s",
+	      (call_med->enable_rtcp_mux? " & RTCP": ""),
 	      pj_sockaddr_print(&skinfo->rtp_addr_name, addr_buf,
 				sizeof(addr_buf), 3)));
     PJ_LOG(4,(THIS_FILE, "RTCP socket reachable at %s",
@@ -1831,9 +1832,11 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
             }
 
             if (call_med->tp) {
+            	unsigned options = (call_med->enable_rtcp_mux?
+            			    PJMEDIA_TPMED_RTCP_MUX: 0);
                 status = pjmedia_transport_media_create(
                              call_med->tp, tmp_pool,
-                             0, call->async_call.rem_sdp, mi);
+                             options, call->async_call.rem_sdp, mi);
             }
 	    if (status != PJ_SUCCESS) {
                 call->med_ch_info.status = status;
@@ -2153,6 +2156,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	}
 
 	if (enabled) {
+	    call_med->enable_rtcp_mux = acc->cfg.enable_rtcp_mux;
+
 	    status = pjsua_call_media_init(call_med, media_type,
 	                                   &acc->cfg.rtp_cfg,
 					   security_level, sip_err_code,
@@ -2789,6 +2794,8 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 	 * address can happen after negotiation, this can be handled
 	 * internally by ICE and does not need to cause media restart.
 	 */
+	if (old_si->rtcp_mux != new_si->rtcp_mux)
+	    return PJ_TRUE;
 	if (!is_ice_running(call_med->tp) &&
 	    pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
 	{
@@ -2851,6 +2858,8 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 	 * address can happen after negotiation, this can be handled
 	 * internally by ICE and does not need to cause media restart.
 	 */
+	if (old_si->rtcp_mux != new_si->rtcp_mux)
+	    return PJ_TRUE;
 	if (!is_ice_running(call_med->tp) &&
 	    pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
 	{
@@ -3028,6 +3037,13 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		goto on_check_med_status;
 	    }
 
+	    /* Check if remote wants RTP and RTCP multiplexing,
+	     * but we don't enable it.
+	     */
+	    if (si->rtcp_mux && !call_med->enable_rtcp_mux) {
+	        si->rtcp_mux = PJ_FALSE;
+	    }
+
             /* Codec parameter of stream info (si->param) can be NULL if
              * the stream is rejected or disabled.
              */
@@ -3070,6 +3086,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		pjmedia_srtp_info *srtp_info;
 
 		if (call->inv->following_fork) {
+		    unsigned options = (call_med->enable_rtcp_mux?
+            			        PJMEDIA_TPMED_RTCP_MUX: 0);
 		    /* Normally media transport will automatically restart
 		     * itself (if needed, based on info from the SDP) in
 		     * pjmedia_transport_media_start(), however in "following
@@ -3087,7 +3105,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    }
 		    status = pjmedia_transport_media_create(call_med->tp,
 							    tmp_pool,
-							    0, NULL, mi);
+							    options, NULL, mi);
 		    if (status != PJ_SUCCESS) {
 			PJ_PERROR(1,(THIS_FILE, status,
 				     "pjmedia_transport_media_create() failed "
@@ -3202,6 +3220,13 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 			         "for call_id %d media %d",
 			     call_id, mi));
 		goto on_check_med_status;
+	    }
+
+	    /* Check if remote wants RTP and RTCP multiplexing,
+	     * but we don't enable it.
+	     */
+	    if (si->rtcp_mux && !call_med->enable_rtcp_mux) {
+	        si->rtcp_mux = PJ_FALSE;
 	    }
 
 	    /* Check if this media is changed */

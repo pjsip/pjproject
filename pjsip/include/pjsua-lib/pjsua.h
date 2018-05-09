@@ -3907,6 +3907,11 @@ typedef struct pjsua_acc_config
      */
     pjsua_ip_change_acc_cfg ip_change_cfg;
 
+    /**
+     * Enable RTP and RTCP multiplexing.
+     */
+    pj_bool_t		enable_rtcp_mux;
+
 } pjsua_acc_config;
 
 

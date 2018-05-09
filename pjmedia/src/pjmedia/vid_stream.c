@@ -218,6 +218,9 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 			     pj_bool_t with_sdes,
 			     pj_bool_t with_bye);
 
+static void on_rx_rtcp( void *data,
+                        void *pkt, 
+                        pj_ssize_t bytes_read);
 
 #if TRACE_JB
 
@@ -649,6 +652,12 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	LOGERR_((channel->port.info.name.ptr, "RTP decode error", status));
 	stream->rtcp.stat.rx.discard++;
 	return;
+    }
+
+    /* Check if multiplexing is allowed and the payload indicates RTCP. */
+    if (stream->info.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
+    	on_rx_rtcp(stream, pkt, bytes_read);
+    	return;
     }
 
     /* Ignore the packet if decoder is paused */
@@ -1736,8 +1745,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     att_param.user_data = stream;
     pj_sockaddr_cp(&att_param.rem_addr, &info->rem_addr);
     pj_sockaddr_cp(&stream->rem_rtp_addr, &info->rem_addr);
-    if (pj_sockaddr_has_addr(&info->rem_rtcp.addr))
-	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);    
+    if (info->rtcp_mux) {
+	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_addr);    	
+    } else if (pj_sockaddr_has_addr(&info->rem_rtcp.addr)) {
+	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
+    }    
     att_param.addr_len = pj_sockaddr_get_len(&info->rem_addr);
     att_param.rtp_cb2 = &on_rx_rtp;
     att_param.rtcp_cb = &on_rx_rtcp;

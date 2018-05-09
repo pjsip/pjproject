@@ -525,6 +525,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJ_SUCCESS;
     }
 
+    /* Check if "rtcp-mux" is present in the SDP. */
+    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+    				  "rtcp-mux", NULL);
+    if (attr)
+    	si->rtcp_mux = PJ_TRUE;
+
     /* If "rtcp" attribute is present in the SDP, set the RTCP address
      * from that attribute. Otherwise, calculate from RTP address.
      */

@@ -257,7 +257,14 @@ typedef enum pjmedia_tranport_media_option
      * transport SRTP, media transport validation only need to be done by 
      * transport SRTP.
      */
-    PJMEDIA_TPMED_NO_TRANSPORT_CHECKING = 1
+    PJMEDIA_TPMED_NO_TRANSPORT_CHECKING = 1,
+
+    /**
+     * When this flag is specified, the transport will allow multiplexing
+     * RTP and RTCP, i.e. if the remote agrees, RTCP will be sent using
+     * the same socket for RTP.
+     */
+    PJMEDIA_TPMED_RTCP_MUX = 2
 
 } pjmedia_tranport_media_option;
 

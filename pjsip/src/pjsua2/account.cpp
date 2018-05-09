@@ -358,6 +358,7 @@ void AccountMediaConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_OBJ     ( this_node, srtpOpt);
     NODE_READ_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_READ_OBJ     ( this_node, transportConfig);
+    NODE_READ_BOOL    ( this_node, rtcpMuxEnabled);
 }
 
 void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
@@ -371,6 +372,7 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_OBJ     ( this_node, srtpOpt);
     NODE_WRITE_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_WRITE_OBJ     ( this_node, transportConfig);
+    NODE_WRITE_BOOL    ( this_node, rtcpMuxEnabled);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -559,6 +561,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.srtp_secure_signaling	= mediaConfig.srtpSecureSignaling;
     ret.srtp_opt		= mediaConfig.srtpOpt.toPj();
     ret.ipv6_media_use		= mediaConfig.ipv6Use;
+    ret.enable_rtcp_mux		= mediaConfig.rtcpMuxEnabled;
 
     // AccountVideoConfig
     ret.vid_in_auto_show	= videoConfig.autoShowIncoming;
@@ -734,6 +737,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.srtpSecureSignaling = prm.srtp_secure_signaling;
     mediaConfig.srtpOpt.fromPj(prm.srtp_opt);
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
+    mediaConfig.rtcpMuxEnabled	= prm.enable_rtcp_mux;
 
     // AccountVideoConfig
     videoConfig.autoShowIncoming 	= PJ2BOOL(prm.vid_in_auto_show);

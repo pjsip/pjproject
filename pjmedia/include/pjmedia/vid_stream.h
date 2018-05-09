@@ -155,6 +155,7 @@ typedef struct pjmedia_vid_stream_info
     pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
+    pj_bool_t		rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
     unsigned		rx_pt;	    /**< Incoming codec paylaod type.	    */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */

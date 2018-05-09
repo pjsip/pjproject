@@ -82,6 +82,8 @@ struct transport_udp
     int			rtp_addrlen;	/**< Address length.		    */
     char		rtp_pkt[RTP_LEN];/**< Incoming RTP packet buffer    */
 
+    pj_bool_t		enable_rtcp_mux;/**< Enable RTP & RTCP multiplexing?*/
+    pj_bool_t		use_rtcp_mux;	/**< Use RTP & RTCP multiplexing?   */
     pj_sock_t		rtcp_sock;	/**< RTCP socket		    */
     pj_sockaddr		rtcp_addr_name;	/**< Published RTCP address.	    */
     pj_sockaddr		rtcp_src_addr;	/**< Actual source RTCP address.    */
@@ -178,6 +180,7 @@ static pjmedia_transport_op transport_udp_op =
     &transport_attach2
 };
 
+static const pj_str_t STR_RTCP_MUX	= { "rtcp-mux", 8 };
 
 /**
  * Create UDP stream transport.
@@ -397,7 +400,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 				  &tp->rtcp_src_addr, &tp->rtcp_addr_len);
     if (status != PJ_EPENDING)
 	goto on_error;
-#endif    
+#endif	
 
     tp->ioqueue = ioqueue;
 
@@ -534,10 +537,13 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 		      pj_sockaddr_print(&udp->rtp_src_addr, addr_text,
 					sizeof(addr_text), 3)));
 
-	    /* Also update remote RTCP address if actual RTCP source
-	     * address is not heard yet.
-	     */
-	    if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
+	    if (udp->use_rtcp_mux) {
+	    	pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
+	    	pj_sockaddr_cp(&udp->rtcp_src_addr, &udp->rem_rtcp_addr);
+	    } else if (!pj_sockaddr_has_addr(&udp->rtcp_src_addr)) {
+	        /* Also update remote RTCP address if actual RTCP source
+	         * address is not heard yet.
+	         */
 		pj_uint16_t port;
 
 		pj_sockaddr_cp(&udp->rem_rtcp_addr, &udp->rem_rtp_addr);
@@ -665,7 +671,9 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->sock_info.rtp_sock = udp->rtp_sock;
     info->sock_info.rtp_addr_name = udp->rtp_addr_name;
     info->sock_info.rtcp_sock = udp->rtcp_sock;
-    info->sock_info.rtcp_addr_name = udp->rtcp_addr_name;
+    info->sock_info.rtcp_addr_name = (udp->use_rtcp_mux?
+    				      udp->rtp_addr_name:
+    				      udp->rtcp_addr_name);
 
     /* Get remote address originating RTP & RTCP. */
     info->src_rtp_name  = udp->rtp_src_addr;
@@ -708,6 +716,10 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
 
     /* Must not be "attached" to existing application */
     //PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
+
+    /* Check again if we are multiplexing RTP & RTCP. */
+    udp->use_rtcp_mux = (pj_sockaddr_has_addr(rem_addr) &&
+			 pj_sockaddr_cmp(rem_addr, rem_rtcp) == 0);
 
     /* Lock the ioqueue keys to make sure that callbacks are
      * not executed. See ticket #844 for details.
@@ -977,7 +989,8 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     }
 
     sent = size;
-    status = pj_ioqueue_sendto( udp->rtcp_key, &udp->rtcp_write_op,
+    status = pj_ioqueue_sendto( (udp->use_rtcp_mux? udp->rtp_key:
+    				 udp->rtcp_key), &udp->rtcp_write_op,
 				pkt, &sent, 0, addr, addr_len);
 
     if (status==PJ_SUCCESS || status==PJ_EPENDING)
@@ -997,6 +1010,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 
     PJ_ASSERT_RETURN(tp && pool, PJ_EINVAL);
     udp->media_options = options;
+    udp->enable_rtcp_mux = ((options & PJMEDIA_TPMED_RTCP_MUX) != 0);
 
     PJ_UNUSED_ARG(sdp_remote);
     PJ_UNUSED_ARG(media_index);
@@ -1025,6 +1039,49 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	{
 	    pjmedia_sdp_media_deactivate(pool, m_loc);
 	    return PJMEDIA_SDP_EINPROTO;
+	}
+    }
+    
+    if (udp->enable_rtcp_mux) {
+        pjmedia_sdp_media *m = sdp_local->media[media_index];
+        pjmedia_sdp_attr *attr;
+        pj_bool_t add_rtcp_mux = PJ_TRUE;
+
+	udp->use_rtcp_mux = PJ_FALSE;
+
+	/* Check if remote wants RTCP mux */
+	if (rem_sdp) {
+	    pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
+	    
+	    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				         &STR_RTCP_MUX, NULL);
+	    udp->use_rtcp_mux = (attr? PJ_TRUE: PJ_FALSE);
+	    add_rtcp_mux = udp->use_rtcp_mux;
+	}
+
+        /* Remove RTCP attribute because for subsequent offers/answers,
+         * the address (obtained from transport_get_info() ) may be
+         * incorrect if we are not yet confirmed to use RTCP mux
+         * (because we are still waiting for remote answer) or
+         * if remote rejects it.
+         */
+        pjmedia_sdp_attr_remove_all(&m->attr_count, m->attr, "rtcp");
+	
+	if (!udp->use_rtcp_mux) {
+	   /* Add RTCP attribute if the remote doesn't offer or
+	    * rejects it.
+	    */
+	    attr = pjmedia_sdp_attr_create_rtcp(pool,
+					        &udp->rtcp_addr_name);	
+	    if (attr)
+	        pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	}
+
+	/* Add a=rtcp-mux attribute. */
+	if (add_rtcp_mux) {
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    	    attr->name = STR_RTCP_MUX;
+    	    m->attr[m->attr_count++] = attr;
 	}
     }
 

@@ -985,7 +985,13 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
 	    pj_sockaddr_cp(&ds->rem_addr, &info.src_rtp_name);
 	    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
 	    ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
-	    if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
+	    if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+	    			&info.sock_info.rtcp_addr_name) == 0)
+	    {
+	    	/* Using RTP & RTCP multiplexing */
+	    	pj_sockaddr_cp(&ds->rem_rtcp, &ds->rem_addr);
+	    	pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
+	    } else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
 		pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
 	    } else {
 		pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
@@ -1186,21 +1192,35 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
      */
     {
 	pjmedia_transport_attach_param ap;
+	pjmedia_transport_info info;
+
 	pj_bzero(&ap, sizeof(ap));
 	ap.user_data = ds->srtp;
+	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 
 	if (sdp_remote)
 	    get_rem_addrs(ds, sdp_remote, media_index);
 
-	if (pj_sockaddr_has_addr(&ds->rem_addr))
+	if (pj_sockaddr_has_addr(&ds->rem_addr)) {
 	    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
-	else
+	} else if (pj_sockaddr_has_addr(&info.sock_info.rtp_addr_name)) {
+	    pj_sockaddr_cp(&ap.rem_addr, &info.sock_info.rtp_addr_name);
+	} else {
 	    pj_sockaddr_init(pj_AF_INET(), &ap.rem_addr, 0, 0);
+	}
 
-	if (pj_sockaddr_has_addr(&ds->rem_rtcp))
+	if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+	    		    &info.sock_info.rtcp_addr_name) == 0)
+	{
+	    /* Using RTP & RTCP multiplexing */
+	    pj_sockaddr_cp(&ap.rem_rtcp, &ap.rem_addr);
+	} else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
 	    pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
-	else
+	} else if (pj_sockaddr_has_addr(&info.sock_info.rtcp_addr_name)) {
+	    pj_sockaddr_cp(&ap.rem_rtcp, &info.sock_info.rtcp_addr_name);
+	} else {
 	    pj_sockaddr_init(pj_AF_INET(), &ap.rem_rtcp, 0, 0);
+	}
 
 	ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
 	status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
