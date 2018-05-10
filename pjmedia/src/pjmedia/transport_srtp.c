@@ -20,6 +20,7 @@
 
 #include <pjmedia/transport_srtp.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/rtp.h>
 #include <pjlib-util/base64.h>
 #include <pj/array.h>
 #include <pj/assert.h>
