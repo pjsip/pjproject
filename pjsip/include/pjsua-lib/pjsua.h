@@ -6613,6 +6613,33 @@ PJ_DECL(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm);
 
 
 /**
+ * This structure specifies the parameters for conference ports connection.
+ * Use pjsua_conf_connect_param_default() to initialize this structure with
+ * default values.
+ */
+typedef struct pjsua_conf_connect_param
+{
+    /*
+     * Signal level adjustment from the source to the sink to make it
+     * louder or quieter. Value 1.0 means no level adjustment,
+     * while value 0 means to mute the port.
+     *
+     * Default: 1.0
+     */
+    float		level;
+
+} pjsua_conf_connect_param;
+
+
+/**
+ * Initialize pjsua_conf_connect_param with default values.
+ *
+ * @param prm		The parameter.
+ */
+PJ_DECL(void) pjsua_conf_connect_param_default(pjsua_conf_connect_param *prm);
+
+
+/**
  * Get maxinum number of conference ports.
  *
  * @return		Maximum number of ports in the conference bridge.
@@ -6703,6 +6730,40 @@ PJ_DECL(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id port_id);
  */
 PJ_DECL(pj_status_t) pjsua_conf_connect(pjsua_conf_port_id source,
 					pjsua_conf_port_id sink);
+
+/**
+ * Establish unidirectional media flow from source to sink. One source
+ * may transmit to multiple destinations/sink. And if multiple
+ * sources are transmitting to the same sink, the media will be mixed
+ * together. Source and sink may refer to the same ID, effectively
+ * looping the media.
+ *
+ * Signal level from the source to the sink can be adjusted by making
+ * it louder or quieter via the parameter param. The level adjustment
+ * will apply to a specific connection only (i.e. only for the signal
+ * from the source to the sink), as compared to
+ * pjsua_conf_adjust_tx_level()/pjsua_conf_adjust_rx_level() which
+ * applies to all signals from/to that port. The signal adjustment
+ * will be cumulative, in this following order:
+ * signal from the source will be adjusted with the level specified
+ * in pjsua_conf_adjust_rx_level(), then with the level specified
+ * via this API, and finally with the level specified to the sink's
+ * pjsua_conf_adjust_tx_level().
+ *
+ * If bidirectional media flow is desired, application needs to call
+ * this function twice, with the second one having the arguments
+ * reversed.
+ *
+ * @param source	Port ID of the source media/transmitter.
+ * @param sink		Port ID of the destination media/received.
+ * @param prm		Conference port connection param. If set to
+ *			NULL, default values will be used.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_conf_connect2(pjsua_conf_port_id source,
+					 pjsua_conf_port_id sink,
+					 const pjsua_conf_connect_param *prm);
 
 
 /**

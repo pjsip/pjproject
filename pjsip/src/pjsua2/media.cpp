@@ -117,6 +117,11 @@ pjmedia_type Media::getType() const
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+AudioMediaTransmitParam::AudioMediaTransmitParam()
+: level(1.0)
+{
+}
+
 AudioMedia::AudioMedia() 
 : Media(PJMEDIA_TYPE_AUDIO), id(PJSUA_INVALID_ID), mediaPool(NULL)
 {
@@ -196,6 +201,17 @@ ConfPortInfo AudioMedia::getPortInfoFromId(int port_id) throw(Error)
 void AudioMedia::startTransmit(const AudioMedia &sink) const throw(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_conf_connect(id, sink.id) );
+}
+
+void AudioMedia::startTransmit2(const AudioMedia &sink,
+				const AudioMediaTransmitParam &param) const
+     throw(Error)
+{
+    pjsua_conf_connect_param pj_param;
+    
+    pjsua_conf_connect_param_default(&pj_param);
+    pj_param.level = param.level;
+    PJSUA2_CHECK_EXPR( pjsua_conf_connect2(id, sink.id, &pj_param) );
 }
 
 void AudioMedia::stopTransmit(const AudioMedia &sink) const throw(Error)

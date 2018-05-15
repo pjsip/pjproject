@@ -192,6 +192,23 @@ private:
     pjmedia_type        type;
 };
 
+struct AudioMediaTransmitParam
+{
+    /**
+     * Signal level adjustment. Value 1.0 means no level adjustment,
+     * while value 0 means to mute the port.
+     *
+     * Default: 1.0
+     */
+    float		level;
+
+public:
+    /**
+     * Default constructor
+     */
+    AudioMediaTransmitParam();
+};
+
 /**
  * Audio Media.
  */
@@ -227,6 +244,35 @@ public:
      * @param sink		The destination Media.
      */
     void startTransmit(const AudioMedia &sink) const throw(Error);
+
+    /**
+     * Establish unidirectional media flow to sink. This media port
+     * will act as a source, and it may transmit to multiple destinations/sink.
+     * And if multiple sources are transmitting to the same sink, the media
+     * will be mixed together. Source and sink may refer to the same Media,
+     * effectively looping the media.
+     *
+     * Signal level from this source to the sink can be adjusted by making
+     * it louder or quieter via the parameter param. The level adjustment
+     * will apply to a specific connection only (i.e. only for signal
+     * from this source to the sink), as compared to
+     * adjustTxLevel()/adjustRxLevel() which applies to all signals from/to
+     * this media port. The signal adjustment
+     * will be cumulative, in this following order:
+     * signal from this source will be adjusted with the level specified
+     * in adjustTxLevel(), then with the level specified via this API,
+     * and finally with the level specified to the sink's adjustRxLevel().
+     *
+     * If bidirectional media flow is desired, application needs to call
+     * this method twice, with the second one called from the opposite source
+     * media.
+     *
+     * @param sink		The destination Media.
+     * @param param		The parameter.
+     */
+    void startTransmit2(const AudioMedia &sink, 
+			const AudioMediaTransmitParam &param) const
+         throw(Error);
 
     /**
      *  Stop media flow to destination/sink port.

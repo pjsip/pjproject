@@ -714,6 +714,12 @@ PJ_DEF(void) pjsua_snd_dev_param_default(pjsua_snd_dev_param *prm)
     prm->playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 }
 
+PJ_DEF(void) pjsua_conf_connect_param_default(pjsua_conf_connect_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+    prm->level = 1.0;
+}
+
 /*
  * Get maxinum number of conference ports.
  */
@@ -824,6 +830,20 @@ PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
  */
 PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 					pjsua_conf_port_id sink)
+{
+    pjsua_conf_connect_param prm;
+
+    pjsua_conf_connect_param_default(&prm);
+    return pjsua_conf_connect2(source, sink, &prm);
+}
+					
+/*
+ * Establish unidirectional media flow from souce to sink, with signal
+ * level adjustment.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
+					 pjsua_conf_port_id sink,
+					 const pjsua_conf_connect_param *prm)
 {
     pj_status_t status = PJ_SUCCESS;
 
@@ -957,7 +977,14 @@ on_return:
     PJSUA_UNLOCK();
 
     if (status == PJ_SUCCESS) {
-	status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
+    	pjsua_conf_connect_param cc_param;
+    	
+    	if (!prm)
+    	    pjsua_conf_connect_param_default(&cc_param);
+    	else
+    	    pj_memcpy(&cc_param, prm, sizeof(cc_param));
+	status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 
+					   (int)((cc_param.level-1) * 128));
     }
 
     pj_log_pop_indent();
