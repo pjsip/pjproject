@@ -1061,14 +1061,18 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 				      sdp_remote->attr, &ID_SETUP, NULL);
 	switch (ds->srtp->setting.use) {
 	    case PJMEDIA_SRTP_DISABLED:
-		if (attr_setup)
-		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		if (attr_setup) {
+		    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
+		    goto on_return;
+		}
 		break;
 	    case PJMEDIA_SRTP_OPTIONAL:
 		break;
 	    case PJMEDIA_SRTP_MANDATORY:
-		if (!attr_setup)
-		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		if (!attr_setup) {
+		    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
+		    goto on_return;
+		}
 		break;
 	}
     }
@@ -1077,10 +1081,11 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
     ds->rem_fprint_status = PJ_EPENDING;
 
 on_return:
+#if DTLS_DEBUG
     if (status != PJ_SUCCESS) {
 	pj_perror(4, ds->base.name, status, "dtls_media_create() failed");
-	dtls_destroy(tp);
     }
+#endif
     return status;
 }
 
@@ -1255,10 +1260,11 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
     }
 
 on_return:
+#if DTLS_DEBUG
     if (status != PJ_SUCCESS) {
 	pj_perror(4, ds->base.name, status, "dtls_encode_sdp() failed");
-	dtls_destroy(tp);
     }
+#endif
     return status;
 }
 
@@ -1392,10 +1398,11 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     }
 
 on_return:
+#if DTLS_DEBUG
     if (status != PJ_SUCCESS) {
 	pj_perror(4, ds->base.name, status, "dtls_media_start() failed");
-	dtls_destroy(tp);
     }
+#endif
     return status;
 }
 

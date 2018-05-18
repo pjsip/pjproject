@@ -1269,9 +1269,12 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    /* Close keying */
-    for (i=0; i < srtp->keying_cnt; i++)
-	pjmedia_transport_close(srtp->keying[i]);
+    /* Close all keying. Note that any keying should not be destroyed before
+     * SRTP transport is destroyed as re-INVITE may initiate new keying method
+     * without destroying SRTP transport.
+     */
+    for (i=0; i < srtp->all_keying_cnt; i++)
+	pjmedia_transport_close(srtp->all_keying[i]);
 
     /* Close member if configured */
     if (srtp->setting.close_member_tp && srtp->member_tp) {
@@ -1611,12 +1614,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	if (!srtp_crypto_empty(&srtp->tx_policy_neg) &&
 	    !srtp_crypto_empty(&srtp->rx_policy_neg))
 	{
-	    /* SRTP nego is done, let's destroy any other keying. */
-	    unsigned j;
-	    for (j = 0; j < srtp->keying_cnt; ++j) {
-		if (j != i)
-		    pjmedia_transport_close(srtp->keying[j]);
-	    }
+	    /* SRTP nego is done */
 	    srtp->keying_cnt = 1;
 	    srtp->keying[0] = srtp->keying[i];
 	    srtp->keying_pending_cnt = 0;
@@ -1682,12 +1680,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	if (!srtp_crypto_empty(&srtp->tx_policy_neg) &&
 	    !srtp_crypto_empty(&srtp->rx_policy_neg))
 	{
-	    /* SRTP nego is done, let's destroy any other keying. */
-	    unsigned j;
-	    for (j = 0; j < srtp->keying_cnt; ++j) {
-		if (j != i)
-		    pjmedia_transport_close(srtp->keying[j]);
-	    }
+	    /* SRTP nego is done */
 	    srtp->keying_cnt = 1;
 	    srtp->keying[0] = srtp->keying[i];
 	    srtp->keying_pending_cnt = 0;
