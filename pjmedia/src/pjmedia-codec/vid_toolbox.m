@@ -34,6 +34,8 @@
 #define THIS_FILE		"vid_toolbox.m"
 
 #if (defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE)
+#import <UIKit/UIKit.h>
+
 #  define DEFAULT_WIDTH		352
 #  define DEFAULT_HEIGHT	288
 #else
@@ -479,6 +481,88 @@ static void encode_cb(void *outputCallbackRefCon,
     vtool_data->enc_frame_size = offset;
 }
 
+
+static OSStatus create_encoder(vtool_codec_data *vtool_data)
+{
+    pjmedia_vid_codec_param	*param = vtool_data->prm;
+    CFDictionaryRef		 supported_prop;
+    OSStatus 			 ret;
+
+    /* Destroy if initialized before */
+    if (vtool_data->enc) {
+	VTCompressionSessionInvalidate(vtool_data->enc);
+	CFRelease(vtool_data->enc);
+	vtool_data->enc = NULL;
+    }
+
+    /* Create encoder session */
+    ret = VTCompressionSessionCreate(NULL, (int)param->enc_fmt.det.vid.size.w,
+    				     (int)param->enc_fmt.det.vid.size.h, 
+    				     kCMVideoCodecType_H264, NULL, NULL,
+    				     NULL, encode_cb, vtool_data,
+    				     &vtool_data->enc);
+    if (ret != noErr) {
+	PJ_LOG(4,(THIS_FILE, "VTCompressionCreate failed, ret=%d", ret));
+	return ret;
+    }
+
+#define SET_PROPERTY(sess, prop, val) \
+{ \
+    ret = VTSessionSetProperty(sess, prop, val); \
+    if (ret != noErr) \
+    	PJ_LOG(5,(THIS_FILE, "Failed to set session property %s", #prop)); \
+}
+
+    SET_PROPERTY(vtool_data->enc,
+    		 kVTCompressionPropertyKey_ProfileLevel,
+    		 kVTProfileLevel_H264_Baseline_AutoLevel);
+    SET_PROPERTY(vtool_data->enc, kVTCompressionPropertyKey_RealTime,
+    	         kCFBooleanTrue);
+    SET_PROPERTY(vtool_data->enc,
+    		 kVTCompressionPropertyKey_AllowFrameReordering,
+    		 kCFBooleanFalse);
+    SET_PROPERTY(vtool_data->enc,
+    		 kVTCompressionPropertyKey_AverageBitRate,
+    		 (__bridge CFTypeRef)@(param->enc_fmt.det.vid.avg_bps));
+    vtool_data->enc_fps = param->enc_fmt.det.vid.fps.num /
+    			  param->enc_fmt.det.vid.fps.denum;
+    SET_PROPERTY(vtool_data->enc,
+    		 kVTCompressionPropertyKey_ExpectedFrameRate,
+    		 (__bridge CFTypeRef)@(vtool_data->enc_fps));
+    SET_PROPERTY(vtool_data->enc,
+		 kVTCompressionPropertyKey_DataRateLimits,
+    		 ((__bridge CFArrayRef) // [Bytes, second]
+    		 @[@(param->enc_fmt.det.vid.max_bps >> 3), @(1)]));
+    SET_PROPERTY(vtool_data->enc,
+		 kVTCompressionPropertyKey_MaxKeyFrameInterval,
+    		 (__bridge CFTypeRef)@(KEYFRAME_INTERVAL *
+    		 param->enc_fmt.det.vid.fps.num /
+    		 param->enc_fmt.det.vid.fps.denum));
+    SET_PROPERTY(vtool_data->enc,
+		 kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration,
+    		 (__bridge CFTypeRef)@(KEYFRAME_INTERVAL));
+
+    ret = VTSessionCopySupportedPropertyDictionary(vtool_data->enc,
+    						   &supported_prop);
+    if (ret == noErr &&
+        CFDictionaryContainsKey(supported_prop,
+        			kVTCompressionPropertyKey_MaxH264SliceBytes))
+    {
+    	/* kVTCompressionPropertyKey_MaxH264SliceBytes is not yet supported
+     	 * by Apple. We leave it here for possible future enhancements.
+    	SET_PROPERTY(vtool_data->enc,
+    		     kVTCompressionPropertyKey_MaxH264SliceBytes,
+    		     // param->enc_mtu - NAL_HEADER_ADD_0X30BYTES
+    		     (__bridge CFTypeRef)@(param->enc_mtu - 50));
+         */
+    }
+
+    VTCompressionSessionPrepareToEncodeFrames(vtool_data->enc);
+
+    return ret;
+}
+
+
 static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
                                     pjmedia_vid_codec_param *codec_param )
 {
@@ -487,9 +571,7 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
     pjmedia_h264_packetizer_cfg  pktz_cfg;
     pjmedia_vid_codec_h264_fmtp  h264_fmtp;
     pj_status_t		 	 status;
-    CMVideoCodecType 		 codec_type;
-    CFDictionaryRef		 supported_prop;
-    OSStatus 			 ret;
+    OSStatus			 ret;
 
     PJ_ASSERT_RETURN(codec && codec_param, PJ_EINVAL);
 
@@ -561,71 +643,11 @@ static pj_status_t vtool_codec_open(pjmedia_vid_codec *codec,
 	}
     }
 
-    /* Create encoder session */
-    codec_type = kCMVideoCodecType_H264;
-    ret = VTCompressionSessionCreate(NULL, (int)param->enc_fmt.det.vid.size.w,
-    				     (int)param->enc_fmt.det.vid.size.h, 
-    				     kCMVideoCodecType_H264, NULL, NULL,
-    				     NULL, encode_cb, vtool_data,
-    				     &vtool_data->enc);
-    if (ret != noErr) {
-	PJ_LOG(4,(THIS_FILE, "VTCompressionCreate failed, ret=%d", ret));
+    /* Create encoder */
+    ret = create_encoder(vtool_data);
+    if (ret != noErr)
 	return PJMEDIA_CODEC_EFAILED;
-    }
 
-#define SET_PROPERTY(sess, prop, val) \
-{ \
-    ret = VTSessionSetProperty(sess, prop, val); \
-    if (ret != noErr) \
-    	PJ_LOG(5,(THIS_FILE, "Failed to set session property %s", #prop)); \
-}
-
-    SET_PROPERTY(vtool_data->enc,
-    		 kVTCompressionPropertyKey_ProfileLevel,
-    		 kVTProfileLevel_H264_Baseline_AutoLevel);
-    SET_PROPERTY(vtool_data->enc, kVTCompressionPropertyKey_RealTime,
-    	         kCFBooleanTrue);
-    SET_PROPERTY(vtool_data->enc,
-    		 kVTCompressionPropertyKey_AllowFrameReordering,
-    		 kCFBooleanFalse);
-    SET_PROPERTY(vtool_data->enc,
-    		 kVTCompressionPropertyKey_AverageBitRate,
-    		 (__bridge CFTypeRef)@(param->enc_fmt.det.vid.avg_bps));
-    vtool_data->enc_fps = param->enc_fmt.det.vid.fps.num /
-    			  param->enc_fmt.det.vid.fps.denum;
-    SET_PROPERTY(vtool_data->enc,
-    		 kVTCompressionPropertyKey_ExpectedFrameRate,
-    		 (__bridge CFTypeRef)@(vtool_data->enc_fps));
-    SET_PROPERTY(vtool_data->enc,
-		 kVTCompressionPropertyKey_DataRateLimits,
-    		 ((__bridge CFArrayRef) // [Bytes, second]
-    		 @[@(param->enc_fmt.det.vid.max_bps >> 3), @(1)]));
-    SET_PROPERTY(vtool_data->enc,
-		 kVTCompressionPropertyKey_MaxKeyFrameInterval,
-    		 (__bridge CFTypeRef)@(KEYFRAME_INTERVAL *
-    		 param->enc_fmt.det.vid.fps.num /
-    		 param->enc_fmt.det.vid.fps.denum));
-    SET_PROPERTY(vtool_data->enc,
-		 kVTCompressionPropertyKey_MaxKeyFrameIntervalDuration,
-    		 (__bridge CFTypeRef)@(KEYFRAME_INTERVAL));
-
-    ret = VTSessionCopySupportedPropertyDictionary(vtool_data->enc,
-    						   &supported_prop);
-    if (ret == noErr &&
-        CFDictionaryContainsKey(supported_prop,
-        			kVTCompressionPropertyKey_MaxH264SliceBytes))
-    {
-    	/* kVTCompressionPropertyKey_MaxH264SliceBytes is not yet supported
-     	 * by Apple. We leave it here for possible future enhancements.
-    	SET_PROPERTY(vtool_data->enc,
-    		     kVTCompressionPropertyKey_MaxH264SliceBytes,
-    		     // param->enc_mtu - NAL_HEADER_ADD_0X30BYTES
-    		     (__bridge CFTypeRef)@(param->enc_mtu - 50));
-         */
-    }
-
-    VTCompressionSessionPrepareToEncodeFrames(vtool_data->enc);
-    
     /* If available, use the "sprop-parameter-sets" fmtp from remote SDP
      * to create the decoder.
      */
@@ -736,9 +758,24 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     size_t plane_w[3], plane_h[3], plane_bpr[3];
     NSDictionary *frm_prop = NULL;
     OSStatus ret;
+#if TARGET_OS_IPHONE
+    UIApplicationState state;
+#endif
  
     PJ_ASSERT_RETURN(codec && input && out_size && output && has_more,
                      PJ_EINVAL);
+
+#if TARGET_OS_IPHONE
+    /* Skip encoding if app is not active, i.e. in the bg. */
+    state = [UIApplication sharedApplication].applicationState;
+    if (state != UIApplicationStateActive) {
+    	*has_more = PJ_FALSE;
+    	output->size = 0;
+    	output->type = PJMEDIA_FRAME_TYPE_NONE;
+
+    	return PJ_SUCCESS;
+    }
+#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -809,6 +846,21 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     				    	  ts, dur,
     				    	  (__bridge CFDictionaryRef)frm_prop,
     				    	  NULL, NULL);
+    if (ret == kVTInvalidSessionErr) {
+	/* Reset compression session */
+        ret = create_encoder(vtool_data);
+	PJ_LOG(3,(THIS_FILE, "Encoder needs to be reset [1]: %s (%d)",
+		  (ret == noErr? "success": "fail"), ret));
+        if (ret == noErr) {
+	    /* Retry encoding the frame after successful encoder reset. */
+	    ret = VTCompressionSessionEncodeFrame(vtool_data->enc, image_buf,
+    				    	  	  ts, dur,
+    				    	  	  (__bridge CFDictionaryRef)
+    				    	  	  frm_prop,
+    				    	  	  NULL, NULL);
+    	}
+    }
+
     if (ret != noErr) {
         PJ_LOG(4,(THIS_FILE, "Failed to encode frame %d", ret));
         CVPixelBufferRelease(image_buf);
@@ -818,6 +870,17 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     /* EncodeFrame is async, so tell it to finish the encoding. */
     ts.flags = kCMTimeFlags_Indefinite;
     ret = VTCompressionSessionCompleteFrames(vtool_data->enc, ts);
+    if (ret == kVTInvalidSessionErr) {
+	/* Reset compression session */
+        ret = create_encoder(vtool_data);
+	PJ_LOG(3,(THIS_FILE, "Encoder needs to be reset [2]: %s (%d)",
+		  (ret == noErr? "success": "fail"), ret));
+        if (ret == PJ_SUCCESS) {
+	    /* Retry finishing the encoding after successful encoder reset. */
+	    ret = VTCompressionSessionCompleteFrames(vtool_data->enc, ts);
+    	}
+    }
+
     if (ret != noErr) {
         PJ_LOG(4,(THIS_FILE, "Failed to complete encoding %d", ret));
         CVPixelBufferRelease(image_buf);
@@ -989,7 +1052,7 @@ static OSStatus create_decoder(struct vtool_codec_data *vtool_data)
 	return ret;
      }
 
-    if (!vtool_data->dec ||
+    if (!vtool_data->dec || !vtool_data->dec_format ||
 	!CMFormatDescriptionEqual(dec_format, vtool_data->dec_format))
     {
 	if (vtool_data->dec_format)
@@ -1048,10 +1111,24 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t decode_whole = DECODE_WHOLE;
     OSStatus ret;
+#if TARGET_OS_IPHONE
+    UIApplicationState state;
+#endif
 
     PJ_ASSERT_RETURN(codec && count && packets && out_size && output,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
+
+#if TARGET_OS_IPHONE
+    /* Skip decoding if app is not active, i.e. in the bg. */
+    state = [UIApplication sharedApplication].applicationState;
+    if (state != UIApplicationStateActive) {
+	output->type = PJMEDIA_FRAME_TYPE_NONE;
+	output->size = 0;
+	output->timestamp = packets[0].timestamp;
+    	return PJ_SUCCESS;
+    }
+#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -1199,6 +1276,22 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 		ret = VTDecompressionSessionDecodeFrame(
 		          vtool_data->dec, sample_buf, 0,
 			  NULL, NULL);
+		if (ret == kVTInvalidSessionErr) {
+		    if (vtool_data->dec_format)
+		        CFRelease(vtool_data->dec_format);
+		    vtool_data->dec_format = NULL;
+		    ret = create_decoder(vtool_data);
+		    PJ_LOG(3,(THIS_FILE, "Decoder needs to be reset: %s (%d)",
+		  	      (ret == noErr? "success": "fail"), ret));
+
+		    if (ret == noErr) {
+	    		/* Retry decoding the frame after successful reset */
+			ret = VTDecompressionSessionDecodeFrame(
+		          	  vtool_data->dec, sample_buf, 0,
+			  	  NULL, NULL);
+		    }
+		}
+
 		if (ret != noErr) {
 		    PJ_LOG(5,(THIS_FILE, "Failed to decode frame %d of size "
 		    			 "%d: %d", nalu_type, frm_size,
