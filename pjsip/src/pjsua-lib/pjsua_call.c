@@ -3760,6 +3760,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 					pjsip_event *e)
 {
     pjsua_call *call;
+    unsigned num_locks = 0;
 
     pj_log_push_indent();
 
@@ -3894,6 +3895,12 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	}
     }
 
+    /* Release locks before calling callbacks, to avoid deadlock. */
+    while (PJSUA_LOCK_IS_LOCKED()) {
+    	num_locks++;
+    	PJSUA_UNLOCK();
+    }
+
     /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
 	e->type == PJSIP_EVENT_TSX_STATE &&
@@ -3906,6 +3913,10 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
     if (pjsua_var.ua_cfg.cb.on_call_state)
 	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
+
+    /* Re-acquire the locks. */
+    for (;num_locks > 0; num_locks--)
+    	PJSUA_LOCK();
 
     /* call->inv may be NULL now */
 
