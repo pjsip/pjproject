@@ -1580,7 +1580,8 @@ AC_ARG_ENABLE(ssl,
 		 AC_MSG_RESULT([Checking if SSL support is disabled... yes])
 	        fi
 	      ],
-	      [
+	      [])
+if test "x$ac_no_ssl" != "x1"; then
                 if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
@@ -1661,11 +1662,19 @@ AC_ARG_ENABLE(ssl,
 			AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_GNUTLS)
             		ac_ssl_backend="gnutls"
         	    else
-            		AC_MSG_RESULT([** No GnuTLS libraries found, disabling SSL support **])
+			AC_MSG_RESULT([** No GnuTLS libraries found **])
         	    fi
         	
         	fi
-	      ])
+
+		if test "x$ac_ssl_backend" = "x"; then
+		    if test "x$enable_ssl" = "xyes"; then
+			AC_MSG_ERROR([SSL Support requested but neither OpenSSL nor GnuTLS operational])
+		    else
+			AC_MSG_RESULT([No SSL detected, disabling SSL support])
+		    fi
+		fi
+fi
 
 dnl # Obsolete option --with-opencore-amrnb
 AC_ARG_WITH(opencore-amrnb,
