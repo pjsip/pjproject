@@ -7900,8 +7900,9 @@ if test "${enable_ssl+set}" = set; then :
 $as_echo "Checking if SSL support is disabled... yes" >&6; }
 	        fi
 
-else
+fi
 
+if test "x$ac_no_ssl" != "x1"; then
                 if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
@@ -8212,14 +8213,21 @@ $as_echo "GnuTLS library found, SSL support enabled" >&6; }
 
             		ac_ssl_backend="gnutls"
         	    else
-            		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ** No GnuTLS libraries found, disabling SSL support **" >&5
-$as_echo "** No GnuTLS libraries found, disabling SSL support **" >&6; }
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ** No GnuTLS libraries found **" >&5
+$as_echo "** No GnuTLS libraries found **" >&6; }
         	    fi
 
         	fi
 
+		if test "x$ac_ssl_backend" = "x"; then
+		    if test "x$enable_ssl" = "xyes"; then
+			as_fn_error $? "SSL Support requested but neither OpenSSL nor GnuTLS operational" "$LINENO" 5
+		    else
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: No SSL detected, disabling SSL support" >&5
+$as_echo "No SSL detected, disabling SSL support" >&6; }
+		    fi
+		fi
 fi
-
 
 
 # Check whether --with-opencore-amrnb was given.
