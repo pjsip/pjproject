@@ -53,11 +53,19 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
+#if !defined(OPENSSL_NO_DH)
+#   include <openssl/dh.h>
+#endif
+
 #include <openssl/rand.h>
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
-#define USING_LIBRESSL (defined(LIBRESSL_VERSION_NUMBER))
+#if defined(LIBRESSL_VERSION_NUMBER)
+#	define USING_LIBRESSL 1
+#else
+#	define USING_LIBRESSL 0
+#endif
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
 	&& OPENSSL_VERSION_NUMBER >= 0x1000200fL
@@ -777,11 +785,10 @@ static void set_entropy(pj_ssl_sock_t *ssock);
 /* Create and initialize new SSL context and instance */
 static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 {
+#if !defined(OPENSSL_NO_DH)
     BIO *bio;
     DH *dh;
     long options;
-#if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
-    EC_KEY *ecdh;
 #endif
     SSL_METHOD *ssl_method = NULL;
     SSL_CTX *ctx;
@@ -933,6 +940,7 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 		return status;
 	    }
 
+#if !defined(OPENSSL_NO_DH)
 	    if (ssock->is_server) {
 		bio = BIO_new_file(cert->privkey_file.ptr, "r");
 		if (bio != NULL) {
@@ -953,6 +961,7 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 		    BIO_free(bio);
 		}
 	    }
+#endif
 	}
     }
 
@@ -1000,7 +1009,6 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    pj_memcpy(p, "rsa", CERT_TYPE_LEN);
 	}
 
-#if OPENSSL_VERSION_NUMBER < 0x10100000L
     #ifndef SSL_CTRL_SET_ECDH_AUTO
 	#define SSL_CTRL_SET_ECDH_AUTO 94
     #endif
@@ -1009,10 +1017,11 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	if (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL)) {
 	    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized "
 		      "(automatic), faster PFS ciphers enabled"));
-    #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
+    #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L && \
+	OPENSSL_VERSION_NUMBER < 0x10100000L
 	} else {
 	    /* enables AES-128 ciphers, to get AES-256 use NID_secp384r1 */
-	    ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+	    EC_KEY *ecdh = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
 	    if (ecdh != NULL) {
 		if (SSL_CTX_set_tmp_ecdh(ctx, ecdh)) {
 		    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized "
@@ -1022,10 +1031,6 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    }
     #endif
 	}
-#else // OPENSSL_VERSION_NUMBER < 0x10100000L
-    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH already initialized "
-              "(OpenSSL 1.1.0+), faster PFS cipher-suites enabled"));
-#endif // OPENSSL_VERSION_NUMBER < 0x10100000L
     } else {
 	X509_STORE *pkix_validation_store = SSL_CTX_get_cert_store(ctx);
 	if (NULL != pkix_validation_store) {
@@ -2710,8 +2715,11 @@ PJ_DEF(pj_ssl_curve) pj_ssl_curve_id(const char *curve_name)
     }
 
     for (i = 0; i < openssl_curves_num; ++i) {
-        if (!pj_ansi_stricmp(openssl_curves[i].name, curve_name))
+        if (openssl_curves[i].name &&
+        	!pj_ansi_stricmp(openssl_curves[i].name, curve_name))
+        {
             return openssl_curves[i].id;
+        }
     }
 
     return PJ_TLS_UNKNOWN_CURVE;
