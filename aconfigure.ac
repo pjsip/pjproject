@@ -1583,6 +1583,7 @@ AC_ARG_ENABLE(ssl,
 	      [
                 if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
+                    CPPFLAGS="$CPPFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
                     AC_MSG_RESULT([Using SSL prefix... $with_ssl])
                 fi
@@ -1722,11 +1723,13 @@ AC_ARG_ENABLE(opencore_amr,
 		AC_MSG_RESULT([checking for OpenCORE AMR installations..])
                 if test "x$with_opencore_amr" != "xno" -a "x$with_opencore_amr" != "x"; then
                     CFLAGS="$CFLAGS -I$with_opencore_amr/include"
+                    CPPFLAGS="$CPPFLAGS -I$with_opencore_amr/include"
                     LDFLAGS="$LDFLAGS -L$with_opencore_amr/lib"
                     AC_MSG_RESULT([Using OpenCORE AMR prefix... $with_opencore_amr])
                 fi
                 if test "x$with_opencore_amrwbenc" != "xno" -a "x$with_opencore_amrwbenc" != "x"; then
                     CFLAGS="$CFLAGS -I$with_opencore_amrwbenc/include"
+                    CPPFLAGS="$CPPFLAGS -I$with_opencore_amrwbenc/include"
                     LDFLAGS="$LDFLAGS -L$with_opencore_amrwbenc/lib"
                     AC_MSG_RESULT([Using OpenCORE AMRWB-enc prefix... $with_opencore_amrwbenc])
                 fi
@@ -1789,7 +1792,7 @@ AC_ARG_ENABLE(silk,
 		AC_MSG_RESULT([checking for SILK installations..])
                 if test "x$with_silk" != "xno" -a "x$with_silk" != "x"; then
                     CFLAGS="$CFLAGS -I$with_silk/interface"
-		    CPPFLAGS="$CPPFLAGS -I$with_silk/interface"
+                    CPPFLAGS="$CPPFLAGS -I$with_silk/interface"
                     LDFLAGS="$LDFLAGS -L$with_silk"
                     AC_MSG_RESULT([Using SILK prefix... $with_silk])
                 fi                
@@ -1836,7 +1839,7 @@ AC_ARG_ENABLE(opus,
 		AC_MSG_RESULT([checking for OPUS installations..])
                 if test "x$with_opus" != "xno" -a "x$with_opus" != "x"; then
                     CFLAGS="$CFLAGS -I$with_opus/include"
-		    CPPFLAGS="$CPPFLAGS -I$with_opus/include"
+                    CPPFLAGS="$CPPFLAGS -I$with_opus/include"
                     LDFLAGS="$LDFLAGS -L$with_opus/lib"
                     AC_MSG_RESULT([Using OPUS prefix... $with_opus])
                 fi
