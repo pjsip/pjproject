@@ -1,0 +1,5 @@
+Notes:
+* Modify iLBC_decode.c and iLBC_encode.c
+  - iLBC using memcpy instead of memmove for overlapping memory. This will 
+    cause some weird sound if the call lasted longer than ~30s. To fix this,
+    some call to memcpy is changed to memmove. Have a look at #2116.
