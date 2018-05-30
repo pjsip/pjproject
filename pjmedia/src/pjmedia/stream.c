@@ -1885,7 +1885,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    		stream->codec_param.info.clock_rate;
 	    stream->rtp_rx_ts_len_per_frame= stream->rtp_rx_ts_len_per_frame *
 	    				     dec_ptime / stream->dec_ptime;
-	    stream->dec_ptime = dec_ptime;
+	    stream->dec_ptime = (pj_uint16_t)dec_ptime;
 	    pjmedia_jbuf_set_ptime(stream->jb, stream->dec_ptime);
 	}
 

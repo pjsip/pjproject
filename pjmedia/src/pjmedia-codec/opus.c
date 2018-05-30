@@ -373,7 +373,7 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     pj_status_t status;
 
     TRACE_((THIS_FILE, "%s:%d: - TRACE", __FUNCTION__, __LINE__));
-    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cfg && param, PJ_EINVAL);
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(opus_codec_factory.endpt);
 
@@ -389,9 +389,15 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     {
 	return PJ_EINVAL;
     }
+
+    status = pjmedia_codec_mgr_get_default_param(codec_mgr, info[0], param);
+    if (status != PJ_SUCCESS)
+	return status;
+
     param->info.clock_rate = opus_cfg.sample_rate = cfg->sample_rate;
     param->info.max_bps = opus_cfg.sample_rate * 2;
-    param->info.frm_ptime = opus_cfg.frm_ptime = cfg->frm_ptime;
+    opus_cfg.frm_ptime = cfg->frm_ptime;
+    param->info.frm_ptime = (pj_uint16_t)cfg->frm_ptime;
 
     /* Set channel count */
     if (cfg->channel_cnt != 1 && cfg->channel_cnt != 2)
@@ -473,11 +479,16 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
     attr->info.channel_cnt 	   = opus_cfg.channel_cnt;
     attr->info.avg_bps     	   = opus_cfg.bit_rate;
     attr->info.max_bps     	   = opus_cfg.sample_rate * 2;
-    attr->info.frm_ptime   	   = opus_cfg.frm_ptime;
+    attr->info.frm_ptime   	   = (pj_uint16_t)opus_cfg.frm_ptime;
     attr->setting.frm_per_pkt 	   = 1;
     attr->info.pcm_bits_per_sample = 16;
     attr->setting.vad      	   = OPUS_DEFAULT_VAD;
     attr->setting.plc      	   = OPUS_DEFAULT_PLC;
+
+    /* Set max RX frame size to 1275 (max Opus frame size) to anticipate
+     * possible ptime change on the fly.
+     */
+    attr->info.max_rx_frame_size   = 1275;
 
     generate_fmtp(attr);
 
@@ -807,7 +818,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
     unsigned char tmp_buf[MAX_ENCODED_PACKET_SIZE];
     int i, num_frames;
     int size, out_pos;
-    unsigned samples_per_frame;
+    unsigned samples_per_frame = 0;
 #if (USE_INCOMING_WORSE_SETTINGS)
     int bw;
 #endif
@@ -1001,7 +1012,7 @@ static pj_status_t  codec_decode( pjmedia_codec *codec,
     frm_size = output->size / (sizeof(opus_int16) *
                opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO || fec) {
-	frm_size = PJ_MIN(frm_size,
+	frm_size = PJ_MIN((unsigned)frm_size,
 			  opus_data->cfg.sample_rate *
 			  opus_data->dec_ptime / 1000);
     }
@@ -1062,7 +1073,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
 
     if (opus_data->dec_frame_index == -1) {
         /* Recover the first packet? Don't think so, fill it with zeroes. */
-	pj_uint16_t samples_per_frame;
+	unsigned samples_per_frame;
 	samples_per_frame = opus_data->cfg.sample_rate * opus_data->dec_ptime/
 			    1000;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -1077,7 +1088,7 @@ static pj_status_t  codec_recover( pjmedia_codec *codec,
     frm_size = output->size / (sizeof(opus_int16) *
                opus_data->cfg.channel_cnt);
     if (inframe->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	frm_size = PJ_MIN(frm_size, opus_data->cfg.sample_rate *
+	frm_size = PJ_MIN((unsigned)frm_size, opus_data->cfg.sample_rate *
 			  opus_data->dec_ptime/1000);
     }
     decoded_samples = opus_decode(opus_data->dec,
