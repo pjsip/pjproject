@@ -819,6 +819,21 @@ Account::~Account()
     /* If this instance is deleted, also delete the corresponding account in
      * PJSUA library.
      */
+    shutdown();
+}
+
+void Account::create(const AccountConfig &acc_cfg,
+                     bool make_default) throw(Error)
+{
+    pjsua_acc_config pj_acc_cfg;
+    
+    acc_cfg.toPj(pj_acc_cfg);
+    pj_acc_cfg.user_data = (void*)this;
+    PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
+}
+
+void Account::shutdown()
+{
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
         // Cleanup buddies in the buddy list
 	while(buddyList.size() > 0) {
@@ -832,16 +847,6 @@ Account::~Account()
 
 	pjsua_acc_del(id);
     }
-}
-
-void Account::create(const AccountConfig &acc_cfg,
-                     bool make_default) throw(Error)
-{
-    pjsua_acc_config pj_acc_cfg;
-    
-    acc_cfg.toPj(pj_acc_cfg);
-    pj_acc_cfg.user_data = (void*)this;
-    PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
 }
 
 void Account::modify(const AccountConfig &acc_cfg) throw(Error)

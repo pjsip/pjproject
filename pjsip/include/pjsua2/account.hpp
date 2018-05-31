@@ -1509,17 +1509,41 @@ public:
     /**
      * Destructor. Note that if the account is deleted, it will also delete
      * the corresponding account in the PJSUA-LIB.
+     *
+     * If application implements a derived class, the derived class should
+     * call shutdown() in the beginning stage in its destructor, or
+     * alternatively application should call shutdown() before deleting
+     * the derived class instance. This is to avoid race condition between
+     * the derived class destructor and Account callbacks.
      */
     virtual ~Account();
 
     /**
      * Create the account.
      *
+     * If application implements a derived class, the derived class should
+     * call shutdown() in the beginning stage in its destructor, or
+     * alternatively application should call shutdown() before deleting
+     * the derived class instance. This is to avoid race condition between
+     * the derived class destructor and Account callbacks.
+     *
      * @param cfg		The account config.
      * @param make_default	Make this the default account.
      */
     void create(const AccountConfig &cfg,
                 bool make_default=false) throw(Error);
+
+    /**
+     * Shutdown the account. This will initiate unregistration if needed,
+     * and delete the corresponding account in the PJSUA-LIB.
+     *
+     * If application implements a derived class, the derived class should
+     * call this method in the beginning stage in its destructor, or
+     * alternatively application should call this method before deleting
+     * the derived class instance. This is to avoid race condition between
+     * the derived class destructor and Account callbacks.
+     */
+    void shutdown();
 
     /**
      * Modify the account to use the specified account configuration.
@@ -1541,8 +1565,6 @@ public:
     /**
      * Set this as default account to be used when incoming and outgoing
      * requests don't match any accounts.
-     *
-     * @return			PJ_SUCCESS on success.
      */
     void setDefault() throw(Error);
 
@@ -1644,18 +1666,6 @@ public:
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
 		    throw(Error);
-
-    /**
-     * An internal function to add a Buddy to Account buddy list.
-     * This function must never be used by application.
-     */
-    void addBuddy(Buddy *buddy);
-
-    /**
-     * An internal function to remove a Buddy from Account buddy list.
-     * This function must never be used by application.
-     */
-    void removeBuddy(Buddy *buddy);
 
 public:
     /*
@@ -1762,8 +1772,23 @@ public:
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-protected:
+
+private:
     friend class Endpoint;
+    friend class Buddy;
+
+    /**
+     * An internal function to add a Buddy to Account buddy list.
+     * This method is used by Buddy::create().
+     */
+    void addBuddy(Buddy *buddy);
+
+    /**
+     * An internal function to remove a Buddy from Account buddy list.
+     * This method is used by Buddy::~Buddy().
+     */
+    void removeBuddy(Buddy *buddy);
+
 
 private:
     pjsua_acc_id 	 id;
