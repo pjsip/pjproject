@@ -737,7 +737,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.srtpSecureSignaling = prm.srtp_secure_signaling;
     mediaConfig.srtpOpt.fromPj(prm.srtp_opt);
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
-    mediaConfig.rtcpMuxEnabled	= prm.enable_rtcp_mux;
+    mediaConfig.rtcpMuxEnabled	= PJ2BOOL(prm.enable_rtcp_mux);
 
     // AccountVideoConfig
     videoConfig.autoShowIncoming 	= PJ2BOOL(prm.vid_in_auto_show);

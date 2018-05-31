@@ -852,7 +852,7 @@ struct AccountMediaConfig : public PersistentObject
     /**
      * Enable RTP and RTCP multiplexing.
      */
-    pj_bool_t		rtcpMuxEnabled;
+    bool		rtcpMuxEnabled;
 
 public:
     /**
