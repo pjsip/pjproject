@@ -295,14 +295,25 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 		if (bit_info)
 		    *bit_info = 0;
 	    } else {
+		pj_size_t frm_size = framelist->content_len[framelist->head];
+		pj_size_t max_size = size? *size : frm_size;
+		pj_size_t copy_size = PJ_MIN(max_size, frm_size);
+
+		/* Buffer size should not be smaller than frame size. */
+		if (max_size < frm_size) {
+		    pj_assert(!"Buffer too small");
+		    PJ_LOG(4, (THIS_FILE, "Warning: buffer too small for the "
+					  "retrieved frame!"));
+		}
+
 		pj_memcpy(frame,
 			  framelist->content +
 			  framelist->head * framelist->frame_size,
-			  framelist->frame_size);
+			  copy_size);
 		*p_type = (pjmedia_jb_frame_type)
 			  framelist->frame_type[framelist->head];
 		if (size)
-		    *size   = framelist->content_len[framelist->head];
+		    *size = copy_size;
 		if (bit_info)
 		    *bit_info = framelist->bit_info[framelist->head];
 	    }
@@ -986,6 +997,12 @@ PJ_DEF(void) pjmedia_jbuf_put_frame3(pjmedia_jbuf *jb,
     pj_status_t status;
 
     cur_size = jb_framelist_eff_size(&jb->jb_framelist);
+
+    /* Check if frame size is larger than JB frame size */
+    if (frame_size > jb->jb_frame_size) {
+	PJ_LOG(4, (THIS_FILE, "Warning: frame too large for jitter buffer, "
+		   "it will be truncated!"));
+    }
 
     /* Attempt to store the frame */
     min_frame_size = PJ_MIN(frame_size, jb->jb_frame_size);

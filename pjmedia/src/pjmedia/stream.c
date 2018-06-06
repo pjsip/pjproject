@@ -86,7 +86,6 @@ struct pjmedia_channel
     pj_bool_t		    paused;	    /**< Paused?.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
     void		   *out_pkt;	    /**< Output buffer.		    */
-    unsigned                out_pkt_len;    /**< Length of data in buffer.  */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 };
 
@@ -530,7 +529,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
     for (samples_count=0; samples_count < samples_required;) {
 	char frame_type;
-	pj_size_t frame_size;
+	pj_size_t frame_size = channel->out_pkt_size;
 	pj_uint32_t bit_info;
 
 	if (stream->dec_buf && stream->dec_buf_pos < stream->dec_buf_count) {
@@ -821,7 +820,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 
     while (f->samples_cnt < samples_required) {
 	char frame_type;
-	pj_size_t frame_size;
+	pj_size_t frame_size = channel->out_pkt_size;
 	pj_uint32_t bit_info;
 
 	/* Lock jitter buffer mutex first */
@@ -2076,10 +2075,22 @@ static pj_status_t create_channel( pj_pool_t *pool,
     /* Allocate buffer for outgoing packet. */
 
     if (param->type == PJMEDIA_TYPE_AUDIO) {
-        channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) +
-			        stream->codec_param.info.max_bps *
-			        PJMEDIA_MAX_FRAME_DURATION_MS /
-			        8 / 1000;
+	unsigned max_rx_based_size;
+	unsigned max_bps_based_size;
+
+	/* out_pkt buffer is used for sending and receiving, so lets calculate
+	 * its size based on both. For receiving, we have stream->frame_size,
+	 * which is used in configuring jitter buffer frame length.
+	 * For sending, it is based on codec max_bps info.
+	 */
+	max_rx_based_size = stream->frame_size;
+	max_bps_based_size = stream->codec_param.info.max_bps *
+			     PJMEDIA_MAX_FRAME_DURATION_MS / 8 / 1000;
+	channel->out_pkt_size = PJ_MAX(max_rx_based_size, max_bps_based_size);
+
+	/* Also include RTP header size (for sending) */
+        channel->out_pkt_size += sizeof(pjmedia_rtp_hdr);
+
         if (channel->out_pkt_size > PJMEDIA_MAX_MTU -
 				    PJMEDIA_STREAM_RESV_PAYLOAD_LEN)
 	{
