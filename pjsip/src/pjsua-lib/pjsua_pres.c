@@ -830,6 +830,19 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Find which account for the incoming request. */
     acc_id = pjsua_acc_find_for_incoming(rdata);
+    if (acc_id == PJSUA_INVALID_ID) {
+	PJ_LOG(2, (THIS_FILE, 
+		   "Unable to process incoming message %s "
+		   "due to no available account", 
+		   pjsip_rx_data_get_info(rdata)));
+
+	PJSUA_UNLOCK();
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+				      NULL, NULL);
+	pj_log_pop_indent();
+	return PJ_TRUE;	
+    }
     acc = &pjsua_var.acc[acc_id];
 
     PJ_LOG(4,(THIS_FILE, "Creating server subscription, using account %d",

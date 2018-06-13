@@ -3000,8 +3000,12 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     pjsua_acc_id id = PJSUA_INVALID_ID;
     unsigned i;
 
-    /* Check that there's at least one account configured */
-    PJ_ASSERT_RETURN(pjsua_var.acc_cnt!=0, pjsua_var.default_acc);
+    if (pjsua_var.acc_cnt == 0) {
+	PJ_LOG(2, (THIS_FILE, "No available account to handle %s",
+		  pjsip_rx_data_get_info(rdata)));
+
+	return PJSUA_INVALID_ID;
+    }
 
     uri = rdata->msg_info.to->uri;
 

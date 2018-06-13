@@ -1319,6 +1319,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * the call.
      */
     acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+    if (acc_id == PJSUA_INVALID_ID) {
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+				      NULL, NULL);
+
+	PJ_LOG(2,(THIS_FILE,
+		  "Unable to accept incoming call (no available account)"));
+
+	goto on_return;
+    }
     call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
 
     /* Get call's secure level */
