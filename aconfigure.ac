@@ -1999,7 +1999,15 @@ AC_ARG_ENABLE(libwebrtc,
 			ac_webrtc_cflags="-msse2"
 			;;
 		     *win32* | *w32* | *darwin* | *linux*)
-			ac_webrtc_instset=sse2
+                         case $target in
+                             armv7l*gnueabihf)
+                                 ac_webrtc_instset=neon
+                                 ac_webrtc_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ;;
+                             *)
+                                 ac_webrtc_instset=sse2
+                                 ;;
+                         esac
 			;;
 		     *)
 			;;
