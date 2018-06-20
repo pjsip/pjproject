@@ -402,6 +402,8 @@ typedef struct pjsip_status_line
  */
 typedef enum pjsip_status_code
 {
+    PJSIP_SC_NULL = 0,
+
     PJSIP_SC_TRYING = 100,
     PJSIP_SC_RINGING = 180,
     PJSIP_SC_CALL_BEING_FORWARDED = 181,

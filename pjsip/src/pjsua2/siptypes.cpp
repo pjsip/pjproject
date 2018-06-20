@@ -304,6 +304,11 @@ void TransportConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+TransportInfo::TransportInfo()
+: id(), type(PJSIP_TRANSPORT_UNSPECIFIED), flags(), usageCount()
+{
+}
+
 void TransportInfo::fromPj(const pjsua_transport_info &tinfo)
 {
     this->id = tinfo.id;
@@ -527,7 +532,7 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
 }
 
 SipTransaction::SipTransaction()
-: role(PJSIP_ROLE_UAC), statusCode(0), pjTransaction(NULL)
+: role(PJSIP_ROLE_UAC), statusCode(PJSIP_SC_NULL), state(PJSIP_TSX_STATE_NULL), pjTransaction(NULL)
 {
 }
 
@@ -543,6 +548,11 @@ void SipTransaction::fromPj(pjsip_transaction &tsx)
     else
 	this->lastTx.pjTxData = NULL;
     this->pjTransaction = (void *)&tsx;
+}
+
+TsxStateEvent::TsxStateEvent()
+: prevState(PJSIP_TSX_STATE_NULL), type(PJSIP_EVENT_UNKNOWN)
+{
 }
 
 bool SipTxOption::isEmpty() const
