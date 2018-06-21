@@ -985,9 +985,9 @@ class AccountCallback:
         """Notification about incoming call.
 
         Application should implement one of on_incoming_call() or
-	on_incoming_call2(), otherwise, the default behavior is to
+        on_incoming_call2(), otherwise, the default behavior is to
         reject the call with default status code. Note that if both are
-	implemented, only on_incoming_call2() will be called.
+        implemented, only on_incoming_call2() will be called.
 
         Keyword arguments:
         call    -- the new incoming call
@@ -998,16 +998,16 @@ class AccountCallback:
         """Notification about incoming call, with received SIP message info.
 
         Application should implement one of on_incoming_call() or
-	on_incoming_call2(), otherwise, the default behavior is to
+        on_incoming_call2(), otherwise, the default behavior is to
         reject the call with default status code. Note that if both are
-	implemented, only on_incoming_call2() will be called.
+        implemented, only on_incoming_call2() will be called.
 
         Keyword arguments:
         call    -- the new incoming call
         rdata   -- the received message
         """
         call.hangup()
-	
+
     def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres_obj):
         """Notification when incoming SUBSCRIBE request is received. 
         
@@ -1082,8 +1082,8 @@ class AccountCallback:
     def on_mwi_info(self, body):
         """
         Notification about change in Message Summary / Message Waiting
-	Indication (RFC 3842) status. MWI subscription must be enabled
-	in the account config to receive this notification.
+        Indication (RFC 3842) status. MWI subscription must be enabled
+        in the account config to receive this notification.
 
         Keyword arguments:
         body      -- String containing message body as received in the
@@ -1794,7 +1794,7 @@ class Call:
         self._lib()._err_check("send_request()", self, err)
 
     def send_pager(self, text, im_id=0, content_type="text/plain", 
-    		   hdr_list=None):
+                   hdr_list=None):
         """Send instant message inside a call.
 
         Keyword arguments:
@@ -2135,14 +2135,14 @@ class _LibMutex:
     def __init__(self, lck):
         self._lck = lck
         self._lck.acquire()
-	#_Trace(('lock acquired',))
+        #_Trace(('lock acquired',))
 
     def __del__(self):
         try:
             self._lck.release()
-	    #_Trace(('lock released',))
+            #_Trace(('lock released',))
         except:
-	    #_Trace(('lock release error',))
+            #_Trace(('lock release error',))
             pass
 
 
@@ -2212,7 +2212,7 @@ class Lib:
         py_ua_cfg.cb.on_pager = _cb_on_pager
         py_ua_cfg.cb.on_pager_status = _cb_on_pager_status
         py_ua_cfg.cb.on_typing = _cb_on_typing
-	py_ua_cfg.cb.on_mwi_info = _cb_on_mwi_info;
+        py_ua_cfg.cb.on_mwi_info = _cb_on_mwi_info;
 
         err = _pjsua.init(py_ua_cfg, log_cfg._cvt_to_pjsua(), 
                           media_cfg._cvt_to_pjsua())
@@ -2260,18 +2260,18 @@ class Lib:
         return _pjsua.handle_events(timeout)
 
     def thread_register(self, name):
-	"""Register external threads (threads that are not created by PJSIP,
-	such as threads that are created by Python API) to PJSIP.
+        """Register external threads (threads that are not created by PJSIP,
+        such as threads that are created by Python API) to PJSIP.
 
-	The call must be made from the new thread before calling any pjlib 
-	functions.
+        The call must be made from the new thread before calling any pjlib
+        functions.
 
-	Keyword arguments:
-	name	-- Non descriptive name for the thread
-	"""
-	dummy = 1
-	err = _pjsua.thread_register(name, dummy)
-	self._err_check("thread_register()", self, err)
+        Keyword arguments:
+        name -- Non descriptive name for the thread
+        """
+        dummy = 1
+        err = _pjsua.thread_register(name, dummy)
+        self._err_check("thread_register()", self, err)
 
     def verify_sip_url(self, sip_url):
         """Verify that the specified string is a valid URI. 
@@ -2948,7 +2948,7 @@ def _worker_thread_main(arg):
     _lib._err_check("thread_register()", _lib, err)
     while _lib and _lib._quit == 0:
         _lib.handle_events(1)
-	time.sleep(0.050)
+        time.sleep(0.050)
     if _lib:
         _lib._quit = 2
     _Trace(('worker thread exited..',))
