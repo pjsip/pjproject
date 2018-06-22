@@ -736,7 +736,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     /* If crypto count is set to zero, setup default crypto-suites,
      * i.e: all available crypto but 'NULL'.
      */
-    if (srtp->setting.crypto_count == 0 && opt->use != PJMEDIA_SRTP_DISABLED)
+    if (srtp->setting.crypto_count == 0 && 
+	srtp->setting.use != PJMEDIA_SRTP_DISABLED)
     {
 	srtp->setting.crypto_count = PJMEDIA_SRTP_MAX_CRYPTOS;
 	pjmedia_srtp_enum_crypto(&srtp->setting.crypto_count,
@@ -1643,7 +1644,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     pj_status_t status;
     unsigned i;
 
-    PJ_ASSERT_RETURN(tp && pool && sdp_local && sdp_remote, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
     status = pjmedia_transport_media_start(srtp->member_tp, pool,
 					   sdp_local, sdp_remote,
