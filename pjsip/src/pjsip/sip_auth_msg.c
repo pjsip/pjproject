@@ -234,7 +234,7 @@ static int print_digest_challenge( pjsip_digest_challenge *chal,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     /* Allow empty realm, see http://trac.pjsip.org/repos/ticket/1061 */
-    copy_advance_pair_quote(buf, " realm=", 7, chal->realm, '"', '"');
+    copy_advance_pair_quote(buf, "realm=", 6, chal->realm, '"', '"');
     copy_advance_pair_quote_cond(buf, ",domain=", 8, chal->domain, '"', '"');
     copy_advance_pair_quote_cond(buf, ",nonce=", 7, chal->nonce, '"', '"');
     copy_advance_pair_quote_cond(buf, ",opaque=", 8, chal->opaque, '"', '"');
