@@ -565,20 +565,12 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 	    jint *fmts;
 	    jsize cnt, j;
 	    pj_bool_t has_i420 = PJ_FALSE;
+	    int k;
 
 	    cnt = (*jni_env)->GetArrayLength(jni_env, jiarray);
 	    fmts = (*jni_env)->GetIntArrayElements(jni_env, jiarray, 0);
 	    for (j = 0; j < cnt; j++) {
-		int k;
 		pjmedia_format_id fmt = and_fmt_to_pj((pj_uint32_t)fmts[j]);
-		
-		/* Check for any duplicate */
-		for (k = 0; k < vdi->fmt_cnt; k++) {
-		    if (fmt == 0 || fmt == vdi->fmt[k].id) {
-			fmt = 0;
-			break;
-		    }
-		}
 
 		/* Make sure we recognize this format */
 		if (fmt == 0)
@@ -588,49 +580,72 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 		if (fmt == PJMEDIA_FORMAT_I420) has_i420 = PJ_TRUE;
 		else if (fmt == PJMEDIA_FORMAT_YV12) adi->has_yv12 = PJ_TRUE;
 		else if (fmt == PJMEDIA_FORMAT_NV21) adi->has_nv21 = PJ_TRUE;
-
-		for (k = 0; k < adi->sup_size_cnt &&
-			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
-		{
-		    /* Landscape video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      fmt,
-					      adi->sup_size[k].w,
-					      adi->sup_size[k].h,
-					      DEFAULT_FPS, 1);
-		    /* Portrait video */
-		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      fmt,
-					      adi->sup_size[k].h,
-					      adi->sup_size[k].w,
-					      DEFAULT_FPS, 1);
-		}
 	    }
 	    (*jni_env)->ReleaseIntArrayElements(jni_env, jiarray, fmts,
 						JNI_ABORT);
 	    (*jni_env)->DeleteLocalRef(jni_env, jtmp);
 
-	    /* Pretend to support I420/IYUV, only if we support YV12/NV21 */
-	    if (!has_i420 && (adi->has_yv12 || adi->has_nv21) &&
-		vdi->fmt_cnt < PJ_ARRAY_SIZE(vdi->fmt))
+	    /* Always put I420/IYUV and in the first place, for better
+	     * compatibility.
+	     */
+	    adi->forced_i420 = !has_i420;
+	    for (k = 0; k < adi->sup_size_cnt &&
+			vdi->fmt_cnt < max_fmt_cnt-1; k++)
 	    {
-		int k;
-		adi->forced_i420 = PJ_TRUE;
+		/* Landscape video */
+		pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					  PJMEDIA_FORMAT_I420,
+					  adi->sup_size[k].w,
+					  adi->sup_size[k].h,
+					  DEFAULT_FPS, 1);
+		/* Portrait video */
+		pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					  PJMEDIA_FORMAT_I420,
+					  adi->sup_size[k].h,
+					  adi->sup_size[k].w,
+					  DEFAULT_FPS, 1);
+	    }
+
+	    /* YV12 */
+	    if (adi->has_yv12) {
 		for (k = 0; k < adi->sup_size_cnt &&
 			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
 		{
+		    /* Landscape video */
 		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_I420,
+					      PJMEDIA_FORMAT_YV12,
 					      adi->sup_size[k].w,
 					      adi->sup_size[k].h,
 					      DEFAULT_FPS, 1);
+		    /* Portrait video */
 		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
-					      PJMEDIA_FORMAT_I420,
+					      PJMEDIA_FORMAT_YV12,
 					      adi->sup_size[k].h,
 					      adi->sup_size[k].w,
 					      DEFAULT_FPS, 1);
 		}
 	    }
+	    
+	    /* NV21 */
+	    if (adi->has_nv21) {
+		for (k = 0; k < adi->sup_size_cnt &&
+			    vdi->fmt_cnt < max_fmt_cnt-1; k++)
+		{
+		    /* Landscape video */
+		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					      PJMEDIA_FORMAT_NV21,
+					      adi->sup_size[k].w,
+					      adi->sup_size[k].h,
+					      DEFAULT_FPS, 1);
+		    /* Portrait video */
+		    pjmedia_format_init_video(&vdi->fmt[vdi->fmt_cnt++],
+					      PJMEDIA_FORMAT_NV21,
+					      adi->sup_size[k].h,
+					      adi->sup_size[k].w,
+					      DEFAULT_FPS, 1);
+		}
+	    }
+	    
 	} else {
 	    goto on_skip_dev;
 	}
