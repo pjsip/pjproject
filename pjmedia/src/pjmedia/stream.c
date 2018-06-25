@@ -1218,7 +1218,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     pjmedia_frame frame_out;
-    unsigned ts_len, rtp_ts_len, samples_per_frame;
+    unsigned ts_len, rtp_ts_len;
     void *rtphdr;
     int rtphdrlen;
     int inc_timestamp = 0;
@@ -1277,10 +1277,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
-
-    /* Calculate number of samples per frame */
-    samples_per_frame = stream->enc_samples_per_pkt;
-
 
     /* If we have DTMF digits in the queue, transmit the digits.
      * Otherwise encode the PCM buffer.

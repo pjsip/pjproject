@@ -3535,15 +3535,19 @@ static pj_status_t handle_ip_change_on_acc()
 
 		pjsip_regc_get_info(next_acc->regc, &tmp_regc_info);
 		if (transport == tmp_regc_info.transport) {
-                    char tmp_buf[PJSUA_MAX_ACC * 4];
+                    char tmp_buf[4];
 
-                    pj_ansi_strncpy(tmp_buf, acc_id, sizeof(acc_id));
-		    pj_ansi_snprintf(acc_id, sizeof(acc_id), "%s #%d", 
-				     tmp_buf, j);
+                    pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), " #%d", j);
+                    if (pj_ansi_strlen(acc_id) + pj_ansi_strlen(tmp_buf) <
+                        sizeof(acc_id))
+                    {
+                        pj_ansi_strcat(acc_id, tmp_buf);
+                    }
+
 		    shut_acc_ids[shut_acc_cnt++] = j;
 		    if (!shutdown_transport) {
 			shutdown_transport =
-				    next_acc->cfg.ip_change_cfg.shutdown_tp;			    
+				    next_acc->cfg.ip_change_cfg.shutdown_tp;
 		    }
 		}
 	    }

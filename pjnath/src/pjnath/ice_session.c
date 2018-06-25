@@ -2734,6 +2734,8 @@ static void handle_incoming_check(pj_ice_sess *ice,
      */
     if (i == ice->rcand_cnt) {
 	char raddr[PJ_INET6_ADDRSTRLEN];
+	void *p;
+
 	if (ice->rcand_cnt >= PJ_ICE_MAX_CAND) {
 	    LOG4((ice->obj_name, 
 	          "Unable to add new peer reflexive candidate: too many "
@@ -2748,10 +2750,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	pj_sockaddr_cp(&rcand->addr, &rcheck->src_addr);
 
 	/* Foundation is random, unique from other foundation */
-	rcand->foundation.ptr = (char*) pj_pool_alloc(ice->pool, 36);
+	rcand->foundation.ptr = p = (char*) pj_pool_alloc(ice->pool, 36);
 	rcand->foundation.slen = pj_ansi_snprintf(rcand->foundation.ptr, 36,
-						  "f%p", 
-						  rcand->foundation.ptr);
+						  "f%p", p);
 
 	LOG4((ice->obj_name, 
 	      "Added new remote candidate from the request: %s:%d",
