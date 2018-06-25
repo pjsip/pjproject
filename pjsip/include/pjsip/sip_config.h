@@ -170,6 +170,17 @@ typedef struct pjsip_cfg_t
 	 */
 	pj_bool_t use_compact_form;
 
+        /**
+         * Accept multiple SDP answers on non-reliable 18X responses and the 2XX
+         * response when they are all received from the same source (same To tag).
+         *
+         * See also:
+         * https://tools.ietf.org/html/rfc6337#section-3.1.1
+         *
+         * Default is PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS.
+         */
+        pj_bool_t accept_multiple_sdp_answers;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -412,6 +423,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_FOLLOW_EARLY_MEDIA_FORK
 #   define PJSIP_FOLLOW_EARLY_MEDIA_FORK	    PJ_TRUE
+#endif
+
+
+/**
+ * Accept multiple SDP answers on non-reliable 18X responses and the 2XX
+ * response when they are all received from the same source (same To tag).
+ *
+ * This option can also be controlled at run-time by the
+ * \a accept_multiple_sdp_answers setting in pjsip_cfg_t.
+ *
+ * Default is PJ_FALSE.
+ */
+#ifndef PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS
+#   define PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS        PJ_TRUE
 #endif
 
 

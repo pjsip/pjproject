@@ -442,6 +442,8 @@ struct pjsip_inv_session
     pj_bool_t		 following_fork;	    /**< Internal, following
 							 forked media?	    */
     pj_atomic_t		*ref_cnt;		    /**< Reference counter. */
+    pj_bool_t            updated_sdp_answer;        /**< SDP answer just been
+							 updated?	    */
 };
 
 

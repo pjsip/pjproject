@@ -162,6 +162,7 @@ struct tsx_inv_data
     pj_bool_t		 retrying;  /* Resend (e.g. due to 401/407)         */
     pj_str_t		 done_tag;  /* To tag in RX response with answer    */
     pj_bool_t		 done_early;/* Negotiation was done for early med?  */
+    pj_bool_t		 done_early_rel;/* Early med was realiable?	    */
     pj_bool_t		 has_sdp;   /* Message with SDP?		    */
 };
 
@@ -2000,18 +2001,20 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
     /* Initialize info that we are following forked media */
     inv->following_fork = PJ_FALSE;
+    inv->updated_sdp_answer = PJ_FALSE;
 
     /* MUST NOT do multiple SDP offer/answer in a single transaction,
-     * EXCEPT if:
-     *	- this is an initial UAC INVITE transaction (i.e. not re-INVITE), and
-     *	- the previous negotiation was done on an early media (18x) and
-     *    this response is a final/2xx response, and
-     *  - the 2xx response has different To tag than the 18x response
-     *    (i.e. the request has forked).
+     * EXCEPT previous nego was in 18x (early media) and any of the following
+     * condition is met:
+     *  - Non-forking scenario:
+     *	  - 'accept_multiple_sdp_answers' is set, and
+     *    - previous early response was not reliable (rfc6337 section 3.1.1).
+     *  - Forking scenario:
+     *    - This response has different To tag than the previous response, and
+     *    - This response is 18x/2xx (early or final). If this is 18x,
+     *      only do multiple SDP nego if 'follow_early_media_fork' is set.
      *
-     * The exception above is to add a rudimentary support for early media
-     * forking (sample case: custom ringback). See this ticket for more
-     * info: http://trac.pjsip.org/repos/ticket/657
+     * See also tickets #657, #1644, #1764, and #2123 for more info.
      */
     if (tsx_inv_data->sdp_done) {
 	pj_str_t res_tag;
@@ -2020,21 +2023,29 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	res_tag = rdata->msg_info.to->tag;
 	st_code = rdata->msg_info.msg->line.status.code;
 
-	/* Allow final/early response after SDP has been negotiated in early
-	 * media, IF this response is a final/early response with different
-	 * tag.
-         * See ticket #1644 and #1764 for forked early media case.
-	 */
-	if (tsx->role == PJSIP_ROLE_UAC &&
-	    (st_code/100 == 2 ||
-	     (st_code/10 == 18 /* st_code == 18x */
-              && pjsip_cfg()->endpt.follow_early_media_fork)) &&
-	    tsx_inv_data->done_early &&
-	    pj_stricmp(&tsx_inv_data->done_tag, &res_tag))
+	if (tsx->role == PJSIP_ROLE_UAC && tsx_inv_data->done_early &&
+	       (
+	           /* Non-forking scenario */
+	           (
+	               !tsx_inv_data->done_early_rel &&
+	               (st_code/100 == 2 || st_code/10 == 18) &&
+                       pjsip_cfg()->endpt.accept_multiple_sdp_answers &&
+	               !pj_stricmp(&tsx_inv_data->done_tag, &res_tag)
+	           )
+	           ||
+	           /* Forking scenario */
+	           (
+	               (st_code/100 == 2 ||
+	                   (st_code/10 == 18 &&
+	                       pjsip_cfg()->endpt.follow_early_media_fork)) &&
+	               pj_stricmp(&tsx_inv_data->done_tag, &res_tag)
+	           )
+	       )
+	   )
 	{
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
 
-	    PJ_LOG(4,(inv->obj_name, "Received forked %s response "
+	    PJ_LOG(4,(inv->obj_name, "Received %s response "
 		      "after SDP negotiation has been done in early "
 		      "media. Renegotiating SDP..",
 		      (st_code/10==18? "early" : "final" )));
@@ -2054,7 +2065,9 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 		return status;
 	    }
 
-	    inv->following_fork = PJ_TRUE;
+	    inv->following_fork = !!pj_stricmp(&tsx_inv_data->done_tag,
+					       &res_tag);
+	    inv->updated_sdp_answer = PJ_TRUE;
 
 	} else {
 
@@ -2163,6 +2176,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	tsx_inv_data->sdp_done = 1;
 	status_code = rdata->msg_info.msg->line.status.code;
 	tsx_inv_data->done_early = (status_code/100==1);
+	tsx_inv_data->done_early_rel = tsx_inv_data->done_early &&
+				       pjsip_100rel_is_reliable(rdata);
 	pj_strdup(tsx->pool, &tsx_inv_data->done_tag, 
 		  &rdata->msg_info.to->tag);
 
