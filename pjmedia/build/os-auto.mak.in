@@ -43,21 +43,12 @@ export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
 
 # Define the desired sound device backend
 # Valid values are:
-#   - pa_unix:	    	PortAudio on Unix (OSS or ALSA)
-#   - pa_darwinos:  	PortAudio on MacOSX (CoreAudio)
-#   - pa_old_darwinos:  PortAudio on MacOSX (old CoreAudio, for OSX 10.2)
-#   - pa_win32:	    	PortAudio on Win32 (WMME)
 #   - win32:	    	Win32 MME (wmme_dev.c)
 #   - coreaudio:	MaxOSX CoreAudio (coreaudio_dev.m)
 #   - alsa:		Unix ALSA (alsa_dev.c)
 #   - null:	    	Null sound device (nullsound.c)
 #   - external:		Link with no sounddev (app will provide)
 AC_PJMEDIA_SND=@ac_pjmedia_snd@
-
-# For Unix, specify if ALSA should be supported
-AC_PA_USE_ALSA=@ac_pa_use_alsa@
-
-# Additional PortAudio CFLAGS are in @ac_pa_cflags@
 
 #
 # Codecs
