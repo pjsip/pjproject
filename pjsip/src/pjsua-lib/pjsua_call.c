@@ -2443,7 +2443,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
         PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
                              "of media transport", call_id));
 
-	if (call->inv->role == PJSIP_ROLE_UAS)
+	if (call->inv && call->inv->role == PJSIP_ROLE_UAS)
 	    call->async_call.call_var.inc_call.hangup = PJ_TRUE;
 	else
 	    call->async_call.call_var.out_call.hangup = PJ_TRUE;
