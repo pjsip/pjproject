@@ -612,7 +612,7 @@ PJ_DEF(pj_status_t) pj_json_writef( const pj_json_elem *elem,
     PJ_ASSERT_RETURN(elem && writer, PJ_EINVAL);
 
     st.writer 		= writer;
-    st.user_data	= user_data,
+    st.user_data	= user_data;
     st.indent 		= 0;
     pj_memset(st.indent_buf, ' ', MAX_INDENT);
     pj_memset(st.space, ' ', PJ_JSON_NAME_MIN_LEN);
