@@ -217,6 +217,8 @@ pjsua_config UaConfig::toPj() const
 
     pua_cfg.nat_type_in_sdp = this->natTypeInSdp;
     pua_cfg.enable_unsolicited_mwi = this->mwiUnsolicitedEnabled;
+    pua_cfg.stun_try_ipv6 = this->stunTryIpv6;
+    pua_cfg.stun_ignore_failure = this->stunIgnoreFailure;
 
     return pua_cfg;
 }
