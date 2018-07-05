@@ -714,7 +714,7 @@ else
 	AC_MSG_RESULT([Checking sound device backend... OpenSL ES])
 	;;
   *-apple-darwin_ios*)
-	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit -framework AVFoundation"
 	ac_pjmedia_audiodev_objs="coreaudio_dev.o"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
 	;;
