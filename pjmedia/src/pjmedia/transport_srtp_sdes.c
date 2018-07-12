@@ -273,6 +273,7 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
 				      unsigned media_index)
 {
     struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
+    pj_uint32_t rem_proto = 0;
 
     PJ_UNUSED_ARG(options);
     PJ_UNUSED_ARG(sdp_pool);
@@ -280,8 +281,12 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
     /* Verify remote media transport, it has to be RTP/AVP or RTP/SAVP */
     if (!srtp->offerer_side) {
 	pjmedia_sdp_media *m = sdp_remote->media[media_index];
-	if (pj_stricmp(&m->desc.transport, &ID_RTP_AVP)  != 0 &&
-	    pj_stricmp(&m->desc.transport, &ID_RTP_SAVP) != 0)
+
+	/* Get transport protocol and drop any RTCP-FB flag */
+	rem_proto = pjmedia_sdp_transport_get_proto(&m->desc.transport);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(rem_proto, PJMEDIA_TP_PROFILE_RTCP_FB);
+	if (rem_proto != PJMEDIA_TP_PROTO_RTP_AVP &&
+	    rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
 	{
 	    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 	}
@@ -291,18 +296,16 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
     if (srtp->offerer_side) {
 	/* As offerer: do nothing. */
     } else {
-	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
-
 	/* Validate remote media transport based on SRTP usage option. */
 	switch (srtp->setting.use) {
 	    case PJMEDIA_SRTP_DISABLED:
-		if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) == 0)
+		if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP)
 		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 		break;
 	    case PJMEDIA_SRTP_OPTIONAL:
 		break;
 	    case PJMEDIA_SRTP_MANDATORY:
-		if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) != 0)
+		if (rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
 		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 		break;
 	}
@@ -333,8 +336,13 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
     /* Verify media transport, it has to be RTP/AVP or RTP/SAVP */
     {
 	pjmedia_sdp_media *m = sdp_remote? m_rem : m_loc;
-	if (pj_stricmp(&m->desc.transport, &ID_RTP_AVP)  != 0 &&
-	    pj_stricmp(&m->desc.transport, &ID_RTP_SAVP) != 0)
+	pj_uint32_t proto = 0;
+
+	/* Get transport protocol and drop any RTCP-FB flag */
+	proto = pjmedia_sdp_transport_get_proto(&m->desc.transport);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(proto, PJMEDIA_TP_PROFILE_RTCP_FB);
+	if (proto != PJMEDIA_TP_PROTO_RTP_AVP &&
+	    proto != PJMEDIA_TP_PROTO_RTP_SAVP)
 	{
 	    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 	}
@@ -408,20 +416,25 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 
     } else {
 	/* Answerer side */
+	pj_uint32_t rem_proto = 0;
 
 	pj_assert(sdp_remote && m_rem);
+
+	/* Get transport protocol and drop any RTCP-FB flag */
+	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(rem_proto, PJMEDIA_TP_PROFILE_RTCP_FB);
 
 	/* Generate transport */
 	switch (srtp->setting.use) {
 	    case PJMEDIA_SRTP_DISABLED:
 		/* Should never reach here */
-		if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) == 0)
+		if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP)
 		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 		return PJ_SUCCESS;
 	    case PJMEDIA_SRTP_OPTIONAL:
 		break;
 	    case PJMEDIA_SRTP_MANDATORY:
-		if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) != 0)
+		if (rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
 		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
 		break;
 	}
@@ -495,7 +508,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 		     * - has no matching crypto
 		     */
 		    if ((!has_crypto_attr || matched_idx == -1) &&
-			pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP) == 0)
+			rem_proto == PJMEDIA_TP_PROTO_RTP_AVP)
 		    {
 			return PJ_SUCCESS;
 		    }
@@ -609,16 +622,24 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
     m_loc = sdp_local->media[media_index];
 
     /* Verify media transport, it has to be RTP/AVP or RTP/SAVP */
-    if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)  != 0 &&
-	pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) != 0)
     {
-	return PJMEDIA_SRTP_ESDPINTRANSPORT;
-    }
+	pj_uint32_t rem_proto;
 
-    if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) == 0)
-	srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
-    else
-	srtp->peer_use = PJMEDIA_SRTP_OPTIONAL;
+	/* Get transport protocol and drop any RTCP-FB flag */
+	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(rem_proto, PJMEDIA_TP_PROFILE_RTCP_FB);
+	if (rem_proto != PJMEDIA_TP_PROTO_RTP_AVP &&
+	    rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
+	{
+	    return PJMEDIA_SRTP_ESDPINTRANSPORT;
+	}
+
+	/* Also check if peer signal SRTP as mandatory */
+	if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP)
+	    srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
+	else
+	    srtp->peer_use = PJMEDIA_SRTP_OPTIONAL;
+    }
 
     /* For answerer side, this function will just have to start SRTP as
      * SRTP crypto policies have been populated in media_encode_sdp().
@@ -646,7 +667,7 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	//}
 	fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
     } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
-	if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP)) {
+	if (srtp->peer_use != PJMEDIA_SRTP_MANDATORY) {
 	    DEACTIVATE_MEDIA(pool, m_loc);
 	    return PJMEDIA_SDP_EINPROTO;
 	}

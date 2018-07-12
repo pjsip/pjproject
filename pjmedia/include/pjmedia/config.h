@@ -567,6 +567,16 @@
 
 
 /**
+ * Specify the maximum number of RTCP Feedback capability definition.
+ * 
+ * Default: 16
+ */
+#ifndef PJMEDIA_RTCP_FB_MAX_CAP
+#   define PJMEDIA_RTCP_FB_MAX_CAP		16
+#endif
+
+
+/**
  * Specify how long (in miliseconds) the stream should suspend the
  * silence detector/voice activity detector (VAD) during the initial
  * period of the session. This feature is useful to open bindings in

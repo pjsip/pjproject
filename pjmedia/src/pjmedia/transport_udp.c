@@ -37,8 +37,6 @@
 /* Maximum pending write operations */
 #define MAX_PENDING 4
 
-static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
-
 /* Pending write buffer */
 typedef struct pending_write
 {
@@ -1030,12 +1028,19 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     /* By now, this transport only support RTP/AVP transport */
     if ((udp->media_options & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
 	pjmedia_sdp_media *m_rem, *m_loc;
+	pj_uint32_t tp_proto_loc, tp_proto_rem;
 
 	m_rem = rem_sdp? rem_sdp->media[media_index] : NULL;
 	m_loc = sdp_local->media[media_index];
 
-	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
-	   (m_rem && pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
+	tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
+	tp_proto_rem = m_rem? 
+		pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
+	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
+
+	if ((tp_proto_loc != PJMEDIA_TP_PROTO_RTP_AVP) ||
+	    (m_rem && tp_proto_rem != PJMEDIA_TP_PROTO_RTP_AVP))
 	{
 	    pjmedia_sdp_media_deactivate(pool, m_loc);
 	    return PJMEDIA_SDP_EINPROTO;

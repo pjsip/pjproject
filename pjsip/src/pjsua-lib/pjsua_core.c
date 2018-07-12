@@ -291,6 +291,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 #endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = DEFAULT_RTP_PORT;
+    pjmedia_rtcp_fb_setting_default(&cfg->rtcp_fb_cfg);
 
     pjsua_media_config_default(&med_cfg);
     pjsua_ice_config_from_media_config(NULL, &cfg->ice_cfg, &med_cfg);

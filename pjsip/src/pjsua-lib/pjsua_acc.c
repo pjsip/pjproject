@@ -140,6 +140,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pjsua_turn_config_dup(pool, &dst->turn_cfg, &src->turn_cfg);
 
     pj_strdup(pool, &dst->ka_data, &src->ka_data);
+
+    pjmedia_rtcp_fb_setting_dup(pool, &dst->rtcp_fb_cfg, &src->rtcp_fb_cfg);
 }
 
 /*
@@ -1432,6 +1434,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.ip_change_cfg.shutdown_tp = cfg->ip_change_cfg.shutdown_tp;
     acc->cfg.ip_change_cfg.hangup_calls = cfg->ip_change_cfg.hangup_calls;    
     acc->cfg.ip_change_cfg.reinvite_flags = cfg->ip_change_cfg.reinvite_flags;
+
+    /* RTCP-FB config */
+    pjmedia_rtcp_fb_setting_dup(acc->pool, &acc->cfg.rtcp_fb_cfg,
+				&cfg->rtcp_fb_cfg);
 
 on_return:
     PJSUA_UNLOCK();

@@ -2257,6 +2257,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     pjmedia_sdp_session *sdp;
     pj_sockaddr origin;
     pjsua_call *call = &pjsua_var.calls[call_id];
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pjmedia_sdp_neg_state sdp_neg_state = PJMEDIA_SDP_NEG_STATE_NULL;
     unsigned mi;
     unsigned tot_bandw_tias = 0;
@@ -2483,6 +2484,19 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 		break;
 	    }
 	}
+
+	/* Add RTCP-FB info in SDP if we are offerer */
+	if (rem_sdp == NULL && acc->cfg.rtcp_fb_cfg.cap_count) {
+	    status = pjmedia_rtcp_fb_encode_sdp(pool, pjsua_var.med_endpt,
+						&acc->cfg.rtcp_fb_cfg, sdp,
+						mi, rem_sdp);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(3,(THIS_FILE, status,
+			     "Call %d media %d: Failed to encode RTCP-FB "
+			     "setting to SDP",
+			     call_id, mi));
+	    }
+	}
     }
 
     /* Add NAT info in the SDP */
@@ -2528,7 +2542,6 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	b->value = bandw / 1000;
 	sdp->bandw[sdp->bandw_count++] = b;
     }
-
 
 #if DISABLED_FOR_TICKET_1185 && defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* Check if SRTP is in optional mode and configured to use duplicated
@@ -2960,34 +2973,60 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     mvidcnt = mtotvidcnt = 0;
 #endif
 
-    /* Applying media count limitation. Note that in generating SDP answer,
-     * no media count limitation applied, as we didn't know yet which media
-     * would pass the SDP negotiation.
+    /* We need to re-nego SDP or modify our answer when:
+     * - media count exceeds the configured limit,
+     * - RTCP-FB is enabled (so a=rtcp-fb will only be printed for negotiated
+     *   codecs)
      */
-    if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt)
+    if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
+	((maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt) ||
+	(acc->cfg.rtcp_fb_cfg.cap_count)))
     {
-	pjmedia_sdp_session *local_sdp2;
+	pjmedia_sdp_session *local_sdp_renego = NULL;
 
-	maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
-	mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
-	local_sdp2 = pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+	local_sdp_renego = pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+	local_sdp = local_sdp_renego;
+	need_renego_sdp = PJ_TRUE;
 
-	for (mi=0; mi < local_sdp2->media_count; ++mi) {
-	    pjmedia_sdp_media *m = local_sdp2->media[mi];
-
-	    if (m->desc.port == 0 ||
-		pj_memchr(maudidx, mi, maudcnt*sizeof(maudidx[0])) ||
-		pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])))
-	    {
-		continue;
+	/* Add RTCP-FB info into local SDP answer */
+	if (acc->cfg.rtcp_fb_cfg.cap_count) {
+	    for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
+		status = pjmedia_rtcp_fb_encode_sdp(
+					tmp_pool, pjsua_var.med_endpt,
+					&acc->cfg.rtcp_fb_cfg,
+					local_sdp_renego, mi, remote_sdp);
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(3,(THIS_FILE, status,
+				 "Call %d media %d: Failed to encode RTCP-FB "
+				 "setting to SDP",
+				 call_id, mi));
+		}
 	    }
-	    
-	    /* Deactivate this media */
-	    pjmedia_sdp_media_deactivate(tmp_pool, m);
 	}
 
-	local_sdp = local_sdp2;
-	need_renego_sdp = PJ_TRUE;
+	/* Applying media count limitation. Note that in generating SDP
+	 * answer, no media count limitation applied as we didn't know yet
+	 * which media would pass the SDP negotiation.
+	 */
+	if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt)
+	{
+	    maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
+	    mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
+
+	    for (mi=0; mi < local_sdp_renego->media_count; ++mi) {
+		pjmedia_sdp_media *m = local_sdp_renego->media[mi];
+
+		if (m->desc.port == 0 ||
+		    pj_memchr(maudidx, mi, maudcnt*sizeof(maudidx[0])) ||
+		    pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])))
+		{
+		    continue;
+		}
+    	    
+		/* Deactivate this excess media */
+		pjmedia_sdp_media_deactivate(tmp_pool, m);
+	    }
+	}
     }
 
     /* Process each media stream */
@@ -3388,16 +3427,10 @@ on_check_med_status:
     pj_memcpy(call->media, call->media_prov,
 	      sizeof(call->media_prov[0]) * call->med_prov_cnt);
 
-    /* Perform SDP re-negotiation if some media have just got disabled
-     * in this function due to media count limit settings.
-     */
+    /* Perform SDP re-negotiation. */
     if (got_media && need_renego_sdp) {
 	pjmedia_sdp_neg *neg = call->inv->neg;
 
-	/* This should only happen when we are the answerer. */
-	PJ_ASSERT_RETURN(neg && !pjmedia_sdp_neg_was_answer_remote(neg),
-			 PJMEDIA_SDPNEG_EINSTATE);
-	
 	status = pjmedia_sdp_neg_set_remote_offer(tmp_pool, neg, remote_sdp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;

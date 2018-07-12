@@ -109,6 +109,8 @@ typedef enum pjmedia_format_id {PJMEDIA_FORMAT_L16 = 0, PJMEDIA_FORMAT_PCM = PJM
 
 typedef enum pjmedia_vid_packing {PJMEDIA_VID_PACKING_UNKNOWN, PJMEDIA_VID_PACKING_PACKETS = 1, PJMEDIA_VID_PACKING_WHOLE = 2} pjmedia_vid_packing;
 
+typedef enum pjmedia_rtcp_fb_type {PJMEDIA_RTCP_FB_ACK, PJMEDIA_RTCP_FB_NACK, PJMEDIA_RTCP_FB_TRR_INT, PJMEDIA_RTCP_FB_OTHER} pjmedia_rtcp_fb_type;
+
 typedef enum pjsip_cred_data_type {PJSIP_CRED_DATA_PLAIN_PASSWD = 0, PJSIP_CRED_DATA_DIGEST = 1, PJSIP_CRED_DATA_EXT_AKA = 16} pjsip_cred_data_type;
 
 typedef enum pjsip_dialog_cap_status {PJSIP_DIALOG_CAP_UNSUPPORTED = 0, PJSIP_DIALOG_CAP_SUPPORTED = 1, PJSIP_DIALOG_CAP_UNKNOWN = 2} pjsip_dialog_cap_status;

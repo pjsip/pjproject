@@ -185,7 +185,6 @@ static pjmedia_transport_op transport_ice_op =
     &transport_attach2
 };
 
-static const pj_str_t STR_RTP_AVP	= { "RTP/AVP", 7 };
 static const pj_str_t STR_CANDIDATE	= { "candidate", 9};
 static const pj_str_t STR_REM_CAND	= { "remote-candidates", 17 };
 static const pj_str_t STR_ICE_LITE	= { "ice-lite", 8};
@@ -1407,15 +1406,22 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
      * transport checking is disabled
      */
     if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
-	pjmedia_sdp_media *loc_m, *rem_m;
+	pjmedia_sdp_media *m_rem, *m_loc;
+	pj_uint32_t tp_proto_loc, tp_proto_rem;
 
-	rem_m = rem_sdp? rem_sdp->media[media_index] : NULL;
-	loc_m = sdp_local->media[media_index];
+	m_rem = rem_sdp? rem_sdp->media[media_index] : NULL;
+	m_loc = sdp_local->media[media_index];
 
-	if (pj_stricmp(&loc_m->desc.transport, &STR_RTP_AVP) ||
-	   (rem_m && pj_stricmp(&rem_m->desc.transport, &STR_RTP_AVP)))
+	tp_proto_loc = pjmedia_sdp_transport_get_proto(&m_loc->desc.transport);
+	tp_proto_rem = m_rem? 
+		pjmedia_sdp_transport_get_proto(&m_rem->desc.transport) : 0;
+	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_loc, PJMEDIA_TP_PROFILE_RTCP_FB);
+	PJMEDIA_TP_PROTO_TRIM_FLAG(tp_proto_rem, PJMEDIA_TP_PROFILE_RTCP_FB);
+
+	if ((tp_proto_loc != PJMEDIA_TP_PROTO_RTP_AVP) ||
+	    (m_rem && tp_proto_rem != PJMEDIA_TP_PROTO_RTP_AVP))
 	{
-	    pjmedia_sdp_media_deactivate(sdp_pool, loc_m);
+	    pjmedia_sdp_media_deactivate(sdp_pool, m_loc);
 	    return PJMEDIA_SDP_EINPROTO;
 	}
     }
@@ -1825,6 +1831,7 @@ static pj_status_t transport_attach  (pjmedia_transport *tp,
     pj_sockaddr_cp(&param.rem_rtcp, rem_rtcp);
     param.addr_len = addr_len;
     param.rtp_cb = rtp_cb;
+    param.rtcp_cb = rtcp_cb;
     return transport_attach2(tp, &param);
 }
 

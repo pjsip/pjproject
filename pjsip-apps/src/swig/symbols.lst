@@ -17,6 +17,7 @@ pjmedia/tonegen.h		pjmedia_tone_digit pjmedia_tone_digit_map pjmedia_tone_desc
 pjmedia/types.h                 pjmedia_type pjmedia_dir pjmedia_tp_proto pjmedia_orient
 pjmedia/format.h		pjmedia_format_id
 pjmedia/vid_codec.h		pjmedia_vid_packing
+pjmedia/rtcp_fb.h		pjmedia_rtcp_fb_type
 
 pjsip/sip_auth.h		pjsip_cred_data_type
 pjsip/sip_dialog.h              pjsip_dialog_cap_status

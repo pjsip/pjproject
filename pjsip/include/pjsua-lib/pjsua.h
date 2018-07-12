@@ -3912,6 +3912,11 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t		enable_rtcp_mux;
 
+    /**
+     * RTCP Feedback configuration.
+     */
+    pjmedia_rtcp_fb_setting rtcp_fb_cfg;
+
 } pjsua_acc_config;
 
 

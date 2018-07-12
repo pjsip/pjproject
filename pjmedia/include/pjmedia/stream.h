@@ -31,6 +31,7 @@
 #include <pjmedia/jbuf.h>
 #include <pjmedia/port.h>
 #include <pjmedia/rtcp.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/stream_common.h>
@@ -109,6 +110,8 @@ typedef struct pjmedia_stream_info
 					 stream. If sin_family is zero, 
 					 this will be ignored.		    */
 #endif
+    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.		    */
+    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.		    */
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */

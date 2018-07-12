@@ -29,6 +29,95 @@ using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void RtcpFbCap::fromPj(const pjmedia_rtcp_fb_cap &prm)
+{
+    this->codecId   = pj2Str(prm.codec_id);
+    this->type	    = prm.type;
+    this->typeName  = pj2Str(prm.type_name);
+    this->param	    = pj2Str(prm.param);
+}
+
+pjmedia_rtcp_fb_cap RtcpFbCap::toPj() const
+{
+    pjmedia_rtcp_fb_cap cap;
+
+    pj_bzero(&cap, sizeof(cap));
+    cap.codec_id    = str2Pj(this->codecId);
+    cap.type	    = this->type;
+    cap.type_name   = str2Pj(this->typeName);
+    cap.param	    = str2Pj(this->param);
+
+    return cap;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+RtcpFbConfig::RtcpFbConfig()
+{
+    pjmedia_rtcp_fb_setting setting;
+    pjmedia_rtcp_fb_setting_default(&setting);
+    fromPj(setting);
+}
+
+void RtcpFbConfig::fromPj(const pjmedia_rtcp_fb_setting &prm)
+{
+    this->dontUseAvpf = PJ2BOOL(prm.dont_use_avpf);
+    this->caps.clear();
+    for (unsigned i = 0; i < prm.cap_count; ++i) {
+	RtcpFbCap cap;
+	cap.fromPj(prm.caps[i]);
+	this->caps.push_back(cap);
+    }
+}
+
+pjmedia_rtcp_fb_setting RtcpFbConfig::toPj() const
+{
+    pjmedia_rtcp_fb_setting setting;
+
+    pj_bzero(&setting, sizeof(setting));
+    setting.dont_use_avpf   = this->dontUseAvpf;
+    setting.cap_count	    = this->caps.size();
+    for (unsigned i = 0; i < setting.cap_count; ++i) {
+	setting.caps[i] = this->caps[i].toPj();
+    }
+
+    return setting;
+}
+
+void RtcpFbConfig::readObject(const ContainerNode &node) throw(Error)
+{
+    ContainerNode this_node = node.readContainer("RtcpFbConfig");
+    NODE_READ_BOOL	(this_node, dontUseAvpf);
+
+    ContainerNode cap_node = this_node.readArray("caps");
+    this->caps.clear();
+    while (cap_node.hasUnread()) {
+	RtcpFbCap cap;
+	NODE_READ_STRING	(cap_node, cap.codecId);
+	NODE_READ_NUM_T		(cap_node, pjmedia_rtcp_fb_type, cap.type);
+	NODE_READ_STRING	(cap_node, cap.typeName);
+	NODE_READ_STRING	(cap_node, cap.param);
+	this->caps.push_back(cap);
+    }
+}
+
+void RtcpFbConfig::writeObject(ContainerNode &node) const throw(Error)
+{
+    ContainerNode this_node = node.writeNewContainer("RtcpFbConfig");
+    NODE_WRITE_BOOL	(this_node, dontUseAvpf);
+
+    ContainerNode cap_node = this_node.writeNewArray("caps");
+    for (unsigned i=0; i<this->caps.size(); ++i) {
+	NODE_WRITE_STRING	(cap_node, this->caps[i].codecId);
+	NODE_WRITE_NUM_T	(cap_node, pjmedia_rtcp_fb_type,
+				 this->caps[i].type);
+	NODE_WRITE_STRING	(cap_node, this->caps[i].typeName);
+	NODE_WRITE_STRING	(cap_node, this->caps[i].param);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SrtpCrypto::fromPj(const pjmedia_srtp_crypto &prm)
 {
     this->key	    = pj2Str(prm.key);

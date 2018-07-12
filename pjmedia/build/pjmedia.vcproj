@@ -5635,6 +5635,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\rtcp_fb.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\rtcp_xr.c"
 				>
 			</File>
@@ -7597,6 +7601,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\rtcp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\rtcp_fb.h"
 				>
 			</File>
 			<File

@@ -97,6 +97,7 @@ struct dtmf
     int		    ebit_cnt;		    /**< # of E bit transmissions   */
 };
 
+
 /**
  * This structure describes media stream.
  * A media stream is bidirectional media transmission between two endpoints.
@@ -245,6 +246,12 @@ struct pjmedia_stream
 
     pj_uint32_t		     rtp_rx_last_ts;        /**< Last received RTP timestamp*/
     pj_status_t		     rtp_rx_last_err;       /**< Last RTP recv() error */
+
+    /* RTCP Feedback */
+    pj_bool_t		     send_rtcp_fb_nack;/**< Should we send NACK?    */
+    pjmedia_rtcp_fb_nack     rtcp_fb_nack;     /**< NACK state.		    */
+
+
 };
 
 
@@ -277,7 +284,8 @@ static void on_rx_rtcp( void *data,
 static pj_status_t send_rtcp(pjmedia_stream *stream,
 			     pj_bool_t with_sdes,
 			     pj_bool_t with_bye,
-			     pj_bool_t with_xr);
+			     pj_bool_t with_xr,
+			     pj_bool_t with_fb);
 
 
 #if TRACE_JB
@@ -460,7 +468,7 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 			       pkt_len);
 
     /* Send RTCP */
-    send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+    send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
     
     /* Update stats in case the stream is paused */
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
@@ -991,10 +999,32 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 }
 
 
+static pj_status_t build_rtcp_fb(pjmedia_stream *stream, void *buf,
+				 pj_size_t *length)
+{
+    pj_status_t status;
+
+    /* Generic NACK */
+    if (stream->send_rtcp_fb_nack && stream->rtcp_fb_nack.pid >= 0)
+    {
+	status = pjmedia_rtcp_fb_build_nack(&stream->rtcp, buf, length, 1,
+					    &stream->rtcp_fb_nack);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Reset Packet ID */
+	stream->rtcp_fb_nack.pid = -1;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t send_rtcp(pjmedia_stream *stream,
 			     pj_bool_t with_sdes,
 			     pj_bool_t with_bye,
-			     pj_bool_t with_xr)
+			     pj_bool_t with_xr,
+			     pj_bool_t with_fb)
 {
     void *sr_rr_pkt;
     pj_uint8_t *pkt;
@@ -1008,7 +1038,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     with_xr = PJ_FALSE;
 #endif
 
-    if (with_sdes || with_bye || with_xr) {
+    if (with_sdes || with_bye || with_xr || with_fb) {
 	pkt = (pj_uint8_t*) stream->out_rtcp_pkt;
 	pj_memcpy(pkt, sr_rr_pkt, len);
 	max_len = stream->out_rtcp_pkt_size;
@@ -1016,6 +1046,10 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	pkt = (pj_uint8_t*)sr_rr_pkt;
 	max_len = len;
     }
+
+    /* RTCP FB must be sent in compound (i.e: with RR/SR and SDES) */
+    if (with_fb)
+	with_sdes = PJ_TRUE;
 
     /* Build RTCP SDES packet */
     if (with_sdes) {
@@ -1032,6 +1066,17 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
         			     "Error generating RTCP SDES"));
 	} else {
 	    len += (int)sdes_len;
+	}
+    }
+
+    if (with_fb) {
+	pj_size_t fb_len = max_len - len;
+	status = build_rtcp_fb(stream, pkt+len, &fb_len);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+        			     "Error generating RTCP FB"));
+	} else {
+	    len += (int)fb_len;
 	}
     }
 
@@ -1136,7 +1181,7 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 #endif
 
 	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled, PJ_FALSE,
-			   with_xr);
+			   with_xr, PJ_FALSE);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
         		 "Error sending RTCP"));
@@ -1679,7 +1724,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     const pjmedia_rtp_hdr *hdr;
     const void *payload;
     unsigned payloadlen;
-    pjmedia_rtp_status seq_st;
+    pjmedia_rtp_status seq_st = {0};
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
 
@@ -2005,10 +2050,32 @@ on_return:
     pjmedia_rtcp_rx_rtp2(&stream->rtcp, pj_ntohs(hdr->seq),
 			 pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
 
+    /* RTCP-FB generic NACK */
+    if (stream->rtcp.received >= 10 && seq_st.diff > 1 &&
+	stream->send_rtcp_fb_nack && pj_ntohs(hdr->seq) >= seq_st.diff)
+    {
+	int i;
+	pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
+	stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
+	for (i = 0; i < (seq_st.diff - 1); ++i) {
+	    stream->rtcp_fb_nack.blp <<= 1;
+	    stream->rtcp_fb_nack.blp |= 1;
+	}
+
+	/* Send it immediately */
+	status = send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4,(stream->port.info.name.ptr, status,
+            	      "Error sending RTCP FB generic NACK"));
+	} else {
+	    stream->initial_rr = PJ_TRUE;
+	}
+    }
+
     /* Send RTCP RR and SDES after we receive some RTP packets */
     if (stream->rtcp.received >= 10 && !stream->initial_rr) {
 	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled,
-			   PJ_FALSE, PJ_FALSE);
+			   PJ_FALSE, PJ_FALSE, PJ_FALSE);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(stream->port.info.name.ptr, status,
             	     "Error sending initial RTCP RR"));
@@ -2160,10 +2227,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream = PJ_POOL_ZALLOC_T(pool, pjmedia_stream);
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
     stream->own_pool = own_pool;
+
+    /* Duplicate stream info */
     pj_memcpy(&stream->si, info, sizeof(*info));
     pj_strdup(pool, &stream->si.fmt.encoding_name, &info->fmt.encoding_name);
     if (info->param)
 	stream->si.param = pjmedia_codec_param_clone(pool, info->param);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->si.loc_rtcp_fb,
+			     &info->loc_rtcp_fb);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->si.rem_rtcp_fb,
+			     &info->rem_rtcp_fb);
 
     /* Init stream/port name */
     name.ptr = (char*) pj_pool_alloc(pool, M);
@@ -2199,6 +2272,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
     stream->last_dtmf = -1;
     stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
+    stream->rtcp_fb_nack.pid = -1;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
@@ -2590,6 +2664,25 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 #endif
 
+    /* Check if RTCP-FB generic NACK is enabled for this codec */
+    if (stream->si.rem_rtcp_fb.cap_count) {
+	pjmedia_rtcp_fb_info *rfi = &stream->si.rem_rtcp_fb;
+	char cid[32];
+	unsigned i;
+
+	pjmedia_codec_info_to_id(&stream->si.fmt, cid, sizeof(cid));
+
+	for (i = 0; i < rfi->cap_count; ++i) {
+	    if (rfi->caps[i].type == PJMEDIA_RTCP_FB_NACK &&
+		(!pj_strcmp2( &rfi->caps[i].codec_id, "*") ||
+		 !pj_stricmp2(&rfi->caps[i].codec_id, cid)))
+	    {
+		stream->send_rtcp_fb_nack = PJ_TRUE;
+		break;
+	    }
+	}
+    }
+
     /* Update the stream info's codec param */
     stream->si.param = &stream->codec_param;
 
@@ -2658,7 +2751,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     /* Send RTCP BYE (also SDES & XR) */
     if (!stream->rtcp_sdes_bye_disabled) {
-	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE);
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE, PJ_FALSE);
     }
 
     /* If we're in the middle of transmitting DTMF digit, send one last
@@ -3073,7 +3166,7 @@ pjmedia_stream_send_rtcp_sdes( pjmedia_stream *stream )
 {
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    return send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+    return send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
 }
 
 /*
@@ -3085,7 +3178,7 @@ pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if (stream->enc && stream->transport) {
-	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE);
+	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
     return PJ_SUCCESS;

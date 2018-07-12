@@ -1047,8 +1047,11 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	 */
 	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
 	pjmedia_sdp_attr *attr_setup;
+	pj_uint32_t rem_proto = 0;
 
-	if (pj_stricmp(&m_rem->desc.transport, &ID_TP_DTLS_SRTP)!=0) {
+	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
+	if (!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto, PJMEDIA_TP_PROTO_DTLS_SRTP))
+	{
 	    /* Remote doesn't signal DTLS-SRTP */
 	    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
 	    goto on_return;

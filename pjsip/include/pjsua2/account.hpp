@@ -737,6 +737,9 @@ public:
 /* Array of SRTP cryptos. */
 typedef std::vector<SrtpCrypto> SrtpCryptoVector;
 
+/**
+ * SRTP settings.
+ */
 struct SrtpOpt : public PersistentObject
 {
     /**
@@ -771,6 +774,109 @@ public:
      * Convert to pjsip
      */
     pjsua_srtp_opt toPj() const;
+
+public:
+    /**
+     * Read this object from a container node.
+     *
+     * @param node		Container to read values from.
+     */
+    virtual void readObject(const ContainerNode &node) throw(Error);
+
+    /**
+     * Write this object to a container node.
+     *
+     * @param node		Container to write values to.
+     */
+    virtual void writeObject(ContainerNode &node) const throw(Error);
+};
+
+/**
+ * RTCP Feedback capability.
+ */
+struct RtcpFbCap
+{
+    /**
+     * Specify the codecs to which the capability is applicable. Codec ID is
+     * using the same format as in pjmedia_codec_mgr_find_codecs_by_id() and
+     * pjmedia_vid_codec_mgr_find_codecs_by_id(), e.g: "L16/8000/1", "PCMU",
+     * "H264". This can also be an asterisk ("*") to represent all codecs.
+     */
+    string		    codecId;
+
+    /**
+     * Specify the RTCP Feedback type.
+     */
+    pjmedia_rtcp_fb_type    type;
+
+    /**
+     * Specify the type name if RTCP Feedback type is PJMEDIA_RTCP_FB_OTHER.
+     */
+    string		    typeName;
+
+    /**
+     * Specify the RTCP Feedback parameters.
+     */
+    string		    param;
+
+public:
+    /**
+     * Constructor.
+     */
+    RtcpFbCap() : type(PJMEDIA_RTCP_FB_OTHER)
+    {}
+
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjmedia_rtcp_fb_cap &prm);
+
+    /**
+     * Convert to pjsip
+     */
+    pjmedia_rtcp_fb_cap toPj() const;
+};
+
+/* Array of RTCP Feedback capabilities. */
+typedef std::vector<RtcpFbCap> RtcpFbCapVector;
+
+
+/**
+ * RTCP Feedback settings.
+ */
+struct RtcpFbConfig : public PersistentObject
+{
+    /**
+     * Specify whether transport protocol in SDP media description uses
+     * RTP/AVP instead of RTP/AVPF. Note that the standard mandates to signal
+     * AVPF profile, but it may cause SDP negotiation failure when negotiating
+     * with endpoints that does not support RTCP Feedback (including older
+     * version of PJSIP).
+     *
+     * Default: false.
+     */
+    bool		    dontUseAvpf;
+
+    /**
+     * RTCP Feedback capabilities.
+     */
+    RtcpFbCapVector	    caps;
+
+public:
+    /**
+     * Constructor.
+     */
+    RtcpFbConfig();
+
+    /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjmedia_rtcp_fb_setting &prm);
+
+    /**
+     * Convert to pjsip
+     */
+    pjmedia_rtcp_fb_setting toPj() const;
 
 public:
     /**
@@ -853,6 +959,11 @@ struct AccountMediaConfig : public PersistentObject
      * Enable RTP and RTCP multiplexing.
      */
     bool		rtcpMuxEnabled;
+
+    /**
+     * RTCP Feedback settings.
+     */
+    RtcpFbConfig	rtcpFbConfig;
 
 public:
     /**

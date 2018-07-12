@@ -602,6 +602,18 @@ PJ_DECL(pj_status_t) pjmedia_sdp_transport_cmp(const pj_str_t *t1,
 
 
 /**
+ * Get media transport protocol info, i.e: base transport and profiles,
+ * from the provided SDP media transport name string.
+ *
+ * @param tp	    The SDP media transport name.
+ *
+ * @return	    Media transport info, combination of transport protocol
+ *		    and profile bit flag defined in pjmedia_tp_proto.
+ */
+PJ_DECL(pj_uint32_t) pjmedia_sdp_transport_get_proto(const pj_str_t *tp);
+
+
+/**
  * Deactivate SDP media.
  *
  * @param pool	    Memory pool to allocate memory from.
