@@ -102,6 +102,27 @@ typedef struct pjsip_tls_setting
     pj_str_t	privkey_file;
 
     /**
+     * Certificate of Authority (CA) buffer. If ca_list_file, ca_list_path,
+     * cert_file or privkey_file are set, this setting will be ignored.
+     */
+    pj_ssl_cert_buffer ca_buf;
+
+    /**
+     * Public endpoint certificate buffer, which will be used as client-
+     * side  certificate for outgoing TLS connection, and server-side
+     * certificate for incoming TLS connection. If ca_list_file, ca_list_path,
+     * cert_file or privkey_file are set, this setting will be ignored.
+     */
+    pj_ssl_cert_buffer cert_buf;
+
+    /**
+     * Optional private key buffer of the endpoint certificate to be used. 
+     * If ca_list_file, ca_list_path, cert_file or privkey_file are set, 
+     * this setting will be ignored.
+     */
+    pj_ssl_cert_buffer privkey_buf;
+
+    /**
      * Password to open private key.
      */
     pj_str_t	password;
@@ -339,6 +360,11 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->password, &src->password);
     pj_strdup_with_null(pool, &dst->sigalgs, &src->sigalgs);
     pj_strdup_with_null(pool, &dst->entropy_path, &src->entropy_path);
+
+    pj_strdup(pool, &dst->ca_buf, &src->ca_buf);
+    pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
+    pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
+
     if (src->ciphers_num) {
 	unsigned i;
 	dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,

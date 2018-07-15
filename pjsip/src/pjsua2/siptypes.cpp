@@ -163,6 +163,9 @@ pjsip_tls_setting TlsConfig::toPj() const
     ts.cert_file	= str2Pj(this->certFile);
     ts.privkey_file	= str2Pj(this->privKeyFile);
     ts.password		= str2Pj(this->password);
+    ts.ca_buf		= str2Pj(this->CaBuf);
+    ts.cert_buf		= str2Pj(this->certBuf);
+    ts.privkey_buf	= str2Pj(this->privKeyBuf);
     ts.method		= this->method;
     ts.ciphers_num	= (unsigned)this->ciphers.size();
     ts.proto		= this->proto;
@@ -188,6 +191,9 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->certFile 	= pj2Str(prm.cert_file);
     this->privKeyFile 	= pj2Str(prm.privkey_file);
     this->password 	= pj2Str(prm.password);
+    this->CaBuf		= pj2Str(prm.ca_buf);
+    this->certBuf	= pj2Str(prm.cert_buf);
+    this->privKeyBuf	= pj2Str(prm.privkey_buf);
     this->method 	= (pjsip_ssl_method)prm.method;
     this->proto 	= prm.proto;
     // The following will only work if sizeof(enum)==sizeof(int)
@@ -210,6 +216,9 @@ void TlsConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_STRING  ( this_node, certFile);
     NODE_READ_STRING  ( this_node, privKeyFile);
     NODE_READ_STRING  ( this_node, password);
+    NODE_READ_STRING  ( this_node, CaBuf);
+    NODE_READ_STRING  ( this_node, certBuf);
+    NODE_READ_STRING  ( this_node, privKeyBuf);
     NODE_READ_NUM_T   ( this_node, pjsip_ssl_method, method);
     readIntVector     ( this_node, "ciphers", ciphers);
     NODE_READ_BOOL    ( this_node, verifyServer);
@@ -229,6 +238,9 @@ void TlsConfig::writeObject(ContainerNode &node) const throw(Error)
     NODE_WRITE_STRING  ( this_node, certFile);
     NODE_WRITE_STRING  ( this_node, privKeyFile);
     NODE_WRITE_STRING  ( this_node, password);
+    NODE_WRITE_STRING  ( this_node, CaBuf);
+    NODE_WRITE_STRING  ( this_node, certBuf);
+    NODE_WRITE_STRING  ( this_node, privKeyBuf);
     NODE_WRITE_NUM_T   ( this_node, pjsip_ssl_method, method);
     writeIntVector     ( this_node, "ciphers", ciphers);
     NODE_WRITE_BOOL    ( this_node, verifyServer);

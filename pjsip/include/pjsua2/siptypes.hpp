@@ -145,6 +145,27 @@ struct TlsConfig : public PersistentObject
     string		password;
 
     /**
+     * Certificate of Authority (CA) buffer. If CaListFile, certFile or
+     * privKeyFile are set, this setting will be ignored.
+     */
+    string		CaBuf;
+
+    /**
+     * Public endpoint certificate buffer, which will be used as client-
+     * side  certificate for outgoing TLS connection, and server-side
+     * certificate for incoming TLS connection. If CaListFile, certFile or
+     * privKeyFile are set, this setting will be ignored.
+     */
+    string		certBuf;
+
+    /**
+     * Optional private key buffer of the endpoint certificate to be used. 
+     * If CaListFile, certFile or privKeyFile are set, this setting will 
+     * be ignored.
+     */
+    string		privKeyBuf;
+
+    /**
      * TLS protocol method from #pjsip_ssl_method. In the future, this field
      * might be deprecated in favor of <b>proto</b> field. For now, this field 
      * is only applicable only when <b>proto</b> field is set to zero.

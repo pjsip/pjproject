@@ -293,6 +293,11 @@ struct pj_ssl_cert_t
     pj_str_t cert_file;
     pj_str_t privkey_file;
     pj_str_t privkey_pass;
+
+    /* Certificate buffer. */
+    pj_ssl_cert_buffer CA_buf;
+    pj_ssl_cert_buffer cert_buf;
+    pj_ssl_cert_buffer privkey_buf;
 };
 
 
@@ -963,6 +968,96 @@ static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 	    }
 #endif
 	}
+
+	/* Load from buffer. */
+	if (cert->cert_buf.slen) {
+	    BIO *cbio;
+	    X509 *xcert = NULL;
+	    
+	    cbio = BIO_new_mem_buf((void*)cert->cert_buf.ptr,
+				   cert->cert_buf.slen);
+	    if (cbio != NULL) {
+		xcert = PEM_read_bio_X509(cbio, NULL, 0, NULL);
+		if (xcert != NULL) {
+		    rc = SSL_CTX_use_certificate(ctx, xcert);
+		    if (rc != 1) {
+			status = GET_SSL_STATUS(ssock);
+			PJ_LOG(1, (ssock->pool->obj_name, "Error loading "
+				   "chain certificate from buffer"));
+			X509_free(xcert);
+			BIO_free(cbio);
+			SSL_CTX_free(ctx);
+			return status;
+		    }
+		    X509_free(xcert);
+		}
+		BIO_free(cbio);
+	    }	    
+	}
+
+	if (cert->CA_buf.slen) {
+	    BIO *cbio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
+					cert->CA_buf.slen);
+	    X509_STORE *cts = SSL_CTX_get_cert_store(ctx);
+
+	    if (cbio && cts) {
+		STACK_OF(X509_INFO) *inf = PEM_X509_INFO_read_bio(cbio, NULL, 
+								  NULL, NULL);
+
+		if (inf != NULL) {
+		    int i = 0;		    
+		    for (; i < sk_X509_INFO_num(inf); i++) {
+			X509_INFO *itmp = sk_X509_INFO_value(inf, i);
+			if (itmp->x509) {
+			    X509_STORE_add_cert(cts, itmp->x509);
+			}
+		    }
+		}
+		sk_X509_INFO_pop_free(inf, X509_INFO_free);
+		BIO_free(cbio);
+	    }
+	}
+
+	if (cert->privkey_buf.slen) {
+	    BIO *kbio;	    
+	    EVP_PKEY *pkey = NULL;
+
+	    kbio = BIO_new_mem_buf((void*)cert->privkey_buf.ptr,
+				   cert->privkey_buf.slen);
+	    if (kbio != NULL) {
+		pkey = PEM_read_bio_PrivateKey(kbio, NULL, 0, NULL);
+		if (pkey) {
+		    rc = SSL_CTX_use_PrivateKey(ctx, pkey);
+		    if (rc != 1) {
+			status = GET_SSL_STATUS(ssock);
+			PJ_LOG(1, (ssock->pool->obj_name, "Error adding "
+				   "private key from buffer"));
+			EVP_PKEY_free(pkey);
+			BIO_free(kbio);
+			SSL_CTX_free(ctx);
+			return status;
+		    }
+		    EVP_PKEY_free(pkey);
+		}
+		if (ssock->is_server) {
+		    dh = PEM_read_bio_DHparams(kbio, NULL, NULL, NULL);
+		    if (dh != NULL) {
+			if (SSL_CTX_set_tmp_dh(ctx, dh)) {
+			    options = SSL_OP_CIPHER_SERVER_PREFERENCE |
+    #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
+				      SSL_OP_SINGLE_ECDH_USE |
+    #endif
+				      SSL_OP_SINGLE_DH_USE;
+			    options = SSL_CTX_set_options(ctx, options);
+			    PJ_LOG(4,(ssock->pool->obj_name, "SSL DH "
+				     "initialized, PFS cipher-suites enabled"));
+			}
+			DH_free(dh);
+		    }
+		}
+		BIO_free(kbio);
+	    }	    
+	}
     }
 
     if (ssock->is_server) {
@@ -1232,7 +1327,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 		pj_strcat2(&cipher_list, c_name);
 		break;
 	    }
-	}
+	}	
     }
 
     /* Put NULL termination in the generated cipher list */
@@ -2554,6 +2649,27 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
+					const pj_ssl_cert_buffer *CA_buf,
+					const pj_ssl_cert_buffer *cert_buf,
+					const pj_ssl_cert_buffer *privkey_buf,
+					const pj_str_t *privkey_pass,
+					pj_ssl_cert_t **p_cert)
+{
+    pj_ssl_cert_t *cert;
+
+    PJ_ASSERT_RETURN(pool && CA_buf && cert_buf && privkey_buf, PJ_EINVAL);
+
+    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    pj_strdup(pool, &cert->CA_buf, CA_buf);
+    pj_strdup(pool, &cert->cert_buf, cert_buf);
+    pj_strdup(pool, &cert->privkey_buf, privkey_buf);
+    pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+
+    *p_cert = cert;
+
+    return PJ_SUCCESS;
+}
 
 /* Set SSL socket credentials. */
 PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
@@ -2572,6 +2688,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate(
     pj_strdup_with_null(pool, &cert_->cert_file, &cert->cert_file);
     pj_strdup_with_null(pool, &cert_->privkey_file, &cert->privkey_file);
     pj_strdup_with_null(pool, &cert_->privkey_pass, &cert->privkey_pass);
+
+    pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
+    pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
+    pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
 
     ssock->cert = cert_;
 

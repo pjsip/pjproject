@@ -27,6 +27,7 @@
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS	    ""
 
+#define TEST_LOAD_FROM_FILES 1
 
 #if INCLUDE_SSLSOCK_TEST
 
@@ -492,6 +493,27 @@ on_return:
     return status;
 }
 
+#if (TEST_LOAD_FROM_FILE==0)
+static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
+				    pj_ssl_cert_buffer *buf)
+{
+    pj_status_t status;
+    pj_oshandle_t fd = 0;
+    pj_ssize_t size = (pj_ssize_t)pj_file_size(file_name->ptr);
+
+    status = pj_file_open(pool, file_name->ptr, PJ_O_RDONLY, &fd);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    buf->ptr = (char*)pj_pool_zalloc(pool, size+1);
+    status = pj_file_read(fd, buf->ptr, &size);
+    buf->slen = size;
+
+    pj_file_close(fd);
+    fd = NULL;
+    return status;
+}
+#endif
 
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 		     pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
@@ -549,14 +571,37 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 
     /* Set server cert */
     {
-	pj_str_t tmp1, tmp2, tmp3, tmp4;
+	pj_str_t ca_file = pj_str(CERT_CA_FILE);
+	pj_str_t cert_file = pj_str(CERT_FILE);
+	pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
+	pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
-	status = pj_ssl_cert_load_from_files(pool, 
-					     pj_strset2(&tmp1, (char*)CERT_CA_FILE), 
-					     pj_strset2(&tmp2, (char*)CERT_FILE), 
-					     pj_strset2(&tmp3, (char*)CERT_PRIVKEY_FILE), 
-					     pj_strset2(&tmp4, (char*)CERT_PRIVKEY_PASS), 
+#if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+	status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+					     &privkey_file, &privkey_pass,
 					     &cert);
+#else
+	pj_ssl_cert_buffer ca_buf, cert_buf, privkey_buf;
+
+	status = load_cert_to_buf(pool, &ca_file, &ca_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &cert_file, &cert_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &privkey_file, &privkey_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
+					      &privkey_buf, &privkey_pass, 
+					      &cert);
+#endif
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}
@@ -613,16 +658,29 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     {
 
 	if (!client_provide_cert) {
-	    pj_str_t tmp1, tmp2;
+	    pj_str_t ca_file = pj_str(CERT_CA_FILE);
+	    pj_str_t null_str = pj_str("");
 
-	    pj_strset2(&tmp1, (char*)CERT_CA_FILE);
-	    pj_strset2(&tmp2, NULL);
-	    status = pj_ssl_cert_load_from_files(pool, 
-						 &tmp1, &tmp2, &tmp2, &tmp2,
-						 &cert);
+#if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+	    status = pj_ssl_cert_load_from_files(pool, &ca_file, &null_str, 
+						 &null_str, &null_str, &cert);
+#else
+	    pj_ssl_cert_buffer null_buf, ca_buf;
+
+	    null_buf.slen = 0;
+
+	    status = load_cert_to_buf(pool, &ca_file, &ca_buf);
 	    if (status != PJ_SUCCESS) {
 		goto on_return;
 	    }
+
+	    status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &null_buf,
+						  &null_buf, &null_str, &cert);
+#endif
+	    if (status != PJ_SUCCESS) {
+		goto on_return;
+	    }
+
 	}
 
 	status = pj_ssl_sock_set_certificate(ssock_cli, pool, cert);
@@ -824,13 +882,37 @@ static int client_non_ssl(unsigned ms_timeout)
 
     /* Set cert */
     {
-	pj_str_t tmp1, tmp2, tmp3, tmp4;
-	status = pj_ssl_cert_load_from_files(pool, 
-					     pj_strset2(&tmp1, (char*)CERT_CA_FILE), 
-					     pj_strset2(&tmp2, (char*)CERT_FILE), 
-					     pj_strset2(&tmp3, (char*)CERT_PRIVKEY_FILE), 
-					     pj_strset2(&tmp4, (char*)CERT_PRIVKEY_PASS), 
+	pj_str_t ca_file = pj_str(CERT_CA_FILE);
+	pj_str_t cert_file = pj_str(CERT_FILE);
+	pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
+	pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
+
+#if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+	status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+					     &privkey_file, &privkey_pass,
 					     &cert);
+#else
+	pj_ssl_cert_buffer ca_buf, cert_buf, privkey_buf;
+
+	status = load_cert_to_buf(pool, &ca_file, &ca_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &cert_file, &cert_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &privkey_file, &privkey_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
+					      &privkey_buf, &privkey_pass, 
+					      &cert);
+#endif
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}
@@ -1131,14 +1213,37 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 
     /* Set cert */
     {
-	pj_str_t tmp1, tmp2, tmp3, tmp4;
+	pj_str_t ca_file = pj_str(CERT_CA_FILE);
+	pj_str_t cert_file = pj_str(CERT_FILE);
+	pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
+	pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
-	status = pj_ssl_cert_load_from_files(pool, 
-					     pj_strset2(&tmp1, (char*)CERT_CA_FILE), 
-					     pj_strset2(&tmp2, (char*)CERT_FILE), 
-					     pj_strset2(&tmp3, (char*)CERT_PRIVKEY_FILE), 
-					     pj_strset2(&tmp4, (char*)CERT_PRIVKEY_PASS), 
+#if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
+	status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
+					     &privkey_file, &privkey_pass,
 					     &cert);
+#else
+	pj_ssl_cert_buffer ca_buf, cert_buf, privkey_buf;
+
+	status = load_cert_to_buf(pool, &ca_file, &ca_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &cert_file, &cert_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = load_cert_to_buf(pool, &privkey_file, &privkey_buf);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = pj_ssl_cert_load_from_buffer(pool, &ca_buf, &cert_buf,
+					      &privkey_buf, &privkey_pass, 
+					      &cert);
+#endif
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}

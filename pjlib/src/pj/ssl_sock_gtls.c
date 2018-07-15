@@ -189,15 +189,23 @@ struct pj_ssl_sock_t {
     int                   tls_init_count; /* library initialization counter */
 };
 
-
-/* Certificate/credential structure definition. */
-struct pj_ssl_cert_t {
+/*
+ * Certificate/credential structure definition.
+ */
+struct pj_ssl_cert_t
+{
     pj_str_t CA_file;
     pj_str_t CA_path;
     pj_str_t cert_file;
     pj_str_t privkey_file;
     pj_str_t privkey_pass;
+
+    /* Certificate buffer. */
+    pj_ssl_cert_buffer CA_buf;
+    pj_ssl_cert_buffer cert_buf;
+    pj_ssl_cert_buffer privkey_buf;
 };
+
 
 /* GnuTLS available ciphers */
 static unsigned tls_available_ciphers;
@@ -978,6 +986,52 @@ static pj_status_t tls_open(pj_ssl_sock_t *ssock)
                                                             GNUTLS_X509_FMT_DER,
                                                             prikey_pass,
                                                             0);
+            if (ret < 0)
+                goto out;
+        }
+
+        if (cert->CA_buf.slen) {
+            gnutls_datum_t ca;
+            ca.data = (unsigned char*)cert->CA_buf.ptr;
+            ca.size = cert->CA_buf.slen;
+            ret = gnutls_certificate_set_x509_trust_mem(ssock->xcred,
+                                                        &ca,
+                                                        GNUTLS_X509_FMT_PEM);
+            if (ret < 0)
+                ret = gnutls_certificate_set_x509_trust_mem(
+                		ssock->xcred, &ca, GNUTLS_X509_FMT_DER);
+            if (ret < 0)
+                goto out;
+        }
+
+        if (cert->cert_buf.slen && cert->privkey_buf.slen) {
+            gnutls_datum_t cert_buf;
+            gnutls_datum_t privkey_buf;
+
+            cert_buf.data = (unsigned char*)cert->CA_buf.ptr;
+            cert_buf.size = cert->CA_buf.slen;
+            privkey_buf.data = (unsigned char*)cert->privkey_buf.ptr;
+            privkey_buf.size = cert->privkey_buf.slen;
+
+            const char *prikey_pass = cert->privkey_pass.slen
+                                    ? cert->privkey_pass.ptr
+                                    : NULL;
+            ret = gnutls_certificate_set_x509_key_mem2(ssock->xcred,
+                                                       &cert_buf,
+                                                       &privkey_buf,
+                                                       GNUTLS_X509_FMT_PEM,
+                                                       prikey_pass,
+                                                       0);
+            /* Load DER format */
+            /*
+            if (ret != GNUTLS_E_SUCCESS)
+                ret = gnutls_certificate_set_x509_key_mem2(ssock->xcred,
+                                                           &cert_buf,
+                                                           &privkey_buf,
+                                                           GNUTLS_X509_FMT_DER,
+                                                           prikey_pass,
+                                                           0);
+            */                                                           
             if (ret < 0)
                 goto out;
         }
@@ -2089,6 +2143,28 @@ PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files2(
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_buffer(pj_pool_t *pool,
+					const pj_ssl_cert_buffer *CA_buf,
+					const pj_ssl_cert_buffer *cert_buf,
+					const pj_ssl_cert_buffer *privkey_buf,
+					const pj_str_t *privkey_pass,
+					pj_ssl_cert_t **p_cert)
+{
+    pj_ssl_cert_t *cert;
+
+    PJ_ASSERT_RETURN(pool && CA_buf && cert_buf && privkey_buf, PJ_EINVAL);
+
+    cert = PJ_POOL_ZALLOC_T(pool, pj_ssl_cert_t);
+    pj_strdup(pool, &cert->CA_buf, CA_buf);
+    pj_strdup(pool, &cert->cert_buf, cert_buf);
+    pj_strdup(pool, &cert->privkey_buf, privkey_buf);
+    pj_strdup_with_null(pool, &cert->privkey_pass, privkey_pass);
+
+    *p_cert = cert;
+
+    return PJ_SUCCESS;
+}
+
 /* Store credentials. */
 PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate( pj_ssl_sock_t *ssock,
                                                  pj_pool_t *pool,
@@ -2105,6 +2181,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_set_certificate( pj_ssl_sock_t *ssock,
     pj_strdup_with_null(pool, &cert_->cert_file, &cert->cert_file);
     pj_strdup_with_null(pool, &cert_->privkey_file, &cert->privkey_file);
     pj_strdup_with_null(pool, &cert_->privkey_pass, &cert->privkey_pass);
+
+    pj_strdup(pool, &cert_->CA_buf, &cert->CA_buf);
+    pj_strdup(pool, &cert_->cert_buf, &cert->cert_buf);
+    pj_strdup(pool, &cert_->privkey_buf, &cert->privkey_buf);
 
     ssock->cert = cert_;
 
