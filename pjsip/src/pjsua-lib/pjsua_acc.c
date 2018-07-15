@@ -3939,7 +3939,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS;
 		PJ_LOG(3, (THIS_FILE, "call to %.*s: hangup "
 			   "triggered by IP change",
-			   call_info.remote_info.slen,
+			   (int)call_info.remote_info.slen,
 			   call_info.remote_info.ptr));
 
 		status = pjsua_call_hangup(i, PJSIP_SC_GONE, NULL, NULL);

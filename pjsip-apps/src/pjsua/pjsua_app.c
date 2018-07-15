@@ -195,9 +195,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    pjsua_player_set_pos(app_config.wav_id, 0);
 
 
-	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
+	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%.*s)]", 
 		  call_id,
 		  call_info.last_status,
+		  (int)call_info.last_status_text.slen,
 		  call_info.last_status_text.ptr));
 
 	if (call_id == current_call) {
@@ -253,12 +254,14 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 		ringback_start(call_id);
 	    }
 
-	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s (%d %.*s)", 
-		      call_id, call_info.state_text.ptr,
-		      code, (int)reason.slen, reason.ptr));
+	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %.*s (%d %.*s)", 
+		      call_id, (int)call_info.state_text.slen, 
+                      call_info.state_text.ptr, code, 
+                      (int)reason.slen, reason.ptr));
 	} else {
-	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s", 
+	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %.*s", 
 		      call_id,
+		      (int)call_info.state_text.slen,
 		      call_info.state_text.ptr));
 	}
 
@@ -320,14 +323,16 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 		  "Incoming call for account %d!\n"
 		  "Media count: %d audio & %d video\n"
 		  "%s"
-		  "From: %s\n"
-		  "To: %s\n"
+		  "From: %.*s\n"
+		  "To: %.*s\n"
 		  "Press %s to answer or %s to reject call",
 		  acc_id,
 		  call_info.rem_aud_cnt,
 		  call_info.rem_vid_cnt,
 		  notif_st,
+		  (int)call_info.remote_info.slen,
 		  call_info.remote_info.ptr,
+		  (int)call_info.local_info.slen,
 		  call_info.local_info.ptr,
 		  (app_config.use_cli?"ca a":"a"),
 		  (app_config.use_cli?"g":"h")));
