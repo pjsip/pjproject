@@ -814,10 +814,8 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
 				  sdp->attr, &ID_FINGERPRINT,
 				  NULL);
     if (!a) {
-	/* Let's just print warning for now, instead of returning error */
-	PJ_LOG(4,(ds->base.name, "Warning: no fingerprint attribute in "
-				 "remote SDP, DTLS verification cannot "
-				 "be done!"));
+	/* No fingerprint attribute in remote SDP */
+	return PJMEDIA_SRTP_DTLS_ENOFPRINT;
     } else {
 	pj_str_t rem_fp = a->value;
 	pj_strtrim(&rem_fp);
@@ -1042,15 +1040,24 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	/* As answerer:
 	 *    Check for DTLS-SRTP support in remote SDP. Detect remote
 	 *    support of DTLS-SRTP by inspecting remote SDP offer for
-	 *    UDP/TLS/RTP/SAVP as media transport, this may be presented
-	 *    in m= line.
+	 *    SDP a=fingerprint attribute. And currently we only support
+	 *    RTP/AVP transports.
 	 */
 	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
-	pjmedia_sdp_attr *attr_setup;
+	pjmedia_sdp_attr *attr_setup, *attr_fp;
 	pj_uint32_t rem_proto = 0;
 
+	/* Find SDP a=fingerprint line. */
+	attr_fp = pjmedia_sdp_media_find_attr(m_rem, &ID_FINGERPRINT, NULL);
+	if (!attr_fp)
+	    attr_fp = pjmedia_sdp_attr_find(sdp_remote->attr_count,
+					    sdp_remote->attr, &ID_FINGERPRINT,
+					    NULL);
+
+	/* Get media transport proto */
 	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
-	if (!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto, PJMEDIA_TP_PROTO_DTLS_SRTP))
+	if (!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto, PJMEDIA_TP_PROTO_RTP_AVP) ||
+	    !attr_fp)
 	{
 	    /* Remote doesn't signal DTLS-SRTP */
 	    status = PJMEDIA_SRTP_ESDPINTRANSPORT;

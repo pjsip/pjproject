@@ -645,6 +645,12 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_SRTP_DTLS_EFPNOTMATCH (PJMEDIA_ERRNO_START+242)  /* 220242 */
 
+/**
+ * @hideinitializer
+ * Fingerprint not found.
+ */
+#define PJMEDIA_SRTP_DTLS_ENOFPRINT (PJMEDIA_ERRNO_START+243)	/* 220243 */
+
 #endif /* PJMEDIA_HAS_SRTP */
 
 

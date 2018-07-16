@@ -169,6 +169,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOCRYPTO,  "No matching SRTP crypto-suite after DTLS nego" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_EPEERNOCERT,"No certificate supplied by peer in DTLS nego" ),
     PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_EFPNOTMATCH,"Fingerprint from signalling not match to actual fingerprint" )
+    PJ_BUILD_ERR( PJMEDIA_SRTP_DTLS_ENOFPRINT,	"Fingerprint not found" )
 #endif
 
 };
