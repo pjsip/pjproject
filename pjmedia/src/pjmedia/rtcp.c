@@ -19,6 +19,8 @@
  */
 #include <pjmedia/rtcp.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -32,6 +34,10 @@
 #define RTCP_SDES 202
 #define RTCP_BYE  203
 #define RTCP_XR   207
+
+/* RTCP Feedbacks */
+#define RTCP_RTPFB	205
+#define RTCP_PSFB	206
 
 enum {
     RTCP_SDES_NULL  = 0,
@@ -764,6 +770,46 @@ static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
 }
 
 
+static void parse_rtcp_fb(pjmedia_rtcp_session *sess,
+			  const void *pkt,
+			  pj_size_t size)
+{
+    unsigned cnt = 1;
+    pjmedia_rtcp_fb_nack nack[1];
+    //pjmedia_rtcp_fb_sli sli[1];
+    //pjmedia_rtcp_fb_rpsi rpsi;
+    pjmedia_event ev;
+    pjmedia_event_rx_rtcp_fb_data ev_data;
+    pj_timestamp ts_now;
+
+    pj_get_timestamp(&ts_now);
+    pj_bzero(&ev_data, sizeof(ev_data));
+
+    if (pjmedia_rtcp_fb_parse_nack(pkt, size, &cnt, nack)==PJ_SUCCESS)
+    {
+	pjmedia_event_init(&ev, PJMEDIA_EVENT_RX_RTCP_FB, &ts_now, sess);
+	ev_data.cap.type = PJMEDIA_RTCP_FB_NACK;
+	ev_data.msg.nack = nack[0];
+	ev.data.ptr = &ev_data;
+
+	/* Sync publish, i.e: don't use PJMEDIA_EVENT_PUBLISH_POST_EVENT */
+	pjmedia_event_publish(NULL, sess, &ev, 0);
+
+	/*  For other FB type implementations later
+    } else if (pjmedia_rtcp_fb_parse_pli(pkt, size)==PJ_SUCCESS)
+    {
+    } else if (pjmedia_rtcp_fb_parse_sli(pkt, size, &cnt, sli)==PJ_SUCCESS)
+    {
+    } else if (pjmedia_rtcp_fb_parse_rpsi(pkt, size, &rpsi)==PJ_SUCCESS)
+    {
+	*/
+    } else {
+	/* Ignore unknown RTCP Feedback */
+	TRACE_((sess->name, "Received unknown RTCP feedback"));
+    }
+}
+
+
 PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 				   const void *pkt,
 				   pj_size_t size)
@@ -788,6 +834,10 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	    break;
 	case RTCP_BYE:
 	    parse_rtcp_bye(sess, p, len);
+	    break;
+	case RTCP_RTPFB:
+	case RTCP_PSFB:
+	    parse_rtcp_fb(sess, p, len);
 	    break;
 	default:
 	    /* Ignore unknown RTCP */

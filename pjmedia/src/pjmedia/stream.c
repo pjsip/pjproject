@@ -248,8 +248,9 @@ struct pjmedia_stream
     pj_status_t		     rtp_rx_last_err;       /**< Last RTP recv() error */
 
     /* RTCP Feedback */
-    pj_bool_t		     send_rtcp_fb_nack;/**< Should we send NACK?    */
-    pjmedia_rtcp_fb_nack     rtcp_fb_nack;     /**< NACK state.		    */
+    pj_bool_t		     send_rtcp_fb_nack;	    /**< Send NACK?	    */
+    pjmedia_rtcp_fb_nack     rtcp_fb_nack;	    /**< TX NACK state.	    */
+    int			     rtcp_fb_nack_cap_idx;  /**< RX NACK cap idx.   */
 
 
 };
@@ -1724,7 +1725,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     const pjmedia_rtp_hdr *hdr;
     const void *payload;
     unsigned payloadlen;
-    pjmedia_rtp_status seq_st = {0};
+    pjmedia_rtp_status seq_st;
     pj_status_t status;
     pj_bool_t pkt_discarded = PJ_FALSE;
 
@@ -1767,6 +1768,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
 
     /* Ignore the packet if decoder is paused */
+    pj_bzero(&seq_st, sizeof(seq_st));
     if (channel->paused)
 	goto on_return;
 
@@ -2192,6 +2194,33 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
 
 /*
+ * Handle events.
+ */
+static pj_status_t stream_event_cb(pjmedia_event *event,
+                                   void *user_data)
+{
+    pjmedia_stream *stream = (pjmedia_stream*)user_data;
+
+    /* Set RTCP FB capability in the event */
+    if (event->type==PJMEDIA_EVENT_RX_RTCP_FB &&
+	event->epub==&stream->rtcp)
+    {
+	pjmedia_event_rx_rtcp_fb_data *data = (pjmedia_event_rx_rtcp_fb_data*)
+					      event->data.ptr;
+
+	/* Application not configured to listen to NACK, discard this event */
+	if (stream->rtcp_fb_nack_cap_idx < 0)
+	    return PJ_SUCCESS;
+	
+	data->cap = stream->si.loc_rtcp_fb.caps[stream->rtcp_fb_nack_cap_idx];
+    }
+
+    /* Republish events */
+    return pjmedia_event_publish(NULL, stream, event, 0);
+}
+
+
+/*
  * Create media stream.
  */
 PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
@@ -2568,6 +2597,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	    stream->rtcp.stat.rtp_tx_last_seq = info->rtp_seq;
 	    stream->rtcp.stat.rtp_tx_last_ts = info->rtp_ts;
 	}
+
+	/* Subscribe to RTCP events */
+	pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
+				&stream->rtcp);
     }
 
     /* Allocate outgoing RTCP buffer, should be enough to hold SR/RR, SDES,
@@ -2664,7 +2697,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 #endif
 
-    /* Check if RTCP-FB generic NACK is enabled for this codec */
+    /* Check if we should send RTCP-FB generic NACK for this codec */
     if (stream->si.rem_rtcp_fb.cap_count) {
 	pjmedia_rtcp_fb_info *rfi = &stream->si.rem_rtcp_fb;
 	char cid[32];
@@ -2678,6 +2711,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 		 !pj_stricmp2(&rfi->caps[i].codec_id, cid)))
 	    {
 		stream->send_rtcp_fb_nack = PJ_TRUE;
+		break;
+	    }
+	}
+    }
+
+    /* Check if we handle incoming RTCP-FB generic NACK for this codec */
+    stream->rtcp_fb_nack_cap_idx = -1;
+    if (stream->si.loc_rtcp_fb.cap_count) {
+	pjmedia_rtcp_fb_info *lfi = &stream->si.loc_rtcp_fb;
+	char cid[32];
+	unsigned i;
+
+	pjmedia_codec_info_to_id(&stream->si.fmt, cid, sizeof(cid));
+
+	for (i = 0; i < lfi->cap_count; ++i) {
+	    if (lfi->caps[i].type == PJMEDIA_RTCP_FB_NACK &&
+		(!pj_strcmp2( &lfi->caps[i].codec_id, "*") ||
+		 !pj_stricmp2(&lfi->caps[i].codec_id, cid)))
+	    {
+		stream->rtcp_fb_nack_cap_idx = i;
 		break;
 	    }
 	}
@@ -2795,6 +2848,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 			 "Error sending RTP/DTMF end packet"));
 	}
     }
+
+    /* Unsubscribe from RTCP session events */
+    pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream,
+			      &stream->rtcp);
 
     /* Detach from transport
      * MUST NOT hold stream mutex while detaching from transport, as

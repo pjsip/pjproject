@@ -215,23 +215,6 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_setting_default(
 {
     pj_bzero(opt, sizeof(*opt));
 
-    /* == just for test == */
-    opt->cap_count = 4;
-
-    pj_cstr(&opt->caps[0].codec_id, "*");
-    opt->caps[0].type = PJMEDIA_RTCP_FB_ACK;
-    
-    pj_cstr(&opt->caps[1].codec_id, "speex/16000");
-    opt->caps[1].type = PJMEDIA_RTCP_FB_NACK;
-    
-    pj_cstr(&opt->caps[2].codec_id, "H264");
-    opt->caps[2].type = PJMEDIA_RTCP_FB_NACK;
-    pj_cstr(&opt->caps[2].param, "pli");
-
-    pj_cstr(&opt->caps[3].codec_id, "pcmu");
-    opt->caps[3].type = PJMEDIA_RTCP_FB_NACK;
-    /* == just for test == */
-
     return PJ_SUCCESS;
 }
 
@@ -577,6 +560,149 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 	if (++info->cap_count == PJMEDIA_RTCP_FB_MAX_CAP)
 	    break;
     }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Check whether the specified payload contains RTCP feedback generic NACK
+ * message, and parse the payload if it does.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_nack(
+					const void *buf,
+					pj_size_t length,
+					unsigned *nack_cnt,
+					pjmedia_rtcp_fb_nack nack[])
+{
+    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pj_uint8_t *p;
+    unsigned cnt, i;
+
+    PJ_ASSERT_RETURN(buf && nack_cnt && nack, PJ_EINVAL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+
+    /* Generic NACK uses pt==RTCP_RTPFB and FMT==1 */
+    if (hdr->pt != RTCP_RTPFB || hdr->count != 1)
+	return PJ_ENOTFOUND;
+
+    cnt = pj_ntohs((pj_uint16_t)hdr->length) - 2;
+    if (length < (cnt+3)*4)
+	return PJ_ETOOSMALL;
+
+    *nack_cnt = PJ_MIN(*nack_cnt, cnt);
+
+    p = (pj_uint8_t*)hdr + sizeof(*hdr);
+    for (i = 0; i < *nack_cnt; ++i) {
+	pj_uint16_t val;
+
+	pj_memcpy(&val, p, 2);
+	nack[i].pid = pj_ntohs(val);
+	pj_memcpy(&val, p+2, 2);
+	nack[i].blp = pj_ntohs(val);
+	p += 4;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Check whether the specified payload contains RTCP feedback Picture Loss
+ * Indication (PLI) message.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
+					const void *buf,
+					pj_size_t length)
+{
+    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+
+    PJ_ASSERT_RETURN(buf, PJ_EINVAL);
+    PJ_ASSERT_RETURN(length >= 12, PJ_ETOOSMALL);
+
+    /* PLI uses pt==RTCP_PSFB and FMT==1 */
+    if (hdr->pt != RTCP_PSFB || hdr->count != 1)
+	return PJ_ENOTFOUND;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Check whether the specified payload contains RTCP feedback Slice Loss
+ * Indication (SLI) message, and parse the payload if it does.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
+					const void *buf,
+					pj_size_t length,
+					unsigned *sli_cnt,
+					pjmedia_rtcp_fb_sli sli[])
+{
+    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pj_uint8_t *p;
+    unsigned cnt, i;
+
+    PJ_ASSERT_RETURN(buf && sli_cnt && sli, PJ_EINVAL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+
+    /* PLI uses pt==RTCP_PSFB and FMT==2 */
+    if (hdr->pt != RTCP_PSFB || hdr->count != 2)
+	return PJ_ENOTFOUND;
+
+    cnt = pj_ntohs((pj_uint16_t)hdr->length) - 2;
+    if (length < (cnt+3)*4)
+	return PJ_ETOOSMALL;
+
+    *sli_cnt = PJ_MIN(*sli_cnt, cnt);
+
+    p = (pj_uint8_t*)hdr + sizeof(*hdr);
+    for (i = 0; i < *sli_cnt; ++i) {
+	/* 'first' takes 13 bit */
+	sli[i].first = (p[0] << 5) + ((p[1] & 0xF8) >> 3);
+	/* 'number' takes 13 bit */
+	sli[i].number = ((p[1] & 0x07) << 10) +
+			(p[2] << 2) +
+			((p[3] & 0xC0) >> 6);
+	/* 'pict_id' takes 6 bit */
+	sli[i].pict_id = (p[3] & 0x3F);
+	p += 4;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Check whether the specified payload contains RTCP feedback Reference
+ * Picture Selection Indication (RPSI) message, and parse the payload
+ * if it does.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
+					const void *buf,
+					pj_size_t length,
+					pjmedia_rtcp_fb_rpsi *rpsi)
+{
+    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pj_uint8_t *p;
+    pj_uint8_t padlen;
+    pj_size_t rpsi_len;
+
+    PJ_ASSERT_RETURN(buf && rpsi, PJ_EINVAL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+
+    /* RPSI uses pt==RTCP_PSFB and FMT==3 */
+    if (hdr->pt != RTCP_PSFB || hdr->count != 3)
+	return PJ_ENOTFOUND;
+
+    rpsi_len = (pj_ntohs((pj_uint16_t)hdr->length)-2) * 4;
+    if (length < rpsi_len + 12)
+	return PJ_ETOOSMALL;
+
+    p = (pj_uint8_t*)hdr + sizeof(*hdr);
+    padlen = *p++;
+    rpsi->pt = (*p++ & 0x7F);
+    rpsi->rpsi_bit_len = rpsi_len*8 - 16 - padlen;
+    pj_strset(&rpsi->rpsi, (char*)p, (rpsi->rpsi_bit_len + 7)/8);
 
     return PJ_SUCCESS;
 }

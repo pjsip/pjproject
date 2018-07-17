@@ -501,6 +501,9 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
     pjmedia_rtcp_stat stat;
 
     if (strm) {
+	/* Unsubscribe from stream events */
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
+
 	pjmedia_stream_send_rtcp_bye(strm);
 
 	if (call_med->strm.a.conf_slot != PJSUA_INVALID_ID) {
@@ -700,6 +703,10 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 		goto on_return;
 	    }
 	}
+
+	/* Subscribe to stream events */
+	pjmedia_event_subscribe(NULL, &call_media_on_event, call_med,
+				call_med->strm.a.stream);
     }
 
 on_return:

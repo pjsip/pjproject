@@ -43,15 +43,34 @@ PJ_BEGIN_DECL
 
 
 /**
- * Enumeration of RTCP Feedback types.
+ * Enumeration of RTCP Feedback types. Each feedback type may have subtypes,
+ * which should be specified in feedback parameters.
  */
 typedef enum pjmedia_rtcp_fb_type
 {
-    PJMEDIA_RTCP_FB_ACK,     /**< Positive acknowledgement feedbacks.	    */
-    PJMEDIA_RTCP_FB_NACK,    /**< Negative acknowledgement feedbacks.	    */
-    PJMEDIA_RTCP_FB_TRR_INT, /**< Minimum interval between two regular RTCP
-				  packets.				    */
-    PJMEDIA_RTCP_FB_OTHER    /**< Other feedback type.			    */
+    /**
+     * Positive acknowledgement feedbacks. Sample subtypes are Reference Picture
+     * Selection Indication (RPSI) and application layer feedbacks.
+     */
+    PJMEDIA_RTCP_FB_ACK,
+
+    /**
+     * Negative acknowledgement feedbacks. Sample subtypes are generic NACK,
+     * Picture Loss Indication (PLI), Slice Loss Indication (SLI), Reference
+     * Picture Selection Indication (RPSI), and application layer feedbacks.
+     */
+    PJMEDIA_RTCP_FB_NACK,
+
+    /**
+     * Minimum interval between two regular RTCP packets.
+     */
+    PJMEDIA_RTCP_FB_TRR_INT,
+
+    /**
+     * Other feedback types.
+     */
+    PJMEDIA_RTCP_FB_OTHER
+
 } pjmedia_rtcp_fb_type;
 
 
@@ -79,7 +98,12 @@ typedef struct pjmedia_rtcp_fb_cap
     pj_str_t		    type_name;
 
     /**
-     * Specify the RTCP Feedback parameters.
+     * Specify the RTCP Feedback parameters. Feedback subtypes should be
+     * specified in this field, e.g:
+     * - 'pli' for Picture Loss Indication feedback,
+     * - 'sli' for Slice Loss Indication feedback,
+     * - 'rpsi' for Reference Picture Selection Indication feedback,
+     * - 'app' for specific/proprietary application layer feedback.
      */
     pj_str_t		    param;
 
@@ -131,6 +155,57 @@ typedef struct pjmedia_rtcp_fb_setting
     pjmedia_rtcp_fb_cap	     caps[PJMEDIA_RTCP_FB_MAX_CAP];
 
 } pjmedia_rtcp_fb_setting;
+
+
+/**
+ * This structure declares RTCP Feedback Generic NACK message.
+ */
+typedef struct pjmedia_rtcp_fb_nack
+{
+    pj_int32_t		 pid;		/**< Packet ID (RTP seq)    */
+    pj_uint16_t		 blp;		/**< Bitmask of following lost
+					     packets		    */
+} pjmedia_rtcp_fb_nack;
+
+
+/**
+ * This structure declares RTCP Feedback Slice Loss Indication (SLI) message.
+ */
+typedef struct pjmedia_rtcp_fb_sli
+{
+    pj_uint16_t		 first;		/**< First lost macroblock	*/
+    pj_uint16_t		 number;	/**< The number of lost macroblocks
+					     packets			*/
+    pj_uint8_t		 pict_id;	/**< Picture ID (temporal ref)	*/
+} pjmedia_rtcp_fb_sli;
+
+
+/**
+ * This structure declares RTCP Feedback Reference Picture Selection
+ * Indication (RPSI) message.
+ */
+typedef struct pjmedia_rtcp_fb_rpsi
+{
+    pj_uint8_t		 pt;		/**< Payload Type		*/
+    pj_str_t		 rpsi;		/**< Native RPSI bit string	*/
+    pj_size_t		 rpsi_bit_len;	/**< Length of RPSI in bit	*/
+} pjmedia_rtcp_fb_rpsi;
+
+
+/**
+ * Event data for incoming RTCP Feedback message event
+ * (PJMEDIA_EVENT_RX_RTCP_FB).
+ */
+typedef struct pjmedia_event_rx_rtcp_fb_data
+{
+    pjmedia_rtcp_fb_cap		cap;
+    union {
+	pjmedia_rtcp_fb_nack	nack;
+	pjmedia_rtcp_fb_sli	sli;
+	pjmedia_rtcp_fb_rpsi	rpsi;
+    } msg;
+
+} pjmedia_event_rx_rtcp_fb_data;
 
 
 /**
@@ -219,17 +294,6 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 
 
 /**
- * This structure declares RTCP Feedback Generic NACK message.
- */
-typedef struct pjmedia_rtcp_fb_nack
-{
-    pj_int32_t		 pid;		/**< Packet ID (RTP seq)    */
-    pj_uint16_t		 blp;		/**< Bitmask of following lost
-					     packets		    */
-} pjmedia_rtcp_fb_nack;
-
-
-/**
  * Build an RTCP Feedback Generic NACK packet. This packet can be appended to
  * other RTCP packets, e.g: RTCP RR/SR, to compose a compound RTCP packet.
  * See also RFC 4585 Section 6.2.1 about Generic NACK message.
@@ -272,18 +336,6 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_pli(
 
 
 /**
- * This structure declares RTCP Feedback Slice Loss Indication (SLI) message.
- */
-typedef struct pjmedia_rtcp_fb_sli
-{
-    pj_uint16_t		 first;		/**< First lost macroblock	*/
-    pj_uint16_t		 number;	/**< The number of lost macroblocks
-					     packets			*/
-    pj_uint8_t		 pict_id;	/**< Picture ID (temporal ref)	*/
-} pjmedia_rtcp_fb_sli;
-
-
-/**
  * Build an RTCP Feedback Slice Loss Indication (SLI) packet. This packet can
  * be appended to other RTCP packets, e.g: RTCP RR/SR, to compose a compound
  * RTCP packet. See also RFC 4585 Section 6.3.2 about SLI FB message.
@@ -307,18 +359,6 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_sli(
 
 
 /**
- * This structure declares RTCP Feedback Reference Picture Selection
- * Indication (RPSI) message.
- */
-typedef struct pjmedia_rtcp_fb_rpsi
-{
-    pj_uint8_t		 pt;		/**< Payload Type		*/
-    pj_str_t		 rpsi;		/**< Native RPSI bit string	*/
-    pj_size_t		 rpsi_bit_len;	/**< Length of RPSI in bit	*/
-} pjmedia_rtcp_fb_rpsi;
-
-
-/**
  * Build an RTCP Feedback Reference Picture Selection Indication (RPSI)
  * packet. This packet can be appended to other RTCP packets, e.g: RTCP RR/SR,
  * to compose a compound RTCP packet. See also RFC 4585 Section 6.3.3 about
@@ -338,6 +378,80 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
 					void *buf,
 					pj_size_t *length,
 					const pjmedia_rtcp_fb_rpsi *rpsi);
+
+
+/**
+ * Check whether the specified payload contains RTCP feedback generic NACK
+ * message, and parse the payload if it does.
+ *
+ * @param buf	    The payload buffer.
+ * @param length    The payload length.
+ * @param nack_cnt  On input, it specifies the maximum number of generic NACK
+ *		    messages.
+ *		    On output, it specifies the number of parsed generic NACK
+ *		    messages.
+ * @param nack	    The array of RTCP Feedback Generic NACK messages.
+ *
+ * @return	    PJ_SUCCESS if the payload contains generic NACK message
+ *		    and has been parsed successfully.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_nack(
+					const void *buf,
+					pj_size_t length,
+					unsigned *nack_cnt,
+					pjmedia_rtcp_fb_nack nack[]);
+
+
+/**
+ * Check whether the specified payload contains RTCP feedback Picture Loss
+ * Indication (PLI) message.
+ *
+ * @param buf	    The payload buffer.
+ * @param length    The payload length.
+ *
+ * @return	    PJ_SUCCESS if the payload contains PLI message.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_pli(
+					const void *buf,
+					pj_size_t length);
+
+
+/**
+ * Check whether the specified payload contains RTCP feedback Slice Loss
+ * Indication (SLI) message, and parse the payload if it does.
+ *
+ * @param buf	    The payload buffer.
+ * @param length    The payload length.
+ * @param sli_cnt   On input, it specifies the maximum number of SLI messages.
+ *		    On output, it specifies the number of parsed SLI messages.
+ * @param sli	    The array of RTCP Feedback SLI messages.
+ *
+ * @return	    PJ_SUCCESS if the payload contains SLI messages and
+ *		    has been parsed successfully.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_sli(
+					const void *buf,
+					pj_size_t length,
+					unsigned *sli_cnt,
+					pjmedia_rtcp_fb_sli sli[]);
+
+
+/**
+ * Check whether the specified payload contains RTCP feedback Reference
+ * Picture Selection Indication (RPSI) message, and parse the payload
+ * if it does.
+ *
+ * @param buf	    The payload buffer.
+ * @param length    The payload length.
+ * @param rpsi	    The parsed RTCP Feedback RPSI messages.
+ *
+ * @return	    PJ_SUCCESS if the payload contains SLI messages and
+ *		    has been parsed successfully.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
+					const void *buf,
+					pj_size_t length,
+					pjmedia_rtcp_fb_rpsi *rpsi);
 
 
 /**

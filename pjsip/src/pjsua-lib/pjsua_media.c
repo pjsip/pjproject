@@ -110,6 +110,17 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	goto on_error;
 #endif
 
+    /* Create event manager (if not yet, e.g: PJMEDIA_HAS_VIDEO==0) */
+    if (!pjmedia_event_mgr_instance()) {
+	status = pjmedia_event_mgr_create(pjsua_var.pool, 
+					  PJMEDIA_EVENT_MGR_NO_THREAD, NULL);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status,
+			 "Error creating PJMEDIA event manager"));
+	    goto on_error;
+	}
+    }
+
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
