@@ -169,7 +169,7 @@ struct pj_dns_resolver
 
     /* Internals */
     pj_pool_t		*pool;		/**< Internal pool.		    */
-    pj_mutex_t		*mutex;		/**< Mutex protection.		    */
+    pj_grp_lock_t	*grp_lock;	/**< Group lock protection.	    */
     pj_bool_t		 own_timer;	/**< Do we own timer?		    */
     pj_timer_heap_t	*timer;		/**< Timer instance.		    */
     pj_bool_t		 own_ioqueue;	/**< Do we own ioqueue?		    */
@@ -236,6 +236,8 @@ static pj_status_t select_nameservers(pj_dns_resolver *resolver,
 				      unsigned *count,
 				      unsigned servers[]);
 
+/* Destructor */
+static void dns_resolver_on_destroy(void *member);
 
 /* Close UDP socket */
 static void close_sock(pj_dns_resolver *resv)
@@ -284,9 +286,9 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     /* Register to ioqueue */
     pj_bzero(&socket_cb, sizeof(socket_cb));
     socket_cb.on_read_complete = &on_read_complete;
-    status = pj_ioqueue_register_sock(resv->pool, resv->ioqueue,
-				      resv->udp_sock, resv, &socket_cb,
-				      &resv->udp_key);
+    status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
+				       resv->udp_sock, resv->grp_lock,
+				       resv, &socket_cb, &resv->udp_key);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -331,9 +333,9 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     /* Register to ioqueue */
     pj_bzero(&socket_cb, sizeof(socket_cb));
     socket_cb.on_read_complete = &on_read_complete;
-    status = pj_ioqueue_register_sock(resv->pool, resv->ioqueue,
-				      resv->udp6_sock, resv, &socket_cb,
-				      &resv->udp6_key);
+    status = pj_ioqueue_register_sock2(resv->pool, resv->ioqueue,
+				       resv->udp6_sock, resv->grp_lock,
+				       resv, &socket_cb, &resv->udp6_key);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -402,10 +404,14 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
     resv->udp_sock = PJ_INVALID_SOCKET;
     pj_strdup2_with_null(pool, &resv->name, name);
     
-    /* Create the mutex */
-    status = pj_mutex_create_recursive(pool, name, &resv->mutex);
+    /* Create group lock */
+    status = pj_grp_lock_create_w_handler(pool, NULL, resv,
+					  &dns_resolver_on_destroy,
+					  &resv->grp_lock); 
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    pj_grp_lock_add_ref(resv->grp_lock);
 
     /* Timer, ioqueue, and settings */
     resv->timer = timer;
@@ -417,6 +423,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 
     /* Create the timer heap if one is not specified */
     if (resv->timer == NULL) {
+	resv->own_timer = PJ_TRUE;
 	status = pj_timer_heap_create(pool, TIMER_SIZE, &resv->timer);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -424,6 +431,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 
     /* Create the ioqueue if one is not specified */
     if (resv->ioqueue == NULL) {
+	resv->own_ioqueue = PJ_TRUE;
 	status = pj_ioqueue_create(pool, MAX_FD, &resv->ioqueue);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -449,6 +457,13 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 on_error:
     pj_dns_resolver_destroy(resv, PJ_FALSE);
     return status;
+}
+
+
+void dns_resolver_on_destroy(void *member)
+{
+    pj_dns_resolver *resolver = (pj_dns_resolver*)member;
+    pj_pool_safe_release(&resolver->pool);
 }
 
 
@@ -508,12 +523,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 	resolver->ioqueue = NULL;
     }
 
-    if (resolver->mutex) {
-	pj_mutex_destroy(resolver->mutex);
-	resolver->mutex = NULL;
-    }
-
-    pj_pool_safe_release(&resolver->pool);
+    pj_grp_lock_dec_ref(resolver->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -535,7 +545,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     PJ_ASSERT_RETURN(resolver && count && servers, PJ_EINVAL);
     PJ_ASSERT_RETURN(count < PJ_DNS_RESOLVER_MAX_NS, PJ_EINVAL);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     if (count > PJ_DNS_RESOLVER_MAX_NS)
 	count = PJ_DNS_RESOLVER_MAX_NS;
@@ -554,7 +564,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
 	    status = pj_sockaddr_init(pj_AF_INET6(), &ns->addr, &servers[i], 
 				      (pj_uint16_t)(ports ? ports[i] : PORT));
 	if (status != PJ_SUCCESS) {
-	    pj_mutex_unlock(resolver->mutex);
+	    pj_grp_lock_release(resolver->grp_lock);
 	    return PJLIB_UTIL_EDNSINNSADDR;
 	}
 
@@ -565,7 +575,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_ns( pj_dns_resolver *resolver,
     
     resolver->ns_count = count;
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
 }
 
@@ -579,9 +589,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_set_settings(pj_dns_resolver *resolver,
 {
     PJ_ASSERT_RETURN(resolver && st, PJ_EINVAL);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
     pj_memcpy(&resolver->settings, st, sizeof(*st));
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
 }
 
@@ -594,9 +604,9 @@ PJ_DEF(pj_status_t) pj_dns_resolver_get_settings( pj_dns_resolver *resolver,
 {
     PJ_ASSERT_RETURN(resolver && st, PJ_EINVAL);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
     pj_memcpy(st, &resolver->settings, sizeof(*st));
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
     return PJ_SUCCESS;
 }
 
@@ -609,9 +619,9 @@ PJ_DEF(void) pj_dns_resolver_handle_events(pj_dns_resolver *resolver,
 {
     PJ_ASSERT_ON_FAIL(resolver, return);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
     pj_timer_heap_poll(resolver->timer, NULL);
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 
     pj_ioqueue_poll(resolver->ioqueue, timeout);
 }
@@ -683,7 +693,10 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     delay.sec = 0;
     delay.msec = resolver->settings.qretr_delay;
     pj_time_val_normalize(&delay);
-    status = pj_timer_heap_schedule(resolver->timer, &q->timer_entry, &delay);
+    status = pj_timer_heap_schedule_w_grp_lock(resolver->timer,
+					       &q->timer_entry,
+					       &delay, 1,
+					       resolver->grp_lock);
     if (status != PJ_SUCCESS) {
 	return status;
     }
@@ -873,7 +886,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     init_res_key(&key, type, name);
 
     /* Start working with the resolver */
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Get current time. */
     pj_gettimeofday(&now);
@@ -906,7 +919,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	     * destroyed by other thread while in callback.
 	     */
 	    cache->ref_cnt++;
-	    pj_mutex_unlock(resolver->mutex);
+	    pj_grp_lock_release(resolver->grp_lock);
 
 	    /* This cached response is still valid. Just return this
 	     * response to caller.
@@ -916,7 +929,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	    }
 
 	    /* Done. No host resolution is necessary */
-	    pj_mutex_lock(resolver->mutex);
+	    pj_grp_lock_acquire(resolver->grp_lock);
 
 	    /* Decrement the ref counter. Also check if it is time to free
 	     * the cache (as it has been expired).
@@ -933,7 +946,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	     * p_query points to may have been freed by cb.
              * Refer to ticket #1974.
 	     */
-	    pj_mutex_unlock(resolver->mutex);
+	    pj_grp_lock_release(resolver->grp_lock);
 	    return status;
 	}
 
@@ -1000,7 +1013,7 @@ on_return:
     if (p_query)
 	*p_query = p_q;
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
     return status;
 }
 
@@ -1015,7 +1028,12 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
 
     PJ_ASSERT_RETURN(query, PJ_EINVAL);
 
-    pj_mutex_lock(query->resolver->mutex);
+    pj_grp_lock_acquire(query->resolver->grp_lock);
+
+    if (query->timer_entry.id == 1) {
+	pj_timer_heap_cancel_if_active(query->resolver->timer,
+				       &query->timer_entry, 0);
+    }
 
     cb = query->cb;
     query->cb = NULL;
@@ -1023,7 +1041,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
     if (notify)
 	(*cb)(query->user_data, PJ_ECANCELLED, NULL);
 
-    pj_mutex_unlock(query->resolver->mutex);
+    pj_grp_lock_release(query->resolver->grp_lock);
     return PJ_SUCCESS;
 }
 
@@ -1552,7 +1570,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     q = (pj_dns_async_query *) entry->user_data;
     resolver = q->resolver;
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Recheck that this query is still pending, since there is a slight
      * possibility of race condition (timer elapsed while at the same time
@@ -1560,7 +1578,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
      */
     if (pj_hash_get(resolver->hquerybyid, &q->id, sizeof(q->id), NULL)==NULL) {
 	/* Yeah, this query is done. */
-	pj_mutex_unlock(resolver->mutex);
+	pj_grp_lock_release(resolver->grp_lock);
 	return;
     }
 
@@ -1571,7 +1589,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     if (q->transmit_cnt < resolver->settings.qretr_count) {
 	status = transmit_query(resolver, q);
 	if (status == PJ_SUCCESS) {
-	    pj_mutex_unlock(resolver->mutex);
+	    pj_grp_lock_release(resolver->grp_lock);
 	    return;
 	} else {
 	    /* Error occurs */
@@ -1590,7 +1608,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 
     /* Call application callback, if any. */
     if (q->cb)
@@ -1605,7 +1623,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     }
 
     /* Workaround for deadlock problem in #1565 (similar to #1108) */
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Clear data */
     q->timer_entry.id = 0;
@@ -1622,7 +1640,7 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     /* Put query entry into recycle list */
     pj_list_push_back(&resolver->query_free_nodes, q);
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 }
 
 
@@ -1662,7 +1680,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	rx_pkt_size = sizeof(resolver->udp_rx_pkt);
     }
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
 
     /* Check for errors */
@@ -1745,7 +1763,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
     /* Workaround for deadlock problem in #1108 */
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 
     /* Notify applications first, to allow application to modify the 
      * record before it is saved to the hash table.
@@ -1766,7 +1784,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     }
 
     /* Workaround for deadlock problem in #1108 */
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Save/update response cache. */
     update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
@@ -1795,7 +1813,7 @@ read_next_packet:
 				 PJ_IOQUEUE_ALWAYS_ASYNC,
 				 src_addr, src_addr_len);
 
-    if (status != PJ_EPENDING) {
+    if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 
 	pj_strerror(status, errmsg, sizeof(errmsg));	
@@ -1805,7 +1823,7 @@ read_next_packet:
 	pj_assert(!"Unhandled error");
     }
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 }
 
 
@@ -1831,7 +1849,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
 		      (pkt->hdr.qdcount && pkt->q),
 		     PJLIB_UTIL_EDNSNOANSWERREC);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     /* Build resource key for looking up hash tables */
     pj_bzero(&key, sizeof(struct res_key));
@@ -1853,7 +1871,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_add_entry( pj_dns_resolver *resolver,
     /* Insert entry. */
     update_res_cache(resolver, &key, PJ_SUCCESS, set_ttl, pkt);
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -1868,9 +1886,9 @@ PJ_DEF(unsigned) pj_dns_resolver_get_cached_count(pj_dns_resolver *resolver)
 
     PJ_ASSERT_RETURN(resolver, 0);
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
     count = pj_hash_count(resolver->hrescache);
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 
     return count;
 }
@@ -1886,7 +1904,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
     unsigned i;
     pj_time_val now;
 
-    pj_mutex_lock(resolver->mutex);
+    pj_grp_lock_acquire(resolver->grp_lock);
 
     pj_gettimeofday(&now);
 
@@ -1946,7 +1964,7 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 	      pj_pool_get_capacity(resolver->pool),
 	      pj_pool_get_used_size(resolver->pool)));
 
-    pj_mutex_unlock(resolver->mutex);
+    pj_grp_lock_release(resolver->grp_lock);
 #endif
 }
 
