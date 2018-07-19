@@ -300,11 +300,11 @@ static pj_status_t add_sdp_attr_rtcp_fb( pj_pool_t *pool,
     /* Generate RTCP FB param */
     if (cap->param.slen) {
 	pj_ansi_snprintf(tmp, sizeof(tmp), "%s %.*s %.*s", pt,
-			 type_name.slen, type_name.ptr,
-			 cap->param.slen, cap->param.ptr);
+			 (int)type_name.slen, type_name.ptr,
+			 (int)cap->param.slen, cap->param.ptr);
     } else {
 	pj_ansi_snprintf(tmp, sizeof(tmp), "%s %.*s", pt,
-			 type_name.slen, type_name.ptr);
+			 (int)type_name.slen, type_name.ptr);
     }
     pj_strset2(&val, tmp);
 
@@ -338,7 +338,7 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 	unsigned pt = 0;
 	pt = pj_strtoul(&m->desc.fmt[j]);
 	if (pt < 96) {
-	    pjmedia_codec_info *ci;
+	    const pjmedia_codec_info *ci;
 	    status = pjmedia_codec_mgr_get_codec_info(codec_mgr,
 						      pt, &ci);
 	    if (status != PJ_SUCCESS)
@@ -358,13 +358,13 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 	    if (r.param.slen) {
 		pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
 				 "%.*s/%d/%.*s",
-				 r.enc_name.slen, r.enc_name.ptr,
+				 (int)r.enc_name.slen, r.enc_name.ptr,
 				 r.clock_rate,
-				 r.param.slen, r.param.ptr);
+				 (int)r.param.slen, r.param.ptr);
 	    } else {
 		pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
 				 "%.*s/%d/1",
-				 r.enc_name.slen, r.enc_name.ptr,
+				 (int)r.enc_name.slen, r.enc_name.ptr,
 				 r.clock_rate);
 	    }
 	}
