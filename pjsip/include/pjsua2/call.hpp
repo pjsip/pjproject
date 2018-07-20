@@ -866,6 +866,41 @@ struct OnCallRxOfferParam
 };
 
 /**
+ * This structure contains parameters for Call::onCallRxReinvite() callback.
+ */
+struct OnCallRxReinviteParam
+{
+    /**
+     * The new offer received.
+     */
+    SdpSession          offer;
+
+    /**
+     * The incoming re-INVITE.
+     */
+    SipRxData           rdata;
+    
+    /**
+     * On input, it is false. Set to true if app wants to manually answer
+     * the re-INVITE.
+     */
+    bool		async;
+    
+    /**
+     * Status code to be returned for answering the offer. On input,
+     * it contains status code 200. Currently, valid values are only
+     * 200 and 488.
+     */
+    pjsip_status_code   statusCode;
+    
+    /**
+     * The current call setting, application can update this setting for
+     * answering the offer.
+     */
+    CallSetting         opt;
+};
+
+/**
  * This structure contains parameters for Call::onCallTxOffer() callback.
  */
 struct OnCallTxOfferParam
@@ -1035,6 +1070,11 @@ struct CallOpParam
      * answers/responses for this INVITE request.
      */
     SipTxOption         txOption;
+
+    /**
+     * SDP answer. Currently only used for Call::answer().
+     */
+    SdpSession		sdp;
     
 public:
     /**
@@ -1658,6 +1698,30 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
+     * Notify application when call has received a re-INVITE offer from
+     * the peer. It allows more fine-grained control over the response to
+     * a re-INVITE. If application sets async to PJ_TRUE, it can send
+     * the reply manually using the function #Call::answer() and setting
+     * the SDP answer. Otherwise, by default the re-INVITE will be
+     * answered automatically after the callback returns.
+     *
+     * Currently, this callback is only called for re-INVITE with
+     * SDP, but app should be prepared to handle the case of re-INVITE
+     * without SDP.
+     *
+     * Remarks: If manually answering at a later timing, application may
+     * need to monitor onCallTsxState() callback to check whether
+     * the re-INVITE is already answered automatically with 487 due to
+     * being cancelled.
+     *
+     * Note: onCallRxOffer() will still be called after this callback,
+     * but only if prm.async is false and prm.code is 200. 
+     */
+    virtual void onCallRxReinvite(OnCallRxReinviteParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+
+    /**
      * Notify application when call has received INVITE with no SDP offer.
      * Application can update the call setting (e.g: add audio/video), or
      * enable/disable codecs, or update other media session settings from
@@ -1805,10 +1869,13 @@ public:
     { PJ_UNUSED_ARG(prm); }
 
 private:
+    friend class Endpoint;
+
     Account             &acc;
     pjsua_call_id 	 id;
     Token                userData;
     std::vector<Media *> medias;
+    pj_pool_t		*sdp_pool;
 };
 
 /**

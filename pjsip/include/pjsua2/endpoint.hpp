@@ -1714,6 +1714,13 @@ private:
                                  void *reserved,
                                  pjsip_status_code *code,
                                  pjsua_call_setting *opt);
+    static void on_call_rx_reinvite(pjsua_call_id call_id,
+                                    const pjmedia_sdp_session *offer,
+                                    pjsip_rx_data *rdata,
+                                    void *reserved,
+                                    pj_bool_t *async,
+                                    pjsip_status_code *code,
+                                    pjsua_call_setting *opt);
     static void on_call_tx_offer(pjsua_call_id call_id,
 				 void *reserved,
 				 pjsua_call_setting *opt);

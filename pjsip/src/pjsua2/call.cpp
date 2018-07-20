@@ -160,6 +160,7 @@ void CallAudioMedia::setPortId(int pid)
 CallOpParam::CallOpParam(bool useDefaultCallSetting)
 : statusCode(pjsip_status_code(0)), reason(""), options(0)
 {
+    sdp.wholeSdp = "";
     if (useDefaultCallSetting)
         opt = CallSetting(true);
 }
@@ -328,6 +329,7 @@ struct call_param
     pjsua_call_setting *p_opt;
     pj_str_t            reason;
     pj_str_t           *p_reason;
+    pjmedia_sdp_session *sdp;
 
 public:
     /**
@@ -335,7 +337,8 @@ public:
      */
     call_param(const SipTxOption &tx_option);
     call_param(const SipTxOption &tx_option, const CallSetting &setting,
-               const string &reason_str);
+               const string &reason_str, pj_pool_t *pool = NULL,
+               const string &sdp_str = "");
 };
 
 call_param::call_param(const SipTxOption &tx_option)
@@ -349,10 +352,12 @@ call_param::call_param(const SipTxOption &tx_option)
     
     p_opt = NULL;
     p_reason = NULL;
+    sdp = NULL;
 }
 
 call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
-                       const string &reason_str)
+                       const string &reason_str, pj_pool_t *pool,
+                       const string &sdp_str)
 {
     if (tx_option.isEmpty()) {
         p_msg_data = NULL;
@@ -370,6 +375,18 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
     
     reason = str2Pj(reason_str);
     p_reason = (reason.slen == 0? NULL: &reason);
+
+    if (sdp_str == "") {
+    	sdp = NULL;
+    } else {
+        pj_str_t dup_pj_sdp;
+        pj_str_t pj_sdp_str = {(char*)sdp_str.c_str(),
+        		       (pj_ssize_t)sdp_str.size()};
+
+        pj_strdup(pool, &dup_pj_sdp, &pj_sdp_str);        
+        pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
+                          dup_pj_sdp.slen, &sdp);
+    }
 }
 
 Call::Call(Account& account, int call_id)
@@ -492,10 +509,19 @@ void Call::makeCall(const string &dst_uri, const CallOpParam &prm) throw(Error)
 
 void Call::answer(const CallOpParam &prm) throw(Error)
 {
-    call_param param(prm.txOption, prm.opt, prm.reason);
+    call_param param(prm.txOption, prm.opt, prm.reason,
+    		     sdp_pool, prm.sdp.wholeSdp);
     
-    PJSUA2_CHECK_EXPR( pjsua_call_answer2(id, param.p_opt, prm.statusCode,
-                                          param.p_reason, param.p_msg_data) );
+    if (param.sdp) {
+    	PJSUA2_CHECK_EXPR( pjsua_call_answer_with_sdp(id, param.sdp, param.p_opt,
+    						      prm.statusCode,
+                                              	      param.p_reason,
+                                              	      param.p_msg_data) );
+    } else {
+    	PJSUA2_CHECK_EXPR( pjsua_call_answer2(id, param.p_opt, prm.statusCode,
+                                              param.p_reason,
+                                              param.p_msg_data) );
+    }
 }
 
 void Call::hangup(const CallOpParam &prm) throw(Error)

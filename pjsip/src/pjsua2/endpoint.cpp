@@ -1066,6 +1066,7 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     if (rem_sdp)
         prm.remSdp.fromPj(*rem_sdp);
     
+    call->sdp_pool = pool;
     call->onCallSdpCreated(prm);
     
     /* Check if application modifies the SDP */
@@ -1252,6 +1253,35 @@ void Endpoint::on_call_rx_offer(pjsua_call_id call_id,
     
     call->onCallRxOffer(prm);
     
+    *code = prm.statusCode;
+    *opt = prm.opt.toPj();
+}
+
+void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
+                                   const pjmedia_sdp_session *offer,
+                                   pjsip_rx_data *rdata,
+			     	   void *reserved,
+			     	   pj_bool_t *async,
+                                   pjsip_status_code *code,
+                                   pjsua_call_setting *opt)
+{
+    PJ_UNUSED_ARG(reserved);
+
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallRxReinviteParam prm;
+    prm.offer.fromPj(*offer);
+    prm.rdata.fromPj(*rdata);
+    prm.async = PJ2BOOL(*async);
+    prm.statusCode = *code;
+    prm.opt.fromPj(*opt);
+    
+    call->onCallRxReinvite(prm);
+    
+    *async = prm.async;
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
 }
@@ -1576,6 +1606,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;
     ua_cfg.cb.on_call_replaced          = &Endpoint::on_call_replaced;
     ua_cfg.cb.on_call_rx_offer          = &Endpoint::on_call_rx_offer;
+    ua_cfg.cb.on_call_rx_reinvite       = &Endpoint::on_call_rx_reinvite;
     ua_cfg.cb.on_call_tx_offer          = &Endpoint::on_call_tx_offer;
     ua_cfg.cb.on_call_redirected        = &Endpoint::on_call_redirected;
     ua_cfg.cb.on_call_media_transport_state =

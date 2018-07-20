@@ -192,6 +192,7 @@ struct pjsua_call
     unsigned		 rem_vid_cnt;  /**< No of active video in last remote
 					    offer.			    */
     
+    pj_bool_t		 rx_reinv_async;/**< on_call_rx_reinvite() async.   */
     pj_timer_entry	 reinv_timer;  /**< Reinvite retry timer.	    */
     pj_bool_t	 	 reinv_pending;/**< Pending until CONFIRMED state.  */
     pj_bool_t	 	 reinv_ice_sent;/**< Has reinvite for ICE upd sent? */

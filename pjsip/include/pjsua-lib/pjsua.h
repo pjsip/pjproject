@@ -1091,6 +1091,9 @@ typedef struct pjsua_callback
      * not defined, the default behavior is to accept the offer using
      * current call setting.
      *
+     * Note: this callback may not be called if \a on_call_rx_reinvite()
+     * is implemented.
+     *
      * @param call_id	The call index.
      * @param offer	The new offer received.
      * @param reserved	Reserved param, currently not used.
@@ -1105,6 +1108,47 @@ typedef struct pjsua_callback
 			     void *reserved,
 			     pjsip_status_code *code,
 			     pjsua_call_setting *opt);
+
+
+    /**
+     * Notify application when call has received a re-INVITE with offer
+     * from the peer. It allows more fine-grained control over the response
+     * to a re-INVITE. If application sets async to PJ_TRUE, it can send
+     * the reply manually using the function #pjsua_call_answer_with_sdp().
+     * Otherwise, by default the re-INVITE will be answered automatically
+     * after the callback returns.
+     *
+     * Currently, this callback is only called for re-INVITE with
+     * SDP, but app should be prepared to handle the case of re-INVITE
+     * without SDP.
+     *
+     * Remarks: If manually answering at a later timing, application may
+     * need to monitor on_call_tsx_state() callback to check whether
+     * the re-INVITE is already answered automatically with 487 due to
+     * being cancelled.
+     *
+     * Note: on_call_rx_offer() will still be called after this callback,
+     * but only if async is PJ_FALSE and code is 200. 
+     *
+     * @param call_id	The call index.
+     * @param offer	Remote offer.
+     * @param rdata     The received re-INVITE request.
+     * @param reserved	Reserved param, currently not used.
+     * @param async	On input, it is PJ_FALSE. Set to PJ_TRUE if
+     *			app wants to manually answer the re-INVITE.
+     * @param code	Status code to be returned for answering the
+     *			offer. On input, it contains status code 200.
+     *			Currently, valid values are only 200 and 488.
+     * @param opt	The current call setting, application can update
+     *			this setting for answering the offer.
+     */
+    void (*on_call_rx_reinvite)(pjsua_call_id call_id,
+    		                const pjmedia_sdp_session *offer,
+                                pjsip_rx_data *rdata,
+			     	void *reserved,
+			     	pj_bool_t *async,
+			     	pjsip_status_code *code,
+			     	pjsua_call_setting *opt);
 
 
     /**
@@ -5119,6 +5163,32 @@ PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 				        unsigned code,
 				        const pj_str_t *reason,
 				        const pjsua_msg_data *msg_data);
+
+
+/**
+ * Same as #pjsua_call_answer2() but this function will set the SDP
+ * answer first before sending the response.
+ *
+ * @param call_id	Incoming call identification.
+ * @param sdp		SDP answer. 
+ * @param opt		Optional call setting.
+ * @param code		Status code, (100-699).
+ * @param reason	Optional reason phrase. If NULL, default text
+ *			will be used.
+ * @param msg_data	Optional list of headers etc to be added to outgoing
+ *			response message. Note that this message data will
+ *			be persistent in all next answers/responses for this
+ *			INVITE request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjsua_call_answer_with_sdp(pjsua_call_id call_id,
+			   const pjmedia_sdp_session *sdp, 
+			   const pjsua_call_setting *opt,
+			   unsigned code,
+			   const pj_str_t *reason,
+			   const pjsua_msg_data *msg_data);
 
 
 /**

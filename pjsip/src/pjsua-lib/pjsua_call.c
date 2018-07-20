@@ -79,7 +79,14 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
  * Called when session received new offer.
  */
 static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
-				   const pjmedia_sdp_session *offer);
+				struct pjsip_inv_on_rx_offer_cb_param *param);
+
+/*
+ * Called when receiving re-INVITE.
+ */
+static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
+    		                  	     const pjmedia_sdp_session *offer,
+                                  	     pjsip_rx_data *rdata);
 
 /*
  * Called to generate new offer.
@@ -190,10 +197,13 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_state_changed = &pjsua_call_on_state_changed;
     inv_cb.on_new_session = &pjsua_call_on_forked;
     inv_cb.on_media_update = &pjsua_call_on_media_update;
-    inv_cb.on_rx_offer = &pjsua_call_on_rx_offer;
+    inv_cb.on_rx_offer2 = &pjsua_call_on_rx_offer;
     inv_cb.on_create_offer = &pjsua_call_on_create_offer;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
     inv_cb.on_redirected = &pjsua_call_on_redirected;
+    if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
+    	inv_cb.on_rx_reinvite = &pjsua_call_on_rx_reinvite;
+    }
 
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
@@ -2403,6 +2413,40 @@ on_return:
 
 
 /*
+ * Send response to incoming INVITE request.
+ */
+PJ_DEF(pj_status_t)
+pjsua_call_answer_with_sdp(pjsua_call_id call_id,
+			   const pjmedia_sdp_session *sdp, 
+			   const pjsua_call_setting *opt,
+			   unsigned code,
+			   const pj_str_t *reason,
+			   const pjsua_msg_data *msg_data)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    status = acquire_call("pjsua_call_answer_with_sdp()",
+    			  call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjsip_inv_set_sdp_answer(call->inv, sdp);
+
+    pjsip_dlg_dec_lock(dlg);
+    
+    if (status != PJ_SUCCESS)
+    	return status;
+    
+    return pjsua_call_answer2(call_id, opt, code, reason, msg_data);
+}
+
+
+/*
  * Hangup call by using method that is appropriate according to the
  * call state.
  */
@@ -4263,12 +4307,15 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
  * Called when session received new offer.
  */
 static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
-				   const pjmedia_sdp_session *offer)
+				struct pjsip_inv_on_rx_offer_cb_param *param)
 {
     pjsua_call *call;
     pjmedia_sdp_session *answer;
     unsigned i;
     pj_status_t status;
+    const pjmedia_sdp_session *offer = param->offer;
+    pjsua_call_setting opt;
+    pj_bool_t async = PJ_FALSE;
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
@@ -4284,12 +4331,53 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     }
 
     cleanup_call_setting_flag(&call->opt);
+    opt = call->opt;
 
-    if (pjsua_var.ua_cfg.cb.on_call_rx_offer) {
+    if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite &&
+        param->rdata->msg_info.msg->type == PJSIP_REQUEST_MSG &&
+        param->rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
+    {
+        pjsip_status_code code = PJSIP_SC_OK;
+
+    	/* If on_call_rx_reinvite() callback is implemented,
+    	 * call it first.
+    	 */
+	(*pjsua_var.ua_cfg.cb.on_call_rx_reinvite)(
+						call->index, offer,
+						(pjsip_rx_data *)param->rdata,
+						NULL, &async, &code, &opt);
+	if (async) {
+    	    pjsip_tx_data *response;
+
+    	    status = pjsip_inv_initial_answer(inv,
+    	    				      (pjsip_rx_data *)param->rdata,
+				      	      100, NULL, NULL, &response);
+    	    if (status != PJ_SUCCESS) {
+		PJ_LOG(3, (THIS_FILE, "Failed to create initial answer")); 
+    	    	goto on_return;
+    	    }
+
+	    status = pjsip_inv_send_msg(inv, response);
+    	    if (status != PJ_SUCCESS) {
+		PJ_LOG(3, (THIS_FILE, "Failed to send initial answer")); 
+    	    	goto on_return;
+    	    }
+
+	    PJ_LOG(4,(THIS_FILE, "App will manually answer the re-INVITE "
+	    			 "on call %d", call->index));
+	}
+	if (code != PJSIP_SC_OK) {
+	    PJ_LOG(4,(THIS_FILE, "Rejecting re-INVITE updated media offer "
+	    			 "on call %d", call->index));
+	    goto on_return;
+	}
+
+	call->opt = opt;
+    }
+
+    if (pjsua_var.ua_cfg.cb.on_call_rx_offer && !async) {
 	pjsip_status_code code = PJSIP_SC_OK;
-	pjsua_call_setting opt;
 
-	opt = call->opt;
 	(*pjsua_var.ua_cfg.cb.on_call_rx_offer)(call->index, offer, NULL,
 						&code, &opt);
 
@@ -4312,6 +4400,11 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
+	goto on_return;
+    }
+
+    if (async) {
+	call->rx_reinv_async = async;
 	goto on_return;
     }
 
@@ -4360,6 +4453,27 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
 on_return:
     pj_log_pop_indent();
+}
+
+
+/*
+ * Called when receiving re-INVITE.
+ */
+static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
+    		                  	     const pjmedia_sdp_session *offer,
+                                  	     pjsip_rx_data *rdata)
+{
+    pjsua_call *call;
+    pj_bool_t async;
+
+    PJ_UNUSED_ARG(offer);
+    PJ_UNUSED_ARG(rdata);
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    async = call->rx_reinv_async;
+    call->rx_reinv_async = PJ_FALSE;
+
+    return (async? PJ_SUCCESS: !PJ_SUCCESS);
 }
 
 
