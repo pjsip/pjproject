@@ -556,8 +556,21 @@ static pj_status_t grp_lock_dec_ref(pj_grp_lock_t *glock)
 	return PJ_EGONE;
     }
     pj_assert(cnt > 0);
-    pj_grp_lock_dump(glock);
     return PJ_SUCCESS;
+}
+
+static pj_status_t grp_lock_dec_ref_dump(pj_grp_lock_t *glock)
+{
+    pj_status_t status;
+
+    status = grp_lock_dec_ref(glock);
+    if (status == PJ_SUCCESS) {
+	pj_grp_lock_dump(glock);
+    } else if (status == PJ_EGONE) {
+	PJ_LOG(4,(THIS_FILE, "Group lock %p destroyed.", glock));
+    }
+
+    return status;
 }
 
 #if PJ_GRP_LOCK_DEBUG
@@ -600,6 +613,8 @@ PJ_DEF(pj_status_t) pj_grp_lock_dec_ref_dbg(pj_grp_lock_t *glock,
 {
     grp_lock_ref *ref;
 
+    PJ_UNUSED_ARG(line);
+
     pj_enter_critical_section();
     /* Find the same source file */
     ref = glock->ref_list.next;
@@ -618,7 +633,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_dec_ref_dbg(pj_grp_lock_t *glock,
 			      "matching ref for %s", file));
     }
 
-    return grp_lock_dec_ref(glock);
+    return grp_lock_dec_ref_dump(glock);
 }
 #else
 PJ_DEF(pj_status_t) pj_grp_lock_add_ref(pj_grp_lock_t *glock)
@@ -695,29 +710,30 @@ PJ_DEF(pj_status_t) pj_grp_lock_unchain_lock( pj_grp_lock_t *glock,
 PJ_DEF(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock)
 {
 #if PJ_GRP_LOCK_DEBUG
-    grp_lock_ref *ref = grp_lock->ref_list.next;
+    grp_lock_ref *ref;
     char info_buf[1000];
     pj_str_t info;
 
     info.ptr = info_buf;
     info.slen = 0;
 
-    pj_grp_lock_acquire(grp_lock);
+    grp_lock_add_ref(grp_lock);
     pj_enter_critical_section();
 
+    ref = grp_lock->ref_list.next;
     while (ref != &grp_lock->ref_list && info.slen < sizeof(info_buf)) {
 	char *start = info.ptr + info.slen;
 	int max_len = sizeof(info_buf) - info.slen;
 	int len;
 
-	len = pj_ansi_snprintf(start, max_len, "%s:%d ", ref->file, ref->line);
+	len = pj_ansi_snprintf(start, max_len, "\t%s:%d\n", ref->file, ref->line);
 	if (len < 1 || len >= max_len) {
 	    len = strlen(ref->file);
 	    if (len > max_len - 1)
 		len = max_len - 1;
 
 	    memcpy(start, ref->file, len);
-	    start[len++] = ' ';
+	    start[len++] = '\n';
 	}
 
 	info.slen += len;
@@ -733,11 +749,13 @@ PJ_DEF(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock)
     info.ptr[info.slen-1] = '\0';
 
     pj_leave_critical_section();
-    pj_grp_lock_release(grp_lock);
 
-    PJ_LOG(4,(THIS_FILE, "Group lock %p, ref_cnt=%d. Reference holders: %s",
-	       grp_lock, pj_grp_lock_get_ref(grp_lock), info.ptr));
+    PJ_LOG(4,(THIS_FILE, "Group lock %p, ref_cnt=%d. Reference holders:\n%s",
+	       grp_lock, pj_grp_lock_get_ref(grp_lock)-1, info.ptr));
+
+    grp_lock_dec_ref(grp_lock);
 #else
-    PJ_UNUSED_ARG(grp_lock);
+    PJ_LOG(4,(THIS_FILE, "Group lock %p, ref_cnt=%d.",
+	       grp_lock, pj_grp_lock_get_ref(grp_lock)));
 #endif
 }
