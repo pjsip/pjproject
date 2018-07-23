@@ -493,7 +493,7 @@ on_return:
     return status;
 }
 
-#if (TEST_LOAD_FROM_FILE==0)
+#if !(defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1) 
 static pj_status_t load_cert_to_buf(pj_pool_t *pool, const pj_str_t *file_name,
 				    pj_ssl_cert_buffer *buf)
 {
