@@ -495,6 +495,7 @@
     <ClCompile Include="..\src\pjmedia\resample_resample.c" />
     <ClCompile Include="..\src\pjmedia\resample_speex.c" />
     <ClCompile Include="..\src\pjmedia\rtcp.c" />
+    <ClCompile Include="..\src\pjmedia\rtcp_fb.c" />
     <ClCompile Include="..\src\pjmedia\rtcp_xr.c" />
     <ClCompile Include="..\src\pjmedia\rtp.c" />
     <ClCompile Include="..\src\pjmedia\sdp.c" />
@@ -599,6 +600,7 @@
     <ClInclude Include="..\include\pjmedia\port.h" />
     <ClInclude Include="..\include\pjmedia\resample.h" />
     <ClInclude Include="..\include\pjmedia\rtcp.h" />
+    <ClInclude Include="..\include\pjmedia\rtcp_fb.h" />
     <ClInclude Include="..\include\pjmedia\rtcp_xr.h" />
     <ClInclude Include="..\include\pjmedia\rtp.h" />
     <ClInclude Include="..\include\pjmedia\sdp.h" />

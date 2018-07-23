@@ -221,6 +221,9 @@
     <ClCompile Include="..\src\pjmedia\transport_srtp_sdes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia\rtcp_fb.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia\alaw_ulaw.h">
@@ -401,6 +404,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia\videodev.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia\rtcp_fb.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
