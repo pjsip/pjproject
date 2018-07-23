@@ -845,7 +845,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	    ++cand_cnt;
 
 	    TRACE_((THIS_FILE, "hostname IP is %s",
-		    pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 0)));
+		    pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 3)));
 	}
     }
 #else
@@ -857,7 +857,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	status = pj_getdefaultipinterface(af, addr);
 	if (status == PJ_SUCCESS) {
 	    TRACE_((THIS_FILE, "default IP is %s",
-		    pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
+		    pj_sockaddr_print(addr, strip, sizeof(strip), 3)));
 
 	    pj_sockaddr_set_port(addr, 0);
 	    for (i=0; i<cand_cnt; ++i) {
@@ -969,7 +969,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     selected_cand = -1;
     for (i=0; i<cand_cnt; ++i) {
 	TRACE_((THIS_FILE, "Checking candidate IP %s, weight=%d",
-		pj_sockaddr_print(&cand_addr[i], strip, sizeof(strip), 0),
+		pj_sockaddr_print(&cand_addr[i], strip, sizeof(strip), 3),
 		cand_weight[i]));
 
 	if (cand_weight[i] < MIN_WEIGHT) {
@@ -994,11 +994,11 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	    s6_addr->s6_addr[15] = 1;
 	}
 	TRACE_((THIS_FILE, "Loopback IP %s returned",
-		pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
+		pj_sockaddr_print(addr, strip, sizeof(strip), 3)));
     } else {
 	pj_sockaddr_copy_addr(addr, &cand_addr[selected_cand]);
 	TRACE_((THIS_FILE, "Candidate %s selected",
-		pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
+		pj_sockaddr_print(addr, strip, sizeof(strip), 3)));
     }
 
     return PJ_SUCCESS;
@@ -1186,6 +1186,40 @@ PJ_DEF(pj_status_t) pj_sock_setsockopt_sobuf( pj_sock_t sockfd,
     }
 
     return status;
+}
+
+
+PJ_DEF(char *) pj_addr_str_print( const pj_str_t *host_str, int port, 
+				  char *buf, int size, unsigned flag)
+{
+    enum {
+	WITH_PORT = 1
+    };
+    char *bquote, *equote;
+    int af = pj_AF_UNSPEC();    
+    pj_in6_addr dummy6;
+
+    /* Check if this is an IPv6 address */
+    if (pj_inet_pton(pj_AF_INET6(), host_str, &dummy6) == PJ_SUCCESS)
+	af = pj_AF_INET6();
+
+    if (af == pj_AF_INET6()) {
+	bquote = "[";
+	equote = "]";    
+    } else {
+	bquote = "";
+	equote = "";    
+    } 
+
+    if (flag & WITH_PORT) {
+	pj_ansi_snprintf(buf, size, "%s%.*s%s:%d",
+			 bquote, (int)host_str->slen, host_str->ptr, equote, 
+			 port);
+    } else {
+	pj_ansi_snprintf(buf, size, "%s%.*s%s",
+			 bquote, (int)host_str->slen, host_str->ptr, equote);
+    }
+    return buf;
 }
 
 

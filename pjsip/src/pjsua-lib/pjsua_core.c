@@ -387,14 +387,20 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
 /* Notification on incoming messages */
 static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
 {
-    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s %s:%d:\n"
+    char addr[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t input_str = pj_str(rdata->pkt_info.src_name);
+
+    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s %s:\n"
 			 "%.*s\n"
 			 "--end msg--",
 			 rdata->msg_info.len,
 			 pjsip_rx_data_get_info(rdata),
-			 rdata->tp_info.transport->type_name,
-			 rdata->pkt_info.src_name,
-			 rdata->pkt_info.src_port,
+			 rdata->tp_info.transport->type_name,	      
+			 pj_addr_str_print(&input_str, 
+					   rdata->pkt_info.src_port, 
+					   addr,
+					   sizeof(addr), 
+					   1),
 			 (int)rdata->msg_info.len,
 			 rdata->msg_info.msg_buf));
     
@@ -405,23 +411,28 @@ static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
 /* Notification on outgoing messages */
 static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
 {
+    char addr[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t input_str = pj_str(tdata->tp_info.dst_name);
     
     /* Important note:
      *	tp_info field is only valid after outgoing messages has passed
      *	transport layer. So don't try to access tp_info when the module
      *	has lower priority than transport layer.
      */
-
-    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:\n"
 			 "%.*s\n"
 			 "--end msg--",
 			 (tdata->buf.cur - tdata->buf.start),
 			 pjsip_tx_data_get_info(tdata),
 			 tdata->tp_info.transport->type_name,
-			 tdata->tp_info.dst_name,
-			 tdata->tp_info.dst_port,
+			 pj_addr_str_print(&input_str, 
+					   tdata->tp_info.dst_port, 
+					   addr,
+					   sizeof(addr), 
+					   1),
 			 (int)(tdata->buf.cur - tdata->buf.start),
 			 tdata->buf.start));
+
 
     /* Always return success, otherwise message will not get sent! */
     return PJ_SUCCESS;

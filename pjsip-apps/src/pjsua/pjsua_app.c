@@ -872,11 +872,8 @@ static void on_transport_state(pjsip_transport *tp,
 {
     char host_port[128];
 
-    pj_ansi_snprintf(host_port, sizeof(host_port), "[%.*s:%d]",
-		     (int)tp->remote_name.host.slen,
-		     tp->remote_name.host.ptr,
-		     tp->remote_name.port);
-
+    pj_addr_str_print(&tp->remote_name.host, 
+		      tp->remote_name.port, host_port, sizeof(host_port), 1);
     switch (state) {
     case PJSIP_TP_STATE_CONNECTED:
 	{

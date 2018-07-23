@@ -412,6 +412,7 @@ static void update_transport_info(struct tls_listener *listener)
 {
     enum { INFO_LEN = 100 };
     char local_addr[PJ_INET6_ADDRSTRLEN + 10];
+    char pub_addr[PJ_INET6_ADDRSTRLEN + 10];
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
     if (listener->factory.info == NULL) {
@@ -419,20 +420,21 @@ static void update_transport_info(struct tls_listener *listener)
 						      INFO_LEN);
     }
     pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
+    pj_addr_str_print(&listener->factory.addr_name.host, 
+		      listener->factory.addr_name.port, pub_addr, 
+		      sizeof(pub_addr), 1);
     pj_ansi_snprintf(
-	    listener->factory.info, INFO_LEN, "tls %s [published as %.*s:%d]",
-	    local_addr,
-	    (int)listener->factory.addr_name.host.slen,
-	    listener->factory.addr_name.host.ptr,
-	    listener->factory.addr_name.port);
+	    listener->factory.info, INFO_LEN, "tls %s [published as %s]",
+	    local_addr, pub_addr);
 
     if (listener->ssock) {
+	char addr[PJ_INET6_ADDRSTRLEN+10];
+
 	PJ_LOG(4, (listener->factory.obj_name,
-	       "SIP TLS listener is ready for incoming connections "
-	       "at %.*s:%d",
-	       (int)listener->factory.addr_name.host.slen,
-	       listener->factory.addr_name.host.ptr,
-	       listener->factory.addr_name.port));
+	       "SIP TLS listener is ready for incoming connections at %s",
+	       pj_addr_str_print(&listener->factory.addr_name.host,
+			         listener->factory.addr_name.port, addr,
+				 sizeof(addr), 1)));
     } else {
 	PJ_LOG(4, (listener->factory.obj_name, "SIP TLS is ready "
 	       "(client only)"));
@@ -1251,6 +1253,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     if (tls->has_pending_connect) {
 	pj_ssl_sock_info info;
+	char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+	char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
 
 	/* Update local address, just in case local address currently set is 
 	 * different now that asynchronous connect() is started.
@@ -1280,13 +1284,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	}
 
 	PJ_LOG(4,(tls->base.obj_name, 
-		  "TLS transport %.*s:%d is connecting to %.*s:%d...",
-		  (int)tls->base.local_name.host.slen,
-		  tls->base.local_name.host.ptr,
-		  tls->base.local_name.port,
-		  (int)tls->base.remote_name.host.slen,
-		  tls->base.remote_name.host.ptr,
-		  tls->base.remote_name.port));
+		  "TLS transport %s is connecting to %s...",
+		  pj_addr_str_print(&tls->base.local_name.host, 
+				    tls->base.local_name.port, 
+				    local_addr_buf, sizeof(local_addr_buf), 1),
+		  pj_addr_str_print(&tls->base.remote_name.host, 
+			        tls->base.remote_name.port, 
+				remote_addr_buf, sizeof(remote_addr_buf), 1)));
     }
 
     /* Done */
@@ -1313,6 +1317,7 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     pj_sockaddr tmp_src_addr;
     pj_bool_t is_shutdown;
     pj_status_t status;
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];        
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1324,11 +1329,11 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	return PJ_FALSE;
 
     PJ_LOG(4,(listener->factory.obj_name, 
-	      "TLS listener %.*s:%d: got incoming TLS connection "
+	      "TLS listener %s: got incoming TLS connection "
 	      "from %s, sock=%d",
-	      (int)listener->factory.addr_name.host.slen,
-	      listener->factory.addr_name.host.ptr,
-	      listener->factory.addr_name.port,
+	      pj_addr_str_print(&listener->factory.addr_name.host, 
+				listener->factory.addr_name.port, addr_buf, 
+				sizeof(addr_buf), 1),
 	      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
 	      new_ssock));
 
@@ -1695,6 +1700,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pj_sockaddr addr, *tp_addr;
     pjsip_tp_state_callback state_cb;
     pj_bool_t is_shutdown;
+    char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
@@ -1880,12 +1887,12 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     PJ_LOG(4,(tls->base.obj_name, 
 	      "TLS transport %.*s:%d is connected to %.*s:%d",
-	      (int)tls->base.local_name.host.slen,
-	      tls->base.local_name.host.ptr,
-	      tls->base.local_name.port,
-	      (int)tls->base.remote_name.host.slen,
-	      tls->base.remote_name.host.ptr,
-	      tls->base.remote_name.port));
+	      pj_addr_str_print(&tls->base.local_name.host, 
+				tls->base.local_name.port, local_addr_buf, 
+				sizeof(local_addr_buf), 1),
+	      pj_addr_str_print(&tls->base.remote_name.host, 
+				tls->base.remote_name.port, remote_addr_buf, 
+				sizeof(remote_addr_buf), 1)));
 
     /* Start pending read */
     status = tls_start_read(tls);
@@ -1922,6 +1929,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_time_val now;
     pj_ssize_t size;
     pj_status_t status;
+    char addr[PJ_INET6_ADDRSTRLEN+10];    
 
     PJ_UNUSED_ARG(th);
 
@@ -1941,10 +1949,11 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 	return;
     }
 
-    PJ_LOG(5,(tls->base.obj_name, "Sending %d byte(s) keep-alive to %.*s:%d", 
-	      (int)tls->ka_pkt.slen, (int)tls->base.remote_name.host.slen,
-	      tls->base.remote_name.host.ptr,
-	      tls->base.remote_name.port));
+    PJ_LOG(5,(tls->base.obj_name, "Sending %d byte(s) keep-alive to %s", 
+	      (int)tls->ka_pkt.slen, 
+	      pj_addr_str_print(&tls->base.remote_name.host, 
+				tls->base.remote_name.port, addr, 
+				sizeof(addr), 1)));
 
     /* Send the data */
     size = tls->ka_pkt.slen;

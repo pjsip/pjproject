@@ -600,6 +600,7 @@ static void udp_set_pub_name(struct udp_transport *tp,
 {
     enum { INFO_LEN = 80 };
     char local_addr[PJ_INET6_ADDRSTRLEN+10];
+    char pub_addr[PJ_INET6_ADDRSTRLEN+10];
 
     pj_assert(a_name->host.slen != 0);
     
@@ -619,12 +620,12 @@ static void udp_set_pub_name(struct udp_transport *tp,
     }
 
     pj_sockaddr_print(&tp->base.local_addr, local_addr, sizeof(local_addr), 3);
+    pj_addr_str_print(&tp->base.local_name.host, 
+		      tp->base.local_name.port, 
+		      pub_addr, sizeof(pub_addr), 1),
 
-    pj_ansi_snprintf( 
-	tp->base.info, INFO_LEN, "udp %s [published as %s:%d]",
-	local_addr,
-	tp->base.local_name.host.ptr,
-	tp->base.local_name.port);
+    pj_ansi_snprintf( tp->base.info, INFO_LEN, "udp %s [published as %s]",
+		      local_addr, pub_addr);
 }
 
 /* Set the socket handle of the transport */
@@ -1146,6 +1147,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
 {
     struct udp_transport *tp;
     pj_status_t status;
+    char addr[PJ_INET6_ADDRSTRLEN+10];
 
     PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
     /* Flag must be specified */
@@ -1241,11 +1243,11 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
     /* Everything has been set up */
     tp->is_paused = PJ_FALSE;
 
-    PJ_LOG(4,(tp->base.obj_name, 
-	      "SIP UDP transport restarted, published address is %.*s:%d",
-	      (int)tp->base.local_name.host.slen,
-	      tp->base.local_name.host.ptr,
-	      tp->base.local_name.port));
+    PJ_LOG(4, (tp->base.obj_name,
+	       "SIP UDP transport restarted, published address is %s",
+	       pj_addr_str_print(&tp->base.local_name.host,
+				 tp->base.local_name.port,
+				 addr, sizeof(addr), 1)));
 
     return PJ_SUCCESS;
 }

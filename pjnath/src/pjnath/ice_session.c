@@ -762,7 +762,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	      ice->tp_data[i].transport_id == transport_id);
 
     pj_ansi_strcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
-                                                   sizeof(address), 0));
+                                                   sizeof(address), 2));
     LOG4((ice->obj_name, 
 	 "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
 	 "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
@@ -773,7 +773,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 lcand->foundation.ptr,
 	 ice->tmp.txt, 
 	  pj_sockaddr_get_port(&lcand->addr),
-	  pj_sockaddr_print(&lcand->base_addr, address, sizeof(address), 0),
+	  pj_sockaddr_print(&lcand->base_addr, address, sizeof(address), 2),
 	  pj_sockaddr_get_port(&lcand->base_addr),
 	 lcand->prio, lcand->prio));
 
@@ -921,10 +921,10 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 			   (int)GET_CHECK_ID(clist, check),
 			   check->lcand->comp_id,
 			   pj_sockaddr_print(&lcand->addr, laddr,
-			                     sizeof(laddr), 0),
+			                     sizeof(laddr), 2),
 			   pj_sockaddr_get_port(&lcand->addr),
 			   pj_sockaddr_print(&rcand->addr, raddr,
-			                     sizeof(raddr), 0),
+			                     sizeof(raddr), 2),
 			   pj_sockaddr_get_port(&rcand->addr));
 
     if (len < 0)
@@ -1073,7 +1073,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		LOG4((ice->obj_name, 
 		      "Base candidate %s:%d not found for srflx candidate %d",
 		      pj_sockaddr_print(&srflx->base_addr, baddr,
-		                        sizeof(baddr), 0),
+		                        sizeof(baddr), 2),
 		      pj_sockaddr_get_port(&srflx->base_addr),
 		      GET_LCAND_ID(clist->checks[i].lcand)));
 		return PJNATH_EICENOHOSTCAND;
@@ -2756,7 +2756,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
 	LOG4((ice->obj_name, 
 	      "Added new remote candidate from the request: %s:%d",
-	      pj_sockaddr_print(&rcand->addr, raddr, sizeof(raddr), 0),
+	      pj_sockaddr_print(&rcand->addr, raddr, sizeof(raddr), 2),
 	      pj_sockaddr_get_port(&rcand->addr)));
 
     } else {

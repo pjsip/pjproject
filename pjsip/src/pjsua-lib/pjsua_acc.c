@@ -533,9 +533,9 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
 {
     pjsua_acc_config cfg;
     pjsua_transport_data *t = &pjsua_var.tpdata[tid];
-    const char *beginquote, *endquote;
     char transport_param[32];
     char uri[PJSIP_MAX_URL_SIZE];
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];
     pjsua_acc_id acc_id;
     pj_status_t status;
 
@@ -551,14 +551,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     /* Lower the priority of local account */
     --cfg.priority;
 
-    /* Enclose IPv6 address in square brackets */
-    if (get_ip_addr_ver(&t->local_name.host) == 6) {
-	beginquote = "[";
-	endquote = "]";
-    } else {
-	beginquote = endquote = "";
-    }
-
     /* Don't add transport parameter if it's UDP */
     if (t->type!=PJSIP_TRANSPORT_UDP && t->type!=PJSIP_TRANSPORT_UDP6) {
 	pj_ansi_snprintf(transport_param, sizeof(transport_param),
@@ -569,13 +561,10 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     }
 
     /* Build URI for the account */
-    pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,
-		     "<sip:%s%.*s%s:%d%s>", 
-		     beginquote,
-		     (int)t->local_name.host.slen,
-		     t->local_name.host.ptr,
-		     endquote,
-		     t->local_name.port,
+    pj_ansi_snprintf(uri, PJSIP_MAX_URL_SIZE,		     
+		     "<sip:%s%s>", 
+		     pj_addr_str_print(&t->local_name.host, t->local_name.port, 
+				       addr_buf, sizeof(addr_buf), 1),
 		     transport_param);
 
     cfg.id = pj_str(uri);
@@ -1610,6 +1599,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pj_bool_t matched;
     pj_str_t srv_ip;
     pjsip_contact_hdr *contact_hdr;
+    char host_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    char via_addr_buf[PJ_INET6_ADDRSTRLEN+10];
     const pj_str_t STR_CONTACT = { "Contact", 7 };
 
     tp = param->rdata->tp_info.transport;
@@ -1776,18 +1767,14 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	pj_pool_release(pool);
 	return PJ_FALSE;
     }
-
+    pj_addr_str_print(&uri->host, uri->port, host_addr_buf, 
+		      sizeof(host_addr_buf), 1);
+    pj_addr_str_print(via_addr, rport, via_addr_buf, 
+		      sizeof(via_addr_buf), 1);
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
-			 "(%.*s:%d --> %.*s:%d). Updating registration "
+			 "(%s --> %s). Updating registration "
 			 "(using method %d)",
-			 acc->index,
-			 (int)uri->host.slen,
-			 uri->host.ptr,
-			 uri->port,
-			 (int)via_addr->slen,
-			 via_addr->ptr,
-			 rport,
-			 contact_rewrite_method));
+			 acc->index, host_addr_buf, via_addr_buf));
 
     pj_assert(contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER ||
 	      contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG ||
@@ -1816,14 +1803,14 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	secure = pjsip_transport_get_flag_from_type(tp->key.type) &
 		 PJSIP_TRANSPORT_SECURE;
-
-	/* Enclose IPv6 address in square brackets */
-	if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
-	    beginquote = "[";
-	    endquote = "]";
-	} else {
-	    beginquote = endquote = "";
-	}
+  	
+        /* Enclose IPv6 address in square brackets */
+        if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
+            beginquote = "[";
+            endquote = "]";
+        } else {
+            beginquote = endquote = "";
+        }
 
 	/* Don't add transport parameter if it's UDP */
 	if (tp->key.type != PJSIP_TRANSPORT_UDP &&
@@ -2133,13 +2120,15 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
 					    &delay);
 	if (status == PJ_SUCCESS) {
+	    char addr[PJ_INET6_ADDRSTRLEN+10];
+	    pj_str_t input_str = pj_str(param->rdata->pkt_info.src_name);
 	    acc->ka_timer.id = PJ_TRUE;
+
+	    pj_addr_str_print(&input_str, param->rdata->pkt_info.src_port, 
+			      addr, sizeof(addr), 1);
 	    PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
 				 "destination:%s:%d, interval:%ds",
-				 acc->index,
-				 param->rdata->pkt_info.src_name,
-				 param->rdata->pkt_info.src_port,
-				 acc->cfg.ka_interval));
+				 acc->index, addr, acc->cfg.ka_interval));
 	} else {
 	    acc->ka_timer.id = PJ_FALSE;
 	    pjsip_transport_dec_ref(acc->ka_transport);

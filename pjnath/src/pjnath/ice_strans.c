@@ -1674,7 +1674,7 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     TRACE_PKT((comp->ice_st->obj_name,
 	       "Component %d TX packet to %s:%d with transport %d",
 	       comp_id,
-	       pj_sockaddr_print(dst_addr, daddr, sizeof(addr), 0),
+	       pj_sockaddr_print(dst_addr, daddr, sizeof(addr), 2),
 	       pj_sockaddr_get_port(dst_addr),
 	       tp_typ));
 

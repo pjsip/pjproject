@@ -328,6 +328,7 @@ static void update_transport_info(struct tcp_listener *listener)
 {    
     enum { INFO_LEN = 100 };
     char local_addr[PJ_INET6_ADDRSTRLEN + 10];
+    char pub_addr[PJ_INET6_ADDRSTRLEN + 10];
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
     /* Set transport info. */
@@ -336,19 +337,21 @@ static void update_transport_info(struct tcp_listener *listener)
 						      INFO_LEN);
     }
     pj_sockaddr_print(listener_addr, local_addr, sizeof(local_addr), 3);
+    pj_addr_str_print(&listener->factory.addr_name.host, 
+		      listener->factory.addr_name.port, pub_addr, 
+		      sizeof(pub_addr), 1);
     pj_ansi_snprintf(
-	    listener->factory.info, INFO_LEN, "tcp %s [published as %.*s:%d]",
-	    local_addr,
-	    (int)listener->factory.addr_name.host.slen,
-	    listener->factory.addr_name.host.ptr,
-	    listener->factory.addr_name.port);
+	    listener->factory.info, INFO_LEN, "tcp %s [published as %s]",
+	    local_addr, pub_addr);
 
-    if (listener->asock) {
+    if (listener->asock) {	
+	char addr[PJ_INET6_ADDRSTRLEN+10];
+
 	PJ_LOG(4, (listener->factory.obj_name,
-	       "SIP TCP listener ready for incoming connections at %.*s:%d",
-	       (int)listener->factory.addr_name.host.slen,
-	       listener->factory.addr_name.host.ptr,
-	       listener->factory.addr_name.port));
+		   "SIP TCP listener ready for incoming connections at %s",
+		   pj_addr_str_print(&listener->factory.addr_name.host,
+				     listener->factory.addr_name.port, addr,
+				     sizeof(addr), 1)));
     } else {
 	PJ_LOG(4, (listener->factory.obj_name, "SIP TCP is ready "
 	       "(client only)"));
@@ -1029,6 +1032,9 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     }
 
     if (tcp->has_pending_connect) {
+	char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+	char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+
 	/* Update (again) local address, just in case local address currently
 	 * set is different now that asynchronous connect() is started.
 	 */
@@ -1050,13 +1056,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	}
 	
 	PJ_LOG(4,(tcp->base.obj_name, 
-		  "TCP transport %.*s:%d is connecting to %.*s:%d...",
-		  (int)tcp->base.local_name.host.slen,
-		  tcp->base.local_name.host.ptr,
-		  tcp->base.local_name.port,
-		  (int)tcp->base.remote_name.host.slen,
-		  tcp->base.remote_name.host.ptr,
-		  tcp->base.remote_name.port));
+		  "TCP transport %s is connecting to %s...",
+		  pj_addr_str_print(&tcp->base.local_name.host, 
+				    tcp->base.local_name.port, 
+				    local_addr_buf, sizeof(local_addr_buf), 1),
+		  pj_addr_str_print(&tcp->base.remote_name.host, 
+			        tcp->base.remote_name.port, 
+				remote_addr_buf, sizeof(remote_addr_buf), 1)));
     }
 
     /* Done */
@@ -1082,6 +1088,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     pj_sockaddr tmp_src_addr, tmp_dst_addr;
     int addr_len;
     pj_status_t status;
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];    
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1093,11 +1100,11 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 	return PJ_FALSE;
 
     PJ_LOG(4,(listener->factory.obj_name, 
-	      "TCP listener %.*s:%d: got incoming TCP connection "
+	      "TCP listener %s: got incoming TCP connection "
 	      "from %s, sock=%d",
-	      (int)listener->factory.addr_name.host.slen,
-	      listener->factory.addr_name.host.ptr,
-	      listener->factory.addr_name.port,
+	      pj_addr_str_print(&listener->factory.addr_name.host, 
+				listener->factory.addr_name.port, addr_buf, 
+				sizeof(addr_buf), 1),
 	      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
 	      sock));
 
@@ -1422,6 +1429,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     pj_sockaddr addr;
     int addrlen;
     pjsip_tp_state_callback state_cb;
+    char local_addr_buf[PJ_INET6_ADDRSTRLEN+10];
+    char remote_addr_buf[PJ_INET6_ADDRSTRLEN+10];
 
     tcp = (struct tcp_transport*) pj_activesock_get_user_data(asock);
 
@@ -1462,13 +1471,13 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     }
 
     PJ_LOG(4,(tcp->base.obj_name, 
-	      "TCP transport %.*s:%d is connected to %.*s:%d",
-	      (int)tcp->base.local_name.host.slen,
-	      tcp->base.local_name.host.ptr,
-	      tcp->base.local_name.port,
-	      (int)tcp->base.remote_name.host.slen,
-	      tcp->base.remote_name.host.ptr,
-	      tcp->base.remote_name.port));
+	      "TCP transport %s is connected to %s",
+	      pj_addr_str_print(&tcp->base.local_name.host, 
+				tcp->base.local_name.port, local_addr_buf, 
+				sizeof(local_addr_buf), 1),
+	      pj_addr_str_print(&tcp->base.remote_name.host, 
+				tcp->base.remote_name.port, remote_addr_buf, 
+				sizeof(remote_addr_buf), 1)));
 
 
     /* Update (again) local address, just in case local address currently
@@ -1528,6 +1537,7 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_time_val now;
     pj_ssize_t size;
     pj_status_t status;
+    char addr[PJ_INET6_ADDRSTRLEN+10];        
 
     PJ_UNUSED_ARG(th);
 
@@ -1547,10 +1557,11 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 	return;
     }
 
-    PJ_LOG(5,(tcp->base.obj_name, "Sending %d byte(s) keep-alive to %.*s:%d", 
-	      (int)tcp->ka_pkt.slen, (int)tcp->base.remote_name.host.slen,
-	      tcp->base.remote_name.host.ptr,
-	      tcp->base.remote_name.port));
+    PJ_LOG(5,(tcp->base.obj_name, "Sending %d byte(s) keep-alive to %s", 
+	      (int)tcp->ka_pkt.slen, 
+	      pj_addr_str_print(&tcp->base.remote_name.host, 
+				tcp->base.remote_name.port, addr, 
+				sizeof(addr), 1)));
 
     /* Send the data */
     size = tcp->ka_pkt.slen;
