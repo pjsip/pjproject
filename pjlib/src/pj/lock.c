@@ -559,6 +559,7 @@ static pj_status_t grp_lock_dec_ref(pj_grp_lock_t *glock)
     return PJ_SUCCESS;
 }
 
+#if PJ_GRP_LOCK_DEBUG
 static pj_status_t grp_lock_dec_ref_dump(pj_grp_lock_t *glock)
 {
     pj_status_t status;
@@ -573,7 +574,6 @@ static pj_status_t grp_lock_dec_ref_dump(pj_grp_lock_t *glock)
     return status;
 }
 
-#if PJ_GRP_LOCK_DEBUG
 PJ_DEF(pj_status_t) pj_grp_lock_add_ref_dbg(pj_grp_lock_t *glock,
                                             const char *file,
                                             int line)
