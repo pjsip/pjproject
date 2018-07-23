@@ -3508,7 +3508,8 @@ static pj_status_t handle_ip_change_on_acc()
 		shutdown_transport = acc->cfg.ip_change_cfg.shutdown_tp;
 		shut_acc_ids[shut_acc_cnt++] = acc->index;
 	    }	
-	} else if (acc->reg_last_code != PJSIP_SC_BAD_GATEWAY &&
+	} else if (acc->cfg.reg_uri.slen &&
+		   acc->reg_last_code != PJSIP_SC_BAD_GATEWAY &&
 		   acc->reg_last_code != PJSIP_SC_REQUEST_TIMEOUT &&
 		   acc->reg_last_code != PJSIP_SC_INTERNAL_SERVER_ERROR &&
 		   acc->reg_last_code != PJSIP_SC_BAD_GATEWAY &&
@@ -3587,7 +3588,7 @@ static pj_status_t handle_ip_change_on_acc()
 	    }
 	} else {
 	    acc_done[i] = PJ_TRUE;
-	    if (acc->cfg.allow_contact_rewrite) {
+	    if (acc->cfg.allow_contact_rewrite && acc->cfg.reg_uri.slen) {
 		status = pjsua_acc_update_contact_on_ip_change(acc);
 	    } else {
 		status = pjsua_acc_handle_call_on_ip_change(acc);
