@@ -1147,7 +1147,26 @@ void Endpoint::on_dtmf_digit(pjsua_call_id call_id, int digit)
     job->call_id = call_id;
     char buf[10];
     pj_ansi_sprintf(buf, "%c", digit);
-    job->prm.digit = (string)buf;
+    job->prm.digit = string(buf);
+    
+    Endpoint::instance().utilAddPendingJob(job);
+}
+
+void Endpoint::on_dtmf_digit2(pjsua_call_id call_id, 
+			      const pjsua_dtmf_info *info)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    PendingOnDtmfDigitCallback *job = new PendingOnDtmfDigitCallback;
+    job->call_id = call_id;
+    char buf[10];
+    pj_ansi_sprintf(buf, "%c", info->digit);
+    job->prm.digit = string(buf);
+    job->prm.method = info->method;
+    job->prm.duration = info->duration;
     
     Endpoint::instance().utilAddPendingJob(job);
 }
@@ -1600,7 +1619,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
-    ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
+    //ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
+    ua_cfg.cb.on_dtmf_digit2            = &Endpoint::on_dtmf_digit2;
     ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
     ua_cfg.cb.on_call_transfer_status   = &Endpoint::on_call_transfer_status;
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;

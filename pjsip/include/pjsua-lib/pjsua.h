@@ -799,6 +799,52 @@ typedef union pjsua_ip_change_op_info {
 
 
 /**
+ * This enumeration specifies DTMF method.
+ */
+typedef enum pjsua_dtmf_method {
+    /**
+     * Send DTMF using RFC2833.
+     */
+    PJSUA_DTMF_METHOD_RFC2833,
+
+    /**
+     * Send DTMF using SIP INFO.
+     * Notes:
+     * - This method is not finalized in any standard/rfc, however it is 
+     *   commonly used.
+     * - Warning: in case the remote doesn't support SIP INFO, response might 
+     *   not be sent and the sender will deal this as timeout and disconnect
+     *   the call.
+     */
+    PJSUA_DTMF_METHOD_SIP_INFO
+
+} pjsua_dtmf_method;
+
+
+/**
+ * This will contain the information of the callback \a on_dtmf_digit2.
+ */
+typedef struct pjsua_dtmf_info {
+    /**
+     * The method used to send DTMF.
+     */
+    pjsua_dtmf_method method;
+
+    /**
+     * DTMF ASCII digit
+     */    
+    unsigned digit;
+
+    /**
+     * DTMF signal duration which might be included when sending DTMF using 
+     * SIP INFO.
+     */
+    unsigned duration;
+
+} pjsua_dtmf_info;
+
+
+/**
  * Call settings.
  */
 typedef struct pjsua_call_setting
@@ -960,12 +1006,23 @@ typedef struct pjsua_callback
 				unsigned stream_idx);
 
     /**
-     * Notify application upon incoming DTMF digits.
+     * Notify application upon incoming DTMF digits using RFC 2833 payload 
+     * formats. This callback will not be called if app implements \a
+     * on_dtmf_digit2().
      *
      * @param call_id	The call index.
      * @param digit	DTMF ASCII digit.
      */
     void (*on_dtmf_digit)(pjsua_call_id call_id, int digit);
+
+    /**
+     * Notify application upon incoming DTMF digits using the method specified 
+     * in \a pjsua_dtmf_method.
+     *
+     * @param call_id	The call index.
+     * @param info	The DTMF info.
+     */
+    void (*on_dtmf_digit2)(pjsua_call_id call_id, const pjsua_dtmf_info *info);
 
     /**
      * Notify application on call being transferred (i.e. REFER is received).
@@ -4925,6 +4982,45 @@ typedef struct pjsua_call_vid_strm_op_param
 
 
 /**
+ * Specify the default signal duration when sending DTMF using SIP INFO.
+ *
+ * Default is 160
+ */
+#ifndef PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT
+#   define PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT    160
+#endif
+
+
+/**
+ * Parameters for sending DTMF. Application should use 
+ * #pjsua_call_send_dtmf_param_default() to initialize this structure
+ * with its default values.
+ */
+typedef struct pjsua_call_send_dtmf_param
+{
+    /**
+     * The method used to send DTMF.
+     *
+     * Default: PJSUA_DTMF_METHOD_RFC2833
+     */
+    pjsua_dtmf_method method;
+
+    /**
+     * The signal duration used for the DTMF.
+     *
+     * Default: PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT
+     */
+    unsigned duration;
+
+    /**
+     * The DTMF digits to be sent.
+     */
+    pj_str_t digits;
+
+} pjsua_call_send_dtmf_param;
+
+
+/**
  * Initialize call settings.
  *
  * @param opt		The call setting to be initialized.
@@ -4939,6 +5035,15 @@ PJ_DECL(void) pjsua_call_setting_default(pjsua_call_setting *opt);
  */
 PJ_DECL(void)
 pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param);
+
+
+/**
+ * Initialize send DTMF param with default values.
+ *
+ * @param param		The send DTMF param to be initialized.
+ */
+PJ_DECL(void) 
+pjsua_call_send_dtmf_param_default(pjsua_call_send_dtmf_param *param);
 
 
 /**
@@ -5407,7 +5512,10 @@ PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id,
 					      const pjsua_msg_data *msg_data);
 
 /**
- * Send DTMF digits to remote using RFC 2833 payload formats.
+ * Send DTMF digits to remote using RFC 2833 payload formats. Use 
+ * #pjsua_call_send_dtmf() to send DTMF using SIP INFO or other method in 
+ * \a pjsua_dtmf_method. App can use \a on_dtmf_digit() or \a on_dtmf_digit2() 
+ * callback to monitor incoming DTMF.
  *
  * @param call_id	Call identification.
  * @param digits	DTMF string digits to be sent as described on RFC 2833 
@@ -5419,6 +5527,23 @@ PJ_DECL(pj_status_t) pjsua_call_xfer_replaces(pjsua_call_id call_id,
  */
 PJ_DECL(pj_status_t) pjsua_call_dial_dtmf(pjsua_call_id call_id, 
 					  const pj_str_t *digits);
+
+/**
+ * Send DTMF digits to remote. Use this method to send DTMF using the method in
+ * \a pjsua_dtmf_method. This method will call #pjsua_call_dial_dtmf() when
+ * sending DTMF using \a PJSUA_DTMF_METHOD_RFC2833. Note that 
+ * \a on_dtmf_digit() callback can only monitor incoming DTMF using RFC 2833. 
+ * App can use \a on_dtmf_digit2() to monitor incoming DTMF using the method in 
+ * \a pjsua_dtmf_method. Note that \a on_dtmf_digit() will not be called once
+ * \a on_dtmf_digit2() is implemented.
+ *
+ * @param call_id	Call identification.
+ * @param param		The send DTMF parameter.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id, 
+			              const pjsua_call_send_dtmf_param *param);
 
 /**
  * Send instant messaging inside INVITE session.

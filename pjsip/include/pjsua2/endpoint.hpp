@@ -1686,6 +1686,8 @@ private:
                                     pjmedia_stream *strm,
                                     unsigned stream_idx);
     static void on_dtmf_digit(pjsua_call_id call_id, int digit);
+    static void on_dtmf_digit2(pjsua_call_id call_id, 
+			       const pjsua_dtmf_info *info);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);

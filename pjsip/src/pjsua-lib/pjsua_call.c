@@ -161,6 +161,17 @@ static void reset_call(pjsua_call_id id)
 			(void*)(pj_size_t)id, &reinv_timer_cb);
 }
 
+/* Get DTMF method type name */
+static const char* get_dtmf_method_name(int type)
+{
+    switch (type) {
+	case PJSUA_DTMF_METHOD_RFC2833:   
+	    return "RFC2833";
+	case PJSUA_DTMF_METHOD_SIP_INFO:  
+	    return "SIP INFO";
+    }
+    return "(Unknown)";
+}
 
 /*
  * Init call subsystem.
@@ -606,6 +617,16 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     opt->req_keyframe_method = PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
 			     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
+}
+
+/* 
+ * Initialize pjsua_call_send_dtmf_param default values. 
+ */
+PJ_DEF(void) pjsua_call_send_dtmf_param_default(
+					     pjsua_call_send_dtmf_param *param)
+{
+    pj_bzero(param, sizeof(*param));
+    param->duration = PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT;
 }
 
 static pj_status_t apply_call_setting(pjsua_call *call,
@@ -3132,6 +3153,46 @@ on_error:
     return status;
 }
 
+/*
+ * Send DTMF digits to remote.
+ */
+PJ_DEF(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
+ 				       const pjsua_call_send_dtmf_param *param)
+{
+    pj_status_t status = PJ_EINVAL;    
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
+		     param, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Call %d sending DTMF %.*s using %s method",
+    		       call_id, (int)param->digits.slen, param->digits.ptr,
+		       get_dtmf_method_name(param->method)));
+
+    if (param->method == PJSUA_DTMF_METHOD_RFC2833) {
+	status = pjsua_call_dial_dtmf(call_id, &param->digits);
+    } else if (param->method == PJSUA_DTMF_METHOD_SIP_INFO) {
+	const pj_str_t SIP_INFO = pj_str("INFO");
+	int i;
+
+	for (i = 0; i < param->digits.slen; ++i) {
+	    char body[80];
+	    pjsua_msg_data msg_data_;
+
+	    pjsua_msg_data_init(&msg_data_);
+	    msg_data_.content_type = pj_str("application/dtmf-relay");
+
+	    pj_ansi_snprintf(body, sizeof(body),
+			     "Signal=%c\r\n"
+			     "Duration=%d",
+			     param->digits.ptr[i], param->duration);
+	    msg_data_.msg_body = pj_str(body);
+
+	    status = pjsua_call_send_request(call_id, &SIP_INFO, &msg_data_);
+	}
+    }
+
+    return status;
+}
 
 /**
  * Send instant messaging inside INVITE session.
@@ -5203,6 +5264,11 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	 */
 	const pj_str_t STR_APPLICATION	     = { "application", 11};
 	const pj_str_t STR_MEDIA_CONTROL_XML = { "media_control+xml", 17 };
+	/*
+	 * Incoming INFO request for DTMF.
+	 */	
+	const pj_str_t STR_DTMF_RELAY  = { "dtmf-relay", 10 };
+
 	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 	pjsip_msg_body *body = rdata->msg_info.msg->body;
 
@@ -5227,6 +5293,105 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 						     400, NULL, &tdata);
 		if (status == PJ_SUCCESS)
 		    status = pjsip_tsx_send_msg(tsx, tdata);
+	    }
+	} else if (body && body->len &&
+	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+	    pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
+	{
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+	    pj_bool_t is_handled = PJ_FALSE;
+
+	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2) {
+		pjsua_dtmf_info info;
+		pj_str_t delim, token, input;
+		pj_ssize_t found_idx;
+
+		delim = pj_str("\r\n");
+		input = pj_str(rdata->msg_info.msg->body->data);
+		found_idx = pj_strtok(&input, &delim, &token, 0);
+		if (found_idx != input.slen) {
+		    /* Get signal/digit */
+		    const pj_str_t STR_SIGNAL = { "Signal=", 7 };
+		    const pj_str_t STR_DURATION = { "Duration=", 9 };
+		    char *val;
+
+		    val = pj_strstr(&input, &STR_SIGNAL);
+		    if (val) {
+			info.digit = *(val+STR_SIGNAL.slen);
+			is_handled = PJ_TRUE;
+
+			/* Get duration */
+			input.ptr += token.slen + 2;
+			input.slen -= (token.slen + 2);
+
+			val = pj_strstr(&input, &STR_DURATION);
+			if (val) {
+			    pj_str_t val_str;
+
+			    val_str.ptr = val + STR_DURATION.slen;
+			    val_str.slen = input.slen - STR_DURATION.slen;
+			    info.duration = pj_strtoul(&val_str);
+			}
+		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+			(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index, 
+							      &info);
+
+			status = pjsip_endpt_create_response(tsx->endpt, rdata,
+							    200, NULL, &tdata);
+			if (status == PJ_SUCCESS)
+			    status = pjsip_tsx_send_msg(tsx, tdata);
+		    }
+		}
+	    } 
+	    
+	    if (!is_handled) {
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     400, NULL, &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_tsx_send_msg(tsx, tdata);
+	    }
+	}
+    } else if (tsx->role == PJSIP_ROLE_UAC && 
+	       pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0 &&
+	       (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
+	       (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	        e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)))
+    {
+	const pj_str_t STR_APPLICATION = { "application", 11};
+	const pj_str_t STR_DTMF_RELAY  = { "dtmf-relay", 10 };
+	pjsip_msg_body *body = NULL;
+	pj_bool_t dtmf_info = PJ_FALSE;
+	
+	if (e->body.tsx_state.type == PJSIP_EVENT_TX_MSG)
+	    body = e->body.tsx_state.src.tdata->msg->body;
+	else
+	    body = e->body.tsx_state.tsx->last_tx->msg->body;
+
+	/* Check DTMF content in the INFO message */
+	if (body && body->len &&
+	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+	    pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
+	{
+	    dtmf_info = PJ_TRUE;
+	}
+
+	if (dtmf_info && (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
+			 (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	           e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED))) 
+	{
+	    /* Status of outgoing INFO request */
+	    if (tsx->status_code >= 200 && tsx->status_code < 300) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Call %d: DTMF sent successfully with INFO",
+			  call->index));
+	    } else if (tsx->status_code >= 300) {
+		PJ_LOG(4,(THIS_FILE, 
+			  "Call %d: Failed to send DTMF with INFO: %d/%.*s",
+			  call->index,
+		          tsx->status_code,
+			  (int)tsx->status_text.slen,
+			  tsx->status_text.ptr));
 	    }
 	}
     }

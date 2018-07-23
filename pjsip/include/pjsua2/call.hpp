@@ -742,9 +742,20 @@ struct OnStreamDestroyedParam
 struct OnDtmfDigitParam
 {
     /**
+     * DTMF sending method.
+     */
+    pjsua_dtmf_method	method;
+
+    /**
      * DTMF ASCII digit.
      */
-    string      digit;
+    string		digit;
+
+    /**
+     * DTMF signal duration which might be included when sending DTMF using 
+     * SIP INFO.
+     */
+    unsigned		duration;
 };
 
 /**
@@ -1156,6 +1167,47 @@ public:
 };
 
 /**
+ * This structure contains parameters for Call::sendDtmf()
+ */
+struct CallSendDtmfParam
+{
+    /**
+     * The method used to send DTMF.
+     * 
+     * Default: PJSUA_DTMF_METHOD_RFC2833
+     */
+    pjsua_dtmf_method method;    
+
+    /**
+     * The signal duration used for the DTMF.
+     *
+     * Default: PJSUA_CALL_SEND_DTMF_DURATION_DEFAULT
+     */
+    unsigned duration;
+
+    /**
+     * The DTMF digits to be sent.
+     */
+    string digits;
+
+public:
+    /**
+     * Default constructor initialize with default value.     
+     */
+    CallSendDtmfParam();
+
+    /**
+     * Convert to pjsip.
+     */
+    pjsua_call_send_dtmf_param toPj() const;
+
+    /**
+     * Convert from pjsip.
+     */
+    void fromPj(const pjsua_call_send_dtmf_param &param);
+};
+
+/**
  * Call.
  */
 class Call
@@ -1436,6 +1488,13 @@ public:
      * @param digits        DTMF string digits to be sent.
      */
     void dialDtmf(const string &digits) throw(Error);
+
+    /**
+     * Send DTMF digits to remote.
+     *
+     * @param param	The send DTMF parameter.
+     */
+    void sendDtmf(const CallSendDtmfParam &param) throw (Error);
     
     /**
      * Send instant messaging inside INVITE session.

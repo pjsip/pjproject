@@ -182,6 +182,30 @@ CallVidSetStreamParam::CallVidSetStreamParam()
 #endif
 }
 
+CallSendDtmfParam::CallSendDtmfParam()
+{
+    pjsua_call_send_dtmf_param param;
+    pjsua_call_send_dtmf_param_default(&param);
+    fromPj(param);
+}
+
+pjsua_call_send_dtmf_param CallSendDtmfParam::toPj() const
+{
+    pjsua_call_send_dtmf_param param;
+    pjsua_call_send_dtmf_param_default(&param);
+    param.method    = this->method;
+    param.duration  = this->duration;
+    param.digits    = str2Pj(this->digits);
+    return param;
+}
+
+void CallSendDtmfParam::fromPj(const pjsua_call_send_dtmf_param &param)
+{
+    this->method    = param.method;
+    this->duration  = param.duration;
+    this->digits    = pj2Str(param.digits);
+}
+
 CallSetting::CallSetting(pj_bool_t useDefaultValues)
 {
     if (useDefaultValues) {
@@ -581,6 +605,14 @@ void Call::dialDtmf(const string &digits) throw(Error)
     
     PJSUA2_CHECK_EXPR(pjsua_call_dial_dtmf(id, &pj_digits));
 }
+
+void Call::sendDtmf(const CallSendDtmfParam &param) throw (Error)
+{
+    pjsua_call_send_dtmf_param pj_param = param.toPj();
+    
+    PJSUA2_CHECK_EXPR(pjsua_call_send_dtmf(id, &pj_param));
+}
+
 
 void Call::sendInstantMessage(const SendInstantMessageParam& prm)
     throw(Error)

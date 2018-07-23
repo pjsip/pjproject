@@ -1246,12 +1246,10 @@ static void ui_send_dtmf_info()
     if (current_call == -1) {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
     } else {
-	const pj_str_t SIP_INFO = pj_str("INFO");
-	pj_str_t digits;
 	int call = current_call;
-	int i;
 	pj_status_t status;
 	char buf[128];
+	pjsua_call_send_dtmf_param param;
 
 	if (!simple_input("DTMF strings to send (0-9*#A-B)", buf,
 	    sizeof(buf)))
@@ -1262,27 +1260,13 @@ static void ui_send_dtmf_info()
 	if (call != current_call) {
 	    puts("Call has been disconnected");
 	    return;
-	}
-
-	digits = pj_str(buf);
-	for (i=0; i<digits.slen; ++i) {
-	    char body[80];
-	    pjsua_msg_data msg_data_;
-
-	    pjsua_msg_data_init(&msg_data_);
-	    msg_data_.content_type = pj_str("application/dtmf-relay");
-
-	    pj_ansi_snprintf(body, sizeof(body),
-		"Signal=%c\r\n"
-		"Duration=160",
-		buf[i]);
-	    msg_data_.msg_body = pj_str(body);
-
-	    status = pjsua_call_send_request(current_call, &SIP_INFO,
-					     &msg_data_);
-	    if (status != PJ_SUCCESS) {
-		return;
-	    }
+	}	
+	pjsua_call_send_dtmf_param_default(&param);
+	param.digits = pj_str(buf);
+	param.method = PJSUA_DTMF_METHOD_SIP_INFO;
+	status = pjsua_call_send_dtmf(current_call, &param);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error sending DTMF", status);
 	}
     }
 }
