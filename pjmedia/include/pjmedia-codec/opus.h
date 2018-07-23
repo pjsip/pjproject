@@ -139,7 +139,11 @@ pjmedia_codec_opus_get_config( pjmedia_codec_opus_config *cfg );
  * Note that the function will call #pjmedia_codec_mgr_set_default_param().
  *
  * @param cfg		Opus codec configuration.
- * @param param	    	The new default Opus codec parameter.
+ * @param param	    	On input, the default Opus codec parameter to be set.
+ *			On output, the current default Opus codec parameter
+ *			after setting. This may be different from the input
+ *			because some settings can be rejected, or overwritten
+ *			by the Opus codec configuration above.
  *
  * @return		PJ_SUCCESS on success.
  */

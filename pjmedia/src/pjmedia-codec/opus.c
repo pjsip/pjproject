@@ -299,6 +299,20 @@ static int find_fmtp(pjmedia_codec_fmtp *fmtp, pj_str_t *name, pj_bool_t add)
         return -1;
 }
 
+static void remove_fmtp(pjmedia_codec_fmtp *fmtp, pj_str_t *name)
+{
+    int i, j;
+    for (i = 0; i < fmtp->cnt; i++) {
+    	if (pj_stricmp(&fmtp->param[i].name, name) == 0) {
+    	    fmtp->cnt--;
+    	    for (j = i; j < fmtp->cnt; j++) {
+    	    	fmtp->param[i].name = fmtp->param[i+1].name;
+    	    	fmtp->param[i].val = fmtp->param[i+1].val;
+    	    }
+    	}
+    }
+}
+
 static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
 {
     int idx;
@@ -316,6 +330,9 @@ static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
 	idx = find_fmtp(&attr->setting.dec_fmtp, &STR_MAX_CAPTURE, PJ_TRUE);
 	if (idx >= 0)
 	    attr->setting.dec_fmtp.param[idx].val = pj_str(clockrate_str);
+    } else {
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_MAX_PLAYBACK);
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_MAX_CAPTURE);
     }
 
     /* Check if we need to set parameter 'maxaveragebitrate' */
@@ -326,6 +343,8 @@ static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
 			     attr->info.avg_bps);
 	    attr->setting.dec_fmtp.param[idx].val = pj_str(bitrate_str);
 	}
+    } else {
+        remove_fmtp(&attr->setting.dec_fmtp, &STR_MAX_BIT_RATE);
     }
 
     if (attr->info.channel_cnt > 1) {
@@ -336,24 +355,33 @@ static pj_status_t generate_fmtp(pjmedia_codec_param *attr)
         idx = find_fmtp(&attr->setting.dec_fmtp, &STR_SPROP_STEREO, PJ_TRUE);
         if (idx >= 0)
 	    attr->setting.dec_fmtp.param[idx].val = pj_str("1");
+    } else {
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_STEREO);
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_SPROP_STEREO);
     }
 
     if (opus_cfg.cbr) {
         idx = find_fmtp(&attr->setting.dec_fmtp, &STR_CBR, PJ_TRUE);
         if (idx >= 0)
 	    attr->setting.dec_fmtp.param[idx].val = pj_str("1");
+    } else {
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_CBR);
     }
 
     if (attr->setting.plc) {
         idx = find_fmtp(&attr->setting.dec_fmtp, &STR_INBAND_FEC, PJ_TRUE);
         if (idx >= 0)
 	    attr->setting.dec_fmtp.param[idx].val = pj_str("1");
+    } else {
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_INBAND_FEC);
     }
 
     if (attr->setting.vad) {
         idx = find_fmtp(&attr->setting.dec_fmtp, &STR_DTX, PJ_TRUE);
         if (idx >= 0)
 	    attr->setting.dec_fmtp.param[idx].val = pj_str("1");
+    } else {
+    	remove_fmtp(&attr->setting.dec_fmtp, &STR_DTX);
     }
     
     return PJ_SUCCESS;
@@ -389,10 +417,6 @@ pjmedia_codec_opus_set_default_param(const pjmedia_codec_opus_config *cfg,
     {
 	return PJ_EINVAL;
     }
-
-    status = pjmedia_codec_mgr_get_default_param(codec_mgr, info[0], param);
-    if (status != PJ_SUCCESS)
-	return status;
 
     param->info.clock_rate = opus_cfg.sample_rate = cfg->sample_rate;
     param->info.max_bps = opus_cfg.sample_rate * 2;
