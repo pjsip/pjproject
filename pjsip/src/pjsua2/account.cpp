@@ -651,6 +651,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.srtp_opt		= mediaConfig.srtpOpt.toPj();
     ret.ipv6_media_use		= mediaConfig.ipv6Use;
     ret.enable_rtcp_mux		= mediaConfig.rtcpMuxEnabled;
+    ret.rtcp_fb_cfg		= mediaConfig.rtcpFbConfig.toPj();
 
     // AccountVideoConfig
     ret.vid_in_auto_show	= videoConfig.autoShowIncoming;
@@ -827,6 +828,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.srtpOpt.fromPj(prm.srtp_opt);
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
     mediaConfig.rtcpMuxEnabled	= PJ2BOOL(prm.enable_rtcp_mux);
+    mediaConfig.rtcpFbConfig.fromPj(prm.rtcp_fb_cfg);
 
     // AccountVideoConfig
     videoConfig.autoShowIncoming 	= PJ2BOOL(prm.vid_in_auto_show);
