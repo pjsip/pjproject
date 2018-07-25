@@ -1124,7 +1124,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     }
 
     /* Start resolving STUN server */
-    status = resolve_stun_server(PJ_FALSE, PJ_FALSE);
+    status = resolve_stun_server(PJ_FALSE, PJ_FALSE, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	goto on_error;
@@ -1452,6 +1452,14 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	
 	pj_assert(sess->idx < sess->count);
 
+	if (pjsua_var.ua_cfg.stun_try_ipv6 &&
+	    pjsua_var.stun_opt != PJSUA_NAT64_DISABLED &&
+	    sess->af == pj_AF_INET())
+	{
+	    /* Skip IPv4 STUN resolution if NAT64 is not disabled. */
+	    continue;
+	}
+
 	pj_ansi_snprintf(target, sizeof(target), "%.*s",
 			 (int)sess->srv[sess->idx].slen,
 			 sess->srv[sess->idx].ptr);
@@ -1548,7 +1556,7 @@ PJ_DEF(pj_status_t) pjsua_update_stun_servers(unsigned count, pj_str_t srv[],
 
     PJSUA_UNLOCK();
     
-    status = resolve_stun_server(wait, PJ_FALSE);
+    status = resolve_stun_server(wait, PJ_FALSE, 0);
     if (wait == PJ_FALSE && status == PJ_EPENDING)
         status = PJ_SUCCESS;
 
@@ -1692,8 +1700,11 @@ static void internal_stun_resolve_cb(const pj_stun_resolve_result *result)
 /*
  * Resolve STUN server.
  */
-pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error)
+pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
+				unsigned options)
 {
+    pjsua_var.stun_opt = options;
+
     /* Retry resolving if currently the STUN status is error */
     if (pjsua_var.stun_status != PJ_EPENDING &&
 	pjsua_var.stun_status != PJ_SUCCESS &&
@@ -2194,7 +2205,7 @@ static pj_status_t create_sip_udp_sock(int af,
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE, PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE, PJ_TRUE, 0);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	return status;
@@ -3102,7 +3113,7 @@ PJ_DEF(pj_status_t) pjsua_detect_nat_type()
 	return PJ_SUCCESS;
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE, PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE, PJ_TRUE, 0);
     if (status != PJ_SUCCESS) {
 	pjsua_var.nat_status = status;
 	pjsua_var.nat_type = PJ_STUN_NAT_TYPE_ERR_UNKNOWN;

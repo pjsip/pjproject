@@ -269,7 +269,8 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	pj_bool_t retry_stun = (acc->cfg.media_stun_use &
 				PJSUA_STUN_RETRY_ON_FAILURE) ==
 				PJSUA_STUN_RETRY_ON_FAILURE;
-	status = resolve_stun_server(PJ_TRUE, retry_stun);
+	status = resolve_stun_server(PJ_TRUE, retry_stun,
+				     (unsigned)acc->cfg.nat64_opt);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	    return status;
@@ -860,7 +861,8 @@ static pj_status_t create_ice_media_transport(
 	pj_bool_t retry_stun = (acc_cfg->media_stun_use &
 				PJSUA_STUN_RETRY_ON_FAILURE) ==
 				PJSUA_STUN_RETRY_ON_FAILURE;
-	status = resolve_stun_server(PJ_TRUE, retry_stun);
+	status = resolve_stun_server(PJ_TRUE, retry_stun,
+				     (unsigned)acc_cfg->nat64_opt);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	    return status;

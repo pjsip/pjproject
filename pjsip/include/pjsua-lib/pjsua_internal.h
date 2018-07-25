@@ -452,6 +452,7 @@ struct pjsua_data
     pj_status_t		 stun_status; /**< STUN server status.		*/
     pjsua_stun_resolve	 stun_res;  /**< List of pending STUN resolution*/
     unsigned		 stun_srv_idx; /**< Resolved STUN server index	*/
+    unsigned		 stun_opt;  /**< STUN resolution option.	*/
     pj_dns_resolver	*resolver;  /**< DNS resolver.			*/   
 
     /* Detected NAT type */
@@ -623,7 +624,8 @@ void pjsua_set_state(pjsua_state new_state);
  * STUN resolution
  */
 /* Resolve the STUN server */
-pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error);
+pj_status_t resolve_stun_server(pj_bool_t wait, pj_bool_t retry_if_cur_error,
+				unsigned options);
 
 /** 
  * Normalize route URI (check for ";lr" and append one if it doesn't
