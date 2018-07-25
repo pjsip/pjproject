@@ -2993,6 +2993,7 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
     pjsua_acc_id id = PJSUA_INVALID_ID;
+    int max_score;
     unsigned i;
 
     if (pjsua_var.acc_cnt == 0) {
@@ -3025,47 +3026,40 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 
     sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 
-    /* Find account which has matching username and domain. */
+    /* Select account by weighted score. Matching priority order is:
+     * transport type (matched or not set), domain part, and user part.
+     * Note that the transport type has higher priority as unmatched
+     * transport type may cause failure in sending response.
+     */
+    max_score = 0;
     for (i=0; i < pjsua_var.acc_cnt; ++i) {
 	unsigned acc_id = pjsua_var.acc_ids[i];
 	pjsua_acc *acc = &pjsua_var.acc[acc_id];
+	int score = 0;
 
-	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0 &&
-	    pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) 
+	if (!acc->valid)
+	    continue;
+
+	/* Match transport type */
+	if (acc->tp_type == rdata->tp_info.transport->key.type ||
+	    acc->tp_type == PJSIP_TRANSPORT_UNSPECIFIED)
 	{
-	    /* Match ! */
-	    id = acc_id;
-	    goto on_return;
+	    score |= 4;
 	}
-    }
 
-    /* No matching account, try match domain part only. */
-    for (i=0; i < pjsua_var.acc_cnt; ++i) {
-	unsigned acc_id = pjsua_var.acc_ids[i];
-	pjsua_acc *acc = &pjsua_var.acc[acc_id];
-
-	if (acc->valid && pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
-	    /* Match ! */
-	    id = acc_id;
-	    goto on_return;
+	/* Match domain */
+	if (pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
+	    score |= 2;
 	}
-    }
 
-    /* No matching account, try match user part (and transport type) only. */
-    for (i=0; i < pjsua_var.acc_cnt; ++i) {
-	unsigned acc_id = pjsua_var.acc_ids[i];
-	pjsua_acc *acc = &pjsua_var.acc[acc_id];
+	/* Match username */
+	if (pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
+	    score |= 1;
+	}
 
-	if (acc->valid && pj_stricmp(&acc->user_part, &sip_uri->user)==0) {
-	    if (acc->tp_type != PJSIP_TRANSPORT_UNSPECIFIED &&
-		acc->tp_type != rdata->tp_info.transport->key.type)
-	    {
-		continue;
-	    }
-
-	    /* Match ! */
+	if (score > max_score) {
 	    id = acc_id;
-	    goto on_return;
+	    max_score = score;
 	}
     }
 
