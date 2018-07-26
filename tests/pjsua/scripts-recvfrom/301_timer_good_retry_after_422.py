@@ -5,7 +5,7 @@ import inc_sdp as sdp
 # Session timers retry after 422
 
 
-pjsua = "--null-audio sip:127.0.0.1:$PORT --timer-min-se 100 --timer-se 1000"
+pjsua = "--null-audio sip:127.0.0.1:$PORT --timer-min-se 100 --timer-se 1000 --no-tcp"
 
 # First INVITE with timer rejected with 422
 req1 = sip.RecvfromTransaction("INVITE with SE too small", 422,
