@@ -264,6 +264,8 @@ typedef enum pjmedia_event_mgr_flag
 {
     /**
      * Tell the event manager not to create any event worker thread.
+     * Do not set this flag if app plans to publish an event using
+     * PJMEDIA_EVENT_PUBLISH_POST_EVENT.
      */
     PJMEDIA_EVENT_MGR_NO_THREAD = 1
 

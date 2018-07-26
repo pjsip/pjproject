@@ -112,8 +112,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 
     /* Create event manager */
     if (!pjmedia_event_mgr_instance()) {
-	status = pjmedia_event_mgr_create(pjsua_var.pool, 
-					  PJMEDIA_EVENT_MGR_NO_THREAD, NULL);
+	status = pjmedia_event_mgr_create(pjsua_var.pool, 0, NULL);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status,
 			 "Error creating PJMEDIA event manager"));
