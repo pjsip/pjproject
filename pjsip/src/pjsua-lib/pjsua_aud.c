@@ -237,6 +237,17 @@ pj_status_t pjsua_aud_subsys_init()
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(codec_id);
 
+    PJ_LOG(4,(THIS_FILE, "Initializing audio subsystem.."));
+
+    if (!pjmedia_event_mgr_instance()) {
+    	status = pjmedia_event_mgr_create(pjsua_var.pool, 0, NULL);
+    	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating PJMEDIA event manager",
+			 status);
+	    goto on_error;
+	}
+    }
+
     /*
      * Register all codecs
      */
