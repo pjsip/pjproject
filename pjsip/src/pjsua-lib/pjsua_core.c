@@ -1457,6 +1457,9 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	    sess->af == pj_AF_INET())
 	{
 	    /* Skip IPv4 STUN resolution if NAT64 is not disabled. */
+	    PJ_LOG(4,(THIS_FILE, "Skipping IPv4 resolution of STUN server "
+	    			 "%s (%d of %d)", target,
+	    			 sess->idx+1, sess->count));	    
 	    continue;
 	}
 
