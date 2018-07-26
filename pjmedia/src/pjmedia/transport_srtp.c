@@ -1189,7 +1189,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     pj_lock_acquire(srtp->mutex);
     if (!srtp->session_inited) {
 	pj_lock_release(srtp->mutex);
-	return PJ_EINVALIDOP;
+	return PJMEDIA_SRTP_EKEYNOTREADY;
     }
     err = srtp_protect(srtp->srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
@@ -1235,7 +1235,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     pj_lock_acquire(srtp->mutex);
     if (!srtp->session_inited) {
 	pj_lock_release(srtp->mutex);
-	return PJ_EINVALIDOP;
+	return PJMEDIA_SRTP_EKEYNOTREADY;
     }
     err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->rtcp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);

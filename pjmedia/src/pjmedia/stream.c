@@ -246,6 +246,8 @@ struct pjmedia_stream
 
     pj_uint32_t		     rtp_rx_last_ts;        /**< Last received RTP timestamp*/
     pj_status_t		     rtp_rx_last_err;       /**< Last RTP recv() error */
+    pj_status_t		     rtp_tx_last_err;       /**< Last RTP send() error */
+    pj_status_t		     rtcp_tx_last_err;      /**< Last RTCP send() error */
 
     /* RTCP Feedback */
     pj_bool_t		     send_rtcp_fb_nack;	    /**< Send NACK?	    */
@@ -1141,6 +1143,18 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 
     /* Send! */
     status = pjmedia_transport_send_rtcp(stream->transport, pkt, len);
+    if (status != PJ_SUCCESS) {
+	if (stream->rtcp_tx_last_err != status) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+			 "Error sending RTCP"));
+	    stream->rtcp_tx_last_err = status;
+	}
+    } else {
+	if (stream->rtcp_tx_last_err != PJ_SUCCESS) {
+	    PJ_LOG(4,(stream->port.info.name.ptr, "Sending RTCP resumed"));
+	    stream->rtcp_tx_last_err = PJ_SUCCESS;
+	}
+    }
 
     return status;
 }
@@ -1183,12 +1197,9 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
 	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled, PJ_FALSE,
 			   with_xr, PJ_FALSE);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
-        		 "Error sending RTCP"));
+	if (status == PJ_SUCCESS) {
+	    stream->rtcp_last_tx = timestamp;
 	}
-
-	stream->rtcp_last_tx = timestamp;
     }
 }
 
@@ -1484,9 +1495,17 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
                                         frame_out.size +
 					    sizeof(pjmedia_rtp_hdr));
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(4,(stream->port.info.name.ptr, status,
-		     "Error sending RTP"));
+	if (stream->rtp_tx_last_err != status) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+			 "Error sending RTP"));
+	    stream->rtp_tx_last_err = status;
+	}
 	return PJ_SUCCESS;
+    } else {
+	if (stream->rtp_tx_last_err != PJ_SUCCESS) {
+	    PJ_LOG(4,(stream->port.info.name.ptr, "Sending RTP resumed"));
+	    stream->rtp_tx_last_err = PJ_SUCCESS;
+	}
     }
 
     /* Update stat */

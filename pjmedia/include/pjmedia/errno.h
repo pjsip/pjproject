@@ -626,6 +626,11 @@ PJ_BEGIN_DECL
  * Secure transport required in SDP media descriptor.
  */
 #define PJMEDIA_SRTP_ESDPREQSECTP   (PJMEDIA_ERRNO_START+229)    /* 220229 */
+/**
+ * @hideinitializer
+ * SRTP parameters negotiation still in progress.
+ */
+#define PJMEDIA_SRTP_EKEYNOTREADY   (PJMEDIA_ERRNO_START+230)	 /* 220230 */
 
 /**
  * @hideinitializer
