@@ -61,15 +61,6 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 
-    if (!pjmedia_event_mgr_instance()) {
-        status = pjmedia_event_mgr_create(pjsua_var.pool, 0, NULL);
-        if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status,
-		         "Error creating PJMEDIA event manager"));
-	    goto on_error;
-	}
-    }
-
     status = pjmedia_vid_codec_mgr_create(pjsua_var.pool, NULL);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status,
@@ -168,9 +159,6 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
     if (pjmedia_converter_mgr_instance())
 	pjmedia_converter_mgr_destroy(NULL);
-
-    if (pjmedia_event_mgr_instance())
-	pjmedia_event_mgr_destroy(NULL);
 
     if (pjmedia_video_format_mgr_instance())
 	pjmedia_video_format_mgr_destroy(NULL);

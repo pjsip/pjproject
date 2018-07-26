@@ -110,7 +110,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	goto on_error;
 #endif
 
-    /* Create event manager (if not yet, e.g: PJMEDIA_HAS_VIDEO==0) */
+    /* Create event manager */
     if (!pjmedia_event_mgr_instance()) {
 	status = pjmedia_event_mgr_create(pjsua_var.pool, 
 					  PJMEDIA_EVENT_MGR_NO_THREAD, NULL);
@@ -231,6 +231,9 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 	// in pjmedia_endpt_destroy().
 	//pjmedia_snd_deinit();
     }
+
+    if (pjmedia_event_mgr_instance())
+	pjmedia_event_mgr_destroy(NULL);
 
     pj_log_pop_indent();
 
