@@ -106,6 +106,7 @@ typedef struct dtls_srtp
     unsigned long	 last_err;
     pj_bool_t		 use_ice;
     pj_bool_t		 nego_started;
+    pj_bool_t		 nego_completed;
     pj_str_t		 rem_fingerprint;   /* Remote fingerprint in SDP    */
     pj_status_t		 rem_fprint_status; /* Fingerprint verif. status    */
     pj_sockaddr		 rem_addr;	    /* Remote address (from SDP/RTP)*/
@@ -228,7 +229,9 @@ static pj_status_t STATUS_FROM_SSL_ERR(dtls_srtp *ds,
     if (status > PJ_SSL_ERRNO_SPACE_SIZE)
 	status = ERR_GET_REASON(err);
 
-    status += PJ_SSL_ERRNO_START;
+    if (status != PJ_SUCCESS)
+	status += PJ_SSL_ERRNO_START;
+
     ds->last_err = err;
     return status;
 }
@@ -641,14 +644,20 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
 	}
     }
 
-    /* Check if handshake has been completed */
-    if (!SSL_is_init_finished(ds->ossl_ssl))
+    /* Just return if handshake completion procedure (key parsing, fingerprint
+     * verification, etc) has been done or handshake is still in progress.
+     */
+    if (ds->nego_completed || !SSL_is_init_finished(ds->ossl_ssl))
 	return PJ_SUCCESS;
 
     /* Yes, SSL handshake is done! */
+    ds->nego_completed = PJ_TRUE;
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP negotiation completed!"));
 
-    /* Stop the retrans clock */
+    /* Stop the retransmission clock. Note that the clock may not be stopped
+     * if this function is called from clock thread context. We'll try again
+     * later in socket context.
+     */
     if (ds->clock)
 	pjmedia_clock_stop(ds->clock);
 
@@ -962,6 +971,12 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
 {
     dtls_srtp *ds = (dtls_srtp*)tp;
 
+    /* Destroy the retransmission clock if handshake has been completed. */
+    if (ds->clock && ds->nego_completed) {
+	pjmedia_clock_destroy(ds->clock);
+	ds->clock = NULL;
+    }
+
     if (size < 1 || !IS_DTLS_PKT(pkt, size))
 	return PJ_EIGNORED;
 
@@ -969,10 +984,13 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
     PJ_LOG(2,(ds->base.name, "DTLS-SRTP receiving %d bytes", size));
 #endif
 
-    /* This is DTLS packet, let's process it */
+    /* This is DTLS packet, let's process it. Note that if DTLS nego has
+     * been completed, this may be a retransmission (e.g: remote didn't
+     * receive our last handshake packet) or just a stray.
+     */
 
     /* Check remote address info, reattach member tp if changed */
-    if (!ds->use_ice) {
+    if (!ds->use_ice && !ds->nego_completed) {
 	pjmedia_transport_info info;
 	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 	if (pj_sockaddr_cmp(&ds->rem_addr, &info.src_rtp_name)) {
@@ -998,13 +1016,25 @@ static pj_status_t dtls_on_recv_rtp( pjmedia_transport *tp,
 	    }
 
 	    pjmedia_transport_attach2(&ds->srtp->base, &ap);
+
+#if DTLS_DEBUG
+	    {
+		char addr[PJ_INET6_ADDRSTRLEN];
+		PJ_LOG(2,(ds->base.name, "Re-attached transport to update "
+			  "remote addr=%s:%d",
+			  pj_sockaddr_print(&ap.rem_addr, addr,
+					    sizeof(addr), 2),
+			  pj_sockaddr_get_port(&ap.rem_addr)));
+	    }
+#endif
 	}
     }
 
     /* If our setup is ACTPASS, incoming packet may be a client hello,
      * so let's update setup to PASSIVE and initiate DTLS handshake.
      */
-    if (ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE)
+    if (!ds->nego_started &&
+	(ds->setup == DTLS_SETUP_ACTPASS || ds->setup == DTLS_SETUP_PASSIVE))
     {
 	pj_status_t status;
 	ds->setup = DTLS_SETUP_PASSIVE;
@@ -1166,6 +1196,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	{
 	    ssl_destroy(ds);
 	    ds->nego_started = PJ_FALSE;
+	    ds->nego_completed = PJ_FALSE;
 	    ds->got_keys = PJ_FALSE;
 	    ds->rem_fprint_status = PJ_EPENDING;
 	}
@@ -1197,8 +1228,10 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	pjmedia_sdp_media_add_attr(m_loc, a);
     }
 
-    if (ds->got_keys) {
-	/* This is subsequent SDP offer/answer and we already got SRTP keys */
+    if (ds->nego_completed) {
+	/* This is subsequent SDP offer/answer and no DTLS re-nego has been
+	 * signalled.
+	 */
 	goto on_return;
     }
 
@@ -1246,6 +1279,15 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	 * (see also #2097).
 	 */
 	udp_member_transport_media_start(ds);
+
+#if DTLS_DEBUG
+	{
+	    char addr[PJ_INET6_ADDRSTRLEN];
+	    PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
+		      pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
+		      pj_sockaddr_get_port(&ap.rem_addr)));
+	}
+#endif
     }
 
     /* If our setup is ACTIVE and member transport is not ICE,
@@ -1316,6 +1358,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	{
 	    ssl_destroy(ds);
 	    ds->nego_started = PJ_FALSE;
+	    ds->nego_completed = PJ_FALSE;
 	    ds->got_keys = PJ_FALSE;
 	    ds->rem_fprint_status = PJ_EPENDING;
 	}
@@ -1400,6 +1443,16 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
 	    if (status != PJ_SUCCESS)
 		goto on_return;
+#if DTLS_DEBUG
+	    {
+		char addr[PJ_INET6_ADDRSTRLEN];
+		PJ_LOG(2,(ds->base.name, "Attached transport, "
+			  "remote addr=%s:%d",
+			  pj_sockaddr_print(&ap.rem_addr, addr,
+			  sizeof(addr), 2),
+			  pj_sockaddr_get_port(&ap.rem_addr)));
+	    }
+#endif
             
 	    status = ssl_handshake(ds);
 	    if (status != PJ_SUCCESS)
@@ -1516,6 +1569,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_dtls_start_nego(
     status = pjmedia_transport_attach2(&ds->srtp->base, &ap);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+#if DTLS_DEBUG
+    {
+	char addr[PJ_INET6_ADDRSTRLEN];
+	PJ_LOG(2,(ds->base.name, "Attached transport, remote addr=%s:%d",
+		  pj_sockaddr_print(&ap.rem_addr, addr, sizeof(addr), 2),
+		  pj_sockaddr_get_port(&ap.rem_addr)));
+    }
+#endif
 
     /* Start DTLS handshake */
     pj_bzero(&srtp->rx_policy_neg, sizeof(srtp->rx_policy_neg));
