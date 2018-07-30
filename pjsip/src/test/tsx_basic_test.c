@@ -274,7 +274,7 @@ int tsx_destroy_test()
 	    "resolve and destroy, wait",
 	    &tsx_create_and_send_req,
 	    "sip:user@somehost",
-	    1,
+	    3000, /* Wait for DNS timeout, dec ref to the group lock is done in DNS+send callback */
 	    15000
 	},
 	{
@@ -288,7 +288,7 @@ int tsx_destroy_test()
 	    "tcp connect and destroy",
 	    &tsx_create_and_send_req,
 	    "sip:user@10.125.36.63:58517;transport=tcp",
-	    1,
+	    22000, /* Wait for TCP connect timeout, dec ref to the group lock is done in send callback */
 	    60000
 	},
 

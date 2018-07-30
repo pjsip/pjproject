@@ -1107,7 +1107,7 @@ struct hdr_test_t
     {
 	/* Proxy-Authenticate, testing which params should be quoted */
 	"Proxy-Authenticate", NULL,
-	"Digest  realm=\"realm\",domain=\"sip:domain\",nonce=\"nonce\","  \
+	"Digest realm=\"realm\",domain=\"sip:domain\",nonce=\"nonce\","  \
 	        "opaque=\"opaque\",stale=true,algorithm=MD5,qop=\"auth\"",
 	&hdr_test_proxy_authenticate
     },

@@ -1489,7 +1489,9 @@ int tsx_transport_failure_test(void)
 	{ 0,  10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (no delay)" },
 	{ 50, 10,   TEST10_BRANCH_ID, "test10: failed transport in TRYING state (50 ms delay)" },
 	{ 0,  1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (no delay)" },
-	{ 50, 1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (50 ms delay)" },
+	// After ticket #2076, transport error will be ignored if tsx is in COMPLETED state, note that
+	// tsx state will be shifted to COMPLETED state once 200 response is sent due to transport delay.
+	//{ 50, 1500, TEST11_BRANCH_ID, "test11: failed transport in PROCEEDING state (50 ms delay)" },
 	{ 0,  2500, TEST12_BRANCH_ID, "test12: failed transport in COMPLETED state (no delay)" },
 	//Not applicable (maybe)
 	//This test may expect transport failure notification in COMPLETED state. This may not be
@@ -1526,6 +1528,7 @@ int tsx_transport_failure_test(void)
 	} while (PJ_TIME_VAL_LT(now, fail_time));
 
 	pjsip_loop_set_failure(loop, 1, NULL);
+	PJ_LOG(5,(THIS_FILE, "   transport loop fail mode set"));
 
 	end_test = now;
 	end_test.sec += 5;

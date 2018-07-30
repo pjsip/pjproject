@@ -50,7 +50,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
     pj_dns_parsed_packet pkt;
     pj_dns_parsed_query q;
     pj_dns_parsed_rr ans[4];
-    pj_dns_parsed_rr ar[5];
+    pj_dns_parsed_rr ar[10];
     pj_str_t tmp;
     unsigned i;
 
@@ -72,6 +72,7 @@ static void add_dns_entries(pj_dns_resolver *resv)
      ; Additionally, add A record for "example.com"
      example.com.	3600 IN A       5.5.5.5
 
+     ; Additionally, add corresponding empty AAAA records for all A records
      */
     pj_bzero(&pkt, sizeof(pkt));
     pj_bzero(ans, sizeof(ans));
@@ -151,6 +152,14 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ar[4].ttl = 3600;
     ar[4].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "5.5.5.5"));
 
+    /* Add corresponding AAAA records for A records above */
+    for (i = 0; i < 5; ++i) {
+	ar[5+i].name = ar[i].name;
+	ar[5+i].type = PJ_DNS_TYPE_AAAA;
+	ar[5+i].dnsclass = PJ_DNS_CLASS_IN;
+	ar[5+i].ttl = 3600;
+    }
+
     /* 
      * Create individual A records for all hosts in "example.com" domain.
      */
@@ -162,8 +171,11 @@ static void add_dns_entries(pj_dns_resolver *resv)
 	q.name = ar[i].name;
 	q.type = ar[i].type;
 	q.dnsclass = PJ_DNS_CLASS_IN;
-	pkt.hdr.anscount = 1;
-	pkt.ans = &ar[i];
+	/* For now, AAAA always contains empty record */
+	if (ar[i].type != PJ_DNS_TYPE_AAAA) {
+	    pkt.hdr.anscount = 1;
+	    pkt.ans = &ar[i];
+	}
 
 	pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
     }
@@ -212,6 +224,8 @@ static void add_dns_entries(pj_dns_resolver *resv)
 
 	sip06.domain.com. 3600 IN A       6.6.6.6
 	sip07.domain.com. 3600 IN A       7.7.7.7
+
+        ; Additionally, add corresponding empty AAAA records for all A records
      */
 
     pj_bzero(&pkt, sizeof(pkt));
@@ -267,12 +281,19 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "6.6.6.6"));
 
     pkt.hdr.qdcount = 1;
+    pkt.hdr.anscount = 1;
     pkt.q = &q;
     q.name = ans[0].name;
     q.type = ans[0].type;
     q.dnsclass = ans[0].dnsclass;
 
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+
+    /* Add corresponding AAAA record */
+    q.type = PJ_DNS_TYPE_AAAA;
+    pkt.hdr.anscount = 0;
+    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+
 
     /* Add the A record for sip07.domain.com */
     ans[0].name = pj_str("sip07.domain.com");
@@ -282,12 +303,19 @@ static void add_dns_entries(pj_dns_resolver *resv)
     ans[0].rdata.a.ip_addr = pj_inet_addr(pj_cstr(&tmp, "7.7.7.7"));
 
     pkt.hdr.qdcount = 1;
+    pkt.hdr.anscount = 1;
     pkt.q = &q;
     q.name = ans[0].name;
     q.type = ans[0].type;
     q.dnsclass = ans[0].dnsclass;
 
     pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+
+    /* Add corresponding AAAA record */
+    q.type = PJ_DNS_TYPE_AAAA;
+    pkt.hdr.anscount = 0;
+    pj_dns_resolver_add_entry( resv, &pkt, PJ_FALSE);
+
 
     pkt.hdr.qdcount = 0;
 }
