@@ -1004,6 +1004,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	 h != &ioqueue->active_list && event_cnt < MAX_EVENTS;
 	 h = h->next)
     {
+	if (h->fd == PJ_INVALID_SOCKET)
+	    continue;
 
 	if ( (key_has_pending_write(h) || key_has_pending_connect(h))
 	     && PJ_FD_ISSET(h->fd, &wfdset) && !IS_CLOSING(h))
