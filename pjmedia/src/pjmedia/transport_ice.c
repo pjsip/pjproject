@@ -700,6 +700,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr, &str);
 	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
+	    str.slen = PJ_ICE_PWD_LEN;
 	    str.ptr = (char*) pj_pool_alloc(sdp_pool, str.slen);
 	    pj_create_random_string(str.ptr, str.slen);
 	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, &str);

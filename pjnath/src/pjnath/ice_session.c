@@ -409,9 +409,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
     }
 
     if (local_passwd == NULL) {
-	ice->rx_pass.ptr = (char*) pj_pool_alloc(ice->pool, PJ_ICE_UFRAG_LEN);
-	pj_create_random_string(ice->rx_pass.ptr, PJ_ICE_UFRAG_LEN);
-	ice->rx_pass.slen = PJ_ICE_UFRAG_LEN;
+	ice->rx_pass.ptr = (char*) pj_pool_alloc(ice->pool, PJ_ICE_PWD_LEN);
+	pj_create_random_string(ice->rx_pass.ptr, PJ_ICE_PWD_LEN);
+	ice->rx_pass.slen = PJ_ICE_PWD_LEN;
     } else {
 	pj_strdup(ice->pool, &ice->rx_pass, local_passwd);
     }
