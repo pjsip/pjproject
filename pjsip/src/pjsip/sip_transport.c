@@ -643,6 +643,53 @@ PJ_DEF(pj_status_t) pjsip_tx_data_set_transport(pjsip_tx_data *tdata,
     return PJ_SUCCESS;
 }
 
+/* Clone pjsip_tx_data. */
+PJ_DEF(pj_status_t) pjsip_tx_data_clone(const pjsip_tx_data *src,
+                                        unsigned flags,
+				  	pjsip_tx_data ** p_tdata)
+{
+    pjsip_tx_data *dst;
+    const pjsip_hdr *hsrc;
+    pjsip_msg *msg;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
+
+    status = pjsip_tx_data_create(src->mgr, p_tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    dst = *p_tdata;
+
+    msg = pjsip_msg_create(dst->pool, PJSIP_RESPONSE_MSG);
+    dst->msg = msg;
+    pjsip_tx_data_add_ref(dst);
+
+    /* Duplicate status line */
+    msg->line.status.code = src->msg->line.status.code;
+    pj_strdup(dst->pool, &msg->line.status.reason,
+	      &src->msg->line.status.reason);
+
+    /* Duplicate all headers */
+    hsrc = src->msg->hdr.next;
+    while (hsrc != &src->msg->hdr) {
+	pjsip_hdr *h = (pjsip_hdr*) pjsip_hdr_clone(dst->pool, hsrc);
+	pjsip_msg_add_hdr(msg, h);
+	hsrc = hsrc->next;
+    }
+
+    /* Duplicate message body */
+    if (src->msg->body)
+	msg->body = pjsip_msg_body_clone(dst->pool, src->msg->body);
+
+    dst->is_pending = src->is_pending;
+
+    PJ_LOG(5,(THIS_FILE,
+	     "Tx data %s cloned",
+	     pjsip_tx_data_get_info(dst)));
+
+    return PJ_SUCCESS;
+}
 
 PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
 {

@@ -2382,6 +2382,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					pjsip_tx_data **p_tdata )
 {
     pjsip_tx_data *last_res;
+    pjsip_tx_data *old_res;
     pj_status_t status;
 
     /* Verify arguments. */
@@ -2397,8 +2398,19 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
     pjsip_dlg_inc_lock(inv->dlg);
 
+    /* Clone last response.
+     * The tdata (last_answer) is a shared object used by the transaction.
+     * Modifying a shared object might lead to a deadlock.
+     * Refer to ticket #2137 for more detail.
+     */
+    status = pjsip_tx_data_clone(inv->last_answer, 0, &last_res);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+    old_res = inv->last_answer;
+    inv->last_answer = last_res;
+    pjsip_tx_data_dec_ref(old_res);
+
     /* Modify last response. */
-    last_res = inv->last_answer;
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
     if (status != PJ_SUCCESS)
 	goto on_return;

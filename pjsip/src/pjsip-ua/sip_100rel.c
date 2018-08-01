@@ -634,47 +634,6 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
 }
 
 
-/* Clone response. */
-static pjsip_tx_data *clone_tdata(dlg_data *dd,
-				  const pjsip_tx_data *src)
-{
-    pjsip_tx_data *dst;
-    const pjsip_hdr *hsrc;
-    pjsip_msg *msg;
-    pj_status_t status;
-
-    status = pjsip_endpt_create_tdata(dd->inv->dlg->endpt, &dst);
-    if (status != PJ_SUCCESS)
-	return NULL;
-
-    msg = pjsip_msg_create(dst->pool, PJSIP_RESPONSE_MSG);
-    dst->msg = msg;
-    pjsip_tx_data_add_ref(dst);
-
-    /* Duplicate status line */
-    msg->line.status.code = src->msg->line.status.code;
-    pj_strdup(dst->pool, &msg->line.status.reason, 
-	      &src->msg->line.status.reason);
-
-    /* Duplicate all headers */
-    hsrc = src->msg->hdr.next;
-    while (hsrc != &src->msg->hdr) {
-	pjsip_hdr *h = (pjsip_hdr*) pjsip_hdr_clone(dst->pool, hsrc);
-	pjsip_msg_add_hdr(msg, h);
-	hsrc = hsrc->next;
-    }
-
-    /* Duplicate message body */
-    if (src->msg->body)
-	msg->body = pjsip_msg_body_clone(dst->pool, src->msg->body);
-
-    PJ_LOG(5,(dd->inv->dlg->obj_name,
-	     "Reliable response %s created",
-	     pjsip_tx_data_get_info(dst)));
-
-    return dst;
-}
-
 
 /* Check if any pending response in transmission list has SDP */
 static pj_bool_t has_sdp(dlg_data *dd)
@@ -725,7 +684,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
      * if it wants to send another response.
      */
     old_tdata = tdata;
-    tdata = clone_tdata(dd, old_tdata);
+    pjsip_tx_data_clone(old_tdata, 0, &tdata);
     pjsip_tx_data_dec_ref(old_tdata);
     
 
