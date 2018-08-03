@@ -1765,14 +1765,14 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
      * ICE activated or received any packets.
      */
     if (tp_ice->use_ice || tp_ice->rtp_src_cnt) {
-	pj_sockaddr_cp(&info->src_rtp_name, &tp_ice->rtp_src_addr);
+	info->src_rtp_name = tp_ice->rtp_src_addr;
 	if (tp_ice->use_rtcp_mux)
-	    pj_sockaddr_cp(&info->src_rtcp_name, &tp_ice->rtp_src_addr);
+	    info->src_rtcp_name = tp_ice->rtp_src_addr;
     }
     if ((!tp_ice->use_rtcp_mux) &&
     	(tp_ice->use_ice || tp_ice->rtcp_src_cnt))
     {
-	pj_sockaddr_cp(&info->src_rtcp_name, &tp_ice->rtcp_src_addr);
+	info->src_rtcp_name = tp_ice->rtcp_src_addr;
     }
 
     /* Fill up transport specific info */

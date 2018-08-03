@@ -553,7 +553,7 @@ struct pjmedia_transport_info
 
     /**
      * Remote address where RTP/RTCP originated from. In case this transport
-     * hasn't ever received packet, the 
+     * hasn't ever received packet, the address can be invalid (zero).
      */
     pj_sockaddr	    src_rtp_name;
     pj_sockaddr	    src_rtcp_name;
