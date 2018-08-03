@@ -1329,6 +1329,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 {
     dtls_srtp *ds = (dtls_srtp *)tp;
     pj_ice_strans_state ice_state;
+    pj_bool_t use_rtcp_mux = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
 
 #if DTLS_DEBUG
@@ -1368,13 +1369,18 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	/* Nothing to do? */
     }
 
-    /* Check and update ICE status */
+    /* Check and update ICE and rtcp-mux status */
     {
 	pjmedia_transport_info info;
 	pjmedia_ice_transport_info *ice_info;
 
 	pjmedia_transport_info_init(&info);
 	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+	if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+	    		    &info.sock_info.rtcp_addr_name) == 0)
+	{
+	    use_rtcp_mux = PJ_TRUE;
+	}
 	ice_info = (pjmedia_ice_transport_info*)
 		   pjmedia_transport_info_get_spc_info(
 				    &info, PJMEDIA_TRANSPORT_TYPE_ICE);
@@ -1434,10 +1440,18 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    else
 		pj_sockaddr_init(pj_AF_INET(), &ap.rem_addr, 0, 0);
 
-	    if (pj_sockaddr_has_addr(&ds->rem_rtcp))
+	    if (use_rtcp_mux) {
+	        /* Using RTP & RTCP multiplexing */
+	        pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
+	    } else if (pj_sockaddr_has_addr(&ds->rem_rtcp)) {
 		pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_rtcp);
-	    else
+	    } else if (pj_sockaddr_has_addr(&ds->rem_addr)) {
+	    	pj_sockaddr_cp(&ap.rem_rtcp, &ds->rem_addr);
+	    	pj_sockaddr_set_port(&ap.rem_rtcp,
+	    			     pj_sockaddr_get_port(&ap.rem_rtcp) + 1);
+	    } else {
 		pj_sockaddr_init(pj_AF_INET(), &ap.rem_rtcp, 0, 0);
+	    }
 
 	    ap.addr_len = pj_sockaddr_get_len(&ap.rem_addr);
 	    status = pjmedia_transport_attach2(&ds->srtp->base, &ap);

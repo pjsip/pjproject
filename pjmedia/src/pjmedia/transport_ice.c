@@ -79,6 +79,7 @@ struct transport_ice
 
     pj_bool_t		 use_ice;
     pj_sockaddr		 rtp_src_addr;	/**< Actual source RTP address.	    */
+    unsigned		 rtp_src_cnt;   /**< How many pkt from this addr.   */
     pj_sockaddr		 rtcp_src_addr;	/**< Actual source RTCP address.    */
     unsigned		 rtcp_src_cnt;  /**< How many pkt from this addr.   */
     pj_bool_t		 enable_rtcp_mux;/**< Enable RTP& RTCP multiplexing?*/
@@ -1763,11 +1764,15 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     /* Set remote address originating RTP & RTCP if this transport has 
      * ICE activated or received any packets.
      */
-    if (tp_ice->use_ice) {
-	info->src_rtp_name  = tp_ice->rtp_src_addr;
+    if (tp_ice->use_ice || tp_ice->rtp_src_cnt) {
+	pj_sockaddr_cp(&info->src_rtp_name, &tp_ice->rtp_src_addr);
+	if (tp_ice->use_rtcp_mux)
+	    pj_sockaddr_cp(&info->src_rtcp_name, &tp_ice->rtp_src_addr);
     }
-    if (tp_ice->use_ice || tp_ice->rtcp_src_cnt) {
-	info->src_rtcp_name = tp_ice->rtcp_src_addr;
+    if ((!tp_ice->use_rtcp_mux) &&
+    	(tp_ice->use_ice || tp_ice->rtcp_src_cnt))
+    {
+	pj_sockaddr_cp(&info->src_rtcp_name, &tp_ice->rtcp_src_addr);
     }
 
     /* Fill up transport specific info */
@@ -1860,7 +1865,7 @@ static pj_status_t transport_attach2  (pjmedia_transport *tp,
     /* Init source RTP & RTCP addresses and counter */
     tp_ice->rtp_src_addr = tp_ice->remote_rtp;
     pj_bzero(&tp_ice->rtcp_src_addr, sizeof(tp_ice->rtcp_src_addr));
-    tp_ice->rtcp_src_cnt = 0;
+    tp_ice->rtp_src_cnt = tp_ice->rtcp_src_cnt = 0;
 
     return PJ_SUCCESS;
 }
@@ -1945,6 +1950,13 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
     if (!tp_ice) {
 	/* Destroy on progress */
 	return;
+    }
+
+    if (comp_id == 1) {
+        ++tp_ice->rtp_src_cnt;
+    	pj_sockaddr_cp(&tp_ice->rtp_src_addr, src_addr);
+    } else if (comp_id == 2) {
+	pj_sockaddr_cp(&tp_ice->rtcp_src_addr, src_addr);
     }
 
     if (comp_id==1 && (tp_ice->rtp_cb || tp_ice->rtp_cb2)) {
