@@ -1886,7 +1886,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     tls->has_pending_connect = PJ_FALSE;
 
     PJ_LOG(4,(tls->base.obj_name, 
-	      "TLS transport %.*s:%d is connected to %.*s:%d",
+	      "TLS transport %s is connected to %s",
 	      pj_addr_str_print(&tls->base.local_name.host, 
 				tls->base.local_name.port, local_addr_buf, 
 				sizeof(local_addr_buf), 1),
