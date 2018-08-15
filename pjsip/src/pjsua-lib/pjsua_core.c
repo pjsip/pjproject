@@ -3668,11 +3668,21 @@ static pj_status_t restart_listener(pjsua_transport_id id,
     default:
 	status = PJ_EINVAL;
     }
+
+    PJ_PERROR(3,(THIS_FILE, status, "Listener %s restart",
+		 pjsip_transport_get_type_name(tp_info.type)));
+
     if (status != PJ_SUCCESS && (restart_lis_delay > 0)) {
 	/* Try restarting again, with delay. */
 	pjsua_schedule_timer2(&restart_listener_cb, 
 			      (void*)(pj_size_t)id, 
 			      restart_lis_delay);
+
+	PJ_LOG(3,(THIS_FILE, "Retry listener %s restart in %d ms",
+		     pjsip_transport_get_type_name(tp_info.type),
+		     restart_lis_delay));
+
+	status = PJ_SUCCESS;
     } else {
 	int i = 0;
 	pj_bool_t all_done = PJ_TRUE;
