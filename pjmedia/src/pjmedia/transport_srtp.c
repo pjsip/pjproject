@@ -1030,6 +1030,7 @@ static pj_status_t start_srtp(transport_srtp *srtp)
 	    pjmedia_transport_srtp_stop(&srtp->base);
 	}
 
+	PJ_LOG(4, (srtp->pool->obj_name, "SRTP not active"));
 	return PJ_SUCCESS;
     }
 
@@ -1587,7 +1588,6 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     if (!srtp->offerer_side && srtp->started) {
 	/* This is may be incoming reoffer that may change keying */
-	srtp->bypass_srtp = PJ_FALSE;
 	srtp->keying_cnt = srtp->all_keying_cnt;
 	for (i = 0; i < srtp->all_keying_cnt; ++i)
 	    srtp->keying[i] = srtp->all_keying[i];
