@@ -266,6 +266,7 @@ typedef struct transport_srtp
     /* Transport information */
     pjmedia_transport	*member_tp; /**< Underlying transport.       */
     pj_bool_t		 member_tp_attached;
+    pj_bool_t		 started;
 
     /* SRTP usage policy of peer. This field is updated when media is starting.
      * This is useful when SRTP is in optional mode and peer is using mandatory
@@ -1050,6 +1051,12 @@ static pj_status_t start_srtp(transport_srtp *srtp)
 					      &srtp->rx_policy_neg);
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	PJ_LOG(4, (srtp->pool->obj_name,
+		   "SRTP started, keying=%s, crypto=%s",
+		   (srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
+		    "SDES":"DTLS-SRTP"),
+		   srtp->tx_policy.name.ptr));
     }
 
     srtp->bypass_srtp = PJ_FALSE;
@@ -1578,6 +1585,14 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     srtp->offerer_side = (sdp_remote == NULL);
 
+    if (!srtp->offerer_side && srtp->started) {
+	/* This is may be incoming reoffer that may change keying */
+	srtp->bypass_srtp = PJ_FALSE;
+	srtp->keying_cnt = srtp->all_keying_cnt;
+	for (i = 0; i < srtp->all_keying_cnt; ++i)
+	    srtp->keying[i] = srtp->all_keying[i];
+    }
+
     status = pjmedia_transport_encode_sdp(srtp->member_tp, sdp_pool,
 					  sdp_local, sdp_remote, media_index);
     if (status != PJ_SUCCESS)
@@ -1610,15 +1625,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    srtp->keying_cnt--;
 	    keying_status = st;
 	    continue;
-	}
-
-	if (!srtp_crypto_empty(&srtp->tx_policy_neg) &&
-	    !srtp_crypto_empty(&srtp->rx_policy_neg))
-	{
-	    /* SRTP nego is done */
-	    srtp->keying_cnt = 1;
+	} else if (!srtp->offerer_side) {
+	    /* Answer with one keying only */
 	    srtp->keying[0] = srtp->keying[i];
-	    srtp->keying_pending_cnt = 0;
+	    srtp->keying_cnt = 1;
 	    break;
 	}
 
@@ -1628,6 +1638,22 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     /* All keying method failed to process remote SDP? */
     if (srtp->keying_cnt == 0)
 	return keying_status;
+
+    /* Bypass SRTP & skip keying as SRTP is disabled and verification on
+     * remote SDP has been done.
+     */
+    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
+	srtp->bypass_srtp = PJ_TRUE;
+	srtp->keying_cnt = 0;
+    }
+
+    if (srtp->keying_cnt != 0) {
+	/* At this point for now, keying count should be 1 */
+	pj_assert(srtp->keying_cnt == 1);
+	PJ_LOG(4, (srtp->pool->obj_name, "SRTP uses keying method %s",
+		   (srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
+		    "SDES":"DTLS-SRTP")));
+    }
 
     return PJ_SUCCESS;
 }
@@ -1645,6 +1671,11 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
+    /* At this point for now, keying count should be 0 or 1 */
+    pj_assert(srtp->keying_cnt <= 1);
+
+    srtp->started = PJ_TRUE;
 
     status = pjmedia_transport_media_start(srtp->member_tp, pool,
 					   sdp_local, sdp_remote,
@@ -1715,6 +1746,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
+    srtp->started = PJ_FALSE;
 
     /* Invoke media_stop() of all keying methods */
     for (i=0; i < srtp->keying_cnt; ++i) {

@@ -189,7 +189,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
     ds->pool = pool;
 
     pj_ansi_strncpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
-    ds->base.type = PJMEDIA_TRANSPORT_TYPE_SRTP;
+    ds->base.type = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
     ds->base.op = &dtls_op;
     ds->base.user_data = srtp;
     ds->srtp = srtp;
@@ -1074,7 +1074,7 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	 *    RTP/AVP transports.
 	 */
 	pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
-	pjmedia_sdp_attr *attr_setup, *attr_fp;
+	pjmedia_sdp_attr *attr_fp;
 	pj_uint32_t rem_proto = 0;
 
 	/* Find SDP a=fingerprint line. */
@@ -1094,14 +1094,10 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	    goto on_return;
 	}
 
-	/* Check for a=setup in remote SDP. */
-	attr_setup = pjmedia_sdp_media_find_attr(m_rem, &ID_SETUP, NULL);
-	if (!attr_setup)
-	    attr_setup = pjmedia_sdp_attr_find(sdp_remote->attr_count,
-				      sdp_remote->attr, &ID_SETUP, NULL);
+	/* Check for a=fingerprint in remote SDP. */
 	switch (ds->srtp->setting.use) {
 	    case PJMEDIA_SRTP_DISABLED:
-		if (attr_setup) {
+		if (attr_fp) {
 		    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
 		    goto on_return;
 		}
@@ -1109,7 +1105,8 @@ static pj_status_t dtls_media_create( pjmedia_transport *tp,
 	    case PJMEDIA_SRTP_OPTIONAL:
 		break;
 	    case PJMEDIA_SRTP_MANDATORY:
-		if (!attr_setup) {
+		if (!attr_fp) {
+		    /* Should never reach here, this is already checked */
 		    status = PJMEDIA_SRTP_ESDPINTRANSPORT;
 		    goto on_return;
 		}

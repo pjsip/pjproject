@@ -78,7 +78,7 @@ static pj_status_t sdes_create(transport_srtp *srtp,
     sdes = PJ_POOL_ZALLOC_T(srtp->pool, pjmedia_transport);
     pj_ansi_strncpy(sdes->name, srtp->pool->obj_name, PJ_MAX_OBJ_NAME);
     pj_memcpy(sdes->name, "sdes", 4);
-    sdes->type = PJMEDIA_TRANSPORT_TYPE_SRTP;
+    sdes->type = PJMEDIA_SRTP_KEYING_SDES;
     sdes->op = &sdes_op;
     sdes->user_data = srtp;
 
