@@ -1055,7 +1055,7 @@ static pj_status_t start_srtp(transport_srtp *srtp)
 
 	PJ_LOG(4, (srtp->pool->obj_name,
 		   "SRTP started, keying=%s, crypto=%s",
-		   (srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
+		   ((int)srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
 		    "SDES":"DTLS-SRTP"),
 		   srtp->tx_policy.name.ptr));
     }
@@ -1651,7 +1651,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	/* At this point for now, keying count should be 1 */
 	pj_assert(srtp->keying_cnt == 1);
 	PJ_LOG(4, (srtp->pool->obj_name, "SRTP uses keying method %s",
-		   (srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
+		   ((int)srtp->keying[0]->type==PJMEDIA_SRTP_KEYING_SDES?
 		    "SDES":"DTLS-SRTP")));
     }
 

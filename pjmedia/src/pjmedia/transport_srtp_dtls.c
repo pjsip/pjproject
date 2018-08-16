@@ -189,7 +189,7 @@ static pj_status_t dtls_create(transport_srtp *srtp,
     ds->pool = pool;
 
     pj_ansi_strncpy(ds->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
-    ds->base.type = PJMEDIA_SRTP_KEYING_DTLS_SRTP;
+    ds->base.type = (pjmedia_transport_type)PJMEDIA_SRTP_KEYING_DTLS_SRTP;
     ds->base.op = &dtls_op;
     ds->base.user_data = srtp;
     ds->srtp = srtp;
