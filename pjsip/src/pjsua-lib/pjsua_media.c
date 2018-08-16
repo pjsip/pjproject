@@ -927,8 +927,9 @@ static pj_status_t create_ice_media_transport(
 	    pj_str_t IN6_ADDR_ANY = {"0", 1};
 
 	    /* Configure STUN server */
-	    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
-	    	pjsua_media_acc_is_using_stun(call_med->call->acc_id))
+	    if (pjsua_media_acc_is_using_stun(call_med->call->acc_id) &&
+		pj_sockaddr_has_addr(&pjsua_var.stun_srv) &&
+		pjsua_var.stun_srv.addr.sa_family == ice_cfg.stun_tp[i].af)
 	    {
 	    	ice_cfg.stun_tp[i].server = pj_str(stunip);
 	    	ice_cfg.stun_tp[i].port = pj_sockaddr_get_port(

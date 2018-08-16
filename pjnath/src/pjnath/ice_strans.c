@@ -517,10 +517,11 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Start STUN Binding resolution and add srflx candidate
-     * only if server is set
+    /* Start STUN Binding resolution and add srflx candidate only if server
+     * is set. When any error occur during STUN Binding resolution, let's
+     * just skip it and generate host candidates.
      */
-    if (stun_cfg->server.slen) {
+    while (stun_cfg->server.slen) {
 	pj_stun_sock_info stun_sock_info;
 
 	/* Add pending job */
@@ -538,16 +539,24 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 				    stun_cfg->port, ice_st->cfg.resolver);
 	if (status != PJ_SUCCESS) {
 	    ///sess_dec_ref(ice_st);
+	    PJ_PERROR(5,(ice_st->obj_name, status,
+			 "Comp %d: srflx candidate (tpid=%d) failed in "
+			 "pj_stun_sock_start()",
+			 comp->comp_id, cand->transport_id));
 	    pj_log_pop_indent();
-	    return status;
+	    break;
 	}
 
 	/* Enumerate addresses */
 	status = pj_stun_sock_get_info(comp->stun[idx].sock, &stun_sock_info);
 	if (status != PJ_SUCCESS) {
 	    ///sess_dec_ref(ice_st);
+	    PJ_PERROR(5,(ice_st->obj_name, status,
+			 "Comp %d: srflx candidate (tpid=%d) failed in "
+			 "pj_stun_sock_get_info()",
+			 comp->comp_id, cand->transport_id));
 	    pj_log_pop_indent();
-	    return status;
+	    break;
 	}
 
 	/* Update and commit the srflx candidate. */
@@ -567,6 +576,9 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	}
 
 	pj_log_pop_indent();
+
+	/* Not really a loop, just trying to avoid complex 'if' blocks */
+	break;
     }
 
     /* Add local addresses to host candidates, unless max_host_cands
@@ -574,15 +586,18 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
      */
     if (stun_cfg->max_host_cands) {
 	pj_stun_sock_info stun_sock_info;
-	unsigned i;
+	unsigned i, cand_cnt = 0;
 
 	/* Enumerate addresses */
 	status = pj_stun_sock_get_info(comp->stun[idx].sock, &stun_sock_info);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed in querying STUN socket info"));
 	    return status;
+	}
 
-	for (i=0; i<stun_sock_info.alias_cnt &&
-		  i<stun_cfg->max_host_cands; ++i)
+	for (i = 0; i < stun_sock_info.alias_cnt &&
+		    cand_cnt < stun_cfg->max_host_cands; ++i)
 	{
 	    unsigned j;
 	    pj_bool_t cand_duplicate = PJ_FALSE;
@@ -613,8 +628,10 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		}
 	    }
 
-	    /* Ignore IPv6 link-local address */
-	    if (stun_cfg->af == pj_AF_INET6()) {
+	    /* Ignore IPv6 link-local address, unless it is the default
+	     * address (first alias).
+	     */
+	    if (stun_cfg->af == pj_AF_INET6() && i != 0) {
 		const pj_in6_addr *a = &addr->ipv6.sin6_addr;
 		if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80)
 		    continue;
@@ -650,6 +667,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		continue;
 	    } else {
 		comp->cand_cnt+=1;
+		cand_cnt++;
 	    }
             
 	    pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
@@ -675,7 +693,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	}
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 

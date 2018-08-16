@@ -426,6 +426,10 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 				    stun_sock->pool, resolver, opt,
 				    stun_sock, &dns_srv_resolver_cb, 
 				    &stun_sock->q);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stun_sock->obj_name, status,
+			 "Failed in pj_dns_srv_resolve()"));
+	}
 
 	/* Processing will resume when the DNS SRV callback is called */
 
@@ -440,6 +444,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 		status = PJ_EAFNOTSUP;
 
 	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(stun_sock->obj_name, status,
+			     "Failed in pj_getaddrinfo()"));
 	        pj_grp_lock_release(stun_sock->grp_lock);
 		return status;
 	    }
@@ -451,6 +457,10 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 
 	/* Start sending Binding request */
 	status = get_mapped_addr(stun_sock);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stun_sock->obj_name, status,
+			 "Failed in sending Binding request"));
+	}
     }
 
     pj_grp_lock_release(stun_sock->grp_lock);
@@ -666,6 +676,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 	/* Get the default address */
 	status = pj_gethostip(stun_sock->af, &def_addr);
 	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stun_sock->obj_name, status,
+			 "Failed in getting default address for STUN info"));
 	    pj_grp_lock_release(stun_sock->grp_lock);
 	    return status;
 	}
@@ -677,8 +689,12 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 	status = pj_enum_ip_interface(stun_sock->af, &info->alias_cnt, 
 				      info->aliases);
 	if (status != PJ_SUCCESS) {
-	    pj_grp_lock_release(stun_sock->grp_lock);
-	    return status;
+	    /* If enumeration fails, just return the default address */
+	    PJ_PERROR(4,(stun_sock->obj_name, status,
+			 "Failed in enumerating interfaces for STUN info, "
+			 "returning default address only"));
+	    info->alias_cnt = 1;
+	    pj_sockaddr_cp(&info->aliases[0], &def_addr);
 	}
 
 	/* Set the port number for each address.
