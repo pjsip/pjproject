@@ -663,9 +663,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
         vp->frm_buf = PJ_POOL_ZALLOC_T(pool, pjmedia_frame);
         vp->frm_buf_size = vafp.framebytes;
-        vp->frm_buf->buf = pj_pool_alloc(pool, vafp.framebytes);
+        vp->frm_buf->buf = pj_pool_zalloc(pool, vafp.framebytes);
         vp->frm_buf->size = vp->frm_buf_size;
         vp->frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
+
+	/* Black initial render screen for I420/YV12 format */
+	if ((vp->dir & PJMEDIA_DIR_RENDER) &&
+	    (prm->vidparam.fmt.id == PJMEDIA_FORMAT_I420 ||
+	     prm->vidparam.fmt.id == PJMEDIA_FORMAT_YV12))
+	{
+	    pj_memset(vp->frm_buf->buf, 16, vafp.plane_bytes[0]);
+	    pj_memset((pj_uint8_t*)vp->frm_buf->buf + vafp.plane_bytes[0],
+		      0x80, vafp.plane_bytes[1] * 2);
+	}
 
         status = pj_mutex_create_simple(pool, vp->dev_name.ptr,
                                         &vp->frm_mutex);
