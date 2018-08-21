@@ -328,6 +328,13 @@ public class CallActivity extends Activity
 	Button buttonAccept = (Button) findViewById(R.id.buttonAccept);
 	String call_state = "";
 
+        if (ci == null) {
+	    buttonAccept.setVisibility(View.GONE);
+	    buttonHangup.setText("OK");
+	    tvState.setText("Call disconnected");
+	    return;
+	}
+
 	if (ci.getRole() == pjsip_role_e.PJSIP_ROLE_UAC) {
 	    buttonAccept.setVisibility(View.GONE);
 	}
