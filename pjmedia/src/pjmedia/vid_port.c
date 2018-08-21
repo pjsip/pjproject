@@ -648,15 +648,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     if (need_frame_buf) {
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
+	const pjmedia_vid_dev_param *vparam_src;
 
-	vfi = pjmedia_get_video_format_info(NULL, vparam.fmt.id);
+	vparam_src = (vp->dir & PJMEDIA_DIR_RENDER)? &prm->vidparam:
+		     &vparam;
+
+	vfi = pjmedia_get_video_format_info(NULL, vparam_src->fmt.id);
 	if (!vfi) {
 	    status = PJ_ENOTFOUND;
 	    goto on_error;
 	}
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = vparam.fmt.det.vid.size;
+	vafp.size = vparam_src->fmt.det.vid.size;
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
