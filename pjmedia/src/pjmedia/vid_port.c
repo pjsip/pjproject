@@ -165,6 +165,20 @@ static const char *vid_dir_name(pjmedia_dir dir)
     }
 }
 
+static pj_status_t get_vafp(const pjmedia_format *fmt,
+			    pjmedia_video_apply_fmt_param *vafp)
+{
+    const pjmedia_video_format_info *vfi;
+
+    vfi = pjmedia_get_video_format_info(NULL, fmt->id);
+    if (!vfi)
+	return PJMEDIA_EBADFMT;
+
+    pj_bzero(vafp, sizeof(*vafp));
+    vafp->size = fmt->det.vid.size;
+    return vfi->apply_fmt(vfi, vafp);
+}
+
 static pj_status_t create_converter(pjmedia_vid_port *vp)
 {
     if (vp->conv.conv) {
@@ -194,19 +208,12 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
         (vp->role==ROLE_ACTIVE && (vp->dir & PJMEDIA_DIR_ENCODING)))
     {
 	pj_status_t status;
-	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
 
 	/* Allocate buffer for conversion */
-	vfi = pjmedia_get_video_format_info(NULL, vp->conv.conv_param.dst.id);
-	if (!vfi)
-	    return PJMEDIA_EBADFMT;
-
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = vp->conv.conv_param.dst.det.vid.size;
-	status = vfi->apply_fmt(vfi, &vafp);
+	status = get_vafp(&vp->conv.conv_param.dst, &vafp);
 	if (status != PJ_SUCCESS)
-	    return PJMEDIA_EBADFMT;
+	    return status;
 
 	if (vafp.framebytes > vp->conv.conv_buf_size) {
 	    vp->conv.conv_buf = pj_pool_alloc(vp->pool, vafp.framebytes);
@@ -646,22 +653,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     }
 
     if (need_frame_buf) {
-	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
-	const pjmedia_vid_dev_param *vparam_src;
 
-	vparam_src = (vp->dir & PJMEDIA_DIR_RENDER)? &prm->vidparam:
-		     &vparam;
-
-	vfi = pjmedia_get_video_format_info(NULL, vparam_src->fmt.id);
-	if (!vfi) {
-	    status = PJ_ENOTFOUND;
-	    goto on_error;
-	}
-
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = vparam_src->fmt.det.vid.size;
-	status = vfi->apply_fmt(vfi, &vafp);
+	status = get_vafp(&vp->conv.conv_param.src, &vafp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -670,16 +664,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
         vp->frm_buf->buf = pj_pool_zalloc(pool, vafp.framebytes);
         vp->frm_buf->size = vp->frm_buf_size;
         vp->frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
-
-	/* Black initial render screen for I420/YV12 format */
-	if ((vp->dir & PJMEDIA_DIR_RENDER) &&
-	    (prm->vidparam.fmt.id == PJMEDIA_FORMAT_I420 ||
-	     prm->vidparam.fmt.id == PJMEDIA_FORMAT_YV12))
-	{
-	    pj_memset(vp->frm_buf->buf, 16, vafp.plane_bytes[0]);
-	    pj_memset((pj_uint8_t*)vp->frm_buf->buf + vafp.plane_bytes[0],
-		      0x80, vafp.plane_bytes[1] * 2);
-	}
 
         status = pj_mutex_create_simple(pool, vp->dev_name.ptr,
                                         &vp->frm_mutex);
@@ -787,6 +771,34 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
     status = pjmedia_vid_dev_stream_start(vp->strm);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    if ((vp->dir & PJMEDIA_DIR_RENDER) &&
+	 (vp->conv.conv_param.dst.id == PJMEDIA_FORMAT_I420 ||
+	  vp->conv.conv_param.dst.id == PJMEDIA_FORMAT_YV12))
+    {
+	pjmedia_video_apply_fmt_param vafp;
+	pj_status_t status;
+	pjmedia_frame frame;
+
+	pj_bzero(&frame, sizeof(pjmedia_frame));
+	frame.buf = (vp->conv.conv? vp->conv.conv_buf: vp->frm_buf->buf);
+	frame.size = (vp->conv.conv? vp->conv.conv_buf_size:
+		      vp->frm_buf_size);
+
+	status = get_vafp(&vp->conv.conv_param.dst, &vafp);
+	if (status == PJ_SUCCESS && frame.buf) {
+	    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
+	    pj_assert(frame.size >= vafp.framebytes);
+	    frame.size = vafp.framebytes;
+	    
+	    /* Black initial render screen for I420/YV12 format */
+	    pj_memset(frame.buf, 16, vafp.plane_bytes[0]);
+	    pj_memset((pj_uint8_t*)frame.buf + vafp.plane_bytes[0],
+		      0x80, vafp.plane_bytes[1] * 2);
+
+	    pjmedia_vid_dev_stream_put_frame(vp->strm, &frame);
+        }
+    }
 
     if (vp->clock) {
 	status = pjmedia_clock_start(vp->clock);
