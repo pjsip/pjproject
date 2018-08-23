@@ -121,16 +121,58 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 }
 
 #elif defined(PJ_DARWINOS) && PJ_DARWINOS != 0
-#include <mach/mach.h>
-#include <mach/clock.h>
-#include <errno.h>
+
+/* SYSTEM_CLOCK will stop when the device is in deep sleep, so we use
+ * KERN_BOOTTIME instead. 
+ * See ticket #2140 for more details.
+ */
+#define USE_KERN_BOOTTIME 1
+
+#if USE_KERN_BOOTTIME
+#   include <sys/sysctl.h>
+#else
+#   include <mach/mach.h>
+#   include <mach/clock.h>
+#   include <errno.h>
+#endif
 
 #ifndef NSEC_PER_SEC
 #	define NSEC_PER_SEC	1000000000
 #endif
 
+#if USE_KERN_BOOTTIME
+static int64_t get_boottime()
+{
+    struct timeval boottime;
+    int mib[2] = {CTL_KERN, KERN_BOOTTIME};
+    size_t size = sizeof(boottime);
+    int rc;
+
+    rc = sysctl(mib, 2, &boottime, &size, NULL, 0);
+    if (rc != 0)
+      return 0;
+
+    return (int64_t)boottime.tv_sec * 1000000 + (int64_t)boottime.tv_usec;
+}
+#endif
+
 PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
 {
+#if USE_KERN_BOOTTIME
+    int64_t before_now, after_now;
+    struct timeval now;
+
+    after_now = get_boottime();
+    do {
+        before_now = after_now;
+        gettimeofday(&now, NULL);
+        after_now = get_boottime();
+    } while (after_now != before_now);
+
+    ts->u64 = (int64_t)now.tv_sec * 1000000 + (int64_t)now.tv_usec;
+    ts->u64 -= before_now;
+    ts->u64 *= 1000;
+#else
     mach_timespec_t tp;
     int ret;
     clock_serv_t serv;
@@ -148,6 +190,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
     ts->u64 = tp.tv_sec;
     ts->u64 *= NSEC_PER_SEC;
     ts->u64 += tp.tv_nsec;
+#endif
 
     return PJ_SUCCESS;
 }
