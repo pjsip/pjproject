@@ -141,6 +141,7 @@ struct darwin_stream
     
     AVCaptureSession		*cap_session;
     AVCaptureDeviceInput	*dev_input;
+    pj_bool_t		 	 has_image;
     AVCaptureVideoDataOutput	*video_output;
     VOutDelegate		*vout_delegate;
     dispatch_queue_t 		 queue;
@@ -546,6 +547,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
     CVPixelBufferLockBaseAddress(img, kCVPixelBufferLock_ReadOnly);
 
     [stream->frame_lock lock];
+    stream->has_image = PJ_TRUE;
     
     if (stream->is_planar && stream->capture_buf) {
         if (stream->param.fmt.id == PJMEDIA_FORMAT_I420) {
@@ -568,6 +570,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             need_clip = (stride != stream->vid_size.w);
             
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
+
             p_len = stream->vid_size.w * stream->vid_size.h;
             Y = (pj_uint8_t*)stream->capture_buf;
             U = Y + p_len;
@@ -629,6 +632,13 @@ static pj_status_t darwin_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                         pjmedia_frame *frame)
 {
     struct darwin_stream *stream = (struct darwin_stream *)strm;
+
+    if (!stream->has_image) {
+	frame->size = 0;
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	frame->timestamp.u64 = stream->frame_ts.u64;
+	return PJMEDIA_EVID_NOTREADY;
+    }
 
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame->bit_info = 0;
@@ -1302,6 +1312,7 @@ static pj_status_t darwin_stream_stop(pjmedia_vid_dev_stream *strm)
     dispatch_sync_on_main_queue(^{
         [stream->cap_session stopRunning];
     });
+    stream->has_image = PJ_FALSE;
     
     return PJ_SUCCESS;
 }
