@@ -725,10 +725,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
     /* Initialize initial timer. */
     if (is_server && listener->initial_timeout) {
+	pj_time_val delay = { 0 };
+
 	tcp->initial_timer.user_data = (void*)tcp;
 	tcp->initial_timer.cb = &tcp_initial_timer;
-
-	pj_time_val delay = { 0 };
+	
 	delay.sec = listener->initial_timeout;
 	pjsip_endpt_schedule_timer(listener->endpt, 
 				    &tcp->initial_timer, 
