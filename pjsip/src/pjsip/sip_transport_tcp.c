@@ -63,6 +63,7 @@ struct tcp_listener
     pj_sockopt_params	     sockopt_params;
     pj_bool_t		     reuse_addr;        
     unsigned		     async_cnt;    
+    unsigned		     initial_timeout;
 
     /* Group lock to be used by TCP listener and ioqueue key */
     pj_grp_lock_t	    *grp_lock;
@@ -123,6 +124,9 @@ struct tcp_transport
 
     /* Group lock to be used by TCP transport and ioqueue key */
     pj_grp_lock_t	    *grp_lock;
+
+    /* Initial timer. */
+    pj_timer_entry	     initial_timer;
 };
 
 
@@ -236,6 +240,7 @@ PJ_DEF(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
     pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
     cfg->async_cnt = 1;
     cfg->reuse_addr = PJSIP_TCP_TRANSPORT_REUSEADDR;
+    cfg->initial_timeout = PJSIP_TCP_INITIAL_TIMEOUT;
 }
 
 
@@ -391,6 +396,7 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     listener->qos_type = cfg->qos_type;
     listener->reuse_addr = cfg->reuse_addr;
     listener->async_cnt = cfg->async_cnt;
+    listener->initial_timeout = cfg->initial_timeout;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
 	      sizeof(cfg->qos_params));
     pj_memcpy(&listener->sockopt_params, &cfg->sockopt_params,
@@ -594,6 +600,9 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 /* TCP keep-alive timer callback */
 static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 
+/* TCP initial timer callback */
+static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e);
+
 /* Clean up TCP resources */
 static void tcp_on_destroy(void *arg);
 
@@ -714,6 +723,19 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
 
+    /* Initialize initial timer. */
+    if (is_server && listener->initial_timeout) {
+	tcp->initial_timer.user_data = (void*)tcp;
+	tcp->initial_timer.cb = &tcp_initial_timer;
+
+	pj_time_val delay = { 0 };
+	delay.sec = listener->initial_timeout;
+	pjsip_endpt_schedule_timer(listener->endpt, 
+				    &tcp->initial_timer, 
+				    &delay);
+	tcp->initial_timer.id = PJ_TRUE;
+    }
+
     /* Done setting up basic transport. */
     *p_tcp = tcp;
 
@@ -809,6 +831,12 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
     if (tcp->ka_timer.id) {
 	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
 	tcp->ka_timer.id = PJ_FALSE;
+    }
+
+    /* Stop initial timer. */
+    if (tcp->initial_timer.id) {
+	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
+	tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Cancel all delayed transmits */
@@ -1339,6 +1367,12 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
 	tcp->ka_timer.id = PJ_FALSE;
     }
 
+    /* Stop initial timer. */
+    if (tcp->initial_timer.id) {
+	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
+	tcp->initial_timer.id = PJ_FALSE;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1365,6 +1399,11 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
     if (tcp->is_closing) {
 	tcp->is_closing++;
 	return PJ_FALSE;
+    }
+
+    if (tcp->initial_timer.id) {
+	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->initial_timer);
+	tcp->initial_timer.id = PJ_FALSE;
     }
 
     /* Houston, we have packet! Report the packet to transport manager
@@ -1584,6 +1623,16 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     tcp->ka_timer.id = PJ_TRUE;
 }
 
+/* Transport keep-alive timer callback */
+static void tcp_initial_timer(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    pj_status_t status = PJ_ETIMEDOUT;
+    struct tcp_transport *tcp = (struct tcp_transport*) e->user_data;
+
+    PJ_UNUSED_ARG(th);
+
+    tcp_init_shutdown(tcp, status);
+}
 
 PJ_DEF(pj_sock_t) pjsip_tcp_transport_get_socket(pjsip_transport *transport)
 {

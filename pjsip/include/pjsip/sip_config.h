@@ -772,6 +772,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Initial timeout interval to be applied to incoming transports (i.e. server
+ * side) when no data received after a successful connection. Value is in
+ * seconds. Disable the timeout by setting it to 0.
+ *
+ * Note that even when this is disable, the connection might still get closed
+ * when it is idle or not referred anymore. Have a look at \a
+ * PJSIP_TRANSPORT_SERVER_IDLE_TIME
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_TCP_INITIAL_TIMEOUT
+#   define PJSIP_TCP_INITIAL_TIMEOUT	    0
+#endif
+
+/**
  * Set the interval to send keep-alive packet for TLS transports.
  * If the value is zero, keep-alive will be disabled for TLS.
  *

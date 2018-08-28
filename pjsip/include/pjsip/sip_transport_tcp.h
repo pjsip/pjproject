@@ -112,6 +112,15 @@ typedef struct pjsip_tcp_transport_cfg
      */
     pj_sockopt_params	sockopt_params;
 
+
+    /**
+     * Intial timeout interval to be applied to incoming transports 
+     * (i.e. server side) when no data received after a successful connection.
+     *
+     * Default: PJSIP_TCP_INITIAL_TIMEOUT
+     */
+    unsigned		initial_timeout;
+
 } pjsip_tcp_transport_cfg;
 
 
