@@ -165,14 +165,17 @@ static const char *vid_dir_name(pjmedia_dir dir)
     }
 }
 
-static pj_status_t get_vafp(const pjmedia_format *fmt,
-			    pjmedia_video_apply_fmt_param *vafp)
+static pj_status_t get_vfi(const pjmedia_format *fmt,
+			   const pjmedia_video_format_info **p_vfi,
+			   pjmedia_video_apply_fmt_param *vafp)
 {
     const pjmedia_video_format_info *vfi;
 
     vfi = pjmedia_get_video_format_info(NULL, fmt->id);
     if (!vfi)
 	return PJMEDIA_EBADFMT;
+
+    if (p_vfi) *p_vfi = vfi;
 
     pj_bzero(vafp, sizeof(*vafp));
     vafp->size = fmt->det.vid.size;
@@ -211,7 +214,7 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
 	pjmedia_video_apply_fmt_param vafp;
 
 	/* Allocate buffer for conversion */
-	status = get_vafp(&vp->conv.conv_param.dst, &vafp);
+	status = get_vfi(&vp->conv.conv_param.dst, NULL, &vafp);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -655,7 +658,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     if (need_frame_buf) {
 	pjmedia_video_apply_fmt_param vafp;
 
-	status = get_vafp(&vp->conv.conv_param.src, &vafp);
+	status = get_vfi(&vp->conv.conv_param.src, NULL, &vafp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -772,31 +775,34 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    if ((vp->dir & PJMEDIA_DIR_RENDER) &&
-	 (vp->conv.conv_param.dst.id == PJMEDIA_FORMAT_I420 ||
-	  vp->conv.conv_param.dst.id == PJMEDIA_FORMAT_YV12))
+    /* Initialize buffer with black color */
     {
+        const pjmedia_video_format_info *vfi;
+        const pjmedia_format *fmt;
 	pjmedia_video_apply_fmt_param vafp;
 	pj_status_t status;
 	pjmedia_frame frame;
 
 	pj_bzero(&frame, sizeof(pjmedia_frame));
-	frame.buf = (vp->conv.conv? vp->conv.conv_buf: vp->frm_buf->buf);
-	frame.size = (vp->conv.conv? vp->conv.conv_buf_size:
-		      vp->frm_buf_size);
+	frame.buf = vp->frm_buf->buf;
+	frame.size = vp->frm_buf_size;
 
-	status = get_vafp(&vp->conv.conv_param.dst, &vafp);
+	fmt = &vp->conv.conv_param.src;
+	status = get_vfi(fmt, &vfi, &vafp);
 	if (status == PJ_SUCCESS && frame.buf) {
 	    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
 	    pj_assert(frame.size >= vafp.framebytes);
 	    frame.size = vafp.framebytes;
 	    
-	    /* Black initial render screen for I420/YV12 format */
-	    pj_memset(frame.buf, 16, vafp.plane_bytes[0]);
-	    pj_memset((pj_uint8_t*)frame.buf + vafp.plane_bytes[0],
-		      0x80, vafp.plane_bytes[1] * 2);
-
-	    pjmedia_vid_dev_stream_put_frame(vp->strm, &frame);
+	    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
+	    	pj_memset(frame.buf, 0, vafp.framebytes);
+	    } else if (fmt->id == PJMEDIA_FORMAT_I420 ||
+	  	       fmt->id == PJMEDIA_FORMAT_YV12)
+	    {	    	
+	    	pj_memset(frame.buf, 16, vafp.plane_bytes[0]);
+	    	pj_memset((pj_uint8_t*)frame.buf + vafp.plane_bytes[0],
+		      	  0x80, vafp.plane_bytes[1] * 2);
+	    }
         }
     }
 
