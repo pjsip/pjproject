@@ -3045,9 +3045,14 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	}
     }
 
+    /* Update call media from provisional media */
+    call->med_cnt = call->med_prov_cnt;
+    pj_memcpy(call->media, call->media_prov,
+	      sizeof(call->media_prov[0]) * call->med_prov_cnt);
+
     /* Process each media stream */
-    for (mi=0; mi < call->med_prov_cnt; ++mi) {
-	pjsua_call_media *call_med = &call->media_prov[mi];
+    for (mi=0; mi < call->med_cnt; ++mi) {
+	pjsua_call_media *call_med = &call->media[mi];
 	pj_bool_t media_changed = PJ_FALSE;
 
 	if (mi >= local_sdp->media_count ||
@@ -3438,10 +3443,10 @@ on_check_med_status:
 	}
     }
 
-    /* Update call media from provisional media */
-    call->med_cnt = call->med_prov_cnt;
-    pj_memcpy(call->media, call->media_prov,
-	      sizeof(call->media_prov[0]) * call->med_prov_cnt);
+    /* Sync provisional media to call media */
+    call->med_prov_cnt = call->med_cnt;
+    pj_memcpy(call->media_prov, call->media,
+	      sizeof(call->media[0]) * call->med_cnt);
 
     /* Perform SDP re-negotiation. */
     if (got_media && need_renego_sdp) {
