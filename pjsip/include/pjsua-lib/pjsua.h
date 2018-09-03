@@ -4077,6 +4077,23 @@ PJ_DECL(void) pjsua_srtp_opt_default(pjsua_srtp_opt *cfg);
 
 
 /**
+ * Duplicate SRTP transport setting. If the \a pool argument is NULL,
+ * a simple memcpy() will be used.
+ *
+ * @param pool	    Memory to duplicate strings.
+ * @param dst	    Destination setting.
+ * @param src	    Source setting.
+ * @param check_str If set to TRUE, the function will check if strings
+ *		    are identical before copying. Identical strings
+ *		    will not be duplicated.
+ *		    If set to FALSE, all strings will be duplicated.
+ */
+PJ_DECL(void) pjsua_srtp_opt_dup(pj_pool_t *pool, pjsua_srtp_opt *dst,
+                                 const pjsua_srtp_opt *src,
+                                 pj_bool_t check_str);
+
+
+/**
  * Call this function to initialize account config with default values.
  *
  * @param cfg	    The account config to be initialized.

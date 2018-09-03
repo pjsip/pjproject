@@ -139,6 +139,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pjsua_ice_config_dup(pool, &dst->ice_cfg, &src->ice_cfg);
     pjsua_turn_config_dup(pool, &dst->turn_cfg, &src->turn_cfg);
 
+    pjsua_srtp_opt_dup(pool, &dst->srtp_opt, &src->srtp_opt, PJ_FALSE);
+
     pj_strdup(pool, &dst->ka_data, &src->ka_data);
 
     pjmedia_rtcp_fb_setting_dup(pool, &dst->rtcp_fb_cfg, &src->rtcp_fb_cfg);
@@ -1423,6 +1425,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.ip_change_cfg.shutdown_tp = cfg->ip_change_cfg.shutdown_tp;
     acc->cfg.ip_change_cfg.hangup_calls = cfg->ip_change_cfg.hangup_calls;    
     acc->cfg.ip_change_cfg.reinvite_flags = cfg->ip_change_cfg.reinvite_flags;
+
+    /* SRTP setting */
+    pjsua_srtp_opt_dup(acc->pool, &acc->cfg.srtp_opt, &cfg->srtp_opt,
+    		       PJ_TRUE);
 
     /* RTCP-FB config */
     pjmedia_rtcp_fb_setting_dup(acc->pool, &acc->cfg.rtcp_fb_cfg,

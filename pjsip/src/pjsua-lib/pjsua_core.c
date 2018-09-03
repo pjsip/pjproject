@@ -143,6 +143,8 @@ PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
     for (i=0; i<src->stun_srv_cnt; ++i) {
 	pj_strdup_with_null(pool, &dst->stun_srv[i], &src->stun_srv[i]);
     }
+
+    pjsua_srtp_opt_dup(pool, &dst->srtp_opt, &src->srtp_opt, PJ_FALSE);
 }
 
 PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
@@ -260,6 +262,30 @@ PJ_DEF(void) pjsua_turn_config_dup(pj_pool_t *pool,
 PJ_DEF(void) pjsua_srtp_opt_default(pjsua_srtp_opt *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+}
+
+
+PJ_DEF(void) pjsua_srtp_opt_dup( pj_pool_t *pool, pjsua_srtp_opt *dst,
+                                 const pjsua_srtp_opt *src,
+                                 pj_bool_t check_str)
+{
+    pj_memcpy(dst, src, sizeof(*src));
+    if (pool) {
+    	unsigned i;
+    	
+    	for (i = 0; i < src->crypto_count; i++) {
+    	    if (!check_str ||
+    	    	pj_stricmp(&dst->crypto[i].key, &src->crypto[i].key))
+    	    {
+	    	pj_strdup(pool, &dst->crypto[i].key, &src->crypto[i].key);
+	    }
+    	    if (!check_str ||
+    	    	pj_stricmp(&dst->crypto[i].name, &src->crypto[i].name))
+    	    {
+	    	pj_strdup(pool, &dst->crypto[i].name, &src->crypto[i].name);
+	    }
+	}
+    }
 }
 
 
