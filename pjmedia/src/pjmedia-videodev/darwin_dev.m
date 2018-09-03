@@ -1284,6 +1284,9 @@ static pj_status_t darwin_stream_start(pjmedia_vid_dev_stream *strm)
         });
     
 	if (![stream->cap_session isRunning]) {
+	    /* More info about the error should be reported in
+	     * VOutDelegate::session_runtime_error()
+	     */
 	    PJ_LOG(3, (THIS_FILE, "Unable to start AVFoundation capture "
 				  "session"));
 	    return PJ_EUNKNOWN;
