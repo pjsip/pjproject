@@ -522,6 +522,14 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 }
 #endif
 
+- (void)session_runtime_error:(NSNotification *)notification
+{
+    NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
+    PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
+    	       [error localizedDescription],
+    	       [error localizedFailureReason]));
+}
+
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
 		      didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer
 		      fromConnection:(AVCaptureConnection *)connection
@@ -864,6 +872,14 @@ static pj_status_t darwin_factory_create_stream(
 					    DISPATCH_QUEUE_SERIAL);
 	[strm->video_output setSampleBufferDelegate:strm->vout_delegate
                             queue:strm->queue];
+
+	/* Add observer to catch notification when the capture session
+	 * fails to start running or encounters an error during runtime.
+	 */
+	[[NSNotificationCenter defaultCenter] addObserver:strm->vout_delegate
+	    selector:@selector(session_runtime_error:)
+	    name:AVCaptureSessionRuntimeErrorNotification
+	    object:strm->cap_session];
         
         if ([strm->cap_session canAddOutput:strm->video_output]) {
 	    [strm->cap_session addOutput:strm->video_output];
