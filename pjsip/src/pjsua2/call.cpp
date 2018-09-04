@@ -131,11 +131,29 @@ void MediaEvent::fromPj(const pjmedia_event &ev)
 void MediaTransportInfo::fromPj(const pjmedia_transport_info &info)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];
-    
-    pj_sockaddr_print(&info.src_rtp_name, straddr, sizeof(straddr), 3);
-    srcRtpName = straddr;
-    pj_sockaddr_print(&info.src_rtcp_name, straddr, sizeof(straddr), 3);
-    srcRtcpName = straddr;
+   
+    localRtpName = localRtcpName = srcRtpName = srcRtcpName = "";    
+    if (pj_sockaddr_has_addr(&info.sock_info.rtp_addr_name)) { 
+        pj_sockaddr_print(&info.sock_info.rtp_addr_name, straddr, 
+		          sizeof(straddr), 3);
+        localRtpName = straddr;
+    }
+
+    if (pj_sockaddr_has_addr(&info.sock_info.rtcp_addr_name)) { 
+        pj_sockaddr_print(&info.sock_info.rtcp_addr_name, straddr, 
+		          sizeof(straddr), 3);
+        localRtcpName = straddr;
+    }
+
+    if (pj_sockaddr_has_addr(&info.src_rtp_name)) {     
+        pj_sockaddr_print(&info.src_rtp_name, straddr, sizeof(straddr), 3);
+        srcRtpName = straddr;
+    }
+
+    if (pj_sockaddr_has_addr(&info.src_rtcp_name)) { 
+        pj_sockaddr_print(&info.src_rtcp_name, straddr, sizeof(straddr), 3);
+        srcRtcpName = straddr;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////

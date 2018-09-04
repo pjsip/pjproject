@@ -285,17 +285,34 @@ public:
 
 /**
  * This structure describes media transport informations. It corresponds to the
- * pjmedia_transport_info structure.
+ * pjmedia_transport_info structure. The address name field can be empty string
+ * if the address in the pjmedia_transport_info is invalid.
  */
 struct MediaTransportInfo
 {
     /**
-     * Remote address where RTP originated from.
+     * Address to be advertised as the local address for the RTP socket, 
+     * which does not need to be equal as the bound address (for example, 
+     * this address can be the address resolved with STUN).
+     */
+    SocketAddress   localRtpName;
+
+    /**
+     * Address to be advertised as the local address for the RTCP socket, 
+     * which does not need to be equal as the bound address (for example, 
+     * this address can be the address resolved with STUN).
+     */
+    SocketAddress   localRtcpName;
+
+    /**
+     * Remote address where RTP originated from. This can be empty string if 
+     * no data is received from the remote.
      */
     SocketAddress   srcRtpName;
 
     /**
-     * Remote address where RTCP originated from.
+     * Remote address where RTCP originated from. This can be empty string if 
+     * no data is recevied from the remote.
      */
     SocketAddress   srcRtcpName;
     
