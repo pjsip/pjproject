@@ -269,7 +269,11 @@ PJ_DEF(void) pjsua_srtp_opt_dup( pj_pool_t *pool, pjsua_srtp_opt *dst,
                                  const pjsua_srtp_opt *src,
                                  pj_bool_t check_str)
 {
+    pjsua_srtp_opt backup_dst;
+    
+    if (check_str) pj_memcpy(&backup_dst, dst, sizeof(*dst));
     pj_memcpy(dst, src, sizeof(*src));
+
     if (pool) {
     	unsigned i;
     	
@@ -278,11 +282,21 @@ PJ_DEF(void) pjsua_srtp_opt_dup( pj_pool_t *pool, pjsua_srtp_opt *dst,
     	    	pj_stricmp(&dst->crypto[i].key, &src->crypto[i].key))
     	    {
 	    	pj_strdup(pool, &dst->crypto[i].key, &src->crypto[i].key);
+	    } else {
+	    	/* If strings are identical, use the old string to
+	    	 * avoid wasting memory.
+	    	 */
+	    	dst->crypto[i].key = backup_dst.crypto[i].key;
 	    }
     	    if (!check_str ||
     	    	pj_stricmp(&dst->crypto[i].name, &src->crypto[i].name))
     	    {
 	    	pj_strdup(pool, &dst->crypto[i].name, &src->crypto[i].name);
+	    } else {
+	    	/* If strings are identical, use the old string to
+	    	 * avoid wasting memory.
+	    	 */
+	    	dst->crypto[i].name = backup_dst.crypto[i].name;
 	    }
 	}
     }
