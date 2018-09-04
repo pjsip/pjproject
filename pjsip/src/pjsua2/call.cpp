@@ -29,7 +29,6 @@ using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define SDP_BUFFER_SIZE 1024
 
 MathStat::MathStat()
 : n(0), max(0), min(0), last(0), mean(0)
@@ -110,11 +109,15 @@ void JbufState::fromPj(const pjmedia_jb_state &prm)
 
 void SdpSession::fromPj(const pjmedia_sdp_session &sdp)
 {
-    char buf[SDP_BUFFER_SIZE];
+#if PJSUA2_MAX_SDP_BUF_LEN
+    char buf[PJSUA2_MAX_SDP_BUF_LEN];
     int len;
 
     len = pjmedia_sdp_print(&sdp, buf, sizeof(buf));
     wholeSdp = (len > -1? string(buf, len): "");
+#else
+    wholeSdp = "";
+#endif    
     pjSdpSession = (void *)&sdp;
 }
 
@@ -167,12 +170,22 @@ public:
      * call audio media.
      */
     void setPortId(int id);
+
+    /**
+     * Destructor
+     */
+    virtual ~CallAudioMedia();
 };
 
 
 void CallAudioMedia::setPortId(int pid)
 {
     this->id = pid;
+}
+
+CallAudioMedia::~CallAudioMedia()
+{
+    id = PJSUA_INVALID_ID;
 }
 
 CallOpParam::CallOpParam(bool useDefaultCallSetting)
@@ -418,16 +431,20 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
     reason = str2Pj(reason_str);
     p_reason = (reason.slen == 0? NULL: &reason);
 
-    if (sdp_str == "") {
-    	sdp = NULL;
-    } else {
+    sdp = NULL;
+    if (sdp_str != "") {
         pj_str_t dup_pj_sdp;
         pj_str_t pj_sdp_str = {(char*)sdp_str.c_str(),
         		       (pj_ssize_t)sdp_str.size()};
+	pj_status_t status;
 
         pj_strdup(pool, &dup_pj_sdp, &pj_sdp_str);        
-        pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
-                          dup_pj_sdp.slen, &sdp);
+        status = pjmedia_sdp_parse(pool, dup_pj_sdp.ptr,
+				   dup_pj_sdp.slen, &sdp);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Failed to parse SDP for call param"));
+	}
     }
 }
 
@@ -752,6 +769,15 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
     unsigned mi;
     
     if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS) {
+	if (medias.size()) {
+	    /* Clear medias. */
+	    for (mi = 0; mi < medias.size(); mi++) {
+		if (medias[mi])
+		    delete medias[mi];
+	    }
+	    medias.clear();	
+	}
+
         for (mi = 0; mi < pj_ci.media_cnt; mi++) {
             if (mi >= medias.size()) {
                 if (pj_ci.media[mi].type == PJMEDIA_TYPE_AUDIO) {

@@ -1358,6 +1358,7 @@ static void sort_media(const pjmedia_sdp_session *sdp,
  * first in the array.
  */
 static void sort_media2(const pjsua_call_media *call_med,
+			pj_bool_t check_tp,
 			unsigned call_med_cnt,
 			pjmedia_type type,
 			pj_uint8_t midx[],
@@ -1386,7 +1387,7 @@ static void sort_media2(const pjsua_call_media *call_med,
 	}
 
 	/* Is it active? */
-	if (!call_med[i].tp) {
+	if (check_tp && !call_med[i].tp) {
 	    score[i] -= 10;
 	}
 
@@ -2046,18 +2047,25 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 * media from existing media.
 	 * Otherwise, apply media count from the call setting directly.
 	 */
-	if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) == 0) {
+	if (reinit) {
+	    pj_bool_t sort_check_tp;
+
+	    /* Media sorting below will check transport, i.e: media without
+	     * transport will have lower priority. If PJSUA_CALL_REINIT_MEDIA
+	     * is set, we must not check transport.
+	     */
+	    sort_check_tp = !(call->opt.flag & PJSUA_CALL_REINIT_MEDIA);
 
 	    /* We are sending reoffer, check media count for each media type
 	     * from the existing call media list.
 	     */
-	    sort_media2(call->media_prov, call->med_prov_cnt,
+	    sort_media2(call->media_prov, sort_check_tp, call->med_prov_cnt,
 			PJMEDIA_TYPE_AUDIO, maudidx, &maudcnt, &mtotaudcnt);
 
 	    /* No need to assert if there's no media. */
 	    //pj_assert(maudcnt > 0);
 
-	    sort_media2(call->media_prov, call->med_prov_cnt,
+	    sort_media2(call->media_prov, sort_check_tp, call->med_prov_cnt,
 			PJMEDIA_TYPE_VIDEO, mvididx, &mvidcnt, &mtotvidcnt);
 
 	    /* Call setting may add or remove media. Adding media is done by
@@ -2088,6 +2096,17 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	    }
 	    mvidcnt = call->opt.vid_cnt;
 
+	    /* In case of media reinit, 'med_prov_cnt' may be decreased
+	     * because the new call->opt says so. As media count should
+	     * never decrease, we should verify 'med_prov_cnt' to be
+	     * at least equal to 'med_cnt' (see also #1987).
+	     */
+	    if ((call->opt.flag & PJSUA_CALL_REINIT_MEDIA) &&
+		call->med_prov_cnt < call->med_cnt)
+	    {
+		call->med_prov_cnt = call->med_cnt;
+	    }
+
 	} else {
 
 	    maudcnt = mtotaudcnt = call->opt.aud_cnt;
@@ -2112,17 +2131,6 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 		    mvididx[0] = (pj_uint8_t)call->med_prov_cnt++;
 		}
 #endif
-	    }
-
-	    /* In case of media reinit, 'med_prov_cnt' may be decreased
-	     * because the new call->opt says so. As media count should
-	     * never decrease, we should verify 'med_prov_cnt' to be
-	     * at least equal to 'med_cnt' (see also #1987).
-	     */
-	    if (reinit && (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) &&
-		call->med_prov_cnt < call->med_cnt)
-	    {
-		call->med_prov_cnt = call->med_cnt;
 	    }
 	}
 
