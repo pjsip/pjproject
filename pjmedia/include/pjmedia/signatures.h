@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2011-2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,7 +14,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #ifndef __PJMEDIA_SIGNATURES_H__
 #define __PJMEDIA_SIGNATURES_H__
@@ -147,6 +147,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 #define PJMEDIA_SIG_IS_CLASS_PORT_AUD(s) ((s)>>24=='P' && (s)>>16=='A')
 
 #define PJMEDIA_SIG_PORT_BIDIR		PJMEDIA_SIG_CLASS_PORT_AUD('B','D')
+#define PJMEDIA_SIG_PORT_CB            PJMEDIA_SIG_CLASS_PORT_AUD('C','B')
 #define PJMEDIA_SIG_PORT_CONF		PJMEDIA_SIG_CLASS_PORT_AUD('C','F')
 #define PJMEDIA_SIG_PORT_CONF_PASV	PJMEDIA_SIG_CLASS_PORT_AUD('C','P')
 #define PJMEDIA_SIG_PORT_CONF_SWITCH	PJMEDIA_SIG_CLASS_PORT_AUD('C','S')

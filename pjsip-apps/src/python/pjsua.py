@@ -2711,6 +2711,53 @@ class Lib:
         err = _pjsua.recorder_destroy(rec_id)
         self._err_check("recorder_destroy()", self, err)
 
+    def create_audio_cb(self, callback):
+        """Create audio callback.
+
+        Keyword arguments
+        callback    -- An object with one or both of methods:
+                       string cb_get_frame(int) should return a string
+                           containing audio data of specified length
+                       int cb_get_frame(string) should process the string
+                           containing audio data. Return code does not matter.
+
+        Return:
+            Audio callback ID
+
+        """
+        lck = self.auto_lock()
+        err, acb_id = _pjsua.audio_cb_create(callback)
+        self._err_check("create_audio_cb()", self, err)
+        return acb_id
+        
+    def audio_cb_get_slot(self, acb_id):
+        """Get the conference port ID for the specified audio callback.
+
+        Keyword arguments:
+        acb_id  -- the audio callback ID
+        
+        Return:
+            Conference slot number for the audio callback
+
+        """
+        lck = self.auto_lock()
+        slot = _pjsua.audio_cb_get_conf_port(acb_id)
+        if slot < 1:
+            self._err_check("audio_cb_get_slot()", self, -1, 
+                            "Invalid audio callback id")
+        return slot
+
+    def audio_cb_destroy(self, acb_id):
+        """Destroy the audio callback.
+
+        Keyword arguments:
+        acb_id   -- the audio callback ID.
+
+        """
+        lck = self.auto_lock()
+        err = _pjsua.audio_cb_destroy(acb_id)
+        self._err_check("audio_cb_destroy()", self, err)
+
 
     # Internal functions
 
