@@ -46,12 +46,12 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjnath/include \
 		   $(CC_INC)../..
 export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS) 
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS)
 
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
-		   $(APP_LDFLAGS) $(LDFLAGS) 
+		   $(APP_LDFLAGS) $(LDFLAGS)
 
 ###############################################################################
 # Defines for building PJMEDIA library
@@ -59,7 +59,7 @@ export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			alaw_ulaw.o alaw_ulaw_table.o avi_player.o \
-			bidirectional.o clock_thread.o codec.o conference.o \
+			bidirectional.o cb_port.o clock_thread.o codec.o conference.o \
 			conf_switch.o converter.o  converter_libswscale.o converter_libyuv.o \
 			delaybuf.o echo_common.o \
 			echo_port.o echo_suppress.o echo_webrtc.o endpoint.o errno.o \
@@ -155,7 +155,7 @@ export PJMEDIA_TEST_SRCDIR = ../src/test
 export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o \
 			    vid_codec_test.o vid_dev_test.o vid_port_test.o \
 			    rtp_test.o test.o
-export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
+export PJMEDIA_TEST_OBJS += sdp_neg_test.o
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_CXXFLAGS += $(_CXXFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
@@ -169,8 +169,8 @@ export PJMEDIA_TEST_LDFLAGS += $(PJMEDIA_CODEC_LDLIB) \
 ifeq ($(EXCLUDE_APP),0)
 export PJMEDIA_TEST_EXE:=pjmedia-test-$(TARGET_NAME)$(HOST_EXE)
 endif
-	
-export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
+
+export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 ###############################################################################
 # Main entry
 #
@@ -192,7 +192,7 @@ doc:
 	@if [ -n "$(WWWDIR)" ] && ! [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html" ] ; then \
 		echo "Creating docs/$(PJ_VERSION)/pjmedia/docs/html" ; \
 		mkdir -p $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html ; \
-	fi 
+	fi
 	@if [ -n "$(WWWDIR)" ] && [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html" ] ; then \
 		echo "Copying docs/$(PJ_VERSION) to $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html.." ; \
 		cp -v -a ../docs/$(PJ_VERSION)/html/* $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html/ ; \
@@ -272,7 +272,7 @@ realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-codec-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-test-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsdp-$(TARGET_NAME).depend),$(HOST_RMR))
-	
+
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_VIDEODEV app=pjmedia-videodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $@
@@ -288,5 +288,3 @@ depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 	echo '$(BINDIR)/$(PJMEDIA_TEST_EXE): $(LIBDIR)/$(PJMEDIA_LIB) $(LIBDIR)/$(PJMEDIA_CODEC_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend
-
-

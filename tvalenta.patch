@@ -1,0 +1,1157 @@
+Index: pjmedia/build/Makefile
+===================================================================
+--- pjmedia/build/Makefile	(revision 4408)
++++ pjmedia/build/Makefile	(working copy)
+@@ -54,7 +54,7 @@
+ export PJMEDIA_SRCDIR = ../src/pjmedia
+ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+ 			alaw_ulaw.o alaw_ulaw_table.o avi_player.o \
+-			bidirectional.o clock_thread.o codec.o conference.o \
++			bidirectional.o cb_port.o clock_thread.o codec.o conference.o \
+ 			conf_switch.o converter.o  converter_libswscale.o \
+ 			delaybuf.o echo_common.o \
+ 			echo_port.o echo_suppress.o endpoint.o errno.o \
+Index: pjmedia/build/pjmedia.vcproj
+===================================================================
+--- pjmedia/build/pjmedia.vcproj	(revision 4408)
++++ pjmedia/build/pjmedia.vcproj	(working copy)
+@@ -2938,6 +2938,64 @@
+ 				</FileConfiguration>
+ 			</File>
+ 			<File
++				RelativePath="..\src\pjmedia\cb_port.c"
++				>
++				<FileConfiguration
++					Name="Release|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++				<FileConfiguration
++					Name="Debug|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++				<FileConfiguration
++					Name="Debug-Static|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++				<FileConfiguration
++					Name="Release-Dynamic|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++				<FileConfiguration
++					Name="Debug-Dynamic|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++				<FileConfiguration
++					Name="Release-Static|Win32"
++					>
++					<Tool
++						Name="VCCLCompilerTool"
++						AdditionalIncludeDirectories=""
++						PreprocessorDefinitions=""
++					/>
++				</FileConfiguration>
++			</File>
++			<File
+ 				RelativePath="..\src\pjmedia\clock_thread.c"
+ 				>
+ 				<FileConfiguration
+@@ -4977,6 +5035,9 @@
+ 				>
+ 			</File>
+ 			<File
++				RelativePath="..\include\pjmedia\cb_port.h"
++				>
++			<File
+ 				RelativePath="..\include\pjmedia\bidirectional.h"
+ 				>
+ 			</File>
+Index: pjmedia/include/pjmedia.h
+===================================================================
+--- pjmedia/include/pjmedia.h	(revision 4408)
++++ pjmedia/include/pjmedia.h	(working copy)
+@@ -27,6 +27,7 @@
+ #include <pjmedia/alaw_ulaw.h>
+ #include <pjmedia/avi_stream.h>
+ #include <pjmedia/bidirectional.h>
++#include <pjmedia/cb_port.h>
+ #include <pjmedia/circbuf.h>
+ #include <pjmedia/clock.h>
+ #include <pjmedia/codec.h>
+Index: pjmedia/include/pjmedia/cb_port.h
+===================================================================
+--- pjmedia/include/pjmedia/cb_port.h	(revision 0)
++++ pjmedia/include/pjmedia/cb_port.h	(working copy)
+@@ -0,0 +1,103 @@
++/* $Id: cb_port.h 3553 2011-05-05 06:14:19Z nanang $ */
++/* 
++ * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
++ * Copyright (C) 2003-2008 Benny Prijono <benny at prijono.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
++ */
++#ifndef __PJMEDIA_CB_PORT_H__
++#define __PJMEDIA_CB_PORT_H__
++
++/**
++ * @file cb_port.h
++ * @brief Audio callback media port.
++ */
++#include <pjmedia/port.h>
++
++
++
++/**
++ * @defgroup PJMEDIA_CB_PORT Audio Callback Port
++ * @ingroup PJMEDIA_PORT
++ * @brief Calls specified functions when an audio frame arrived or needed.
++ * @{
++ *
++ * Audio callback port provides a simple way to access raw audio streams
++ * frame by frame in a higher level application. This allows to connect
++ * for example a speech synthesizer or a speech recognizer easily
++ * with application-defined buffering or no buffering at all
++ * as opposed with @ref PJMEDIA_MEM_PLAYER.
++ */
++
++
++PJ_BEGIN_DECL
++
++
++/**
++ * Create Audio Callback port. 
++ *
++ * @param pool			Pool to allocate memory.
++ * @param sampling_rate		Sampling rate of the port.
++ * @param channel_count		Number of channels.
++ * @param samples_per_frame	Number of samples per frame.
++ * @param bits_per_sample	Number of bits per sample.
++ * @param user_data			User data to be specified in the callback
++ * @param cb_get_frame		Callback to be called when audio data needed.
++ *					The buffer should be filled in the callback.
++ * @param cb_put_frame		Callback to be called when audio data arrived.
++ *					The callback function should process the buffer.
++ * @param p_port		Pointer to receive the port instance.
++ *
++ * @return			PJ_SUCCESS on success.
++ */
++PJ_DECL(pj_status_t) pjmedia_cb_port_create( pj_pool_t *pool,
++							unsigned sampling_rate,
++							unsigned channel_count,
++							unsigned samples_per_frame,
++							unsigned bits_per_sample,
++							void *user_data,
++							pj_status_t (*cb_get_frame)(
++								pjmedia_port *port,
++								void *usr_data,
++								void *buffer,
++								pj_size_t buf_size),
++							pj_status_t (*cb_put_frame)(
++								pjmedia_port *port,
++								void *usr_data,
++								const void *buffer,
++								pj_size_t buf_size),
++							pjmedia_port **p_port );
++
++
++/**
++ * Get user object associated with the audio callback port.
++ *
++ * @param port      The audio callback port whose object to get.
++ * @param user_data Pointer to receive the user object.
++ *
++ * @return PJ_SUCCESS on success.
++ */
++PJ_DECL(pj_status_t) pjmedia_cb_port_userdata_get( pjmedia_port *port,
++							void** user_data );
++
++
++PJ_END_DECL
++
++/**
++ * @}
++ */
++
++
++#endif	/* __PJMEDIA_CB_PORT_H__ */
+Index: pjmedia/include/pjmedia/signatures.h
+===================================================================
+--- pjmedia/include/pjmedia/signatures.h	(revision 4408)
++++ pjmedia/include/pjmedia/signatures.h	(working copy)
+@@ -147,6 +147,7 @@
+ #define PJMEDIA_SIG_IS_CLASS_PORT_AUD(s) ((s)>>24=='P' && (s)>>16=='A')
+ 
+ #define PJMEDIA_SIG_PORT_BIDIR		PJMEDIA_SIG_CLASS_PORT_AUD('B','D')
++#define PJMEDIA_SIG_PORT_CB			PJMEDIA_SIG_CLASS_PORT_AUD('C','B')
+ #define PJMEDIA_SIG_PORT_CONF		PJMEDIA_SIG_CLASS_PORT_AUD('C','F')
+ #define PJMEDIA_SIG_PORT_CONF_PASV	PJMEDIA_SIG_CLASS_PORT_AUD('C','P')
+ #define PJMEDIA_SIG_PORT_CONF_SWITCH	PJMEDIA_SIG_CLASS_PORT_AUD('C','S')
+Index: pjmedia/src/pjmedia/cb_port.c
+===================================================================
+--- pjmedia/src/pjmedia/cb_port.c	(revision 0)
++++ pjmedia/src/pjmedia/cb_port.c	(working copy)
+@@ -0,0 +1,186 @@
++/* $Id: cb_port.c 3664 2011-07-19 03:42:28Z nanang $ */
++/* 
++ * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
++ * Copyright (C) 2003-2008 Benny Prijono <benny at prijono.org>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License as published by
++ * the Free Software Foundation; either version 2 of the License, or
++ * (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
++ */
++#include <pjmedia/cb_port.h>
++#include <pjmedia/errno.h>
++#include <pj/assert.h>
++#include <pj/pool.h>
++#include <pj/string.h>
++
++
++#define SIGNATURE   PJMEDIA_SIG_PORT_CB
++
++struct cb_port {
++	pjmedia_port base;
++
++	pj_timestamp timestamp;
++	void        *user_data;
++
++	pj_status_t (*cb_get_frame)(
++		pjmedia_port *port,
++		void *usr_data,
++		void *buffer,
++		pj_size_t buf_size);
++
++	pj_status_t (*cb_put_frame)(
++		pjmedia_port *port,
++		void *usr_data,
++		const void *buffer,
++		pj_size_t buf_size);
++};
++
++static pj_status_t cb_port_get_frame(pjmedia_port *this_port, 
++				  pjmedia_frame *frame);
++static pj_status_t cb_port_put_frame(pjmedia_port *this_port, 
++				  pjmedia_frame *frame);
++static pj_status_t cb_port_on_destroy(pjmedia_port *this_port);
++
++
++PJ_DEF(pj_status_t) pjmedia_cb_port_create( pj_pool_t *pool,
++							unsigned sampling_rate,
++							unsigned channel_count,
++							unsigned samples_per_frame,
++							unsigned bits_per_sample,
++							void *user_data,
++							pj_status_t (*cb_get_frame)(
++								pjmedia_port *port,
++								void *usr_data,
++								void *buffer,
++								pj_size_t buf_size),
++							pj_status_t (*cb_put_frame)(
++								pjmedia_port *port,
++								void *usr_data,
++								const void *buffer,
++								pj_size_t buf_size),
++							pjmedia_port **p_port )
++{
++	struct cb_port *cbport;
++	const pj_str_t name = pj_str("cb-port");
++
++	PJ_ASSERT_RETURN(pool && sampling_rate && channel_count &&
++			samples_per_frame && bits_per_sample && p_port &&
++			(cb_get_frame || cb_put_frame),
++		PJ_EINVAL);
++
++	cbport = PJ_POOL_ZALLOC_T(pool, struct cb_port);
++	PJ_ASSERT_RETURN(cbport != NULL, PJ_ENOMEM);
++
++	/* Create the port */
++	pjmedia_port_info_init(&cbport->base.info, &name, SIGNATURE, sampling_rate,
++		channel_count, bits_per_sample, samples_per_frame);
++
++	cbport->base.get_frame = &cb_port_get_frame;
++	cbport->base.put_frame = &cb_port_put_frame;
++	cbport->base.on_destroy = &cb_port_on_destroy;
++
++	/* port->timestamp zeroed in ZALLOC */
++	cbport->user_data = user_data;
++	cbport->cb_get_frame = cb_get_frame;
++	cbport->cb_put_frame = cb_put_frame;
++
++	*p_port = &cbport->base;
++
++	return PJ_SUCCESS;
++}
++
++
++PJ_DEF(pj_status_t) pjmedia_cb_port_userdata_get(pjmedia_port *port,
++							void** user_data)
++{
++	const struct cb_port *cbport;
++
++	PJ_ASSERT_RETURN(port && user_data, PJ_EINVAL);
++	PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
++		PJ_EINVALIDOP);
++
++	cbport = (struct cb_port*) port;
++	*user_data = cbport->user_data;
++	return PJ_SUCCESS;
++}
++
++
++
++/*
++ * Put frame for application processing.
++ */
++static pj_status_t cb_port_put_frame(pjmedia_port *this_port, 
++							pjmedia_frame *frame)
++{
++	const struct cb_port *cbport;
++
++	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
++		PJ_EINVALIDOP);
++
++	cbport = (struct cb_port*) this_port;
++	if (cbport->cb_put_frame && (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)) {
++		/* TODO: We should process the return code somehow */
++		cbport->cb_put_frame(this_port, cbport->user_data, frame->buf, frame->size);
++	}
++
++	return PJ_SUCCESS;
++}
++
++
++/*
++ * Get frame from application.
++ */
++static pj_status_t cb_port_get_frame(pjmedia_port *this_port, 
++							pjmedia_frame *frame)
++{
++	struct cb_port *cbport;
++	pj_size_t size;
++
++	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
++		PJ_EINVALIDOP);
++
++	cbport = (struct cb_port*) this_port;
++	size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
++	if (cbport->cb_get_frame) {
++		pj_status_t ret;
++
++		ret = cbport->cb_get_frame(this_port, cbport->user_data, frame->buf, size);
++		if (ret == PJ_SUCCESS) {
++			frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
++			frame->size = size;
++			/* Is this the correct timestamp calculation? */
++			frame->timestamp.u64 = cbport->timestamp.u64;
++			cbport->timestamp.u64 += PJMEDIA_PIA_SPF(&this_port->info);
++		} else {
++			frame->type = PJMEDIA_FRAME_TYPE_NONE;
++			frame->size = 0;
++		}
++	}
++
++	return PJ_SUCCESS;
++}
++
++
++/*
++ * Destroy port.
++ */
++static pj_status_t cb_port_on_destroy(pjmedia_port *this_port)
++{
++	PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
++		PJ_EINVALIDOP);
++
++	/* Destroy signature */
++	this_port->info.signature = 0;
++
++	return PJ_SUCCESS;
++}
+Index: pjmedia/src/pjmedia/null_port.c
+===================================================================
+--- pjmedia/src/pjmedia/null_port.c	(revision 4408)
++++ pjmedia/src/pjmedia/null_port.c	(working copy)
+@@ -46,7 +46,7 @@
+     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
+ 
+     port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
+-    PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
++    PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
+ 
+     pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
+ 			   channel_count, bits_per_sample, samples_per_frame);
+Index: pjsip-apps/src/python/_pjsua.c
+===================================================================
+--- pjsip-apps/src/python/_pjsua.c	(revision 4408)
++++ pjsip-apps/src/python/_pjsua.c	(working copy)
+@@ -2669,6 +2669,134 @@
+ }
+ 
+ /*
++ * Audio callback get frame.
++ * Calls python: string = user_data.cb_get_frame(size_t)
++ */
++static pj_status_t py_acb_get_frame(void *user_data, void *buffer, pj_size_t buf_size)
++{
++	PyObject *py_ret, *py_obj;
++	PyGILState_STATE state;
++
++	py_obj = (PyObject*) user_data;
++	/* We are in PJMEDIA thread, so we have to lock the Python interpreter */
++	state = PyGILState_Ensure();
++	py_ret = PyObject_CallMethod(py_obj, "cb_get_frame", "(I)", (unsigned) buf_size);
++	PyGILState_Release(state);
++
++	if (py_ret && PyString_Check(py_ret) && (PyString_Size(py_ret) >= 0)) {
++		pj_size_t returned = PyString_Size(py_ret);
++		/* Truncate returned string if too big */
++		pj_size_t to_copy = returned > buf_size ? buf_size : returned;
++		memcpy(buffer, PyString_AsString(py_ret), to_copy);
++		/* Pad returned string with zeros if too small */
++		if (to_copy < buf_size)
++			pj_bzero((char*) buffer + to_copy, buf_size - to_copy);
++		Py_DECREF(py_ret);
++		return PJ_SUCCESS;
++	}
++	Py_XDECREF(py_ret);
++	return PJ_EINVALIDOP;
++}
++
++/*
++ * Audio callback put frame.
++ * Calls python: int = user_data.cb_put_frame(string)
++ */
++static pj_status_t py_acb_put_frame(void *user_data, const void *buffer, pj_size_t buf_size)
++{
++	PyObject *py_ret, *py_obj;
++	pj_status_t ret;
++	PyGILState_STATE state;
++
++	py_obj = (PyObject*) user_data;
++	/* We are in PJMEDIA thread, so we have to lock the Python interpreter */
++	state = PyGILState_Ensure();
++	py_ret = PyObject_CallMethod(py_obj, "cb_put_frame", "(s#)", buffer, (int) buf_size);
++	PyGILState_Release(state);
++
++	ret = py_ret && PyInt_Check(py_ret) ? (pj_status_t) PyInt_AsLong(py_ret) : PJ_EINVALIDOP;
++	Py_XDECREF(py_ret);
++	return ret;
++}
++
++/*
++ * py_pjsua_audio_cb_create
++ *
++ * Instead of (user_data, cb_get, cb_put) expects object with one/both methods
++ * - string cb_get_frame(size_t)
++ * - int cb_put_frame(string)
++ */
++static PyObject *py_pjsua_audio_cb_create(PyObject *pSelf, PyObject *pArgs)
++{
++	pj_status_t status;
++	int id = PJSUA_INVALID_ID;
++	PyObject *user_data, *py_get, *py_put;
++	PJ_UNUSED_ARG(pSelf);
++
++	if (!PyArg_ParseTuple(pArgs, "O", &user_data))
++		return NULL;
++	py_get = PyObject_GetAttrString(user_data, "cb_get_frame");
++	if (!py_get || !PyCallable_Check(py_get))
++		py_get = NULL;
++	py_put = PyObject_GetAttrString(user_data, "cb_put_frame");
++	if (!py_put || !PyCallable_Check(py_put))
++		py_put = NULL;
++
++	status = pjsua_audio_cb_create(user_data,
++		py_get ? &py_acb_get_frame : NULL,
++		py_put ? &py_acb_put_frame : NULL,
++		&id);
++
++	if (status == PJ_SUCCESS)
++		Py_INCREF(user_data);
++	return Py_BuildValue("ii", status, id);
++}
++
++/*
++ * py_pjsua_audio_cb_get_conf_port
++ */
++static PyObject *py_pjsua_audio_cb_get_conf_port(PyObject *pSelf, 
++						 PyObject *pArgs)
++{
++
++	int id, port_id;
++
++	PJ_UNUSED_ARG(pSelf);
++
++	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
++		return NULL;
++	}
++
++	port_id = pjsua_audio_cb_get_conf_port(id);
++
++	return Py_BuildValue("i", port_id);
++}
++
++/*
++ * py_pjsua_audio_cb_destroy
++ */
++static PyObject *py_pjsua_audio_cb_destroy(PyObject *pSelf, PyObject *pArgs)
++{
++	int id;
++	int status;
++	PyObject *user_data;
++
++	PJ_UNUSED_ARG(pSelf);
++
++	if (!PyArg_ParseTuple(pArgs, "i", &id)) {
++		return NULL;
++	}
++
++	status = pjsua_audio_cb_get_user_data(id, (void**) &user_data);
++	if (status != PJ_SUCCESS)
++		return Py_BuildValue("i", status);
++	Py_XDECREF(user_data);
++
++	status = pjsua_audio_cb_destroy(id);
++	return Py_BuildValue("i", status);
++}
++
++/*
+  * py_pjsua_enum_snd_devs
+  */
+ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
+@@ -2997,6 +3125,17 @@
+ static char pjsua_recorder_destroy_doc[] =
+     "int _pjsua.recorder_destroy (int id) "
+     "Destroy recorder (this will complete recording).";
++static char pjsua_audio_cb_create_doc[] =
++    "int, int _pjsua.audio_cb_create (object callback) "
++    "Create an audio callback port, and automatically connect this port "
++    "to the conference bridge. The callback object may have one/both methods "
++    "string cb_get_frame(int), int cb_put_frame(string).";
++static char pjsua_audio_cb_get_conf_port_doc[] =
++    "int _pjsua.audio_cb_get_conf_port (int id) "
++    "Get conference port associated with audio callback";
++static char pjsua_audio_cb_destroy_doc[] =
++    "int _pjsua.audio_cb_destroy (int id) "
++    "Destroy audio callback port.";
+ static char pjsua_enum_snd_devs_doc[] =
+     "_pjsua.PJMedia_Snd_Dev_Info[] _pjsua.enum_snd_devs (int count) "
+     "Enum sound devices.";
+@@ -3105,14 +3244,15 @@
+     int acc_id;
+     pj_str_t dst_uri;
+     PyObject *pDstUri, *pMsgData, *pUserData;
+-    unsigned options;
++    pjsua_call_setting option;
+     pjsua_msg_data msg_data;
+     int call_id;
+     pj_pool_t *pool = NULL;
+ 
+     PJ_UNUSED_ARG(pSelf);
+ 
+-    if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &options, 
++    pjsua_call_setting_default(&option);
++    if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &option.flag, 
+ 			  &pUserData, &pMsgData))
+     {
+         return NULL;
+@@ -3135,7 +3275,7 @@
+     Py_XINCREF(pUserData);
+ 
+     status = pjsua_call_make_call(acc_id, &dst_uri, 
+-				  options, (void*)pUserData, 
++				  &option, (void*)pUserData, 
+ 				  &msg_data, &call_id);	
+     if (pool != NULL)
+ 	pj_pool_release(pool);
+@@ -4279,6 +4419,18 @@
+         pjsua_recorder_destroy_doc
+     },
+     {
++        "audio_cb_create", py_pjsua_audio_cb_create, METH_VARARGS,
++        pjsua_audio_cb_create_doc
++    },
++    {
++        "audio_cb_get_conf_port", py_pjsua_audio_cb_get_conf_port, METH_VARARGS,
++        pjsua_audio_cb_get_conf_port_doc
++    },
++    {
++        "audio_cb_destroy", py_pjsua_audio_cb_destroy, METH_VARARGS,
++        pjsua_audio_cb_destroy_doc
++    },
++    {
+         "enum_snd_devs", py_pjsua_enum_snd_devs, METH_VARARGS,
+         pjsua_enum_snd_devs_doc
+     },
+Index: pjsip-apps/src/python/pjsua.py
+===================================================================
+--- pjsip-apps/src/python/pjsua.py	(revision 4408)
++++ pjsip-apps/src/python/pjsua.py	(working copy)
+@@ -2613,7 +2613,54 @@
+         err = _pjsua.recorder_destroy(rec_id)
+         self._err_check("recorder_destroy()", self, err)
+ 
++    def create_audio_cb(self, callback):
++        """Create audio callback.
+ 
++        Keyword arguments
++        callback    -- An object with one or both of methods:
++                       string cb_get_frame(int) should return a string
++                           containing audio data of specified length
++                       int cb_get_frame(string) should process the string
++                           containing audio data. Return code does not matter.
++
++        Return:
++            Audio callback ID
++
++        """
++        lck = self.auto_lock()
++        err, acb_id = _pjsua.audio_cb_create(callback)
++        self._err_check("create_audio_cb()", self, err)
++        return acb_id
++        
++    def audio_cb_get_slot(self, acb_id):
++        """Get the conference port ID for the specified audio callback.
++
++        Keyword arguments:
++        acb_id  -- the audio callback ID
++        
++        Return:
++            Conference slot number for the audio callback
++
++        """
++        lck = self.auto_lock()
++        slot = _pjsua.audio_cb_get_conf_port(acb_id)
++        if slot < 1:
++            self._err_check("audio_cb_get_slot()", self, -1, 
++                            "Invalid audio callback id")
++        return slot
++
++    def audio_cb_destroy(self, acb_id):
++        """Destroy the audio callback.
++
++        Keyword arguments:
++        acb_id   -- the audio callback ID.
++
++        """
++        lck = self.auto_lock()
++        err = _pjsua.audio_cb_destroy(acb_id)
++        self._err_check("audio_cb_destroy()", self, err)
++
++
+     # Internal functions
+ 
+     @staticmethod
+Index: pjsip-apps/src/python/samples/audio_cb.py
+===================================================================
+--- pjsip-apps/src/python/samples/audio_cb.py	(revision 0)
++++ pjsip-apps/src/python/samples/audio_cb.py	(working copy)
+@@ -0,0 +1,136 @@
++# $Id: audio_cb.py 2171 2008-07-24 09:01:33Z bennylp $
++#
++# SIP account and registration sample. In this sample, the program
++# will block to wait until registration is complete
++#
++# Copyright (C) 2003-2008 Benny Prijono <benny at prijono.org>
++#
++# This program is free software; you can redistribute it and/or modify
++# it under the terms of the GNU General Public License as published by
++# the Free Software Foundation; either version 2 of the License, or
++# (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
++#
++import sys
++import pjsua as pj
++import threading
++from collections import deque
++
++
++def log_cb(level, str, len):
++    print str,
++
++
++class AudioCB:
++    frames = deque()
++
++    def cb_put_frame(self, frame):
++        # An audio frame arrived, it is a string (i.e. ByteArray)
++        self.frames.append(frame)
++        # Return an integer; 0 means success, but this does not matter now
++        return 0
++
++    def cb_get_frame(self, size):
++        # Audio frame wanted
++        if len(self.frames):
++            frame = self.frames.popleft()
++            # Send the frame out
++            return frame
++        else:
++            # Do not emit an audio frame
++            return None
++
++
++class MyCallCallback(pj.CallCallback):
++
++    def __init__(self, call=None):
++        pj.CallCallback.__init__(self, call)
++
++    def on_state(self):
++        if self.call.info().state == pj.CallState.DISCONNECTED:
++            global g_current_call
++            g_current_call = None
++            print "Call hung up"
++
++    def on_media_state(self):
++        info = self.call.info()
++        call_slot = info.conf_slot
++        if (info.media_state == pj.MediaState.ACTIVE) and (call_slot >= 0):
++            print "Call slot:", call_slot
++            global g_acb_id
++            acb_slot = lib.audio_cb_get_slot(g_acb_id)
++            print "Audio callback ", g_acb_id, "slot:", acb_slot
++            print "Starting loopback via python audio callback"
++            lib.conf_connect(call_slot, acb_slot)
++            lib.conf_connect(acb_slot, call_slot)
++
++
++class MyAccountCallback(pj.AccountCallback):
++
++    def __init__(self, account=None):
++        pj.AccountCallback.__init__(self, account)
++
++    # Notification on incoming call
++    def on_incoming_call(self, call):
++        global g_current_call 
++        if g_current_call:
++            call.answer(486, "Busy")
++            return
++
++        call.set_callback(MyCallCallback(call))
++        info = call.info()
++        print "Incoming call from", info.remote_uri
++        call.answer()
++        g_current_call = call
++
++
++lib = pj.Lib()
++
++try:
++    lib.init(log_cfg = pj.LogConfig(level=4, callback=log_cb))
++
++    # This is a MUST if not using a HW sound
++    lib.set_null_snd_dev()
++
++    # Create UDP transport which listens to any available port
++    transport = lib.create_transport(pj.TransportType.UDP, 
++                                     pj.TransportConfig(0))
++    print "\nListening on", transport.info().host, 
++    print "port", transport.info().port, "\n"
++
++    lib.start(True)
++
++    # Create local account
++    acc = lib.create_account_for_transport(transport, cb=MyAccountCallback())
++
++    g_current_call = None
++    g_acb_id = lib.create_audio_cb(AudioCB())
++    print "Audio callback ID:", g_acb_id
++
++    print "\nWaiting for incoming call"
++    my_sip_uri = "sip:" + transport.info().host + \
++                 ":" + str(transport.info().port)
++    print "My SIP URI is", my_sip_uri
++    print "\nPress ENTER to quit"
++    sys.stdin.readline()
++
++    # Shutdown the library
++    lib.audio_cb_destroy(g_acb_id)
++    transport = None
++    acc.delete()
++    acc = None
++    lib.destroy()
++    lib = None
++
++except pj.Error, e:
++    print "Exception: " + str(e)
++    lib.destroy()
++
+Index: pjsip/include/pjsua-lib/pjsua.h
+===================================================================
+--- pjsip/include/pjsua-lib/pjsua.h	(revision 4408)
++++ pjsip/include/pjsua-lib/pjsua.h	(working copy)
+@@ -5722,6 +5722,82 @@
+ 
+ 
+ /*****************************************************************************
++ * Audio callback.
++ */
++
++/**
++ * Create an audio callback, and automatically connect this port to
++ * the conference bridge. The callback port allows low-level real-time
++ * audio access (e.g. for speech recognizer and synthesizer) using
++ * high-level PJSUA API.
++ *
++ * @param user_data    The user object passed to the callbacks.
++ * @param cb_get_frame Callback to be called when audio data needed.
++ *					The buffer should be filled in the callback.
++ * @param cb_put_frame Callback to be called when audio data arrived.
++ *					The callback function should process the buffer.
++ * @param p_id		   Pointer to receive the audio callback port instance.
++ *                  The id space is shared with recorders.
++ *
++ * @return		PJ_SUCCESS on success, or the appropriate error code.
++ */
++PJ_DECL(pj_status_t) pjsua_audio_cb_create(void *user_data,
++						pj_status_t (*cb_get_frame)(
++							void *usr_data,
++							void *buffer,
++							pj_size_t buf_size),
++						pj_status_t (*cb_put_frame)(
++							void *usr_data,
++							const void *buffer,
++							pj_size_t buf_size),
++						pjsua_recorder_id *p_id);
++
++
++/**
++ * Get user data associated with the audio callback port.
++ *
++ * @param id        Audio callback ID.
++ * @param user_data The pointer to receive user object associated with the audio callback port.
++ *
++ * @return PJ_SUCCESS on success.
++ */
++PJ_DECL(pj_status_t) pjsua_audio_cb_get_user_data(pjsua_recorder_id id,
++						void **user_data);
++
++
++/**
++ * Get conference port associated with audio callback port.
++ *
++ * @param id		The audio callback (i.e. recorder) ID.
++ *
++ * @return		Conference port ID associated with this audio callback.
++ */
++PJ_DECL(pjsua_conf_port_id) pjsua_audio_cb_get_conf_port(pjsua_recorder_id id);
++
++
++/**
++ * Get the media port for the audio callback.
++ *
++ * @param id		The audio callback ID.
++ * @param p_port	The media port associated with the audio callback.
++ *
++ * @return		PJ_SUCCESS on success.
++ */
++PJ_DECL(pj_status_t) pjsua_audio_cb_get_port(pjsua_recorder_id id,
++					     pjmedia_port **p_port);
++
++
++/**
++ * Destroy audio callback.
++ *
++ * @param id		The audio callback ID.
++ *
++ * @return		PJ_SUCCESS on success, or the appropriate error code.
++ */
++PJ_DECL(pj_status_t) pjsua_audio_cb_destroy(pjsua_recorder_id id);
++
++
++/*****************************************************************************
+  * Sound devices.
+  */
+ 
+Index: pjsip/src/pjsua-lib/pjsua_aud.c
+===================================================================
+--- pjsip/src/pjsua-lib/pjsua_aud.c	(revision 4408)
++++ pjsip/src/pjsua-lib/pjsua_aud.c	(working copy)
+@@ -1454,6 +1454,234 @@
+ 
+ 
+ /*****************************************************************************
++ * Audio callback.
++ */
++
++/** PJSUA audio callback object */
++struct pjsua_acb {
++	pjsua_recorder_id rec_id;
++	void         *user_data;
++	pj_status_t (*acb_get)(void *usr_data, void *buffer, pj_size_t buf_size);
++	pj_status_t (*acb_put)(void *usr_data, const void *buffer, pj_size_t buf_size);
++};
++
++static pj_status_t pjsua_acb_get(pjmedia_port *port, void *usr_data, void *buffer, pj_size_t buf_size)
++{
++	struct pjsua_acb *acb;
++
++	/* Should be always pointer to struct pjsua_acb */
++	PJ_ASSERT_RETURN(usr_data, PJ_EBUG);
++	acb = (struct pjsua_acb*) usr_data;
++	/* PJMEDIA callback should not be registered unless PJSUA callback is */
++	PJ_ASSERT_RETURN(acb->acb_get, PJ_EBUG);
++	PJ_UNUSED_ARG(port);
++
++	return acb->acb_get(acb->user_data, buffer, buf_size);
++}
++
++static pj_status_t pjsua_acb_put(pjmedia_port *port, void *usr_data, const void *buffer, pj_size_t buf_size)
++{
++	struct pjsua_acb *acb;
++
++	/* Should be always pointer to struct pjsua_acb */
++	PJ_ASSERT_RETURN(usr_data, PJ_EBUG);
++	acb = (struct pjsua_acb*) usr_data;
++	/* PJMEDIA callback should not be registered unless PJSUA callback is */
++	PJ_ASSERT_RETURN(acb->acb_put, PJ_EBUG);
++	PJ_UNUSED_ARG(port);
++
++	return acb->acb_put(acb->user_data, buffer, buf_size);
++}
++
++/*
++ * Create an audio callback, and automatically connect this port to
++ * the conference bridge.
++ * Warning! Shares ID space with recorders.
++ */
++PJ_DEF(pj_status_t) pjsua_audio_cb_create(void *user_data,
++						pj_status_t (*cb_get_frame)(
++							void *usr_data,
++							void *buffer,
++							pj_size_t buf_size),
++						pj_status_t (*cb_put_frame)(
++							void *usr_data,
++							const void *buffer,
++							pj_size_t buf_size),
++						pjsua_recorder_id *p_id)
++{
++    unsigned slot, rec_id;
++    pj_pool_t *pool = NULL;
++	struct pjsua_acb *pjsua_cb;
++    pjmedia_port *port;
++	const pj_str_t acb_name = pj_str("audio-cb");
++    pj_status_t status = PJ_SUCCESS;
++
++    /* At least one callback must be present */
++    PJ_ASSERT_RETURN(cb_get_frame || cb_put_frame, PJ_EINVAL);
++
++    PJ_LOG(4,(THIS_FILE, "Creating callback for %s frame..",
++	      (cb_get_frame && cb_put_frame ? "get and put" : (cb_get_frame ? "get" : "put"))));
++    pj_log_push_indent();
++
++    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
++	pj_log_pop_indent();
++	return PJ_ETOOMANY;
++    }
++
++    PJSUA_LOCK();
++
++    for (rec_id=0; rec_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++rec_id) {
++	if (pjsua_var.recorder[rec_id].port == NULL)
++	    break;
++    }
++
++    if (rec_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
++	/* This is unexpected */
++	pj_assert(0);
++	status = PJ_EBUG;
++	goto on_return;
++    }
++
++    pool = pjsua_pool_create("audio-cb", 512, 512);
++    if (!pool) {
++	status = PJ_ENOMEM;
++	goto on_return;
++    }
++
++	pjsua_cb = PJ_POOL_ALLOC_T(pool, struct pjsua_acb);
++	if (!pjsua_cb) {
++	status = PJ_ENOMEM;
++	goto on_return;
++    }
++	pjsua_cb->rec_id = rec_id;
++	pjsua_cb->user_data = user_data;
++	pjsua_cb->acb_get = cb_get_frame;
++	pjsua_cb->acb_put = cb_put_frame;
++
++	status = pjmedia_cb_port_create(pool,
++						pjsua_var.media_cfg.clock_rate,
++						pjsua_var.mconf_cfg.channel_count,
++						pjsua_var.mconf_cfg.samples_per_frame,
++						pjsua_var.mconf_cfg.bits_per_sample,
++						pjsua_cb,
++						cb_get_frame ? &pjsua_acb_get : NULL,
++						cb_put_frame ? &pjsua_acb_put : NULL,
++						&port);
++
++    if (status != PJ_SUCCESS) {
++	pjsua_perror(THIS_FILE, "Unable to create audio callback port", status);
++	goto on_return;
++    }
++
++    status = pjmedia_conf_add_port(pjsua_var.mconf, pool,
++				   port, &acb_name, &slot);
++    if (status != PJ_SUCCESS) {
++	pjmedia_port_destroy(port);
++	goto on_return;
++    }
++
++    pjsua_var.recorder[rec_id].port = port;
++    pjsua_var.recorder[rec_id].slot = slot;
++    pjsua_var.recorder[rec_id].pool = pool;
++
++    if (p_id) *p_id = rec_id;
++
++    ++pjsua_var.rec_cnt;
++
++    PJSUA_UNLOCK();
++
++    PJ_LOG(4,(THIS_FILE, "Audio callback created, id=%d, slot=%d", rec_id, slot));
++
++    pj_log_pop_indent();
++    return PJ_SUCCESS;
++
++on_return:
++    PJSUA_UNLOCK();
++    if (pool) pj_pool_release(pool);
++    pj_log_pop_indent();
++    return status;
++}
++
++
++/*
++ * Get user data associated with audio callback.
++ * Warning! Shares ID space with recorders.
++ */
++PJ_DEF(pj_status_t) pjsua_audio_cb_get_user_data(pjsua_recorder_id id,
++						void **user_data)
++{
++	struct pjsua_acb *pjsua_data;
++	pj_status_t status;
++
++    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder),
++		     PJ_EINVAL);
++	PJ_ASSERT_RETURN(user_data, PJ_EINVAL);
++    PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
++	
++	status = pjmedia_cb_port_userdata_get(pjsua_var.recorder[id].port,
++			(void**) &pjsua_data);
++	if (status != PJ_SUCCESS)
++		return status;
++	/* Should never be NULL here */
++	PJ_ASSERT_RETURN(pjsua_data, PJ_EBUG);
++
++	*user_data = pjsua_data->user_data;
++	return PJ_SUCCESS;
++}
++
++
++/*
++ * Get conference port associated with audio callback.
++ * Warning! Shares ID space with recorders.
++ */
++PJ_DEF(pjsua_conf_port_id) pjsua_audio_cb_get_conf_port(pjsua_recorder_id id)
++{
++    return pjsua_recorder_get_conf_port(id);
++}
++
++/*
++ * Get the media port for the audio callback.
++ * Warning! Shares ID space with recorders.
++ */
++PJ_DEF(pj_status_t) pjsua_audio_cb_get_port( pjsua_recorder_id id,
++					     pjmedia_port **p_port)
++{
++    return pjsua_recorder_get_port(id, p_port);
++}
++
++/*
++ * Destroy audio callback.
++ * Warning! Shares ID space with recorders.
++ */
++PJ_DEF(pj_status_t) pjsua_audio_cb_destroy(pjsua_recorder_id id)
++{
++    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder),
++		     PJ_EINVAL);
++    PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
++
++    PJ_LOG(4,(THIS_FILE, "Destroying audio callback (i.e. recorder) %d..", id));
++    pj_log_push_indent();
++
++    PJSUA_LOCK();
++
++    if (pjsua_var.recorder[id].port) {
++	pjsua_conf_remove_port(pjsua_var.recorder[id].slot);
++	pjmedia_port_destroy(pjsua_var.recorder[id].port);
++	pjsua_var.recorder[id].port = NULL;
++	pjsua_var.recorder[id].slot = 0xFFFF;
++	pj_pool_release(pjsua_var.recorder[id].pool);
++	pjsua_var.recorder[id].pool = NULL;
++	pjsua_var.rec_cnt--;
++    }
++
++    PJSUA_UNLOCK();
++    pj_log_pop_indent();
++
++    return PJ_SUCCESS;
++}
++
++
++/*****************************************************************************
+  * Sound devices.
+  */
+ 

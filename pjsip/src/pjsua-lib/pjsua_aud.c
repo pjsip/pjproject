@@ -1571,6 +1571,234 @@ PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
 
 
 /*****************************************************************************
+ * Audio callback.
+ */
+
+/** PJSUA audio callback object */
+struct pjsua_acb {
+	pjsua_recorder_id rec_id;
+	void         *user_data;
+	pj_status_t (*acb_get)(void *usr_data, void *buffer, pj_size_t buf_size);
+	pj_status_t (*acb_put)(void *usr_data, const void *buffer, pj_size_t buf_size);
+};
+
+static pj_status_t pjsua_acb_get(pjmedia_port *port, void *usr_data, void *buffer, pj_size_t buf_size)
+{
+	struct pjsua_acb *acb;
+
+	/* Should be always pointer to struct pjsua_acb */
+	PJ_ASSERT_RETURN(usr_data, PJ_EBUG);
+	acb = (struct pjsua_acb*) usr_data;
+	/* PJMEDIA callback should not be registered unless PJSUA callback is */
+	PJ_ASSERT_RETURN(acb->acb_get, PJ_EBUG);
+	PJ_UNUSED_ARG(port);
+
+	return acb->acb_get(acb->user_data, buffer, buf_size);
+}
+
+static pj_status_t pjsua_acb_put(pjmedia_port *port, void *usr_data, const void *buffer, pj_size_t buf_size)
+{
+	struct pjsua_acb *acb;
+
+	/* Should be always pointer to struct pjsua_acb */
+	PJ_ASSERT_RETURN(usr_data, PJ_EBUG);
+	acb = (struct pjsua_acb*) usr_data;
+	/* PJMEDIA callback should not be registered unless PJSUA callback is */
+	PJ_ASSERT_RETURN(acb->acb_put, PJ_EBUG);
+	PJ_UNUSED_ARG(port);
+
+	return acb->acb_put(acb->user_data, buffer, buf_size);
+}
+
+/*
+ * Create an audio callback, and automatically connect this port to
+ * the conference bridge.
+ * Warning! Shares ID space with recorders.
+ */
+PJ_DEF(pj_status_t) pjsua_audio_cb_create(void *user_data,
+						pj_status_t (*cb_get_frame)(
+							void *usr_data,
+							void *buffer,
+							pj_size_t buf_size),
+						pj_status_t (*cb_put_frame)(
+							void *usr_data,
+							const void *buffer,
+							pj_size_t buf_size),
+						pjsua_recorder_id *p_id)
+{
+    unsigned slot, rec_id;
+    pj_pool_t *pool = NULL;
+	struct pjsua_acb *pjsua_cb;
+    pjmedia_port *port;
+	const pj_str_t acb_name = pj_str("audio-cb");
+    pj_status_t status = PJ_SUCCESS;
+
+    /* At least one callback must be present */
+    PJ_ASSERT_RETURN(cb_get_frame || cb_put_frame, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Creating callback for %s frame..",
+	      (cb_get_frame && cb_put_frame ? "get and put" : (cb_get_frame ? "get" : "put"))));
+    pj_log_push_indent();
+
+    if (pjsua_var.rec_cnt >= PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	pj_log_pop_indent();
+	return PJ_ETOOMANY;
+    }
+
+    PJSUA_LOCK();
+
+    for (rec_id=0; rec_id<PJ_ARRAY_SIZE(pjsua_var.recorder); ++rec_id) {
+	if (pjsua_var.recorder[rec_id].port == NULL)
+	    break;
+    }
+
+    if (rec_id == PJ_ARRAY_SIZE(pjsua_var.recorder)) {
+	/* This is unexpected */
+	pj_assert(0);
+	status = PJ_EBUG;
+	goto on_return;
+    }
+
+    pool = pjsua_pool_create("audio-cb", 512, 512);
+    if (!pool) {
+	status = PJ_ENOMEM;
+	goto on_return;
+    }
+
+	pjsua_cb = PJ_POOL_ALLOC_T(pool, struct pjsua_acb);
+	if (!pjsua_cb) {
+	status = PJ_ENOMEM;
+	goto on_return;
+    }
+	pjsua_cb->rec_id = rec_id;
+	pjsua_cb->user_data = user_data;
+	pjsua_cb->acb_get = cb_get_frame;
+	pjsua_cb->acb_put = cb_put_frame;
+
+	status = pjmedia_cb_port_create(pool,
+						pjsua_var.media_cfg.clock_rate,
+						pjsua_var.mconf_cfg.channel_count,
+						pjsua_var.mconf_cfg.samples_per_frame,
+						pjsua_var.mconf_cfg.bits_per_sample,
+						pjsua_cb,
+						cb_get_frame ? &pjsua_acb_get : NULL,
+						cb_put_frame ? &pjsua_acb_put : NULL,
+						&port);
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create audio callback port", status);
+	goto on_return;
+    }
+
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool,
+				   port, &acb_name, &slot);
+    if (status != PJ_SUCCESS) {
+	pjmedia_port_destroy(port);
+	goto on_return;
+    }
+
+    pjsua_var.recorder[rec_id].port = port;
+    pjsua_var.recorder[rec_id].slot = slot;
+    pjsua_var.recorder[rec_id].pool = pool;
+
+    if (p_id) *p_id = rec_id;
+
+    ++pjsua_var.rec_cnt;
+
+    PJSUA_UNLOCK();
+
+    PJ_LOG(4,(THIS_FILE, "Audio callback created, id=%d, slot=%d", rec_id, slot));
+
+    pj_log_pop_indent();
+    return PJ_SUCCESS;
+
+on_return:
+    PJSUA_UNLOCK();
+    if (pool) pj_pool_release(pool);
+    pj_log_pop_indent();
+    return status;
+}
+
+
+/*
+ * Get user data associated with audio callback.
+ * Warning! Shares ID space with recorders.
+ */
+PJ_DEF(pj_status_t) pjsua_audio_cb_get_user_data(pjsua_recorder_id id,
+						void **user_data)
+{
+	struct pjsua_acb *pjsua_data;
+	pj_status_t status;
+
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder),
+		     PJ_EINVAL);
+	PJ_ASSERT_RETURN(user_data, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
+	
+	status = pjmedia_cb_port_userdata_get(pjsua_var.recorder[id].port,
+			(void**) &pjsua_data);
+	if (status != PJ_SUCCESS)
+		return status;
+	/* Should never be NULL here */
+	PJ_ASSERT_RETURN(pjsua_data, PJ_EBUG);
+
+	*user_data = pjsua_data->user_data;
+	return PJ_SUCCESS;
+}
+
+
+/*
+ * Get conference port associated with audio callback.
+ * Warning! Shares ID space with recorders.
+ */
+PJ_DEF(pjsua_conf_port_id) pjsua_audio_cb_get_conf_port(pjsua_recorder_id id)
+{
+    return pjsua_recorder_get_conf_port(id);
+}
+
+/*
+ * Get the media port for the audio callback.
+ * Warning! Shares ID space with recorders.
+ */
+PJ_DEF(pj_status_t) pjsua_audio_cb_get_port( pjsua_recorder_id id,
+					     pjmedia_port **p_port)
+{
+    return pjsua_recorder_get_port(id, p_port);
+}
+
+/*
+ * Destroy audio callback.
+ * Warning! Shares ID space with recorders.
+ */
+PJ_DEF(pj_status_t) pjsua_audio_cb_destroy(pjsua_recorder_id id)
+{
+    PJ_ASSERT_RETURN(id>=0 && id<(int)PJ_ARRAY_SIZE(pjsua_var.recorder),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.recorder[id].port != NULL, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Destroying audio callback (i.e. recorder) %d..", id));
+    pj_log_push_indent();
+
+    PJSUA_LOCK();
+
+    if (pjsua_var.recorder[id].port) {
+	pjsua_conf_remove_port(pjsua_var.recorder[id].slot);
+	pjmedia_port_destroy(pjsua_var.recorder[id].port);
+	pjsua_var.recorder[id].port = NULL;
+	pjsua_var.recorder[id].slot = 0xFFFF;
+	pj_pool_release(pjsua_var.recorder[id].pool);
+	pjsua_var.recorder[id].pool = NULL;
+	pjsua_var.rec_cnt--;
+    }
+
+    PJSUA_UNLOCK();
+    pj_log_pop_indent();
+
+    return PJ_SUCCESS;
+}
+
+
+/*****************************************************************************
  * Sound devices.
  */
 
