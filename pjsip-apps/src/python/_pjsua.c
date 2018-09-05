@@ -1,5 +1,5 @@
 /* $Id$ */
-/* 
+/*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -15,7 +15,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include "_pjsua.h"
 
@@ -67,7 +67,7 @@ static void clear_py_thread_desc(void)
  */
 static void cb_log_cb(int level, const char *data, int len)
 {
-	
+
     /* Ignore if this callback is called from alien thread context,
      * or otherwise it will crash Python.
      */
@@ -82,11 +82,11 @@ static void cb_log_cb(int level, const char *data, int len)
 	param_data = PyString_FromStringAndSize(data, len);
 
         PyObject_CallFunction(
-            g_obj_log_cb, 
+            g_obj_log_cb,
 	    "iOi",
 	    level,
-            param_data, 
-	    len, 
+            param_data,
+	    len,
 	    NULL
         );
 
@@ -104,13 +104,13 @@ static void cb_on_call_state(pjsua_call_id call_id, pjsip_event *e)
 {
     PJ_UNUSED_ARG(e);
 
-    if (PyCallable_Check(g_obj_callback->on_call_state)) {	
+    if (PyCallable_Check(g_obj_callback->on_call_state)) {
         PyObject * obj;
 
 	ENTER_PYTHON();
 
 	obj = Py_BuildValue("");
-		
+
         PyObject_CallFunction(
             g_obj_callback->on_call_state,
 	    "iO",
@@ -250,7 +250,7 @@ static void cb_on_call_transfer_request(pjsua_call_id call_id,
 /*
  * Notify application of the status of previously sent call
  * transfer request. Application can monitor the status of the
- * call transfer request, for example to decide whether to 
+ * call transfer request, for example to decide whether to
  * terminate existing call.
  * !modified @061206
  */
@@ -389,7 +389,7 @@ static void cb_on_reg_state(pjsua_acc_id acc_id)
     }
 }
 
-/* 
+/*
  * cb_on_incoming_subscribe
  */
 static void cb_on_incoming_subscribe( pjsua_acc_id acc_id,
@@ -425,7 +425,7 @@ static void cb_on_incoming_subscribe( pjsua_acc_id acc_id,
 
 	    pool = pjsua_pool_create("pytmp", 512, 512);
 	    contact = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE+1);
-	    len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, contact_hdr->uri, 
+	    len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR, contact_hdr->uri,
 				  contact, PJSIP_MAX_URL_SIZE);
 	    if (len < 1)
 		len = 0;
@@ -527,7 +527,7 @@ static void cb_on_pager(pjsua_call_id call_id, const pj_str_t *from,
 		param_to,
 		param_contact,
 		param_mime_type,
-		param_body, 
+		param_body,
 		acc_id,
 		NULL
 	    );
@@ -569,7 +569,7 @@ static void cb_on_pager_status(pjsua_call_id call_id, const pj_str_t *to,
 		g_obj_callback->on_pager_status,
 		param_call_id	= Py_BuildValue("i",call_id),
 		param_to	= PyString_FromPJ(to),
-		param_body	= PyString_FromPJ(body), 
+		param_body	= PyString_FromPJ(body),
 		param_user_data = Py_BuildValue("i", user_data),
 		param_status	= Py_BuildValue("i",status),
 		param_reason	= PyString_FromPJ(reason),
@@ -622,7 +622,7 @@ static void cb_on_typing(pjsua_call_id call_id, const pj_str_t *from,
 	Py_DECREF(param_from);
 	Py_DECREF(param_to);
 	Py_DECREF(param_contact);
-	Py_DECREF(param_is_typing); 
+	Py_DECREF(param_is_typing);
 	Py_DECREF(param_acc_id);
 
 	LEAVE_PYTHON();
@@ -658,9 +658,9 @@ static void cb_on_mwi_info(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info)
     }
 }
 
-/* 
+/*
  * translate_hdr
- * internal function 
+ * internal function
  * translate from hdr_list to pjsip_generic_string_hdr
  */
 void translate_hdr(pj_pool_t *pool, pjsip_hdr *hdr, PyObject *py_hdr_list)
@@ -670,7 +670,7 @@ void translate_hdr(pj_pool_t *pool, pjsip_hdr *hdr, PyObject *py_hdr_list)
     if (PyList_Check(py_hdr_list)) {
 	int i;
 
-        for (i=0; i<PyList_Size(py_hdr_list); ++i)  { 
+        for (i=0; i<PyList_Size(py_hdr_list); ++i)  {
             pj_str_t hname, hvalue;
 	    pjsip_generic_string_hdr * new_hdr;
             PyObject * tuple = PyList_GetItem(py_hdr_list, i);
@@ -689,10 +689,10 @@ void translate_hdr(pj_pool_t *pool, pjsip_hdr *hdr, PyObject *py_hdr_list)
 		hname.slen = 0;
 		hvalue.ptr = "";
 		hvalue.slen = 0;
-            }  
+            }
             new_hdr = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
             pj_list_push_back((pj_list_type *)hdr, (pj_list_type *)new_hdr);
-	}     
+	}
     }
 }
 
@@ -701,7 +701,7 @@ void translate_hdr(pj_pool_t *pool, pjsip_hdr *hdr, PyObject *py_hdr_list)
  */
 static PyObject *py_pjsua_thread_register(PyObject *pSelf, PyObject *pArgs)
 {
-    pj_status_t status;	
+    pj_status_t status;
     const char *name;
     PyObject *py_desc;
     pj_thread_t *thread;
@@ -731,18 +731,18 @@ static PyObject *py_pjsua_thread_register(PyObject *pSelf, PyObject *pArgs)
 static PyObject *py_pjsua_logging_config_default(PyObject *pSelf,
                                                  PyObject *pArgs)
 {
-    PyObj_pjsua_logging_config *obj;	
+    PyObj_pjsua_logging_config *obj;
     pjsua_logging_config cfg;
 
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     pjsua_logging_config_default(&cfg);
-    obj = (PyObj_pjsua_logging_config*) 
-	  PyObj_pjsua_logging_config_new(&PyTyp_pjsua_logging_config, 
+    obj = (PyObj_pjsua_logging_config*)
+	  PyObj_pjsua_logging_config_new(&PyTyp_pjsua_logging_config,
 					 NULL, NULL);
     PyObj_pjsua_logging_config_import(obj, &cfg);
-    
+
     return (PyObject*)obj;
 }
 
@@ -759,7 +759,7 @@ static PyObject *py_pjsua_config_default(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pArgs);
 
     pjsua_config_default(&cfg);
-    obj = (PyObj_pjsua_config *) PyObj_pjsua_config_new(&PyTyp_pjsua_config, 
+    obj = (PyObj_pjsua_config *) PyObj_pjsua_config_new(&PyTyp_pjsua_config,
 							NULL, NULL);
     PyObj_pjsua_config_import(obj, &cfg);
 
@@ -796,7 +796,7 @@ static PyObject *py_pjsua_msg_data_init(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
-    return (PyObject *)PyObj_pjsua_msg_data_new(&PyTyp_pjsua_msg_data, 
+    return (PyObject *)PyObj_pjsua_msg_data_new(&PyTyp_pjsua_msg_data,
 						NULL, NULL);
 }
 
@@ -804,7 +804,7 @@ static PyObject *py_pjsua_msg_data_init(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_reconfigure_logging
  */
-static PyObject *py_pjsua_reconfigure_logging(PyObject *pSelf, 
+static PyObject *py_pjsua_reconfigure_logging(PyObject *pSelf,
 					      PyObject *pArgs)
 {
     PyObject *logObj;
@@ -853,7 +853,7 @@ static PyObject *py_pjsua_perror(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "ssi", &sender, &title, &status)) {
         return NULL;
     }
-	
+
     pjsua_perror(sender, title, status);
 
     return Py_BuildValue("");
@@ -871,7 +871,7 @@ static PyObject *py_pjsua_create(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pArgs);
 
     status = pjsua_create();
-    
+
     if (status == PJ_SUCCESS)  {
 	status = pj_thread_local_alloc(&g_thread_id);
 	if (status == PJ_SUCCESS)
@@ -900,7 +900,7 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "OOO", &o_ua_cfg, &o_log_cfg, &o_media_cfg)) {
         return NULL;
     }
-    
+
     pjsua_config_default(&cfg_ua);
     pjsua_logging_config_default(&cfg_log);
     pjsua_media_config_default(&cfg_media);
@@ -940,7 +940,7 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
 	PyObj_pjsua_logging_config * obj_log;
 
         obj_log = (PyObj_pjsua_logging_config *)o_log_cfg;
-        
+
         PyObj_pjsua_logging_config_export(&cfg_log, obj_log);
 
         Py_XDECREF(g_obj_log_cb);
@@ -955,7 +955,7 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
     }
 
     if (o_media_cfg != Py_None) {
-	PyObj_pjsua_media_config_export(&cfg_media, 
+	PyObj_pjsua_media_config_export(&cfg_media,
 				        (PyObj_pjsua_media_config*)o_media_cfg);
 	p_cfg_media = &cfg_media;
 
@@ -980,7 +980,7 @@ static PyObject *py_pjsua_start(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pArgs);
 
     status = pjsua_start();
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -996,7 +996,7 @@ static PyObject *py_pjsua_destroy(PyObject *pSelf, PyObject *pArgs)
     PJ_UNUSED_ARG(pArgs);
 
     status = pjsua_destroy();
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -1032,7 +1032,7 @@ static PyObject *py_pjsua_handle_events(PyObject *pSelf, PyObject *pArgs)
 #if !NO_PJSIP_THREAD
     Py_END_ALLOW_THREADS
 #endif
-    
+
     return Py_BuildValue("i", ret);
 }
 
@@ -1052,7 +1052,7 @@ static PyObject *py_pjsua_verify_sip_url(PyObject *pSelf, PyObject *pArgs)
     }
 
     status = pjsua_verify_sip_url(url);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -1135,7 +1135,7 @@ static char pjsua_media_config_default_doc[] =
 static char pjsua_msg_data_init_doc[] =
     "_pjsua.Msg_Data void _pjsua.msg_data_init () "
     "Initialize message data ";
-        
+
 
 /* END OF LIB BASE */
 
@@ -1144,7 +1144,7 @@ static char pjsua_msg_data_init_doc[] =
 /*
  * py_pjsua_transport_config_default
  */
-static PyObject *py_pjsua_transport_config_default(PyObject *pSelf, 
+static PyObject *py_pjsua_transport_config_default(PyObject *pSelf,
 						   PyObject *pArgs)
 {
     PyObj_pjsua_transport_config *obj;
@@ -1188,8 +1188,8 @@ static PyObject *py_pjsua_transport_create(PyObject *pSelf, PyObject *pArgs)
     } else {
         status = pjsua_transport_create(type, NULL, &id);
     }
-    
-    
+
+
     return Py_BuildValue("ii", status, id);
 }
 
@@ -1208,12 +1208,12 @@ static PyObject *py_pjsua_enum_transports(PyObject *pSelf, PyObject *pArgs)
 
     c = PJ_ARRAY_SIZE(id);
     status = pjsua_enum_transports(id, &c);
-    
+
     list = PyList_New(c);
-    for (i = 0; i < c; i++) {     
+    for (i = 0; i < c; i++) {
         PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
     }
-    
+
     return (PyObject*)list;
 }
 
@@ -1226,18 +1226,18 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
     pj_status_t status;
     int id;
     pjsua_transport_info info;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
-    status = pjsua_transport_get_info(id, &info);	
+    }
+
+    status = pjsua_transport_get_info(id, &info);
     if (status == PJ_SUCCESS) {
 	PyObj_pjsua_transport_info *obj;
-        obj = (PyObj_pjsua_transport_info *) 
-	      PyObj_pjsua_transport_info_new(&PyTyp_pjsua_transport_info, 
+        obj = (PyObj_pjsua_transport_info *)
+	      PyObj_pjsua_transport_info_new(&PyTyp_pjsua_transport_info,
 					     NULL, NULL);
 	PyObj_pjsua_transport_info_import(obj, &info);
         return (PyObject*)obj;
@@ -1249,7 +1249,7 @@ static PyObject *py_pjsua_transport_get_info(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_transport_set_enable
  */
-static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf, 
+static PyObject *py_pjsua_transport_set_enable(PyObject *pSelf,
 					       PyObject *pArgs)
 {
     pj_status_t status;
@@ -1279,9 +1279,9 @@ static PyObject *py_pjsua_transport_close(PyObject *pSelf, PyObject *pArgs)
 
     if (!PyArg_ParseTuple(pArgs, "ii", &id, &force)) {
         return NULL;
-    }	
-    status = pjsua_transport_close(id, force);	
-    
+    }
+    status = pjsua_transport_close(id, force);
+
     return Py_BuildValue("i", status);
 }
 
@@ -1338,7 +1338,7 @@ static PyObject *py_pjsua_acc_config_default(PyObject *pSelf, PyObject *pArgs)
 
     pjsua_acc_config_default(&cfg);
     obj = (PyObj_pjsua_acc_config *)
-	  PyObj_pjsua_acc_config_new(&PyTyp_pjsua_acc_config, 
+	  PyObj_pjsua_acc_config_new(&PyTyp_pjsua_acc_config,
 				     NULL, NULL);
     PyObj_pjsua_acc_config_import(obj, &cfg);
     return (PyObject *)obj;
@@ -1362,7 +1362,7 @@ static PyObject *py_pjsua_acc_get_count(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_is_valid
  */
 static PyObject *py_pjsua_acc_is_valid(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int id;
     int is_valid;
 
@@ -1372,7 +1372,7 @@ static PyObject *py_pjsua_acc_is_valid(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
 
-    is_valid = pjsua_acc_is_valid(id);	
+    is_valid = pjsua_acc_is_valid(id);
     return Py_BuildValue("i", is_valid);
 }
 
@@ -1380,7 +1380,7 @@ static PyObject *py_pjsua_acc_is_valid(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_set_default
  */
 static PyObject *py_pjsua_acc_set_default(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int id;
     int status;
 
@@ -1390,7 +1390,7 @@ static PyObject *py_pjsua_acc_set_default(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     status = pjsua_acc_set_default(id);
-	
+
     return Py_BuildValue("i", status);
 }
 
@@ -1398,14 +1398,14 @@ static PyObject *py_pjsua_acc_set_default(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_get_default
  */
 static PyObject *py_pjsua_acc_get_default(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int id;
-	
+
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     id = pjsua_acc_get_default();
-	
+
     return Py_BuildValue("i", id);
 }
 
@@ -1413,7 +1413,7 @@ static PyObject *py_pjsua_acc_get_default(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_add
  */
 static PyObject *py_pjsua_acc_add(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int is_default;
     PyObject *pCfg;
     int acc_id;
@@ -1424,7 +1424,7 @@ static PyObject *py_pjsua_acc_add(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "Oi", &pCfg, &is_default)) {
         return NULL;
     }
-    
+
     if (pCfg != Py_None) {
 	pjsua_acc_config cfg;
 	PyObj_pjsua_acc_config *ac;
@@ -1437,7 +1437,7 @@ static PyObject *py_pjsua_acc_add(PyObject *pSelf, PyObject *pArgs)
         status = PJ_EINVAL;
 	acc_id = PJSUA_INVALID_ID;
     }
-    
+
     return Py_BuildValue("ii", status, acc_id);
 }
 
@@ -1445,20 +1445,20 @@ static PyObject *py_pjsua_acc_add(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_add_local
  */
 static PyObject *py_pjsua_acc_add_local(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int is_default;
     int tid;
     int acc_id;
     int status;
-	
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &tid, &is_default)) {
         return NULL;
     }
-	
+
     status = pjsua_acc_add_local(tid, is_default, &acc_id);
-    
+
     return Py_BuildValue("ii", status, acc_id);
 }
 
@@ -1466,7 +1466,7 @@ static PyObject *py_pjsua_acc_add_local(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_set_user_data
  */
 static PyObject *py_pjsua_acc_set_user_data(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int acc_id;
     PyObject *pUserData, *old_user_data;
     int status;
@@ -1493,7 +1493,7 @@ static PyObject *py_pjsua_acc_set_user_data(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_get_user_data
  */
 static PyObject *py_pjsua_acc_get_user_data(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int acc_id;
     PyObject *user_data;
 
@@ -1512,7 +1512,7 @@ static PyObject *py_pjsua_acc_get_user_data(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_del
  */
 static PyObject *py_pjsua_acc_del(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int acc_id;
     PyObject *user_data;
     int status;
@@ -1535,7 +1535,7 @@ static PyObject *py_pjsua_acc_del(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_modify
  */
 static PyObject *py_pjsua_acc_modify(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     PyObject *pCfg;
     PyObj_pjsua_acc_config * ac;
     int acc_id;
@@ -1548,7 +1548,7 @@ static PyObject *py_pjsua_acc_modify(PyObject *pSelf, PyObject *pArgs)
     }
 
     if (pCfg != Py_None) {
-	pjsua_acc_config cfg;	
+	pjsua_acc_config cfg;
 
 	pjsua_acc_config_default(&cfg);
         ac = (PyObj_pjsua_acc_config*)pCfg;
@@ -1564,42 +1564,42 @@ static PyObject *py_pjsua_acc_modify(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_acc_set_online_status
  */
-static PyObject *py_pjsua_acc_set_online_status(PyObject *pSelf, 
+static PyObject *py_pjsua_acc_set_online_status(PyObject *pSelf,
 						PyObject *pArgs)
-{    
-    int is_online;	
+{
+    int is_online;
     int acc_id;
-    int status;	
+    int status;
 
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &acc_id, &is_online)) {
         return NULL;
     }
-	
+
     status = pjsua_acc_set_online_status(acc_id, is_online);
-	
+
     return Py_BuildValue("i", status);
 }
 
 /*
  * py_pjsua_acc_set_online_status2
  */
-static PyObject *py_pjsua_acc_set_online_status2(PyObject *pSelf, 
+static PyObject *py_pjsua_acc_set_online_status2(PyObject *pSelf,
 						 PyObject *pArgs)
-{    
-    int is_online;	
+{
+    int is_online;
     int acc_id;
     int activity_id;
     const char *activity_text = NULL;
     const char *rpid_id = NULL;
     pjrpid_element rpid;
-    pj_status_t status;	
+    pj_status_t status;
 
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "iiiss", &acc_id, &is_online,
-			  &activity_id, &activity_text, &rpid_id)) 
+			  &activity_id, &activity_text, &rpid_id))
     {
         return NULL;
     }
@@ -1621,21 +1621,21 @@ static PyObject *py_pjsua_acc_set_online_status2(PyObject *pSelf,
 /*
  * py_pjsua_acc_set_registration
  */
-static PyObject *py_pjsua_acc_set_registration(PyObject *pSelf, 
+static PyObject *py_pjsua_acc_set_registration(PyObject *pSelf,
 					       PyObject *pArgs)
-{    
-    int renew;	
+{
+    int renew;
     int acc_id;
-    int status;	
+    int status;
 
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &acc_id, &renew)) {
         return NULL;
     }
-	
+
     status = pjsua_acc_set_registration(acc_id, renew);
-	
+
     return Py_BuildValue("i", status);
 }
 
@@ -1643,18 +1643,18 @@ static PyObject *py_pjsua_acc_set_registration(PyObject *pSelf,
  * py_pjsua_acc_get_info
  */
 static PyObject *py_pjsua_acc_get_info(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int acc_id;
     PyObj_pjsua_acc_info * obj;
     pjsua_acc_info info;
-    int status;	
+    int status;
 
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &acc_id)) {
         return NULL;
     }
-    
+
     status = pjsua_acc_get_info(acc_id, &info);
     if (status == PJ_SUCCESS) {
 	obj = (PyObj_pjsua_acc_info*)
@@ -1683,12 +1683,12 @@ static PyObject *py_pjsua_enum_accs(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_enum_accs(id, &c);
     if (status != PJ_SUCCESS)
 	c = 0;
-    
+
     list = PyList_New(c);
     for (i = 0; i < c; i++) {
         PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
     }
-    
+
     return (PyObject*)list;
 }
 
@@ -1707,8 +1707,8 @@ static PyObject *py_pjsua_acc_enum_info(PyObject *pSelf, PyObject *pArgs)
 
     if (!PyArg_ParseTuple(pArgs, "")) {
         return NULL;
-    }	
-    
+    }
+
     c = PJ_ARRAY_SIZE(info);
     status = pjsua_acc_enum_info(info, &c);
     if (status != PJ_SUCCESS)
@@ -1724,7 +1724,7 @@ static PyObject *py_pjsua_acc_enum_info(PyObject *pSelf, PyObject *pArgs)
 
         PyList_SetItem(list, i, (PyObject*)obj);
     }
-    
+
     return (PyObject*)list;
 }
 
@@ -1732,19 +1732,19 @@ static PyObject *py_pjsua_acc_enum_info(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_acc_set_transport
  */
 static PyObject *py_pjsua_acc_set_transport(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int acc_id, transport_id;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &acc_id, &transport_id)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_acc_set_transport(acc_id, transport_id);
-    
-    
+
+
     return Py_BuildValue("i", status);
 }
 
@@ -1752,7 +1752,7 @@ static PyObject *py_pjsua_acc_set_transport(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_acc_pres_notify
  */
-static PyObject *py_pjsua_acc_pres_notify(PyObject *pSelf, 
+static PyObject *py_pjsua_acc_pres_notify(PyObject *pSelf,
 					  PyObject *pArgs)
 {
     int acc_id, state;
@@ -1762,16 +1762,16 @@ static PyObject *py_pjsua_acc_pres_notify(PyObject *pSelf,
     pj_str_t reason;
     pj_bool_t with_body;
     pj_pool_t *pool = NULL;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOiOO", &acc_id, &arg_pres, 
+    if (!PyArg_ParseTuple(pArgs, "iOiOO", &acc_id, &arg_pres,
 			  &state, &arg_reason, &arg_msg_data))
     {
         return NULL;
-    }	
-    
+    }
+
     srv_pres = (void*) PyLong_AsLong(arg_pres);
     with_body = (state != PJSIP_EVSUB_STATE_TERMINATED);
 
@@ -1793,7 +1793,7 @@ static PyObject *py_pjsua_acc_pres_notify(PyObject *pSelf,
     status = pjsua_pres_notify(acc_id, (pjsua_srv_pres*)srv_pres,
 			       (pjsip_evsub_state)state, NULL,
 			       &reason, with_body, &msg_data);
-    
+
     if (pool) {
 	pj_pool_release(pool);
     }
@@ -1865,20 +1865,20 @@ static char pjsua_acc_enum_info_doc[] =
 /*
  * py_pjsua_buddy_config_default
  */
-static PyObject *py_pjsua_buddy_config_default(PyObject *pSelf, 
+static PyObject *py_pjsua_buddy_config_default(PyObject *pSelf,
 					       PyObject *pArgs)
-{    
-    PyObj_pjsua_buddy_config *obj;	
+{
+    PyObj_pjsua_buddy_config *obj;
     pjsua_buddy_config cfg;
 
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     pjsua_buddy_config_default(&cfg);
-    obj = (PyObj_pjsua_buddy_config *) 
+    obj = (PyObj_pjsua_buddy_config *)
 	  PyObj_pjsua_buddy_config_new(&PyTyp_pjsua_buddy_config, NULL, NULL);
     PyObj_pjsua_buddy_config_import(obj, &cfg);
-    
+
     return (PyObject *)obj;
 }
 
@@ -1886,7 +1886,7 @@ static PyObject *py_pjsua_buddy_config_default(PyObject *pSelf,
  * py_pjsua_get_buddy_count
  */
 static PyObject *py_pjsua_get_buddy_count(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
@@ -1897,7 +1897,7 @@ static PyObject *py_pjsua_get_buddy_count(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_is_valid
  */
 static PyObject *py_pjsua_buddy_is_valid(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int id;
     int is_valid;
 
@@ -1907,7 +1907,7 @@ static PyObject *py_pjsua_buddy_is_valid(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
     is_valid = pjsua_buddy_is_valid(id);
-	
+
     return Py_BuildValue("i", is_valid);
 }
 
@@ -1933,7 +1933,7 @@ static PyObject *py_pjsua_enum_buddies(PyObject *pSelf, PyObject *pArgs)
     for (i = 0; i < c; i++) {
         PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
     }
-    
+
     return (PyObject*)list;
 }
 
@@ -1941,7 +1941,7 @@ static PyObject *py_pjsua_enum_buddies(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_find
  */
 static PyObject *py_pjsua_buddy_find(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     PyObject *pURI;
     pj_str_t uri;
     pjsua_buddy_id buddy_id;
@@ -1965,10 +1965,10 @@ static PyObject *py_pjsua_buddy_find(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_get_info
  */
 static PyObject *py_pjsua_buddy_get_info(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int buddy_id;
     pjsua_buddy_info info;
-    int status;	
+    int status;
 
     PJ_UNUSED_ARG(pSelf);
 
@@ -1981,9 +1981,9 @@ static PyObject *py_pjsua_buddy_get_info(PyObject *pSelf, PyObject *pArgs)
 	PyObj_pjsua_buddy_info *obj;
 
 	obj = (PyObj_pjsua_buddy_info *)
-	      PyObj_pjsua_buddy_config_new(&PyTyp_pjsua_buddy_info, 
+	      PyObj_pjsua_buddy_config_new(&PyTyp_pjsua_buddy_info,
 					   NULL, NULL);
-	PyObj_pjsua_buddy_info_import(obj, &info);	
+	PyObj_pjsua_buddy_info_import(obj, &info);
         return (PyObject*)obj;
     } else {
 	return Py_BuildValue("");
@@ -1994,7 +1994,7 @@ static PyObject *py_pjsua_buddy_get_info(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_add
  */
 static PyObject *py_pjsua_buddy_add(PyObject *pSelf, PyObject *pArgs)
-{   
+{
     PyObject *pCfg;
     int buddy_id;
     int status;
@@ -2012,8 +2012,8 @@ static PyObject *py_pjsua_buddy_add(PyObject *pSelf, PyObject *pArgs)
         bc = (PyObj_pjsua_buddy_config *)pCfg;
 
 	pjsua_buddy_config_default(&cfg);
-        PyObj_pjsua_buddy_config_export(&cfg, bc);  
-    
+        PyObj_pjsua_buddy_config_export(&cfg, bc);
+
         status = pjsua_buddy_add(&cfg, &buddy_id);
 
     } else {
@@ -2027,7 +2027,7 @@ static PyObject *py_pjsua_buddy_add(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_del
  */
 static PyObject *py_pjsua_buddy_del(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int buddy_id;
     int status;
     PyObject *user_data;
@@ -2050,7 +2050,7 @@ static PyObject *py_pjsua_buddy_del(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_set_user_data
  */
 static PyObject *py_pjsua_buddy_set_user_data(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int buddy_id;
     int status;
     PyObject *user_data, *old_user_data;
@@ -2081,7 +2081,7 @@ static PyObject *py_pjsua_buddy_set_user_data(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_buddy_get_user_data
  */
 static PyObject *py_pjsua_buddy_get_user_data(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int buddy_id;
     PyObject *user_data;
 
@@ -2099,7 +2099,7 @@ static PyObject *py_pjsua_buddy_get_user_data(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_buddy_subscribe_pres
  */
-static PyObject *py_pjsua_buddy_subscribe_pres(PyObject *pSelf, 
+static PyObject *py_pjsua_buddy_subscribe_pres(PyObject *pSelf,
 					       PyObject *pArgs)
 {
     int buddy_id;
@@ -2121,7 +2121,7 @@ static PyObject *py_pjsua_buddy_subscribe_pres(PyObject *pSelf,
  * py_pjsua_pres_dump
  */
 static PyObject *py_pjsua_pres_dump(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int verbose;
 
     PJ_UNUSED_ARG(pSelf);
@@ -2130,7 +2130,7 @@ static PyObject *py_pjsua_pres_dump(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
 
-    pjsua_pres_dump(verbose);	
+    pjsua_pres_dump(verbose);
 
     return Py_BuildValue("");
 }
@@ -2139,7 +2139,7 @@ static PyObject *py_pjsua_pres_dump(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_im_send
  */
 static PyObject *py_pjsua_im_send(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int acc_id;
     pj_str_t *mime_type, tmp_mime_type;
@@ -2154,7 +2154,7 @@ static PyObject *py_pjsua_im_send(PyObject *pSelf, PyObject *pArgs)
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOOOOi", &acc_id, 
+    if (!PyArg_ParseTuple(pArgs, "iOOOOi", &acc_id,
 		&pTo, &pMimeType, &pContent, &pMsgData, &user_data))
     {
         return NULL;
@@ -2182,11 +2182,11 @@ static PyObject *py_pjsua_im_send(PyObject *pSelf, PyObject *pArgs)
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
 
-    status = pjsua_im_send(acc_id, &to, mime_type, &content, 
+    status = pjsua_im_send(acc_id, &to, mime_type, &content,
 			   &msg_data, (void*)(long)user_data);
     if (pool)
 	pj_pool_release(pool);
-    
+
     return Py_BuildValue("i",status);
 }
 
@@ -2194,7 +2194,7 @@ static PyObject *py_pjsua_im_send(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_im_typing
  */
 static PyObject *py_pjsua_im_typing(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int acc_id;
     pj_str_t to;
@@ -2206,12 +2206,12 @@ static PyObject *py_pjsua_im_typing(PyObject *pSelf, PyObject *pArgs)
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOiO", &acc_id, &pTo, &is_typing, 
-			  &pMsgData)) 
+    if (!PyArg_ParseTuple(pArgs, "iOiO", &acc_id, &pTo, &is_typing,
+			  &pMsgData))
     {
         return NULL;
     }
-	
+
     to = PyString_ToPJ(pTo);
 
     pjsua_msg_data_init(&msg_data);
@@ -2281,7 +2281,7 @@ static char pjsua_im_typing_doc[] =
  * py_pjsua_conf_get_max_ports
  */
 static PyObject *py_pjsua_conf_get_max_ports(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
@@ -2291,9 +2291,9 @@ static PyObject *py_pjsua_conf_get_max_ports(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_conf_get_active_ports
  */
-static PyObject *py_pjsua_conf_get_active_ports(PyObject *pSelf, 
+static PyObject *py_pjsua_conf_get_active_ports(PyObject *pSelf,
 						PyObject *pArgs)
-{    
+{
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
@@ -2317,12 +2317,12 @@ static PyObject *py_pjsua_enum_conf_ports(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_enum_conf_ports(id, &c);
     if (status != PJ_SUCCESS)
 	c = 0;
-    
+
     list = PyList_New(c);
     for (i = 0; i < c; i++) {
         PyList_SetItem(list, i, Py_BuildValue("i", id[i]));
     }
-    
+
     return (PyObject*)list;
 }
 
@@ -2330,11 +2330,11 @@ static PyObject *py_pjsua_enum_conf_ports(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_get_port_info
  */
 static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
     PyObj_pjsua_conf_port_info *ret;
     pjsua_conf_port_info info;
-    int status;	
+    int status;
     unsigned i;
 
     PJ_UNUSED_ARG(pSelf);
@@ -2342,7 +2342,7 @@ static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
     }
-    
+
     status = pjsua_conf_get_port_info(id, &info);
     ret = (PyObj_pjsua_conf_port_info *)
 	  conf_port_info_new(&PyTyp_pjsua_conf_port_info, NULL, NULL);
@@ -2365,18 +2365,18 @@ static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_remove_port
  */
 static PyObject *py_pjsua_conf_remove_port(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_remove_port(id);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2384,18 +2384,18 @@ static PyObject *py_pjsua_conf_remove_port(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_connect
  */
 static PyObject *py_pjsua_conf_connect(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int source, sink;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &source, &sink)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_connect(source, sink);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2403,18 +2403,18 @@ static PyObject *py_pjsua_conf_connect(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_disconnect
  */
 static PyObject *py_pjsua_conf_disconnect(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int source, sink;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &source, &sink)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_disconnect(source, sink);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2422,19 +2422,19 @@ static PyObject *py_pjsua_conf_disconnect(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_set_tx_level
  */
 static PyObject *py_pjsua_conf_set_tx_level(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int slot;
     float level;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "if", &slot, &level)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_adjust_tx_level(slot, level);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2442,41 +2442,41 @@ static PyObject *py_pjsua_conf_set_tx_level(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_conf_set_rx_level
  */
 static PyObject *py_pjsua_conf_set_rx_level(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int slot;
     float level;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "if", &slot, &level)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_adjust_rx_level(slot, level);
-    
+
     return Py_BuildValue("i", status);
 }
 
 /*
  * py_pjsua_conf_get_signal_level
  */
-static PyObject *py_pjsua_conf_get_signal_level(PyObject *pSelf, 
+static PyObject *py_pjsua_conf_get_signal_level(PyObject *pSelf,
 						PyObject *pArgs)
-{    	
+{
     int slot;
     unsigned tx_level, rx_level;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &slot)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_conf_get_signal_level(slot, &tx_level, &rx_level);
-    
-    return Py_BuildValue("iff", status, (float)(tx_level/255.0), 
+
+    return Py_BuildValue("iff", status, (float)(tx_level/255.0),
 			 (float)(rx_level/255.0));
 }
 
@@ -2484,13 +2484,13 @@ static PyObject *py_pjsua_conf_get_signal_level(PyObject *pSelf,
  * py_pjsua_player_create
  */
 static PyObject *py_pjsua_player_create(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
     int options;
     PyObject *pFilename;
     pj_str_t filename;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "Oi", &pFilename, &options)) {
@@ -2499,7 +2499,7 @@ static PyObject *py_pjsua_player_create(PyObject *pSelf, PyObject *pArgs)
 
     filename = PyString_ToPJ(pFilename);
     status = pjsua_player_create(&filename, options, &id);
-    
+
     return Py_BuildValue("ii", status, id);
 }
 
@@ -2507,15 +2507,15 @@ static PyObject *py_pjsua_player_create(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_playlist_create
  */
 static PyObject *py_pjsua_playlist_create(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
     int options;
     PyObject *pLabel, *pFileList;
     pj_str_t label;
     int count;
     pj_str_t files[64];
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "OOi", &pLabel, &pFileList, &options)) {
@@ -2527,34 +2527,34 @@ static PyObject *py_pjsua_playlist_create(PyObject *pSelf, PyObject *pArgs)
 	return Py_BuildValue("ii", PJ_EINVAL, PJSUA_INVALID_ID);
 
     count = 0;
-    for (count=0; count<PyList_Size(pFileList) && 
-		  count<PJ_ARRAY_SIZE(files); ++count) 
+    for (count=0; count<PyList_Size(pFileList) &&
+		  count<PJ_ARRAY_SIZE(files); ++count)
     {
 	files[count] = PyString_ToPJ(PyList_GetItem(pFileList, count));
     }
 
     status = pjsua_playlist_create(files, count, &label, options, &id);
-    
+
     return Py_BuildValue("ii", status, id);
 }
 
 /*
  * py_pjsua_player_get_conf_port
  */
-static PyObject *py_pjsua_player_get_conf_port(PyObject *pSelf, 
+static PyObject *py_pjsua_player_get_conf_port(PyObject *pSelf,
 					       PyObject *pArgs)
-{    	
-    
-    int id, port_id;	
-    
+{
+
+    int id, port_id;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
+    }
+
     port_id = pjsua_player_get_conf_port(id);
-    
+
     return Py_BuildValue("i", port_id);
 }
 
@@ -2562,22 +2562,22 @@ static PyObject *py_pjsua_player_get_conf_port(PyObject *pSelf,
  * py_pjsua_player_set_pos
  */
 static PyObject *py_pjsua_player_set_pos(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
     int samples;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &id, &samples)) {
         return NULL;
-    }	
-    
+    }
+
     if (samples < 0)
 	samples = 0;
 
     status = pjsua_player_set_pos(id, samples);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2585,18 +2585,18 @@ static PyObject *py_pjsua_player_set_pos(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_player_destroy
  */
 static PyObject *py_pjsua_player_destroy(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_player_destroy(id);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2604,15 +2604,15 @@ static PyObject *py_pjsua_player_destroy(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_recorder_create
  */
 static PyObject *py_pjsua_recorder_create(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id, options;
     int max_size;
     PyObject *pFilename, *pEncParam;
     pj_str_t filename;
     int enc_type;
-    
-    int status;	
-    
+
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "OiOii", &pFilename, &enc_type, &pEncParam,
@@ -2632,20 +2632,20 @@ static PyObject *py_pjsua_recorder_create(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_recorder_get_conf_port
  */
-static PyObject *py_pjsua_recorder_get_conf_port(PyObject *pSelf, 
+static PyObject *py_pjsua_recorder_get_conf_port(PyObject *pSelf,
 						 PyObject *pArgs)
-{    	
-    
-    int id, port_id;	
-    
+{
+
+    int id, port_id;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
+    }
+
     port_id = pjsua_recorder_get_conf_port(id);
-    
+
     return Py_BuildValue("i", port_id);
 }
 
@@ -2653,18 +2653,18 @@ static PyObject *py_pjsua_recorder_get_conf_port(PyObject *pSelf,
  * py_pjsua_recorder_destroy
  */
 static PyObject *py_pjsua_recorder_destroy(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int id;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &id)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_recorder_destroy(id);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2685,13 +2685,13 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_enum_snd_devs(info, &c);
     if (status != PJ_SUCCESS)
 	c = 0;
-    
+
     ret = PyList_New(c);
     for (i = 0; i < c; i++)  {
         PyObj_pjmedia_snd_dev_info * obj;
 
         obj = (PyObj_pjmedia_snd_dev_info *)
-	      pjmedia_snd_dev_info_new(&PyTyp_pjmedia_snd_dev_info, 
+	      pjmedia_snd_dev_info_new(&PyTyp_pjmedia_snd_dev_info,
 				       NULL, NULL);
         obj->default_samples_per_sec = info[i].default_samples_per_sec;
         obj->input_count = info[i].input_count;
@@ -2700,7 +2700,7 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
 
         PyList_SetItem(ret, i, (PyObject *)obj);
     }
-    
+
     return (PyObject*)ret;
 }
 
@@ -2708,15 +2708,15 @@ static PyObject *py_pjsua_enum_snd_devs(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_get_snd_dev
  */
 static PyObject *py_pjsua_get_snd_dev(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int capture_dev, playback_dev;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     status = pjsua_get_snd_dev(&capture_dev, &playback_dev);
-    
+
     return Py_BuildValue("ii", capture_dev, playback_dev);
 }
 
@@ -2724,18 +2724,18 @@ static PyObject *py_pjsua_get_snd_dev(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_set_snd_dev
  */
 static PyObject *py_pjsua_set_snd_dev(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int capture_dev, playback_dev;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &capture_dev, &playback_dev)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_set_snd_dev(capture_dev, playback_dev);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2743,8 +2743,8 @@ static PyObject *py_pjsua_set_snd_dev(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_set_null_snd_dev
  */
 static PyObject *py_pjsua_set_null_snd_dev(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int status;	
+{
+    int status;
 
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
@@ -2758,19 +2758,19 @@ static PyObject *py_pjsua_set_null_snd_dev(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_set_ec
  */
 static PyObject *py_pjsua_set_ec(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int options;
     int tail_ms;
-    int status;	
-    
+    int status;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "ii", &tail_ms, &options)) {
         return NULL;
-    }	
+    }
 
     status = pjsua_set_ec(tail_ms, options);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2778,8 +2778,8 @@ static PyObject *py_pjsua_set_ec(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_get_ec_tail
  */
 static PyObject *py_pjsua_get_ec_tail(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int status;	
+{
+    int status;
     unsigned tail_ms;
 
     PJ_UNUSED_ARG(pSelf);
@@ -2788,7 +2788,7 @@ static PyObject *py_pjsua_get_ec_tail(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_get_ec_tail(&tail_ms);
     if (status != PJ_SUCCESS)
 	tail_ms = 0;
-    
+
     return Py_BuildValue("i", tail_ms);
 }
 
@@ -2809,7 +2809,7 @@ static PyObject *py_pjsua_enum_codecs(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_enum_codecs(info, &c);
     if (status != PJ_SUCCESS)
 	c = 0;
-    
+
     ret = PyList_New(c);
     for (i = 0; i < c; i++)  {
         PyObj_pjsua_codec_info * obj;
@@ -2828,12 +2828,12 @@ static PyObject *py_pjsua_enum_codecs(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_codec_set_priority
  */
 static PyObject *py_pjsua_codec_set_priority(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int status;	
+{
+    int status;
     PyObject *pCodecId;
     pj_str_t codec_id;
     int priority;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "Oi", &pCodecId, &priority)) {
@@ -2847,7 +2847,7 @@ static PyObject *py_pjsua_codec_set_priority(PyObject *pSelf, PyObject *pArgs)
 	priority = 255;
 
     status = pjsua_codec_set_priority(&codec_id, (pj_uint8_t)priority);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -2855,18 +2855,18 @@ static PyObject *py_pjsua_codec_set_priority(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_codec_get_param
  */
 static PyObject *py_pjsua_codec_get_param(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int status;	
+{
+    int status;
     PyObject *pCodecId;
     pj_str_t codec_id;
     pjmedia_codec_param param;
     PyObj_pjmedia_codec_param *ret;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "O", &pCodecId)) {
         return NULL;
-    }	
+    }
 
     codec_id = PyString_ToPJ(pCodecId);
 
@@ -2899,17 +2899,17 @@ static PyObject *py_pjsua_codec_get_param(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_codec_set_param
  */
 static PyObject *py_pjsua_codec_set_param(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int status;	
+{
+    int status;
     PyObject *pCodecId, *pCodecParam;
     pj_str_t codec_id;
     pjmedia_codec_param param;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "OO", &pCodecId, &pCodecParam)) {
         return NULL;
-    }	
+    }
 
     codec_id = PyString_ToPJ(pCodecId);
 
@@ -3044,14 +3044,14 @@ static char pjsua_codec_set_param_doc[] =
  * py_pjsua_call_get_max_count
  */
 static PyObject *py_pjsua_call_get_max_count(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int count;
 
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     count = pjsua_call_get_max_count();
-    
+
     return Py_BuildValue("i", count);
 }
 
@@ -3059,14 +3059,14 @@ static PyObject *py_pjsua_call_get_max_count(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_get_count
  */
 static PyObject *py_pjsua_call_get_count(PyObject *pSelf, PyObject *pArgs)
-{    	
-    int count;	
-    
+{
+    int count;
+
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     count = pjsua_call_get_count();
-    
+
     return Py_BuildValue("i", count);
 }
 
@@ -3087,12 +3087,12 @@ static PyObject *py_pjsua_enum_calls(PyObject *pSelf, PyObject *pArgs)
     status = pjsua_enum_calls(id, &c);
     if (status != PJ_SUCCESS)
 	c = 0;
-    
+
     ret = PyList_New(c);
-    for (i = 0; i < c; i++)  {     
+    for (i = 0; i < c; i++)  {
         PyList_SetItem(ret, i, Py_BuildValue("i", id[i]));
     }
-    
+
     return (PyObject*)ret;
 }
 
@@ -3100,24 +3100,25 @@ static PyObject *py_pjsua_enum_calls(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_make_call
  */
 static PyObject *py_pjsua_call_make_call(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int acc_id;
     pj_str_t dst_uri;
     PyObject *pDstUri, *pMsgData, *pUserData;
-    unsigned options;
+    pjsua_call_setting option;
     pjsua_msg_data msg_data;
     int call_id;
     pj_pool_t *pool = NULL;
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &options, 
+    pjsua_call_setting_default(&option);
+    if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &option.flag,
 			  &pUserData, &pMsgData))
     {
         return NULL;
     }
-	
+
     dst_uri = PyString_ToPJ(pDstUri);
     pjsua_msg_data_init(&msg_data);
 
@@ -3134,35 +3135,35 @@ static PyObject *py_pjsua_call_make_call(PyObject *pSelf, PyObject *pArgs)
 
     Py_XINCREF(pUserData);
 
-    status = pjsua_call_make_call(acc_id, &dst_uri, 
-				  options, (void*)pUserData, 
-				  &msg_data, &call_id);	
+    status = pjsua_call_make_call(acc_id, &dst_uri,
+				  &option, (void*)pUserData,
+				  &msg_data, &call_id);
     if (pool != NULL)
 	pj_pool_release(pool);
-    
+
     if (status != PJ_SUCCESS) {
     	Py_XDECREF(pUserData);
     }
 
-    return Py_BuildValue("ii", status, call_id);	
+    return Py_BuildValue("ii", status, call_id);
 }
 
 /*
  * py_pjsua_call_is_active
  */
 static PyObject *py_pjsua_call_is_active(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     int is_active;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id)) {
         return NULL;
-    }	
-    
+    }
+
     is_active = pjsua_call_is_active(call_id);
-    
+
     return Py_BuildValue("i", is_active);
 }
 
@@ -3170,16 +3171,16 @@ static PyObject *py_pjsua_call_is_active(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_has_media
  */
 static PyObject *py_pjsua_call_has_media(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     int has_media;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id)) {
         return NULL;
-    }	
-    
+    }
+
     has_media = pjsua_call_has_media(call_id);
 
     return Py_BuildValue("i", has_media);
@@ -3189,7 +3190,7 @@ static PyObject *py_pjsua_call_has_media(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_get_conf_port
  */
 static PyObject* py_pjsua_call_get_conf_port(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     int port_id;
 
@@ -3208,18 +3209,18 @@ static PyObject* py_pjsua_call_get_conf_port(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_get_info
  */
 static PyObject* py_pjsua_call_get_info(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     int status;
     PyObj_pjsua_call_info *ret;
     pjsua_call_info info;
-    
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id)) {
         return NULL;
-    }	
-    
+    }
+
     status = pjsua_call_get_info(call_id, &info);
     if (status != PJ_SUCCESS)
 	return Py_BuildValue("");
@@ -3260,7 +3261,7 @@ static PyObject* py_pjsua_call_get_info(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_set_user_data
  */
 static PyObject *py_pjsua_call_set_user_data(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     PyObject *pUserData, *old_user_data;
     int status;
@@ -3281,7 +3282,7 @@ static PyObject *py_pjsua_call_set_user_data(PyObject *pSelf, PyObject *pArgs)
     Py_XDECREF(old_user_data);
 
     status = pjsua_call_set_user_data(call_id, (void*)pUserData);
-    
+
     if (status != PJ_SUCCESS) {
     	Py_XDECREF(pUserData);
     }
@@ -3293,16 +3294,16 @@ static PyObject *py_pjsua_call_set_user_data(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_get_user_data
  */
 static PyObject *py_pjsua_call_get_user_data(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
-    PyObject *user_data;	
-    
+    PyObject *user_data;
+
     PJ_UNUSED_ARG(pSelf);
 
     if (!PyArg_ParseTuple(pArgs, "i", &call_id)) {
         return NULL;
-    }	
-    
+    }
+
     user_data = (PyObject*)pjsua_call_get_user_data(call_id);
     return user_data ? Py_BuildValue("O", user_data) : Py_BuildValue("");
 }
@@ -3311,7 +3312,7 @@ static PyObject *py_pjsua_call_get_user_data(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_answer
  */
 static PyObject *py_pjsua_call_answer(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     pj_str_t * reason, tmp_reason;
@@ -3344,8 +3345,8 @@ static PyObject *py_pjsua_call_answer(PyObject *pSelf, PyObject *pArgs)
         pool = pjsua_pool_create("pytmp", POOL_SIZE, POOL_SIZE);
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
-    
-    status = pjsua_call_answer(call_id, code, reason, &msg_data);	
+
+    status = pjsua_call_answer(call_id, code, reason, &msg_data);
 
     if (pool)
 	pj_pool_release(pool);
@@ -3357,7 +3358,7 @@ static PyObject *py_pjsua_call_answer(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_hangup
  */
 static PyObject *py_pjsua_call_hangup(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     pj_str_t *reason, tmp_reason;
@@ -3369,7 +3370,7 @@ static PyObject *py_pjsua_call_hangup(PyObject *pSelf, PyObject *pArgs)
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iIOO", &call_id, &code, &pReason, 
+    if (!PyArg_ParseTuple(pArgs, "iIOO", &call_id, &code, &pReason,
 			  &omdObj))
     {
         return NULL;
@@ -3392,7 +3393,7 @@ static PyObject *py_pjsua_call_hangup(PyObject *pSelf, PyObject *pArgs)
         pool = pjsua_pool_create("pytmp", POOL_SIZE, POOL_SIZE);
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
-    
+
     status = pjsua_call_hangup(call_id, code, reason, &msg_data);
     if (pool)
 	pj_pool_release(pool);
@@ -3404,9 +3405,9 @@ static PyObject *py_pjsua_call_hangup(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_set_hold
  */
 static PyObject *py_pjsua_call_set_hold(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
-    int call_id;    
+    int call_id;
     pjsua_msg_data msg_data;
     PyObject *omdObj;
     pj_pool_t *pool = NULL;
@@ -3419,7 +3420,7 @@ static PyObject *py_pjsua_call_set_hold(PyObject *pSelf, PyObject *pArgs)
 
     pjsua_msg_data_init(&msg_data);
     if (omdObj != Py_None) {
-	PyObj_pjsua_msg_data *omd;    
+	PyObj_pjsua_msg_data *omd;
 
         omd = (PyObj_pjsua_msg_data *)omdObj;
         msg_data.content_type = PyString_ToPJ(omd->content_type);
@@ -3440,7 +3441,7 @@ static PyObject *py_pjsua_call_set_hold(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_reinvite
  */
 static PyObject *py_pjsua_call_reinvite(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     int unhold;
@@ -3477,9 +3478,9 @@ static PyObject *py_pjsua_call_reinvite(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_update
  */
 static PyObject *py_pjsua_call_update(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
-    int call_id;    
+    int call_id;
     int option;
     pjsua_msg_data msg_data;
     PyObject *omdObj;
@@ -3502,7 +3503,7 @@ static PyObject *py_pjsua_call_update(PyObject *pSelf, PyObject *pArgs)
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
 
-    status = pjsua_call_update(call_id, option, &msg_data);	
+    status = pjsua_call_update(call_id, option, &msg_data);
 
     if (pool)
         pj_pool_release(pool);
@@ -3514,9 +3515,9 @@ static PyObject *py_pjsua_call_update(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_send_request
  */
 static PyObject *py_pjsua_call_send_request(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
-    int call_id;    
+    int call_id;
     PyObject *pMethod;
     pj_str_t method;
     pjsua_msg_data msg_data;
@@ -3546,7 +3547,7 @@ static PyObject *py_pjsua_call_send_request(PyObject *pSelf, PyObject *pArgs)
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
 
-    status = pjsua_call_send_request(call_id, &method, &msg_data);	
+    status = pjsua_call_send_request(call_id, &method, &msg_data);
 
     if (pool)
         pj_pool_release(pool);
@@ -3558,7 +3559,7 @@ static PyObject *py_pjsua_call_send_request(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_xfer
  */
 static PyObject *py_pjsua_call_xfer(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     pj_str_t dest;
@@ -3601,18 +3602,18 @@ static PyObject *py_pjsua_call_xfer(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_xfer_replaces
  */
 static PyObject *py_pjsua_call_xfer_replaces(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     int dest_call_id;
-    unsigned options;    
+    unsigned options;
     pjsua_msg_data msg_data;
     PyObject *omdObj;
     pj_pool_t *pool = NULL;
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iiIO", &call_id, &dest_call_id, 
+    if (!PyArg_ParseTuple(pArgs, "iiIO", &call_id, &dest_call_id,
 			  &options, &omdObj))
     {
         return NULL;
@@ -3630,7 +3631,7 @@ static PyObject *py_pjsua_call_xfer_replaces(PyObject *pSelf, PyObject *pArgs)
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
 
-    status = pjsua_call_xfer_replaces(call_id, dest_call_id, options, 
+    status = pjsua_call_xfer_replaces(call_id, dest_call_id, options,
 				      &msg_data);
 
     if (pool)
@@ -3643,7 +3644,7 @@ static PyObject *py_pjsua_call_xfer_replaces(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_dial_dtmf
  */
 static PyObject *py_pjsua_call_dial_dtmf(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     PyObject *pDigits;
     pj_str_t digits;
@@ -3660,7 +3661,7 @@ static PyObject *py_pjsua_call_dial_dtmf(PyObject *pSelf, PyObject *pArgs)
 
     digits = PyString_ToPJ(pDigits);
     status = pjsua_call_dial_dtmf(call_id, &digits);
-    
+
     return Py_BuildValue("i", status);
 }
 
@@ -3668,7 +3669,7 @@ static PyObject *py_pjsua_call_dial_dtmf(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_send_im
  */
 static PyObject *py_pjsua_call_send_im(PyObject *pSelf, PyObject *pArgs)
-{    
+{
     int status;
     int call_id;
     pj_str_t content;
@@ -3680,7 +3681,7 @@ static PyObject *py_pjsua_call_send_im(PyObject *pSelf, PyObject *pArgs)
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOOOi", &call_id, &pMimeType, &pContent, 
+    if (!PyArg_ParseTuple(pArgs, "iOOOi", &call_id, &pMimeType, &pContent,
 			  &omdObj, &user_data))
     {
         return NULL;
@@ -3695,7 +3696,7 @@ static PyObject *py_pjsua_call_send_im(PyObject *pSelf, PyObject *pArgs)
         mime_type = &tmp_mime_type;
         tmp_mime_type = PyString_ToPJ(pMimeType);
     } else {
-	mime_type = NULL;   
+	mime_type = NULL;
     }
 
     pjsua_msg_data_init(&msg_data);
@@ -3708,8 +3709,8 @@ static PyObject *py_pjsua_call_send_im(PyObject *pSelf, PyObject *pArgs)
         pool = pjsua_pool_create("pytmp", POOL_SIZE, POOL_SIZE);
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
-    
-    status = pjsua_call_send_im(call_id, mime_type, &content, 
+
+    status = pjsua_call_send_im(call_id, mime_type, &content,
 				&msg_data, (void*)(long)user_data);
 
     if (pool)
@@ -3721,11 +3722,11 @@ static PyObject *py_pjsua_call_send_im(PyObject *pSelf, PyObject *pArgs)
 /*
  * py_pjsua_call_send_typing_ind
  */
-static PyObject *py_pjsua_call_send_typing_ind(PyObject *pSelf, 
+static PyObject *py_pjsua_call_send_typing_ind(PyObject *pSelf,
 					       PyObject *pArgs)
-{    
+{
     int status;
-    int call_id;    
+    int call_id;
     int is_typing;
     pjsua_msg_data msg_data;
     PyObject *omdObj;
@@ -3736,7 +3737,7 @@ static PyObject *py_pjsua_call_send_typing_ind(PyObject *pSelf,
     if (!PyArg_ParseTuple(pArgs, "iiO", &call_id, &is_typing, &omdObj)) {
         return NULL;
     }
-	
+
     pjsua_msg_data_init(&msg_data);
     if (omdObj != Py_None) {
 	PyObj_pjsua_msg_data *omd;
@@ -3748,7 +3749,7 @@ static PyObject *py_pjsua_call_send_typing_ind(PyObject *pSelf,
         translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
     }
 
-    status = pjsua_call_send_typing_ind(call_id, is_typing, &msg_data);	
+    status = pjsua_call_send_typing_ind(call_id, is_typing, &msg_data);
 
     if (pool)
         pj_pool_release(pool);
@@ -3760,12 +3761,12 @@ static PyObject *py_pjsua_call_send_typing_ind(PyObject *pSelf,
  * py_pjsua_call_hangup_all
  */
 static PyObject *py_pjsua_call_hangup_all(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     PJ_UNUSED_ARG(pSelf);
     PJ_UNUSED_ARG(pArgs);
 
     pjsua_call_hangup_all();
-    
+
     return Py_BuildValue("");
 }
 
@@ -3773,27 +3774,27 @@ static PyObject *py_pjsua_call_hangup_all(PyObject *pSelf, PyObject *pArgs)
  * py_pjsua_call_dump
  */
 static PyObject *py_pjsua_call_dump(PyObject *pSelf, PyObject *pArgs)
-{    	
+{
     int call_id;
     int with_media;
     PyObject *ret;
     PyObject *pIndent;
     char *buffer;
     char *indent;
-    unsigned maxlen;    
+    unsigned maxlen;
     int status;
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iiIO", &call_id, &with_media, 
+    if (!PyArg_ParseTuple(pArgs, "iiIO", &call_id, &with_media,
 			  &maxlen, &pIndent))
     {
         return NULL;
-    }	
+    }
 
     buffer = (char*) malloc(maxlen * sizeof(char));
     indent = PyString_AsString(pIndent);
-    
+
     status = pjsua_call_dump(call_id, with_media, buffer, maxlen, indent);
     if (status != PJ_SUCCESS) {
 	free(buffer);
@@ -3818,7 +3819,7 @@ static PyObject *py_pjsua_dump(PyObject *pSelf, PyObject *pArgs)
 
     if (!PyArg_ParseTuple(pArgs, "i", &detail)) {
         return NULL;
-    }	
+    }
 
     pjsua_dump(detail);
 
@@ -3840,9 +3841,9 @@ static PyObject *py_pj_strerror(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "i", &err)) {
         return NULL;
     }
-    
+
     ret = pj_strerror(err, err_msg, sizeof(err_msg));
-    
+
     return PyString_FromStringAndSize(err_msg, ret.slen);
 }
 
@@ -3864,19 +3865,19 @@ static PyObject *py_pj_parse_simple_sip(PyObject *pSelf, PyObject *pArgs)
     if (!PyArg_ParseTuple(pArgs, "s", &arg_uri)) {
         return NULL;
     }
-    
+
     strncpy(tmp, arg_uri, sizeof(tmp));
     tmp[sizeof(tmp)-1] = '\0';
 
     pool = pjsua_pool_create("py_pj_parse_simple_sip", 512, 512);
     uri = pjsip_parse_uri(pool, tmp, strlen(tmp), 0);
-    
+
     if (uri == NULL || (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
 			!PJSIP_URI_SCHEME_IS_SIPS(uri))) {
 	pj_pool_release(pool);
 	return Py_BuildValue("");
     }
-    
+
     ret = PyTuple_New(5);
     sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
 
@@ -4000,7 +4001,7 @@ static char pjsua_call_dump_doc[] =
 static PyMethodDef py_pjsua_methods[] =
 {
     {
-        "thread_register", py_pjsua_thread_register, METH_VARARGS, 
+        "thread_register", py_pjsua_thread_register, METH_VARARGS,
          pjsua_thread_register_doc
     },
     {
@@ -4042,14 +4043,14 @@ static PyMethodDef py_pjsua_methods[] =
     	"media_config_default", py_pjsua_media_config_default, METH_VARARGS,
     	pjsua_media_config_default_doc
     },
-    
-    
+
+
     {
     	"msg_data_init", py_pjsua_msg_data_init, METH_VARARGS,
     	pjsua_msg_data_init_doc
     },
     {
-        "transport_config_default", py_pjsua_transport_config_default, 
+        "transport_config_default", py_pjsua_transport_config_default,
         METH_VARARGS,pjsua_transport_config_default_doc
     },
     {
@@ -4163,11 +4164,11 @@ static PyMethodDef py_pjsua_methods[] =
     {
         "enum_buddies", py_pjsua_enum_buddies, METH_VARARGS,
         pjsua_enum_buddies_doc
-    },    
+    },
     {
         "buddy_find", py_pjsua_buddy_find, METH_VARARGS,
         "Find buddy with the specified URI"
-    },    
+    },
     {
         "buddy_get_info", py_pjsua_buddy_get_info, METH_VARARGS,
         pjsua_buddy_get_info_doc
@@ -4234,7 +4235,7 @@ static PyMethodDef py_pjsua_methods[] =
     },
     {
 	"conf_set_tx_level", py_pjsua_conf_set_tx_level, METH_VARARGS,
-	"Adjust the signal level to be transmitted from the bridge to the" 
+	"Adjust the signal level to be transmitted from the bridge to the"
 	" specified port by making it louder or quieter"
     },
     {
@@ -4420,7 +4421,7 @@ static PyMethodDef py_pjsua_methods[] =
 	"parse_simple_uri", py_pj_parse_simple_sip, METH_VARARGS, "Parse URI"
     },
 
-    
+
     {NULL, NULL} /* end of function list */
 };
 
@@ -4435,7 +4436,7 @@ init_pjsua(void)
     PyObject* m = NULL;
 #define ADD_CONSTANT(mod,name)	PyModule_AddIntConstant(mod,#name,name)
 
-    
+
     PyEval_InitThreads();
 
     if (PyType_Ready(&PyTyp_pjsua_callback) < 0)
@@ -4457,15 +4458,15 @@ init_pjsua(void)
 
     if (PyType_Ready(&PyTyp_pjsua_transport_config) < 0)
         return;
-    
+
     if (PyType_Ready(&PyTyp_pjsua_transport_info) < 0)
         return;
-    
+
     /* END OF LIB TRANSPORT */
 
     /* LIB ACCOUNT */
 
-    
+
     if (PyType_Ready(&PyTyp_pjsua_acc_config) < 0)
         return;
     if (PyType_Ready(&PyTyp_pjsua_acc_info) < 0)
@@ -4483,7 +4484,7 @@ init_pjsua(void)
     /* END OF LIB BUDDY */
 
     /* LIB MEDIA */
-  
+
     if (PyType_Ready(&PyTyp_pjsua_codec_info) < 0)
         return;
 
@@ -4541,16 +4542,16 @@ init_pjsua(void)
     Py_INCREF(&PyTyp_pjsua_transport_config);
     PyModule_AddObject
         (m, "Transport_Config", (PyObject *)&PyTyp_pjsua_transport_config);
-    
+
     Py_INCREF(&PyTyp_pjsua_transport_info);
     PyModule_AddObject(m, "Transport_Info", (PyObject *)&PyTyp_pjsua_transport_info);
-    
+
 
     /* END OF LIB TRANSPORT */
 
     /* LIB ACCOUNT */
 
-    
+
     Py_INCREF(&PyTyp_pjsua_acc_config);
     PyModule_AddObject(m, "Acc_Config", (PyObject *)&PyTyp_pjsua_acc_config);
     Py_INCREF(&PyTyp_pjsua_acc_info);
@@ -4559,7 +4560,7 @@ init_pjsua(void)
     /* END OF LIB ACCOUNT */
 
     /* LIB BUDDY */
-    
+
     Py_INCREF(&PyTyp_pjsua_buddy_config);
     PyModule_AddObject(m, "Buddy_Config", (PyObject *)&PyTyp_pjsua_buddy_config);
     Py_INCREF(&PyTyp_pjsua_buddy_info);
@@ -4574,16 +4575,16 @@ init_pjsua(void)
     Py_INCREF(&PyTyp_pjsua_conf_port_info);
     PyModule_AddObject(m, "Conf_Port_Info", (PyObject *)&PyTyp_pjsua_conf_port_info);
     Py_INCREF(&PyTyp_pjmedia_snd_dev_info);
-    PyModule_AddObject(m, "PJMedia_Snd_Dev_Info", 
+    PyModule_AddObject(m, "PJMedia_Snd_Dev_Info",
 	(PyObject *)&PyTyp_pjmedia_snd_dev_info);
     Py_INCREF(&PyTyp_pjmedia_codec_param_info);
-    PyModule_AddObject(m, "PJMedia_Codec_Param_Info", 
+    PyModule_AddObject(m, "PJMedia_Codec_Param_Info",
 	(PyObject *)&PyTyp_pjmedia_codec_param_info);
     Py_INCREF(&PyTyp_pjmedia_codec_param_setting);
-    PyModule_AddObject(m, "PJMedia_Codec_Param_Setting", 
+    PyModule_AddObject(m, "PJMedia_Codec_Param_Setting",
 	(PyObject *)&PyTyp_pjmedia_codec_param_setting);
     Py_INCREF(&PyTyp_pjmedia_codec_param);
-    PyModule_AddObject(m, "PJMedia_Codec_Param", 
+    PyModule_AddObject(m, "PJMedia_Codec_Param",
 	(PyObject *)&PyTyp_pjmedia_codec_param);
 
     /* END OF LIB MEDIA */
