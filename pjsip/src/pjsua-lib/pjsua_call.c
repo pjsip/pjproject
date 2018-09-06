@@ -1967,6 +1967,11 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     /* state, state_text */
     if (call->inv) {
         info->state = call->inv->state;
+        if (call->inv->role == PJSIP_ROLE_UAS &&
+            info->state == PJSIP_INV_STATE_NULL)
+        {
+            info->state = PJSIP_INV_STATE_INCOMING;
+        }
     } else if (call->async_call.dlg && call->last_code==0) {
         info->state = PJSIP_INV_STATE_NULL;
     } else {
