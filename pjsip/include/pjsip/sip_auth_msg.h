@@ -89,6 +89,23 @@ struct pjsip_pgp_credential
 typedef struct pjsip_pgp_credential pjsip_pgp_credential;
 
 /**
+ * This structure describe credential used in Authorization and
+ * Proxy-Authorization header for OAuth authentication scheme.
+ */
+struct pjsip_oauth_credential
+{
+    pj_str_t    realm;          /**< Realm of the credential    */
+    pjsip_param other_param;    /**< Other parameters.          */
+    pj_str_t    username;       /**< Username parameter.        */
+    pj_str_t    token;          /**< Token parameter.           */
+};
+
+/**
+ * @see pjsip_oauth_credential
+ */
+typedef struct pjsip_oauth_credential pjsip_oauth_credential;
+
+/**
  * This structure describes SIP Authorization header (and also SIP
  * Proxy-Authorization header).
  */
@@ -106,6 +123,7 @@ struct pjsip_authorization_hdr
 	pjsip_common_credential common;	/**< Common fields.	    */
 	pjsip_digest_credential digest;	/**< Digest credentials.    */
 	pjsip_pgp_credential	pgp;	/**< PGP credentials.	    */
+	pjsip_oauth_credential  oauth;  /**< OAuth credentials.     */
     } credential;
 };
 

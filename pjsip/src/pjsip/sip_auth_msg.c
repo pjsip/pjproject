@@ -103,6 +103,23 @@ static int print_pgp_credential(pjsip_pgp_credential *cred, char *buf, pj_size_t
     return -1;
 }
 
+static int print_oauth_credential(pjsip_oauth_credential *cred, char *buf,
+				  pj_size_t size)
+{
+    pj_ssize_t printed;
+    char *startbuf = buf;
+    char *endbuf = buf + size;
+
+    copy_advance_pair_quote_cond_always(buf, "token=", 6, cred->token,
+    					'"', '"');
+    copy_advance_pair_quote_cond_always(buf, ", username=", 11, cred->username,
+    					'"', '"');
+    copy_advance_pair_quote_cond_always(buf, ", realm=", 8, cred->realm,
+    					'"', '"');
+
+    return (int) (buf-startbuf);
+}
+
 static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
 					  char *buf, pj_size_t size)
 {
@@ -125,6 +142,11 @@ static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
     {
 	printed = print_pgp_credential(&hdr->credential.pgp, buf, endbuf - buf);
     } 
+    else if (pj_stricmp(&hdr->scheme, &pjsip_BEARER_STR) == 0)
+    {
+        printed = print_oauth_credential(&hdr->credential.oauth, buf,
+        				 endbuf - buf);
+    }
     else {
 	pj_assert(0);
 	return -1;

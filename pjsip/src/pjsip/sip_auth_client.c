@@ -959,13 +959,22 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 
 		hs = pjsip_authorization_hdr_create(tdata->pool);
 		pj_strdup(tdata->pool, &hs->scheme, &c->scheme);
-		pj_strdup(tdata->pool, &hs->credential.digest.username,
-			  &c->username);
-		pj_strdup(tdata->pool, &hs->credential.digest.realm,
-			  &c->realm);
-		pj_strdup(tdata->pool, &hs->credential.digest.uri, &uri);
-		pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
-			  &sess->pref.algorithm);
+		if (pj_stricmp(&c->scheme, &pjsip_BEARER_STR)==0) {
+			pj_strdup(tdata->pool, &hs->credential.oauth.username,
+                                  &c->username);
+                        pj_strdup(tdata->pool, &hs->credential.oauth.realm,
+                                  &c->realm);
+                        pj_strdup(tdata->pool, &hs->credential.oauth.token,
+                                  &c->data);
+		} else { //if (pj_stricmp(&c->scheme, &pjsip_DIGEST_STR)==0)
+			pj_strdup(tdata->pool, &hs->credential.digest.username,
+				  &c->username);
+			pj_strdup(tdata->pool, &hs->credential.digest.realm,
+				  &c->realm);
+			pj_strdup(tdata->pool,&hs->credential.digest.uri, &uri);
+			pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
+			  	  &sess->pref.algorithm);
+		}
 
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hs);
 	    }
