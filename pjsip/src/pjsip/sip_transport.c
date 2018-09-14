@@ -2119,7 +2119,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	 */
 	pjsip_transport_key key;
 	int key_len;
-	pjsip_transport *transport;
+	pjsip_transport *transport = NULL;
 
 	/* If listener is specified, verify that the listener type matches
 	 * the destination type.
@@ -2132,17 +2132,21 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    }
 	}
 
-	pj_bzero(&key, sizeof(key));
-	key_len = sizeof(key.type) + addr_len;
+	if (!sel || sel->disable_connection_reuse == PJ_FALSE) {
+	    pj_bzero(&key, sizeof(key));
+	    key_len = sizeof(key.type) + addr_len;
 
-	/* First try to get exact destination. */
-	key.type = type;
-	pj_memcpy(&key.rem_addr, remote, addr_len);
+	    /* First try to get exact destination. */
+	    key.type = type;
+	    pj_memcpy(&key.rem_addr, remote, addr_len);
 
-	transport = (pjsip_transport*)
-		    pj_hash_get(mgr->table, &key, key_len, NULL);
+	    transport = (pjsip_transport*)
+		        pj_hash_get(mgr->table, &key, key_len, NULL);
+	}
 
-	if (transport == NULL) {
+	if (transport == NULL &&
+	    (!sel || sel->disable_connection_reuse == PJ_FALSE))
+	{
 	    unsigned flag = pjsip_transport_get_flag_from_type(type);
 	    const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
@@ -2180,9 +2184,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    transport = NULL;
 	    /* This will cause a new transport to be created which will be a
 	     * 'duplicate' of the existing transport (same type & remote addr,
-	     * but different factory). Any future hash lookup will return
-	     * the new one, and eventually the old one will still be freed
-	     * (by application or #1774).
+	     * but different factory).
 	     */
 	}
 
@@ -2200,9 +2202,14 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 
 
 	/*
-	 * Transport not found!
-	 * So we need to create one, find factory that can create
-	 * such transport.
+	 * Either transport not found, or we don't want to use the existing
+	 * transport (such as in the case of different factory or
+	 * if connection reuse is disabled). So we need to create one,
+	 * find factory that can create such transport.
+	 *
+	 * If there's an existing transport, its place in the hash table
+	 * will be replaced by this new one. And eventually the existing
+	 * transport will still be freed (by application or #1774).
 	 */
 	if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER && sel->u.listener)
 	{

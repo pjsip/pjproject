@@ -221,11 +221,25 @@ typedef enum pjsip_tpselector_type
  * application specificly request that a particular transport/listener
  * should be used to send request. This structure is used when calling
  * pjsip_tsx_set_transport() and pjsip_dlg_set_transport().
+ *
+ * If application disables connection reuse and wants to force creating
+ * a new transport, it needs to consider the following couple of things:
+ * - If it still wants to reuse an existing transport (if any), it
+ *   needs to keep a reference to that transport and specifically set
+ *   the transport to be used for sending requests.
+ * - Delete those existing transports manually when no longer needed.
  */
 typedef struct pjsip_tpselector
 {
     /** The type of data in the union */
     pjsip_tpselector_type   type;
+
+    /**
+     * Whether to disable reuse of an existing connection.
+     * This setting will be ignored if (type == PJSIP_TPSELECTOR_TRANSPORT)
+     * and transport in the union below is set.
+     */
+    pj_bool_t disable_connection_reuse;
 
     /** Union representing the transport/listener criteria to be used. */
     union {
