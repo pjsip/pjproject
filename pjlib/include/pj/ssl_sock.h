@@ -605,7 +605,8 @@ typedef struct pj_ssl_sock_cb
 
     /**
      * This callback is called when new connection arrives as the result
-     * of pj_ssl_sock_start_accept().
+     * of pj_ssl_sock_start_accept(). If the status of accept operation is
+     * needed use on_accept_complete2 instead of this callback.
      *
      * @param ssock	The secure socket.
      * @param newsock	The new incoming secure socket.
@@ -621,6 +622,29 @@ typedef struct pj_ssl_sock_cb
 				    pj_ssl_sock_t *newsock,
 				    const pj_sockaddr_t *src_addr,
 				    int src_addr_len);
+    /**
+     * This callback is called when new connection arrives as the result
+     * of pj_ssl_sock_start_accept().
+     *
+     * @param asock	The active socket.
+     * @param newsock	The new incoming socket.
+     * @param src_addr	The source address of the connection.
+     * @param addr_len	Length of the source address.
+     * @param status	The status of the accept operation. This may contain
+     *			non-PJ_SUCCESS for example when the TCP listener is in
+     *			bad state for example on iOS platform after the
+     *			application waking up from background.
+     *
+     * @return		PJ_TRUE if further accept() is desired, and PJ_FALSE
+     *			when application no longer wants to accept incoming
+     *			connection. Application may destroy the active socket
+     *			in the callback and return PJ_FALSE here.
+     */
+    pj_bool_t (*on_accept_complete2)(pj_ssl_sock_t *ssock,
+				     pj_ssl_sock_t *newsock,
+				     const pj_sockaddr_t *src_addr,
+				     int src_addr_len, 
+				     pj_status_t status);
 
     /**
      * This callback is called when pending connect operation has been

@@ -121,10 +121,11 @@ struct tls_transport
  */
 
 /* This callback is called when pending accept() operation completes. */
-static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
+static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 				    pj_ssl_sock_t *new_ssock,
 				    const pj_sockaddr_t *src_addr,
-				    int src_addr_len);
+				    int src_addr_len,
+				    pj_status_t status);
 
 /* Callback on incoming data */
 static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
@@ -294,7 +295,7 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     af = pjsip_transport_type_get_af(listener->factory.type);
     pj_ssl_sock_param_default(ssock_param);
     ssock_param->sock_af = af;
-    ssock_param->cb.on_accept_complete = &on_accept_complete;
+    ssock_param->cb.on_accept_complete2 = &on_accept_complete2;
     ssock_param->async_cnt = listener->async_cnt;
     ssock_param->ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     ssock_param->timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
@@ -1300,15 +1301,12 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 }
 
 
-/*
- * This callback is called by SSL socket when pending accept() operation
- * has completed.
- */
-static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
-				    pj_ssl_sock_t *new_ssock,
-				    const pj_sockaddr_t *src_addr,
-				    int src_addr_len)
-{
+static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
+				     pj_ssl_sock_t *new_ssock,
+				     const pj_sockaddr_t *src_addr,
+				     int src_addr_len, 
+				     pj_status_t accept_status)
+{    
     struct tls_listener *listener;
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
@@ -1323,10 +1321,30 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 
     listener = (struct tls_listener*) pj_ssl_sock_get_user_data(ssock);
 
+    if (accept_status != PJ_SUCCESS) {
+	if (listener->tls_setting.on_accept_fail_cb) {
+	    pjsip_tls_on_accept_fail_param param;
+	    pj_bzero(&param, sizeof(param));
+	    param.status = accept_status;
+	    param.remote_addr = src_addr;
+	    (*listener->tls_setting.on_accept_fail_cb) (&param);
+	}
+
+	return PJ_FALSE;
+    }
+
     PJ_ASSERT_RETURN(new_ssock, PJ_TRUE);
 
-    if (!listener->is_registered)
+    if (!listener->is_registered) {
+	if (listener->tls_setting.on_accept_fail_cb) {
+	    pjsip_tls_on_accept_fail_param param;
+	    pj_bzero(&param, sizeof(param));
+	    param.status = PJSIP_TLS_EACCEPT;
+	    param.remote_addr = src_addr;
+	    (*listener->tls_setting.on_accept_fail_cb) (&param);
+	}
 	return PJ_FALSE;
+    }	
 
     PJ_LOG(4,(listener->factory.obj_name, 
 	      "TLS listener %s: got incoming TLS connection "
@@ -1343,6 +1361,14 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     status = pj_ssl_sock_get_info(new_ssock, &ssl_info);
     if (status != PJ_SUCCESS) {
 	pj_ssl_sock_close(new_ssock);
+
+	if (listener->tls_setting.on_accept_fail_cb) {
+	    pjsip_tls_on_accept_fail_param param;
+	    pj_bzero(&param, sizeof(param));
+	    param.status = status;
+	    param.remote_addr = src_addr;
+	    (*listener->tls_setting.on_accept_fail_cb) (&param);
+	}
 	return PJ_TRUE;
     }
 
@@ -1357,8 +1383,16 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
 			 &ssl_info.local_addr, &tmp_src_addr, NULL, &tls);
     
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	if (listener->tls_setting.on_accept_fail_cb) {
+	    pjsip_tls_on_accept_fail_param param;
+	    pj_bzero(&param, sizeof(param));
+	    param.status = status;
+	    param.remote_addr = src_addr;
+	    (*listener->tls_setting.on_accept_fail_cb) (&param);
+	}
 	return PJ_TRUE;
+    }
 
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(new_ssock, tls);
@@ -1439,6 +1473,18 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 
     return PJ_TRUE;
 }
+
+/*
+ * This callback is called by SSL socket when pending accept() operation
+ * has completed.
+ */
+//static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
+//				    pj_ssl_sock_t *new_ssock,
+//				    const pj_sockaddr_t *src_addr,
+//				    int src_addr_len)
+//{
+//    PJ_UNUSED_ARG(src_addr_len);
+//}
 
 
 /* 

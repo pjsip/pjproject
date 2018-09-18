@@ -75,6 +75,22 @@ typedef enum pjsip_ssl_method
 #endif
 
 /**
+ * This structure describe the parameter passed from #on_accept_fail_cb().
+ */
+typedef struct pjsip_tls_on_accept_fail_param {
+    /**
+     * Remote address of the fail accept operation of the TLS listener.
+     */
+    const pj_sockaddr_t *remote_addr;
+
+    /**
+     * Error status of the fail accept operation of the TLS listener.
+     */
+    pj_status_t status;
+
+} pjsip_tls_on_accept_fail_param;
+
+/**
  * TLS transport settings.
  */
 typedef struct pjsip_tls_setting
@@ -306,6 +322,13 @@ typedef struct pjsip_tls_setting
      * 
      */
     pj_bool_t sockopt_ignore_error;
+
+    /**
+     * Callback to be called when a accept operation of the TLS listener fails.
+     *
+     * @param param         The parameter to the callback.
+     */
+    void(*on_accept_fail_cb)(const pjsip_tls_on_accept_fail_param *param);
 
 } pjsip_tls_setting;
 

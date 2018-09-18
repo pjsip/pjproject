@@ -1709,6 +1709,13 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
 		      errmsg));
 
+	    if (*ssock->param.cb.on_accept_complete2) {
+		(*ssock->param.cb.on_accept_complete2) 
+		      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
+		      pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
+		      status);
+	    }
+
 	    /* Originally, this is a workaround for ticket #985. However,
 	     * a race condition may occur in multiple worker threads
 	     * environment when we are destroying SSL objects while other
@@ -1748,7 +1755,15 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 	    return PJ_FALSE;
 	}
 	/* Notify application the newly accepted SSL socket */
-	if (ssock->param.cb.on_accept_complete) {
+	if (ssock->param.cb.on_accept_complete2) {
+	    pj_bool_t ret;
+	    ret = (*ssock->param.cb.on_accept_complete2) 
+		    (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
+		    pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
+		    status);
+	    if (ret == PJ_FALSE)
+		return PJ_FALSE;	
+	} else if (ssock->param.cb.on_accept_complete) {
 	    pj_bool_t ret;
 	    ret = (*ssock->param.cb.on_accept_complete)
 		      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr,
@@ -2516,6 +2531,29 @@ on_return:
      * continue listening.
      */
     return PJ_TRUE;
+}
+
+
+static pj_bool_t asock_on_accept_complete2(pj_activesock_t *asock,
+					   pj_sock_t newsock,
+					   const pj_sockaddr_t *src_addr,
+					   int src_addr_len,
+					   pj_status_t status)
+{
+    pj_bool_t ret = PJ_TRUE;
+    if (status != PJ_SUCCESS) {
+	pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)
+			pj_activesock_get_user_data(asock);
+
+	if (ssock->param.cb.on_accept_complete2) {
+	    (*ssock->param.cb.on_accept_complete2) (ssock->parent, ssock, 
+						    src_addr, src_addr_len, 
+						    status);
+	}
+    } else {
+	ret = asock_on_accept_complete(asock, newsock, src_addr, src_addr_len);
+    }
+    return ret;
 }
 
 
@@ -3425,7 +3463,8 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
     asock_cfg.grp_lock = ssock->param.grp_lock;
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
-    asock_cb.on_accept_complete = asock_on_accept_complete;
+    //asock_cb.on_accept_complete = asock_on_accept_complete;
+    asock_cb.on_accept_complete2 = asock_on_accept_complete2;
 
     status = pj_activesock_create(pool,
 				  ssock->sock, 
