@@ -1976,6 +1976,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    rdata->msg_info.cseq == NULL) 
 	{
 	    mgr->on_rx_msg(mgr->endpt, PJSIP_EMISSINGHDR, rdata);
+
+	    /* Notify application about the missing header. */
+	    if (mgr->tp_drop_data_cb) {
+		pjsip_tp_dropped_data dd;
+		pj_bzero(&dd, sizeof(dd));
+		dd.tp = tr;
+		dd.data = current_pkt;
+		dd.len = msg_fragment_size;
+		dd.status = PJSIP_EMISSINGHDR;
+		(*mgr->tp_drop_data_cb)(&dd);	    
+	    }
 	    goto finish_process_fragment;
 	}
 
@@ -1998,6 +2009,17 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 		rdata->msg_info.msg->line.status.code >= 700)
 	    {
 		mgr->on_rx_msg(mgr->endpt, PJSIP_EINVALIDSTATUS, rdata);
+
+		/* Notify application about the invalid status. */
+		if (mgr->tp_drop_data_cb) {
+		    pjsip_tp_dropped_data dd;
+		    pj_bzero(&dd, sizeof(dd));
+		    dd.tp = tr;
+		    dd.data = current_pkt;
+		    dd.len = msg_fragment_size;
+		    dd.status = PJSIP_EINVALIDSTATUS;
+		    (*mgr->tp_drop_data_cb)(&dd);	    
+		}
 		goto finish_process_fragment;
 	    }
 	}
