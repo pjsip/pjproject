@@ -79,6 +79,11 @@ typedef enum pjsip_ssl_method
  */
 typedef struct pjsip_tls_on_accept_fail_param {
     /**
+     * Local address of the fail accept operation of the TLS listener.
+     */
+    const pj_sockaddr_t *local_addr;
+
+    /**
      * Remote address of the fail accept operation of the TLS listener.
      */
     const pj_sockaddr_t *remote_addr;
