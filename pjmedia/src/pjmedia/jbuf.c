@@ -1160,6 +1160,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
     state->frame_size = (unsigned)jb->jb_frame_size;
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
+    state->max_count = jb->jb_max_count;
 
     state->burst = jb->jb_eff_level;
     state->prefetch = jb->jb_prefetch;

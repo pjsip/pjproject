@@ -139,6 +139,7 @@ struct pjmedia_vid_stream
     unsigned		     dec_max_size;  /**< Size of decoded/raw picture*/
     pjmedia_ratio	     dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
+    unsigned		     dec_delay_cnt; /**< Decoding delay (in frames).*/
     pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
                                                  to avoid deadlock	    */
     pjmedia_event            miss_keyframe_event; 
@@ -1127,10 +1128,10 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
                                 pjmedia_frame *frame)
 {
     pjmedia_vid_channel *channel = stream->dec;
-    pj_uint32_t last_ts = 0;
+    pj_uint32_t last_ts = 0, frm_ts = 0;
     int frm_first_seq = 0, frm_last_seq = 0;
     pj_bool_t got_frame = PJ_FALSE;
-    unsigned cnt;
+    unsigned cnt, frm_pkt_cnt = 0, frm_cnt = 0;
     pj_status_t status;
 
     /* Repeat get payload from the jitter buffer until all payloads with same
@@ -1138,7 +1139,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
      */
 
     /* Check if we got a decodable frame */
-    for (cnt=0; ; ++cnt) {
+    for (cnt=0; ; ) {
 	char ptype;
 	pj_uint32_t ts;
 	int seq;
@@ -1147,38 +1148,68 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	pjmedia_jbuf_peek_frame(stream->jb, cnt, NULL, NULL,
 				&ptype, NULL, &ts, &seq);
 	if (ptype == PJMEDIA_JB_NORMAL_FRAME) {
+	    if (stream->last_dec_ts ==  ts) {
+		/* Remove any late packet (the frame has been decoded) */
+		pjmedia_jbuf_remove_frame(stream->jb, 1);
+		continue;
+	    }
+
 	    if (last_ts == 0) {
 		last_ts = ts;
+
+		/* Init timestamp and first seq of the first frame */
+		frm_ts = ts;
 		frm_first_seq = seq;
 	    }
 	    if (ts != last_ts) {
-		got_frame = PJ_TRUE;
-		break;
+		last_ts = ts;
+		if (frm_pkt_cnt == 0)
+		    frm_pkt_cnt = cnt;
+
+		/* Is it time to decode? Check with minimum delay setting */
+		if (++frm_cnt == stream->dec_delay_cnt) {
+		    got_frame = PJ_TRUE;
+		    break;
+		}
 	    }
-	    frm_last_seq = seq;
 	} else if (ptype == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 	    /* No more packet in the jitter buffer */
 	    break;
 	}
+
+	++cnt;
     }
 
     if (got_frame) {
 	unsigned i;
 
-	/* Generate frame bitstream from the payload */
-	if (cnt > stream->rx_frame_cnt) {
-	    PJ_LOG(1,(channel->port.info.name.ptr,
-		      "Discarding %u frames because array is full!",
-		      cnt - stream->rx_frame_cnt));
-	    pjmedia_jbuf_remove_frame(stream->jb, cnt - stream->rx_frame_cnt);
-	    cnt = stream->rx_frame_cnt;
+	/* Exclude any MISSING frames in the end of the packets array, as
+	 * it may be part of the next video frame (late packets).
+	 */
+	for (; frm_pkt_cnt > 1; --frm_pkt_cnt) {
+	    char ptype;
+	    pjmedia_jbuf_peek_frame(stream->jb, frm_pkt_cnt, NULL, NULL, &ptype,
+				    NULL, NULL, NULL);
+	    if (ptype == PJMEDIA_JB_NORMAL_FRAME)
+		break;
 	}
 
-	for (i = 0; i < cnt; ++i) {
+	/* Check if the packet count for this frame exceeds the limit */
+	if (frm_pkt_cnt > stream->rx_frame_cnt) {
+	    PJ_LOG(1,(channel->port.info.name.ptr,
+		      "Discarding %u frames because array is full!",
+		      frm_pkt_cnt - stream->rx_frame_cnt));
+	    pjmedia_jbuf_remove_frame(stream->jb,
+				      frm_pkt_cnt - stream->rx_frame_cnt);
+	    frm_pkt_cnt = stream->rx_frame_cnt;
+	}
+
+	/* Generate frame bitstream from the payload */
+	for (i = 0; i < frm_pkt_cnt; ++i) {
 	    char ptype;
 
 	    stream->rx_frames[i].type = PJMEDIA_FRAME_TYPE_VIDEO;
-	    stream->rx_frames[i].timestamp.u64 = last_ts;
+	    stream->rx_frames[i].timestamp.u64 = frm_ts;
 	    stream->rx_frames[i].bit_info = 0;
 
 	    /* We use jbuf_peek_frame() as it will returns the pointer of
@@ -1187,7 +1218,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    pjmedia_jbuf_peek_frame(stream->jb, i,
 				    (const void**)&stream->rx_frames[i].buf,
 				    &stream->rx_frames[i].size, &ptype,
-				    NULL, NULL, NULL);
+				    NULL, NULL, &frm_last_seq);
 
 	    if (ptype != PJMEDIA_JB_NORMAL_FRAME) {
 		/* Packet lost, must set payload to NULL and keep going */
@@ -1199,7 +1230,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	}
 
 	/* Decode */
-	status = pjmedia_vid_codec_decode(stream->codec, cnt,
+	status = pjmedia_vid_codec_decode(stream->codec, frm_pkt_cnt,
 	                                  stream->rx_frames,
 	                                  (unsigned)frame->size, frame);
 	if (status != PJ_SUCCESS) {
@@ -1209,22 +1240,22 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    frame->size = 0;
 	}
 
-	pjmedia_jbuf_remove_frame(stream->jb, cnt);
+	pjmedia_jbuf_remove_frame(stream->jb, frm_pkt_cnt);
     }
 
     /* Learn remote frame rate after successful decoding */
-    if (frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
+    if (got_frame && frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
     {
 	/* Only check remote frame rate when timestamp is not wrapping and
 	 * sequence is increased by 1.
 	 */
-	if (last_ts > stream->last_dec_ts &&
+	if (frm_ts > stream->last_dec_ts &&
 	    frm_first_seq - stream->last_dec_seq == 1)
 	{
 	    pj_uint32_t ts_diff;
 	    pjmedia_video_format_detail *vfd;
 
-	    ts_diff = last_ts - stream->last_dec_ts;
+	    ts_diff = frm_ts - stream->last_dec_ts;
 	    vfd = pjmedia_format_get_video_format_detail(
 				    &channel->port.info.fmt, PJ_TRUE);
 	    if (stream->info.codec_info.clock_rate * vfd->fps.denum !=
@@ -1241,6 +1272,22 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 
 		/* Update stream info */
 		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
+
+		/* Update the decoding delay as FPS updated */
+		{
+		    pjmedia_jb_state jb_state;
+		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
+
+		    stream->dec_delay_cnt = 
+				    ((PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC *
+				      vfd->fps.num) +
+				     (1000 * vfd->fps.denum) - 1) /
+				    (1000 * vfd->fps.denum);
+		    if (stream->dec_delay_cnt < 1)
+			stream->dec_delay_cnt = 1;
+		    if (stream->dec_delay_cnt > jb_state.max_count * 4/5)
+			stream->dec_delay_cnt = jb_state.max_count * 4/5;
+		}
 
 		/* Publish PJMEDIA_EVENT_FMT_CHANGED event if frame rate
 		 * increased and not exceeding 100fps.
@@ -1274,7 +1321,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 
 	/* Update last frame seq and timestamp */
 	stream->last_dec_seq = frm_last_seq;
-	stream->last_dec_ts = last_ts;
+	stream->last_dec_ts = frm_ts;
     }
 
     return got_frame ? PJ_SUCCESS : PJ_ENOTFOUND;
@@ -1693,6 +1740,16 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	jb_init  = info->jb_init * chunks_per_frm / frm_ptime;
     else
 	jb_init  = 0;
+
+    /* Calculate the decoding delay (in number of frames) based on FPS */
+    stream->dec_delay_cnt = ((PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC *
+			      vfd_dec->fps.num) +
+			     (1000 * vfd_dec->fps.denum) - 1) /
+			    (1000 * vfd_dec->fps.denum);
+    if (stream->dec_delay_cnt < 1)
+	stream->dec_delay_cnt = 1;
+    if (stream->dec_delay_cnt > jb_max * 4/5)
+	stream->dec_delay_cnt = jb_max * 4/5;
 
     /* Allocate array for temporary storage for assembly of incoming
      * frames. Add more just in case.
