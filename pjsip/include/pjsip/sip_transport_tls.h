@@ -74,6 +74,7 @@ typedef enum pjsip_ssl_method
 				     PJ_SSL_SOCK_PROTO_TLS1_2)
 #endif
 
+
 /**
  * This structure describe the parameter passed from #on_accept_fail_cb().
  */
@@ -93,7 +94,14 @@ typedef struct pjsip_tls_on_accept_fail_param {
      */
     pj_status_t status;
 
+    /**
+     * Last error code returned by native SSL backend. Note that this may be
+     * zero, if the failure is not SSL related (e.g: accept rejection).
+     */
+    pj_status_t last_native_err;
+
 } pjsip_tls_on_accept_fail_param;
+
 
 /**
  * TLS transport settings.
