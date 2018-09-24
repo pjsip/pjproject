@@ -41,6 +41,8 @@ PJ_DEF(pj_status_t) pjmedia_port_info_init( pjmedia_port_info *info,
 #define USEC_IN_SEC (pj_uint64_t)1000000
     unsigned frame_time_usec, avg_bps;
 
+    PJ_ASSERT_RETURN(clock_rate && channel_count, PJ_EINVAL);
+
     pj_bzero(info, sizeof(*info));
 
     info->signature = signature;
