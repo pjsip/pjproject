@@ -2145,14 +2145,16 @@ void Endpoint::resetVideoCodecParam(const string &codec_id) throw(Error)
  */
 StringVector Endpoint::srtpCryptoEnum() throw(Error)
 {
+    StringVector result;
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     unsigned cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
     pjmedia_srtp_crypto cryptos[PJMEDIA_SRTP_MAX_CRYPTOS];
-    StringVector result;
 
     PJSUA2_CHECK_EXPR(pjmedia_srtp_enum_crypto(&cnt, cryptos));
 
     for (unsigned i = 0; i < cnt; ++i)
 	result.push_back(pj2Str(cryptos[i].name));
+#endif
 
     return result;
 }
