@@ -690,6 +690,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 				  int *sip_err_code,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb);
+void pjsua_call_cleanup_flag(pjsua_call_setting *opt);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 void pjsua_media_prov_clean_up(pjsua_call_id call_id);

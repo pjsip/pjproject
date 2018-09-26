@@ -593,7 +593,7 @@ on_error:
  * PJSUA_CALL_UNHOLD, PJSUA_CALL_UPDATE_CONTACT, or
  * PJSUA_CALL_NO_SDP_OFFER, to be sticky (ticket #1793).
  */
-static void cleanup_call_setting_flag(pjsua_call_setting *opt)
+void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
 {
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
 		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA |
@@ -636,7 +636,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     pj_assert(call);
 
     if (!opt) {
-	cleanup_call_setting_flag(&call->opt);
+	pjsua_call_cleanup_flag(&call->opt);
 	return PJ_SUCCESS;
     }
 
@@ -1308,7 +1308,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	/* Copy call setting from the replaced call */
 	call->opt = replaced_call->opt;
-	cleanup_call_setting_flag(&call->opt);
+	pjsua_call_cleanup_flag(&call->opt);
 
 	/* Notify application */
 	if (pjsua_var.ua_cfg.cb.on_call_replace_request) {
@@ -2699,6 +2699,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
 
     /* Set flag that local put the call on hold */
     call->local_hold = PJ_TRUE;
+
+    /* Clear unhold flag */
+    call->opt.flag &= ~PJSUA_CALL_UNHOLD;
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -4396,7 +4399,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	goto on_return;
     }
 
-    cleanup_call_setting_flag(&call->opt);
+    pjsua_call_cleanup_flag(&call->opt);
     opt = call->opt;
 
     if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite &&
@@ -4597,7 +4600,7 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 #endif
 
-    cleanup_call_setting_flag(&call->opt);
+    pjsua_call_cleanup_flag(&call->opt);
 
     if (pjsua_var.ua_cfg.cb.on_call_tx_offer) {
 	(*pjsua_var.ua_cfg.cb.on_call_tx_offer)(call->index, NULL,
@@ -4914,7 +4917,7 @@ static void on_call_transferred( pjsip_inv_session *inv,
 							&code);
     }
 
-    cleanup_call_setting_flag(&existing_call->opt);
+    pjsua_call_cleanup_flag(&existing_call->opt);
     call_opt = existing_call->opt;
     if (pjsua_var.ua_cfg.cb.on_call_transfer_request2) {
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request2)(existing_call->index,

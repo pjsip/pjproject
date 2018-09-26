@@ -3950,14 +3950,16 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	    {
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
 
+		pjsua_call_cleanup_flag(&call_info.setting.flag);
 		call_info.setting.flag |=
 					 acc->cfg.ip_change_cfg.reinvite_flags;
 
 		PJ_LOG(3, (THIS_FILE, "call to %.*s: send "
 			   "re-INVITE with flags 0x%x triggered "
-			   "by IP change",
+			   "by IP change (IP change flag: 0x%x)",
 			   call_info.remote_info.slen,
 			   call_info.remote_info.ptr,
+			   call_info.setting.flag,
 			   acc->cfg.ip_change_cfg.reinvite_flags));
 
 		status = pjsua_call_reinvite(i, call_info.setting.flag, NULL);
