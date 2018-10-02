@@ -929,8 +929,8 @@ static pj_status_t put_frame(pjmedia_port *port,
     rtp_ts_len = stream->frame_ts_len;
 
     /* Init frame_out buffer. */
+    pj_bzero(&frame_out, sizeof(frame_out));
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
-    frame_out.size = 0;
 
     /* Check if need to send keyframe. */
     if (stream->num_keyframe && 
