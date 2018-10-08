@@ -107,8 +107,11 @@ struct MediaFormatVideo : public MediaFormat
     pjmedia_format toPj() const;
 };
 
-/** Array of MediaFormat */
-typedef std::vector<MediaFormat> MediaFormatVector;
+/** Array of MediaFormatAudio */
+typedef std::vector<MediaFormatAudio> MediaFormatAudioVector;
+
+/** Array of MediaFormatVideo */
+typedef std::vector<MediaFormatVideo> MediaFormatVideoVector;
 
 /**
  * This structure descibes information about a particular media port that
@@ -759,7 +762,7 @@ struct AudioDevInfo
     /**
      * Array of supported extended audio formats
      */
-    MediaFormatVector extFmt;
+    MediaFormatAudioVector extFmt;
 
     /**
      * Construct from pjmedia_aud_dev_info.
@@ -1744,7 +1747,7 @@ struct VideoDevInfo
      * value is unknown or should be ignored. When these value are not set
      * to zero, it indicates that the exact format combination is being used.
      */
-    MediaFormatVector fmt;
+    MediaFormatVideoVector fmt;
 
     /**
      * Construct from pjmedia_vid_dev_info.
