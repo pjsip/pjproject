@@ -96,6 +96,7 @@ struct tp_adapter
     void	       (*stream_rtp_cb)(void *user_data,
 					void *pkt,
 					pj_ssize_t);
+    void 	       (*stream_rtp_cb2)(pjmedia_tp_cb_param *param);
     void	       (*stream_rtcp_cb)(void *user_data,
 					 void *pkt,
 					 pj_ssize_t);
@@ -160,14 +161,24 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 /* This is our RTP callback, that is called by the slave transport when it
  * receives RTP packet.
  */
-static void transport_rtp_cb(void *user_data, void *pkt, pj_ssize_t size)
+static void transport_rtp_cb2(pjmedia_tp_cb_param *param)
 {
-    struct tp_adapter *adapter = (struct tp_adapter*)user_data;
+    struct tp_adapter *adapter = (struct tp_adapter*)param->user_data;
 
-    pj_assert(adapter->stream_rtp_cb != NULL);
+    pj_assert(adapter->stream_rtp_cb != NULL ||
+    	      adapter->stream_rtp_cb2 != NULL);
 
     /* Call stream's callback */
-    adapter->stream_rtp_cb(adapter->stream_user_data, pkt, size);
+    if (adapter->stream_rtp_cb2) {
+    	pjmedia_tp_cb_param cbparam;
+    	
+    	pj_memcpy(&cbparam, param, sizeof(cbparam));
+    	cbparam.user_data = adapter->stream_user_data;
+    	adapter->stream_rtp_cb2(&cbparam);
+    } else {
+    	adapter->stream_rtp_cb(adapter->stream_user_data, param->pkt,
+    			       param->size);
+    }
 }
 
 /* This is our RTCP callback, that is called by the slave transport when it
@@ -199,11 +210,15 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
      */
     pj_assert(adapter->stream_user_data == NULL);
     adapter->stream_user_data = att_param->user_data;
-    adapter->stream_rtp_cb = att_param->rtp_cb;
+    if (att_param->rtp_cb) {
+        adapter->stream_rtp_cb = att_param->rtp_cb;
+    } else {
+        adapter->stream_rtp_cb2 = att_param->rtp_cb2;
+    }
     adapter->stream_rtcp_cb = att_param->rtcp_cb;
     adapter->stream_ref = att_param->stream;
 
-    att_param->rtp_cb = &transport_rtp_cb;
+    att_param->rtp_cb2 = &transport_rtp_cb2;
     att_param->rtcp_cb = &transport_rtcp_cb;
     att_param->user_data = adapter;
         
@@ -211,6 +226,7 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
     if (status != PJ_SUCCESS) {
 	adapter->stream_user_data = NULL;
 	adapter->stream_rtp_cb = NULL;
+	adapter->stream_rtp_cb2 = NULL;
 	adapter->stream_rtcp_cb = NULL;
         adapter->stream_ref = NULL;
 	return status;
