@@ -210,15 +210,16 @@ static pj_status_t transport_attach2(pjmedia_transport *tp,
      */
     pj_assert(adapter->stream_user_data == NULL);
     adapter->stream_user_data = att_param->user_data;
-    if (att_param->rtp_cb) {
-        adapter->stream_rtp_cb = att_param->rtp_cb;
-    } else {
+    if (att_param->rtp_cb2) {
         adapter->stream_rtp_cb2 = att_param->rtp_cb2;
+    } else {
+        adapter->stream_rtp_cb = att_param->rtp_cb;
     }
     adapter->stream_rtcp_cb = att_param->rtcp_cb;
     adapter->stream_ref = att_param->stream;
 
     att_param->rtp_cb2 = &transport_rtp_cb2;
+    att_param->rtp_cb = NULL;    
     att_param->rtcp_cb = &transport_rtcp_cb;
     att_param->user_data = adapter;
         
