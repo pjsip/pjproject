@@ -784,19 +784,25 @@ struct OnCallTransferRequestParam
     /**
      * The destination where the call will be transferred to.
      */
-    string              dstUri;
+    string               dstUri;
     
     /**
      * Status code to be returned for the call transfer request. On input,
-     * it contains status code 200.
+     * it contains status code 202.
      */
-    pjsip_status_code   statusCode;
+    pjsip_status_code    statusCode;
     
     /**
      * The current call setting, application can update this setting
      * for the call being transferred.
      */
-    CallSetting         opt;
+    CallSetting          opt;
+
+    /**
+     * New Call derived object instantiated by application when the call
+     * transfer is about to be accepted.
+     */
+    Call		*newCall;
 };
 
 /**
@@ -866,7 +872,12 @@ struct OnCallReplacedParam
     /**
      * The new call id.
      */
-    pjsua_call_id       newCallId;
+    pjsua_call_id        newCallId;
+
+    /**
+     * New Call derived object instantiated by application.
+     */
+    Call		*newCall;
 };
 
 /**
@@ -1716,10 +1727,21 @@ public:
     
     /**
      * Notify application on call being transferred (i.e. REFER is received).
-     * Application can decide to accept/reject transfer request
-     * by setting the code (default is 202). When this callback
-     * is not implemented, the default behavior is to accept the
-     * transfer.
+     * Application can decide to accept/reject transfer request by setting
+     * the code (default is 202). When this callback is not implemented,
+     * the default behavior is to accept the transfer.
+     *
+     * If application decides to accept the transfer request, it must also
+     * instantiate the new Call object for the transfer operation and return
+     * this new Call object to prm.newCall.
+     * 
+     * If application does not specify new Call object, library will reuse the
+     * existing Call object for initiating the new call (to the transfer
+     * destination). In this case, any events from both calls (transferred and
+     * transferring) will be delivered to the same Call object, where the call
+     * ID will be switched back and forth between callbacks. Application must
+     * be careful to not destroy the Call object when receiving disconnection
+     * event of the transferred call after the transfer process is completed.
      *
      * @param prm	Callback parameter.
      */
@@ -1752,7 +1774,11 @@ public:
      * request with Replaces header.
      *
      * After this callback is called, normally PJSUA-API will disconnect
-     * this call and establish a new call \a newCallId.
+     * this call and establish a new call. To be able to control the call,
+     * e.g: hold, transfer, change media parameters, application must
+     * instantiate a new Call object for the new call using call ID
+     * specified in prm.newCallId, and return the Call object via
+     * prm.newCall.
      *
      * @param prm	Callback parameter.
      */
@@ -1952,6 +1978,7 @@ private:
     Token                userData;
     std::vector<Media *> medias;
     pj_pool_t		*sdp_pool;
+    Call		*child;	    /* New outgoing call in call transfer.  */
 };
 
 /**

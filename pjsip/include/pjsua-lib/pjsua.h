@@ -1036,7 +1036,7 @@ typedef struct pjsua_callback
      * @param dst	The destination where the call will be 
      *			transferred to.
      * @param code	Status code to be returned for the call transfer
-     *			request. On input, it contains status code 200.
+     *			request. On input, it contains status code 202.
      */
     void (*on_call_transfer_request)(pjsua_call_id call_id,
 				     const pj_str_t *dst,
@@ -1053,7 +1053,7 @@ typedef struct pjsua_callback
      * @param dst	The destination where the call will be 
      *			transferred to.
      * @param code	Status code to be returned for the call transfer
-     *			request. On input, it contains status code 200.
+     *			request. On input, it contains status code 202.
      * @param opt	The current call setting, application can update
      *			this setting for the call being transferred.
      */

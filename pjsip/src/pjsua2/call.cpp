@@ -449,7 +449,7 @@ call_param::call_param(const SipTxOption &tx_option, const CallSetting &setting,
 }
 
 Call::Call(Account& account, int call_id)
-: acc(account), id(call_id)
+: acc(account), id(call_id), userData(NULL), sdp_pool(NULL), child(NULL)
 {
     if (call_id != PJSUA_INVALID_ID)
         pjsua_call_set_user_data(call_id, this);
@@ -502,8 +502,14 @@ int Call::getId() const
 Call *Call::lookup(int call_id)
 {
     Call *call = (Call*)pjsua_call_get_user_data(call_id);
-    if (call)
-        call->id = call_id;
+    if (call && call_id != call->id) {
+	if (call->child && call->child->id == PJSUA_INVALID_ID) {
+	    /* This must be a new call from call transfer */
+	    call = call->child;
+	    pjsua_call_set_user_data(call_id, call);
+	}
+	call->id = call_id;
+    }
     return call;
 }
 
@@ -820,6 +826,9 @@ void Call::processStateChange(OnCallStateParam &prm)
                 delete medias[mi];
         }
         medias.clear();
+
+	/* Remove this Call object association */
+	pjsua_call_set_user_data(id, NULL);
     }
     
     onCallState(prm);

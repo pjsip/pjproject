@@ -1191,11 +1191,25 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
     prm.dstUri = pj2Str(*dst);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
+    prm.newCall = NULL;
     
     call->onCallTransferRequest(prm);
     
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
+    if (*code/100 <= 2) {
+	if (prm.newCall) {
+	    /* We don't manage (e.g: create, delete) the call child,
+	     * so let's just override any existing child.
+	     */
+	    call->child = prm.newCall;
+	    call->child->id = PJSUA_INVALID_ID;
+	} else {
+	    PJ_LOG(4,(THIS_FILE,
+		      "Warning: application reuses Call instance in "
+		      "call transfer (call ID:%d)", call_id));
+	}
+    }
 }
 
 void Endpoint::on_call_transfer_status(pjsua_call_id call_id,
@@ -1254,8 +1268,21 @@ void Endpoint::on_call_replaced(pjsua_call_id old_call_id,
     
     OnCallReplacedParam prm;
     prm.newCallId = new_call_id;
+    prm.newCall = NULL;
     
     call->onCallReplaced(prm);
+
+    if (prm.newCall) {
+	/* Sanity checks */
+	pj_assert(prm.newCall->id == new_call_id);
+	pj_assert(prm.newCall->acc.getId() == call->acc.getId());
+	pj_assert(pjsua_call_get_user_data(new_call_id) == prm.newCall);
+    } else {
+	PJ_LOG(4,(THIS_FILE,
+		  "Warning: application has not created new Call instance "
+		  "for call replace (old call ID:%d, new call ID: %d)",
+		  old_call_id, new_call_id));
+    }
 }
 
 void Endpoint::on_call_rx_offer(pjsua_call_id call_id,

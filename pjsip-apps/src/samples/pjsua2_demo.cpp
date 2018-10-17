@@ -39,6 +39,8 @@ public:
     }
     
     virtual void onCallState(OnCallStateParam &prm);
+    virtual void onCallTransferRequest(OnCallTransferRequestParam &prm);
+    virtual void onCallReplaced(OnCallReplacedParam &prm);
 };
 
 class MyAccount : public Account
@@ -54,6 +56,13 @@ public:
     {
         std::cout << "*** Account is being deleted: No of calls="
                   << calls.size() << std::endl;
+
+	for (std::vector<Call *>::iterator it = calls.begin();
+             it != calls.end(); )
+        {
+	    delete (*it);
+	    it = calls.erase(it);
+        }
     }
     
     void removeCall(Call *call)
@@ -99,11 +108,24 @@ void MyCall::onCallState(OnCallStateParam &prm)
               << "]" << std::endl;
     
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
-        myAcc->removeCall(this);
+        //myAcc->removeCall(this);
         /* Delete the call */
-        delete this;
+        //delete this;
     }
 }
+
+void MyCall::onCallTransferRequest(OnCallTransferRequestParam &prm)
+{
+    /* Create new Call for call transfer */
+    prm.newCall = new MyCall(*myAcc);
+}
+
+void MyCall::onCallReplaced(OnCallReplacedParam &prm)
+{
+    /* Create new Call for call replace */
+    prm.newCall = new MyCall(*myAcc, prm.newCallId);
+}
+
 
 static void mainProg1(Endpoint &ep) throw(Error)
 {
@@ -147,8 +169,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     
     // Destroy library
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
-    delete call;
-    delete acc;
+    delete acc; /* Will delete all calls too */
 }
 
 static void mainProg2() throw(Error)
@@ -346,7 +367,7 @@ int main()
     try {
 	ep.libCreate();
 
-	mainProg3(ep);
+	mainProg1(ep);
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;
