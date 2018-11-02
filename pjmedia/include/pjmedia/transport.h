@@ -781,7 +781,14 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 	pj_bzero(&param, sizeof(param));
 	param.user_data = user_data;
 	pj_sockaddr_cp(&param.rem_addr, rem_addr);
-	pj_sockaddr_cp(&param.rem_rtcp, rem_rtcp);
+	if (rem_rtcp && pj_sockaddr_has_addr(rem_rtcp)) {
+	    pj_sockaddr_cp(&param.rem_rtcp, rem_rtcp);
+	} else {
+	    /* Copy RTCP address from the RTP address, with port + 1 */
+	    pj_memcpy(&param.rem_rtcp, rem_addr, addr_len);
+	    pj_sockaddr_set_port(&param.rem_rtcp,
+				 pj_sockaddr_get_port(rem_addr) + 1);
+	}
 	param.addr_len = addr_len;
 	param.rtp_cb = rtp_cb;
 	param.rtcp_cb = rtcp_cb;
