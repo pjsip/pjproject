@@ -250,6 +250,7 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
 	pjmedia_transport_detach(adapter->slave_tp, adapter);
 	adapter->stream_user_data = NULL;
 	adapter->stream_rtp_cb = NULL;
+	adapter->stream_rtp_cb2 = NULL;
 	adapter->stream_rtcp_cb = NULL;
         adapter->stream_ref = NULL;
     }
