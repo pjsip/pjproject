@@ -1710,6 +1710,7 @@ void Endpoint::libRegisterThread(const string &name) throw(Error)
 
     status = pj_thread_register(name.c_str(), *desc, &thread);
     if (status == PJ_SUCCESS) {
+        std::lock_guard<std::mutex> guard(threadDescMutex);
 	threadDescMap[thread] = desc;
     } else {
 	free(desc);
@@ -1720,6 +1721,7 @@ void Endpoint::libRegisterThread(const string &name) throw(Error)
 bool Endpoint::libIsThreadRegistered()
 {
     if (pj_thread_is_registered()) {
+        std::lock_guard<std::mutex> guard(threadDescMutex);
 	/* Recheck again if it exists in the thread description map */
 	return (threadDescMap.find(pj_thread_this()) != threadDescMap.end());
     }

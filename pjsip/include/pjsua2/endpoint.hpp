@@ -28,6 +28,7 @@
 #include <pjsua2/siptypes.hpp>
 #include <list>
 #include <map>
+#include <mutex>
 
 /** PJSUA2 API is inside pj namespace */
 namespace pj
@@ -1596,6 +1597,7 @@ private:
     CodecInfoVector		 codecInfoList;
     CodecInfoVector		 videoCodecInfoList;
     std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
+    std::mutex			 threadDescMutex;
 
     /* Pending logging */
     bool			 mainThreadOnly;
