@@ -1781,7 +1781,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
 			 "(%s --> %s). Updating registration "
 			 "(using method %d)",
-			 acc->index, host_addr_buf, via_addr_buf));
+			 acc->index, host_addr_buf, via_addr_buf,
+			 contact_rewrite_method));
 
     pj_assert(contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER ||
 	      contact_rewrite_method == PJSUA_CONTACT_REWRITE_NO_UNREG ||
