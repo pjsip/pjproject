@@ -719,6 +719,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
 	return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
+    PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
     read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
@@ -792,6 +793,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
 	return PJ_ECANCELLED;
 
     read_op = (struct read_operation*)op_key;
+    PJ_ASSERT_RETURN(read_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
     read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
@@ -1127,6 +1129,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 	return PJ_ECANCELLED;
 
     accept_op = (struct accept_operation*)op_key;
+    PJ_ASSERT_RETURN(accept_op->op == PJ_IOQUEUE_OP_NONE, PJ_EPENDING);
     accept_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Fast track:

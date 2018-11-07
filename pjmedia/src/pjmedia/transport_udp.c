@@ -465,6 +465,8 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
+    if (-bytes_read == PJ_ECANCELLED) return;
+
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
@@ -584,6 +586,8 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
     pj_status_t status = PJ_SUCCESS;
 
     PJ_UNUSED_ARG(op_key);
+
+    if (-bytes_read == PJ_ECANCELLED) return;
 
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
