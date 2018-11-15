@@ -61,7 +61,7 @@
      * For example, if ptime is 20ms, set this to 250 to print the metrics
      * every 250*20/1000=5 seconds.
      */
-    #define SHOW_DELAY_METRICS	0
+    #define SHOW_DELAY_METRICS	1
     
 #endif
 
@@ -354,7 +354,8 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     }
 
 #if SHOW_DELAY_METRICS
-    if (++echo->counter >= SHOW_DELAY_METRICS) {
+    // if (++echo->counter >= SHOW_DELAY_METRICS) {
+     if (1) {	
     	int median, std;
     	float frac_delay;
 

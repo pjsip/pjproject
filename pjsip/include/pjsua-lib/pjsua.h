@@ -6303,7 +6303,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * is the default value for pjsua_media_config.ec_tail_len.
  */
 #ifndef PJSUA_DEFAULT_EC_TAIL_LEN
-#   define PJSUA_DEFAULT_EC_TAIL_LEN	200
+#   define PJSUA_DEFAULT_EC_TAIL_LEN	4
 #endif
 
 

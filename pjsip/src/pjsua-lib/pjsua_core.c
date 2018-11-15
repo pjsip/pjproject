@@ -397,6 +397,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
     cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
     cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
+    printf("Setting ec_tail_len to %d.\n", PJSUA_DEFAULT_EC_TAIL_LEN);
     cfg->snd_rec_latency = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     cfg->snd_play_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
