@@ -1148,6 +1148,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
     struct udp_transport *tp;
     pj_status_t status;
     char addr[PJ_INET6_ADDRSTRLEN+10];
+    int i;
 
     PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
     /* Flag must be specified */
@@ -1233,6 +1234,12 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
     status = register_to_ioqueue(tp);
     if (status != PJ_SUCCESS) {
 	return status;
+    }
+
+    /* Re-init op_key. */
+    for (i = 0; i < tp->rdata_cnt; ++i) {
+	pj_ioqueue_op_key_init(&tp->rdata[i]->tp_info.op_key.op_key,
+			       sizeof(pj_ioqueue_op_key_t));
     }
 
     /* Restart async read operation. */

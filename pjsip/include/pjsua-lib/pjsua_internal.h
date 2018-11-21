@@ -311,6 +311,7 @@ typedef struct pjsua_transport_data
     } data;
 
     pj_bool_t		     is_restarting;
+    pj_status_t		     restart_status;
 } pjsua_transport_data;
 
 

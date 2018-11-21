@@ -3565,8 +3565,43 @@ static pj_status_t handle_ip_change_on_acc()
 	if (!acc->valid || (acc_done[i]))
 	    continue;
 
-	if (acc->regc) {	    	    
+	if (acc->regc) {
+	    int j = 0;
+	    pj_status_t found_restart_tp_fail = PJ_FALSE;
+
 	    pjsip_regc_get_info(acc->regc, &regc_info);
+	    
+	    /* Check if transport restart listener succeed. */
+	    for (; j < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++j) {
+		if (pjsua_var.tpdata[j].data.ptr != NULL && 
+		  pjsua_var.tpdata[j].restart_status != PJ_SUCCESS &&
+		  pjsua_var.tpdata[j].type == regc_info.transport->key.type)
+		{
+		    if ((pjsua_var.tpdata[j].data.factory
+					   == regc_info.transport->factory) ||
+			(pjsua_var.tpdata[j].data.tp
+					       == regc_info.transport)) 
+		    {
+			found_restart_tp_fail = PJ_TRUE;
+			break;
+		    }
+		}
+	    }
+
+	    if (found_restart_tp_fail) {
+		if (acc->ka_timer.id) {
+		    pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
+		    acc->ka_timer.id = PJ_FALSE;
+
+		    if (acc->ka_transport) {
+			pjsip_transport_dec_ref(acc->ka_transport);
+			acc->ka_transport = NULL;
+		    }
+		}
+		    
+		continue;
+	    }
+
 	    if ((regc_info.transport) &&
 		((regc_info.transport->flag & PJSIP_TRANSPORT_DATAGRAM) == 0))
 	    {
@@ -3729,7 +3764,8 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 	int i = 0;
 	pj_bool_t all_done = PJ_TRUE;
 
-	pjsua_var.tpdata[id].is_restarting = PJ_FALSE;	
+	pjsua_var.tpdata[id].is_restarting = PJ_FALSE;
+	pjsua_var.tpdata[id].restart_status = status;
 	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 	    pjsua_ip_change_op_info info;
 
@@ -3781,6 +3817,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
 	    if (pjsua_var.tpdata[i].data.ptr != NULL) {
 		pjsua_var.tpdata[i].is_restarting = PJ_TRUE;
+		pjsua_var.tpdata[i].restart_status = PJ_EUNKNOWN;
 	    }
 	}
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
@@ -3790,6 +3827,11 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 	}
         PJSUA_UNLOCK();
     } else {
+	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+	    if (pjsua_var.tpdata[i].data.ptr != NULL) {
+		pjsua_var.tpdata[i].restart_status = PJ_SUCCESS;
+	    }
+	}
 	status = handle_ip_change_on_acc();
     }
 
