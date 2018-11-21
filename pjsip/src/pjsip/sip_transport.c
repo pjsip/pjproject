@@ -2439,6 +2439,11 @@ PJ_DEF(pj_status_t) pjsip_transport_add_state_listener (
 
     PJ_ASSERT_RETURN(tp && cb && key, PJ_EINVAL);
 
+    if (tp->is_shutdown) {
+	*key = NULL;
+	return PJ_EINVALIDOP;
+    }
+
     pj_lock_acquire(tp->lock);
 
     /* Init transport data, if it hasn't */

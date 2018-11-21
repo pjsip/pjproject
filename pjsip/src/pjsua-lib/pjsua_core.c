@@ -3546,6 +3546,7 @@ static pj_status_t handle_ip_change_on_acc()
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t acc_done[PJSUA_MAX_ACC];
 
+    PJSUA_LOCK();
     /* Reset ip_change_active flag. */
     for (; i < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_var.acc[i].ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
@@ -3660,6 +3661,7 @@ static pj_status_t handle_ip_change_on_acc()
 	    }
 	}
     }
+    PJSUA_UNLOCK();
     return status;
 }
 
@@ -3772,6 +3774,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
     
     if (param->restart_listener) {
+	PJSUA_LOCK();
 	/* Restart listener/transport, handle_ip_change_on_acc() will
 	 * be called after listener restart is completed successfully.
 	 */
@@ -3785,6 +3788,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 		status = restart_listener(i, param->restart_lis_delay);
 	    }
 	}
+        PJSUA_UNLOCK();
     } else {
 	status = handle_ip_change_on_acc();
     }

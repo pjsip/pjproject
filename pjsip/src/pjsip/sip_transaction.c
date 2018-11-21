@@ -2388,8 +2388,10 @@ static void tsx_update_transport( pjsip_transaction *tsx,
     pj_assert(tsx);
 
     if (tsx->transport) {
-	pjsip_transport_remove_state_listener(tsx->transport, 
-					       tsx->tp_st_key, tsx);
+	if (tsx->tp_st_key) {
+	    pjsip_transport_remove_state_listener(tsx->transport,
+						  tsx->tp_st_key, tsx);
+	}
 	pjsip_transport_dec_ref( tsx->transport );
 	tsx->transport = NULL;
     }

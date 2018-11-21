@@ -3914,6 +3914,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
     pj_status_t status = PJ_SUCCESS;
     unsigned i = 0;
 
+    PJSUA_LOCK();
     if (acc->cfg.ip_change_cfg.hangup_calls || 
 	acc->cfg.ip_change_cfg.reinvite_flags)
     {
@@ -3983,5 +3984,6 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	}
     }    
     acc->ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
+    PJSUA_UNLOCK();
     return status;
 }
