@@ -831,9 +831,9 @@ on_exit:
 	pjmedia_transport *tp;
 
 	tp = pjmedia_stream_get_transport(stream);
-	pjmedia_transport_media_stop(tp);
 	pjmedia_stream_destroy(stream);
 	
+	pjmedia_transport_media_stop(tp);
 	pjmedia_transport_close(tp);
     }
 
