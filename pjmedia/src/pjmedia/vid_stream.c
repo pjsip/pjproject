@@ -1253,27 +1253,34 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    frm_first_seq - stream->last_dec_seq == 1)
 	{
 	    pj_uint32_t ts_diff;
-	    pjmedia_video_format_detail *vfd;
+	    pjmedia_ratio new_fps;
 
 	    ts_diff = frm_ts - stream->last_dec_ts;
-	    vfd = pjmedia_format_get_video_format_detail(
-				    &channel->port.info.fmt, PJ_TRUE);
-	    if (stream->info.codec_info.clock_rate * vfd->fps.denum !=
-		vfd->fps.num * ts_diff)
+	    
+	    /* Calculate new FPS based on RTP timestamp diff */
+	    if (stream->info.codec_info.clock_rate % ts_diff == 0) {
+		new_fps.num = stream->info.codec_info.clock_rate/ts_diff;
+		new_fps.denum = 1;
+	    } else {
+		new_fps.num = stream->info.codec_info.clock_rate;
+		new_fps.denum = ts_diff;
+	    }
+
+	    /* Only apply the new FPS when it is >0, <=100, and increasing */
+	    if (new_fps.num/new_fps.denum <= 100 &&
+		new_fps.num/new_fps.denum > 0 &&
+		new_fps.num*1.0/new_fps.denum >
+		stream->dec_max_fps.num*1.0/stream->dec_max_fps.denum)
 	    {
-		/* Frame rate changed, update decoding port info */
-		if (stream->info.codec_info.clock_rate % ts_diff == 0) {
-		    vfd->fps.num = stream->info.codec_info.clock_rate/ts_diff;
-		    vfd->fps.denum = 1;
-		} else {
-		    vfd->fps.num = stream->info.codec_info.clock_rate;
-		    vfd->fps.denum = ts_diff;
-		}
+		pjmedia_video_format_detail *vfd;
+		vfd = pjmedia_format_get_video_format_detail(
+					&channel->port.info.fmt, PJ_TRUE);
 
-		/* Update stream info */
-		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
+		/* Update FPS in channel & stream info */
+		vfd->fps = new_fps;
+		stream->info.codec_param->dec_fmt.det.vid.fps = new_fps;
 
-		/* Update the decoding delay as FPS updated */
+		/* Update the decoding delay */
 		{
 		    pjmedia_jb_state jb_state;
 		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
@@ -1289,12 +1296,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 			stream->dec_delay_cnt = jb_state.max_count * 4/5;
 		}
 
-		/* Publish PJMEDIA_EVENT_FMT_CHANGED event if frame rate
-		 * increased and not exceeding 100fps.
-		 */
-		if (vfd->fps.num/vfd->fps.denum <= 100 &&
-		    vfd->fps.num * stream->dec_max_fps.denum >
-		    stream->dec_max_fps.num * vfd->fps.denum)
+		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
 		{
 		    pjmedia_event *event = &stream->fmt_event;
 
@@ -2115,11 +2117,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
 
     if ((dir & PJMEDIA_DIR_ENCODING) && stream->enc) {
 	stream->enc->paused = 0;
+	stream->force_keyframe = PJ_TRUE;
 	PJ_LOG(4,(stream->enc->port.info.name.ptr, "Encoder stream resumed"));
     }
 
     if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 0;
+	stream->last_dec_seq = 0;
 	PJ_LOG(4,(stream->dec->port.info.name.ptr, "Decoder stream resumed"));
     }
 
