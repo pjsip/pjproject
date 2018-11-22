@@ -479,7 +479,8 @@ struct PendingLog : public PendingJob
  * Endpoint instance
  */
 Endpoint::Endpoint()
-: writer(NULL), mainThreadOnly(false), mainThread(NULL), pendingJobSize(0)
+: writer(NULL), threadDescMutex(NULL), mainThreadOnly(false), 
+  mainThread(NULL), pendingJobSize(0)
 {
     if (instance_) {
 	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -1688,6 +1689,9 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
 	if (t)
 	    threadDescMap[t] = NULL;
     }
+    
+    PJSUA2_CHECK_EXPR( pj_mutex_create_simple(pjsua_var.pool, "threadDesc",
+    				    	      &threadDescMutex) );
 }
 
 void Endpoint::libStart() throw(Error)
@@ -1710,8 +1714,9 @@ void Endpoint::libRegisterThread(const string &name) throw(Error)
 
     status = pj_thread_register(name.c_str(), *desc, &thread);
     if (status == PJ_SUCCESS) {
-        std::lock_guard<std::mutex> guard(threadDescMutex);
+    	pj_mutex_lock(threadDescMutex);
 	threadDescMap[thread] = desc;
+	pj_mutex_unlock(threadDescMutex);
     } else {
 	free(desc);
 	PJSUA2_RAISE_ERROR(status);
@@ -1721,9 +1726,14 @@ void Endpoint::libRegisterThread(const string &name) throw(Error)
 bool Endpoint::libIsThreadRegistered()
 {
     if (pj_thread_is_registered()) {
-        std::lock_guard<std::mutex> guard(threadDescMutex);
+    	bool found;
+
+    	pj_mutex_lock(threadDescMutex);
 	/* Recheck again if it exists in the thread description map */
-	return (threadDescMap.find(pj_thread_this()) != threadDescMap.end());
+	found = (threadDescMap.find(pj_thread_this()) != threadDescMap.end());
+	pj_mutex_unlock(threadDescMutex);
+
+	return found;
     }
 
     return false;
@@ -1743,6 +1753,11 @@ int Endpoint::libHandleEvents(unsigned msec_timeout)
 void Endpoint::libDestroy(unsigned flags) throw(Error)
 {
     pj_status_t status;
+
+    if (threadDescMutex) {
+    	pj_mutex_destroy(threadDescMutex);
+    	threadDescMutex = NULL;
+    }
 
     status = pjsua_destroy2(flags);
 
