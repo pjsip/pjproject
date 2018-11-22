@@ -3153,6 +3153,17 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		pjmedia_transport_info tp_info;
 		pjmedia_srtp_info *srtp_info;
 
+		/* Call media direction */
+		call_med->dir = si->dir;
+
+		/* Call media state */
+		if (call->local_hold)
+		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
+		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
+		else
+		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+
 		if (call->inv->following_fork) {
 		    unsigned options = (call_med->enable_rtcp_mux?
             			        PJMEDIA_TPMED_RTCP_MUX: 0);
@@ -3220,17 +3231,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 			goto on_check_med_status;
 		    }
 		}
-
-		/* Call media direction */
-		call_med->dir = si->dir;
-
-		/* Call media state */
-		if (call->local_hold)
-		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
-		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
-		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
 	    }
 
 	    /* Print info. */
@@ -3320,6 +3320,17 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		pjmedia_transport_info tp_info;
 		pjmedia_srtp_info *srtp_info;
 
+		/* Call media direction */
+		call_med->dir = si->dir;
+
+		/* Call media state */
+		if (call->local_hold)
+		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
+		else if (call_med->dir == PJMEDIA_DIR_DECODING)
+		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
+		else
+		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
+
 		/* Start/restart media transport */
 		status = pjmedia_transport_media_start(call_med->tp,
 						       tmp_pool, local_sdp,
@@ -3357,17 +3368,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 			goto on_check_med_status;
 		    }
 		}
-
-		/* Call media direction */
-		call_med->dir = si->dir;
-
-		/* Call media state */
-		if (call->local_hold)
-		    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-		else if (call_med->dir == PJMEDIA_DIR_DECODING)
-		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-		else
-		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
 	    }
 
 	    /* Print info. */
