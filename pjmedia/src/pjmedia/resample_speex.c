@@ -95,8 +95,9 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
     out_length = resample->out_samples_per_frame;
 
     speex_resampler_process_interleaved_int(resample->state,
-					    (const __int16 *)input, &in_length,
-					    (__int16 *)output, &out_length);
+					    (const spx_int16_t *)input,
+					    &in_length, (spx_int16_t *)output,
+					    &out_length);
 
     pj_assert(in_length == resample->in_samples_per_frame);
     pj_assert(out_length == resample->out_samples_per_frame);
