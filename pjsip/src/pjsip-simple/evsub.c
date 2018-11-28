@@ -2198,8 +2198,8 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 		/* Can't authenticate. Terminate session (?) */
 		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL,
 			  &tsx->status_text);
-		return;
 	    }
+	    return;
 
 	}
 
