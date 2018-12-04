@@ -4723,13 +4723,24 @@ typedef struct pjsua_call_info
     /** The reason phrase describing the status. */
     pj_str_t		last_status_text;
 
-    /** Media status of the first audio stream. */
+    /** Media status of the default audio stream. Default audio stream 
+     *  is chosen according to this priority:
+     *  1. enabled, i.e: SDP media port not zero
+     *  2. transport protocol in the SDP matching account config's
+     *     secure media transport usage (\a use_srtp field).
+     *  3. active, i.e: SDP media direction is not "inactive"
+     *  4. media order (according to the SDP).
+     */
     pjsua_call_media_status media_status;
 
-    /** Media direction of the first audio stream. */
+    /** Media direction of the default audio stream.
+     *  See \a media_status above on how the default is chosen.
+     */
     pjmedia_dir		media_dir;
 
-    /** The conference port number for the first audio stream. */
+    /** The conference port number for the default audio stream.
+     *  See \a media_status above on how the default is chosen.
+     */
     pjsua_conf_port_id	conf_slot;
 
     /** Number of active media info in this call. */

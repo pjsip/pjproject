@@ -787,19 +787,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
     PJSUA_LOCK();
 
-    /* Create sound port if none is instantiated, to check if sound device
-     * can be used. But only do this with the conference bridge, as with
-     * audio switchboard (i.e. APS-Direct), we can only open the sound
-     * device once the correct format has been known
-     */
-    if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL &&
-	pjsua_var.null_snd==NULL && !pjsua_var.no_snd)
-    {
-	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
-
     acc = &pjsua_var.acc[acc_id];
     if (!acc->valid) {
 	pjsua_perror(THIS_FILE, "Unable to make call because account "
@@ -836,6 +823,19 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 	goto on_error;
     }
     
+    /* Create sound port if none is instantiated, to check if sound device
+     * can be used. But only do this with the conference bridge, as with
+     * audio switchboard (i.e. APS-Direct), we can only open the sound
+     * device once the correct format has been known
+     */
+    if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL &&
+	pjsua_var.null_snd==NULL && !pjsua_var.no_snd && call->opt.aud_cnt > 0)
+    {
+	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+
     /* Create temporary pool */
     tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
 

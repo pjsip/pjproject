@@ -1246,10 +1246,13 @@ PJ_DEF(pj_status_t) pjsua_media_transports_attach(pjsua_media_transport tp[],
 #endif
 
 /* Go through the list of media in the SDP, find acceptable media, and
- * sort them based on the "quality" of the media, and store the indexes
- * in the specified array. Media with the best quality will be listed
- * first in the array. The quality factors considered currently is
- * encryption.
+ * sort them based on the below criteria, and store the indexes
+ * in the specified array. The criteria is as follows:
+ * 1. enabled, i.e: SDP media port not zero
+ * 2. transport protocol in the SDP matching account config's
+ *    secure media transport usage (\a use_srtp field).
+ * 3. active, i.e: SDP media direction is not "inactive"
+ * 4. media order (according to the SDP).
  */
 static void sort_media(const pjmedia_sdp_session *sdp,
 		       const pj_str_t *type,
@@ -2013,12 +2016,6 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 */
 	sort_media(rem_sdp, &STR_AUDIO, acc->cfg.use_srtp,
 		   maudidx, &maudcnt, &mtotaudcnt);
-	if (maudcnt==0) {
-	    /* Expecting audio in the offer */
-	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-	    status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
-	    goto on_error;
-	}
 
 #if PJMEDIA_HAS_VIDEO
 	sort_media(rem_sdp, &STR_VIDEO, acc->cfg.use_srtp,
@@ -2027,6 +2024,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	mvidcnt = mtotvidcnt = 0;
 	PJ_UNUSED_ARG(STR_VIDEO);
 #endif
+
+	if (maudcnt + mvidcnt == 0) {
+	    /* Expecting audio or video in the offer */
+	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+	    status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
+	    goto on_error;
+	}
 
 	/* Update media count only when remote add any media, this media count
 	 * must never decrease. Also note that we shouldn't apply the media
@@ -2230,10 +2234,14 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	}
     }
 
-    call->audio_idx = maudidx[0];
+    if (maudcnt > 0) {
+    	call->audio_idx = maudidx[0];
 
-    PJ_LOG(4,(THIS_FILE, "Media index %d selected for audio call %d",
-	      call->audio_idx, call->index));
+    	PJ_LOG(4,(THIS_FILE, "Media index %d selected for audio call %d",
+	      	  call->audio_idx, call->index));
+    } else {
+    	call->audio_idx = -1;
+    }
 
     if (pending_med_tp) {
         /* We shouldn't use temporary pool anymore. */

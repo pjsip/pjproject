@@ -77,7 +77,8 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 	goto on_return;
 
     call = &pjsua_var.calls[call_id];
-    port_id = call->media[call->audio_idx].strm.a.conf_slot;
+    if (call->audio_idx >= 0)
+	port_id = call->media[call->audio_idx].strm.a.conf_slot;
 
 on_return:
     PJSUA_UNLOCK();
