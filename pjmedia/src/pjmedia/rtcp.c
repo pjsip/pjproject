@@ -823,6 +823,9 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	unsigned len;
 
 	len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
+	if (p + len > p_end)
+	    break;
+
 	switch(common->pt) {
 	case RTCP_SR:
 	case RTCP_RR:
