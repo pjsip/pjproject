@@ -4929,12 +4929,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                     return;
                 }
 
-                /* If application lets us answer the re-INVITE,
-                 * application must set the SDP answer with
+                /* If application lets us answer the re-INVITE which contains 
+		 * SDP, application must set the SDP answer with
                  * #pjsip_inv_set_sdp_answer().
                  */
-                if (pjmedia_sdp_neg_get_state(inv->neg) !=
-		    PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+                if (sdp_info->sdp && 
+		    (pjmedia_sdp_neg_get_state(inv->neg) !=
+			PJMEDIA_SDP_NEG_STATE_WAIT_NEGO))
                 {
                     status = PJ_EINVALIDOP;
                 }
