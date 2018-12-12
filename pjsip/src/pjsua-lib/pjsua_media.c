@@ -1426,7 +1426,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
-    pjsua_call *call = call_med->call;
+    pjsua_call *call = call_med? call_med->call : NULL;
     pj_status_t status = PJ_SUCCESS;
   
     switch(event->type) {
@@ -1470,9 +1470,15 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	    break;
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_media_event && call) {
-	(*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
-						   call_med->idx, event);
+    if (pjsua_var.ua_cfg.cb.on_call_media_event) {
+	if (call) {
+	    (*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
+						       call_med->idx, event);
+	} else {
+	    /* Also deliver non call events such as audio device error */
+	    (*pjsua_var.ua_cfg.cb.on_call_media_event)(PJSUA_INVALID_ID,
+						       0, event);
+	}
     }
 
     return status;

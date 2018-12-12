@@ -1947,6 +1947,10 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 
     pjsua_var.snd_is_on = PJ_TRUE;
 
+    /* Subscribe to audio device events */
+    pjmedia_event_subscribe(NULL, &call_media_on_event, NULL,
+		    pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port));
+
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
@@ -1983,6 +1987,9 @@ static void close_snd_dev(void)
 	PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
 			     "%s sound capture device",
 			     play_info.name, cap_info.name));
+
+	/* Unsubscribe from audio device events */
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL, strm);
 
 	pjmedia_snd_port_disconnect(pjsua_var.snd_port);
 	pjmedia_snd_port_destroy(pjsua_var.snd_port);

@@ -87,7 +87,12 @@ typedef enum pjmedia_event_type
     /**
      * RTCP-FB has been received.
      */
-    PJMEDIA_EVENT_RX_RTCP_FB = PJMEDIA_FOURCC('R', 'T', 'F', 'B')
+    PJMEDIA_EVENT_RX_RTCP_FB = PJMEDIA_FOURCC('R', 'T', 'F', 'B'),
+
+    /**
+     * Audio device stopped on error.
+     */
+    PJMEDIA_EVENT_AUD_DEV_ERROR = PJMEDIA_FOURCC('A', 'E', 'R', 'R')
 
 } pjmedia_event_type;
 
@@ -133,6 +138,21 @@ typedef struct pjmedia_event_wnd_closing_data
     /** Consumer may set this field to PJ_TRUE to cancel the closing */
     pj_bool_t		cancel;
 } pjmedia_event_wnd_closing_data;
+
+/**
+ * Additional data/parameters for audio device error event.
+ */
+typedef struct pjmedia_event_aud_dev_err_data
+{
+    /** The media direction that fails */
+    pjmedia_dir		     dir;
+
+    /** The audio device ID */
+    pjmedia_aud_dev_index    id;
+
+    /** The error code */
+    pj_status_t		     status;
+} pjmedia_event_aud_dev_err_data;
 
 /** Additional parameters for window changed event. */
 typedef pjmedia_event_dummy_data pjmedia_event_wnd_closed_data;
@@ -215,6 +235,9 @@ typedef struct pjmedia_event
 
 	/** Keyframe missing event data */
 	pjmedia_event_keyframe_missing_data	keyframe_missing;
+
+	/** Audio device error event data */
+	pjmedia_event_aud_dev_err_data		aud_dev_err;
 
 	/** Storage for user event data */
 	pjmedia_event_user_data			user;
