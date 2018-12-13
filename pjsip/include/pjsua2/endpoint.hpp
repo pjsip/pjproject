@@ -415,6 +415,16 @@ struct OnIpChangeProgressParam
     RegProgressParam	regInfo;
 };
 
+/**
+ * Parameter of Endpoint::onCallMediaEvent() callback.
+ */
+struct OnMediaEventParam
+{
+    /**
+     * The media event.
+     */
+    MediaEvent      ev;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 /**
@@ -1587,6 +1597,18 @@ public:
     virtual void onIpChangeProgress(OnIpChangeProgressParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
+    /**
+     * Notification about media events such as video notifications. This
+     * callback will most likely be called from media threads, thus
+     * application must not perform heavy processing in this callback.
+     * If application needs to perform more complex tasks to handle the
+     * event, it should post the task to another thread.
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onMediaEvent(OnMediaEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
 private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
@@ -1733,6 +1755,7 @@ private:
     static pj_status_t
     on_call_media_transport_state(pjsua_call_id call_id,
                                   const pjsua_med_tp_state_info *info);
+    static void on_media_event(pjmedia_event *event);
     static void on_call_media_event(pjsua_call_id call_id,
                                     unsigned med_idx,
                                     pjmedia_event *event);

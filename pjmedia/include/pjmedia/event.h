@@ -23,6 +23,7 @@
  * @file pjmedia/event.h
  * @brief Event framework
  */
+#include <pjmedia/audiodev.h>
 #include <pjmedia/format.h>
 #include <pjmedia/signatures.h>
 

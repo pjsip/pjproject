@@ -697,6 +697,7 @@ void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st)
 void pjsua_media_prov_clean_up(pjsua_call_id call_id);
 
 /* Callback to receive media events */
+pj_status_t on_media_event(pjmedia_event *event, void *user_data);
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data);
 

@@ -121,16 +121,6 @@ void SdpSession::fromPj(const pjmedia_sdp_session &sdp)
     pjSdpSession = (void *)&sdp;
 }
 
-void MediaEvent::fromPj(const pjmedia_event &ev)
-{
-    type = ev.type;
-    if (type == PJMEDIA_EVENT_FMT_CHANGED) {
-        data.fmtChanged.newWidth = ev.data.fmt_changed.new_fmt.det.vid.size.w;
-        data.fmtChanged.newHeight = ev.data.fmt_changed.new_fmt.det.vid.size.h;
-    }
-    pjMediaEvent = (void *)&ev;
-}
-
 void MediaTransportInfo::fromPj(const pjmedia_transport_info &info)
 {
     char straddr[PJ_INET6_ADDRSTRLEN+10];

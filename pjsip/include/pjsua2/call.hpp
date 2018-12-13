@@ -227,61 +227,6 @@ public:
     void fromPj(const pjmedia_sdp_session &sdp);
 };
 
-/**
- * This structure describes a media format changed event.
- */
-struct MediaFmtChangedEvent
-{
-    unsigned newWidth;      /**< The new width.     */
-    unsigned newHeight;     /**< The new height.    */
-};
-
-/**
- * Media event data.
- */
-typedef union MediaEventData {
-    /**
-     * Media format changed event data.
-     */
-    MediaFmtChangedEvent    fmtChanged;
-    
-    /**
-     * Pointer to storage to user event data, if it's outside
-     * this struct
-     */
-    GenericData		ptr;
-
-} MediaEventData;
-
-/**
- * This structure describes a media event. It corresponds to the
- * pjmedia_event structure.
- */
-struct MediaEvent
-{
-    /**
-     * The event type.
-     */
-    pjmedia_event_type          type;
-
-    /**
-     * Additional data/parameters about the event. The type of data
-     * will be specific to the event type being reported.
-     */
-    MediaEventData              data;
-    
-    /**
-     * Pointer to original pjmedia_event. Only valid when the struct
-     * is converted from PJSIP's pjmedia_event.
-     */
-    void                       *pjMediaEvent;
-
-public:
-    /**
-     * Convert from pjsip
-     */
-    void fromPj(const pjmedia_event &ev);
-};
 
 /**
  * This structure describes media transport informations. It corresponds to the

@@ -1420,8 +1420,22 @@ static void sort_media2(const pjsua_call_media *call_med,
     }
 }
 
+/* Callback to receive global media events */
+pj_status_t on_media_event(pjmedia_event *event, void *user_data)
+{
+    pj_status_t status = PJ_SUCCESS;
 
-/* Callback to receive media events */
+    PJ_UNUSED_ARG(user_data);
+
+    /* Forward the event */
+    if (pjsua_var.ua_cfg.cb.on_media_event) {
+	(*pjsua_var.ua_cfg.cb.on_media_event)(event);
+    }
+
+    return status;
+}
+
+/* Callback to receive media events of a call */
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
 {

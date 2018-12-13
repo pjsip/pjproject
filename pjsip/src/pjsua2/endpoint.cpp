@@ -1430,28 +1430,39 @@ struct PendingOnMediaEventCallback : public PendingJob
 
     virtual void execute(bool is_pending)
     {
-	Call *call = Call::lookup(call_id);
-	if (!call)
-	    return;
-
 	if (is_pending) {
 	    /* Can't do this anymore, pointer is invalid */
 	    prm.ev.pjMediaEvent = NULL;
 	}
 
-	call->onCallMediaEvent(prm);
+	if (call_id == PJSUA_INVALID_ID) {
+	    OnMediaEventParam prm2;
+	    prm2.ev = prm.ev;
+	    Endpoint::instance().onMediaEvent(prm2);
+	} else {
+	    Call *call = Call::lookup(call_id);
+	    
+	    if (call)
+		call->onCallMediaEvent(prm);
+	}
     }
 };
+
+void Endpoint::on_media_event(pjmedia_event *event)
+{
+    PendingOnMediaEventCallback *job = new PendingOnMediaEventCallback;
+
+    job->call_id = PJSUA_INVALID_ID;
+    job->prm.medIdx = 0;
+    job->prm.ev.fromPj(*event);
+    
+    Endpoint::instance().utilAddPendingJob(job);
+}
 
 void Endpoint::on_call_media_event(pjsua_call_id call_id,
                                    unsigned med_idx,
                                    pjmedia_event *event)
 {
-    Call *call = Call::lookup(call_id);
-    if (!call) {
-	return;
-    }
-    
     PendingOnMediaEventCallback *job = new PendingOnMediaEventCallback;
 
     job->call_id = call_id;
@@ -1665,6 +1676,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     ua_cfg.cb.on_call_redirected        = &Endpoint::on_call_redirected;
     ua_cfg.cb.on_call_media_transport_state =
         &Endpoint::on_call_media_transport_state;
+    ua_cfg.cb.on_media_event		= &Endpoint::on_media_event;
     ua_cfg.cb.on_call_media_event       = &Endpoint::on_call_media_event;
     ua_cfg.cb.on_create_media_transport = &Endpoint::on_create_media_transport;
     ua_cfg.cb.on_stun_resolution_complete = 

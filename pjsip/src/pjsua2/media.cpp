@@ -1729,3 +1729,18 @@ pjmedia_vid_codec_param VidCodecParam::toPj() const
     return param;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+void MediaEvent::fromPj(const pjmedia_event &ev)
+{
+    type = ev.type;
+    if (type == PJMEDIA_EVENT_FMT_CHANGED) {
+        data.fmtChanged.newWidth = ev.data.fmt_changed.new_fmt.det.vid.size.w;
+        data.fmtChanged.newHeight = ev.data.fmt_changed.new_fmt.det.vid.size.h;
+    } else if (type == PJMEDIA_EVENT_AUD_DEV_ERROR) {
+	data.audDevError.dir = ev.data.aud_dev_err.dir;
+	data.audDevError.id = ev.data.aud_dev_err.id;
+	data.audDevError.status = ev.data.aud_dev_err.status;
+    }
+    pjMediaEvent = (void *)&ev;
+}
+
