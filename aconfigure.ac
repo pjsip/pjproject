@@ -466,7 +466,7 @@ dnl # OS specific files
 dnl #
 case $target in
   *mingw* | *cygw* | *win32* | *w32* )
-	ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o sock_qos_bsd.o"
+	ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o sock_qos_bsd.o unicode_win32.o"
 	;;
   *)
 	ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
