@@ -963,6 +963,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     unsigned buf_pos, whole_len = 0;
     unsigned i, frm_cnt;
     pj_status_t status = PJ_SUCCESS;
+    DECODING_STATE ret;
 
     PJ_ASSERT_RETURN(codec && count && packets && out_size && output,
                      PJ_EINVAL);
@@ -1045,7 +1046,10 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	/* Decode */
 	oh264_data->dec->DecodeFrame2( start, frm_size, pData, &sDstBufInfo);
 
-	if (sDstBufInfo.iBufferStatus == 1) {
+	if (0 && sDstBufInfo.iBufferStatus == 1) {
+	    // Better to just get the frame later after all NALs are consumed
+	    // by the decoder, it should have the best quality and save some
+	    // CPU load.
 	    /* May overwrite existing frame but that's ok. */
 	    status = oh264_got_decoded_frame(codec, oh264_data, pData,
 	                                     &sDstBufInfo,
@@ -1068,9 +1072,12 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     /* Retrieve the decoded frame */
     pj_bzero(pData, sizeof(pData));
     pj_bzero(&sDstBufInfo, sizeof (SBufferInfo));
-    oh264_data->dec->DecodeFrame2 (NULL, 0, pData, &sDstBufInfo);
+    ret = oh264_data->dec->DecodeFrame2 (NULL, 0, pData, &sDstBufInfo);
 
-    if (sDstBufInfo.iBufferStatus == 1) {
+    if (sDstBufInfo.iBufferStatus == 1 &&
+	!(ret & dsRefLost) && !(ret & dsNoParamSets) &&
+	!(ret & dsDepLayerLost))
+    {
 	/* Overwrite existing output frame and that's ok, because we assume
 	 * newer frame have better quality because it has more NALs
 	 */
@@ -1080,7 +1087,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	has_frame = (status==PJ_SUCCESS && output->size != 0);
     }
 
-    if (!has_frame) {
+    if (ret != dsErrorFree) {
 	pjmedia_event event;
 
 	/* Broadcast missing keyframe event */
@@ -1089,13 +1096,20 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	pjmedia_event_publish(NULL, codec, &event,
 	                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
 
-	PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
-		  "input nframes=%d, concatenated size=%d bytes",
-		  count, whole_len));
-
+	if (has_frame) {
+	    PJ_LOG(5,(oh264_data->pool->obj_name,
+		      "Decoder returned non error free frame, ret=%d", ret));
+	}
+    }
+	
+    if (!has_frame) {
 	output->type = PJMEDIA_FRAME_TYPE_NONE;
 	output->size = 0;
 	output->timestamp = packets[0].timestamp;
+
+	PJ_LOG(5,(THIS_FILE, "Decode couldn't produce picture, "
+		  "input nframes=%d, concatenated size=%d bytes, ret=%d",
+		  count, whole_len, ret));
     }
 
     return status;
