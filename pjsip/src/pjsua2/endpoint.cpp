@@ -1493,6 +1493,14 @@ Endpoint::on_create_media_transport(pjsua_call_id call_id,
 	    if (!call) {
 		return base_tp;
 	    }
+	    if (in_call->inv->dlg->mod_data[pjsua_var.mod.id] == NULL) {
+		/* This will enabled notification for fail events related to 
+		 * the call via on_call_state() and on_call_tsx_state().
+		 */
+		in_call->inv->dlg->mod_data[pjsua_var.mod.id] = in_call;
+		in_call->inv->mod_data[pjsua_var.mod.id] = in_call;
+		++pjsua_var.call_cnt;
+	    }
 	} else {
 	    return base_tp;
 	}

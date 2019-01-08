@@ -1084,23 +1084,179 @@ static void process_pending_call_answer(pjsua_call *call)
     }
 }
 
+pj_status_t create_temp_sdp(pj_pool_t *pool,
+			    const pjmedia_sdp_session *rem_sdp,
+    			    pjmedia_sdp_session **p_sdp)
+{
+    const pj_str_t STR_AUDIO = { "audio", 5 };
+    const pj_str_t STR_VIDEO = { "video", 5 };
+    const pj_str_t STR_IP6 = { "IP6", 3};
+
+    pjmedia_sdp_session *sdp;
+    pj_sockaddr origin;
+    pj_uint16_t tmp_port = 50123;
+    pj_status_t status = PJ_SUCCESS;
+    pj_str_t tmp_st;
+    unsigned i = 0;
+    pj_bool_t sess_use_ipv4 = PJ_TRUE;
+
+    /* Get one address to use in the origin field */
+    pj_sockaddr_init(PJ_AF_INET, &origin, pj_strset2(&tmp_st, "127.0.0.1"), 0);
+
+    /* Create the base (blank) SDP */
+    status = pjmedia_endpt_create_base_sdp(pjsua_var.med_endpt, pool, NULL,
+                                           &origin, &sdp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (rem_sdp->conn && pj_stricmp(&rem_sdp->conn->addr_type, &STR_IP6)==0) {
+	sess_use_ipv4 = PJ_FALSE;
+    }
+
+    for (; i< rem_sdp->media_count ; ++i) {
+	pjmedia_sdp_media *m = NULL;
+	pjmedia_sock_info sock_info;
+	pj_bool_t med_use_ipv4 = sess_use_ipv4;
+
+	if (rem_sdp->media[i]->conn && 
+	    pj_stricmp(&rem_sdp->media[i]->conn->addr_type, &STR_IP6) == 0) 
+	{
+	    med_use_ipv4 = PJ_FALSE;
+	}
+
+	pj_sockaddr_init(med_use_ipv4?PJ_AF_INET:PJ_AF_INET6, 
+			 &sock_info.rtp_addr_name, 
+			 med_use_ipv4?pj_strset2(&tmp_st, "127.0.0.1"):
+				      pj_strset2(&tmp_st, "::1"), 
+			 tmp_port++);
+
+	pj_sockaddr_init(med_use_ipv4?PJ_AF_INET:PJ_AF_INET6, 
+			 &sock_info.rtcp_addr_name, 
+			 med_use_ipv4?pj_strset2(&tmp_st, "127.0.0.1"):
+				      pj_strset2(&tmp_st, "::1"), 
+			 tmp_port++);
+
+	if (pj_stricmp(&rem_sdp->media[i]->desc.media, &STR_AUDIO)==0) {
+	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+	    status = pjmedia_endpt_create_audio_sdp(pjsua_var.med_endpt,
+						    pool, &sock_info, 0, &m);
+
+	    if (status != PJ_SUCCESS)
+		return status;
+	
+	} else if (pj_stricmp(&rem_sdp->media[i]->desc.media, &STR_VIDEO)==0) {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+
+	    pj_sockaddr_set_port(&sock_info.rtp_addr_name, ++tmp_port);
+	    status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
+						    &sock_info, 0, &m);
+	    if (status != PJ_SUCCESS)
+		return status;
+#else	    
+	    m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
+#endif	    
+	} else {
+	    m = pjmedia_sdp_media_clone_deactivate(pool, rem_sdp->media[i]);
+	}
+	if (status != PJ_SUCCESS)
+	    return status;
+	sdp->media[sdp->media_count++] = m;
+    }	   
+
+    *p_sdp = sdp;
+    return PJ_SUCCESS;
+}
+
+static pj_status_t verify_request(const pjsua_call *call,
+				  pjsip_rx_data *rdata,
+				  pj_bool_t use_tmp_sdp,
+				  int *sip_err_code,
+				  pjsip_tx_data **response)
+{
+    const pjmedia_sdp_session *offer = NULL;
+    pjmedia_sdp_session *answer;    
+    int err_code = 0;
+    pj_status_t status;
+    
+    /* Get remote SDP offer (if any). */
+    if (call->inv->neg)
+    {
+	pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
+    }
+
+    if (use_tmp_sdp) {
+	if (offer == NULL)
+	    return PJ_SUCCESS;
+
+	/* Create temporary SDP to check for codec support and capability 
+	 * to handle the required SIP extensions.
+	 */
+	status = create_temp_sdp(call->inv->pool_prov, offer, &answer);
+
+	if (status != PJ_SUCCESS) {
+	    err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+	    pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+	}
+    } else {
+	status = pjsua_media_channel_create_sdp(call->index,
+						call->async_call.dlg->pool,
+						offer, &answer, sip_err_code);
+
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+	} else {
+	    status = pjsip_inv_set_local_sdp(call->inv, answer);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error setting local SDP", status);
+		err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;		
+	    }
+	}
+    }
+
+    if (status == PJ_SUCCESS) {
+	unsigned options = 0;
+
+	/* Verify that we can handle the request. */
+	status = pjsip_inv_verify_request3(rdata,
+					   call->inv->pool_prov, &options, 
+					   offer, answer, NULL, 
+					   pjsua_var.endpt, response);
+	if (status != PJ_SUCCESS) {
+	    /*
+	     * No we can't handle the incoming INVITE request.
+	     */
+	    if (response)
+		err_code = (*response)->msg->line.status.code;
+	    else
+		err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
+	}
+    }
+    if (sip_err_code)
+	*sip_err_code = err_code;
+
+    return status;
+}
 
 /* Incoming call callback when media transport creation is completed. */
 static pj_status_t
-on_incoming_call_med_tp_complete(pjsua_call_id call_id,
-                                 const pjsua_med_tp_state_info *info)
+on_incoming_call_med_tp_complete2(pjsua_call_id call_id,
+				  const pjsua_med_tp_state_info *info,
+				  pjsip_rx_data *rdata,
+				  int *sip_err_code,
+				  pjsip_tx_data **tdata)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
-    const pjmedia_sdp_session *offer=NULL;
-    pjmedia_sdp_session *answer;
-    pjsip_tx_data *response = NULL;
-    unsigned options = 0;
-    pjsip_dialog *dlg = call->async_call.dlg;
-    int sip_err_code = (info? info->sip_err_code: 0);
+    pjsip_dialog *dlg = call->async_call.dlg;    
     pj_status_t status = (info? info->status: PJ_SUCCESS);
+    int err_code = (info? info->sip_err_code: 0);
+    pjsip_tx_data *response = NULL;
 
     PJSUA_LOCK();
-    
+
+    if (sip_err_code)
+	*sip_err_code = err_code;
+
     /* Increment the dialog's lock to prevent it to be destroyed prematurely,
      * such as in case of transport error.
      */
@@ -1123,36 +1279,7 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
         return PJ_SUCCESS;
     }
 
-    /* Get remote SDP offer (if any). */
-    if (call->inv->neg)
-        pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
-
-    status = pjsua_media_channel_create_sdp(call_id,
-                                            call->async_call.dlg->pool,
-					    offer, &answer, &sip_err_code);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
-        goto on_return;
-    }
-
-    status = pjsip_inv_set_local_sdp(call->inv, answer);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error setting local SDP", status);
-        sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
-        goto on_return;
-    }
-
-    /* Verify that we can handle the request. */
-    status = pjsip_inv_verify_request3(NULL,
-                                       call->inv->pool_prov, &options, offer,
-                                       answer, NULL, pjsua_var.endpt, &response);
-    if (status != PJ_SUCCESS) {
-	/*
-	 * No we can't handle the incoming INVITE request.
-	 */
-        sip_err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
-	goto on_return;
-    }
+    status = verify_request(call, rdata, PJ_FALSE, &err_code, &response);
 
 on_return:
     if (status != PJ_SUCCESS) {
@@ -1160,16 +1287,17 @@ on_return:
          * invite's state is PJSIP_INV_STATE_NULL, so the invite session
          * will be terminated later, otherwise we end the session here.
          */
-        if (call->inv->state > PJSIP_INV_STATE_NULL) {
-            pjsip_tx_data *tdata;
-            pj_status_t status_;
+        if (call->inv->state > PJSIP_INV_STATE_NULL) {            
+            pj_status_t status_ = PJ_SUCCESS;
 
-	    status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL,
-                                            &tdata);
-	    if (status_ == PJ_SUCCESS && tdata)
-	        status_ = pjsip_inv_send_msg(call->inv, tdata);
-        }
+	    if (response == NULL) {
+		status_ = pjsip_inv_end_session(call->inv, err_code, NULL,
+						&response);
+	    }
 
+	    if (status_ == PJ_SUCCESS && response)
+	        status_ = pjsip_inv_send_msg(call->inv, response);
+	}
         pjsua_media_channel_deinit(call->index);
     }
 
@@ -1192,9 +1320,22 @@ on_return:
     }
     
     pjsip_dlg_dec_lock(dlg);
+
+    if (sip_err_code)
+	*sip_err_code = err_code;
+
+    if (tdata)
+	*tdata = response;
     
     PJSUA_UNLOCK();
     return status;
+}
+
+static pj_status_t
+on_incoming_call_med_tp_complete(pjsua_call_id call_id,
+				 const pjsua_med_tp_state_info *info)
+{
+    return on_incoming_call_med_tp_complete2(call_id, info, NULL, NULL, NULL);
 }
 
 
@@ -1610,6 +1751,33 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * in pjsua_call_answer(), see ticket #1526.
      */
     if (offer || replaced_dlg) {
+
+	/* This is only for initial verification, it will check the SDP for
+	 * codec support and the capability to handle the required
+	 * SIP extensions.
+	 */
+	status = verify_request(call, rdata, PJ_TRUE, &sip_err_code, 
+				&response);
+
+	if (status != PJ_SUCCESS) {
+	    pjsip_dlg_inc_lock(dlg);
+
+	    if (response) {
+		pjsip_dlg_send_response(dlg, call->inv->invite_tsx, response);
+
+	    } else {
+		pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+	    }
+		
+	    if (call->inv && call->inv->dlg) {
+		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
+	    }
+	    pjsip_dlg_dec_lock(dlg);
+
+	    call->inv = NULL;
+	    call->async_call.dlg = NULL;
+	    goto on_return;
+	}
 	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
 					  call->secure_level,
 					  rdata->tp_info.pool,
@@ -1617,16 +1785,26 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 					  &sip_err_code, PJ_TRUE,
 					  &on_incoming_call_med_tp_complete);
 	if (status == PJ_SUCCESS) {
-	    status = on_incoming_call_med_tp_complete(call_id, NULL);
-	    if (status != PJ_SUCCESS) {
-		sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+	    status = on_incoming_call_med_tp_complete2(call_id, NULL, 
+						       rdata, &sip_err_code, 
+						       &response);
+	    if (status != PJ_SUCCESS) {		
 		/* Since the call invite's state is still PJSIP_INV_STATE_NULL,
 		 * the invite session was not ended in
 		 * on_incoming_call_med_tp_complete(), so we need to send
 		 * a response message and terminate the invite here.
 		 */
 		pjsip_dlg_inc_lock(dlg);
-		pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+
+		if (response) {
+		    pjsip_dlg_send_response(dlg, call->inv->invite_tsx, 
+					    response);
+
+		} else {
+		    pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, 
+				      NULL);
+		}		
+
 		if (call->inv && call->inv->dlg) {
 		    pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
 		}
@@ -1733,10 +1911,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Only do this after sending 100/Trying (really! see the long comment
      * above)
      */
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
-
-    ++pjsua_var.call_cnt;
+    if (dlg->mod_data[pjsua_var.mod.id] == NULL) {
+	/* In PJSUA2, on_incoming_call() may be called from 
+	 * on_media_transport_created() hence this might already set
+	 * to allow notification about fail events via on_call_state() and
+	 * on_call_tsx_state().
+	 */
+	dlg->mod_data[pjsua_var.mod.id] = call;
+	inv->mod_data[pjsua_var.mod.id] = call;
+	++pjsua_var.call_cnt;
+    }
 
     /* Check if this request should replace existing call */
     if (replaced_dlg) {
