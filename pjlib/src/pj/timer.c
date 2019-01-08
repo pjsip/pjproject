@@ -580,13 +580,16 @@ static int cancel_timer(pj_timer_heap_t *ht,
 
     lock_timer_heap(ht);
     count = cancel(ht, entry, flags | F_DONT_CALL);
-    if (flags & F_SET_ID) {
-	entry->id = id_val;
-    }
-    if (entry->_grp_lock) {
-	pj_grp_lock_t *grp_lock = entry->_grp_lock;
-	entry->_grp_lock = NULL;
-	pj_grp_lock_dec_ref(grp_lock);
+    if (count > 0) {
+	/* Timer entry found & cancelled */
+	if (flags & F_SET_ID) {
+	    entry->id = id_val;
+	}
+	if (entry->_grp_lock) {
+	    pj_grp_lock_t *grp_lock = entry->_grp_lock;
+	    entry->_grp_lock = NULL;
+	    pj_grp_lock_dec_ref(grp_lock);
+	}
     }
     unlock_timer_heap(ht);
 
