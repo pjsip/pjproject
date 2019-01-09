@@ -493,7 +493,7 @@ static pj_status_t tls_init(void)
     if (!tls_available_ciphers) {
         unsigned int i;
 
-        for (i = 0; ; i++) {
+        for (i = 0; i<PJ_ARRAY_SIZE(tls_ciphers); i++) {
             unsigned char id[2];
             const char *suite;
             
@@ -503,7 +503,7 @@ static pj_status_t tls_init(void)
             /* usually the array size is bigger than the number of available
              * ciphers anyway, so by checking here we can exit the loop as soon
              * as either all ciphers have been added or the array is full */
-            if (suite && i < PJ_ARRAY_SIZE(tls_ciphers)) {
+            if (suite) {
                 tls_ciphers[i].id = (pj_ssl_cipher)
                     (pj_uint32_t) ((id[0] << 8) | id[1]);
                 tls_ciphers[i].name = suite;

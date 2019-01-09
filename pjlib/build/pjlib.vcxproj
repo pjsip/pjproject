@@ -752,6 +752,7 @@
     <ClCompile Include="..\src\pj\ssl_sock_common.c" />
     <ClCompile Include="..\src\pj\ssl_sock_dump.c" />
     <ClCompile Include="..\src\pj\ssl_sock_ossl.c" />
+    <ClCompile Include="..\src\pj\ssl_sock_gtls.c" />
     <ClCompile Include="..\src\pj\string.c" />
     <ClCompile Include="..\src\pj\symbols.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">true</ExcludedFromBuild>

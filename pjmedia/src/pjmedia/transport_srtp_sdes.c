@@ -20,15 +20,16 @@
 #if defined(PJ_HAS_SSL_SOCK) && (PJ_HAS_SSL_SOCK != 0)
 
 /* Include OpenSSL libraries for MSVC */
-#  ifdef _MSC_VER
-#    if OPENSSL_VERSION_NUMBER >= 0x10100000L
-#      pragma comment(lib, "libcrypto")
-#    else
-#      pragma comment(lib, "libeay32")
-#      pragma comment(lib, "ssleay32")
+#  ifdef _MSC_VER 
+#    if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#      if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#        pragma comment(lib, "libcrypto")
+#      else
+#        pragma comment(lib, "libeay32")
+#        pragma comment(lib, "ssleay32")
+#      endif
 #    endif
 #  endif
-
 #endif
 
 
