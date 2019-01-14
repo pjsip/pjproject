@@ -115,7 +115,7 @@ if test "$1" = "--use-ndk-cflags"; then
         NDK_CC=$i
       fi
     fi
-    # Find g++ toolchain
+    # Find g++ or clang++ toolchain
     if test "x`echo $i | grep 'g++'`" != "x"; then
       NDK_CXX=$i
     fi
