@@ -1161,6 +1161,20 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 	}
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	/* Add connection line, if none */
+	if (m->conn == NULL && sdp->conn == NULL) {
+	    m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+	    m->conn->net_type = pj_str("IN");
+	    if (med_use_ipv4) {
+		m->conn->addr_type = pj_str("IP4");
+		m->conn->addr = pj_str("127.0.0.1");
+	    } else {
+		m->conn->addr_type = pj_str("IP6");
+		m->conn->addr = pj_str("::1");
+	    }
+	}
+
 	sdp->media[sdp->media_count++] = m;
     }	   
 
