@@ -633,7 +633,8 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
     {
 	pj_timer_entry *node = remove_node(ht, 0);
 	/* Avoid re-use of this timer until the callback is done. */
-	pj_timer_id_t node_timer_id = pop_freelist(ht);
+	///Not necessary, even causes problem (see also #2176).
+	///pj_timer_id_t node_timer_id = pop_freelist(ht);
 	pj_grp_lock_t *grp_lock;
 
 	++count;
@@ -653,7 +654,7 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 
 	lock_timer_heap(ht);
 	/* Now, the timer is really free for re-use. */
-	push_freelist(ht, node_timer_id);
+	///push_freelist(ht, node_timer_id);
     }
     if (ht->cur_size && next_delay) {
 	*next_delay = ht->heap[0]->_timer_value;
