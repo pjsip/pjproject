@@ -1712,7 +1712,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
 		      errmsg));
 
-	    if (*ssock->param.cb.on_accept_complete2) {
+	    if (ssock->param.cb.on_accept_complete2) {
 		(*ssock->param.cb.on_accept_complete2) 
 		      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
 		      pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
@@ -2549,7 +2549,7 @@ static pj_bool_t asock_on_accept_complete2(pj_activesock_t *asock,
 			pj_activesock_get_user_data(asock);
 
 	if (ssock->param.cb.on_accept_complete2) {
-	    (*ssock->param.cb.on_accept_complete2) (ssock->parent, ssock, 
+	    (*ssock->param.cb.on_accept_complete2) (ssock, NULL, 
 						    src_addr, src_addr_len, 
 						    status);
 	}

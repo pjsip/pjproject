@@ -1322,7 +1322,7 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     listener = (struct tls_listener*) pj_ssl_sock_get_user_data(ssock);
 
     if (accept_status != PJ_SUCCESS) {
-	if (listener->tls_setting.on_accept_fail_cb) {
+	if (listener && listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_ssl_sock_info ssi;
 
@@ -1330,8 +1330,11 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 	    param.status = accept_status;
 	    param.local_addr = &listener->factory.local_addr;
 	    param.remote_addr = src_addr;
-	    if (pj_ssl_sock_get_info(new_ssock, &ssi) == PJ_SUCCESS)
+	    if (new_ssock &&
+		pj_ssl_sock_get_info(new_ssock, &ssi) == PJ_SUCCESS)
+	    {
 		param.last_native_err = ssi.last_native_err;
+	    }
 
 	    (*listener->tls_setting.on_accept_fail_cb) (&param);
 	}
