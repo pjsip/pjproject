@@ -1496,6 +1496,9 @@ static void get_cn_from_gen_name(const pj_str_t *gen_name, pj_str_t *cn)
 
     pj_bzero(cn, sizeof(pj_str_t));
 
+    if (!gen_name->slen)
+	return;
+
     p = pj_strstr(gen_name, &CN_sign);
     if (!p)
 	return;
