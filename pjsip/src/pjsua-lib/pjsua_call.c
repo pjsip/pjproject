@@ -1240,6 +1240,8 @@ static pj_status_t verify_request(const pjsua_call *call,
 	    /*
 	     * No we can't handle the incoming INVITE request.
 	     */
+	    pjsua_perror(THIS_FILE, "Request verification failed", status);
+
 	    if (response)
 		err_code = (*response)->msg->line.status.code;
 	    else

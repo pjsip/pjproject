@@ -1181,13 +1181,21 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 	    pjmedia_sdp_neg *neg;
 
 	    /* Local SDP must be valid! */
-	    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(l_sdp))==PJ_SUCCESS,
-			     status);
+	    status = pjmedia_sdp_validate(l_sdp);
+	    if (status != PJ_SUCCESS) {
+		pj_assert(!"Invalid local SDP");
+		code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+		goto on_return;
+	    }
 
 	    /* Create SDP negotiator */
 	    status = pjmedia_sdp_neg_create_w_remote_offer(
 			    tmp_pool, l_sdp, r_sdp, &neg);
-	    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	    if (status != PJ_SUCCESS) {
+		pj_assert(!"Failed creating SDP negotiator");
+		code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+		goto on_return;
+	    }
 
 	    /* Negotiate SDP */
 	    status = pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
