@@ -705,6 +705,7 @@ typedef enum pj_ssl_sock_proto
      * protocol. 
      */
     PJ_SSL_SOCK_PROTO_SSL23   = (1 << 16) - 1,
+    PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
 
     /**
      * DTLSv1.0 protocol.	  
