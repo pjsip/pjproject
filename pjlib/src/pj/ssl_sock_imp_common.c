@@ -1960,7 +1960,6 @@ on_error:
 
 PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
 {
-    return ssl_renegotiate(ssock);
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
