@@ -4679,8 +4679,21 @@ typedef struct pjsua_call_media_info
 	     */
 	    pjsua_vid_win_id	    win_in;
 
-	    /** The video capture device for outgoing transmission,
-	     *  if any, or PJMEDIA_VID_INVALID_DEV
+	    /**
+	     * The video conference port number for the call in decoding
+	     * direction.
+	     */
+	    pjsua_conf_port_id	    dec_slot;
+
+	    /**
+	     * The video conference port number for the call in encoding
+	     * direction.
+	     */
+	    pjsua_conf_port_id	    enc_slot;
+
+	    /**
+	     * The video capture device for outgoing transmission,
+	     * if any, or PJMEDIA_VID_INVALID_DEV
 	     */
 	    pjmedia_vid_dev_index   cap_dev;
 
@@ -5167,6 +5180,36 @@ PJ_DECL(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id);
  *			media has not been established or is not active.
  */
 PJ_DECL(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id);
+
+
+/**
+ * Get the video window associated with the call. Note that this function
+ * will only evaluate the first video stream in the call, to query any other
+ * video stream, use pjsua_call_get_info().
+ *
+ * @param call_id	Call identification.
+ *
+ * @return		Video window, or PJSUA_INVALID_ID when the
+ *			media has not been established or is not active.
+ */
+PJ_DECL(pjsua_vid_win_id) pjsua_call_get_vid_win(pjsua_call_id call_id);
+
+
+/**
+ * Get the video conference port identification associated with the call.
+ * Note that this function will only evaluate the first video stream in
+ * the call, to query any other video stream, use pjsua_call_get_info().
+ *
+ * @param call_id	Call identification.
+ * @param dir		Port direction to be queried. Valid values are
+ *			PJMEDIA_DIR_ENCODING and PJMEDIA_DIR_DECODING only.
+ *
+ * @return		Conference port ID, or PJSUA_INVALID_ID when the
+ *			media has not been established or is not active.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
+						    pjsua_call_id call_id,
+						    pjmedia_dir dir);
 
 /**
  * Obtain detail information about the specified call.
@@ -6703,7 +6746,7 @@ typedef struct pjsua_codec_info
 
 
 /**
- * This structure descibes information about a particular media port that
+ * This structure describes information about a particular media port that
  * has been registered into the conference bridge. Application can query
  * this info by calling #pjsua_conf_get_port_info().
  */
@@ -6740,7 +6783,7 @@ typedef struct pjsua_conf_port_info
     unsigned		listener_cnt;
 
     /** Array of listeners (in other words, ports where this port is 
-     *  transmitting to.
+     *  transmitting to).
      */
     pjsua_conf_port_id	listeners[PJSUA_MAX_CONF_PORTS];
 
@@ -7807,6 +7850,18 @@ PJ_DECL(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 PJ_DECL(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id);
 
 /**
+ * Get video conference slot ID of the specified capture device, if any.
+ *
+ * @param id		The capture device ID.
+ *
+ * @return		The video conference slot ID of the specified capture
+ *			device ID, or PJSUA_INVALID_ID if preview has not been
+ *			started for the device.
+ */
+PJ_DECL(pjsua_conf_port_id) pjsua_vid_preview_get_vid_conf_port(
+						    pjmedia_vid_dev_index id);
+
+/**
  * Stop video preview.
  *
  * @param id		The capture device ID.
@@ -7842,6 +7897,11 @@ typedef struct pjsua_vid_win_info
      * Renderer device ID.
      */
     pjmedia_vid_dev_index rdr_dev;
+
+    /**
+     * Renderer port ID in the video conference bridge.
+     */
+    pjsua_conf_port_id slot_id;
 
     /**
      * Window show status. The window is hidden if false.
@@ -8015,6 +8075,147 @@ PJ_DECL(pj_status_t) pjsua_vid_codec_get_param(
 PJ_DECL(pj_status_t) pjsua_vid_codec_set_param( 
 					const pj_str_t *codec_id,
 					const pjmedia_vid_codec_param *param);
+
+
+/*
+ * Video conference API
+ */
+
+/**
+ * This structure describes information about a particular video media port
+ * that has been registered into the video conference bridge. Application
+ * can query this info by calling #pjsua_vid_conf_get_port_info().
+ */
+typedef struct pjsua_vid_conf_port_info
+{
+    /** Conference port number. */
+    pjsua_conf_port_id	slot_id;
+
+    /** Port name. */
+    pj_str_t		name;
+
+    /** Format. */
+    pjmedia_format	format;
+
+    /** Number of listeners in the array. */
+    unsigned		listener_cnt;
+
+    /** Array of listeners (in other words, ports where this port is 
+     *  transmitting to).
+     */
+    pjsua_conf_port_id	listeners[PJSUA_MAX_CONF_PORTS];
+
+    /** Number of transmitters in the array. */
+    unsigned		transmitter_cnt;
+
+    /** Array of transmitters (in other words, ports where this port is 
+     *  receiving from).
+     */
+    pjsua_conf_port_id	transmitters[PJSUA_MAX_CONF_PORTS];
+
+} pjsua_vid_conf_port_info;
+
+
+/**
+ * Get current number of active ports in the bridge.
+ *
+ * @return		The number.
+ */
+PJ_DECL(unsigned) pjsua_vid_conf_get_active_ports(void);
+
+
+/**
+ * Enumerate all video conference ports.
+ *
+ * @param id		Array of conference port ID to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_enum_ports(pjsua_conf_port_id id[],
+					       unsigned *count);
+
+
+/**
+ * Get information about the specified video conference port
+ *
+ * @param port_id	Port identification.
+ * @param info		Pointer to store the port info.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_get_port_info(
+					    pjsua_conf_port_id port_id,
+					    pjsua_vid_conf_port_info *info);
+
+
+/**
+ * Add arbitrary video media port to PJSUA's video conference bridge.
+ * Application can use this function to add the media port that it creates.
+ * For media ports that are created by PJSUA-LIB (such as calls, AVI player),
+ * PJSUA-LIB will automatically add the port to the bridge.
+ *
+ * @param pool		Pool to use.
+ * @param port		Media port to be added to the bridge.
+ * @param param		Currently this is not used and must be set to NULL.
+ * @param p_id		Optional pointer to receive the conference 
+ *			slot id.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_add_port(pj_pool_t *pool,
+					     pjmedia_port *port,
+					     const void *param,
+					     pjsua_conf_port_id *p_id);
+
+
+/**
+ * Remove arbitrary slot from the video conference bridge. Application should
+ * only call this function if it registered the port manually with previous
+ * call to #pjsua_vid_conf_add_port().
+ *
+ * @param port_id	The slot id of the port to be removed.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id port_id);
+
+
+/**
+ * Establish unidirectional video flow from souce to sink. One source
+ * may transmit to multiple destinations/sink. And if multiple
+ * sources are transmitting to the same sink, the video will be mixed
+ * together (currently, each source will be resized down so all sources will
+ * occupy the same portion in the sink video frame). Source and sink may
+ * refer to the same ID, effectively looping the media.
+ *
+ * If bidirectional media flow is desired, application needs to call
+ * this function twice, with the second one having the arguments
+ * reversed.
+ *
+ * @param source	Port ID of the source media/transmitter.
+ * @param sink		Port ID of the destination media/received.
+ * @param param		Currently this is not used and must be set to NULL.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_connect(pjsua_conf_port_id source,
+					    pjsua_conf_port_id sink,
+					    const void *param);
+
+
+/**
+ * Disconnect video flow from the source to destination port.
+ *
+ * @param source	Port ID of the source media/transmitter.
+ * @param sink		Port ID of the destination media/received.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
+					       pjsua_conf_port_id sink);
 
 
 

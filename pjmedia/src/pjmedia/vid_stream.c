@@ -928,6 +928,14 @@ static pj_status_t put_frame(pjmedia_port *port,
     /* Get frame length in timestamp unit */
     rtp_ts_len = stream->frame_ts_len;
 
+    /* Empty video frame? Just update RTP timestamp for now */
+    if (frame->type==PJMEDIA_FRAME_TYPE_VIDEO && frame->size==0) {
+	pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 1, 0,
+			       rtp_ts_len,  (const void**)&rtphdr,
+			       &rtphdrlen);
+	return PJ_SUCCESS;
+    }
+
     /* Init frame_out buffer. */
     pj_bzero(&frame_out, sizeof(frame_out));
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);

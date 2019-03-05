@@ -102,6 +102,7 @@
 #define CMD_VIDEO_DEVICE	    ((CMD_VIDEO*10)+5)
 #define CMD_VIDEO_CODEC		    ((CMD_VIDEO*10)+6)
 #define CMD_VIDEO_WIN		    ((CMD_VIDEO*10)+7)
+#define CMD_VIDEO_CONF		    ((CMD_VIDEO*10)+8)
 
 /* video level 3 command */
 #define CMD_VIDEO_ACC_SHOW	    ((CMD_VIDEO_ACC*10)+1)
@@ -129,6 +130,9 @@
 #define CMD_VIDEO_WIN_HIDE	    ((CMD_VIDEO_WIN*10)+4)
 #define CMD_VIDEO_WIN_MOVE	    ((CMD_VIDEO_WIN*10)+5)
 #define CMD_VIDEO_WIN_RESIZE	    ((CMD_VIDEO_WIN*10)+6)
+#define CMD_VIDEO_CONF_LIST	    ((CMD_VIDEO_CONF*10)+1)
+#define CMD_VIDEO_CONF_CONNECT	    ((CMD_VIDEO_CONF*10)+2)
+#define CMD_VIDEO_CONF_DISCONNECT   ((CMD_VIDEO_CONF*10)+3)
 
 /* dynamic choice argument list */
 #define DYN_CHOICE_START	    9900
@@ -2465,6 +2469,81 @@ static pj_status_t cmd_resize_vid_win(pj_cli_cmd_val *cval)
     return pjsua_vid_win_set_size(wid, &size);
 }
 
+static pj_status_t cmd_vid_conf_list()
+{
+    pjsua_conf_port_id id[100];
+    unsigned count = PJ_ARRAY_SIZE(id);
+    unsigned i;
+    pj_status_t status;
+
+    status = pjsua_vid_conf_enum_ports(id, &count);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Failed enumerating video conf bridge ports"));
+	return status;
+    }
+
+    PJ_LOG(3,(THIS_FILE," Video conference has %d ports:\n", count));
+    PJ_LOG(3,(THIS_FILE," id name                   format               rx           tx    \n"));
+    PJ_LOG(3,(THIS_FILE," ------------------------------------------------------------------\n"));
+    for (i=0; i<count; ++i) {
+	char li_list[PJSUA_MAX_CALLS*4];
+	char tr_list[PJSUA_MAX_CALLS*4];
+	char s[32];
+	unsigned j;
+	pjsua_vid_conf_port_info info;
+	pjmedia_rect_size *size;
+	pjmedia_ratio *fps;
+
+	pjsua_vid_conf_get_port_info(id[i], &info);
+	size = &info.format.det.vid.size;
+	fps = &info.format.det.vid.fps;
+
+	li_list[0] = '\0';
+	for (j=0; j<info.listener_cnt; ++j) {
+	    char s[10];
+	    pj_ansi_snprintf(s, sizeof(s), "%d%s",
+			     info.listeners[j],
+			     (j==info.listener_cnt-1)?"":",");
+	    pj_ansi_strcat(li_list, s);
+	}
+	tr_list[0] = '\0';
+	for (j=0; j<info.transmitter_cnt; ++j) {
+	    char s[10];
+	    pj_ansi_snprintf(s, sizeof(s), "%d%s", info.transmitters[j],
+			     (j==info.transmitter_cnt-1)?"":",");
+	    pj_ansi_strcat(tr_list, s);
+	}
+	pjmedia_fourcc_name(info.format.id, s);
+	s[4] = ' ';
+	pj_ansi_snprintf(s+5, sizeof(s)-5, "%dx%d@%.1f",
+			 size->w, size->h, (float)(fps->num*1.0/fps->denum));
+	PJ_LOG(3,(THIS_FILE,"%3d %.*s%.*s %s%.*s %s%.*s %s\n",
+			    id[i],
+			    (int)info.name.slen, info.name.ptr,
+			    22-(int)info.name.slen, "                   ",
+			    s,
+			    20-pj_ansi_strlen(s), "                    ",
+			    tr_list,
+			    12-pj_ansi_strlen(tr_list), "            ",
+			    li_list));
+    }
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cmd_vid_conf_connect(pj_cli_cmd_val *cval, pj_bool_t connect)
+{
+    int P, Q;
+
+    P = (int)pj_strtol(&cval->argv[1]);
+    Q = (int)pj_strtol(&cval->argv[2]);
+    if (connect)
+	return pjsua_vid_conf_connect(P, Q, NULL);
+    else
+	return pjsua_vid_conf_disconnect(P, Q);
+}
+
+
 /* Video handler */
 static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
 {
@@ -2544,6 +2623,13 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
 	break;
     case CMD_VIDEO_WIN_RESIZE:
 	status = cmd_resize_vid_win(cval);
+	break;
+    case CMD_VIDEO_CONF_LIST:
+	status = cmd_vid_conf_list();
+	break;
+    case CMD_VIDEO_CONF_CONNECT:
+    case CMD_VIDEO_CONF_DISCONNECT:
+	status = cmd_vid_conf_connect(cval, (cmd_id==CMD_VIDEO_CONF_CONNECT));
 	break;
     }
 
@@ -3048,6 +3134,17 @@ static pj_status_t add_video_command(pj_cli_t *c)
 	"       desc='Windows Id'/>"
 	"      <ARG name='width' type='int' desc='Width'/>"
 	"      <ARG name='height' type='int' desc='Height'/>"
+	"    </CMD>"
+	"  </CMD>"
+	"  <CMD name='conf' id='6008' desc='Video conference commands'>"
+	"    <CMD name='list' id='60081' desc='List all ports in video conference'/>"
+	"    <CMD name='cc' id='60082' desc='Connect ports in video conference'>"
+	"      <ARG name='source' type='int' desc='Source port ID'/>"
+	"      <ARG name='sink' type='int' desc='Sink port ID'/>"
+	"    </CMD>"
+	"    <CMD name='cd' id='60083' desc='Disconnect ports in video conference'>"
+	"      <ARG name='source' type='int' desc='Source port ID'/>"
+	"      <ARG name='sink' type='int' desc='Sink port ID'/>"
 	"    </CMD>"
 	"  </CMD>"
 	"</CMD>";

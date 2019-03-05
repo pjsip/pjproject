@@ -26,7 +26,6 @@
 #if PJSUA_HAS_VIDEO
 
 #define ENABLE_EVENT	    	1
-#define VID_TEE_MAX_PORT    	(PJSUA_MAX_CALLS + 1)
 
 #define PJSUA_SHOW_WINDOW	1
 #define PJSUA_HIDE_WINDOW	0
@@ -65,6 +64,14 @@ pj_status_t pjsua_vid_subsys_init(void)
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status,
 		     "Error creating PJMEDIA video codec manager"));
+	goto on_error;
+    }
+
+    status = pjmedia_vid_conf_create(pjsua_var.pool, NULL,
+				     &pjsua_var.vid_conf);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Error creating PJMEDIA video conference bridge"));
 	goto on_error;
     }
 
@@ -138,6 +145,11 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 	    pj_pool_release(pjsua_var.win[i].pool);
 	    pjsua_var.win[i].pool = NULL;
 	}
+    }
+
+    if (pjsua_var.vid_conf) {
+	pjmedia_vid_conf_destroy(pjsua_var.vid_conf);
+	pjsua_var.vid_conf = NULL;
     }
 
     pjmedia_vid_dev_subsys_shutdown();
@@ -514,6 +526,24 @@ PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
     return vid_preview_get_win(id, PJ_TRUE);
 }
 
+/*
+ * Get video conference slot ID of the specified capture device.
+ */
+PJ_DEF(pjsua_conf_port_id) pjsua_vid_preview_get_vid_conf_port(
+						    pjmedia_vid_dev_index id)
+{
+    pjsua_vid_win_id wid;
+    pjsua_vid_win *w;
+
+    wid = vid_preview_get_win(id, PJ_TRUE);
+    if (wid == PJSUA_INVALID_ID)
+	return PJSUA_INVALID_ID;
+
+    w = &pjsua_var.win[wid];
+    return w->cap_slot;
+}
+
+
 PJ_DEF(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w = &pjsua_var.win[wid];
@@ -527,9 +557,9 @@ PJ_DEF(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
 }
 
 /* Allocate and initialize pjsua video window:
- * - If the type is preview, video capture, tee, and render
- *   will be instantiated.
- * - If the type is stream, only renderer will be created.
+ * - If the type is preview: capture port and render port
+ *   will be instantiated, and connected via conf.
+ * - If the type is stream: only render port will be created.
  */
 static pj_status_t create_vid_win(pjsua_vid_win_type type,
 				  const pjmedia_format *fmt,
@@ -672,7 +702,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	w->preview_cap_id = cap_id;
 
 	/* Create capture video port */
-	vp_param.active = PJ_TRUE;
+	vp_param.active = PJ_FALSE;
 	vp_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
 
         /* Update the video setting with user preference */
@@ -702,14 +732,11 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	fmt_ = vp_param.vidparam.fmt;
 	fmt = &fmt_;
 
-	/* Create video tee */
-	status = pjmedia_vid_tee_create(w->pool, fmt, VID_TEE_MAX_PORT,
-					&w->tee);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	/* Connect capturer to the video tee */
-	status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
+	/* Register capturer to the video conf */
+	status = pjsua_vid_conf_add_port(
+				w->pool,
+				pjmedia_vid_port_get_passive_port(w->vp_cap),
+				NULL, &w->cap_slot);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -738,7 +765,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	vp_param.active = (w->type == PJSUA_WND_TYPE_STREAM);
+	vp_param.active = PJ_FALSE;
 	vp_param.vidparam.dir = PJMEDIA_DIR_RENDER;
 	vp_param.vidparam.fmt = *fmt;
 	vp_param.vidparam.disp_size = fmt->det.vid.size;
@@ -755,12 +782,17 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	/* For preview window, connect capturer & renderer (via tee) */
-	if (w->type == PJSUA_WND_TYPE_PREVIEW) {
-	    pjmedia_port *rend_port;
+	/* Register renderer to the video conf */
+	status = pjsua_vid_conf_add_port(
+				w->pool,
+				pjmedia_vid_port_get_passive_port(w->vp_rend),
+				NULL, &w->rend_slot);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
 
-	    rend_port = pjmedia_vid_port_get_passive_port(w->vp_rend);
-	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, rend_port);
+	/* For preview window, connect capturer & renderer (via conf) */
+	if (w->type == PJSUA_WND_TYPE_PREVIEW) {
+	    status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 	}
@@ -798,20 +830,18 @@ static void free_vid_win(pjsua_vid_win_id wid)
     pj_log_push_indent();
 
     if (w->vp_cap) {
+	pjsua_vid_conf_remove_port(w->cap_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_cap);
 	pjmedia_vid_port_stop(w->vp_cap);
-	pjmedia_vid_port_disconnect(w->vp_cap);
 	pjmedia_vid_port_destroy(w->vp_cap);
     }
     if (w->vp_rend) {
+	pjsua_vid_conf_remove_port(w->rend_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
                                   w->vp_rend);
 	pjmedia_vid_port_stop(w->vp_rend);
 	pjmedia_vid_port_destroy(w->vp_rend);
-    }
-    if (w->tee) {
-	pjmedia_port_destroy(w->tee);
     }
     pjsua_vid_win_reset(wid);
 
@@ -849,6 +879,8 @@ pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med)
 
     call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
     call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
+    call_med->strm.v.strm_dec_slot = PJSUA_INVALID_ID;
+    call_med->strm.v.strm_enc_slot = PJSUA_INVALID_ID;
     if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
 	pjmedia_vid_dev_info info;
 	pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
@@ -978,6 +1010,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    PJ_LOG(4,(THIS_FILE, "Setting up RX.."));
 	    pj_log_push_indent();
 
+	    /* Retrieve stream decoding port */
 	    status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 						 PJMEDIA_DIR_DECODING,
 						 &media_port);
@@ -1009,9 +1042,22 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
                                     call_med, w->vp_rend);
 #endif
 	    
-	    /* Connect renderer to stream */
-	    status = pjmedia_vid_port_connect(w->vp_rend, media_port,
-					      PJ_FALSE);
+	    /* Register renderer to stream events */
+	    pjmedia_vid_port_subscribe_event(w->vp_rend, media_port);
+
+	    /* Register stream decoding to conf, using tmp_pool should be fine
+	     * as bridge will create its own pool (using tmp_pool factory).
+	     */
+	    status = pjsua_vid_conf_add_port(tmp_pool, media_port, NULL,
+					     &call_med->strm.v.strm_dec_slot);
+	    if (status != PJ_SUCCESS) {
+		pj_log_pop_indent();
+		goto on_error;
+	    }
+
+	    /* Connect stream to renderer (via conf) */
+	    status = pjsua_vid_conf_connect(call_med->strm.v.strm_dec_slot,
+					    w->rend_slot, NULL);
 	    if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
 		goto on_error;
@@ -1041,6 +1087,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    PJ_LOG(4,(THIS_FILE, "Setting up TX.."));
 	    pj_log_push_indent();
 
+	    /* Retrieve stream encoding port */
 	    status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 						 PJMEDIA_DIR_ENCODING,
 						 &media_port);
@@ -1078,8 +1125,20 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
                                     call_med, w->vp_cap);
 #endif
 	    
-	    /* Connect stream to capturer (via video window tee) */
-	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, media_port);
+	    /* Register stream encoding to conf, using tmp_pool should be fine
+	     * as bridge will create its own pool (using tmp_pool factory).
+	     */
+	    status = pjsua_vid_conf_add_port(tmp_pool, media_port, NULL,
+					     &call_med->strm.v.strm_enc_slot);
+	    if (status != PJ_SUCCESS) {
+		pj_log_pop_indent();
+		goto on_error;
+	    }
+
+	    /* Connect capturer to stream encoding (via conf) */
+	    status = pjsua_vid_conf_connect(w->cap_slot,
+					    call_med->strm.v.strm_enc_slot,
+					    NULL);
 	    if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
 		goto on_error;
@@ -1132,32 +1191,20 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
     
+    /* Unregister video stream ports (encode+decode) from conference */
+    pjsua_vid_conf_remove_port(call_med->strm.v.strm_enc_slot);
+    pjsua_vid_conf_remove_port(call_med->strm.v.strm_dec_slot);
+
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
-	pjmedia_port *media_port;
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
-	pj_status_t status;
 
-	/* Stop the capture before detaching stream and unsubscribing event */
-	pjmedia_vid_port_stop(w->vp_cap);
-
-	/* Disconnect video stream from capture device */
-	status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
-					     PJMEDIA_DIR_ENCODING,
-					     &media_port);
-	if (status == PJ_SUCCESS) {
-	    pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
-	}
-
-        /* Unsubscribe event */
+	/* Unsubscribe event */
 	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                   w->vp_cap);
 
-	/* Re-start capture again, if it is used by other stream */
-	if (w->ref_cnt > 1)
-	    pjmedia_vid_port_start(w->vp_cap);
-
+	/* Decrement ref count of preview video window */
 	dec_vid_win(call_med->strm.v.cap_win_id);
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
     }
@@ -1165,11 +1212,12 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 
-	/* Stop the render before unsubscribing event */
+	/* Unsubscribe event, but stop the render first */
 	pjmedia_vid_port_stop(w->vp_rend);
 	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                   w->vp_rend);
 
+	/* Decrement ref count of stream video window */
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
     }
@@ -1431,6 +1479,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
     }
 
     wi->rdr_dev = vparam.rend_id;
+    wi->slot_id = w->rend_slot;
     wi->hwnd = vparam.window;
     wi->show = !vparam.window_hide;
     wi->pos  = vparam.window_pos;
@@ -2042,10 +2091,13 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status == PJ_SUCCESS) {
 	w->preview_cap_id = cap_dev;
 	call_med->strm.v.cap_dev = cap_dev;
+	/* Yay, change capturer done! */
 	return PJ_SUCCESS;
     }
 
-    /* No it doesn't support fast switching. Do slow switching then.. */
+    /* Oh no, it doesn't support fast switching. Do normal change then,
+     * i.e: remove the old and create a new capture.
+     */
     status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 					 PJMEDIA_DIR_ENCODING, &media_port);
     if (status != PJ_SUCCESS)
@@ -2054,22 +2106,12 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                               w->vp_cap);
     
-    /* temporarily disconnect while we operate on the tee. */
-    pjmedia_vid_port_disconnect(w->vp_cap);
+    /* Disconnect the old capture device to stream encoding port */
+    status = pjsua_vid_conf_disconnect(w->cap_slot,
+				       call_med->strm.v.strm_enc_slot);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    /* = Detach stream port from the old capture device's tee = */
-    status = pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
-    if (status != PJ_SUCCESS) {
-	/* Something wrong, assume that media_port has been removed
-	 * and continue.
-	 */
-	PJ_PERROR(4,(THIS_FILE, status,
-		     "Warning: call %d: unable to remove video from tee",
-		     call->index));
-    }
-
-    /* Reconnect again immediately. We're done with w->tee */
-    pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
 
     /* = Attach stream port to the new capture device = */
 
@@ -2097,11 +2139,6 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     inc_vid_win(new_wid);
     new_w = &pjsua_var.win[new_wid];
-    
-    /* Connect stream to capturer (via video window tee) */
-    status = pjmedia_vid_tee_add_dst_port2(new_w->tee, 0, media_port);
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
     if (new_w->vp_rend) {
 	/* Start renderer */
@@ -2122,6 +2159,13 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 	    goto on_error;
     }
 
+    /* Connect capturer to stream encoding port (via conf) */
+    status = pjsua_vid_conf_connect(new_w->cap_slot,
+				    call_med->strm.v.strm_enc_slot,
+				    NULL);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     /* Finally */
     call_med->strm.v.cap_dev = cap_dev;
     call_med->strm.v.cap_win_id = new_wid;
@@ -2138,16 +2182,14 @@ on_error:
 	/* Unsubscribe, just in case */
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                   new_w->vp_cap);
-	/* Disconnect media port from the new capturer */
-	pjmedia_vid_tee_remove_dst_port(new_w->tee, media_port);
+
 	/* Release the new capturer */
 	dec_vid_win(new_wid);
     }
 
     /* Revert back to the old capturer */
-    pjmedia_vid_port_disconnect(w->vp_cap);
-    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, media_port);
-    pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
+    status = pjsua_vid_conf_connect(w->cap_slot,
+				    call_med->strm.v.strm_enc_slot, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -2370,6 +2412,203 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
 
     return pjmedia_vid_stream_is_running(call_med->strm.v.stream, dir);
 }
+
+
+/*****************************************************************************
+ * Video conference
+ */
+
+/*
+ * Get current number of active ports in the bridge.
+ */
+PJ_DEF(unsigned) pjsua_vid_conf_get_active_ports(void)
+{
+    return pjmedia_vid_conf_get_port_count(pjsua_var.vid_conf);
+}
+
+
+/*
+ * Enumerate all video conference ports.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
+					       unsigned *count)
+{
+    return pjmedia_vid_conf_enum_ports(pjsua_var.vid_conf,
+				       (unsigned*)id, count);
+}
+
+
+/*
+ * Get information about the specified video conference port
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
+					    pjsua_conf_port_id port_id,
+					    pjsua_vid_conf_port_info *info)
+{
+    pjmedia_vid_conf_port_info cinfo;
+    unsigned i;
+    pj_status_t status;
+
+    status = pjmedia_vid_conf_get_port_info(pjsua_var.vid_conf,
+					    (unsigned)port_id, &cinfo);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_bzero(info, sizeof(*info));
+    info->slot_id = port_id;
+    info->name = cinfo.name;
+    pjmedia_format_copy(&info->format, &cinfo.format);
+
+    /* Build array of listeners */
+    info->listener_cnt = cinfo.listener_cnt;
+    for (i=0; i<cinfo.listener_cnt; ++i) {
+	info->listeners[i] = cinfo.listener_slots[i];
+    }
+
+    /* Build array of transmitters */
+    info->transmitter_cnt = cinfo.transmitter_cnt;
+    for (i=0; i<cinfo.transmitter_cnt; ++i) {
+	info->transmitters[i] = cinfo.transmitter_slots[i];
+    }
+
+    return PJ_SUCCESS;
+
+}
+
+
+/*
+ * Add arbitrary video media port to PJSUA's video conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_add_port( pj_pool_t *pool,
+					     pjmedia_port *port,
+					     const void *param,
+					     pjsua_conf_port_id *p_id)
+{
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(param);
+
+    status = pjmedia_vid_conf_add_port(pjsua_var.vid_conf, pool,
+				       port, NULL, NULL, (unsigned*)p_id);
+    if (status != PJ_SUCCESS) {
+	if (p_id)
+	    *p_id = PJSUA_INVALID_ID;
+    }
+
+    return status;
+}
+
+
+/*
+ * Remove arbitrary slot from the video conference bridge.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id id)
+{
+    return pjmedia_vid_conf_remove_port(pjsua_var.vid_conf, (unsigned)id);
+}
+
+
+/*
+ * Establish unidirectional video flow from souce to sink.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
+					    pjsua_conf_port_id sink,
+					    const void *param)
+{
+    PJ_UNUSED_ARG(param);
+    return pjmedia_vid_conf_connect_port(pjsua_var.vid_conf, source, sink,
+					 NULL);
+}
+
+
+/*
+ * Disconnect video flow from the source to destination port.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
+					      pjsua_conf_port_id sink)
+{
+    return pjmedia_vid_conf_disconnect_port(pjsua_var.vid_conf, source, sink);
+}
+
+/*
+ * Get the video window associated with the call.
+ */
+PJ_DEF(pjsua_vid_win_id) pjsua_call_get_vid_win(pjsua_call_id call_id)
+{
+    pjsua_call *call;
+    pjsua_vid_win_id wid = PJSUA_INVALID_ID;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    /* Use PJSUA_LOCK() instead of acquire_call():
+     *  https://trac.pjsip.org/repos/ticket/1371
+     */
+    PJSUA_LOCK();
+
+    if (!pjsua_call_is_active(call_id))
+	goto on_return;
+
+    call = &pjsua_var.calls[call_id];
+    for (i = 0; i < call->med_cnt; ++i) {
+	if (call->media[i].type == PJMEDIA_TYPE_VIDEO &&
+	    (call->media[i].dir & PJMEDIA_DIR_DECODING))
+	{
+	    wid = call->media[i].strm.v.rdr_win_id;
+	    break;
+	}
+    }
+
+on_return:
+    PJSUA_UNLOCK();
+
+    return wid;
+}
+
+
+/*
+ * Get the video conference port identification associated with the call.
+ */
+PJ_DEF(pjsua_conf_port_id) pjsua_call_get_vid_conf_port(
+						    pjsua_call_id call_id,
+						    pjmedia_dir dir)
+{
+    pjsua_call *call;
+    pjsua_conf_port_id port_id = PJSUA_INVALID_ID;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(dir==PJMEDIA_DIR_ENCODING || dir==PJMEDIA_DIR_DECODING,
+		     PJ_EINVAL);
+
+    /* Use PJSUA_LOCK() instead of acquire_call():
+     *  https://trac.pjsip.org/repos/ticket/1371
+     */
+    PJSUA_LOCK();
+
+    if (!pjsua_call_is_active(call_id))
+	goto on_return;
+
+    call = &pjsua_var.calls[call_id];
+    for (i = 0; i < call->med_cnt; ++i) {
+	if (call->media[i].type == PJMEDIA_TYPE_VIDEO &&
+	    (call->media[i].dir & dir))
+	{
+	    port_id = (dir==PJMEDIA_DIR_ENCODING)?
+				    call->media[i].strm.v.strm_enc_slot :
+				    call->media[i].strm.v.strm_dec_slot;
+	    break;
+	}
+    }
+
+on_return:
+    PJSUA_UNLOCK();
+
+    return port_id;
+}
+
 
 #endif /* PJSUA_HAS_VIDEO */
 

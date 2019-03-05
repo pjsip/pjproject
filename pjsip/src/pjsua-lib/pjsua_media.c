@@ -1480,6 +1480,19 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	    }
 	    break;
 
+	case PJMEDIA_EVENT_FMT_CHANGED:
+	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
+		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
+		if (event->src == w->vp_rend) {
+		    /* Renderer just changed format, reconnect stream */
+		    pjsua_vid_conf_disconnect(call_med->strm.v.strm_dec_slot,
+					      w->rend_slot);
+		    pjsua_vid_conf_connect(call_med->strm.v.strm_dec_slot,
+					   w->rend_slot, NULL);
+		}
+	    }
+	    break;
+
 	default:
 	    break;
     }

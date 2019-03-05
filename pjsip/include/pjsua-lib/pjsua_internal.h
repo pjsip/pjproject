@@ -59,6 +59,8 @@ struct pjsua_call_media
 	/** Video stream */
 	struct {
 	    pjmedia_vid_stream  *stream;    /**< The video stream.	    */
+	    pjsua_conf_port_id	 strm_enc_slot;	/**< Stream encode slot	    */
+	    pjsua_conf_port_id	 strm_dec_slot;	/**< Stream decode slot	    */
 	    pjsua_vid_win_id	 cap_win_id;/**< The video capture window   */
 	    pjsua_vid_win_id	 rdr_win_id;/**< The video render window    */
 	    pjmedia_vid_dev_index cap_dev;  /**< The video capture device   */
@@ -403,7 +405,8 @@ typedef struct pjsua_vid_win
     unsigned	 		 ref_cnt;	/**< Reference counter.	*/
     pjmedia_vid_port		*vp_cap;	/**< Capture vidport.	*/
     pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
-    pjmedia_port		*tee;		/**< Video tee		*/
+    pjsua_conf_port_id		 cap_slot;	/**< Capturer conf slot */
+    pjsua_conf_port_id		 rend_slot;	/**< Renderer conf slot */
     pjmedia_vid_dev_index	 preview_cap_id;/**< Capture dev id	*/
     pj_bool_t			 preview_running;/**< Preview is started*/
     pj_bool_t			 is_native; 	/**< Preview is by dev  */
@@ -512,6 +515,7 @@ struct pjsua_data
 
     /* For keeping video device settings */
 #if PJSUA_HAS_VIDEO
+    pjmedia_vid_conf	 *vid_conf;
     pj_uint32_t		  vid_caps[PJMEDIA_VID_DEV_MAX_DEVS];
     pjmedia_vid_dev_param vid_param[PJMEDIA_VID_DEV_MAX_DEVS];
 #endif

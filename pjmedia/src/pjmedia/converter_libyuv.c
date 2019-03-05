@@ -36,6 +36,16 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
 				       pjmedia_frame *src_frame,
 				       pjmedia_frame *dst_frame);
 
+static pj_status_t libyuv_conv_convert2(
+				    pjmedia_converter	    *converter,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    void		    *param);
+
 static void libyuv_conv_destroy(pjmedia_converter *converter);
 
 static pjmedia_converter_factory_op libyuv_factory_op =
@@ -47,7 +57,8 @@ static pjmedia_converter_factory_op libyuv_factory_op =
 static pjmedia_converter_op libyuv_converter_op =
 {
     &libyuv_conv_convert,
-    &libyuv_conv_destroy
+    &libyuv_conv_destroy,
+    &libyuv_conv_convert2
 };
 
 typedef struct fmt_info
@@ -346,7 +357,7 @@ static int set_converter_act(pj_uint32_t src_id,
     pj_bool_t need_scale = PJ_FALSE;
 
     /* Convert to I420 or BGRA if needed. */
-    if ((src_id != PJMEDIA_FORMAT_I420) || (src_id != PJMEDIA_FORMAT_BGRA)) {
+    if ((src_id != PJMEDIA_FORMAT_I420) && (src_id != PJMEDIA_FORMAT_BGRA)) {
 	pj_uint32_t next_id = get_next_conv_fmt(src_id);
         if (get_converter_map(src_id, next_id, src_size, dst_size, ++act_num, 
                               act) != PJ_SUCCESS)
@@ -358,8 +369,12 @@ static int set_converter_act(pj_uint32_t src_id,
     }
 
     /* Scale if needed */
-    need_scale = ((src_size->w != dst_size->w) ||
-		  (src_size->h != dst_size->h));
+    //need_scale = ((src_size->w != dst_size->w) ||
+		  //(src_size->h != dst_size->h));
+
+    // Always enable scale, as this can be used for rendering a region of
+    // a frame to another region of similar/another frame.
+    need_scale = PJ_TRUE;
 
     if (need_scale) {
 	if (get_converter_map(current_id, current_id, src_size, dst_size, 
@@ -531,6 +546,168 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
 
 	(*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info, 
 						 &dst_fmt_info->apply_param);
+
+	switch (lconv->act[i].act_type) {
+	case CONV_PACK_TO_PACK:
+	    (*lconv->act[i].method.conv_pack_to_pack)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.planes[0], 
+			      dst_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.size.w, 
+			      dst_fmt_info->apply_param.size.h);
+	    break;
+	case CONV_PACK_TO_PLANAR:
+	    (*lconv->act[i].method.conv_pack_to_planar)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.planes[0], 
+			      dst_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.planes[1], 
+			      dst_fmt_info->apply_param.strides[1],
+			      dst_fmt_info->apply_param.planes[2], 
+			      dst_fmt_info->apply_param.strides[2],
+			      dst_fmt_info->apply_param.size.w, 
+			      dst_fmt_info->apply_param.size.h);
+	    break;
+	case CONV_PLANAR_TO_PACK:
+	    (*lconv->act[i].method.conv_planar_to_pack)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      (const uint8*)src_fmt_info->apply_param.planes[1],
+			      src_fmt_info->apply_param.strides[1],
+			      (const uint8*)src_fmt_info->apply_param.planes[2],
+			      src_fmt_info->apply_param.strides[2],
+			      dst_fmt_info->apply_param.planes[0], 
+			      dst_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.size.w, 
+			      dst_fmt_info->apply_param.size.h);
+	    break;
+	case CONV_PLANAR_TO_PLANAR:
+	    (*lconv->act[i].method.conv_planar_to_planar)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      (const uint8*)src_fmt_info->apply_param.planes[1],
+			      src_fmt_info->apply_param.strides[1],
+			      (const uint8*)src_fmt_info->apply_param.planes[2],
+			      src_fmt_info->apply_param.strides[2],
+			      dst_fmt_info->apply_param.planes[0], 
+			      dst_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.planes[1], 
+			      dst_fmt_info->apply_param.strides[1],
+			      dst_fmt_info->apply_param.planes[2], 
+			      dst_fmt_info->apply_param.strides[2],
+			      dst_fmt_info->apply_param.size.w, 
+			      dst_fmt_info->apply_param.size.h);
+	    break;
+	case SCALE_PACK:
+	    (*lconv->act[i].method.scale_pack)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      src_fmt_info->apply_param.size.w,
+			      src_fmt_info->apply_param.size.h,
+			      (uint8*)dst_fmt_info->apply_param.planes[0],
+			      dst_fmt_info->apply_param.strides[0],
+			      dst_fmt_info->apply_param.size.w,
+			      dst_fmt_info->apply_param.size.h,
+			      LIBYUV_FILTER_MODE);
+	    break;	
+	case SCALE_PLANAR:
+	    (*lconv->act[i].method.scale_planar)(
+			      (const uint8*)src_fmt_info->apply_param.planes[0],
+			      src_fmt_info->apply_param.strides[0],
+			      (const uint8*)src_fmt_info->apply_param.planes[1],
+			      src_fmt_info->apply_param.strides[1],
+			      (const uint8*)src_fmt_info->apply_param.planes[2],
+			      src_fmt_info->apply_param.strides[2],
+			      src_fmt_info->apply_param.size.w,
+			      src_fmt_info->apply_param.size.h,
+			      (uint8*)dst_fmt_info->apply_param.planes[0],
+			      dst_fmt_info->apply_param.strides[0],
+			      (uint8*)dst_fmt_info->apply_param.planes[1],
+			      dst_fmt_info->apply_param.strides[1],
+			      (uint8*)dst_fmt_info->apply_param.planes[2],
+			      dst_fmt_info->apply_param.strides[2],
+			      dst_fmt_info->apply_param.size.w,
+			      dst_fmt_info->apply_param.size.h,
+			      LIBYUV_FILTER_MODE);
+	    break;	
+	};	
+    }    
+    return PJ_SUCCESS;
+}
+
+static pj_status_t libyuv_conv_convert2(
+				    pjmedia_converter	    *converter,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    pjmedia_converter_convert_setting
+							    *param)
+{
+    struct libyuv_converter *lconv = (struct libyuv_converter*)converter;
+    int i = 0;
+    fmt_info *src_info = &lconv->act[0].src_fmt_info;
+    fmt_info *dst_info = &lconv->act[lconv->act_num-1].dst_fmt_info;
+    pjmedia_rect_size orig_src_size;
+    pjmedia_rect_size orig_dst_size;
+
+    PJ_UNUSED_ARG(param);
+
+    /* Save original conversion sizes */
+    orig_src_size = src_info->apply_param.size;
+    orig_dst_size = dst_info->apply_param.size;
+
+    /* Set the first act buffer from src frame, and overwrite size. */
+    src_info->apply_param.buffer = src_frame->buf;
+    src_info->apply_param.size   = *src_frame_size;
+
+    /* Set the last act buffer from dst frame, and overwrite size. */
+    dst_info->apply_param.buffer = dst_frame->buf;
+    dst_info->apply_param.size   = *dst_frame_size;
+
+    for (i=0;i<lconv->act_num;++i) {
+	/* Use destination info as the source info for the next act. */
+	struct fmt_info *src_fmt_info = (i==0)? src_info : 
+					&lconv->act[i-1].dst_fmt_info;
+
+	struct fmt_info *dst_fmt_info = &lconv->act[i].dst_fmt_info;	
+	
+	(*src_fmt_info->vid_fmt_info->apply_fmt)(src_fmt_info->vid_fmt_info, 
+						 &src_fmt_info->apply_param);
+
+	(*dst_fmt_info->vid_fmt_info->apply_fmt)(dst_fmt_info->vid_fmt_info, 
+						 &dst_fmt_info->apply_param);
+
+	/* For first and last acts, apply plane buffer offset and return back
+	 * the original sizes.
+	 */
+	if (i == 0) {
+	    pjmedia_video_apply_fmt_param *ap = &src_fmt_info->apply_param;
+	    unsigned j;
+	    for (j = 0; j < src_fmt_info->vid_fmt_info->plane_cnt; ++j) {
+		int y = src_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+			ap->size.h;
+		ap->planes[j] += y * ap->strides[j] + src_pos->x *
+				 ap->strides[j] / ap->size.w;
+	    }
+	    ap->size = orig_src_size;
+	}
+	if (i == lconv->act_num-1) {
+	    pjmedia_video_apply_fmt_param *ap = &dst_fmt_info->apply_param;
+	    unsigned j;
+	    for (j = 0; j < dst_fmt_info->vid_fmt_info->plane_cnt; ++j)
+	    {
+		int y = dst_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+			ap->size.h;
+		ap->planes[j] += y * ap->strides[j] + dst_pos->x *
+				 ap->strides[j] / ap->size.w;
+	    }
+	    ap->size = orig_dst_size;
+	}
 
 	switch (lconv->act[i].act_type) {
 	case CONV_PACK_TO_PACK:

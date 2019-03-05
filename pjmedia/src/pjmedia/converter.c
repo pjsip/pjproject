@@ -191,4 +191,20 @@ PJ_DEF(void) pjmedia_converter_destroy(pjmedia_converter *cv)
     (*cv->op->destroy)(cv);
 }
 
+PJ_DEF(pj_status_t) pjmedia_converter_convert2(
+				    pjmedia_converter	    *cv,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    void		    *param)
+{
+    if (!cv->op->convert2)
+	return PJ_ENOTSUP;
+
+    return (*cv->op->convert2)(cv, src_frame, src_frame_size, src_pos,
+			       dst_frame, dst_frame_size, dst_pos, param);
+}
 

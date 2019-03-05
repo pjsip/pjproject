@@ -296,6 +296,9 @@ static void vid_show_help()
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
     puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
     puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
+    puts("| vid conf list             List all video ports in video conference bridge   |");
+    puts("| vid conf cc P Q           Connect port P to Q in the video conf bridge      |");
+    puts("| vid conf cd P Q           Disconnect port P to Q in the video conf bridge   |");
     puts("+=============================================================================+");
     printf("| Video will be %s in the next offer/answer %s                            |\n",
 	   (vid_enabled? "enabled" : "disabled"), (vid_enabled? " " : ""));
@@ -591,6 +594,80 @@ static void vid_handle_menu(char *menuin)
 		PJ_PERROR(1,(THIS_FILE, status, "Set codec size error"));
 	} else
 	    goto on_error;
+    } else if (strcmp(argv[1], "conf")==0) {
+	pj_status_t status;
+
+	if (argc==3 && strcmp(argv[2], "list")==0) {
+	    pjsua_conf_port_id id[100];
+	    unsigned count = PJ_ARRAY_SIZE(id);
+
+	    status = pjsua_vid_conf_enum_ports(id, &count);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status,
+			     "Failed enumerating video conf bridge ports"));
+	    } else {
+		unsigned i;
+		printf(" Video conference has %d ports:\n", count);
+		printf(" id name                   format               rx           tx    \n");
+		printf(" ------------------------------------------------------------------\n");
+		for (i=0; i<count; ++i) {
+		    char li_list[PJSUA_MAX_CALLS*4];
+		    char tr_list[PJSUA_MAX_CALLS*4];
+		    char s[32];
+		    unsigned j;
+		    pjsua_vid_conf_port_info info;
+		    pjmedia_rect_size *size;
+		    pjmedia_ratio *fps;
+
+		    pjsua_vid_conf_get_port_info(id[i], &info);
+		    size = &info.format.det.vid.size;
+		    fps = &info.format.det.vid.fps;
+
+		    li_list[0] = '\0';
+		    for (j=0; j<info.listener_cnt; ++j) {
+			char s[10];
+			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+					 info.listeners[j],
+					 (j==info.listener_cnt-1)?"":",");
+			pj_ansi_strcat(li_list, s);
+		    }
+		    tr_list[0] = '\0';
+		    for (j=0; j<info.transmitter_cnt; ++j) {
+			char s[10];
+			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+					 info.transmitters[j],
+					 (j==info.transmitter_cnt-1)?"":",");
+			pj_ansi_strcat(tr_list, s);
+		    }
+		    pjmedia_fourcc_name(info.format.id, s);
+		    s[4] = ' ';
+		    pj_ansi_snprintf(s+5, sizeof(s)-5, "%dx%d@%.1f",
+				     size->w, size->h,
+				     (float)(fps->num*1.0/fps->denum));
+		    printf("%3d %.*s%.*s %s%.*s %s%.*s %s\n",
+			   id[i],
+			   (int)info.name.slen, info.name.ptr,
+			   22-(int)info.name.slen, "                   ",
+			   s,
+			   20-pj_ansi_strlen(s), "                    ",
+			   tr_list,
+			   12-pj_ansi_strlen(tr_list), "            ",
+			   li_list);
+		}
+	    }
+	} else if (argc==5 && strcmp(argv[2], "cc")==0) {
+	    int P, Q;
+	    P = atoi(argv[3]);
+	    Q = atoi(argv[4]);
+	    pjsua_vid_conf_connect(P, Q, NULL);
+	} else if (argc==5 && strcmp(argv[2], "cd")==0) {
+	    int P, Q;
+	    P = atoi(argv[3]);
+	    Q = atoi(argv[4]);
+	    pjsua_vid_conf_disconnect(P, Q);
+	} else {
+	    goto on_error;
+	}
     } else
 	goto on_error;
 

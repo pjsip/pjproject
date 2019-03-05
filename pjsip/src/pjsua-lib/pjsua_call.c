@@ -152,6 +152,8 @@ static void reset_call(pjsua_call_id id)
 	call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
+	call_med->strm.v.strm_dec_slot = PJSUA_INVALID_ID;
+	call_med->strm.v.strm_enc_slot = PJSUA_INVALID_ID;
 	call_med->call = call;
 	call_med->idx = i;
 	call_med->tp_auto_del = PJ_TRUE;
@@ -2223,6 +2225,11 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 
 	    info->media[info->media_cnt].stream.vid.win_in =
 						call_med->strm.v.rdr_win_id;
+
+	    info->media[info->media_cnt].stream.vid.dec_slot =
+						call_med->strm.v.strm_dec_slot;
+	    info->media[info->media_cnt].stream.vid.enc_slot =
+						call_med->strm.v.strm_enc_slot;
 
 	    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 		cap_dev = call_med->strm.v.cap_dev;
