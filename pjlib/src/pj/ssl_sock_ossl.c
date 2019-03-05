@@ -390,6 +390,8 @@ static pj_bool_t io_empty(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
+    PJ_UNUSED_ARG(cb);
+
     return !BIO_pending(ossock->ossl_wbio);
 }
 
@@ -397,6 +399,8 @@ static pj_size_t io_size(pj_ssl_sock_t *ssock, circ_buf_t *cb)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     char *data;
+
+    PJ_UNUSED_ARG(cb);
 
     return BIO_get_mem_data(ossock->ossl_wbio, &data);
 }
@@ -406,6 +410,8 @@ static void io_read(pj_ssl_sock_t *ssock, circ_buf_t *cb,
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     char *data;
+
+    PJ_UNUSED_ARG(cb);
 
     BIO_get_mem_data(ossock->ossl_wbio, &data);
     pj_memcpy(dst, data, len);
