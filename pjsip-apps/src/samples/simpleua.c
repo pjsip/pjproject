@@ -593,6 +593,9 @@ int main(int argc, char *argv[])
 #   if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     pjmedia_codec_openh264_vid_deinit();
 #   endif
+#   if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
+    pjmedia_codec_vid_toolbox_deinit();
+#   endif
 
 #endif
 
