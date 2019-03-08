@@ -1352,8 +1352,12 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
         /* We are passive and the stream is passive.
          * The decoding counterpart is in vid_pasv_port_put_frame().
          */
-	status = pjmedia_vid_dev_stream_get_frame(vp->strm, (vp->conv.conv?
-                                                  vp->frm_buf: frame));
+    	pjmedia_frame *get_frm = vp->conv.conv? vp->frm_buf : frame;
+
+    	if (vp->conv.conv)
+            get_frm->size = vp->frm_buf_size;
+
+    	status = pjmedia_vid_dev_stream_get_frame(vp->strm, get_frm);
 	if (status != PJ_SUCCESS)
 	    return status;
 
