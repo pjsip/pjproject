@@ -1480,6 +1480,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	    }
 	    break;
 
+#if PJSUA_HAS_VIDEO
 	case PJMEDIA_EVENT_FMT_CHANGED:
 	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
@@ -1492,6 +1493,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		}
 	    }
 	    break;
+#endif
 
 	default:
 	    break;
