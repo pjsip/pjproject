@@ -609,11 +609,21 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
     }
 
     if (i != src_port->listener_cnt) {
+	unsigned k;
+
 	pj_assert(j != dst_port->transmitter_cnt);
 	pj_assert(src_port->listener_cnt > 0 && 
 		  src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
 	pj_assert(dst_port->transmitter_cnt > 0 && 
 		  dst_port->transmitter_cnt < vid_conf->opt.max_slot_cnt);
+
+	/* Cleanup all render states of the sink */
+	for (k=0; k<dst_port->transmitter_cnt; ++k)
+	    cleanup_render_state(dst_port, k);
+
+	/* Update listeners array of the source and transmitters array of
+	 * the sink.
+	 */
 	pj_array_erase(src_port->listener_slots, sizeof(unsigned), 
 		       src_port->listener_cnt, i);
 	pj_array_erase(dst_port->transmitter_slots, sizeof(unsigned), 
@@ -621,7 +631,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	--src_port->listener_cnt;
 	--dst_port->transmitter_cnt;
 
-	cleanup_render_state(src_port, j);
+	/* Update render states of the sink */
 	update_render_state(vid_conf, dst_port);
 
 	--vid_conf->connect_cnt;
@@ -805,6 +815,9 @@ static void cleanup_render_state(vconf_port *cp,
 
     if (cp->render_pool[transmitter_idx]) {
 	pj_pool_safe_release(&cp->render_pool[transmitter_idx]);
+
+	TRACE_((THIS_FILE, "Cleaned up render state for connection %d->%d",
+		cp->transmitter_slots[transmitter_idx], cp->idx));
     }
 }
 
@@ -821,7 +834,6 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     pjmedia_rect_size size, tr_size[4];
     unsigned i;
     pj_status_t status;
-    char buf[5];
 
     /* Nothing to render, just return */
     if (cp->transmitter_cnt == 0)
@@ -859,11 +871,17 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 	pj_pool_t *pool;
 	render_state *rs;
 	pjmedia_conversion_param cparam;
+	char tmp_buf[32];
 
 	/* Create pool & render state */
-	pool = pj_pool_create(cp->pool->factory, "vconf_rdr", 128, 128, NULL);
+	pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "vcport_rs_%d->%d",
+			 cp->transmitter_slots[i], cp->idx);
+	pool = pj_pool_create(cp->pool->factory, tmp_buf, 128, 128, NULL);
 	cp->render_pool[i] = pool;
 	rs = cp->render_states[i] = PJ_POOL_ZALLOC_T(pool, render_state);
+
+	TRACE_((THIS_FILE, "Created render state for connection %d->%d",
+			   cp->transmitter_slots[i], cp->idx));
 
 	/* Setup format & frame */
 	rs->src_fmt_id = tr_fmt_id[i];
@@ -962,8 +980,8 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 	if (rs->src_rect.size.h < tr_size[i].h)
 	    rs->src_rect.coord.y = (tr_size[i].h - rs->src_rect.size.h)/2;
 
-	TRACE_((THIS_FILE, "src%d=%s/%dx%d->%dx%d@%d,%d dst=%dx%d@%d,%d",
-			   i, pjmedia_fourcc_name(tr_fmt_id[i], buf),
+	TRACE_((THIS_FILE, "src#%d=%s/%dx%d->%dx%d@%d,%d dst=%dx%d@%d,%d",
+			   i, pjmedia_fourcc_name(tr_fmt_id[i], tmp_buf),
 			   tr_size[i].w, tr_size[i].h,
 			   rs->src_rect.size.w, rs->src_rect.size.h,
 			   rs->src_rect.coord.x, rs->src_rect.coord.y,
