@@ -385,6 +385,11 @@ int main(int argc, char *argv[])
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
+    status = pjmedia_codec_vid_toolbox_init(NULL, &cp.factory);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+#endif
+
 #   if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     status = pjmedia_codec_openh264_vid_init(NULL, &cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -398,6 +403,10 @@ int main(int argc, char *argv[])
 
 #endif	/* PJMEDIA_HAS_VIDEO */
     
+    /* Create event manager */
+    status = pjmedia_event_mgr_create(pool, 0, NULL);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
     /* 
      * Create media transport used to send/receive RTP/RTCP socket.
      * One media transport is needed for each call. Application may
@@ -592,6 +601,9 @@ int main(int argc, char *argv[])
 	if (g_med_transport[i])
 	    pjmedia_transport_close(g_med_transport[i]);
     }
+
+    /* Destroy event manager */
+    pjmedia_event_mgr_destroy(NULL); 
 
     /* Deinit pjmedia endpoint */
     if (g_med_endpt)
