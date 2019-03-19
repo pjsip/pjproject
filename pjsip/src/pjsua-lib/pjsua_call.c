@@ -1376,6 +1376,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int call_id = -1;
     int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
+    pj_bool_t should_dec_dlg = PJ_TRUE;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -1802,7 +1803,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 					  offer,
 					  &sip_err_code, PJ_TRUE,
 					  &on_incoming_call_med_tp_complete);
-	if (status == PJ_SUCCESS) {
+	if (status == PJ_EPENDING) {
+	    /* on_incoming_call_med_tp_complete() will call
+	     * pjsip_dlg_dec_session().
+	     */
+	    should_dec_dlg = PJ_FALSE;
+	} else  if (status == PJ_SUCCESS) {
+	    /* on_incoming_call_med_tp_complete2() will call
+	     * pjsip_dlg_dec_session().
+	     */
+	    should_dec_dlg = PJ_FALSE;
+
 	    status = on_incoming_call_med_tp_complete2(call_id, NULL, 
 						       rdata, &sip_err_code, 
 						       &response);
@@ -1841,8 +1852,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE);
 	    }
 	    pjsip_dlg_dec_lock(dlg);
-
-	    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 
 	    call->inv = NULL;
 	    call->async_call.dlg = NULL;
@@ -1985,6 +1994,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 on_return:
     if (dlg) {
         pjsip_dlg_dec_lock(dlg);
+    }
+
+    if (should_dec_dlg) {
+	pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
     }
 
     if (call && call->incoming_data) {
