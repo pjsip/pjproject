@@ -696,8 +696,13 @@ void AudDevManager::setCaptureDev(int capture_dev) const throw(Error)
 
     param.capture_dev = capture_dev;
     param.playback_dev = getPlaybackDev();
-    if (param.playback_dev == PJMEDIA_AUD_INVALID_DEV)
+    
+    /* Normalize invalid ID or null device to default device */
+    if (param.playback_dev == PJMEDIA_AUD_INVALID_DEV ||
+	param.playback_dev == PJSUA_SND_NULL_DEV)
+    {
         param.playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+    }
 
     param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
 
@@ -709,10 +714,15 @@ void AudDevManager::setPlaybackDev(int playback_dev) const throw(Error)
     pjsua_snd_dev_param param;
     pjsua_snd_dev_param_default(&param);    
 
-    param.capture_dev = getCaptureDev();
-    if (param.capture_dev == PJMEDIA_AUD_INVALID_DEV)
-        param.capture_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
     param.playback_dev = playback_dev;
+    param.capture_dev = getCaptureDev();
+
+    /* Normalize invalid ID or null device to default device */
+    if (param.capture_dev == PJMEDIA_AUD_INVALID_DEV ||
+	param.capture_dev == PJSUA_SND_NULL_DEV)
+    {
+        param.capture_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    }
 
     param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
 
