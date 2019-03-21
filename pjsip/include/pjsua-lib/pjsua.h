@@ -7490,8 +7490,10 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
  * some sound devices may produce jittery clock. To improve media clock,
  * application can install Null Sound Device (i.e: using
  * pjsua_set_null_snd_dev()), which will act as a master port, and instantiate
- * the sound device as extra sound device. But note that extra sound device
- * will not have auto-close upon idle feature.
+ * the sound device as extra sound device.
+ *
+ * Note that extra sound device will not have auto-close upon idle feature.
+ * Also note that currently extra sound device only supports mono channel.
  */
 typedef struct pjsua_ext_snd_dev pjsua_ext_snd_dev;
 
@@ -7499,7 +7501,8 @@ typedef struct pjsua_ext_snd_dev pjsua_ext_snd_dev;
 /**
  * Create an extra sound device and register it to conference bridge.
  *
- * @param snd_param	Sound device port param.
+ * @param snd_param	Sound device port param. Currently this only supports
+ *			mono channel, so channel count must be set to 1.
  * @param p_snd		The extra sound device instance.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.

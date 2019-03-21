@@ -1400,13 +1400,17 @@ private:
 
 /**
  * Extra audio device. This class allows application to have multiple
- * sound device instances active concurrently. Application may also use
- * this class to improve media clock. Normally media clock is driven by
- * sound device in master port, but unfortunately some sound devices may
- * produce jittery clock. To improve media clock, application can install
- * Null Sound Device (i.e: using AudDevManager::setNullDev()), which will
- * act as a master port, and install the sound device as extra sound device.
+ * sound device instances active concurrently.
+ 
+ * Application may also use this class to improve media clock. Normally
+ * media clock is driven by sound device in master port, but unfortunately
+ * some sound devices may produce jittery clock. To improve media clock,
+ * application can install Null Sound Device (i.e: using
+ * AudDevManager::setNullDev()), which will act as a master port, and
+ * install the sound device as extra sound device.
+ *
  * Note that extra sound device will not have auto-close upon idle feature.
+ * Also note that the extra sound device only supports mono channel.
  */
 class ExtraAudioDevice : public AudioMedia
 {
@@ -1425,8 +1429,9 @@ public:
     virtual ~ExtraAudioDevice();
 
     /**
-     * Open the audio device using format (e.g.: clock rate, channel count,
-     * samples per frame) matched to the conference bridge's format.
+     * Open the audio device using format (e.g.: clock rate, bit per sample,
+     * samples per frame) matched to the conference bridge's format, except
+     * the channel count, which will be set to one (mono channel).
      */
     void open();
 

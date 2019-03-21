@@ -2387,6 +2387,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(param && p_snd, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param->base.channel_count == 1, PJMEDIA_ENCCHANNEL);
 
     pool = pjsua_pool_create("extsnd%p", 512, 512);
     if (!pool)

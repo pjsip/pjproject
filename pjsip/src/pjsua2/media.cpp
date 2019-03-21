@@ -1094,8 +1094,9 @@ void ExtraAudioDevice::open()
     param.base.play_id = playDev;
     param.base.rec_id = recDev;
     param.base.clock_rate = master_info.clock_rate;
-    param.base.channel_count = master_info.channel_count;
-    param.base.samples_per_frame = master_info.samples_per_frame;
+    param.base.channel_count = 1;
+    param.base.samples_per_frame = master_info.samples_per_frame /
+				   master_info.channel_count;
     param.base.bits_per_sample = master_info.bits_per_sample;
 
     /* Create the extra sound device */
