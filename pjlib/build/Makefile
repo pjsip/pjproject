@@ -36,7 +36,7 @@ export PJLIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 	os_info.o pool.o pool_buf.o pool_caching.o pool_dbg.o rand.o \
 	rbtree.o sock_common.o sock_qos_common.o \
 	ssl_sock_common.o ssl_sock_ossl.o ssl_sock_gtls.o ssl_sock_dump.o \
-	string.o timer.o types.o
+	ssl_sock_darwin.o string.o timer.o types.o
 export PJLIB_CFLAGS += $(_CFLAGS)
 export PJLIB_CXXFLAGS += $(_CXXFLAGS)
 export PJLIB_LDFLAGS += $(_LDFLAGS)

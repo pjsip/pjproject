@@ -1542,7 +1542,12 @@ Optional Packages:
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
                           "em64t. Default is blank for IA32"
-  --with-ssl=DIR          Specify alternate SSL library prefix. This option
+  --with-ssl=SSL_BACKEND/DIR
+                          Specify alternate SSL library prefix or SSL
+                          native-backend. You can specify "darwin" as the
+                          native iOS/MacOS backend using Security framework,
+                          or you can specify an alternate SSL library prefix
+                          directory. If a directory is specified, this option
                           will try to find OpenSSL first, then if not found,
                           GnuTLS. To skip OpenSSL finding, use --with-gnutls
                           option instead.
@@ -7951,7 +7956,42 @@ $as_echo "Checking if SSL support is disabled... yes" >&6; }
 
 else
 
-                if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
+	        if test "x$with_ssl" = "xdarwin"; then
+	            SAVED_LIBS="$LIBS"
+	            LIBS="-framework Security"
+	            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_ssl_backend=darwin
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+		    LIBS="$SAVED_LIBS"
+	            if test "x$ac_ssl_backend" = "xdarwin"; then
+		        $as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
+
+		        $as_echo "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_DARWIN" >>confdefs.h
+
+		        LIBS="$LIBS -framework Security"
+		        ac_ssl_backend="darwin"
+	  	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... yes" >&5
+$as_echo "Checking if Security framework for Darwin SSL is available... yes" >&6; }
+	            else
+	                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... no" >&5
+$as_echo "Checking if Security framework for Darwin SSL is available... no" >&6; }
+		    fi
+		fi
+
+	        if test "x$ac_ssl_backend" = "x" -a "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
                     CPPFLAGS="$CPPFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
@@ -7959,7 +7999,7 @@ else
 $as_echo "Using SSL prefix... $with_ssl" >&6; }
                 fi
 
-	        if test "x$with_gnutls" = "xno"; then
+	        if test "x$ac_ssl_backend" = "x" -a "x$with_gnutls" = "xno"; then
 
 		    { $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OpenSSL installations.." >&5
 $as_echo "checking for OpenSSL installations.." >&6; }

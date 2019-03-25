@@ -22,7 +22,12 @@
 
 
 #define CERT_DIR		    "../build/"
-#define CERT_CA_FILE		    CERT_DIR "cacert.pem"
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+/* If we use Darwin SSL, use the cert in DER format. */
+#   define CERT_CA_FILE		    CERT_DIR "cacert.der"
+#else
+#   define CERT_CA_FILE		    CERT_DIR "cacert.pem"
+#endif
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS	    ""
@@ -886,6 +891,14 @@ static int client_non_ssl(unsigned ms_timeout)
 	pj_str_t cert_file = pj_str(CERT_FILE);
 	pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
 	pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
+
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+	PJ_LOG(3, ("", "Darwin SSL requires the private key to be "
+		       "inside the Keychain. So double click on "
+		       "the file pjlib/build/privkey.p12 to "
+		       "place it in the Keychain. "
+		       "The password is \"pjsip\"."));
+#endif
 
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
 	status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
