@@ -1541,14 +1541,10 @@ dnl #
 
 dnl # SSL alt prefix
 AC_ARG_WITH(ssl,
-    AS_HELP_STRING([--with-ssl=SSL_BACKEND/DIR],
-		   [Specify alternate SSL library prefix or SSL native-backend.
-		    You can specify "darwin" as the native iOS/MacOS backend
-		    using Security framework, or you can specify an alternate
-		    SSL library prefix directory. If a directory
-		    is specified, this option will try to find OpenSSL first,
-		    then if not found, GnuTLS. To skip OpenSSL finding, use
-		    --with-gnutls option instead.]),
+    AS_HELP_STRING([--with-ssl=DIR],
+                   [Specify alternate SSL library prefix. This option will try
+                    to find OpenSSL first, then if not found, GnuTLS. To skip
+                    OpenSSL finding, use --with-gnutls option instead.]),
     [],
     [with_ssl=no]
     )
@@ -1570,6 +1566,33 @@ dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_SUBST(ac_ssl_has_aes_gcm,0)
 AC_SUBST(ac_ssl_backend)
+
+AC_ARG_ENABLE(darwin-ssl,
+	      AS_HELP_STRING([--disable-darwin-ssl],
+			     [Exclude Darwin SSL (default: autodetect)]),
+	      [if test "$enable_darwin_ssl" = "no"; then
+		 AC_MSG_RESULT([Checking if Darwin SSL support is disabled... yes])
+	        fi],
+	      [
+		case $target in
+	  	*darwin*)
+	            SAVED_LIBS="$LIBS"
+	            LIBS="-framework Security"
+	            AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
+		                   [ac_ssl_backend=darwin],)
+		    LIBS="$SAVED_LIBS"
+	            if test "x$ac_ssl_backend" = "xdarwin"; then
+		        AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+		        AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_DARWIN)
+		        LIBS="$LIBS -framework Security"
+	  	        AC_MSG_RESULT([Checking if Security framework for Darwin SSL is available... yes])
+	            else
+	                AC_MSG_RESULT([Checking if Security framework for Darwin SSL is available... no])
+		    fi
+		    ;;
+		esac
+	      ])
+
 AC_ARG_ENABLE(ssl,
 	      AS_HELP_STRING([--disable-ssl],
 			     [Exclude SSL support the build (default: autodetect)])
@@ -1581,32 +1604,16 @@ AC_ARG_ENABLE(ssl,
 	        fi
 	      ],
 	      [
-	        if test "x$with_ssl" = "xdarwin"; then
-	            SAVED_LIBS="$LIBS"
-	            LIBS="-framework Security"
-	            AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
-		                   [ac_ssl_backend=darwin],)
-		    LIBS="$SAVED_LIBS"
-	            if test "x$ac_ssl_backend" = "xdarwin"; then
-		        AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-		        AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_DARWIN)
-		        LIBS="$LIBS -framework Security"
-		        ac_ssl_backend="darwin"
-	  	        AC_MSG_RESULT([Checking if Security framework for Darwin SSL is available... yes])
-	            else
-	                AC_MSG_RESULT([Checking if Security framework for Darwin SSL is available... no])
-		    fi
-		fi
-	        
-	        if test "x$ac_ssl_backend" = "x" -a "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
+	        if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
                     CFLAGS="$CFLAGS -I$with_ssl/include"
                     CPPFLAGS="$CPPFLAGS -I$with_ssl/include"
                     LDFLAGS="$LDFLAGS -L$with_ssl/lib"
                     AC_MSG_RESULT([Using SSL prefix... $with_ssl])
                 fi
 
-	        if test "x$ac_ssl_backend" = "x" -a "x$with_gnutls" = "xno"; then
-
+	        if test "x$with_gnutls" = "xno"; then
+		    # We still need to check for OpenSSL installations even if
+		    # we find Darwin SSL above since DTLS requires OpenSSL.
 		    AC_MSG_RESULT([checking for OpenSSL installations..])
 		    AC_SUBST(openssl_h_present)
 		    AC_SUBST(libssl_present)
@@ -1632,11 +1639,13 @@ AC_ARG_ENABLE(ssl,
 				AC_MSG_RESULT([OpenSSL AES GCM support not found, SRTP will only support AES CM cryptos])
 			fi
 
-			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
-			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
-			AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-			AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_OPENSSL)
-			ac_ssl_backend="openssl"
+    		        if test "x$ac_ssl_backend" = "x"; then
+			    # PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
+			    #AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
+			    AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
+			    AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_OPENSSL)
+			    ac_ssl_backend="openssl"
+			fi
 		    else
 			AC_MSG_RESULT([** OpenSSL libraries not found **])
 		    fi
