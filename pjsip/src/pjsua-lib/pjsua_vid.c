@@ -1157,6 +1157,25 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    inc_vid_win(wid);
 	    call_med->strm.v.cap_win_id = wid;
 	    pj_log_pop_indent();
+
+	} else if (si->dir & PJMEDIA_DIR_ENCODING && call->local_hold) {
+	    /* This is similar as above, but we are on local hold. So
+	     * we just get the stream encoding port and add it to the
+	     * video conference, in order for the stream to be able to
+	     * keep sending keep-alive.
+	     */
+	    PJ_LOG(4,(THIS_FILE, "Setting up TX.."));
+
+	    status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
+						 PJMEDIA_DIR_ENCODING,
+						 &media_port);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    status = pjsua_vid_conf_add_port(tmp_pool, media_port, NULL,
+					     &call_med->strm.v.strm_enc_slot);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
 	}
 
     }

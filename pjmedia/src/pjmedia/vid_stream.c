@@ -74,12 +74,6 @@
  */
 #define MIN_CHUNKS_PER_FRM	30
 
-/* Video stream keep-alive feature is currently disabled. */
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
-#   undef PJMEDIA_STREAM_ENABLE_KA
-#   define PJMEDIA_STREAM_ENABLE_KA 0
-#endif
-
 
 /**
  * Media channel.
@@ -907,16 +901,13 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent, 
 					   &frame->timestamp);
-        /* Video stream keep-alive feature is currently disabled. */
-        /*
+
         if (dtx_duration >
-	    PJMEDIA_STREAM_KA_INTERVAL *
-            PJMEDIA_PIA_SRATE(&channel->port.info))
+	    PJMEDIA_STREAM_KA_INTERVAL * stream->info.codec_info.clock_rate)
 	{
 	    send_keep_alive_packet(stream);
 	    stream->last_frm_ts_sent = frame->timestamp;
 	}
-        */
     }
 #endif
 
