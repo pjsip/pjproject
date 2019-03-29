@@ -1145,12 +1145,13 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    }
 
 	    /* Start capturer */
-	    if (just_created) {
+	    if (just_created && acc->cfg.vid_out_auto_transmit) {
 		status = pjmedia_vid_port_start(w->vp_cap);
 		if (status != PJ_SUCCESS) {
 		    pj_log_pop_indent();
 		    goto on_error;
 		}
+		w->cap_started = PJ_TRUE;
 	    }
 
 	    /* Done */
@@ -2257,7 +2258,23 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
     }
 
     if (enable) {
-	/* Start stream in encoding direction */
+	pjsua_vid_win *w;
+	pjsua_vid_win_id wid;
+
+	wid = vid_preview_get_win(call_med->strm.v.cap_dev, PJ_FALSE);
+	pj_assert(wid != PJSUA_INVALID_ID);
+
+	w = &pjsua_var.win[wid];
+
+	if (!w->cap_started) {
+	    /* Start the video capture first */
+	    status = pjmedia_vid_port_start(w->vp_cap);
+	    if (status != PJ_SUCCESS)
+	        return status;
+	    w->cap_started = PJ_TRUE;
+	}
+	
+	/* Resume stream in encoding direction */
 	status = pjmedia_vid_stream_resume(call_med->strm.v.stream,
 					   PJMEDIA_DIR_ENCODING);
     } else {
