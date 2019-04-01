@@ -410,8 +410,6 @@ typedef struct pjsua_vid_win
     pjmedia_vid_dev_index	 preview_cap_id;/**< Capture dev id	*/
     pj_bool_t			 preview_running;/**< Preview is started*/
     pj_bool_t			 is_native; 	/**< Preview is by dev  */
-    pj_bool_t			 cap_started;	/**< Has the capture
-    						     been started?	*/
 } pjsua_vid_win;
 
 
@@ -876,7 +874,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 				     const pjmedia_sdp_session *remote_sdp);
 
 #if PJSUA_HAS_VIDEO
-PJ_DECL(void) pjsua_vid_win_reset(pjsua_vid_win_id wid);
+void pjsua_vid_win_reset(pjsua_vid_win_id wid);
 #else
 #  define pjsua_vid_win_reset(wid)
 #endif
