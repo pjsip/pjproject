@@ -163,6 +163,60 @@ static pj_uint32_t calc_proxy_crc(const pj_str_t proxy[], pj_size_t cnt)
 }
 
 /*
+ * Initialize outbound settings.
+ */
+static void init_outbound_setting(pjsua_acc *acc)
+{
+    pjsua_acc_config *acc_cfg = &acc->cfg;
+    if (acc_cfg->rfc5626_instance_id.slen == 0) {
+	const pj_str_t *hostname;
+	pj_uint32_t hval;
+	pj_size_t pos;
+	char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
+
+	hostname = pj_gethostname();
+	pos = pj_ansi_strlen(instprm) - 10;
+	hval = pj_hash_calc(0, hostname->ptr, (unsigned)hostname->slen);
+	pj_val_to_hex_digit(((char*)&hval)[0], instprm + pos + 0);
+	pj_val_to_hex_digit(((char*)&hval)[1], instprm + pos + 2);
+	pj_val_to_hex_digit(((char*)&hval)[2], instprm + pos + 4);
+	pj_val_to_hex_digit(((char*)&hval)[3], instprm + pos + 6);
+
+	pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
+    } else {
+	const char *prmname = ";+sip.instance=\"";
+	pj_size_t len;
+
+	len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
+	acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len + 1);
+	pj_ansi_snprintf(acc->rfc5626_instprm.ptr, len + 1,
+			 "%s%.*s\"",
+			 prmname,
+			 (int)acc_cfg->rfc5626_instance_id.slen,
+			 acc_cfg->rfc5626_instance_id.ptr);
+	acc->rfc5626_instprm.slen = len;
+    }
+
+    if (acc_cfg->rfc5626_reg_id.slen == 0) {
+	acc->rfc5626_regprm = pj_str(";reg-id=1");
+    } else {
+	const char *prmname = ";reg-id=";
+	pj_size_t len;
+
+	len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
+	acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len + 1);
+	pj_ansi_snprintf(acc->rfc5626_regprm.ptr, len + 1,
+			 "%s%.*s\"",
+			 prmname,
+			 (int)acc_cfg->rfc5626_reg_id.slen,
+			 acc_cfg->rfc5626_reg_id.ptr);
+	acc->rfc5626_regprm.slen = len;
+    }
+
+    acc->rfc5626_status = OUTBOUND_WANTED;
+}
+
+/*
  * Initialize a new account (after configuration is set).
  */
 static pj_status_t initialize_acc(unsigned acc_id)
@@ -340,52 +394,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
      * not specified
      */
     if (acc_cfg->use_rfc5626) {
-	if (acc_cfg->rfc5626_instance_id.slen==0) {
-	    const pj_str_t *hostname;
-	    pj_uint32_t hval;
-	    pj_size_t pos;
-	    char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
-
-	    hostname = pj_gethostname();
-	    pos = pj_ansi_strlen(instprm) - 10;
-	    hval = pj_hash_calc(0, hostname->ptr, (unsigned)hostname->slen);
-	    pj_val_to_hex_digit( ((char*)&hval)[0], instprm+pos+0);
-	    pj_val_to_hex_digit( ((char*)&hval)[1], instprm+pos+2);
-	    pj_val_to_hex_digit( ((char*)&hval)[2], instprm+pos+4);
-	    pj_val_to_hex_digit( ((char*)&hval)[3], instprm+pos+6);
-
-	    pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
-	} else {
-	    const char *prmname = ";+sip.instance=\"";
-	    pj_size_t len;
-
-	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
-	    acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
-	    pj_ansi_snprintf(acc->rfc5626_instprm.ptr, len+1,
-		             "%s%.*s\"",
-		             prmname,
-		             (int)acc_cfg->rfc5626_instance_id.slen,
-		             acc_cfg->rfc5626_instance_id.ptr);
-	    acc->rfc5626_instprm.slen = len;
-	}
-
-	if (acc_cfg->rfc5626_reg_id.slen==0) {
-	    acc->rfc5626_regprm = pj_str(";reg-id=1");
-	} else {
-	    const char *prmname = ";reg-id=";
-	    pj_size_t len;
-
-	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
-	    acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
-	    pj_ansi_snprintf(acc->rfc5626_regprm.ptr, len+1,
-		             "%s%.*s\"",
-		             prmname,
-		             (int)acc_cfg->rfc5626_reg_id.slen,
-		             acc_cfg->rfc5626_reg_id.ptr);
-	    acc->rfc5626_regprm.slen = len;
-	}
-
-	acc->rfc5626_status = OUTBOUND_WANTED;
+	init_outbound_setting(acc);
     }
 
     /* Mark account as valid */
@@ -1304,8 +1313,23 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.use_rfc5626 != cfg->use_rfc5626 ||
 	pj_strcmp(&acc->cfg.rfc5626_instance_id, &cfg->rfc5626_instance_id) ||
 	pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id))
-    {
+    {	
+	if (acc->cfg.use_rfc5626 != cfg->use_rfc5626)
+	    acc->cfg.use_rfc5626 = cfg->use_rfc5626;
+
+	if (pj_strcmp(&acc->cfg.rfc5626_instance_id, 
+		      &cfg->rfc5626_instance_id)) 
+	{
+	    pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_instance_id,
+				&cfg->rfc5626_instance_id);
+	}
+	if (pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id)) {
+	    pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_reg_id,
+				&cfg->rfc5626_reg_id);
+	}
+	init_outbound_setting(acc);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Video settings */
