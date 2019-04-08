@@ -1619,6 +1619,7 @@ private:
     CodecInfoVector		 videoCodecInfoList;
     std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
     pj_mutex_t			*threadDescMutex;
+    pj_mutex_t			*mediaListMutex;
 
     /* Pending logging */
     bool			 mainThreadOnly;

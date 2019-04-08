@@ -479,8 +479,8 @@ struct PendingLog : public PendingJob
  * Endpoint instance
  */
 Endpoint::Endpoint()
-: writer(NULL), threadDescMutex(NULL), mainThreadOnly(false), 
-  mainThread(NULL), pendingJobSize(0)
+: writer(NULL), threadDescMutex(NULL), mediaListMutex(NULL), 
+  mainThreadOnly(false), mainThread(NULL), pendingJobSize(0)
 {
     if (instance_) {
 	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -1712,6 +1712,9 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) throw(Error)
     
     PJSUA2_CHECK_EXPR( pj_mutex_create_simple(pjsua_var.pool, "threadDesc",
     				    	      &threadDescMutex) );
+
+    PJSUA2_CHECK_EXPR( pj_mutex_create_recursive(pjsua_var.pool, "mediaList",
+    				    		 &mediaListMutex) );
 }
 
 void Endpoint::libStart() throw(Error)
@@ -1777,6 +1780,11 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
     if (threadDescMutex) {
     	pj_mutex_destroy(threadDescMutex);
     	threadDescMutex = NULL;
+    }
+
+    if (mediaListMutex) {
+    	pj_mutex_destroy(mediaListMutex);
+    	mediaListMutex = NULL;
     }
 
     status = pjsua_destroy2(flags);
@@ -2038,14 +2046,20 @@ const AudioMediaVector &Endpoint::mediaEnumPorts() const throw(Error)
 
 void Endpoint::mediaAdd(AudioMedia &media)
 {
-    if (mediaExists(media))
+    pj_mutex_lock(mediaListMutex);
+
+    if (mediaExists(media)) {
+	pj_mutex_unlock(mediaListMutex);
 	return;
+    }
 
     mediaList.push_back(&media);
+    pj_mutex_unlock(mediaListMutex);
 }
 
 void Endpoint::mediaRemove(AudioMedia &media)
 {
+    pj_mutex_lock(mediaListMutex);
     AudioMediaVector::iterator it = std::find(mediaList.begin(),
 					      mediaList.end(),
 					      &media);
@@ -2053,15 +2067,20 @@ void Endpoint::mediaRemove(AudioMedia &media)
     if (it != mediaList.end())
 	mediaList.erase(it);
 
+    pj_mutex_unlock(mediaListMutex);
 }
 
 bool Endpoint::mediaExists(const AudioMedia &media) const
 {
+    bool exists;
+
+    pj_mutex_lock(mediaListMutex);
     AudioMediaVector::const_iterator it = std::find(mediaList.begin(),
 						    mediaList.end(),
 						    &media);
-
-    return (it != mediaList.end());
+    exists = (it != mediaList.end());
+    pj_mutex_unlock(mediaListMutex);
+    return exists;
 }
 
 AudDevManager &Endpoint::audDevManager()
