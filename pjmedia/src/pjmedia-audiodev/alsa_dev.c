@@ -47,7 +47,9 @@
 #define MAX_MIX_NAME_LEN                64 
 
 /* Set to 1 to enable tracing */
-#if 0
+#define ENABLE_TRACING			0
+
+#if ENABLE_TRACING
 #	define TRACE_(expr)		PJ_LOG(5,expr)
 #else
 #	define TRACE_(expr)
@@ -151,6 +153,7 @@ static pjmedia_aud_stream_op alsa_stream_op =
     &alsa_stream_destroy
 };
 
+#if ENABLE_TRACING==0
 static void null_alsa_error_handler (const char *file,
 				int line,
 				const char *function,
@@ -164,6 +167,7 @@ static void null_alsa_error_handler (const char *file,
     PJ_UNUSED_ARG(err);
     PJ_UNUSED_ARG(fmt);
 }
+#endif
 
 static void alsa_error_handler (const char *file,
 				int line,
@@ -385,8 +389,12 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
     if (err != 0)
 	return PJMEDIA_EAUD_SYSERR;
 
+#if ENABLE_TRACING
+    snd_lib_error_set_handler(alsa_error_handler);
+#else
     /* Set a null error handler prior to enumeration to suppress errors */
     snd_lib_error_set_handler(null_alsa_error_handler);
+#endif
 
     n = hints;
     while (*n != NULL) {
