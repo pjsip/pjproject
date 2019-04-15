@@ -1648,6 +1648,9 @@ public:
      * Shutdown the account. This will initiate unregistration if needed,
      * and delete the corresponding account in the PJSUA-LIB.
      *
+     * Note that application must delete all Buddy instances belong to this
+     * account before shutting down the account.
+     *
      * If application implements a derived class, the derived class should
      * call this method in the beginning stage in its destructor, or
      * alternatively application should call this method before deleting
@@ -1759,6 +1762,9 @@ public:
     void presNotify(const PresNotifyParam &prm) throw(Error);
     
     /**
+     * Warning: deprecated, use enumBuddies2() instead. This function is not
+     * safe in multithreaded environment.
+     *
      * Enumerate all buddies of the account.
      *
      * @return			The buddy list.
@@ -1766,6 +1772,16 @@ public:
     const BuddyVector& enumBuddies() const throw(Error);
 
     /**
+     * Enumerate all buddies of the account.
+     *
+     * @return			The buddy list.
+     */
+    BuddyVector2 enumBuddies2() const throw(Error);
+
+    /**
+     * Warning: deprecated, use findBuddy2 instead. This function is not
+     * safe in multithreaded environment.
+     *
      * Find a buddy in the buddy list with the specified URI. 
      *
      * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
@@ -1777,6 +1793,17 @@ public:
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
 		    throw(Error);
+
+    /**
+     * Find a buddy in the buddy list with the specified URI. 
+     *
+     * Exception: if buddy is not found, PJ_ENOTFOUND will be thrown.
+     *
+     * @param uri		The buddy URI.
+     *
+     * @return			The pointer to buddy.
+     */
+    Buddy findBuddy2(string uri) const throw(Error);
 
 public:
     /*

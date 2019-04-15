@@ -227,7 +227,7 @@ void CallSendDtmfParam::fromPj(const pjsua_call_send_dtmf_param &param)
     this->digits    = pj2Str(param.digits);
 }
 
-CallSetting::CallSetting(pj_bool_t useDefaultValues)
+CallSetting::CallSetting(bool useDefaultValues)
 {
     if (useDefaultValues) {
         pjsua_call_setting setting;
@@ -519,6 +519,19 @@ Media *Call::getMedia(unsigned med_idx) const
     }
     
     return medias[med_idx];
+}
+
+AudioMedia Call::getAudioMedia(unsigned med_idx) const throw(Error)
+{
+    CallAudioMedia cam;
+    CallInfo ci = getInfo();
+
+    if (med_idx < ci.media.size() &&
+	ci.media[med_idx].type == PJMEDIA_TYPE_AUDIO)
+    {
+	cam.setPortId(ci.media[med_idx].audioConfSlot);
+    }
+    return cam;
 }
 
 pjsip_dialog_cap_status Call::remoteHasCap(int htype,

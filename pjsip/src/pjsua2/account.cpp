@@ -1028,6 +1028,20 @@ const BuddyVector& Account::enumBuddies() const throw(Error)
     return buddyList;
 }
 
+BuddyVector2 Account::enumBuddies2() const throw(Error)
+{
+    BuddyVector2 bv2;
+    pjsua_buddy_id ids[PJSUA_MAX_BUDDIES];
+    unsigned i, count = PJSUA_MAX_BUDDIES;
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_buddies(ids, &count) );
+    for (i = 0; i < count; ++i) {
+	bv2.push_back(Buddy(ids[i]));
+    }
+
+    return bv2;
+}
+
 Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
 		throw(Error)
 {
@@ -1041,6 +1055,22 @@ Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
 	    return buddyList[i];
     }
     PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+}
+
+Buddy Account::findBuddy2(string uri) const throw(Error)
+{
+    pj_str_t pj_uri;
+    pjsua_buddy_id id;
+
+    pj_strset2(&pj_uri, (char*)uri.c_str());
+
+    id = pjsua_buddy_find(&pj_uri);
+    if (id == PJSUA_INVALID_ID) {
+	PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
+    }
+
+    Buddy buddy(id);
+    return buddy;
 }
 
 void Account::addBuddy(Buddy *buddy)

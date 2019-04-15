@@ -977,7 +977,8 @@ void Endpoint::on_acc_find_for_incoming(const pjsip_rx_data *rdata,
 
 void Endpoint::on_buddy_state(pjsua_buddy_id buddy_id)
 {
-    Buddy *buddy = (Buddy*)pjsua_buddy_get_user_data(buddy_id);
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
     if (!buddy || !buddy->isValid()) {
 	/* Ignored */
 	return;
@@ -992,7 +993,8 @@ void Endpoint::on_buddy_evsub_state(pjsua_buddy_id buddy_id,
 {
     PJ_UNUSED_ARG(sub);
 
-    Buddy *buddy = (Buddy*)pjsua_buddy_get_user_data(buddy_id);
+    Buddy b(buddy_id);
+    Buddy *buddy = b.getOriginalInstance();
     if (!buddy || !buddy->isValid()) {
 	/* Ignored */
 	return;
@@ -2044,8 +2046,27 @@ const AudioMediaVector &Endpoint::mediaEnumPorts() const throw(Error)
     return mediaList;
 }
 
+AudioMediaVector2 Endpoint::mediaEnumPorts2() const throw(Error)
+{
+    AudioMediaVector2 amv2;
+    pjsua_conf_port_id ids[PJSUA_MAX_CONF_PORTS];
+    unsigned i, count = PJSUA_MAX_CONF_PORTS;
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_conf_ports(ids, &count) );
+    for (i = 0; i < count; ++i) {
+	AudioMedia am;
+	am.id = ids[i];
+	amv2.push_back(am);
+    }
+
+    return amv2;
+}
+
 void Endpoint::mediaAdd(AudioMedia &media)
 {
+    /* mediaList serves mediaEnumPorts() only, once mediaEnumPorts()
+     * is removed, this function implementation should be no-op.
+     */
     pj_mutex_lock(mediaListMutex);
 
     if (mediaExists(media)) {
@@ -2059,6 +2080,9 @@ void Endpoint::mediaAdd(AudioMedia &media)
 
 void Endpoint::mediaRemove(AudioMedia &media)
 {
+    /* mediaList serves mediaEnumPorts() only, once mediaEnumPorts()
+     * is removed, this function implementation should be no-op.
+     */
     pj_mutex_lock(mediaListMutex);
     AudioMediaVector::iterator it = std::find(mediaList.begin(),
 					      mediaList.end(),
@@ -2066,21 +2090,17 @@ void Endpoint::mediaRemove(AudioMedia &media)
 
     if (it != mediaList.end())
 	mediaList.erase(it);
-
     pj_mutex_unlock(mediaListMutex);
 }
 
 bool Endpoint::mediaExists(const AudioMedia &media) const
 {
-    bool exists;
+    pjsua_conf_port_id id = media.getPortId();
+    if (id == PJSUA_INVALID_ID || id >= (int)mediaMaxPorts())
+	return false;
 
-    pj_mutex_lock(mediaListMutex);
-    AudioMediaVector::const_iterator it = std::find(mediaList.begin(),
-						    mediaList.end(),
-						    &media);
-    exists = (it != mediaList.end());
-    pj_mutex_unlock(mediaListMutex);
-    return exists;
+    pjsua_conf_port_info pi;
+    return (pjsua_conf_get_port_info(id, &pi) == PJ_SUCCESS);
 }
 
 AudDevManager &Endpoint::audDevManager()
@@ -2105,6 +2125,21 @@ const CodecInfoVector &Endpoint::codecEnum() throw(Error)
 
     updateCodecInfoList(pj_codec, count, codecInfoList);
     return codecInfoList;
+}
+
+CodecInfoVector2 Endpoint::codecEnum2() const throw(Error)
+{
+    CodecInfoVector2 civ2;
+    pjsua_codec_info pj_codec[MAX_CODEC_NUM];
+    unsigned count = MAX_CODEC_NUM;
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_codecs(pj_codec, &count) );
+    for (unsigned i = 0; i<count; ++i) {
+	CodecInfo codec_info;
+	codec_info.fromPj(pj_codec[i]);
+	civ2.push_back(codec_info);
+    }
+    return civ2;
 }
 
 void Endpoint::codecSetPriority(const string &codec_id,
@@ -2168,6 +2203,23 @@ const CodecInfoVector &Endpoint::videoCodecEnum() throw(Error)
     updateCodecInfoList(pj_codec, count, videoCodecInfoList);
 #endif
     return videoCodecInfoList;
+}
+
+CodecInfoVector2 Endpoint::videoCodecEnum2() const throw(Error)
+{
+    CodecInfoVector2 civ2;
+#if PJSUA_HAS_VIDEO
+    pjsua_codec_info pj_codec[MAX_CODEC_NUM];
+    unsigned count = MAX_CODEC_NUM;
+
+    PJSUA2_CHECK_EXPR(pjsua_vid_enum_codecs(pj_codec, &count));
+    for (unsigned i = 0; i<count; ++i) {
+	CodecInfo codec_info;
+	codec_info.fromPj(pj_codec[i]);
+	civ2.push_back(codec_info);
+    }
+#endif
+    return civ2;
 }
 
 void Endpoint::videoCodecSetPriority(const string &codec_id,

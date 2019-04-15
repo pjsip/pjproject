@@ -105,15 +105,24 @@ using namespace pj;
 %template(SrtpCryptoVector)		std::vector<pj::SrtpCrypto>;
 %template(SipMultipartPartVector)	std::vector<pj::SipMultipartPart>;
 %template(BuddyVector)			std::vector<pj::Buddy*>;
+%template(BuddyVector2)			std::vector<pj::Buddy>;
 %template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
+%template(AudioMediaVector2)		std::vector<pj::AudioMedia>;
 %template(ToneDescVector)		std::vector<pj::ToneDesc>;
 %template(ToneDigitVector)		std::vector<pj::ToneDigit>;
 %template(ToneDigitMapVector)	        std::vector<pj::ToneDigitMapDigit>;
-%template(MediaFormatVector)		std::vector<pj::MediaFormat*>;
 %template(AudioDevInfoVector)		std::vector<pj::AudioDevInfo*>;
+%template(AudioDevInfoVector2)		std::vector<pj::AudioDevInfo>;
 %template(CodecInfoVector)		std::vector<pj::CodecInfo*>;
+%template(CodecInfoVector2)		std::vector<pj::CodecInfo>;
 %template(VideoDevInfoVector)		std::vector<pj::VideoDevInfo*>;
+%template(VideoDevInfoVector2)		std::vector<pj::VideoDevInfo>;
 %template(CodecFmtpVector)		std::vector<pj::CodecFmtp>;	
+%template(MediaFormatAudioVector)       std::vector<pj::MediaFormatAudio>;
+%template(MediaFormatVideoVector)       std::vector<pj::MediaFormatVideo>;
+%template(CallMediaInfoVector)          std::vector<pj::CallMediaInfo>;
+%template(RtcpFbCapVector)              std::vector<pj::RtcpFbCap>;
+%template(SslCertNameVector)            std::vector<pj::SslCertName>;
 
 %ignore pj::WindowHandle::display;
 %ignore pj::WindowHandle::window;
@@ -143,8 +152,6 @@ using namespace pj;
 %include "pjsua2/presence.hpp"
 %include "pjsua2/account.hpp"
 %include "pjsua2/call.hpp"
-
-%template(CallMediaInfoVector)          std::vector<pj::CallMediaInfo>;
 
 %ignore pj::JsonDocument::allocElement;
 %ignore pj::JsonDocument::getPool;

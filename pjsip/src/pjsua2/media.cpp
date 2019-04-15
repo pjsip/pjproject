@@ -157,6 +157,24 @@ void AudioMedia::registerMediaPort(MediaPort port) throw(Error)
     Endpoint::instance().mediaAdd(*this);
 }
 
+void AudioMedia::registerMediaPort2(MediaPort port, pj_pool_t *pool)
+     throw(Error)
+{
+    /* Check if media already added to Conf bridge. */
+    pj_assert(!Endpoint::instance().mediaExists(*this));
+
+    if (port != NULL) {
+	pj_assert(id == PJSUA_INVALID_ID);
+	pj_assert(pool);
+
+	PJSUA2_CHECK_EXPR( pjsua_conf_add_port(pool,
+					       (pjmedia_port *)port,
+					       &id) );
+    }
+
+    Endpoint::instance().mediaAdd(*this);
+}
+
 void AudioMedia::unregisterMediaPort()
 {
     if (id != PJSUA_INVALID_ID) {
@@ -175,7 +193,6 @@ void AudioMedia::unregisterMediaPort()
 
 AudioMedia::~AudioMedia() 
 {
-    unregisterMediaPort();
 }
 
 ConfPortInfo AudioMedia::getPortInfo() const throw(Error)
@@ -408,7 +425,7 @@ AudioMediaRecorder::~AudioMediaRecorder()
 
 void AudioMediaRecorder::createRecorder(const string &file_name,
 				        unsigned enc_type,
-				        pj_ssize_t max_size,
+				        long max_size,
 				        unsigned options)
 				        throw(Error)
 {
@@ -480,7 +497,7 @@ void ToneGenerator::createToneGenerator(unsigned clock_rate,
 	PJSUA2_RAISE_ERROR(status);
     }
 
-    registerMediaPort(tonegen);
+    registerMediaPort2(tonegen, pool);
 }
 
 bool ToneGenerator::isBusy() const
@@ -745,6 +762,23 @@ const AudioDevInfoVector &AudDevManager::enumDev() throw(Error)
     }
     pj_leave_critical_section();
     return audioDevList;
+}
+
+AudioDevInfoVector2 AudDevManager::enumDev2() const throw(Error)
+{
+    pjmedia_aud_dev_info pj_info[MAX_DEV_COUNT];
+    unsigned count = MAX_DEV_COUNT;
+    AudioDevInfoVector2 adiv2;
+
+    PJSUA2_CHECK_EXPR( pjsua_enum_aud_devs(pj_info, &count) );
+
+    for (unsigned i = 0; i<count ;++i) {
+	AudioDevInfo di;
+	di.fromPj(pj_info[i]);
+	adiv2.push_back(di);
+    }
+
+    return adiv2;
 }
 
 void AudDevManager::setNullDev() throw(Error)
@@ -1424,6 +1458,24 @@ const VideoDevInfoVector &VidDevManager::enumDev() throw(Error)
     pj_leave_critical_section();
 #endif
     return videoDevList;
+}
+
+VideoDevInfoVector2 VidDevManager::enumDev2() const throw(Error)
+{
+    VideoDevInfoVector2 vdiv2;
+#if PJSUA_HAS_VIDEO
+    pjmedia_vid_dev_info pj_info[MAX_DEV_COUNT];
+    unsigned count = MAX_DEV_COUNT;
+
+    PJSUA2_CHECK_EXPR(pjsua_vid_enum_devs(pj_info, &count));
+
+    for (unsigned i = 0; i<count;++i) {
+	VideoDevInfo vdi;
+	vdi.fromPj(pj_info[i]);
+	vdiv2.push_back(vdi);
+    }
+#endif
+    return vdiv2;
 }
 
 int VidDevManager::lookupDev(const string &drv_name,

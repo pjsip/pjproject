@@ -132,6 +132,9 @@ struct SslCertName
     string		   name;    	    /**< The name		*/
 };
 
+/** Array of SSL certificate type and name. */
+typedef std::vector<SslCertName> SslCertNameVector;
+
 /**
  * SSL certificate information.
  */
@@ -155,7 +158,7 @@ struct SslCertInfo
     bool		validityGmt;	    /**< Flag if validity 
 					 	 date/time use GMT	*/
 
-    vector<SslCertName> subjectAltName;     /**< Subject alternative
+    SslCertNameVector	subjectAltName;     /**< Subject alternative
 					 	 name extension		*/
 
     string 		raw;		    /**< Raw certificate in PEM
@@ -1378,11 +1381,21 @@ public:
     unsigned mediaActivePorts() const;
 
     /**
+     * Warning: deprecated, use mediaEnumPorts2() instead. This function is
+     * not safe in multithreaded environment.
+     *
      * Enumerate all media port.
      *
      * @return		The list of media port.
      */
     const AudioMediaVector &mediaEnumPorts() const throw(Error);
+
+    /**
+     * Enumerate all audio media port.
+     *
+     * @return		The list of audio media port.
+     */
+    AudioMediaVector2 mediaEnumPorts2() const throw(Error);
 
     /**
      * Get the instance of Audio Device Manager.
@@ -1403,11 +1416,21 @@ public:
      */
 
     /**
+     * Warning: deprecated, use codecEnum2() instead. This function is not
+     * safe in multithreaded environment.
+     *
      * Enum all supported codecs in the system.
      *
      * @return		Array of codec info.
      */
     const CodecInfoVector &codecEnum() throw(Error);
+
+    /**
+     * Enum all supported codecs in the system.
+     *
+     * @return		Array of codec info.
+     */
+    CodecInfoVector2 codecEnum2() const throw(Error);
 
     /**
      * Change codec priority.
@@ -1444,11 +1467,21 @@ public:
 		       const CodecParam param) throw(Error);
 
     /**
+     * Warning: deprecated, use videoCodecEnum2() instead. This function is
+     * not safe in multithreaded environment.
+     *
      * Enum all supported video codecs in the system.
      *  
      * @return		Array of video codec info.
      */
     const CodecInfoVector &videoCodecEnum() throw(Error);
+
+    /**
+     * Enum all supported video codecs in the system.
+     *  
+     * @return		Array of video codec info.
+     */
+    CodecInfoVector2 videoCodecEnum2() const throw(Error);
 
     /**
      * Change video codec priority.

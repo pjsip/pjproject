@@ -311,7 +311,7 @@ public:
     /**
      * Default constructor initializes with empty or default values.
      */
-    CallSetting(pj_bool_t useDefaultValues = false);
+    CallSetting(bool useDefaultValues = false);
 
     /**
      * Check if the settings are set with empty values.
@@ -1009,7 +1009,7 @@ struct OnCreateMediaTransportSrtpParam
      * Application can modify this to specify the cryptos and keys
      * which are going to be used.
      */
-    vector<SrtpCrypto>		cryptos;
+    SrtpCryptoVector		cryptos;
 };
 
 /**
@@ -1235,6 +1235,9 @@ public:
     bool hasMedia() const;
     
     /**
+     * Warning: deprecated, use getAudioMedia() instead. This function is not
+     * safe in multithreaded environment.
+     *
      * Get media for the specified media index.
      *
      * @param med_idx       Media index.
@@ -1242,6 +1245,16 @@ public:
      * @return              The media or NULL if invalid or inactive.
      */
     Media *getMedia(unsigned med_idx) const;
+
+    /**
+     * Get audio media for the specified media index. If the specified media
+     * index is not audio or invalid or inactive, exception will be thrown.
+     *
+     * @param med_idx       Media index.
+     *
+     * @return              The audio media.
+     */
+    AudioMedia getAudioMedia(unsigned med_idx) const throw(Error);
 
     /**
      * Check if remote peer support the specified capability.

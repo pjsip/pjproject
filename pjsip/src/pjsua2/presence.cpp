@@ -73,6 +73,11 @@ void BuddyInfo::fromPj(const pjsua_buddy_info &pbi)
 }
 
 //////////////////////////////////////////////////////////////////////////////
+typedef struct BuddyUserData
+{
+    Buddy	*self;
+    Account	*acc;
+} BuddyUserData;
 
 /*
  * Constructor.
@@ -82,17 +87,36 @@ Buddy::Buddy()
 {
 }
  
+Buddy::Buddy(pjsua_buddy_id buddy_id)
+: id(buddy_id)
+{
+}
+
+Buddy *Buddy::getOriginalInstance()
+{
+    BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+    return (bud? bud->self : NULL);
+}
+
 /*
  * Destructor.
  */
 Buddy::~Buddy()
 {
-    if (isValid()) {
+    if (isValid() && getOriginalInstance()==this) {
+	Account *acc = NULL;
+	BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+	if (bud) {
+	    acc = bud->acc;
+	    delete bud;
+	}
+
 	pjsua_buddy_set_user_data(id, NULL);
 	pjsua_buddy_del(id);
 
 	/* Remove from account buddy list */
-	acc->removeBuddy(this);
+	if (acc)
+	    acc->removeBuddy(this);
     }
 }
     
@@ -107,13 +131,16 @@ void Buddy::create(Account &account, const BuddyConfig &cfg) throw(Error)
     if (!account.isValid())
 	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "Buddy::create()", "Invalid account");
     
+    BuddyUserData *bud = new BuddyUserData();
+    bud->self = this;
+    bud->acc  = &account;
+
     pj_cfg.uri = str2Pj(cfg.uri);
     pj_cfg.subscribe = cfg.subscribe;
-    pj_cfg.user_data = (void*)this;
+    pj_cfg.user_data = (void*)bud;
     PJSUA2_CHECK_EXPR( pjsua_buddy_add(&pj_cfg, &id) );
     
-    acc = &account;
-    acc->addBuddy(this);
+    account.addBuddy(this);
 }
     
 /*
@@ -160,6 +187,13 @@ void Buddy::updatePresence(void) throw(Error)
 void Buddy::sendInstantMessage(const SendInstantMessageParam &prm) throw(Error)
 {
     BuddyInfo bi = getInfo();
+    BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+    Account *acc = bud? bud->acc : NULL;
+
+    if (!bud || !acc || !acc->isValid()) {
+	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
+			    "Invalid Buddy");
+    }
 
     pj_str_t to = str2Pj(bi.contact.empty()? bi.uri : bi.contact);
     pj_str_t mime_type = str2Pj(prm.contentType);
@@ -179,6 +213,13 @@ void Buddy::sendTypingIndication(const SendTypingIndicationParam &prm)
      throw(Error)
 {
     BuddyInfo bi = getInfo();
+    BuddyUserData *bud = (BuddyUserData*)pjsua_buddy_get_user_data(id);
+    Account *acc = bud? bud->acc : NULL;
+
+    if (!bud || !acc || !acc->isValid()) {
+	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "sendInstantMessage()",
+			    "Invalid Buddy");
+    }
 
     pj_str_t to = str2Pj(bi.contact.empty()? bi.uri : bi.contact);
     pjsua_msg_data msg_data;
