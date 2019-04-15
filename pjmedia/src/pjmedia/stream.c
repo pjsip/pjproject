@@ -2049,10 +2049,11 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
 
     /* Check if now is the time to transmit RTCP SR/RR report.
-     * We only do this when stream direction is "decoding only",
+     * We only do this when stream direction is "decoding only" or
+     * if the encoder is paused,
      * because otherwise check_tx_rtcp() will be handled by put_frame()
      */
-    if (stream->dir == PJMEDIA_DIR_DECODING) {
+    if (stream->dir == PJMEDIA_DIR_DECODING || stream->enc->paused) {
 	check_tx_rtcp(stream, pj_ntohl(hdr->ts));
     }
 
