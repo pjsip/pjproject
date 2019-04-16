@@ -1280,7 +1280,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_ioqueue_unlock_key(key);
 
-            (*key->cb.on_read_complete)(key, op_key, bytes_status);
+            if (key->cb.on_read_complete)
+            	(*key->cb.on_read_complete)(key, op_key, bytes_status);
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
@@ -1294,7 +1295,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_ioqueue_unlock_key(key);
 
-            (*key->cb.on_write_complete)(key, op_key, bytes_status);
+            if (key->cb.on_write_complete)
+            	(*key->cb.on_write_complete)(key, op_key, bytes_status);
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
@@ -1308,9 +1310,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             op_rec->op = PJ_IOQUEUE_OP_NONE;
             pj_ioqueue_unlock_key(key);
 
-            (*key->cb.on_accept_complete)(key, op_key, 
-                                          PJ_INVALID_SOCKET,
-                                          (pj_status_t)bytes_status);
+            if (key->cb.on_accept_complete) {
+            	(*key->cb.on_accept_complete)(key, op_key, 
+                                              PJ_INVALID_SOCKET,
+                                              (pj_status_t)bytes_status);
+            }
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
