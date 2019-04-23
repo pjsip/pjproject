@@ -108,6 +108,7 @@ using namespace pj;
 %template(BuddyVector2)			std::vector<pj::Buddy>;
 %template(AudioMediaVector)		std::vector<pj::AudioMedia*>;
 %template(AudioMediaVector2)		std::vector<pj::AudioMedia>;
+%template(VideoMediaVector)		std::vector<pj::VideoMedia>;
 %template(ToneDescVector)		std::vector<pj::ToneDesc>;
 %template(ToneDigitVector)		std::vector<pj::ToneDigit>;
 %template(ToneDigitMapVector)	        std::vector<pj::ToneDigitMapDigit>;

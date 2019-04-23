@@ -148,7 +148,7 @@ struct ConfPortInfo
 
     /**
      * Array of listeners (in other words, ports where this port is
-     * transmitting to.
+     * transmitting to).
      */
     IntVector		listeners;
 
@@ -195,6 +195,9 @@ private:
     pjmedia_type        type;
 };
 
+/**
+ * Parameters for AudioMedia::startTransmit2() method.
+ */
 struct AudioMediaTransmitParam
 {
     /**
@@ -347,8 +350,11 @@ public:
     static AudioMedia* typecastFromMedia(Media *media);
 
     /**
-     * Default Constructor. Normally application will not create AudioMedia
-     * object directly, but it may instantiate an AudioMedia derived class.
+     * Default Constructor.
+     *
+     * Normally application will not create AudioMedia object directly,
+     * but it instantiates an AudioMedia derived class. This is set as public
+     * because some STL vector implementations require it.
      */
     AudioMedia();
 
@@ -400,8 +406,6 @@ private:
     /* Memory pool for deprecated registerMediaPort() */
     pj_caching_pool 	 mediaCachingPool;
     pj_pool_t 		*mediaPool;
-
-    friend class Endpoint;
 };
 
 /** 
@@ -1546,6 +1550,145 @@ struct MediaSize
     unsigned 	h;	    /**< The height.	*/
 };
 
+
+/**
+ * This structure descibes information about a particular media port that
+ * has been registered into the conference bridge. 
+ */
+struct VidConfPortInfo
+{
+    /**
+     * Conference port number.
+     */
+    int			portId;
+
+    /**
+     * Port name.
+     */
+    string		name;
+
+    /**
+     * Media audio format information
+     */
+    MediaFormatVideo	format;
+
+    /**
+     * Array of listeners (in other words, ports where this port is
+     * transmitting to).
+     */
+    IntVector		listeners;
+
+    /**
+     * Array of listeners (in other words, ports where this port is
+     * listening to).
+     */
+    IntVector		transmitters;
+
+public:
+    /**
+     * Construct from pjsua_conf_port_info.
+     */
+    void fromPj(const pjsua_vid_conf_port_info &port_info);
+};
+
+/**
+ * Parameters for VideoMedia::startTransmit() method.
+ */
+struct VideoMediaTransmitParam
+{
+};
+
+/**
+ * Video Media.
+ */
+class VideoMedia : public Media
+{
+public:
+    /**
+    * Get information about the specified conference port.
+    */
+    VidConfPortInfo getPortInfo() const throw(Error);
+
+    /**
+     * Get port Id.
+     */
+    int getPortId() const;
+
+    /**
+     * Get information from specific port id.
+     */
+    static VidConfPortInfo getPortInfoFromId(int port_id) throw(Error);
+
+    /**
+     * Establish unidirectional media flow to sink. This media port
+     * will act as a source, and it may transmit to multiple destinations/sink.
+     * And if multiple sources are transmitting to the same sink, the media
+     * will be mixed together. Source and sink may refer to the same Media,
+     * effectively looping the media.
+     *
+     * If bidirectional media flow is desired, application needs to call
+     * this method twice, with the second one called from the opposite source
+     * media.
+     *
+     * @param sink		The destination Media.
+     * @param param		The parameter.
+     */
+    void startTransmit(const VideoMedia &sink, 
+		       const VideoMediaTransmitParam &param) const
+         throw(Error);
+
+    /**
+     *  Stop media flow to destination/sink port.
+     *
+     * @param sink		The destination media.
+     *
+     */
+    void stopTransmit(const VideoMedia &sink) const throw(Error);
+
+    /**
+     * Default Constructor.
+     *
+     * Normally application will not create VideoMedia object directly,
+     * but it instantiates a VideoMedia derived class. This is set as public
+     * because some STL vector implementations require it.
+     */
+    VideoMedia();
+
+    /**
+     * Virtual Destructor
+     */
+    virtual ~VideoMedia();
+
+protected:
+    /**
+     * Conference port Id.
+     */
+    int			 id;
+
+protected:
+    /**
+     * This method needs to be called by descendants of this class to register
+     * the media port created to the conference bridge and Endpoint's
+     * media list.
+     *
+     * param port  The media port to be registered to the conference bridge.
+     * param pool  The memory pool.
+     */
+    void registerMediaPort(MediaPort port, pj_pool_t *pool) throw(Error);
+
+    /**
+     * This method needs to be called by descendants of this class to remove
+     * the media port from the conference bridge and Endpoint's media list.
+     * Descendant should only call this method if it has registered the media
+     * with the previous call to registerMediaPort().
+     */
+    void unregisterMediaPort();
+};
+
+/** Array of Video Media */
+typedef std::vector<VideoMedia> VideoMediaVector;
+
+
 /**
  * Window handle.
  */
@@ -1627,6 +1770,14 @@ public:
      * @return			video window info.
      */
     VideoWindowInfo getInfo() const throw(Error);
+
+    /**
+     * Get video media or conference bridge port of the renderer of
+     * this video window.
+     *
+     * @return			Video media of this renderer window.
+     */
+    VideoMedia getVideoMedia() throw(Error);
     
     /**
      * Show or hide window. This operation is not valid for native windows
@@ -1780,6 +1931,13 @@ public:
      * Get the preview window handle associated with the capture device,if any.
      */
     VideoWindow getVideoWindow();
+
+    /**
+     * Get video media or conference bridge port of the video capture device.
+     *
+     * @return			Video media of the video capture device.
+     */
+    VideoMedia getVideoMedia() throw(Error);
 
 private:
     pjmedia_vid_dev_index devId;

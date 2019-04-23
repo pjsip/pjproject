@@ -333,6 +333,11 @@ public:
 
 /**
  * Call media information.
+ *
+ * Application can query conference bridge port of this media using
+ * Call::getAudioMedia() if the media type is audio,
+ * or Call::getEncodingVideoMedia()/Call::getDecodingVideoMedia()
+ * if the media type is video.
  */
 struct CallMediaInfo
 {
@@ -357,6 +362,9 @@ struct CallMediaInfo
     pjsua_call_media_status status;
     
     /**
+     * Warning: this is deprecated, application can query conference bridge
+     * port of this media using Call::getAudioMedia().
+     *
      * The conference port number for the call. Only valid if the media type
      * is audio.
      */
@@ -374,7 +382,7 @@ struct CallMediaInfo
      * the media type is video.
      */
     VideoWindow	    	    videoWindow;
-    
+
     /**
      * The video capture device for outgoing transmission, if any,
      * or PJMEDIA_VID_INVALID_DEV. Only valid if the media type is video.
@@ -1250,11 +1258,38 @@ public:
      * Get audio media for the specified media index. If the specified media
      * index is not audio or invalid or inactive, exception will be thrown.
      *
-     * @param med_idx       Media index.
+     * @param med_idx       Media index, or -1 to specify any first audio
+     *                      media registered in the conference bridge.
      *
      * @return              The audio media.
      */
-    AudioMedia getAudioMedia(unsigned med_idx) const throw(Error);
+    AudioMedia getAudioMedia(int med_idx) const throw(Error);
+
+    /**
+     * Get video media in encoding direction for the specified media index.
+     * If the specified media index is not video or invalid or the direction
+     * is receive only, exception will be thrown.
+     *
+     * @param med_idx       Media index, or -1 to specify any first video
+     *			    media with encoding direction registered in the
+     *			    conference bridge.
+     *
+     * @return              The video media.
+     */
+    VideoMedia getEncodingVideoMedia(int med_idx) const throw(Error);
+
+    /**
+     * Get video media in decoding direction for the specified media index.
+     * If the specified media index is not video or invalid or the direction
+     * is send only, exception will be thrown.
+     *
+     * @param med_idx       Media index, or -1 to specify any first video
+     *			    media with decoding direction registered in the
+     *			    conference bridge.
+     *
+     * @return              The video media.
+     */
+    VideoMedia getDecodingVideoMedia(int med_idx) const throw(Error);
 
     /**
      * Check if remote peer support the specified capability.

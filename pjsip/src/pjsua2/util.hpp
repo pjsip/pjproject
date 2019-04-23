@@ -18,6 +18,7 @@
  */
 
 #include <pjsua2/types.hpp>
+#include <pjsua2/media.hpp>
 #include <string>
 
 #define PJ2BOOL(var) ((var) != PJ_FALSE)
@@ -41,5 +42,16 @@ inline string pj2Str(const pj_str_t &input_str)
     return string();
 }
 
+class AudioMediaHelper : public AudioMedia
+{
+public:
+    void setPortId(int port_id) { id = port_id; }
+};
 
-}	// namespace
+class VideoMediaHelper : public VideoMedia
+{
+public:
+    void setPortId(int port_id) { id = port_id; }
+};
+
+} // namespace pj

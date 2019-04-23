@@ -151,33 +151,6 @@ void MediaTransportInfo::fromPj(const pjmedia_transport_info &info)
 
 //////////////////////////////////////////////////////////////////////////////
 
-/* Call Audio Media. */
-class CallAudioMedia : public AudioMedia
-{
-public:
-    /*
-     * Set the conference port identification associated with the
-     * call audio media.
-     */
-    void setPortId(int id);
-
-    /**
-     * Destructor
-     */
-    virtual ~CallAudioMedia();
-};
-
-
-void CallAudioMedia::setPortId(int pid)
-{
-    this->id = pid;
-}
-
-CallAudioMedia::~CallAudioMedia()
-{
-    id = PJSUA_INVALID_ID;
-}
-
 CallOpParam::CallOpParam(bool useDefaultCallSetting)
 : statusCode(pjsip_status_code(0)), reason(""), options(0)
 {
@@ -270,7 +243,10 @@ pjsua_call_setting CallSetting::toPj() const
 
 
 CallMediaInfo::CallMediaInfo()
-: videoWindow(PJSUA_INVALID_ID)
+: audioConfSlot(PJSUA_INVALID_ID),
+  videoWindow(PJSUA_INVALID_ID),
+  videoIncomingWindowId(PJSUA_INVALID_ID),
+  videoCapDev(PJMEDIA_VID_INVALID_DEV)
 {
 }
 
@@ -521,17 +497,118 @@ Media *Call::getMedia(unsigned med_idx) const
     return medias[med_idx];
 }
 
-AudioMedia Call::getAudioMedia(unsigned med_idx) const throw(Error)
+AudioMedia Call::getAudioMedia(int med_idx) const throw(Error)
 {
-    CallAudioMedia cam;
-    CallInfo ci = getInfo();
-
-    if (med_idx < ci.media.size() &&
-	ci.media[med_idx].type == PJMEDIA_TYPE_AUDIO)
-    {
-	cam.setPortId(ci.media[med_idx].audioConfSlot);
+    pjsua_call_info pj_ci;
+    pjsua_call_get_info(id, &pj_ci);
+    
+    if (med_idx < 0) {
+	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+	    if (pj_ci.media[med_idx].type == PJMEDIA_TYPE_AUDIO &&
+		pj_ci.media[med_idx].stream.aud.conf_slot != PJSUA_INVALID_ID)
+	    {
+		med_idx = i;
+		break;
+	    }
+	}
+	if (med_idx < 0) {
+    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getAudioMedia()",
+				"no active audio media");
+	}
     }
-    return cam;
+
+    if (med_idx >= (int)pj_ci.media_cnt) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+			    "invalid media index");
+    }
+    if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_AUDIO) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+			    "media is not audio");
+    }
+    if (pj_ci.media[med_idx].stream.aud.conf_slot == PJSUA_INVALID_ID) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getAudioMedia()",
+			    "no audio slot (inactive?)");
+    }
+
+    AudioMediaHelper am;
+    am.setPortId(pj_ci.media[med_idx].stream.aud.conf_slot);
+    return am;
+}
+
+VideoMedia Call::getEncodingVideoMedia(int med_idx) const throw(Error)
+{
+    pjsua_call_info pj_ci;
+    pjsua_call_get_info(id, &pj_ci);
+
+    if (med_idx < 0) {
+	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+	    if (pj_ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO &&
+		pj_ci.media[med_idx].stream.vid.enc_slot != PJSUA_INVALID_ID)
+	    {
+		med_idx = i;
+		break;
+	    }
+	}
+	if (med_idx < 0) {
+    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getEncodingVideoMedia()",
+				"no active encoding video media");
+	}
+    }
+
+    if (med_idx >= (int)pj_ci.media_cnt) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+			    "invalid media index");
+    }
+    if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_VIDEO) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+			    "media is not video");
+    }
+    if (pj_ci.media[med_idx].stream.vid.enc_slot == PJSUA_INVALID_ID) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getEncodingVideoMedia()",
+			    "no encoding slot (recvonly?)");
+    }
+
+    VideoMediaHelper vm;
+    vm.setPortId(pj_ci.media[med_idx].stream.vid.enc_slot);
+    return vm;
+}
+
+VideoMedia Call::getDecodingVideoMedia(int med_idx) const throw(Error)
+{
+    pjsua_call_info pj_ci;
+    pjsua_call_get_info(id, &pj_ci);
+
+    if (med_idx < 0) {
+	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
+	    if (pj_ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO &&
+		pj_ci.media[med_idx].stream.vid.dec_slot != PJSUA_INVALID_ID)
+	    {
+		med_idx = i;
+		break;
+	    }
+	}
+	if (med_idx < 0) {
+    	    PJSUA2_RAISE_ERROR3(PJ_ENOTFOUND, "getDecodingVideoMedia()",
+				"no active decoding video media");
+	}
+    }
+
+    if (med_idx >= (int)pj_ci.media_cnt) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+			    "invalid media index");
+    }
+    if (pj_ci.media[med_idx].type != PJMEDIA_TYPE_VIDEO) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+			    "media is not video");
+    }
+    if (pj_ci.media[med_idx].stream.vid.dec_slot == PJSUA_INVALID_ID) {
+    	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "getDecodingVideoMedia()",
+			    "no decoding slot (sendonly?)");
+    }
+
+    VideoMediaHelper vm;
+    vm.setPortId(pj_ci.media[med_idx].stream.vid.dec_slot);
+    return vm;
 }
 
 pjsip_dialog_cap_status Call::remoteHasCap(int htype,
@@ -790,24 +867,24 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
         for (mi = 0; mi < pj_ci.media_cnt; mi++) {
             if (mi >= medias.size()) {
                 if (pj_ci.media[mi].type == PJMEDIA_TYPE_AUDIO) {
-                    medias.push_back(new CallAudioMedia);
+                    medias.push_back(new AudioMediaHelper);
                 } else {
                     medias.push_back(NULL);
                 }
             }
             
             if (pj_ci.media[mi].type == PJMEDIA_TYPE_AUDIO) {
-                CallAudioMedia *aud_med = (CallAudioMedia *)medias[mi];
-                
+                AudioMediaHelper *aud_med = (AudioMediaHelper*)medias[mi];
                 aud_med->setPortId(pj_ci.media[mi].stream.aud.conf_slot);
-                /* Add media if the conference slot ID is valid. */
+
+		/* Add media if the conference slot ID is valid. */
                 if (pj_ci.media[mi].stream.aud.conf_slot != PJSUA_INVALID_ID)
                 {
                     Endpoint::instance().mediaAdd((AudioMedia &)*aud_med);
                 } else {
                     Endpoint::instance().mediaRemove((AudioMedia &)*aud_med);
                 }
-            }
+	    }
         }
     }
     

@@ -1398,6 +1398,13 @@ public:
     AudioMediaVector2 mediaEnumPorts2() const throw(Error);
 
     /**
+     * Enumerate all video media port.
+     *
+     * @return		The list of video media port.
+     */
+    VideoMediaVector mediaEnumVidPorts() const throw(Error);
+
+    /**
      * Get the instance of Audio Device Manager.
      *
      * @return		The Audio Device Manager.

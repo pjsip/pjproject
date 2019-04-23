@@ -2054,12 +2054,28 @@ AudioMediaVector2 Endpoint::mediaEnumPorts2() const throw(Error)
 
     PJSUA2_CHECK_EXPR( pjsua_enum_conf_ports(ids, &count) );
     for (i = 0; i < count; ++i) {
-	AudioMedia am;
-	am.id = ids[i];
+	AudioMediaHelper am;
+	am.setPortId(ids[i]);
 	amv2.push_back(am);
     }
 
     return amv2;
+}
+
+VideoMediaVector Endpoint::mediaEnumVidPorts() const throw(Error)
+{
+    VideoMediaVector vmv;
+    pjsua_conf_port_id ids[PJSUA_MAX_CONF_PORTS];
+    unsigned i, count = PJSUA_MAX_CONF_PORTS;
+
+    PJSUA2_CHECK_EXPR( pjsua_vid_conf_enum_ports(ids, &count) );
+    for (i = 0; i < count; ++i) {
+	VideoMediaHelper vm;
+	vm.setPortId(ids[i]);
+	vmv.push_back(vm);
+    }
+
+    return vmv;
 }
 
 void Endpoint::mediaAdd(AudioMedia &media)
