@@ -138,6 +138,7 @@ PJ_DECL(pj_status_t) pjsip_endpt_handle_events( pjsip_endpoint *endpt,
 PJ_DECL(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
 					        const pj_time_val *max_timeout,
 					        unsigned *count);
+
 /**
  * Schedule timer to endpoint's timer heap. Application must poll the endpoint
  * periodically (by calling #pjsip_endpt_handle_events) to ensure that the
@@ -164,6 +165,44 @@ PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
 PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 						 pj_timer_entry *entry,
 						 const pj_time_val *delay );
+#endif
+
+/**
+ * Schedule timer to endpoint's timer heap with group lock. Application must
+ * poll the endpoint periodically (by calling #pjsip_endpt_handle_events) to
+ * ensure that the timer events are handled in timely manner. When the
+ * timeout for the timer has elapsed, the callback specified in the entry
+ * argument will be called. This function, like all other endpoint functions,
+ * is thread safe.
+ *
+ * @param endpt	    The endpoint.
+ * @param entry	    The timer entry.
+ * @param delay	    The relative delay of the timer.
+ * @param id_val    The value to be set to the "id" field of the timer entry
+ * 		    once the timer is scheduled.
+ * @param grp_lock  The group lock.
+ * @return	    PJ_OK (zero) if successfull.
+ */
+#if PJ_TIMER_DEBUG
+#define pjsip_endpt_schedule_timer_w_grp_lock(ept,ent,d,id,gl) \
+		pjsip_endpt_schedule_timer_w_grp_lock_dbg(ept,ent,d,id,gl,\
+							  __FILE__, __LINE__)
+
+PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock_dbg(
+						    pjsip_endpoint *endpt,
+						    pj_timer_entry *entry,
+						    const pj_time_val *delay,
+						    int id_val,
+						    pj_grp_lock_t *grp_lock,
+						    const char *src_file,
+						    int src_line);
+#else
+PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
+						 pjsip_endpoint *endpt,
+						 pj_timer_entry *entry,
+						 const pj_time_val *delay,
+						 int id_val,
+						 pj_grp_lock_t *grp_lock );
 #endif
 
 /**

@@ -1012,6 +1012,9 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
+    if (entry->id == PJ_FALSE)
+	return;
+
     entry->id = PJ_FALSE;
     pjsip_transport_destroy(tp);
 }
@@ -1049,6 +1052,10 @@ PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
 
     PJ_ASSERT_RETURN(tp != NULL, PJ_EINVAL);
 
+    /* Add ref transport group lock, if any */
+    if (tp->grp_lock)
+	pj_grp_lock_add_ref(tp->grp_lock);
+
     /* Cache some vars for checking transport validity later */
     tpmgr = tp->tpmgr;
     key_len = sizeof(tp->key.type) + tp->addr_len;
@@ -1063,8 +1070,8 @@ PJ_DEF(pj_status_t) pjsip_transport_add_ref( pjsip_transport *tp )
 	    pj_atomic_get(tp->ref_cnt) == 1)
 	{
 	    if (tp->idle_timer.id != PJ_FALSE) {
-		pjsip_endpt_cancel_timer(tp->tpmgr->endpt, &tp->idle_timer);
 		tp->idle_timer.id = PJ_FALSE;
+		pjsip_endpt_cancel_timer(tp->tpmgr->endpt, &tp->idle_timer);
 	    }
 	}
 	pj_lock_release(tpmgr->lock);
@@ -1114,13 +1121,22 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 		delay.msec = 0;
 	    }
 
-	    pj_assert(tp->idle_timer.id == 0);
-	    tp->idle_timer.id = PJ_TRUE;
-	    pjsip_endpt_schedule_timer(tp->tpmgr->endpt, &tp->idle_timer, 
-				       &delay);
+	    /* Avoid double timer entry scheduling */
+	    if (pj_timer_entry_running(&tp->idle_timer))
+		pjsip_endpt_cancel_timer(tp->tpmgr->endpt, &tp->idle_timer);
+
+	    pjsip_endpt_schedule_timer_w_grp_lock(tp->tpmgr->endpt,
+						  &tp->idle_timer,
+						  &delay,
+						  PJ_TRUE,
+						  tp->grp_lock);
 	}
 	pj_lock_release(tpmgr->lock);
     }
+
+    /* Dec ref transport group lock, if any */
+    if (tp->grp_lock)
+	pj_grp_lock_dec_ref(tp->grp_lock);
 
     return PJ_SUCCESS;
 }
@@ -1168,6 +1184,10 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     /* Register new entry */
     pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, hval, tp);
 
+    /* Add ref transport group lock, if any */
+    if (tp->grp_lock)
+	pj_grp_lock_add_ref(tp->grp_lock);
+
     pj_lock_release(mgr->lock);
 
     TRACE_((THIS_FILE,"Transport %s registered: type=%s, remote=%s:%d",
@@ -1199,8 +1219,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
      */
     //pj_assert(tp->idle_timer.id == PJ_FALSE);
     if (tp->idle_timer.id != PJ_FALSE) {
-	pjsip_endpt_cancel_timer(mgr->endpt, &tp->idle_timer);
 	tp->idle_timer.id = PJ_FALSE;
+	pjsip_endpt_cancel_timer(mgr->endpt, &tp->idle_timer);
     }
 
     /*
@@ -1225,6 +1245,10 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 
     pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
+
+    /* Dec ref transport group lock, if any */
+    if (tp->grp_lock)
+	pj_grp_lock_dec_ref(tp->grp_lock);
 
     /* Destroy. */
     return tp->destroy(tp);

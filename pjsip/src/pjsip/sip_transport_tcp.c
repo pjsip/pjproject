@@ -692,6 +692,8 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_grp_lock_add_ref(tcp->grp_lock);
     pj_grp_lock_add_handler(tcp->grp_lock, pool, tcp, &tcp_on_destroy);
 
+    tcp->base.grp_lock = tcp->grp_lock;
+
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
     asock_cfg.async_cnt = 1;
@@ -746,7 +748,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     return PJ_SUCCESS;
 
 on_error:
-    tcp_destroy(&tcp->base, status);
+    if (tcp->grp_lock && pj_grp_lock_get_ref(tcp->grp_lock))
+	tcp_destroy(&tcp->base, status);
+    else
+    	tcp_on_destroy(tcp);
+
     return status;
 }
 
@@ -867,8 +873,6 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	tcp->grp_lock = NULL;
 	pj_grp_lock_dec_ref(grp_lock);
 	/* Transport may have been deleted at this point */
-    } else {
-	tcp_on_destroy(tcp);
     }
 
     return PJ_SUCCESS;

@@ -165,6 +165,10 @@ static pj_status_t tls_create(struct tls_listener *listener,
 			      struct tls_transport **p_tls);
 
 
+/* Clean up TLS resources */
+static void tls_on_destroy(void *arg);
+
+
 static void tls_perror(const char *sender, const char *title,
 		       pj_status_t status)
 {
@@ -893,7 +897,11 @@ static pj_status_t tls_create( struct tls_listener *listener,
     return PJ_SUCCESS;
 
 on_error:
-    tls_destroy(&tls->base, status);
+    if (tls->grp_lock && pj_grp_lock_get_ref(tls->grp_lock))
+	tls_destroy(&tls->base, status);
+    else
+    	tls_on_destroy(tls);
+
     return status;
 }
 
@@ -1048,8 +1056,6 @@ static pj_status_t tls_destroy(pjsip_transport *transport,
 	tls->grp_lock = NULL;
 	pj_grp_lock_dec_ref(grp_lock);
 	/* Transport may have been deleted at this point */
-    } else {
-	tls_on_destroy(tls);
     }
 
     return PJ_SUCCESS;
@@ -1235,7 +1241,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_ssl_sock_set_user_data(tls->ssock, tls);
 
     /* Set up the group lock */
-    tls->grp_lock = glock;
+    tls->grp_lock = tls->base.grp_lock = glock;
     pj_grp_lock_add_ref(tls->grp_lock);
     pj_grp_lock_add_handler(tls->grp_lock, pool, tls, &tls_on_destroy);
 

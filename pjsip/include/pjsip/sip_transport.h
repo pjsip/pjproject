@@ -810,6 +810,8 @@ struct pjsip_transport
     pj_pool_t		   *pool;	    /**< Pool used by transport.    */
     pj_atomic_t		   *ref_cnt;	    /**< Reference counter.	    */
     pj_lock_t		   *lock;	    /**< Lock object.		    */
+    pj_grp_lock_t	   *grp_lock;	    /**< Group lock for sync with
+					         ioqueue and timer.	    */
     pj_bool_t		    tracing;	    /**< Tracing enabled?	    */
     pj_bool_t		    is_shutdown;    /**< Being shutdown?	    */
     pj_bool_t		    is_destroying;  /**< Destroy in progress?	    */

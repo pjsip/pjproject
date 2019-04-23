@@ -691,6 +691,8 @@ static pj_status_t register_to_ioqueue(struct udp_transport *tp)
 	pj_grp_lock_add_ref(tp->grp_lock);
 	pj_grp_lock_add_handler(tp->grp_lock, tp->base.pool, tp,
 				&udp_on_destroy);
+
+	tp->base.grp_lock = tp->grp_lock;
     }
     
     /* Register to ioqueue. */
