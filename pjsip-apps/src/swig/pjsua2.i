@@ -26,6 +26,15 @@ using namespace pj;
   }
 #endif
 
+#ifdef SWIGCSHARP
+  %typemap(throws, canthrow=1) pj::Error {
+    SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, 
+    	(std::string("C++ pj::Error:\n") + $1.info(true).c_str()).c_str());
+    
+    return $null;
+  }
+#endif
+
 // Allow C++ exceptions to be handled in Java
 #ifdef SWIGJAVA
   %typemap(throws, throws="java.lang.Exception") pj::Error {
