@@ -747,6 +747,26 @@ void call_update_contact(pjsua_call *call, pj_str_t **new_contact)
 	*new_contact = &acc->cfg.force_contact;
     else if (acc->contact.slen)
 	*new_contact = &acc->contact;
+    else {
+	/* Non-registering account */
+	pjsip_dialog *dlg = call->inv->dlg;
+	pj_str_t tmp_contact;
+	pj_status_t status;
+
+	status = pjsua_acc_create_uac_contact(dlg->pool,
+					      &tmp_contact,
+					      acc->index,
+					      &dlg->remote.info_str);
+	if (status == PJ_SUCCESS) {
+	    *new_contact = PJ_POOL_ZALLOC_T(dlg->pool, pj_str_t);
+	    **new_contact = tmp_contact;
+	} else {
+	    PJ_PERROR(3,(THIS_FILE, status,
+			 "Call %d: failed creating contact "
+			 "for contact update", call->index));
+	}
+    }
+
 
     /* When contact is changed, the account transport may have been
      * changed too, so let's update the dialog's transport too.
