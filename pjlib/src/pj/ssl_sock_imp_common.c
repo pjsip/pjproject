@@ -1480,6 +1480,14 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_read2 (pj_ssl_sock_t *ssock,
     ssock->read_started = PJ_TRUE;
     ssock->read_flags = flags;
 
+    for (i=0; i<ssock->param.async_cnt; ++i) {
+	if (ssock->asock_rbuf[i]) {
+	    pj_size_t remainder = 0;
+	    asock_on_data_read(ssock->asock, ssock->asock_rbuf[i], 0,
+			       PJ_SUCCESS, &remainder);
+	}
+    }
+
     return PJ_SUCCESS;
 }
 
