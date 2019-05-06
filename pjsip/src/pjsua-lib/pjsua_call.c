@@ -1396,7 +1396,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int call_id = -1;
     int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
-    pj_bool_t should_dec_dlg = PJ_TRUE;
+    pj_bool_t should_dec_dlg = PJ_FALSE;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -1784,6 +1784,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pj_list_init(&call->async_call.call_var.inc_call.answers);
 
     pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+    should_dec_dlg = PJ_TRUE;
 
     /* Init media channel, only when there is offer or call replace request.
      * For incoming call without SDP offer, media channel init will be done
@@ -2013,11 +2014,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* This INVITE request has been handled. */
 on_return:
     if (dlg) {
-        pjsip_dlg_dec_lock(dlg);
-    }
+	if (should_dec_dlg)
+	    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 
-    if (should_dec_dlg) {
-	pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+        pjsip_dlg_dec_lock(dlg);
     }
 
     if (call && call->incoming_data) {
