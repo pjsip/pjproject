@@ -25,6 +25,8 @@
 using namespace pj;
 using namespace std;
 
+#include <pjsua-lib/pjsua_internal.h>
+
 #define THIS_FILE		"call.cpp"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -900,6 +902,24 @@ void Call::processStateChange(OnCallStateParam &prm)
     if (pjsua_call_get_info(id, &pj_ci) == PJ_SUCCESS &&
         pj_ci.state == PJSIP_INV_STATE_DISCONNECTED)
     {
+    	pjsua_call *call = &pjsua_var.calls[id];
+
+	/* We are going to remove the Call object association below,
+	 * so we need to call onStreamDestroyed() callback here.
+	 */
+    	for (mi = 0; mi < call->med_cnt; ++mi) {
+    	    pjsua_call_media *call_med = &call->media[mi];
+	    if (call_med->type == PJMEDIA_TYPE_AUDIO &&
+	    	call_med->strm.a.stream)
+	    {
+    		OnStreamDestroyedParam prm;
+    		prm.stream = call_med->strm.a.stream;
+    		prm.streamIdx = mi;
+    
+    		onStreamDestroyed(prm);	    	
+	    }
+    	}
+
         /* Clear medias. */
         for (mi = 0; mi < medias.size(); mi++) {
             if (medias[mi])

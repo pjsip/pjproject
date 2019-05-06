@@ -1118,6 +1118,9 @@ void Endpoint::on_stream_destroyed(pjsua_call_id call_id,
 {
     Call *call = Call::lookup(call_id);
     if (!call) {
+    	/* This can happen for call disconnection case. The callback
+    	 * should have been called from on_call_state() instead.
+    	 */
 	return;
     }
     
