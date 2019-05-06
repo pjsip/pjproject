@@ -1686,14 +1686,19 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 
 
 on_return:
-    if (status != PJ_SUCCESS && call_med->tp) {
-	pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-	pjmedia_transport_close(call_med->tp);
-	call_med->tp = NULL;
-    }
+    if (status != PJ_SUCCESS) {
+	if (call_med->tp) {
+	    pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+	    pjmedia_transport_close(call_med->tp);
+	    call_med->tp = NULL;
+	}
 
-    if (sip_err_code)
-        *sip_err_code = err_code;
+	if (err_code == 0)
+	    err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
+
+	if (sip_err_code)
+	    *sip_err_code = err_code;
+    }
 
     if (call_med->med_init_cb) {
         pjsua_med_tp_state_info info;
@@ -1782,6 +1787,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	}
 
         if (status != PJ_SUCCESS) {
+	    if (sip_err_code)
+		*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
 	    call_med->tp_ready = status;
 	    pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
 	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
@@ -1992,7 +1999,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
      */
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING) {
-        if (sip_err_code) *sip_err_code = PJSIP_SC_SERVICE_UNAVAILABLE;
+        if (sip_err_code)
+	    *sip_err_code = PJSIP_SC_SERVICE_UNAVAILABLE;
 	return PJ_EBUSY;
     }
 
@@ -2001,8 +2009,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                               call->async_call.dlg->pool);
 
         status = pj_mutex_create_simple(tmppool, NULL, &call->med_ch_mutex);
-        if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    if (sip_err_code)
+		*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
             return status;
+	}
     }
 
     if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED)
@@ -2062,7 +2073,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
 	if (maudcnt + mvidcnt == 0) {
 	    /* Expecting audio or video in the offer */
-	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+	    if (sip_err_code)
+		*sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
 	    status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
 	    goto on_error;
 	}
@@ -2178,7 +2190,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     if (call->med_prov_cnt == 0) {
 	/* Expecting at least one media */
-	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+	if (sip_err_code)
+	    *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
 	goto on_error;
     }
@@ -2292,8 +2305,12 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     call->med_ch_cb = NULL;
 
     status = media_channel_init_cb(call_id, NULL);
-    if (status != PJ_SUCCESS && sip_err_code)
-        *sip_err_code = call->med_ch_info.sip_err_code;
+    if (status != PJ_SUCCESS && sip_err_code) {
+	if (call->med_ch_info.sip_err_code)
+	    *sip_err_code = call->med_ch_info.sip_err_code;
+	else
+	    *sip_err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
+    }
 
     pj_log_pop_indent();
     return status;
@@ -2303,6 +2320,9 @@ on_error:
         pj_mutex_destroy(call->med_ch_mutex);
         call->med_ch_mutex = NULL;
     }
+
+    if (sip_err_code && *sip_err_code == 0)
+	*sip_err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 
     pj_log_pop_indent();
     return status;
@@ -2330,8 +2350,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     unsigned tot_bandw_tias = 0;
     pj_status_t status;
 
-    if (pjsua_get_state() != PJSUA_STATE_RUNNING)
-	return PJ_EBUSY;
+    if (pjsua_get_state() != PJSUA_STATE_RUNNING) {
+	status = PJ_EBUSY;
+	goto on_error;
+    }
 
 #if 0
     // This function should not really change the media channel.
@@ -2396,7 +2418,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     status = pjmedia_endpt_create_base_sdp(pjsua_var.med_endpt, pool, NULL,
                                            &origin, &sdp);
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_error;
 
     /* Process each media line */
     for (mi=0; mi<call->med_prov_cnt; ++mi) {
@@ -2511,11 +2533,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 #endif
 	default:
 	    pj_assert(!"Invalid call_med media type");
-	    return PJ_EBUG;
+	    status = PJ_EBUG;
 	}
 
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
 
     	/* Add ssrc and cname attribute */
     	m->attr[m->attr_count++] = pjmedia_sdp_attr_create_ssrc(pool,
@@ -2529,7 +2551,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 					      sdp, rem_sdp, mi);
 	if (status != PJ_SUCCESS) {
 	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
-	    return status;
+	    goto on_error;
 	}
 
 #if PJSUA_SDP_SESS_HAS_CONN
@@ -2673,6 +2695,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
     *p_sdp = sdp;
     return PJ_SUCCESS;
+
+on_error:
+    if (sip_err_code && *sip_err_code == 0)
+	*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+
+    return status;
 }
 
 
