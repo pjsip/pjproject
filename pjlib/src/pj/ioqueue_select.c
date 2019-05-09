@@ -750,14 +750,14 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             addr_len = sizeof(local_addr);
             status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(5,(THIS_FILE, "Error get socket name %d", status));
+                PJ_PERROR(5,(THIS_FILE, status, "Error get socket name"));
             	continue;
             }
         
             addr_len = sizeof(rem_addr);
             status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(5,(THIS_FILE, "Error get peer name %d", status));
+                PJ_PERROR(5,(THIS_FILE, status, "Error get peer name"));
             } else {
             	flags |= HAS_PEER_ADDR;
             }
@@ -766,12 +766,12 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
             if (status == PJ_STATUS_FROM_OS(EBADF) ||
                 status == PJ_STATUS_FROM_OS(EINVAL))
             {
-            	PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+            	PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
             	continue;
             }
         
             if (status != PJ_SUCCESS) {
-            	PJ_LOG(5,(THIS_FILE, "Error get qos param %d", status));
+            	PJ_PERROR(5,(THIS_FILE, status, "Error get qos param"));
             } else {
             	flags |= HAS_QOS;
             }
@@ -781,7 +781,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
              */
             status = pj_sock_close(old_sock);
        	    if (status != PJ_SUCCESS) {
-                PJ_LOG(5,(THIS_FILE, "Error closing socket %d", status));
+                PJ_PERROR(5,(THIS_FILE, status, "Error closing socket"));
             }
             
             old_sock = PJ_INVALID_SOCKET;
@@ -791,7 +791,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
         status = pj_sock_socket(local_addr.addr.sa_family, PJ_SOCK_DGRAM, 0,
                                 &new_sock);
         if (status != PJ_SUCCESS) {
-            PJ_LOG(5,(THIS_FILE, "Error create socket %d", status));
+            PJ_PERROR(5,(THIS_FILE, status, "Error create socket"));
             continue;
         }
 
@@ -804,8 +804,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
         if (status == PJ_STATUS_FROM_OS(EBADF) ||
             status == PJ_STATUS_FROM_OS(EINVAL))
         {
-            PJ_LOG(5,(THIS_FILE, "Error set socket option %d",
-                      status));
+            PJ_PERROR(5,(THIS_FILE, status, "Error set socket option"));
             continue;
         }
 
@@ -825,7 +824,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
         if (flags & HAS_QOS) {
             status = pj_sock_set_qos_params(new_sock, &qos_params);
             if (status == PJ_STATUS_FROM_OS(EINVAL)) {
-                PJ_LOG(5,(THIS_FILE, "Error set qos param %d", status));
+                PJ_PERROR(5,(THIS_FILE, status, "Error set qos param"));
                 continue;
             }
         }
@@ -833,7 +832,7 @@ static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
         if (flags & HAS_PEER_ADDR) {
             status = pj_sock_connect(new_sock, &rem_addr, addr_len);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(5,(THIS_FILE, "Error connect socket %d", status));
+                PJ_PERROR(5,(THIS_FILE, status, "Error connect socket"));
                 continue;
             }
         }
@@ -888,7 +887,7 @@ on_error:
     }
 
     h->fd = PJ_INVALID_SOCKET;
-    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket [%d]", status));
+    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket %d", old_sock));
     pj_lock_release(h->ioqueue->lock);
     return PJ_ESOCKETSTOP;
 }

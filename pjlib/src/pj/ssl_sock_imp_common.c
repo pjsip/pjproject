@@ -225,14 +225,12 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 	if (status != PJ_SUCCESS) {
 	    /* Handshake failed in accepting, destroy our self silently. */
 
-	    char errmsg[PJ_ERR_MSG_SIZE];
 	    char buf[PJ_INET6_ADDRSTRLEN+10];
 
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(3,(ssock->pool->obj_name, "Handshake failed in accepting "
-		      "%s: %s",
-		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
-		      errmsg));
+	    PJ_PERROR(3,(ssock->pool->obj_name, status,
+			 "Handshake failed in accepting %s",
+			 pj_sockaddr_print(&ssock->rem_addr, buf,
+					   sizeof(buf), 3)));
 
 	    if (ssock->param.cb.on_accept_complete2) {
 		(*ssock->param.cb.on_accept_complete2) 
@@ -250,6 +248,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 #if 1 //(defined(PJ_WIN32) && PJ_WIN32!=0)||(defined(PJ_WIN64) && PJ_WIN64!=0)
 	    if (ssock->param.timer_heap) {
 		pj_time_val interval = {0, PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT};
+		pj_status_t status1;
 
 		ssock->ssl_state = SSL_STATE_NULL;
 		ssl_close_sockets(ssock);
@@ -260,11 +259,12 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		}
 		ssock->timer.id = TIMER_CLOSE;
 		pj_time_val_normalize(&interval);
-		if (pj_timer_heap_schedule(ssock->param.timer_heap, 
-					   &ssock->timer, &interval) != 0)
-		{
-	    	    PJ_LOG(3,(ssock->pool->obj_name, "Failed to schedule "
-		      	      "a delayed close. Race condition may occur."));
+		status1 = pj_timer_heap_schedule(ssock->param.timer_heap, 
+						 &ssock->timer, &interval);
+		if (status1 != PJ_SUCCESS) {
+	    	    PJ_PERROR(3,(ssock->pool->obj_name, status,
+				 "Failed to schedule a delayed close. "
+				 "Race condition may occur."));
 		    ssock->timer.id = TIMER_NONE;
 		    pj_ssl_sock_close(ssock);
 		}

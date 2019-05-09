@@ -177,10 +177,7 @@ PJ_BEGIN_DECL
 
    static void my_perror(const char *title, pj_status_t status)
    {
-        char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(1,(THIS_FILE, "%s: %s [status=%d]", title, errmsg, status));
+	PJ_PERROR(1,(THIS_FILE, status, title));
    }
 
    static void pool_demo_1(pj_pool_factory *pfactory)

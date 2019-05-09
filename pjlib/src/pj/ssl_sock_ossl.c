@@ -803,14 +803,14 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	    if (rc != 1) {
 		status = GET_SSL_STATUS(ssock);
 		if (cert->CA_file.slen) {
-		    PJ_LOG(1,(ssock->pool->obj_name,
-			      "Error loading CA list file '%s'",
-			      cert->CA_file.ptr));
+		    PJ_PERROR(1,(ssock->pool->obj_name, status,
+				 "Error loading CA list file '%s'",
+				 cert->CA_file.ptr));
 		}
 		if (cert->CA_path.slen) {
-		    PJ_LOG(1,(ssock->pool->obj_name,
-			      "Error loading CA path '%s'",
-			      cert->CA_path.ptr));
+		    PJ_PERROR(1,(ssock->pool->obj_name, status,
+				 "Error loading CA path '%s'",
+				 cert->CA_path.ptr));
 		}
 		SSL_CTX_free(ctx);
 		return status;
@@ -832,8 +832,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
 	    if(rc != 1) {
 		status = GET_SSL_STATUS(ssock);
-		PJ_LOG(1,(ssock->pool->obj_name, "Error loading certificate "
-			  "chain file '%s'", cert->cert_file.ptr));
+		PJ_PERROR(1,(ssock->pool->obj_name, status,
+			     "Error loading certificate chain file '%s'",
+			     cert->cert_file.ptr));
 		SSL_CTX_free(ctx);
 		return status;
 	    }
@@ -848,8 +849,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
 	    if(rc != 1) {
 		status = GET_SSL_STATUS(ssock);
-		PJ_LOG(1,(ssock->pool->obj_name, "Error adding private key "
-			  "from '%s'", cert->privkey_file.ptr));
+		PJ_PERROR(1,(ssock->pool->obj_name, status,
+			     "Error adding private key from '%s'",
+			     cert->privkey_file.ptr));
 		SSL_CTX_free(ctx);
 		return status;
 	    }
@@ -891,8 +893,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 		    rc = SSL_CTX_use_certificate(ctx, xcert);
 		    if (rc != 1) {
 			status = GET_SSL_STATUS(ssock);
-			PJ_LOG(1, (ssock->pool->obj_name, "Error loading "
-				   "chain certificate from buffer"));
+			PJ_PERROR(1,(ssock->pool->obj_name, status,
+			      "Error loading chain certificate from buffer"));
 			X509_free(xcert);
 			BIO_free(cbio);
 			SSL_CTX_free(ctx);
@@ -939,8 +941,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 		    rc = SSL_CTX_use_PrivateKey(ctx, pkey);
 		    if (rc != 1) {
 			status = GET_SSL_STATUS(ssock);
-			PJ_LOG(1, (ssock->pool->obj_name, "Error adding "
-				   "private key from buffer"));
+			PJ_PERROR(1,(ssock->pool->obj_name, status,
+				     "Error adding private key from buffer"));
 			EVP_PKEY_free(pkey);
 			BIO_free(kbio);
 			SSL_CTX_free(ctx);
@@ -1003,8 +1005,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 		    PJ_LOG(4,(ssock->pool->obj_name,
 			      "Additional certificate '%s' loaded.", cf));
 		} else {
-		    pj_perror(1, ssock->pool->obj_name, GET_SSL_STATUS(ssock),
-			      "Error loading certificate file '%s'", cf);
+		    PJ_PERROR(1,(ssock->pool->obj_name, GET_SSL_STATUS(ssock),
+				 "Error loading certificate file '%s'", cf));
 		    ERR_clear_error();
 		}
 	    }
@@ -1305,7 +1307,7 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 
 static void set_entropy(pj_ssl_sock_t *ssock)
 {
-    int ret;
+    int ret = 0;
 
     switch (ssock->param.entropy_type) {
 #ifndef OPENSSL_NO_EGD
@@ -1323,15 +1325,15 @@ static void set_entropy(pj_ssl_sock_t *ssock)
 	    ret = RAND_load_file(ssock->param.entropy_path.ptr,255);
 	    break;
 	case PJ_SSL_ENTROPY_NONE:
-	    default:
-	    return;
+	default:
 	    break;
     }
 
     if (ret < 0) {
-	PJ_LOG(3, (ssock->pool->obj_name, "SSL failed to reseed with "
-					  "entropy type %d",
-			  		  ssock->param.entropy_type));
+	PJ_LOG(3, (ssock->pool->obj_name,
+		   "SSL failed to reseed with entropy type %d "
+		   "[native err=%d]",
+		   ssock->param.entropy_type, ret));
     }
 }
 
