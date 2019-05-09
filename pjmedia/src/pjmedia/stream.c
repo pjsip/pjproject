@@ -38,7 +38,7 @@
 
 #define THIS_FILE			"stream.c"
 #define ERRLEVEL			1
-#define LOGERR_(expr)			stream_perror expr
+#define LOGERR_(expr)			PJ_PERROR(4,expr);
 #define TRC_(expr)			PJ_LOG(5,expr)
 
 #define BYTES_PER_SAMPLE		2
@@ -268,17 +268,6 @@ static const char digitmap[17] = { '0', '1', '2', '3',
 /* Zero audio frame samples */
 static pj_int16_t zero_frame[2 * 30 * 16000 / 1000];
 
-/*
- * Print error.
- */
-static void stream_perror(const char *sender, const char *title,
-			  pj_status_t status)
-{
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(4,(sender, "%s: %s [err:%d]", title, errmsg, status));
-}
 
 static void on_rx_rtcp( void *data,
                         void *pkt,
@@ -748,8 +737,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 					   (unsigned)frame_out.size,
 					   &frame_out);
 	    if (status != 0) {
-		LOGERR_((port->info.name.ptr, "codec decode() error",
-			 status));
+		LOGERR_((port->info.name.ptr, status,
+			 "codec decode() error"));
 
 		if (use_dec_buf) {
 		    pjmedia_zero_samples(p_out_samp + samples_count,
@@ -861,8 +850,8 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    status = pjmedia_codec_decode( stream->codec, &frame_in,
 					   0, frame);
 	    if (status != PJ_SUCCESS) {
-		LOGERR_((port->info.name.ptr, "codec decode() error",
-			 status));
+		LOGERR_((port->info.name.ptr, status,
+			 "codec decode() error"));
 		pjmedia_frame_ext_append_subframe(f, NULL, 0,
 					    (pj_uint16_t)samples_per_frame);
 	    }
@@ -1396,8 +1385,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 				       sizeof(pjmedia_rtp_hdr),
 				       &frame_out);
 	if (status != PJ_SUCCESS) {
-	    LOGERR_((stream->port.info.name.ptr,
-		    "Codec encode() error", status));
+	    LOGERR_((stream->port.info.name.ptr, status,
+		    "Codec encode() error"));
 	    return status;
 	}
 
@@ -1420,8 +1409,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 				       sizeof(pjmedia_rtp_hdr),
 				       &frame_out);
 	if (status != PJ_SUCCESS) {
-	    LOGERR_((stream->port.info.name.ptr,
-		    "Codec encode() error", status));
+	    LOGERR_((stream->port.info.name.ptr, status,
+		    "Codec encode() error"));
 	    return status;
 	}
 
@@ -1444,8 +1433,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     }
 
     if (status != PJ_SUCCESS) {
-	LOGERR_((stream->port.info.name.ptr,
-		"RTP encode_rtp() error", status));
+	LOGERR_((stream->port.info.name.ptr, status,
+		"RTP encode_rtp() error"));
 	return status;
     }
 
@@ -1775,7 +1764,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     status = pjmedia_rtp_decode_rtp(&channel->rtp, pkt, (int)bytes_read,
 				    &hdr, &payload, &payloadlen);
     if (status != PJ_SUCCESS) {
-	LOGERR_((stream->port.info.name.ptr, "RTP decode error", status));
+	LOGERR_((stream->port.info.name.ptr, status, "RTP decode error"));
 	stream->rtcp.stat.rx.discard++;
 	return;
     }
@@ -1930,9 +1919,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	status = pjmedia_codec_parse(stream->codec, (void*)payload,
 				     payloadlen, &ts, &count, frames);
 	if (status != PJ_SUCCESS) {
-	    LOGERR_((stream->port.info.name.ptr,
-		     "Codec parse() error",
-		     status));
+	    LOGERR_((stream->port.info.name.ptr, status,
+		     "Codec parse() error"));
 	    count = 0;
 	} else if (stream->detect_ptime_change &&
 		   frames[0].bit_info > 0xFFFF)
@@ -2058,8 +2046,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
 
     if (status != 0) {
-	LOGERR_((stream->port.info.name.ptr, "Jitter buffer put() error",
-		status));
+	LOGERR_((stream->port.info.name.ptr, status,
+		 "Jitter buffer put() error"));
 	pkt_discarded = PJ_TRUE;
 	goto on_return;
     }
@@ -2121,8 +2109,8 @@ static void on_rx_rtcp( void *data,
     /* Check for errors */
     if (bytes_read < 0) {
 	if (bytes_read != -PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
-	    LOGERR_((stream->port.info.name.ptr, "RTCP recv() error",
-		    (pj_status_t)-bytes_read));
+	    LOGERR_((stream->port.info.name.ptr, (pj_status_t)-bytes_read,
+		     "RTCP recv() error"));
 	}
 	return;
     }
@@ -2778,11 +2766,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	pj_ansi_snprintf(trace_name, sizeof(trace_name),
 			 TRACE_JB_PATH_PREFIX "%s.csv",
 			 stream->port.info.name.ptr);
-	status = pj_file_open(pool, trace_name, PJ_O_WRONLY, &stream->trace_jb_fd);
+	status = pj_file_open(pool, trace_name, PJ_O_WRONLY,
+			      &stream->trace_jb_fd);
 	if (status != PJ_SUCCESS) {
 	    stream->trace_jb_fd = TRACE_JB_INVALID_FD;
-	    PJ_LOG(3,(THIS_FILE, "Failed creating RTP trace file '%s'",
-		      trace_name));
+	    PJ_PERROR(3,(THIS_FILE, status,
+			 "Failed creating RTP trace file '%s'", trace_name));
 	} else {
 	    stream->trace_jb_buf = (char*)pj_pool_alloc(pool, PJ_LOG_MAX_SIZE);
 

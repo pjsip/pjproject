@@ -371,8 +371,10 @@ static pj_status_t handle_event(void *data)
 	    switch (pevent.type) {
 	    case PJMEDIA_EVENT_WND_RESIZED:
                 status = resize_disp(strm, &pevent.data.wnd_resized.new_size);
-                if (status != PJ_SUCCESS)
-                    PJ_LOG(3, (THIS_FILE, "Failed resizing the display."));
+		if (status != PJ_SUCCESS) {
+                    PJ_PERROR(3, (THIS_FILE, status,
+				  "Failed resizing the display."));
+		}
 		break;
 	    case PJMEDIA_EVENT_WND_CLOSING:
 		if (pevent.data.wnd_closing.cancel) {
@@ -1181,9 +1183,9 @@ static pj_status_t set_cap(void *data)
 	    return status;	
 
 	status = sdl_create_window(strm, PJ_TRUE, sdl_info->sdl_format, hwnd);
-        PJ_LOG(4, (THIS_FILE, "Re-initializing SDL with native window"
-        		      " %d: %s", hwnd->info.window,
-                              (status == PJ_SUCCESS? "success": "failed")));
+        PJ_PERROR(4, (THIS_FILE, status,
+		      "Re-initializing SDL with native window %d",
+		      hwnd->info.window));
 	return status;	
     }
 
@@ -1300,7 +1302,8 @@ static int job_thread(void * data)
             status = pj_sem_create(jq->pool, "thread_sem", 0, jq->size + 1,
                                    &jq->sem);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(3, (THIS_FILE, "Failed growing SDL job queue size."));
+                PJ_PERROR(3, (THIS_FILE, status,
+			      "Failed growing SDL job queue size."));
                 return 0;
             }
             jq->jobs = (job **)pj_pool_calloc(jq->pool, jq->size,
@@ -1311,8 +1314,8 @@ static int job_thread(void * data)
                 status = pj_sem_create(jq->pool, "job_sem", 0, 1,
                                        &jq->job_sem[i]);
                 if (status != PJ_SUCCESS) {
-                    PJ_LOG(3, (THIS_FILE, "Failed growing SDL job "
-                                          "queue size."));
+                    PJ_PERROR(3, (THIS_FILE, status,
+				  "Failed growing SDL job queue size."));
                     return 0;
                 }
             }

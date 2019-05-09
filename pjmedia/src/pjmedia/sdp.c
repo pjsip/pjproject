@@ -1433,12 +1433,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     }
     PJ_CATCH_ANY {
 	
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(ctx.last_error, errmsg, sizeof(errmsg));
-
-	PJ_LOG(4, (THIS_FILE, "Error parsing SDP in line %d col %d: %s",
-		   scanner.line, pj_scan_get_col(&scanner),
-		   errmsg));
+	PJ_PERROR(4, (THIS_FILE, ctx.last_error,
+		      "Error parsing SDP in line %d col %d",
+		      scanner.line, pj_scan_get_col(&scanner)));
 
 	session = NULL;
 

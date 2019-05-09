@@ -514,14 +514,18 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
     dtls_init();
 #endif
 
-    if (pjmedia_endpt_atexit(endpt, pjmedia_srtp_deinit_lib) != PJ_SUCCESS)
-    {
+    status = pjmedia_endpt_atexit(endpt, pjmedia_srtp_deinit_lib);
+    if (status != PJ_SUCCESS) {
 	/* There will be memory leak when it fails to schedule libsrtp
 	 * deinitialization, however the memory leak could be harmless,
 	 * since in modern OS's memory used by an application is released
 	 * when the application terminates.
 	 */
-	PJ_LOG(4, (THIS_FILE, "Failed to register libsrtp deinit."));
+	PJ_PERROR(4, (THIS_FILE, status,
+		      "Failed to register libsrtp deinit."));
+
+	/* Ignore this error */
+	status = PJ_SUCCESS;
     }
 
     libsrtp_initialized = PJ_TRUE;
@@ -1757,8 +1761,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     /* Invoke media_stop() of member tp */
     status = pjmedia_transport_media_stop(srtp->member_tp);
     if (status != PJ_SUCCESS)
-	PJ_LOG(4, (srtp->pool->obj_name,
-		   "SRTP failed stop underlying media transport."));
+	PJ_PERROR(4, (srtp->pool->obj_name, status,
+		      "SRTP failed stop underlying media transport."));
 
     /* Finally, stop SRTP */
     return pjmedia_transport_srtp_stop(tp);

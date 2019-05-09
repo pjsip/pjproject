@@ -171,7 +171,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 	nal_end - nal_start > pktz->cfg.mtu)
     {
 	//pj_assert(!"MTU too small for H.264 single NAL packetization mode");
-	PJ_LOG(2,("h264_packetizer.c",
+	PJ_LOG(2,(THIS_FILE,
 		  "MTU too small for H.264 (required=%u, MTU=%u)",
 		  nal_end - nal_start, pktz->cfg.mtu));
 	return PJ_ETOOSMALL;

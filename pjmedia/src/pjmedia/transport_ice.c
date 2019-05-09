@@ -394,10 +394,8 @@ static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
 		       pj_status_t err)
 {
     if (err != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(err, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(tp_ice->base.name, 
-		  "Stopping ICE, reason=%s:%s", reason, errmsg));
+	PJ_PERROR(4,(tp_ice->base.name, err,
+		     "Stopping ICE, reason=%s", reason));
     } else {
 	PJ_LOG(4,(tp_ice->base.name, 
 		  "Stopping ICE, reason=%s", reason));
@@ -1060,11 +1058,11 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	status = parse_cand(tp_ice->base.name, tmp_pool, 
 			    &rem_m->attr[i]->value, &cand);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(4,(tp_ice->base.name, 
-		      "Error in parsing SDP candidate attribute '%.*s', "
-		      "candidate is ignored",
-		      (int)rem_m->attr[i]->value.slen, 
-		      rem_m->attr[i]->value.ptr));
+	    PJ_PERROR(4,(tp_ice->base.name, status,
+			 "Error in parsing SDP candidate attribute '%.*s', "
+			 "candidate is ignored",
+			 (int)rem_m->attr[i]->value.slen, 
+			 rem_m->attr[i]->value.ptr));
 	    continue;
 	}
 
@@ -1490,10 +1488,10 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
 	status = parse_cand(tp_ice->base.name, tmp_pool, &attr->value, 
 			    &cand[cand_cnt]);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(4,(tp_ice->base.name, 
-		      "Error in parsing SDP candidate attribute '%.*s', "
-		      "candidate is ignored",
-		      (int)attr->value.slen, attr->value.ptr));
+	    PJ_PERROR(4,(tp_ice->base.name, status,
+			 "Error in parsing SDP candidate attribute '%.*s', "
+			 "candidate is ignored",
+			 (int)attr->value.slen, attr->value.ptr));
 	    continue;
 	}
 
@@ -1670,9 +1668,8 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 					    &ufrag_attr->value, 
 					    &pwd_attr->value);
 	    if (status != PJ_SUCCESS) {
-		PJ_LOG(1,(tp_ice->base.name, 
-			  "ICE re-initialization failed (status=%d)!",
-			  status));
+		PJ_PERROR(1,(tp_ice->base.name, status,
+			     "ICE re-initialization failed!"));
 		return status;
 	    }
 	}
@@ -1710,9 +1707,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     /* Now start ICE */
     status = start_ice(tp_ice, tmp_pool, rem_sdp, media_index);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(1,(tp_ice->base.name, 
-		  "ICE restart failed (status=%d)!",
-		  status));
+	PJ_PERROR(1,(tp_ice->base.name, status, "ICE restart failed!"));
 	return status;
     }
 

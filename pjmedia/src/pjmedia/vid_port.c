@@ -1000,11 +1000,11 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
              vp->conv.conv_param.dst.det.vid.size.w))
         {
             status = pjmedia_vid_dev_stream_set_cap(vp->strm,
-                                                    PJMEDIA_VID_DEV_CAP_FORMAT,
-                                                    &vp->conv.conv_param.dst);
+                                                PJMEDIA_VID_DEV_CAP_FORMAT,
+                                                &vp->conv.conv_param.dst);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
-                                      "video device"));
+                PJ_PERROR(3,(THIS_FILE, status,
+		    "failure in changing the format of the video device"));
                 PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
                                       status != PJMEDIA_EVID_ERR ? "success" :
                                       "failure"));
