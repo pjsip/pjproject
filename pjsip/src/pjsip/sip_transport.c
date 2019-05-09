@@ -1506,8 +1506,9 @@ static pj_status_t get_net_interface(pjsip_transport_type_e tp_type,
 	    /* If it fails, e.g: on WM6(http://support.microsoft.com/kb/129065),
 	     * just fallback using pj_gethostip(), see ticket #1660.
 	     */
-	    PJ_LOG(5,(THIS_FILE,"Warning: unable to determine local "
-				"interface, fallback to default interface!"));
+	    PJ_PERROR(5,(THIS_FILE, status,
+			 "Warning: unable to determine local interface, "
+			 "fallback to default interface!"));
 	    status = pj_gethostip(af, &itf_addr);
 	    if (status != PJ_SUCCESS)
 		return status;

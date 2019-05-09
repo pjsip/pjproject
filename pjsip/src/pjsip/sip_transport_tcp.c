@@ -166,11 +166,7 @@ static pj_status_t tcp_create(struct tcp_listener *listener,
 static void tcp_perror(const char *sender, const char *title,
 		       pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_PERROR(3,(sender, status, "%s: [code=%d]", title, status));
 }
 
 
@@ -965,9 +961,8 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
     status = pj_activesock_start_read2(tcp->asock, tcp->base.pool, size,
 				       readbuf, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	PJ_LOG(4, (tcp->base.obj_name, 
-		   "pj_activesock_start_read() error, status=%d", 
-		   status));
+	PJ_PERROR(4, (tcp->base.obj_name, status,
+		      "pj_activesock_start_read() error"));
 	return status;
     }
 
@@ -1686,9 +1681,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
 	status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
 				    &enabled, sizeof(enabled));
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(1, ("TRACE", "fail set reuseaddr"));
 	    PJ_PERROR(4, (listener->factory.obj_name, status,
-		"Warning: error applying SO_REUSEADDR"));
+			  "Warning: error applying SO_REUSEADDR"));
 	}
     }
 

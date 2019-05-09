@@ -523,7 +523,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Create asynchronous DNS resolver. */
     status = pjsip_resolver_create(endpt->pool, &endpt->resolver);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(4, (THIS_FILE, "Error creating resolver instance"));
+	PJ_PERROR(4, (THIS_FILE, status,
+		      "Error creating resolver instance"));
 	goto on_error;
     }
 
@@ -567,7 +568,7 @@ on_error:
     }
     pj_pool_release( endpt->pool );
 
-    PJ_LOG(4, (THIS_FILE, "Error creating endpoint"));
+    PJ_PERROR(4, (THIS_FILE, status, "Error creating endpoint"));
     return status;
 }
 
@@ -579,7 +580,7 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     pjsip_module *mod;
     exit_cb *ecb;
 
-    PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
+    PJ_LOG(5, (THIS_FILE, "Destroying endpoint instance.."));
 
     /* Phase 1: stop all modules */
     mod = endpt->module_list.prev;

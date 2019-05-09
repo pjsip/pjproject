@@ -172,11 +172,7 @@ static void tls_on_destroy(void *arg);
 static void tls_perror(const char *sender, const char *title,
 		       pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_PERROR(3,(sender, status, "%s: [code=%d]", title, status));
 }
 
 
@@ -1105,9 +1101,8 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
     status = pj_ssl_sock_start_read2(tls->ssock, tls->base.pool, size,
 				     readbuf, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	PJ_LOG(4, (tls->base.obj_name, 
-		   "pj_ssl_sock_start_read() error, status=%d", 
-		   status));
+	PJ_PERROR(4, (tls->base.obj_name, status,
+		     "pj_ssl_sock_start_read() error"));
 	return status;
     }
 

@@ -644,10 +644,7 @@ static void udp_set_socket(struct udp_transport *tp,
     status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_RCVBUF(),
 				&sobuf_size, sizeof(sobuf_size));
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(THIS_FILE, "Error setting SO_RCVBUF: %s [%d]", errmsg,
-		  status));
+	PJ_PERROR(4,(THIS_FILE, status, "Error setting SO_RCVBUF"));
     }
 #endif
 
@@ -657,10 +654,7 @@ static void udp_set_socket(struct udp_transport *tp,
     status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_SNDBUF(),
 				&sobuf_size, sizeof(sobuf_size));
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(THIS_FILE, "Error setting SO_SNDBUF: %s [%d]", errmsg,
-		  status));
+	PJ_PERROR(4,(THIS_FILE, status, "Error setting SO_SNDBUF"));
     }
 #endif
 

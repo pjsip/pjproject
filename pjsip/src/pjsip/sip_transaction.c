@@ -775,11 +775,11 @@ static pj_status_t mod_tsx_layer_unload(void)
      * from transport and when it tries to unregister itself.
      */
     if (pj_hash_count(mod_tsx_layer.htable) != 0) {
-	if (pjsip_endpt_atexit(mod_tsx_layer.endpt, &tsx_layer_destroy) !=
-	    PJ_SUCCESS)
-	{
-	    PJ_LOG(3,(THIS_FILE, "Failed to register transaction layer "
-				 "module destroy."));
+	pj_status_t status;
+	status = pjsip_endpt_atexit(mod_tsx_layer.endpt, &tsx_layer_destroy);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3,(THIS_FILE, status,
+		    "Failed to register transaction layer module destroy."));
 	}
 	return PJ_EBUSY;
     }
@@ -2037,12 +2037,10 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 
     if (sent < 0) {
 	pj_time_val delay = {0, 0};
-	char errmsg[PJ_ERR_MSG_SIZE];
 
-	pj_strerror((pj_status_t)-sent, errmsg, sizeof(errmsg));
-
-	PJ_LOG(2,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
-		pjsip_tx_data_get_info(tdata), -sent, errmsg));
+	PJ_PERROR(2,(tsx->obj_name, (pj_status_t)-sent,
+		      "Transport failed to send %s!",
+		      pjsip_tx_data_get_info(tdata)));
 
 	/* Post the event for later processing, to avoid deadlock.
 	 * See https://trac.pjsip.org/repos/ticket/1646

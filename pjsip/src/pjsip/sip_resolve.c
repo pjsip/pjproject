@@ -512,12 +512,10 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 on_error:
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	PJ_LOG(4,(THIS_FILE, "Failed to resolve '%.*s'. Err=%d (%s)",
-			     (int)target->addr.host.slen,
-			     target->addr.host.ptr,
-			     status,
-			     pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Failed to resolve '%.*s'",
+		     (int)target->addr.host.slen,
+		     target->addr.host.ptr));
 	(*cb)(status, token, NULL);
 	return;
     }
@@ -567,12 +565,8 @@ static void dns_a_callback(void *user_data,
     }
     
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS A record resolution failed: %s", 
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS A record resolution failed"));
 
 	query->last_error = status;
     }
@@ -630,12 +624,8 @@ static void dns_aaaa_callback(void *user_data,
     }
     
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS AAAA record resolution failed: %s", 
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS AAAA record resolution failed"));
 
 	query->last_error = status;
     }
@@ -660,12 +650,8 @@ static void srv_resolver_cb(void *user_data,
     unsigned i;
 
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS A/AAAA record resolution failed: %s",
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS A/AAAA record resolution failed"));
 
 	/* Call the callback */
 	(*query->cb)(status, query->token, NULL);

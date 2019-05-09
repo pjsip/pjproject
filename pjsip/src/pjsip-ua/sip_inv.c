@@ -1947,7 +1947,7 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 
     status = pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
 
-    PJ_LOG(5,(inv->obj_name, "SDP negotiation done, status=%d", status));
+    PJ_PERROR(4,(inv->obj_name, status, "SDP negotiation done"));
 
     if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
