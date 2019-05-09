@@ -834,8 +834,8 @@ static void turn_on_state(pj_turn_session *sess,
 	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_RCVBUF(),
 					      PJ_TRUE, &sobuf_size);
 	    if (status != PJ_SUCCESS) {
-		pj_perror(3, turn_sock->obj_name, status,
-			  "Failed setting SO_RCVBUF");
+		PJ_PERROR(3, (turn_sock->obj_name, status,
+			      "Failed setting SO_RCVBUF"));
 	    } else {
 		if (sobuf_size < turn_sock->setting.so_rcvbuf_size) {
 		    PJ_LOG(4, (turn_sock->obj_name, 
@@ -853,8 +853,8 @@ static void turn_on_state(pj_turn_session *sess,
 	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_SNDBUF(),
 					      PJ_TRUE, &sobuf_size);
 	    if (status != PJ_SUCCESS) {
-		pj_perror(3, turn_sock->obj_name, status,
-			  "Failed setting SO_SNDBUF");
+		PJ_PERROR(3, (turn_sock->obj_name, status,
+			      "Failed setting SO_SNDBUF"));
 	    } else {
 		if (sobuf_size < turn_sock->setting.so_sndbuf_size) {
 		    PJ_LOG(4, (turn_sock->obj_name, 
@@ -904,10 +904,10 @@ static void turn_on_state(pj_turn_session *sess,
 	if (status == PJ_SUCCESS) {
 	    on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
 	} else if (status != PJ_EPENDING) {
-            pj_perror(3, turn_sock->pool->obj_name, status,
-                      "Failed to connect to %s",
-                      pj_sockaddr_print(&info.server, addrtxt,
-                                        sizeof(addrtxt), 3));
+            PJ_PERROR(3, (turn_sock->pool->obj_name, status,
+			  "Failed to connect to %s",
+			  pj_sockaddr_print(&info.server, addrtxt,
+					    sizeof(addrtxt), 3)));
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
 	}

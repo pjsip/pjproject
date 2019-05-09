@@ -958,10 +958,8 @@ PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
 static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
 		      const char *title, pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
+    PJ_PERROR(4,(ice_st->obj_name, status, title));
 
-    pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(4,(ice_st->obj_name, "%s: %s", title, errmsg));
     pj_log_push_indent();
 
     if (op==PJ_ICE_STRANS_OP_INIT && ice_st->cb_called) {
@@ -1587,11 +1585,9 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 
     if (cb.on_ice_complete) {
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(ice_st->obj_name,
-		      "ICE negotiation failed after %ds:%03d: %s",
-		      msec/1000, msec%1000, errmsg));
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "ICE negotiation failed after %ds:%03d",
+			 msec/1000, msec%1000));
 	} else {
 	    unsigned i;
 	    enum {

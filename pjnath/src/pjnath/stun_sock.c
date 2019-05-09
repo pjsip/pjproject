@@ -243,8 +243,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
 	status = pj_sock_setsockopt_sobuf(stun_sock->sock_fd, pj_SO_RCVBUF(),
 					  PJ_TRUE, &sobuf_size);
 	if (status != PJ_SUCCESS) {
-	    pj_perror(3, stun_sock->obj_name, status,
-		      "Failed setting SO_RCVBUF");
+	    PJ_PERROR(3, (stun_sock->obj_name, status,
+			  "Failed setting SO_RCVBUF"));
 	} else {
 	    if (sobuf_size < cfg->so_rcvbuf_size) {
 		PJ_LOG(4, (stun_sock->obj_name, 
@@ -262,8 +262,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
 	status = pj_sock_setsockopt_sobuf(stun_sock->sock_fd, pj_SO_SNDBUF(),
 					  PJ_TRUE, &sobuf_size);
 	if (status != PJ_SUCCESS) {
-	    pj_perror(3, stun_sock->obj_name, status,
-		      "Failed setting SO_SNDBUF");
+	    PJ_PERROR(3, (stun_sock->obj_name, status,
+			  "Failed setting SO_SNDBUF"));
 	} else {
 	    if (sobuf_size < cfg->so_sndbuf_size) {
 		PJ_LOG(4, (stun_sock->obj_name, 

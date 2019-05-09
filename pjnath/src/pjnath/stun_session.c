@@ -1220,7 +1220,7 @@ static pj_status_t authenticate_req(pj_stun_session *sess,
 					  &sess->cred, tmp_pool, &rdata->info,
 					  &response);
     if (status != PJ_SUCCESS && response != NULL) {
-	PJ_LOG(5,(SNAME(sess), "Message authentication failed"));
+	PJ_PERROR(5,(SNAME(sess), status, "Message authentication failed"));
 	send_response(sess, token, tmp_pool, response, &rdata->info, 
 		      PJ_FALSE, src_addr, src_addr_len);
     }
@@ -1262,8 +1262,8 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
 	status = pj_stun_authenticate_response(pkt, pkt_len, msg, 
 					       &tdata->auth_info.auth_key);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(5,(SNAME(sess), 
-		      "Response authentication failed"));
+	    PJ_PERROR(5,(SNAME(sess), status,
+			 "Response authentication failed"));
 	    return status;
 	}
     }

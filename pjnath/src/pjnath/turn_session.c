@@ -1932,9 +1932,8 @@ static unsigned refresh_permissions(pj_turn_session *sess,
 					PJ_STUN_CREATE_PERM_REQUEST,
 					PJ_STUN_MAGIC, NULL, &tdata);
 		    if (status != PJ_SUCCESS) {
-			PJ_LOG(1,(sess->obj_name, 
-				 "Error creating CreatePermission request: %d",
-				 status));
+			PJ_PERROR(1,(sess->obj_name, status,
+				  "Error creating CreatePermission request"));
 			return 0;
 		    }
 
@@ -1977,9 +1976,8 @@ static unsigned refresh_permissions(pj_turn_session *sess,
 					  pj_sockaddr_get_len(sess->srv_addr), 
 					  tdata);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(1,(sess->obj_name, 
-		      "Error sending CreatePermission request: %d",
-		      status));
+	    PJ_PERROR(1,(sess->obj_name, status,
+		      "Error sending CreatePermission request"));
 	    count = 0;
 	}
 
