@@ -48,38 +48,39 @@ pj_status_t pjsua_vid_subsys_init(void)
 
     status = pjmedia_video_format_mgr_create(pjsua_var.pool, 64, 0, NULL);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video format manager"));
+	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video format manager",
+		     status);
 	goto on_error;
     }
 
     status = pjmedia_converter_mgr_create(pjsua_var.pool, NULL);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA converter manager"));
+	pjsua_perror(THIS_FILE, "Error creating PJMEDIA converter manager",
+		     status);
 	goto on_error;
     }
 
     status = pjmedia_vid_codec_mgr_create(pjsua_var.pool, NULL);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video codec manager"));
+	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video codec manager",
+		     status);
 	goto on_error;
     }
 
     status = pjmedia_vid_conf_create(pjsua_var.pool, NULL,
 				     &pjsua_var.vid_conf);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video conference bridge"));
+	pjsua_perror(THIS_FILE,
+		     "Error creating PJMEDIA video conference bridge",
+		     status);
 	goto on_error;
     }
 
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
     status = pjmedia_codec_vid_toolbox_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error initializing Video Toolbox codec"));
+	pjsua_perror(THIS_FILE, "Error initializing Video Toolbox codec",
+		     status);
 	goto on_error;
     }
 #endif
@@ -87,8 +88,8 @@ pj_status_t pjsua_vid_subsys_init(void)
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_OPENH264_CODEC
     status = pjmedia_codec_openh264_vid_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error initializing OpenH264 library"));
+	pjsua_perror(THIS_FILE, "Error initializing OpenH264 library",
+		     status);
 	goto on_error;
     }
 #endif
@@ -96,16 +97,15 @@ pj_status_t pjsua_vid_subsys_init(void)
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_FFMPEG_VID_CODEC
     status = pjmedia_codec_ffmpeg_vid_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error initializing ffmpeg library"));
+	pjsua_perror(THIS_FILE, "Error initializing ffmpeg library", status);
 	goto on_error;
     }
 #endif
 
     status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video subsystem"));
+	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video subsystem",
+		     status);
 	goto on_error;
     }
 
@@ -765,9 +765,10 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 			    cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
 			    &enabled);
 	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(1,(THIS_FILE, status,
+		pjsua_perror(THIS_FILE,
 			     "Error activating native preview, falling back "
-			     "to software preview.."));
+			     "to software preview..",
+			     status);
 		w->is_native = PJ_FALSE;
 	    }
 	}
@@ -1355,9 +1356,10 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 			cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
 			&enabled);
 	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status,
+	    pjsua_perror(THIS_FILE,
 			 "Error activating native preview, falling back "
-			 "to software preview.."));
+			 "to software preview..",
+			 status);
 	    w->is_native = PJ_FALSE;
 	}
     }

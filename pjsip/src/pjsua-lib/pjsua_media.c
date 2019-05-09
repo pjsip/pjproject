@@ -114,8 +114,8 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     if (!pjmedia_event_mgr_instance()) {
 	status = pjmedia_event_mgr_create(pjsua_var.pool, 0, NULL);
 	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status,
-			 "Error creating PJMEDIA event manager"));
+	    pjsua_perror(THIS_FILE, "Error creating PJMEDIA event manager",
+			 status);
 	    goto on_error;
 	}
     }
@@ -1471,8 +1471,8 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		    status = pjsua_call_send_request(call->index, &SIP_INFO, 
 						     &msg_data);
 		    if (status != PJ_SUCCESS) {
-			pj_perror(3, THIS_FILE, status,
-				  "Failed requesting keyframe via SIP INFO");
+			PJ_PERROR(3,(THIS_FILE, status,
+				  "Failed requesting keyframe via SIP INFO"));
 		    } else {
 			call_med->last_req_keyframe = now;
 		    }
@@ -1791,7 +1791,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 		*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
 	    call_med->tp_ready = status;
 	    pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
-	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
+	    pjsua_perror(THIS_FILE, "Error creating media transport", status);
 	    return status;
 	}
 

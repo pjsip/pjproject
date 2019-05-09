@@ -4666,13 +4666,15 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     	    				      (pjsip_rx_data *)param->rdata,
 				      	      100, NULL, NULL, &response);
     	    if (status != PJ_SUCCESS) {
-		PJ_LOG(3, (THIS_FILE, "Failed to create initial answer")); 
+		PJ_PERROR(3, (THIS_FILE, status,
+			      "Failed to create initial answer"));
     	    	goto on_return;
     	    }
 
 	    status = pjsip_inv_send_msg(inv, response);
     	    if (status != PJ_SUCCESS) {
-		PJ_LOG(3, (THIS_FILE, "Failed to send initial answer")); 
+		PJ_PERROR(3, (THIS_FILE, status,
+			      "Failed to send initial answer")); 
     	    	goto on_return;
     	    }
 
