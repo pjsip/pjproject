@@ -685,16 +685,11 @@ static void dns_callback(void *user_data,
         if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
             status = pj_dns_parse_addr_response(pkt, &rec);
             if (status!=PJ_SUCCESS) {
-                char errmsg[PJ_ERR_MSG_SIZE];
-	        
-                PJ_LOG(4,(query_job->objname, 
-		          "DNS %s record parse error for '%.*s'."
-		          " Err=%d (%s)",
-                          (is_type_a ? "A" : "AAAA"),
-		          (int)query_job->domain_part.slen,
-		          query_job->domain_part.ptr,
-		          status,
-		          pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+                PJ_PERROR(4,(query_job->objname, status,
+			     "DNS %s record parse error for '%.*s'.",
+			     (is_type_a ? "A" : "AAAA"),
+			     (int)query_job->domain_part.slen,
+			     query_job->domain_part.ptr));
 	    }
 	}
 
@@ -755,17 +750,13 @@ static void dns_callback(void *user_data,
 	    }
 
 	} else if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
 	    /* Update last error */
 	    query_job->last_error = status;
 
 	    /* Log error */
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(query_job->objname,
-		      "DNS %s record resolution failed: %s",
-		      (is_type_a? "A" : "AAAA"),
-		      errmsg));
+	    PJ_PERROR(4,(query_job->objname, status,
+			 "DNS %s record resolution failed",
+			 (is_type_a? "A" : "AAAA")));
 	}
 
 	/* Increment host resolved count when both DNS A and AAAA record
@@ -840,16 +831,11 @@ static void dns_callback(void *user_data,
 on_error:
     /* Check for failure */
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	PJ_UNUSED_ARG(errmsg);
-	PJ_LOG(4,(query_job->objname, 
-		  "DNS %s record resolution error for '%.*s'."
-		  " Err=%d (%s)",
-		  pj_dns_get_type_name(query_job->dns_state),
-		  (int)query_job->domain_part.slen,
-		  query_job->domain_part.ptr,
-		  status,
-		  pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+	PJ_PERROR(4,(query_job->objname, status,
+		     "DNS %s record resolution error for '%.*s'.",
+		     pj_dns_get_type_name(query_job->dns_state),
+		     (int)query_job->domain_part.slen,
+		     query_job->domain_part.ptr));
 
 	/* Cancel any pending query */
 	pj_dns_srv_cancel_query(query_job, PJ_FALSE);
