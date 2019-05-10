@@ -860,8 +860,10 @@ void Call::processMediaUpdate(OnCallMediaStateParam &prm)
 	if (medias.size()) {
 	    /* Clear medias. */
 	    for (mi = 0; mi < medias.size(); mi++) {
-		if (medias[mi])
+		if (medias[mi]) {
+		    Endpoint::instance().mediaRemove((AudioMedia&)*medias[mi]);
 		    delete medias[mi];
+		}
 	    }
 	    medias.clear();	
 	}
@@ -922,8 +924,10 @@ void Call::processStateChange(OnCallStateParam &prm)
 
         /* Clear medias. */
         for (mi = 0; mi < medias.size(); mi++) {
-            if (medias[mi])
+            if (medias[mi]) {
+		Endpoint::instance().mediaRemove((AudioMedia &)*medias[mi]);
                 delete medias[mi];
+            }
         }
         medias.clear();
 

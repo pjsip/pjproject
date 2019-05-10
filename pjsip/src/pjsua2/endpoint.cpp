@@ -504,11 +504,6 @@ Endpoint::~Endpoint()
 	pendingJobs.pop_front();
     }
 
-    while(mediaList.size() > 0) {
-	AudioMedia *cur_media = mediaList[0];
-	delete cur_media; /* this will remove itself from the list */
-    }
-
     clearCodecInfoList(codecInfoList);
     clearCodecInfoList(videoCodecInfoList);
 
@@ -1787,6 +1782,11 @@ void Endpoint::libDestroy(unsigned flags) throw(Error)
     	threadDescMutex = NULL;
     }
 
+    while(mediaList.size() > 0) {
+	AudioMedia *cur_media = mediaList[0];
+	delete cur_media; /* this will remove itself from the list */
+    }
+
     if (mediaListMutex) {
     	pj_mutex_destroy(mediaListMutex);
     	mediaListMutex = NULL;
@@ -2088,12 +2088,12 @@ void Endpoint::mediaAdd(AudioMedia &media)
      */
     pj_mutex_lock(mediaListMutex);
 
-    if (mediaExists(media)) {
-	pj_mutex_unlock(mediaListMutex);
-	return;
-    }
+    AudioMediaVector::iterator it = std::find(mediaList.begin(),
+					      mediaList.end(),
+					      &media);
 
-    mediaList.push_back(&media);
+    if (it == mediaList.end())
+    	mediaList.push_back(&media);
     pj_mutex_unlock(mediaListMutex);
 }
 

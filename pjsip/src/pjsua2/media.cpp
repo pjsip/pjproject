@@ -131,9 +131,7 @@ AudioMedia::AudioMedia()
 void AudioMedia::registerMediaPort(MediaPort port) throw(Error)
 {
     /* Check if media already added to Conf bridge. */
-    pj_assert(!Endpoint::instance().mediaExists(*this));
-
-    if (port != NULL) {
+    if (!Endpoint::instance().mediaExists(*this) && port != NULL) {
 	pj_assert(id == PJSUA_INVALID_ID);
 
 	pj_caching_pool_init(&mediaCachingPool, NULL, 0);
@@ -663,6 +661,7 @@ DevAudioMedia::~DevAudioMedia()
 {
     /* Avoid removing this port (conf port id=0) from conference */
     this->id = PJSUA_INVALID_ID;
+    unregisterMediaPort();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
