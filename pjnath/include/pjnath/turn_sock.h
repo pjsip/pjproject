@@ -98,6 +98,49 @@ typedef struct pj_turn_sock_cb
 		     pj_turn_state_t old_state,
 		     pj_turn_state_t new_state);
 
+    /**
+     * Notification when TURN client received a ConnectionAttempt Indication
+     * from the TURN server, which indicates that peer initiates a TCP
+     * connection to allocated slot in the TURN server. Application should
+     * implement this callback if it uses RFC 6062 (TURN TCP allocations),
+     * otherwise TURN client will automatically accept it.
+     *
+     * If application accepts the peer connection attempt (i.e: by returning
+     * PJ_SUCCESS or not implementing this callback), the TURN socket will
+     * initiate a new connection to the TURN server and send ConnectionBind
+     * request, and eventually will notify application via
+     * on_connection_status callback, if implemented.
+     *
+     * @param turn_sock	    The TURN client transport.
+     * @param conn_id	    The connection ID assigned by TURN server.
+     * @param peer_addr	    Peer address that tried to connect to the
+     *			    TURN server.
+     * @param addr_len	    Length of the peer address.
+     *
+     * @return		    The callback must return PJ_SUCCESS to accept
+     *			    the connection attempt.
+     */
+    pj_status_t (*on_connection_attempt)(pj_turn_sock *turn_sock,
+					 pj_uint32_t conn_id,
+					 const pj_sockaddr_t *peer_addr,
+					 unsigned addr_len);
+
+    /**
+     * Notification for initiated TCP data connection to peer (RFC 6062),
+     * for example after peer connection attempt is accepted.
+     *
+     * @param turn_sock	    The TURN client transport.
+     * @param status	    The status code.
+     * @param conn_id	    The connection ID.
+     * @param peer_addr	    Peer address.
+     * @param addr_len	    Length of the peer address.
+     */
+    void (*on_connection_status)(pj_turn_sock *turn_sock,
+				 pj_status_t status,
+				 pj_uint32_t conn_id,
+				 const pj_sockaddr_t *peer_addr,
+				 unsigned addr_len);
+
 } pj_turn_sock_cb;
 
 
