@@ -1029,7 +1029,7 @@ static void dataconn_cleanup(tcp_data_conn_t *conn)
 
     pj_pool_safe_release(&conn->pool);
 
-    pj_bzero(conn, sizeof(conn));
+    pj_bzero(conn, sizeof(*conn));
 }
 
 static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
