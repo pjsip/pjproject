@@ -596,6 +596,27 @@ static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
     }
 }
 
+
+static void wipe_buf(pj_str_t *buf)
+{
+    volatile char *p = buf->ptr;
+    pj_ssize_t len = buf->slen;
+    while (len--) *p++ = 0;
+    buf->slen = 0;
+}
+
+static void wipe_cert_buffer(pj_ssl_cert_t *cert)
+{
+    wipe_buf(&cert->CA_file);
+    wipe_buf(&cert->CA_path);
+    wipe_buf(&cert->cert_file);
+    wipe_buf(&cert->privkey_file);
+    wipe_buf(&cert->privkey_pass);
+    wipe_buf(&cert->CA_buf);
+    wipe_buf(&cert->cert_buf);
+    wipe_buf(&cert->privkey_buf);
+}
+
 static void ssl_on_destroy(void *arg)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)arg;
@@ -613,7 +634,15 @@ static void ssl_on_destroy(void *arg)
 	ssock->write_mutex = NULL;
     }
 
-    pj_pool_safe_release(&ssock->pool);
+    /* Wipe out cert & key buffer, note that they may not be allocated
+     * using SSL socket memory pool.
+     */
+    if (ssock->cert) {
+	wipe_cert_buffer(ssock->cert);
+    }
+
+    /* Secure release pool, i.e: all memory blocks will be zeroed first */
+    pj_pool_secure_release(&ssock->pool);
 }
 
 

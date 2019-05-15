@@ -397,6 +397,15 @@ PJ_IDECL(void) pj_pool_safe_release( pj_pool_t **ppool );
 
 
 /**
+ * Release the pool back to pool factory and set the pool pointer to zero.
+ * The memory pool content will be wiped out first before released.
+ *
+ * @param ppool	    Pointer to memory pool.
+ */
+PJ_IDECL(void) pj_pool_secure_release( pj_pool_t **ppool );
+
+
+/**
  * Get pool object name.
  *
  * @param pool the pool.

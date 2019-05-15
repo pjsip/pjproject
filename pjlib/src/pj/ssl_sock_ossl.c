@@ -1051,6 +1051,14 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	}
     }
 
+    /* Early sensitive data cleanup after OpenSSL context setup. However,
+     * this cannot be done for listener sockets, as the data will still
+     * be needed by accepted sockets.
+     */
+    if (cert && (!ssock->is_server || ssock->parent)) {
+	wipe_cert_buffer(cert);
+    }
+
     /* Create SSL instance */
     ossock->ossl_ctx = ctx;
     ossock->ossl_ssl = SSL_new(ossock->ossl_ctx);
