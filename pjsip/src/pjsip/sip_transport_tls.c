@@ -672,7 +672,7 @@ static void lis_on_destroy(void *arg)
 
     if (listener->factory.pool) {
 	PJ_LOG(4,(listener->factory.obj_name,  "SIP TLS transport destroyed"));
-	pj_pool_safe_release(&listener->factory.pool);
+	pj_pool_secure_release(&listener->factory.pool);
     }
 }
 
@@ -970,8 +970,7 @@ static void tls_on_destroy(void *arg)
     struct tls_transport *tls = (struct tls_transport*)arg;
 
     if (tls->rdata.tp_info.pool) {
-	pj_pool_release(tls->rdata.tp_info.pool);
-	tls->rdata.tp_info.pool = NULL;
+	pj_pool_secure_release(&tls->rdata.tp_info.pool);
     }
 
     if (tls->base.lock) {
@@ -985,8 +984,6 @@ static void tls_on_destroy(void *arg)
     }
 
     if (tls->base.pool) {
-	pj_pool_t *pool;
-
 	if (tls->close_reason != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -1001,10 +998,7 @@ static void tls_on_destroy(void *arg)
 		      "TLS transport destroyed normally"));
 
 	}
-
-	pool = tls->base.pool;
-	tls->base.pool = NULL;
-	pj_pool_release(pool);
+	pj_pool_secure_release(&tls->base.pool);
     }
 }
 
@@ -2027,6 +2021,32 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 			       &delay);
     tls->ka_timer.id = PJ_TRUE;
+}
+
+
+static void wipe_buf(pj_str_t *buf)
+{
+    volatile char *p = buf->ptr;
+    pj_ssize_t len = buf->slen;
+    while (len--) *p++ = 0;
+    buf->slen = 0;
+}
+
+/*
+ * Wipe out certificates and keys in the TLS setting buffer.
+ */
+PJ_DEF(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt)
+{
+    wipe_buf(&opt->ca_list_file);
+    wipe_buf(&opt->ca_list_path);
+    wipe_buf(&opt->cert_file);
+    wipe_buf(&opt->privkey_file);
+    wipe_buf(&opt->password);
+    wipe_buf(&opt->sigalgs);
+    wipe_buf(&opt->entropy_path);
+    wipe_buf(&opt->ca_buf);
+    wipe_buf(&opt->cert_buf);
+    wipe_buf(&opt->privkey_buf);    
 }
 
 #endif /* PJSIP_HAS_TLS_TRANSPORT */

@@ -1793,7 +1793,7 @@ static pj_status_t app_init()
     if (app_config.null_audio) {
 	status = pjsua_set_null_snd_dev();
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
     }
 #endif
 
@@ -1810,6 +1810,9 @@ static pj_status_t app_init()
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
 
     pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
@@ -1959,6 +1962,9 @@ static pj_status_t app_destroy()
 	cli_fe = app_config.cli_cfg.cli_fe;
 	cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;	
     }
+
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
 
     /* Reset config */
     pj_bzero(&app_config, sizeof(app_config));

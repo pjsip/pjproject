@@ -420,6 +420,14 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
 
 
 /**
+ * Wipe out certificates and keys in the TLS setting buffer.
+ *
+ * @param opt	    TLS setting.
+ */
+PJ_DECL(void) pjsip_tls_setting_wipe_keys(pjsip_tls_setting *opt);
+
+
+/**
  * Register support for SIP TLS transport by creating TLS listener on
  * the specified address and port. This function will create an
  * instance of SIP TLS transport factory and register it to the
