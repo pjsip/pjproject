@@ -470,6 +470,16 @@ static pj_status_t udp_destroy( pjsip_transport *transport )
 	    break;
     }
 
+    /* When creating this transport, reference count was incremented to flag
+     * this transport as permanent so it will not be destroyed by transport
+     * manager whenever idle. Application may or may not have cleared the
+     * flag (by calling pjsip_transport_dec_ref()), so in case it has not,
+     * let's do it now, so this transport can be destroyed.
+     */
+    if (pj_atomic_get(tp->base.ref_cnt) > 0)
+	pjsip_transport_dec_ref(&tp->base);
+
+    /* Destroy transport */
     if (tp->grp_lock) {
 	pj_grp_lock_t *grp_lock = tp->grp_lock;
 	tp->grp_lock = NULL;
@@ -844,18 +854,17 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     tp->base.do_shutdown = &udp_shutdown;
     tp->base.destroy = &udp_destroy;
 
-    /* This is a permanent transport, so we initialize the ref count
-     * to one so that transport manager don't destroy this transport
-     * when there's no user!
-     */
-    pj_atomic_inc(tp->base.ref_cnt);
-
     /* Register to transport manager. */
     tp->base.tpmgr = pjsip_endpt_get_tpmgr(endpt);
     status = pjsip_transport_register( tp->base.tpmgr, (pjsip_transport*)tp);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* This is a permanent transport, so we initialize the ref count
+     * to one so that transport manager won't destroy this transport
+     * when there's no user!
+     */
+    pjsip_transport_add_ref(&tp->base);
 
     /* Create rdata and put it in the array. */
     tp->rdata_cnt = 0;

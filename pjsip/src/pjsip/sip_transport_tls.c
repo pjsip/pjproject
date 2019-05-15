@@ -162,6 +162,7 @@ static pj_status_t tls_create(struct tls_listener *listener,
 			      const pj_sockaddr *local,
 			      const pj_sockaddr *remote,
 			      const pj_str_t *remote_name,
+			      pj_grp_lock_t *glock,
 			      struct tls_transport **p_tls);
 
 
@@ -786,6 +787,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 			       const pj_sockaddr *local,
 			       const pj_sockaddr *remote,
 			       const pj_str_t *remote_name,
+			       pj_grp_lock_t *glock,
 			       struct tls_transport **p_tls)
 {
     struct tls_transport *tls;
@@ -869,6 +871,11 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.factory = &listener->factory;
 
     tls->ssock = ssock;
+
+    /* Set up the group lock */
+    tls->grp_lock = tls->base.grp_lock = glock;
+    pj_grp_lock_add_ref(tls->grp_lock);
+    pj_grp_lock_add_handler(tls->grp_lock, pool, tls, &tls_on_destroy);
 
     /* Register transport to transport manager */
     status = pjsip_transport_register(listener->tpmgr, &tls->base);
@@ -1226,19 +1233,12 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-			rem_addr, &remote_name, &tls);
-    if (status != PJ_SUCCESS) {
-	pj_grp_lock_destroy(glock);
+			rem_addr, &remote_name, glock, &tls);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
 
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(tls->ssock, tls);
-
-    /* Set up the group lock */
-    tls->grp_lock = tls->base.grp_lock = glock;
-    pj_grp_lock_add_ref(tls->grp_lock);
-    pj_grp_lock_add_handler(tls->grp_lock, pool, tls, &tls_on_destroy);
 
     /* Start asynchronous connect() operation */
     tls->has_pending_connect = PJ_TRUE;
@@ -1393,7 +1393,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
-			 &ssl_info.local_addr, &tmp_src_addr, NULL, &tls);
+			 &ssl_info.local_addr, &tmp_src_addr, NULL,
+			 ssl_info.grp_lock, &tls);
     
     if (status != PJ_SUCCESS) {
 	if (listener->tls_setting.on_accept_fail_cb) {
@@ -1409,14 +1410,6 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(new_ssock, tls);
-
-    /* Set up the group lock */
-    if (ssl_info.grp_lock) {
-	tls->grp_lock = ssl_info.grp_lock;
-	pj_grp_lock_add_ref(tls->grp_lock);
-	pj_grp_lock_add_handler(tls->grp_lock, tls->base.pool, tls,
-				&tls_on_destroy);
-    }
 
     /* Prevent immediate transport destroy as application may access it 
      * (getting info, etc) in transport state notification callback.
