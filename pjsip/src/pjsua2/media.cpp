@@ -1868,6 +1868,7 @@ VideoMedia::VideoMedia()
 void VideoMedia::registerMediaPort(MediaPort port, pj_pool_t *pool)
      throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     if (!pool) {
 	PJSUA2_RAISE_ERROR3(PJ_EINVAL, "registerMediaPort()",
 			    "pool must be supplied");
@@ -1884,14 +1885,21 @@ void VideoMedia::registerMediaPort(MediaPort port, pj_pool_t *pool)
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_add_port(pool,
 					       (pjmedia_port*)port, NULL,
 					       &id) );
+#else
+    PJ_UNUSED_ARG(port);
+    PJ_UNUSED_ARG(pool);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
 }
 
 void VideoMedia::unregisterMediaPort()
 {
+#if PJSUA_HAS_VIDEO
     if (id != PJSUA_INVALID_ID) {
 	pjsua_vid_conf_remove_port(id);
 	id = PJSUA_INVALID_ID;
     }
+#endif
 }
 
 VideoMedia::~VideoMedia() 
@@ -1910,12 +1918,17 @@ int VideoMedia::getPortId() const
 
 VidConfPortInfo VideoMedia::getPortInfoFromId(int port_id) throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     pjsua_vid_conf_port_info pj_info;
     VidConfPortInfo pi;
 
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_get_port_info(port_id, &pj_info) );
     pi.fromPj(pj_info);
     return pi;
+#else
+    PJ_UNUSED_ARG(port_id);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
 }
 
 void VideoMedia::startTransmit(const VideoMedia &sink,
@@ -1923,10 +1936,20 @@ void VideoMedia::startTransmit(const VideoMedia &sink,
      throw(Error)
 {
     PJ_UNUSED_ARG(param);
+#if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_connect(id, sink.id, NULL) );
+#else
+    PJ_UNUSED_ARG(sink);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
 }
 
 void VideoMedia::stopTransmit(const VideoMedia &sink) const throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_disconnect(id, sink.id) );
+#else
+    PJ_UNUSED_ARG(sink);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
 }

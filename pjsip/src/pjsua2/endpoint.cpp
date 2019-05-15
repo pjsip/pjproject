@@ -2067,6 +2067,7 @@ AudioMediaVector2 Endpoint::mediaEnumPorts2() const throw(Error)
 
 VideoMediaVector Endpoint::mediaEnumVidPorts() const throw(Error)
 {
+#if PJSUA_HAS_VIDEO
     VideoMediaVector vmv;
     pjsua_conf_port_id ids[PJSUA_MAX_CONF_PORTS];
     unsigned i, count = PJSUA_MAX_CONF_PORTS;
@@ -2079,6 +2080,9 @@ VideoMediaVector Endpoint::mediaEnumVidPorts() const throw(Error)
     }
 
     return vmv;
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
 }
 
 void Endpoint::mediaAdd(AudioMedia &media)
