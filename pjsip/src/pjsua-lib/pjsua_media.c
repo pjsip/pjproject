@@ -650,6 +650,52 @@ on_error:
     return status;
 }
 
+/* Create loop media transport */
+static pj_status_t create_loop_media_transport(
+		       const pjsua_transport_config *cfg,
+		       pjsua_call_media *call_med)
+{
+    pj_status_t status;
+    pjmedia_loop_tp_setting opt;
+    pj_bool_t use_ipv6, use_nat64;
+    int af;
+    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+
+    use_ipv6 = (acc->cfg.ipv6_media_use != PJSUA_IPV6_DISABLED);
+    use_nat64 = (acc->cfg.nat64_opt != PJSUA_NAT64_DISABLED);
+    af = (use_ipv6 || use_nat64) ? pj_AF_INET6() : pj_AF_INET();
+
+    pjmedia_loop_tp_setting_default(&opt);
+    opt.af = af;
+    if (cfg->bound_addr.slen)
+        opt.addr = cfg->bound_addr;
+    opt.port = cfg->port;
+    opt.disable_rx=!pjsua_var.acc[call_med->call->acc_id].cfg.enable_loopback;
+    status = pjmedia_transport_loop_create2(pjsua_var.med_endpt, &opt,
+    					    &call_med->tp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create loop media transport",
+		     status);
+	goto on_error;
+    }
+
+    pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_ENCODING,
+				    pjsua_var.media_cfg.tx_drop_pct);
+
+    pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_DECODING,
+				    pjsua_var.media_cfg.rx_drop_pct);
+
+    call_med->tp_ready = PJ_SUCCESS;
+
+    return PJ_SUCCESS;
+
+on_error:
+    if (call_med->tp)
+	pjmedia_transport_close(call_med->tp);
+
+    return status;
+}
+
 #if DISABLED_FOR_TICKET_1185
 /* Create normal UDP media transports */
 static pj_status_t create_udp_media_transports(pjsua_transport_config *cfg)
@@ -1754,6 +1800,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
      *   the unused transport of a disabled media.
      */
     if (call_med->tp == NULL) {
+    	pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+
         /* Initializations. If media transport creation completes immediately, 
          * we don't need to call the callbacks.
          */
@@ -1771,7 +1819,9 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 
         pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_CREATING);
 
-	if (pjsua_var.acc[call_med->call->acc_id].cfg.ice_cfg.enable_ice) {
+	if (acc->cfg.use_loop_med_tp) {
+	    status = create_loop_media_transport(tcfg, call_med);
+	} else if (acc->cfg.ice_cfg.enable_ice) {
 	    status = create_ice_media_transport(tcfg, call_med, async);
             if (async && status == PJ_EPENDING) {
 	        /* We will resume call media initialization in the
@@ -3300,6 +3350,14 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 					 "for call_id %d media %d",
 				     call_id, mi));
 			goto on_check_med_status;
+		    }
+
+		    if (pjmedia_transport_info_get_spc_info(
+				    &tp_info, PJMEDIA_TRANSPORT_TYPE_LOOP))
+		    {
+			pjmedia_transport_loop_disable_rx(
+				call_med->tp, call_med->strm.a.stream,
+				!acc->cfg.enable_loopback);
 		    }
 		}
 	    }

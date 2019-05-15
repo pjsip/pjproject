@@ -35,6 +35,7 @@ struct user
     void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
 			void*,
 			pj_ssize_t);
+    void  (*rtp_cb2)(	pjmedia_tp_cb_param*);
     void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
 			void*,
 			pj_ssize_t);
@@ -47,6 +48,9 @@ struct transport_loop
     pj_pool_t	       *pool;		/**< Memory pool		    */
     unsigned		user_cnt;	/**< Number of attachments	    */
     struct user		users[4];	/**< Array of users.		    */
+    pj_bool_t		disable_rx;	/**< Disable RX.		    */
+
+    pjmedia_loop_tp_setting setting;	/**< Setting.			    */
 
     unsigned		tx_drop_pct;	/**< Percent of tx pkts to drop.    */
     unsigned		rx_drop_pct;	/**< Percent of rx pkts to drop.    */
@@ -71,6 +75,9 @@ static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void (*rtcp_cb)(void*,
 						       void*,
 						       pj_ssize_t));
+static pj_status_t transport_attach2  (pjmedia_transport *tp,
+				       pjmedia_transport_attach_param
+				           *att_param);
 static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
@@ -119,8 +126,20 @@ static pjmedia_transport_op transport_udp_op =
     &transport_media_start,
     &transport_media_stop,
     &transport_simulate_lost,
-    &transport_destroy
+    &transport_destroy,
+    &transport_attach2
 };
+
+
+/**
+ * Initialize loopback media transport setting with its default values.
+ */
+PJ_DEF(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt)
+{
+    pj_bzero(opt, sizeof(pjmedia_loop_tp_setting));
+    
+    opt->af = pj_AF_INET();
+}
 
 
 /**
@@ -128,6 +147,20 @@ static pjmedia_transport_op transport_udp_op =
  */
 PJ_DEF(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
 						  pjmedia_transport **p_tp)
+{
+    pjmedia_loop_tp_setting opt;
+    
+    pj_bzero(&opt, sizeof(opt));
+    opt.af = pj_AF_INET();
+
+    return pjmedia_transport_loop_create2(endpt, &opt, p_tp);
+}
+
+
+PJ_DEF(pj_status_t)
+pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
+			       const pjmedia_loop_tp_setting *opt,
+			       pjmedia_transport **p_tp)
 {
     struct transport_loop *tp;
     pj_pool_t *pool;
@@ -145,6 +178,20 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
     pj_ansi_strncpy(tp->base.name, tp->pool->obj_name, PJ_MAX_OBJ_NAME-1);
     tp->base.op = &transport_udp_op;
     tp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
+
+    if (opt) {
+    	tp->setting = *opt;
+    } else {
+    	pjmedia_loop_tp_setting_default(&tp->setting);
+    }
+    if (tp->setting.addr.slen) {
+    	pj_strdup(pool, &tp->setting.addr, &opt->addr);
+    } else {
+    	pj_strset2(&tp->setting.addr, (opt->af == pj_AF_INET())?
+    				       "127.0.0.1": "::1");
+    }
+    if (tp->setting.port == 0)
+    	tp->setting.port = 4000;
 
     /* Done */
     *p_tp = &tp->base;
@@ -189,19 +236,21 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 static pj_status_t transport_get_info(pjmedia_transport *tp,
 				      pjmedia_transport_info *info)
 {
-    PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
+    struct transport_loop *loop = (struct transport_loop*) tp;
 
     info->sock_info.rtp_sock = 1;
-    pj_sockaddr_in_init(&info->sock_info.rtp_addr_name.ipv4, 0, 0);
+    pj_sockaddr_init(loop->setting.af, &info->sock_info.rtp_addr_name, 
+		     &loop->setting.addr, loop->setting.port);
     info->sock_info.rtcp_sock = 2;
-    pj_sockaddr_in_init(&info->sock_info.rtcp_addr_name.ipv4, 0, 0);
+    pj_sockaddr_init(loop->setting.af, &info->sock_info.rtcp_addr_name,
+    		     &loop->setting.addr, loop->setting.port + 1);
 
     return PJ_SUCCESS;
 }
 
 
 /* Called by application to initialize the transport */
-static pj_status_t transport_attach(   pjmedia_transport *tp,
+static pj_status_t tp_attach(   pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
 				       const pj_sockaddr_t *rem_rtcp,
@@ -209,6 +258,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       void (*rtp_cb)(void*,
 						      void*,
 						      pj_ssize_t),
+				       void (*rtp_cb2)(pjmedia_tp_cb_param*),
 				       void (*rtcp_cb)(void*,
 						       void*,
 						       pj_ssize_t))
@@ -235,11 +285,40 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 
     /* Save the new user */
     loop->users[loop->user_cnt].rtp_cb = rtp_cb;
+    loop->users[loop->user_cnt].rtp_cb2 = rtp_cb2;
     loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
     loop->users[loop->user_cnt].user_data = user_data;
+    loop->users[loop->user_cnt].rx_disabled = loop->disable_rx;
     ++loop->user_cnt;
 
     return PJ_SUCCESS;
+}
+
+static pj_status_t transport_attach(   pjmedia_transport *tp,
+				       void *user_data,
+				       const pj_sockaddr_t *rem_addr,
+				       const pj_sockaddr_t *rem_rtcp,
+				       unsigned addr_len,
+				       void (*rtp_cb)(void*,
+						      void*,
+						      pj_ssize_t),
+				       void (*rtcp_cb)(void*,
+						       void*,
+						       pj_ssize_t))
+{
+    return tp_attach(tp, user_data, rem_addr, rem_rtcp, addr_len,
+    		     rtp_cb, NULL, rtcp_cb);
+}
+
+static pj_status_t transport_attach2(pjmedia_transport *tp,
+				     pjmedia_transport_attach_param *att_param)
+{
+    return tp_attach(tp, att_param->user_data, 
+			    (pj_sockaddr_t*)&att_param->rem_addr, 
+			    (pj_sockaddr_t*)&att_param->rem_rtcp, 
+			    att_param->addr_len, att_param->rtp_cb,
+			    att_param->rtp_cb2, 
+			    att_param->rtcp_cb);
 }
 
 
@@ -296,9 +375,19 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     /* Distribute to users */
     for (i=0; i<loop->user_cnt; ++i) {
-	if (!loop->users[i].rx_disabled && loop->users[i].rtp_cb)
+	if (loop->users[i].rx_disabled) continue;
+	if (loop->users[i].rtp_cb2) {
+	    pjmedia_tp_cb_param param;
+
+	    pj_bzero(&param, sizeof(param));
+	    param.user_data = loop->users[i].user_data;
+	    param.pkt = (void *)pkt;
+	    param.size = size;
+	    (*loop->users[i].rtp_cb2)(&param);
+	} else if (loop->users[i].rtp_cb) {
 	    (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt, 
 				     size);
+	}
     }
 
     return PJ_SUCCESS;

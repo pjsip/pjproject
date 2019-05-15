@@ -485,6 +485,9 @@ typedef enum pjmedia_transport_type
      */
     PJMEDIA_TRANSPORT_TYPE_SRTP,
 
+    /** Loopback media transport */
+    PJMEDIA_TRANSPORT_TYPE_LOOP,
+
     /**
      * Start of user defined transport.
      */

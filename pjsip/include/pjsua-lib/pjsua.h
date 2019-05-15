@@ -3858,6 +3858,24 @@ typedef struct pjsua_acc_config
     pjsua_stun_use 		media_stun_use;
 
     /**
+     * Use loopback media transport. This may be useful if application
+     * doesn't want PJSIP to create real media transports/sockets, such as
+     * when using third party media.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t			use_loop_med_tp;
+
+    /**
+     * Enable local loopback when loop_med_tp_use is set to PJ_TRUE.
+     * If enabled, packets sent to the transport will be sent back to
+     * the streams attached to the transport.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t			enable_loopback;
+
+    /**
      * Control the use of ICE in the account. By default, the settings in the
      * \a pjsua_media_config will be used.
      *

@@ -50,6 +50,56 @@ PJ_BEGIN_DECL
 
 
 /**
+ * Settings to be given when creating loopback media transport. Application
+ * should call #pjmedia_loop_tp_setting_default() to initialize this
+ * structure with its default values.
+ */
+typedef struct pjmedia_loop_tp_setting
+{
+    /* Address family, which can be pj_AF_INET() for IPv4 or
+     * pj_AF_INET6() for IPv6. Default is IPv4 (pj_AF_INET()).
+     */
+    int 	af;
+
+    /* Optional local address which will be returned in the transport info.
+     * If the string is empty, the address will be the default loopback
+     * address (127.0.0.1 or ::1).
+     *
+     * Note that the address is used for info purpose only and no actual
+     * resource will be allocated.
+     *
+     * Default is empty string.
+     */
+    pj_str_t 	addr;
+
+    /* The port number for the RTP socket. The RTCP port number will be
+     * set to one above RTP port. If zero, it will use the default port
+     * number (4000).
+     *
+     * Note that no actual port will be allocated. Default is 4000.
+     */
+    int 	port;
+    
+    /* Setting whether attached streams will receive incoming packets.
+     * Application can further customize the setting of a particular setting
+     * using the API pjmedia_transport_loop_disable_rx().
+     *
+     * Default: PJ_FALSE;
+     */
+    pj_bool_t 	disable_rx;
+
+} pjmedia_loop_tp_setting;
+
+
+/**
+ * Initialize loopback media transport setting with its default values.
+ *
+ * @param opt	SRTP setting to be initialized.
+ */
+PJ_DECL(void) pjmedia_loop_tp_setting_default(pjmedia_loop_tp_setting *opt);
+
+
+/**
  * Create the loopback transport.
  *
  * @param endpt	    The media endpoint instance.
@@ -62,7 +112,29 @@ PJ_DECL(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
 
 
 /**
- * Set this stream as the receiver of incoming packets.
+ * Create the loopback transport.
+ *
+ * @param endpt	    The media endpoint instance.
+ * @param opt       Optional settings. If NULL is given, default
+ *		    settings will be used.
+ * @param p_tp	    Pointer to receive the transport instance.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
+			       const pjmedia_loop_tp_setting *opt,
+			       pjmedia_transport **p_tp);
+
+
+/**
+ * Set the configuration of whether a stream will become the receiver of
+ * incoming packets.
+ *
+ * @param tp	    The transport.
+ * @param user	    The stream.
+ * @param disabled  PJ_TRUE to disable the receiving of packets, or
+ *		    PJ_FALSE to enable it.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_loop_disable_rx(pjmedia_transport *tp,
 						       void *user,
