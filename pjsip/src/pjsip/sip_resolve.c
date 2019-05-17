@@ -276,7 +276,15 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	    /* Target is an IP address, no need to resolve */
 	    svr_addr.count = 1;
 	    if (ip_addr_ver == 4) {
-	        if (af == pj_AF_INET6()) {
+	        if (af == pj_AF_INET()) {
+		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
+				     NULL, 0);
+		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
+		}
+
+	        if (af == pj_AF_INET6() || PJSIP_MAX_RESOLVED_ADDRESSES > 1)
+	        {
 	            /* Generate a synthesized IPv6 address, if possible. */
 		    unsigned int count = 1;
 		    pj_addrinfo ai[1];
@@ -287,22 +295,22 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		    if (status2 == PJ_SUCCESS && count > 0 &&
 		    	ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
 		    {
+		    	unsigned idx = 0;
+		    	
+		    	if (target->type == PJSIP_TRANSPORT_UNSPECIFIED) {
+		    	    idx = 1;
+		    	    svr_addr.count++;
+		    	}
 			pj_sockaddr_init(pj_AF_INET6(),
-					 &svr_addr.entry[0].addr,
+					 &svr_addr.entry[idx].addr,
 					 NULL, 0);
-			svr_addr.entry[0].addr.ipv6.sin6_addr =
+			svr_addr.entry[idx].addr.ipv6.sin6_addr =
 			    ai[0].ai_addr.ipv6.sin6_addr;
-		    } else {
-		        pj_sockaddr_init(pj_AF_INET(),
-		        		 &svr_addr.entry[0].addr, NULL, 0);
-		        pj_inet_pton(pj_AF_INET(), &target->addr.host,
-			     	     &svr_addr.entry[0].addr.ipv4.sin_addr);
+		    } else if (af == pj_AF_INET6()) {
+		    	svr_addr.count = 0;
+			status = PJ_ERESOLVE;
+			goto on_error;
 		    }
-		} else {
-		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
-				     NULL, 0);
-		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
-			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
 		}
 	    } else {
 		pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
