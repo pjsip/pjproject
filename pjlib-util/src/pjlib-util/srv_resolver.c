@@ -239,6 +239,11 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	    continue;
 	}
 
+	if (rr->rdata.srv.target.slen == 0) {
+	    PJ_LOG(4,(query_job->objname, "Hostname is empty!"));
+	    continue;
+	}
+
 	/* Build the SRV entry for RR */
 	pj_bzero(srv, sizeof(*srv));
 	srv->target_name.ptr = srv->target_buf;
@@ -610,7 +615,7 @@ static void dns_callback(void *user_data,
 	/* If we can't build SRV record, assume the original target is
 	 * an A record and resolve with DNS A resolution.
 	 */
-	if (query_job->srv_cnt == 0) {
+	if (query_job->srv_cnt == 0 && query_job->domain_part.slen > 0) {
 	    unsigned new_option = 0;
 
 	    /* Looks like we aren't getting any SRV responses.
