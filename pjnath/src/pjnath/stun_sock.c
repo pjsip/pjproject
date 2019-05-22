@@ -61,6 +61,7 @@ struct pj_stun_sock
     pj_activesock_t	*active_sock;	/* Active socket object	    */
     pj_ioqueue_op_key_t	 send_key;	/* Default send key for app */
     pj_ioqueue_op_key_t	 int_send_key;	/* Send key for internal    */
+    pj_status_t		 last_err;	/* Last error status	    */
 
     pj_uint16_t		 tsx_id[6];	/* .. to match STUN msg	    */
     pj_stun_session	*stun_sess;	/* STUN session		    */
@@ -422,6 +423,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 	else
 	    opt = PJ_DNS_SRV_FALLBACK_A;
 
+	stun_sock->last_err = PJ_SUCCESS;
 	status = pj_dns_srv_resolve(domain, &res_name, default_port, 
 				    stun_sock->pool, resolver, opt,
 				    stun_sock, &dns_srv_resolver_cb, 
@@ -429,9 +431,18 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(stun_sock->obj_name, status,
 			 "Failed in pj_dns_srv_resolve()"));
+	} else {
+	    /* DNS SRV callback may have been called here, such as when
+	     * the result is cached, so we need to check the last error
+	     * status. If the callback hasn't been called, processing
+	     * will resume later.
+	     */
+	    status = stun_sock->last_err;
+	    if (stun_sock->last_err != PJ_SUCCESS) {
+	    	PJ_PERROR(4,(stun_sock->obj_name, status,
+			     "Failed in sending Binding request (2)"));
+	    }
 	}
-
-	/* Processing will resume when the DNS SRV callback is called */
 
     } else {
 
@@ -577,6 +588,7 @@ static void dns_srv_resolver_cb(void *user_data,
 
     /* Handle error */
     if (status != PJ_SUCCESS) {
+        stun_sock->last_err = status;
 	sess_fail(stun_sock, PJ_STUN_SOCK_DNS_OP, status);
 	pj_grp_lock_release(stun_sock->grp_lock);
 	return;
@@ -598,7 +610,7 @@ static void dns_srv_resolver_cb(void *user_data,
     }
 
     /* Start sending Binding request */
-    get_mapped_addr(stun_sock);
+    stun_sock->last_err = get_mapped_addr(stun_sock);
 
     pj_grp_lock_release(stun_sock->grp_lock);
 }
