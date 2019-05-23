@@ -286,13 +286,6 @@ typedef enum pjmedia_vid_dev_cap
   PJMEDIA_VID_DEV_CAP_MAX = 16384
 } pjmedia_vid_dev_cap;
 
-typedef enum pjmedia_aud_dev_id
-{
-  PJMEDIA_AUD_DEFAULT_CAPTURE_DEV = -1,
-  PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV = -2,
-  PJMEDIA_AUD_INVALID_DEV = -3
-} pjmedia_aud_dev_id;
-
 typedef enum pjmedia_aud_dev_route
 {
   PJMEDIA_AUD_DEV_ROUTE_DEFAULT = 0,
