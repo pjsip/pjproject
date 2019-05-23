@@ -1870,8 +1870,10 @@ static pj_status_t app_init()
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Wipe out TLS key settings in transport configs */
     pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
 
     pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
@@ -2022,8 +2024,10 @@ static pj_status_t app_destroy()
 	cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;	
     }
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Wipe out TLS key settings in transport configs */
     pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
 
     /* Reset config */
     pj_bzero(&app_config, sizeof(app_config));
