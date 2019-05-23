@@ -379,6 +379,9 @@ int test_main(void)
 on_return:
     flush_events(500);
 
+    /* Show additional info on the log. e.g: not released memory pool. */
+    pj_log_set_level(4);
+
     /* Dumping memory pool usage */
     PJ_LOG(3,(THIS_FILE, "Peak memory size=%u MB",
 		         caching_pool.peak_used_size / 1000000));

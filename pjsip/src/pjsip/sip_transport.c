@@ -54,6 +54,25 @@ static const char *addr_string(const pj_sockaddr_t *addr)
 #   define TRACE_(x)
 #endif
 
+/* Specify the initial size of the transport manager's pool. */
+#ifndef  TPMGR_POOL_INIT_SIZE
+#   define TPMGR_POOL_INIT_SIZE	64
+#endif
+
+/* Specify the increment size of the transport manager's pool. */
+#ifndef TPMGR_POOL_INC_SIZE
+    #define TPMGR_POOL_INC_SIZE	64
+#endif
+
+/* Specify transport entry allocation count. When registering a new transport,
+ * a new entry will be picked from a free list. This setting will determine
+ * the size of the free list size. If all entry is used, then the same number
+ * of entry will be allocated.
+ */
+#ifndef PJSIP_TRANSPORT_ENTRY_ALLOC_CNT
+#   define PJSIP_TRANSPORT_ENTRY_ALLOC_CNT  16
+#endif
+
 /* Prototype. */
 static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata);
 
@@ -81,6 +100,7 @@ static pjsip_module mod_msg_print =
 typedef struct transport
 {
     PJ_DECL_LIST_MEMBER(struct transport);
+    pj_hash_entry_buf tp_buf;
     pjsip_transport *tp;
 } transport;
 
@@ -93,6 +113,7 @@ struct pjsip_tpmgr
     pj_lock_t	    *lock;
     pjsip_endpoint  *endpt;
     pjsip_tpfactory  factory_list;
+    pj_pool_t	    *pool;
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     pj_atomic_t	    *tdata_counter;
 #endif
@@ -105,12 +126,9 @@ struct pjsip_tpmgr
      * is destroyed.
      */
     pjsip_tx_data    tdata_list;
-    
-    /* List of transports which are NOT stored in the hash table, so
-     * that it can be properly cleaned up when transport manager
-     * is destroyed.
-     */
-    transport        tp_list;
+
+    /* List of free transport entry. */
+    transport	     tp_entry_freelist;
 };
 
 
@@ -1024,18 +1042,18 @@ static pj_bool_t is_transport_valid(pjsip_transport *tp, pjsip_tpmgr *tpmgr,
 				    const pjsip_transport_key *key,
 				    int key_len)
 {
-    transport *tp_iter;
+    transport *tp_entry;
 
-    if (pj_hash_get(tpmgr->table, key, key_len, NULL) == (void*)tp) {
-        return PJ_TRUE;
-    }
+    tp_entry = (transport *)pj_hash_get(tpmgr->table, key, key_len, NULL);
+    if (tp_entry != NULL) {
 
-    tp_iter = tpmgr->tp_list.next;
-    while (tp_iter != &tpmgr->tp_list) {
-        if (tp_iter->tp == tp) {
-            return PJ_TRUE;
-        }
-        tp_iter = tp_iter->next;
+	transport *tp_iter = tp_entry;
+	do {
+	    if (tp_iter->tp == tp) {
+		return PJ_TRUE;
+	    }
+	    tp_iter = tp_iter->next;
+	} while (tp_iter != tp_entry);
     }
 
     return PJ_FALSE;
@@ -1135,8 +1153,9 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
     }
 
     /* Dec ref transport group lock, if any */
-    if (tp->grp_lock)
+    if (tp->grp_lock) {
 	pj_grp_lock_dec_ref(tp->grp_lock);
+    }
 
     return PJ_SUCCESS;
 }
@@ -1150,7 +1169,8 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 {
     int key_len;
     pj_uint32_t hval;
-    void *entry;
+    transport *tp_ref = NULL;
+    transport *tp_add = NULL;
 
     /* Init. */
     tp->tpmgr = mgr;
@@ -1158,31 +1178,43 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     tp->idle_timer.user_data = tp;
     tp->idle_timer.cb = &transport_idle_callback;
 
-    /* 
+    /*
      * Register to hash table (see Trac ticket #42).
      */
     key_len = sizeof(tp->key.type) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
 
-    /* If entry already occupied, unregister previous entry */
     hval = 0;
-    entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
-    if (entry != NULL) {
-        transport *tp_ref;
-        
-        tp_ref = PJ_POOL_ZALLOC_T(((pjsip_transport *)entry)->pool, transport);
-        
-        /*
-         * Add transport to the list before removing it from the hash table.
-         * See ticket #1774 for more details.
-         */
-        tp_ref->tp = (pjsip_transport *)entry;
-        pj_list_push_back(&mgr->tp_list, tp_ref);
-	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
-    }
+    tp_ref = (transport *)pj_hash_get(mgr->table, &tp->key, key_len, &hval);
 
-    /* Register new entry */
-    pj_hash_set(tp->pool, mgr->table, &tp->key, key_len, hval, tp);
+    /* Get an empty entry from the freelist. */
+    if (pj_list_empty(&mgr->tp_entry_freelist)) {
+	unsigned i = 0;
+
+	TRACE_((THIS_FILE, "Transport list is full, allocate new entry"));
+	/* Allocate new entry for the freelist. */
+	for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
+	    tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
+	    if (!tp_add)
+		return PJ_ENOMEM;
+	    pj_list_init(tp_add);
+	    pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
+	}
+    }
+    tp_add = mgr->tp_entry_freelist.next;
+    tp_add->tp = tp;
+    pj_list_erase(tp_add);
+
+    if (tp_ref) {
+	/* There'a already a transport list from the hash table. Add the 
+	 * new transport to the list.
+	 */
+	pj_list_push_back(tp_ref, tp_add);
+    } else {
+	/* Transport list not found, add it to the hash table. */
+	pj_hash_set_np(mgr->table, &tp->key, key_len, hval, tp_add->tp_buf,
+		       tp_add);
+    }
 
     /* Add ref transport group lock, if any */
     if (tp->grp_lock)
@@ -1229,26 +1261,46 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     key_len = sizeof(tp->key.type) + tp->addr_len;
     hval = 0;
     entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
-    if (entry == (void*)tp) {
-	pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval, NULL);
-    } else {
-        /* If not found in hash table, remove from the tranport list. */
-        transport *tp_iter = mgr->tp_list.next;
-        while (tp_iter != &mgr->tp_list) {
-            if (tp_iter->tp == tp) {
-                pj_list_erase(tp_iter);
-                break;
-            }
-            tp_iter = tp_iter->next;
-        }
+    if (entry) {
+	transport *tp_ref = (transport *)entry;
+	transport *tp_iter = tp_ref;
+	/* Search the matching entry from the transport list. */
+	do {
+	    if (tp_iter->tp == tp) {
+		transport *tp_next = tp_iter->next;
+
+		/* Update hash table :
+		 * - transport list only contain single element, or
+		 * - the entry is the first element of the transport list.
+		 */
+		if (tp_iter == tp_ref) {
+		    pj_hash_set(NULL, mgr->table, &tp->key, key_len, hval,
+				NULL);
+
+		    if (tp_ref->next != tp_ref) {
+			/* The transport list has multiple entry. */
+			pj_hash_set_np(mgr->table, &tp_next->tp->key, key_len,
+				       hval, tp_next->tp_buf, tp_next);
+		    }
+		}
+
+		pj_list_erase(tp_iter);
+		/* Put back to the transport freelist. */
+		pj_list_push_back(&mgr->tp_entry_freelist, tp_iter);
+
+		break;
+	    }
+	    tp_iter = tp_iter->next;
+	} while (tp_iter != tp_ref);
     }
 
     pj_lock_release(mgr->lock);
     pj_lock_release(tp->lock);
 
     /* Dec ref transport group lock, if any */
-    if (tp->grp_lock)
+    if (tp->grp_lock) {
 	pj_grp_lock_dec_ref(tp->grp_lock);
+    }
 
     /* Destroy. */
     return tp->destroy(tp);
@@ -1362,13 +1414,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_register_tpfactory( pjsip_tpmgr *mgr,
 
     pj_lock_acquire(mgr->lock);
 
-    /* Check that no factory with the same type has been registered. */
+    /* Check that no same factory has been registered. */
     status = PJ_SUCCESS;
     for (p=mgr->factory_list.next; p!=&mgr->factory_list; p=p->next) {
-	if (p->type == tpf->type) {
-	    status = PJSIP_ETYPEEXISTS;
-	    break;
-	}
 	if (p == tpf) {
 	    status = PJ_EEXISTS;
 	    break;
@@ -1443,6 +1491,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 {
     pjsip_tpmgr *mgr;
     pj_status_t status;
+    unsigned i = 0;
+    pj_pool_t *mgr_pool;
 
     PJ_ASSERT_RETURN(pool && endpt && rx_cb && p_mgr, PJ_EINVAL);
 
@@ -1452,24 +1502,42 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 	return status;
 
     /* Create and initialize transport manager. */
-    mgr = PJ_POOL_ZALLOC_T(pool, pjsip_tpmgr);
+    mgr_pool = pjsip_endpt_create_pool(endpt, "tpmgr",
+				       TPMGR_POOL_INIT_SIZE,
+				       TPMGR_POOL_INC_SIZE);
+    mgr = PJ_POOL_ZALLOC_T(mgr_pool, pjsip_tpmgr);
     mgr->endpt = endpt;
     mgr->on_rx_msg = rx_cb;
     mgr->on_tx_msg = tx_cb;
+    mgr->pool = mgr_pool;
+
+    if (!mgr->pool)
+	return PJ_ENOMEM;
+
     pj_list_init(&mgr->factory_list);
     pj_list_init(&mgr->tdata_list);
-    pj_list_init(&mgr->tp_list);
+    pj_list_init(&mgr->tp_entry_freelist);
 
-    mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
+    mgr->table = pj_hash_create(mgr->pool, PJSIP_TPMGR_HTABLE_SIZE);
     if (!mgr->table)
 	return PJ_ENOMEM;
 
-    status = pj_lock_create_recursive_mutex(pool, "tmgr%p", &mgr->lock);
+    status = pj_lock_create_recursive_mutex(mgr->pool, "tmgr%p", &mgr->lock);
     if (status != PJ_SUCCESS)
 	return status;
 
+    for (; i < PJSIP_TRANSPORT_ENTRY_ALLOC_CNT; ++i) {
+	transport *tp_add = NULL;
+
+	tp_add = PJ_POOL_ZALLOC_T(mgr->pool, transport);
+	if (!tp_add)
+	    return PJ_ENOMEM;
+	pj_list_init(tp_add);
+	pj_list_push_back(&mgr->tp_entry_freelist, tp_add);
+    }
+
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
-    status = pj_atomic_create(pool, 0, &mgr->tdata_counter);
+    status = pj_atomic_create(mgr->pool, 0, &mgr->tdata_counter);
     if (status != PJ_SUCCESS) {
     	pj_lock_destroy(mgr->lock);
     	return status;
@@ -1697,15 +1765,16 @@ PJ_DEF(unsigned) pjsip_tpmgr_get_transport_count(pjsip_tpmgr *mgr)
     pj_hash_iterator_t itr_val;
     pj_hash_iterator_t *itr;
     int nr_of_transports = 0;
-    
+
     pj_lock_acquire(mgr->lock);
-    
+
     itr = pj_hash_first(mgr->table, &itr_val);
     while (itr) {
-	nr_of_transports++;
+	transport *tp_entry = (transport *)pj_hash_this(mgr->table, itr);
+	nr_of_transports += pj_list_size(tp_entry);
 	itr = pj_hash_next(mgr->table, itr);
     }
-    
+
     pj_lock_release(mgr->lock);
 
     return nr_of_transports;
@@ -1722,7 +1791,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     pj_hash_iterator_t *itr;
     pjsip_tpfactory *factory;
     pjsip_endpoint *endpt = mgr->endpt;
-    
+
     PJ_LOG(5, (THIS_FILE, "Destroying transport manager"));
 
     pj_lock_acquire(mgr->lock);
@@ -1730,39 +1799,21 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     /*
      * Destroy all transports in the hash table.
      */
-    itr = pj_hash_first(mgr->table, &itr_val);
-    while (itr != NULL) {
-	pj_hash_iterator_t *next;
-	pjsip_transport *transport;
-	
-	transport = (pjsip_transport*) pj_hash_this(mgr->table, itr);
-
-	next = pj_hash_next(mgr->table, itr);
-
-	destroy_transport(mgr, transport);
-
-	itr = next;
+    for (itr = pj_hash_first(mgr->table, &itr_val); itr;
+	 itr = pj_hash_first(mgr->table, &itr_val))
+    {
+	transport *tp_ref;
+	tp_ref = pj_hash_this(mgr->table, itr);
+	destroy_transport(mgr, tp_ref->tp);
     }
 
-    /*
-     * Destroy transports in the list.
-     */
-    if (!pj_list_empty(&mgr->tp_list)) {
-        transport *tp_iter = mgr->tp_list.next;
-        while (tp_iter != &mgr->tp_list) {
-	    transport *next = tp_iter->next;
-	    destroy_transport(mgr, tp_iter->tp);
-	    tp_iter = next;
-        }
-    }
-    
     /*
      * Destroy all factories/listeners.
      */
     factory = mgr->factory_list.next;
     while (factory != &mgr->factory_list) {
 	pjsip_tpfactory *next = factory->next;
-	
+
 	factory->destroy(factory);
 
 	factory = next;
@@ -1804,6 +1855,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     /* Unregister mod_msg_print. */
     if (mod_msg_print.id != -1) {
 	pjsip_endpt_unregister_module(endpt, &mod_msg_print);
+    }
+
+    if (mgr->pool) {
+	pjsip_endpt_release_pool( mgr->endpt, mgr->pool );
     }
 
     return PJ_SUCCESS;
@@ -2166,7 +2221,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	 */
 	pjsip_transport_key key;
 	int key_len;
-	pjsip_transport *transport = NULL;
+	pjsip_transport *tp_ref = NULL;
+	transport *tp_entry = NULL;
+
 
 	/* If listener is specified, verify that the listener type matches
 	 * the destination type.
@@ -2187,11 +2244,28 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    key.type = type;
 	    pj_memcpy(&key.rem_addr, remote, addr_len);
 
-	    transport = (pjsip_transport*)
-		        pj_hash_get(mgr->table, &key, key_len, NULL);
+	    tp_entry = (transport *)pj_hash_get(mgr->table, &key, key_len,
+						NULL);
+	    if (tp_entry) {
+		if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER) {
+		    transport *tp_iter = tp_entry;
+		    do {
+			if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
+			    sel->u.listener &&
+			    tp_iter->tp->factory == sel->u.listener)
+			{
+			    tp_ref = tp_iter->tp;
+			    break;
+			}
+			tp_iter = tp_iter->next;
+		    } while (tp_iter != tp_entry);
+		} else {
+		    tp_ref = tp_entry->tp;
+		}
+	    }
 	}
 
-	if (transport == NULL &&
+	if (tp_ref == NULL &&
 	    (!sel || sel->disable_connection_reuse == PJ_FALSE))
 	{
 	    unsigned flag = pjsip_transport_get_flag_from_type(type);
@@ -2206,8 +2280,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 
 		pj_bzero(addr, addr_len);
 		key_len = sizeof(key.type) + addr_len;
-		transport = (pjsip_transport*) 
-			    pj_hash_get(mgr->table, &key, key_len, NULL);
+		tp_entry = (transport *) pj_hash_get(mgr->table, &key,
+						     key_len, NULL);
+		if (tp_entry) {
+		    tp_ref = tp_entry->tp;
+		}
 	    }
 	    /* For datagram transports, try lookup with zero address.
 	     */
@@ -2219,31 +2296,34 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		addr->addr.sa_family = remote_addr->addr.sa_family;
 
 		key_len = sizeof(key.type) + addr_len;
-		transport = (pjsip_transport*)
-			    pj_hash_get(mgr->table, &key, key_len, NULL);
+		tp_entry = (transport *) pj_hash_get(mgr->table, &key,
+						     key_len, NULL);
+		if (tp_entry) {
+		    tp_ref = tp_entry->tp;
+		}
 	    }
 	}
 
 	/* If transport is found and listener is specified, verify listener */
 	else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
-		 sel->u.listener && transport->factory != sel->u.listener)
+		 sel->u.listener && tp_ref->factory != sel->u.listener)
 	{
-	    transport = NULL;
+	    tp_ref = NULL;
 	    /* This will cause a new transport to be created which will be a
 	     * 'duplicate' of the existing transport (same type & remote addr,
 	     * but different factory).
 	     */
 	}
 
-	if (transport!=NULL && !transport->is_shutdown) {
+	if (tp_ref!=NULL && !tp_ref->is_shutdown) {
 	    /*
 	     * Transport found!
 	     */
-	    pjsip_transport_add_ref(transport);
+	    pjsip_transport_add_ref(tp_ref);
 	    pj_lock_release(mgr->lock);
-	    *tp = transport;
+	    *tp = tp_ref;
 
-	    TRACE_((THIS_FILE, "Transport %s acquired", transport->obj_name));
+	    TRACE_((THIS_FILE, "Transport %s acquired", tp_ref->obj_name));
 	    return PJ_SUCCESS;
 	}
 
@@ -2305,15 +2385,15 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
     /* Request factory to create transport. */
     if (factory->create_transport2) {
 	status = factory->create_transport2(factory, mgr, mgr->endpt,
-					    (const pj_sockaddr*) remote, 
+					    (const pj_sockaddr*) remote,
 					    addr_len, tdata, tp);
     } else {
 	status = factory->create_transport(factory, mgr, mgr->endpt,
-					   (const pj_sockaddr*) remote, 
+					   (const pj_sockaddr*) remote,
 					   addr_len, tp);
     }
     if (status == PJ_SUCCESS) {
-	PJ_ASSERT_ON_FAIL(tp!=NULL, 
+	PJ_ASSERT_ON_FAIL(tp!=NULL,
 	    {pj_lock_release(mgr->lock); return PJ_EBUG;});
 	pjsip_transport_add_ref(*tp);
 	(*tp)->factory = factory;
@@ -2356,15 +2436,25 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 	PJ_LOG(3, (THIS_FILE, " Dumping transports:"));
 
 	do {
-	    pjsip_transport *t = (pjsip_transport*) 
-	    			 pj_hash_this(mgr->table, itr);
+	    transport *tp_entry = (transport *) pj_hash_this(mgr->table, itr);
+	    if (tp_entry) {
+		transport *tp_iter = tp_entry;
 
-	    PJ_LOG(3, (THIS_FILE, "  %s %s (refcnt=%d%s)", 
-		       t->obj_name,
-		       t->info,
-		       pj_atomic_get(t->ref_cnt),
-		       (t->idle_timer.id ? " [idle]" : "")));
+		do {
+		    pjsip_transport *tp_ref = tp_iter->tp;
 
+		    PJ_LOG(3, (THIS_FILE, "  %s %s%s%s%s(refcnt=%d%s)",
+			       tp_ref->obj_name,
+			       tp_ref->info,
+			       (tp_ref->factory)?" listener[":"",
+			       (tp_ref->factory)?tp_ref->factory->obj_name:"",
+			       (tp_ref->factory)?"]":"",
+			       pj_atomic_get(tp_ref->ref_cnt),
+			       (tp_ref->idle_timer.id ? " [idle]" : "")));
+
+		    tp_iter = tp_iter->next;
+		} while (tp_iter != tp_entry);
+	    }
 	    itr = pj_hash_next(mgr->table, itr);
 	} while (itr);
     }
