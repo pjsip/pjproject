@@ -1776,9 +1776,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    /* Save/update response cache. */
-    update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
-    
+    /* Truncated responses MUST NOT be saved (cached). */
+    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0) {
+	/* Save/update response cache. */
+	update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
+    }
+
     /* Recycle query objects, starting with the child queries */
     if (!pj_list_empty(&q->child_head)) {
 	pj_dns_async_query *child_q;

@@ -585,13 +585,29 @@ static void dns_callback(void *user_data,
 	/* Clear the outstanding job */
 	query_job->q_srv = NULL;
 
-	if (status == PJ_SUCCESS && pkt->hdr.anscount != 0) {
-	    /* Got SRV response, build server entry. If A records are available
-	     * in additional records section of the DNS response, save them too.
-	     */
-	    build_server_entries(query_job, pkt);
+	if (status == PJ_SUCCESS) {
+	    if (PJ_DNS_GET_TC(pkt->hdr.flags)) {
+		/* Got truncated answer, the standard recommends to follow up
+		 * the query using TCP. Since we currently don't support it,
+		 * just return error.
+		 */
+		PJ_LOG(4,(query_job->objname,
+			  "Discard truncated DNS SRV response for %.*s",
+			  (int)query_job->full_name.slen,
+			  query_job->full_name.ptr));
 
-	} else if (status != PJ_SUCCESS) {
+		status = PJ_EIGNORED;
+		query_job->last_error = status;
+		goto on_error;
+	    } else if (pkt->hdr.anscount != 0) {
+		/* Got SRV response, build server entry. If A records are
+		 * available in additional records section of the DNS response,
+		 * save them too.
+		 */
+		build_server_entries(query_job, pkt);
+	    }
+
+	} else {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
 	    /* Update query_job last error */
