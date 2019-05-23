@@ -297,7 +297,8 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		    {
 		    	unsigned idx = 0;
 		    	
-		    	if (target->type == PJSIP_TRANSPORT_UNSPECIFIED) {
+		    	if (af != pj_AF_INET6()) {
+		    	    /* Return IPv4 and IPv6 addresses */
 		    	    idx = 1;
 		    	    svr_addr.count++;
 		    	}
