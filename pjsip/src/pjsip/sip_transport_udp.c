@@ -142,8 +142,6 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
     if (tp->is_paused)
 	goto on_return;
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-    	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
     if (-bytes_read == PJ_ESOCKETSTOP) {
 	--tp->read_loop_spin;
 	/* Try to recover by restarting the transport. */
@@ -161,7 +159,6 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	}
         return;
     }
-#endif
 
     /*
      * The idea of the loop is to process immediate data received by
@@ -324,8 +321,6 @@ static void udp_on_write_complete( pj_ioqueue_key_t *key,
 
     tdata_op_key->tdata = NULL;
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-    	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
     if (-bytes_sent == PJ_ESOCKETSTOP) {
 	pj_status_t status;
 	/* Try to recover by restarting the transport. */
@@ -343,7 +338,6 @@ static void udp_on_write_complete( pj_ioqueue_key_t *key,
 	}
         return;
     }
-#endif
 
     if (tdata_op_key->callback) {
 	tdata_op_key->callback(&tp->base, tdata_op_key->token, bytes_sent);
@@ -385,8 +379,24 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 			       tdata->buf.start, &size, 0,
 			       rem_addr, addr_len);
 
-    if (status != PJ_EPENDING)
+    if (status != PJ_EPENDING) {
+	if (status == PJ_ESOCKETSTOP) {
+	    /* Try to recover by restarting the transport. */
+	    PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
+	    status = pjsip_udp_transport_restart2(
+				&tp->base,
+				PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+				PJ_INVALID_SOCKET,
+				&tp->base.local_addr,
+				&tp->base.local_name);
+
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status,
+			     "Error restarting SIP UDP transport"));
+	    }
+	}
 	tdata->op_key.tdata = NULL;
+    }
 
     return status;
 }

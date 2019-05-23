@@ -1029,15 +1029,19 @@ retry_on_restart:
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
 	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 		/* Special treatment for dead UDP sockets here, see ticket #1107 */
-		if (status==PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(key) &&
-		    key->fd_type==pj_SOCK_DGRAM() && !restart_retry)
+		if (status == PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(key) &&
+		    key->fd_type == pj_SOCK_DGRAM())
 		{
-		    PJ_PERROR(4,(THIS_FILE, status,
-				 "Send error for socket %d, retrying",
-				 key->fd));
-		    replace_udp_sock(key);
-		    restart_retry = PJ_TRUE;
-		    goto retry_on_restart;
+		    if (!restart_retry) {
+			PJ_PERROR(4, (THIS_FILE, status,
+				      "Send error for socket %d, retrying",
+				      key->fd));
+			replace_udp_sock(key);
+			restart_retry = PJ_TRUE;
+			goto retry_on_restart;
+		    } else {
+			status = PJ_ESOCKETSTOP;
+		    }
 		}
 #endif
 
