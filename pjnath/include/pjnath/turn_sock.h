@@ -26,6 +26,7 @@
  */
 #include <pjnath/turn_session.h>
 #include <pj/sock_qos.h>
+#include <pj/ssl_sock.h>
 
 
 PJ_BEGIN_DECL
@@ -145,6 +146,113 @@ typedef struct pj_turn_sock_cb
 
 
 /**
+ * The default enabled SSL proto to be used.
+ * Default is all protocol above TLSv1 (TLSv1 & TLS v1.1 & TLS v1.2).
+ */
+#ifndef PJ_TURN_TLS_DEFAULT_PROTO
+#   define PJ_TURN_TLS_DEFAULT_PROTO  (PJ_SSL_SOCK_PROTO_TLS1 | \
+				       PJ_SSL_SOCK_PROTO_TLS1_1 | \
+				       PJ_SSL_SOCK_PROTO_TLS1_2)
+#endif
+
+/**
+ * TLS transport settings.
+ */
+typedef struct pj_turn_sock_tls_cfg
+{
+    /**
+     * Certificate of Authority (CA) list file.
+     */
+    pj_str_t	ca_list_file;
+
+    /**
+     * Certificate of Authority (CA) list directory path.
+     */
+    pj_str_t	ca_list_path;
+
+    /**
+     * Public endpoint certificate file, which will be used as client-
+     * side  certificate for outgoing TLS connection.
+     */
+    pj_str_t	cert_file;
+
+    /**
+     * Optional private key of the endpoint certificate to be used.
+     */
+    pj_str_t	privkey_file;
+
+    /**
+     * Certificate of Authority (CA) buffer. If ca_list_file, ca_list_path,
+     * cert_file or privkey_file are set, this setting will be ignored.
+     */
+    pj_ssl_cert_buffer ca_buf;
+
+    /**
+     * Public endpoint certificate buffer, which will be used as client-
+     * side  certificate for outgoing TLS connection, and server-side
+     * certificate for incoming TLS connection. If ca_list_file, ca_list_path,
+     * cert_file or privkey_file are set, this setting will be ignored.
+     */
+    pj_ssl_cert_buffer cert_buf;
+
+    /**
+     * Optional private key buffer of the endpoint certificate to be used. 
+     * If ca_list_file, ca_list_path, cert_file or privkey_file are set, 
+     * this setting will be ignored.
+     */
+    pj_ssl_cert_buffer privkey_buf;
+
+    /**
+     * Password to open private key.
+     */
+    pj_str_t	password;
+
+    /**
+     * The ssl socket parameter.
+     * These fields are used by TURN TLS:
+     * - proto
+     * - ciphers_num
+     * - ciphers
+     * - curves_num
+     * - curves
+     * - sigalgs
+     * - entropy_type
+     * - entropy_path
+     * - timeout
+     * - sockopt_params
+     * - sockopt_ignore_error
+     */
+    pj_ssl_sock_param ssock_param;
+
+} pj_turn_sock_tls_cfg;
+
+/**
+ * Initialize TLS setting with default values.
+ *
+ * @param tls_cfg   The TLS setting to be initialized.
+ */
+ PJ_DECL(void) pj_turn_sock_tls_cfg_default(pj_turn_sock_tls_cfg *tls_cfg);
+
+/**
+ * Duplicate TLS setting.
+ *
+ * @param pool	    The pool to duplicate strings etc.
+ * @param dst	    Destination structure.
+ * @param src	    Source structure.
+ */
+ PJ_DECL(void) pj_turn_sock_tls_cfg_dup(pj_pool_t *pool,
+					pj_turn_sock_tls_cfg *dst,
+					const pj_turn_sock_tls_cfg *src);
+
+/**
+ * Wipe out certificates and keys in the TLS setting.
+ *
+ * @param tls_cfg   The TLS setting.
+ */
+PJ_DECL(void) pj_turn_sock_tls_cfg_wipe_keys(pj_turn_sock_tls_cfg *tls_cfg);
+
+
+/**
  * This structure describes options that can be specified when creating
  * the TURN socket. Application should call #pj_turn_sock_cfg_default()
  * to initialize this structure with its default values before using it.
@@ -228,6 +336,12 @@ typedef struct pj_turn_sock_cfg
      * Default: 0 (OS default)
      */
     unsigned so_sndbuf_size;
+
+    /**
+     * This specifies TLS settings for TLS transport. It is only be used
+     * when this TLS is used to connect to the TURN server.
+     */
+    pj_turn_sock_tls_cfg tls_cfg;
 
 } pj_turn_sock_cfg;
 

@@ -3346,7 +3346,7 @@ typedef struct pjsua_turn_config
 
     /**
      * Specify the connection type to be used to the TURN server. Valid
-     * values are PJ_TURN_TP_UDP or PJ_TURN_TP_TCP.
+     * values are PJ_TURN_TP_UDP, PJ_TURN_TP_TCP or PJ_TURN_TP_TLS.
      *
      * Default: PJ_TURN_TP_UDP
      */
@@ -3356,6 +3356,12 @@ typedef struct pjsua_turn_config
      * Specify the credential to authenticate with the TURN server.
      */
     pj_stun_auth_cred	turn_auth_cred;
+
+    /**
+     * This specifies TLS settings for TURN TLS. It is only be used
+     * when this TLS is used to connect to the TURN server.
+     */
+    pj_turn_sock_tls_cfg turn_tls_setting;
 
 } pjsua_turn_config;
 
@@ -6642,7 +6648,7 @@ struct pjsua_media_config
 
     /**
      * Specify the connection type to be used to the TURN server. Valid
-     * values are PJ_TURN_TP_UDP or PJ_TURN_TP_TCP.
+     * values are PJ_TURN_TP_UDP, PJ_TURN_TP_TCP or PJ_TURN_TP_TLS.
      *
      * Default: PJ_TURN_TP_UDP
      */
@@ -6652,6 +6658,12 @@ struct pjsua_media_config
      * Specify the credential to authenticate with the TURN server.
      */
     pj_stun_auth_cred	turn_auth_cred;
+
+    /**
+     * This specifies TLS settings for TLS transport. It is only be used
+     * when this TLS is used to connect to the TURN server.
+     */
+    pj_turn_sock_tls_cfg turn_tls_setting;
 
     /**
      * Specify idle time of sound device before it is automatically closed,

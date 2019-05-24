@@ -36,6 +36,10 @@ static void pjsua_media_config_dup(pj_pool_t *pool,
     pj_memcpy(dst, src, sizeof(*src));
     pj_strdup(pool, &dst->turn_server, &src->turn_server);
     pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred, &src->turn_auth_cred);
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_dup(pool, &dst->turn_tls_setting,
+			     &src->turn_tls_setting);
+#endif
 }
 
 
@@ -1074,6 +1078,14 @@ static pj_status_t create_ice_media_transport(
 
 	    /* Configure max packet size */
 	    ice_cfg.turn_tp[i].cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+
+#if PJ_HAS_SSL_SOCK
+	    if (ice_cfg.turn_tp[i].conn_type == PJ_TURN_TP_TLS) {
+		pj_memcpy(&ice_cfg.turn_tp[i].cfg.tls_cfg, 
+			  &acc_cfg->turn_cfg.turn_tls_setting,
+			  sizeof(ice_cfg.turn_tp[i].cfg.tls_cfg));
+	    }
+#endif
 	}
     }
 

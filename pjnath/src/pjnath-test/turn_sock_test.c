@@ -90,7 +90,14 @@ static void destroy_session(struct test_session *sess)
     }
 }
 
-
+pj_turn_tp_type get_turn_tp_type(pj_uint32_t flag) {
+    if (flag & TURN_TCP) {
+	return PJ_TURN_TP_TCP;
+    } else if (flag & TURN_TLS) {
+	return PJ_TURN_TP_TLS;
+    } 
+    return PJ_TURN_TP_UDP;
+}
 
 static int create_test_session(pj_stun_config  *stun_cfg,
 			       const struct test_session_cfg *cfg,
@@ -103,6 +110,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     pj_stun_auth_cred cred;
     pj_status_t status;
     pj_bool_t use_ipv6 = cfg->srv.flags & SERVER_IPV6;
+    pj_turn_tp_type tp_type = get_turn_tp_type(cfg->srv.flags);
 
     /* Create client */
     pool = pj_pool_create(mem, "turnclient", 512, 512, NULL);
@@ -116,7 +124,7 @@ static int create_test_session(pj_stun_config  *stun_cfg,
     turn_sock_cb.on_state = &turn_on_state;
     status = pj_turn_sock_create(sess->stun_cfg,
 				 GET_AF(use_ipv6),
-				 PJ_TURN_TP_UDP, 
+				 tp_type, 
 				 &turn_sock_cb, 
 				 0, 
 				 sess, 
@@ -257,14 +265,25 @@ static void turn_on_state(pj_turn_sock *turn_sock,
 /////////////////////////////////////////////////////////////////////
 
 static void set_server_flag(struct test_session_cfg *test_cfg, 
-			    pj_bool_t use_ipv6)
+			    pj_bool_t use_ipv6,
+			    pj_turn_tp_type tp_type)
 {
-    test_cfg->srv.flags &= ~(SERVER_IPV4+SERVER_IPV6);
-    test_cfg->srv.flags |= (use_ipv6)?SERVER_IPV6:SERVER_IPV4;
+    pj_uint32_t flag = TURN_UDP;
+    test_cfg->srv.flags &= ~(SERVER_IPV4+SERVER_IPV6+
+			     TURN_UDP+TURN_TCP+TURN_TLS);    
+    switch (tp_type) {
+	case PJ_TURN_TP_TCP:
+	    flag = TURN_TCP;
+	    break;
+	case PJ_TURN_TP_TLS:
+	    flag = TURN_TLS;
+    }
+    test_cfg->srv.flags |= ((use_ipv6)?SERVER_IPV6:SERVER_IPV4)+flag;
 }
 
 static int state_progression_test(pj_stun_config  *stun_cfg, 
-				  pj_bool_t use_ipv6)
+				  pj_bool_t use_ipv6,
+				  pj_turn_tp_type tp_type)
 {
     struct test_session_cfg test_cfg = 
     {
@@ -282,9 +301,12 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
     unsigned i;
     int rc = 0;
 
-    PJ_LOG(3,("", "  state progression tests - (%s)",use_ipv6?"IPv6":"IPv4"));
+    PJ_LOG(3,("", "  state progression tests - (%s) (%s)",
+	      use_ipv6?"IPv6":"IPv4",
+	      (tp_type==PJ_TURN_TP_UDP)?"UDP":
+		(tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
     
-    set_server_flag(&test_cfg, use_ipv6);
+    set_server_flag(&test_cfg, use_ipv6, tp_type);
     for (i=0; i<=1; ++i) {
 	enum { TIMEOUT = 60 };
 	pjlib_state pjlib_state;
@@ -311,6 +333,9 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
 	    pj_time_val now;
 
 	    poll_events(stun_cfg, 10, PJ_FALSE);
+	    if (sess->turn_sock == NULL) {
+		break;
+	    }
 	    rc = pj_turn_sock_get_info(sess->turn_sock, &info);
 	    if (rc!=PJ_SUCCESS)
 		break;
@@ -388,7 +413,7 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
     }
 
     if (use_ipv6)
-	rc = state_progression_test(stun_cfg, 0);
+	rc = state_progression_test(stun_cfg, 0, tp_type);
 
     return rc;
 }
@@ -399,7 +424,8 @@ static int state_progression_test(pj_stun_config  *stun_cfg,
 static int destroy_test(pj_stun_config  *stun_cfg,
 			pj_bool_t with_dns_srv,
 			pj_bool_t in_callback,
-			pj_bool_t use_ipv6)
+			pj_bool_t use_ipv6,
+			pj_turn_tp_type tp_type)
 {
     struct test_session_cfg test_cfg = 
     {
@@ -417,13 +443,14 @@ static int destroy_test(pj_stun_config  *stun_cfg,
     int target_state;
     int rc;
 
-    PJ_LOG(3,("", "  destroy test %s %s",
+    PJ_LOG(3,("", "  destroy test %s %s (%s)",
 	          (in_callback? "in callback" : ""),
-		  (with_dns_srv? "with DNS srv" : "")
-		  ));
+		  (with_dns_srv? "with DNS srv" : ""),
+		  (tp_type==PJ_TURN_TP_UDP)?"UDP":
+		    (tp_type==PJ_TURN_TP_TCP)?"TCP":"TLS"));
 
     test_cfg.client.enable_dns_srv = with_dns_srv;
-    set_server_flag(&test_cfg, use_ipv6);    
+    set_server_flag(&test_cfg, use_ipv6, tp_type);    
 
     for (target_state=PJ_TURN_STATE_RESOLVING; target_state<=PJ_TURN_STATE_READY; ++target_state) {
 	enum { TIMEOUT = 60 };
@@ -506,7 +533,7 @@ int turn_sock_test(void)
 {
     pj_pool_t *pool;
     pj_stun_config stun_cfg;
-    int i, rc = 0;
+    int n, i, rc = 0;
 
     pool = pj_pool_create(mem, "turntest", 512, 512, NULL);
     rc = create_stun_config(pool, &stun_cfg);
@@ -515,16 +542,31 @@ int turn_sock_test(void)
 	return -2;
     }
 
-    rc = state_progression_test(&stun_cfg, USE_IPV6);
-    if (rc != 0) 
-	goto on_return;
+    for (n = 0; n <= 2; ++n) {
+	pj_turn_tp_type tp_type = PJ_TURN_TP_UDP;
 
-    for (i=0; i<=1; ++i) {
-	int j;
-	for (j=0; j<=1; ++j) {
-	    rc = destroy_test(&stun_cfg, i, j, USE_IPV6);
-	    if (rc != 0)
-		goto on_return;
+	if ((n == 2) && !USE_TLS)
+	    break;
+
+	switch (n) {
+	case 1:
+	    tp_type = PJ_TURN_TP_TCP;
+	    break;
+	case 2:
+	    tp_type = PJ_TURN_TP_TLS;
+	}
+
+	rc = state_progression_test(&stun_cfg, USE_IPV6, tp_type);
+	if (rc != 0) 
+	    goto on_return;
+
+	for (i=0; i<=1; ++i) {
+	    int j;
+	    for (j=0; j<=1; ++j) {
+		rc = destroy_test(&stun_cfg, i, j, USE_IPV6, tp_type);
+		if (rc != 0)
+		    goto on_return;
+	    }
 	}
     }
 

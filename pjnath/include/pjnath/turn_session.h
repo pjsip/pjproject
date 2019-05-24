@@ -151,8 +151,9 @@ typedef enum pj_turn_tp_type
     /**
      * TLS transport. The TLS transport will only be used as the connection
      * type to reach the server and never as the allocation transport type.
+     * The value corresponds to IANA protocol number.
      */
-    PJ_TURN_TP_TLS = 255
+    PJ_TURN_TP_TLS = 56
 
 } pj_turn_tp_type;
 

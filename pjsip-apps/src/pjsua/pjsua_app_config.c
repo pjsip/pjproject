@@ -196,7 +196,18 @@ static void usage(void)
     puts  ("  --srtp-keying       SRTP keying method for outgoing SDP offer.");
     puts  ("                      0=SDES (default), 1=DTLS");
 #endif
-
+#if PJ_HAS_SSL_SOCK
+    puts  ("");
+    puts  ("TURN TLS Options:");
+    puts  ("  --turn-tls          Use TLS connection to TURN server (default no)");
+    puts  ("  --turn-tls-ca-file  Specify TURN TLS CA file (default=none)");
+    puts  ("  --turn-tls-cert-file  Specify TURN TLS certificate file (default=none)");
+    puts  ("  --turn-tls-privkey-file  Specify TURN TLS private key file (default=none)");
+    puts  ("  --turn-tls-privkey-pwd Specify TURN TLS password to private key file (default=none)");
+    puts  ("  --turn-tls-neg-timeout Specify TURN TLS negotiation timeout (default=no)");
+    puts  ("  --turn-tls-cipher   Specify prefered TURN TLS cipher (optional).");
+    puts  ("                      May be specified multiple times");
+#endif
     puts  ("");
     puts  ("Buddy List (can be more than one):");
     puts  ("  --add-buddy url     Add the specified URL to the buddy list.");
@@ -360,8 +371,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV,
-	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_RTCP_MUX,
-	   OPT_SRTP_KEYING,
+	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_TURN_TLS, 
+	   OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
+	   OPT_TURN_TLS_NEG_TIMEOUT, OPT_TURN_TLS_CIPHER,
+	   OPT_TURN_TLS_PRIV_FILE, OPT_TURN_TLS_PASSWORD,
+	   OPT_RTCP_MUX, OPT_SRTP_KEYING,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC,
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -452,6 +466,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
 	{ "turn-srv",	1, 0, OPT_TURN_SRV},
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
+#if PJ_HAS_SSL_SOCK
+	{ "turn-tls",	0, 0, OPT_TURN_TLS},
+	{ "turn-tls-ca-file",1, 0, OPT_TURN_TLS_CA_FILE},
+	{ "turn-tls-cert-file",1,0, OPT_TURN_TLS_CERT_FILE},
+	{ "turn-tls-privkey-file",1,0, OPT_TURN_TLS_PRIV_FILE},
+	{ "turn-tls-privkey-pwd",1,0, OPT_TURN_TLS_PASSWORD},
+	{ "turn-tls-neg-timeout", 1, 0, OPT_TURN_TLS_NEG_TIMEOUT},
+	{ "turn-tls-cipher", 1, 0, OPT_TURN_TLS_CIPHER},
+#endif
 	{ "turn-user",	1, 0, OPT_TURN_USER},
 	{ "turn-passwd",1, 0, OPT_TURN_PASSWD},
 	{ "rtcp-mux",	0, 0, OPT_RTCP_MUX},
@@ -1007,6 +1030,80 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.turn_conn_type =
 		    cur_acc->turn_cfg.turn_conn_type = PJ_TURN_TP_TCP;
 	    break;
+
+#if PJ_HAS_SSL_SOCK
+	case OPT_TURN_TLS:
+	    cfg->media_cfg.turn_conn_type =
+		    cur_acc->turn_cfg.turn_conn_type = PJ_TURN_TP_TLS;
+	    break;
+	case OPT_TURN_TLS_CA_FILE:
+	    cfg->media_cfg.turn_tls_setting.ca_list_file =
+		cur_acc->turn_cfg.turn_tls_setting.ca_list_file =
+		    pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_TLS_CERT_FILE:
+	    cfg->media_cfg.turn_tls_setting.cert_file =
+		cur_acc->turn_cfg.turn_tls_setting.cert_file =
+		    pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_TLS_PRIV_FILE:
+	    cfg->media_cfg.turn_tls_setting.privkey_file =
+		cur_acc->turn_cfg.turn_tls_setting.privkey_file =
+		    pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_TLS_PASSWORD:
+	    cfg->media_cfg.turn_tls_setting.password =
+		cur_acc->turn_cfg.turn_tls_setting.password =
+		    pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_TLS_NEG_TIMEOUT:
+	    cfg->media_cfg.turn_tls_setting.ssock_param.timeout.sec =
+		cur_acc->turn_cfg.turn_tls_setting.ssock_param.timeout.sec =
+		    atoi(pj_optarg);
+	    break;
+
+	case OPT_TURN_TLS_CIPHER:
+	    {
+		pj_ssl_cipher cipher;
+
+		if (pj_ansi_strnicmp(pj_optarg, "0x", 2) == 0) {
+		    pj_str_t cipher_st = pj_str(pj_optarg + 2);
+		    cipher = pj_strtoul2(&cipher_st, NULL, 16);
+		} else {
+		    cipher = atoi(pj_optarg);
+		}
+
+		if (pj_ssl_cipher_is_supported(cipher)) {
+		    static pj_ssl_cipher tls_ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
+		    pj_ssl_sock_param *ssock_param =
+				  &cfg->media_cfg.turn_tls_setting.ssock_param;
+
+		    tls_ciphers[ssock_param->ciphers_num++] = cipher;
+		    ssock_param->ciphers =
+		       cur_acc->turn_cfg.turn_tls_setting.ssock_param.ciphers =
+			    tls_ciphers;
+		} else {
+		    pj_ssl_cipher ciphers[PJ_SSL_SOCK_MAX_CIPHERS];
+		    unsigned j, ciphers_cnt;
+
+		    ciphers_cnt = PJ_ARRAY_SIZE(ciphers);
+		    pj_ssl_cipher_get_availables(ciphers, &ciphers_cnt);
+
+		    PJ_LOG(1,(THIS_FILE, "Cipher \"%s\" is not supported by "
+					 "TLS/SSL backend.", pj_optarg));
+		    printf("Available TLS/SSL ciphers (%d):\n", ciphers_cnt);
+		    for (j=0; j<ciphers_cnt; ++j)
+			printf("- 0x%06X: %s\n", ciphers[j], 
+			       pj_ssl_cipher_name(ciphers[j]));
+		    return -1;
+		}
+	    }
+ 	    break;
+#endif
 
 	case OPT_TURN_USER:
 	    cfg->media_cfg.turn_auth_cred.type =

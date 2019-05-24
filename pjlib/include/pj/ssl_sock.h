@@ -299,6 +299,14 @@ PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
 						 const char *error_strings[],
 						 unsigned *count);
 
+/** 
+ * Wipe out the keys in the SSL certificate. 
+ *
+ * @param cert		The SSL certificate. 
+ *
+ */
+PJ_DECL(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert);
+
 
 /** 
  * Cipher suites enumeration.
@@ -1049,6 +1057,40 @@ typedef struct pj_ssl_sock_param
 
 
 /**
+ * The parameter for pj_ssl_sock_start_connect2().
+ */
+typedef struct pj_ssl_start_connect_param {
+    /**
+     * The pool to allocate some internal data for the operation.
+     */
+    pj_pool_t *pool;
+
+    /**
+     * Local address.
+     */
+    const pj_sockaddr_t *localaddr;
+
+    /**
+     * Port range for socket binding, relative to the start port number
+     * specified in \a localaddr. This is only applicable when the start port
+     * number is non zero.
+     */
+    pj_uint16_t local_port_range;
+
+    /**
+     * Remote address.
+     */
+    const pj_sockaddr_t *remaddr;
+
+    /**
+     * Length of buffer containing above addresses.
+     */
+    int addr_len;
+
+} pj_ssl_start_connect_param;
+
+
+/**
  * Initialize the secure socket parameters for its creation with 
  * the default values.
  *
@@ -1368,6 +1410,24 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
 					       const pj_sockaddr_t *remaddr,
 					       int addr_len);
 
+/**
+ * Same as #pj_ssl_sock_start_connect(), but application can provide a 
+ * \a port_range parameter, which will be used to bind the socket to 
+ * random port.
+ *
+ * @param ssock		The secure socket.
+ *
+ * @param connect_param The parameter, refer to \a pj_ssl_start_connect_param.
+ *
+ * @return		PJ_SUCCESS if connection can be established immediately
+ *			or PJ_EPENDING if connection cannot be established 
+ *			immediately. In this case the \a on_connect_complete()
+ *			callback will be called when connection is complete. 
+ *			Any other return value indicates error condition.
+ */
+PJ_DECL(pj_status_t) pj_ssl_sock_start_connect2(
+			      pj_ssl_sock_t *ssock,
+			      pj_ssl_start_connect_param *connect_param);
 
 /**
  * Starts SSL/TLS renegotiation over an already established SSL connection
@@ -1384,7 +1444,6 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
  *			on failure.
  */
 PJ_DECL(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock);
-
 
 /**
  * @}

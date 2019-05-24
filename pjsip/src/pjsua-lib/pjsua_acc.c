@@ -713,6 +713,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     if (pjsua_var.default_acc == acc_id)
 	pjsua_var.default_acc = 0;
 
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_wipe_keys(&acc->cfg.turn_cfg.turn_tls_setting);
+#endif
+
     PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Account id %d deleted", acc_id));

@@ -1056,7 +1056,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
      * be needed by accepted sockets.
      */
     if (cert && (!ssock->is_server || ssock->parent)) {
-	wipe_cert_buffer(cert);
+	pj_ssl_cert_wipe_keys(cert);	
     }
 
     /* Create SSL instance */

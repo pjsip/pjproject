@@ -169,6 +169,8 @@ static pj_status_t tls_create(struct tls_listener *listener,
 /* Clean up TLS resources */
 static void tls_on_destroy(void *arg);
 
+static void wipe_buf(pj_str_t *buf);
+
 
 static void tls_perror(const char *sender, const char *title,
 		       pj_status_t status)
@@ -664,6 +666,11 @@ on_error:
 static void lis_on_destroy(void *arg)
 {
     struct tls_listener *listener = (struct tls_listener*)arg;
+
+    if (listener->cert) {
+	pj_ssl_cert_wipe_keys(listener->cert);
+	listener->cert = NULL;
+    }
 
     if (listener->factory.lock) {
 	pj_lock_destroy(listener->factory.lock);

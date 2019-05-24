@@ -31,6 +31,8 @@
 #   define PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT	500
 #endif
 
+enum { MAX_BIND_RETRY = 100 };
+
 #ifdef SSL_SOCK_IMP_USE_CIRC_BUF
 /*
  *******************************************************************
@@ -596,27 +598,6 @@ static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
     }
 }
 
-
-static void wipe_buf(pj_str_t *buf)
-{
-    volatile char *p = buf->ptr;
-    pj_ssize_t len = buf->slen;
-    while (len--) *p++ = 0;
-    buf->slen = 0;
-}
-
-static void wipe_cert_buffer(pj_ssl_cert_t *cert)
-{
-    wipe_buf(&cert->CA_file);
-    wipe_buf(&cert->CA_path);
-    wipe_buf(&cert->cert_file);
-    wipe_buf(&cert->privkey_file);
-    wipe_buf(&cert->privkey_pass);
-    wipe_buf(&cert->CA_buf);
-    wipe_buf(&cert->cert_buf);
-    wipe_buf(&cert->privkey_buf);
-}
-
 static void ssl_on_destroy(void *arg)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)arg;
@@ -632,13 +613,6 @@ static void ssl_on_destroy(void *arg)
         pj_lock_destroy(ssock->circ_buf_output_mutex);
 	ssock->circ_buf_output_mutex = NULL;
 	ssock->write_mutex = NULL;
-    }
-
-    /* Wipe out cert & key buffer, note that they may not be allocated
-     * using SSL socket memory pool.
-     */
-    if (ssock->cert) {
-	wipe_cert_buffer(ssock->cert);
     }
 
     /* Secure release pool, i.e: all memory blocks will be zeroed first */
@@ -1362,6 +1336,13 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
     }
 
     ssl_reset_sock_state(ssock);
+
+    /* Wipe out cert & key buffer. */
+    if (ssock->cert) {
+	pj_ssl_cert_wipe_keys(ssock->cert);
+	ssock->cert = NULL;
+    }
+
     if (ssock->param.grp_lock) {
 	pj_grp_lock_dec_ref(ssock->param.grp_lock);
     } else {
@@ -1882,15 +1863,35 @@ on_error:
 /**
  * Starts asynchronous socket connect() operation.
  */
-PJ_DEF(pj_status_t) pj_ssl_sock_start_connect( pj_ssl_sock_t *ssock,
-					       pj_pool_t *pool,
-					       const pj_sockaddr_t *localaddr,
-					       const pj_sockaddr_t *remaddr,
-					       int addr_len)
+PJ_DEF(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
+					      pj_pool_t *pool,
+					      const pj_sockaddr_t *localaddr,
+					      const pj_sockaddr_t *remaddr,
+					      int addr_len)
+{
+    pj_ssl_start_connect_param param;    
+    param.pool = pool;
+    param.localaddr = localaddr;
+    param.local_port_range = 0;
+    param.remaddr = remaddr;
+    param.addr_len = addr_len;
+
+    return pj_ssl_sock_start_connect2(ssock, &param);
+}
+
+PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
+			       pj_ssl_sock_t *ssock,
+			       pj_ssl_start_connect_param *connect_param)
 {
     pj_activesock_cb asock_cb;
     pj_activesock_cfg asock_cfg;
     pj_status_t status;
+    
+    pj_pool_t *pool = connect_param->pool;
+    const pj_sockaddr_t *localaddr = connect_param->localaddr;
+    pj_uint16_t port_range = connect_param->local_port_range;
+    const pj_sockaddr_t *remaddr = connect_param->remaddr;
+    int addr_len = connect_param->addr_len;
 
     PJ_ASSERT_RETURN(ssock && pool && localaddr && remaddr && addr_len,
 		     PJ_EINVAL);
@@ -1918,7 +1919,18 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect( pj_ssl_sock_t *ssock,
     }
 
     /* Bind socket */
-    status = pj_sock_bind(ssock->sock, localaddr, addr_len);
+    if (port_range) {
+	pj_uint16_t max_bind_retry = MAX_BIND_RETRY;
+	if (port_range && port_range < max_bind_retry)
+	{
+	    max_bind_retry = port_range;
+	}
+	status = pj_sock_bind_random(ssock->sock, localaddr, port_range,
+				     max_bind_retry);
+    } else {
+	status = pj_sock_bind(ssock->sock, localaddr, addr_len);
+    }
+
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -2010,6 +2022,28 @@ PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
     }
 
     return status;
+}
+
+static void wipe_buf(pj_str_t *buf)
+{
+    volatile char *p = buf->ptr;
+    pj_ssize_t len = buf->slen;
+    while (len--) *p++ = 0;
+    buf->slen = 0;
+}
+
+PJ_DEF(void) pj_ssl_cert_wipe_keys(pj_ssl_cert_t *cert)
+{    
+    if (cert) {
+	wipe_buf(&cert->CA_file);
+	wipe_buf(&cert->CA_path);
+	wipe_buf(&cert->cert_file);
+	wipe_buf(&cert->privkey_file);
+	wipe_buf(&cert->privkey_pass);
+	wipe_buf(&cert->CA_buf);
+	wipe_buf(&cert->cert_buf);
+	wipe_buf(&cert->privkey_buf);
+    }
 }
 
 /* Load credentials from files. */

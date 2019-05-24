@@ -19,12 +19,14 @@
  */
 #include <pjnath/turn_sock.h>
 #include <pj/activesock.h>
+#include <pj/ssl_sock.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/ioqueue.h>
+#include <pj/compat/socket.h>
 
 enum
 {
@@ -84,6 +86,12 @@ struct pj_turn_sock
     int			 af;
     pj_turn_tp_type	 conn_type;
     pj_activesock_t	*active_sock;
+#if PJ_HAS_SSL_SOCK
+    pj_ssl_sock_t       *ssl_sock;
+    pj_ssl_cert_t       *cert;
+    pj_str_t             server_name;
+#endif
+
     pj_ioqueue_op_key_t	 send_key;
 
     /* Data connection, when peer_conn_type==PJ_TURN_TP_TCP (RFC 6062) */
@@ -122,14 +130,36 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
 					   const pj_sockaddr_t *peer_addr,
 					   unsigned addr_len);
 
-static pj_bool_t on_data_read(pj_activesock_t *asock,
+static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 			      void *data,
 			      pj_size_t size,
 			      pj_status_t status,
 			      pj_size_t *remainder);
-static pj_bool_t on_connect_complete(pj_activesock_t *asock,
+static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
 				     pj_status_t status);
 
+/*
+ * Activesock callback
+ */
+static pj_bool_t on_connect_complete_asock(pj_activesock_t *asock,
+					   pj_status_t status);
+static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
+				    void *data,
+				    pj_size_t size,
+				    pj_status_t status,
+				    pj_size_t *remainder);
+
+/*
+ * SSL sock callback
+ */
+static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
+					      pj_status_t status);
+static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
+				       void *data,
+				       pj_size_t size,
+				       pj_status_t status,
+				       pj_size_t *remainder);
+  
 static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
 				       void *data,
 				       pj_size_t size,
@@ -151,8 +181,57 @@ PJ_DEF(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg)
     cfg->max_pkt_size = PJ_TURN_MAX_PKT_LEN;
     cfg->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     cfg->qos_ignore_error = PJ_TRUE;
+
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_default(&cfg->tls_cfg);
+#endif
 }
 
+#if PJ_HAS_SSL_SOCK
+
+PJ_DEF(void) pj_turn_sock_tls_cfg_default(pj_turn_sock_tls_cfg *tls_cfg)
+{
+    pj_bzero(tls_cfg, sizeof(*tls_cfg));
+    pj_ssl_sock_param_default(&tls_cfg->ssock_param);
+    tls_cfg->ssock_param.proto = PJ_TURN_TLS_DEFAULT_PROTO;
+}
+
+PJ_DEF(void) pj_turn_sock_tls_cfg_dup(pj_pool_t *pool,
+				      pj_turn_sock_tls_cfg *dst,
+				      const pj_turn_sock_tls_cfg *src)
+{
+    pj_memcpy(dst, src, sizeof(*dst));
+    pj_strdup_with_null(pool, &dst->ca_list_file, &src->ca_list_file);
+    pj_strdup_with_null(pool, &dst->ca_list_path, &src->ca_list_path);
+    pj_strdup_with_null(pool, &dst->cert_file, &src->cert_file);
+    pj_strdup_with_null(pool, &dst->privkey_file, &src->privkey_file);
+    pj_strdup_with_null(pool, &dst->password, &src->password);
+    pj_strdup(pool, &dst->ca_buf, &src->ca_buf);
+    pj_strdup(pool, &dst->cert_buf, &src->cert_buf);
+    pj_strdup(pool, &dst->privkey_buf, &src->privkey_buf);
+    pj_ssl_sock_param_copy(pool, &dst->ssock_param, &src->ssock_param);
+}
+
+static void wipe_buf(pj_str_t *buf)
+{
+    volatile char *p = buf->ptr;
+    pj_ssize_t len = buf->slen;
+    while (len--) *p++ = 0;
+    buf->slen = 0;
+}
+
+PJ_DEF(void) pj_turn_sock_tls_cfg_wipe_keys(pj_turn_sock_tls_cfg *tls_cfg)
+{
+    wipe_buf(&tls_cfg->ca_list_file);
+    wipe_buf(&tls_cfg->ca_list_path);
+    wipe_buf(&tls_cfg->cert_file);
+    wipe_buf(&tls_cfg->privkey_file);
+    wipe_buf(&tls_cfg->password);
+    wipe_buf(&tls_cfg->ca_buf);
+    wipe_buf(&tls_cfg->cert_buf);
+    wipe_buf(&tls_cfg->privkey_buf); 
+}
+#endif
 
 /*
  * Create.
@@ -175,6 +254,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     PJ_ASSERT_RETURN(cfg && p_turn_sock, PJ_EINVAL);
     PJ_ASSERT_RETURN(af==pj_AF_INET() || af==pj_AF_INET6(), PJ_EINVAL);
     PJ_ASSERT_RETURN(conn_type!=PJ_TURN_TP_TCP || PJ_HAS_TCP, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conn_type!=PJ_TURN_TP_TLS || PJ_HAS_SSL_SOCK, PJ_EINVAL);
 
     if (!setting) {
 	pj_turn_sock_cfg_default(&default_setting);
@@ -188,6 +268,11 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     case PJ_TURN_TP_TCP:
 	name_tmpl = "tcprel%p";
 	break;
+#if PJ_HAS_SSL_SOCK
+    case PJ_TURN_TP_TLS:
+	name_tmpl = "tlsrel%p";
+	break;
+#endif
     default:
 	PJ_ASSERT_RETURN(!"Invalid TURN conn_type", PJ_EINVAL);
 	name_tmpl = "tcprel%p";
@@ -209,6 +294,10 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
 
     /* Copy setting (QoS parameters etc */
     pj_memcpy(&turn_sock->setting, setting, sizeof(*setting));
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_dup(turn_sock->pool, &turn_sock->setting.tls_cfg,
+			     &setting->tls_cfg);
+#endif
 
     /* Set callback */
     if (cb) {
@@ -288,6 +377,10 @@ static void destroy(pj_turn_sock *turn_sock)
 	pj_turn_session_shutdown(turn_sock->sess);
     if (turn_sock->active_sock)
 	pj_activesock_close(turn_sock->active_sock);
+#if PJ_HAS_SSL_SOCK
+    if (turn_sock->ssl_sock)
+	pj_ssl_sock_close(turn_sock->ssl_sock);
+#endif
 
     for (i=0; i < PJ_TURN_MAX_TCP_CONN_CNT; ++i) {
 	dataconn_cleanup(&turn_sock->data_conn[i]);
@@ -474,6 +567,11 @@ PJ_DEF(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
 	    return status;
 	}
     }
+#if PJ_HAS_SSL_SOCK
+    if (turn_sock->conn_type == PJ_TURN_TP_TLS) {
+	pj_strdup_with_null(turn_sock->pool, &turn_sock->server_name, domain);
+    }
+#endif
 
     /* Resolve server */
     status = pj_turn_session_set_server(turn_sock->sess, domain, default_port,
@@ -548,15 +646,9 @@ PJ_DEF(pj_status_t) pj_turn_sock_bind_channel( pj_turn_sock *turn_sock,
 /*
  * Notification when outgoing TCP socket has been connected.
  */
-static pj_bool_t on_connect_complete(pj_activesock_t *asock,
+static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
 				     pj_status_t status)
 {
-    pj_turn_sock *turn_sock;
-
-    turn_sock = (pj_turn_sock*) pj_activesock_get_user_data(asock);
-    if (!turn_sock)
-        return PJ_FALSE;
-
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
     /* TURN session may have already been destroyed here.
@@ -569,18 +661,33 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     }
 
     if (status != PJ_SUCCESS) {
-	sess_fail(turn_sock, "TCP connect() error", status);
+	if (turn_sock->conn_type == PJ_TURN_TP_UDP)
+	    sess_fail(turn_sock, "UDP connect() error", status);
+	else if (turn_sock->conn_type == PJ_TURN_TP_TCP)
+	    sess_fail(turn_sock, "TCP connect() error", status);
+	else if (turn_sock->conn_type == PJ_TURN_TP_TLS)
+	    sess_fail(turn_sock, "TLS connect() error", status);
+
 	pj_grp_lock_release(turn_sock->grp_lock);
 	return PJ_FALSE;
     }
 
     if (turn_sock->conn_type != PJ_TURN_TP_UDP) {
-	PJ_LOG(5,(turn_sock->obj_name, "TCP connected"));
+	PJ_LOG(5, (turn_sock->obj_name, "%s connected",
+		   turn_sock->conn_type == PJ_TURN_TP_TCP ? "TCP" : "TLS"));
     }
 
     /* Kick start pending read operation */
-    status = pj_activesock_start_read(asock, turn_sock->pool, 
-				      turn_sock->setting.max_pkt_size, 0);
+    if (turn_sock->conn_type != PJ_TURN_TP_TLS) 
+	status = pj_activesock_start_read(turn_sock->active_sock, 
+					  turn_sock->pool,
+					  turn_sock->setting.max_pkt_size, 
+					  0);
+#if PJ_HAS_SSL_SOCK
+    else
+	status = pj_ssl_sock_start_read(turn_sock->ssl_sock, turn_sock->pool,
+					turn_sock->setting.max_pkt_size, 0);
+#endif
 
     /* Init send_key */
     pj_ioqueue_op_key_init(&turn_sock->send_key, sizeof(turn_sock->send_key));
@@ -595,6 +702,30 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 
     pj_grp_lock_release(turn_sock->grp_lock);
     return PJ_TRUE;
+}
+
+static pj_bool_t on_connect_complete_asock(pj_activesock_t *asock,
+					   pj_status_t status)
+{
+    pj_turn_sock *turn_sock;
+
+    turn_sock = (pj_turn_sock*)pj_activesock_get_user_data(asock);
+    if (!turn_sock)
+	return PJ_FALSE;
+
+    return on_connect_complete(turn_sock, status);
+}
+
+static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
+					      pj_status_t status)
+{
+    pj_turn_sock *turn_sock;
+
+    turn_sock = (pj_turn_sock*)pj_ssl_sock_get_user_data(ssl_sock);
+    if (!turn_sock)
+	return PJ_FALSE;
+
+    return on_connect_complete(turn_sock, status);
 }
 
 static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
@@ -643,16 +774,14 @@ static unsigned has_packet(pj_turn_sock *turn_sock, const void *buf, pj_size_t b
 /*
  * Notification from ioqueue when incoming UDP packet is received.
  */
-static pj_bool_t on_data_read(pj_activesock_t *asock,
+static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 			      void *data,
 			      pj_size_t size,
 			      pj_status_t status,
 			      pj_size_t *remainder)
 {
-    pj_turn_sock *turn_sock;
     pj_bool_t ret = PJ_TRUE;
 
-    turn_sock = (pj_turn_sock*) pj_activesock_get_user_data(asock);
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
     if (status == PJ_SUCCESS && turn_sock->sess && !turn_sock->is_destroying) {
@@ -696,10 +825,14 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 	    //PJ_LOG(5,(turn_sock->pool->obj_name, 
 	    //	      "Buffer size now %lu bytes", size));
 	}
-    } else if (status != PJ_SUCCESS && 
-	       turn_sock->conn_type != PJ_TURN_TP_UDP) 
-    {
-	sess_fail(turn_sock, "TCP connection closed", status);
+    } else if (status != PJ_SUCCESS) {
+	if (turn_sock->conn_type == PJ_TURN_TP_UDP)
+	    sess_fail(turn_sock, "UDP connection closed", status);
+	else if (turn_sock->conn_type == PJ_TURN_TP_TCP)
+	    sess_fail(turn_sock, "TCP connection closed", status);
+	else if (turn_sock->conn_type == PJ_TURN_TP_TLS)
+	    sess_fail(turn_sock, "TLS connection closed", status);
+
 	ret = PJ_FALSE;
 	goto on_return;
     }
@@ -710,6 +843,56 @@ on_return:
     return ret;
 }
 
+static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
+				    void *data,
+				    pj_size_t size,
+				    pj_status_t status,
+				    pj_size_t *remainder)
+{
+    pj_turn_sock *turn_sock;
+
+    turn_sock = (pj_turn_sock*)pj_activesock_get_user_data(asock);
+
+    return on_data_read(turn_sock, data, size, status, remainder);
+}
+
+static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
+				       void *data,
+				       pj_size_t size,
+				       pj_status_t status,
+				       pj_size_t *remainder)
+{
+    pj_turn_sock *turn_sock;
+
+    turn_sock = (pj_turn_sock*)pj_ssl_sock_get_user_data(ssl_sock);
+
+    return on_data_read(turn_sock, data, size, status, remainder);
+}
+
+static pj_bool_t on_data_sent_ssl_sock(pj_ssl_sock_t *ssl_sock,
+				       pj_ioqueue_op_key_t *op_key,
+				       pj_ssize_t bytes_sent)
+{
+    pj_turn_sock *turn_sock;
+
+    PJ_UNUSED_ARG(op_key);
+
+    turn_sock = (pj_turn_sock*)pj_ssl_sock_get_user_data(ssl_sock);
+
+    /* Check for error/closure */
+    if (bytes_sent <= 0) {
+	pj_status_t status;
+
+	status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
+	    (pj_status_t)-bytes_sent;
+
+	sess_fail(turn_sock, "TLS send() error", status);
+
+	return PJ_FALSE;
+    }
+
+    return PJ_TRUE;
+}
 
 /*
  * Callback from TURN session to send outgoing packet.
@@ -760,9 +943,18 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 		}
 	    }
 	}
-    } else {
+    } else  if (turn_sock->conn_type == PJ_TURN_TP_TCP) {
 	status = pj_activesock_send(turn_sock->active_sock,
 				    &turn_sock->send_key, pkt, &len, 0);
+    }
+#if PJ_HAS_SSL_SOCK
+    else if (turn_sock->conn_type == PJ_TURN_TP_TLS) {
+	status = pj_ssl_sock_send(turn_sock->ssl_sock,
+				  &turn_sock->send_key, pkt, &len, 0);
+    }
+#endif
+    else {
+	PJ_ASSERT_RETURN(!"Invalid TURN conn_type", PJ_EINVAL);
     }
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
@@ -825,7 +1017,7 @@ static void turn_on_state(pj_turn_session *sess,
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) 
 			   pj_turn_session_get_user_data(sess);
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     if (turn_sock == NULL) {
 	/* We've been destroyed */
@@ -862,11 +1054,20 @@ static void turn_on_state(pj_turn_session *sess,
 	 * we're switching to alternate TURN server when either TCP
 	 * connection or ALLOCATE request failed.
 	 */
-	if (turn_sock->active_sock) {
+	if ((turn_sock->conn_type != PJ_TURN_TP_TLS) && 
+	    (turn_sock->active_sock)) 
+	{
 	    pj_activesock_close(turn_sock->active_sock);
 	    turn_sock->active_sock = NULL;
 	}
-
+#if PJ_HAS_SSL_SOCK
+	else if ((turn_sock->conn_type == PJ_TURN_TP_TLS) &&
+	    (turn_sock->ssl_sock))
+	{
+	    pj_ssl_sock_close(turn_sock->ssl_sock);
+	    turn_sock->ssl_sock = NULL;
+	}
+#endif
 	/* Get server address from session info */
 	pj_turn_session_get_info(sess, &info);
 
@@ -875,14 +1076,6 @@ static void turn_on_state(pj_turn_session *sess,
 	else
 	    sock_type = pj_SOCK_STREAM();
 
-	/* Init socket */
-	status = pj_sock_socket(turn_sock->af, sock_type, 0, &sock);
-	if (status != PJ_SUCCESS) {
-	    pj_turn_sock_destroy(turn_sock);
-	    return;
-	}
-
-	/* Bind socket */
 	cfg_bind_addr = &turn_sock->setting.bound_addr;
 	max_bind_retry = MAX_BIND_RETRY;
 	if (turn_sock->setting.port_range &&
@@ -896,76 +1089,170 @@ static void turn_on_state(pj_turn_session *sess,
 	{
 	    pj_sockaddr_cp(&bound_addr, cfg_bind_addr);
 	}
-	status = pj_sock_bind_random(sock, &bound_addr,
-				     turn_sock->setting.port_range,
-				     max_bind_retry);
-	if (status != PJ_SUCCESS) {
-	    pj_turn_sock_destroy(turn_sock);
-	    return;
-	}
 
-	/* Apply QoS, if specified */
-	status = pj_sock_apply_qos2(sock, turn_sock->setting.qos_type,
-				    &turn_sock->setting.qos_params, 
+	if (turn_sock->conn_type != PJ_TURN_TP_TLS) {
+	    /* Init socket */
+	    status = pj_sock_socket(turn_sock->af, sock_type, 0, &sock);
+	    if (status != PJ_SUCCESS) {
+		pj_turn_sock_destroy(turn_sock);
+		return;
+	    }
+
+	    /* Bind socket */
+	    status = pj_sock_bind_random(sock, &bound_addr,
+					 turn_sock->setting.port_range,
+					 max_bind_retry);
+	    if (status != PJ_SUCCESS) {
+		pj_turn_sock_destroy(turn_sock);
+		return;
+	    }
+	    /* Apply QoS, if specified */
+	    status = pj_sock_apply_qos2(sock, turn_sock->setting.qos_type,
+				    &turn_sock->setting.qos_params,
 				    (turn_sock->setting.qos_ignore_error?2:1),
 				    turn_sock->pool->obj_name, NULL);
-	if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error) {
-	    pj_turn_sock_destroy(turn_sock);
-	    return;
-	}
+	    if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error) 
+	    {
+		pj_turn_sock_destroy(turn_sock);
+		return;
+	    }
 
-	/* Apply socket buffer size */
-	if (turn_sock->setting.so_rcvbuf_size > 0) {
-	    unsigned sobuf_size = turn_sock->setting.so_rcvbuf_size;
-	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_RCVBUF(),
-					      PJ_TRUE, &sobuf_size);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(3, (turn_sock->obj_name, status,
-			      "Failed setting SO_RCVBUF"));
-	    } else {
-		if (sobuf_size < turn_sock->setting.so_rcvbuf_size) {
-		    PJ_LOG(4, (turn_sock->obj_name, 
-			       "Warning! Cannot set SO_RCVBUF as configured,"
-			       " now=%d, configured=%d", sobuf_size,
-			       turn_sock->setting.so_rcvbuf_size));
+	    /* Apply socket buffer size */
+	    if (turn_sock->setting.so_rcvbuf_size > 0) {
+		unsigned sobuf_size = turn_sock->setting.so_rcvbuf_size;
+		status = pj_sock_setsockopt_sobuf(sock, pj_SO_RCVBUF(),
+						  PJ_TRUE, &sobuf_size);
+		if (status != PJ_SUCCESS) {
+		    pj_perror(3, turn_sock->obj_name, status,
+			      "Failed setting SO_RCVBUF");
 		} else {
-		    PJ_LOG(5, (turn_sock->obj_name, "SO_RCVBUF set to %d",
-			       sobuf_size));
+		    if (sobuf_size < turn_sock->setting.so_rcvbuf_size) {
+			PJ_LOG(4, (turn_sock->obj_name,
+				"Warning! Cannot set SO_RCVBUF as configured,"
+				" now=%d, configured=%d", sobuf_size,
+				turn_sock->setting.so_rcvbuf_size));
+		    } else {
+			PJ_LOG(5, (turn_sock->obj_name, "SO_RCVBUF set to %d",
+				   sobuf_size));
+		    }
 		}
 	    }
-	}
-	if (turn_sock->setting.so_sndbuf_size > 0) {
-	    unsigned sobuf_size = turn_sock->setting.so_sndbuf_size;
-	    status = pj_sock_setsockopt_sobuf(sock, pj_SO_SNDBUF(),
-					      PJ_TRUE, &sobuf_size);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(3, (turn_sock->obj_name, status,
-			      "Failed setting SO_SNDBUF"));
-	    } else {
-		if (sobuf_size < turn_sock->setting.so_sndbuf_size) {
-		    PJ_LOG(4, (turn_sock->obj_name, 
-			       "Warning! Cannot set SO_SNDBUF as configured,"
-			       " now=%d, configured=%d", sobuf_size,
-			       turn_sock->setting.so_sndbuf_size));
+	    if (turn_sock->setting.so_sndbuf_size > 0) {
+		unsigned sobuf_size = turn_sock->setting.so_sndbuf_size;
+		status = pj_sock_setsockopt_sobuf(sock, pj_SO_SNDBUF(),
+						  PJ_TRUE, &sobuf_size);
+		if (status != PJ_SUCCESS) {
+		    pj_perror(3, turn_sock->obj_name, status,
+			      "Failed setting SO_SNDBUF");
 		} else {
-		    PJ_LOG(5, (turn_sock->obj_name, "SO_SNDBUF set to %d",
-			       sobuf_size));
+		    if (sobuf_size < turn_sock->setting.so_sndbuf_size) {
+			PJ_LOG(4, (turn_sock->obj_name,
+				"Warning! Cannot set SO_SNDBUF as configured,"
+				" now=%d, configured=%d", sobuf_size,
+				turn_sock->setting.so_sndbuf_size));
+		    } else {
+			PJ_LOG(5, (turn_sock->obj_name, "SO_SNDBUF set to %d",
+				   sobuf_size));
+		    }
 		}
 	    }
+
+	    /* Create active socket */
+	    pj_activesock_cfg_default(&asock_cfg);
+	    asock_cfg.grp_lock = turn_sock->grp_lock;
+
+	    pj_bzero(&asock_cb, sizeof(asock_cb));
+	    asock_cb.on_data_read = &on_data_read_asock;
+	    asock_cb.on_connect_complete = &on_connect_complete_asock;
+	    status = pj_activesock_create(turn_sock->pool, sock,
+					  sock_type, &asock_cfg,
+					  turn_sock->cfg.ioqueue, &asock_cb,
+					  turn_sock,
+					  &turn_sock->active_sock);
 	}
+#if PJ_HAS_SSL_SOCK
+	else {
+	    //TURN TLS
+	    pj_ssl_sock_param param, *ssock_param;
 
-	/* Create active socket */
-	pj_activesock_cfg_default(&asock_cfg);
-	asock_cfg.grp_lock = turn_sock->grp_lock;
+	    ssock_param = &turn_sock->setting.tls_cfg.ssock_param;
+	    pj_ssl_sock_param_default(&param);
 
-	pj_bzero(&asock_cb, sizeof(asock_cb));
-	asock_cb.on_data_read = &on_data_read;
-	asock_cb.on_connect_complete = &on_connect_complete;
-	status = pj_activesock_create(turn_sock->pool, sock,
-				      sock_type, &asock_cfg,
-				      turn_sock->cfg.ioqueue, &asock_cb, 
-				      turn_sock,
-				      &turn_sock->active_sock);
+	    pj_ssl_sock_param_copy(turn_sock->pool, &param, ssock_param);
+	    param.cb.on_connect_complete = &on_connect_complete_ssl_sock;
+	    param.cb.on_data_read = &on_data_read_ssl_sock;
+	    param.cb.on_data_sent = &on_data_sent_ssl_sock;
+	    param.ioqueue = turn_sock->cfg.ioqueue;
+	    param.timer_heap = turn_sock->cfg.timer_heap;
+	    param.grp_lock = turn_sock->grp_lock;
+	    param.server_name = turn_sock->server_name;
+	    param.user_data = turn_sock;
+	    param.sock_type = sock_type;
+	    param.sock_af = turn_sock->af;
+	    if (param.send_buffer_size < PJ_TURN_MAX_PKT_LEN)
+		param.send_buffer_size = PJ_TURN_MAX_PKT_LEN;
+	    if (param.read_buffer_size < PJ_TURN_MAX_PKT_LEN)
+		param.read_buffer_size = PJ_TURN_MAX_PKT_LEN;
+
+	    param.qos_type = turn_sock->setting.qos_type;
+	    param.qos_ignore_error = turn_sock->setting.qos_ignore_error;
+	    pj_memcpy(&param.qos_params, &turn_sock->setting.qos_params,
+		      sizeof(param.qos_params));
+
+	    if (turn_sock->setting.tls_cfg.cert_file.slen ||
+		turn_sock->setting.tls_cfg.ca_list_file.slen ||
+		turn_sock->setting.tls_cfg.ca_list_path.slen ||
+		turn_sock->setting.tls_cfg.privkey_file.slen)
+	    {
+		status = pj_ssl_cert_load_from_files2(
+		    turn_sock->pool,
+		    &turn_sock->setting.tls_cfg.ca_list_file,
+		    &turn_sock->setting.tls_cfg.ca_list_path,
+		    &turn_sock->setting.tls_cfg.cert_file,
+		    &turn_sock->setting.tls_cfg.privkey_file,
+		    &turn_sock->setting.tls_cfg.password,
+		    &turn_sock->cert);
+
+	    } else if (turn_sock->setting.tls_cfg.ca_buf.slen ||
+		       turn_sock->setting.tls_cfg.cert_buf.slen ||
+		       turn_sock->setting.tls_cfg.privkey_buf.slen)
+	    {
+		status = pj_ssl_cert_load_from_buffer(
+		    turn_sock->pool,
+		    &turn_sock->setting.tls_cfg.ca_buf,
+		    &turn_sock->setting.tls_cfg.cert_buf,
+		    &turn_sock->setting.tls_cfg.privkey_buf,
+		    &turn_sock->setting.tls_cfg.password,
+		    &turn_sock->cert);
+	    }
+	    if (status != PJ_SUCCESS) {
+		pj_turn_sock_destroy(turn_sock);
+		return;
+	    }
+	    if (turn_sock->cert) {
+		pj_turn_sock_tls_cfg_wipe_keys(&turn_sock->setting.tls_cfg);
+	    }
+
+	    status = pj_ssl_sock_create(turn_sock->pool, &param,
+					&turn_sock->ssl_sock);
+
+	    if (status != PJ_SUCCESS) {
+		pj_turn_sock_destroy(turn_sock);
+		return;
+	    }
+
+	    if (turn_sock->cert) {
+		status = pj_ssl_sock_set_certificate(turn_sock->ssl_sock,
+						     turn_sock->pool,
+						     turn_sock->cert);
+
+		pj_ssl_cert_wipe_keys(turn_sock->cert);
+		turn_sock->cert = NULL;
+	    }
+
+	}
+#endif
+
 	if (status != PJ_SUCCESS) {
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
@@ -977,18 +1264,33 @@ static void turn_on_state(pj_turn_session *sess,
 				    sizeof(addrtxt), 3)));
 
 	/* Initiate non-blocking connect */
+	if (turn_sock->conn_type == PJ_TURN_TP_UDP) {
+	    status = PJ_SUCCESS;
+	}
 #if PJ_HAS_TCP
-	if (turn_sock->conn_type != PJ_TURN_TP_UDP) {
+	else if (turn_sock->conn_type == PJ_TURN_TP_TCP) {
 	    status=pj_activesock_start_connect(
 					turn_sock->active_sock, 
 					turn_sock->pool,
 					&info.server, 
 					pj_sockaddr_get_len(&info.server));
-	} else {
-	    status = PJ_SUCCESS;
+	} 
+#endif	
+#if PJ_HAS_SSL_SOCK
+	else if (turn_sock->conn_type == PJ_TURN_TP_TLS) {
+	    pj_ssl_start_connect_param connect_param;
+	    connect_param.pool = turn_sock->pool;
+	    connect_param.localaddr = &bound_addr;
+	    connect_param.local_port_range = turn_sock->setting.port_range;
+	    connect_param.remaddr = &info.server;
+	    connect_param.addr_len = pj_sockaddr_get_len(&info.server);
+
+	    status = pj_ssl_sock_start_connect2(turn_sock->ssl_sock,
+						&connect_param);
 	}
+#endif
 	if (status == PJ_SUCCESS) {
-	    on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
+	    on_connect_complete(turn_sock, PJ_SUCCESS);
 	} else if (status != PJ_EPENDING) {
             PJ_PERROR(3, (turn_sock->pool->obj_name, status,
 			  "Failed to connect to %s",
@@ -997,9 +1299,6 @@ static void turn_on_state(pj_turn_session *sess,
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
 	}
-#else
-	on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
-#endif
 
 	/* Done for now. Subsequent work will be done in 
 	 * on_connect_complete() callback.
