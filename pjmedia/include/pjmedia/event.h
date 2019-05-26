@@ -93,7 +93,12 @@ typedef enum pjmedia_event_type
     /**
      * Audio device stopped on error.
      */
-    PJMEDIA_EVENT_AUD_DEV_ERROR = PJMEDIA_FOURCC('A', 'E', 'R', 'R')
+    PJMEDIA_EVENT_AUD_DEV_ERROR = PJMEDIA_FOURCC('A', 'E', 'R', 'R'),
+
+    /**
+     * Transport media error.
+     */
+    PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R')
 
 } pjmedia_event_type;
 
@@ -154,6 +159,26 @@ typedef struct pjmedia_event_aud_dev_err_data
     /** The error code */
     pj_status_t		     status;
 } pjmedia_event_aud_dev_err_data;
+
+/**
+ * Additional data/parameters for media transmit error event.
+ */
+typedef struct pjmedia_event_media_tp_err_data
+{
+    /** The media type		*/
+    pjmedia_type	    type;
+
+    /** RTP/RTCP?		*/
+    pj_bool_t		    is_rtp;
+
+    /** Media direction		*/
+    pjmedia_dir		    dir;
+
+    /** The error code		*/
+    pj_status_t		    status;
+
+} pjmedia_event_media_tp_err_data;
+
 
 /** Additional parameters for window changed event. */
 typedef pjmedia_event_dummy_data pjmedia_event_wnd_closed_data;
@@ -242,6 +267,9 @@ typedef struct pjmedia_event
 
 	/** Storage for user event data */
 	pjmedia_event_user_data			user;
+
+	/** Media transport error event data */
+	pjmedia_event_media_tp_err_data		med_tp_err;
 
 	/** Pointer to storage to user event data, if it's outside
 	 * this struct

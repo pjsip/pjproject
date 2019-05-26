@@ -904,6 +904,19 @@ static pj_status_t on_snd_dev_operation(int operation)
     return PJ_SUCCESS;
 }
 
+static char *get_media_dir(pjmedia_dir dir) {
+    switch (dir) {
+    case PJMEDIA_DIR_ENCODING:
+	return "TX";
+    case PJMEDIA_DIR_DECODING:
+	return "RX";
+    case PJMEDIA_DIR_ENCODING+PJMEDIA_DIR_DECODING:
+	return "TX+RX";
+    default:
+	return "unknown dir";
+    }    
+}
+
 /* Callback on media events */
 static void on_call_media_event(pjsua_call_id call_id,
                                 unsigned med_idx,
@@ -914,8 +927,18 @@ static void on_call_media_event(pjsua_call_id call_id,
     PJ_LOG(5,(THIS_FILE, "Event %s",
 	      pjmedia_fourcc_name(event->type, event_name)));
 
+    if (event->type == PJMEDIA_EVENT_MEDIA_TP_ERR) {
+	pjmedia_event_media_tp_err_data *err_data;
+
+	err_data = &event->data.med_tp_err;
+	PJ_PERROR(3, (THIS_FILE, err_data->status, 
+		  "Media transport error event (%s %s %s)",
+		  (err_data->type==PJMEDIA_TYPE_AUDIO)?"Audio":"Video",
+		  (err_data->is_rtp)?"RTP":"RTCP",
+		  get_media_dir(err_data->dir)));
+    }
 #if PJSUA_HAS_VIDEO
-    if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
+    else if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
 	/* Adjust renderer window size to original video size */
 	pjsua_call_info ci;
 
@@ -930,7 +953,7 @@ static void on_call_media_event(pjsua_call_id call_id,
 
 	    wid = ci.media[med_idx].stream.vid.win_in;
 	    pjsua_vid_win_get_info(wid, &win_info);
-	    
+
 	    size = event->data.fmt_changed.new_fmt.det.vid.size;
 	    if (size.w != win_info.size.w || size.h != win_info.size.h) {
 		pjsua_vid_win_set_size(wid, &size);
@@ -942,8 +965,7 @@ static void on_call_media_event(pjsua_call_id call_id,
     }
 #else
     PJ_UNUSED_ARG(call_id);
-    PJ_UNUSED_ARG(med_idx);
-    PJ_UNUSED_ARG(event);
+    PJ_UNUSED_ARG(med_idx);    
 #endif
 }
 

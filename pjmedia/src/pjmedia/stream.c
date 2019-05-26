@@ -75,6 +75,9 @@
 /* Number of DTMF E bit transmissions */
 #define DTMF_EBIT_RETRANSMIT_CNT	3
 
+/*  Number of send error before repeat the report. */
+#define SEND_ERR_COUNT_TO_REPORT	50
+
 /**
  * Media channel.
  */
@@ -233,8 +236,8 @@ struct pjmedia_stream
 
     pj_sockaddr		     rem_rtp_addr;     /**< Remote RTP address	    */
     unsigned		     rem_rtp_flag;     /**< Indicator flag about
-						    packet from this addr. 
-						    0=no pkt, 1=good ssrc, 
+						    packet from this addr.
+						    0=no pkt, 1=good ssrc,
 						    2=bad ssrc pkts	    */
     unsigned		     rtp_src_cnt;      /**< How many pkt from
     						    this addr.   	    */
@@ -244,10 +247,12 @@ struct pjmedia_stream
     char		   *trace_jb_buf;	    /**< Jitter tracing buffer.	    */
 #endif
 
-    pj_uint32_t		     rtp_rx_last_ts;        /**< Last received RTP timestamp*/
-    pj_status_t		     rtp_rx_last_err;       /**< Last RTP recv() error */
-    pj_status_t		     rtp_tx_last_err;       /**< Last RTP send() error */
-    pj_status_t		     rtcp_tx_last_err;      /**< Last RTCP send() error */
+    pj_uint32_t		     rtp_rx_last_ts;        /**< Last received RTP
+							 timestamp	    */
+    pj_uint32_t		     rtp_tx_err_cnt;        /**< The number of RTP
+							 send() error	    */
+    pj_uint32_t		     rtcp_tx_err_cnt;       /**< The number of RTCP
+							 send() error	    */
 
     /* RTCP Feedback */
     pj_bool_t		     send_rtcp_fb_nack;	    /**< Send NACK?	    */
@@ -262,7 +267,7 @@ struct pjmedia_stream
 static const char digitmap[17] = { '0', '1', '2', '3',
 				   '4', '5', '6', '7',
 				   '8', '9', '*', '#',
-				   'A', 'B', 'C', 'D', 
+				   'A', 'B', 'C', 'D',
 				   'R'};
 
 /* Zero audio frame samples */
@@ -461,7 +466,7 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 
     /* Send RTCP */
     send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
-    
+
     /* Update stats in case the stream is paused */
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
@@ -537,7 +542,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    unsigned nsamples_avail = stream->dec_buf_count -
 	    			      stream->dec_buf_pos;
 	    unsigned nsamples_copy = PJ_MIN(nsamples_req, nsamples_avail);
-	    
+
 	    pjmedia_copy_samples(p_out_samp + samples_count,
 		      		 stream->dec_buf + stream->dec_buf_pos,
 	    	      		 nsamples_copy);
@@ -1012,6 +1017,33 @@ static pj_status_t build_rtcp_fb(pjmedia_stream *stream, void *buf,
 }
 
 
+/**
+ * Publish transport error event.
+ */
+static void publish_tp_event(pjmedia_event_type event_type,
+			     pj_status_t status,
+			     pj_bool_t is_rtp,
+			     pjmedia_dir dir,
+			     pjmedia_stream *stream)
+{
+    pjmedia_event ev;
+    pj_timestamp ts_now;
+
+    pj_get_timestamp(&ts_now);
+    pj_bzero(&ev.data.med_tp_err, sizeof(ev.data.med_tp_err));
+
+    /* Publish event. */
+    pjmedia_event_init(&ev, event_type,
+		       &ts_now, stream);
+    ev.data.med_tp_err.type = PJMEDIA_TYPE_AUDIO;
+    ev.data.med_tp_err.is_rtp = is_rtp;
+    ev.data.med_tp_err.dir = dir;
+    ev.data.med_tp_err.status = status;
+
+    pjmedia_event_publish(NULL, stream, &ev, 0);
+}
+
+
 static pj_status_t send_rtcp(pjmedia_stream *stream,
 			     pj_bool_t with_sdes,
 			     pj_bool_t with_bye,
@@ -1133,15 +1165,12 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     /* Send! */
     status = pjmedia_transport_send_rtcp(stream->transport, pkt, len);
     if (status != PJ_SUCCESS) {
-	if (stream->rtcp_tx_last_err != status) {
-	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
-			 "Error sending RTCP"));
-	    stream->rtcp_tx_last_err = status;
+	if (stream->rtcp_tx_err_cnt++ == 0) {
+	    LOGERR_((stream->port.info.name.ptr, status,
+		     "Error sending RTCP"));
 	}
-    } else {
-	if (stream->rtcp_tx_last_err != PJ_SUCCESS) {
-	    PJ_LOG(4,(stream->port.info.name.ptr, "Sending RTCP resumed"));
-	    stream->rtcp_tx_last_err = PJ_SUCCESS;
+	if (stream->rtcp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT) {
+	    stream->rtcp_tx_err_cnt = 0;
 	}
     }
 
@@ -1483,18 +1512,15 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     status = pjmedia_transport_send_rtp(stream->transport, channel->out_pkt,
                                         frame_out.size +
 					    sizeof(pjmedia_rtp_hdr));
+
     if (status != PJ_SUCCESS) {
-	if (stream->rtp_tx_last_err != status) {
-	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
-			 "Error sending RTP"));
-	    stream->rtp_tx_last_err = status;
+	if (stream->rtp_tx_err_cnt++ == 0) {
+	    LOGERR_((stream->port.info.name.ptr, status, "Error sending RTP"));
+	}
+	if (stream->rtp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT) {
+	    stream->rtp_tx_err_cnt = 0;
 	}
 	return PJ_SUCCESS;
-    } else {
-	if (stream->rtp_tx_last_err != PJ_SUCCESS) {
-	    PJ_LOG(4,(stream->port.info.name.ptr, "Sending RTP resumed"));
-	    stream->rtp_tx_last_err = PJ_SUCCESS;
-	}
     }
 
     /* Update stat */
@@ -1679,7 +1705,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
     if (event->event > 16) {
 #else
     if (event->event > 15) {
-#endif    
+#endif
 	PJ_LOG(5,(stream->port.info.name.ptr,
 		  "Ignored RTP pkt with bad DTMF event %d",
     		  event->event));
@@ -1743,17 +1769,16 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
 	    return;
 	}
-	if (stream->rtp_rx_last_err != status) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(stream->port.info.name.ptr,
-		      "Unable to receive RTP packet, recv() returned %d: %s",
-		      status, errmsg));
-	    stream->rtp_rx_last_err = status;
+
+	LOGERR_((stream->port.info.name.ptr, status,
+		 "Unable to receive RTP packet"));
+
+	if (status == PJ_ESOCKETSTOP) {
+	    /* Publish receive error event. */
+	    publish_tp_event(PJMEDIA_EVENT_MEDIA_TP_ERR, status, PJ_TRUE,
+			     PJMEDIA_DIR_DECODING, stream);
 	}
 	return;
-    } else {
-	stream->rtp_rx_last_err = PJ_SUCCESS;
     }
 
     /* Ignore keep-alive packets */
@@ -1768,7 +1793,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	stream->rtcp.stat.rx.discard++;
 	return;
     }
-    
+
     /* Check if multiplexing is allowed and the payload indicates RTCP. */
     if (stream->si.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
     	on_rx_rtcp(stream, pkt, bytes_read);
@@ -1837,7 +1862,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	goto on_return;
     }
 
-    /* See if source address of RTP packet is different than the 
+    /* See if source address of RTP packet is different than the
      * configured address, and check if we need to tell the
      * media transport to switch RTP remote address.
      */
@@ -1851,7 +1876,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    stream->rem_rtp_flag = badssrc? 2: 1;
 	} else {
 	    stream->rtp_src_cnt++;
-	    
+
 	    if (stream->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
 	    	if (stream->rem_rtp_flag == 1 ||
 	    	    (stream->rem_rtp_flag == 2 && badssrc))
@@ -1864,7 +1889,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 		     */
 	    	    pkt_discarded = PJ_TRUE;
 	    	    goto on_return;
-	    	}	    	
+	    	}
 	    	if (stream->si.has_rem_ssrc && !seq_st.status.flag.badssrc &&
 	    	    stream->rem_rtp_flag != 1)
 	    	{
@@ -1926,7 +1951,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 		   frames[0].bit_info > 0xFFFF)
 	{
 	    unsigned dec_ptime;
-	    
+
 	    PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
 	               "ptime change detected"));
 	    frames[0].bit_info &= 0xFFFF;
@@ -2105,12 +2130,21 @@ static void on_rx_rtcp( void *data,
                         pj_ssize_t bytes_read)
 {
     pjmedia_stream *stream = (pjmedia_stream*) data;
+    pj_status_t status;
 
     /* Check for errors */
     if (bytes_read < 0) {
-	if (bytes_read != -PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
-	    LOGERR_((stream->port.info.name.ptr, (pj_status_t)-bytes_read,
-		     "RTCP recv() error"));
+	status = (pj_status_t)-bytes_read;
+	if (status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) {
+	    return;
+	}
+	LOGERR_((stream->port.info.name.ptr, status,
+			 "Unable to receive RTCP packet"));
+
+	if (status == PJ_ESOCKETSTOP) {
+	    /* Publish receive error event. */
+	    publish_tp_event(PJMEDIA_EVENT_MEDIA_TP_ERR, status, PJ_FALSE,
+			     PJMEDIA_DIR_DECODING, stream);
 	}
 	return;
     }
@@ -2219,7 +2253,7 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
 	/* Application not configured to listen to NACK, discard this event */
 	if (stream->rtcp_fb_nack_cap_idx < 0)
 	    return PJ_SUCCESS;
-	
+
 	data->cap = stream->si.loc_rtcp_fb.caps[stream->rtcp_fb_nack_cap_idx];
     }
 
@@ -2635,7 +2669,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_sockaddr_cp(&att_param.rem_addr, &info->rem_addr);
     pj_sockaddr_cp(&stream->rem_rtp_addr, &info->rem_addr);
     if (stream->si.rtcp_mux) {
-	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_addr);    	
+	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_addr);
     } else if (pj_sockaddr_has_addr(&info->rem_rtcp.addr)) {
 	pj_sockaddr_cp(&att_param.rem_rtcp, &info->rem_rtcp);
     }
@@ -3127,7 +3161,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 	    {
 		pt = 11;
 	    }
-#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0	    
+#if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
 	    else if (dig == 'r')
 	    {
 		pt = 16;
