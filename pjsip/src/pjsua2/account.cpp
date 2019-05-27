@@ -1060,16 +1060,16 @@ Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
 Buddy Account::findBuddy2(string uri) const throw(Error)
 {
     pj_str_t pj_uri;
-    pjsua_buddy_id id;
+    pjsua_buddy_id bud_id;
 
     pj_strset2(&pj_uri, (char*)uri.c_str());
 
-    id = pjsua_buddy_find(&pj_uri);
+    bud_id = pjsua_buddy_find(&pj_uri);
     if (id == PJSUA_INVALID_ID) {
 	PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
     }
 
-    Buddy buddy(id);
+    Buddy buddy(bud_id);
     return buddy;
 }
 

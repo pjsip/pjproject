@@ -914,11 +914,11 @@ void Call::processStateChange(OnCallStateParam &prm)
 	    if (call_med->type == PJMEDIA_TYPE_AUDIO &&
 	    	call_med->strm.a.stream)
 	    {
-    		OnStreamDestroyedParam prm;
-    		prm.stream = call_med->strm.a.stream;
-    		prm.streamIdx = mi;
+    		OnStreamDestroyedParam strm_prm;
+    		strm_prm.stream = call_med->strm.a.stream;
+    		strm_prm.streamIdx = mi;
     
-    		onStreamDestroyed(prm);	    	
+    		onStreamDestroyed(strm_prm);	    	
 	    }
     	}
 

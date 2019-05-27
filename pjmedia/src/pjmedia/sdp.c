@@ -506,19 +506,19 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
     /* Parse */
     PJ_TRY {
-        pj_str_t attr;
+        pj_str_t scan_attr;
 
 	/* Get the ssrc */
 	pj_scan_get(&scanner, &cs_digit, &token);
 	ssrc->ssrc = pj_strtoul(&token);
 
     	pj_scan_get_char(&scanner);
-	pj_scan_get(&scanner, &cs_token, &attr);
+	pj_scan_get(&scanner, &cs_token, &scan_attr);
 	
 	/* Get cname attribute, if any */
 	if (!pj_scan_is_eof(&scanner) &&
 	    pj_scan_get_char(&scanner) == ':' &&
-	    pj_strcmp2(&attr, "cname"))
+	    pj_strcmp2(&scan_attr, "cname"))
 	{
 	    pj_scan_get(&scanner, &cs_token, &ssrc->cname);
 	}

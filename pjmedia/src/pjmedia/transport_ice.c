@@ -764,11 +764,11 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 
     /* Add a=rtcp-mux attribute */
     if (rtcp_mux) {
-	pjmedia_sdp_attr *attr;
+	pjmedia_sdp_attr *add_attr;
 
-	attr = PJ_POOL_ZALLOC_T(sdp_pool, pjmedia_sdp_attr);
-    	attr->name = STR_RTCP_MUX;
-    	m->attr[m->attr_count++] = attr;
+	add_attr = PJ_POOL_ZALLOC_T(sdp_pool, pjmedia_sdp_attr);
+    	add_attr->name = STR_RTCP_MUX;
+    	m->attr[m->attr_count++] = add_attr;
     }
 
     return PJ_SUCCESS;

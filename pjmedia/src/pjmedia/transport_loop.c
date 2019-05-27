@@ -240,10 +240,10 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     info->sock_info.rtp_sock = 1;
     pj_sockaddr_init(loop->setting.af, &info->sock_info.rtp_addr_name, 
-		     &loop->setting.addr, loop->setting.port);
+		     &loop->setting.addr, (pj_uint16_t)loop->setting.port);
     info->sock_info.rtcp_sock = 2;
     pj_sockaddr_init(loop->setting.af, &info->sock_info.rtcp_addr_name,
-    		     &loop->setting.addr, loop->setting.port + 1);
+    		     &loop->setting.addr, (pj_uint16_t)loop->setting.port + 1);
 
     return PJ_SUCCESS;
 }
