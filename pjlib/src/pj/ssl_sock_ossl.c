@@ -724,6 +724,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
+    /* Specific version methods are deprecated since 1.1.0 */
 #if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
     || OPENSSL_VERSION_NUMBER < 0x10100000L
     switch (ssock->param.proto) {
@@ -741,13 +742,15 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 #endif
 	break;
     }
-#else
-    /* Specific version methods are deprecated in 1.1.0 */
-    ssl_method = (SSL_METHOD*)TLS_method();
 #endif
 
     if (!ssl_method) {
+#if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
+    || OPENSSL_VERSION_NUMBER < 0x10100000L
 	ssl_method = (SSL_METHOD*)SSLv23_method();
+#else
+	ssl_method = (SSL_METHOD*)TLS_method();
+#endif
 
 #ifdef SSL_OP_NO_SSLv2
 	/** Check if SSLv2 is enabled */
