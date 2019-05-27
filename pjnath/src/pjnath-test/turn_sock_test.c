@@ -277,6 +277,9 @@ static void set_server_flag(struct test_session_cfg *test_cfg,
 	    break;
 	case PJ_TURN_TP_TLS:
 	    flag = TURN_TLS;
+	    break;
+	default:
+	    break;
     }
     test_cfg->srv.flags |= ((use_ipv6)?SERVER_IPV6:SERVER_IPV4)+flag;
 }
