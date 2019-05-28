@@ -716,6 +716,7 @@ static pj_bool_t on_connect_complete_asock(pj_activesock_t *asock,
     return on_connect_complete(turn_sock, status);
 }
 
+#if PJ_HAS_SSL_SOCK
 static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
 					      pj_status_t status)
 {
@@ -727,6 +728,7 @@ static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
 
     return on_connect_complete(turn_sock, status);
 }
+#endif
 
 static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 {
@@ -856,6 +858,7 @@ static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
     return on_data_read(turn_sock, data, size, status, remainder);
 }
 
+#if PJ_HAS_SSL_SOCK
 static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
 				       void *data,
 				       pj_size_t size,
@@ -893,6 +896,7 @@ static pj_bool_t on_data_sent_ssl_sock(pj_ssl_sock_t *ssl_sock,
 
     return PJ_TRUE;
 }
+#endif
 
 /*
  * Callback from TURN session to send outgoing packet.
