@@ -415,6 +415,10 @@ class MyApp {
 	    my_cfg.accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
 	    my_cfg.accCfg.getVideoConfig().setAutoShowIncoming(true);
 
+	    /* Enable SRTP optional mode and without requiring SIP TLS transport */
+	    my_cfg.accCfg.getMediaConfig().setSrtpUse(pjmedia_srtp_use.PJMEDIA_SRTP_OPTIONAL);
+	    my_cfg.accCfg.getMediaConfig().setSrtpSecureSignaling(0);
+
 	    MyAccount acc = addAcc(my_cfg.accCfg);
 	    if (acc == null)
 		continue;
