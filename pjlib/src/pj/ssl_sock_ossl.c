@@ -1566,6 +1566,41 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
     }	 
 }
 
+/* Update remote certificates chain info. This function should be
+ * called after handshake or renegotiation successfully completed.
+ */
+static void ssl_update_remote_cert_chain_info(pj_pool_t *pool,
+					      pj_ssl_cert_info *ci,
+					      STACK_OF(X509) *chain,
+					      pj_bool_t get_pem)
+{
+    int i;
+
+    ci->raw_chain.cert_raw = (pj_str_t *)pj_pool_calloc(pool,
+       				    			sk_X509_num(chain),
+       				    			sizeof(pj_str_t));
+    ci->raw_chain.cnt = sk_X509_num(chain);
+
+    for (i = 0; i < sk_X509_num(chain); i++) {
+        BIO *bio;
+        BUF_MEM *ptr;
+	X509 *x = sk_X509_value(chain, i);
+
+        bio = BIO_new(BIO_s_mem());
+        
+        if (!PEM_write_bio_X509(bio, x)) {
+            PJ_LOG(3, (THIS_FILE, "Error retrieving raw certificate info"));
+            ci->raw_chain.cert_raw[i].ptr  = NULL;
+            ci->raw_chain.cert_raw[i].slen = 0;
+        } else {
+            BIO_write(bio, "\0", 1);
+            BIO_get_mem_ptr(bio, &ptr);
+            pj_strdup2(pool, &ci->raw_chain.cert_raw[i], ptr->data );
+        }
+        
+        BIO_free(bio);
+    }
+}
 
 /* Update local & remote certificates info. This function should be
  * called after handshake or renegotiation successfully completed.
@@ -1574,6 +1609,7 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     X509 *x;
+    STACK_OF(X509) *chain;
 
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
 
@@ -1594,6 +1630,15 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 	X509_free(x);
     } else {
 	pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
+    }
+
+    chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
+    if (chain) {
+       ssl_update_remote_cert_chain_info(ssock->pool,
+       					 &ssock->remote_cert_info,
+       					 chain, PJ_TRUE);
+    } else {
+       ssock->remote_cert_info.raw_chain.cnt = 0;
     }
 }
 
