@@ -3292,9 +3292,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Set this as default return value. This may be changed below
-     * for TCP/TLS
-     */
+    /* Set this as default return value. This may be changed below. */
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
 
@@ -3315,6 +3313,26 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 	    acc->via_addr.port = addr->port;
 	    acc->via_tp = (pjsip_transport *)tfla2_prm.ret_tp;
 	}
+    } else
+    /* For UDP transport, check if we need to overwrite the address
+     * with its bound address.
+     */
+    if ((flag & PJSIP_TRANSPORT_DATAGRAM) && tfla2_prm.local_if &&
+    	tfla2_prm.ret_tp)
+    {
+    	int i;
+
+    	for (i = 0; i < sizeof(pjsua_var.tpdata); i++) {
+    	    if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
+    	    	if (pjsua_var.tpdata[i].has_bound_addr) {
+		    pj_strdup(acc->pool, &addr->host,
+		    	      &pjsua_var.tpdata[i].data.tp->local_name.host);
+	    	    addr->port = (pj_uint16_t)
+	    	    		 pjsua_var.tpdata[i].data.tp->local_name.port;
+    	    	}
+    	    	break;
+    	    }
+    	}
     }
 
     /* For TCP/TLS, acc may request to specify source port */

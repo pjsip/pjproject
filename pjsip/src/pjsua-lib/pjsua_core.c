@@ -2506,6 +2506,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].type = type;
 	pjsua_var.tpdata[id].local_name = tp->local_name;
 	pjsua_var.tpdata[id].data.tp = tp;
+	if (cfg->bound_addr.slen)
+	    pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
