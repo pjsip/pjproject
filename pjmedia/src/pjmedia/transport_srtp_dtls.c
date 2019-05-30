@@ -462,7 +462,14 @@ static void ssl_destroy(dtls_srtp *ds)
 {
     /* Destroy SSL instance */
     if (ds->ossl_ssl) {
-	SSL_shutdown(ds->ossl_ssl);
+	/**
+	 * Avoid calling SSL_shutdown() if handshake wasn't completed.
+	 * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an
+	 * SSL handshake, while previous versions always return 0.	 
+	 */
+	if (SSL_in_init(ossock->ossl_ssl) == 0) {
+	    SSL_shutdown(ossock->ossl_ssl);
+	}
 	SSL_free(ds->ossl_ssl); /* this will also close BIOs */
 	ds->ossl_ssl = NULL;
     }
