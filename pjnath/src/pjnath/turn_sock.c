@@ -152,6 +152,7 @@ static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
 /*
  * SSL sock callback
  */
+#if PJ_HAS_SSL_SOCK
 static pj_bool_t on_connect_complete_ssl_sock(pj_ssl_sock_t *ssl_sock,
 					      pj_status_t status);
 static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
@@ -159,7 +160,8 @@ static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
 				       pj_size_t size,
 				       pj_status_t status,
 				       pj_size_t *remainder);
-  
+#endif
+
 static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
 				       void *data,
 				       pj_size_t size,

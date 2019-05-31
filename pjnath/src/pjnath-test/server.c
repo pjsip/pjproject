@@ -40,11 +40,13 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
 				       pj_size_t size,
 				       pj_status_t status,
 				       pj_size_t *remainder);
+#if USE_TLS
 static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssock,
 				       void *data,
 				       pj_size_t size,
 				       pj_status_t status,
 				       pj_size_t *remainder);
+#endif
 static pj_bool_t turn_udp_on_data_recvfrom(pj_activesock_t *asock,
 					   void *data,
 				           pj_size_t size,
@@ -263,7 +265,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	    status = pj_activesock_start_accept(test_srv->turn_sock,
 						pool);
 	} 
-#if USE_TLS	
+#if USE_TLS
 	else if (tp_type == PJ_TURN_TP_TLS) {
 	    pj_ssl_sock_t *ssock_serv = NULL;
 	    pj_ssl_sock_param ssl_param;
@@ -508,6 +510,7 @@ static pj_bool_t turn_tcp_on_data_read(pj_activesock_t *asock,
 			    sizeof(test_srv->remote_addr), status);
 }
 
+#if USE_TLS
 static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssl_sock,
 				       void *data,
 				       pj_size_t size,
@@ -522,6 +525,7 @@ static pj_bool_t turn_tls_on_data_read(pj_ssl_sock_t *ssl_sock,
 			     sizeof(test_srv->remote_addr), 
 			     status);
 }
+#endif
 
 static pj_bool_t turn_udp_on_data_recvfrom(pj_activesock_t *asock,
 					   void *data,

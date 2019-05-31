@@ -733,6 +733,11 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		frame.buf = src->get_buf;
 		frame.size = src->get_buf_size;
 		status = pjmedia_port_get_frame(src->port, &frame);
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(5, (THIS_FILE, status,
+				  "Failed to get frame from port [%s]!",
+				  src->port->info.name.ptr));
+		}
 
 		/* Update next src put/get */
 		pj_add_timestamp32(&src->ts_next, src->ts_interval);
@@ -743,6 +748,13 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	     * settings, if any)
 	     */
 	    status = render_src_frame(src, sink, j);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(5, (THIS_FILE, status,
+			      "Failed to render frame from port [%s] to [%s]",
+			      src->port->info.name.ptr,
+			      sink->port->info.name.ptr));
+	    }
+
 	    got_frame = PJ_TRUE;
 	}
 
@@ -759,6 +771,11 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    frame.size = sink->put_buf_size;
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(5, (THIS_FILE, status,
+			  "Failed to put frame to port [%s]!",
+			  sink->port->info.name.ptr));
+	}
 
 	/* Update next put/get, careful that it may have been updated
 	 * if this port transmits to itself!
