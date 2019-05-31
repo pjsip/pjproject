@@ -1222,11 +1222,13 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 
     pj_lock_release(mgr->lock);
 
-    TRACE_((THIS_FILE,"Transport %s registered: type=%s, remote=%s:%d",
-		       tp->obj_name,
-		       pjsip_transport_get_type_name(tp->key.type),
-		       addr_string(&tp->key.rem_addr),
-		       pj_sockaddr_get_port(&tp->key.rem_addr)));
+    TRACE_((THIS_FILE, "Transport %s registered: type=%s, remote=%s:%d",
+	    tp->obj_name,
+	    pjsip_transport_get_type_name(tp->key.type),
+	    pj_sockaddr_has_addr(&tp->key.rem_addr)?
+				addr_string(&tp->key.rem_addr):"",
+	    pj_sockaddr_has_addr(&tp->key.rem_addr)?
+				pj_sockaddr_get_port(&tp->key.rem_addr):0));
 
     return PJ_SUCCESS;
 }
