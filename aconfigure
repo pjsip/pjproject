@@ -7955,22 +7955,24 @@ else
 	  	*darwin*)
 	            SAVED_LIBS="$LIBS"
 	            LIBS="-framework Security"
-	            cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+		    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-
+#include <Security/SecureTransport.h>
 int
 main ()
 {
-
+if (__builtin_available(macOS 10.3, iOS 11.3, *)) {
+			     SSLContextRef ssl_ctx;
+			     SSLReHandshake(ssl_ctx);
+			 }
   ;
   return 0;
 }
 _ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
+if ac_fn_c_try_compile "$LINENO"; then :
   ac_ssl_backend=darwin
 fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 		    LIBS="$SAVED_LIBS"
 	            if test "x$ac_ssl_backend" = "xdarwin"; then
 		        $as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
