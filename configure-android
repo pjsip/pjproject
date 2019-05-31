@@ -38,7 +38,9 @@ if test "x${ANDROID_NDK_ROOT}" = "x" || test ! -e ${ANDROID_NDK_ROOT}; then
   exit 0
 fi
 
-NDK_VER=`sed -n -e 's/.*Pkg.Revision *= *\([0-9]\+\).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
+# The BRE version somehow does not work well on MacOSX
+#NDK_VER=`sed -n -e 's/.*Pkg.Revision *= *\([0-9]\+\).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
+NDK_VER=`sed -n -E 's/^Pkg.Revision *= *([0-9]+).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
 
 if test "x$APP_PLATFORM" = "x"; then
   APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
