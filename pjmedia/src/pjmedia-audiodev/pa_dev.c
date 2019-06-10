@@ -493,7 +493,8 @@ static pj_status_t pa_destroy(pjmedia_aud_dev_factory *f)
 static pj_status_t pa_refresh(pjmedia_aud_dev_factory *f)
 {
     PJ_UNUSED_ARG(f);
-    return PJ_ENOTSUP;
+    int err = Pa_RefreshDeviceList();
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
