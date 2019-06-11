@@ -93,7 +93,7 @@ typedef struct circ_buf_t {
 /*
  * Secure socket structure definition.
  */
-typedef struct pj_ssl_sock_t
+struct pj_ssl_sock_t
 {
     pj_pool_t		 *pool;
     pj_ssl_sock_t	 *parent;
@@ -139,7 +139,7 @@ typedef struct pj_ssl_sock_t
 
     circ_buf_t            circ_buf_output;
     pj_lock_t            *circ_buf_output_mutex;
-} pj_ssl_sock_t;
+};
 
 
 /*

@@ -37,7 +37,6 @@
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 
-#include "ssl_sock_imp_common.h"
 #include "ssl_sock_imp_common.c"
 
 #define THIS_FILE		"ssl_sock_ossl.c"
@@ -1575,6 +1574,10 @@ static void ssl_update_remote_cert_chain_info(pj_pool_t *pool,
 					      pj_bool_t get_pem)
 {
     int i;
+
+    /* For now, get_pem has to be PJ_TRUE */
+    pj_assert(get_pem);
+    PJ_UNUSED_ARG(get_pem);
 
     ci->raw_chain.cert_raw = (pj_str_t *)pj_pool_calloc(pool,
        				    			sk_X509_num(chain),
