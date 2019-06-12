@@ -544,8 +544,8 @@ VideoMedia Call::getEncodingVideoMedia(int med_idx) const throw(Error)
 
     if (med_idx < 0) {
 	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
-	    if (pj_ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO &&
-		pj_ci.media[med_idx].stream.vid.enc_slot != PJSUA_INVALID_ID)
+	    if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+		pj_ci.media[i].stream.vid.enc_slot != PJSUA_INVALID_ID)
 	    {
 		med_idx = i;
 		break;
@@ -582,8 +582,8 @@ VideoMedia Call::getDecodingVideoMedia(int med_idx) const throw(Error)
 
     if (med_idx < 0) {
 	for (unsigned i = 0; i < pj_ci.media_cnt; ++i) {
-	    if (pj_ci.media[med_idx].type == PJMEDIA_TYPE_VIDEO &&
-		pj_ci.media[med_idx].stream.vid.dec_slot != PJSUA_INVALID_ID)
+	    if (pj_ci.media[i].type == PJMEDIA_TYPE_VIDEO &&
+		pj_ci.media[i].stream.vid.dec_slot != PJSUA_INVALID_ID)
 	    {
 		med_idx = i;
 		break;
