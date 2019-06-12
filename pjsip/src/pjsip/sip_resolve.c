@@ -283,7 +283,9 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
 		}
 
-	        if (af == pj_AF_INET6() || PJSIP_MAX_RESOLVED_ADDRESSES > 1)
+	        if (af == pj_AF_INET6() ||
+	            (type != PJSIP_TRANSPORT_LOOP_DGRAM &&
+	             PJSIP_MAX_RESOLVED_ADDRESSES > 1))
 	        {
 	            /* Generate a synthesized IPv6 address, if possible. */
 		    unsigned int count = 1;
