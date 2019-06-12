@@ -84,7 +84,7 @@ pjmedia_rtcp_fb_setting RtcpFbConfig::toPj() const
     return setting;
 }
 
-void RtcpFbConfig::readObject(const ContainerNode &node) throw(Error)
+void RtcpFbConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("RtcpFbConfig");
     NODE_READ_BOOL	(this_node, dontUseAvpf);
@@ -101,7 +101,7 @@ void RtcpFbConfig::readObject(const ContainerNode &node) throw(Error)
     }
 }
 
-void RtcpFbConfig::writeObject(ContainerNode &node) const throw(Error)
+void RtcpFbConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("RtcpFbConfig");
     NODE_WRITE_BOOL	(this_node, dontUseAvpf);
@@ -179,7 +179,7 @@ pjsua_srtp_opt SrtpOpt::toPj() const
     return opt;
 }
 
-void SrtpOpt::readObject(const ContainerNode &node) throw(Error)
+void SrtpOpt::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("SrtpOpt");
 
@@ -202,7 +202,7 @@ void SrtpOpt::readObject(const ContainerNode &node) throw(Error)
     }
 }
 
-void SrtpOpt::writeObject(ContainerNode &node) const throw(Error)
+void SrtpOpt::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("SrtpOpt");
 
@@ -221,7 +221,8 @@ void SrtpOpt::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountRegConfig::readObject(const ContainerNode &node)
+				  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountRegConfig");
 
@@ -240,7 +241,8 @@ void AccountRegConfig::readObject(const ContainerNode &node) throw(Error)
     readSipHeaders(this_node, "headers", headers);
 }
 
-void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountRegConfig::writeObject(ContainerNode &node) const
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountRegConfig");
 
@@ -261,7 +263,8 @@ void AccountRegConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountSipConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountSipConfig::readObject(const ContainerNode &node)
+				  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountSipConfig");
 
@@ -282,7 +285,8 @@ void AccountSipConfig::readObject(const ContainerNode &node) throw(Error)
     }
 }
 
-void AccountSipConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountSipConfig::writeObject(ContainerNode &node) const
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountSipConfig");
 
@@ -302,7 +306,8 @@ void AccountSipConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountCallConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountCallConfig::readObject(const ContainerNode &node)
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountCallConfig");
 
@@ -313,7 +318,8 @@ void AccountCallConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_UNSIGNED( this_node, timerSessExpiresSec);
 }
 
-void AccountCallConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountCallConfig::writeObject(ContainerNode &node) const
+				    PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountCallConfig");
 
@@ -326,7 +332,8 @@ void AccountCallConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountPresConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountPresConfig::readObject(const ContainerNode &node)
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountPresConfig");
 
@@ -338,7 +345,8 @@ void AccountPresConfig::readObject(const ContainerNode &node) throw(Error)
     readSipHeaders(this_node, "headers", headers);
 }
 
-void AccountPresConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountPresConfig::writeObject(ContainerNode &node) const
+				    PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountPresConfig");
 
@@ -352,7 +360,8 @@ void AccountPresConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountMwiConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountMwiConfig::readObject(const ContainerNode &node)
+				  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountMwiConfig");
 
@@ -360,7 +369,8 @@ void AccountMwiConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_UNSIGNED( this_node, expirationSec);
 }
 
-void AccountMwiConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountMwiConfig::writeObject(ContainerNode &node) const
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountMwiConfig");
 
@@ -370,7 +380,8 @@ void AccountMwiConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountNatConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountNatConfig::readObject(const ContainerNode &node)
+				  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountNatConfig");
 
@@ -402,7 +413,8 @@ void AccountNatConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_INT     ( this_node, contactUseSrcPort);
 }
 
-void AccountNatConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountNatConfig::writeObject(ContainerNode &node) const
+				   PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountNatConfig");
 
@@ -436,7 +448,8 @@ void AccountNatConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountMediaConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountMediaConfig::readObject(const ContainerNode &node)
+				    PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountMediaConfig");
 
@@ -450,7 +463,8 @@ void AccountMediaConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_BOOL    ( this_node, rtcpMuxEnabled);
 }
 
-void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountMediaConfig::writeObject(ContainerNode &node) const
+				     PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountMediaConfig");
 
@@ -466,38 +480,47 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const throw(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountVideoConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountVideoConfig::readObject(const ContainerNode &node)
+				    PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountVideoConfig");
 
     NODE_READ_BOOL    ( this_node, autoShowIncoming);
     NODE_READ_BOOL    ( this_node, autoTransmitOutgoing);
     NODE_READ_UNSIGNED( this_node, windowFlags);
-    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultCaptureDevice);
-    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
-    NODE_READ_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index,
+			defaultCaptureDevice);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_dev_index,
+			defaultRenderDevice);
+    NODE_READ_NUM_T   ( this_node, pjmedia_vid_stream_rc_method,
+			rateControlMethod);
     NODE_READ_UNSIGNED( this_node, rateControlBandwidth);
     NODE_READ_UNSIGNED( this_node, startKeyframeCount);
     NODE_READ_UNSIGNED( this_node, startKeyframeInterval);
 }
 
-void AccountVideoConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountVideoConfig::writeObject(ContainerNode &node) const
+				     PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountVideoConfig");
 
     NODE_WRITE_BOOL    ( this_node, autoShowIncoming);
     NODE_WRITE_BOOL    ( this_node, autoTransmitOutgoing);
     NODE_WRITE_UNSIGNED( this_node, windowFlags);
-    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultCaptureDevice);
-    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index, defaultRenderDevice);
-    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_stream_rc_method, rateControlMethod);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index,
+			 defaultCaptureDevice);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_dev_index,
+			 defaultRenderDevice);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_vid_stream_rc_method,
+			 rateControlMethod);
     NODE_WRITE_UNSIGNED( this_node, rateControlBandwidth);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeCount);
     NODE_WRITE_UNSIGNED( this_node, startKeyframeInterval);
 }
 ///////////////////////////////////////////////////////////////////////////////
 
-void AccountIpChangeConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountIpChangeConfig::readObject(const ContainerNode &node)
+				       PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountIpChangeConfig");
 
@@ -506,7 +529,8 @@ void AccountIpChangeConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_UNSIGNED( this_node, reinviteFlags);
 }
 
-void AccountIpChangeConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountIpChangeConfig::writeObject(ContainerNode &node) const
+					PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountIpChangeConfig");
 
@@ -613,8 +637,10 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.ice_cfg.enable_ice	= natConfig.iceEnabled;
     ret.ice_cfg.ice_max_host_cands = natConfig.iceMaxHostCands;
     ret.ice_cfg.ice_opt.aggressive = natConfig.iceAggressiveNomination;
-    ret.ice_cfg.ice_opt.nominated_check_delay = natConfig.iceNominatedCheckDelayMsec;
-    ret.ice_cfg.ice_opt.controlled_agent_want_nom_timeout = natConfig.iceWaitNominationTimeoutMsec;
+    ret.ice_cfg.ice_opt.nominated_check_delay =
+			    natConfig.iceNominatedCheckDelayMsec;
+    ret.ice_cfg.ice_opt.controlled_agent_want_nom_timeout =
+			    natConfig.iceWaitNominationTimeoutMsec;
     ret.ice_cfg.ice_no_rtcp	= natConfig.iceNoRtcp;
     ret.ice_cfg.ice_always_update = natConfig.iceAlwaysUpdate;
 
@@ -623,9 +649,12 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.turn_cfg.turn_server	= str2Pj(natConfig.turnServer);
     ret.turn_cfg.turn_conn_type	= natConfig.turnConnType;
     ret.turn_cfg.turn_auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
-    ret.turn_cfg.turn_auth_cred.data.static_cred.username = str2Pj(natConfig.turnUserName);
-    ret.turn_cfg.turn_auth_cred.data.static_cred.data_type = (pj_stun_passwd_type)natConfig.turnPasswordType;
-    ret.turn_cfg.turn_auth_cred.data.static_cred.data = str2Pj(natConfig.turnPassword);
+    ret.turn_cfg.turn_auth_cred.data.static_cred.username =
+			    str2Pj(natConfig.turnUserName);
+    ret.turn_cfg.turn_auth_cred.data.static_cred.data_type =
+			    (pj_stun_passwd_type)natConfig.turnPasswordType;
+    ret.turn_cfg.turn_auth_cred.data.static_cred.data =
+			    str2Pj(natConfig.turnPassword);
     ret.turn_cfg.turn_auth_cred.data.static_cred.realm = pj_str((char*)"");
     ret.turn_cfg.turn_auth_cred.data.static_cred.nonce = pj_str((char*)"");
 
@@ -764,9 +793,12 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     if (prm.ice_cfg_use == PJSUA_ICE_CONFIG_USE_CUSTOM) {
 	natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
 	natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
-	natConfig.iceAggressiveNomination = PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
-	natConfig.iceNominatedCheckDelayMsec = prm.ice_cfg.ice_opt.nominated_check_delay;
-	natConfig.iceWaitNominationTimeoutMsec = prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
+	natConfig.iceAggressiveNomination =
+			PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
+	natConfig.iceNominatedCheckDelayMsec =
+			prm.ice_cfg.ice_opt.nominated_check_delay;
+	natConfig.iceWaitNominationTimeoutMsec =
+			prm.ice_cfg.ice_opt.controlled_agent_want_nom_timeout;
 	natConfig.iceNoRtcp	= PJ2BOOL(prm.ice_cfg.ice_no_rtcp);
 	natConfig.iceAlwaysUpdate = PJ2BOOL(prm.ice_cfg.ice_always_update);
     } else {
@@ -778,8 +810,10 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 	natConfig.iceEnabled	= PJ2BOOL(mcfg->enable_ice);
 	natConfig.iceMaxHostCands= mcfg->ice_max_host_cands;
 	natConfig.iceAggressiveNomination = PJ2BOOL(mcfg->ice_opt.aggressive);
-	natConfig.iceNominatedCheckDelayMsec = mcfg->ice_opt.nominated_check_delay;
-	natConfig.iceWaitNominationTimeoutMsec = mcfg->ice_opt.controlled_agent_want_nom_timeout;
+	natConfig.iceNominatedCheckDelayMsec =
+			mcfg->ice_opt.nominated_check_delay;
+	natConfig.iceWaitNominationTimeoutMsec =
+			mcfg->ice_opt.controlled_agent_want_nom_timeout;
 	natConfig.iceNoRtcp	= PJ2BOOL(mcfg->ice_no_rtcp);
 	natConfig.iceAlwaysUpdate = PJ2BOOL(mcfg->ice_always_update);
     }
@@ -788,9 +822,12 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 	natConfig.turnEnabled	= PJ2BOOL(prm.turn_cfg.enable_turn);
 	natConfig.turnServer	= pj2Str(prm.turn_cfg.turn_server);
 	natConfig.turnConnType	= prm.turn_cfg.turn_conn_type;
-	natConfig.turnUserName	= pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.username);
-	natConfig.turnPasswordType = prm.turn_cfg.turn_auth_cred.data.static_cred.data_type;
-	natConfig.turnPassword	= pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.data);
+	natConfig.turnUserName	=
+		pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.username);
+	natConfig.turnPasswordType =
+		prm.turn_cfg.turn_auth_cred.data.static_cred.data_type;
+	natConfig.turnPassword	=
+		pj2Str(prm.turn_cfg.turn_auth_cred.data.static_cred.data);
     } else {
 	pjsua_media_config default_mcfg;
 	if (!mcfg) {
@@ -800,9 +837,12 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
 	natConfig.turnEnabled	= PJ2BOOL(mcfg->enable_turn);
 	natConfig.turnServer	= pj2Str(mcfg->turn_server);
 	natConfig.turnConnType	= mcfg->turn_conn_type;
-	natConfig.turnUserName	= pj2Str(mcfg->turn_auth_cred.data.static_cred.username);
-	natConfig.turnPasswordType = mcfg->turn_auth_cred.data.static_cred.data_type;
-	natConfig.turnPassword	= pj2Str(mcfg->turn_auth_cred.data.static_cred.data);
+	natConfig.turnUserName	=
+		pj2Str(mcfg->turn_auth_cred.data.static_cred.username);
+	natConfig.turnPasswordType =
+		mcfg->turn_auth_cred.data.static_cred.data_type;
+	natConfig.turnPassword	=
+		pj2Str(mcfg->turn_auth_cred.data.static_cred.data);
     }
     natConfig.contactRewriteUse	= prm.allow_contact_rewrite;
     natConfig.contactRewriteMethod = prm.contact_rewrite_method;
@@ -847,7 +887,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     ipChangeConfig.reinviteFlags = prm.ip_change_cfg.reinvite_flags;
 }
 
-void AccountConfig::readObject(const ContainerNode &node) throw(Error)
+void AccountConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AccountConfig");
 
@@ -863,7 +903,7 @@ void AccountConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_OBJ     ( this_node, videoConfig);
 }
 
-void AccountConfig::writeObject(ContainerNode &node) const throw(Error)
+void AccountConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AccountConfig");
 
@@ -914,7 +954,7 @@ Account::~Account()
 }
 
 void Account::create(const AccountConfig &acc_cfg,
-                     bool make_default) throw(Error)
+                     bool make_default) PJSUA2_THROW(Error)
 {
     pjsua_acc_config pj_acc_cfg;
     
@@ -940,7 +980,7 @@ void Account::shutdown()
     }
 }
 
-void Account::modify(const AccountConfig &acc_cfg) throw(Error)
+void Account::modify(const AccountConfig &acc_cfg) PJSUA2_THROW(Error)
 {
     pjsua_acc_config pj_acc_cfg;
     
@@ -954,7 +994,7 @@ bool Account::isValid() const
     return pjsua_acc_is_valid(id) != 0;
 }
 
-void Account::setDefault() throw(Error)
+void Account::setDefault() PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_default(id) );
 }
@@ -974,7 +1014,7 @@ Account *Account::lookup(int acc_id)
     return (Account*)pjsua_acc_get_user_data(acc_id);
 }
 
-AccountInfo Account::getInfo() const throw(Error)
+AccountInfo Account::getInfo() const PJSUA2_THROW(Error)
 {
     pjsua_acc_info pj_ai;
     AccountInfo ai;
@@ -984,13 +1024,13 @@ AccountInfo Account::getInfo() const throw(Error)
     return ai;
 }
 
-void Account::setRegistration(bool renew) throw(Error)
+void Account::setRegistration(bool renew) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_registration(id, renew) );
 }
 
 void
-Account::setOnlineStatus(const PresenceStatus &pres_st) throw(Error)
+Account::setOnlineStatus(const PresenceStatus &pres_st) PJSUA2_THROW(Error)
 {
     pjrpid_element pj_rpid;
 
@@ -1005,12 +1045,12 @@ Account::setOnlineStatus(const PresenceStatus &pres_st) throw(Error)
 			    &pj_rpid) );
 }
 
-void Account::setTransport(TransportId tp_id) throw(Error)
+void Account::setTransport(TransportId tp_id) PJSUA2_THROW(Error)
 {
     PJSUA2_CHECK_EXPR( pjsua_acc_set_transport(id, tp_id) );
 }
 
-void Account::presNotify(const PresNotifyParam &prm) throw(Error)
+void Account::presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error)
 {
     pj_str_t pj_state_str   = str2Pj(prm.stateStr);
     pj_str_t pj_reason	    = str2Pj(prm.reason);
@@ -1023,12 +1063,12 @@ void Account::presNotify(const PresNotifyParam &prm) throw(Error)
 					 &msg_data) );
 }
 
-const BuddyVector& Account::enumBuddies() const throw(Error)
+const BuddyVector& Account::enumBuddies() const PJSUA2_THROW(Error)
 {
     return buddyList;
 }
 
-BuddyVector2 Account::enumBuddies2() const throw(Error)
+BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 {
     BuddyVector2 bv2;
     pjsua_buddy_id ids[PJSUA_MAX_BUDDIES];
@@ -1043,7 +1083,7 @@ BuddyVector2 Account::enumBuddies2() const throw(Error)
 }
 
 Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
-		throw(Error)
+		PJSUA2_THROW(Error)
 {
     if (!buddy_match) {
 	static FindBuddyMatch def_bm;
@@ -1057,7 +1097,7 @@ Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
     PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 }
 
-Buddy Account::findBuddy2(string uri) const throw(Error)
+Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
     pj_str_t pj_uri;
     pjsua_buddy_id bud_id;

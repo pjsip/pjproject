@@ -174,7 +174,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 }
 
 
-static void mainProg1(Endpoint &ep) throw(Error)
+static void mainProg1(Endpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;
@@ -197,7 +197,11 @@ static void mainProg1(Endpoint &ep) throw(Error)
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
     MyAccount *acc(new MyAccount);
-    acc->create(acc_cfg);
+    try {
+	acc->create(acc_cfg);
+    } catch (...) {
+	std::cout << "Adding account failed" << std::endl;
+    }
     
     pj_thread_sleep(2000);
     
@@ -219,7 +223,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     delete acc; /* Will delete all calls too */
 }
 
-static void mainProg2() throw(Error)
+static void mainProg2()
 {
     string json_str;
     {
@@ -265,7 +269,7 @@ static void mainProg2() throw(Error)
 }
 
 
-static void mainProg3(Endpoint &ep) throw(Error)
+static void mainProg3(Endpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
 			    "../../tests/pjsua/wavs/input.16.wav",
@@ -324,7 +328,7 @@ static void mainProg3(Endpoint &ep) throw(Error)
 }
 
 
-static void mainProg() throw(Error)
+static void mainProg()
 {
     string json_str;
 
@@ -376,7 +380,7 @@ static void mainProg() throw(Error)
 }
 
 
-static void mainProg4(Endpoint &ep) throw(Error)
+static void mainProg4(Endpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;

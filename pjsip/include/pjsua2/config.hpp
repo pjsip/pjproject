@@ -47,6 +47,16 @@
 #   define PJSUA2_MAX_SDP_BUF_LEN		1024
 #endif
 
+
+/*
+ * C++11 deprecated dynamic exception specification, but SWIG needs it.
+ */
+#ifndef SWIG
+#   define PJSUA2_THROW(x)
+#else
+#   define PJSUA2_THROW(x) throw(x)
+#endif
+
 /**
  * @}  PJSUA2_CFG
  */

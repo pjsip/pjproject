@@ -100,14 +100,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -232,7 +232,7 @@ public:
      * @param acc		The account for this buddy.
      * @param cfg		The buddy config.
      */
-    void create(Account &acc, const BuddyConfig &cfg) throw(Error);
+    void create(Account &acc, const BuddyConfig &cfg) PJSUA2_THROW(Error);
     
     /**
      * Check if this buddy is valid.
@@ -246,7 +246,7 @@ public:
      *
      * @return			Buddy info.
      */
-    BuddyInfo getInfo() const throw(Error);
+    BuddyInfo getInfo() const PJSUA2_THROW(Error);
 
     /**
      * Enable/disable buddy's presence monitoring. Once buddy's presence is
@@ -256,7 +256,7 @@ public:
      * @param subscribe		Specify true to activate presence
      *				subscription.
      */
-    void subscribePresence(bool subscribe) throw(Error);
+    void subscribePresence(bool subscribe) PJSUA2_THROW(Error);
     
     /**
      * Update the presence information for the buddy. Although the library
@@ -274,7 +274,7 @@ public:
      * application will be notified about the buddy's presence status in the
      * \a onBuddyState() callback.
      */
-     void updatePresence(void) throw(Error);
+     void updatePresence(void) PJSUA2_THROW(Error);
      
     /**
      * Send instant messaging outside dialog, using this buddy's specified
@@ -282,7 +282,8 @@ public:
      *
      * @param prm	Sending instant message parameter.
      */
-    void sendInstantMessage(const SendInstantMessageParam &prm) throw(Error);
+    void sendInstantMessage(const SendInstantMessageParam &prm)
+			    PJSUA2_THROW(Error);
 
     /**
      * Send typing indication outside dialog.
@@ -290,7 +291,7 @@ public:
      * @param prm	Sending instant message parameter.
      */
     void sendTypingIndication(const SendTypingIndicationParam &prm)
-	 throw(Error);
+	 PJSUA2_THROW(Error);
 
 public:
     /*

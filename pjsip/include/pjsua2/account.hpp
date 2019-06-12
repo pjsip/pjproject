@@ -174,14 +174,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
 };
 
@@ -273,14 +273,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -331,14 +331,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -398,14 +398,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -438,14 +438,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -692,14 +692,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -781,14 +781,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -884,14 +884,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -971,14 +971,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -1077,14 +1077,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 /**
@@ -1132,14 +1132,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
     
 } AccountIpChangeConfig;
 
@@ -1234,14 +1234,14 @@ public:
      *
      * @param node		Container to read values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container node.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -1642,7 +1642,7 @@ public:
      * @param make_default	Make this the default account.
      */
     void create(const AccountConfig &cfg,
-                bool make_default=false) throw(Error);
+                bool make_default=false) PJSUA2_THROW(Error);
 
     /**
      * Shutdown the account. This will initiate unregistration if needed,
@@ -1667,7 +1667,7 @@ public:
      * @param cfg 		New account config to be applied to the
      * 				account.
      */
-    void modify(const AccountConfig &cfg) throw(Error);
+    void modify(const AccountConfig &cfg) PJSUA2_THROW(Error);
 
     /**
      * Check if this account is still valid.
@@ -1680,7 +1680,7 @@ public:
      * Set this as default account to be used when incoming and outgoing
      * requests don't match any accounts.
      */
-    void setDefault() throw(Error);
+    void setDefault() PJSUA2_THROW(Error);
 
     /**
      * Check if this account is the default account. Default account will be
@@ -1712,7 +1712,7 @@ public:
      *
      * @return			Account info.
      */
-    AccountInfo getInfo() const throw(Error);
+    AccountInfo getInfo() const PJSUA2_THROW(Error);
 
     /**
      * Update registration or perform unregistration. Application normally
@@ -1722,7 +1722,7 @@ public:
      * @param renew		If False, this will start unregistration
      * 				process.
      */
-    void setRegistration(bool renew) throw(Error);
+    void setRegistration(bool renew) PJSUA2_THROW(Error);
 
     /**
      * Set or modify account's presence online status to be advertised to
@@ -1733,7 +1733,7 @@ public:
      *
      * @param pres_st		Presence online status.
      */
-    void setOnlineStatus(const PresenceStatus &pres_st) throw(Error);
+    void setOnlineStatus(const PresenceStatus &pres_st) PJSUA2_THROW(Error);
 
     /**
      * Lock/bind this account to a specific transport/listener. Normally
@@ -1749,7 +1749,7 @@ public:
      *
      * @param tp_id		The transport ID.
      */
-    void setTransport(TransportId tp_id) throw(Error);
+    void setTransport(TransportId tp_id) PJSUA2_THROW(Error);
 
     /**
      * Send NOTIFY to inform account presence status or to terminate server
@@ -1759,7 +1759,7 @@ public:
      *
      * @param prm		The sending NOTIFY parameter.
      */
-    void presNotify(const PresNotifyParam &prm) throw(Error);
+    void presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Warning: deprecated, use enumBuddies2() instead. This function is not
@@ -1769,14 +1769,14 @@ public:
      *
      * @return			The buddy list.
      */
-    const BuddyVector& enumBuddies() const throw(Error);
+    const BuddyVector& enumBuddies() const PJSUA2_THROW(Error);
 
     /**
      * Enumerate all buddies of the account.
      *
      * @return			The buddy list.
      */
-    BuddyVector2 enumBuddies2() const throw(Error);
+    BuddyVector2 enumBuddies2() const PJSUA2_THROW(Error);
 
     /**
      * Warning: deprecated, use findBuddy2 instead. This function is not
@@ -1792,7 +1792,7 @@ public:
      * @return			The pointer to buddy.
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
-		    throw(Error);
+		    PJSUA2_THROW(Error);
 
     /**
      * Find a buddy in the buddy list with the specified URI. 
@@ -1803,7 +1803,7 @@ public:
      *
      * @return			The pointer to buddy.
      */
-    Buddy findBuddy2(string uri) const throw(Error);
+    Buddy findBuddy2(string uri) const PJSUA2_THROW(Error);
 
 public:
     /*

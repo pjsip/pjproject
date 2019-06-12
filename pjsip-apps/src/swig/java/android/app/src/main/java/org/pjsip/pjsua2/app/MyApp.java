@@ -444,6 +444,7 @@ class MyApp {
 	try {
 	    acc.create(cfg);
 	} catch (Exception e) {
+	    System.out.println(e);
 	    acc = null;
 	    return null;
 	}

@@ -573,14 +573,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
 };
 
@@ -673,14 +673,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -892,14 +892,14 @@ public:
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 };
 
 
@@ -922,14 +922,14 @@ struct EpConfig : public PersistentObject
      *
      * @param node		Container to write values from.
      */
-    virtual void readObject(const ContainerNode &node) throw(Error);
+    virtual void readObject(const ContainerNode &node) PJSUA2_THROW(Error);
 
     /**
      * Write this object to a container.
      *
      * @param node		Container to write values to.
      */
-    virtual void writeObject(ContainerNode &node) const throw(Error);
+    virtual void writeObject(ContainerNode &node) const PJSUA2_THROW(Error);
 
 };
 
@@ -954,7 +954,7 @@ class Endpoint
 {
 public:
     /** Retrieve the singleton instance of the endpoint */
-    static Endpoint &instance() throw(Error);
+    static Endpoint &instance() PJSUA2_THROW(Error);
 
     /** Default constructor */
     Endpoint();
@@ -978,7 +978,7 @@ public:
      * are properly initialized. Once this function has returned success,
      * application must call libDestroy() before quitting.
      */
-    void libCreate() throw(Error);
+    void libCreate() PJSUA2_THROW(Error);
 
     /**
      * Get library state.
@@ -996,14 +996,14 @@ public:
      *
      * @param prmEpConfig	Endpoint configurations
      */
-    void libInit( const EpConfig &prmEpConfig) throw(Error);
+    void libInit( const EpConfig &prmEpConfig) PJSUA2_THROW(Error);
 
     /**
      * Call this function after all initialization is done, so that the
      * library can do additional checking set up. Application may call this
      * function any time after init().
      */
-    void libStart() throw(Error);
+    void libStart() PJSUA2_THROW(Error);
 
     /**
      * Register a thread that was created by external or native API to the
@@ -1013,7 +1013,7 @@ public:
      *
      * @param name	The optional name to be assigned to the thread.
      */
-    void libRegisterThread(const string &name) throw(Error);
+    void libRegisterThread(const string &name) PJSUA2_THROW(Error);
 
     /**
      * Check if this thread has been registered to the library. Note that
@@ -1062,7 +1062,7 @@ public:
      *
      * @param prmFlags	Combination of pjsua_destroy_flag enumeration.
      */
-    void libDestroy(unsigned prmFlags=0) throw(Error);
+    void libDestroy(unsigned prmFlags=0) PJSUA2_THROW(Error);
 
 
     /*************************************************************************
@@ -1135,7 +1135,7 @@ public:
      * 				given to utilTimerCancel().
      */
     Token utilTimerSchedule(unsigned prmMsecDelay,
-                            Token prmUserData) throw (Error);
+                            Token prmUserData) PJSUA2_THROW(Error);
 
     /**
      * Cancel previously scheduled timer with the specified timer token.
@@ -1157,7 +1157,7 @@ public:
     /**
      * Get cipher list supported by SSL/TLS backend.
      */
-    IntVector utilSslGetAvailableCiphers() throw (Error);
+    IntVector utilSslGetAvailableCiphers() PJSUA2_THROW(Error);
 
     /*************************************************************************
      * NAT operations
@@ -1174,7 +1174,7 @@ public:
      *
      * Note that STUN must be enabled to run this function successfully.
      */
-    void natDetectType(void) throw(Error);
+    void natDetectType(void) PJSUA2_THROW(Error);
 
     /**
      * Get the NAT type as detected by natDetectType() function. This
@@ -1185,7 +1185,7 @@ public:
      * Exception: if this function is called while detection is in progress,
      * PJ_EPENDING exception will be raised.
      */
-    pj_stun_nat_type natGetType() throw(Error);
+    pj_stun_nat_type natGetType() PJSUA2_THROW(Error);
 
     /**
      * Update the STUN servers list. The libInit() must have been called
@@ -1211,7 +1211,7 @@ public:
      *
      */
     void natUpdateStunServers(const StringVector &prmServers,
-                              bool prmWait) throw(Error);
+                              bool prmWait) PJSUA2_THROW(Error);
 
     /**
      * Auxiliary function to resolve and contact each of the STUN server
@@ -1241,7 +1241,7 @@ public:
      */
     void natCheckStunServers(const StringVector &prmServers,
                              bool prmWait,
-                             Token prmUserData) throw(Error);
+                             Token prmUserData) PJSUA2_THROW(Error);
 
     /**
      * Cancel pending STUN resolution which match the specified token.
@@ -1256,7 +1256,7 @@ public:
      * Exception: PJ_ENOTFOUND if there is no matching one, or other error.
      */
     void natCancelCheckStunServers(Token token,
-                                   bool notify_cb = false) throw(Error);
+                                   bool notify_cb = false) PJSUA2_THROW(Error);
 
     /*************************************************************************
      * Transport operations
@@ -1272,7 +1272,7 @@ public:
      * @return			The transport ID.
      */
     TransportId transportCreate(pjsip_transport_type_e type,
-                                const TransportConfig &cfg) throw(Error);
+                                const TransportConfig &cfg) PJSUA2_THROW(Error);
 
     /**
      * Enumerate all transports currently created in the system. This
@@ -1282,7 +1282,7 @@ public:
      *
      * @return			Array of transport IDs.
      */
-    IntVector transportEnum() throw(Error);
+    IntVector transportEnum() PJSUA2_THROW(Error);
 
     /**
      * Get information about transport.
@@ -1291,7 +1291,7 @@ public:
      *
      * @return			Transport info.
      */
-    TransportInfo transportGetInfo(TransportId id) throw(Error);
+    TransportInfo transportGetInfo(TransportId id) PJSUA2_THROW(Error);
 
     /**
      * Disable a transport or re-enable it. By default transport is always
@@ -1303,7 +1303,7 @@ public:
      * @param enabled		Enable or disable the transport.
      *
      */
-    void transportSetEnable(TransportId id, bool enabled) throw(Error);
+    void transportSetEnable(TransportId id, bool enabled) PJSUA2_THROW(Error);
 
     /**
      * Close the transport. The system will wait until all transactions are
@@ -1312,7 +1312,7 @@ public:
      *
      * @param id		Transport ID.
      */
-    void transportClose(TransportId id) throw(Error);
+    void transportClose(TransportId id) PJSUA2_THROW(Error);
     
     /**
      * Start graceful shutdown procedure for this transport handle. After
@@ -1327,7 +1327,7 @@ public:
      *
      * @param tp		The transport.
      */
-    void transportShutdown(TransportHandle tp) throw(Error);
+    void transportShutdown(TransportHandle tp) PJSUA2_THROW(Error);
 
     /*************************************************************************
      * Call operations
@@ -1388,21 +1388,21 @@ public:
      *
      * @return		The list of media port.
      */
-    const AudioMediaVector &mediaEnumPorts() const throw(Error);
+    const AudioMediaVector &mediaEnumPorts() const PJSUA2_THROW(Error);
 
     /**
      * Enumerate all audio media port.
      *
      * @return		The list of audio media port.
      */
-    AudioMediaVector2 mediaEnumPorts2() const throw(Error);
+    AudioMediaVector2 mediaEnumPorts2() const PJSUA2_THROW(Error);
 
     /**
      * Enumerate all video media port.
      *
      * @return		The list of video media port.
      */
-    VideoMediaVector mediaEnumVidPorts() const throw(Error);
+    VideoMediaVector mediaEnumVidPorts() const PJSUA2_THROW(Error);
 
     /**
      * Get the instance of Audio Device Manager.
@@ -1430,14 +1430,14 @@ public:
      *
      * @return		Array of codec info.
      */
-    const CodecInfoVector &codecEnum() throw(Error);
+    const CodecInfoVector &codecEnum() PJSUA2_THROW(Error);
 
     /**
      * Enum all supported codecs in the system.
      *
      * @return		Array of codec info.
      */
-    CodecInfoVector2 codecEnum2() const throw(Error);
+    CodecInfoVector2 codecEnum2() const PJSUA2_THROW(Error);
 
     /**
      * Change codec priority.
@@ -1449,7 +1449,7 @@ public:
      *
      */
     void codecSetPriority(const string &codec_id,
-			  pj_uint8_t priority) throw(Error);
+			  pj_uint8_t priority) PJSUA2_THROW(Error);
 
     /**
      * Get codec parameters.
@@ -1460,7 +1460,7 @@ public:
      * 			will be thrown.
      *
      */
-    CodecParam codecGetParam(const string &codec_id) const throw(Error);
+    CodecParam codecGetParam(const string &codec_id) const PJSUA2_THROW(Error);
 
     /**
      * Set codec parameters.
@@ -1471,7 +1471,7 @@ public:
      *
      */
     void codecSetParam(const string &codec_id,
-		       const CodecParam param) throw(Error);
+		       const CodecParam param) PJSUA2_THROW(Error);
 
     /**
      * Warning: deprecated, use videoCodecEnum2() instead. This function is
@@ -1481,14 +1481,14 @@ public:
      *  
      * @return		Array of video codec info.
      */
-    const CodecInfoVector &videoCodecEnum() throw(Error);
+    const CodecInfoVector &videoCodecEnum() PJSUA2_THROW(Error);
 
     /**
      * Enum all supported video codecs in the system.
      *  
      * @return		Array of video codec info.
      */
-    CodecInfoVector2 videoCodecEnum2() const throw(Error);
+    CodecInfoVector2 videoCodecEnum2() const PJSUA2_THROW(Error);
 
     /**
      * Change video codec priority.
@@ -1501,7 +1501,7 @@ public:
      *
      */
     void videoCodecSetPriority(const string &codec_id,
-			       pj_uint8_t priority) throw(Error);
+			       pj_uint8_t priority) PJSUA2_THROW(Error);
 
     /**
      * Get video codec parameters.
@@ -1512,7 +1512,8 @@ public:
      *			will be thrown.
      *
      */
-    VidCodecParam getVideoCodecParam(const string &codec_id) const throw(Error);
+    VidCodecParam getVideoCodecParam(const string &codec_id) const
+				     PJSUA2_THROW(Error);
 
     /**
      * Set video codec parameters.
@@ -1522,7 +1523,7 @@ public:
      *
      */
     void setVideoCodecParam(const string &codec_id,
-			    const VidCodecParam &param) throw(Error);
+			    const VidCodecParam &param) PJSUA2_THROW(Error);
 			    
     /**
      * Reset video codec parameters to library default settings.
@@ -1530,14 +1531,14 @@ public:
      * @param codec_id	Codec ID.
      *
      */
-    void resetVideoCodecParam(const string &codec_id) throw(Error);
+    void resetVideoCodecParam(const string &codec_id) PJSUA2_THROW(Error);
 
     /**
      * Enumerate all SRTP crypto-suite names.
      *
      * @return		The list of SRTP crypto-suite name.
      */
-    StringVector srtpCryptoEnum() throw(Error);
+    StringVector srtpCryptoEnum() PJSUA2_THROW(Error);
 
     /*************************************************************************
      * IP Change
@@ -1562,7 +1563,7 @@ public:
      *
      * @return		PJ_SUCCESS on success, other on error.
      */
-    void handleIpChange(const IpChangeParam &param) throw(Error);
+    void handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error);
 
 public:
     /*

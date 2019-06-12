@@ -1209,7 +1209,7 @@ public:
      *
      * @return              Call info.
      */
-    CallInfo getInfo() const throw(Error);
+    CallInfo getInfo() const PJSUA2_THROW(Error);
     
     /**
      * Check if this call has active INVITE session and the INVITE
@@ -1263,7 +1263,7 @@ public:
      *
      * @return              The audio media.
      */
-    AudioMedia getAudioMedia(int med_idx) const throw(Error);
+    AudioMedia getAudioMedia(int med_idx) const PJSUA2_THROW(Error);
 
     /**
      * Get video media in encoding direction for the specified media index.
@@ -1276,7 +1276,7 @@ public:
      *
      * @return              The video media.
      */
-    VideoMedia getEncodingVideoMedia(int med_idx) const throw(Error);
+    VideoMedia getEncodingVideoMedia(int med_idx) const PJSUA2_THROW(Error);
 
     /**
      * Get video media in decoding direction for the specified media index.
@@ -1289,7 +1289,7 @@ public:
      *
      * @return              The video media.
      */
-    VideoMedia getDecodingVideoMedia(int med_idx) const throw(Error);
+    VideoMedia getDecodingVideoMedia(int med_idx) const PJSUA2_THROW(Error);
 
     /**
      * Check if remote peer support the specified capability.
@@ -1348,7 +1348,7 @@ public:
      *
      * @see Endpoint::natGetType(), natTypeInSdp
      */
-    pj_stun_nat_type getRemNatType() throw(Error);
+    pj_stun_nat_type getRemNatType() PJSUA2_THROW(Error);
 
     /**
      * Make outgoing call to the specified URI.
@@ -1359,7 +1359,8 @@ public:
      * @param prm.txOption  Optional headers etc to be added to outgoing INVITE
      *                      request.
      */
-    void makeCall(const string &dst_uri, const CallOpParam &prm) throw(Error);
+    void makeCall(const string &dst_uri, const CallOpParam &prm)
+		  PJSUA2_THROW(Error);
 
     /**
      * Send response to incoming INVITE request with call setting param.
@@ -1383,7 +1384,7 @@ public:
      *                      be persistent in all next answers/responses for this
      *                      INVITE request.
      */
-    void answer(const CallOpParam &prm) throw(Error);
+    void answer(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Hangup call by using method that is appropriate according to the
@@ -1403,7 +1404,7 @@ public:
      * @param prm.txOption  Optional list of headers etc to be added to outgoing
      *                      request/response message.
      */
-    void hangup(const CallOpParam &prm) throw(Error);
+    void hangup(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Put the specified call on hold. This will send re-INVITE with the
@@ -1417,7 +1418,7 @@ public:
      * @param prm.txOption  Optional message components to be sent with
      *                      the request.
      */
-    void setHold(const CallOpParam &prm) throw(Error);
+    void setHold(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Send re-INVITE.
@@ -1432,7 +1433,7 @@ public:
      * @param prm.txOption  Optional message components to be sent with
      *                      the request.
      */
-    void reinvite(const CallOpParam &prm) throw(Error);
+    void reinvite(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Send UPDATE request.
@@ -1442,7 +1443,7 @@ public:
      * @param prm.txOption  Optional message components to be sent with
      *                      the request.
      */
-    void update(const CallOpParam &prm) throw(Error);
+    void update(const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Initiate call transfer to the specified address. This function will send
@@ -1459,7 +1460,7 @@ public:
      * @param prm.txOption  Optional message components to be sent with
      *                      the request.
      */
-    void xfer(const string &dest, const CallOpParam &prm) throw(Error);
+    void xfer(const string &dest, const CallOpParam &prm) PJSUA2_THROW(Error);
 
     /**
      * Initiate attended call transfer. This function will send REFER request
@@ -1477,7 +1478,7 @@ public:
      *                      the request.
      */
     void xferReplaces(const Call& dest_call,
-                      const CallOpParam &prm) throw(Error);
+                      const CallOpParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Accept or reject redirection response. Application MUST call this
@@ -1501,21 +1502,21 @@ public:
      *                      callback, except that the PJSIP_REDIRECT_PENDING is
      *                      not accepted here.
      */
-    void processRedirect(pjsip_redirect_op cmd) throw(Error);
+    void processRedirect(pjsip_redirect_op cmd) PJSUA2_THROW(Error);
 
     /**
      * Send DTMF digits to remote using RFC 2833 payload formats.
      *
      * @param digits        DTMF string digits to be sent.
      */
-    void dialDtmf(const string &digits) throw(Error);
+    void dialDtmf(const string &digits) PJSUA2_THROW(Error);
 
     /**
      * Send DTMF digits to remote.
      *
      * @param param	The send DTMF parameter.
      */
-    void sendDtmf(const CallSendDtmfParam &param) throw (Error);
+    void sendDtmf(const CallSendDtmfParam &param) PJSUA2_THROW(Error);
     
     /**
      * Send instant messaging inside INVITE session.
@@ -1529,7 +1530,8 @@ public:
      * @param prm.userData  Optional user data, which will be given back when
      *                      the IM callback is called.
      */
-    void sendInstantMessage(const SendInstantMessageParam& prm) throw(Error);
+    void sendInstantMessage(const SendInstantMessageParam& prm)
+			    PJSUA2_THROW(Error);
     
     /**
      * Send IM typing indication inside INVITE session.
@@ -1540,7 +1542,7 @@ public:
      *                      outgoing request.
      */
     void sendTypingIndication(const SendTypingIndicationParam &prm)
-         throw(Error);
+         PJSUA2_THROW(Error);
     
     /**
      * Send arbitrary request with the call. This is useful for example to send
@@ -1552,7 +1554,7 @@ public:
      * @param prm.txOption  Optional message body and/or list of headers to be
      *                      included in outgoing request.
      */
-    void sendRequest(const CallSendRequestParam &prm) throw(Error);
+    void sendRequest(const CallSendRequestParam &prm) PJSUA2_THROW(Error);
     
     /**
      * Dump call and media statistics to string.
@@ -1562,7 +1564,7 @@ public:
      *
      * @return              Call dump and media statistics string.
      */
-    string dump(bool with_media, const string indent) throw(Error);
+    string dump(bool with_media, const string indent) PJSUA2_THROW(Error);
     
     /**
      * Get the media stream index of the default video stream in the call.
@@ -1600,7 +1602,7 @@ public:
      *                      (see CallVidSetStreamParam).
      */
     void vidSetStream(pjsua_call_vid_strm_op op,
-                      const CallVidSetStreamParam &param) throw(Error);
+                      const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
 
     /**
      * Get media stream info for the specified media index.
@@ -1609,7 +1611,7 @@ public:
      *
      * @return              The stream info.
      */
-    StreamInfo getStreamInfo(unsigned med_idx) const throw(Error);
+    StreamInfo getStreamInfo(unsigned med_idx) const PJSUA2_THROW(Error);
     
     /**
      * Get media stream statistic for the specified media index.
@@ -1618,7 +1620,7 @@ public:
      *
      * @return              The stream statistic.
      */
-    StreamStat getStreamStat(unsigned med_idx) const throw(Error);
+    StreamStat getStreamStat(unsigned med_idx) const PJSUA2_THROW(Error);
     
     /**
      * Get media transport info for the specified media index.
@@ -1627,7 +1629,8 @@ public:
      *
      * @return              The transport info.
      */
-    MediaTransportInfo getMedTransportInfo(unsigned med_idx) const throw(Error);
+    MediaTransportInfo getMedTransportInfo(unsigned med_idx) const
+					   PJSUA2_THROW(Error);
 
     /**
      * Internal function (callled by Endpoint( to process update to call
