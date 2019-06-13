@@ -48,10 +48,10 @@ int my_atoi(const char *cs)
 
     pj_cstr(&s, cs);
     if (cs[0] == '-') {
-	s.ptr++, s.slen--;
+	s.ptr++; s.slen--;
 	return 0 - (int)pj_strtoul(&s);
     } else if (cs[0] == '+') {
-	s.ptr++, s.slen--;
+	s.ptr++; s.slen--;
 	return (int)pj_strtoul(&s);
     } else {
 	return (int)pj_strtoul(&s);

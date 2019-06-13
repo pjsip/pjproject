@@ -532,10 +532,12 @@ static void on_call_media_state(pjsua_call_id call_id)
 /*
  * DTMF callback.
  */
+/*
 static void call_on_dtmf_callback(pjsua_call_id call_id, int dtmf)
 {
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c", call_id, dtmf));
 }
+*/
 
 static void call_on_dtmf_callback2(pjsua_call_id call_id, 
 				   const pjsua_dtmf_info *info)
