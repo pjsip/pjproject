@@ -162,7 +162,7 @@ void displayLog(const char *msg, int len);
 
 /** Forward declaration **/
 pj_status_t cli_setup_command(pj_cli_t *cli);
-void cli_destroy();
+void cli_destroy(void);
 
 PJ_DEF(void) cli_get_info(char *info, pj_size_t size)
 {
@@ -184,7 +184,7 @@ static void cli_log_writer(int level, const char *buffer, int len)
 #endif
 }
 
-pj_status_t cli_init()
+pj_status_t cli_init(void)
 {
     pj_status_t status;
 
@@ -266,7 +266,7 @@ pj_status_t cli_main(pj_bool_t wait_telnet_cli)
     return PJ_SUCCESS;
 }
 
-void cli_destroy()
+void cli_destroy(void)
 {
     /* Destroy CLI, it will automatically destroy any FEs */
     if (cli) {

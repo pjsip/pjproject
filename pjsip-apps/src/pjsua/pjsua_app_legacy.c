@@ -1753,7 +1753,7 @@ static void ui_call_redirect(char menuin[])
 /*
  * Main "user interface" loop.
  */
-void legacy_main()
+void legacy_main(void)
 {
     char menuin[80];
     char buf[128];

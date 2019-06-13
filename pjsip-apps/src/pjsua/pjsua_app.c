@@ -53,8 +53,8 @@ pj_bool_t showNotification(pjsua_call_id call_id);
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
-static pj_status_t app_init();
-static pj_status_t app_destroy();
+static pj_status_t app_init(void);
+static pj_status_t app_destroy(void);
 
 static pjsua_app_cfg_t app_cfg;
 pj_str_t		    uri_arg;
@@ -1251,7 +1251,7 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
-static pj_status_t app_init()
+static pj_status_t app_init(void)
 {
     pjsua_transport_id transport_id = -1;
     pjsua_transport_id udp6_tp_id = -1, tcp6_tp_id = -1, tls6_tp_id = -1;
@@ -1980,7 +1980,7 @@ on_return:
     return status;
 }
 
-static pj_status_t app_destroy()
+static pj_status_t app_destroy(void)
 {
     pj_status_t status = PJ_SUCCESS;
     unsigned i;
@@ -2065,7 +2065,7 @@ static pj_status_t app_destroy()
     return status;
 }
 
-pj_status_t pjsua_app_destroy()
+pj_status_t pjsua_app_destroy(void)
 {
     pj_status_t status;
 

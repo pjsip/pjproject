@@ -1072,7 +1072,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 		if (pj_ansi_strnicmp(pj_optarg, "0x", 2) == 0) {
 		    pj_str_t cipher_st = pj_str(pj_optarg + 2);
-		    cipher = pj_strtoul2(&cipher_st, NULL, 16);
+		    cipher = (pj_ssl_cipher)pj_strtoul2(&cipher_st, NULL, 16);
 		} else {
 		    cipher = atoi(pj_optarg);
 		}
@@ -1346,7 +1346,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 		if (pj_ansi_strnicmp(pj_optarg, "0x", 2) == 0) {
 		    pj_str_t cipher_st = pj_str(pj_optarg + 2);
-		    cipher = pj_strtoul2(&cipher_st, NULL, 16);
+		    cipher = (pj_ssl_cipher)pj_strtoul2(&cipher_st, NULL, 16);
 		} else {
 		    cipher = atoi(pj_optarg);
 		}
