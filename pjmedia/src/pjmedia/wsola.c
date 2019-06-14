@@ -527,7 +527,7 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
     wsola->buf_size = (pj_uint16_t) (samples_per_frame * FRAME_CNT);
     status = pjmedia_circ_buf_create(pool, wsola->buf_size, &wsola->buf);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3, (THIS_FILE, "Failed to create circular buf"));
+	PJ_PERROR(3, (THIS_FILE, status, "Failed to create circular buf"));
 	return status;
     }
 

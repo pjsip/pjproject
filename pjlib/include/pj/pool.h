@@ -177,10 +177,7 @@ PJ_BEGIN_DECL
 
    static void my_perror(const char *title, pj_status_t status)
    {
-        char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(1,(THIS_FILE, "%s: %s [status=%d]", title, errmsg, status));
+	PJ_PERROR(1,(THIS_FILE, status, title));
    }
 
    static void pool_demo_1(pj_pool_factory *pfactory)
@@ -397,6 +394,15 @@ PJ_IDECL(void) pj_pool_release( pj_pool_t *pool );
  * @param ppool	    Pointer to memory pool.
  */
 PJ_IDECL(void) pj_pool_safe_release( pj_pool_t **ppool );
+
+
+/**
+ * Release the pool back to pool factory and set the pool pointer to zero.
+ * The memory pool content will be wiped out first before released.
+ *
+ * @param ppool	    Pointer to memory pool.
+ */
+PJ_IDECL(void) pj_pool_secure_release( pj_pool_t **ppool );
 
 
 /**

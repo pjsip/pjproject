@@ -241,7 +241,7 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     
     if (dev_ori == prev_ori) return;
     
-    NSLog(@"Device orientation changed: %d", (prev_ori = dev_ori));
+    NSLog(@"Device orientation changed: %d", (int)(prev_ori = dev_ori));
     
     if (dev_ori >= UIDeviceOrientationPortrait &&
         dev_ori <= UIDeviceOrientationLandscapeRight)

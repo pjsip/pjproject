@@ -97,18 +97,16 @@ class MyCall extends Call
 		 cmi.getStatus() == 
 			pjsua_call_media_status.PJSUA_CALL_MEDIA_REMOTE_HOLD))
 	    {
-		// unfortunately, on Java too, the returned Media cannot be
-		// downcasted to AudioMedia 
-		Media m = getMedia(i);
-		AudioMedia am = AudioMedia.typecastFromMedia(m);
-
 		// connect ports
 		try {
+		    AudioMedia am = getAudioMedia(i);
 		    MyApp.ep.audDevManager().getCaptureDevMedia().
 							    startTransmit(am);
 		    am.startTransmit(MyApp.ep.audDevManager().
 				     getPlaybackDevMedia());
 		} catch (Exception e) {
+		    System.out.println("Failed connecting media ports" +
+				       e.getMessage());
 		    continue;
 		}
 	    } else if (cmi.getType() == pjmedia_type.PJMEDIA_TYPE_VIDEO &&
@@ -417,6 +415,10 @@ class MyApp {
 	    my_cfg.accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
 	    my_cfg.accCfg.getVideoConfig().setAutoShowIncoming(true);
 
+	    /* Enable SRTP optional mode and without requiring SIP TLS transport */
+	    my_cfg.accCfg.getMediaConfig().setSrtpUse(pjmedia_srtp_use.PJMEDIA_SRTP_OPTIONAL);
+	    my_cfg.accCfg.getMediaConfig().setSrtpSecureSignaling(0);
+
 	    MyAccount acc = addAcc(my_cfg.accCfg);
 	    if (acc == null)
 		continue;
@@ -442,6 +444,7 @@ class MyApp {
 	try {
 	    acc.create(cfg);
 	} catch (Exception e) {
+	    System.out.println(e);
 	    acc = null;
 	    return null;
 	}

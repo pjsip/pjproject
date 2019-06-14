@@ -18,7 +18,7 @@ export CFLAGS += -Wno-unused-label -g
 #define PJ_HAS_IPV6		0
 ]]>			
 		</FileWrite>
-		<Configure cmd='make distclean &amp;&amp; ./aconfigure --enable-ipp --with-ipp="$(IPPROOT)" --with-ipp-samples="$(IPPSAMPLES)" --with-ipp-arch=$(IPPARCH)' />
+		<Configure cmd='make distclean &amp;&amp; ./aconfigure --enable-ipp --with-ipp="$(IPPROOT)" --with-ipp-samples="$(IPPSAMPLES)" --with-ipp-arch=$(IPPARCH) --with-ssl=/Users/pjsip/Desktop/opt' />
 		<Build cmd="make dep &amp;&amp; make clean &amp;&amp; make" />
 		<Test name="pjlib-test" wdir="pjlib/bin" cmd="./pjlib-test-$(SUFFIX)" disabled=$(NOTEST) />
 		<Test name="pjlib-util-test" wdir="pjlib-util/bin" cmd="./pjlib-util-test-$(SUFFIX)" disabled=$(NOTEST) />

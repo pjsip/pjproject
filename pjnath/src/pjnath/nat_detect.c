@@ -581,8 +581,8 @@ static void on_request_complete(pj_stun_session *stun_sess,
 	goto on_return;
     }
 
-    PJ_LOG(5,(sess->pool->obj_name, "Completed %s, status=%d",
-	      test_names[test_id], status));
+    PJ_PERROR(5,(sess->pool->obj_name, status, "Completed %s",
+		 test_names[test_id]));
 
     sess->result[test_id].complete = PJ_TRUE;
     sess->result[test_id].status = status;

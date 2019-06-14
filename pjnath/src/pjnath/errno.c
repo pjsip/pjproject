@@ -193,20 +193,16 @@ PJ_DEF(pj_status_t) pjnath_init(void)
 PJ_DEF(void) pjnath_perror(const char *sender, const char *title,
 			   pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
 #if PJNATH_ERROR_LEVEL==1
-    PJ_LOG(1,(sender, "%s: %s", title, errmsg));
+    PJ_PERROR(1,(sender, status, title));
 #elif PJNATH_ERROR_LEVEL==2
-    PJ_LOG(2,(sender, "%s: %s", title, errmsg));
+    PJ_PERROR(2,(sender, status, title));
 #elif PJNATH_ERROR_LEVEL==3
-    PJ_LOG(3,(sender, "%s: %s", title, errmsg));
+    PJ_PERROR(3,(sender, status, title));
 #elif PJNATH_ERROR_LEVEL==4
-    PJ_LOG(4,(sender, "%s: %s", title, errmsg));
+    PJ_PERROR(4,(sender, status, title));
 #elif PJNATH_ERROR_LEVEL==5
-    PJ_LOG(5,(sender, "%s: %s", title, errmsg));
+    PJ_PERROR(5,(sender, status, title));
 #else
 # error Invalid PJNATH_ERROR_LEVEL value
 #endif

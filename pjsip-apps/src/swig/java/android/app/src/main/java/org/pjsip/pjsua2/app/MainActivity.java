@@ -610,7 +610,7 @@ public class MainActivity extends Activity
 	    ci = call.getInfo();
 	} catch (Exception e) {}
         
-	if (ci != null)
+	if (ci == null)
 	    return;
 
 	Message m = Message.obtain(handler, MSG_TYPE.CALL_STATE, ci);

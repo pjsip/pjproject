@@ -300,7 +300,7 @@ pj_status_t pjsua_aud_subsys_init()
     status = pjmedia_codec_register_audio_codecs(pjsua_var.med_endpt,
                                                  &codec_cfg);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "Error registering codecs"));
+	pjsua_perror(THIS_FILE, "Error registering codecs", status);
 	goto on_error;
     }
 
@@ -2387,6 +2387,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(param && p_snd, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param->base.channel_count == 1, PJMEDIA_ENCCHANNEL);
 
     pool = pjsua_pool_create("extsnd%p", 512, 512);
     if (!pool)
@@ -2444,7 +2445,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
 
 on_return:
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3,(THIS_FILE, "Failed creating extra sound device"));
+	pjsua_perror(THIS_FILE, "Failed creating extra sound device", status);
 	pjsua_ext_snd_dev_destroy(snd);
     }
 

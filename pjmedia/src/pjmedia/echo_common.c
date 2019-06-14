@@ -401,8 +401,8 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
     rc = pjmedia_delay_buf_get(echo->delay_buf, oldest_frm->buf);
     if (rc != PJ_SUCCESS) {
 	/* Ooops.. no frame! */
-	PJ_LOG(5,(echo->obj_name, 
-		  "No frame from delay buffer. This will upset EC later"));
+	PJ_PERROR(5,(echo->obj_name, rc,
+		  "No frame from delay buffer (this will upset EC later)"));
 	pjmedia_zero_samples(oldest_frm->buf, echo->samples_per_frame);
     }
     pj_list_push_back(&echo->lat_buf, oldest_frm);

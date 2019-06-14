@@ -73,7 +73,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			stream.o stream_info.o tonegen.o transport_adapter_sample.o \
 			transport_ice.o transport_loop.o transport_srtp.o transport_udp.o \
 			types.o vid_codec.o vid_codec_util.o \
-			vid_port.o vid_stream.o vid_stream_info.o vid_tee.o \
+			vid_port.o vid_stream.o vid_stream_info.o vid_conf.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			wsola.o audiodev.o videodev.o
 

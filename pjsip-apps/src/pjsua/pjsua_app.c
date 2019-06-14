@@ -53,8 +53,8 @@ pj_bool_t showNotification(pjsua_call_id call_id);
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
-static pj_status_t app_init();
-static pj_status_t app_destroy();
+static pj_status_t app_init(void);
+static pj_status_t app_destroy(void);
 
 static pjsua_app_cfg_t app_cfg;
 pj_str_t		    uri_arg;
@@ -532,10 +532,12 @@ static void on_call_media_state(pjsua_call_id call_id)
 /*
  * DTMF callback.
  */
+/*
 static void call_on_dtmf_callback(pjsua_call_id call_id, int dtmf)
 {
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c", call_id, dtmf));
 }
+*/
 
 static void call_on_dtmf_callback2(pjsua_call_id call_id, 
 				   const pjsua_dtmf_info *info)
@@ -904,6 +906,19 @@ static pj_status_t on_snd_dev_operation(int operation)
     return PJ_SUCCESS;
 }
 
+static char *get_media_dir(pjmedia_dir dir) {
+    switch (dir) {
+    case PJMEDIA_DIR_ENCODING:
+	return "TX";
+    case PJMEDIA_DIR_DECODING:
+	return "RX";
+    case PJMEDIA_DIR_ENCODING+PJMEDIA_DIR_DECODING:
+	return "TX+RX";
+    default:
+	return "unknown dir";
+    }    
+}
+
 /* Callback on media events */
 static void on_call_media_event(pjsua_call_id call_id,
                                 unsigned med_idx,
@@ -914,8 +929,18 @@ static void on_call_media_event(pjsua_call_id call_id,
     PJ_LOG(5,(THIS_FILE, "Event %s",
 	      pjmedia_fourcc_name(event->type, event_name)));
 
+    if (event->type == PJMEDIA_EVENT_MEDIA_TP_ERR) {
+	pjmedia_event_media_tp_err_data *err_data;
+
+	err_data = &event->data.med_tp_err;
+	PJ_PERROR(3, (THIS_FILE, err_data->status, 
+		  "Media transport error event (%s %s %s)",
+		  (err_data->type==PJMEDIA_TYPE_AUDIO)?"Audio":"Video",
+		  (err_data->is_rtp)?"RTP":"RTCP",
+		  get_media_dir(err_data->dir)));
+    }
 #if PJSUA_HAS_VIDEO
-    if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
+    else if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
 	/* Adjust renderer window size to original video size */
 	pjsua_call_info ci;
 
@@ -930,7 +955,7 @@ static void on_call_media_event(pjsua_call_id call_id,
 
 	    wid = ci.media[med_idx].stream.vid.win_in;
 	    pjsua_vid_win_get_info(wid, &win_info);
-	    
+
 	    size = event->data.fmt_changed.new_fmt.det.vid.size;
 	    if (size.w != win_info.size.w || size.h != win_info.size.h) {
 		pjsua_vid_win_set_size(wid, &size);
@@ -942,8 +967,7 @@ static void on_call_media_event(pjsua_call_id call_id,
     }
 #else
     PJ_UNUSED_ARG(call_id);
-    PJ_UNUSED_ARG(med_idx);
-    PJ_UNUSED_ARG(event);
+    PJ_UNUSED_ARG(med_idx);    
 #endif
 }
 
@@ -1227,9 +1251,10 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
-static pj_status_t app_init()
+static pj_status_t app_init(void)
 {
     pjsua_transport_id transport_id = -1;
+    pjsua_transport_id udp6_tp_id = -1, tcp6_tp_id = -1, tls6_tp_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_pool_t *tmp_pool;
@@ -1258,6 +1283,9 @@ static pj_status_t app_init()
 	pj_pool_release(tmp_pool);
 	return status;
     }
+    
+    if (app_config.ipv6)
+    	app_config.cfg.stun_try_ipv6 = PJ_TRUE;
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
@@ -1584,6 +1612,7 @@ static pj_status_t app_init()
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+	udp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1649,6 +1678,7 @@ static pj_status_t app_init()
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+	tcp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1688,6 +1718,7 @@ static pj_status_t app_init()
 	tcp_cfg.port--;
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+	tls6_tp_id = transport_id;
 	
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
@@ -1750,6 +1781,58 @@ static pj_status_t app_init()
 	app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
 	app_config.acc_cfg[i].reg_retry_interval = 300;
 	app_config.acc_cfg[i].reg_first_retry_interval = 60;
+	if (app_config.ipv6) {
+	    pj_str_t *dst_uri = NULL;
+	    pj_str_t tmp;
+	    pjsip_uri *uri;
+
+	    // Uncomment this for testing in a NAT64 network
+	    // app_config.acc_cfg[i].nat64_opt = PJSUA_NAT64_ENABLED;
+	    app_config.acc_cfg[i].ipv6_media_use = PJSUA_IPV6_ENABLED;
+
+	    if ((app_config.cfg.outbound_proxy_cnt > 0) &&
+	        (app_config.acc_cfg[i].reg_use_proxy == 1 /* outbound */ ||
+	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
+	    {
+	    	dst_uri = &app_config.cfg.outbound_proxy[0];
+	    } else if ((app_config.acc_cfg[i].proxy_cnt > 0) &&
+	        (app_config.acc_cfg[i].reg_use_proxy == 2 /* acc */ ||
+	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
+	    {
+	    	dst_uri = &app_config.acc_cfg[i].proxy[0];
+	    } else if (app_config.acc_cfg[i].reg_uri.slen > 0) {
+	    	dst_uri = &app_config.acc_cfg[i].reg_uri;
+	    }
+	    
+	    pj_strdup_with_null(app_config.pool, &tmp, dst_uri);
+
+	    uri = pjsip_parse_uri(app_config.pool, tmp.ptr, tmp.slen, 0);
+	    if (uri != NULL) {
+		pjsip_sip_uri *sip_uri;
+		pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;	
+		
+		sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+
+    		/* Get transport type of the URI */
+    		if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
+		    tp_type = PJSIP_TRANSPORT_TLS;
+    		} else if (sip_uri->transport_param.slen == 0) {
+		    tp_type = PJSIP_TRANSPORT_UDP;
+    		} else {
+		    tp_type = pjsip_transport_get_type_from_name(
+		    		  &sip_uri->transport_param);
+		    tp_type &= ~ PJSIP_TRANSPORT_IPV6;
+		}
+		
+		if (tp_type == PJSIP_TRANSPORT_UDP) {
+	    	    app_config.acc_cfg[i].transport_id = udp6_tp_id;
+		} else if (tp_type == PJSIP_TRANSPORT_TCP) {
+	    	    app_config.acc_cfg[i].transport_id = tcp6_tp_id;
+		} else if (tp_type == PJSIP_TRANSPORT_TLS) {
+	    	    app_config.acc_cfg[i].transport_id = tls6_tp_id;
+		}
+	    }
+	}
 
 	app_config_init_video(&app_config.acc_cfg[i]);
 
@@ -1793,7 +1876,7 @@ static pj_status_t app_init()
     if (app_config.null_audio) {
 	status = pjsua_set_null_snd_dev();
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
     }
 #endif
 
@@ -1810,6 +1893,11 @@ static pj_status_t app_init()
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
     call_opt.vid_cnt = app_config.vid.vid_cnt;
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
 
     pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
@@ -1892,7 +1980,7 @@ on_return:
     return status;
 }
 
-static pj_status_t app_destroy()
+static pj_status_t app_destroy(void)
 {
     pj_status_t status = PJ_SUCCESS;
     unsigned i;
@@ -1960,6 +2048,11 @@ static pj_status_t app_destroy()
 	cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;	
     }
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+    /* Wipe out TLS key settings in transport configs */
+    pjsip_tls_setting_wipe_keys(&app_config.udp_cfg.tls_setting);
+#endif
+
     /* Reset config */
     pj_bzero(&app_config, sizeof(app_config));
 
@@ -1972,7 +2065,7 @@ static pj_status_t app_destroy()
     return status;
 }
 
-pj_status_t pjsua_app_destroy()
+pj_status_t pjsua_app_destroy(void)
 {
     pj_status_t status;
 

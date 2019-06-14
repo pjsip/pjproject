@@ -166,11 +166,7 @@ static pj_status_t tcp_create(struct tcp_listener *listener,
 static void tcp_perror(const char *sender, const char *title,
 		       pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
-
-    pj_strerror(status, errmsg, sizeof(errmsg));
-
-    PJ_LOG(3,(sender, "%s: %s [code=%d]", title, errmsg, status));
+    PJ_PERROR(3,(sender, status, "%s: [code=%d]", title, status));
 }
 
 
@@ -692,6 +688,8 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_grp_lock_add_ref(tcp->grp_lock);
     pj_grp_lock_add_handler(tcp->grp_lock, pool, tcp, &tcp_on_destroy);
 
+    tcp->base.grp_lock = tcp->grp_lock;
+
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
     asock_cfg.async_cnt = 1;
@@ -746,7 +744,11 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     return PJ_SUCCESS;
 
 on_error:
-    tcp_destroy(&tcp->base, status);
+    if (tcp->grp_lock && pj_grp_lock_get_ref(tcp->grp_lock))
+	tcp_destroy(&tcp->base, status);
+    else
+    	tcp_on_destroy(tcp);
+
     return status;
 }
 
@@ -867,8 +869,6 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 	tcp->grp_lock = NULL;
 	pj_grp_lock_dec_ref(grp_lock);
 	/* Transport may have been deleted at this point */
-    } else {
-	tcp_on_destroy(tcp);
     }
 
     return PJ_SUCCESS;
@@ -961,9 +961,8 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
     status = pj_activesock_start_read2(tcp->asock, tcp->base.pool, size,
 				       readbuf, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	PJ_LOG(4, (tcp->base.obj_name, 
-		   "pj_activesock_start_read() error, status=%d", 
-		   status));
+	PJ_PERROR(4, (tcp->base.obj_name, status,
+		      "pj_activesock_start_read() error"));
 	return status;
     }
 
@@ -1682,9 +1681,8 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_lis_start(pjsip_tpfactory *factory,
 	status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
 				    &enabled, sizeof(enabled));
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(1, ("TRACE", "fail set reuseaddr"));
 	    PJ_PERROR(4, (listener->factory.obj_name, status,
-		"Warning: error applying SO_REUSEADDR"));
+			  "Warning: error applying SO_REUSEADDR"));
 	}
     }
 

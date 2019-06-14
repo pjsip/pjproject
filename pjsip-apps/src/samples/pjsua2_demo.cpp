@@ -30,17 +30,26 @@ class MyCall : public Call
 {
 private:
     MyAccount *myAcc;
+    AudioMediaPlayer *wav_player;
 
 public:
     MyCall(Account &acc, int call_id = PJSUA_INVALID_ID)
     : Call(acc, call_id)
     {
+    	wav_player = NULL;
         myAcc = (MyAccount *)&acc;
+    }
+    
+    ~MyCall()
+    {
+    	if (wav_player)
+    	    delete wav_player;
     }
     
     virtual void onCallState(OnCallStateParam &prm);
     virtual void onCallTransferRequest(OnCallTransferRequestParam &prm);
     virtual void onCallReplaced(OnCallReplacedParam &prm);
+    virtual void onCallMediaState(OnCallMediaStateParam &prm);
 };
 
 class MyAccount : public Account
@@ -114,6 +123,44 @@ void MyCall::onCallState(OnCallStateParam &prm)
     }
 }
 
+void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
+{
+    PJ_UNUSED_ARG(prm);
+
+    unsigned i;
+    CallInfo ci = getInfo();
+    AudioMedia aud_med;
+    AudioMedia& play_dev_med =
+    	Endpoint::instance().audDevManager().getPlaybackDevMedia();
+
+    try {
+    	// Get the first audio media
+    	aud_med = getAudioMedia(-1);
+    } catch(...) {
+	std::cout << "Failed to get audio media" << std::endl;
+	return;
+    }
+
+    if (!wav_player) {
+    	wav_player = new AudioMediaPlayer();
+   	try {
+   	    wav_player->createPlayer(
+   	    	"../../../../tests/pjsua/wavs/input.16.wav", 0);
+   	} catch (...) {
+	    std::cout << "Failed opening wav file" << std::endl;
+	    delete wav_player;
+	    wav_player = NULL;
+    	}
+    }
+
+    // This will connect the wav file to the call audio media
+    if (wav_player)
+    	wav_player->startTransmit(aud_med);
+
+    // And this will connect the call audio media to the sound device/speaker
+    aud_med.startTransmit(play_dev_med);
+}
+
 void MyCall::onCallTransferRequest(OnCallTransferRequestParam &prm)
 {
     /* Create new Call for call transfer */
@@ -127,7 +174,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 }
 
 
-static void mainProg1(Endpoint &ep) throw(Error)
+static void mainProg1(Endpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;
@@ -150,7 +197,11 @@ static void mainProg1(Endpoint &ep) throw(Error)
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
     MyAccount *acc(new MyAccount);
-    acc->create(acc_cfg);
+    try {
+	acc->create(acc_cfg);
+    } catch (...) {
+	std::cout << "Adding account failed" << std::endl;
+    }
     
     pj_thread_sleep(2000);
     
@@ -163,7 +214,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     call->makeCall("sip:test1@pjsip.org", prm);
     
     // Hangup all calls
-    pj_thread_sleep(8000);
+    pj_thread_sleep(4000);
     ep.hangupAllCalls();
     pj_thread_sleep(4000);
     
@@ -172,7 +223,7 @@ static void mainProg1(Endpoint &ep) throw(Error)
     delete acc; /* Will delete all calls too */
 }
 
-static void mainProg2() throw(Error)
+static void mainProg2()
 {
     string json_str;
     {
@@ -218,7 +269,7 @@ static void mainProg2() throw(Error)
 }
 
 
-static void mainProg3(Endpoint &ep) throw(Error)
+static void mainProg3(Endpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
 			    "../../tests/pjsua/wavs/input.16.wav",
@@ -277,7 +328,7 @@ static void mainProg3(Endpoint &ep) throw(Error)
 }
 
 
-static void mainProg() throw(Error)
+static void mainProg()
 {
     string json_str;
 
@@ -329,7 +380,7 @@ static void mainProg() throw(Error)
 }
 
 
-static void mainProg4(Endpoint &ep) throw(Error)
+static void mainProg4(Endpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;

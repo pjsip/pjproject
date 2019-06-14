@@ -143,6 +143,10 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     int pending_op = 0;
     pj_ioqueue_op_key_t read_op, write_op;
 
+    // Init operation keys.
+    pj_ioqueue_op_key_init(&read_op, sizeof(read_op));
+    pj_ioqueue_op_key_init(&write_op, sizeof(write_op));
+
     // Start reading on the server side.
     bytes = bufsize;
     status = pj_ioqueue_recv(skey, &read_op, recv_buf, &bytes, 0);
@@ -301,6 +305,9 @@ static int compliance_test_0(pj_bool_t allow_concur)
         app_perror("...ERROR in pj_ioqueue_create()", rc);
 	status=-20; goto on_error;
     }
+
+    // Init operation key.
+    pj_ioqueue_op_key_init(&accept_op, sizeof(accept_op));
 
     // Concurrency
     rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);

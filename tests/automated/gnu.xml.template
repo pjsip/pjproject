@@ -12,9 +12,10 @@ export CFLAGS += -Wno-unused-label -g
 		<FileWrite file="pjlib/include/pj/config_site.h">
 		  <![CDATA[
 /* Written by ccdash */
-#define PJ_HAS_IPV6		1
-#define PJMEDIA_HAS_G7221_CODEC 1
-#define PJMEDIA_SRTP_HAS_DTLS	1
+#define PJ_HAS_IPV6		0	
+#define PJMEDIA_HAS_VIDEO	0
+#undef PJ_HAS_SSL_SOCK
+#define PJ_HAS_SSL_SOCK		0
 ]]>			
 		</FileWrite>
 		<Configure cmd="make distclean &amp;&amp; ./aconfigure" />

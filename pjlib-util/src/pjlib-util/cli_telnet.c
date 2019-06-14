@@ -1785,7 +1785,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
 				&val, sizeof(val));
 
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3, (THIS_FILE, "Failed setting socket options"));
+	PJ_PERROR(3, (THIS_FILE, status, "Failed setting socket options"));
     }
 
     /* The loop is silly, but what else can we do? */
@@ -1820,7 +1820,7 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
 	    pj_strcat(&fe->cfg.prompt_str, &prompt_sign);
 	}
     } else {
-        PJ_LOG(3, (THIS_FILE, "Failed binding the socket"));
+        PJ_PERROR(3, (THIS_FILE, status, "Failed binding the socket"));
         goto on_exit;
     }
 

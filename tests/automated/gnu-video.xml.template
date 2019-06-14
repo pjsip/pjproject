@@ -1,12 +1,12 @@
 <?xml version="1.0" ?>
 <Scenario site="$(HOSTNAME)" url="http://my.cdash.org/submit.php?project=PJSIP" wdir="$(PJDIR)">
  
-	<Submit group="Experimental" build="$(SUFFIX)-$(GCC)-VideoFFmpeg-IPv6" exclude="(.*amr.*)">
+	<Submit group="Experimental" build="$(SUFFIX)-$(GCC)-VideoOpenh264-IPv6-G7221-DTLS" exclude="(.*amr.*)">
 		<Update />
 		<FileWrite file="user.mak">
 		  <![CDATA[
 # Written by ccdash
-export CFLAGS += -Wno-unused-label -g -Wno-deprecated-declarations
+export CFLAGS += -Wno-unused-label -g
 ]]>			
 		</FileWrite>
 		<FileWrite file="pjlib/include/pj/config_site.h">

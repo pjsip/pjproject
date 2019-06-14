@@ -154,6 +154,7 @@ typedef enum pj_ssl_sock_proto
   PJ_SSL_SOCK_PROTO_TLS1_1 = 1 << 3,
   PJ_SSL_SOCK_PROTO_TLS1_2 = 1 << 4,
   PJ_SSL_SOCK_PROTO_SSL23 = (1 << 16) - 1,
+  PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
   PJ_SSL_SOCK_PROTO_DTLS1 = 1 << 16
 } pj_ssl_sock_proto;
 
@@ -201,6 +202,24 @@ typedef enum pj_turn_tp_type
   PJ_TURN_TP_TCP = 6,
   PJ_TURN_TP_TLS = 255
 } pj_turn_tp_type;
+
+typedef enum pjmedia_echo_flag
+{
+  PJMEDIA_ECHO_DEFAULT = 0,
+  PJMEDIA_ECHO_SPEEX = 1,
+  PJMEDIA_ECHO_SIMPLE = 2,
+  PJMEDIA_ECHO_WEBRTC = 3,
+  PJMEDIA_ECHO_ALGO_MASK = 15,
+  PJMEDIA_ECHO_NO_LOCK = 16,
+  PJMEDIA_ECHO_USE_SIMPLE_FIFO = 32,
+  PJMEDIA_ECHO_USE_SW_ECHO = 64,
+  PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR = 128,
+  PJMEDIA_ECHO_AGGRESSIVENESS_DEFAULT = 0,
+  PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x100,
+  PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x200,
+  PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x300,
+  PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF00
+} pjmedia_echo_flag;
 
 typedef enum pjmedia_event_type
 {
@@ -266,13 +285,6 @@ typedef enum pjmedia_vid_dev_cap
   PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS = 512,
   PJMEDIA_VID_DEV_CAP_MAX = 16384
 } pjmedia_vid_dev_cap;
-
-typedef enum pjmedia_aud_dev_id
-{
-  PJMEDIA_AUD_DEFAULT_CAPTURE_DEV = -1,
-  PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV = -2,
-  PJMEDIA_AUD_INVALID_DEV = -3
-} pjmedia_aud_dev_id;
 
 typedef enum pjmedia_aud_dev_route
 {

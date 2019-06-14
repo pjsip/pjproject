@@ -36,6 +36,7 @@ static int datagram_loop_test()
 
     PJ_LOG(3,(THIS_FILE, "testing datagram loop transport"));
 
+    pj_sockaddr_in_init(&addr, NULL, 0);
     /* Test acquire transport. */
     status = pjsip_endpt_acquire_transport( endpt, PJSIP_TRANSPORT_LOOP_DGRAM,
 					    &addr, sizeof(addr), NULL, &loop);

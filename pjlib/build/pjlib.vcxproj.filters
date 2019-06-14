@@ -215,6 +215,12 @@
     <ClCompile Include="..\src\pj\ip_helper_generic.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_gtls.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\pj\ssl_sock_imp_common.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pj\ioqueue_common_abs.h">
@@ -426,6 +432,9 @@
     </ClInclude>
     <ClInclude Include="..\include\pj\compat\limits.h">
       <Filter>Header Files\compat</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\pj\ssl_sock_imp_common.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

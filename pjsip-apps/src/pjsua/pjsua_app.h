@@ -81,7 +81,7 @@ pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli);
 /**
  * This will destroy/cleanup the application library.
  */
-pj_status_t pjsua_app_destroy();
+pj_status_t pjsua_app_destroy(void);
 
 PJ_END_DECL
     

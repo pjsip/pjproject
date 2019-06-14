@@ -357,8 +357,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 	    
 	    /* Give all what delay buffer has, then pad with zeroes */
             if (b->wsola)
-	        PJ_LOG(4,(b->obj_name,"Error generating frame, status=%d", 
-		          status));
+	        PJ_PERROR(4,(b->obj_name, status, "Error generating frame"));
 
 	    pjmedia_circ_buf_read(b->circ_buf, frame, buf_len);
 	    pjmedia_zero_samples(&frame[buf_len], 

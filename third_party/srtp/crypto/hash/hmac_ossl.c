@@ -54,7 +54,12 @@
 #include <openssl/opensslv.h>
 
 #define SHA1_DIGEST_SIZE		20
-#define USING_LIBRESSL (defined(LIBRESSL_VERSION_NUMBER))
+
+#if defined(LIBRESSL_VERSION_NUMBER)
+#	define USING_LIBRESSL 1
+#else
+#	define USING_LIBRESSL 0
+#endif
 
 /* the debug module for authentiation */
 

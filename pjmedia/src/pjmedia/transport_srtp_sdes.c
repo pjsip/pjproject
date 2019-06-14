@@ -128,7 +128,8 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 	    int err = RAND_bytes((unsigned char*)key,
 				 crypto_suites[cs_idx].cipher_key_len);
 	    if (err != 1) {
-		PJ_LOG(5,(THIS_FILE, "Failed generating random key"));
+		PJ_LOG(4,(THIS_FILE, "Failed generating random key "
+			  "(native err=%d)", err));
 		return PJMEDIA_ERRNO_FROM_LIBSRTP(1);
 	    }
 #else
@@ -159,10 +160,12 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 	return PJMEDIA_SRTP_EINKEYLEN;
 
     /* Key transmitted via SDP should be base64 encoded. */
-    status = pj_base64_encode((pj_uint8_t*)crypto->key.ptr, (int)crypto->key.slen,
+    status = pj_base64_encode((pj_uint8_t*)crypto->key.ptr,
+			      (int)crypto->key.slen,
 			      b64_key, &b64_key_len);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(5,(THIS_FILE, "Failed encoding plain key to base64"));
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Failed encoding plain key to base64"));
 	return status;
     }
 
@@ -258,7 +261,8 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
     status = pj_base64_decode(&token, (pj_uint8_t*)crypto->key.ptr,
 			      &itmp);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(4,(THIS_FILE, "Failed decoding crypto key from base64"));
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Failed decoding crypto key from base64"));
 	return status;
     }
     crypto->key.slen = itmp;

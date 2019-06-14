@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/transport_udp.h>
+#include <pj/compat/socket.h>
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
@@ -26,7 +27,6 @@
 #include <pj/pool.h>
 #include <pj/rand.h>
 #include <pj/string.h>
-
 
 /* Maximum size of incoming RTP packet */
 #define RTP_LEN	    PJMEDIA_MAX_MRU
@@ -154,12 +154,8 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 				       pjmedia_dir dir,
 				       unsigned pct_lost);
 static pj_status_t transport_destroy  (pjmedia_transport *tp);
-
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 static pj_status_t transport_restart  (pj_bool_t is_rtp, 
 				       struct transport_udp *udp);
-#endif
 
 static pjmedia_transport_op transport_udp_op = 
 {
@@ -453,6 +449,46 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     return PJ_SUCCESS;
 }
 
+/* Call RTP cb. */
+static void call_rtp_cb(struct transport_udp *udp, pj_ssize_t bytes_read, 
+			pj_bool_t *rem_switch)
+{
+    void (*cb)(void*,void*,pj_ssize_t);
+    void (*cb2)(pjmedia_tp_cb_param*);
+    void *user_data;
+
+    cb = udp->rtp_cb;
+    cb2 = udp->rtp_cb2;
+    user_data = udp->user_data;
+
+    if (cb2) {
+	pjmedia_tp_cb_param param;
+
+	param.user_data = user_data;
+	param.pkt = udp->rtp_pkt;
+	param.size = bytes_read;
+	param.src_addr = &udp->rtp_src_addr;
+	param.rem_switch = PJ_FALSE;
+	(*cb2)(&param);
+	if (rem_switch)
+	    *rem_switch = param.rem_switch;
+    } else if (cb) {
+	(*cb)(user_data, udp->rtp_pkt, bytes_read);
+    }
+}
+
+/* Call RTCP cb. */
+static void call_rtcp_cb(struct transport_udp *udp, pj_ssize_t bytes_read)
+{
+    void(*cb)(void*, void*, pj_ssize_t);
+    void *user_data;
+
+    cb = udp->rtcp_cb;
+    user_data = udp->user_data;
+
+    if (cb)
+	(*cb)(user_data, udp->rtcp_pkt, bytes_read);
+}
 
 /* Notification from ioqueue about incoming RTP packet */
 static void on_rx_rtp(pj_ioqueue_key_t *key,
@@ -462,6 +498,9 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
     struct transport_udp *udp;
     pj_status_t status;
     pj_bool_t rem_switch = PJ_FALSE;
+    pj_bool_t transport_restarted = PJ_FALSE;
+    unsigned num_err = 0;
+    pj_status_t last_err = PJ_SUCCESS;
 
     PJ_UNUSED_ARG(op_key);
 
@@ -469,31 +508,18 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
     if (-bytes_read == PJ_ESOCKETSTOP) {
 	/* Try to recover by restarting the transport. */
-	PJ_LOG(4, (udp->base.name, "Restarting RTP transport"));
 	status = transport_restart(PJ_TRUE, udp);
-	if (status == PJ_SUCCESS) {
-	    PJ_LOG(4, (udp->base.name, "Success restarting RTP transport"));
-	} else {
-	    PJ_PERROR(1, (udp->base.name, status, 
-			  "Error restarting RTP transport"));
+	if (status != PJ_SUCCESS) {
+	    bytes_read = -PJ_ESOCKETSTOP;
+	    call_rtp_cb(udp, bytes_read, NULL);
 	}
 	return;
     }
-#endif
 
     do {
-	void (*cb)(void*,void*,pj_ssize_t);
-	void (*cb2)(pjmedia_tp_cb_param*);
-	void *user_data;
 	pj_bool_t discard = PJ_FALSE;
-
-	cb = udp->rtp_cb;
-	cb2 = udp->rtp_cb2;
-	user_data = udp->user_data;
 
 	/* Simulate packet lost on RX direction */
 	if (udp->rx_drop_pct) {
@@ -506,20 +532,10 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 	}
 
 	//if (!discard && udp->attached && cb)
-	if (!discard) {
-	    if (cb2) {
-		pjmedia_tp_cb_param param;
-
-	    	param.user_data = user_data;
-	    	param.pkt = udp->rtp_pkt;
-	    	param.size = bytes_read;
-	    	param.src_addr = &udp->rtp_src_addr;
-	    	param.rem_switch = PJ_FALSE;
-	    	(*cb2)(&param);
-	    	rem_switch = param.rem_switch;
-	    } else if (cb) {
-	    	(*cb)(user_data, udp->rtp_pkt, bytes_read);
-	    }
+	if (!discard && 
+	    (-bytes_read != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))) 
+	{
+	    call_rtp_cb(udp, bytes_read, &rem_switch);
 	}
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
@@ -565,13 +581,39 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 	bytes_read = sizeof(udp->rtp_pkt);
 	udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
 	status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
-				     udp->rtp_pkt, &bytes_read, 0,
-				     &udp->rtp_src_addr, 
-				     &udp->rtp_addrlen);
+					udp->rtp_pkt, &bytes_read, 0,
+					&udp->rtp_src_addr,
+					&udp->rtp_addrlen);
 
-	if (status != PJ_EPENDING && status != PJ_SUCCESS)
+	if (status != PJ_EPENDING && status != PJ_SUCCESS) {	    
+	    if (transport_restarted && last_err == status) {
+		/* Still the same error after restart */
+		bytes_read = -PJ_ESOCKETSTOP;
+		call_rtp_cb(udp, bytes_read, NULL);
+		break;
+	    } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
+		if (last_err == status) {
+		    ++num_err;
+		} else {
+		    num_err = 1;
+		    last_err = status;
+		}
+
+		if (status == PJ_ESOCKETSTOP ||
+		    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
+		{
+		    status = transport_restart(PJ_TRUE, udp);		    
+		    if (status != PJ_SUCCESS) {
+			bytes_read = -PJ_ESOCKETSTOP;
+			call_rtp_cb(udp, bytes_read, NULL);
+			break;
+		    }
+		    transport_restarted = PJ_TRUE;
+		    num_err = 0;
+		}
+	    }
 	    bytes_read = -status;
-
+	}
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
 	     udp->started);
 }
@@ -584,6 +626,9 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 {
     struct transport_udp *udp;
     pj_status_t status = PJ_SUCCESS;
+    pj_bool_t transport_restarted = PJ_FALSE;
+    unsigned num_err = 0;
+    pj_status_t last_err = PJ_SUCCESS;
 
     PJ_UNUSED_ARG(op_key);
 
@@ -591,32 +636,18 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
     if (-bytes_read == PJ_ESOCKETSTOP) {
 	/* Try to recover by restarting the transport. */
-	PJ_LOG(4, (udp->base.name, "Restarting RTCP transport"));
 	status = transport_restart(PJ_FALSE, udp);
-	if (status == PJ_SUCCESS) {
-	    PJ_LOG(4, (udp->base.name, "Success restarting RTCP transport"));
-	} else {
-	    PJ_PERROR(1, (udp->base.name, status, 
-			  "Error restarting RTCP transport"));
+	if (status != PJ_SUCCESS) {
+	    bytes_read = -PJ_ESOCKETSTOP;
+	    call_rtcp_cb(udp, bytes_read);
 	}
 	return;
     }
-#endif
 
     do {
-	void (*cb)(void*,void*,pj_ssize_t);
-	void *user_data;
-
-	cb = udp->rtcp_cb;
-	user_data = udp->user_data;
-
-	//if (udp->attached && cb)
-	if (cb)
-	    (*cb)(user_data, udp->rtcp_pkt, bytes_read);
+	call_rtcp_cb(udp, bytes_read);
 
 #if defined(PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR) && \
     (PJMEDIA_TRANSPORT_SWITCH_REMOTE_ADDR == 1)
@@ -655,9 +686,36 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 				     udp->rtcp_pkt, &bytes_read, 0,
 				     &udp->rtcp_src_addr, 
 				     &udp->rtcp_addr_len);
-	if (status != PJ_EPENDING && status != PJ_SUCCESS)
-	    bytes_read = -status;
 
+	if (status != PJ_EPENDING && status != PJ_SUCCESS) {
+	    if (transport_restarted && last_err == status) {
+		/* Still the same error after restart */
+		bytes_read = -PJ_ESOCKETSTOP;
+		call_rtcp_cb(udp, bytes_read);
+		break;
+	    } else if (PJMEDIA_IGNORE_RECV_ERR_CNT) {
+		if (last_err == status) {
+		    ++num_err;
+		} else {
+		    num_err = 1;
+		    last_err = status;
+		}
+
+		if (status == PJ_ESOCKETSTOP ||
+		    num_err > PJMEDIA_IGNORE_RECV_ERR_CNT)
+		{
+		    status = transport_restart(PJ_FALSE, udp);		    
+		    if (status != PJ_SUCCESS) {
+			bytes_read = -PJ_ESOCKETSTOP;
+			call_rtcp_cb(udp, bytes_read);
+			break;
+		    }
+		    transport_restarted = PJ_TRUE;
+		    num_err = 0;
+		}
+	    }
+	    bytes_read = -status;
+	}	
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
 	     udp->started);
 }
@@ -927,6 +985,10 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     /* Check that the size is supported */
     PJ_ASSERT_RETURN(size <= PJMEDIA_MAX_MTU, PJ_ETOOBIG);
 
+    if (!udp->started) {
+	return PJ_SUCCESS;
+    }
+
     /* Simulate packet lost on TX direction */
     if (udp->tx_drop_pct) {
 	if ((pj_rand() % 100) <= (int)udp->tx_drop_pct) {
@@ -984,6 +1046,10 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     pj_status_t status;
 
     //PJ_ASSERT_RETURN(udp->attached, PJ_EINVALIDOP);
+
+    if (!udp->started) {
+	return PJ_SUCCESS;
+    }
 
     if (addr == NULL) {
 	addr = &udp->rem_rtcp_addr;
@@ -1180,9 +1246,7 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-static pj_status_t transport_restart(pj_bool_t is_rtp,
+static pj_status_t transport_restart(pj_bool_t is_rtp, 
 				     struct transport_udp *udp)
 {
     pj_ioqueue_key_t *key = (is_rtp ? udp->rtp_key : udp->rtcp_key);
@@ -1193,6 +1257,10 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     pj_ioqueue_callback cb;
     pj_ssize_t size;
 
+    PJ_LOG(4, (udp->base.name, "Restarting %s transport", 
+	      (is_rtp)?"RTP":"RTCP"));
+
+    udp->started = PJ_FALSE;
     /* Destroy existing socket, if any. */    
     if (key) {
 	/* This will block the execution if callback is still
@@ -1207,7 +1275,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     } else if (*sock != PJ_INVALID_SOCKET) {
 	pj_sock_close(*sock);
     }
-    *sock = PJ_INVALID_SOCKET;
+    *sock = PJ_INVALID_SOCKET;   
 
     /* Create socket */
     af = udp->rtp_addr_name.addr.sa_family;
@@ -1223,43 +1291,19 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
 
     /* Set buffer size for RTP socket */
 #if PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE
-    {
+    if (is_rtp) {
 	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE;
 
-	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(),
-					  PJ_TRUE, &sobuf_size);
-	if (status != PJ_SUCCESS) {
-	    pj_perror(3, udp->base.name, status, "Failed setting SO_RCVBUF");
-	} else {
-	    if (sobuf_size < PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE) {
-		PJ_LOG(4, (udp->base.name,
-			   "Warning! Cannot set SO_RCVBUF as configured, "
-			   "now=%d, configured=%d",
-			   sobuf_size, PJMEDIA_TRANSPORT_SO_RCVBUF_SIZE));
-	    } else {
-		PJ_LOG(5, (udp->base.name, "SO_RCVBUF set to %d", sobuf_size));
-	    }
-	}
+	pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_RCVBUF(), 
+				 PJ_TRUE, &sobuf_size);
     }
 #endif
 #if PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE
-    {
+    if (is_rtp) {
 	unsigned sobuf_size = PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
 
-	status = pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(),
-					  PJ_TRUE, &sobuf_size);
-	if (status != PJ_SUCCESS) {
-	    pj_perror(3, udp->base.name, status, "Failed setting SO_SNDBUF");
-	} else {
-	    if (sobuf_size < PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE) {
-		PJ_LOG(4, (udp->base.name,
-			   "Warning! Cannot set SO_SNDBUF as configured, "
-			   "now=%d, configured=%d",
-			   sobuf_size, PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE));
-	    } else {
-		PJ_LOG(5, (udp->base.name, "SO_SNDBUF set to %d", sobuf_size));
-	    }
-	}
+	pj_sock_setsockopt_sobuf(udp->rtp_sock, pj_SO_SNDBUF(), 
+				 PJ_TRUE, &sobuf_size);
     }
 #endif
     pj_bzero(&cb, sizeof(cb));
@@ -1295,13 +1339,16 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     if (status != PJ_EPENDING)
 	goto on_error;
 
-
+    udp->started = PJ_TRUE;
+    PJ_LOG(4, (udp->base.name, "Success restarting %s transport", 
+	      (is_rtp)?"RTP":"RTCP"));
     return PJ_SUCCESS;
 on_error:
     if (*sock != PJ_INVALID_SOCKET) {
 	pj_sock_close(*sock);
 	*sock = PJ_INVALID_SOCKET;
     }
+    PJ_PERROR(1, (udp->base.name, status, 
+		 "Error restarting %s transport", (is_rtp)?"RTP":"RTCP"));
     return status;
 }
-#endif

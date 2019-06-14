@@ -153,6 +153,21 @@ pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
                                 pjmedia_clock_src *clocksrc );
 
 /**
+ * Subscribe media event notifications from the specified media port.
+ * Sample use case is that renderer video port needs to monitor stream port
+ * events so renderer can adjust its param whenever stream port detects
+ * format change.
+ *
+ * @param vid_port	The video port.
+ * @param port		The media port whose events to be monitored.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_port_subscribe_event(
+						pjmedia_vid_port *vid_port,
+						pjmedia_port *port);
+
+/**
  * Connect the video port to a downstream (slave) media port. This operation
  * is only valid for video ports created with active interface selected.
  * Connecting a passive video port may raise an assertion.

@@ -506,19 +506,19 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_ssrc(const pjmedia_sdp_attr *attr,
 
     /* Parse */
     PJ_TRY {
-        pj_str_t attr;
+        pj_str_t scan_attr;
 
 	/* Get the ssrc */
 	pj_scan_get(&scanner, &cs_digit, &token);
 	ssrc->ssrc = pj_strtoul(&token);
 
     	pj_scan_get_char(&scanner);
-	pj_scan_get(&scanner, &cs_token, &attr);
+	pj_scan_get(&scanner, &cs_token, &scan_attr);
 	
 	/* Get cname attribute, if any */
 	if (!pj_scan_is_eof(&scanner) &&
 	    pj_scan_get_char(&scanner) == ':' &&
-	    pj_strcmp2(&attr, "cname"))
+	    pj_strcmp2(&scan_attr, "cname"))
 	{
 	    pj_scan_get(&scanner, &cs_token, &ssrc->cname);
 	}
@@ -1433,12 +1433,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     }
     PJ_CATCH_ANY {
 	
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(ctx.last_error, errmsg, sizeof(errmsg));
-
-	PJ_LOG(4, (THIS_FILE, "Error parsing SDP in line %d col %d: %s",
-		   scanner.line, pj_scan_get_col(&scanner),
-		   errmsg));
+	PJ_PERROR(4, (THIS_FILE, ctx.last_error,
+		      "Error parsing SDP in line %d col %d",
+		      scanner.line, pj_scan_get_col(&scanner)));
 
 	session = NULL;
 

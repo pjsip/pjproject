@@ -33,6 +33,16 @@ static void factory_destroy_factory(pjmedia_converter_factory *cf);
 static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
 					   pjmedia_frame *src_frame,
 					   pjmedia_frame *dst_frame);
+static pj_status_t libswscale_conv_convert2(
+				    pjmedia_converter	    *converter,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    pjmedia_converter_convert_setting
+							    *param);
 static void libswscale_conv_destroy(pjmedia_converter *converter);
 
 
@@ -59,7 +69,8 @@ static pjmedia_converter_factory_op libswscale_factory_op =
 static pjmedia_converter_op liswscale_converter_op =
 {
     &libswscale_conv_convert,
-    &libswscale_conv_destroy
+    &libswscale_conv_destroy,
+    &libswscale_conv_convert2
 };
 
 static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
@@ -149,6 +160,75 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
 
     dst->apply_param.buffer = dst_frame->buf;
     (*dst->fmt_info->apply_fmt)(dst->fmt_info, &dst->apply_param);
+
+    h = sws_scale(fcv->sws_ctx,
+	          (const uint8_t* const *)src->apply_param.planes,
+	          src->apply_param.strides,
+		  0, src->apply_param.size.h,
+		  dst->apply_param.planes, dst->apply_param.strides);
+
+    //sws_scale() return value can't be trusted? There are cases when
+    //sws_scale() returns zero but conversion seems to work okay.
+    //return h==(int)dst->apply_param.size.h ? PJ_SUCCESS : PJ_EUNKNOWN;
+    PJ_UNUSED_ARG(h);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t libswscale_conv_convert2(
+				    pjmedia_converter	    *converter,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    pjmedia_converter_convert_setting
+							    *param)
+{
+    struct ffmpeg_converter *fcv = (struct ffmpeg_converter*)converter;
+    struct fmt_info *src = &fcv->src,
+	            *dst = &fcv->dst;
+    int h;
+    unsigned j;
+    pjmedia_rect_size orig_src_size;
+    pjmedia_rect_size orig_dst_size;
+
+    PJ_UNUSED_ARG(param);
+
+    /* Save original conversion sizes */
+    orig_src_size = src->apply_param.size;
+    orig_dst_size = dst->apply_param.size;
+
+    /* Set the first act buffer from src frame, and overwrite size. */
+    src->apply_param.buffer = src_frame->buf;
+    src->apply_param.size   = *src_frame_size;
+    (*src->fmt_info->apply_fmt)(src->fmt_info, &src->apply_param);
+
+    /* Set the last act buffer from dst frame, and overwrite size. */
+    dst->apply_param.buffer = dst_frame->buf;
+    dst->apply_param.size   = *dst_frame_size;
+    (*dst->fmt_info->apply_fmt)(dst->fmt_info, &dst->apply_param);
+
+    for (j = 0; j < src->fmt_info->plane_cnt; ++j) {
+	pjmedia_video_apply_fmt_param *ap = &src->apply_param;
+	int y = src_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+		ap->size.h;
+	ap->planes[j] += y * ap->strides[j] +
+			 src_pos->x * ap->strides[j] / ap->size.w;
+    }
+
+    for (j = 0; j < dst->fmt_info->plane_cnt; ++j) {
+	pjmedia_video_apply_fmt_param *ap = &dst->apply_param;
+	int y = dst_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+		ap->size.h;
+	ap->planes[j] += y * ap->strides[j] +
+			 dst_pos->x * ap->strides[j] / ap->size.w;
+    }
+
+    /* Return back the original conversion size */
+    src->apply_param.size = orig_src_size;
+    dst->apply_param.size = orig_dst_size;
 
     h = sws_scale(fcv->sws_ctx,
 	          (const uint8_t* const *)src->apply_param.planes,

@@ -100,3 +100,22 @@ PJ_IDEF(void) pj_pool_safe_release( pj_pool_t **ppool )
     if (pool)
 	pj_pool_release(pool);
 }
+
+PJ_IDEF(void) pj_pool_secure_release( pj_pool_t **ppool )
+{
+    pj_pool_block *b;
+    pj_pool_t *pool = *ppool;
+    *ppool = NULL;
+
+    if (!pool)
+	return;
+
+    b = pool->block_list.next;
+    while (b != &pool->block_list) {
+	volatile unsigned char *p = b->buf;
+	while (p < b->end) *p++ = 0;
+	b = b->next;
+    }
+
+    pj_pool_release(pool);
+}

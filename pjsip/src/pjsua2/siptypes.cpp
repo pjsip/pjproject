@@ -30,7 +30,7 @@ namespace pj
 {
 void readIntVector( ContainerNode &node,
                     const string &array_name,
-                    IntVector &v) throw(Error)
+                    IntVector &v) PJSUA2_THROW(Error)
 {
     ContainerNode array_node = node.readArray(array_name);
     v.resize(0);
@@ -41,7 +41,7 @@ void readIntVector( ContainerNode &node,
 
 void writeIntVector(ContainerNode &node,
                     const string &array_name,
-                    const IntVector &v) throw(Error)
+                    const IntVector &v) PJSUA2_THROW(Error)
 {
     ContainerNode array_node = node.writeNewArray(array_name);
     for (unsigned i=0; i<v.size(); ++i) {
@@ -50,7 +50,7 @@ void writeIntVector(ContainerNode &node,
 }
 
 void readQosParams( ContainerNode &node,
-                    pj_qos_params &qos) throw(Error)
+                    pj_qos_params &qos) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("qosParams");
 
@@ -61,7 +61,7 @@ void readQosParams( ContainerNode &node,
 }
 
 void writeQosParams( ContainerNode &node,
-                     const pj_qos_params &qos) throw(Error)
+                     const pj_qos_params &qos) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("qosParams");
 
@@ -73,7 +73,7 @@ void writeQosParams( ContainerNode &node,
 
 void readSipHeaders( const ContainerNode &node,
                      const string &array_name,
-                     SipHeaderVector &headers) throw(Error)
+                     SipHeaderVector &headers) PJSUA2_THROW(Error)
 {
     ContainerNode headers_node = node.readArray(array_name);
     headers.resize(0);
@@ -89,7 +89,7 @@ void readSipHeaders( const ContainerNode &node,
 
 void writeSipHeaders(ContainerNode &node,
                      const string &array_name,
-                     const SipHeaderVector &headers) throw(Error)
+                     const SipHeaderVector &headers) PJSUA2_THROW(Error)
 {
     ContainerNode headers_node = node.writeNewArray(array_name);
     for (unsigned i=0; i<headers.size(); ++i) {
@@ -117,7 +117,7 @@ AuthCredInfo::AuthCredInfo(const string &param_scheme,
 {
 }
 
-void AuthCredInfo::readObject(const ContainerNode &node) throw(Error)
+void AuthCredInfo::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("AuthCredInfo");
 
@@ -131,7 +131,7 @@ void AuthCredInfo::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_STRING( this_node, akaAmf);
 }
 
-void AuthCredInfo::writeObject(ContainerNode &node) const throw(Error)
+void AuthCredInfo::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("AuthCredInfo");
 
@@ -208,7 +208,7 @@ void TlsConfig::fromPj(const pjsip_tls_setting &prm)
     this->qosIgnoreError = PJ2BOOL(prm.qos_ignore_error);
 }
 
-void TlsConfig::readObject(const ContainerNode &node) throw(Error)
+void TlsConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("TlsConfig");
 
@@ -230,7 +230,7 @@ void TlsConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_BOOL    ( this_node, qosIgnoreError);
 }
 
-void TlsConfig::writeObject(ContainerNode &node) const throw(Error)
+void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("TlsConfig");
 
@@ -288,7 +288,7 @@ pjsua_transport_config TransportConfig::toPj() const
     return tc;
 }
 
-void TransportConfig::readObject(const ContainerNode &node) throw(Error)
+void TransportConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.readContainer("TransportConfig");
 
@@ -301,7 +301,8 @@ void TransportConfig::readObject(const ContainerNode &node) throw(Error)
     NODE_READ_OBJ       ( this_node, tlsConfig);
 }
 
-void TransportConfig::writeObject(ContainerNode &node) const throw(Error)
+void TransportConfig::writeObject(ContainerNode &node) const
+				  PJSUA2_THROW(Error)
 {
     ContainerNode this_node = node.writeNewContainer("TransportConfig");
 
@@ -378,7 +379,7 @@ pjsip_media_type SipMediaType::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SipHeader::fromPj(const pjsip_hdr *hdr) throw(Error)
+void SipHeader::fromPj(const pjsip_hdr *hdr) PJSUA2_THROW(Error)
 {
     char *buf = NULL;
     int len = 0;
@@ -435,7 +436,8 @@ pjsip_generic_string_hdr &SipHeader::toPj() const
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SipMultipartPart::fromPj(const pjsip_multipart_part &prm) throw(Error)
+void SipMultipartPart::fromPj(const pjsip_multipart_part &prm)
+			      PJSUA2_THROW(Error)
 {
     headers.clear();
     pjsip_hdr* pj_hdr = prm.hdr.next;
@@ -574,7 +576,7 @@ bool SipTxOption::isEmpty() const
             multipartContentType.subType == "" && multipartParts.size() == 0);
 }
 
-void SipTxOption::fromPj(const pjsua_msg_data &prm) throw(Error)
+void SipTxOption::fromPj(const pjsua_msg_data &prm) PJSUA2_THROW(Error)
 {
     targetUri = pj2Str(prm.target_uri);
 

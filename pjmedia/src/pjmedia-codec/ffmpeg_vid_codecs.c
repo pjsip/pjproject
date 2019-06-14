@@ -685,8 +685,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 		raw_fmt_cnt_should_be++;
 		status = PixelFormat_to_pjmedia_format_id(*p, &fmt_id);
 		if (status != PJ_SUCCESS) {
-		    PJ_LOG(6, (THIS_FILE, "Unrecognized ffmpeg pixel "
-			       "format %d", *p));
+		    PJ_PERROR(6, (THIS_FILE, status,
+				  "Unrecognized ffmpeg pixel format %d", *p));
 		    continue;
 		}
 		

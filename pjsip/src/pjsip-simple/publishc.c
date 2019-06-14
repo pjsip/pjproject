@@ -803,7 +803,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 	// already decremented pending_tsx. Decrementing this here may 
 	// cause accessing freed memory location.
 	//--pubc->pending_tsx;
-	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
+	PJ_PERROR(4,(THIS_FILE, status, "Error sending request"));
     }
 
     return status;

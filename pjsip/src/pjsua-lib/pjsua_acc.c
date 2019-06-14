@@ -163,6 +163,60 @@ static pj_uint32_t calc_proxy_crc(const pj_str_t proxy[], pj_size_t cnt)
 }
 
 /*
+ * Initialize outbound settings.
+ */
+static void init_outbound_setting(pjsua_acc *acc)
+{
+    pjsua_acc_config *acc_cfg = &acc->cfg;
+    if (acc_cfg->rfc5626_instance_id.slen == 0) {
+	const pj_str_t *hostname;
+	pj_uint32_t hval;
+	pj_size_t pos;
+	char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
+
+	hostname = pj_gethostname();
+	pos = pj_ansi_strlen(instprm) - 10;
+	hval = pj_hash_calc(0, hostname->ptr, (unsigned)hostname->slen);
+	pj_val_to_hex_digit(((char*)&hval)[0], instprm + pos + 0);
+	pj_val_to_hex_digit(((char*)&hval)[1], instprm + pos + 2);
+	pj_val_to_hex_digit(((char*)&hval)[2], instprm + pos + 4);
+	pj_val_to_hex_digit(((char*)&hval)[3], instprm + pos + 6);
+
+	pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
+    } else {
+	const char *prmname = ";+sip.instance=\"";
+	pj_size_t len;
+
+	len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
+	acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len + 1);
+	pj_ansi_snprintf(acc->rfc5626_instprm.ptr, len + 1,
+			 "%s%.*s\"",
+			 prmname,
+			 (int)acc_cfg->rfc5626_instance_id.slen,
+			 acc_cfg->rfc5626_instance_id.ptr);
+	acc->rfc5626_instprm.slen = len;
+    }
+
+    if (acc_cfg->rfc5626_reg_id.slen == 0) {
+	acc->rfc5626_regprm = pj_str(";reg-id=1");
+    } else {
+	const char *prmname = ";reg-id=";
+	pj_size_t len;
+
+	len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
+	acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len + 1);
+	pj_ansi_snprintf(acc->rfc5626_regprm.ptr, len + 1,
+			 "%s%.*s\"",
+			 prmname,
+			 (int)acc_cfg->rfc5626_reg_id.slen,
+			 acc_cfg->rfc5626_reg_id.ptr);
+	acc->rfc5626_regprm.slen = len;
+    }
+
+    acc->rfc5626_status = OUTBOUND_WANTED;
+}
+
+/*
  * Initialize a new account (after configuration is set).
  */
 static pj_status_t initialize_acc(unsigned acc_id)
@@ -340,52 +394,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
      * not specified
      */
     if (acc_cfg->use_rfc5626) {
-	if (acc_cfg->rfc5626_instance_id.slen==0) {
-	    const pj_str_t *hostname;
-	    pj_uint32_t hval;
-	    pj_size_t pos;
-	    char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
-
-	    hostname = pj_gethostname();
-	    pos = pj_ansi_strlen(instprm) - 10;
-	    hval = pj_hash_calc(0, hostname->ptr, (unsigned)hostname->slen);
-	    pj_val_to_hex_digit( ((char*)&hval)[0], instprm+pos+0);
-	    pj_val_to_hex_digit( ((char*)&hval)[1], instprm+pos+2);
-	    pj_val_to_hex_digit( ((char*)&hval)[2], instprm+pos+4);
-	    pj_val_to_hex_digit( ((char*)&hval)[3], instprm+pos+6);
-
-	    pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
-	} else {
-	    const char *prmname = ";+sip.instance=\"";
-	    pj_size_t len;
-
-	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
-	    acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
-	    pj_ansi_snprintf(acc->rfc5626_instprm.ptr, len+1,
-		             "%s%.*s\"",
-		             prmname,
-		             (int)acc_cfg->rfc5626_instance_id.slen,
-		             acc_cfg->rfc5626_instance_id.ptr);
-	    acc->rfc5626_instprm.slen = len;
-	}
-
-	if (acc_cfg->rfc5626_reg_id.slen==0) {
-	    acc->rfc5626_regprm = pj_str(";reg-id=1");
-	} else {
-	    const char *prmname = ";reg-id=";
-	    pj_size_t len;
-
-	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
-	    acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
-	    pj_ansi_snprintf(acc->rfc5626_regprm.ptr, len+1,
-		             "%s%.*s\"",
-		             prmname,
-		             (int)acc_cfg->rfc5626_reg_id.slen,
-		             acc_cfg->rfc5626_reg_id.ptr);
-	    acc->rfc5626_regprm.slen = len;
-	}
-
-	acc->rfc5626_status = OUTBOUND_WANTED;
+	init_outbound_setting(acc);
     }
 
     /* Mark account as valid */
@@ -704,6 +713,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     if (pjsua_var.default_acc == acc_id)
 	pjsua_var.default_acc = 0;
 
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_wipe_keys(&acc->cfg.turn_cfg.turn_tls_setting);
+#endif
+
     PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Account id %d deleted", acc_id));
@@ -1013,6 +1026,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->cfg.reg_contact_params,
 			    &cfg->reg_contact_params);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Contact param */
@@ -1020,6 +1034,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->cfg.contact_params,
 			    &cfg->contact_params);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Contact URI params */
@@ -1027,6 +1042,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->cfg.contact_uri_params,
 			    &cfg->contact_uri_params);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Reliable provisional response */
@@ -1301,8 +1317,23 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.use_rfc5626 != cfg->use_rfc5626 ||
 	pj_strcmp(&acc->cfg.rfc5626_instance_id, &cfg->rfc5626_instance_id) ||
 	pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id))
-    {
+    {	
+	if (acc->cfg.use_rfc5626 != cfg->use_rfc5626)
+	    acc->cfg.use_rfc5626 = cfg->use_rfc5626;
+
+	if (pj_strcmp(&acc->cfg.rfc5626_instance_id, 
+		      &cfg->rfc5626_instance_id)) 
+	{
+	    pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_instance_id,
+				&cfg->rfc5626_instance_id);
+	}
+	if (pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id)) {
+	    pj_strdup_with_null(acc->pool, &acc->cfg.rfc5626_reg_id,
+				&cfg->rfc5626_reg_id);
+	}
+	init_outbound_setting(acc);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Video settings */
@@ -3261,9 +3292,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Set this as default return value. This may be changed below
-     * for TCP/TLS
-     */
+    /* Set this as default return value. This may be changed below. */
     addr->host = tfla2_prm.ret_addr;
     addr->port = tfla2_prm.ret_port;
 
@@ -3284,6 +3313,26 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
 	    acc->via_addr.port = addr->port;
 	    acc->via_tp = (pjsip_transport *)tfla2_prm.ret_tp;
 	}
+    } else
+    /* For UDP transport, check if we need to overwrite the address
+     * with its bound address.
+     */
+    if ((flag & PJSIP_TRANSPORT_DATAGRAM) && tfla2_prm.local_if &&
+    	tfla2_prm.ret_tp)
+    {
+    	int i;
+
+    	for (i = 0; i < sizeof(pjsua_var.tpdata); i++) {
+    	    if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
+    	    	if (pjsua_var.tpdata[i].has_bound_addr) {
+		    pj_strdup(acc->pool, &addr->host,
+		    	      &pjsua_var.tpdata[i].data.tp->local_name.host);
+	    	    addr->port = (pj_uint16_t)
+	    	    		 pjsua_var.tpdata[i].data.tp->local_name.port;
+    	    	}
+    	    	break;
+    	    }
+    	}
     }
 
     /* For TCP/TLS, acc may request to specify source port */

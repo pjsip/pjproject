@@ -1391,6 +1391,7 @@ void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags)
 	pjsua_acc_config *acc_cfg = &acc->cfg;
 
 	acc->online_status = PJ_FALSE;
+	acc_cfg->publish_enabled = PJ_FALSE;
 
 	if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
 	    send_publish(acc->index, PJ_FALSE);
@@ -1403,7 +1404,6 @@ void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags)
 	    acc->publish_sess = NULL;
 	}
 	*/
-	acc_cfg->publish_enabled = PJ_FALSE;
     }
 }
 
@@ -1449,7 +1449,8 @@ void pjsua_pres_delete_acc(int acc_id, unsigned flags)
     pj_list_init(&acc->pres_srv_list);
 
     /* Terminate presence publication, if any */
-    pjsua_pres_unpublish(acc, flags);
+    if (acc->cfg.publish_enabled)
+    	pjsua_pres_unpublish(acc, flags);
 }
 
 

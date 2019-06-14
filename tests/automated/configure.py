@@ -30,7 +30,7 @@ def gcc_version(gcc):
             ver = s.split(None, 3)[2]
             break
     proc.wait()
-    return "gcc-" + ver
+    return "gcc" + ver
 
 #
 # Get Visual Studio info

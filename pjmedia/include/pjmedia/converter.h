@@ -123,6 +123,12 @@ typedef struct pjmedia_converter
 
 
 /**
+ * Settings for pjmedia_converter_convert2().
+ */
+typedef void pjmedia_converter_convert_setting;
+
+
+/**
  * Converter factory operation.
  */
 struct pjmedia_converter_factory_op
@@ -157,19 +163,19 @@ struct pjmedia_converter_factory_op
 struct pjmedia_converter_op
 {
     /**
-     * Convert the buffer in the source frame and save the result in the
+     * Convert the buffer of the source frame and save the result in the
      * buffer of the destination frame, according to conversion format that
      * was specified when the converter was created.
      *
      * Note that application should use #pjmedia_converter_convert() instead
      * of calling this function directly.
      *
-     * @param cv	The converter instance.
-     * @param src_frame	The source frame.
-     * @param dst_frame	The destination frame.
+     * @param cv		The converter instance.
+     * @param src_frame		The source frame.
+     * @param dst_frame		The destination frame.
      *
-     * @return		PJ_SUCCESS if conversion has been performed
-     * 			successfully.
+     * @return			PJ_SUCCESS if conversion has been performed
+     * 				successfully.
      */
     pj_status_t (*convert)(pjmedia_converter *cv,
 			   pjmedia_frame *src_frame,
@@ -181,9 +187,39 @@ struct pjmedia_converter_op
      * Note that application should use #pjmedia_converter_destroy() instead
      * of calling this function directly.
      *
-     * @param cv	The converter.
+     * @param cv		The converter.
      */
     void (*destroy)(pjmedia_converter *cv);
+
+    /**
+     * Convert a region in the buffer of the source frame and put the result
+     * into a region in the buffer of the destination frame, according to
+     * conversion format that was specified when the converter was created.
+     *
+     * Note that application should use #pjmedia_converter_convert2() instead
+     * of calling this function directly.
+     *
+     * @param cv		The converter instance.
+     * @param src_frame		The source frame.
+     * @param src_frame_size	The source frame size.
+     * @param src_reg_pos	The source region position.
+     * @param dst_frame		The destination frame.
+     * @param dst_frame_size	The destination frame size.
+     * @param dst_reg_pos	The destination region position.
+     * @param param		This is unused for now and must be NULL.
+     *
+     * @return			PJ_SUCCESS if conversion has been performed
+     * 				successfully.
+     */
+    pj_status_t (*convert2)(pjmedia_converter	    *cv,
+			    pjmedia_frame	    *src_frame,
+			    const pjmedia_rect_size *src_frame_size,
+			    const pjmedia_coord	    *src_pos,
+			    pjmedia_frame	    *dst_frame,
+			    const pjmedia_rect_size *dst_frame_size,
+			    const pjmedia_coord	    *dst_pos,
+			    pjmedia_converter_convert_setting
+						    *param);
 
 };
 
@@ -301,6 +337,35 @@ PJ_DECL(pj_status_t) pjmedia_converter_create(pjmedia_converter_mgr *mgr,
 PJ_DECL(pj_status_t) pjmedia_converter_convert(pjmedia_converter *cv,
 					       pjmedia_frame *src_frame,
 					       pjmedia_frame *dst_frame);
+
+
+/**
+ * Convert a region in the buffer of the source frame and put the result
+ * into a region in the buffer of the destination frame, according to
+ * conversion format that was specified when the converter was created.
+ *
+ * @param cv		    The converter instance.
+ * @param src_frame	    The source frame.
+ * @param src_frame_size    The source frame size.
+ * @param src_reg_pos	    The source region position.
+ * @param dst_frame	    The destination frame.
+ * @param dst_frame_size    The destination frame size.
+ * @param dst_reg_pos	    The destination region position.
+ * @param param		    This is unused for now and must be NULL.
+ *
+ * @return		    PJ_SUCCESS if conversion has been performed
+ * 			    successfully.
+ */
+PJ_DECL(pj_status_t) pjmedia_converter_convert2(
+				    pjmedia_converter	    *cv,
+				    pjmedia_frame	    *src_frame,
+				    const pjmedia_rect_size *src_frame_size,
+				    const pjmedia_coord	    *src_pos,
+				    pjmedia_frame	    *dst_frame,
+				    const pjmedia_rect_size *dst_frame_size,
+				    const pjmedia_coord	    *dst_pos,
+				    pjmedia_converter_convert_setting
+							    *param);
 
 /**
  * Destroy the converter.

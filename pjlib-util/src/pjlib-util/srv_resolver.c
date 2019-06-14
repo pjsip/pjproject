@@ -239,6 +239,11 @@ static void build_server_entries(pj_dns_srv_async_query *query_job,
 	    continue;
 	}
 
+	if (rr->rdata.srv.target.slen == 0) {
+	    PJ_LOG(4,(query_job->objname, "Hostname is empty!"));
+	    continue;
+	}
+
 	/* Build the SRV entry for RR */
 	pj_bzero(srv, sizeof(*srv));
 	srv->target_name.ptr = srv->target_buf;
@@ -580,13 +585,29 @@ static void dns_callback(void *user_data,
 	/* Clear the outstanding job */
 	query_job->q_srv = NULL;
 
-	if (status == PJ_SUCCESS && pkt->hdr.anscount != 0) {
-	    /* Got SRV response, build server entry. If A records are available
-	     * in additional records section of the DNS response, save them too.
-	     */
-	    build_server_entries(query_job, pkt);
+	if (status == PJ_SUCCESS) {
+	    if (PJ_DNS_GET_TC(pkt->hdr.flags)) {
+		/* Got truncated answer, the standard recommends to follow up
+		 * the query using TCP. Since we currently don't support it,
+		 * just return error.
+		 */
+		PJ_LOG(4,(query_job->objname,
+			  "Discard truncated DNS SRV response for %.*s",
+			  (int)query_job->full_name.slen,
+			  query_job->full_name.ptr));
 
-	} else if (status != PJ_SUCCESS) {
+		status = PJ_EIGNORED;
+		query_job->last_error = status;
+		goto on_error;
+	    } else if (pkt->hdr.anscount != 0) {
+		/* Got SRV response, build server entry. If A records are
+		 * available in additional records section of the DNS response,
+		 * save them too.
+		 */
+		build_server_entries(query_job, pkt);
+	    }
+
+	} else {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
 	    /* Update query_job last error */
@@ -610,7 +631,7 @@ static void dns_callback(void *user_data,
 	/* If we can't build SRV record, assume the original target is
 	 * an A record and resolve with DNS A resolution.
 	 */
-	if (query_job->srv_cnt == 0) {
+	if (query_job->srv_cnt == 0 && query_job->domain_part.slen > 0) {
 	    unsigned new_option = 0;
 
 	    /* Looks like we aren't getting any SRV responses.
@@ -685,16 +706,11 @@ static void dns_callback(void *user_data,
         if (status==PJ_SUCCESS && pkt->hdr.anscount != 0) {
             status = pj_dns_parse_addr_response(pkt, &rec);
             if (status!=PJ_SUCCESS) {
-                char errmsg[PJ_ERR_MSG_SIZE];
-	        
-                PJ_LOG(4,(query_job->objname, 
-		          "DNS %s record parse error for '%.*s'."
-		          " Err=%d (%s)",
-                          (is_type_a ? "A" : "AAAA"),
-		          (int)query_job->domain_part.slen,
-		          query_job->domain_part.ptr,
-		          status,
-		          pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+                PJ_PERROR(4,(query_job->objname, status,
+			     "DNS %s record parse error for '%.*s'.",
+			     (is_type_a ? "A" : "AAAA"),
+			     (int)query_job->domain_part.slen,
+			     query_job->domain_part.ptr));
 	    }
 	}
 
@@ -755,17 +771,13 @@ static void dns_callback(void *user_data,
 	    }
 
 	} else if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
 	    /* Update last error */
 	    query_job->last_error = status;
 
 	    /* Log error */
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(query_job->objname,
-		      "DNS %s record resolution failed: %s",
-		      (is_type_a? "A" : "AAAA"),
-		      errmsg));
+	    PJ_PERROR(4,(query_job->objname, status,
+			 "DNS %s record resolution failed",
+			 (is_type_a? "A" : "AAAA")));
 	}
 
 	/* Increment host resolved count when both DNS A and AAAA record
@@ -840,16 +852,11 @@ static void dns_callback(void *user_data,
 on_error:
     /* Check for failure */
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	PJ_UNUSED_ARG(errmsg);
-	PJ_LOG(4,(query_job->objname, 
-		  "DNS %s record resolution error for '%.*s'."
-		  " Err=%d (%s)",
-		  pj_dns_get_type_name(query_job->dns_state),
-		  (int)query_job->domain_part.slen,
-		  query_job->domain_part.ptr,
-		  status,
-		  pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+	PJ_PERROR(4,(query_job->objname, status,
+		     "DNS %s record resolution error for '%.*s'.",
+		     pj_dns_get_type_name(query_job->dns_state),
+		     (int)query_job->domain_part.slen,
+		     query_job->domain_part.ptr));
 
 	/* Cancel any pending query */
 	pj_dns_srv_cancel_query(query_job, PJ_FALSE);
