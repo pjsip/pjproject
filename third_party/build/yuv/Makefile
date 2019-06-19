@@ -71,7 +71,7 @@ export YUV_OBJS = \
 	video_common.o
 
 export YUV_CFLAGS = -fomit-frame-pointer $(_CFLAGS)
-export YUV_CXXFLAGS = $(YUV_CFLAGS)
+export YUV_CXXFLAGS = -fomit-frame-pointer $(_CXXFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
