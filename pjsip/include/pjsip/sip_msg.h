@@ -1070,7 +1070,7 @@ typedef struct pjsip_generic_int_hdr
     /** Standard header field. */
     PJSIP_DECL_HDR_MEMBER(struct pjsip_generic_int_hdr);
     /** ivalue */
-    pj_int32_t ivalue;
+    pj_int64_t ivalue;
 } pjsip_generic_int_hdr;
 
 
