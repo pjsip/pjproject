@@ -21,9 +21,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "                   android-9. By default, configure will use the"
   echo "                   maximum platform level detected."
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
-  echo "                   e.g. armeabi-v7a, mips, x86. By default, the target"
-  echo "                   architecture is armeabi. Only used when"
-  echo "                   --use-ndk-cflags is specified."
+  echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
+  echo "                   the target architecture is arm64-v8a."
   echo "  IGNORE_CFLAGS    Optionally specify compilation flags to be ignored."
   echo "                   Each grepped flag that satisfies the criteria will"
   echo "                   be ignored. Default:"
@@ -49,12 +48,7 @@ if test "x$APP_PLATFORM" = "x"; then
 fi
 
 if test "x$TARGET_ABI" = "x"; then
-  # armeabi was removed since NDK r17
-  if [ "${NDK_VER}" -ge "17" ]; then
-    TARGET_ABI="armeabi-v7a"
-  else
-    TARGET_ABI="armeabi"
-  fi
+  TARGET_ABI="arm64-v8a"
   echo "$F: TARGET_ABI not specified, using ${TARGET_ABI}"
 fi
 

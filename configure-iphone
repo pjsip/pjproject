@@ -18,7 +18,7 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "             to use. By default, the compiler is deduced from the"
   echo "             SDK."
   echo "  ARCH       Optional flags to specify target architecture, e.g."
-  echo "             ARCH=\"-arch armv6\". Default is armv7."
+  echo "             ARCH=\"-arch armv7\". Default is arm64."
   echo "  MIN_IOS    Optional flags to specify minimum supported iOS"
   echo "             versions, e.g. MIN_IOS=\"-miphoneos-version-min=10.0\". "
   echo "             Default is 7.0."
@@ -113,7 +113,7 @@ if test "${CC}" = ""; then
 fi
 
 if test "${ARCH}" = ""; then
-  export ARCH="-arch armv7"
+  export ARCH="-arch arm64"
   echo "$F: ARCH is not specified, choosing ${ARCH}"
 fi
 export ARCH_VAL=`echo ${ARCH} | sed 's/\-arch //' | sed -e 's/^[ \t]*//;s/[ \t]*$//' `
