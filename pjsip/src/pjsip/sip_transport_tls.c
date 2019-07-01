@@ -173,9 +173,11 @@ static void wipe_buf(pj_str_t *buf);
 
 
 static void tls_perror(const char *sender, const char *title,
-		       pj_status_t status)
+		       pj_status_t status, pj_str_t *remote_name)
 {
-    PJ_PERROR(3,(sender, status, "%s: [code=%d]", title, status));
+    PJ_PERROR(3,(sender, status, "%s: [code=%d]%s%.*s", title, status,
+        remote_name ? " peer: " : "", remote_name ? remote_name->slen : 0,
+	remote_name ? remote_name->ptr : ""));
 }
 
 
@@ -730,7 +732,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) {	
 	tls_perror(listener->factory.obj_name, 
-		   "Unable to start listener after closing it", status);
+		   "Unable to start listener after closing it", status, NULL);
 
 	return status;
     }
@@ -739,7 +741,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
 					    &listener->factory);
     if (status != PJ_SUCCESS) {
 	tls_perror(listener->factory.obj_name,
-		    "Unable to register the transport listener", status);
+		    "Unable to register the transport listener", status, NULL);
 
 	listener->is_registered = PJ_FALSE;	
     } else {
@@ -1085,7 +1087,8 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
 				   PJSIP_POOL_RDATA_LEN,
 				   PJSIP_POOL_RDATA_INC);
     if (!pool) {
-	tls_perror(tls->base.obj_name, "Unable to create pool", PJ_ENOMEM);
+	tls_perror(tls->base.obj_name, "Unable to create pool", PJ_ENOMEM,
+		   NULL);
 	return PJ_ENOMEM;
     }
 
@@ -1772,7 +1775,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
 
-	tls_perror(tls->base.obj_name, "TLS connect() error", status);
+	tls_perror(tls->base.obj_name, "TLS connect() error", status,
+		   &tls->remote_name);
 
 	/* Cancel all delayed transmits */
 	while (!pj_list_empty(&tls->delayed_list)) {
@@ -1916,7 +1920,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pjsip_transport_dec_ref(&tls->base);
     if (is_shutdown) {
 	status = tls->close_reason;
-	tls_perror(tls->base.obj_name, "TLS connect() error", status);
+	tls_perror(tls->base.obj_name, "TLS connect() error", status, 
+		   &tls->remote_name);
 
 	/* Cancel all delayed transmits */
 	while (!pj_list_empty(&tls->delayed_list)) {
@@ -2015,7 +2020,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	tls_perror(tls->base.obj_name, 
-		   "Error sending keep-alive packet", status);
+		   "Error sending keep-alive packet", status,
+		   &tls->remote_name);
 
 	tls_init_shutdown(tls, status);
 	return;

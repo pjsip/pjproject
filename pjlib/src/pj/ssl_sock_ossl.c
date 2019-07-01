@@ -210,15 +210,22 @@ static char *SSLErrorString (int err)
     }
 }
 
-#define ERROR_LOG(msg, err) \
-    PJ_LOG(2,("SSL", "%s (%s): Level: %d err: <%lu> <%s-%s-%s> len: %d", \
-	      msg, action, level, err, \
-	      (ERR_lib_error_string(err)? ERR_lib_error_string(err): "???"), \
-	      (ERR_func_error_string(err)? ERR_func_error_string(err):"???"),\
-	      (ERR_reason_error_string(err)? \
-	       ERR_reason_error_string(err): "???"), len));
+#define ERROR_LOG(msg, err, ssock) \
+{ \
+    char buf[PJ_INET6_ADDRSTRLEN+10]; \
+    PJ_LOG(2,("SSL", "%s (%s): Level: %d err: <%lu> <%s-%s-%s> len: %d " \
+	   "peer: %s", \
+	   msg, action, level, err, \
+	   (ERR_lib_error_string(err)? ERR_lib_error_string(err): "???"), \
+	   (ERR_func_error_string(err)? ERR_func_error_string(err):"???"),\
+	   (ERR_reason_error_string(err)? \
+	    ERR_reason_error_string(err): "???"), len, \
+	   (ssock && pj_sockaddr_has_addr(&ssock->rem_addr)? \
+	    pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3):"???")));\
+}
 
-static void SSLLogErrors(char * action, int ret, int ssl_err, int len)
+static void SSLLogErrors(char * action, int ret, int ssl_err, int len, 
+			 pj_ssl_sock_t *ssock)
 {
     char *ssl_err_str = SSLErrorString(ssl_err);
 
@@ -233,7 +240,7 @@ static void SSLLogErrors(char * action, int ret, int ssl_err, int len)
 	if (err2) {
 	    int level = 0;
 	    while (err2) {
-	        ERROR_LOG("SSL_ERROR_SYSCALL", err2);
+	        ERROR_LOG("SSL_ERROR_SYSCALL", err2, ssock);
 		level++;
 		err2 = ERR_get_error();
 	    }
@@ -264,7 +271,7 @@ static void SSLLogErrors(char * action, int ret, int ssl_err, int len)
 	int level = 0;
 
 	while (err2) {
-	    ERROR_LOG("SSL_ERROR_SSL", err2);
+	    ERROR_LOG("SSL_ERROR_SSL", err2, ssock);
 	    level++;
 	    err2 = ERR_get_error();
 	}
@@ -302,13 +309,13 @@ static pj_status_t STATUS_FROM_SSL_ERR(char *action, pj_ssl_sock_t *ssock,
     int level = 0;
     int len = 0; //dummy
 
-    ERROR_LOG("STATUS_FROM_SSL_ERR", err);
+    ERROR_LOG("STATUS_FROM_SSL_ERR", err, ssock);
     level++;
 
     /* General SSL error, dig more from OpenSSL error queue */
     if (err == SSL_ERROR_SSL) {
 	err = ERR_get_error();
-	ERROR_LOG("STATUS_FROM_SSL_ERR", err);
+	ERROR_LOG("STATUS_FROM_SSL_ERR", err, ssock);
     }
 
     ssock->last_err = err;
@@ -326,7 +333,7 @@ static pj_status_t STATUS_FROM_SSL_ERR2(char *action, pj_ssl_sock_t *ssock,
     }
 
     /* Dig for more from OpenSSL error queue */
-    SSLLogErrors(action, ret, err, len);
+    SSLLogErrors(action, ret, err, len, ssock);
 
     ssock->last_err = ssl_err;
     return GET_STATUS_FROM_SSL_ERR(ssl_err);
