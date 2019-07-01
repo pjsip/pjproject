@@ -28,7 +28,7 @@ import org.pjsip.pjsua2.*;
 interface MyAppObserver
 {
     abstract void notifyRegState(pjsip_status_code code, String reason,
-				 int expiration);
+				 long expiration);
     abstract void notifyIncomingCall(MyCall call);
     abstract void notifyCallState(MyCall call);
     abstract void notifyCallMediaState(MyCall call);

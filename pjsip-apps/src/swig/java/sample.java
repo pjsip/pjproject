@@ -37,7 +37,7 @@ class MyObserver implements MyAppObserver {
 	}
 	
 	@Override
-	public void notifyRegState(pjsip_status_code code, String reason, int expiration) {}
+	public void notifyRegState(pjsip_status_code code, String reason, long expiration) {}
 	
 	@Override
 	public void notifyIncomingCall(MyCall call) {

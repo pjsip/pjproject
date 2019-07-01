@@ -583,7 +583,7 @@ public class MainActivity extends Activity
     }
 
     public void notifyRegState(pjsip_status_code code, String reason,
-			       int expiration)
+			       long expiration)
     {
 	String msg_str = "";
 	if (expiration == 0)
