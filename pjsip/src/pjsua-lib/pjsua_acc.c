@@ -2876,7 +2876,7 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
 	pjsip_regc_get_info(acc->regc, &regc_info);
 	info->expires = regc_info.next_reg;
     } else {
-	info->expires = -1;
+	info->expires = PJSIP_EXPIRES_NOT_SPECIFIED;
     }
 
     PJSUA_UNLOCK();

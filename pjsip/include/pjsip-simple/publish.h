@@ -97,9 +97,11 @@ struct pjsip_publishc_cbparam
     int			 code;	    /**< SIP status code received.	    */
     pj_str_t		 reason;    /**< SIP reason phrase received.	    */
     pjsip_rx_data	*rdata;	    /**< The complete received response.    */
-    int			 expiration;/**< Next expiration interval. If the
-					 value is -1, it means the session
-					 will not renew itself.		    */
+    unsigned		 expiration;/**< Next expiration interval. If the
+					 value is
+					 PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED,
+					 it means the session will not renew
+					 itself.		    	    */
 };
 
 

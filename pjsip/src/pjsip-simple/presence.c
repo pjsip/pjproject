@@ -347,7 +347,7 @@ PJ_DEF(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
  * Create SUBSCRIBE
  */
 PJ_DEF(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
-					 pj_int32_t expires,
+					 pj_uint32_t expires,
 					 pjsip_tx_data **p_tdata)
 {
     return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires, 
@@ -909,7 +909,8 @@ static void pres_on_evsub_client_refresh(pjsip_evsub *sub)
 	pj_status_t status;
 	pjsip_tx_data *tdata;
 
-	status = pjsip_pres_initiate(sub, -1, &tdata);
+	status = pjsip_pres_initiate(sub, PJSIP_EXPIRES_NOT_SPECIFIED,
+				     &tdata);
 	if (status == PJ_SUCCESS)
 	    pjsip_pres_send_request(sub, tdata);
     }

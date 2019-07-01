@@ -1885,8 +1885,13 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && 
                    pvalue.slen) 
         {
-	    strtoi_validate(&pvalue, PJSIP_MIN_EXPIRES, PJSIP_MAX_EXPIRES,
-                            &hdr->expires);
+            hdr->expires = pj_strtoul(&pvalue);
+            if (hdr->expires == PJSIP_EXPIRES_NOT_SPECIFIED)
+        	hdr->expires--;
+            if (hdr->expires > PJSIP_MAX_EXPIRES)
+            	hdr->expires = PJSIP_MAX_EXPIRES;
+            if (hdr->expires < PJSIP_MIN_EXPIRES)
+            	hdr->expires = PJSIP_MIN_EXPIRES;
 	} else {
 	    pjsip_param *p = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	    p->name = pname;

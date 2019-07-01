@@ -218,7 +218,9 @@ struct pjsua_srv_pres
     char	    *remote;	    /**< Remote URI.			    */
     int		     acc_id;	    /**< Account ID.			    */
     pjsip_dialog    *dlg;	    /**< Dialog.			    */
-    int		     expires;	    /**< "expires" value in the request.    */
+    unsigned	     expires;	    /**< "expires" value in the request,
+    					 PJSIP_EXPIRES_NOT_SPECIFIED
+    					 if not present.    		    */
 };
 
 /**

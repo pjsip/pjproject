@@ -403,7 +403,7 @@ int dummy_function()
     pjsip_evsub_terminate(NULL, PJ_FALSE);
     pjsip_evsub_get_state(NULL);
     pjsip_evsub_get_state_name(NULL);
-    pjsip_evsub_initiate(NULL, NULL, -1, NULL);
+    pjsip_evsub_initiate(NULL, NULL, PJSIP_EXPIRES_NOT_SPECIFIED, NULL);
     pjsip_evsub_accept(NULL, NULL, 200, NULL);
     pjsip_evsub_notify(NULL, PJSIP_EVSUB_STATE_ACTIVE, NULL, NULL, NULL);
     pjsip_evsub_current_notify(NULL, NULL);

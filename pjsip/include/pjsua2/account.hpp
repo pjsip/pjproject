@@ -1281,7 +1281,7 @@ struct AccountInfo
     /**
      * An up to date expiration interval for account registration session.
      */
-    int			regExpiresSec;
+    unsigned		regExpiresSec;
 
     /**
      * Last registration status code. If status code is zero, the account
@@ -1373,7 +1373,7 @@ struct OnRegStateParam
     /**
      * Next expiration interval.
      */
-    int			expiration;
+    unsigned		expiration;
 };
 
 /**

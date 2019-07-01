@@ -45,7 +45,7 @@
  */
 #define REGC_TSX_TIMEOUT	33000
 
-enum { NOEXP = 0x1FFFFFFF };
+enum { NOEXP = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED };
 
 static const pj_str_t XUID_PARAM_NAME = { "x-uid", 5 };
 
@@ -739,7 +739,7 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
                           pjsip_regc *regc, 
                           pj_status_t status, int st_code, 
 			  const pj_str_t *reason,
-			  pjsip_rx_data *rdata, pj_int32_t expiration,
+			  pjsip_rx_data *rdata, pj_uint32_t expiration,
 			  int contact_cnt, pjsip_contact_hdr *contact[],
 			  pj_bool_t is_unreg)
 {
@@ -750,8 +750,8 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
     cbparam->reason = *reason;
     cbparam->rdata = rdata;
     cbparam->contact_cnt = contact_cnt;
-    cbparam->expiration = (expiration >= 0? expiration:
-          		   regc->expires_requested);
+    cbparam->expiration = (expiration != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED?
+    			   expiration: regc->expires_requested);
     cbparam->is_unreg = is_unreg;
     if (contact_cnt) {
 	pj_memcpy( cbparam->contact, contact, 
@@ -761,7 +761,7 @@ static void cbparam_init( struct pjsip_regc_cbparam *cbparam,
 
 static void call_callback(pjsip_regc *regc, pj_status_t status, int st_code, 
 			  const pj_str_t *reason,
-			  pjsip_rx_data *rdata, pj_int32_t expiration,
+			  pjsip_rx_data *rdata, pj_uint32_t expiration,
 			  int contact_cnt, pjsip_contact_hdr *contact[],
 			  pj_bool_t is_unreg)
 {
@@ -798,7 +798,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     if (status != PJ_SUCCESS && regc->cb) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL,
+	call_callback(regc, status, 400, &reason, NULL, NOEXP, 0, NULL,
 		      PJ_FALSE);
     }
 
@@ -808,9 +808,9 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     }
 }
 
-static void schedule_registration ( pjsip_regc *regc, pj_int32_t expiration )
+static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
 {
-    if (regc->auto_reg && expiration > 0) {
+    if (regc->auto_reg && expiration > 0 && expiration != NOEXP) {
         pj_time_val delay = { 0, 0};
 
         pj_timer_heap_cancel_if_active(pjsip_endpt_get_timer_heap(regc->endpt),
@@ -892,13 +892,13 @@ pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
 }
 
 
-static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
-					        const pjsip_rx_data *rdata,
-						unsigned *contact_cnt,
-						unsigned max_contact,
-						pjsip_contact_hdr *contacts[])
+static pj_uint32_t calculate_response_expiration(const pjsip_regc *regc,
+					         const pjsip_rx_data *rdata,
+						 unsigned *contact_cnt,
+						 unsigned max_contact,
+						 pjsip_contact_hdr *contacts[])
 {
-    pj_int32_t expiration = NOEXP;
+    pj_uint32_t expiration = NOEXP;
     const pjsip_msg *msg = rdata->msg_info.msg;
     const pjsip_hdr *hdr;
 
@@ -982,8 +982,8 @@ static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
 		    if (matched) {
 			has_our_contact = PJ_TRUE;
 
-			if (contacts[i]->expires >= 0 && 
-			    contacts[i]->expires < expiration) 
+			if (contacts[i]->expires != PJSIP_EXPIRES_NOT_SPECIFIED
+			    && contacts[i]->expires < expiration) 
 			{
 			    /* Get the lowest expiration time. */
 			    expiration = contacts[i]->expires;
@@ -1037,7 +1037,7 @@ static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
 	    our_contact_cnt = pj_list_size(&regc->contact_hdr_list);
 
 	    if (*contact_cnt == our_contact_cnt && *contact_cnt &&
-		contacts[0]->expires >= 0) 
+		contacts[0]->expires != PJSIP_EXPIRES_NOT_SPECIFIED) 
 	    {
 		expiration = contacts[0]->expires;
 	    } else if (expires)
@@ -1097,7 +1097,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		     &tsx->status_text,
                      (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
 	              event->body.tsx_state.src.rdata : NULL,
-                     -1, 0, NULL, PJ_FALSE);
+                     NOEXP, 0, NULL, PJ_FALSE);
 
         /* Call regc tsx callback before handling any response */
         pj_lock_release(regc->lock);
@@ -1117,7 +1117,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 	        while (h != &regc->contact_hdr_list) {
                     pjsip_contact_hdr *next = h->next;
 
-                    if (h->expires == -1) {
+                    if (h->expires == PJSIP_EXPIRES_NOT_SPECIFIED) {
                         pj_list_erase(h);
                     }
                     h = next;
@@ -1205,7 +1205,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code, 
 			      &rdata->msg_info.msg->line.status.reason,
-			      rdata, -1, 0, NULL, is_unreg);
+			      rdata, NOEXP, 0, NULL, is_unreg);
 		pj_lock_acquire(regc->lock);
 	    }
 	}
@@ -1232,7 +1232,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
 	pjsip_min_expires_hdr *me_hdr;
 	pjsip_tx_data *tdata;
-	pj_int32_t min_exp;
+	pj_uint32_t min_exp;
 
 	/* reset current op */
 	regc->current_op = REGC_IDLE;
@@ -1294,7 +1294,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code,
 			      &rdata->msg_info.msg->line.status.reason,
-			      rdata, -1, 0, NULL, PJ_FALSE);
+			      rdata, NOEXP, 0, NULL, PJ_FALSE);
 		pj_lock_acquire(regc->lock);
 	    }
 	}
@@ -1306,7 +1306,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 handle_err:
     if (!handled) {
 	pjsip_rx_data *rdata;
-	pj_int32_t expiration = NOEXP;
+	pj_uint32_t expiration = NOEXP;
 	unsigned contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 	pj_bool_t is_unreg;
@@ -1330,7 +1330,7 @@ handle_err:
 	}
 
 	/* Update registration */
-	if (expiration==NOEXP) expiration=-1;
+	// if (expiration==NOEXP) expiration=-1;
 	regc->expires = expiration;
 
 	/* Mark operation as complete */

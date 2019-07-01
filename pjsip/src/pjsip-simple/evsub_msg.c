@@ -149,7 +149,7 @@ PJ_DEF(pjsip_sub_state_hdr*) pjsip_sub_state_hdr_create(pj_pool_t *pool)
     hdr->type = PJSIP_H_OTHER;
     hdr->name = hdr->sname = sub_state;
     hdr->vptr = &sub_state_hdr_vptr;
-    hdr->expires_param = -1;
+    hdr->expires_param = PJSIP_EXPIRES_NOT_SPECIFIED;
     hdr->retry_after = -1;
     pj_list_init(hdr);
     pj_list_init(&hdr->other_param);
@@ -171,7 +171,7 @@ static int pjsip_sub_state_hdr_print(pjsip_sub_state_hdr *hdr,
     copy_advance_escape(p, hdr->sub_state, pc->pjsip_TOKEN_SPEC);
     copy_advance_pair_escape(p, ";reason=", 8, hdr->reason_param,
 			     pc->pjsip_TOKEN_SPEC);
-    if (hdr->expires_param >= 0) {
+    if (hdr->expires_param != PJSIP_EXPIRES_NOT_SPECIFIED) {
 	pj_memcpy(p, ";expires=", 9);
 	p += 9;
 	printed = pj_utoa(hdr->expires_param, p);
@@ -274,6 +274,8 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
 
 	} else if (pj_stricmp(&pname, &expires) == 0) {
 	    hdr->expires_param = pj_strtoul(&pvalue);
+	    if (hdr->expires_param == PJSIP_EXPIRES_NOT_SPECIFIED)
+	    	hdr->expires_param--;
 
 	} else if (pj_stricmp(&pname, &retry_after) == 0) {
 	    hdr->retry_after = pj_strtoul(&pvalue);

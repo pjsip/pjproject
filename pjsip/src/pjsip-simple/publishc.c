@@ -532,7 +532,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_update_expires( pjsip_publishc *pubc,
 
 static void call_callback(pjsip_publishc *pubc, pj_status_t status, 
 			  int st_code, const pj_str_t *reason,
-			  pjsip_rx_data *rdata, pj_int32_t expiration)
+			  pjsip_rx_data *rdata, pj_uint32_t expiration)
 {
     struct pjsip_publishc_cbparam cbparam;
 
@@ -562,7 +562,8 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-	call_callback(pubc, status, 400, &reason, NULL, -1);
+	call_callback(pubc, status, 400, &reason, NULL,
+		      PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
 	return;
     }
 
@@ -604,14 +605,14 @@ static void tsx_callback(void *token, pjsip_event *event)
 	if (status != PJ_SUCCESS) {
 	    call_callback(pubc, status, tsx->status_code, 
 			  &rdata->msg_info.msg->line.status.reason,
-			  rdata, -1);
+			  rdata, PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED);
 	} else {
     	    status = pjsip_publishc_send(pubc, tdata);
 	}
 
     } else {
 	pjsip_rx_data *rdata;
-	pj_int32_t expiration = 0xFFFF;
+	pj_uint32_t expiration = PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED;
 
 	if (tsx->status_code/100 == 2) {
 	    pjsip_msg *msg;
@@ -638,7 +639,9 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    if (pubc->auto_refresh && expires)
 		expiration = expires->ivalue;
 	    
-	    if (pubc->auto_refresh && expiration!=0 && expiration!=0xFFFF) {
+	    if (pubc->auto_refresh && expiration!=0 &&
+	    	expiration!=PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED)
+	    {
 		pj_time_val delay = { 0, 0};
 
 		/* Cancel existing timer, if any */
@@ -671,7 +674,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 
 
 	/* Call callback. */
-	if (expiration == 0xFFFF) expiration = -1;
+	// if (expiration == 0xFFFF) expiration = -1;
 
 	/* Temporarily increment pending_tsx to prevent callback from
 	 * destroying pubc.

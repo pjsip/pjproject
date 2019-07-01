@@ -171,13 +171,15 @@ PJ_DECL(pj_status_t) pjsip_pres_terminate( pjsip_evsub *sub,
  *
  * @param sub		Client subscription instance.
  * @param expires	Subscription expiration. If the value is set to zero,
- *			this will request unsubscription.
+ *			this will request unsubscription. If the value is
+ *			PJSIP_EXPIRES_NOT_SPECIFIED, default expiration
+ * 			as defined by the package will be used.
  * @param p_tdata	Pointer to receive the request.
  *
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
-					  pj_int32_t expires,
+					  pj_uint32_t expires,
 					  pjsip_tx_data **p_tdata);
 
 

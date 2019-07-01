@@ -1063,9 +1063,9 @@ static void simple_registrar(pjsip_rx_data *rdata)
     while (h != &rdata->msg_info.msg->hdr) {
 	if (h->type == PJSIP_H_CONTACT) {
 	    const pjsip_contact_hdr *c = (const pjsip_contact_hdr*)h;
-	    int e = c->expires;
+	    unsigned e = c->expires;
 
-	    if (e < 0) {
+	    if (e != PJSIP_EXPIRES_NOT_SPECIFIED) {
 		if (exp)
 		    e = exp->ivalue;
 		else

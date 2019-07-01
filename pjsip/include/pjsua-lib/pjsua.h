@@ -4176,9 +4176,10 @@ typedef struct pjsua_acc_info
     pj_bool_t		has_registration;
 
     /**
-     * An up to date expiration interval for account registration session.
+     * An up to date expiration interval for account registration session,
+     * PJSIP_EXPIRES_NOT_SPECIFIED if the account doesn't have reg session.
      */
-    int			expires;
+    unsigned		expires;
 
     /**
      * Last registration status code. If status code is zero, the account
