@@ -1118,7 +1118,7 @@ static pj_status_t create_ice_media_transport(
             /* Don't lock otherwise deadlock:
              * https://trac.pjsip.org/repos/ticket/1737
              */
-            ++dlg->sess_count;
+	    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
             pjsip_dlg_dec_lock(dlg);
         }
         while (call_med->tp_ready == PJ_EPENDING) {
@@ -1126,7 +1126,7 @@ static pj_status_t create_ice_media_transport(
         }
         if (dlg) {
             pjsip_dlg_inc_lock(dlg);
-            --dlg->sess_count;
+	    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
         }
 	if (has_pjsua_lock)
 	    PJSUA_LOCK();

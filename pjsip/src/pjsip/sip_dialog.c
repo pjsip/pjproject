@@ -61,7 +61,17 @@ PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 	   (pjsip_method_cmp(m, &update)==0);
 }
 
+static void dlg_on_destroy( void *arg )
+{
+    pjsip_dialog *dlg = (pjsip_dialog *)arg;
+
+    PJ_LOG(5,(dlg->obj_name, "Dialog destroyed!"));
+
+    pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
+}
+
 static pj_status_t create_dialog( pjsip_user_agent *ua,
+				  pj_grp_lock_t *grp_lock,
 				  pjsip_dialog **p_dlg)
 {
     pjsip_endpoint *endpt;
@@ -98,9 +108,17 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    status = pj_mutex_create_recursive(pool, dlg->obj_name, &dlg->mutex_);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    if (grp_lock) {
+	dlg->grp_lock_ = grp_lock;
+    } else {
+ 	status = pj_grp_lock_create(pool, NULL, &dlg->grp_lock_);
+ 	if (status != PJ_SUCCESS) {
+	    goto on_error;
+ 	}
+    }
+
+    pj_grp_lock_add_ref(dlg->grp_lock_);
+    pj_grp_lock_add_handler(dlg->grp_lock_, pool, dlg, &dlg_on_destroy);
 
     pjsip_target_set_init(&dlg->target_set);
 
@@ -108,27 +126,23 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     return PJ_SUCCESS;
 
 on_error:
-    if (dlg->mutex_)
-	pj_mutex_destroy(dlg->mutex_);
     pjsip_endpt_release_pool(endpt, pool);
     return status;
 }
 
 static void destroy_dialog( pjsip_dialog *dlg, pj_bool_t unlock_mutex )
 {
-    if (dlg->mutex_) {
-        if (unlock_mutex) pj_mutex_unlock(dlg->mutex_);
-	pj_mutex_destroy(dlg->mutex_);
-	dlg->mutex_ = NULL;
-    }
     if (dlg->tp_sel.type != PJSIP_TPSELECTOR_NONE) {
 	pjsip_tpselector_dec_ref(&dlg->tp_sel);
 	pj_bzero(&dlg->tp_sel, sizeof(pjsip_tpselector));
     }
     pjsip_auth_clt_deinit(&dlg->auth_sess);
-    pjsip_endpt_release_pool(dlg->endpt, dlg->pool);
-}
 
+    pj_grp_lock_dec_ref(dlg->grp_lock_);
+
+    if (unlock_mutex)
+	pj_grp_lock_release(dlg->grp_lock_);
+}
 
 /*
  * Create an UAC dialog.
@@ -140,20 +154,43 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 					  const pj_str_t *target,
 					  pjsip_dialog **p_dlg)
 {
+    PJ_ASSERT_RETURN(ua && local_uri && remote_uri && p_dlg, PJ_EINVAL);
+
+    pjsip_dlg_create_uac_param create_param;
+    pj_bzero(&create_param, sizeof(create_param));
+
+    create_param.ua = ua;
+    create_param.local_uri = *local_uri;
+    create_param.remote_uri = *remote_uri;
+    if (local_contact)
+	create_param.local_contact = *local_contact;
+
+    if (target)
+	create_param.target = *target;
+
+    return pjsip_dlg_create_uac2(&create_param, p_dlg);
+}
+
+PJ_DEF(pj_status_t) pjsip_dlg_create_uac2(
+				const pjsip_dlg_create_uac_param *create_param,
+				pjsip_dialog **p_dlg)
+{
     pj_status_t status;
     pj_str_t tmp;
     pjsip_dialog *dlg;
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(ua && local_uri && remote_uri && p_dlg, PJ_EINVAL);
+    PJ_ASSERT_RETURN(create_param->ua && create_param->local_uri.slen &&
+		     create_param->remote_uri.slen && p_dlg, PJ_EINVAL);
 
     /* Create dialog instance. */
-    status = create_dialog(ua, &dlg);
+    status = create_dialog(create_param->ua, create_param->grp_lock, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Parse target. */
-    pj_strdup_with_null(dlg->pool, &tmp, target ? target : remote_uri);
+    pj_strdup_with_null(dlg->pool, &tmp, create_param->target.slen ?
+			&create_param->target : &create_param->remote_uri);
     dlg->target = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen, 0);
     if (!dlg->target) {
 	status = PJSIP_EINVALIDURI;
@@ -203,7 +240,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Init local info. */
     dlg->local.info = pjsip_from_hdr_create(dlg->pool);
-    pj_strdup_with_null(dlg->pool, &dlg->local.info_str, local_uri);
+    pj_strdup_with_null(dlg->pool, &dlg->local.info_str,
+			&create_param->local_uri);
     dlg->local.info->uri = pjsip_parse_uri(dlg->pool,
 					   dlg->local.info_str.ptr,
 					   dlg->local.info_str.slen, 0);
@@ -225,7 +263,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Init local contact. */
     pj_strdup_with_null(dlg->pool, &tmp,
-			local_contact ? local_contact : local_uri);
+		    create_param->local_contact.slen ?
+		    &create_param->local_contact : &create_param->local_uri);
     dlg->local.contact = (pjsip_contact_hdr*)
 			 pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr,
 					 tmp.slen, NULL);
@@ -236,7 +275,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 
     /* Init remote info. */
     dlg->remote.info = pjsip_to_hdr_create(dlg->pool);
-    pj_strdup_with_null(dlg->pool, &dlg->remote.info_str, remote_uri);
+    pj_strdup_with_null(dlg->pool, &dlg->remote.info_str,
+			&create_param->remote_uri);
     dlg->remote.info->uri = pjsip_parse_uri(dlg->pool,
 					    dlg->remote.info_str.ptr,
 					    dlg->remote.info_str.slen, 0);
@@ -292,14 +332,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     pj_list_init(&dlg->route_set);
 
     /* Register this dialog to user agent. */
-    status = pjsip_ua_register_dlg( ua, dlg );
+    status = pjsip_ua_register_dlg( create_param->ua, dlg );
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-
     /* Done! */
     *p_dlg = dlg;
-
 
     PJ_LOG(5,(dlg->obj_name, "UAC dialog created"));
 
@@ -349,7 +387,7 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 	PJ_EINVALIDOP);
 
     /* Create dialog instance. */
-    status = create_dialog(ua, &dlg);
+    status = create_dialog(ua, NULL, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -564,7 +602,7 @@ on_error:
     } else {
         destroy_dialog(dlg, PJ_FALSE);
     }
-    
+
     return status;
 }
 
@@ -680,7 +718,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
 	return PJSIP_EMISSINGHDR;
 
     /* Create the dialog. */
-    status = create_dialog((pjsip_user_agent*)first_dlg->ua, &dlg);
+    status = create_dialog((pjsip_user_agent*)first_dlg->ua, NULL, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -771,7 +809,7 @@ on_error:
 
 
 /*
- * Destroy dialog.
+ * Unregister and destroy dialog.
  */
 static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg,
 						  pj_bool_t unlock_mutex )
@@ -795,9 +833,6 @@ static pj_status_t unregister_and_destroy_dialog( pjsip_dialog *dlg,
 	    return status;
 	}
     }
-
-    /* Log */
-    PJ_LOG(5,(dlg->obj_name, "Dialog destroyed"));
 
     /* Destroy this dialog. */
     destroy_dialog(dlg, unlock_mutex);
@@ -878,7 +913,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_inc_session( pjsip_dialog *dlg,
 }
 
 /*
- * Lock dialog and increment session counter temporarily
+ * Lock dialog and increment session count temporarily
  * to prevent it from being deleted. In addition, it must lock
  * the user agent's dialog table first, to prevent deadlock.
  */
@@ -887,14 +922,14 @@ PJ_DEF(void) pjsip_dlg_inc_lock(pjsip_dialog *dlg)
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_inc_lock(), sess_count=%d",
 	      dlg->sess_count));
 
-    pj_mutex_lock(dlg->mutex_);
+    pj_grp_lock_acquire(dlg->grp_lock_);
     dlg->sess_count++;
 
     PJ_LOG(6,(dlg->obj_name, "Leaving pjsip_dlg_inc_lock(), sess_count=%d",
 	      dlg->sess_count));
 }
 
-/* Try to acquire dialog's mutex, but bail out if mutex can not be
+/* Try to acquire dialog's group lock, but bail out if group lock can not be
  * acquired immediately.
  */
 PJ_DEF(pj_status_t) pjsip_dlg_try_inc_lock(pjsip_dialog *dlg)
@@ -904,7 +939,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_try_inc_lock(pjsip_dialog *dlg)
     PJ_LOG(6,(dlg->obj_name,"Entering pjsip_dlg_try_inc_lock(), sess_count=%d",
 	      dlg->sess_count));
 
-    status = pj_mutex_trylock(dlg->mutex_);
+    status = pj_grp_lock_tryacquire(dlg->grp_lock_);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(6,(dlg->obj_name, "pjsip_dlg_try_inc_lock() failed"));
 	return status;
@@ -920,7 +955,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_try_inc_lock(pjsip_dialog *dlg)
 
 
 /*
- * Unlock dialog and decrement session counter.
+ * Unlock dialog and decrement reference counter.
  * It may delete the dialog!
  */
 PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
@@ -934,24 +969,23 @@ PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
     --dlg->sess_count;
 
     if (dlg->sess_count==0 && dlg->tsx_count==0) {
-	pj_mutex_unlock(dlg->mutex_);
-	pj_mutex_lock(dlg->mutex_);
-	/* We are holding the dialog mutex here, so before we destroy
+	pj_grp_lock_release(dlg->grp_lock_);
+	pj_grp_lock_acquire(dlg->grp_lock_);
+	/* We are holding the dialog group lock here, so before we destroy
 	 * the dialog, make sure that we unlock it first to avoid
 	 * undefined behaviour on some platforms. See ticket #1886.
 	 */
 	unregister_and_destroy_dialog(dlg, PJ_TRUE);
     } else {
-	pj_mutex_unlock(dlg->mutex_);
+	pj_grp_lock_release(dlg->grp_lock_);
     }
 
     PJ_LOG(6,(THIS_FILE, "Leaving pjsip_dlg_dec_lock() (dlg=%p)", dlg));
 }
 
 
-
 /*
- * Decrement session counter.
+ * Decrement session count.
  */
 PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
 					   pjsip_module *mod)
@@ -969,6 +1003,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_grp_lock_t *) pjsip_dlg_get_lock(pjsip_dialog *dlg)
+{
+    PJ_ASSERT_RETURN(dlg, NULL);
+    return dlg->grp_lock_;
 }
 
 /*
