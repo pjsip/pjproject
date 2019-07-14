@@ -21,6 +21,7 @@
 #include <pjmedia/vid_codec_util.h>
 #include <pjmedia/errno.h>
 #include <pj/log.h>
+#include <pj/math.h>
 
 #if defined(PJMEDIA_HAS_VID_TOOLBOX_CODEC) && \
             PJMEDIA_HAS_VID_TOOLBOX_CODEC != 0 && \
@@ -1228,12 +1229,14 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 
 	if (nalu_type == 7) {
  	    /* NALU type 7 is the SPS parameter NALU */
- 	    vtool_data->dec_sps_size = frm_size - code_size;
+ 	    vtool_data->dec_sps_size = PJ_MIN(frm_size - code_size,
+ 	    				      sizeof(vtool_data->dec_sps));
  	    pj_memcpy(vtool_data->dec_sps, &start[code_size],
  	    	      vtool_data->dec_sps_size);
     	} else if (nalu_type == 8) {
     	    /* NALU type 8 is the PPS parameter NALU */
- 	    vtool_data->dec_pps_size = frm_size - code_size;
+ 	    vtool_data->dec_pps_size = PJ_MIN(frm_size - code_size,
+ 	    				      sizeof(vtool_data->dec_pps));
  	    pj_memcpy(vtool_data->dec_pps, &start[code_size],
  	    	      vtool_data->dec_pps_size);
  	    
