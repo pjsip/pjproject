@@ -1357,37 +1357,40 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
 	return PJ_FALSE;
     }
 
-    if (conn->state == DATACONN_STATE_READY) {
-	/* Application data */
-	if (turn_sock->cb.on_rx_data) {
-	    (*turn_sock->cb.on_rx_data)(turn_sock, data, size,
-					&conn->peer_addr,
-					conn->peer_addr_len);
-	}
-    } else if (conn->state == DATACONN_STATE_CONN_BINDING) {
-	/* Waiting for ConnectionBind response */
-	pj_bool_t is_stun;
-	pj_turn_session_on_rx_pkt_param prm;
-        
-	/* Ignore if this is not a STUN message */
-	is_stun = ((((pj_uint8_t*)data)[0] & 0xC0) == 0);
-	if (!is_stun)
-	    goto on_return;
+    *remainder = size;
+    while (*remainder > 0) {
+	if (conn->state == DATACONN_STATE_READY) {
+	    /* Application data */
+	    if (turn_sock->cb.on_rx_data) {
+		(*turn_sock->cb.on_rx_data)(turn_sock, data, *remainder,
+					    &conn->peer_addr,
+					    conn->peer_addr_len);
+	    }
+	    *remainder = 0;
+	} else if (conn->state == DATACONN_STATE_CONN_BINDING) {
+	    /* Waiting for ConnectionBind response */
+	    pj_bool_t is_stun;
+	    pj_turn_session_on_rx_pkt_param prm;
 
-	pj_bzero(&prm, sizeof(prm));
-	prm.pkt = data;
-	prm.pkt_len = size;
-	prm.src_addr = &conn->peer_addr;
-	prm.src_addr_len = conn->peer_addr_len;
-	pj_turn_session_on_rx_pkt2(conn->turn_sock->sess, &prm);
-	/* Got remainder? */
-	if (prm.parsed_len < size) {
-	    *remainder = size - prm.parsed_len;
-	    if (prm.parsed_len) {
-		pj_memmove(data, (pj_uint8_t*)data+prm.parsed_len,
+	    /* Ignore if this is not a STUN message */
+	    is_stun = ((((pj_uint8_t*)data)[0] & 0xC0) == 0);
+	    if (!is_stun)
+		goto on_return;
+
+	    pj_bzero(&prm, sizeof(prm));
+	    prm.pkt = data;
+	    prm.pkt_len = *remainder;
+	    prm.src_addr = &conn->peer_addr;
+	    prm.src_addr_len = conn->peer_addr_len;
+	    pj_turn_session_on_rx_pkt2(conn->turn_sock->sess, &prm);
+	    /* Got remainder? */
+	    if (prm.parsed_len < *remainder && prm.parsed_len > 0) {
+		pj_memmove(data, (pj_uint8_t*)data + prm.parsed_len,
 			   *remainder);
 	    }
-	}
+	    *remainder -= prm.parsed_len;
+	} else
+	    goto on_return;
     }
 
 on_return:
