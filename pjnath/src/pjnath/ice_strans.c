@@ -312,7 +312,8 @@ PJ_DEF(void) pj_ice_strans_cfg_copy( pj_pool_t *pool,
  */
 static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 				   pj_ice_strans_comp *comp,
-				   unsigned idx)
+				   unsigned idx,
+				   unsigned max_cand_cnt)
 {
     pj_ice_sess_cand *cand = NULL;
     pj_ice_strans_turn_cfg *turn_cfg = &ice_st->cfg.turn_tp[idx];
@@ -321,6 +322,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
     pj_turn_sock_cb turn_sock_cb;
     sock_user_data *data;
     unsigned i;
+    pj_bool_t new_cand = PJ_FALSE;
     pj_uint8_t tp_id;
     pj_status_t status;
 
@@ -383,12 +385,15 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 
     /* Add relayed candidate with pending status if there's no existing one */
     if (cand == NULL) {
+	PJ_ASSERT_RETURN(max_cand_cnt > 0, PJ_ETOOSMALL);
+
 	cand = &comp->cand_list[comp->cand_cnt];
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 	cand->status = PJ_EPENDING;
 	cand->local_pref = RELAY_PREF;
 	cand->transport_id = tp_id;
 	cand->comp_id = (pj_uint8_t) comp->comp_id;
+	new_cand = PJ_TRUE;
     }
 
     /* Allocate and initialize TURN socket data */
@@ -420,8 +425,10 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	return status;
     }
 
-    /* Commit the relayed candidate. */
-    comp->cand_cnt++;
+    if (new_cand) {
+	/* Commit the relayed candidate. */
+	comp->cand_cnt++;
+    }
 
     PJ_LOG(4,(ice_st->obj_name,
 		  "Comp %d/%d: TURN relay candidate (tpid=%d) "
@@ -459,7 +466,8 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
 
 static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 				     pj_ice_strans_comp *comp,
-				     unsigned idx)
+				     unsigned idx,
+				     unsigned max_cand_cnt)
 {
     pj_ice_sess_cand *cand;
     pj_ice_strans_stun_cfg *stun_cfg = &ice_st->cfg.stun_tp[idx];
@@ -468,6 +476,8 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
     pj_stun_sock_cb stun_sock_cb;
     sock_user_data *data;
     pj_status_t status;
+
+    PJ_ASSERT_RETURN(max_cand_cnt > 0, PJ_ETOOSMALL);
 
     /* Check if STUN transport or host candidate is configured */
     if (stun_cfg->server.slen == 0 && stun_cfg->max_host_cands == 0)
@@ -565,6 +575,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
 			       cand->type, &cand->base_addr);
 	comp->cand_cnt++;
+	max_cand_cnt--;
 
 	/* Set default candidate to srflx */
 	if (comp->cand_list[comp->default_cand].type != PJ_ICE_CAND_TYPE_SRFLX
@@ -604,8 +615,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	    char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 	    const pj_sockaddr *addr = &stun_sock_info.aliases[i];
 
-	    /* Leave one candidate for relay */
-	    if (comp->cand_cnt >= PJ_ICE_ST_MAX_CAND-1) {
+	    if (max_cand_cnt==0) {
 		PJ_LOG(4,(ice_st->obj_name, "Too many host candidates"));
 		break;
 	    }
@@ -668,6 +678,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	    } else {
 		comp->cand_cnt+=1;
 		cand_cnt++;
+		max_cand_cnt--;
 	    }
             
 	    pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
@@ -725,7 +736,14 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
     /* Create STUN transport if configured */
     for (i=0; i<ice_st->cfg.stun_tp_cnt; ++i) {
-	status = add_stun_and_host(ice_st, comp, i);
+	unsigned max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt -
+				ice_st->cfg.turn_tp_cnt;
+
+	status = PJ_ETOOSMALL;
+
+	if ((max_cand_cnt > 0) && (max_cand_cnt <= PJ_ICE_ST_MAX_CAND))
+	    status = add_stun_and_host(ice_st, comp, i, max_cand_cnt);
+
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(ice_st->obj_name, status,
 			 "Failed creating STUN transport #%d for comp %d",
@@ -736,12 +754,21 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
     /* Create TURN relay if configured. */
     for (i=0; i<ice_st->cfg.turn_tp_cnt; ++i) {
-	status = add_update_turn(ice_st, comp, i);
+	unsigned max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt;
+
+	status = PJ_ETOOSMALL;
+
+	if ((max_cand_cnt > 0) && (max_cand_cnt <= PJ_ICE_ST_MAX_CAND))
+	    status = add_update_turn(ice_st, comp, i, max_cand_cnt);
+
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(ice_st->obj_name, status,
 			 "Failed creating TURN transport #%d for comp %d",
 			 i, comp->comp_id));
+
 	    //return status;
+	} else if (max_cand_cnt > 0) {
+	    max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt;
 	}
     }
 
@@ -2244,7 +2271,8 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		PJ_PERROR(4,(comp->ice_st->obj_name, info.last_status,
 			  "Comp %d: TURN allocation failed, retrying",
 			  comp->comp_id));
-		add_update_turn(comp->ice_st, comp, tp_idx);
+		add_update_turn(comp->ice_st, comp, tp_idx,
+				PJ_ICE_ST_MAX_CAND - comp->cand_cnt);
 	    }
 	}
     }
