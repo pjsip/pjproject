@@ -350,17 +350,17 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 	/* Fill the nearest width list. */
 	if (diff_width1 <= diff_width2) {
 	    int k = 1;
-	    pjmedia_rect_size tmp_size = vfd->size;	    
+	    pjmedia_rect_size tmp_size = vfd->size;
 
-	    while(((GET_DIFF(tmp_size.w, req_fmt_size->w) <
-		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w))) && 
-		  (k < PJ_ARRAY_SIZE(nearest_width))))    	
+	    while(((k < PJ_ARRAY_SIZE(nearest_width)) &&
+		   (GET_DIFF(tmp_size.w, req_fmt_size->w) <
+		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w)))))
 	    {
 		nearest_width[k-1] = nearest_width[k];
 		++k;
 	    }
 	    nearest_width[k-1] = tmp_size;
-	}		
+	}
     }
     /* No need to calculate ratio if exact match is found. */
     if (!found_exact_match) {
