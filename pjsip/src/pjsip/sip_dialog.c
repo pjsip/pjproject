@@ -154,11 +154,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 					  const pj_str_t *target,
 					  pjsip_dialog **p_dlg)
 {
+    pjsip_dlg_create_uac_param create_param;
+
     PJ_ASSERT_RETURN(ua && local_uri && remote_uri && p_dlg, PJ_EINVAL);
 
-    pjsip_dlg_create_uac_param create_param;
     pj_bzero(&create_param, sizeof(create_param));
-
     create_param.ua = ua;
     create_param.local_uri = *local_uri;
     create_param.remote_uri = *remote_uri;
