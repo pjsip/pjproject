@@ -46,6 +46,14 @@
 #define INIT_CYCLE		10
 
 
+/* Maximum frame index in JB framelist (estimated).
+ * As index is calculated as (RTP-timestamp/timestamp-span), the maximum index
+ * usually ranging from MAXUINT32/9000 (10 fps video at 90kHz) to MAXUINT32/80
+ * (10 ms audio at 8000Hz), lets take the 'lowest'.
+ */
+#define MAX_FRAME_INDEX		(0xFFFFFFFF/9000)
+
+
 /* Minimal difference between JB size and 2*burst-level to perform
  * JB shrinking in static discard algorithm.
  */
@@ -470,35 +478,56 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 
     PJ_ASSERT_RETURN(frame_size <= framelist->frame_size, PJ_EINVAL);
 
-    /* too late or sequence restart */
-    if (index < framelist->origin) {
+    /* get distance of this frame to the first frame in the buffer */
+    distance = index - framelist->origin;
+
+    /* too late or sequence restart or far jump */
+    if (distance < 0) {
 	if (framelist->origin - index < MAX_MISORDER) {
 	    /* too late */
+	    TRACE__((THIS_FILE,"Put frame #%d: too late (distance=%d)",
+			       index, distance));
 	    return PJ_ETOOSMALL;
-	} else {
+	} else if (framelist->origin + framelist->size >= MAX_FRAME_INDEX) {
 	    /* sequence restart */
+	    TRACE__((THIS_FILE,"Put frame #%d: sequence restart (distance=%d, "
+			       "orig=%d, size=%d)",
+			       index, distance, framelist->origin,
+			       framelist->size));
 	    framelist->origin = index - framelist->size;
+	    distance = framelist->size;
+	} else {
+	    /* jump too far, reset the buffer */
+	    TRACE__((THIS_FILE,"Put frame #%d: far jump (distance=%d)",
+			       index, distance));
+	    jb_framelist_reset(framelist);
+	    framelist->origin = index;
+	    distance = 0;
 	}
     }
 
     /* if jbuf is empty, just reset the origin */
     if (framelist->size == 0) {
 	pj_assert(framelist->discarded_num == 0);
+	TRACE__((THIS_FILE,"Put frame #%d: origin reset (from %d) as JB empty",
+			   index, framelist->origin));
 	framelist->origin = index;
+	distance = 0;
     }
-
-    /* get distance of this frame to the first frame in the buffer */
-    distance = index - framelist->origin;
 
     /* far jump, the distance is greater than buffer capacity */
     if (distance >= (int)framelist->max_count) {
 	if (distance > MAX_DROPOUT) {
 	    /* jump too far, reset the buffer */
+	    TRACE__((THIS_FILE,"Put frame #%d: far jump (distance=%d)",
+			       index, distance));
 	    jb_framelist_reset(framelist);
 	    framelist->origin = index;
 	    distance = 0;
 	} else {
 	    /* otherwise, reject the frame */
+	    TRACE__((THIS_FILE,"Put frame #%d: rejected due to JB full",
+			       index));
 	    return PJ_ETOOMANY;
 	}
     }
@@ -507,8 +536,10 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     pos = (framelist->head + distance) % framelist->max_count;
 
     /* if the slot is occupied, it must be duplicated frame, ignore it. */
-    if (framelist->frame_type[pos] != PJMEDIA_JB_MISSING_FRAME)
+    if (framelist->frame_type[pos] != PJMEDIA_JB_MISSING_FRAME) {
+	TRACE__((THIS_FILE,"Put frame #%d maybe a duplicate, ignored", index));
 	return PJ_EEXISTS;
+    }
 
     /* put the frame into the slot */
     framelist->frame_type[pos] = frame_type;

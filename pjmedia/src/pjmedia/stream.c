@@ -1961,6 +1961,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    				     dec_ptime / stream->dec_ptime;
 	    stream->dec_ptime = (pj_uint16_t)dec_ptime;
 	    pjmedia_jbuf_set_ptime(stream->jb, stream->dec_ptime);
+
+	    /* Reset jitter buffer after ptime changed */
+	    pjmedia_jbuf_reset(stream->jb);
 	}
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
