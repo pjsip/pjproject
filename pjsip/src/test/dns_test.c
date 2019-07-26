@@ -362,10 +362,7 @@ static int test_resolve(const char *title,
     if (ref) {
 	unsigned i;
 
-	/* Result may have double the number of addresses, for IPv4 and IPv6 */
-	if (ref->count != result.servers.count &&
-	    2*ref->count != result.servers.count)
-	{
+	if (ref->count != result.servers.count) {
 	    PJ_LOG(3,(THIS_FILE, "  test_resolve() error 10: result count mismatch"));
 	    return 10;
 	}

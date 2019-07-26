@@ -1254,7 +1254,6 @@ int stdout_refresh_proc(void *arg)
 static pj_status_t app_init(void)
 {
     pjsua_transport_id transport_id = -1;
-    pjsua_transport_id udp6_tp_id = -1, tcp6_tp_id = -1, tls6_tp_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_pool_t *tmp_pool;
@@ -1283,9 +1282,6 @@ static pj_status_t app_init(void)
 	pj_pool_release(tmp_pool);
 	return status;
     }
-    
-    if (app_config.ipv6)
-    	app_config.cfg.stun_try_ipv6 = PJ_TRUE;
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
@@ -1612,7 +1608,6 @@ static pj_status_t app_init(void)
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	udp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1678,7 +1673,6 @@ static pj_status_t app_init(void)
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	tcp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1718,7 +1712,6 @@ static pj_status_t app_init(void)
 	tcp_cfg.port--;
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	tls6_tp_id = transport_id;
 	
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
@@ -1781,58 +1774,6 @@ static pj_status_t app_init(void)
 	app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
 	app_config.acc_cfg[i].reg_retry_interval = 300;
 	app_config.acc_cfg[i].reg_first_retry_interval = 60;
-	if (app_config.ipv6) {
-	    pj_str_t *dst_uri = NULL;
-	    pj_str_t tmp;
-	    pjsip_uri *uri;
-
-	    // Uncomment this for testing in a NAT64 network
-	    // app_config.acc_cfg[i].nat64_opt = PJSUA_NAT64_ENABLED;
-	    app_config.acc_cfg[i].ipv6_media_use = PJSUA_IPV6_ENABLED;
-
-	    if ((app_config.cfg.outbound_proxy_cnt > 0) &&
-	        (app_config.acc_cfg[i].reg_use_proxy == 1 /* outbound */ ||
-	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
-	    {
-	    	dst_uri = &app_config.cfg.outbound_proxy[0];
-	    } else if ((app_config.acc_cfg[i].proxy_cnt > 0) &&
-	        (app_config.acc_cfg[i].reg_use_proxy == 2 /* acc */ ||
-	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
-	    {
-	    	dst_uri = &app_config.acc_cfg[i].proxy[0];
-	    } else if (app_config.acc_cfg[i].reg_uri.slen > 0) {
-	    	dst_uri = &app_config.acc_cfg[i].reg_uri;
-	    }
-	    
-	    pj_strdup_with_null(app_config.pool, &tmp, dst_uri);
-
-	    uri = pjsip_parse_uri(app_config.pool, tmp.ptr, tmp.slen, 0);
-	    if (uri != NULL) {
-		pjsip_sip_uri *sip_uri;
-		pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;	
-		
-		sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-
-    		/* Get transport type of the URI */
-    		if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
-		    tp_type = PJSIP_TRANSPORT_TLS;
-    		} else if (sip_uri->transport_param.slen == 0) {
-		    tp_type = PJSIP_TRANSPORT_UDP;
-    		} else {
-		    tp_type = pjsip_transport_get_type_from_name(
-		    		  &sip_uri->transport_param);
-		    tp_type &= ~ PJSIP_TRANSPORT_IPV6;
-		}
-		
-		if (tp_type == PJSIP_TRANSPORT_UDP) {
-	    	    app_config.acc_cfg[i].transport_id = udp6_tp_id;
-		} else if (tp_type == PJSIP_TRANSPORT_TCP) {
-	    	    app_config.acc_cfg[i].transport_id = tcp6_tp_id;
-		} else if (tp_type == PJSIP_TRANSPORT_TLS) {
-	    	    app_config.acc_cfg[i].transport_id = tls6_tp_id;
-		}
-	    }
-	}
 
 	app_config_init_video(&app_config.acc_cfg[i]);
 
