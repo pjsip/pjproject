@@ -682,7 +682,8 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 	pj_sockaddr_cp(&info->aliases[0], &info->bound_addr);
     } else {
 	pj_sockaddr def_addr;
-	pj_uint16_t port = pj_sockaddr_get_port(&info->bound_addr); 
+	pj_uint16_t port = pj_sockaddr_get_port(&info->bound_addr);
+	pj_enum_ip_option enum_opt;
 	unsigned i;
 
 	/* Get the default address */
@@ -697,9 +698,19 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 	pj_sockaddr_set_port(&def_addr, port);
 	
 	/* Enum all IP interfaces in the host */
+	pj_enum_ip_option_default(&enum_opt);
+	enum_opt.af = stun_sock->af;
+	enum_opt.omit_deprecated_ipv6 = PJ_TRUE;
 	info->alias_cnt = PJ_ARRAY_SIZE(info->aliases);
-	status = pj_enum_ip_interface(stun_sock->af, &info->alias_cnt, 
-				      info->aliases);
+	status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt, 
+				       info->aliases);
+	if (status == PJ_ENOTSUP) {
+	    /* Try again without omitting deprecated IPv6 addresses */
+	    enum_opt.omit_deprecated_ipv6 = PJ_FALSE;
+	    status = pj_enum_ip_interface2(&enum_opt, &info->alias_cnt, 
+					   info->aliases);
+	}
+
 	if (status != PJ_SUCCESS) {
 	    /* If enumeration fails, just return the default address */
 	    PJ_PERROR(4,(stun_sock->obj_name, status,

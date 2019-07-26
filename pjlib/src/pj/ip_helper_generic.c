@@ -25,6 +25,17 @@
 #include <pj/compat/socket.h>
 #include <pj/sock.h>
 
+
+#if defined(PJ_LINUX) && PJ_LINUX!=0
+/* The following headers are used to get DEPRECATED addresses */
+#include <arpa/inet.h>
+#include <asm/types.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 /* Set to 1 to enable tracing */
 #if 0
 #   include <pj/log.h>
@@ -407,3 +418,151 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     return PJ_SUCCESS;
 }
 
+static pj_status_t get_ipv6_deprecated(unsigned *count, pj_sockaddr addr[])
+{
+#if defined(PJ_LINUX) && PJ_LINUX!=0
+    struct {
+        struct nlmsghdr        nlmsg_info;
+        struct ifaddrmsg    ifaddrmsg_info;
+    } netlink_req;
+
+    long pagesize = sysconf(_SC_PAGESIZE);
+    if (!pagesize)
+        pagesize = 4096; /* Assume pagesize is 4096 if sysconf() failed */
+
+    int fd = socket(AF_NETLINK, SOCK_RAW, NETLINK_ROUTE);
+    if (fd < 0)
+	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+
+    bzero(&netlink_req, sizeof(netlink_req));
+
+    netlink_req.nlmsg_info.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifaddrmsg));
+    netlink_req.nlmsg_info.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
+    netlink_req.nlmsg_info.nlmsg_type = RTM_GETADDR;
+    netlink_req.nlmsg_info.nlmsg_pid = getpid();
+    netlink_req.ifaddrmsg_info.ifa_family = AF_INET6;
+
+    int rtn = send(fd, &netlink_req, netlink_req.nlmsg_info.nlmsg_len, 0);
+    if (rtn < 0)
+	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+
+    char read_buffer[pagesize];
+    size_t idx = 0;
+
+    while(1) {
+	bzero(read_buffer, pagesize);
+	int read_size = recv(fd, read_buffer, pagesize, 0);
+	if (read_size < 0)
+	    return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+
+	struct nlmsghdr *nlmsg_ptr = (struct nlmsghdr *) read_buffer;
+	int nlmsg_len = read_size;
+
+	if (nlmsg_len < sizeof (struct nlmsghdr))
+	    return PJ_ETOOSMALL;
+
+	if (nlmsg_ptr->nlmsg_type == NLMSG_DONE)
+	    break;
+
+	for(; NLMSG_OK(nlmsg_ptr, nlmsg_len);
+	    nlmsg_ptr = NLMSG_NEXT(nlmsg_ptr, nlmsg_len))
+	{
+	    struct ifaddrmsg *ifaddrmsg_ptr;
+	    struct rtattr *rtattr_ptr;
+	    int ifaddrmsg_len;
+
+	    ifaddrmsg_ptr = (struct ifaddrmsg*)NLMSG_DATA(nlmsg_ptr);
+
+	    if (ifaddrmsg_ptr->ifa_flags & IFA_F_DEPRECATED ||
+		ifaddrmsg_ptr->ifa_flags & IFA_F_TENTATIVE)
+	    {
+		rtattr_ptr = (struct rtattr*)IFA_RTA(ifaddrmsg_ptr);
+		ifaddrmsg_len = IFA_PAYLOAD(nlmsg_ptr);
+
+		for(;RTA_OK(rtattr_ptr, ifaddrmsg_len);
+		    rtattr_ptr = RTA_NEXT(rtattr_ptr, ifaddrmsg_len))
+		{
+		    switch(rtattr_ptr->rta_type) {
+		    case IFA_ADDRESS:
+			// Check if addr can contains more data
+			if (idx >= *count)
+			    break;
+			// Store deprecated IP
+			char deprecatedAddr[PJ_INET6_ADDRSTRLEN];
+			inet_ntop(ifaddrmsg_ptr->ifa_family,
+				  RTA_DATA(rtattr_ptr),
+				  deprecatedAddr,
+				  sizeof(deprecatedAddr));
+			pj_str_t pj_addr_str;
+			pj_cstr(&pj_addr_str, deprecatedAddr);
+			pj_sockaddr_init(pj_AF_INET6(), &addr[idx],
+					 &pj_addr_str, 0);
+			++idx;
+		    default:
+			break;
+		    }
+		}
+	    }
+	}
+    }
+
+    close(fd);
+    *count = idx;
+
+    return PJ_SUCCESS;
+#else
+    *count = 0;
+    return PJ_ENOTSUP;
+#endif
+}
+
+
+/*
+ * Enumerate the local IP interface currently active in the host.
+ */
+PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
+					   unsigned *p_cnt,
+					   pj_sockaddr ifs[])
+{
+    pj_enum_ip_option opt_;
+
+    if (opt)
+	opt_ = *opt;
+    else
+	pj_enum_ip_option_default(&opt_);
+
+    if (opt_.af != pj_AF_INET() && opt_.omit_deprecated_ipv6) {
+	pj_sockaddr addrs[*p_cnt];
+	pj_sockaddr deprecatedAddrs[*p_cnt];
+	unsigned deprecatedCount = *p_cnt;
+	unsigned cnt = 0;
+	pj_status_t status;
+
+	status = get_ipv6_deprecated(&deprecatedCount, deprecatedAddrs);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = pj_enum_ip_interface(opt_.af, p_cnt, addrs);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	for (int i = 0; i < *p_cnt; ++i) {
+	    ifs[cnt++] = addrs[i];
+
+	    if (addrs[i].addr.sa_family != pj_AF_INET6())
+		continue;
+
+	    for (int j = 0; j < deprecatedCount; ++j) {
+		if (pj_sockaddr_cmp(&addrs[i], &deprecatedAddrs[j]) == 0) {
+		    cnt--;
+		    break;
+		}
+	    }
+	}
+
+	*p_cnt = cnt;
+	return *p_cnt ? PJ_SUCCESS : PJ_ENOTFOUND;
+    }
+
+    return pj_enum_ip_interface(opt_.af, p_cnt, ifs);
+}
