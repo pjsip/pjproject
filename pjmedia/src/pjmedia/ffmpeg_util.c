@@ -47,6 +47,8 @@ static const struct ffmpeg_fmt_table_t
     { PJMEDIA_FORMAT_I422, AV(PIX_FMT_YUV422P)},
     { PJMEDIA_FORMAT_I420JPEG, AV(PIX_FMT_YUVJ420P)},
     { PJMEDIA_FORMAT_I422JPEG, AV(PIX_FMT_YUVJ422P)},
+    { PJMEDIA_FORMAT_NV12, AV(PIX_FMT_NV12)},
+    { PJMEDIA_FORMAT_NV21, AV(PIX_FMT_NV21)},
 };
 
 /* Conversion table between pjmedia_format_id and CodecID */
