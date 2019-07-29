@@ -201,6 +201,13 @@ static struct transport_names_t
 	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
     },
     { 
+	PJSIP_TRANSPORT_DTLS,
+	5061, 
+	{"DTLS", 4}, 
+	"DTLS transport", 
+	PJSIP_TRANSPORT_SECURE
+    },
+    { 
 	PJSIP_TRANSPORT_SCTP, 
 	5060, 
 	{"SCTP", 4}, 
@@ -241,6 +248,13 @@ static struct transport_names_t
 	{"TLS", 3},
 	"TLS IPv6 transport",
 	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
+    },
+    {
+	PJSIP_TRANSPORT_DTLS6,
+	5061,
+	{"DTLS", 4},
+	"DTLS IPv6 transport",
+	PJSIP_TRANSPORT_SECURE
     },
 };
 
