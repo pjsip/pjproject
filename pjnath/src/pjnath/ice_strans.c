@@ -1404,6 +1404,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
 	    unsigned j, count=0;
 
+	    if (!comp->turn[n].sock)
+		continue;
+
 	    /* Gather remote addresses for this component */
 	    for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
 		if (rem_cand[j].comp_id==i+1 &&
@@ -2201,8 +2204,9 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	sess_init_update(comp->ice_st);
 
     } else if ((old_state == PJ_TURN_STATE_RESOLVING ||
-                old_state == PJ_TURN_STATE_RESOLVED) &&
-	       new_state == PJ_TURN_STATE_DESTROYING)
+                old_state == PJ_TURN_STATE_RESOLVED ||
+                old_state == PJ_TURN_STATE_ALLOCATING) &&
+	       new_state >= PJ_TURN_STATE_DEALLOCATING)
     {
 	pj_ice_sess_cand *cand = NULL;
 	unsigned i, cand_idx = 0xFF;
@@ -2237,10 +2241,12 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	 * to the list.
 	 */
 	if (cand) {
-	    cand->status = PJ_ERESOLVE;
+	    cand->status = (old_state == PJ_TURN_STATE_RESOLVING)?
+	    		   PJ_ERESOLVE : PJ_EINVALIDOP;
 	    PJ_LOG(4,(comp->ice_st->obj_name,
-		      "Comp %d/%d: TURN resolving (tpid=%d) failed",
-		      comp->comp_id, cand_idx, cand->transport_id));
+		      "Comp %d/%d: TURN error (tpid=%d) during state %s",
+		      comp->comp_id, cand_idx, cand->transport_id,
+		      pj_turn_state_name(old_state)));
 	}
 
 	sess_init_update(comp->ice_st);
