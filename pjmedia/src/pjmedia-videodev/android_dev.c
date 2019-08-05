@@ -450,15 +450,13 @@ static pj_status_t and_factory_destroy(pjmedia_vid_dev_factory *ff)
 
     jni_deinit_ids();
     
+    pool = f->dev_pool;
+    f->dev_pool = NULL;    
+    pj_pool_safe_release(&pool);
+    
     pool = f->pool;
     f->pool = NULL;
-    if (pool)
-	pj_pool_release(pool);
-    
-    pool = f->dev_pool;
-    f->dev_pool = NULL;
-    if (pool)
-	pj_pool_release(pool);
+    pj_pool_safe_release(&pool);	 
 
     return PJ_SUCCESS;
 }
