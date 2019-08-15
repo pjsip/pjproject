@@ -44,8 +44,8 @@ Endpoint *Endpoint::instance_;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TlsInfo::TlsInfo()
-	: empty(true)
+TlsInfo::TlsInfo() : cipher(PJ_TLS_UNKNOWN_CIPHER),
+		     empty(true)
 {
 }
 

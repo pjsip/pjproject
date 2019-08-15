@@ -130,6 +130,13 @@ struct SslCertName
 {
     pj_ssl_cert_name_type  type;    	    /**< Name type		*/
     string		   name;    	    /**< The name		*/
+
+public:
+    /**
+     * Default constructor
+     */
+    SslCertName() : type(PJ_SSL_CERT_NAME_UNKNOWN)
+    {}
 };
 
 /** Array of SSL certificate type and name. */
@@ -340,6 +347,7 @@ struct IpChangeParam {
      * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
      */
     unsigned	    restartLisDelay;
+
 public:
     /**
      * Constructor.

@@ -245,7 +245,10 @@ pjsua_call_setting CallSetting::toPj() const
 
 
 CallMediaInfo::CallMediaInfo()
-: audioConfSlot(PJSUA_INVALID_ID),
+: type(PJMEDIA_TYPE_NONE),
+  dir(PJMEDIA_DIR_NONE),
+  status(PJSUA_CALL_MEDIA_NONE),
+  audioConfSlot(PJSUA_INVALID_ID),
   videoIncomingWindowId(PJSUA_INVALID_ID),
   videoWindow(PJSUA_INVALID_ID),
   videoCapDev(PJMEDIA_VID_INVALID_DEV)
