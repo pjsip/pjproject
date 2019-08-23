@@ -1060,6 +1060,59 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	}
     }
 
+    /* Add certificate authorities for clients from CA.
+     * Needed for certificate request during handshake.
+     */
+    if (cert && ssock->is_server) {
+    	STACK_OF(X509_NAME) *ca_dn = NULL;
+
+    	if (cert->CA_file.slen > 0) {
+    	    ca_dn = SSL_load_client_CA_file(cert->CA_file.ptr);
+    	} else if (cert->CA_buf.slen > 0) {
+    	    X509      *x  = NULL;
+    	    X509_NAME *xn = NULL;
+    	    STACK_OF(X509_NAME) *sk = NULL;
+    	    BIO *bio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
+    	    			       cert->CA_buf.slen);
+
+    	    sk = sk_X509_NAME_new((sk_X509_NAME_compfunc)X509_NAME_cmp);
+
+    	    if (sk != NULL && bio != NULL) {
+    	    	for (;;) {
+    	    	    if (PEM_read_bio_X509(bio, &x, NULL, NULL) == NULL)
+    	    		break;
+
+    	    	    if (ca_dn == NULL) {
+    	    		ca_dn = sk_X509_NAME_new_null();
+
+    	    		if (ca_dn == NULL)
+    	    		    break;
+    	    	    }
+
+    	    	    if ((xn = X509_get_subject_name(x)) == NULL)
+    	    		break;
+
+    	    	    if ((xn = X509_NAME_dup(xn)) == NULL )
+    	    		break;
+
+    	    	    if (sk_X509_NAME_find(sk, xn) >= 0) {
+    	    		X509_NAME_free(xn);
+    	    	    } else {
+    	    		sk_X509_NAME_push(sk, xn);
+    	    		sk_X509_NAME_push(ca_dn, xn);
+    	    	    }
+    	        }
+    	    }
+    	    if (sk != NULL)
+    	    	sk_X509_NAME_free(sk);
+    	    if (bio != NULL)
+    	    	BIO_free(bio);
+    	}
+
+    	if (ca_dn != NULL)
+    	    SSL_CTX_set_client_CA_list(ctx, ca_dn);
+    }
+
     /* Early sensitive data cleanup after OpenSSL context setup. However,
      * this cannot be done for listener sockets, as the data will still
      * be needed by accepted sockets.
