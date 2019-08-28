@@ -396,6 +396,22 @@ static void update_digest_session( pjsip_cached_auth *cached_auth,
 
 	/* Create cnonce */
 	pj_create_unique_string( cached_auth->pool, &cached_auth->cnonce );
+#if defined(PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY) && \
+    PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY!=0
+	if (pj_strchr(&cached_auth->cnonce, '-')) {
+	    /* remove hyphen character. */
+	    int w, r, len = pj_strlen(&cached_auth->cnonce);
+	    char *s = cached_auth->cnonce.ptr;
+
+	    w = r = 0;
+	    for (; r < len; r++) {
+		if (s[r] != '-')
+		    s[w++] = s[r];
+	    }
+	    s[w] = '\0';
+	    cached_auth->cnonce.slen = w;
+	}
+#endif
 
 	/* Initialize nonce-count */
 	cached_auth->nc = 1;

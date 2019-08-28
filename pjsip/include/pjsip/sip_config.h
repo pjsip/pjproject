@@ -1190,6 +1190,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_AUTH_CACHED_POOL_MAX_SIZE	(20 * 1024)
 #endif
 
+
+/**
+ * Specify whether the cnonce used for SIP authentication contain digits only.
+ * The "cnonce" value is setup using GUID generator, i.e:
+ * pj_create_unique_string(), and the GUID string may contain hyphen character
+ * ("-"). Some SIP servers do not like this GUID format, so this option will
+ * strip any hyphens from the GUID string.
+ *
+ * Default is 1 (cnonce will not contain any hyphen characters).
+ */
+#ifndef PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY
+#   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY	1
+#endif
+
 /*****************************************************************************
  *  SIP Event framework and presence settings.
  */
