@@ -689,6 +689,8 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     tmp_period_size = stream->pb_frames;
     snd_pcm_hw_params_set_period_size_near (stream->pb_pcm, params,
 					    &tmp_period_size, NULL);
+    stream->pb_frames = tmp_period_size > stream->pb_frames ? tmp_period_size : 
+                                                              stream->pb_frames;					    					    
     TRACE_((THIS_FILE, "open_playback: period size set to: %d",
 	    tmp_period_size));
 
@@ -807,6 +809,8 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     tmp_period_size = stream->ca_frames;
     snd_pcm_hw_params_set_period_size_near (stream->ca_pcm, params,
 					    &tmp_period_size, NULL);
+    stream->ca_frames = tmp_period_size > stream->ca_frames ? tmp_period_size : 
+                                                              stream->ca_frames;
     TRACE_((THIS_FILE, "open_capture: period size set to: %d",
 	    tmp_period_size));
 
