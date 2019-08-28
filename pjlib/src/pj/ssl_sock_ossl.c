@@ -700,6 +700,9 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     return (pj_ssl_sock_t *)PJ_POOL_ZALLOC_T(pool, ossl_sock_t);
 }
 
+static int xname_cmp(const X509_NAME * const *a, const X509_NAME * const *b) {
+  return X509_NAME_cmp(*a, *b);
+}
 
 /* Create and initialize new SSL context and instance */
 static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
@@ -1064,53 +1067,47 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
      * Needed for certificate request during handshake.
      */
     if (cert && ssock->is_server) {
-    	STACK_OF(X509_NAME) *ca_dn = NULL;
+        STACK_OF(X509_NAME) *ca_dn = NULL;
 
-    	if (cert->CA_file.slen > 0) {
-    	    ca_dn = SSL_load_client_CA_file(cert->CA_file.ptr);
-    	} else if (cert->CA_buf.slen > 0) {
-    	    X509      *x  = NULL;
-    	    X509_NAME *xn = NULL;
-    	    STACK_OF(X509_NAME) *sk = NULL;
-    	    BIO *bio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
-    	    			       cert->CA_buf.slen);
+        if (cert->CA_file.slen > 0) {
+            ca_dn = SSL_load_client_CA_file(cert->CA_file.ptr);
+        } else if (cert->CA_buf.slen > 0) {
+            X509      *x  = NULL;
+            X509_NAME *xn = NULL;
+            STACK_OF(X509_NAME) *sk = NULL;
+            BIO *new_bio = BIO_new_mem_buf((void*)cert->CA_buf.ptr,
+					   cert->CA_buf.slen);
 
-    	    sk = sk_X509_NAME_new((sk_X509_NAME_compfunc)X509_NAME_cmp);
+            sk = sk_X509_NAME_new(xname_cmp);
 
-    	    if (sk != NULL && bio != NULL) {
-    	    	for (;;) {
-    	    	    if (PEM_read_bio_X509(bio, &x, NULL, NULL) == NULL)
-    	    		break;
+            if (sk != NULL && new_bio != NULL) {
+                for (;;) {
+                    if (PEM_read_bio_X509(new_bio, &x, NULL, NULL) == NULL)
+                        break;
 
-    	    	    if (ca_dn == NULL) {
-    	    		ca_dn = sk_X509_NAME_new_null();
+                    if ((xn = X509_get_subject_name(x)) == NULL)
+                        break;
 
-    	    		if (ca_dn == NULL)
-    	    		    break;
-    	    	    }
+                    if ((xn = X509_NAME_dup(xn)) == NULL )
+                        break;
 
-    	    	    if ((xn = X509_get_subject_name(x)) == NULL)
-    	    		break;
+                    if (sk_X509_NAME_find(sk, xn) >= 0) {
+                        X509_NAME_free(xn);
+                    } else {
+                        sk_X509_NAME_push(sk, xn);
+                    }
+                    X509_free(x);
+                    x = NULL;
+                }
+            }
+            if (sk != NULL)
+            	ca_dn = sk;
+            if (new_bio != NULL)
+                BIO_free(new_bio);
+        }
 
-    	    	    if ((xn = X509_NAME_dup(xn)) == NULL )
-    	    		break;
-
-    	    	    if (sk_X509_NAME_find(sk, xn) >= 0) {
-    	    		X509_NAME_free(xn);
-    	    	    } else {
-    	    		sk_X509_NAME_push(sk, xn);
-    	    		sk_X509_NAME_push(ca_dn, xn);
-    	    	    }
-    	        }
-    	    }
-    	    if (sk != NULL)
-    	    	sk_X509_NAME_free(sk);
-    	    if (bio != NULL)
-    	    	BIO_free(bio);
-    	}
-
-    	if (ca_dn != NULL)
-    	    SSL_CTX_set_client_CA_list(ctx, ca_dn);
+        if (ca_dn != NULL)
+            SSL_CTX_set_client_CA_list(ctx, ca_dn);
     }
 
     /* Early sensitive data cleanup after OpenSSL context setup. However,
