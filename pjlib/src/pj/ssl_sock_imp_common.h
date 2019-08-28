@@ -107,6 +107,7 @@ struct pj_ssl_sock_t
     pj_bool_t		  is_server;
     enum ssl_state	  ssl_state;
     pj_ioqueue_op_key_t	  handshake_op_key;
+    pj_ioqueue_op_key_t	  shutdown_op_key;
     pj_timer_entry	  timer;
     pj_status_t		  verify_status;
 

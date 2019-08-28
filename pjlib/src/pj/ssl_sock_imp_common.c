@@ -1281,6 +1281,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     pj_timer_entry_init(&ssock->timer, 0, ssock, &on_timer);
     pj_ioqueue_op_key_init(&ssock->handshake_op_key,
 			   sizeof(pj_ioqueue_op_key_t));
+    pj_ioqueue_op_key_init(&ssock->shutdown_op_key,
+			   sizeof(pj_ioqueue_op_key_t));
 
     /* Create secure socket mutex */
     status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
