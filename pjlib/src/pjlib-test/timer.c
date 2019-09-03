@@ -188,19 +188,40 @@ static int test_timer_heap(void)
 /***************
  * Stress test *
  ***************
- * Test scenario:
+ * Test scenario (if RANDOMIZED_TEST is 0):
  * 1. Create and schedule a number of timer entries.
  * 2. Start threads for polling (simulating normal worker thread).
  *    Each expired entry will try to cancel and re-schedule itself
  *    from within the callback.
  * 3. Start threads for cancelling random entries. Each successfully
  *    cancelled entry will be re-scheduled after some random delay.
+ *
+ * Test scenario (if RANDOMIZED_TEST is 1):
+ * 1. Create and schedule a number of timer entries.
+ * 2. Start threads which will, based on a configurable probability
+ *    setting, randomly perform timer scheduling, cancelling, or
+ *    polling (simulating normal worker thread).
+ * This test is considered a failure if:
+ * - It triggers assertion/crash.
+ * - There's an error message in the log, which indicates a potential
+ *   bug in the implementation (note that race message is ok).
  */
-#define ST_POLL_THREAD_COUNT	    10
-#define ST_CANCEL_THREAD_COUNT	    10
+#define RANDOMIZED_TEST 1
+#define SIMULATE_CRASH	PJ_TIMER_HEAP_USE_COPY
 
-#define ST_ENTRY_COUNT		    1000
-#define ST_ENTRY_MAX_TIMEOUT_MS	    100
+#if RANDOMIZED_TEST
+    #define ST_STRESS_THREAD_COUNT	    20
+    #define ST_POLL_THREAD_COUNT	    0
+    #define ST_CANCEL_THREAD_COUNT	    0
+#else
+    #define ST_STRESS_THREAD_COUNT	    0
+    #define ST_POLL_THREAD_COUNT	    10
+    #define ST_CANCEL_THREAD_COUNT	    10
+#endif
+
+#define ST_ENTRY_COUNT		    10000
+#define ST_DURATION		    30000
+#define ST_ENTRY_MAX_TIMEOUT_MS	    ST_DURATION/10
 
 /* Number of group lock, may be zero, shared by timer entries, group lock
  * can be useful to evaluate poll vs cancel race condition scenario, i.e:
@@ -215,6 +236,10 @@ struct thread_param
     pj_timer_heap_t *timer;
     pj_bool_t stopping;
     pj_timer_entry *entries;
+    pj_atomic_t **status;
+    pj_atomic_t *n_sched, *n_cancel, *n_poll;
+    pj_grp_lock_t **grp_locks;
+    int err;
 
     pj_atomic_t *idx;
     struct {
@@ -226,8 +251,14 @@ struct thread_param
 static pj_status_t st_schedule_entry(pj_timer_heap_t *ht, pj_timer_entry *e)
 {
     pj_time_val delay = {0};
-    pj_grp_lock_t *grp_lock = (pj_grp_lock_t*)e->user_data;
+    pj_grp_lock_t *grp_lock = NULL;
     pj_status_t status;
+    struct thread_param *tparam = (struct thread_param *)e->user_data;
+
+    if (ST_ENTRY_GROUP_LOCK_COUNT && pj_rand() % 10) {
+	/* About 90% of entries should have group lock */
+	grp_lock = tparam->grp_locks[pj_rand() % ST_ENTRY_GROUP_LOCK_COUNT];
+    }
 
     delay.msec = pj_rand() % ST_ENTRY_MAX_TIMEOUT_MS;
     pj_time_val_normalize(&delay);
@@ -235,8 +266,22 @@ static pj_status_t st_schedule_entry(pj_timer_heap_t *ht, pj_timer_entry *e)
     return status;
 }
 
+static void dummy_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
+{
+    PJ_LOG(4,("test", "dummy callback called %p %p", e, e->user_data));
+}
+
 static void st_entry_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
 {
+    struct thread_param *tparam = (struct thread_param *)e->user_data;
+
+#if RANDOMIZED_TEST
+    /* Make sure the flag has been set. */
+    while (pj_atomic_get(tparam->status[e - tparam->entries]) != 1)
+    	pj_thread_sleep(10);
+    pj_atomic_set(tparam->status[e - tparam->entries], 0);
+#endif
+
     /* try to cancel this */
     pj_timer_heap_cancel_if_active(ht, e, 10);
     
@@ -244,7 +289,118 @@ static void st_entry_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
     pj_thread_sleep(pj_rand() % 50);
 
     /* reschedule entry */
-    st_schedule_entry(ht, e);
+    if (!ST_STRESS_THREAD_COUNT)
+    	st_schedule_entry(ht, e);
+}
+
+/* Randomized stress worker thread function. */
+static int stress_worker(void *arg)
+{
+    /* Enumeration of possible task. */
+    enum {
+    	SCHEDULING = 0,
+    	CANCELLING = 1,
+    	POLLING = 2,
+    	NOTHING = 3
+    };
+    /* Probability of a certain task being chosen.
+     * The first number indicates the probability of the first task,
+     * the second number for the second task, and so on.
+     */
+    int prob[3] = {75, 15, 5};
+    struct thread_param *tparam = (struct thread_param*)arg;
+    int t_idx, i;
+
+    t_idx = pj_atomic_inc_and_get(tparam->idx);
+    PJ_LOG(4,("test", "...thread #%d (random) started", t_idx));
+    while (!tparam->stopping) {
+    	int job, task;
+	int idx, count;
+    	pj_status_t prev_status, status;
+
+    	/* Randomly choose which task to do */
+    	job = pj_rand() % 100;
+    	if (job < prob[0]) task = SCHEDULING;
+    	else if (job < (prob[0] + prob[1])) task = CANCELLING;
+    	else if (job < (prob[0] + prob[1] + prob[2])) task = POLLING;
+    	else task = NOTHING;
+    
+    	idx = pj_rand() % ST_ENTRY_COUNT;
+    	prev_status = pj_atomic_get(tparam->status[idx]);
+    	if (task == SCHEDULING) {
+    	    if (prev_status != 0) continue;
+    	    status = st_schedule_entry(tparam->timer, &tparam->entries[idx]);
+    	    if (prev_status == 0 && status != PJ_SUCCESS) {
+    	        /* To make sure the flag has been set. */
+    	        pj_thread_sleep(20);
+    	        if (pj_atomic_get(tparam->status[idx]) == 1) {
+    	    	    /* Race condition with another scheduling. */
+    	    	    PJ_LOG(3,("test", "race schedule-schedule %d: %p",
+    	    	   	              idx, &tparam->entries[idx]));
+    	        } else {
+    	            if (tparam->err != 0) tparam->err = -210;
+	    	    PJ_LOG(3,("test", "error: failed to schedule entry %d: %p",
+	    	   		      idx, &tparam->entries[idx]));
+	    	}
+    	    } else if (prev_status == 1 && status == PJ_SUCCESS) {
+    	    	/* Race condition with another cancellation or
+    	    	 * timer poll.
+    	    	 */
+    	    	pj_thread_sleep(20);
+    	    	PJ_LOG(3,("test", "race schedule-cancel/poll %d: %p",
+    	    	   	          idx, &tparam->entries[idx]));
+    	    }
+    	    if (status == PJ_SUCCESS) {
+    	    	pj_atomic_set(tparam->status[idx], 1);
+    	    	pj_atomic_inc(tparam->n_sched);
+    	    }
+    	} else if (task == CANCELLING) {
+	    count = pj_timer_heap_cancel_if_active(tparam->timer,
+	    					   &tparam->entries[idx], 10);
+    	    if (prev_status == 0 && count > 0) {
+    	        /* To make sure the flag has been set. */
+    	        pj_thread_sleep(20);
+    	        if (pj_atomic_get(tparam->status[idx]) == 1) {
+    	    	    /* Race condition with scheduling. */
+    	    	    PJ_LOG(3,("test", "race cancel-schedule %d: %p",
+    	    	   	              idx, &tparam->entries[idx]));
+    	        } else {
+    	            if (tparam->err != 0) tparam->err = -220;
+	    	    PJ_LOG(3,("test", "error: cancelling invalid entry %d: %p",
+	    	   		      idx, &tparam->entries[idx]));
+	    	}
+    	    } else if (prev_status == 1 && count == 0) {
+    	        /* To make sure the flag has been cleared. */
+    	        pj_thread_sleep(20);
+    	    	if (pj_atomic_get(tparam->status[idx]) == 0) {
+    	    	    /* Race condition with polling. */
+    	    	    PJ_LOG(3,("test", "race cancel-poll %d: %p",
+    	    	   	              idx, &tparam->entries[idx]));
+    	    	} else {
+    	            if (tparam->err != 0) tparam->err = -230;
+    	    	    PJ_LOG(3,("test", "error: failed to cancel entry %d: %p",
+    	    		   	      idx, &tparam->entries[idx]));
+    	    	}
+    	    }
+    	    if (count > 0) {
+    	        /* Make sure the flag has been set. */
+    		while (pj_atomic_get(tparam->status[idx]) != 1)
+    		    pj_thread_sleep(10);
+    	    	pj_atomic_set(tparam->status[idx], 0);
+    	    	pj_atomic_inc(tparam->n_cancel);
+    	    }
+    	} else if (task == POLLING) {
+	    count = pj_timer_heap_poll(tparam->timer, NULL);
+	    for (i = 0; i < count; i++) {
+	        pj_atomic_inc_and_get(tparam->n_poll);
+	    }
+	} else {
+	    pj_thread_sleep(10);
+	}
+    }
+    PJ_LOG(4,("test", "...thread #%d (poll) stopped", t_idx));
+
+    return 0;
 }
 
 /* Poll worker thread function. */
@@ -307,18 +463,26 @@ static int cancel_worker(void *arg)
 
 static int timer_stress_test(void)
 {
+    unsigned count = 0, n_sched = 0, n_cancel = 0, n_poll = 0;
     int i;
     pj_timer_entry *entries = NULL;
+    pj_atomic_t	**entries_status = NULL;
     pj_grp_lock_t **grp_locks = NULL;
     pj_pool_t *pool;
     pj_timer_heap_t *timer = NULL;
     pj_lock_t *timer_lock;
     pj_status_t status;
     int err=0;
+    pj_thread_t **stress_threads = NULL;
     pj_thread_t **poll_threads = NULL;
     pj_thread_t **cancel_threads = NULL;
     struct thread_param tparam = {0};
     pj_time_val now;
+#if SIMULATE_CRASH
+    pj_timer_entry *entry;
+    pj_pool_t *tmp_pool;
+    pj_time_val delay = {0};
+#endif
 
     PJ_LOG(3,("test", "...Stress test"));
 
@@ -332,8 +496,11 @@ static int timer_stress_test(void)
 	goto on_return;
     }
 
-    /* Create timer heap */
-    status = pj_timer_heap_create(pool, ST_ENTRY_COUNT, &timer);
+    /* Create timer heap.
+     * Initially we only create a fraction of what's required,
+     * to test the timer heap growth algorithm.
+     */
+    status = pj_timer_heap_create(pool, ST_ENTRY_COUNT/64, &timer);
     if (status != PJ_SUCCESS) {
         app_perror("...error: unable to create timer heap", status);
 	err = -20;
@@ -354,6 +521,7 @@ static int timer_stress_test(void)
 	grp_locks = (pj_grp_lock_t**)
 		    pj_pool_calloc(pool, ST_ENTRY_GROUP_LOCK_COUNT,
 				   sizeof(pj_grp_lock_t*));
+    	tparam.grp_locks = grp_locks;
     }
     for (i=0; i<ST_ENTRY_GROUP_LOCK_COUNT; ++i) {    
 	status = pj_grp_lock_create(pool, NULL, &grp_locks[i]);
@@ -372,32 +540,68 @@ static int timer_stress_test(void)
 	err = -50;
 	goto on_return;
     }
-
+    entries_status = (pj_atomic_t**)pj_pool_calloc(pool, ST_ENTRY_COUNT,
+					      	   sizeof(*entries_status));
+    if (!entries_status) {
+	err = -55;
+	goto on_return;
+    }
+    
     for (i=0; i<ST_ENTRY_COUNT; ++i) {
-	pj_grp_lock_t *grp_lock = NULL;
+	pj_timer_entry_init(&entries[i], 0, &tparam, &st_entry_callback);
 
-	if (ST_ENTRY_GROUP_LOCK_COUNT && pj_rand() % 10) {
-	    /* About 90% of entries should have group lock */
-	    grp_lock = grp_locks[pj_rand() % ST_ENTRY_GROUP_LOCK_COUNT];
-	}
-
-	pj_timer_entry_init(&entries[i], 0, grp_lock, &st_entry_callback);
-	status = st_schedule_entry(timer, &entries[i]);
+	status = pj_atomic_create(pool, -1, &entries_status[i]);
 	if (status != PJ_SUCCESS) {
-	    app_perror("...error: unable to schedule entry", status);
 	    err = -60;
 	    goto on_return;
+	}
+	pj_atomic_set(entries_status[i], 0);
+
+	/* For randomized test, we schedule the entry inside the thread */
+	if (!ST_STRESS_THREAD_COUNT) {
+	    status = st_schedule_entry(timer, &entries[i]);
+	    if (status != PJ_SUCCESS) {
+	        app_perror("...error: unable to schedule entry", status);
+	        err = -60;
+	        goto on_return;
+	    }
 	}
     }
 
     tparam.stopping = PJ_FALSE;
     tparam.timer = timer;
     tparam.entries = entries;
+    tparam.status = entries_status;
     status = pj_atomic_create(pool, -1, &tparam.idx);
     if (status != PJ_SUCCESS) {
 	app_perror("...error: unable to create atomic", status);
 	err = -70;
 	goto on_return;
+    }
+    status = pj_atomic_create(pool, -1, &tparam.n_sched);
+    pj_assert (status == PJ_SUCCESS);
+    pj_atomic_set(tparam.n_sched, 0);
+    status = pj_atomic_create(pool, -1, &tparam.n_cancel);
+    pj_assert (status == PJ_SUCCESS);
+    pj_atomic_set(tparam.n_cancel, 0);
+    status = pj_atomic_create(pool, -1, &tparam.n_poll);
+    pj_assert (status == PJ_SUCCESS);
+    pj_atomic_set(tparam.n_poll, 0);
+
+    /* Start stress worker threads */
+    if (ST_STRESS_THREAD_COUNT) {
+	stress_threads = (pj_thread_t**)
+		        pj_pool_calloc(pool, ST_STRESS_THREAD_COUNT,
+				       sizeof(pj_thread_t*));
+    }
+    for (i=0; i<ST_STRESS_THREAD_COUNT; ++i) {
+	status = pj_thread_create( pool, "poll", &stress_worker, &tparam,
+				   0, 0, &stress_threads[i]);
+	if (status != PJ_SUCCESS) {
+	    app_perror("...error: unable to create stress thread", status);
+	    err = -75;
+	    goto on_return;
+	}
     }
 
     /* Start poll worker threads */
@@ -432,15 +636,38 @@ static int timer_stress_test(void)
 	}
     }
 
-    /* Wait 30s */
-    pj_thread_sleep(30*1000);
+#if SIMULATE_CRASH
+    tmp_pool = pj_pool_create( mem, NULL, 4096, 128, NULL);
+    pj_assert(tmp_pool);
+    entry = (pj_timer_entry*)pj_pool_calloc(tmp_pool, 1, sizeof(*entry));
+    pj_assert(entry);
+    pj_timer_entry_init(entry, 0, &tparam, &dummy_callback);
+    delay.sec = 6;
+    status = pj_timer_heap_schedule(timer, entry, &delay);
+    pj_assert(status == PJ_SUCCESS);
+    pj_thread_sleep(1000);
+    PJ_LOG(3,("test", "...Releasing timer entry %p without cancelling it",
+    		      entry));
+    pj_pool_secure_release(tmp_pool);
+    //pj_pool_release(tmp_pool);
+    //pj_memset(tmp_pool, 128, 4096);
+#endif
 
+    /* Wait */
+    pj_thread_sleep(ST_DURATION);
 
 on_return:
     
     PJ_LOG(3,("test", "...Cleaning up resources"));
     tparam.stopping = PJ_TRUE;
     
+    for (i=0; i<ST_STRESS_THREAD_COUNT; ++i) {
+	if (!stress_threads[i])
+	    continue;
+	pj_thread_join(stress_threads[i]);
+	pj_thread_destroy(stress_threads[i]);
+    }
+
     for (i=0; i<ST_POLL_THREAD_COUNT; ++i) {
 	if (!poll_threads[i])
 	    continue;
@@ -462,7 +689,9 @@ on_return:
     }
 
     for (i=0; i<ST_ENTRY_COUNT; ++i) {
-	pj_timer_heap_cancel_if_active(timer, &entries[i], 10);
+	count += pj_timer_heap_cancel_if_active(timer, &entries[i], 10);
+	if (entries_status)
+	    pj_atomic_destroy(entries_status[i]);
     }
 
     for (i=0; i<ST_ENTRY_GROUP_LOCK_COUNT; ++i) {
@@ -477,12 +706,44 @@ on_return:
     if (timer)
 	pj_timer_heap_destroy(timer);
 
+    PJ_LOG(3,("test", "Total memory of timer heap: %d",
+    		      pj_timer_heap_mem_size(ST_ENTRY_COUNT)));
+
     if (tparam.idx)
 	pj_atomic_destroy(tparam.idx);
+    if (tparam.n_sched) {
+        n_sched = pj_atomic_get(tparam.n_sched);
+        PJ_LOG(3,("test", "Total number of scheduled entries: %d", n_sched));
+	pj_atomic_destroy(tparam.n_sched);
+    }
+    if (tparam.n_cancel) {
+        n_cancel = pj_atomic_get(tparam.n_cancel);
+        PJ_LOG(3,("test", "Total number of cancelled entries: %d", n_cancel));
+	pj_atomic_destroy(tparam.n_cancel);
+    }
+    if (tparam.n_poll) {
+        n_poll = pj_atomic_get(tparam.n_poll);
+        PJ_LOG(3,("test", "Total number of polled entries: %d", n_poll));
+	pj_atomic_destroy(tparam.n_poll);
+    }
+    PJ_LOG(3,("test", "Number of remaining active entries: %d", count));
+    if (n_sched) {
+        pj_bool_t match = PJ_TRUE;
+
+#if SIMULATE_CRASH
+	n_sched++;
+#endif
+        if (n_sched != (n_cancel + n_poll + count)) {
+            if (tparam.err != 0) tparam.err = -250;
+            match = PJ_FALSE;
+        }
+    	PJ_LOG(3,("test", "Scheduled = cancelled + polled + remaining?: %s",
+    			  (match? "yes": "no")));
+    }
 
     pj_pool_safe_release(&pool);
 
-    return err;
+    return (err? err: tparam.err);
 }
 
 int timer_test()
