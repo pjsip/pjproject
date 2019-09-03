@@ -648,7 +648,7 @@ static int timer_stress_test(void)
     pj_thread_sleep(1000);
     PJ_LOG(3,("test", "...Releasing timer entry %p without cancelling it",
     		      entry));
-    pj_pool_secure_release(tmp_pool);
+    pj_pool_secure_release(&tmp_pool);
     //pj_pool_release(tmp_pool);
     //pj_memset(tmp_pool, 128, 4096);
 #endif
