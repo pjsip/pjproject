@@ -538,7 +538,9 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
     fport = (struct file_reader_port*) port;
 
     payload_pos = (pj_size_t)(fport->fpos - fport->start_data);
-    if (payload_pos >= fport->bufsize)
+    if (payload_pos == 0)
+	return 0;
+    else if (payload_pos >= fport->bufsize)
 	return payload_pos - fport->bufsize + (fport->readpos - fport->buf);
     else
 	return (fport->readpos - fport->buf) % payload_pos;
