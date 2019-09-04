@@ -2185,10 +2185,14 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Handle authentication */
 	if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 	    (tsx->status_code==401 || tsx->status_code==407))
-	{	    
+	{
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
 	    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+
+	    /* Handled by other module already (e.g: invite module) */
+	    if (tsx->last_tx->auth_retry)
+		return;
 
 	    status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess, rdata,
 					       tsx->last_tx, &tdata);
