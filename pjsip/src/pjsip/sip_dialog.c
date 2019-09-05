@@ -1247,6 +1247,26 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
     return status;
 }
 
+/* Callback for send ACK, providing send callback will allow stack to try
+ * next server upon failure.
+ */
+static void send_ack_callback( pjsip_send_state *send_state,
+			       pj_ssize_t sent, pj_bool_t *cont )
+{
+    if (sent > 0)
+	return;
+
+    if (*cont) {
+	PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
+		     "Temporary failure in sending %s, "
+		     "will try next server",
+		     pjsip_tx_data_get_info(send_state->tdata)));
+    } else {
+	PJ_PERROR(3,(THIS_FILE, (pj_status_t)-sent,
+		     "Failed to send %s!",
+		     pjsip_tx_data_get_info(send_state->tdata)));
+    }
+}
 
 /*
  * Send request statefully, and update dialog'c CSeq.
@@ -1338,7 +1358,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 
 	/* Send request */
 	status = pjsip_endpt_send_request_stateless(dlg->endpt, tdata,
-						    NULL, NULL);
+						    NULL, &send_ack_callback);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
