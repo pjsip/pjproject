@@ -1150,13 +1150,13 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 			 &sock_info.rtp_addr_name, 
 			 med_use_ipv4?pj_strset2(&tmp_st, "127.0.0.1"):
 				      pj_strset2(&tmp_st, "::1"), 
-			 tmp_port++);
+			 rem_sdp->media[i]->desc.port? (tmp_port++):0);
 
 	pj_sockaddr_init(med_use_ipv4?PJ_AF_INET:PJ_AF_INET6, 
 			 &sock_info.rtcp_addr_name, 
 			 med_use_ipv4?pj_strset2(&tmp_st, "127.0.0.1"):
 				      pj_strset2(&tmp_st, "::1"), 
-			 tmp_port++);
+			 rem_sdp->media[i]->desc.port? (tmp_port++):0);
 
 	if (pj_stricmp(&rem_sdp->media[i]->desc.media, &STR_AUDIO)==0) {
 	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
@@ -1169,8 +1169,6 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 	} else if (pj_stricmp(&rem_sdp->media[i]->desc.media, &STR_VIDEO)==0) {
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-
-	    pj_sockaddr_set_port(&sock_info.rtp_addr_name, ++tmp_port);
 	    status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
 						    &sock_info, 0, &m);
 	    if (status != PJ_SUCCESS)
