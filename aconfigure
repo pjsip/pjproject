@@ -8931,7 +8931,7 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    	ac_webrtc_instset=mips
 			        ;;
 			    *)
-				ac_webrtc_instset=sse2
+				ac_webrtc_instset=generic
 			    	;;
 			esac
 		        ;;
