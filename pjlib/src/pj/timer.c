@@ -300,15 +300,18 @@ static pj_timer_entry_dup * remove_node( pj_timer_heap_t *ht, size_t slot)
     if (GET_FIELD(removed_node, _timer_id) !=
     	GET_ENTRY(removed_node)->_timer_id)
     {
-	    PJ_LOG(3,(THIS_FILE, "Bug! Trying to remove entry %p from %s "
-	    			 "line %d, which has been deallocated "
-	    			 "without being cancelled",
-		  		 GET_ENTRY(removed_node),
 #if PJ_TIMER_DEBUG
-		  		 removed_node->src_file,
-		  		 removed_node->src_line));
+	PJ_LOG(3,(THIS_FILE, "Bug! Trying to remove entry %p from %s "
+    			     "line %d, which has been deallocated "
+    			     "without being cancelled",
+	  		     GET_ENTRY(removed_node),
+	  		     removed_node->src_file,
+	  		     removed_node->src_line));
 #else
-		  		 "N/A", 0));
+	PJ_LOG(3,(THIS_FILE, "Bug! Trying to remove entry %p "
+    			     "which has been deallocated "
+    			     "without being cancelled",
+	  		     GET_ENTRY(removed_node)));
 #endif
 #if ASSERT_IF_ENTRY_DESTROYED
     	pj_assert(removed_node->dup._timer_id==removed_node->entry->_timer_id);
@@ -351,14 +354,12 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
     pj_timer_entry_dup *new_timer_dups = 0;
     pj_timer_id_t *new_timer_ids;
     pj_size_t i;
+    pj_timer_entry_dup **new_heap = 0;
     
     PJ_LOG(6,(THIS_FILE, "Growing heap size from %d to %d",
 		  	 ht->max_size, new_size));
     
     // First grow the heap itself.
-    
-    pj_timer_entry_dup **new_heap = 0;
-    
     new_heap = (pj_timer_entry_dup**) 
     	       pj_pool_calloc(ht->pool, new_size, sizeof(pj_timer_entry_dup*));
     if (!new_heap)
@@ -378,7 +379,7 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
     for (i = 0; i < ht->cur_size; i++) {
     	int idx = ht->heap[i] - ht->timer_dups;
         // Point to the address in the new array
-        pj_assert(idx >= 0 && idx < ht->max_size);
+        pj_assert(idx >= 0 && idx < (int)ht->max_size);
     	new_heap[i] = &new_timer_dups[idx];
     }
     ht->timer_dups = new_timer_dups;
@@ -804,13 +805,15 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 	    GET_FIELD(node, user_data) != entry->user_data)
 	{
 	    valid = PJ_FALSE;
+#if PJ_TIMER_DEBUG
 	    PJ_LOG(3,(THIS_FILE, "Bug! Polling entry %p from %s line %d has "
 	    			 "been deallocated without being cancelled",
 		  		 GET_ENTRY(node),
-#if PJ_TIMER_DEBUG
 		  		 node->src_file, node->src_line));
 #else
-		  		 "N/A", 0));
+	    PJ_LOG(3,(THIS_FILE, "Bug! Polling entry %p has "
+	    			 "been deallocated without being cancelled",
+		  		 GET_ENTRY(node)));
 #endif
 #if ASSERT_IF_ENTRY_DESTROYED
 	    pj_assert(node->dup.cb == entry->cb);
