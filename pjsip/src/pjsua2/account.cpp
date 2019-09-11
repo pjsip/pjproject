@@ -929,7 +929,8 @@ void AccountInfo::fromPj(const pjsua_acc_info &pai)
     uri			= pj2Str(pai.acc_uri);
     regIsConfigured	= pai.has_registration != 0;
     regIsActive		= pai.has_registration && pai.expires > 0 &&
-			    (pai.status / 100 == 2);
+    			  pai.expires != PJSIP_EXPIRES_NOT_SPECIFIED &&
+			  (pai.status / 100 == 2);
     regExpiresSec	= pai.expires;
     regStatus		= pai.status;
     regStatusText	= pj2Str(pai.status_text);
