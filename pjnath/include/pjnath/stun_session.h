@@ -348,6 +348,8 @@ struct pj_stun_tx_data
     pj_bool_t		 retransmit;	/**< Retransmit request?	    */
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
     pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */
+    
+    pj_grp_lock_t	*grp_lock;	/**< Group lock (for resp cache).   */
 
     pj_stun_req_cred_info auth_info;	/**< Credential info		    */
 

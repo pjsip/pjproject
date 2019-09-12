@@ -76,6 +76,7 @@ static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
 					pj_size_t pkt_size);
 static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx);
 static void stun_sess_on_destroy(void *comp);
+static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force);
 
 static pj_stun_tsx_cb tsx_cb = 
 {
@@ -153,7 +154,7 @@ static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx)
         
         pj_grp_lock_acquire(sess->grp_lock);
 	tsx_erase(sess, tdata);
-	pj_pool_release(tdata->pool);
+	destroy_tdata(tdata, PJ_TRUE);
 	pj_grp_lock_release(sess->grp_lock);
     }
 
@@ -162,15 +163,23 @@ static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx)
     TRACE_((THIS_FILE, "STUN transaction %p destroyed", tsx));
 }
 
+static void tdata_on_destroy(void *arg)
+{
+    pj_stun_tx_data *tdata = (pj_stun_tx_data*)arg;
+
+    pj_pool_safe_release(&tdata->pool);
+}
+
 static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 {
     TRACE_((THIS_FILE, "tdata %p destroy request, force=%d, tsx=%p", tdata,
 	    force, tdata->client_tsx));
 
+    /* STUN session may have been destroyed, except when tdata is cached. */
+
     if (tdata->res_timer.id != PJ_FALSE) {
 	pj_timer_heap_cancel_if_active(tdata->sess->cfg->timer_heap,
-	                               &tdata->res_timer, PJ_FALSE);
-	pj_list_erase(tdata);
+				       &tdata->res_timer, PJ_FALSE);
     }
 
     if (force) {
@@ -179,7 +188,12 @@ static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 	    pj_stun_client_tsx_stop(tdata->client_tsx);
 	    pj_stun_client_tsx_set_data(tdata->client_tsx, NULL);
 	}
-	pj_pool_release(tdata->pool);
+	if (tdata->grp_lock) {
+	    pj_grp_lock_dec_ref(tdata->sess->grp_lock);
+	    pj_grp_lock_dec_ref(tdata->grp_lock);
+	} else {
+	    tdata_on_destroy(tdata);
+	}
 
     } else {
 	if (tdata->client_tsx) {
@@ -188,7 +202,13 @@ static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 	    pj_stun_client_tsx_schedule_destroy(tdata->client_tsx, &delay);
 
 	} else {
-	    pj_pool_release(tdata->pool);
+	    pj_list_erase(tdata);
+	    if (tdata->grp_lock) {
+		pj_grp_lock_dec_ref(tdata->sess->grp_lock);
+		pj_grp_lock_dec_ref(tdata->grp_lock);
+	    } else {
+		tdata_on_destroy(tdata);
+	    }
 	}
     }
 }
@@ -225,10 +245,9 @@ static void on_cache_timeout(pj_timer_heap_t *timer_heap,
 
     PJ_LOG(5,(SNAME(tdata->sess), "Response cache deleted"));
 
-    pj_list_erase(tdata);
+    destroy_tdata(tdata, PJ_FALSE);
     pj_grp_lock_release(sess->grp_lock);
 
-    destroy_tdata(tdata, PJ_FALSE);
 }
 
 static pj_status_t apply_msg_options(pj_stun_session *sess,
@@ -564,17 +583,8 @@ static void stun_sess_on_destroy(void *comp)
 	destroy_tdata(tdata, PJ_TRUE);
     }
 
-    while (!pj_list_empty(&sess->cached_response_list)) {
-	pj_stun_tx_data *tdata = sess->cached_response_list.next;
-	destroy_tdata(tdata, PJ_TRUE);
-    }
-
-    if (sess->rx_pool) {
-	pj_pool_release(sess->rx_pool);
-	sess->rx_pool = NULL;
-    }
-
-    pj_pool_release(sess->pool);
+    pj_pool_safe_release(&sess->rx_pool);
+    pj_pool_safe_release(&sess->pool);
 
     TRACE_((THIS_FILE, "STUN session %p destroyed", sess));
 }
@@ -598,7 +608,7 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
 
     sess->is_destroying = PJ_TRUE;
 
-    /* We need to stop transactions and cached response because they are
+    /* We need to stop transactions because they are
      * holding the group lock's reference counter while retransmitting.
      */
     tdata = sess->pending_request_list.next;
@@ -608,11 +618,12 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
 	tdata = tdata->next;
     }
 
-    tdata = sess->cached_response_list.next;
-    while (tdata != &sess->cached_response_list) {
-	pj_timer_heap_cancel_if_active(tdata->sess->cfg->timer_heap,
-				       &tdata->res_timer, PJ_FALSE);
-	tdata = tdata->next;
+    /* Destroy cached response within session lock protection to avoid
+     * race scenario with on_cache_timeout().
+     */
+    while (!pj_list_empty(&sess->cached_response_list)) {
+	pj_stun_tx_data *tdata = sess->cached_response_list.next;
+	destroy_tdata(tdata, PJ_TRUE);
     }
 
     pj_grp_lock_dec_ref(sess->grp_lock);
@@ -804,7 +815,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 
 on_error:
     if (tdata)
-	pj_pool_release(tdata->pool);
+	pj_pool_safe_release(&tdata->pool);
     pj_grp_lock_release(sess->grp_lock);
     return status;
 }
@@ -835,7 +846,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
     status = pj_stun_msg_create(tdata->pool, msg_type,  PJ_STUN_MAGIC, 
 				NULL, &tdata->msg);
     if (status != PJ_SUCCESS) {
-	pj_pool_release(tdata->pool);
+	pj_pool_safe_release(&tdata->pool);
 	pj_grp_lock_release(sess->grp_lock);
 	return status;
     }
@@ -874,7 +885,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_res( pj_stun_session *sess,
     status = pj_stun_msg_create_response(tdata->pool, rdata->msg, 
 					 err_code, err_msg, &tdata->msg);
     if (status != PJ_SUCCESS) {
-	pj_pool_release(tdata->pool);
+	pj_pool_safe_release(&tdata->pool);
 	pj_grp_lock_release(sess->grp_lock);
 	return status;
     }
@@ -1007,12 +1018,28 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	tsx_add(sess, tdata);
 
     } else {
+	/* Otherwise for non-request message, send directly to transport. */
 	if (cache_res && 
 	    (PJ_STUN_IS_SUCCESS_RESPONSE(tdata->msg->hdr.type) ||
 	     PJ_STUN_IS_ERROR_RESPONSE(tdata->msg->hdr.type))) 
 	{
 	    /* Requested to keep the response in the cache */
 	    pj_time_val timeout;
+
+	    status = pj_grp_lock_create(tdata->pool, NULL, &tdata->grp_lock);
+	    if (status != PJ_SUCCESS) {
+		pj_stun_msg_destroy_tdata(sess, tdata);
+		LOG_ERR_(sess, "Error creating group lock", status);
+		goto on_return;
+	    }
+	    pj_grp_lock_add_ref(tdata->grp_lock);
+	    pj_grp_lock_add_handler(tdata->grp_lock, tdata->pool, tdata,
+				    &tdata_on_destroy);
+
+	    /* Also add ref session group lock to make sure that the session
+	     * is still valid when cache timeout callback is called.
+	     */
+	    pj_grp_lock_add_ref(sess->grp_lock);
 	    
 	    pj_memset(&tdata->res_timer, 0, sizeof(tdata->res_timer));
 	    pj_timer_entry_init(&tdata->res_timer, PJ_FALSE, tdata,
@@ -1024,7 +1051,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	    status = pj_timer_heap_schedule_w_grp_lock(sess->cfg->timer_heap,
 	                                               &tdata->res_timer,
 	                                               &timeout, PJ_TRUE,
-	                                               sess->grp_lock);
+	                                               tdata->grp_lock);
 	    if (status != PJ_SUCCESS) {
 		pj_stun_msg_destroy_tdata(sess, tdata);
 		LOG_ERR_(sess, "Error scheduling response timer", status);
@@ -1033,8 +1060,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
 	    pj_list_push_back(&sess->cached_response_list, tdata);
 	}
-    
-	/* Otherwise for non-request message, send directly to transport. */
+
+	/* Send to transport directly. */
 	status = sess->cb.on_send_msg(sess, token, tdata->pkt, 
 				      tdata->pkt_size, server, addr_len);
 
