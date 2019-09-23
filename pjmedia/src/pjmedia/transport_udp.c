@@ -42,6 +42,7 @@ typedef struct pending_write
 {
     char		buffer[PJMEDIA_MAX_MTU];
     pj_ioqueue_op_key_t	op_key;
+    pj_bool_t		is_pending;
 } pending_write;
 
 
@@ -98,6 +99,9 @@ struct transport_udp
 static void on_rx_rtp( pj_ioqueue_key_t *key, 
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
+static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
+                       	     pj_ioqueue_op_key_t *op_key, 
+                       	     pj_ssize_t bytes_sent);
 static void on_rx_rtcp(pj_ioqueue_key_t *key, 
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
@@ -338,6 +342,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     /* Setup RTP socket with the ioqueue */
     pj_bzero(&rtp_cb, sizeof(rtp_cb));
     rtp_cb.on_read_complete = &on_rx_rtp;
+    rtp_cb.on_write_complete = &on_rtp_data_sent;
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtp_sock, tp,
 				      &rtp_cb, &tp->rtp_key);
@@ -352,9 +357,11 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 	goto on_error;
 
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
-    for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i)
+    for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i) {
+        tp->rtp_pending_write[i].is_pending = PJ_FALSE;
 	pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
 			       sizeof(tp->rtp_pending_write[i].op_key));
+    }
 
 #if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTP read from the ioqueue */
@@ -618,6 +625,24 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 	     udp->started);
 }
 
+static void on_rtp_data_sent(pj_ioqueue_key_t *key, 
+                      	     pj_ioqueue_op_key_t *op_key, 
+                      	     pj_ssize_t bytes_sent)
+{
+    struct transport_udp *udp;
+    unsigned i;
+
+    PJ_UNUSED_ARG(bytes_sent);
+
+    udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
+
+    for (i = 0; i < PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
+	if (&udp->rtp_pending_write[i].op_key == op_key) {
+	    udp->rtp_pending_write[i].is_pending = PJ_FALSE;
+	    break;
+	}
+    }
+}
 
 /* Notification from ioqueue about incoming RTCP packet */
 static void on_rx_rtcp(pj_ioqueue_key_t *key, 
@@ -958,6 +983,7 @@ static void transport_detach( pjmedia_transport *tp,
 	for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
 	    pj_ioqueue_post_completion(udp->rtp_key,
 				       &udp->rtp_pending_write[i].op_key, 0);
+	    udp->rtp_pending_write[i].is_pending = PJ_FALSE;
 	}
 	pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_write_op, 0);
 
@@ -1002,6 +1028,12 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 
     id = udp->rtp_write_op_id;
     pw = &udp->rtp_pending_write[id];
+    if (pw->is_pending) {
+    	/* There is still currently pending operation for this buffer. */
+	PJ_LOG(4,(udp->base.name, "Too many pending write operations"));
+    	return PJ_EBUSY;
+    }
+    pw->is_pending = PJ_TRUE;
 
     /* We need to copy packet to our buffer because when the
      * operation is pending, caller might write something else
@@ -1015,6 +1047,11 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 				pw->buffer, &sent, 0,
 				&udp->rem_rtp_addr, 
 				udp->addr_len);
+
+    if (status != PJ_EPENDING) {
+    	/* Send operation has completed immediately. Clear the flag. */
+    	pw->is_pending = PJ_FALSE;
+    }
 
     udp->rtp_write_op_id = (udp->rtp_write_op_id + 1) %
 			   PJ_ARRAY_SIZE(udp->rtp_pending_write);
@@ -1307,10 +1344,12 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
     }
 #endif
     pj_bzero(&cb, sizeof(cb));
-    if (is_rtp)
+    if (is_rtp) {
 	cb.on_read_complete = &on_rx_rtp;
-    else 
+	cb.on_write_complete = &on_rtp_data_sent;
+    } else {
 	cb.on_read_complete = &on_rx_rtcp;
+    }
 
     if (is_rtp) {
 	status = pj_ioqueue_register_sock(udp->pool, udp->ioqueue, *sock, udp,
