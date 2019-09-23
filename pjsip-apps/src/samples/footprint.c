@@ -222,7 +222,7 @@ int dummy_function()
     pj_ice_strans_init_ice(NULL, PJ_ICE_SESS_ROLE_CONTROLLED, NULL, NULL);
     pj_ice_strans_start_ice(NULL, NULL, NULL, 0, NULL);
     pj_ice_strans_stop_ice(NULL);
-    pj_ice_strans_sendto(NULL, 0, NULL, 0, NULL, 0);
+    pj_ice_strans_sendto2(NULL, 0, NULL, 0, NULL, 0);
 #endif
 
 #ifdef HAS_PJSIP_CORE_MSG_ELEM

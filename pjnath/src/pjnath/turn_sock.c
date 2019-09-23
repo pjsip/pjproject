@@ -93,6 +93,9 @@ struct pj_turn_sock
 #endif
 
     pj_ioqueue_op_key_t	 send_key;
+    pj_ioqueue_op_key_t	 int_send_key;
+    unsigned 		 pkt_len;
+    unsigned 		 body_len;
 
     /* Data connection, when peer_conn_type==PJ_TURN_TP_TCP (RFC 6062) */
     unsigned		 data_conn_cnt;
@@ -108,6 +111,11 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 				    unsigned pkt_len,
 				    const pj_sockaddr_t *dst_addr,
 				    unsigned dst_addr_len);
+static pj_status_t turn_on_stun_send_pkt(pj_turn_session *sess,
+				    	 const pj_uint8_t *pkt,
+				    	 unsigned pkt_len,
+				    	 const pj_sockaddr_t *dst_addr,
+				    	 unsigned dst_addr_len);
 static void turn_on_channel_bound(pj_turn_session *sess,
 				  const pj_sockaddr_t *peer_addr,
 				  unsigned addr_len,
@@ -135,6 +143,9 @@ static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 			      pj_size_t size,
 			      pj_status_t status,
 			      pj_size_t *remainder);
+static pj_bool_t on_data_sent(pj_turn_sock *turn_sock,
+			      pj_ioqueue_op_key_t *send_key,
+			      pj_ssize_t sent);
 static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
 				     pj_status_t status);
 
@@ -148,6 +159,9 @@ static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
 				    pj_size_t size,
 				    pj_status_t status,
 				    pj_size_t *remainder);
+static pj_bool_t on_data_sent_asock(pj_activesock_t *asock,
+			      	     pj_ioqueue_op_key_t *send_key,
+			      	     pj_ssize_t sent);
 
 /*
  * SSL sock callback
@@ -167,6 +181,9 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
 				       pj_size_t size,
 				       pj_status_t status,
 				       pj_size_t *remainder);
+static pj_bool_t dataconn_on_data_sent(pj_activesock_t *asock,
+			      	       pj_ioqueue_op_key_t *send_key,
+			      	       pj_ssize_t sent);
 static pj_bool_t dataconn_on_connect_complete(pj_activesock_t *asock,
 					      pj_status_t status);
 static void dataconn_cleanup(tcp_data_conn_t *conn);
@@ -327,6 +344,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     /* Init TURN session */
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_send_pkt = &turn_on_send_pkt;
+    sess_cb.on_stun_send_pkt = &turn_on_stun_send_pkt;
     sess_cb.on_channel_bound = &turn_on_channel_bound;
     sess_cb.on_rx_data = &turn_on_rx_data;
     sess_cb.on_state = &turn_on_state;
@@ -627,6 +645,10 @@ PJ_DEF(pj_status_t) pj_turn_sock_sendto( pj_turn_sock *turn_sock,
     if (turn_sock->sess == NULL)
 	return PJ_EINVALIDOP;
 
+    /* TURN session may add some headers to the packet, so we need
+     * to store our actual data length to be sent here.
+     */
+    turn_sock->body_len = pkt_len;
     return pj_turn_session_sendto(turn_sock->sess, pkt, pkt_len, 
 				  addr, addr_len);
 }
@@ -693,6 +715,8 @@ static pj_bool_t on_connect_complete(pj_turn_sock *turn_sock,
 
     /* Init send_key */
     pj_ioqueue_op_key_init(&turn_sock->send_key, sizeof(turn_sock->send_key));
+    pj_ioqueue_op_key_init(&turn_sock->int_send_key,
+    			   sizeof(turn_sock->int_send_key));
 
     /* Send Allocate request */
     status = pj_turn_session_alloc(turn_sock->sess, &turn_sock->alloc_param);
@@ -860,6 +884,40 @@ static pj_bool_t on_data_read_asock(pj_activesock_t *asock,
     return on_data_read(turn_sock, data, size, status, remainder);
 }
 
+static pj_bool_t on_data_sent(pj_turn_sock *turn_sock,
+			      pj_ioqueue_op_key_t *send_key,
+			      pj_ssize_t sent)
+{
+    unsigned header_len, sent_size;
+
+    /* Don't report to callback if this is internal message. */
+    if (send_key == &turn_sock->int_send_key) {
+	return PJ_TRUE;
+    }
+
+    if (turn_sock->cb.on_data_sent) {
+        /* Remove the length of packet header from sent size. */
+	header_len = turn_sock->pkt_len - turn_sock->body_len;
+	sent_size = (sent > header_len)? (sent - header_len) : 0;
+	(*turn_sock->cb.on_data_sent)(turn_sock, sent_size);
+    }
+
+    return PJ_TRUE;
+}
+
+
+static pj_bool_t on_data_sent_asock(pj_activesock_t *asock,
+			      	     pj_ioqueue_op_key_t *send_key,
+			      	     pj_ssize_t sent)
+{
+    pj_turn_sock *turn_sock;
+
+    turn_sock = (pj_turn_sock*)pj_activesock_get_user_data(asock);
+
+    return on_data_sent(turn_sock, send_key, sent);
+}
+
+
 #if PJ_HAS_SSL_SOCK
 static pj_bool_t on_data_read_ssl_sock(pj_ssl_sock_t *ssl_sock,
 				       void *data,
@@ -896,23 +954,23 @@ static pj_bool_t on_data_sent_ssl_sock(pj_ssl_sock_t *ssl_sock,
 	return PJ_FALSE;
     }
 
-    return PJ_TRUE;
+    return on_data_sent(turn_sock, op_key, bytes_sent);
 }
 #endif
 
-/*
- * Callback from TURN session to send outgoing packet.
- */
-static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
-				    const pj_uint8_t *pkt,
-				    unsigned pkt_len,
-				    const pj_sockaddr_t *dst_addr,
-				    unsigned dst_addr_len)
+
+static pj_status_t send_pkt(pj_turn_session *sess,
+			    pj_bool_t internal,
+			    const pj_uint8_t *pkt,
+			    unsigned pkt_len,
+			    const pj_sockaddr_t *dst_addr,
+			    unsigned dst_addr_len)
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) 
 			      pj_turn_session_get_user_data(sess);
     pj_ssize_t len = pkt_len;
     pj_status_t status = PJ_SUCCESS;
+    pj_ioqueue_key_t *send_key = &turn_sock->send_key;
 
     if (turn_sock == NULL || turn_sock->is_destroying) {
 	/* We've been destroyed */
@@ -921,9 +979,13 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 	return PJ_EINVALIDOP;
     }
 
+    if (internal)
+    	send_key = &turn_sock->int_send_key;
+    turn_sock->pkt_len = pkt_len;
+
     if (turn_sock->conn_type == PJ_TURN_TP_UDP) {
 	status = pj_activesock_sendto(turn_sock->active_sock,
-				      &turn_sock->send_key, pkt, &len, 0,
+				      send_key, pkt, &len, 0,
 				      dst_addr, dst_addr_len);
     } else if (turn_sock->alloc_param.peer_conn_type == PJ_TURN_TP_TCP) {
 	pj_turn_session_info info;
@@ -931,7 +993,7 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 	if (pj_sockaddr_cmp(&info.server, dst_addr) == 0) {
 	    /* Destination address is TURN server */
 	    status = pj_activesock_send(turn_sock->active_sock,
-					&turn_sock->send_key, pkt, &len, 0);
+					send_key, pkt, &len, 0);
 	} else {
 	    /* Destination address is peer, lookup data connection */
 	    unsigned i;
@@ -951,12 +1013,12 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 	}
     } else  if (turn_sock->conn_type == PJ_TURN_TP_TCP) {
 	status = pj_activesock_send(turn_sock->active_sock,
-				    &turn_sock->send_key, pkt, &len, 0);
+				    send_key, pkt, &len, 0);
     }
 #if PJ_HAS_SSL_SOCK
     else if (turn_sock->conn_type == PJ_TURN_TP_TLS) {
 	status = pj_ssl_sock_send(turn_sock->ssl_sock,
-				  &turn_sock->send_key, pkt, &len, 0);
+				  send_key, pkt, &len, 0);
     }
 #endif
     else {
@@ -968,6 +1030,30 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
     }
 
     return status;
+}
+
+
+/*
+ * Callback from TURN session to send outgoing packet.
+ */
+static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
+				    const pj_uint8_t *pkt,
+				    unsigned pkt_len,
+				    const pj_sockaddr_t *dst_addr,
+				    unsigned dst_addr_len)
+{
+    return send_pkt(sess, PJ_FALSE, pkt, pkt_len,
+    		    dst_addr, dst_addr_len);
+}
+
+static pj_status_t turn_on_stun_send_pkt(pj_turn_session *sess,
+				    	 const pj_uint8_t *pkt,
+				    	 unsigned pkt_len,
+				    	 const pj_sockaddr_t *dst_addr,
+				    	 unsigned dst_addr_len)
+{
+    return send_pkt(sess, PJ_TRUE, pkt, pkt_len,
+    		    dst_addr, dst_addr_len);
 }
 
 
@@ -1169,6 +1255,7 @@ static void turn_on_state(pj_turn_session *sess,
 
 	    pj_bzero(&asock_cb, sizeof(asock_cb));
 	    asock_cb.on_data_read = &on_data_read_asock;
+	    asock_cb.on_data_sent = &on_data_sent_asock;
 	    asock_cb.on_connect_complete = &on_connect_complete_asock;
 	    status = pj_activesock_create(turn_sock->pool, sock,
 					  sock_type, &asock_cfg,
@@ -1398,6 +1485,17 @@ on_return:
     return PJ_TRUE;
 }
 
+static pj_bool_t dataconn_on_data_sent(pj_activesock_t *asock,
+			      	       pj_ioqueue_op_key_t *send_key,
+			      	       pj_ssize_t sent)
+{
+    tcp_data_conn_t *conn = (tcp_data_conn_t*)
+			    pj_activesock_get_user_data(asock);
+    pj_turn_sock *turn_sock = conn->turn_sock;
+
+    return on_data_sent(turn_sock, send_key, sent);
+}
+
 static pj_bool_t dataconn_on_connect_complete(pj_activesock_t *asock,
 					      pj_status_t status)
 {
@@ -1576,6 +1674,7 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
     asock_cb.on_data_read = &dataconn_on_data_read;
+    asock_cb.on_data_sent = &dataconn_on_data_sent;
     asock_cb.on_connect_complete = &dataconn_on_connect_complete;
     status = pj_activesock_create(pool, sock,
 				  pj_SOCK_STREAM(), &asock_cfg,

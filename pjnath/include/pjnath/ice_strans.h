@@ -98,7 +98,7 @@ PJ_BEGIN_DECL
  *    data will be sent using the candidate from the successful/nominated
  *    pair. The ICE stream transport may not be able to send data while 
  *    negotiation is in progress.\n\n
- *  - application sends data by using #pj_ice_strans_sendto(). Incoming
+ *  - application sends data by using #pj_ice_strans_sendto2(). Incoming
  *    data will be reported in \a on_rx_data() callback of the
  *    #pj_ice_strans_cb.\n\n
  *  - once the media session has finished (e.g. user hangs up the call),
@@ -112,6 +112,14 @@ PJ_BEGIN_DECL
  *    and this will consume power which is an important issue for mobile
  *    applications.\n\n
  */
+
+/* Deprecated API pj_ice_strans_sendto() due to its limitations. See
+ * below for more info and refer to
+ * https://trac.pjsip.org/repos/ticket/2229 for more details.
+ */
+#ifndef DEPRECATED_FOR_TICKET_2229
+#  define DEPRECATED_FOR_TICKET_2229	0
+#endif
 
 /** Forward declaration for ICE stream transport. */
 typedef struct pj_ice_strans pj_ice_strans;
@@ -159,6 +167,19 @@ typedef struct pj_ice_strans_cb
 			  void *pkt, pj_size_t size,
 			  const pj_sockaddr_t *src_addr,
 			  unsigned src_addr_len);
+
+    /**
+     * This callback is optional and will be called to notify the status of
+     * async send operations.
+     *
+     * @param ice_st	    The ICE stream transport.
+     * @param sent	    If value is positive non-zero it indicates the
+     *			    number of data sent. When the value is negative,
+     *			    it contains the error code which can be retrieved
+     *			    by negating the value (i.e. status=-sent).
+     */
+    void    (*on_data_sent)(pj_ice_strans *sock,
+			    pj_ssize_t sent);
 
     /**
      * Callback to report status of various ICE operations.
@@ -415,6 +436,26 @@ typedef struct pj_ice_strans_cfg
      * TURN transport settings.
      */
     pj_ice_strans_turn_cfg turn_tp[PJ_ICE_MAX_TURN];
+
+    /**
+     * Number of send buffers used for pj_ice_strans_sendto2(). If the send
+     * buffers are full, pj_ice_strans_sendto()/sendto2() will return
+     * PJ_EBUSY.
+     *
+     * Set this to 0 to disable buffering (then application will have to
+     * maintain the buffer passed to pj_ice_strans_sendto()/sendto2()
+     * until it has been sent).
+     *
+     * Default: 4
+     */
+    unsigned 		 num_send_buf;
+
+    /**
+     * Buffer size used for pj_ice_strans_sendto2().
+     *
+     * Default: 0 (size determined by the size of the first packet sent).
+     */
+    unsigned 		 send_buf_size;
 
     /**
      * Component specific settings, which will override the settings in
@@ -904,6 +945,7 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
 PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
 
 
+#if !DEPRECATED_FOR_TICKET_2229
 /**
  * Send outgoing packet using this transport. 
  * Application can send data (normally RTP or RTCP packets) at any time
@@ -916,6 +958,19 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
  * successfully, this function will send the data to the nominated remote 
  * address, as negotiated by ICE.
  *
+ * Limitations:
+ * 1. This function cannot inform the app whether the data has been sent,
+ *    or currently still pending.
+ * 2. In case that the data is still pending, the application has no way
+ *    of knowing the status of the send operation (whether it's a success
+ *    or failure).
+ * Due to these limitations, the API is deprecated and will be removed
+ * in the future.
+ *
+ * Note that application shouldn't mix using pj_ice_strans_sendto() and
+ * pj_ice_strans_sendto2() to avoid inconsistent calling of
+ * on_data_sent() callback.
+ *
  * @param ice_st	The ICE stream transport.
  * @param comp_id	Component ID.
  * @param data		The data or packet to be sent.
@@ -923,7 +978,8 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
  * @param dst_addr	The destination address.
  * @param dst_addr_len	Length of destination address.
  *
- * @return		PJ_SUCCESS if data is sent successfully.
+ * @return		PJ_SUCCESS if data has been sent, or will be sent
+ *			later. No callback will be called.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
 					  unsigned comp_id,
@@ -931,6 +987,44 @@ PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
 					  pj_size_t data_len,
 					  const pj_sockaddr_t *dst_addr,
 					  int dst_addr_len);
+#endif
+
+
+/**
+ * Send outgoing packet using this transport. 
+ * Application can send data (normally RTP or RTCP packets) at any time
+ * by calling this function. This function takes a destination
+ * address as one of the arguments, and this destination address should
+ * be taken from the default transport address of the component (that is
+ * the address in SDP c= and m= lines, or in a=rtcp attribute). 
+ * If ICE negotiation is in progress, this function will send the data 
+ * to the destination address. Otherwise if ICE negotiation has completed
+ * successfully, this function will send the data to the nominated remote 
+ * address, as negotiated by ICE.
+ *
+ * Note that application shouldn't mix using pj_ice_strans_sendto() and
+ * pj_ice_strans_sendto2() to avoid inconsistent calling of
+ * on_data_sent() callback.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param comp_id	Component ID.
+ * @param data		The data or packet to be sent.
+ * @param data_len	Size of data or packet, in bytes.
+ * @param dst_addr	The destination address.
+ * @param dst_addr_len	Length of destination address.
+ *
+ * @return		PJ_SUCCESS if data has been sent, or
+ *		    	PJ_EPENDING if data cannot be sent immediately. In
+ *		    	this case the \a on_data_sent() callback will be
+ *		    	called when data is actually sent. Any other return
+ *		    	value indicates error condition.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_sendto2(pj_ice_strans *ice_st,
+					   unsigned comp_id,
+					   const void *data,
+					   pj_size_t data_len,
+					   const pj_sockaddr_t *dst_addr,
+					   int dst_addr_len);
 
 
 /**

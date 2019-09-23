@@ -291,6 +291,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 	ice_st_cfg.comp[COMP_RTP-1].so_sndbuf_size = 
 			    PJMEDIA_TRANSPORT_SO_SNDBUF_SIZE;
     }
+    if (ice_st_cfg.send_buf_size == 0)
+    	ice_st_cfg.send_buf_size = PJMEDIA_MAX_MTU;
 
     /* Create ICE */
     status = pj_ice_strans_create(name, &ice_st_cfg, comp_cnt, tp_ice, 
@@ -1887,6 +1889,7 @@ static pj_status_t transport_send_rtp(pjmedia_transport *tp,
 				      pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_status_t status;
 
     /* Simulate packet lost on TX direction */
     if (tp_ice->tx_drop_pct) {
@@ -1898,9 +1901,13 @@ static pj_status_t transport_send_rtp(pjmedia_transport *tp,
 	}
     }
 
-    return pj_ice_strans_sendto(tp_ice->ice_st, 1, 
-			        pkt, size, &tp_ice->remote_rtp,
-				tp_ice->addr_len);
+    status = pj_ice_strans_sendto2(tp_ice->ice_st, 1, 
+			           pkt, size, &tp_ice->remote_rtp,
+				   tp_ice->addr_len);
+    if (status == PJ_EPENDING)
+        status = PJ_SUCCESS;
+
+    return status;
 }
 
 
@@ -1920,13 +1927,20 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
     if (tp_ice->comp_cnt > 1 || tp_ice->use_rtcp_mux) {
+        pj_status_t status;
         unsigned comp_id = (tp_ice->use_rtcp_mux? 1: 2);
+
 	if (addr == NULL) {
 	    addr = &tp_ice->remote_rtcp;
 	    addr_len = pj_sockaddr_get_len(addr);
 	}	  
-	return pj_ice_strans_sendto(tp_ice->ice_st, comp_id, pkt, size,
-				    addr, addr_len);
+
+	status = pj_ice_strans_sendto2(tp_ice->ice_st, comp_id, pkt, size,
+				       addr, addr_len);
+	if (status == PJ_EPENDING)
+	    status = PJ_SUCCESS;
+
+	return status;
     } else {
 	return PJ_SUCCESS;
     }

@@ -233,8 +233,11 @@ typedef struct pj_turn_session_cb
 {
     /**
      * This callback will be called by the TURN session whenever it
-     * needs to send outgoing message. Since the TURN session doesn't
-     * have a socket on its own, this callback must be implemented.
+     * needs to send data or outgoing messages. Since the TURN session
+     * doesn't have a socket on its own, this callback must be implemented.
+     *
+     * If the callback \a on_stun_send_pkt() is implemented, outgoing
+     * messages will use that callback instead.
      *
      * @param sess	The TURN session.
      * @param pkt	The packet/data to be sent.
@@ -250,6 +253,28 @@ typedef struct pj_turn_session_cb
 			       unsigned pkt_len,
 			       const pj_sockaddr_t *dst_addr,
 			       unsigned addr_len);
+
+    /**
+     * This callback will be called by the TURN session whenever it
+     * needs to send outgoing STUN requests/messages for TURN signalling
+     * purposes (data sending will not invoke this callback). If this
+     * callback is not implemented, the callback \a on_send_pkt()
+     * will be called instead.
+     *
+     * @param sess	The TURN session.
+     * @param pkt	The packet/data to be sent.
+     * @param pkt_len	Length of the packet/data.
+     * @param dst_addr	Destination address of the packet.
+     * @param addr_len	Length of the destination address.
+     *
+     * @return		The callback should return the status of the
+     *			send operation. 
+     */
+    pj_status_t (*on_stun_send_pkt)(pj_turn_session *sess,
+			       	    const pj_uint8_t *pkt,
+			       	    unsigned pkt_len,
+			       	    const pj_sockaddr_t *dst_addr,
+			       	    unsigned addr_len);
 
     /**
      * Notification when peer address has been bound successfully to 
@@ -762,8 +787,10 @@ PJ_DECL(pj_status_t) pj_turn_session_set_perm(pj_turn_session *sess,
  *			of the data, and not the TURN server address).
  * @param addr_len	Length of the address.
  *
- * @return		PJ_SUCCESS if the operation has been successful,
- *			or the appropriate error code on failure.
+ * @return		If the callback \a on_send_pkt() is called, this
+ *			will contain the return value of the callback.
+ *			Otherwise, it will indicate failure with
+ * 			the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_turn_session_sendto(pj_turn_session *sess,
 					    const pj_uint8_t *pkt,

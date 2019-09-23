@@ -993,13 +993,13 @@ static void icedemo_send_data(unsigned comp_id, const char *data)
 	return;
     }
 
-    status = pj_ice_strans_sendto(icedemo.icest, comp_id, data, strlen(data),
-				  &icedemo.rem.def_addr[comp_id-1],
-				  pj_sockaddr_get_len(&icedemo.rem.def_addr[comp_id-1]));
-    if (status != PJ_SUCCESS)
+    status = pj_ice_strans_sendto2(icedemo.icest, comp_id, data, strlen(data),
+				   &icedemo.rem.def_addr[comp_id-1],
+				   pj_sockaddr_get_len(&icedemo.rem.def_addr[comp_id-1]));
+    if (status != PJ_SUCCESS && status != PJ_EPENDING)
 	icedemo_perror("Error sending data", status);
     else
-	PJ_LOG(3,(THIS_FILE, "Data sent"));
+	PJ_LOG(3,(THIS_FILE, "Data sent/will be sent"));
 }
 
 

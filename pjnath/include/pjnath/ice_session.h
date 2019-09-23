@@ -934,7 +934,10 @@ PJ_DECL(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice);
  * @param data		The data or packet to be sent.
  * @param data_len	Size of data or packet, in bytes.
  *
- * @return		PJ_SUCCESS if data is sent successfully.
+ * @return		If the callback \a on_tx_pkt() is called, this
+ *			will contain the return value of the callback.
+ *			Otherwise, it will indicate failure with
+ * 			the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
 					   unsigned comp_id,
