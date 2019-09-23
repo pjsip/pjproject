@@ -910,6 +910,7 @@ public:
      */
     void setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumDev2 instead. This function is not
      * safe in multithreaded environment.
@@ -920,6 +921,7 @@ public:
      * @return			The list of audio device info.
      */
     const AudioDevInfoVector &enumDev() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all audio devices installed in the system.
@@ -1465,7 +1467,9 @@ public:
     bool getPlc() const PJSUA2_THROW(Error);
 
 private:
+#if !DEPRECATED_FOR_TICKET_2232
     AudioDevInfoVector		 audioDevList;
+#endif
     AudioMedia			*devMedia;
 
     /**
@@ -2068,6 +2072,7 @@ public:
      */
     VideoDevInfo getDevInfo(int dev_id) const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumDev2() instead. This function is not
      * safe in multithreaded environment.
@@ -2077,6 +2082,7 @@ public:
      * @return		The list of video device info
      */
     const VideoDevInfoVector &enumDev() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all video devices installed in the system.
@@ -2275,7 +2281,9 @@ public:
     			  bool keep=true) PJSUA2_THROW(Error);
 
 private:
+#if !DEPRECATED_FOR_TICKET_2232
     VideoDevInfoVector videoDevList;
+#endif
 
     void clearVideoDevList();
 

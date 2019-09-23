@@ -967,11 +967,13 @@ void Account::create(const AccountConfig &acc_cfg,
 void Account::shutdown()
 {
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
+#if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
 	while(buddyList.size() > 0) {
 	    Buddy *b = buddyList[0];
 	    delete b; /* this will remove itself from the list */
 	}
+#endif
 
 	// This caused error message of "Error: cannot find Account.."
 	// when Endpoint::on_reg_started() is called for unregistration.
@@ -1064,10 +1066,12 @@ void Account::presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error)
 					 &msg_data) );
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const BuddyVector& Account::enumBuddies() const PJSUA2_THROW(Error)
 {
     return buddyList;
 }
+#endif
 
 BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 {
@@ -1083,6 +1087,7 @@ BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
     return bv2;
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
 		PJSUA2_THROW(Error)
 {
@@ -1097,6 +1102,7 @@ Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
     }
     PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 }
+#endif
 
 Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
@@ -1116,13 +1122,18 @@ Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 
 void Account::addBuddy(Buddy *buddy)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     pj_assert(buddy);
 
     buddyList.push_back(buddy);
+#else
+    PJ_UNUSED_ARG(buddy);
+#endif
 }
 
 void Account::removeBuddy(Buddy *buddy)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     pj_assert(buddy);
 
     BuddyVector::iterator it;
@@ -1134,4 +1145,7 @@ void Account::removeBuddy(Buddy *buddy)
     }
 
     pj_assert(!"Bug! Buddy to be removed is not in the buddy list!");
+#else
+    PJ_UNUSED_ARG(buddy);
+#endif
 }

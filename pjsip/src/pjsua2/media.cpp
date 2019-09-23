@@ -748,6 +748,7 @@ void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );    
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const AudioDevInfoVector &AudDevManager::enumDev() PJSUA2_THROW(Error)
 {
     pjmedia_aud_dev_info pj_info[MAX_DEV_COUNT];
@@ -765,6 +766,7 @@ const AudioDevInfoVector &AudDevManager::enumDev() PJSUA2_THROW(Error)
     pj_leave_critical_section();
     return audioDevList;
 }
+#endif
 
 AudioDevInfoVector2 AudDevManager::enumDev2() const PJSUA2_THROW(Error)
 {
@@ -1083,10 +1085,12 @@ bool AudDevManager::getPlc() const PJSUA2_THROW(Error)
 
 void AudDevManager::clearAudioDevList()
 {
+#if !DEPRECATED_FOR_TICKET_2232
     for(unsigned i=0;i<audioDevList.size();++i) {
 	delete audioDevList[i];
     }
     audioDevList.clear();
+#endif
 }
 
 int AudDevManager::getActiveDev(bool is_capture) const PJSUA2_THROW(Error)
@@ -1480,6 +1484,7 @@ VideoDevInfo VidDevManager::getDevInfo(int dev_id) const PJSUA2_THROW(Error)
     return dev_info;
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const VideoDevInfoVector &VidDevManager::enumDev() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
@@ -1499,6 +1504,7 @@ const VideoDevInfoVector &VidDevManager::enumDev() PJSUA2_THROW(Error)
 #endif
     return videoDevList;
 }
+#endif
 
 VideoDevInfoVector2 VidDevManager::enumDev2() const PJSUA2_THROW(Error)
 {
@@ -1665,7 +1671,7 @@ void VidDevManager::switchDev(int dev_id,
 
 void VidDevManager::clearVideoDevList()
 {
-#if PJSUA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO && !DEPRECATED_FOR_TICKET_2232
     for (unsigned i = 0;i<videoDevList.size();++i) {
 	delete videoDevList[i];
     }

@@ -1798,6 +1798,7 @@ public:
      */
     void presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error);
     
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumBuddies2() instead. This function is not
      * safe in multithreaded environment.
@@ -1807,6 +1808,7 @@ public:
      * @return			The buddy list.
      */
     const BuddyVector& enumBuddies() const PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enumerate all buddies of the account.
@@ -1815,6 +1817,7 @@ public:
      */
     BuddyVector2 enumBuddies2() const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use findBuddy2 instead. This function is not
      * safe in multithreaded environment.
@@ -1830,6 +1833,7 @@ public:
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
 		    PJSUA2_THROW(Error);
+#endif
 
     /**
      * Find a buddy in the buddy list with the specified URI. 
@@ -1968,7 +1972,9 @@ private:
 private:
     pjsua_acc_id 	 id;
     string		 tmpReason;	// for saving response's reason
+#if !DEPRECATED_FOR_TICKET_2232
     BuddyVector		 buddyList;
+#endif
 };
 
 /**

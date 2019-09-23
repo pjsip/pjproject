@@ -478,9 +478,12 @@ struct PendingLog : public PendingJob
 /*
  * Endpoint instance
  */
-Endpoint::Endpoint()
-: writer(NULL), threadDescMutex(NULL), mediaListMutex(NULL), 
-  mainThreadOnly(false), mainThread(NULL), pendingJobSize(0)
+Endpoint::Endpoint():
+#if !DEPRECATED_FOR_TICKET_2232
+mediaListMutex(NULL),
+#endif
+writer(NULL), threadDescMutex(NULL), mainThreadOnly(false),
+mainThread(NULL), pendingJobSize(0)
 {
     if (instance_) {
 	PJSUA2_RAISE_ERROR(PJ_EEXISTS);
@@ -504,8 +507,10 @@ Endpoint::~Endpoint()
 	pendingJobs.pop_front();
     }
 
+#if !DEPRECATED_FOR_TICKET_2232
     clearCodecInfoList(codecInfoList);
     clearCodecInfoList(videoCodecInfoList);
+#endif
 
     try {
 	libDestroy();
@@ -1713,8 +1718,10 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     PJSUA2_CHECK_EXPR( pj_mutex_create_simple(pjsua_var.pool, "threadDesc",
     				    	      &threadDescMutex) );
 
+#if !DEPRECATED_FOR_TICKET_2232
     PJSUA2_CHECK_EXPR( pj_mutex_create_recursive(pjsua_var.pool, "mediaList",
     				    		 &mediaListMutex) );
+#endif
 }
 
 void Endpoint::libStart() PJSUA2_THROW(Error)
@@ -1782,6 +1789,7 @@ void Endpoint::libDestroy(unsigned flags) PJSUA2_THROW(Error)
     	threadDescMutex = NULL;
     }
 
+#if !DEPRECATED_FOR_TICKET_2232
     while(mediaList.size() > 0) {
 	AudioMedia *cur_media = mediaList[0];
 	delete cur_media; /* this will remove itself from the list */
@@ -1791,6 +1799,7 @@ void Endpoint::libDestroy(unsigned flags) PJSUA2_THROW(Error)
     	pj_mutex_destroy(mediaListMutex);
     	mediaListMutex = NULL;
     }
+#endif
 
     status = pjsua_destroy2(flags);
 
@@ -2046,10 +2055,12 @@ unsigned Endpoint::mediaActivePorts() const
     return pjsua_conf_get_active_ports();
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const AudioMediaVector &Endpoint::mediaEnumPorts() const PJSUA2_THROW(Error)
 {
     return mediaList;
 }
+#endif
 
 AudioMediaVector2 Endpoint::mediaEnumPorts2() const PJSUA2_THROW(Error)
 {
@@ -2089,6 +2100,7 @@ VideoMediaVector Endpoint::mediaEnumVidPorts() const PJSUA2_THROW(Error)
 
 void Endpoint::mediaAdd(AudioMedia &media)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     /* mediaList serves mediaEnumPorts() only, once mediaEnumPorts()
      * is removed, this function implementation should be no-op.
      */
@@ -2101,10 +2113,14 @@ void Endpoint::mediaAdd(AudioMedia &media)
     if (it == mediaList.end())
     	mediaList.push_back(&media);
     pj_mutex_unlock(mediaListMutex);
+#else
+    PJ_UNUSED_ARG(media);
+#endif
 }
 
 void Endpoint::mediaRemove(AudioMedia &media)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     /* mediaList serves mediaEnumPorts() only, once mediaEnumPorts()
      * is removed, this function implementation should be no-op.
      */
@@ -2116,6 +2132,9 @@ void Endpoint::mediaRemove(AudioMedia &media)
     if (it != mediaList.end())
 	mediaList.erase(it);
     pj_mutex_unlock(mediaListMutex);
+#else
+    PJ_UNUSED_ARG(media);
+#endif
 }
 
 bool Endpoint::mediaExists(const AudioMedia &media) const
@@ -2141,6 +2160,8 @@ VidDevManager &Endpoint::vidDevManager()
 /*
  * Codec operations.
  */
+
+#if !DEPRECATED_FOR_TICKET_2232
 const CodecInfoVector &Endpoint::codecEnum() PJSUA2_THROW(Error)
 {
     pjsua_codec_info pj_codec[MAX_CODEC_NUM];
@@ -2151,6 +2172,7 @@ const CodecInfoVector &Endpoint::codecEnum() PJSUA2_THROW(Error)
     updateCodecInfoList(pj_codec, count, codecInfoList);
     return codecInfoList;
 }
+#endif
 
 CodecInfoVector2 Endpoint::codecEnum2() const PJSUA2_THROW(Error)
 {
@@ -2219,6 +2241,7 @@ void Endpoint::updateCodecInfoList(pjsua_codec_info pj_codec[],
     pj_leave_critical_section();
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const CodecInfoVector &Endpoint::videoCodecEnum() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
@@ -2231,6 +2254,7 @@ const CodecInfoVector &Endpoint::videoCodecEnum() PJSUA2_THROW(Error)
 #endif
     return videoCodecInfoList;
 }
+#endif
 
 CodecInfoVector2 Endpoint::videoCodecEnum2() const PJSUA2_THROW(Error)
 {

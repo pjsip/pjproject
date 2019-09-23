@@ -1388,6 +1388,7 @@ public:
      */
     unsigned mediaActivePorts() const;
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use mediaEnumPorts2() instead. This function is
      * not safe in multithreaded environment.
@@ -1397,6 +1398,7 @@ public:
      * @return		The list of media port.
      */
     const AudioMediaVector &mediaEnumPorts() const PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enumerate all audio media port.
@@ -1430,6 +1432,7 @@ public:
      * Codec management operations
      */
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use codecEnum2() instead. This function is not
      * safe in multithreaded environment.
@@ -1439,6 +1442,7 @@ public:
      * @return		Array of codec info.
      */
     const CodecInfoVector &codecEnum() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all supported codecs in the system.
@@ -1481,6 +1485,7 @@ public:
     void codecSetParam(const string &codec_id,
 		       const CodecParam param) PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use videoCodecEnum2() instead. This function is
      * not safe in multithreaded environment.
@@ -1490,6 +1495,7 @@ public:
      * @return		Array of video codec info.
      */
     const CodecInfoVector &videoCodecEnum() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all supported video codecs in the system.
@@ -1661,14 +1667,18 @@ public:
 private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
-    AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
     VidDevManager		 videoDevMgr;
+#if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector		 codecInfoList;
     CodecInfoVector		 videoCodecInfoList;
+#endif
     std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
     pj_mutex_t			*threadDescMutex;
+#if !DEPRECATED_FOR_TICKET_2232
+    AudioMediaVector 	 	 mediaList;
     pj_mutex_t			*mediaListMutex;
+#endif
 
     /* Pending logging */
     bool			 mainThreadOnly;
