@@ -1073,6 +1073,7 @@ static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
 static void sess_init_update(pj_ice_strans *ice_st)
 {
     unsigned i;
+    pj_status_t status = PJ_EUNKNOWN;
 
     /* Ignore if ICE is destroying or init callback has been called */
     if (ice_st->destroy_req || ice_st->cb_called)
@@ -1092,6 +1093,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
 	    return;
 	}
 
+	status = PJ_EUNKNOWN;
 	for (j=0; j<comp->cand_cnt; ++j) {
 	    pj_ice_sess_cand *cand = &comp->cand_list[j];
 
@@ -1102,15 +1104,28 @@ static void sess_init_update(pj_ice_strans *ice_st)
 			   pj_ice_get_cand_type_name(cand->type)));
 		return;
 	    }
+	    
+	    if (status == PJ_EUNKNOWN) {
+	    	status = cand->status;
+	    } else {
+	    	/* We only need one successful candidate. */
+	    	if (cand->status == PJ_SUCCESS)
+	    	    status = PJ_SUCCESS;
+	    }
 	}
+	
+	if (status != PJ_SUCCESS)
+	    break;
     }
 
-    /* All candidates have been gathered */
+    /* All candidates have been gathered or there's no successful
+     * candidate for a component.
+     */
     ice_st->cb_called = PJ_TRUE;
     ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
 	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT,
-				      PJ_SUCCESS);
+				      status);
 }
 
 /*
@@ -2503,8 +2518,11 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	 * to the list.
 	 */
 	if (cand) {
+	    pj_turn_session_info info;
+
+	    pj_turn_sock_get_info(turn_sock, &info);
 	    cand->status = (old_state == PJ_TURN_STATE_RESOLVING)?
-	    		   PJ_ERESOLVE : PJ_EINVALIDOP;
+	    		   PJ_ERESOLVE : info.last_status;
 	    PJ_LOG(4,(comp->ice_st->obj_name,
 		      "Comp %d/%d: TURN error (tpid=%d) during state %s",
 		      comp->comp_id, cand_idx, cand->transport_id,
