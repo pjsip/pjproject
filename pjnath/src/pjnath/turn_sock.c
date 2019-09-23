@@ -970,7 +970,7 @@ static pj_status_t send_pkt(pj_turn_session *sess,
 			      pj_turn_session_get_user_data(sess);
     pj_ssize_t len = pkt_len;
     pj_status_t status = PJ_SUCCESS;
-    pj_ioqueue_key_t *send_key = &turn_sock->send_key;
+    pj_ioqueue_op_key_t *send_key = &turn_sock->send_key;
 
     if (turn_sock == NULL || turn_sock->is_destroying) {
 	/* We've been destroyed */
