@@ -43,6 +43,14 @@
 
 PJ_BEGIN_DECL
 
+/* Since 1.3 pjmedia_conf_add_passive_port() has been deprecated
+ * and replaced by splitcomb.
+ * See also https://trac.pjsip.org/repos/ticket/2234.
+ */
+#ifndef DEPRECATED_FOR_TICKET_2234
+#  define DEPRECATED_FOR_TICKET_2234	1
+#endif
+
 /**
  * The conference bridge signature in pjmedia_port_info.
  */
@@ -237,6 +245,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 					    unsigned *p_slot );
 
 
+#if !DEPRECATED_FOR_TICKET_2234
 /**
  * <i><b>Warning:</b> This API has been deprecated since 1.3 and will be
  * removed in the future release, use @ref PJMEDIA_SPLITCOMB instead.</i>
@@ -279,6 +288,7 @@ PJ_DECL(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 						    unsigned *p_slot,
 						    pjmedia_port **p_port );
 
+#endif
 
 /**
  * Change TX and RX settings for the port.

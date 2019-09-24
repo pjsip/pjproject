@@ -251,10 +251,13 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 			     pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
+static pj_status_t destroy_port(pjmedia_port *this_port);
+
+#if !DEPRECATED_FOR_TICKET_2234
 static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
-static pj_status_t destroy_port(pjmedia_port *this_port);
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
+#endif
 
 
 /*
@@ -667,6 +670,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 	    continue;
 	
 	++ci;
+
+	if (cport->rx_resample) {
+	    pjmedia_resample_destroy(cport->rx_resample);
+	    cport->rx_resample = NULL;
+	}
+	if (cport->tx_resample) {
+	    pjmedia_resample_destroy(cport->tx_resample);
+	    cport->tx_resample = NULL;
+	}
 	if (cport->delay_buf) {
 	    pjmedia_delay_buf_destroy(cport->delay_buf);
 	    cport->delay_buf = NULL;
@@ -690,6 +702,7 @@ static pj_status_t destroy_port(pjmedia_port *this_port)
     return pjmedia_conf_destroy(conf);
 }
 
+#if !DEPRECATED_FOR_TICKET_2234
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port) {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];
@@ -701,6 +714,7 @@ static pj_status_t destroy_port_pasv(pjmedia_port *this_port) {
 
     return status;
 }
+#endif
 
 /*
  * Get port zero interface.
@@ -814,6 +828,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2234
 /*
  * Add passive port.
  */
@@ -915,6 +930,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 
     return PJ_SUCCESS;
 }
+#endif
 
 
 
@@ -1173,10 +1189,23 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 	--conf->connect_cnt;
     }
 
+    /* Destroy resample if this conf port has it. */
+    if (conf_port->rx_resample) {
+	pjmedia_resample_destroy(conf_port->rx_resample);
+	conf_port->rx_resample = NULL;
+    }
+    if (conf_port->tx_resample) {
+	pjmedia_resample_destroy(conf_port->tx_resample);
+	conf_port->tx_resample = NULL;
+    }
+
     /* Destroy pjmedia port if this conf port is passive port,
      * i.e: has delay buf.
      */
     if (conf_port->delay_buf) {
+	pjmedia_delay_buf_destroy(conf_port->delay_buf);
+	conf_port->delay_buf = NULL;
+
 	pjmedia_port_destroy(conf_port->port);
 	conf_port->port = NULL;
     }
@@ -2173,6 +2202,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2234
 /*
  * get_frame() for passive port
  */
@@ -2184,6 +2214,7 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
     PJ_UNUSED_ARG(frame);
     return -1;
 }
+#endif
 
 
 /*
