@@ -55,7 +55,7 @@ if not CPP_PATH:
 
 # Hardcoded!
 if sys.platform == 'win32':
-	PYCPARSER_DIR="C:/devs/tools/pycparser"
+	PYCPARSER_DIR="D:/work/tool/pycparser-master"
 elif sys.platform == "linux2":
 	PYCPARSER_DIR="/home/bennylp/Desktop/opt/src/pycparser-master"
 else:

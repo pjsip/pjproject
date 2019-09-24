@@ -200,7 +200,7 @@ typedef enum pj_turn_tp_type
 {
   PJ_TURN_TP_UDP = 17,
   PJ_TURN_TP_TCP = 6,
-  PJ_TURN_TP_TLS = 255
+  PJ_TURN_TP_TLS = 56
 } pj_turn_tp_type;
 
 typedef enum pjmedia_echo_flag
@@ -233,7 +233,9 @@ typedef enum pjmedia_event_type
   PJMEDIA_EVENT_KEYFRAME_MISSING = ((('M' << 24) | ('R' << 16)) | ('F' << 8)) | 'I',
   PJMEDIA_EVENT_ORIENT_CHANGED = ((('T' << 24) | ('N' << 16)) | ('R' << 8)) | 'O',
   PJMEDIA_EVENT_RX_RTCP_FB = ((('B' << 24) | ('F' << 16)) | ('T' << 8)) | 'R',
-  PJMEDIA_EVENT_AUD_DEV_ERROR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'A'
+  PJMEDIA_EVENT_AUD_DEV_ERROR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'A',
+  PJMEDIA_EVENT_VID_DEV_ERROR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'V',
+  PJMEDIA_EVENT_MEDIA_TP_ERR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'T'
 } pjmedia_event_type;
 
 typedef enum pjmedia_srtp_use
@@ -826,9 +828,9 @@ typedef enum pjsua_create_media_transport_flag
 
 typedef enum pjsua_snd_dev_id
 {
-  PJSUA_SND_DEFAULT_CAPTURE_DEV = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV,
-  PJSUA_SND_DEFAULT_PLAYBACK_DEV = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV,
-  PJSUA_SND_NO_DEV = PJMEDIA_AUD_INVALID_DEV,
+  PJSUA_SND_DEFAULT_CAPTURE_DEV = -1,
+  PJSUA_SND_DEFAULT_PLAYBACK_DEV = -2,
+  PJSUA_SND_NO_DEV = -3,
   PJSUA_SND_NULL_DEV = -99
 } pjsua_snd_dev_id;
 

@@ -582,7 +582,7 @@ public class MainActivity extends Activity
 	m.sendToTarget();
     }
 
-    public void notifyRegState(pjsip_status_code code, String reason,
+    public void notifyRegState(int code, String reason,
 			       long expiration)
     {
 	String msg_str = "";
@@ -591,7 +591,7 @@ public class MainActivity extends Activity
 	else
 	    msg_str += "Registration";
 
-	if (code.swigValue()/100 == 2)
+	if (code/100 == 2)
 	    msg_str += " successful";
 	else
 	    msg_str += " failed: " + reason;

@@ -67,6 +67,12 @@ using namespace pj;
 
 
 // Constants from PJSIP libraries
+
+#ifdef SWIGJAVA
+%include "enumtypeunsafe.swg"
+%javaconst(1);
+#endif
+
 %include "symbols.i"
 
 
