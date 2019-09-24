@@ -1036,15 +1036,15 @@ retry_on_restart:
 			PJ_PERROR(4, (THIS_FILE, status,
 				      "Send error for socket %d, retrying",
 				      key->fd));
-			replace_udp_sock(key);
-			restart_retry = PJ_TRUE;
-			goto retry_on_restart;
-		    } else {
-			status = PJ_ESOCKETSTOP;
+			status = replace_udp_sock(key);
+			if (status == PJ_SUCCESS) {
+			    restart_retry = PJ_TRUE;
+			    goto retry_on_restart;
+			}
 		    }
+		    status = PJ_ESOCKETSTOP;
 		}
 #endif
-
                 return status;
             }
         }
