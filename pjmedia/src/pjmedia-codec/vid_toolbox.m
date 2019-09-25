@@ -180,6 +180,15 @@ typedef struct vtool_codec_data
 /* Prototypes */
 static OSStatus create_decoder(struct vtool_codec_data *vtool_data);
 
+static void dispatch_sync_on_main_queue(void (^block)(void))
+{
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
+
 PJ_DEF(pj_status_t) pjmedia_codec_vid_toolbox_init(pjmedia_vid_codec_mgr *mgr,
                                                    pj_pool_factory *pf)
 {
@@ -759,24 +768,9 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     size_t plane_w[3], plane_h[3], plane_bpr[3];
     NSDictionary *frm_prop = NULL;
     OSStatus ret;
-#if TARGET_OS_IPHONE
-    UIApplicationState state;
-#endif
  
     PJ_ASSERT_RETURN(codec && input && out_size && output && has_more,
                      PJ_EINVAL);
-
-#if TARGET_OS_IPHONE
-    /* Skip encoding if app is not active, i.e. in the bg. */
-    state = [UIApplication sharedApplication].applicationState;
-    if (state != UIApplicationStateActive) {
-    	*has_more = PJ_FALSE;
-    	output->size = 0;
-    	output->type = PJMEDIA_FRAME_TYPE_NONE;
-
-    	return PJ_SUCCESS;
-    }
-#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -848,6 +842,23 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     				    	  (__bridge CFDictionaryRef)frm_prop,
     				    	  NULL, NULL);
     if (ret == kVTInvalidSessionErr) {
+#if TARGET_OS_IPHONE
+	/* Just return if app is not active, i.e. in the bg. */
+	__block UIApplicationState state;
+
+	dispatch_sync_on_main_queue(^{
+	    state = [UIApplication sharedApplication].applicationState;
+	});
+	if (state != UIApplicationStateActive) {
+    	    *has_more = PJ_FALSE;
+    	    output->size = 0;
+    	    output->type = PJMEDIA_FRAME_TYPE_NONE;
+
+	    CVPixelBufferRelease(image_buf);
+    	    return PJ_SUCCESS;
+	}
+#endif
+
 	/* Reset compression session */
         ret = create_encoder(vtool_data);
 	PJ_LOG(3,(THIS_FILE, "Encoder needs to be reset [1]: %s (%d)",
@@ -1112,24 +1123,10 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t decode_whole = DECODE_WHOLE;
     OSStatus ret;
-#if TARGET_OS_IPHONE
-    UIApplicationState state;
-#endif
 
     PJ_ASSERT_RETURN(codec && count && packets && out_size && output,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
-
-#if TARGET_OS_IPHONE
-    /* Skip decoding if app is not active, i.e. in the bg. */
-    state = [UIApplication sharedApplication].applicationState;
-    if (state != UIApplicationStateActive) {
-	output->type = PJMEDIA_FRAME_TYPE_NONE;
-	output->size = 0;
-	output->timestamp = packets[0].timestamp;
-    	return PJ_SUCCESS;
-    }
-#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -1280,6 +1277,23 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 		          vtool_data->dec, sample_buf, 0,
 			  NULL, NULL);
 		if (ret == kVTInvalidSessionErr) {
+#if TARGET_OS_IPHONE
+		    /* Just return if app is not active, i.e. in the bg. */
+		    __block UIApplicationState state;
+
+		    dispatch_sync_on_main_queue(^{
+		        state = [UIApplication sharedApplication].applicationState;
+		    });
+		    if (state != UIApplicationStateActive) {
+			output->type = PJMEDIA_FRAME_TYPE_NONE;
+			output->size = 0;
+			output->timestamp = packets[0].timestamp;
+
+			CFRelease(block_buf);
+			CFRelease(sample_buf);
+			return PJ_SUCCESS;
+		    }
+#endif
 		    if (vtool_data->dec_format)
 		        CFRelease(vtool_data->dec_format);
 		    vtool_data->dec_format = NULL;
