@@ -102,13 +102,8 @@ using namespace pj;
 %ignore fromPj;
 %ignore toPj;
 
-// C++11 deprecated dynamic exception specification, but SWIG needs it.
-#ifndef SWIG
-#   define PJSUA2_THROW(x)
-#else
-#   define PJSUA2_THROW(x) throw(x)
-#endif
-
+%import "pj/config_site.h"
+%import "pjsua2/config.hpp"
 
 //
 // Now include the API itself.
