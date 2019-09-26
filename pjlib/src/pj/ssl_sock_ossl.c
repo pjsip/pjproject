@@ -145,7 +145,16 @@ static unsigned get_nid_from_cid(unsigned cid)
 #    pragma comment(lib, "libeay32")
 #    pragma comment(lib, "ssleay32")
 #  endif
-#  define strerror_r(errno,buf,len) strerror_s(buf,len,errno)
+#endif
+
+
+#if defined(PJ_WIN32) && PJ_WIN32 != 0 || \
+    defined(PJ_WIN64) && PJ_WIN64 != 0
+#  ifdef _MSC_VER
+#    define strerror_r(err,buf,len) strerror_s(buf,len,err)
+#  else
+#    define strerror_r(err,buf,len) pj_ansi_strncpy(buf,strerror(err),len)
+#  endif
 #endif
 
 

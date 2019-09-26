@@ -536,6 +536,7 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
 	pj_sockaddr deprecatedAddrs[*p_cnt];
 	unsigned deprecatedCount = *p_cnt;
 	unsigned cnt = 0;
+	int i;
 	pj_status_t status;
 
 	status = get_ipv6_deprecated(&deprecatedCount, deprecatedAddrs);
@@ -546,13 +547,15 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	for (int i = 0; i < *p_cnt; ++i) {
+	for (i = 0; i < *p_cnt; ++i) {
+	    int j;
+	    
 	    ifs[cnt++] = addrs[i];
 
 	    if (addrs[i].addr.sa_family != pj_AF_INET6())
 		continue;
 
-	    for (int j = 0; j < deprecatedCount; ++j) {
+	    for (j = 0; j < deprecatedCount; ++j) {
 		if (pj_sockaddr_cmp(&addrs[i], &deprecatedAddrs[j]) == 0) {
 		    cnt--;
 		    break;
