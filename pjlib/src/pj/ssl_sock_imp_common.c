@@ -259,10 +259,13 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		    pj_timer_heap_cancel(ssock->param.timer_heap,
 					 &ssock->timer);
 		}
-		ssock->timer.id = TIMER_CLOSE;
 		pj_time_val_normalize(&interval);
-		status1 = pj_timer_heap_schedule(ssock->param.timer_heap, 
-						 &ssock->timer, &interval);
+		status1 = pj_timer_heap_schedule_w_grp_lock(
+						 ssock->param.timer_heap, 
+						 &ssock->timer,
+						 &interval,
+						 TIMER_CLOSE,
+						 ssock->param.grp_lock);
 		if (status1 != PJ_SUCCESS) {
 	    	    PJ_PERROR(3,(ssock->pool->obj_name, status,
 				 "Failed to schedule a delayed close. "
@@ -984,10 +987,11 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
 	ssock->param.timeout.msec != 0))
     {
 	pj_assert(ssock->timer.id == TIMER_NONE);
-	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
-	status = pj_timer_heap_schedule(ssock->param.timer_heap, 
-				        &ssock->timer,
-					&ssock->param.timeout);
+	status = pj_timer_heap_schedule_w_grp_lock(ssock->param.timer_heap, 
+						   &ssock->timer,
+						   &ssock->param.timeout,
+						   TIMER_HANDSHAKE_TIMEOUT,
+						   ssock->param.grp_lock);
 	if (status != PJ_SUCCESS) {
 	    ssock->timer.id = TIMER_NONE;
 	    status = PJ_SUCCESS;
@@ -1968,10 +1972,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
         (ssock->param.timeout.sec != 0 || ssock->param.timeout.msec != 0))
     {
 	pj_assert(ssock->timer.id == TIMER_NONE);
-	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
-	status = pj_timer_heap_schedule(ssock->param.timer_heap,
-					&ssock->timer,
-				        &ssock->param.timeout);
+	status = pj_timer_heap_schedule_w_grp_lock(ssock->param.timer_heap,
+						   &ssock->timer,
+						   &ssock->param.timeout,
+						   TIMER_HANDSHAKE_TIMEOUT,
+						   ssock->param.grp_lock);
 	if (status != PJ_SUCCESS) {
 	    ssock->timer.id = TIMER_NONE;
 	    status = PJ_SUCCESS;
