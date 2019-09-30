@@ -1097,6 +1097,11 @@ public:
 
     /**
      * Write a log entry.
+     * Application must implement its own custom LogWriter and
+     * this function will then call the LogWriter::write() method.
+     * Note that this function does not call PJSIP's internal
+     * logging functionality. For that, you should use
+     * utilLogWrite(prmLevel, prmSender, prmMsg) above.
      *
      * @param e			The log entry.
      */

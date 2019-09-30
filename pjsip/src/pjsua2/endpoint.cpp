@@ -560,6 +560,8 @@ void Endpoint::utilAddPendingJob(PendingJob *job)
 /* Handle log callback */
 void Endpoint::utilLogWrite(LogEntry &entry)
 {
+    if (!writer) return;
+
     if (mainThreadOnly && pj_thread_this() != mainThread) {
 	PendingLog *job = new PendingLog;
 	job->entry = entry;
