@@ -3028,7 +3028,6 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
 						NULL, &sdp, NULL);
-	call->local_hold = PJ_FALSE;
     }
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint",
@@ -3071,7 +3070,12 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_SUCCESS &&
+        ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
+         (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
+    {
+    	call->local_hold = PJ_FALSE;
+    } else if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
 	goto on_return;
     }
@@ -3155,7 +3159,6 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
 	status = pjsua_media_channel_create_sdp(call->index,
 						call->inv->pool_prov,
 						NULL, &sdp, NULL);
-	call->local_hold = PJ_FALSE;
     }
 
     if (status != PJ_SUCCESS) {
@@ -3199,7 +3202,12 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     /* Send the request */
     call->med_update_success = PJ_FALSE;
     status = pjsip_inv_send_msg( call->inv, tdata);
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_SUCCESS &&
+        ((call->opt.flag & PJSUA_CALL_UNHOLD) &&
+         (call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0))
+    {
+    	call->local_hold = PJ_FALSE;
+    } else if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
 	goto on_return;
     }
