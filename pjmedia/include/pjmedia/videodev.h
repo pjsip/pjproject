@@ -25,7 +25,6 @@
  */
 #include <pjmedia-videodev/config.h>
 #include <pjmedia-videodev/errno.h>
-#include <pjmedia/event.h>
 #include <pjmedia/frame.h>
 #include <pjmedia/format.h>
 #include <pj/pool.h>

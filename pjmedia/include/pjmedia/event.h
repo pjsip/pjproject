@@ -26,6 +26,7 @@
 #include <pjmedia/audiodev.h>
 #include <pjmedia/format.h>
 #include <pjmedia/signatures.h>
+#include <pjmedia/videodev.h>
 
 PJ_BEGIN_DECL
 
@@ -96,6 +97,11 @@ typedef enum pjmedia_event_type
     PJMEDIA_EVENT_AUD_DEV_ERROR = PJMEDIA_FOURCC('A', 'E', 'R', 'R'),
 
     /**
+     * Video device stopped on error.
+     */
+    PJMEDIA_EVENT_VID_DEV_ERROR = PJMEDIA_FOURCC('V', 'E', 'R', 'R'),
+
+    /**
      * Transport media error.
      */
     PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R')
@@ -158,7 +164,24 @@ typedef struct pjmedia_event_aud_dev_err_data
 
     /** The error code */
     pj_status_t		     status;
+
 } pjmedia_event_aud_dev_err_data;
+
+/**
+ * Additional data/parameters for video device error event.
+ */
+typedef struct pjmedia_event_vid_dev_err_data
+{
+    /** The media direction that fails */
+    pjmedia_dir		     dir;
+
+    /** The video device ID */
+    pjmedia_vid_dev_index    id;
+
+    /** The error code */
+    pj_status_t		     status;
+
+} pjmedia_event_vid_dev_err_data;
 
 /**
  * Additional data/parameters for media transmit error event.
@@ -264,6 +287,9 @@ typedef struct pjmedia_event
 
 	/** Audio device error event data */
 	pjmedia_event_aud_dev_err_data		aud_dev_err;
+
+	/** Video device error event data */
+	pjmedia_event_vid_dev_err_data		vid_dev_err;
 
 	/** Storage for user event data */
 	pjmedia_event_user_data			user;

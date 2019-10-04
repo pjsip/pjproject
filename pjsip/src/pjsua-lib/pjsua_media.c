@@ -1551,6 +1551,15 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		}
 	    }
 	    break;
+
+	case PJMEDIA_EVENT_VID_DEV_ERROR:
+	    {
+		PJ_PERROR(3,(THIS_FILE, event->data.vid_dev_err.status,
+			     "Video device id=%d error for call %d",
+			     event->data.vid_dev_err.id,
+			     call->index));
+	    }
+	    break;
 #endif
 
 	default:

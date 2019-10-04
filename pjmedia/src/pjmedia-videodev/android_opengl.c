@@ -114,6 +114,9 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 static pj_status_t andgl_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t andgl_stream_destroy(pjmedia_vid_dev_stream *strm);
 
+static pj_status_t init_opengl(void * data);
+static pj_status_t deinit_opengl(void * data);
+
 /* Job queue prototypes */
 static pj_status_t job_queue_create(pj_pool_t *pool, job_queue **pjq);
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
@@ -154,7 +157,8 @@ static andgl_fmt_info* get_andgl_format_info(pjmedia_format_id id)
 #define EGL_ERR(str) \
     { \
         PJ_LOG(3, (THIS_FILE, "Unable to %s %d", str, eglGetError())); \
-        return PJMEDIA_EVID_SYSERR; \
+        status = PJMEDIA_EVID_SYSERR; \
+	goto on_return; \
     }
 
 static pj_status_t init_opengl(void * data)
@@ -172,6 +176,7 @@ static pj_status_t init_opengl(void * data)
     EGLint format;
     EGLint width;
     EGLint height;
+    pj_status_t status;
     
     strm->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (strm->display == EGL_NO_DISPLAY ||
@@ -219,8 +224,16 @@ static pj_status_t init_opengl(void * data)
     pjmedia_vid_dev_opengl_create_buffers(strm->pool, PJ_TRUE, &strm->gl_buf);
     
     /* Init GL buffers */
-    return pjmedia_vid_dev_opengl_init_buffers(strm->gl_buf);
+    status = pjmedia_vid_dev_opengl_init_buffers(strm->gl_buf);
+    
+on_return:
+    if (status != PJ_SUCCESS)
+	deinit_opengl(strm);
+
+    return status;
 }
+
+#undef EGL_ERR
 
 static pj_status_t render(void * data)
 {
@@ -386,6 +399,7 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         pjmedia_video_format_detail *vfd;
         pjmedia_format *fmt = (pjmedia_format *)pval;
         andgl_fmt_info *ifi;
+        pj_status_t status = PJ_SUCCESS;
         
         if (!(ifi = get_andgl_format_info(fmt->id)))
             return PJMEDIA_EVID_BADFORMAT;
@@ -406,11 +420,12 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         pj_memcpy(&strm->param.disp_size, &vfd->size, sizeof(vfd->size));
         
 	if (strm->window)
-	    job_queue_post_job(strm->jq, init_opengl, strm, 0, NULL);
+	    job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
 	    
-	PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL due to format change"));
-        
-	return PJ_SUCCESS;
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Re-initializing OpenGL due to format change"));
+	return status;
+	
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
         pj_status_t status = PJ_SUCCESS;
         pjmedia_vid_dev_hwnd *wnd = (pjmedia_vid_dev_hwnd *)pval;
@@ -429,10 +444,9 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
             job_queue_post_job(strm->jq, init_opengl, strm, 0, &status);
         }
 
-        PJ_LOG(4, (THIS_FILE, "Re-initializing OpenGL with native window"
-        		      " %p: %s", strm->window,
-                              (status == PJ_SUCCESS? "success": "failed")));
-        
+        PJ_PERROR(4,(THIS_FILE, status,
+		     "Re-initializing OpenGL with native window %p",
+		     strm->window));
         return status;
     }
     

@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-videodev/videodev_imp.h>
+#include <pjmedia/event.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
