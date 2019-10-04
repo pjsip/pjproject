@@ -45,7 +45,7 @@ class MyObserver implements MyAppObserver {
 	}
 	
 	@Override
-	public void notifyRegState(pjsip_status_code code, String reason, int expiration) {}
+	public void notifyRegState(int code, String reason, long expiration) {}
 	
 	@Override
 	public void notifyIncomingCall(MyCall call) {
@@ -86,16 +86,19 @@ class MyObserver implements MyAppObserver {
 				VideoWindowHandle vidWH = new VideoWindowHandle();	
 				vidWH.getHandle().setWindow(sample2.hwnd);	    	    
 				try {
-					currentCall.vidWin.setWindow(vidWH);			
+					currentCall.vidWin.setWindow(vidWH);
 				} catch (Exception e) {
 					System.out.println(e);
-				}		 		
+				}
 			}
-		}		
+		}
 	}
 
 	@Override
 	public void notifyBuddyState(MyBuddy buddy) {}	
+
+	@Override
+	public void notifyChangeNetwork() {}
 }
 
 class MyThread extends Thread {
@@ -116,6 +119,23 @@ class MyThread extends Thread {
 		if (app.accList.size() == 0) {
 			accCfg = new AccountConfig();
 			accCfg.setIdUri("sip:localhost");
+			account = app.addAcc(accCfg);
+
+			accCfg.setIdUri("sip:test1@pjsip.org");
+			AccountSipConfig sipCfg = accCfg.getSipConfig();		
+			AuthCredInfoVector ciVec = sipCfg.getAuthCreds();
+			ciVec.add(new AuthCredInfo("Digest", 
+					"*",
+					"test1",
+					0,
+					"test1"));
+
+			StringVector proxy = sipCfg.getProxies();
+			proxy.add("sip:sip.pjsip.org;transport=tcp");							
+
+			AccountRegConfig regCfg = accCfg.getRegConfig();
+			regCfg.setRegistrarUri("sip:pjsip.org");
+
 			accCfg.getVideoConfig().setAutoTransmitOutgoing(true);
 			accCfg.getVideoConfig().setAutoShowIncoming(true);                        
 			account = app.addAcc(accCfg);                        
@@ -135,7 +155,7 @@ class MyThread extends Thread {
 			// Check if any call instance need to be deleted
 			observer.check_call_deletion();
 			try {
-				Thread.currentThread().sleep(50);
+				Thread.sleep(50);
 			} catch (InterruptedException ie) {
 				break;
 			}
