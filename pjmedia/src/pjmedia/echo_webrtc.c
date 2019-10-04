@@ -151,8 +151,10 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
     
     /* Currently we only support mono. */
-    if (channel_count != 1)
+    if (channel_count != 1) {
+    	PJ_LOG(3, (THIS_FILE, "WebRTC AEC doesn't support stereo"));
     	return PJ_ENOTSUP;
+    }
 
     echo->channel_count = channel_count;
     echo->samples_per_frame = samples_per_frame;
