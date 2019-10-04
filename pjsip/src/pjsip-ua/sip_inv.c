@@ -313,12 +313,18 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
     /* Mark the callback as called for this state */
     inv->cb_called |= (1 << state);
 
-    /* Call on_state_changed() callback. */
+    /* Call on_state_changed() callback.
+     * While in the callback, can the state shift to DISCONNECTED? Perhaps
+     * yes, so better avoid premature destroy of the invite session by
+     * temporarily increase its ref counter.
+     */
+    pjsip_inv_add_ref(inv);
     if (mod_inv.cb.on_state_changed && inv->notify && !dont_notify)
 	(*mod_inv.cb.on_state_changed)(inv, e);
+    pjsip_inv_dec_ref(inv);
 
     /* Only decrement when previous state is not already DISCONNECTED */
-    if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
+    if (state == PJSIP_INV_STATE_DISCONNECTED &&
 	prev_state != PJSIP_INV_STATE_DISCONNECTED) 
     {
 	pjsip_inv_dec_ref(inv);
