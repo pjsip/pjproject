@@ -1105,6 +1105,7 @@ static void stateless_send_transport_cb( void *token,
 
     PJ_UNUSED_ARG(tdata);
     pj_assert(tdata == stateless_data->tdata);
+    pj_status_t need_update_via = PJ_TRUE;
 
     for (;;) {
 	pj_status_t status;
@@ -1201,6 +1202,15 @@ static void stateless_send_transport_cb( void *token,
 	    pjsip_msg_insert_first_hdr(tdata->msg, (pjsip_hdr*)via);
 	}
 
+	if (tdata->msg->line.req.method.id == PJSIP_CANCEL_METHOD) {
+	    if (via->sent_by.host.slen > 0) {
+		/* Don't update Via header on a CANCEL request if the sent-by
+		 * parameter is already set since it needs to match the 
+		 * original request. */
+		need_update_via = PJ_FALSE;
+	    }
+	}
+
 	if (via->branch_param.slen == 0) {
 	    pj_str_t tmp;
 	    via->branch_param.ptr = (char*)pj_pool_alloc(tdata->pool,
@@ -1213,10 +1223,7 @@ static void stateless_send_transport_cb( void *token,
 	    pj_generate_unique_string(&tmp);
 	}
 
-	/* For CANCEL request, do not update the Via header since it needs
-	 * to match the original request.
-	 */
-	if (tdata->msg->line.req.method.id != PJSIP_CANCEL_METHOD) {
+	if (need_update_via) {
 	    via->transport = pj_str(stateless_data->cur_transport->type_name);
 
 	    if (tdata->via_addr.host.slen > 0 &&
