@@ -769,7 +769,8 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
     pj_memcpy(&dst->pkt_info, &src->pkt_info, sizeof(src->pkt_info));
 
     /* msg_info needs deep clone */
-    dst->msg_info.msg_buf = dst->pkt_info.packet;
+    dst->msg_info.msg_buf = dst->pkt_info.packet +
+			    (src->msg_info.msg_buf - src->pkt_info.packet);
     dst->msg_info.len = src->msg_info.len;
     dst->msg_info.msg = pjsip_msg_clone(pool, src->msg_info.msg);
     pj_list_init(&dst->msg_info.parse_err);
