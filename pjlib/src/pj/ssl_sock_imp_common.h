@@ -96,6 +96,9 @@ typedef struct circ_buf_t {
 struct pj_ssl_sock_t
 {
     pj_pool_t		 *pool;
+    pj_pool_t		 *info_pool; /* this is for certificate chain 
+				      * information allocation. Don't use for 
+				      * other purposes. */
     pj_ssl_sock_t	 *parent;
     pj_ssl_sock_param	  param;
     pj_ssl_sock_param	  newsock_param;

@@ -619,6 +619,7 @@ static void ssl_on_destroy(void *arg)
     }
 
     /* Secure release pool, i.e: all memory blocks will be zeroed first */
+    pj_pool_secure_release(&ssock->info_pool);
     pj_pool_secure_release(&ssock->pool);
 }
 
@@ -1266,15 +1267,18 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
 {
     pj_ssl_sock_t *ssock;
     pj_status_t status;
+    pj_pool_t *info_pool;
 
     PJ_ASSERT_RETURN(pool && param && p_ssock, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->sock_type == pj_SOCK_STREAM(), PJ_ENOTSUP);
 
+    info_pool = pj_pool_create(pool->factory, "ssl_chain%p", 512, 512, NULL);
     pool = pj_pool_create(pool->factory, "ssl%p", 512, 512, NULL);
 
     /* Create secure socket */
     ssock = ssl_alloc(pool);
     ssock->pool = pool;
+    ssock->info_pool = info_pool;
     ssock->sock = PJ_INVALID_SOCKET;
     ssock->ssl_state = SSL_STATE_NULL;
     ssock->circ_buf_input.owner = ssock;

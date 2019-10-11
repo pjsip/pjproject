@@ -1050,7 +1050,8 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
         goto us_out;
 
     tls_cert_get_info(ssock->pool, &ssock->local_cert_info, cert);
-    tls_cert_get_chain_raw(ssock->pool, &ssock->local_cert_info, us, 1);
+    pj_pool_reset(ssock->info_pool);
+    tls_cert_get_chain_raw(ssock->info_pool, &ssock->local_cert_info, us, 1);
 
 us_out:
     tls_last_error = ret;
@@ -1077,7 +1078,8 @@ us_out:
         goto peer_out;
 
     tls_cert_get_info(ssock->pool, &ssock->remote_cert_info, cert);
-    tls_cert_get_chain_raw(ssock->pool, &ssock->remote_cert_info, certs,
+    pj_pool_reset(ssock->info_pool);
+    tls_cert_get_chain_raw(ssock->info_pool, &ssock->remote_cert_info, certs,
     			   certslen);
 
 peer_out:

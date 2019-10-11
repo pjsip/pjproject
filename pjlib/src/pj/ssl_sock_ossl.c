@@ -1709,11 +1709,12 @@ static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 
     chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
     if (chain) {
-       ssl_update_remote_cert_chain_info(ssock->pool,
-       					 &ssock->remote_cert_info,
-       					 chain, PJ_TRUE);
+	pj_pool_reset(ssock->info_pool);
+	ssl_update_remote_cert_chain_info(ssock->info_pool,
+       					  &ssock->remote_cert_info,
+       					  chain, PJ_TRUE);
     } else {
-       ssock->remote_cert_info.raw_chain.cnt = 0;
+	ssock->remote_cert_info.raw_chain.cnt = 0;
     }
 }
 
