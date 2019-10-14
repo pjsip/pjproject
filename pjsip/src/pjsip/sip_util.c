@@ -1102,10 +1102,10 @@ static void stateless_send_transport_cb( void *token,
 					 pj_ssize_t sent )
 {
     pjsip_send_state *stateless_data = (pjsip_send_state*) token;
+    pj_status_t need_update_via = PJ_TRUE;
 
     PJ_UNUSED_ARG(tdata);
     pj_assert(tdata == stateless_data->tdata);
-    pj_status_t need_update_via = PJ_TRUE;
 
     for (;;) {
 	pj_status_t status;
