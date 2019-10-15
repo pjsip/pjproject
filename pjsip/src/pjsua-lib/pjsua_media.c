@@ -1542,12 +1542,41 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	case PJMEDIA_EVENT_FMT_CHANGED:
 	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
-		if (event->src == w->vp_rend) {
+		if (event->epub == w->vp_rend) {
 		    /* Renderer just changed format, reconnect stream */
 		    pjsua_vid_conf_disconnect(call_med->strm.v.strm_dec_slot,
 					      w->rend_slot);
 		    pjsua_vid_conf_connect(call_med->strm.v.strm_dec_slot,
 					   w->rend_slot, NULL);
+		}
+	    }
+
+	    if (call_med->strm.v.strm_dec_slot != PJSUA_INVALID_ID) {
+		/* Stream decoder changed format, update all conf listeners
+		 * by reconnecting.
+		 */
+		pjsua_conf_port_id dec_pid = call_med->strm.v.strm_dec_slot;
+		pjmedia_port *strm_dec;
+		pjsua_vid_conf_port_info pi;
+		unsigned i;
+
+		status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
+						     PJMEDIA_DIR_DECODING,
+						     &strm_dec);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		/* Verify that the publisher is the stream decoder */
+		if (event->epub != strm_dec)
+		    break;
+
+		status = pjsua_vid_conf_get_port_info(dec_pid, &pi);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		for (i = 0; i < pi.listener_cnt; i++) {
+		    pjsua_vid_conf_disconnect(dec_pid, pi.listeners[i]);
+		    pjsua_vid_conf_connect(dec_pid, pi.listeners[i], NULL);
 		}
 	    }
 	    break;

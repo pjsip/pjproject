@@ -1131,6 +1131,8 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    /* Register to video events */
 	    pjmedia_event_subscribe(NULL, &call_media_on_event,
                                     call_med, w->vp_rend);
+	    pjmedia_event_subscribe(NULL, &call_media_on_event,
+                                    call_med, media_port);
 #endif
 	    
 	    /* Register renderer to stream events */
