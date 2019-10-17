@@ -37,8 +37,22 @@ PJ_BEGIN_DECL
 /**
  * @defgroup s2_audio_device_reference Audio Device API Reference
  * @ingroup audio_device_api
- * @brief API Reference
+ * @brief Documentation and API Reference
  * @{
+ *
+ * @section ec_sec Hardware/Built-in Echo Cancellation
+ *
+ * On some platforms, audio device comes with built-in echo cancellation
+ * feature. This is usually done based on specific hardware configuration,
+ * such as the use of multiple microphones and/or a known fixed distance
+ * between the capture and playback device, in order to precalculate the
+ * echo time distance. Because of this, when using the hardware EC,
+ * users may not get the freedom to select their own audio devices.
+ * This is applicable for Mac (users must use default audio devices) and
+ * iOS (users must use the same built-in audio device).
+ *
+ * In PJMEDIA, applications wishing to use sofware echo instead can pass
+ * PJMEDIA_ECHO_USE_SW_ECHO when calling pjmedia_snd_port_create2().
  */
 
 /**

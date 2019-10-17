@@ -6545,7 +6545,9 @@ struct pjsua_media_config
     unsigned		rx_drop_pct;
 
     /**
-     * Echo canceller options (see #pjmedia_echo_create())
+     * Echo canceller options (see #pjmedia_echo_create()).
+     * Specify PJMEDIA_ECHO_USE_SW_ECHO here if application wishes
+     * to use software echo canceller instead of device EC.
      *
      * Default: 0.
      */

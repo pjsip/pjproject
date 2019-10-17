@@ -100,6 +100,7 @@ struct coreaudio_factory
     struct coreaudio_dev_info	*dev_info;
 
     AudioComponent		 io_comp;
+    pj_bool_t			 has_vpio;
     struct stream_list		 streams;
 };
 
@@ -270,6 +271,10 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
     cf->io_comp = AudioComponentFindNext(NULL, &desc);
     if (cf->io_comp == NULL)
 	return PJMEDIA_EAUD_INIT; // cannot find IO unit;
+
+    desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    if (AudioComponentFindNext(NULL, &desc) != NULL)
+    	cf->has_vpio = PJ_TRUE;
 
     status = ca_factory_refresh(f);
     if (status != PJ_SUCCESS)
@@ -631,11 +636,14 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 		cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
 	    }
 	}
+	if (cf->has_vpio) {
+	    cdi->info.caps |= PJMEDIA_AUD_DEV_CAP_EC;
+	}
 
 	cf->dev_count++;
 
 	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d) %dHz",
-	       i,
+	       cdi->dev_id,
 	       cdi->info.name,
 	       cdi->info.input_count,
 	       cdi->info.output_count,
@@ -1000,6 +1008,30 @@ on_break:
     return -1;
 }
 
+/* Copy 16-bit signed int samples to a destination buffer, which can be
+ * either 16-bit signed int, or float.
+ */
+static void copy_samples(void *dst, unsigned *dst_pos, unsigned dst_elmt_size,
+			 pj_int16_t *src, unsigned nsamples)
+{
+   if (dst_elmt_size == sizeof(pj_int16_t)) {
+   	/* Destination is also 16-bit signed int. */
+	pjmedia_copy_samples((pj_int16_t*)dst + *dst_pos, src, nsamples);
+   } else {
+   	/* Convert it first to float. */
+   	unsigned i;
+   	float *fdst = (float *)dst;
+
+   	pj_assert(dst_elmt_size == sizeof(Float32));
+
+   	for (i = 0; i< nsamples; i++) {
+   	    /* Value needs to be between -1.0 to 1.0 */
+   	    fdst[*dst_pos + i] = (float)src[i] / 32768.0f;
+   	}
+   }
+   *dst_pos += nsamples;
+}
+
 static OSStatus output_renderer(void                       *inRefCon,
                                 AudioUnitRenderActionFlags *ioActionFlags,
                                 const AudioTimeStamp       *inTimeStamp,
@@ -1010,7 +1042,9 @@ static OSStatus output_renderer(void                       *inRefCon,
     struct coreaudio_stream *stream = (struct coreaudio_stream*)inRefCon;
     pj_status_t status = 0;
     unsigned nsamples_req = inNumberFrames * stream->param.channel_count;
-    pj_int16_t *output = ioData->mBuffers[0].mData;
+    void *output = ioData->mBuffers[0].mData;
+    unsigned elmt_size = ioData->mBuffers[0].mDataByteSize / inNumberFrames;
+    unsigned output_pos = 0;
 
     pj_assert(!stream->quit_flag);
 
@@ -1036,8 +1070,8 @@ static OSStatus output_renderer(void                       *inRefCon,
     if (stream->play_buf_count) {
 	/* samples buffered >= requested by sound device */
 	if (stream->play_buf_count >= nsamples_req) {
-	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
-				 nsamples_req);
+	    copy_samples(output, &output_pos, elmt_size,
+	    		 stream->play_buf, nsamples_req);
 	    stream->play_buf_count -= nsamples_req;
 	    pjmedia_move_samples(stream->play_buf,
 				 stream->play_buf + nsamples_req,
@@ -1048,10 +1082,9 @@ static OSStatus output_renderer(void                       *inRefCon,
 	}
 
 	/* samples buffered < requested by sound device */
-	pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
-			     stream->play_buf_count);
+	copy_samples(output, &output_pos, elmt_size,
+		     stream->play_buf, stream->play_buf_count);
 	nsamples_req -= stream->play_buf_count;
-	output = (pj_int16_t*)output + stream->play_buf_count;
 	stream->play_buf_count = 0;
     }
 
@@ -1066,7 +1099,14 @@ static OSStatus output_renderer(void                       *inRefCon,
 	frame.bit_info = 0;
 
 	if (nsamples_req >= stream->param.samples_per_frame) {
-	    frame.buf = output;
+	    /* If the output buffer is 16-bit signed int, we can
+	     * directly use the supplied buffer.
+	     */
+	    if (elmt_size == sizeof(pj_int16_t)) {
+	    	frame.buf = (pj_int16_t *)output + output_pos;
+	    } else {
+	    	frame.buf = stream->play_buf;
+	    }
 	    status = (*stream->play_cb)(stream->user_data, &frame);
 	    if (status != PJ_SUCCESS)
 		goto on_break;
@@ -1075,7 +1115,12 @@ static OSStatus output_renderer(void                       *inRefCon,
 		pj_bzero(frame.buf, frame.size);
 
 	    nsamples_req -= stream->param.samples_per_frame;
-	    output = (pj_int16_t*)output + stream->param.samples_per_frame;
+	    if (elmt_size == sizeof(pj_int16_t)) {
+	    	output_pos += stream->param.samples_per_frame;
+	    } else {
+	    	copy_samples(output, &output_pos, elmt_size, stream->play_buf,
+	    		     stream->param.samples_per_frame);
+	    }
 	} else {
 	    frame.buf = stream->play_buf;
 	    status = (*stream->play_cb)(stream->user_data, &frame);
@@ -1085,8 +1130,8 @@ static OSStatus output_renderer(void                       *inRefCon,
 	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
 		pj_bzero(frame.buf, frame.size);
 
-	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf,
-				 nsamples_req);
+	    copy_samples(output, &output_pos, elmt_size,
+	    		 stream->play_buf, nsamples_req);
 	    stream->play_buf_count = stream->param.samples_per_frame -
 		                     nsamples_req;
 	    pjmedia_move_samples(stream->play_buf,
@@ -1292,7 +1337,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	                               1,
 	                               &enable,
 	                               sizeof(enable));
-	if (ostatus != noErr) {
+	if (ostatus != noErr && !strm->param.ec_enabled) {
 	    PJ_LOG(4, (THIS_FILE,
 		   "Warning: cannot enable IO of capture device %d",
 		   dev_id));
@@ -1307,7 +1352,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 					   0,
 					   &enable,
 					   sizeof(enable));
-	    if (ostatus != noErr) {
+	    if (ostatus != noErr && !strm->param.ec_enabled) {
 		PJ_LOG(4, (THIS_FILE,
 		       "Warning: cannot disable IO of capture device %d",
 		       dev_id));
@@ -1326,7 +1371,8 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	                               0,
 	                               &enable,
 	                               sizeof(enable));
-	if (ostatus != noErr) {
+	if (ostatus != noErr && !strm->param.ec_enabled)
+	{
 	    PJ_LOG(4, (THIS_FILE,
 		   "Warning: cannot enable IO of playback device %d",
 		   dev_id));
@@ -1335,15 +1381,23 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     }
 
 #if COREAUDIO_MAC
-    PJ_LOG(5, (THIS_FILE, "Opening device %d", dev_id));
-    ostatus = AudioUnitSetProperty(*io_unit,
-			           kAudioOutputUnitProperty_CurrentDevice,
-			           kAudioUnitScope_Global,
-			           0,
-			           &dev_id,
-			           sizeof(dev_id));
-    if (ostatus != noErr) {
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+    if (!strm->param.ec_enabled) {
+    	/* When using VPIO on Mac, we shouldn't set the current device.
+    	 * Doing so will cause getting the buffer size later to fail
+    	 * with kAudioUnitErr_InvalidProperty error (-10879).
+    	 */
+    	PJ_LOG(4, (THIS_FILE, "Setting current device %d", dev_id));
+    	ostatus = AudioUnitSetProperty(*io_unit,
+			               kAudioOutputUnitProperty_CurrentDevice,
+			               kAudioUnitScope_Global,
+			               0,
+			               &dev_id,
+			               sizeof(dev_id));
+    	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed setting current device %d, "
+	    	       "error: %d", dev_id, ostatus));
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+	}
     }
 #endif
 
@@ -1352,21 +1406,24 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	AudioStreamBasicDescription deviceFormat;
 	UInt32 size;
 
-	/*
-	 * Keep the sample rate from the device, otherwise we will confuse
-	 * AUHAL
-	 */
-	size = sizeof(AudioStreamBasicDescription);
-	ostatus = AudioUnitGetProperty(*io_unit,
-				       kAudioUnitProperty_StreamFormat,
-				       kAudioUnitScope_Input,
-				       1,
-				       &deviceFormat,
-				       &size);
-	if (ostatus != noErr) {
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+	if (!strm->param.ec_enabled) {
+	    /* Keep the sample rate from the device, otherwise we will confuse
+	     * AUHAL.
+	     */
+	    size = sizeof(AudioStreamBasicDescription);
+	    ostatus = AudioUnitGetProperty(*io_unit,
+				       	   kAudioUnitProperty_StreamFormat,
+				       	   kAudioUnitScope_Input,
+				       	   1,
+				       	   &deviceFormat,
+				       	   &size);
+	    if (ostatus != noErr) {
+	    	PJ_LOG(3, (THIS_FILE, "Failed getting stream format of device"
+	    			      " %d, error: %d", dev_id, ostatus));
+	    	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+	    }
+	    strm->streamFormat.mSampleRate = deviceFormat.mSampleRate;
 	}
-	strm->streamFormat.mSampleRate = deviceFormat.mSampleRate;
 #endif
 
 	/* When setting the stream format, we have to make sure the sample
@@ -1380,6 +1437,8 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 				       &strm->streamFormat,
 				       sizeof(strm->streamFormat));
 	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed setting stream format of device %d"
+	    			  ", error: %d", dev_id, ostatus));
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 	}
 
@@ -1394,11 +1453,19 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 					&size);
 	if (ostatus == noErr) {
 	    if (strm->streamFormat.mSampleRate != deviceFormat.mSampleRate) {
+	    	PJ_LOG(4, (THIS_FILE, "Creating audio resample from %d to %d",
+	    		   (int)deviceFormat.mSampleRate,
+	    		   (int)strm->streamFormat.mSampleRate));
 		pj_status_t rc = create_audio_resample(strm, &deviceFormat);
-		if (PJ_SUCCESS != rc)
+		if (PJ_SUCCESS != rc) {
+	    	    PJ_LOG(3, (THIS_FILE, "Failed creating resample %d",
+	    		       rc));
 		    return rc;
+		}
 	    }
 	} else {
+	    PJ_LOG(3, (THIS_FILE, "Failed getting stream format of device %d"
+	    			  " (2), error: %d", dev_id, ostatus));
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 	}
 #endif
@@ -1406,14 +1473,30 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	AURenderCallbackStruct output_cb;
+	AudioStreamBasicDescription streamFormat = strm->streamFormat;
 
 	/* Set the stream format */
+#if COREAUDIO_MAC
+   	if (strm->param.ec_enabled) {
+   	    /* When using VPIO on Mac, we need to use float data. Using
+   	     * signed integer will generate no errors, but strangely,
+   	     * no sound will be played.
+   	     */
+    	    streamFormat.mFormatFlags      = kLinearPCMFormatFlagIsFloat |
+  					     kLinearPCMFormatFlagIsPacked;
+    	    streamFormat.mBitsPerChannel   = sizeof(float) * 8;
+   	    streamFormat.mBytesPerFrame    = streamFormat.mChannelsPerFrame *
+	                                     streamFormat.mBitsPerChannel / 8;
+    	    streamFormat.mBytesPerPacket   = streamFormat.mBytesPerFrame *
+					     streamFormat.mFramesPerPacket;
+	}
+#endif
 	ostatus = AudioUnitSetProperty(*io_unit,
 	                               kAudioUnitProperty_StreamFormat,
 	                               kAudioUnitScope_Input,
 	                               0,
-	                               &strm->streamFormat,
-	                               sizeof(strm->streamFormat));
+	                               &streamFormat,
+	                               sizeof(streamFormat));
 	if (ostatus != noErr) {
 	    PJ_LOG(4, (THIS_FILE,
 		   "Warning: cannot set playback stream format of dev %d",
@@ -1430,12 +1513,15 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 				       &output_cb,
 				       sizeof(output_cb));
 	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed setting render callback %d",
+	    	       ostatus));
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 	}
 
 	/* Allocate playback buffer */
 	strm->play_buf = (pj_int16_t*)pj_pool_alloc(strm->pool,
 			 strm->param.samples_per_frame *
+			 (strm->param.ec_enabled? 2: 1) *
 			 strm->param.bits_per_sample >> 3);
 	if (!strm->play_buf)
 	    return PJ_ENOMEM;
@@ -1457,24 +1543,41 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 		      *io_unit,
 		      kAudioOutputUnitProperty_SetInputCallback,
 		      kAudioUnitScope_Global,
-		      0,
+		      1,
 		      &input_cb,
 		      sizeof(input_cb));
 	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed setting input callback %d",
+	    	       ostatus));
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 	}
 
 #if COREAUDIO_MAC
-	/* Get device's buffer frame size */
+	/* Set device's buffer frame size */
 	size = sizeof(UInt32);
+	buf_size = (20 * strm->streamFormat.mSampleRate) / 1000;
+    	ostatus = AudioUnitSetProperty (*io_unit,
+    					kAudioDevicePropertyBufferFrameSize,
+    					kAudioUnitScope_Global,
+    					0,
+    					&buf_size,
+    					size);
+	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed setting buffer size %d",
+	    	       ostatus));
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
+	}
+
+	/* Get device's buffer frame size */
 	ostatus = AudioUnitGetProperty(*io_unit,
 		                       kAudioDevicePropertyBufferFrameSize,
 		                       kAudioUnitScope_Global,
 		                       0,
 		                       &buf_size,
 		                       &size);
-	if (ostatus != noErr)
-	{
+	if (ostatus != noErr) {
+	    PJ_LOG(3, (THIS_FILE, "Failed getting buffer size %d",
+	    	       ostatus));
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
 	}
 
@@ -1488,7 +1591,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	ab = &strm->audio_buf->mBuffers[0];
 	ab->mNumberChannels = strm->streamFormat.mChannelsPerFrame;
 	ab->mDataByteSize = buf_size * ab->mNumberChannels *
-			    strm->param.bits_per_sample >> 3;
+			    strm->streamFormat.mBitsPerChannel >> 3;
 	ab->mData = pj_pool_alloc(strm->pool,
 				  ab->mDataByteSize);
 	if (!ab->mData)
@@ -1521,6 +1624,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     /* Initialize the audio unit */
     ostatus = AudioUnitInitialize(*io_unit);
     if (ostatus != noErr) {
+	PJ_LOG(3, (THIS_FILE, "Failed initializing audio unit %d", ostatus));
  	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
@@ -1562,7 +1666,8 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
     strm->streamFormat.mBitsPerChannel   = strm->param.bits_per_sample;
     strm->streamFormat.mChannelsPerFrame = param->channel_count;
     strm->streamFormat.mBytesPerFrame    = strm->streamFormat.mChannelsPerFrame
-	                                   * strm->param.bits_per_sample >> 3;
+	                                   * strm->streamFormat.mBitsPerChannel
+	                                   / 8;
     strm->streamFormat.mFramesPerPacket  = 1;
     strm->streamFormat.mBytesPerPacket   = strm->streamFormat.mBytesPerFrame *
 					   strm->streamFormat.mFramesPerPacket;
@@ -1579,21 +1684,34 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
 		          &param->output_route);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_EC) {
-	ca_stream_set_cap(&strm->base,
-		          PJMEDIA_AUD_DEV_CAP_EC,
-		          &param->ec_enabled);
+	status = ca_stream_set_cap(&strm->base,
+		          	   PJMEDIA_AUD_DEV_CAP_EC,
+		          	   &param->ec_enabled);
+	if (status != PJ_SUCCESS)
+	    strm->param.ec_enabled = PJ_FALSE;
     } else {
 	pj_bool_t ec = PJ_FALSE;
 	ca_stream_set_cap(&strm->base,
 		          PJMEDIA_AUD_DEV_CAP_EC, &ec);
     }
 
-    strm->io_units[0] = strm->io_units[1] = NULL;
-    if (param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK &&
-	param->rec_id == param->play_id)
+#if !TARGET_OS_IPHONE
+    if (strm->param.ec_enabled &&
+	param->rec_id != PJMEDIA_AUD_DEFAULT_CAPTURE_DEV &&
+	param->play_id != PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV)
     {
-	/* If both input and output are on the same device, only create
-	 * one audio unit to interface with the device.
+	PJ_LOG(4, (THIS_FILE, "Warning: audio device id settings are "
+			      "ignored when using VPIO"));
+    }
+#endif
+
+    strm->io_units[0] = strm->io_units[1] = NULL;
+    if ((param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK &&
+	 param->rec_id == param->play_id) ||
+	(param->flags & PJMEDIA_AUD_DEV_CAP_EC && param->ec_enabled))
+    {
+	/* If both input and output are on the same device or if EC is enabled,
+	 * only create one audio unit to interface with the device(s).
 	 */
 	status = create_audio_unit(cf->io_comp,
 		                   cf->dev_info[param->rec_id].dev_id,
@@ -1890,8 +2008,37 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
+    if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
+	AudioComponentDescription desc;
+	AudioComponent io_comp;
+        
+	desc.componentType = kAudioUnitType_Output;
+	desc.componentSubType = (*(pj_bool_t*)pval)?
+        			kAudioUnitSubType_VoiceProcessingIO :
 #if COREAUDIO_MAC
-    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+        			kAudioUnitSubType_HALOutput;
+#else
+				kAudioUnitSubType_RemoteIO;
+#endif
+	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+	desc.componentFlags = 0;
+	desc.componentFlagsMask = 0;
+        
+	io_comp = AudioComponentFindNext(NULL, &desc);
+	if (io_comp == NULL)
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
+	strm->cf->io_comp = io_comp;
+	strm->param.ec_enabled = *(pj_bool_t*)pval;
+        
+        PJ_LOG(4, (THIS_FILE, "Using %s audio unit",
+                   (desc.componentSubType ==
+                    kAudioUnitSubType_VoiceProcessingIO?
+                    "VoiceProcessingIO": "default")));
+        
+	return PJ_SUCCESS;
+    }
+#if COREAUDIO_MAC
+    else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
 	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
 	OSStatus ostatus;
@@ -1914,31 +2061,7 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
     }
 
 #else
-    if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
-	AudioComponentDescription desc;
-	AudioComponent io_comp;
-        
-	desc.componentType = kAudioUnitType_Output;
-	desc.componentSubType = (*(pj_bool_t*)pval)?
-        kAudioUnitSubType_VoiceProcessingIO :
-        kAudioUnitSubType_RemoteIO;
-	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
-	desc.componentFlags = 0;
-	desc.componentFlagsMask = 0;
-        
-	io_comp = AudioComponentFindNext(NULL, &desc);
-	if (io_comp == NULL)
-	    return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(-1);
-	strm->cf->io_comp = io_comp;
-	strm->param.ec_enabled = *(pj_bool_t*)pval;
-        
-        PJ_LOG(4, (THIS_FILE, "Using %s audio unit",
-                   (desc.componentSubType ==
-                    kAudioUnitSubType_RemoteIO? "RemoteIO":
-                    "VoiceProcessingIO")));
-        
-	return PJ_SUCCESS;
-    } else if ((cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
+    else if ((cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY &&
 	 (strm->param.dir & PJMEDIA_DIR_CAPTURE)) ||
 	(cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
 	 (strm->param.dir & PJMEDIA_DIR_PLAYBACK)))
