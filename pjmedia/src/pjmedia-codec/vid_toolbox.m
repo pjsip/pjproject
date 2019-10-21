@@ -797,11 +797,17 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
 
 	count = CVPixelBufferGetPlaneCount(image_buf);
 	for (i = 0; i < count; i++) {
-    	    void *ptr = CVPixelBufferGetBaseAddressOfPlane(image_buf, i);
-    	    size_t bpr = CVPixelBufferGetBytesPerRow(image_buf);
-    	    
-    	    pj_assert(bpr = plane_bpr[i]);
-    	    pj_memcpy(ptr, base_addr[i], plane_bpr[i] * plane_h[i]);
+    	    char *ptr = (char*)CVPixelBufferGetBaseAddressOfPlane(image_buf, i);
+    	    char *src = (char*)base_addr[i];
+    	    size_t bpr = CVPixelBufferGetBytesPerRowOfPlane(image_buf, i);
+	    int j;
+
+    	    pj_assert(bpr >= plane_bpr[i]);
+	    for (j = 0; j < plane_h[i]; ++j) {
+		pj_memcpy(ptr, src, plane_bpr[i]);
+		src += plane_bpr[i];
+		ptr += bpr;
+	    }
 	}
 
 	CVPixelBufferUnlockBaseAddress(image_buf, 0);
