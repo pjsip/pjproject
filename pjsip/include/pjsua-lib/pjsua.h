@@ -510,12 +510,12 @@ typedef struct pjsua_reg_info
 typedef struct pjsua_on_stream_created_param
 {
     /**
-     * The media stream, read-only.
+     * The audio media stream, read-only.
      */
     pjmedia_stream 	*stream;
 
     /**
-     * Stream index in the media session, read-only.
+     * Stream index in the audio media session, read-only.
      */
     unsigned 		 stream_idx;
 
@@ -530,7 +530,7 @@ typedef struct pjsua_on_stream_created_param
     pj_bool_t 		 destroy_port;
 
     /**
-     * On input, it specifies the media port of the stream. Application
+     * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
      */
@@ -960,18 +960,18 @@ typedef struct pjsua_callback
 
 
     /**
-     * Notify application when media session is created and before it is
+     * Notify application when audio media session is created and before it is
      * registered to the conference bridge. Application may return different
-     * media port if it has added media processing port to the stream. This
-     * media port then will be added to the conference bridge instead.
+     * audio media port if it has added media processing port to the stream.
+     * This media port then will be added to the conference bridge instead.
      *
      * Note: if implemented, #on_stream_created2() callback will be called
      * instead of this one. 
      *
      * @param call_id	    Call identification.
-     * @param strm	    Media stream.
-     * @param stream_idx    Stream index in the media session.
-     * @param p_port	    On input, it specifies the media port of the
+     * @param strm	    Audio media stream.
+     * @param stream_idx    Stream index in the audio media session.
+     * @param p_port	    On input, it specifies the audio media port of the
      *			    stream. Application may modify this pointer to
      *			    point to different media port to be registered
      *			    to the conference bridge.
@@ -982,10 +982,10 @@ typedef struct pjsua_callback
 			      pjmedia_port **p_port);
 
     /**
-     * Notify application when media session is created and before it is
+     * Notify application when audio media session is created and before it is
      * registered to the conference bridge. Application may return different
-     * media port if it has added media processing port to the stream. This
-     * media port then will be added to the conference bridge instead.
+     * audio media port if it has added media processing port to the stream.
+     * This media port then will be added to the conference bridge instead.
      *
      * @param call_id	    Call identification.
      * @param param	    The on stream created callback parameter.
@@ -994,12 +994,12 @@ typedef struct pjsua_callback
 			       pjsua_on_stream_created_param *param);
 
     /**
-     * Notify application when media session has been unregistered from the
-     * conference bridge and about to be destroyed.
+     * Notify application when audio media session has been unregistered from
+     * the conference bridge and about to be destroyed.
      *
      * @param call_id	    Call identification.
-     * @param strm	    Media stream.
-     * @param stream_idx    Stream index in the media session.
+     * @param strm	    Audio media stream.
+     * @param stream_idx    Stream index in the audio media session.
      */
     void (*on_stream_destroyed)(pjsua_call_id call_id,
                                 pjmedia_stream *strm,

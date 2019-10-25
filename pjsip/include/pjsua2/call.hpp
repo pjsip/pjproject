@@ -678,12 +678,12 @@ struct OnCallSdpCreatedParam
 struct OnStreamCreatedParam
 {
     /**
-     * Media stream, read-only.
+     * Audio media stream, read-only.
      */
     MediaStream stream;
     
     /**
-     * Stream index in the media session, read-only.
+     * Stream index in the audio media session, read-only.
      */
     unsigned    streamIdx;
     
@@ -698,7 +698,7 @@ struct OnStreamCreatedParam
     bool 	destroyPort;
 
     /**
-     * On input, it specifies the media port of the stream. Application
+     * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
      */
@@ -712,12 +712,12 @@ struct OnStreamCreatedParam
 struct OnStreamDestroyedParam
 {
     /**
-     * Media stream.
+     * Audio media stream.
      */
     MediaStream stream;
     
     /**
-     * Stream index in the media session.
+     * Stream index in the audio media session.
      */
     unsigned    streamIdx;
 };
@@ -1711,10 +1711,10 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
-     * Notify application when media session is created and before it is
+     * Notify application when audio media session is created and before it is
      * registered to the conference bridge. Application may return different
-     * media port if it has added media processing port to the stream. This
-     * media port then will be added to the conference bridge instead.
+     * audio media port if it has added media processing port to the stream.
+     * This media port then will be added to the conference bridge instead.
      *
      * @param prm	Callback parameter.
      */
@@ -1722,8 +1722,8 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
-     * Notify application when media session has been unregistered from the
-     * conference bridge and about to be destroyed.
+     * Notify application when audio media session has been unregistered from
+     * the conference bridge and about to be destroyed.
      *
      * @param prm	Callback parameter.
      */
