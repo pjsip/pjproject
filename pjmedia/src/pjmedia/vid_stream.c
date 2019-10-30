@@ -1603,7 +1603,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 					       &info->codec_info,
 					       &stream->codec);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     /* Get codec param: */
     if (!info->codec_param) {
@@ -1613,7 +1613,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 						         &info->codec_info,
 						         &def_param);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto err_cleanup;
 
 	info->codec_param = pjmedia_vid_codec_param_clone(pool, &def_param);
 	pj_assert(info->codec_param);
@@ -1664,15 +1664,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     status = pj_mutex_create_simple(pool, NULL, &stream->jb_mutex);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     /* Init and open the codec. */
     status = pjmedia_vid_codec_init(stream->codec, pool);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
     status = pjmedia_vid_codec_open(stream->codec, info->codec_param);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     /* Subscribe to codec events */
     pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
@@ -1731,13 +1731,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     status = create_channel( pool, stream, PJMEDIA_DIR_DECODING,
 			     info->rx_pt, info, &stream->dec);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     /* Create encoder channel */
     status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING,
 			     info->tx_pt, info, &stream->enc);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     /* Create temporary buffer for immediate decoding */
     stream->dec_max_size = vfd_dec->size.w * vfd_dec->size.h * 4;
@@ -1796,7 +1796,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 				 1000 * vfd_enc->fps.denum / vfd_enc->fps.num,
 				 jb_max, &stream->jb);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
 
     /* Set up jitter buffer */
@@ -1846,7 +1846,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
-	return status;
+	goto err_cleanup;
 
     stream->transport = tp;
 
@@ -1903,6 +1903,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     PJ_LOG(5,(THIS_FILE, "Video stream %s created", stream->name.ptr));
 
     return PJ_SUCCESS;
+
+err_cleanup:
+    pjmedia_vid_stream_destroy(stream);
+    return status;
 }
 
 
@@ -1927,7 +1931,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 #endif
 
     /* Send RTCP BYE (also SDES) */
-    if (!stream->rtcp_sdes_bye_disabled) {
+    if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
 	send_rtcp(stream, PJ_TRUE, PJ_TRUE);
     }
 
