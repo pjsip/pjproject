@@ -207,7 +207,7 @@ static int test_timer_heap(void)
  *   bug in the implementation (note that race message is ok).
  */
 #define RANDOMIZED_TEST 1
-#define SIMULATE_CRASH	PJ_TIMER_HEAP_USE_COPY
+#define SIMULATE_CRASH	PJ_TIMER_USE_COPY
 
 #if RANDOMIZED_TEST
     #define ST_STRESS_THREAD_COUNT	    20
@@ -230,6 +230,11 @@ static int test_timer_heap(void)
  */
 #define ST_ENTRY_GROUP_LOCK_COUNT   1
 
+#define BT_ENTRY_COUNT 100000
+#define BT_ENTRY_SHOW_START 100
+#define BT_ENTRY_SHOW_MULT 10
+#define BT_REPEAT_RANDOM_TEST 4
+#define BT_REPEAT_INC_TEST 4
 
 struct thread_param
 {
@@ -268,6 +273,7 @@ static pj_status_t st_schedule_entry(pj_timer_heap_t *ht, pj_timer_entry *e)
 
 static void dummy_callback(pj_timer_heap_t *ht, pj_timer_entry *e)
 {
+    PJ_UNUSED_ARG(ht);
     PJ_LOG(4,("test", "dummy callback called %p %p", e, e->user_data));
 }
 
@@ -746,6 +752,209 @@ on_return:
     return (err? err: tparam.err);
 }
 
+static int get_random_delay()
+{
+    return pj_rand() % BT_ENTRY_COUNT;
+}
+
+static int get_next_delay(int delay)
+{
+    return ++delay;
+}
+
+typedef enum BENCH_TEST_TYPE {
+    RANDOM_SCH = 0,
+    RANDOM_CAN = 1,
+    INCREMENT_SCH = 2,
+    INCREMENT_CAN = 3
+} BENCH_TEST_TYPE;
+
+static char *get_test_name(BENCH_TEST_TYPE test_type) {
+    switch (test_type) {
+    case RANDOM_SCH:
+    case INCREMENT_SCH:
+	return "schedule";
+    case RANDOM_CAN:
+    case INCREMENT_CAN:
+	return "cancel";
+    }
+    return "undefined";
+}
+
+static void *get_format_num(unsigned n, char *out)
+{
+    int c;
+    char buf[64];
+    char *p;
+
+    pj_ansi_snprintf(buf, 64, "%d", n);
+    c = 2 - pj_ansi_strlen(buf) % 3;
+    for (p = buf; *p != 0; ++p) {
+       *out++ = *p;
+       if (c == 1) {
+           *out++ = ',';
+       }
+       c = (c + 1) % 3;
+    }
+    *--out = 0;
+    return out;
+}
+
+static void print_bench(BENCH_TEST_TYPE test_type, pj_timestamp time_freq,
+			pj_timestamp time_start, int start_idx, int end_idx)
+{
+    char start_idx_str[64];
+    char end_idx_str[64];
+    char num_req_str[64];
+    unsigned num_req;
+    pj_timestamp t2;
+
+    pj_get_timestamp(&t2);
+    pj_sub_timestamp(&t2, &time_start);
+
+    num_req = (unsigned)(time_freq.u64 * (end_idx-start_idx) / t2.u64);
+    if (test_type == RANDOM_CAN || test_type == INCREMENT_CAN) {
+	start_idx = BT_ENTRY_COUNT - start_idx;
+	end_idx = BT_ENTRY_COUNT - end_idx;
+    }
+    get_format_num(start_idx, start_idx_str);
+    get_format_num(end_idx, end_idx_str);
+    get_format_num(num_req, num_req_str);
+
+    PJ_LOG(3, (THIS_FILE, "    Entries %s-%s: %s %s ent/sec",
+	       start_idx_str, end_idx_str, get_test_name(test_type),
+	       num_req_str));
+}
+
+static int bench_test(pj_timer_heap_t *timer,
+		      pj_timer_entry *entries,
+		      pj_timestamp freq,
+		      BENCH_TEST_TYPE test_type)
+{
+    pj_timestamp t1, t2;
+    unsigned mult = BT_ENTRY_SHOW_START;
+    int i, j;
+
+    pj_get_timestamp(&t1);
+    t2.u64 = 0;
+    /*Schedule random entry.*/
+    for (i=0, j=0; j < BT_ENTRY_COUNT; ++j) {
+	pj_time_val delay = { 0 };
+	pj_status_t status;
+
+	switch (test_type) {
+	case RANDOM_SCH:
+	    delay.msec = get_random_delay();
+	    break;
+	case INCREMENT_SCH:
+	    delay.msec = get_next_delay(delay.msec);
+	    break;
+	}
+
+	if (test_type == RANDOM_SCH || test_type == INCREMENT_SCH) {
+	    pj_timer_entry_init(&entries[j], 0, NULL, &dummy_callback);
+
+	    status = pj_timer_heap_schedule(timer, &entries[j], &delay);
+	    if (status != PJ_SUCCESS) {
+		app_perror("...error: unable to schedule timer entry", status);
+		return -50;
+	    }
+	} else if (test_type == RANDOM_CAN || test_type == INCREMENT_CAN) {
+	    unsigned num_ent = pj_timer_heap_cancel(timer, &entries[j]);
+	    if (num_ent == 0) {
+		PJ_LOG(3, ("test", "...error: unable to cancel timer entry"));
+		return -60;
+	    }
+	} else {
+	    return -70;
+	}
+
+	if (j && (j % mult) == 0) {
+	    print_bench(test_type, freq, t1, i, j);
+
+	    i = j+1;
+	    pj_get_timestamp(&t1);
+	    mult *= BT_ENTRY_SHOW_MULT;
+	}
+    }
+    if (j > 0 && ((j-1) % mult != 0)) {
+	print_bench(test_type, freq, t1, i, j);
+    }
+    return 0;
+}
+
+static int timer_bench_test(void)
+{
+    pj_pool_t *pool = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_status_t status;
+    int err=0;
+    pj_timer_entry *entries = NULL;
+    pj_timestamp freq;
+    int i;
+
+    PJ_LOG(3,("test", "...Benchmark test"));
+
+    status = pj_get_timestamp_freq(&freq);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(3,("test", "...error: unable to get timestamp freq"));
+	err = -10;
+	goto on_return;
+    }
+
+    pool = pj_pool_create( mem, NULL, 128, 128, NULL);
+    if (!pool) {
+	PJ_LOG(3,("test", "...error: unable to create pool"));
+	err = -20;
+	goto on_return;
+    }
+
+    /* Create timer heap.*/
+    status = pj_timer_heap_create(pool, BT_ENTRY_COUNT/64, &timer);
+    if (status != PJ_SUCCESS) {
+        app_perror("...error: unable to create timer heap", status);
+	err = -30;
+	goto on_return;
+    }
+
+    /* Create and schedule timer entries */
+    entries = (pj_timer_entry*)pj_pool_calloc(pool, BT_ENTRY_COUNT,
+					      sizeof(*entries));
+    if (!entries) {
+	err = -40;
+	goto on_return;
+    }
+
+    PJ_LOG(3,("test", "....random scheduling/cancelling test.."));
+    for (i = 0; i < BT_REPEAT_RANDOM_TEST; ++i) {
+	PJ_LOG(3,("test", "    test %d of %d..", i+1, BT_REPEAT_RANDOM_TEST));
+	err = bench_test(timer, entries, freq, RANDOM_SCH);
+	if (err < 0)
+	    goto on_return;
+
+	err = bench_test(timer, entries, freq, RANDOM_CAN);
+	if (err < 0)
+	    goto on_return;
+    }
+
+    PJ_LOG(3,("test", "....increment scheduling/cancelling test.."));
+    for (i = 0; i < BT_REPEAT_INC_TEST; ++i) {
+	PJ_LOG(3,("test", "    test %d of %d..", i+1, BT_REPEAT_INC_TEST));
+	err = bench_test(timer, entries, freq, INCREMENT_SCH);
+	if (err < 0)
+	    goto on_return;
+
+	err = bench_test(timer, entries, freq, INCREMENT_CAN);
+	if (err < 0)
+	    goto on_return;
+    }
+ on_return:
+    PJ_LOG(3,("test", "...Cleaning up resources"));
+    if (pool)
+	pj_pool_safe_release(&pool);
+    return err;
+}
+
 int timer_test()
 {
     int rc;
@@ -755,6 +964,10 @@ int timer_test()
 	return rc;
 
     rc = timer_stress_test();
+    if (rc != 0)
+	return rc;
+
+    rc = timer_bench_test();
     if (rc != 0)
 	return rc;
 

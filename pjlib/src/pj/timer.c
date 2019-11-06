@@ -50,9 +50,9 @@
  * which has been deallocated without being cancelled. If disabled,
  * the timer heap will simply remove the destroyed entry (and print log)
  * and resume normally.
- * This setting only works if PJ_TIMER_HEAP_USE_COPY is enabled.
+ * This setting only works if PJ_TIMER_USE_COPY is enabled.
  */
-#define ASSERT_IF_ENTRY_DESTROYED (PJ_TIMER_HEAP_USE_COPY? 0: 0)
+#define ASSERT_IF_ENTRY_DESTROYED (PJ_TIMER_USE_COPY? 0: 0)
 
 
 enum
@@ -62,11 +62,18 @@ enum
     F_SET_ID = 4
 };
 
-#if PJ_TIMER_HEAP_USE_COPY
+#if PJ_TIMER_USE_COPY
 
 /* Duplicate/copy of the timer entry. */
 typedef struct pj_timer_entry_dup
 {
+#if PJ_TIMER_USE_LINKED_LIST
+    /**
+    * Standard list members.
+    */
+    PJ_DECL_LIST_MEMBER(struct pj_timer_entry_dup);
+#endif
+
     /**
      * The duplicate copy.
      */
@@ -140,6 +147,14 @@ struct pj_timer_heap_t
      * array.
      */
     pj_timer_entry_dup **heap;
+
+#if PJ_TIMER_USE_LINKED_LIST
+    /**
+    * If timer heap uses linked list, then this will represent the head of
+    * the list.
+    */
+    pj_timer_entry_dup head_list;
+#endif
 
     /**
      * An array of "pointers" that allows each pj_timer_entry in the
@@ -288,7 +303,7 @@ static void reheap_up( pj_timer_heap_t *ht, pj_timer_entry_dup *moved_node,
 static pj_timer_entry_dup * remove_node( pj_timer_heap_t *ht, size_t slot)
 {
     pj_timer_entry_dup *removed_node = ht->heap[slot];
-    
+
     // Return this timer id to the freelist.
     push_freelist( ht, GET_FIELD(removed_node, _timer_id) );
     
@@ -320,6 +335,7 @@ static pj_timer_entry_dup * remove_node( pj_timer_heap_t *ht, size_t slot)
     GET_ENTRY(removed_node)->_timer_id = -1;
     GET_FIELD(removed_node, _timer_id) = -1;
 
+#if !PJ_TIMER_USE_LINKED_LIST
     // Only try to reheapify if we're not deleting the last entry.
     
     if (slot < ht->cur_size)
@@ -343,7 +359,10 @@ static pj_timer_entry_dup * remove_node( pj_timer_heap_t *ht, size_t slot)
 	    reheap_up( ht, moved_node, slot, parent);
 	}
     }
-    
+#else
+    pj_list_erase(removed_node);
+#endif
+
     return removed_node;
 }
 
@@ -351,10 +370,17 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
 {
     // All the containers will double in size from max_size_
     size_t new_size = ht->max_size * 2;
+#if PJ_TIMER_USE_COPY
     pj_timer_entry_dup *new_timer_dups = 0;
+#endif
     pj_timer_id_t *new_timer_ids;
     pj_size_t i;
     pj_timer_entry_dup **new_heap = 0;
+
+#if PJ_TIMER_USE_LINKED_LIST
+    pj_timer_entry_dup *tmp_dup = NULL;
+    pj_timer_entry_dup *new_dup;
+#endif
     
     PJ_LOG(6,(THIS_FILE, "Growing heap size from %d to %d",
 		  	 ht->max_size, new_size));
@@ -365,7 +391,7 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
     if (!new_heap)
     	return PJ_ENOMEM;
     
-#if PJ_TIMER_HEAP_USE_COPY
+#if PJ_TIMER_USE_COPY
     // Grow the array of timer copies.
     
     new_timer_dups = (pj_timer_entry_dup*) 
@@ -386,6 +412,18 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
 #else
     memcpy(new_heap, ht->heap, ht->max_size * sizeof(pj_timer_entry *));
 #endif
+
+#if PJ_TIMER_USE_LINKED_LIST
+    tmp_dup = ht->head_list.next;
+    pj_list_init(&ht->head_list);
+    for (; tmp_dup != &ht->head_list; tmp_dup = tmp_dup->next)
+    {
+	int slot = ht->timer_ids[GET_FIELD(tmp_dup, _timer_id)];
+	new_dup = new_heap[slot];
+	pj_list_push_back(&ht->head_list, new_dup);
+    }
+#endif
+
     ht->heap = new_heap;
     
     // Grow the array of timer ids.
@@ -416,6 +454,10 @@ static pj_status_t insert_node(pj_timer_heap_t *ht,
 {
     pj_timer_entry_dup *timer_copy;
 
+#if PJ_TIMER_USE_LINKED_LIST
+    pj_timer_entry_dup *tmp_node = NULL;
+#endif
+
     if (ht->cur_size + 2 >= ht->max_size) {
 	pj_status_t status = grow_heap(ht);
 	if (status != PJ_SUCCESS)
@@ -423,15 +465,44 @@ static pj_status_t insert_node(pj_timer_heap_t *ht,
     }
 
     timer_copy = GET_TIMER(ht, new_node);
-#if PJ_TIMER_HEAP_USE_COPY    
+#if PJ_TIMER_USE_COPY
     // Create a duplicate of the timer entry.
     pj_bzero(timer_copy, sizeof(*timer_copy));
     pj_memcpy(&timer_copy->dup, new_node, sizeof(*new_node));
     timer_copy->entry = new_node;
 #endif
+
+#if PJ_TIMER_USE_LINKED_LIST
+    pj_list_init(timer_copy);
+#endif
+
     timer_copy->_timer_value = *future_time;
 
-    reheap_up( ht, timer_copy, ht->cur_size, HEAP_PARENT(ht->cur_size));
+#if !PJ_TIMER_USE_LINKED_LIST
+    reheap_up(ht, timer_copy, ht->cur_size, HEAP_PARENT(ht->cur_size));
+#else
+    if (ht->cur_size == 0) {
+	pj_list_push_back(&ht->head_list, timer_copy);
+    } else if (PJ_TIME_VAL_GTE(*future_time,
+			       ht->head_list.prev->_timer_value))
+    {
+	/* Insert the max value to the end of the list. */
+	pj_list_insert_before(&ht->head_list, timer_copy);
+    } else {
+	tmp_node = ht->head_list.next;
+	while (tmp_node->next != &ht->head_list &&
+	       PJ_TIME_VAL_GT(*future_time, tmp_node->_timer_value))
+	{
+	    tmp_node = tmp_node->next;
+	}
+	if (PJ_TIME_VAL_LT(*future_time, tmp_node->_timer_value)) {
+	    pj_list_insert_before(tmp_node, timer_copy);
+	} else {
+	    pj_list_insert_after(tmp_node, timer_copy);
+	}
+    }
+    copy_node(ht, new_node->_timer_id-1, timer_copy);
+#endif
     ht->cur_size++;
 
     return PJ_SUCCESS;
@@ -546,7 +617,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
     if (!ht->heap)
         return PJ_ENOMEM;
 
-#if PJ_TIMER_HEAP_USE_COPY
+#if PJ_TIMER_USE_COPY
     // Create the timer entry copies array.
     ht->timer_dups = (pj_timer_entry_dup*)
     	       	     pj_pool_alloc(pool, sizeof(pj_timer_entry_dup) * size);
@@ -565,6 +636,10 @@ PJ_DEF(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
     // array.
     for (i=0; i<size; ++i)
 	ht->timer_ids[i] = -((pj_timer_id_t) (i + 1));
+
+#if PJ_TIMER_USE_LINKED_LIST
+    pj_list_init(&ht->head_list);
+#endif
 
     *p_heap = ht;
     return PJ_SUCCESS;
@@ -609,7 +684,7 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
     entry->id = id;
     entry->user_data = user_data;
     entry->cb = cb;
-#if !PJ_TIMER_HEAP_USE_COPY
+#if !PJ_TIMER_USE_COPY
     entry->_grp_lock = NULL;
 #endif
 
@@ -771,7 +846,9 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
                                      pj_time_val *next_delay )
 {
     pj_time_val now;
+    pj_time_val min_time_node = {0,0};
     unsigned count;
+    pj_timer_id_t slot = 0;
 
     PJ_ASSERT_RETURN(ht, 0);
 
@@ -785,11 +862,18 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
     count = 0;
     pj_gettickcount(&now);
 
+    if (ht->cur_size) {
+#if PJ_TIMER_USE_LINKED_LIST
+	slot = ht->timer_ids[GET_FIELD(ht->head_list.next, _timer_id)];
+#endif
+	min_time_node = ht->heap[slot]->_timer_value;
+    }
+
     while ( ht->cur_size && 
-	    PJ_TIME_VAL_LTE(ht->heap[0]->_timer_value, now) &&
+	    PJ_TIME_VAL_LTE(min_time_node, now) &&
             count < ht->max_entries_per_poll ) 
     {
-	pj_timer_entry_dup *node = remove_node(ht, 0);
+	pj_timer_entry_dup *node = remove_node(ht, slot);
 	pj_timer_entry *entry = GET_ENTRY(node);
 	/* Avoid re-use of this timer until the callback is done. */
 	///Not necessary, even causes problem (see also #2176).
@@ -834,6 +918,13 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 	lock_timer_heap(ht);
 	/* Now, the timer is really free for re-use. */
 	///push_freelist(ht, node_timer_id);
+
+	if (ht->cur_size) {
+#if PJ_TIMER_USE_LINKED_LIST
+	    slot = ht->timer_ids[GET_FIELD(ht->head_list.next, _timer_id)];
+#endif
+	    min_time_node = ht->heap[slot]->_timer_value;
+	}
     }
     if (ht->cur_size && next_delay) {
 	*next_delay = ht->heap[0]->_timer_value;
@@ -879,7 +970,11 @@ PJ_DEF(void) pj_timer_heap_dump(pj_timer_heap_t *ht)
 			 (int)ht->cur_size, (int)ht->max_size));
 
     if (ht->cur_size) {
+#if PJ_TIMER_USE_LINKED_LIST
+	pj_timer_entry_dup *tmp_dup;
+#else
 	unsigned i;
+#endif
 	pj_time_val now;
 
 	PJ_LOG(3,(THIS_FILE, "  Entries: "));
@@ -888,8 +983,17 @@ PJ_DEF(void) pj_timer_heap_dump(pj_timer_heap_t *ht)
 
 	pj_gettickcount(&now);
 
-	for (i=0; i<(unsigned)ht->cur_size; ++i) {
+#if !PJ_TIMER_USE_LINKED_LIST
+	for (i=0; i<(unsigned)ht->cur_size; ++i)
+	{
 	    pj_timer_entry_dup *e = ht->heap[i];
+#else
+	for (tmp_dup = ht->head_list.next; tmp_dup != &ht->head_list;
+	     tmp_dup = tmp_dup->next)
+	{
+	    pj_timer_entry_dup *e = tmp_dup;
+#endif
+
 	    pj_time_val delta;
 
 	    if (PJ_TIME_VAL_LTE(e->_timer_value, now))

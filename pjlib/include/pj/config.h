@@ -543,8 +543,8 @@
 
 
 /**
- * Enable timer heap debugging facility. When this is enabled, application
- * can call pj_timer_heap_dump() to show the contents of the timer heap
+ * Enable timer debugging facility. When this is enabled, application
+ * can call pj_timer_heap_dump() to show the contents of the timer
  * along with the source location where the timer entries were scheduled.
  * See https://trac.pjsip.org/repos/ticket/1527 for more info.
  *
@@ -556,8 +556,8 @@
 
 
 /**
- * If enabled, the timer heap will keep internal copies of the timer entries.
- * This will increase the robustness and stability of the timer heap (against
+ * If enabled, the timer will keep internal copies of the timer entries.
+ * This will increase the robustness and stability of the timer (against
  * accidental modification or premature deallocation of the timer entries) and
  * makes it easier to troubleshoot any timer related issues, with the overhead
  * of additional memory space required.
@@ -570,10 +570,22 @@
  *
  * Default: 1 (enabled)
  */
-#ifndef PJ_TIMER_HEAP_USE_COPY
-#  define PJ_TIMER_HEAP_USE_COPY    1
+#ifndef PJ_TIMER_USE_COPY
+#  define PJ_TIMER_USE_COPY    1
 #endif
 
+
+/**
+ * If enabled, the timer use sorted linked list instead of binary heap tree
+ * structure. Note that using sorted linked list is intended for debugging
+ * purposes and will hamper performance significantly when scheduling large
+ * number of entries.
+ *
+ * Default: 0 (Use binary heap tree)
+ */
+#ifndef PJ_TIMER_USE_LINKED_LIST
+#  define PJ_TIMER_USE_LINKED_LIST    0
+#endif
 
 /**
  * Set this to 1 to enable debugging on the group lock. Default: 0
