@@ -842,16 +842,12 @@ static int bench_test(pj_timer_heap_t *timer,
 	pj_time_val delay = { 0 };
 	pj_status_t status;
 
-	switch (test_type) {
-	case RANDOM_SCH:
-	    delay.msec = get_random_delay();
-	    break;
-	case INCREMENT_SCH:
-	    delay.msec = get_next_delay(delay.msec);
-	    break;
-	}
-
 	if (test_type == RANDOM_SCH || test_type == INCREMENT_SCH) {
+	    if (test_type == RANDOM_SCH)
+		delay.msec = get_random_delay();
+	    else
+		delay.msec = get_next_delay(delay.msec);
+
 	    pj_timer_entry_init(&entries[j], 0, NULL, &dummy_callback);
 
 	    status = pj_timer_heap_schedule(timer, &entries[j], &delay);
