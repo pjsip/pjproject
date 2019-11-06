@@ -571,6 +571,16 @@
 #endif
 
 /**
+ * Determine the log level of the native openH264 log which will be forwarded
+ * to the library's log.
+ * Set to WELS_LOG_QUIET to disable logging, or WELS_LOG_DETAIL for debugging.
+ *
+ * Default: WELS_LOG_ERROR.
+ */
+#ifndef PJMEDIA_CODEC_OPENH264_LOG_LEVEL
+#   define PJMEDIA_CODEC_OPENH264_LOG_LEVEL  WELS_LOG_ERROR
+#endif
+/**
  * @}
  */
 

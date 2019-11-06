@@ -167,6 +167,10 @@ struct SLayerPEncCtx
     SSliceArgument		sSliceArgument;
 };
 
+static void log_print(void* ctx, int level, const char* string) {
+    PJ_LOG(4,("[OPENH264_LOG]", "[L%d] %s", level, string));
+}
+
 PJ_DEF(pj_status_t) pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                     pj_pool_factory *pf)
 {
@@ -328,6 +332,8 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     pjmedia_vid_codec *codec;
     oh264_codec_data *oh264_data;
     int rc;
+    WelsTraceCallback log_cb = &log_print;
+    int log_level = PJMEDIA_CODEC_OPENH264_LOG_LEVEL;
 
     PJ_ASSERT_RETURN(factory == &oh264_factory.base && info && p_codec,
                      PJ_EINVAL);
@@ -359,6 +365,11 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     rc = WelsCreateDecoder(&oh264_data->dec);
     if (rc != 0)
 	goto on_error;
+
+    oh264_data->enc->SetOption(ENCODER_OPTION_TRACE_LEVEL, &log_level);
+    oh264_data->enc->SetOption(ENCODER_OPTION_TRACE_CALLBACK, &log_cb);
+    oh264_data->dec->SetOption(DECODER_OPTION_TRACE_LEVEL, &log_level);
+    oh264_data->dec->SetOption(DECODER_OPTION_TRACE_CALLBACK, &log_cb);
 
     *p_codec = codec;
     return PJ_SUCCESS;
