@@ -894,9 +894,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
-/* Endpoint. */
-#define PJSIP_MAX_TIMER_COUNT		(2*pjsip_cfg()->tsx.max_count + \
+/**
+ * Specify the maximum number of timer entries initially allocated by
+ * endpoint. If the application registers more entries during runtime,
+ * then the timer will automatically resize.
+ *
+ * Default: (2*pjsip_cfg()->tsx.max_count) + (2*PJSIP_MAX_DIALOG_COUNT)
+ */
+#ifndef PJSIP_MAX_TIMER_COUNT
+#   define PJSIP_MAX_TIMER_COUNT	(2*pjsip_cfg()->tsx.max_count + \
 					 2*PJSIP_MAX_DIALOG_COUNT)
+#endif
 
 /**
  * Initial memory block for the endpoint.
