@@ -416,6 +416,13 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
     unsigned i;
     unsigned max_bitrate = 0;
     pj_status_t status;
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    unsigned televent_num = 0;
+    unsigned televent_clockrates[8];
+    unsigned used_pt_num = 0;
+    unsigned used_pt[PJMEDIA_MAX_SDP_FMT];
+#endif
 
     PJ_UNUSED_ARG(options);
 
@@ -540,33 +547,82 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	/* Find maximum bitrate in this media */
 	if (max_bitrate < codec_param.info.max_bps)
 	    max_bitrate = codec_param.info.max_bps;
+
+	/* List clock rate & channel count of audio codecs for generating
+	 * telephone-event later.
+	 */
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+	{
+	    unsigned j;
+
+	    /* Take a note of used dynamic PT */
+	    if (codec_info->pt >= 96)
+		used_pt[used_pt_num++] = codec_info->pt;
+
+	    for (j=0; j<televent_num; ++j) {
+		if (televent_clockrates[j] == rtpmap.clock_rate)
+		    break;
+	    }
+	    if (j==televent_num &&
+		televent_num<PJ_ARRAY_SIZE(televent_clockrates))
+	    {
+		/* List this clockrate for tel-event generation */
+		televent_clockrates[televent_num++] = rtpmap.clock_rate;
+	    }
+	}
+#endif
     }
 
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
-    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
     /*
      * Add support telephony event
      */
     if (endpt->has_telephone_event) {
-	m->desc.fmt[m->desc.fmt_count++] =
-	    pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
+	for (i=0; i<televent_num; i++) {
+	    char buf[160];
+	    unsigned j = 0;
+	    unsigned pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
 
-	/* Add rtpmap. */
-	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-	attr->name = pj_str("rtpmap");
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR
-			     " telephone-event/8000");
-	m->attr[m->attr_count++] = attr;
+	    /* Find PT for this tel-event */
+	    while (j < used_pt_num && pt <= 127) {
+		if (pt == used_pt[j]) {
+		    pt++;
+		    j = 0;
+		} else {
+		    j++;
+		}
+	    }
+	    if (pt > 127) {
+		/* No more available PT */
+		break;
+	    }
+	    used_pt[used_pt_num++] = pt;
 
-	/* Add fmtp */
-	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-	attr->name = pj_str("fmtp");
+	    /* Print tel-event PT */
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d", pt);
+	    m->desc.fmt[m->desc.fmt_count++] = pj_strdup3(pool, buf);
+
+	    /* Add rtpmap. */
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	    attr->name = pj_str("rtpmap");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d telephone-event/%d",
+			     pt, televent_clockrates[i]);
+	    attr->value = pj_strdup3(pool, buf);
+	    m->attr[m->attr_count++] = attr;
+
+	    /* Add fmtp */
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	    attr->name = pj_str("fmtp");
 #if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-16");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d 0-16", pt);
 #else
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d 0-15", pt);
 #endif
-	m->attr[m->attr_count++] = attr;
+	    attr->value = pj_strdup3(pool, buf);
+	    m->attr[m->attr_count++] = attr;
+	}
     }
 #endif
 
