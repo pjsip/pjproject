@@ -1616,6 +1616,8 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x,
 		ci->subj_alt_name.cnt++;
 	    }
         }
+        GENERAL_NAMES_free(names);
+        names = NULL;
     }
 
     if (get_pem) {
