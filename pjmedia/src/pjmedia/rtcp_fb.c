@@ -353,6 +353,7 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 
 		pjmedia_codec_info_to_id(ci, sci[cnt].id, sizeof(sci[0].id));
 	    } else {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 		const pjmedia_vid_codec_info *ci;
 		status = pjmedia_vid_codec_mgr_get_codec_info(NULL, pt, &ci);
 		if (status != PJ_SUCCESS)
@@ -360,6 +361,9 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 
 		pjmedia_vid_codec_info_to_id(ci, sci[cnt].id,
 					     sizeof(sci[0].id));
+#else
+		continue;
+#endif
 	    }
 	} else {
 	    pjmedia_sdp_attr *a;
