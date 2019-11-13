@@ -420,15 +420,23 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
     unsigned televent_num = 0;
     unsigned televent_clockrates[8];
+#endif
     unsigned used_pt_num = 0;
     unsigned used_pt[PJMEDIA_MAX_SDP_FMT];
-#endif
 
     PJ_UNUSED_ARG(options);
 
     /* Check that there are not too many codecs */
     PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
 		     PJ_ETOOMANY);
+
+    /* Insert PJMEDIA_RTP_PT_TELEPHONE_EVENTS as used PT */
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    if (endpt->has_telephone_event) {
+	used_pt[used_pt_num++] = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+    }
+#endif
 
     /* Create and init basic SDP media */
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
@@ -444,6 +452,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	char tmp_param[3];
 	pjmedia_codec_param codec_param;
 	pj_str_t *fmt;
+	unsigned pt;
 
 	if (endpt->codec_mgr.codec_desc[i].prio == PJMEDIA_CODEC_PRIO_DISABLED)
 	    break;
@@ -452,15 +461,43 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr, codec_info,
 					    &codec_param);
 	fmt = &m->desc.fmt[m->desc.fmt_count++];
+	pt = codec_info->pt;
+
+	/* Rearrange dynamic payload type to make sure it is inside 96-127
+	 * range and not being used by other codec/tel-event.
+	 */
+	if (pt >= 96) {
+	    unsigned pt_check = 96;
+	    unsigned j = 0;
+	    while (j < used_pt_num && pt_check <= 127) {
+		if (pt_check==used_pt[j]) {
+		    pt_check++;
+		    j = 0;
+		} else {
+		    j++;
+		}
+	    }
+	    if (pt_check > 127) {
+		/* No more available PT */
+		PJ_LOG(4,(THIS_FILE, "Warning: no available dynamic "
+			  "payload type for audio codec"));
+		break;
+	    }
+	    pt = pt_check;
+	}
+
+	/* Take a note of used dynamic PT */
+	if (pt >= 96)
+	    used_pt[used_pt_num++] = pt;
 
 	fmt->ptr = (char*) pj_pool_alloc(pool, 8);
-	fmt->slen = pj_utoa(codec_info->pt, fmt->ptr);
+	fmt->slen = pj_utoa(pt, fmt->ptr);
 
 	rtpmap.pt = *fmt;
 	rtpmap.enc_name = codec_info->encoding_name;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG != 0)
-	if (codec_info->pt == PJMEDIA_RTP_PT_G722)
+	if (pt == PJMEDIA_RTP_PT_G722)
 	    rtpmap.clock_rate = 8000;
 	else
 	    rtpmap.clock_rate = codec_info->clock_rate;
@@ -487,7 +524,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    rtpmap.param.slen = 0;
 	}
 
-	if (codec_info->pt >= 96 || pjmedia_add_rtpmap_for_static_pt) {
+	if (pt >= 96 || pjmedia_add_rtpmap_for_static_pt) {
 	    pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
 	    m->attr[m->attr_count++] = attr;
 	}
@@ -503,7 +540,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    buf_len += pj_ansi_snprintf(buf,
 					MAX_FMTP_STR_LEN - buf_len,
 					"%d",
-					codec_info->pt);
+					pt);
 
 	    for (ii = 0; ii < dec_fmtp->cnt; ++ii) {
 		pj_size_t test_len = 2;
@@ -548,17 +585,11 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	if (max_bitrate < codec_param.info.max_bps)
 	    max_bitrate = codec_param.info.max_bps;
 
-	/* List clock rate & channel count of audio codecs for generating
-	 * telephone-event later.
-	 */
+	/* List clock rate of audio codecs for generating telephone-event */
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
 	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
-	{
+	if (endpt->has_telephone_event) {
 	    unsigned j;
-
-	    /* Take a note of used dynamic PT */
-	    if (codec_info->pt >= 96)
-		used_pt[used_pt_num++] = codec_info->pt;
 
 	    for (j=0; j<televent_num; ++j) {
 		if (televent_clockrates[j] == rtpmap.clock_rate)
@@ -583,20 +614,48 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	for (i=0; i<televent_num; i++) {
 	    char buf[160];
 	    unsigned j = 0;
-	    unsigned pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+	    unsigned pt;
 
 	    /* Find PT for this tel-event */
-	    while (j < used_pt_num && pt <= 127) {
-		if (pt == used_pt[j]) {
-		    pt++;
-		    j = 0;
-		} else {
-		    j++;
+	    if (i == 0) {
+		/* First telephony-event always uses preconfigured PT
+		 * PJMEDIA_RTP_PT_TELEPHONE_EVENTS.
+		 */
+		pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+	    } else {
+		/* Otherwise, find any free PT slot, starting from
+		 * (PJMEDIA_RTP_PT_TELEPHONE_EVENTS + 1).
+		 */
+		pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS + 1;
+		while (j < used_pt_num && pt <= 127) {
+		    if (pt == used_pt[j]) {
+			pt++;
+			j = 0;
+		    } else {
+			j++;
+		    }
 		}
-	    }
-	    if (pt > 127) {
-		/* No more available PT */
-		break;
+		if (pt > 127) {
+		    /* Not found? Find more, but now starting from 96 */
+		    pt = 96;
+		    j = 0;
+		    while (j < used_pt_num &&
+			   pt < PJMEDIA_RTP_PT_TELEPHONE_EVENTS)
+		    {
+			if (pt == used_pt[j]) {
+			    pt++;
+			    j = 0;
+			} else {
+			    j++;
+			}
+		    }
+		    if (pt >= PJMEDIA_RTP_PT_TELEPHONE_EVENTS) {
+			/* No more available PT */
+			PJ_LOG(4,(THIS_FILE, "Warning: no available dynamic "
+				  "payload type for telephone-event"));
+			break;
+		    }
+		}
 	    }
 	    used_pt[used_pt_num++] = pt;
 

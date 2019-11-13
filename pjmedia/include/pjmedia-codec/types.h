@@ -41,24 +41,24 @@
  * These are the dynamic payload types that are used by audio codecs in
  * this library. Also see the header file <pjmedia/codec.h> for list
  * of static payload types.
+ *
+ * These enumeration is for older audio codecs only, newer audio codec using
+ * dynamic payload type can simply assign PJMEDIA_RTP_PT_DYNAMIC in its
+ * payload type (i.e: pjmedia_codec_info.pt). Endpoint will automatically
+ * rearrange dynamic payload types in SDP generation.
  */
 enum pjmedia_audio_pt
 {
     /* According to IANA specifications, dynamic payload types are to be in
-     * the range 96-127 (inclusive). This enum is structured to place the
-     * values of the payload types specified below into that range.
+     * the range 96-127 (inclusive), but this enum allows the value to be
+     * outside that range, later endpoint will rearrange dynamic payload types
+     * in SDP generation to be inside the 96-127 range and not equal to
+     * PJMEDIA_RTP_PT_TELEPHONE_EVENTS.
      *
      * PJMEDIA_RTP_PT_DYNAMIC is defined in <pjmedia/codec.h>. It is defined
      * to be 96.
-     *
-     * PJMEDIA_RTP_PT_TELEPHONE_EVENTS is defined in <pjmedia/config.h>.
-     * The default value is 96.
      */
-#if PJMEDIA_RTP_PT_TELEPHONE_EVENTS
-    PJMEDIA_RTP_PT_START = PJMEDIA_RTP_PT_TELEPHONE_EVENTS,
-#else
     PJMEDIA_RTP_PT_START = (PJMEDIA_RTP_PT_DYNAMIC-1),
-#endif
 
     PJMEDIA_RTP_PT_SPEEX_NB,			/**< Speex narrowband/8KHz  */
     PJMEDIA_RTP_PT_SPEEX_WB,			/**< Speex wideband/16KHz   */
@@ -108,10 +108,6 @@ enum pjmedia_audio_pt
 #if PJMEDIA_CODEC_L16_HAS_48KHZ_STEREO
     PJMEDIA_RTP_PT_L16_48KHZ_STEREO,		/**< L16 @ 48KHz, stereo    */
 #endif
-
-    /* Caution!
-     * Ensure the value of the last pt above is <= 127.
-     */
 };
 
 /**
