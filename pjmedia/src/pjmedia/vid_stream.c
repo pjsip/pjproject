@@ -19,9 +19,10 @@
 #include <pjmedia/vid_stream.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/event.h>
+#include <pjmedia/jbuf.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
-#include <pjmedia/jbuf.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/compat/socket.h>
@@ -123,8 +124,9 @@ struct pjmedia_vid_stream
     unsigned		     jb_last_frm_cnt;/**< Last JB frame type counter*/
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
-    pj_uint32_t		     rtcp_last_tx;  /**< RTCP tx time in timestamp  */
-    pj_uint32_t		     rtcp_interval; /**< Interval, in timestamp.    */
+    pj_timestamp	     rtcp_last_tx;  /**< Last RTCP tx time.	    */
+    pj_timestamp	     rtcp_fb_last_tx;/**< Last RTCP-FB tx time.	    */
+    pj_uint32_t		     rtcp_interval; /**< Interval, in msec.	    */
     pj_bool_t		     initial_rr;    /**< Initial RTCP RR sent	    */
     pj_bool_t                rtcp_sdes_bye_disabled;/**< Send RTCP SDES/BYE?*/
     void		    *out_rtcp_pkt;  /**< Outgoing RTCP packet.	    */
@@ -149,8 +151,8 @@ struct pjmedia_vid_stream
 					         frame assembly.	    */
     pj_bool_t		     force_keyframe;/**< Forced to encode keyframe? */
     unsigned		     num_keyframe;  /**< The number of keyframe needed
-						 to be sent, after the stream
-						 is created. */
+						 to be sent, e.g: after the
+						 stream is created. */
     pj_timestamp	     last_keyframe_tx;
 					    /**< Timestamp of the last
 						 keyframe. */
@@ -187,6 +189,17 @@ struct pjmedia_vid_stream
     pj_sockaddr		     rtp_src_addr;  /**< Actual packet src addr.    */
     unsigned		     rtp_src_cnt;   /**< How many pkt from this addr*/
 
+
+    /* RTCP Feedback */
+    pj_bool_t		     send_rtcp_fb_nack;	    /**< Send NACK?	    */
+    int			     pending_rtcp_fb_nack;  /**< Any pending NACK?  */
+    int			     rtcp_fb_nack_cap_idx;  /**< RX NACK cap idx.   */
+    pjmedia_rtcp_fb_nack     rtcp_fb_nack;	    /**< TX NACK state.	    */
+
+    pj_bool_t		     send_rtcp_fb_pli;	    /**< Send PLI?	    */
+    int			     pending_rtcp_fb_pli;   /**< Any pending PLI?   */
+    int			     rtcp_fb_pli_cap_idx;   /**< RX PLI cap idx.    */
+
 #if TRACE_RC
     unsigned		     rc_total_sleep;
     unsigned		     rc_total_pkt;
@@ -203,7 +216,9 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 
 static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 			     pj_bool_t with_sdes,
-			     pj_bool_t with_bye);
+			     pj_bool_t with_bye,
+			     pj_bool_t with_fb_nack,
+			     pj_bool_t with_fb_pli);
 
 static void on_rx_rtcp( void *data,
                         void *pkt,
@@ -398,15 +413,58 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
 	case PJMEDIA_EVENT_KEYFRAME_MISSING:
 	    /* Republish this event later from get_frame(). */
 	    pj_memcpy(&stream->miss_keyframe_event, event, sizeof(*event));
+
+	    if (stream->send_rtcp_fb_pli) {
+		/* Schedule sending RTCP-FB PLI to encoder, if configured,
+		 * also perhaps better to make it redundant, in case the first
+		 * packet is lost.
+		 */
+		stream->pending_rtcp_fb_pli = 2;
+	    }
 	    return PJ_SUCCESS;
 
 	default:
 	    break;
 	}
+    } else if (event->epub == &stream->rtcp && 
+	       event->type==PJMEDIA_EVENT_RX_RTCP_FB)
+    {
+	/* This is RX RTCP-FB event */
+	pjmedia_event_rx_rtcp_fb_data *data = 
+		    (pjmedia_event_rx_rtcp_fb_data*)&event->data.rx_rtcp_fb;
+
+	/* Check if configured to listen to the RTCP-FB type */
+	if (data->cap.type == PJMEDIA_RTCP_FB_NACK) {
+	    if (data->cap.param.slen == 0 &&
+		stream->rtcp_fb_nack_cap_idx >= 0)
+	    {
+		/* Generic NACK */
+
+		/* Update event data capability before republishing */
+		data->cap = stream->info.loc_rtcp_fb.caps[
+					stream->rtcp_fb_nack_cap_idx];
+	    }
+	    else if (pj_strcmp2(&data->cap.param, "pli") == 0 &&
+		     stream->rtcp_fb_pli_cap_idx >= 0)
+	    {
+		/* PLI */
+
+		/* Tell encoder to generate keyframe */
+		pjmedia_vid_stream_send_keyframe(stream);
+
+		/* Update event data capability before republishing */
+		data->cap = stream->info.loc_rtcp_fb.caps[
+					stream->rtcp_fb_pli_cap_idx];
+
+	    }
+	}
     }
 
-    return pjmedia_event_publish(NULL, stream, event, 0);
+    /* Republish events */
+    return pjmedia_event_publish(NULL, stream, event,
+				 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 }
+
 
 /**
  * Publish transport error event.
@@ -501,7 +559,9 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 
 static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 			     pj_bool_t with_sdes,
-			     pj_bool_t with_bye)
+			     pj_bool_t with_bye,
+			     pj_bool_t with_fb_nack,
+			     pj_bool_t with_fb_pli)
 {
     void *sr_rr_pkt;
     pj_uint8_t *pkt;
@@ -512,7 +572,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
 
-    if (with_sdes || with_bye) {
+    if (with_sdes || with_bye || with_fb_nack || with_fb_pli) {
 	pkt = (pj_uint8_t*) stream->out_rtcp_pkt;
 	pj_memcpy(pkt, sr_rr_pkt, len);
 	max_len = stream->out_rtcp_pkt_size;
@@ -521,7 +581,8 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 	max_len = len;
     }
 
-    /* Build RTCP SDES packet */
+    /* Build RTCP SDES packet, forced if also send RTCP-FB */
+    with_sdes = with_sdes || with_fb_pli || with_fb_nack;
     if (with_sdes) {
 	pjmedia_rtcp_sdes sdes;
 	pj_size_t sdes_len;
@@ -541,9 +602,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 
     /* Build RTCP BYE packet */
     if (with_bye) {
-	pj_size_t bye_len;
-
-	bye_len = max_len - len;
+	pj_size_t bye_len = max_len - len;
 	status = pjmedia_rtcp_build_rtcp_bye(&stream->rtcp, pkt+len,
 					     &bye_len, NULL);
 	if (status != PJ_SUCCESS) {
@@ -551,6 +610,32 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
         			     "Error generating RTCP BYE"));
 	} else {
 	    len += (int)bye_len;
+	}
+    }
+
+    /* Build RTCP-FB generic NACK packet */
+    if (with_fb_nack && stream->rtcp_fb_nack.pid >= 0) {
+	pj_size_t fb_len = max_len - len;
+	status = pjmedia_rtcp_fb_build_nack(&stream->rtcp, pkt+len, &fb_len,
+					    1, &stream->rtcp_fb_nack);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->name.ptr, status,
+        			     "Error generating RTCP-FB NACK"));
+	} else {
+	    len += (int)fb_len;
+	}
+    }
+
+    /* Build RTCP-FB PLI packet */
+    if (with_fb_pli) {
+	pj_size_t fb_len = max_len - len;
+	status = pjmedia_rtcp_fb_build_pli(&stream->rtcp, pkt+len, &fb_len);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->name.ptr, status,
+        			     "Error generating RTCP-FB PLI"));
+	} else {
+	    len += (int)fb_len;
+	    PJ_LOG(5,(stream->name.ptr, "Sending RTCP-FB PLI packet"));
 	}
     }
 
@@ -574,29 +659,53 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
  *
  * This function is can be called by either put_frame() or get_frame(),
  * to transmit periodic RTCP SR/RR report.
+ * If 'fb_pli' is set to PJ_TRUE, this will send immediate RTCP-FB PLI.
  */
-static void check_tx_rtcp(pjmedia_vid_stream *stream, pj_uint32_t timestamp)
+static void check_tx_rtcp(pjmedia_vid_stream *stream)
 {
-    /* Note that timestamp may represent local or remote timestamp,
-     * depending on whether this function is called from put_frame()
-     * or get_frame().
+    pj_timestamp now;
+    pj_bool_t early;
+
+    /* Check if early RTCP mode is required (i.e: RTCP-FB) and allowed (i.e:
+     * elapsed timestamp from previous RTCP-FB >= PJMEDIA_RTCP_FB_INTERVAL).
      */
+    pj_get_timestamp(&now);
+    early = ((stream->pending_rtcp_fb_pli || stream->pending_rtcp_fb_nack)
+	     &&
+	     (stream->rtcp_fb_last_tx.u64 == 0 ||
+	      pj_elapsed_msec(&stream->rtcp_fb_last_tx, &now) >=
+					    PJMEDIA_RTCP_FB_INTERVAL));
 
+    /* First check, unless RTCP is 'urgent', just init rtcp_last_tx. */
+    if (stream->rtcp_last_tx.u64 == 0 && !early) {
+	pj_get_timestamp(&stream->rtcp_last_tx);
+	return;
+    } 
 
-    if (stream->rtcp_last_tx == 0) {
-
-	stream->rtcp_last_tx = timestamp;
-
-    } else if (timestamp - stream->rtcp_last_tx >= stream->rtcp_interval) {
+    /* Build & send RTCP */
+    if (early ||
+	pj_elapsed_msec(&stream->rtcp_last_tx, &now) >= stream->rtcp_interval)
+    {
 	pj_status_t status;
 
-	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled, PJ_FALSE);
+	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled, PJ_FALSE,
+			   stream->pending_rtcp_fb_nack,
+			   stream->pending_rtcp_fb_pli);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(stream->name.ptr, status,
         		 "Error sending RTCP"));
 	}
 
-	stream->rtcp_last_tx = timestamp;
+	stream->rtcp_last_tx = now;
+
+	if (early)
+	    stream->rtcp_fb_last_tx = now;
+
+	if (stream->pending_rtcp_fb_pli)
+	    stream->pending_rtcp_fb_pli--;
+
+	if (stream->pending_rtcp_fb_nack)
+	    stream->pending_rtcp_fb_nack--;
     }
 }
 
@@ -840,6 +949,19 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
     pj_mutex_unlock( stream->jb_mutex );
 
+    /* Check if we need to send RTCP-FB generic NACK */
+    if (stream->send_rtcp_fb_nack && seq_st.diff > 1 &&
+	pj_ntohs(hdr->seq) >= seq_st.diff)
+    {
+	int i;
+	pj_bzero(&stream->rtcp_fb_nack, sizeof(stream->rtcp_fb_nack));
+	stream->rtcp_fb_nack.pid = pj_ntohs(hdr->seq) - seq_st.diff + 1;
+	for (i = 0; i < (seq_st.diff - 1); ++i) {
+	    stream->rtcp_fb_nack.blp <<= 1;
+	    stream->rtcp_fb_nack.blp |= 1;
+	}
+	stream->pending_rtcp_fb_nack = 1;
+    }
 
     /* Check if now is the time to transmit RTCP SR/RR report.
      * We only do this when stream direction is "decoding only" or
@@ -847,7 +969,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
      * because otherwise check_tx_rtcp() will be handled by put_frame()
      */
     if (stream->dir == PJMEDIA_DIR_DECODING || stream->enc->paused) {
-	check_tx_rtcp(stream, pj_ntohl(hdr->ts));
+	check_tx_rtcp(stream);
     }
 
     if (status != 0) {
@@ -868,7 +990,7 @@ on_return:
     /* Send RTCP RR and SDES after we receive some RTP packets */
     if (stream->rtcp.received >= 10 && !stream->initial_rr) {
 	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled,
-			   PJ_FALSE);
+			   PJ_FALSE, PJ_FALSE, PJ_FALSE);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(4,(stream->name.ptr, status,
             	     "Error sending initial RTCP RR"));
@@ -923,6 +1045,7 @@ static pj_status_t put_frame(pjmedia_port *port,
     pjmedia_vid_encode_opt enc_opt;
     unsigned pkt_cnt = 0;
     pj_timestamp initial_time;
+    pj_timestamp now;
     pj_timestamp null_ts ={{0}};
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
@@ -966,16 +1089,13 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
 
     /* Check if need to send keyframe. */
+    pj_get_timestamp(&now);
     if (stream->num_keyframe &&
 	(pj_cmp_timestamp(&null_ts, &stream->last_keyframe_tx) != 0))
     {
 	unsigned elapse_time;
-	pj_timestamp now;
-
-	pj_get_timestamp(&now);
 
 	elapse_time = pj_elapsed_msec(&stream->last_keyframe_tx, &now);
-
 	if (elapse_time > stream->info.sk_cfg.interval)
 	{
 	    stream->force_keyframe = PJ_TRUE;
@@ -985,7 +1105,10 @@ static pj_status_t put_frame(pjmedia_port *port,
 
     /* Init encoding option */
     pj_bzero(&enc_opt, sizeof(enc_opt));
-    if (stream->force_keyframe) {
+    if (stream->force_keyframe &&
+	pj_elapsed_msec(&stream->last_keyframe_tx, &now) >=
+			PJMEDIA_VID_STREAM_MIN_KEYFRAME_INTERVAL_MSEC)
+    {
 	/* Force encoder to generate keyframe */
 	enc_opt.force_keyframe = PJ_TRUE;
 	stream->force_keyframe = PJ_FALSE;
@@ -1012,11 +1135,11 @@ static pj_status_t put_frame(pjmedia_port *port,
 
     pj_get_timestamp(&initial_time);
 
-    if ((stream->num_keyframe) &&
-	((frame_out.bit_info & PJMEDIA_VID_FRM_KEYFRAME)
-						  == PJMEDIA_VID_FRM_KEYFRAME))
+    if ((frame_out.bit_info & PJMEDIA_VID_FRM_KEYFRAME)
+						  == PJMEDIA_VID_FRM_KEYFRAME)
     {
 	stream->last_keyframe_tx = initial_time;
+	TRC_((channel->port.info.name.ptr, "Keyframe generated"));
     }
 
     /* Loop while we have frame to send */
@@ -1129,7 +1252,7 @@ static pj_status_t put_frame(pjmedia_port *port,
      * when it is, check_tx_rtcp() will be handled by get_frame().
      */
     if (stream->dir != PJMEDIA_DIR_DECODING) {
-	check_tx_rtcp(stream, pj_ntohl(channel->rtp.out_hdr.ts));
+	check_tx_rtcp(stream);
     }
 
     /* Do nothing if we have nothing to transmit */
@@ -1636,8 +1759,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->endpt = endpt;
     stream->dir = info->dir;
     stream->user_data = user_data;
-    stream->rtcp_interval = (PJMEDIA_RTCP_INTERVAL-500 + (pj_rand()%1000)) *
-			    info->codec_info.clock_rate / 1000;
+    stream->rtcp_interval = PJMEDIA_RTCP_INTERVAL + pj_rand()%1000 - 500;
     stream->rtcp_sdes_bye_disabled = info->rtcp_sdes_bye_disabled;
 
     stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
@@ -1815,15 +1937,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	rtcp_setting.samples_per_frame = 1;
 
 	pjmedia_rtcp_init2(&stream->rtcp, &rtcp_setting);
+
+	/* Subscribe to RTCP events */
+	pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
+				&stream->rtcp);
     }
 
     /* Allocate outgoing RTCP buffer, should be enough to hold SR/RR, SDES,
-     * BYE, and XR.
+     * BYE, Feedback, and XR.
      */
     stream->out_rtcp_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
 				 sizeof(pjmedia_rtcp_common) +
 				 (4 + (unsigned)stream->cname.slen) +
-				 32;
+				 32 + 32;
     if (stream->out_rtcp_pkt_size > PJMEDIA_MAX_MTU)
 	stream->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
 
@@ -1896,6 +2022,49 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     pj_memcpy(&stream->info, info, sizeof(*info));
     stream->info.codec_param = pjmedia_vid_codec_param_clone(
 						pool, info->codec_param);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->info.loc_rtcp_fb,
+			     &info->loc_rtcp_fb);
+    pjmedia_rtcp_fb_info_dup(pool, &stream->info.rem_rtcp_fb,
+			     &info->rem_rtcp_fb);
+
+    /* Check if we should send RTCP-FB */
+    if (stream->info.rem_rtcp_fb.cap_count) {
+	pjmedia_rtcp_fb_info *rfi = &stream->info.rem_rtcp_fb;
+	unsigned i;
+
+	for (i = 0; i < rfi->cap_count; ++i) {
+	    if (rfi->caps[i].type == PJMEDIA_RTCP_FB_NACK) {
+		if (rfi->caps[i].param.slen == 0) {
+		    stream->send_rtcp_fb_nack = PJ_TRUE;
+		    PJ_LOG(5,(stream->name.ptr, "Send RTCP-FB generic NACK"));
+		} else if (pj_stricmp2(&rfi->caps[i].param, "pli")==0) {
+		    stream->send_rtcp_fb_pli = PJ_TRUE;
+		    PJ_LOG(5,(stream->name.ptr, "Send RTCP-FB PLI"));
+		}
+	    }
+	}
+    }
+
+    /* Check if we should process incoming RTCP-FB */
+    stream->rtcp_fb_nack_cap_idx = -1;
+    stream->rtcp_fb_pli_cap_idx = -1;
+    if (stream->info.loc_rtcp_fb.cap_count) {
+	pjmedia_rtcp_fb_info *lfi = &stream->info.loc_rtcp_fb;
+	unsigned i;
+
+	for (i = 0; i < lfi->cap_count; ++i) {
+	    if (lfi->caps[i].type == PJMEDIA_RTCP_FB_NACK) {
+		if (lfi->caps[i].param.slen == 0) {
+		    stream->rtcp_fb_nack_cap_idx = i;
+		    PJ_LOG(5,(stream->name.ptr,
+			      "Receive RTCP-FB generic NACK"));
+		} else if (pj_stricmp2(&lfi->caps[i].param, "pli")==0) {
+		    stream->rtcp_fb_pli_cap_idx = i;
+		    PJ_LOG(5,(stream->name.ptr, "Receive RTCP-FB PLI"));
+		}
+	    }
+	}
+    }
 
     /* Success! */
     *p_stream = stream;
@@ -1930,9 +2099,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     }
 #endif
 
+    /* Unsubscribe events from RTCP */
+    pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
+
     /* Send RTCP BYE (also SDES) */
     if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
-	send_rtcp(stream, PJ_TRUE, PJ_TRUE);
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
     /* Detach from transport
@@ -2172,10 +2344,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
 PJ_DEF(pj_status_t) pjmedia_vid_stream_send_keyframe(
 						pjmedia_vid_stream *stream)
 {
+    pj_timestamp now;
+
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if (!pjmedia_vid_stream_is_running(stream, PJMEDIA_DIR_ENCODING))
 	return PJ_EINVALIDOP;
+
+    pj_get_timestamp(&now);
+    if (pj_elapsed_msec(&stream->last_keyframe_tx, &now) <
+			PJMEDIA_VID_STREAM_MIN_KEYFRAME_INTERVAL_MSEC)
+    {
+	return PJ_ETOOMANY;
+    }
 
     stream->force_keyframe = PJ_TRUE;
 
@@ -2191,7 +2372,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_sdes(
 {
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    return send_rtcp(stream, PJ_TRUE, PJ_FALSE);
+    return send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
 }
 
 
@@ -2204,7 +2385,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if (stream->enc && stream->transport) {
-	return send_rtcp(stream, PJ_TRUE, PJ_TRUE);
+	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
     }
 
     return PJ_SUCCESS;

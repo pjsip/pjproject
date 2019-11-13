@@ -306,6 +306,17 @@ typedef enum pjmedia_orient
  */
 PJ_DECL(const char*) pjmedia_type_name(pjmedia_type t);
 
+
+/**
+ * Utility function to return the media type for a media name string.
+ *
+ * @param name		The media name string.
+ *
+ * @return		media type.
+ */
+PJ_DECL(pjmedia_type) pjmedia_get_type(const pj_str_t *name);
+
+
 /**
  * A utility function to convert fourcc type of value to four letters string.
  *

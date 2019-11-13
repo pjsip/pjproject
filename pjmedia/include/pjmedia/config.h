@@ -465,10 +465,19 @@
 
 
 /**
- * Interval to send RTCP packets, in msec
+ * Interval to send regular RTCP packets, in msec.
  */
 #ifndef PJMEDIA_RTCP_INTERVAL
-#	define PJMEDIA_RTCP_INTERVAL		5000	/* msec*/
+#   define PJMEDIA_RTCP_INTERVAL		5000	/* msec*/
+#endif
+
+
+/**
+ * Minimum interval between two consecutive outgoing RTCP-FB packets,
+ * such as Picture Loss Indication, in msec.
+ */
+#ifndef PJMEDIA_RTCP_FB_INTERVAL
+#   define PJMEDIA_RTCP_FB_INTERVAL		50	/* msec*/
 #endif
 
 
@@ -1523,6 +1532,16 @@
  */
 #ifndef PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
 #   define PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC  1000
+#endif
+
+
+/**
+ * Specify the minimum interval to send video keyframe, in msec.
+ *
+ * Default : 1000
+ */
+#ifndef PJMEDIA_VID_STREAM_MIN_KEYFRAME_INTERVAL_MSEC
+#   define PJMEDIA_VID_STREAM_MIN_KEYFRAME_INTERVAL_MSEC    1000
 #endif
 
 

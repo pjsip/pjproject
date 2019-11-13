@@ -617,7 +617,7 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->vid_cnt = 1;
     opt->req_keyframe_method = PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
-			     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
+			       PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
 }
 

@@ -860,7 +860,8 @@ typedef struct pjsua_call_setting
      * This flag controls what methods to request keyframe are allowed on
      * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
      *
-     * Default: PJSUA_VID_REQ_KEYFRAME_SIP_INFO
+     * Default: (PJSUA_VID_REQ_KEYFRAME_SIP_INFO | 
+     *		 PJSUA_VID_REQ_KEYFRAME_RTCP_PLI)
      */
     unsigned	     req_keyframe_method;
 

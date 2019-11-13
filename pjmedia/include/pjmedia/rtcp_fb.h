@@ -135,12 +135,13 @@ typedef struct pjmedia_rtcp_fb_setting
 {
     /**
      * Specify whether transport protocol in SDP media description uses
-     * RTP/AVP instead of RTP/AVPF. Note that the standard mandates to signal
-     * AVPF profile, but it may cause SDP negotiation failure when negotiating
-     * with endpoints that does not support RTCP Feedback (including older
-     * version of PJSIP).
+     * RTP/AVP instead of RTP/AVPF. Note that RFC4585 mandates to signal
+     * RTP/AVPF profile, but it may cause SDP negotiation failure when
+     * negotiating with endpoints that does not support RTP/AVPF (including
+     * older version of PJSIP), furthermore, there is RFC8643 that promotes
+     * interoperability over the strictness of RTP profile specifications.
      *
-     * Default: PJ_FALSE.
+     * Default: PJ_TRUE.
      */
     pj_bool_t		     dont_use_avpf;
 
@@ -290,6 +291,31 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 				    const void *opt,
 				    const pjmedia_sdp_session *sdp,
 				    unsigned med_idx,
+				    pjmedia_rtcp_fb_info *info);
+
+
+/**
+ * Decode RTCP Feedback specific information from SDP media for the specified
+ * payload type. If the payload type is set to negative value, it will decode
+ * RTCP Feedback info for all payload types in the SDP media.
+ *
+ * @param pool		Pool object to allocate memory.
+ * @param endpt		The media endpoint.
+ * @param opt		Options, currently it must be NULL.
+ * @param sdp		The SDP.
+ * @param med_idx	The SDP media index.
+ * @param pt		The payload type.
+ * @param info		The RTCP-FB info fetched from SDP.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_fb_decode_sdp2(
+				    pj_pool_t *pool,
+				    pjmedia_endpt *endpt,
+				    const void *opt,
+				    const pjmedia_sdp_session *sdp,
+				    unsigned med_idx,
+				    int pt,
 				    pjmedia_rtcp_fb_info *info);
 
 

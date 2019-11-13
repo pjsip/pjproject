@@ -2251,7 +2251,7 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
 	event->epub==&stream->rtcp)
     {
 	pjmedia_event_rx_rtcp_fb_data *data = (pjmedia_event_rx_rtcp_fb_data*)
-					      event->data.ptr;
+					      &event->data.rx_rtcp_fb;
 
 	/* Application not configured to listen to NACK, discard this event */
 	if (stream->rtcp_fb_nack_cap_idx < 0)
@@ -2261,7 +2261,8 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
     }
 
     /* Republish events */
-    return pjmedia_event_publish(NULL, stream, event, 0);
+    return pjmedia_event_publish(NULL, stream, event,
+				 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 }
 
 
@@ -2742,40 +2743,36 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 #endif
 
-    /* Check if we should send RTCP-FB generic NACK for this codec */
+    /* Check if we should send RTCP-FB */
     if (stream->si.rem_rtcp_fb.cap_count) {
 	pjmedia_rtcp_fb_info *rfi = &stream->si.rem_rtcp_fb;
-	char cid[32];
 	unsigned i;
-
-	pjmedia_codec_info_to_id(&stream->si.fmt, cid, sizeof(cid));
 
 	for (i = 0; i < rfi->cap_count; ++i) {
 	    if (rfi->caps[i].type == PJMEDIA_RTCP_FB_NACK &&
-		(!pj_strcmp2( &rfi->caps[i].codec_id, "*") ||
-		 !pj_stricmp2(&rfi->caps[i].codec_id, cid)))
+		rfi->caps[i].param.slen == 0)
 	    {
 		stream->send_rtcp_fb_nack = PJ_TRUE;
+		PJ_LOG(4,(stream->port.info.name.ptr,
+			  "Send RTCP-FB generic NACK"));
 		break;
 	    }
 	}
     }
 
-    /* Check if we handle incoming RTCP-FB generic NACK for this codec */
+    /* Check if we should process incoming RTCP-FB */
     stream->rtcp_fb_nack_cap_idx = -1;
     if (stream->si.loc_rtcp_fb.cap_count) {
 	pjmedia_rtcp_fb_info *lfi = &stream->si.loc_rtcp_fb;
-	char cid[32];
 	unsigned i;
-
-	pjmedia_codec_info_to_id(&stream->si.fmt, cid, sizeof(cid));
 
 	for (i = 0; i < lfi->cap_count; ++i) {
 	    if (lfi->caps[i].type == PJMEDIA_RTCP_FB_NACK &&
-		(!pj_strcmp2( &lfi->caps[i].codec_id, "*") ||
-		 !pj_stricmp2(&lfi->caps[i].codec_id, cid)))
+		lfi->caps[i].param.slen == 0)
 	    {
 		stream->rtcp_fb_nack_cap_idx = i;
+		PJ_LOG(4,(stream->port.info.name.ptr,
+			  "Receive RTCP-FB generic NACK"));
 		break;
 	    }
 	}

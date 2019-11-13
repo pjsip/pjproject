@@ -29,6 +29,7 @@
 #include <pjmedia/jbuf.h>
 #include <pjmedia/port.h>
 #include <pjmedia/rtcp.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/stream_common.h>
@@ -156,6 +157,8 @@ typedef struct pjmedia_vid_stream_info
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
     pj_bool_t		rtcp_mux;   /**< Use RTP and RTCP multiplexing.     */
+    pjmedia_rtcp_fb_info loc_rtcp_fb; /**< Local RTCP-FB info.		    */
+    pjmedia_rtcp_fb_info rem_rtcp_fb; /**< Remote RTCP-FB info.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
     unsigned		rx_pt;	    /**< Incoming codec paylaod type.	    */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */

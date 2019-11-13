@@ -1082,6 +1082,10 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
+	/* Subscribe to video stream events */
+	pjmedia_event_subscribe(NULL, &call_media_on_event,
+				call_med, call_med->strm.v.stream);
+
 	/* Start stream */
 	status = pjmedia_vid_stream_start(call_med->strm.v.stream);
 	if (status != PJ_SUCCESS)
@@ -1286,6 +1290,9 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	call_med->rtp_tx_seq = stat.rtp_tx_last_seq;
 	call_med->rtp_tx_ts = stat.rtp_tx_last_ts;
     }
+
+    /* Unsubscribe from video stream events */
+    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     pjmedia_vid_stream_destroy(strm);
     call_med->strm.v.stream = NULL;

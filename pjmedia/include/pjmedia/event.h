@@ -25,6 +25,7 @@
  */
 #include <pjmedia/audiodev.h>
 #include <pjmedia/format.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pjmedia/signatures.h>
 #include <pjmedia/videodev.h>
 
@@ -296,6 +297,9 @@ typedef struct pjmedia_event
 
 	/** Media transport error event data */
 	pjmedia_event_media_tp_err_data		med_tp_err;
+
+	/** Receiving RTCP-FB event data */
+	pjmedia_event_rx_rtcp_fb_data		rx_rtcp_fb;
 
 	/** Pointer to storage to user event data, if it's outside
 	 * this struct

@@ -1335,7 +1335,7 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     for (i=0; i<sdp->media_count && count<PJSUA_MAX_CALL_MEDIA; ++i) {
 	const pjmedia_sdp_media *m = sdp->media[i];
 	const pjmedia_sdp_conn *c;
-	static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
+	pj_uint32_t proto;
 
 	/* Skip different media */
 	if (pj_stricmp(&m->desc.media, type) != 0) {
@@ -1346,7 +1346,9 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 	c = m->conn? m->conn : sdp->conn;
 
 	/* Supported transports */
-	if (pj_stristr(&m->desc.transport, &ID_RTP_SAVP)) {
+	proto = pjmedia_sdp_transport_get_proto(&m->desc.transport);
+	if (PJMEDIA_TP_PROTO_HAS_FLAG(proto, PJMEDIA_TP_PROTO_RTP_SAVP))
+	{
 	    switch (use_srtp) {
 	    case PJMEDIA_SRTP_MANDATORY:
 	    case PJMEDIA_SRTP_OPTIONAL:
@@ -1357,7 +1359,8 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 		score[i] -= 5;
 		break;
 	    }
-	} else if (pj_stricmp2(&m->desc.transport, "RTP/AVP")==0) {
+	} else if (PJMEDIA_TP_PROTO_HAS_FLAG(proto, PJMEDIA_TP_PROTO_RTP_AVP))
+	{
 	    switch (use_srtp) {
 	    case PJMEDIA_SRTP_MANDATORY:
 		//--score[i];
@@ -1481,9 +1484,14 @@ static void sort_media2(const pjsua_call_media *call_med,
 /* Callback to receive global media events */
 pj_status_t on_media_event(pjmedia_event *event, void *user_data)
 {
+    char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
     PJ_UNUSED_ARG(user_data);
+
+    pjmedia_fourcc_name(event->type, ev_name);
+    PJ_LOG(4,(THIS_FILE, "Received media event type=%s, src=%p, epub=%p",
+			 ev_name, event->src, event->epub));
 
     /* Forward the event */
     if (pjsua_var.ua_cfg.cb.on_media_event) {
@@ -1499,8 +1507,16 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
     pjsua_call *call = call_med? call_med->call : NULL;
+    char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
-  
+
+    pj_assert(call && call_med);
+    pjmedia_fourcc_name(event->type, ev_name);
+    PJ_LOG(5,(THIS_FILE, "Call %d: Media %d: Received media event, type=%s, "
+			 "src=%p, epub=%p",
+			 call->index, call_med->idx, ev_name,
+			 event->src, event->epub));
+
     switch(event->type) {
 	case PJMEDIA_EVENT_KEYFRAME_MISSING:
 	    if (call->opt.req_keyframe_method & PJSUA_VID_REQ_KEYFRAME_SIP_INFO)
@@ -2674,16 +2690,62 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    }
 	}
 
-	/* Add RTCP-FB info in SDP if we are offerer */
-	if (rem_sdp == NULL && acc->cfg.rtcp_fb_cfg.cap_count) {
+	/* Setup RTCP-FB */
+	{
+	    pjmedia_rtcp_fb_setting rtcp_cfg;
+	    pjmedia_rtcp_fb_setting_default(&rtcp_cfg);
+
+	    /* Add RTCP-FB PLI if PJSUA_VID_REQ_KEYFRAME_RTCP_PLI is set */
+	    if (call_med->type == PJMEDIA_TYPE_VIDEO &&
+		(call->opt.req_keyframe_method &
+		 PJSUA_VID_REQ_KEYFRAME_RTCP_PLI))
+	    {
+		rtcp_cfg.cap_count = 1;
+		pj_strset2(&rtcp_cfg.caps[0].codec_id, (char*)"*");
+		rtcp_cfg.caps[0].type = PJMEDIA_RTCP_FB_NACK;
+		pj_strset2(&rtcp_cfg.caps[0].param, (char*)"pli");
+	    }
+
+	    /* Should we put "RTP/AVPF" in SDP?*/
+	    if (rem_sdp) {
+		/* For answer, match remote offer */
+		unsigned rem_proto = 0;
+		rem_proto = pjmedia_sdp_transport_get_proto(
+					&rem_sdp->media[mi]->desc.transport);
+		rtcp_cfg.dont_use_avpf =
+			!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto, 
+						PJMEDIA_TP_PROFILE_RTCP_FB);
+	    } else {
+		/* For offer, check account setting */
+		rtcp_cfg.dont_use_avpf = acc->cfg.rtcp_fb_cfg.dont_use_avpf ||
+					 (acc->cfg.rtcp_fb_cfg.cap_count == 0
+					  && rtcp_cfg.cap_count == 0);
+	    }
+
 	    status = pjmedia_rtcp_fb_encode_sdp(pool, pjsua_var.med_endpt,
-						&acc->cfg.rtcp_fb_cfg, sdp,
+						&rtcp_cfg, sdp,
 						mi, rem_sdp);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(3,(THIS_FILE, status,
-			     "Call %d media %d: Failed to encode RTCP-FB "
+			     "Call %d media %d: Failed to encode RTCP-FB PLI "
 			     "setting to SDP",
 			     call_id, mi));
+	    }
+
+	    /* Add any other RTCP-FB setting configured in account setting */
+	    if (acc->cfg.rtcp_fb_cfg.cap_count) {
+		pj_bool_t tmp = rtcp_cfg.dont_use_avpf;
+		rtcp_cfg = acc->cfg.rtcp_fb_cfg;
+		rtcp_cfg.dont_use_avpf = tmp;
+		status = pjmedia_rtcp_fb_encode_sdp(pool, pjsua_var.med_endpt,
+						    &rtcp_cfg, sdp,
+						    mi, rem_sdp);
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(3,(THIS_FILE, status,
+				 "Call %d media %d: Failed to encode account "
+				 "RTCP-FB setting to SDP",
+				 call_id, mi));
+		}
 	    }
 	}
     }
