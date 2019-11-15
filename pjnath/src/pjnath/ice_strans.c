@@ -1917,7 +1917,8 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 
     pj_grp_lock_acquire(ice_st->grp_lock);
     if (ice_st->num_buf > 0 &&
-        ice_st->send_buf[ice_st->buf_idx].buffer != pkt)
+        (!ice_st->send_buf ||
+         ice_st->send_buf[ice_st->buf_idx].buffer != pkt))
     {
         use_buf = PJ_TRUE;
     	status = use_buffer(ice_st, comp_id, pkt, size, dst_addr,
