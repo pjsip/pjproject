@@ -294,18 +294,22 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
-	NSArray *dev_list;
+	NSArray *dev_list = NULL;
 
-#if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
-    	if (NSClassFromString(@"AVCaptureDeviceTypeBuiltInWideAngleCamera")) {
-	    /* Starting in iOS 10, [AVCaptureDevice devices] is deprecated
-	     * and replaced by AVCaptureDeviceDiscoverySession.
+#if (TARGET_OS_IPHONE && defined(__IPHONE_10_0)) || \
+    (TARGET_OS_OSX && defined(__MAC_10_15))
+	if (__builtin_available(macOS 10.15, iOS 10.0, *)) {
+	    /* Starting in iOS 10 and macOS 10.15, [AVCaptureDevice devices]
+	     * is deprecated and replaced by AVCaptureDeviceDiscoverySession.
 	     */
     	    AVCaptureDeviceDiscoverySession *dds;
 	    NSArray<AVCaptureDeviceType> *dev_types =
-	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera,
-	    	  AVCaptureDeviceTypeBuiltInDuoCamera,
-	    	  AVCaptureDeviceTypeBuiltInTelephotoCamera];
+	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera
+#if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
+	    	  , AVCaptureDeviceTypeBuiltInDuoCamera
+	    	  , AVCaptureDeviceTypeBuiltInTelephotoCamera
+#endif
+	    	  ];
 
     	    dds = [AVCaptureDeviceDiscoverySession
     	       	   discoverySessionWithDeviceTypes:dev_types
@@ -314,7 +318,9 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
 
     	    dev_list = [dds devices];
 	} else {
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_15
 	    dev_list = [AVCaptureDevice devices];
+#endif
 	}
 #else
 	dev_list = [AVCaptureDevice devices];
@@ -562,37 +568,50 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
             /* kCVPixelFormatType_420YpCbCr8BiPlanar* is NV12 */
             pj_uint8_t *p, *p_end, *Y, *U, *V;
             pj_size_t p_len;
-            /* Image stride is not always equal to the image width. I.e on Ipad
-             * air, at 352*288 the image stride is 384.
+            pj_size_t wxh = stream->vid_size.w * stream->vid_size.h;
+            /* Image stride is not always equal to the image width.
+             * For example, resolution 352*288 can have a stride of 384.
              */
             pj_size_t stride = CVPixelBufferGetBytesPerRowOfPlane(img, 0);
+            /* Image height is not always equal to the video resolution.
+             * For example, resolution 352*288 can have a height of 264.
+             */
             pj_size_t height = CVPixelBufferGetHeight(img);
             pj_bool_t need_clip;
             
             /* Auto detect rotation */
-            if (height != stream->vid_size.h) {
+            if ((stream->vid_size.w > stream->vid_size.h && stride < height) ||
+                (stream->vid_size.h > stream->vid_size.w && stride > height))
+            {
+            	pj_size_t w = stream->vid_size.w;
                 stream->vid_size.w = stream->vid_size.h;
-                stream->vid_size.h = height;
+                stream->vid_size.h = w;
             }
             
             need_clip = (stride != stream->vid_size.w);
             
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 0);
 
-            p_len = stream->vid_size.w * stream->vid_size.h;
+            p_len = stream->vid_size.w * height;
             Y = (pj_uint8_t*)stream->capture_buf;
-            U = Y + p_len;
-            V = U + p_len/4;
+            U = Y + wxh;
+            V = U + wxh/4;
 
             if (!need_clip) {
                 pj_memcpy(Y, p, p_len);
+                Y += p_len;
             } else {
                 int i = 0;
-                for (; i < stream->vid_size.h; ++i) {
+                for (; i < height; ++i) {
                     pj_memcpy(Y, p, stream->vid_size.w);
                     Y += stream->vid_size.w;
                     p += stride;
                 }
+            }
+            
+            if (stream->vid_size.h > height) {
+                pj_memset(Y, 16, (stream->vid_size.h - height) *
+                	  stream->vid_size.w);
             }
 
             p = (pj_uint8_t*)CVPixelBufferGetBaseAddressOfPlane(img, 1);
@@ -606,7 +625,7 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                 }
             } else {
                 int i = 0;
-                for (;i<(stream->vid_size.h)/2;++i) {
+                for (;i<height/2;++i) {
                     int y=0;
                     for (;y<(stream->vid_size.w)/2;++y) {
                         *U++ = *p++;
@@ -614,6 +633,13 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
                     }
                     p += (stride - stream->vid_size.w);
                 }
+            }
+
+            if (stream->vid_size.h > height) {
+            	pj_size_t UV_size = (stream->vid_size.h - height) *
+                	  	    stream->vid_size.w / 4;
+                pj_memset(U, 0x80, UV_size);
+                pj_memset(V, 0x80, UV_size);
             }
         }
     } else {
