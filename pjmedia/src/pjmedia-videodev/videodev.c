@@ -27,10 +27,6 @@
 
 
 /* extern functions to create factories */
-#if PJMEDIA_VIDEO_DEV_HAS_NULL_VIDEO
-pjmedia_vid_dev_factory* pjmedia_null_video_factory(pj_pool_factory *pf);
-#endif
-
 #if PJMEDIA_VIDEO_DEV_HAS_DSHOW
 pjmedia_vid_dev_factory* pjmedia_dshow_factory(pj_pool_factory *pf);
 #endif

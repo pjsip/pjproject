@@ -35,6 +35,12 @@
 #   define USE_IPV6	0
 #endif
 
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK
+#   define USE_TLS	1
+#else
+#   define USE_TLS	0
+#endif
+
 int stun_test(void);
 int sess_auth_test(void);
 int stun_sock_test(void);
@@ -70,6 +76,7 @@ void capture_pjlib_state(pj_stun_config *cfg, struct pjlib_state *st);
 int check_pjlib_state(pj_stun_config *cfg, 
 		      const struct pjlib_state *initial_st);
 
+pj_turn_tp_type get_turn_tp_type(pj_uint32_t flag);
 
 #define ERR_MEMORY_LEAK	    1
 #define ERR_TIMER_LEAK	    2

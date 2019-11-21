@@ -639,6 +639,11 @@ int main(int argc, char *argv[])
 					  0, &codec_info);
     }
 
+    /* Create event manager */
+    status = pjmedia_event_mgr_create(pool, 0, NULL);
+    if (status != PJ_SUCCESS)
+	goto on_exit;
+
     /* Create stream based on program arguments */
     status = create_stream(pool, med_endpt, codec_info, dir, local_port, 
 			   &remote_addr, mcast, &mcast_addr,
@@ -828,6 +833,7 @@ on_exit:
 	tp = pjmedia_stream_get_transport(stream);
 	pjmedia_stream_destroy(stream);
 	
+	pjmedia_transport_media_stop(tp);
 	pjmedia_transport_close(tp);
     }
 
@@ -837,6 +843,8 @@ on_exit:
     if (rec_file_port)
 	pjmedia_port_destroy( rec_file_port );
 
+    /* Destroy event manager */
+    pjmedia_event_mgr_destroy(NULL);
 
     /* Release application pool */
     pj_pool_release( pool );

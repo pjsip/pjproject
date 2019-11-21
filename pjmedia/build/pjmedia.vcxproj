@@ -559,6 +559,7 @@
     <ClCompile Include="..\src\pjmedia\videodev.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec.c" />
     <ClCompile Include="..\src\pjmedia\vid_codec_util.c" />
+    <ClCompile Include="..\src\pjmedia\vid_conf.c" />
     <ClCompile Include="..\src\pjmedia\vid_port.c" />
     <ClCompile Include="..\src\pjmedia\vid_stream.c" />
     <ClCompile Include="..\src\pjmedia\vid_stream_info.c" />
@@ -624,6 +625,7 @@
     <ClInclude Include="..\include\pjmedia\videodev.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec.h" />
     <ClInclude Include="..\include\pjmedia\vid_codec_util.h" />
+    <ClInclude Include="..\include\pjmedia\vid_conf.h" />
     <ClInclude Include="..\include\pjmedia\vid_port.h" />
     <ClInclude Include="..\include\pjmedia\vid_stream.h" />
     <ClInclude Include="..\include\pjmedia\vid_tee.h" />

@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3A31F1B21DA4F568007C23A3 /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A31F1B11DA4F568007C23A3 /* libwebrtc.a */; };
+		3A6FDEF0223B3BEC001726FD /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FDEEF223B3BEC001726FD /* Security.framework */; };
 		3AA31FF618F3FB4C00112C3D /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */; };
 		3AA31FF718F3FB4C00112C3D /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */; };
 		3AA31FF818F3FB4C00112C3D /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FEB18F3FB4C00112C3D /* CFNetwork.framework */; };
@@ -63,6 +64,7 @@
 
 /* Begin PBXFileReference section */
 		3A31F1B11DA4F568007C23A3 /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libwebrtc.a; sourceTree = "<group>"; };
+		3A6FDEEF223B3BEC001726FD /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		3AA31FEB18F3FB4C00112C3D /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
@@ -128,6 +130,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A6FDEF0223B3BEC001726FD /* Security.framework in Frameworks */,
 				7485A6B11F09B2D500122F1A /* SystemConfiguration.framework in Frameworks */,
 				3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */,
 				3AB0EC581DA76B39008A0F62 /* libc++.tbd in Frameworks */,
@@ -203,6 +206,7 @@
 		3AF0580716F050770046B835 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				3A6FDEEF223B3BEC001726FD /* Security.framework */,
 				741C73BA1F0E64AF00887FB6 /* libopenh264.a */,
 				7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */,
 				3AF253011EFBD36E00213893 /* VideoToolbox.framework */,

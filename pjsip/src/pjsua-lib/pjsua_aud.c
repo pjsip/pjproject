@@ -77,7 +77,8 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 	goto on_return;
 
     call = &pjsua_var.calls[call_id];
-    port_id = call->media[call->audio_idx].strm.a.conf_slot;
+    if (call->audio_idx >= 0)
+	port_id = call->media[call->audio_idx].strm.a.conf_slot;
 
 on_return:
     PJSUA_UNLOCK();
@@ -299,7 +300,7 @@ pj_status_t pjsua_aud_subsys_init()
     status = pjmedia_codec_register_audio_codecs(pjsua_var.med_endpt,
                                                  &codec_cfg);
     if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "Error registering codecs"));
+	pjsua_perror(THIS_FILE, "Error registering codecs", status);
 	goto on_error;
     }
 
@@ -1946,6 +1947,10 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 
     pjsua_var.snd_is_on = PJ_TRUE;
 
+    /* Subscribe to audio device events */
+    pjmedia_event_subscribe(NULL, &on_media_event, NULL,
+		    pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port));
+
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
@@ -1982,6 +1987,9 @@ static void close_snd_dev(void)
 	PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
 			     "%s sound capture device",
 			     play_info.name, cap_info.name));
+
+	/* Unsubscribe from audio device events */
+	pjmedia_event_unsubscribe(NULL, &on_media_event, NULL, strm);
 
 	pjmedia_snd_port_disconnect(pjsua_var.snd_port);
 	pjmedia_snd_port_destroy(pjsua_var.snd_port);
@@ -2379,6 +2387,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(param && p_snd, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param->base.channel_count == 1, PJMEDIA_ENCCHANNEL);
 
     pool = pjsua_pool_create("extsnd%p", 512, 512);
     if (!pool)
@@ -2436,7 +2445,7 @@ PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
 
 on_return:
     if (status != PJ_SUCCESS) {
-	PJ_LOG(3,(THIS_FILE, "Failed creating extra sound device"));
+	pjsua_perror(THIS_FILE, "Failed creating extra sound device", status);
 	pjsua_ext_snd_dev_destroy(snd);
     }
 

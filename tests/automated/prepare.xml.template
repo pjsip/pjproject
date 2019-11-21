@@ -5,7 +5,7 @@
 		<Configure cmd="$(NOP)" />
 		<Build cmd="$(NOP)" />
 
-		<!-- GNU Makefile based scenario 
+		<!-- GNU Makefile based (basic features) scenario 
 		     Requirement:
 		      - none
 		  -->
@@ -20,6 +20,15 @@
 		 -->
 		<Test name="Configuring GNU IPP scenario" cmd="python configure.py -t gnu -o gnu-ipp.xml gnu-ipp.xml.template" />
 
+                <!-- GNU Makefile with video scenario.
+                     Requirement:
+                      - OpenH264, or
+                      - ffmpeg
+                      - SDL
+                  -->
+                <Test name="Configuring 2.x VIDEO with OpenH264" cmd="python configure.py -t gnu -o gnu-video.xml gnu-video.xml.template" />
+                <Test name="Configuring 2.x VIDEO with ffmpeg" cmd="python configure.py -t gnu -o gnu-video-ffmpeg.xml gnu-video-ffmpeg.xml.template" />
+
 		<!-- iPhone target.
 		     Requriement(s):
 		      - valid SDK is installed
@@ -27,19 +36,41 @@
 		 -->
 		<Test name="Configuring iPhone scenario" cmd="python configure.py -t gnu -o iphone.xml iphone.xml.template" />
 
+                <!-- iPhone 64 bit target.
+                     Requriement(s):
+                      - valid SDK is installed
+                 -->
+                <Test name="Configuring iPhone 64bit scenario" cmd="python configure.py -t gnu -o iphone64.xml iphone64.xml.template" />
+                <Test name="Configuring iPhone 64bit with IPv6 scenario" cmd="python configure.py -t gnu -o iphone64-ipv6.xml iphone64-ipv6.xml.template" />
+
+                <!-- Android target.
+                     Requriement(s):
+                      - valid NDK & SDK is installed
+                      - SWIG
+                 -->
+                <Test name="Configuring Android scenario" cmd="python configure.py -t gnu -o android.xml android.xml.template" />
+
+                <!-- Android 64 bit target.
+                     Requriement(s):
+                      - valid NDK & SDK is installed
+                      - SWIG
+                 -->
+                <Test name="Configuring Android 64bit scenario" cmd="python configure.py -t gnu -o android64.xml android64.xml.template" />
+                <Test name="Configuring Android 64bit with IPv6 scenario" cmd="python configure.py -t gnu -o android64-ipv6.xml android64-ipv6.xml.template" />
+
 		<!-- MSVC target.
 		     Requirements:
 		      - Build from VS successfully
 		      - VS paths are set
 
 		 -->
-		<Test name="Configuring Visual Studio for Win32" cmd="python configure.py -t vs -vstarget Release -o msvc-win32.xml -nopjsuatest msvc.xml.template" />
+		<!--Test name="Configuring Visual Studio for Win32" cmd="python configure.py -t vs -vstarget Release -o msvc-win32.xml -nopjsuatest msvc.xml.template" /-->
 
 		<!-- Symbian target.
 		     Requirement:
 		       - EPOCROOT (modify below)
 		-->
-		<Test name="Configuring Symbian scenario" cmd='CMD /C SET EPOCROOT=\S60\devices\S60_5th_Edition_SDK_v1.0&amp;&amp; devices -setdefault @S60_5th_Edition_SDK_v1.0:com.nokia.s60&amp;&amp; python configure.py -t s60 -s60target &quot;gcce urel&quot; -o symbian.xml symbian.xml.template' />
+		<!--Test name="Configuring Symbian scenario" cmd='CMD /C SET EPOCROOT=\S60\devices\S60_5th_Edition_SDK_v1.0&amp;&amp; devices -setdefault @S60_5th_Edition_SDK_v1.0:com.nokia.s60&amp;&amp; python configure.py -t s60 -s60target &quot;gcce urel&quot; -o symbian.xml symbian.xml.template' /-->
 
 	</Submit>
 	

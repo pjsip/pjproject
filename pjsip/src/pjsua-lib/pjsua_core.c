@@ -238,11 +238,21 @@ PJ_DEF(void) pjsua_turn_config_from_media_config(pj_pool_t *pool,
     if (pool == NULL) {
 	dst->turn_server = src->turn_server;
 	dst->turn_auth_cred = src->turn_auth_cred;
+
+#if PJ_HAS_SSL_SOCK
+	pj_memcpy(&dst->turn_tls_setting, &src->turn_tls_setting,
+		  sizeof(src->turn_tls_setting));
+#endif
     } else {
 	if (pj_stricmp(&dst->turn_server, &src->turn_server))
 	    pj_strdup(pool, &dst->turn_server, &src->turn_server);
 	pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred,
 	                      &src->turn_auth_cred);
+
+#if PJ_HAS_SSL_SOCK
+	pj_turn_sock_tls_cfg_dup(pool, &dst->turn_tls_setting,
+				 &src->turn_tls_setting);
+#endif
     }
 }
 
@@ -255,6 +265,11 @@ PJ_DEF(void) pjsua_turn_config_dup(pj_pool_t *pool,
 	pj_strdup(pool, &dst->turn_server, &src->turn_server);
 	pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred,
 	                      &src->turn_auth_cred);
+
+#if PJ_HAS_SSL_SOCK
+	pj_turn_sock_tls_cfg_dup(pool, &dst->turn_tls_setting,
+				 &src->turn_tls_setting);
+#endif
     }
 }
 
@@ -407,6 +422,9 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     pj_ice_sess_options_default(&cfg->ice_opt);
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
+#if PJ_HAS_SSL_SOCK
+    pj_turn_sock_tls_cfg_default(&cfg->turn_tls_setting);
+#endif
     cfg->vid_preview_enable_native = PJ_TRUE;
 }
 
@@ -1927,6 +1945,10 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    {
 		pjsua_acc_set_registration(i, PJ_FALSE);
 	    }
+#if PJ_HAS_SSL_SOCK
+	    pj_turn_sock_tls_cfg_wipe_keys(
+			      &pjsua_var.acc[i].cfg.turn_cfg.turn_tls_setting);
+#endif
 	}
 
 	/* Wait until all unregistrations are done (ticket #364) */
@@ -2484,6 +2506,8 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].type = type;
 	pjsua_var.tpdata[id].local_name = tp->local_name;
 	pjsua_var.tpdata[id].data.tp = tp;
+	if (cfg->bound_addr.slen)
+	    pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
 
@@ -3546,6 +3570,7 @@ static pj_status_t handle_ip_change_on_acc()
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t acc_done[PJSUA_MAX_ACC];
 
+    PJSUA_LOCK();
     /* Reset ip_change_active flag. */
     for (; i < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_var.acc[i].ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
@@ -3564,8 +3589,43 @@ static pj_status_t handle_ip_change_on_acc()
 	if (!acc->valid || (acc_done[i]))
 	    continue;
 
-	if (acc->regc) {	    	    
+	if (acc->regc) {
+	    int j = 0;
+	    pj_status_t found_restart_tp_fail = PJ_FALSE;
+
 	    pjsip_regc_get_info(acc->regc, &regc_info);
+	    
+	    /* Check if transport restart listener succeed. */
+	    for (; j < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++j) {
+		if (pjsua_var.tpdata[j].data.ptr != NULL && 
+		  pjsua_var.tpdata[j].restart_status != PJ_SUCCESS &&
+		  pjsua_var.tpdata[j].type == regc_info.transport->key.type)
+		{
+		    if ((pjsua_var.tpdata[j].data.factory
+					   == regc_info.transport->factory) ||
+			(pjsua_var.tpdata[j].data.tp
+					       == regc_info.transport)) 
+		    {
+			found_restart_tp_fail = PJ_TRUE;
+			break;
+		    }
+		}
+	    }
+
+	    if (found_restart_tp_fail) {
+		if (acc->ka_timer.id) {
+		    pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
+		    acc->ka_timer.id = PJ_FALSE;
+
+		    if (acc->ka_transport) {
+			pjsip_transport_dec_ref(acc->ka_transport);
+			acc->ka_transport = NULL;
+		    }
+		}
+		    
+		continue;
+	    }
+
 	    if ((regc_info.transport) &&
 		((regc_info.transport->flag & PJSIP_TRANSPORT_DATAGRAM) == 0))
 	    {
@@ -3660,6 +3720,7 @@ static pj_status_t handle_ip_change_on_acc()
 	    }
 	}
     }
+    PJSUA_UNLOCK();
     return status;
 }
 
@@ -3727,7 +3788,8 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 	int i = 0;
 	pj_bool_t all_done = PJ_TRUE;
 
-	pjsua_var.tpdata[id].is_restarting = PJ_FALSE;	
+	pjsua_var.tpdata[id].is_restarting = PJ_FALSE;
+	pjsua_var.tpdata[id].restart_status = status;
 	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 	    pjsua_ip_change_op_info info;
 
@@ -3772,12 +3834,14 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
     
     if (param->restart_listener) {
+	PJSUA_LOCK();
 	/* Restart listener/transport, handle_ip_change_on_acc() will
 	 * be called after listener restart is completed successfully.
 	 */
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
 	    if (pjsua_var.tpdata[i].data.ptr != NULL) {
 		pjsua_var.tpdata[i].is_restarting = PJ_TRUE;
+		pjsua_var.tpdata[i].restart_status = PJ_EUNKNOWN;
 	    }
 	}
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
@@ -3785,7 +3849,13 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 		status = restart_listener(i, param->restart_lis_delay);
 	    }
 	}
+        PJSUA_UNLOCK();
     } else {
+	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
+	    if (pjsua_var.tpdata[i].data.ptr != NULL) {
+		pjsua_var.tpdata[i].restart_status = PJ_SUCCESS;
+	    }
+	}
 	status = handle_ip_change_on_acc();
     }
 

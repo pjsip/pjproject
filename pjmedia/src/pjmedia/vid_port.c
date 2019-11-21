@@ -646,8 +646,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	/* Always need to create media port for passive role */
 	vp->pasv_port = pp = PJ_POOL_ZALLOC_T(pool, vid_pasv_port);
 	pp->vp = vp;
-	pp->base.get_frame = &vid_pasv_port_get_frame;
-	pp->base.put_frame = &vid_pasv_port_put_frame;
+	if (prm->vidparam.dir & PJMEDIA_DIR_CAPTURE)
+	    pp->base.get_frame = &vid_pasv_port_get_frame;
+	if (prm->vidparam.dir & PJMEDIA_DIR_RENDER)
+	    pp->base.put_frame = &vid_pasv_port_put_frame;
 	pjmedia_port_info_init2(&pp->base.info, &vp->dev_name,
 	                        PJMEDIA_SIG_VID_PORT,
 			        prm->vidparam.dir, &prm->vidparam.fmt);
@@ -729,6 +731,16 @@ pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_vid_port_subscribe_event(
+						pjmedia_vid_port *vp,
+						pjmedia_port *port)
+{
+    PJ_ASSERT_RETURN(vp && port, PJ_EINVAL);
+
+    /* Subscribe to port's events */
+    return pjmedia_event_subscribe(NULL, &client_port_event_cb, vp, port);
+}
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
 					      pjmedia_port *port,
@@ -988,11 +1000,11 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
              vp->conv.conv_param.dst.det.vid.size.w))
         {
             status = pjmedia_vid_dev_stream_set_cap(vp->strm,
-                                                    PJMEDIA_VID_DEV_CAP_FORMAT,
-                                                    &vp->conv.conv_param.dst);
+                                                PJMEDIA_VID_DEV_CAP_FORMAT,
+                                                &vp->conv.conv_param.dst);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
-                                      "video device"));
+                PJ_PERROR(3,(THIS_FILE, status,
+		    "failure in changing the format of the video device"));
                 PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
                                       status != PJMEDIA_EVID_ERR ? "success" :
                                       "failure"));
@@ -1000,7 +1012,7 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
             }
         }
         
-        if (vp->stream_role == ROLE_PASSIVE) {
+        if (vp->role == ROLE_ACTIVE && vp->stream_role == ROLE_PASSIVE) {
             pjmedia_clock_param clock_param;
             
             /**
@@ -1016,6 +1028,12 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
         
 	/* pjmedia_vid_port_start(vp); */
 	pjmedia_vid_dev_stream_start(vp->strm);
+
+	/* Update passive port info from the video stream */
+	if (vp->role == ROLE_PASSIVE) {
+	    pjmedia_format_copy(&vp->pasv_port->base.info.fmt,
+				&event->data.fmt_changed.new_fmt);
+	}
     }
     
     /* Republish the event, post the event to the event manager
@@ -1334,8 +1352,12 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
         /* We are passive and the stream is passive.
          * The decoding counterpart is in vid_pasv_port_put_frame().
          */
-	status = pjmedia_vid_dev_stream_get_frame(vp->strm, (vp->conv.conv?
-                                                  vp->frm_buf: frame));
+    	pjmedia_frame *get_frm = vp->conv.conv? vp->frm_buf : frame;
+
+    	if (vp->conv.conv)
+            get_frm->size = vp->frm_buf_size;
+
+    	status = pjmedia_vid_dev_stream_get_frame(vp->strm, get_frm);
 	if (status != PJ_SUCCESS)
 	    return status;
 

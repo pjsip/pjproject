@@ -45,6 +45,9 @@ static const char *stun_method_names[PJ_STUN_METHOD_MAX] =
     "Data",			/* 7 */
     "CreatePermission",		/* 8 */
     "ChannelBind",		/* 9 */
+    "Connect",			/* 10 */
+    "ConnectionBind",		/* 11 */
+    "ConnectionAttempt",	/* 12 */
 };
 
 static struct
@@ -476,11 +479,11 @@ static struct attr_desc mandatory_attr_desc[] =
 	NULL
     },
     {
-	/* ID 0x002a is not assigned */
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	/* PJ_STUN_ATTR_CONNECTION_ID, */
+	"CONNECTION-ID",
+	&decode_uint_attr,
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* ID 0x002b is not assigned */

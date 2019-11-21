@@ -452,10 +452,12 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
 	      pjsip_rx_data_get_info(rdata)));
 
-    /* Check if we have cached ACK request. Must not use the cached ACK
-     * if it's still marked as pending by transport (#1011)
+    /* Check if we have cached ACK request and if we have sent it.
+     * Must not use the cached ACK if it's still marked as pending
+     * by transport (#1011).
      */
     if (inv->last_ack && rdata->msg_info.cseq->cseq == inv->last_ack_cseq &&
+	inv->last_ack->tp_info.transport != NULL &&
 	!inv->last_ack->is_pending)
     {
 	pjsip_tx_data_add_ref(inv->last_ack);
@@ -1179,13 +1181,21 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 	    pjmedia_sdp_neg *neg;
 
 	    /* Local SDP must be valid! */
-	    PJ_ASSERT_RETURN((status=pjmedia_sdp_validate(l_sdp))==PJ_SUCCESS,
-			     status);
+	    status = pjmedia_sdp_validate(l_sdp);
+	    if (status != PJ_SUCCESS) {
+		pj_assert(!"Invalid local SDP");
+		code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+		goto on_return;
+	    }
 
 	    /* Create SDP negotiator */
 	    status = pjmedia_sdp_neg_create_w_remote_offer(
 			    tmp_pool, l_sdp, r_sdp, &neg);
-	    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	    if (status != PJ_SUCCESS) {
+		pj_assert(!"Failed creating SDP negotiator");
+		code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+		goto on_return;
+	    }
 
 	    /* Negotiate SDP */
 	    status = pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
@@ -1937,7 +1947,7 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 
     status = pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
 
-    PJ_LOG(5,(inv->obj_name, "SDP negotiation done, status=%d", status));
+    PJ_PERROR(4,(inv->obj_name, status, "SDP negotiation done"));
 
     if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
@@ -4185,6 +4195,29 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 
 	    if (tsx->status_code != 100) {
 
+		if (inv->role == PJSIP_ROLE_UAC) {
+		    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+		    pjsip_allow_hdr *allow = NULL;
+		    pjsip_msg *msg = rdata->msg_info.msg;
+
+		    if (msg) {
+			allow = (pjsip_allow_hdr*) pjsip_msg_find_hdr(msg, 
+                                 PJSIP_H_ALLOW, NULL);
+		    }
+		    if (allow) {
+			unsigned i;
+			const pj_str_t STR_UPDATE = { "UPDATE", 6 };
+
+			for (i=0; i<allow->count; ++i) {
+			    if (pj_stricmp(&allow->values[i], &STR_UPDATE)==0) {
+				/* UPDATE is present in Allow */
+				inv->options |= PJSIP_INV_SUPPORT_UPDATE;
+				break;
+			    }
+			}
+		    }
+		}
+
 		if (dlg->remote.info->tag.slen)
 		    inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 
@@ -4906,12 +4939,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
                     return;
                 }
 
-                /* If application lets us answer the re-INVITE,
-                 * application must set the SDP answer with
+                /* If application lets us answer the re-INVITE which contains 
+		 * SDP, application must set the SDP answer with
                  * #pjsip_inv_set_sdp_answer().
                  */
-                if (pjmedia_sdp_neg_get_state(inv->neg) !=
-		    PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+                if (sdp_info->sdp && 
+		    (pjmedia_sdp_neg_get_state(inv->neg) !=
+			PJMEDIA_SDP_NEG_STATE_WAIT_NEGO))
                 {
                     status = PJ_EINVALIDOP;
                 }

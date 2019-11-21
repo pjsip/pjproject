@@ -208,6 +208,10 @@ static int compliance_test(pj_bool_t allow_concur)
     // Randomize send_buf.
     pj_create_random_string(send_buf, bufsize);
 
+    // Init operation keys.
+    pj_ioqueue_op_key_init(&read_op, sizeof(read_op));
+    pj_ioqueue_op_key_init(&write_op, sizeof(write_op));
+
     // Register reading from ioqueue.
     TRACE_("start recvfrom...");
     pj_bzero(&addr, sizeof(addr));
@@ -713,6 +717,8 @@ static int bench_test(pj_bool_t allow_concur, int bufsize,
 	    goto on_error;
 	}
         bytes = bufsize;
+        pj_ioqueue_op_key_init(&inactive_read_op[i],
+        		       sizeof(inactive_read_op[i]));
 	rc = pj_ioqueue_recv(keys[i], &inactive_read_op[i], recv_buf, &bytes, 0);
 	if (rc != PJ_EPENDING) {
 	    pj_sock_close(inactive_sock[i]);
@@ -750,6 +756,10 @@ static int bench_test(pj_bool_t allow_concur, int bufsize,
 
 	// Randomize send buffer.
 	pj_create_random_string(send_buf, bufsize);
+
+        // Init operation keys.
+        pj_ioqueue_op_key_init(&read_op, sizeof(read_op));
+        pj_ioqueue_op_key_init(&write_op, sizeof(write_op));
 
 	// Start reading on the server side.
         bytes = bufsize;

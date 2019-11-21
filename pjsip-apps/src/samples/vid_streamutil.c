@@ -954,6 +954,7 @@ on_exit:
 	tp = pjmedia_vid_stream_get_transport(stream);
 	pjmedia_vid_stream_destroy(stream);
 	
+	pjmedia_transport_media_stop(tp);
 	pjmedia_transport_close(tp);
     }
 

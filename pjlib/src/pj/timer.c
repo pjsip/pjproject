@@ -502,7 +502,7 @@ static pj_status_t schedule_w_grp_lock(pj_timer_heap_t *ht,
     PJ_ASSERT_RETURN(entry->cb != NULL, PJ_EINVAL);
 
     /* Prevent same entry from being scheduled more than once */
-    PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
+    //PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
 
 #if PJ_TIMER_DEBUG
     entry->src_file = src_file;
@@ -512,6 +512,15 @@ static pj_status_t schedule_w_grp_lock(pj_timer_heap_t *ht,
     PJ_TIME_VAL_ADD(expires, *delay);
     
     lock_timer_heap(ht);
+
+    /* Prevent same entry from being scheduled more than once */
+    if (pj_timer_entry_running(entry)) {
+	unlock_timer_heap(ht);
+	PJ_LOG(3,(THIS_FILE, "Bug! Rescheduling outstanding entry (%p)",
+		  entry));
+	return PJ_EINVALIDOP;
+    }
+
     status = schedule_entry(ht, entry, &expires);
     if (status == PJ_SUCCESS) {
 	if (set_id)
@@ -580,13 +589,16 @@ static int cancel_timer(pj_timer_heap_t *ht,
 
     lock_timer_heap(ht);
     count = cancel(ht, entry, flags | F_DONT_CALL);
-    if (flags & F_SET_ID) {
-	entry->id = id_val;
-    }
-    if (entry->_grp_lock) {
-	pj_grp_lock_t *grp_lock = entry->_grp_lock;
-	entry->_grp_lock = NULL;
-	pj_grp_lock_dec_ref(grp_lock);
+    if (count > 0) {
+	/* Timer entry found & cancelled */
+	if (flags & F_SET_ID) {
+	    entry->id = id_val;
+	}
+	if (entry->_grp_lock) {
+	    pj_grp_lock_t *grp_lock = entry->_grp_lock;
+	    entry->_grp_lock = NULL;
+	    pj_grp_lock_dec_ref(grp_lock);
+	}
     }
     unlock_timer_heap(ht);
 
@@ -630,7 +642,8 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
     {
 	pj_timer_entry *node = remove_node(ht, 0);
 	/* Avoid re-use of this timer until the callback is done. */
-	pj_timer_id_t node_timer_id = pop_freelist(ht);
+	///Not necessary, even causes problem (see also #2176).
+	///pj_timer_id_t node_timer_id = pop_freelist(ht);
 	pj_grp_lock_t *grp_lock;
 
 	++count;
@@ -650,7 +663,7 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 
 	lock_timer_heap(ht);
 	/* Now, the timer is really free for re-use. */
-	push_freelist(ht, node_timer_id);
+	///push_freelist(ht, node_timer_id);
     }
     if (ht->cur_size && next_delay) {
 	*next_delay = ht->heap[0]->_timer_value;

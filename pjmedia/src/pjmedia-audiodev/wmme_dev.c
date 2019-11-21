@@ -23,6 +23,7 @@
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pj/unicode.h>
+#include <pjmedia/event.h>
 
 #if PJMEDIA_AUDIO_DEV_HAS_WMME
 
@@ -893,6 +894,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     pj_status_t status = PJ_SUCCESS;
     static unsigned rec_cnt, play_cnt;
     enum { MAX_BURST = 1000 };
+    pjmedia_dir signalled_dir = PJMEDIA_DIR_NONE;
 
     /* Suppress compile warning for unused debugging vars */
     PJ_UNUSED_ARG(rec_cnt);
@@ -927,7 +929,6 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     {
 
 	DWORD rc;
-	pjmedia_dir signalled_dir;
 
 	/* Swap hWaveIn and hWaveOut to get equal opportunity for both */
 	if (eventCount==3) {
@@ -1046,6 +1047,8 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 				  sizeof(WAVEHDR));
 		if (mr != MMSYSERR_NOERROR) {
 		    status = PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
+		    PJ_PERROR(3, (THIS_FILE, status,
+				  "Failed to write audio frame for playback"));
 		    break;
 		}
 
@@ -1148,6 +1151,8 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 				     sizeof(WAVEHDR));
 		if (mr != MMSYSERR_NOERROR) {
 		    status = PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
+		    PJ_PERROR(3, (THIS_FILE, status,
+				  "Failed to add recording buffer"));
 		    break;
 		}
 
@@ -1168,6 +1173,31 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     }
 
     PJ_LOG(5,(THIS_FILE, "WMME: thread stopping.."));
+    
+    if (status != PJ_SUCCESS) {
+	pjmedia_event e;
+	pj_timestamp *ts;
+	pjmedia_aud_param param;
+
+	PJ_PERROR(3, (THIS_FILE, status, "WMME thread stopped due to error"));
+
+	/* Broadcast WMME error */
+	pj_assert(signalled_dir != PJMEDIA_DIR_NONE);
+	ts = (signalled_dir==PJMEDIA_DIR_PLAYBACK)?
+	     &strm->play_strm.timestamp : &strm->rec_strm.timestamp;
+	pjmedia_event_init(&e, PJMEDIA_EVENT_AUD_DEV_ERROR, ts, &strm->base);
+	e.data.aud_dev_err.dir = signalled_dir;
+	e.data.aud_dev_err.status = status;
+	e.data.aud_dev_err.id = PJMEDIA_AUD_INVALID_DEV;
+	if (pjmedia_aud_stream_get_param(&strm->base, &param) == PJ_SUCCESS) {
+	    e.data.aud_dev_err.id = (signalled_dir==PJMEDIA_DIR_PLAYBACK)?
+				    param.play_id : param.rec_id;
+	}
+
+	pjmedia_event_publish(NULL, &strm->base, &e,
+			      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+    }
+
     return 0;
 }
 

@@ -276,7 +276,17 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	    /* Target is an IP address, no need to resolve */
 	    svr_addr.count = 1;
 	    if (ip_addr_ver == 4) {
-	        if (af == pj_AF_INET6()) {
+	        if (af == pj_AF_INET()) {
+		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
+				     NULL, 0);
+		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
+			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
+		}
+
+	        if (af == pj_AF_INET6() ||
+	            (type != PJSIP_TRANSPORT_LOOP_DGRAM &&
+	             PJSIP_MAX_RESOLVED_ADDRESSES > 1))
+	        {
 	            /* Generate a synthesized IPv6 address, if possible. */
 		    unsigned int count = 1;
 		    pj_addrinfo ai[1];
@@ -287,22 +297,23 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 		    if (status2 == PJ_SUCCESS && count > 0 &&
 		    	ai[0].ai_addr.addr.sa_family == pj_AF_INET6())
 		    {
+		    	unsigned idx = 0;
+		    	
+		    	if (af != pj_AF_INET6()) {
+		    	    /* Return IPv4 and IPv6 addresses */
+		    	    idx = 1;
+		    	    svr_addr.count++;
+		    	}
 			pj_sockaddr_init(pj_AF_INET6(),
-					 &svr_addr.entry[0].addr,
+					 &svr_addr.entry[idx].addr,
 					 NULL, 0);
-			svr_addr.entry[0].addr.ipv6.sin6_addr =
+			svr_addr.entry[idx].addr.ipv6.sin6_addr =
 			    ai[0].ai_addr.ipv6.sin6_addr;
-		    } else {
-		        pj_sockaddr_init(pj_AF_INET(),
-		        		 &svr_addr.entry[0].addr, NULL, 0);
-		        pj_inet_pton(pj_AF_INET(), &target->addr.host,
-			     	     &svr_addr.entry[0].addr.ipv4.sin_addr);
+		    } else if (af == pj_AF_INET6()) {
+		    	svr_addr.count = 0;
+			status = PJ_ERESOLVE;
+			goto on_error;
 		    }
-		} else {
-		    pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
-				     NULL, 0);
-		    pj_inet_pton(pj_AF_INET(), &target->addr.host,
-			     	 &svr_addr.entry[0].addr.ipv4.sin_addr);
 		}
 	    } else {
 		pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
@@ -512,12 +523,10 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 
 on_error:
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	PJ_LOG(4,(THIS_FILE, "Failed to resolve '%.*s'. Err=%d (%s)",
-			     (int)target->addr.host.slen,
-			     target->addr.host.ptr,
-			     status,
-			     pj_strerror(status,errmsg,sizeof(errmsg)).ptr));
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Failed to resolve '%.*s'",
+		     (int)target->addr.host.slen,
+		     target->addr.host.ptr));
 	(*cb)(status, token, NULL);
 	return;
     }
@@ -567,12 +576,8 @@ static void dns_a_callback(void *user_data,
     }
     
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS A record resolution failed: %s", 
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS A record resolution failed"));
 
 	query->last_error = status;
     }
@@ -630,12 +635,8 @@ static void dns_aaaa_callback(void *user_data,
     }
     
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS AAAA record resolution failed: %s", 
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS AAAA record resolution failed"));
 
 	query->last_error = status;
     }
@@ -660,12 +661,8 @@ static void srv_resolver_cb(void *user_data,
     unsigned i;
 
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	/* Log error */
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(query->objname, "DNS A/AAAA record resolution failed: %s",
-		  errmsg));
+	PJ_PERROR(4,(query->objname, status,
+		     "DNS A/AAAA record resolution failed"));
 
 	/* Call the callback */
 	(*query->cb)(status, query->token, NULL);

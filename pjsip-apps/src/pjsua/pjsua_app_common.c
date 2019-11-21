@@ -48,10 +48,10 @@ int my_atoi(const char *cs)
 
     pj_cstr(&s, cs);
     if (cs[0] == '-') {
-	s.ptr++, s.slen--;
+	s.ptr++; s.slen--;
 	return 0 - (int)pj_strtoul(&s);
     } else if (cs[0] == '+') {
-	s.ptr++, s.slen--;
+	s.ptr++; s.slen--;
 	return (int)pj_strtoul(&s);
     } else {
 	return (int)pj_strtoul(&s);
@@ -62,7 +62,7 @@ int my_atoi(const char *cs)
  * Find next call when current call is disconnected or when user
  * press ']'
  */
-pj_bool_t find_next_call()
+pj_bool_t find_next_call(void)
 {
     int i, max;
 
@@ -85,7 +85,7 @@ pj_bool_t find_next_call()
     return PJ_FALSE;
 }
 
-pj_bool_t find_prev_call()
+pj_bool_t find_prev_call(void)
 {
     int i, max;
 
@@ -328,7 +328,7 @@ void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title)
 			      (st_len<0? " ..." : "")));
 }
 
-void vid_list_devs()
+void vid_list_devs(void)
 {
     unsigned i, count;
     pjmedia_vid_dev_info vdi;

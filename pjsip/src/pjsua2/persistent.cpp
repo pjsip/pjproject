@@ -27,98 +27,103 @@ bool PersistentDocument::hasUnread() const
     return getRootContainer().hasUnread();
 }
 
-string PersistentDocument::unreadName() const throw(Error)
+string PersistentDocument::unreadName() const PJSUA2_THROW(Error)
 {
     return getRootContainer().unreadName();
 }
 
-int PersistentDocument::readInt(const string &name) const throw(Error)
+int PersistentDocument::readInt(const string &name) const PJSUA2_THROW(Error)
 {
     return (int)getRootContainer().readNumber(name);
 }
 
-float PersistentDocument::readNumber(const string &name) const throw(Error)
+float PersistentDocument::readNumber(const string &name) const
+				     PJSUA2_THROW(Error)
 {
     return getRootContainer().readNumber(name);
 }
 
-bool PersistentDocument::readBool(const string &name) const throw(Error)
+bool PersistentDocument::readBool(const string &name) const
+				  PJSUA2_THROW(Error)
 {
     return getRootContainer().readBool(name);
 }
 
-string PersistentDocument::readString(const string &name) const throw(Error)
+string PersistentDocument::readString(const string &name) const
+				      PJSUA2_THROW(Error)
 {
     return getRootContainer().readString(name);
 }
 
 StringVector PersistentDocument::readStringVector(const string &name) const
-						  throw(Error)
+						  PJSUA2_THROW(Error)
 {
     return getRootContainer().readStringVector(name);
 }
 
-void PersistentDocument::readObject(PersistentObject &obj) const throw(Error)
+void PersistentDocument::readObject(PersistentObject &obj) const
+				    PJSUA2_THROW(Error)
 {
     getRootContainer().readObject(obj);
 }
 
 ContainerNode PersistentDocument::readContainer(const string &name) const
-					        throw(Error)
+					        PJSUA2_THROW(Error)
 {
     return getRootContainer().readContainer(name);
 }
 
 ContainerNode PersistentDocument::readArray(const string &name) const
-					    throw(Error)
+					    PJSUA2_THROW(Error)
 {
     return getRootContainer().readArray(name);
 }
 
 void PersistentDocument::writeNumber(const string &name,
-				     float num) throw(Error)
+				     float num) PJSUA2_THROW(Error)
 {
     getRootContainer().writeNumber(name, num);
 }
 
 void PersistentDocument::writeInt(const string &name,
-				  int num) throw(Error)
+				  int num) PJSUA2_THROW(Error)
 {
     getRootContainer().writeNumber(name, (float)num);
 }
 
 void PersistentDocument::writeBool(const string &name,
-				   bool value) throw(Error)
+				   bool value) PJSUA2_THROW(Error)
 {
     getRootContainer().writeBool(name, value);
 }
 
 void PersistentDocument::writeString(const string &name,
-                                     const string &value) throw(Error)
+                                     const string &value) PJSUA2_THROW(Error)
 {
     getRootContainer().writeString(name, value);
 }
 
 void PersistentDocument::writeStringVector(const string &name,
                                            const StringVector &value)
-					   throw(Error)
+					   PJSUA2_THROW(Error)
 {
     getRootContainer().writeStringVector(name, value);
 }
 
-void PersistentDocument::writeObject(const PersistentObject &obj) throw(Error)
+void PersistentDocument::writeObject(const PersistentObject &obj)
+				     PJSUA2_THROW(Error)
 {
     getRootContainer().writeObject(obj);
 }
 
 ContainerNode PersistentDocument::writeNewContainer(const string &name)
-						    throw(Error)
+						    PJSUA2_THROW(Error)
 {
     return getRootContainer().writeNewContainer(name);
 }
 
 ContainerNode PersistentDocument::writeNewArray(const string &name)
-						    throw(Error)
+						    PJSUA2_THROW(Error)
 {
     return getRootContainer().writeNewArray(name);
 }
@@ -130,98 +135,100 @@ bool ContainerNode::hasUnread() const
     return op->hasUnread(this);
 }
 
-string ContainerNode::unreadName() const throw(Error)
+string ContainerNode::unreadName() const PJSUA2_THROW(Error)
 {
     return op->unreadName(this);
 }
 
-int ContainerNode::readInt(const string &name) const throw(Error)
+int ContainerNode::readInt(const string &name) const PJSUA2_THROW(Error)
 {
     return (int)op->readNumber(this, name);
 }
 
-float ContainerNode::readNumber(const string &name) const throw(Error)
+float ContainerNode::readNumber(const string &name) const PJSUA2_THROW(Error)
 {
     return op->readNumber(this, name);
 }
 
-bool ContainerNode::readBool(const string &name) const throw(Error)
+bool ContainerNode::readBool(const string &name) const PJSUA2_THROW(Error)
 {
     return op->readBool(this, name);
 }
 
-string ContainerNode::readString(const string &name) const throw(Error)
+string ContainerNode::readString(const string &name) const PJSUA2_THROW(Error)
 {
     return op->readString(this, name);
 }
 
 StringVector ContainerNode::readStringVector(const string &name) const
-					     throw(Error)
+					     PJSUA2_THROW(Error)
 {
     return op->readStringVector(this, name);
 }
 
-void ContainerNode::readObject(PersistentObject &obj) const throw(Error)
+void ContainerNode::readObject(PersistentObject &obj) const
+			       PJSUA2_THROW(Error)
 {
     obj.readObject(*this);
 }
 
 ContainerNode ContainerNode::readContainer(const string &name) const
-					   throw(Error)
+					   PJSUA2_THROW(Error)
 {
     return op->readContainer(this, name);
 }
 
 ContainerNode ContainerNode::readArray(const string &name) const
-					   throw(Error)
+					   PJSUA2_THROW(Error)
 {
     return op->readArray(this, name);
 }
 
 void ContainerNode::writeNumber(const string &name,
-				float num) throw(Error)
+				float num) PJSUA2_THROW(Error)
 {
     return op->writeNumber(this, name, num);
 }
 
 void ContainerNode::writeInt(const string &name,
-			     int num) throw(Error)
+			     int num) PJSUA2_THROW(Error)
 {
     return op->writeNumber(this, name, (float)num);
 }
 
 void ContainerNode::writeBool(const string &name,
-			      bool value) throw(Error)
+			      bool value) PJSUA2_THROW(Error)
 {
     return op->writeBool(this, name, value);
 }
 
 void ContainerNode::writeString(const string &name,
-				const string &value) throw(Error)
+				const string &value) PJSUA2_THROW(Error)
 {
     return op->writeString(this, name, value);
 }
 
 void ContainerNode::writeStringVector(const string &name,
 				      const StringVector &value)
-				      throw(Error)
+				      PJSUA2_THROW(Error)
 {
     return op->writeStringVector(this, name, value);
 }
 
-void ContainerNode::writeObject(const PersistentObject &obj) throw(Error)
+void ContainerNode::writeObject(const PersistentObject &obj)
+				PJSUA2_THROW(Error)
 {
     obj.writeObject(*this);
 }
 
 ContainerNode ContainerNode::writeNewContainer(const string &name)
-					       throw(Error)
+					       PJSUA2_THROW(Error)
 {
     return op->writeNewContainer(this, name);
 }
 
 ContainerNode ContainerNode::writeNewArray(const string &name)
-					   throw(Error)
+					   PJSUA2_THROW(Error)
 {
     return op->writeNewArray(this, name);
 }

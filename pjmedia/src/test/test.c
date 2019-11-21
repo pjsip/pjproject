@@ -69,10 +69,11 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
+    pjmedia_event_mgr_create(pool, 0, NULL);
+
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     pjmedia_converter_mgr_create(pool, NULL);
-    pjmedia_event_mgr_create(pool, 0, NULL);
     pjmedia_vid_codec_mgr_create(pool, NULL);
 #endif
 
@@ -116,9 +117,10 @@ on_return:
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr_instance());
     pjmedia_converter_mgr_destroy(pjmedia_converter_mgr_instance());
-    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
     pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr_instance());
 #endif
+
+    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
 
     pj_pool_release(pool);
     pj_caching_pool_destroy(&caching_pool);

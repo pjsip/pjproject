@@ -358,8 +358,7 @@
  *    implementation to be used.
  *  - #PJMEDIA_RESAMPLE_LIBSAMPLERATE, to use libsamplerate implementation
  *    (a.k.a. Secret Rabbit Code).
- *  - #PJMEDIA_RESAMPLE_SPEEX, to use experimental sample rate conversion in
- *    Speex library.
+ *  - #PJMEDIA_RESAMPLE_SPEEX, to use sample rate conversion in Speex library.
  *  - #PJMEDIA_RESAMPLE_NONE, to disable sample rate conversion. Any calls to
  *    resample function will return error.
  *
@@ -1223,6 +1222,30 @@
 #endif
 
 
+/**
+ * Specify the number of identical consecutive error that will be ignored when 
+ * receiving RTP/RTCP data before the library tries to restart the transport.
+ *
+ * When receiving RTP/RTCP data, the library will ignore error besides 
+ * PJ_EPENDING or PJ_ECANCELLED and continue the loop to receive the data. 
+ * If the OS always return error, then the loop will continue non stop.
+ * This setting will limit the number of the identical consecutive error, 
+ * before the library start to restart the transport. If error still happens
+ * after transport restart, then PJMEDIA_EVENT_MEDIA_TP_ERR event will be 
+ * publish as a notification.
+ *
+ * If PJ_ESOCKETSTOP is raised, then transport will be restarted regardless
+ * of this setting.
+ * 
+ * To always ignore the error when receving RTP/RTCP, set this to 0.
+ *
+ * Default : 20
+ */
+#ifndef PJMEDIA_IGNORE_RECV_ERR_CNT
+#   define PJMEDIA_IGNORE_RECV_ERR_CNT		20
+#endif
+
+
 /*
  * .... new stuffs ...
  */
@@ -1493,6 +1516,7 @@
 #   define PJMEDIA_HAS_DTMF_FLASH			1
 #endif
 
+
 /**
  * Specify the number of keyframe needed to be sent after the stream is 
  * created. Setting this to 0 will disable it.
@@ -1503,6 +1527,7 @@
 #   define PJMEDIA_VID_STREAM_START_KEYFRAME_CNT	5
 #endif
 
+
 /**
  * Specify the interval to send keyframe after the stream is created, in msec.
  *
@@ -1511,6 +1536,21 @@
 #ifndef PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC
 #   define PJMEDIA_VID_STREAM_START_KEYFRAME_INTERVAL_MSEC  1000
 #endif
+
+
+/**
+ * Specify minimum delay of video decoding, in milliseconds. Lower value may
+ * degrade video quality significantly in a bad network environment (e.g:
+ * with persistent late and out-of-order RTP packets). Note that the value
+ * must be lower than jitter buffer maximum delay (configurable via
+ * pjmedia_stream_info.jb_max or pjsua_media_config.jb_max).
+ *
+ * Default : 100
+ */
+#ifndef PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC
+#   define PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC	    100
+#endif
+
 
 
 /**

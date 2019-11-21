@@ -523,7 +523,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Create asynchronous DNS resolver. */
     status = pjsip_resolver_create(endpt->pool, &endpt->resolver);
     if (status != PJ_SUCCESS) {
-	PJ_LOG(4, (THIS_FILE, "Error creating resolver instance"));
+	PJ_PERROR(4, (THIS_FILE, status,
+		      "Error creating resolver instance"));
 	goto on_error;
     }
 
@@ -567,7 +568,7 @@ on_error:
     }
     pj_pool_release( endpt->pool );
 
-    PJ_LOG(4, (THIS_FILE, "Error creating endpoint"));
+    PJ_PERROR(4, (THIS_FILE, status, "Error creating endpoint"));
     return status;
 }
 
@@ -579,7 +580,7 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     pjsip_module *mod;
     exit_cb *ecb;
 
-    PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
+    PJ_LOG(5, (THIS_FILE, "Destroying endpoint instance.."));
 
     /* Phase 1: stop all modules */
     mod = endpt->module_list.prev;
@@ -799,6 +800,42 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
     PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
 			 entry, delay->sec, delay->msec));
     return pj_timer_heap_schedule( endpt->timer_heap, entry, delay );
+}
+#endif
+
+/*
+ * Schedule timer with group lock.
+ */
+#if PJ_TIMER_DEBUG
+PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock_dbg(
+						    pjsip_endpoint *endpt,
+						    pj_timer_entry *entry,
+						    const pj_time_val *delay,
+						    int id_val,
+						    pj_grp_lock_t *grp_lock,
+						    const char *src_file,
+						    int src_line)
+{
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer_w_grp_lock"
+			  "(entry=%p, delay=%u.%u, grp_lock=%p)",
+			  entry, delay->sec, delay->msec, grp_lock));
+    return pj_timer_heap_schedule_w_grp_lock_dbg(endpt->timer_heap, entry,
+						 delay, id_val, grp_lock,
+						 src_file, src_line);
+}
+#else
+PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_w_grp_lock(
+						 pjsip_endpoint *endpt,
+						 pj_timer_entry *entry,
+						 const pj_time_val *delay,
+						 int id_val,
+						 pj_grp_lock_t *grp_lock )
+{
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer_w_grp_lock"
+			  "(entry=%p, delay=%u.%u, grp_lock=%p)",
+			  entry, delay->sec, delay->msec, grp_lock));
+    return pj_timer_heap_schedule_w_grp_lock( endpt->timer_heap, entry,
+					      delay, id_val, grp_lock );
 }
 #endif
 

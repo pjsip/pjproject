@@ -235,10 +235,8 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 					   &addrlen);
 
 		if (status != PJ_SUCCESS) {
-		    char errmsg[PJ_ERR_MSG_SIZE];
-
-		    PJ_LOG(4,(THIS_FILE, "recvfrom() error ignored: %s",
-			      pj_strerror(status, errmsg,sizeof(errmsg)).ptr));
+		    PJ_PERROR(4,(THIS_FILE, status,
+				 "recvfrom() error ignored"));
 
 		    /* Ignore non-PJ_SUCCESS status.
 		     * It possible that other SIP entity is currently 
@@ -252,10 +250,8 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 
 		status = pjstun_parse_msg(recv_buf, len, &msg);
 		if (status != PJ_SUCCESS) {
-		    char errmsg[PJ_ERR_MSG_SIZE];
-
-		    PJ_LOG(4,(THIS_FILE, "STUN parsing error ignored: %s",
-			      pj_strerror(status, errmsg,sizeof(errmsg)).ptr));
+		    PJ_PERROR(4,(THIS_FILE, status,
+				 "STUN parsing error ignored"));
 
 		    /* Also ignore non-successful parsing. This may not
 		     * be STUN response at all. See the comment above.

@@ -21,7 +21,7 @@ else
     LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.jnilib
   else
     ifeq ($(OS),android)
-      LIBPJSUA2_SO=android/app/src/main/jniLibs/armeabi/libpjsua2.so
+      LIBPJSUA2_SO=android/app/src/main/jniLibs/$(TARGET_ARCH)/libpjsua2.so
     else
       LIBPJSUA2_SO=$(OUT_DIR)/libpjsua2.so
     endif
@@ -162,7 +162,7 @@ all: $(LIBPJSUA2_SO) java
 
 $(LIBPJSUA2_SO): $(OUT_DIR)/pjsua2_wrap.o
 ifeq ($(OS),android)
-	mkdir -p android/app/src/main/jniLibs/armeabi
+	mkdir -p android/app/src/main/jniLibs/$(TARGET_ARCH)
 endif
 	$(PJ_CXX) -shared -o $(LIBPJSUA2_SO) $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS) $(MY_LDFLAGS)

@@ -471,7 +471,8 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     if (status != PJ_SUCCESS) {
 	char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 	pj_sockaddr_print(src_addr, addrinfo, sizeof(addrinfo), 3);
-	PJ_LOG(4,(THIS_FILE, "Error parsing query from %s", addrinfo));
+	PJ_PERROR(4,(THIS_FILE, status, "Error parsing query from %s",
+		     addrinfo));
 	goto on_return;
     }
 
@@ -553,7 +554,7 @@ send_pkt:
     status = pj_activesock_sendto(srv->asock, &srv->send_key, data, &pkt_len,
 				  0, src_addr, addr_len);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	PJ_LOG(4,(THIS_FILE, "Error sending answer, status=%d", status));
+	PJ_PERROR(4,(THIS_FILE, status, "Error sending answer"));
 	goto on_return;
     }
 

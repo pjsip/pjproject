@@ -252,9 +252,9 @@ PJ_DECL(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
  *
  * @param ht        The timer heap.
  * @param entry     The entry to be registered.
+ * @param delay     The interval to expire.
  * @param id_val    The value to be set to the "id" field of the timer entry
  * 		    once the timer is scheduled.
- * @param delay     The interval to expire.
  * @param grp_lock  The group lock.
  *
  * @return          PJ_SUCCESS, or the appropriate error code.

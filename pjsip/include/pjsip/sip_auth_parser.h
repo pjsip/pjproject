@@ -64,6 +64,7 @@ extern const pj_str_t	pjsip_USERNAME_STR, /**< "username" string const.   */
 			pjsip_FALSE_STR,    /**< "false" string const.	    */
 			pjsip_DIGEST_STR,   /**< "digest" string const.	    */
 			pjsip_PGP_STR,	    /**< "pgp" string const.	    */
+			pjsip_BEARER_STR,   /**< "bearer" string const.     */
 			pjsip_MD5_STR,	    /**< "md5" string const.	    */
 			pjsip_AUTH_STR;	    /**< "auth" string const.	    */
 

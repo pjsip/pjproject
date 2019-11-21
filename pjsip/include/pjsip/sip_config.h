@@ -433,7 +433,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * This option can also be controlled at run-time by the
  * \a accept_multiple_sdp_answers setting in pjsip_cfg_t.
  *
- * Default is PJ_FALSE.
+ * Default is PJ_TRUE.
  */
 #ifndef PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS
 #   define PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS        PJ_TRUE
@@ -692,7 +692,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * will be used as the default value for the "reuse_addr" field in the
  * pjsip_tcp_transport_cfg structure.
  *
- * Default is FALSE on Windows and TRUE on non-Windows.
+ * Default is 0 on Windows and 1 on non-Windows.
  *
  * @see PJSIP_TLS_TRANSPORT_REUSEADDR
  */
@@ -718,7 +718,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * pj_getipinterface()/pj_gethostip(), but the address will not be
  * able to accept connections. 
  *
- * Default is FALSE (listener will be created).
+ * Default is 0 (listener will be created).
  */
 #ifndef PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER
 #   define PJSIP_TCP_TRANSPORT_DONT_CREATE_LISTENER 0
@@ -738,7 +738,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * pj_getipinterface()/pj_gethostip(), but the address will not be
  * able to accept connections.
  *
- * Default is FALSE (listener will be created).
+ * Default is 0 (listener will be created).
  */
 #ifndef PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER
 #   define PJSIP_TLS_TRANSPORT_DONT_CREATE_LISTENER 0
@@ -881,7 +881,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /**
  * Specify whether TLS listener should use SO_REUSEADDR option.
  *
- * Default is FALSE on Windows and TRUE on non-Windows.
+ * Default is 0 on Windows and 1 on non-Windows.
  *
  * @see PJSIP_TCP_TRANSPORT_REUSEADDR
  */

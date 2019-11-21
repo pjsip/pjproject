@@ -197,6 +197,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 #define PJMEDIA_SIG_CLASS_VID_OTHER(c,d) PJMEDIA_SIGNATURE('V','O',c,d)
 #define PJMEDIA_SIG_IS_CLASS_VID_OTHER(s) ((s)>>24=='V' && (s)>>16=='O')
 
+#define PJMEDIA_SIG_VID_CONF		PJMEDIA_SIG_CLASS_VID_OTHER('C','F')
 #define PJMEDIA_SIG_VID_PORT		PJMEDIA_SIG_CLASS_VID_OTHER('P','O')
 
 

@@ -1593,11 +1593,8 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 	    return;
 	} else {
 	    /* Error occurs */
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(resolver->name.ptr,
-		      "Error transmitting request: %s", errmsg));
+	    PJ_PERROR(4,(resolver->name.ptr, status,
+			 "Error transmitting request"));
 
 	    /* Let it fallback to timeout section below */
 	}
@@ -1685,11 +1682,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Check for errors */
     if (bytes_read < 0) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
 	status = (pj_status_t)-bytes_read;
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(resolver->name.ptr, "DNS resolver read error: %s", errmsg));
+	PJ_PERROR(4,(resolver->name.ptr, status, "DNS resolver read error"));
 
 	goto read_next_packet;
     }
@@ -1726,14 +1720,10 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     /* Handle parse error */
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(3,(resolver->name.ptr, 
-		  "Error parsing DNS response from %s:%d: %s", 
-		  pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
-		  pj_sockaddr_get_port(src_addr),
-		  errmsg));
+	PJ_PERROR(3,(resolver->name.ptr, status,
+		     "Error parsing DNS response from %s:%d", 
+		     pj_sockaddr_print(src_addr, addr, sizeof(addr), 2),
+		     pj_sockaddr_get_port(src_addr)));
 	goto read_next_packet;
     }
 
@@ -1786,9 +1776,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     /* Workaround for deadlock problem in #1108 */
     pj_grp_lock_acquire(resolver->grp_lock);
 
-    /* Save/update response cache. */
-    update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
-    
+    /* Truncated responses MUST NOT be saved (cached). */
+    if (PJ_DNS_GET_TC(dns_pkt->hdr.flags) == 0) {
+	/* Save/update response cache. */
+	update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
+    }
+
     /* Recycle query objects, starting with the child queries */
     if (!pj_list_empty(&q->child_head)) {
 	pj_dns_async_query *child_q;
@@ -1814,11 +1807,8 @@ read_next_packet:
 				 src_addr, src_addr_len);
 
     if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));	
-	PJ_LOG(4,(resolver->name.ptr, "DNS resolver ioqueue read error: %s",
-		  errmsg));
+	PJ_PERROR(4,(resolver->name.ptr, status,
+		     "DNS resolver ioqueue read error"));
 
 	pj_assert(!"Unhandled error");
     }
