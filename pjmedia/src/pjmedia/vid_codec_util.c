@@ -762,4 +762,80 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 }
 
 
+/* VPX fmtp parser */
+PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
+				    const pjmedia_codec_fmtp *fmtp,
+				    pjmedia_vid_codec_vpx_fmtp *vpx_fmtp)
+{
+    const pj_str_t PROFILE_ID	= {"profile-id", 10};
+    const pj_str_t MAX_FR	= {"max-fr", 6};
+    const pj_str_t MAX_FS	= {"max-fs", 6};
+
+    unsigned i;
+
+    pj_bzero(vpx_fmtp, sizeof(*vpx_fmtp));
+
+    for (i = 0; i < fmtp->cnt; ++i) {
+    	unsigned tmp;
+
+	if (pj_stricmp(&fmtp->param[i].name, &MAX_FS) == 0) {
+	    tmp = pj_strtoul(&fmtp->param[i].val);
+	    vpx_fmtp->max_fs = PJ_MAX(tmp, vpx_fmtp->max_fs);
+	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_FR) == 0) {
+	    tmp = pj_strtoul(&fmtp->param[i].val);
+	    vpx_fmtp->max_fr = PJ_MAX(tmp, vpx_fmtp->max_fr);
+	} else if (pj_stricmp(&fmtp->param[i].name, &PROFILE_ID) == 0) {
+	    tmp = pj_strtoul(&fmtp->param[i].val);
+	    vpx_fmtp->profile_id = PJ_MAX(tmp, vpx_fmtp->profile_id);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
+				pjmedia_vid_codec_param *param)
+{
+    if (param->dir & PJMEDIA_DIR_ENCODING) {
+	pjmedia_vid_codec_vpx_fmtp fmtp;
+	pjmedia_video_format_detail *vfd;
+	pj_status_t status;
+
+	/* Get remote param */
+	status = pjmedia_vid_codec_vpx_parse_fmtp(&param->enc_fmtp,
+						  &fmtp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Adjust fps and size to conform to the parameter
+	 * specified by remote SDP fmtp.
+	 */
+	vfd = pjmedia_format_get_video_format_detail(&param->enc_fmt,
+						     PJ_TRUE);
+
+	if (fmtp.max_fr > 0) {
+	    vfd->fps.num   = fmtp.max_fr;
+	    vfd->fps.denum = 1;
+	}
+	
+	if (fmtp.max_fs > 0) {
+	    unsigned max_res = ((int)pj_isqrt(fmtp.max_fs * 8)) * 16;
+	    
+	    /* Do we need to maintain the aspect ratio or scale down
+	     * to some predetermined resolution instead (for example,
+	     * if the requested resolution is 640x480 and max_res is
+	     * 600, should we scale down to 480xx360)?
+	     */
+	    if (vfd->size.w > max_res)
+		vfd->size.w = max_res;
+	    if (vfd->size.h > max_res)
+	    	vfd->size.h = max_res;
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 #endif /* PJMEDIA_HAS_VIDEO */

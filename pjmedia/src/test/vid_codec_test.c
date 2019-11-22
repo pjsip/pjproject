@@ -469,6 +469,13 @@ int vid_codec_test(void)
     }
 #endif
 
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VPX_CODEC
+    status = pjmedia_codec_vpx_vid_init(NULL, mem);
+    if (status != PJ_SUCCESS) {
+	return -22;
+    }
+#endif
+
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
     status = pjmedia_codec_ffmpeg_vid_init(NULL, mem);
     if (status != PJ_SUCCESS)
@@ -501,6 +508,26 @@ int vid_codec_test(void)
 	goto on_return;
 #endif
 
+#if PJMEDIA_HAS_VPX_CODEC && PJMEDIA_HAS_VPX_CODEC_VP8
+    rc = encode_decode_test(pool, "vp8", PJMEDIA_VID_PACKING_WHOLE);
+    if (rc != 0)
+	goto on_return;
+
+    rc = encode_decode_test(pool, "vp8", PJMEDIA_VID_PACKING_PACKETS);
+    if (rc != 0)
+	goto on_return;
+#endif
+
+#if PJMEDIA_HAS_VPX_CODEC && PJMEDIA_HAS_VPX_CODEC_VP9
+    rc = encode_decode_test(pool, "vp9", PJMEDIA_VID_PACKING_WHOLE);
+    if (rc != 0)
+	goto on_return;
+
+    rc = encode_decode_test(pool, "vp9", PJMEDIA_VID_PACKING_PACKETS);
+    if (rc != 0)
+	goto on_return;
+#endif
+
 
 on_return:
 #if PJMEDIA_HAS_FFMPEG_VID_CODEC
@@ -511,6 +538,9 @@ on_return:
 #endif
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
     pjmedia_codec_vid_toolbox_deinit();
+#endif
+#if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    pjmedia_codec_vpx_vid_deinit();
 #endif
     pjmedia_vid_dev_subsys_shutdown();
     pj_pool_release(pool);

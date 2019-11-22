@@ -173,6 +173,10 @@ V4L2_LDFLAGS = @ac_v4l2_ldflags@
 OPENH264_CFLAGS = @ac_openh264_cflags@ 
 OPENH264_LDFLAGS =  @ac_openh264_ldflags@
 
+# VPX flags
+VPX_CFLAGS = @ac_vpx_cflags@ 
+VPX_LDFLAGS =  @ac_vpx_ldflags@
+
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
 # QT_CFLAGS = @ac_qt_cflags@
@@ -188,9 +192,9 @@ ANDROID_CFLAGS = @ac_android_cflags@
 
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(DARWIN_CFLAGS)
+		   $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(DARWIN_CFLAGS)
 PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
-                   $(OPENH264_LDFLAGS)
+                   $(OPENH264_LDFLAGS) $(VPX_LDFLAGS)
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export APP_CC := @CC@

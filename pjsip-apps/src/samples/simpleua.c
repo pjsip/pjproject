@@ -395,6 +395,11 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 #   endif
 
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    status = pjmedia_codec_vpx_vid_init(NULL, &cp.factory);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+#   endif
+
 #  if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC!=0
     /* Init ffmpeg video codecs */
     status = pjmedia_codec_ffmpeg_vid_init(NULL, &cp.factory);
@@ -595,6 +600,9 @@ int main(int argc, char *argv[])
 #   endif
 #   if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_VID_TOOLBOX_CODEC
     pjmedia_codec_vid_toolbox_deinit();
+#   endif
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    pjmedia_codec_vpx_vid_deinit();
 #   endif
 
 #endif

@@ -650,6 +650,8 @@ openssl_h_present
 ac_ssl_backend
 ac_ssl_has_aes_gcm
 ac_no_ssl
+ac_vpx_ldflags
+ac_vpx_cflags
 ac_openh264_ldflags
 ac_openh264_cflags
 ac_v4l2_ldflags
@@ -814,6 +816,8 @@ enable_ffmpeg
 enable_v4l2
 with_openh264
 enable_openh264
+with_vpx
+enable_vpx
 enable_ipp
 with_ipp
 with_ipp_samples
@@ -1485,6 +1489,7 @@ Optional Features:
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
+  --disable-vpx           Disable VPX (default: not disabled)
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
@@ -1540,6 +1545,7 @@ Optional Packages:
   --with-sdl=DIR          Specify alternate libSDL prefix
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
+  --with-vpx=DIR          Specify alternate VPX prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -7609,6 +7615,92 @@ fi
 
 
 
+# Check whether --with-vpx was given.
+if test "${with_vpx+set}" = set; then :
+  withval=$with_vpx;
+else
+  with_vpx=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_vpx" = "xno"; then
+    enable_vpx=no
+fi
+
+
+
+# Check whether --enable-vpx was given.
+if test "${enable_vpx+set}" = set; then :
+  enableval=$enable_vpx;
+		if test "$enable_vpx" = "no"; then
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if VPX is disabled... yes" >&5
+$as_echo "Checking if VPX is disabled... yes" >&6; }
+		fi
+
+else
+
+		  if test "x$with_vpx" != "xno" -a "x$with_vpx" != "x"; then
+		        VPX_PREFIX=$with_vpx
+		  	VPX_CFLAGS="-I$VPX_PREFIX/include"
+			VPX_LDFLAGS="-L$VPX_PREFIX/lib"
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using VPX prefix... $with_vpx" >&5
+$as_echo "Using VPX prefix... $with_vpx" >&6; }
+		  else
+		  	VPX_CFLAGS=""
+			VPX_LDFLAGS=""
+		  fi
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking VPX usability" >&5
+$as_echo_n "checking VPX usability... " >&6; }
+
+		  VPX_LIBS="-lvpx"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$VPX_LIBS $LIBS"
+		  LDFLAGS="$VPX_LDFLAGS $LDFLAGS"
+		  CFLAGS="$VPX_CFLAGS $CFLAGS"
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <vpx/vpx_encoder.h>
+						    #include <vpx/vp8cx.h>
+
+int
+main ()
+{
+vpx_codec_iface_t *(*enc_if)() = &vpx_codec_vp8_cx;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+   ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
+		  		   ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
+$as_echo "ok" >&6; }
+
+else
+
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+
+
+
 # Check whether --enable-ipp was given.
 if test "${enable_ipp+set}" = set; then :
   enableval=$enable_ipp;
@@ -7961,7 +8053,7 @@ else
 int
 main ()
 {
-if (__builtin_available(macOS 10.3, iOS 11.3, *)) {
+if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
 			     SSLContextRef ssl_ctx;
 			     SSLReHandshake(ssl_ctx);
 			 }
@@ -7980,11 +8072,11 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 		        $as_echo "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_DARWIN" >>confdefs.h
 
 		        LIBS="$LIBS -framework Security"
-	  	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... yes" >&5
-$as_echo "Checking if Security framework for Darwin SSL is available... yes" >&6; }
+	  	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... yes" >&5
+$as_echo "Checking if Darwin SSL is available... yes" >&6; }
 	            else
-	                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... no" >&5
-$as_echo "Checking if Security framework for Darwin SSL is available... no" >&6; }
+	                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... no" >&5
+$as_echo "Checking if Darwin SSL is available... no" >&6; }
 		    fi
 		    ;;
 		esac

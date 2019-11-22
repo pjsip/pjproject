@@ -580,6 +580,25 @@
 #ifndef PJMEDIA_CODEC_OPENH264_LOG_LEVEL
 #   define PJMEDIA_CODEC_OPENH264_LOG_LEVEL  WELS_LOG_ERROR
 #endif
+
+/**
+ * Enable VPX VP8 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_VPX_CODEC_VP8
+#   define PJMEDIA_HAS_VPX_CODEC_VP8		1
+#endif
+
+/**
+ * Enable VPX VP9 codec.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_HAS_VPX_CODEC_VP9
+#   define PJMEDIA_HAS_VPX_CODEC_VP9		0
+#endif
+
 /**
  * @}
  */

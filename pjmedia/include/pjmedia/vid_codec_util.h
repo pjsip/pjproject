@@ -152,6 +152,43 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 				pjmedia_vid_codec_param *param);
 
 
+/**
+ * Definition of VPX parameters.
+ */
+typedef struct pjmedia_vid_codec_vpx_fmtp
+{
+    unsigned	    max_fr;	    /**< Max frame rate    		    */
+    unsigned	    max_fs;	    /**< Max frame size (in macroblocks)    */
+    pj_uint8_t	    profile_id;     /**< Profile ID			    */
+} pjmedia_vid_codec_vpx_fmtp;
+
+
+/**
+ * Parse SDP fmtp of VPX.
+ *
+ * @param fmtp		The VPX SDP fmtp to be parsed.
+ * @param vpx_fmtp	The parsing result.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
+				const pjmedia_codec_fmtp *fmtp,
+				pjmedia_vid_codec_vpx_fmtp *vpx_fmtp);
+
+
+/**
+ * Parse and apply the encoding and decoding SDP fmtp of VPX in the
+ * specified codec parameter. This will validate size and fps to conform
+ * to VPX level specified in SDP fmtp "max-fr" and "max-fs".
+ *
+ * @param param		The codec parameter.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
+				pjmedia_vid_codec_param *param);
+
+
 PJ_END_DECL
 
 
