@@ -1001,7 +1001,7 @@ static pjmedia_transport* on_create_media_transport(pjsua_call_id call_id,
 #endif
 
 /* Playfile done notification, set timer to hangup calls */
-pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
+void on_playfile_done(pjmedia_port *port, void *usr_data)
 {
     pj_time_val delay;
 
@@ -1011,12 +1011,11 @@ pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
     /* Just rewind WAV when it is played outside of call */
     if (pjsua_call_get_count() == 0) {
 	pjsua_player_set_pos(app_config.wav_id, 0);
-	return PJ_SUCCESS;
     }
 
     /* Timer is already active */
     if (app_config.auto_hangup_timer.id == 1)
-	return PJ_SUCCESS;
+	return;
 
     app_config.auto_hangup_timer.id = 1;
     delay.sec = 0;
@@ -1024,8 +1023,6 @@ pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
     pjsip_endpt_schedule_timer(pjsua_get_pjsip_endpt(), 
 			       &app_config.auto_hangup_timer, 
 			       &delay);
-
-    return PJ_SUCCESS;
 }
 
 /* Auto hangup timer callback */
@@ -1360,8 +1357,8 @@ static pj_status_t app_init(void)
 		pjmedia_port *port;
 
 		pjsua_player_get_port(app_config.wav_id, &port);
-		status = pjmedia_wav_player_set_eof_cb(port, NULL, 
-						       &on_playfile_done);
+		status = pjmedia_wav_player_set_eof_cb2(port, NULL, 
+						        &on_playfile_done);
 		if (status != PJ_SUCCESS)
 		    goto on_error;
 

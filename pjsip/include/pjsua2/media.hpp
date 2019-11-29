@@ -548,6 +548,9 @@ public:
      * Callbacks
      */
 
+
+/* Unfortunately for pjsua2, a hard deprecation is inevitable. */
+#if 0 // !DEPRECATED_FOR_TICKET_2251
     /**
      * Register a callback to be called when the file player reading has
      * reached the end of file, or when the file reading has reached the
@@ -562,7 +565,21 @@ public:
      */
     virtual bool onEof()
     { return true; }
+#endif
 
+    /**
+     * Register a callback to be called when the file player reading has
+     * reached the end of file, or when the file reading has reached the
+     * end of file of the last file for a playlist. If the file or playlist
+     * is set to play repeatedly, then the callback will be called multiple
+     * times.
+     *
+     * If application wishes to stop the playback, it can stop the media
+     * transmission in the callback, and only after all transmissions have
+     * been stopped, could the application safely destroy the player.
+     */
+    virtual void onEof2()
+    { }
 
 private:
     /**
@@ -573,8 +590,8 @@ private:
     /**
      *  Low level PJMEDIA callback
      */
-    static pj_status_t eof_cb(pjmedia_port *port,
-                              void *usr_data);
+    static void eof_cb(pjmedia_port *port,
+                       void *usr_data);
 };
 
 /**

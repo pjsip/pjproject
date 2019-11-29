@@ -138,6 +138,8 @@ struct avi_reader_port
     pj_timestamp     next_ts;
 
     pj_status_t	   (*cb)(pjmedia_port*, void*);
+    pj_bool_t	     subscribed;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 
@@ -578,6 +580,7 @@ PJ_DEF(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream)
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register a callback to be called when the file reading has reached the
  * end of file.
@@ -596,11 +599,56 @@ pjmedia_avi_stream_set_eof_cb( pjmedia_avi_stream *stream,
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(stream->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_avi_stream_set_eof_cb() is deprecated. "
+    	       "Use pjmedia_avi_stream_set_eof_cb2() instead."));
+
     fport = (struct avi_reader_port*) stream;
 
     fport->base.port_data.pdata = user_data;
     fport->cb = cb;
 
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of file.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
+			       void *user_data,
+			       void (*cb)(pjmedia_avi_stream *stream,
+					  void *usr_data))
+{
+    struct avi_reader_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(stream, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(stream->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct avi_reader_port*) stream;
+
+    fport->base.port_data.pdata = user_data;
+    fport->cb2 = cb;
+
+    return PJ_SUCCESS;
+}
+
+
+static pj_status_t file_on_event(pjmedia_event *event,
+                                 void *user_data)
+{
+    struct avi_reader_port *fport = (struct avi_reader_port*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (fport->cb2)
+	    (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
+    }
+    
     return PJ_SUCCESS;
 }
 
@@ -624,8 +672,44 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
 		  fport->base.info.name.ptr));
 
 	/* Call callback, if any */
-	if (fport->cb)
+	if (fport->cb2) {
+	    pj_bool_t no_loop = (fport->options & PJMEDIA_AVI_FILE_NO_LOOP);
+
+	    if (!fport->subscribed) {
+	    	status = pjmedia_event_subscribe(NULL, &file_on_event,
+	    				         fport, fport);
+	    	fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+	    			    PJ_FALSE;
+	    }
+
+	    if (fport->subscribed && fport->eof != 2) {
+	    	pjmedia_event event;
+
+	    	if (no_loop) {
+	    	    /* To prevent the callback from being called repeatedly */
+	    	    fport->eof = 2;
+	    	} else {
+	    	    fport->eof = PJ_FALSE;
+        	    pj_file_setpos(fport->fd, fport->start_data, PJ_SEEK_SET);
+	    	}
+
+	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	   NULL, fport);
+	    	pjmedia_event_publish(NULL, fport, &event,
+	                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	    }
+	    
+	    /* Should not access player port after this since
+	     * it might have been destroyed by the callback.
+	     */
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
+	    
+	    return (no_loop? PJ_EEOF: PJ_SUCCESS);
+
+	} else if (fport->cb) {
 	    status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+	}
 
 	/* If callback returns non PJ_SUCCESS or 'no loop' is specified,
 	 * return immediately (and don't try to access player port since
@@ -783,6 +867,11 @@ static pj_status_t avi_on_destroy(pjmedia_port *this_port)
     struct avi_reader_port *fport = (struct avi_reader_port*) this_port;
 
     pj_assert(this_port->info.signature == SIGNATURE);
+
+    if (fport->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+    	fport->subscribed = PJ_FALSE;
+    }
 
     if (fport->fd != (pj_oshandle_t) (pj_ssize_t)-1)
         pj_file_close(fport->fd);

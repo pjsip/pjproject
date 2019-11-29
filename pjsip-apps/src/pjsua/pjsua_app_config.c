@@ -140,6 +140,7 @@ static void usage(void)
     puts  ("                      frequencies, and ON,OFF=on/off duration in msec.");
     puts  ("                      This can be specified multiple times.");
     puts  ("  --auto-play         Automatically play the file (to incoming calls only)");
+    puts  ("  --auto-play-hangup  Automatically hangup the file after file play completes");
     puts  ("  --auto-loop         Automatically loop incoming RTP to outgoing RTP");
     puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3");

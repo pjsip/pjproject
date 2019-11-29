@@ -105,7 +105,12 @@ typedef enum pjmedia_event_type
     /**
      * Transport media error.
      */
-    PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R')
+    PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R'),
+
+    /**
+     * Callback event. Currently for internal use only.
+     */
+    PJMEDIA_EVENT_CALLBACK = PJMEDIA_FOURCC('C', 'B', ' ', ' ')
 
 } pjmedia_event_type;
 

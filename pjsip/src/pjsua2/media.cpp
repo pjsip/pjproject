@@ -302,7 +302,7 @@ void AudioMediaPlayer::createPlayer(const string &file_name,
 	pjsua_player_destroy(playerId);
 	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlayer()");
     }
-    status = pjmedia_wav_player_set_eof_cb(port, this, &eof_cb);
+    status = pjmedia_wav_player_set_eof_cb2(port, this, &eof_cb);
     if (status != PJ_SUCCESS) {
 	pjsua_player_destroy(playerId);
 	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlayer()");
@@ -350,7 +350,7 @@ void AudioMediaPlayer::createPlaylist(const StringVector &file_names,
 	pjsua_player_destroy(playerId);
 	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlaylist()");
     }
-    status = pjmedia_wav_playlist_set_eof_cb(port, this, &eof_cb);
+    status = pjmedia_wav_playlist_set_eof_cb2(port, this, &eof_cb);
     if (status != PJ_SUCCESS) {
 	pjsua_player_destroy(playerId);
 	PJSUA2_RAISE_ERROR2(status, "AudioMediaPlayer::createPlaylist()");
@@ -398,12 +398,13 @@ AudioMediaPlayer* AudioMediaPlayer::typecastFromAudioMedia(
     return static_cast<AudioMediaPlayer*>(media);
 }
 
-pj_status_t AudioMediaPlayer::eof_cb(pjmedia_port *port,
-                                     void *usr_data)
+void AudioMediaPlayer::eof_cb(pjmedia_port *port,
+                              void *usr_data)
 {
     PJ_UNUSED_ARG(port);
     AudioMediaPlayer *player = (AudioMediaPlayer*)usr_data;
-    return player->onEof() ? PJ_SUCCESS : PJ_EEOF;
+    
+    player->onEof2();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -587,13 +587,13 @@ int dummy_function()
     pjmedia_wav_player_port_create(NULL, NULL, 0, 0, 0, NULL);
     pjmedia_wav_player_port_set_pos(NULL, 0);
     pjmedia_wav_player_port_get_pos(NULL);
-    pjmedia_wav_player_set_eof_cb(NULL, NULL, NULL);
+    pjmedia_wav_player_set_eof_cb2(NULL, NULL, NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_FILE_CAPTURE
     pjmedia_wav_writer_port_create(NULL, NULL, 8000, 1, 80, 16, 0, 0, NULL);
     pjmedia_wav_writer_port_get_pos(NULL);
-    pjmedia_wav_writer_port_set_cb(NULL, 0, NULL, NULL);
+    pjmedia_wav_writer_port_set_cb2(NULL, 0, NULL, NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_MEM_PLAYER

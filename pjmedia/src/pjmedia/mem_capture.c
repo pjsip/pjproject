@@ -20,6 +20,7 @@
 #include <pjmedia/mem_port.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 
 
@@ -42,6 +43,8 @@ struct mem_rec
     void	    *user_data;
     pj_status_t    (*cb)(pjmedia_port *port,
 			 void *user_data);
+    pj_bool_t	     subscribed;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 
@@ -101,6 +104,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_create( pj_pool_t *pool,
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register a callback to be called when the file reading has reached the
  * end of buffer.
@@ -115,9 +119,35 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_set_eof_cb( pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
 		     PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_mem_capture_set_eof_cb() is deprecated. "
+    	       "Use pjmedia_mem_capture_set_eof_cb2() instead."));
+
     rec = (struct mem_rec*) port;
     rec->user_data = user_data;
     rec->cb = cb;
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of buffer.
+ */
+PJ_DEF(pj_status_t) pjmedia_mem_capture_set_eof_cb2( pjmedia_port *port,
+				void *user_data,
+				void (*cb)(pjmedia_port *port,
+					   void *usr_data))
+{
+    struct mem_rec *rec;
+
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
+		     PJ_EINVALIDOP);
+
+    rec = (struct mem_rec*) port;
+    rec->user_data = user_data;
+    rec->cb2 = cb;
 
     return PJ_SUCCESS;
 } 
@@ -136,6 +166,20 @@ PJ_DEF(pj_size_t) pjmedia_mem_capture_get_size(pjmedia_port *port)
         return rec->buf_size;
     }
     return rec->write_pos - rec->buffer;
+}
+
+
+static pj_status_t rec_on_event(pjmedia_event *event,
+                                void *user_data)
+{
+    struct mem_rec *rec = (struct mem_rec *)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (rec->cb2)
+	    (*rec->cb2)(&rec->base, rec->base.port_data.pdata);
+    }
+    
+    return PJ_SUCCESS;
 }
 
 
@@ -177,7 +221,28 @@ static pj_status_t rec_put_frame( pjmedia_port *this_port,
 	    rec->write_pos = rec->buffer;
 	    
 	    /* Call callback, if any */
-            if (rec->cb) {
+	    if (rec->cb2) {
+	    	if (!rec->subscribed) {
+	            pj_status_t status;
+
+	    	    status = pjmedia_event_subscribe(NULL, rec_on_event,
+	    				         rec, rec);
+	    	    rec->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+	    			    	PJ_FALSE;
+	        }
+
+	    	if (rec->subscribed) {
+	    	    pjmedia_event event;
+
+	    	    pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	       NULL, rec);
+	    	    pjmedia_event_publish(NULL, rec, &event,
+	                                  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	        }
+
+	        return PJ_SUCCESS;
+
+	    } else if (rec->cb) {
 		pj_status_t status;
 		
 		rec->eof = PJ_TRUE;
@@ -223,6 +288,11 @@ static pj_status_t rec_on_destroy(pjmedia_port *this_port)
                      PJ_EINVALIDOP);
 
     rec = (struct mem_rec*) this_port;
+
+    if (rec->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &rec_on_event, rec, rec);
+    	rec->subscribed = PJ_FALSE;
+    }
 
     if(rec->cb && PJ_FALSE == rec->eof) {
 	rec->eof = PJ_TRUE;

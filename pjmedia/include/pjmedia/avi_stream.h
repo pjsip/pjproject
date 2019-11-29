@@ -138,6 +138,7 @@ pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
 PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file. If the file is set to play repeatedly, then the callback
@@ -158,6 +159,31 @@ pjmedia_avi_stream_set_eof_cb(pjmedia_avi_stream *stream,
 			      void *user_data,
 			      pj_status_t (*cb)(pjmedia_avi_stream *stream,
 					        void *usr_data));
+#endif
+
+
+/**
+ * Register a callback to be called when the file reading has reached the
+ * end of file. If the file is set to play repeatedly, then the callback
+ * will be called multiple times. Note that only one callback can be 
+ * registered for each AVI stream.
+ *
+ * @param stream	The AVI stream.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. Note that if
+ *			application wishes to stop the playback, it
+ *			can disconnect the port in the callback, and
+ *			only after all connections have been removed
+ *			could the application safely destroy the port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_avi_stream_set_eof_cb2(pjmedia_avi_stream *stream,
+			       void *user_data,
+			       void (*cb)(pjmedia_avi_stream *stream,
+					  void *usr_data));
+
 
 /**
  * @}

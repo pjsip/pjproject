@@ -187,6 +187,19 @@
 PJ_BEGIN_DECL
 
 
+/* Since media port's callback is called synchronously and has a return value,
+ * it can introduce a deadlock when a mutex is held before calling it.
+ * To prevent this, media ports' set_eof_cb() and set_cb() functions have
+ * been deprecated and replaced by set_eof_cb2() and set_cb2(), which
+ * will call the callback asynchronously without expecting any return value.
+ *
+ * See also https://trac.pjsip.org/repos/ticket/2251.
+ */
+#ifndef DEPRECATED_FOR_TICKET_2251
+#  define DEPRECATED_FOR_TICKET_2251	0
+#endif
+
+
 /**
  * Create 32bit port signature from ASCII characters.
  */
