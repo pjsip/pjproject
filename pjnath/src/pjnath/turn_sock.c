@@ -1588,7 +1588,8 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 	if (turn_sock->data_conn[i].state == DATACONN_STATE_NULL)
 	    break;
     }
-    pj_assert(i < turn_sock->data_conn_cnt);
+    /* If this is the first connection, turn_sock->data_conn_cnt can be 0. */
+    // pj_assert(i < turn_sock->data_conn_cnt);
     ++turn_sock->data_conn_cnt;
 
     /* Init new data connection */
