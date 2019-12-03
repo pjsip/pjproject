@@ -1588,8 +1588,9 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 	if (turn_sock->data_conn[i].state == DATACONN_STATE_NULL)
 	    break;
     }
-    /* If this is the first connection, turn_sock->data_conn_cnt can be 0. */
-    // pj_assert(i < turn_sock->data_conn_cnt);
+
+    /* Verify that a free slot is found */
+    pj_assert(i < PJ_TURN_MAX_TCP_CONN_CNT);
     ++turn_sock->data_conn_cnt;
 
     /* Init new data connection */
