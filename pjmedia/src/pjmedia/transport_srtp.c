@@ -1640,8 +1640,12 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     }
 
     /* All keying method failed to process remote SDP? */
-    if (srtp->keying_cnt == 0)
+    if (srtp->keying_cnt == 0) {
+	if (keying_status != PJ_SUCCESS) {
+	    DEACTIVATE_MEDIA(sdp_pool, sdp_local->media[media_index]);
+	}
 	return keying_status;
+    }
 
     /* Bypass SRTP & skip keying as SRTP is disabled and verification on
      * remote SDP has been done.

@@ -472,7 +472,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 		/* Check duplicated tag */
 		for (j=0; j<cr_attr_count; ++j) {
 		    if (tags[j] == tags[cr_attr_count]) {
-			DEACTIVATE_MEDIA(sdp_pool, m_loc);
+			//DEACTIVATE_MEDIA(sdp_pool, m_loc);
 			return PJMEDIA_SRTP_ESDPDUPCRYPTOTAG;
 		    }
 		}
@@ -513,7 +513,8 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 		     * - has no matching crypto
 		     */
 		    if ((!has_crypto_attr || matched_idx == -1) &&
-			rem_proto == PJMEDIA_TP_PROTO_RTP_AVP)
+			!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto,
+						   PJMEDIA_TP_PROFILE_SRTP))
 		    {
 			return PJ_SUCCESS;
 		    }
@@ -526,13 +527,13 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 
 	    /* No crypto attr */
 	    if (!has_crypto_attr) {
-		DEACTIVATE_MEDIA(sdp_pool, m_loc);
+		//DEACTIVATE_MEDIA(sdp_pool, m_loc);
 		return PJMEDIA_SRTP_ESDPREQCRYPTO;
 	    }
 
 	    /* No crypto match */
 	    if (matched_idx == -1) {
-		DEACTIVATE_MEDIA(sdp_pool, m_loc);
+		//DEACTIVATE_MEDIA(sdp_pool, m_loc);
 		return PJMEDIA_SRTP_ENOTSUPCRYPTO;
 	    }
 
