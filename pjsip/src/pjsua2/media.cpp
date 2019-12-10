@@ -1280,6 +1280,16 @@ void VideoWindow::setWindow(const VideoWindowHandle &win) PJSUA2_THROW(Error)
     PJ_UNUSED_ARG(win);
 #endif
 }
+
+void VideoWindow::setFullScreen(bool enabled) PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_fullscreen(winId, enabled) );
+#else
+    PJ_UNUSED_ARG(enabled);
+#endif
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 VideoPreviewOpParam::VideoPreviewOpParam()
 {

@@ -701,6 +701,12 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
             flags |= SDL_WINDOW_HIDDEN;
         }
 
+        if (!((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) &&
+            strm->param.window_fullscreen))
+        {
+            flags |= SDL_WINDOW_FULLSCREEN;
+        }
+
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
@@ -1017,6 +1023,11 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
     {
 	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
     }
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN,
+			   &pi->window_fullscreen) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1092,6 +1103,10 @@ static pj_status_t get_cap(void *data)
             *wnd_flags |= PJMEDIA_VID_DEV_WND_BORDER;
         if (flag & SDL_WINDOW_RESIZABLE)
             *wnd_flags |= PJMEDIA_VID_DEV_WND_RESIZABLE;
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	*((pj_bool_t *)pval) = (flag & SDL_WINDOW_FULLSCREEN)? PJ_TRUE: PJ_FALSE;
 	return PJ_SUCCESS;
     }
 
@@ -1188,6 +1203,14 @@ static pj_status_t set_cap(void *data)
 		      "Re-initializing SDL with native window %d",
 		      hwnd->info.window));
 	return status;	
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
+        int flag;
+        if (*(pj_bool_t *)pval)
+            flag = SDL_WINDOW_FULLSCREEN;
+        else
+            flag = 0;
+        SDL_SetWindowFullscreen(strm->window, flag);
+	return PJ_SUCCESS;
     }
 
     return PJMEDIA_EVID_INVCAP;

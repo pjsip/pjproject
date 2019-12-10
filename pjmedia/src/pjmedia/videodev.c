@@ -47,7 +47,8 @@ static struct cap_info
     DEFINE_CAP("preview",       "Input preview"),
     DEFINE_CAP("orientation",   "Video orientation"),
     DEFINE_CAP("switch",        "Switch device"),
-    DEFINE_CAP("wndflags",      "Window flags")
+    DEFINE_CAP("wndflags",      "Window flags"),
+    DEFINE_CAP("fullscreen",    "Renderer fullscreen")
 };
 
 
@@ -139,6 +140,9 @@ static pj_status_t get_cap_pointer(const pjmedia_vid_dev_param *param,
      */
     case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS:
 	FIELD_INFO(window_flags);
+	break;
+    case PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN:
+	FIELD_INFO(window_fullscreen);
 	break;
     default:
 	return PJMEDIA_EVID_INVCAP;

@@ -8054,6 +8054,20 @@ PJ_DECL(pj_status_t) pjsua_vid_win_rotate(pjsua_vid_win_id wid,
 					  int angle);
 
 
+/**
+ * Set video window full-screen. This operation is valid only when the
+ * underlying video device supports PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN
+ * capability. Currently it is only supported on SDL backend.
+ *
+ * @param wid		The video window ID.
+ * @param enabled   	Set to PJ_TRUE if full screen is desired, PJ_FALSE 
+ *			otherwise.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_set_fullscreen(pjsua_vid_win_id wid,
+                                                  pj_bool_t enabled);
+
 /*
  * Video codecs API
  */

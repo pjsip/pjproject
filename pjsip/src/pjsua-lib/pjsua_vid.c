@@ -1739,6 +1739,35 @@ PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
 }
 
 
+/*
+ * Set video window fullscreen.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen( pjsua_vid_win_id wid,
+                                                  pj_bool_t enabled)
+{
+    pjsua_vid_win *w;
+    pjmedia_vid_dev_stream *s;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS, PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    w = &pjsua_var.win[wid];
+    s = pjmedia_vid_port_get_stream(w->vp_rend? w->vp_rend: w->vp_cap);
+    if (s == NULL) {
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    status = pjmedia_vid_dev_stream_set_cap(s,
+			    PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN, &enabled);
+
+    PJSUA_UNLOCK();
+
+    return status;
+}
+
 static void call_get_vid_strm_info(pjsua_call *call,
 				   int *first_active,
 				   int *first_inactive,
