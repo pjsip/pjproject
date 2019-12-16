@@ -135,6 +135,33 @@ static const pj_str_t ID_ACTIVE       = { "active", 6 };
 static const pj_str_t ID_PASSIVE      = { "passive", 7 };
 static const pj_str_t ID_FINGERPRINT  = { "fingerprint", 11 };
 
+/* Map of OpenSSL-pjmedia SRTP cryptos. Currently OpenSSL seems to
+ * support few cryptos only (based on ssl/d1_srtp.c of OpenSSL 1.1.0c).
+ */
+#define OPENSSL_PROFILE_NUM 4
+
+static char* ossl_profiles[OPENSSL_PROFILE_NUM] =
+{
+     "SRTP_AES128_CM_SHA1_80",
+     "SRTP_AES128_CM_SHA1_32",
+     "SRTP_AEAD_AES_256_GCM",
+     "SRTP_AEAD_AES_128_GCM"
+};
+static char* pj_profiles[OPENSSL_PROFILE_NUM] =
+{
+    "AES_CM_128_HMAC_SHA1_80",
+    "AES_CM_128_HMAC_SHA1_32",
+    "AEAD_AES_256_GCM",
+    "AEAD_AES_128_GCM"
+};
+
+/* This will store the valid OpenSSL profiles which is mapped from 
+ * OpenSSL-pjmedia SRTP cryptos.
+ */
+static char *valid_pj_profiles_list[OPENSSL_PROFILE_NUM];
+static char *valid_ossl_profiles_list[OPENSSL_PROFILE_NUM];
+static unsigned valid_profiles_cnt;
+
 
 /* Certificate & private key */
 static X509	*dtls_cert;
@@ -161,6 +188,43 @@ static pj_status_t dtls_init()
 	}
     }
 
+    if (valid_profiles_cnt == 0) {
+	unsigned n, j;
+	int rc;
+	char *p, *end, buf[OPENSSL_PROFILE_NUM*25];
+
+	/* Create DTLS context */
+	SSL_CTX *ctx = SSL_CTX_new(DTLS_method());
+	if (ctx == NULL) {
+	    return PJ_ENOMEM;
+	}
+
+	p = buf;
+	end = buf + sizeof(buf);
+	for (j=0; j<PJ_ARRAY_SIZE(ossl_profiles); ++j) {
+	    rc = SSL_CTX_set_tlsext_use_srtp(ctx, ossl_profiles[j]);
+	    if (rc == 0) {
+		valid_pj_profiles_list[valid_profiles_cnt] =
+		    pj_profiles[j];
+		valid_ossl_profiles_list[valid_profiles_cnt++] =
+		    ossl_profiles[j];
+
+		n = pj_ansi_snprintf(p, end - p, ":%s", pj_profiles[j]);
+		p += n;
+	    }
+	}
+	SSL_CTX_free(ctx);
+
+	if (valid_profiles_cnt > 0) {
+	    PJ_LOG(4,("DTLS-SRTP", "%s profile is supported", buf));
+	} else {
+	    PJ_PERROR(4, ("DTLS-SRTP", PJMEDIA_SRTP_DTLS_ENOPROFILE,
+			  "Error getting SRTP profile"));
+
+	    return PJMEDIA_SRTP_DTLS_ENOPROFILE;
+	}
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -173,6 +237,8 @@ static void dtls_deinit()
 	EVP_PKEY_free(dtls_priv_key);
 	dtls_priv_key = NULL;
     }
+
+    valid_profiles_cnt = 0;
 }
 
 
@@ -351,26 +417,6 @@ on_error:
     return PJ_EUNKNOWN;
 }
 
-
-/* Map of OpenSSL-pjmedia SRTP cryptos. Currently OpenSSL seems to
- * support few cryptos only (based on ssl/d1_srtp.c of OpenSSL 1.1.0c).
- */
-static char* ossl_profiles[] =
-{
-     "SRTP_AES128_CM_SHA1_80",
-     "SRTP_AES128_CM_SHA1_32",
-     "SRTP_AEAD_AES_256_GCM",
-     "SRTP_AEAD_AES_128_GCM"
-};
-static char* pj_profiles[] =
-{
-    "AES_CM_128_HMAC_SHA1_80",
-    "AES_CM_128_HMAC_SHA1_32",
-    "AEAD_AES_256_GCM",
-    "AEAD_AES_128_GCM"
-};
-
-
 /* Create and initialize new SSL context and instance */
 static pj_status_t ssl_create(dtls_srtp *ds)
 {
@@ -388,6 +434,10 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	return GET_SSL_STATUS(ds);
     }
 
+    if (valid_profiles_cnt == 0) {	
+	return PJMEDIA_SRTP_DTLS_ENOPROFILE;
+    }
+
     /* Set crypto */
     if (1) {
 	char *p, *end, buf[PJ_ARRAY_SIZE(ossl_profiles)*25];
@@ -398,9 +448,12 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	for (i=0; i<ds->srtp->setting.crypto_count && p < end; ++i) {
 	    pjmedia_srtp_crypto *crypto = &ds->srtp->setting.crypto[i];
 	    unsigned j;
-	    for (j=0; j<PJ_ARRAY_SIZE(pj_profiles); ++j) {
-		if (!pj_ansi_strcmp(crypto->name.ptr, pj_profiles[j])) {
-		    n = pj_ansi_snprintf(p, end-p, ":%s", ossl_profiles[j]);
+	    for (j=0; j < valid_profiles_cnt; ++j) {
+		if (!pj_ansi_strcmp(crypto->name.ptr,
+				    valid_pj_profiles_list[j]))
+		{
+		    n = pj_ansi_snprintf(p, end-p, ":%s",
+					 valid_ossl_profiles_list[j]);
 		    p += n;
 		    break;
 		}
@@ -409,7 +462,10 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	}
 	rc = SSL_CTX_set_tlsext_use_srtp(ctx, buf+1);
 	PJ_LOG(4,(ds->base.name, "Setting crypto [%s], errcode=%d", buf, rc));
-	pj_assert(rc == 0);
+	if (rc != 0) {
+	    SSL_CTX_free(ctx);
+	    return GET_SSL_STATUS(ds);
+	}
     }
 
     /* Set ciphers */

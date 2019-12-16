@@ -656,6 +656,12 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_SRTP_DTLS_ENOFPRINT (PJMEDIA_ERRNO_START+243)	/* 220243 */
 
+/**
+ * @hideinitializer
+ * No valid SRTP protection profile for DTLS.
+ */
+#define PJMEDIA_SRTP_DTLS_ENOPROFILE (PJMEDIA_ERRNO_START+244)   /* 220244 */
+
 #endif /* PJMEDIA_HAS_SRTP */
 
 
