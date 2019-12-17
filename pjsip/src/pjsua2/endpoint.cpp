@@ -2220,6 +2220,38 @@ void Endpoint::codecSetParam(const string &codec_id,
     PJSUA2_CHECK_EXPR( pjsua_codec_set_param(&codec_str, &pj_param) );
 }
 
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+
+CodecOpusConfig Endpoint::getCodecOpusConfig() const PJSUA2_THROW(Error)
+{
+   pjmedia_codec_opus_config opus_cfg;
+   CodecOpusConfig config;
+
+   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&opus_cfg));
+   config.fromPj(opus_cfg);
+
+   return config;
+}
+
+void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
+				  PJSUA2_THROW(Error)
+{
+   const pj_str_t codec_id = {"opus", 4};
+   pjmedia_codec_param param;
+   pjmedia_codec_opus_config new_opus_cfg;
+
+   PJSUA2_CHECK_EXPR(pjsua_codec_get_param(&codec_id, &param));
+
+   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_get_config(&new_opus_cfg));
+
+   new_opus_cfg = opus_cfg.toPj();
+
+   PJSUA2_CHECK_EXPR(pjmedia_codec_opus_set_default_param(&new_opus_cfg,
+							  &param));
+}
+
+#endif
+
 void Endpoint::clearCodecInfoList(CodecInfoVector &codec_list)
 {
     for (unsigned i=0;i<codec_list.size();++i) {

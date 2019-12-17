@@ -1823,6 +1823,32 @@ pjmedia_codec_param CodecParam::toPj() const
     return param;
 }
 
+pjmedia_codec_opus_config CodecOpusConfig::toPj() const
+{
+    pjmedia_codec_opus_config config;
+
+    config.sample_rate = sample_rate;
+    config.channel_cnt = channel_cnt;
+    config.frm_ptime = frm_ptime;
+    config.bit_rate = bit_rate;
+    config.packet_loss = packet_loss;
+    config.complexity = complexity;
+    config.cbr = cbr;
+
+    return config;
+}
+
+void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
+{
+    sample_rate = config.sample_rate;
+    channel_cnt = config.channel_cnt;
+    frm_ptime = config.frm_ptime;
+    bit_rate = config.bit_rate;
+    packet_loss = config.packet_loss;
+    complexity = config.complexity;
+    cbr = config.cbr;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 void VidCodecParam::fromPj(const pjmedia_vid_codec_param &param)
 {

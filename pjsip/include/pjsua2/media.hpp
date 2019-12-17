@@ -2441,6 +2441,23 @@ struct CodecParam
 };
 
 /**
+ * Opus codec parameters setting;
+ */
+struct CodecOpusConfig
+{
+    unsigned   sample_rate; /**< Sample rate in Hz.                     */
+    unsigned   channel_cnt; /**< Number of channels.                    */
+    unsigned   frm_ptime;   /**< Frame time in msec.   			*/
+    unsigned   bit_rate;    /**< Encoder bit rate in bps.		*/
+    unsigned   packet_loss; /**< Encoder's expected packet loss pct.	*/
+    unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
+    bool       cbr;         /**< Constant bit rate?			*/
+
+    pjmedia_codec_opus_config toPj() const;
+    void fromPj(const pjmedia_codec_opus_config &config);
+};
+
+/**
  * Detailed codec attributes used in configuring a video codec and in querying
  * the capability of video codec factories. 
  *
