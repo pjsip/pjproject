@@ -46,8 +46,12 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib-util/include \
 		   $(CC_INC)../../pjnath/include \
 		   $(CC_INC)../../pjmedia/include
-export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(CC_INC)../include \
+		   $(CC_INC)../../pjlib/include \
+		   $(CC_INC)../../pjlib-util/include \
+		   $(CC_INC)../../pjnath/include \
+		   $(CC_INC)../../pjmedia/include
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
@@ -140,7 +144,7 @@ export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   account.o endpoint.o json.o persistent.o types.o \
 			   siptypes.o call.o presence.o media.o
 export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS)
 export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 			     $(PJSIP_UA_LDLIB) \
 			     $(PJSIP_SIMPLE_LDLIB) \
