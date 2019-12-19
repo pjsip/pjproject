@@ -106,9 +106,21 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
       if test "x`echo $i|grep 'dummy'`" != "x"; then
         continue
       fi
-      if test "x`echo $i|grep ${IGNORE_CPPFLAGS}`" = "x"; then
-        NDK_CXXFLAGS="${NDK_CXXFLAGS} $i"
+      if test "x`echo $i|grep ${IGNORE_CPPFLAGS}`" != "x"; then
+        continue
       fi
+      # Check if flag is already in CFLAGS
+      ISDUP="0"
+      for j in $NDK_CFLAGS; do
+        if test "$i" = "$j"; then
+	  ISDUP="1"
+	  break
+	fi
+      done
+      if test "${ISDUP}" = "1"; then
+        continue
+      fi
+      NDK_CXXFLAGS="${NDK_CXXFLAGS} $i"
       continue
     fi
 
@@ -253,11 +265,11 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
 
-  export LDFLAGS="${NDK_LDFLAGS}"
+  export CPPFLAGS="${CPPFLAGS}"
+  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS}"
+  export CXXFLAGS="${NDK_CXXFLAGS} ${CPPFLAGS}"
+  export LDFLAGS="${NDK_LDFLAGS} ${LDFLAGS}"
   export LIBS="${LIBS}"
-  export CFLAGS="${NDK_CFLAGS} ${CFLAGS}"
-  export CPPFLAGS="${NDK_CXXFLAGS} ${CPPFLAGS}"
-  export CXXFLAGS="${CPPFLAGS}"
 
 else
 
@@ -323,11 +335,11 @@ fi
 #STDCPP_LIBS="-lstlport_static -ldl"
 #STDCPP_LDFLAGS="-L${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/libs/${TARGET_ABI}"
 
-export CFLAGS="${CFLAGS} ${STDCPP_CFLAGS}"
-export LIBS="${STDCPP_LIBS} ${LIBS}"
+export CFLAGS="${CFLAGS}"
+export LIBS="${LIBS} ${STDCPP_LIBS}"
 export LDFLAGS="${LDFLAGS} ${STDCPP_LDFLAGS}"
-export CPPFLAGS="${CPPFLAGS} ${STDCPP_CFLAGS}"
-export CXXFLAGS="${CPPFLAGS}"
+export CPPFLAGS="${CPPFLAGS}"
+export CXXFLAGS="${CXXFLAGS} ${STDCPP_CFLAGS}"
 
 # Print settings
 if test "1" = "1"; then

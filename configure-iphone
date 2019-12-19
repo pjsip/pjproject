@@ -136,7 +136,6 @@ fi
 # Other settings to feed to configure script. 
 #ARCH="-arch armv6"
 export CFLAGS="${CFLAGS} -DPJ_SDK_NAME=\"\\\"`basename $SDKPATH`\\\"\" ${ARCH} -isysroot ${SDKPATH}"
-export CXXFLAGS="${CFLAGS}"
 export LDFLAGS="${LDFLAGS} ${ARCH} -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
 export AR="${TCPATH}/usr/bin/libtool -static -o"
 export AR_FLAGS=" "
