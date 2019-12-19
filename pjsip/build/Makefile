@@ -144,7 +144,7 @@ export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   account.o endpoint.o json.o persistent.o types.o \
 			   siptypes.o call.o presence.o media.o
 export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS)
+export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 			     $(PJSIP_UA_LDLIB) \
 			     $(PJSIP_SIMPLE_LDLIB) \
