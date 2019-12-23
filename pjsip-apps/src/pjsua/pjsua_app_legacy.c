@@ -296,6 +296,7 @@ static void vid_show_help()
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
     puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
     puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
+    puts("| vid win full on|off ID    Set fullscreen on/off for window ID               |");
     puts("| vid conf list             List all video ports in video conference bridge   |");
     puts("| vid conf cc P Q           Connect port P to Q in the video conf bridge      |");
     puts("| vid conf cd P Q           Disconnect port P to Q in the video conf bridge   |");
@@ -499,6 +500,11 @@ static void vid_handle_menu(char *menuin)
 	    status = pjsua_vid_win_set_size(wid, &size);
 	} else if (argc==3 && strcmp(argv[2], "arrange")==0) {
 	    arrange_window(PJSUA_INVALID_ID);
+	} else if (argc==5 && (strcmp(argv[2], "full")==0))
+	{
+	    pjsua_vid_win_id wid = atoi(argv[4]);
+	    pj_bool_t fullscreen = (strcmp(argv[3], "on")==0);
+	    status = pjsua_vid_win_set_fullscreen(wid, fullscreen);
 	} else
 	    goto on_error;
 

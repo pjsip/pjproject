@@ -701,8 +701,8 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
             flags |= SDL_WINDOW_HIDDEN;
         }
 
-        if (!((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) &&
-            strm->param.window_fullscreen))
+        if ((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) &&
+            strm->param.window_fullscreen)
         {
             flags |= SDL_WINDOW_FULLSCREEN;
         }
@@ -1204,12 +1204,26 @@ static pj_status_t set_cap(void *data)
 		      hwnd->info.window));
 	return status;	
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
-        int flag;
+        Uint32 flag;
+
+	flag = SDL_GetWindowFlags(strm->window);
         if (*(pj_bool_t *)pval)
-            flag = SDL_WINDOW_FULLSCREEN;
+            flag |= SDL_WINDOW_FULLSCREEN;
         else
-            flag = 0;
+            flag &= (~SDL_WINDOW_FULLSCREEN);
+
         SDL_SetWindowFullscreen(strm->window, flag);
+
+	/* Trying to restore the border after returning from fullscreen,
+	 * unfortunately not sure how to put back the resizable flag.
+	 */
+	if ((flag & SDL_WINDOW_FULLSCREEN)==0 &&
+	    (flag & SDL_WINDOW_BORDERLESS)==0)
+	{
+	    SDL_SetWindowBordered(strm->window, PJ_FALSE);
+	    SDL_SetWindowBordered(strm->window, PJ_TRUE);
+	}
+
 	return PJ_SUCCESS;
     }
 
