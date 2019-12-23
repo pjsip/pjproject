@@ -532,8 +532,8 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 {
     NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
     PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
-    	       [error localizedDescription],
-    	       [error localizedFailureReason]));
+    	       [error.localizedDescription UTF8String],
+    	       [error.localizedFailureReason UTF8String]));
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
