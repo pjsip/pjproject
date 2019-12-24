@@ -1220,8 +1220,8 @@ static pj_status_t set_cap(void *data)
 	if ((flag & SDL_WINDOW_FULLSCREEN)==0 &&
 	    (flag & SDL_WINDOW_BORDERLESS)==0)
 	{
-	    SDL_SetWindowBordered(strm->window, PJ_FALSE);
-	    SDL_SetWindowBordered(strm->window, PJ_TRUE);
+	    SDL_SetWindowBordered(strm->window, SDL_FALSE);
+	    SDL_SetWindowBordered(strm->window, SDL_TRUE);
 	}
 
 	return PJ_SUCCESS;
