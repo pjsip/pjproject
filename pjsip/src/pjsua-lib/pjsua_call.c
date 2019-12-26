@@ -5489,9 +5489,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             call->hold_msg = NULL;
         }
         
-        if (tsx->status_code/100 != 2 ||
-            ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
-             !call->med_update_success))
+        if (tsx->last_tx->msg->body &&
+            (tsx->status_code/100 != 2 || !call->med_update_success))
         {
             /* Either we get non-2xx or media update failed,
              * clean up provisional media.
@@ -5506,9 +5505,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
                 tsx->status_code!=401 && tsx->status_code!=407 &&
                 tsx->status_code!=422))
     {
-        if (tsx->status_code/100 != 2 ||
-            ((call->opt.flag & PJSUA_CALL_NO_SDP_OFFER) == 0 &&
-             !call->med_update_success))
+        if (tsx->last_tx->msg->body &&
+            (tsx->status_code/100 != 2 || !call->med_update_success))
         {
             /* Either we get non-2xx or media update failed,
              * clean up provisional media.
