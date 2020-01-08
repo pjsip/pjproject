@@ -1043,7 +1043,8 @@ static OSStatus output_renderer(void                       *inRefCon,
     pj_status_t status = 0;
     unsigned nsamples_req = inNumberFrames * stream->param.channel_count;
     void *output = ioData->mBuffers[0].mData;
-    unsigned elmt_size = ioData->mBuffers[0].mDataByteSize / inNumberFrames;
+    unsigned elmt_size = ioData->mBuffers[0].mDataByteSize / inNumberFrames /
+    			 stream->param.channel_count;
     unsigned output_pos = 0;
 
     pj_assert(!stream->quit_flag);
