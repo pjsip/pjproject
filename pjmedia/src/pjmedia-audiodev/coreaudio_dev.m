@@ -1685,9 +1685,17 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
 		          &param->output_route);
     }
     if (param->flags & PJMEDIA_AUD_DEV_CAP_EC) {
+#if COREAUDIO_MAC
+	/* Temporarily disable VPIO on Mac for stereo due to recording sound
+	 * artefacts.
+	 */
+    	if (param->channel_count > 1) {
+    	    strm->param.ec_enabled = PJ_FALSE;
+    	}
+#endif
 	status = ca_stream_set_cap(&strm->base,
 		          	   PJMEDIA_AUD_DEV_CAP_EC,
-		          	   &param->ec_enabled);
+		          	   &strm->param.ec_enabled);
 	if (status != PJ_SUCCESS)
 	    strm->param.ec_enabled = PJ_FALSE;
     } else {
@@ -1709,7 +1717,7 @@ static pj_status_t ca_factory_create_stream(pjmedia_aud_dev_factory *f,
     strm->io_units[0] = strm->io_units[1] = NULL;
     if ((param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK &&
 	 param->rec_id == param->play_id) ||
-	(param->flags & PJMEDIA_AUD_DEV_CAP_EC && param->ec_enabled))
+	(param->flags & PJMEDIA_AUD_DEV_CAP_EC && strm->param.ec_enabled))
     {
 	/* If both input and output are on the same device or if EC is enabled,
 	 * only create one audio unit to interface with the device(s).
