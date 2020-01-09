@@ -119,7 +119,7 @@
 
 #else
 
-#include "speexdsp_config_types.h"
+#  include <speex/speex_config_types.h>
 
 #endif
 
