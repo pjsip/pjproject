@@ -9,18 +9,18 @@
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions
    are met:
-   
+
    - Redistributions of source code must retain the above copyright
    notice, this list of conditions and the following disclaimer.
-   
+
    - Redistributions in binary form must reproduce the above copyright
    notice, this list of conditions and the following disclaimer in the
    documentation and/or other materials provided with the distribution.
-   
+
    - Neither the name of the Xiph.org Foundation nor the names of its
    contributors may be used to endorse or promote products derived from
    this software without specific prior written permission.
-   
+
    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
    ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
    LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -71,7 +71,7 @@ static inline float interpolate_product_single(const float *a, const float *b, u
    return ret;
 }
 
-#ifdef _USE_SSE2
+#ifdef USE_SSE2
 #include <emmintrin.h>
 #define OVERRIDE_INNER_PRODUCT_DOUBLE
 
@@ -91,7 +91,7 @@ static inline double inner_product_double(const float *a, const float *b, unsign
       sum = _mm_add_pd(sum, _mm_cvtps_pd(t));
       sum = _mm_add_pd(sum, _mm_cvtps_pd(_mm_movehl_ps(t, t)));
    }
-   sum = _mm_add_sd(sum, (__m128d) _mm_movehl_ps((__m128) sum, (__m128) sum));
+   sum = _mm_add_sd(sum, _mm_unpackhi_pd(sum, sum));
    _mm_store_sd(&ret, sum);
    return ret;
 }
@@ -120,7 +120,7 @@ static inline double interpolate_product_double(const float *a, const float *b, 
   sum1 = _mm_mul_pd(f1, sum1);
   sum2 = _mm_mul_pd(f2, sum2);
   sum = _mm_add_pd(sum1, sum2);
-  sum = _mm_add_sd(sum, (__m128d) _mm_movehl_ps((__m128) sum, (__m128) sum));
+  sum = _mm_add_sd(sum, _mm_unpackhi_pd(sum, sum));
   _mm_store_sd(&ret, sum);
   return ret;
 }

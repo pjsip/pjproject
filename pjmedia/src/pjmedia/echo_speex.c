@@ -35,10 +35,12 @@
 typedef struct speex_ec
 {
     SpeexEchoState	 *state;
-    SpeexPreprocessState *preprocess;
+    SpeexDecorrState 	 *decorr;
+    SpeexPreprocessState **preprocess;
 
     unsigned		  samples_per_frame;
-    unsigned		  prefetch;
+    unsigned		  channel_count;
+    unsigned		  spf_per_channel;
     unsigned		  options;
     pj_int16_t		 *tmp_frame;
 } speex_ec;
@@ -57,18 +59,20 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 				     void **p_echo )
 {
     speex_ec *echo;
-    int sampling_rate;
+    int i, sampling_rate;
 
     *p_echo = NULL;
 
     echo = PJ_POOL_ZALLOC_T(pool, speex_ec);
     PJ_ASSERT_RETURN(echo != NULL, PJ_ENOMEM);
 
+    echo->channel_count = channel_count;
     echo->samples_per_frame = samples_per_frame;
+    echo->spf_per_channel = samples_per_frame / channel_count;
     echo->options = options;
 
-#if 0
-    echo->state = speex_echo_state_init_mc(echo->samples_per_frame,
+#if 1
+    echo->state = speex_echo_state_init_mc(echo->spf_per_channel,
 					   clock_rate * tail_ms / 1000,
 					   channel_count, channel_count);
 #else
@@ -79,57 +83,63 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
     echo->state = speex_echo_state_init(echo->samples_per_frame,
     					clock_rate * tail_ms / 1000);
 #endif
-    if (echo->state == NULL) {
+    if (echo->state == NULL)
 	return PJ_ENOMEM;
-    }
+
+    echo->decorr = speex_decorrelate_new(clock_rate, channel_count,
+    					 echo->spf_per_channel);
+    if (echo->decorr == NULL)
+	return PJ_ENOMEM;
 
     /* Set sampling rate */
     sampling_rate = clock_rate;
     speex_echo_ctl(echo->state, SPEEX_ECHO_SET_SAMPLING_RATE, 
 		   &sampling_rate);
 
-    echo->preprocess = speex_preprocess_state_init(echo->samples_per_frame,
-						   clock_rate);
-    if (echo->preprocess == NULL) {
-	speex_echo_state_destroy(echo->state);
-	return PJ_ENOMEM;
-    }
-
-    /* Disable all preprocessing, we only want echo cancellation */
-#if 0
-    disabled = 0;
-    enabled = 1;
-    speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, 
-			 &enabled);
-    speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_AGC, 
-			 &disabled);
-    speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_VAD, 
-			 &disabled);
-    speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DEREVERB, 
-			 &enabled);
-#endif
-
-    /* Enable/disable AGC & denoise */
-    {
+    /* We need to create one state per channel processed. */
+    echo->preprocess = PJ_POOL_ZALLOC_T(pool, SpeexPreprocessState *);
+    for (i = 0; i < channel_count; i++) {
 	spx_int32_t enabled;
 
+    	echo->preprocess[i] = speex_preprocess_state_init(
+    				  echo->spf_per_channel, clock_rate);
+    	if (echo->preprocess[i] == NULL) {
+    	    speex_aec_destroy(echo);
+	    return PJ_ENOMEM;
+	}
+
+    	/* Enable/disable AGC & denoise */
 	enabled = PJMEDIA_SPEEX_AEC_USE_AGC;
-	speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_AGC, 
+	speex_preprocess_ctl(echo->preprocess[i], SPEEX_PREPROCESS_SET_AGC,
 			     &enabled);
 
 	enabled = PJMEDIA_SPEEX_AEC_USE_DENOISE;
-	speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_DENOISE, 
+	speex_preprocess_ctl(echo->preprocess[i],
+			     SPEEX_PREPROCESS_SET_DENOISE, &enabled);
+
+    	/* Currently, VAD and dereverb are set at default setting. */
+    	/*
+    	enabled = 1;
+    	speex_preprocess_ctl(echo->preprocess[i], SPEEX_PREPROCESS_SET_VAD,
 			     &enabled);
+    	speex_preprocess_ctl(echo->preprocess[i],
+    			     SPEEX_PREPROCESS_SET_DEREVERB,
+			     &enabled);
+	*/
+
+    	/* Control echo cancellation in the preprocessor */
+   	speex_preprocess_ctl(echo->preprocess[i],
+   			     SPEEX_PREPROCESS_SET_ECHO_STATE, echo->state);
     }
 
-    /* Control echo cancellation in the preprocessor */
-   speex_preprocess_ctl(echo->preprocess, SPEEX_PREPROCESS_SET_ECHO_STATE, 
-			echo->state);
-
-
     /* Create temporary frame for echo cancellation */
-    echo->tmp_frame = (pj_int16_t*) pj_pool_zalloc(pool, 2*samples_per_frame);
-    PJ_ASSERT_RETURN(echo->tmp_frame != NULL, PJ_ENOMEM);
+    echo->tmp_frame = (pj_int16_t*) pj_pool_zalloc(pool, sizeof(pj_int16_t) *
+    						   channel_count *
+    						   samples_per_frame);
+    if (!echo->tmp_frame) {
+    	speex_aec_destroy(echo);
+	return PJ_ENOMEM;
+    }
 
     /* Done */
     *p_echo = echo;
@@ -144,6 +154,7 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 PJ_DEF(pj_status_t) speex_aec_destroy(void *state )
 {
     speex_ec *echo = (speex_ec*) state;
+    unsigned i;
 
     PJ_ASSERT_RETURN(echo && echo->state, PJ_EINVAL);
 
@@ -152,8 +163,18 @@ PJ_DEF(pj_status_t) speex_aec_destroy(void *state )
 	echo->state = NULL;
     }
 
+    if (echo->decorr) {
+	speex_decorrelate_destroy(echo->decorr);
+	echo->decorr = NULL;
+    }
+
     if (echo->preprocess) {
-	speex_preprocess_state_destroy(echo->preprocess);
+        for (i = 0; i < echo->channel_count; i++) {
+	    if (echo->preprocess[i]) {
+	    	speex_preprocess_state_destroy(echo->preprocess[i]);
+	    	echo->preprocess[i] = NULL;
+	    }
+	}
 	echo->preprocess = NULL;
     }
 
@@ -181,6 +202,7 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
 					   void *reserved )
 {
     speex_ec *echo = (speex_ec*) state;
+    unsigned i;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm && options==0 &&
@@ -192,8 +214,27 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
 			    (spx_int16_t*)echo->tmp_frame);
 
 
-    /* Preprocess output */
-    speex_preprocess_run(echo->preprocess, (spx_int16_t*)echo->tmp_frame);
+    /* Preprocess output per channel */
+    for (i = 0; i < echo->channel_count; i++) {
+    	spx_int16_t *buf = (spx_int16_t*)echo->tmp_frame;
+    	unsigned j;
+
+        /* De-interleave each channel. */
+        if (echo->channel_count > 1) {
+    	    for (j = 0; j < echo->spf_per_channel; j++) {
+    	        rec_frm[j] = echo->tmp_frame[j * echo->channel_count + i];
+    	    }
+    	    buf = (spx_int16_t*)rec_frm;
+    	}
+
+	speex_preprocess_run(echo->preprocess[i], buf);
+
+        if (echo->channel_count > 1) {
+    	    for (j = 0; j < echo->spf_per_channel; j++) {
+    	        echo->tmp_frame[j * echo->channel_count + i] = rec_frm[j];
+    	    }
+    	}
+    }
 
     /* Copy temporary buffer back to original rec_frm */
     pjmedia_copy_samples(rec_frm, echo->tmp_frame, echo->samples_per_frame);
@@ -213,6 +254,15 @@ PJ_DEF(pj_status_t) speex_aec_playback( void *state,
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && play_frm, PJ_EINVAL);
 
+    /* Channel decorrelation algorithm is useful for multi-channel echo
+     * cancellation only .
+     */
+    if (echo->channel_count > 1) {
+    	pjmedia_copy_samples(echo->tmp_frame, play_frm, echo->samples_per_frame);
+    	speex_decorrelate(echo->decorr, (spx_int16_t*)echo->tmp_frame,
+    		      	  (spx_int16_t*)play_frm, 100);
+    }
+
     speex_echo_playback(echo->state, (spx_int16_t*)play_frm);
 
     return PJ_SUCCESS;
@@ -227,6 +277,7 @@ PJ_DEF(pj_status_t) speex_aec_capture( void *state,
 				       unsigned options )
 {
     speex_ec *echo = (speex_ec*) state;
+    unsigned i;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm, PJ_EINVAL);
@@ -234,13 +285,33 @@ PJ_DEF(pj_status_t) speex_aec_capture( void *state,
     PJ_UNUSED_ARG(options);
 
     /* Cancel echo */
-    pjmedia_copy_samples(echo->tmp_frame, rec_frm, echo->samples_per_frame);
     speex_echo_capture(echo->state,
-		       (spx_int16_t*)echo->tmp_frame,
-		       (spx_int16_t*)rec_frm);
+		       (spx_int16_t*)rec_frm,
+		       (spx_int16_t*)echo->tmp_frame);
 
-    /* Apply preprocessing */
-    speex_preprocess_run(echo->preprocess, (spx_int16_t*)rec_frm);
+    /* Apply preprocessing per channel. */
+    for (i = 0; i < echo->channel_count; i++) {
+    	spx_int16_t *buf = (spx_int16_t*)echo->tmp_frame;
+    	unsigned j;
+
+        /* De-interleave each channel. */
+        if (echo->channel_count > 1) {
+    	    for (j = 0; j < echo->spf_per_channel; j++) {
+    	        rec_frm[j] = echo->tmp_frame[j * echo->channel_count + i];
+    	    }
+    	    buf = (spx_int16_t*)rec_frm;
+    	}
+
+	speex_preprocess_run(echo->preprocess[i], buf);
+
+        if (echo->channel_count > 1) {
+    	    for (j = 0; j < echo->spf_per_channel; j++) {
+    	        echo->tmp_frame[j * echo->channel_count + i] = rec_frm[j];
+    	    }
+    	}
+    }
+
+    pjmedia_copy_samples(rec_frm, echo->tmp_frame, echo->samples_per_frame);
 
     return PJ_SUCCESS;
 }

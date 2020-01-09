@@ -99,7 +99,7 @@ static struct ec_operations echo_supp_op =
 #if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
 static struct ec_operations speex_aec_op = 
 {
-    "AEC",
+    "Speex AEC",
     &speex_aec_create,
     &speex_aec_destroy,
     &speex_aec_reset,

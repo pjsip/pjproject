@@ -52,6 +52,10 @@ The algorithm implemented here is described in:
 #include <math.h>
 #include <stdlib.h>
 
+#ifndef M_PI
+#define M_PI           3.14159265358979323846  /* pi */
+#endif
+
 #define ALLPASS_ORDER 20
 
 struct SpeexDecorrState_ {
@@ -171,7 +175,6 @@ EXPORT void speex_decorrelate(SpeexDecorrState *st, const spx_int16_t *in, spx_i
          buff[i+st->frame_size] = in[i*st->channels+ch];
 
       x = buff+st->frame_size;
-      beta = 1.-.3*amount*amount;
       if (amount>1)
          beta = 1-sqrt(.4*amount);
       else

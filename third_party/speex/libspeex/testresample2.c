@@ -1,8 +1,7 @@
 /* Copyright (C) 2007 Jean-Marc Valin
-      
-   File: speex_buffer.h
-   This is a very simple ring buffer implementation. It is not thread-safe
-   so you need to do your own locking.
+
+   File: testresample2.c
+   Testing the resampling code
 
    Redistribution and use in source and binary forms, with or without
    modification, are permitted provided that the following conditions are
@@ -31,38 +30,64 @@
    POSSIBILITY OF SUCH DAMAGE.
 */
 
-#ifndef SPEEX_BUFFER_H
-#define SPEEX_BUFFER_H
-
-#include "speexdsp_types.h"
-
-#ifdef __cplusplus
-extern "C" {
+#ifdef HAVE_CONFIG_H
+#include "config.h"
 #endif
 
-struct SpeexBuffer_;
-typedef struct SpeexBuffer_ SpeexBuffer;
+#include "speex/speex_resampler.h"
+#include <stdio.h>
+#include <math.h>
+#include <stdlib.h>
 
-SpeexBuffer *speex_buffer_init(int size);
+#define PERIOD 32
+#define INBLOCK 1024
+#define RATE 48000
 
-void speex_buffer_destroy(SpeexBuffer *st);
+int main()
+{
+   spx_uint32_t i;
+   float *fin, *fout;
+   int rate = 1000, off = 0, avail = INBLOCK;
+   SpeexResamplerState *st = speex_resampler_init(1, RATE, RATE, 4, NULL);
+   speex_resampler_set_rate(st, RATE, rate);
+   speex_resampler_skip_zeros(st);
 
-int speex_buffer_write(SpeexBuffer *st, void *data, int len);
+   fin = malloc(INBLOCK*2*sizeof(float));
+   for (i=0; i<INBLOCK*2;i++)
+     fin[i] = sinf ((float)i/PERIOD * 2 * M_PI) * 0.9;
 
-int speex_buffer_writezeros(SpeexBuffer *st, int len);
+   fout = malloc(INBLOCK*4*sizeof(float));
 
-int speex_buffer_read(SpeexBuffer *st, void *data, int len);
+   while (1)
+   {
+      spx_uint32_t in_len;
+      spx_uint32_t out_len;
 
-int speex_buffer_get_available(SpeexBuffer *st);
+      in_len = avail;
+      out_len = (in_len * rate + RATE-1) / RATE;
 
-int speex_buffer_resize(SpeexBuffer *st, int len);
+      fprintf (stderr, "%d %d %d %d -> ", rate, off, in_len, out_len);
 
-#ifdef __cplusplus
+      speex_resampler_process_float(st, 0, fin + off, &in_len, fout, &out_len);
+
+      fprintf (stderr, "%d %d\n", in_len, out_len);
+      off += in_len;
+      avail = avail - in_len + INBLOCK;
+
+      if (off >= INBLOCK)
+        off -= INBLOCK;
+
+      fwrite(fout, sizeof(float), out_len, stdout);
+
+      rate += 100;
+      if (rate > 128000)
+        break;
+
+      speex_resampler_set_rate(st, RATE, rate);
+   }
+   speex_resampler_destroy(st);
+   free(fin);
+   free(fout);
+   return 0;
 }
-#endif
-
-#endif
-
-
-
 
