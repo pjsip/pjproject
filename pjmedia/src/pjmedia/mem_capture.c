@@ -176,7 +176,7 @@ static pj_status_t rec_on_event(pjmedia_event *event,
 
     if (event->type == PJMEDIA_EVENT_CALLBACK) {
 	if (rec->cb2)
-	    (*rec->cb2)(&rec->base, rec->base.port_data.pdata);
+	    (*rec->cb2)(&rec->base, rec->user_data);
     }
     
     return PJ_SUCCESS;
