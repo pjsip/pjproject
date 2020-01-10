@@ -490,6 +490,7 @@ static pj_status_t init_openssl(void)
 	SSL_CTX *ctx;
 	SSL *ssl;
 	STACK_OF(SSL_CIPHER) *sk_cipher;
+	SSL_SESSION *ssl_sess;
 	unsigned i, n;
 	int nid;
 	const char *cname;
@@ -537,7 +538,8 @@ static pj_status_t init_openssl(void)
 	}
 	ssl_cipher_num = n;
 
-	SSL_set_session(ssl, SSL_SESSION_new());
+	ssl_sess = SSL_SESSION_new();
+	SSL_set_session(ssl, ssl_sess);
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
     && OPENSSL_VERSION_NUMBER >= 0x1000200fL
@@ -567,6 +569,7 @@ static pj_status_t init_openssl(void)
 #endif
 
 	SSL_free(ssl);
+	SSL_SESSION_free(ssl_sess);
 	SSL_CTX_free(ctx);
     }
 
