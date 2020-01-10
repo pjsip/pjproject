@@ -169,7 +169,7 @@ static pj_status_t player_on_event(pjmedia_event *event,
 
     if (event->type == PJMEDIA_EVENT_CALLBACK) {
 	if (player->cb2)
-	    (*player->cb2)(&player->base, player->base.port_data.pdata);
+	    (*player->cb2)(&player->base, player->user_data);
     }
     
     return PJ_SUCCESS;
