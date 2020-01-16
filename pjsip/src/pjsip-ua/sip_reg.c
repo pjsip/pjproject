@@ -1190,7 +1190,14 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
+    	    /* Need to unlock the regc temporarily while sending the message
+    	     * to prevent deadlock (see ticket #2260 and #1247).
+     	     * It should be safe to do this since the regc's refcount has been
+     	     * incremented.
+     	     */
+    	    pj_lock_release(regc->lock);
 	    status = pjsip_regc_send(regc, tdata);
+	    pj_lock_acquire(regc->lock);
 	}
 	
 	if (status != PJ_SUCCESS) {
@@ -1280,7 +1287,14 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
 
 	status = pjsip_regc_register(regc, regc->auto_reg, &tdata);
 	if (status == PJ_SUCCESS) {
+    	    /* Need to unlock the regc temporarily while sending the message
+    	     * to prevent deadlock (see ticket #2260 and #1247).
+     	     * It should be safe to do this since the regc's refcount has been
+     	     * incremented.
+     	     */
+	    pj_lock_release(regc->lock);
 	    status = pjsip_regc_send(regc, tdata);
+	    pj_lock_acquire(regc->lock);
 	}
 
 	if (status != PJ_SUCCESS) {
