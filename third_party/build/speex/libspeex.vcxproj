@@ -78,7 +78,7 @@
   <Import Project="..\..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4B059DBA-CD9C-4D0F-BE8C-FFB4EFD498E9}</ProjectGuid>
-    <RootNamespace>libspeex</RootNamespace>    
+    <RootNamespace>libspeex</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
@@ -191,10 +191,11 @@
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
-  <!-- Override the PlatformToolset -->  
+  <!-- Override the PlatformToolset -->
   <PropertyGroup>
     <PlatformToolset>$(BuildToolset)</PlatformToolset>
-    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
+    </CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -828,7 +829,18 @@
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
     </ClCompile>
-    <ClCompile Include="..\..\speex\libspeex\smallft.c">
+    <ClCompile Include="..\..\speex\libspeex\scal.c">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">MaxSpeed</Optimization>
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|x64'">MaxSpeed</Optimization>
+    </ClCompile>
+      <ClCompile Include="..\..\speex\libspeex\smallft.c">
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">MaxSpeed</Optimization>
       <Optimization Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">MaxSpeed</Optimization>
