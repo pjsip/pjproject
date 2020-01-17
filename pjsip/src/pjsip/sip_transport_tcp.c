@@ -681,12 +681,12 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.factory = &listener->factory;
 
     /* Create group lock */
-    status = pj_grp_lock_create(pool, NULL, &tcp->grp_lock);
+    status = pj_grp_lock_create_w_handler(pool, NULL, tcp, &tcp_on_destroy,
+    					  &tcp->grp_lock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     pj_grp_lock_add_ref(tcp->grp_lock);
-    pj_grp_lock_add_handler(tcp->grp_lock, pool, tcp, &tcp_on_destroy);
 
     tcp->base.grp_lock = tcp->grp_lock;
 
