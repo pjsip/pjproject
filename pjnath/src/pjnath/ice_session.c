@@ -418,6 +418,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create(pj_stun_config *stun_cfg,
 
     pj_list_init(&ice->early_check);
 
+    ice->valid_pair_found = PJ_FALSE;
+
     /* Done */
     *p_ice = ice;
 
@@ -1348,6 +1350,14 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 	     GET_CHECK_ID(&ice->clist, check),
 	     (check->nominated ? "  and nominated" : "")));
 
+	/* On the first valid pair, we call the callback, if present */
+	if (ice->valid_pair_found == PJ_FALSE) {
+	    ice->valid_pair_found = PJ_TRUE;
+
+	    if (ice->cb.on_valid_pair) {
+		(*ice->cb.on_valid_pair)(ice);
+	    }
+	}
     }
 
     /* 8.2.  Updating States

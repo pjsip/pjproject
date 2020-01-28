@@ -468,6 +468,14 @@ typedef struct pj_ice_sess_cb
 {
     /**
      * An optional callback that will be called by the ICE session when
+     * a valid pair has been found during ICE negotiation.
+     *
+     * @param ice           The ICE session.
+     */
+    void	(*on_valid_pair)(pj_ice_sess *ice);
+
+    /**
+     * An optional callback that will be called by the ICE session when
      * ICE negotiation has completed, successfully or with failure.
      *
      * @param ice	    The ICE session.
@@ -625,6 +633,7 @@ struct pj_ice_sess
     pj_bool_t		 is_nominating;		    /**< Nominating stage   */
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_bool_t		 is_destroying;		    /**< Destroy is called  */
+    pj_bool_t            valid_pair_found;          /**< First pair found   */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 timer;			    /**< ICE timer.	    */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
