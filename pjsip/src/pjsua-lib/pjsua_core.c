@@ -3571,12 +3571,21 @@ static pj_status_t handle_ip_change_on_acc()
     pj_bool_t acc_done[PJSUA_MAX_ACC];
 
     PJSUA_LOCK();
+
+    if (pjsua_var.acc_cnt == 0) {
+	PJ_LOG(3, (THIS_FILE,
+		   "No account is set, IP change handling will stop"));
+	pjsua_acc_end_ip_change(NULL);
+	PJSUA_UNLOCK();
+	return status;
+    }
+
     /* Reset ip_change_active flag. */
     for (; i < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_var.acc[i].ip_change_op = PJSUA_IP_CHANGE_OP_NULL;
 	acc_done[i] = PJ_FALSE;
-    }    
-    
+    }
+
     for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pj_bool_t shutdown_transport = PJ_FALSE;
 	pjsip_regc_info regc_info;
@@ -3594,17 +3603,17 @@ static pj_status_t handle_ip_change_on_acc()
 	    pj_status_t found_restart_tp_fail = PJ_FALSE;
 
 	    pjsip_regc_get_info(acc->regc, &regc_info);
-	    
+
 	    /* Check if transport restart listener succeed. */
 	    for (; j < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++j) {
-		if (pjsua_var.tpdata[j].data.ptr != NULL && 
+		if (pjsua_var.tpdata[j].data.ptr != NULL &&
 		  pjsua_var.tpdata[j].restart_status != PJ_SUCCESS &&
 		  pjsua_var.tpdata[j].type == regc_info.transport->key.type)
 		{
 		    if ((pjsua_var.tpdata[j].data.factory
 					   == regc_info.transport->factory) ||
 			(pjsua_var.tpdata[j].data.tp
-					       == regc_info.transport)) 
+					       == regc_info.transport))
 		    {
 			found_restart_tp_fail = PJ_TRUE;
 			break;
@@ -3622,7 +3631,7 @@ static pj_status_t handle_ip_change_on_acc()
 			acc->ka_transport = NULL;
 		    }
 		}
-		    
+		pjsua_acc_end_ip_change(acc);
 		continue;
 	    }
 
@@ -3632,19 +3641,23 @@ static pj_status_t handle_ip_change_on_acc()
 		transport = regc_info.transport;
 		shutdown_transport = acc->cfg.ip_change_cfg.shutdown_tp;
 		shut_acc_ids[shut_acc_cnt++] = acc->index;
-	    }	
+	    }
 	} else if (acc->cfg.reg_uri.slen &&
-		   acc->reg_last_code != PJSIP_SC_BAD_GATEWAY &&
+		   acc->reg_last_code != PJSIP_SC_OK &&
 		   acc->reg_last_code != PJSIP_SC_REQUEST_TIMEOUT &&
 		   acc->reg_last_code != PJSIP_SC_INTERNAL_SERVER_ERROR &&
 		   acc->reg_last_code != PJSIP_SC_BAD_GATEWAY &&
 		   acc->reg_last_code != PJSIP_SC_SERVICE_UNAVAILABLE &&
 		   acc->reg_last_code != PJSIP_SC_SERVER_TIMEOUT &&
-		   acc->reg_last_code != PJSIP_SC_TEMPORARILY_UNAVAILABLE) 
+		   acc->reg_last_code != PJSIP_SC_TEMPORARILY_UNAVAILABLE)
 	{
+	    PJ_LOG(3, (THIS_FILE, "Permanent registration failure, "
+		       "IP change handling will stop for acc %d", acc->index));
+
+	    pjsua_acc_end_ip_change(acc);
 	    continue;
-	} 
-	pj_ansi_snprintf(acc_id, sizeof(acc_id), "#%d", i);	
+	}
+	pj_ansi_snprintf(acc_id, sizeof(acc_id), "#%d", i);
 
 	if (transport) {
 	    unsigned j = i + 1;
@@ -3655,7 +3668,7 @@ static pj_status_t handle_ip_change_on_acc()
 		pjsua_acc *next_acc = &pjsua_var.acc[j];
 
 		if (!next_acc->valid || !next_acc->regc ||
-		    (next_acc->ip_change_op > PJSUA_IP_CHANGE_OP_NULL)) 
+		    (next_acc->ip_change_op > PJSUA_IP_CHANGE_OP_NULL))
 		{
 		    continue;
 		}
@@ -3682,7 +3695,7 @@ static pj_status_t handle_ip_change_on_acc()
 
 	if (shutdown_transport) {
 	    unsigned j;
-	    /* Shutdown the transport. */	    
+	    /* Shutdown the transport. */
 	    PJ_LOG(3, (THIS_FILE, "Shutdown transport %s used by account %s "
 		       "triggered by IP change", transport->obj_name, acc_id));
 
@@ -3693,24 +3706,6 @@ static pj_status_t handle_ip_change_on_acc()
 	    }
 
 	    status = pjsip_transport_shutdown2(transport, PJ_TRUE);
-
-	    /* Report progress to each acc which uses the same transport. */
-	    for (j = 0; j < shut_acc_cnt; ++j) {
-		pjsua_acc *tmp_acc = &pjsua_var.acc[shut_acc_ids[j]];
-
-		if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
-		    pjsua_ip_change_op_info info;
-
-		    pj_bzero(&info, sizeof(info));
-		    info.acc_shutdown_tp.acc_id = tmp_acc->index;
-
-		    pjsua_var.ua_cfg.cb.on_ip_change_progress(
-							 tmp_acc->ip_change_op,
-							 status,
-							 &info);
-		}
-
-	    }
 	} else {
 	    acc_done[i] = PJ_TRUE;
 	    if (acc->cfg.allow_contact_rewrite && acc->cfg.reg_uri.slen) {
@@ -3725,19 +3720,19 @@ static pj_status_t handle_ip_change_on_acc()
 }
 
 
-static pj_status_t restart_listener(pjsua_transport_id id, 
+static pj_status_t restart_listener(pjsua_transport_id id,
 				    unsigned restart_lis_delay)
 {
     pj_sockaddr bind_addr;
     pjsua_transport_info tp_info;
-    pj_status_t status;    
+    pj_status_t status;
 
-    pjsua_transport_get_info(id, &tp_info);        
+    pjsua_transport_get_info(id, &tp_info);
     pj_sockaddr_init(pjsip_transport_type_get_af(tp_info.type),
 		     &bind_addr,
 		     NULL,
 		     pj_sockaddr_get_port(&tp_info.local_addr));
-    
+
     switch (tp_info.type) {
     case PJSIP_TRANSPORT_UDP:
     case PJSIP_TRANSPORT_UDP6:
@@ -3770,18 +3765,17 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 	status = PJ_EINVAL;
     }
 
-    PJ_PERROR(3,(THIS_FILE, status, "Listener %s restart",
-		 pjsip_transport_get_type_name(tp_info.type)));
+    PJ_PERROR(3,(THIS_FILE, status, "Listener %.*s restart",
+		 tp_info.info.slen, tp_info.info.ptr));
 
     if (status != PJ_SUCCESS && (restart_lis_delay > 0)) {
 	/* Try restarting again, with delay. */
-	pjsua_schedule_timer2(&restart_listener_cb, 
-			      (void*)(pj_size_t)id, 
+	pjsua_schedule_timer2(&restart_listener_cb,
+			      (void*)(pj_size_t)id,
 			      restart_lis_delay);
 
-	PJ_LOG(3,(THIS_FILE, "Retry listener %s restart in %d ms",
-		     pjsip_transport_get_type_name(tp_info.type),
-		     restart_lis_delay));
+	PJ_LOG(3,(THIS_FILE, "Retry listener %.*s restart in %d ms",
+		  tp_info.info.slen, tp_info.info.ptr, restart_lis_delay));
 
 	status = PJ_SUCCESS;
     } else {
@@ -3796,15 +3790,15 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 	    pj_bzero(&info, sizeof(info));
 	    info.lis_restart.transport_id = id;
 	    pjsua_var.ua_cfg.cb.on_ip_change_progress(
-						PJSUA_IP_CHANGE_OP_RESTART_LIS, 
-						status, 
+						PJSUA_IP_CHANGE_OP_RESTART_LIS,
+						status,
 						&info);
 	}
 
 	/* Move forward if all listener has been restarted. */
 	for (; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
-	    if (pjsua_var.tpdata[i].data.ptr != NULL && 
-		pjsua_var.tpdata[i].is_restarting) 
+	    if (pjsua_var.tpdata[i].data.ptr != NULL &&
+		pjsua_var.tpdata[i].is_restarting)
 	    {
 		all_done = PJ_FALSE;
 		break;
@@ -3831,8 +3825,17 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
+    for (; i < (int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	if (pjsua_var.acc[i].valid &&
+	    pjsua_var.acc[i].ip_change_op != PJSUA_IP_CHANGE_OP_NULL &&
+	    pjsua_var.acc[i].ip_change_op != PJSUA_IP_CHANGE_OP_COMPLETED)
+	{
+	    PJ_LOG(2, (THIS_FILE,
+		     "Previous IP address change handling still in progress"));
+	}
+    }
+
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
-    
     if (param->restart_listener) {
 	PJSUA_LOCK();
 	/* Restart listener/transport, handle_ip_change_on_acc() will
@@ -3845,7 +3848,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 	    }
 	}
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
-	    if (pjsua_var.tpdata[i].data.ptr != NULL) {		
+	    if (pjsua_var.tpdata[i].data.ptr != NULL) {
 		status = restart_listener(i, param->restart_lis_delay);
 	    }
 	}

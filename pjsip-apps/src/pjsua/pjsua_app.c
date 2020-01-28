@@ -1025,6 +1025,69 @@ void on_playfile_done(pjmedia_port *port, void *usr_data)
 			       &delay);
 }
 
+/* IP change progress callback. */
+void on_ip_change_progress(pjsua_ip_change_op op,
+			   pj_status_t status,
+			   const pjsua_ip_change_op_info *info)
+{
+    char info_str[128];
+    pjsua_acc_info acc_info;
+    pjsua_transport_info tp_info;
+
+    if (status == PJ_SUCCESS) {
+	switch (op) {
+	case PJSUA_IP_CHANGE_OP_RESTART_LIS:
+	    pjsua_transport_get_info(info->lis_restart.transport_id, &tp_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "restart transport %.*s",
+			     tp_info.info.slen, tp_info.info.ptr);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "transport shutdown for account %.*s",
+			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    if (info->acc_update_contact.code) {
+		pj_ansi_snprintf(info_str, sizeof(info_str),
+				 "update contact for account %.*s, code[%d]",
+				 acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+				 info->acc_update_contact.code);
+	    } else {
+		pj_ansi_snprintf(info_str, sizeof(info_str),
+				 "update contact for account %.*s",
+				 acc_info.acc_uri.slen, acc_info.acc_uri.ptr);
+	    }
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "hangup call for account %.*s, call_id[%d]",
+			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     info->acc_hangup_calls.call_id);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "reinvite call for account %.*s, call_id[%d]",
+			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     info->acc_reinvite_calls.call_id);
+	    break;
+	case PJSUA_IP_CHANGE_OP_COMPLETED:
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "done");
+	    break;
+	}
+	PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));
+
+    } else {
+	PJ_PERROR(3,(THIS_FILE, status, "IP change progress fail"));
+    }
+}
+
 /* Auto hangup timer callback */
 static void hangup_timeout_callback(pj_timer_heap_t *timer_heap,
 				    struct pj_timer_entry *entry)
@@ -1300,6 +1363,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
+    app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif

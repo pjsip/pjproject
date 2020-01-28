@@ -1755,6 +1755,12 @@ static void ui_call_redirect(char menuin[])
     }
 }
 
+static void ui_handle_ip_change()
+{
+    pjsua_ip_change_param param;
+    pjsua_ip_change_param_default(&param);
+    pjsua_handle_ip_change(&param);
+}
 
 /*
  * Main "user interface" loop.
@@ -2004,6 +2010,10 @@ void legacy_main(void)
 
 	case 'R':
 	    ui_call_redirect(menuin);
+	    break;
+
+	case 'I': /* Handle IP change. */
+	    ui_handle_ip_change();
 	    break;
 
 	default:

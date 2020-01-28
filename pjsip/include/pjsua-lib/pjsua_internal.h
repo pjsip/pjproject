@@ -897,6 +897,11 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc);
  */
 pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc);
 
+/*
+ * End IP change process per account.
+ */
+void pjsua_acc_end_ip_change(pjsua_acc *acc);
+
 PJ_END_DECL
 
 #endif	/* __PJSUA_INTERNAL_H__ */

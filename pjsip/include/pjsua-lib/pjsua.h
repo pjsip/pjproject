@@ -748,7 +748,12 @@ typedef enum pjsua_ip_change_op {
     /**
      * The re-INVITE call process.
      */
-    PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS
+    PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS,
+
+    /**
+     * The ip change process has completed.
+     */
+    PJSUA_IP_CHANGE_OP_COMPLETED
 
 } pjsua_ip_change_op;
 
