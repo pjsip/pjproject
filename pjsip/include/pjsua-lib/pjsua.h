@@ -7452,6 +7452,17 @@ PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
 
 
 /**
+ * Get echo canceller statistics.
+ *
+ * @param p_stat	    Pointer to receive the stat.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjsua_get_ec_stat(pjmedia_echo_stat *p_stat);
+
+
+/**
  * Check whether the sound device is currently active. The sound device
  * may be inactive if the application has set the auto close feature to
  * non-zero (the snd_auto_close_time setting in #pjsua_media_config), or

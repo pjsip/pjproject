@@ -2277,6 +2277,19 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
 
 
 /*
+ * Get echo canceller statistics.
+ */
+PJ_DEF(pj_status_t) pjsua_get_ec_stat(pjmedia_echo_stat *p_stat)
+{
+    if (pjsua_var.snd_port) {
+    	return pjmedia_snd_port_get_ec_stat(pjsua_var.snd_port, p_stat);
+    } else {
+    	return PJ_ENOTFOUND;
+    }
+}
+
+
+/*
  * Check whether the sound device is currently active.
  */
 PJ_DEF(pj_bool_t) pjsua_snd_is_active(void)

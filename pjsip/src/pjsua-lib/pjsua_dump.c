@@ -369,6 +369,26 @@ static void dump_media_session(const char *indent,
 	}
 	p += len;
 
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    if (pjsua_snd_is_active()) {
+	    	pjmedia_echo_stat stat;
+	    	pj_status_t status;
+	    	
+	    	status = pjsua_get_ec_stat(&stat);
+	    	if (status == PJ_SUCCESS) {
+		    len = pj_ansi_snprintf(p, end-p, "   %s  EC stat: %.*s\n",
+		    			   indent,
+		    			   (int)stat.stat_info.slen,
+		    			   stat.stat_info.ptr);
+		    if (len < 1 || len >= end-p) {
+	    	    	*p = '\0';
+	    	    	return;
+		    }
+		    p += len;
+	    	}
+	    }
+	}
+
 	/* Get and ICE SRTP status */
 	if (call_med->tp) {
 	    if (tp_info.specific_info_cnt > 0) {

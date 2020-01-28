@@ -804,3 +804,31 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) echo_supp_get_stat( void *state,
+					pjmedia_echo_stat *p_stat)
+{
+    echo_supp *ec = (echo_supp*) state;
+
+    pjmedia_echo_stat_default(p_stat);
+    p_stat->name = "Echo suppressor";
+    p_stat->learning = ec->learning;
+    p_stat->duration = ec->update_cnt * SEGMENT_PTIME;
+    p_stat->tail = (ec->tail_cnt-ec->tail_index) * SEGMENT_PTIME;
+    p_stat->min_factor = (int)(ec->min_factor[ec->tail_index] * 1000);
+    p_stat->avg_factor = (int)(ec->avg_factor[ec->tail_index] * 1000);
+
+    p_stat->stat_info.ptr = p_stat->buf_;
+    p_stat->stat_info.slen =
+    	pj_ansi_snprintf(p_stat->buf_, sizeof(p_stat->buf_),
+	        "Echo suppressor learning %s at t=%03d.%03ds, tail=%d ms,\n"
+	        "          factor min/avg=%d.%03d/%d.%03d",
+	        (ec->learning? "in progress": "done"),
+	        (p_stat->duration/1000), (p_stat->duration%1000),
+	        p_stat->tail,
+	        p_stat->min_factor/1000, p_stat->min_factor%1000,
+	        p_stat->avg_factor/1000, p_stat->avg_factor%1000);
+
+    return PJ_SUCCESS;
+}
+

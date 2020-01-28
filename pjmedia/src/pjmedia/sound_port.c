@@ -714,6 +714,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_tail( pjmedia_snd_port *snd_port,
 
 
 /*
+ * Get echo canceller statistics.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_stat( pjmedia_snd_port *snd_port,
+						  pjmedia_echo_stat *p_stat)
+{
+    PJ_ASSERT_RETURN(snd_port && p_stat, PJ_EINVAL);
+
+    if (snd_port->ec_state) {
+    	return pjmedia_echo_get_stat(snd_port->ec_state, p_stat);
+    } else {
+    	return PJ_ENOTFOUND;
+    }
+}
+
+						  
+/*
  * Get clock source.
  */
 PJ_DEF(pjmedia_clock_src *)

@@ -22,6 +22,7 @@
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
+#include <pj/string.h>
 
 #if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC != 0
 
@@ -49,23 +50,18 @@
     #define WebRtcAec_set_config WebRtcAecm_set_config
     #define WebRtcAec_BufferFarend WebRtcAecm_BufferFarend
     #define AecConfig AecmConfig
-    #define SHOW_DELAY_METRICS	0
     typedef short sample;
 #else
     #include <webrtc/modules/audio_processing/ns/include/noise_suppression.h>
 
     typedef float sample;
 
-    /* If SHOW_DELAY_METRICS is set to non-zero, delay metrics stats will
-     * be printed every SHOW_DELAY_METRICS-th call to webrtc_aec_cancel_echo().
-     * For example, if ptime is 20ms, set this to 250 to print the metrics
-     * every 250*20/1000=5 seconds.
-     */
-    #define SHOW_DELAY_METRICS	0
-    
 #endif
 
 #define BUF_LEN			160
+
+/* Set this to 0 to disable metrics calculation. */
+#define SHOW_DELAY_METRICS	1
 
 typedef struct webrtc_ec
 {
@@ -79,9 +75,6 @@ typedef struct webrtc_ec
     unsigned    subframe_len;
     sample      tmp_buf[BUF_LEN];
     sample      tmp_buf2[BUF_LEN];
-#if SHOW_DELAY_METRICS
-    unsigned	counter;
-#endif
 } webrtc_ec;
 
 
@@ -355,23 +348,31 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     	}
     }
 
-#if SHOW_DELAY_METRICS
-    if (++echo->counter >= SHOW_DELAY_METRICS) {
-    	int median, std;
-    	float frac_delay;
+    return PJ_SUCCESS;
+}
 
-        if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &median, &std,
-        			      &frac_delay) == 0)
-        {
-            PJ_LOG(3, (THIS_FILE, "WebRTC delay metrics: median=%d, std=%d, "
-            			  "fraction of poor delays=%f",
-            			  median, std, frac_delay));
-        }
-        echo->counter = 0;
+
+PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
+					pjmedia_echo_stat *p_stat)
+{
+    webrtc_ec *echo = (webrtc_ec*) state;
+
+    if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &p_stat->median,
+    				  &p_stat->std, &p_stat->frac_delay) != 0)
+    {
+        return PJ_EUNKNOWN;
     }
-#endif
+
+    p_stat->name = "WebRTC AEC";
+    p_stat->stat_info.ptr = p_stat->buf_;
+    p_stat->stat_info.slen =
+        pj_ansi_snprintf(p_stat->buf_, sizeof(p_stat->buf_),
+		     	 "WebRTC delay metric: median=%d, std=%d, "
+            	     	 "frac of poor delay=%.02f",
+            	     	 p_stat->median, p_stat->std, p_stat->frac_delay);
 
     return PJ_SUCCESS;
 }
+
 
 #endif

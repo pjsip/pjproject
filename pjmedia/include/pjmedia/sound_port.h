@@ -27,6 +27,7 @@
 #include <pjmedia-audiodev/audiodev.h>
 #include <pjmedia/clock.h>
 #include <pjmedia/port.h>
+#include <pjmedia/echo.h>
 
 PJ_BEGIN_DECL
 
@@ -314,6 +315,19 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
  */
 PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_tail(pjmedia_snd_port *snd_port,
 						  unsigned *p_length);
+
+
+/**
+ * Get echo canceller statistics.
+ *
+ * @param snd_port	    The sound device port.
+ * @param p_stat	    Pointer to receive the stat.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_stat(pjmedia_snd_port *snd_port,
+						  pjmedia_echo_stat *p_stat);
 
 
 /**
