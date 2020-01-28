@@ -925,12 +925,17 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     stream->last_ts.u64 = frame->timestamp.u64;
 
+    /* Video conference just trying to send heart beat for updating timestamp
+     * or keep-alive, this port doesn't need any, just ignore.
+     */
+    if (frame->size==0 || frame->buf==NULL)
+	return PJ_SUCCESS;
+
+    if (frame->size < stream->vafp.framebytes)
+	return PJ_ETOOSMALL;
+
     if (!stream->is_running)
 	return PJ_EINVALIDOP;
-
-    if (frame->size==0 || frame->buf==NULL ||
-	frame->size < stream->vafp.framebytes)
-	return PJ_SUCCESS;
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);

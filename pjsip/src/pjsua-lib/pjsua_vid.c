@@ -667,6 +667,13 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 		}
 	    }
 
+	    status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4, (THIS_FILE, status,
+			      "Ignored error on connecting video ports "
+			      "on wid=%d", wid));
+	    }
+
 	    /* Done */
 	    *id = wid;
 	    pj_log_pop_indent();
@@ -820,7 +827,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	    goto on_error;
 
 	/* For preview window, connect capturer & renderer (via conf) */
-	if (w->type == PJSUA_WND_TYPE_PREVIEW) {
+	if (w->type == PJSUA_WND_TYPE_PREVIEW && show) {
 	    status = pjsua_vid_conf_connect(w->cap_slot, w->rend_slot, NULL);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
@@ -1444,6 +1451,12 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id)
 			    cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
 			    &enabled);
 	} else {
+	    status = pjsua_vid_conf_disconnect(w->cap_slot, w->rend_slot);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4, (THIS_FILE, status,
+			      "Ignored error on disconnecting video ports "
+			      "on stopping preview wid=%d", wid));
+	    }
 	    status = pjmedia_vid_port_stop(w->vp_rend);
 	}
 

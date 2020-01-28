@@ -1330,6 +1330,12 @@ static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
 #if TARGET_OS_IPHONE
     struct darwin_stream *stream = (struct darwin_stream*)strm;
 
+    /* Video conference just trying to send heart beat for updating timestamp
+     * or keep-alive, this port doesn't need any, just ignore.
+     */
+    if (frame->size==0 || frame->buf==NULL)
+	return PJ_SUCCESS;
+	
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
     else

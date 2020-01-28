@@ -473,6 +473,12 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     struct andgl_stream *stream = (struct andgl_stream*)strm;
     pj_status_t status;
 
+    /* Video conference just trying to send heart beat for updating timestamp
+     * or keep-alive, this port doesn't need any, just ignore.
+     */
+    if (frame->size==0 || frame->buf==NULL)
+	return PJ_SUCCESS;
+	
     if (!stream->is_running || stream->display == EGL_NO_DISPLAY)
 	return PJ_EINVALIDOP;
     
