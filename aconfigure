@@ -8045,6 +8045,8 @@ else
 
 		case $target in
 	  	*darwin*)
+	            SAVED_CFLAGS="$CFLAGS"
+	            CFLAGS="-Werror"
 	            SAVED_LIBS="$LIBS"
 	            LIBS="-framework Security"
 		    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -8065,6 +8067,7 @@ if ac_fn_c_try_compile "$LINENO"; then :
   ac_ssl_backend=darwin
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+		    CFLAGS="$SAVED_CFLAGS"
 		    LIBS="$SAVED_LIBS"
 	            if test "x$ac_ssl_backend" = "xdarwin"; then
 		        $as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
@@ -9023,7 +9026,7 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    	ac_webrtc_instset=mips
 			        ;;
 			    x86*)
-				ac_webrtc_instset=sse2
+			    	ac_webrtc_instset=sse2
 			    	;;
 			    *)
 				ac_webrtc_instset=generic

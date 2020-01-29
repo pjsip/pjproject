@@ -1641,6 +1641,8 @@ AC_ARG_ENABLE(darwin-ssl,
 	      [
 		case $target in
 	  	*darwin*)
+	            SAVED_CFLAGS="$CFLAGS"
+	            CFLAGS="-Werror"
 	            SAVED_LIBS="$LIBS"
 	            LIBS="-framework Security"
 		    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <Security/SecureTransport.h>]],
@@ -1649,6 +1651,7 @@ AC_ARG_ENABLE(darwin-ssl,
 			     SSLReHandshake(ssl_ctx);
 			 }])],
 			[ac_ssl_backend=darwin],)
+		    CFLAGS="$SAVED_CFLAGS"
 		    LIBS="$SAVED_LIBS"
 	            if test "x$ac_ssl_backend" = "xdarwin"; then
 		        AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
