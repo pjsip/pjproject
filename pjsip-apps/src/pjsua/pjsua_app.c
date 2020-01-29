@@ -1040,45 +1040,49 @@ void on_ip_change_progress(pjsua_ip_change_op op,
 	    pjsua_transport_get_info(info->lis_restart.transport_id, &tp_info);
 	    pj_ansi_snprintf(info_str, sizeof(info_str),
 			     "restart transport %.*s",
-			     tp_info.info.slen, tp_info.info.ptr);
+			     (int)tp_info.info.slen, tp_info.info.ptr);
 	    break;
 	case PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP:
 	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
 
 	    pj_ansi_snprintf(info_str, sizeof(info_str),
 			     "transport shutdown for account %.*s",
-			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr);
+			     (int)acc_info.acc_uri.slen,
+			     acc_info.acc_uri.ptr);
 	    break;
 	case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT:
 	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
 	    if (info->acc_update_contact.code) {
 		pj_ansi_snprintf(info_str, sizeof(info_str),
 				 "update contact for account %.*s, code[%d]",
-				 acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+				 (int)acc_info.acc_uri.slen,
+				 acc_info.acc_uri.ptr,
 				 info->acc_update_contact.code);
 	    } else {
 		pj_ansi_snprintf(info_str, sizeof(info_str),
 				 "update contact for account %.*s",
-				 acc_info.acc_uri.slen, acc_info.acc_uri.ptr);
+				 (int)acc_info.acc_uri.slen,
+				 acc_info.acc_uri.ptr);
 	    }
 	    break;
 	case PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS:
 	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
 	    pj_ansi_snprintf(info_str, sizeof(info_str),
 			     "hangup call for account %.*s, call_id[%d]",
-			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     (int)acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
 			     info->acc_hangup_calls.call_id);
 	    break;
 	case PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS:
 	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
 	    pj_ansi_snprintf(info_str, sizeof(info_str),
 			     "reinvite call for account %.*s, call_id[%d]",
-			     acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     (int)acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
 			     info->acc_reinvite_calls.call_id);
 	    break;
 	case PJSUA_IP_CHANGE_OP_COMPLETED:
 	    pj_ansi_snprintf(info_str, sizeof(info_str),
 			     "done");
+	default:
 	    break;
 	}
 	PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));
