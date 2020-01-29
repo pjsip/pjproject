@@ -2778,8 +2778,20 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	                           &tdata->via_tp);
         }
 
+	/* Increment ref counter and release PJSUA lock here, to avoid
+	 * deadlock while making sure that regc won't be destroyed.
+	 */
+	pjsip_regc_add_ref(pjsua_var.acc[acc_id].regc);
+	PJSUA_UNLOCK();
+	
 	//pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
+	
+	PJSUA_LOCK();
+	if (pjsip_regc_dec_ref(pjsua_var.acc[acc_id].regc) == PJ_EGONE) {
+	    /* regc has been deleted. */
+	    goto on_return;
+	}
     }
 
     /* Update pointer to registration transport */

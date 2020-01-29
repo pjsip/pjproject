@@ -397,6 +397,23 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(void) pjsip_regc_add_ref( pjsip_regc *regc )
+{
+    pj_assert(regc);
+    pj_atomic_inc(regc->busy_ctr);
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc )
+{
+    pj_assert(regc);
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
+	pjsip_regc_destroy(regc);
+	return PJ_EGONE;
+    }
+    
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
 						int count,
 						const pjsip_cred_info cred[] )
@@ -787,7 +804,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     /* Temporarily increase busy flag to prevent regc from being deleted
      * in pjsip_regc_send() or in the callback
      */
-    pj_atomic_inc(regc->busy_ctr);
+    pjsip_regc_add_ref(regc);
 
     entry->id = 0;
     status = pjsip_regc_register(regc, 1, &tdata);
@@ -803,9 +820,7 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     }
 
     /* Delete the record if user destroy regc during the callback. */
-    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
-	pjsip_regc_destroy(regc);
-    }
+    pjsip_regc_dec_ref(regc);
 }
 
 static void schedule_registration ( pjsip_regc *regc, pj_uint32_t expiration )
@@ -1067,7 +1082,7 @@ static void regc_tsx_callback(void *token, pjsip_event *event)
     pj_bool_t handled = PJ_TRUE;
     pj_bool_t update_contact = PJ_FALSE;
 
-    pj_atomic_inc(regc->busy_ctr);
+    pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
 
     /* Decrement pending transaction counter. */
@@ -1367,9 +1382,7 @@ handle_err:
     pj_lock_release(regc->lock);
 
     /* Delete the record if user destroy regc during the callback. */
-    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
-	pjsip_regc_destroy(regc);
-    }
+    pjsip_regc_dec_ref(regc);
 }
 
 PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
@@ -1379,7 +1392,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pjsip_expires_hdr *expires_hdr;
     pj_uint32_t cseq;
 
-    pj_atomic_inc(regc->busy_ctr);
+    pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
 
     /* Make sure we don't have pending transaction. */
@@ -1480,9 +1493,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pj_lock_release(regc->lock);
 
     /* Delete the record if user destroy regc during the callback. */
-    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
-	pjsip_regc_destroy(regc);
-    }
+    pjsip_regc_dec_ref(regc);
 
     return status;
 }

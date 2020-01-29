@@ -209,6 +209,29 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     const pj_str_t contact[],
 				     pj_uint32_t expires);
 
+
+/**
+ * Increment busy counter temporarily, to prevent client registration
+ * structure from being destroyed.
+ *
+ * @param regc	    The client registration structure.
+ */
+PJ_DECL(void) pjsip_regc_add_ref( pjsip_regc *regc );
+
+
+/**
+ * Decrement temporary busy counter. After this function
+ * is called, client registration structure may have been destroyed
+ * if there's a pending destroy.
+ *
+ * @param regc	    The client registration structure.
+ *
+ * @return	    PJ_SUCCESS on success. PJ_EGONE if the registration
+ *		    structure has been destroyed inside the function.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc );
+
+
 /**
  * Set callback to be called when the registration received a final response.
  * This callback is different with the one specified during creation via
