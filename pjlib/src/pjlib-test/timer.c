@@ -250,7 +250,8 @@ struct thread_param
     struct {
 	pj_bool_t is_poll;
 	unsigned cnt;
-    } stat[ST_POLL_THREAD_COUNT + ST_CANCEL_THREAD_COUNT];
+    } stat[ST_POLL_THREAD_COUNT + ST_CANCEL_THREAD_COUNT + 1];
+    /* Plus one here to avoid compile warning of zero-sized array */
 };
 
 static pj_status_t st_schedule_entry(pj_timer_heap_t *ht, pj_timer_entry *e)
@@ -831,12 +832,11 @@ static int bench_test(pj_timer_heap_t *timer,
 		      pj_timestamp freq,
 		      BENCH_TEST_TYPE test_type)
 {
-    pj_timestamp t1, t2;
+    pj_timestamp t1;
     unsigned mult = BT_ENTRY_SHOW_START;
     int i, j;
 
     pj_get_timestamp(&t1);
-    t2.u64 = 0;
     /*Schedule random entry.*/
     for (i=0, j=0; j < BT_ENTRY_COUNT; ++j) {
 	pj_time_val delay = { 0 };
