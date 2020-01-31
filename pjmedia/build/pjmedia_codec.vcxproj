@@ -530,6 +530,7 @@
     <ClCompile Include="..\src\pjmedia-codec\passthrough.c" />
     <ClCompile Include="..\src\pjmedia-codec\silk.c" />
     <ClCompile Include="..\src\pjmedia-codec\speex_codec.c" />
+    <ClCompile Include="..\src\pjmedia-codec\vpx.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia-codec.h" />
@@ -554,6 +555,7 @@
     <ClInclude Include="..\include\pjmedia-codec\silk.h" />
     <ClInclude Include="..\include\pjmedia-codec\speex.h" />
     <ClInclude Include="..\include\pjmedia-codec\types.h" />
+    <ClInclude Include="..\include\pjmedia-codec\vpx.h" />
     <ClInclude Include="..\src\pjmedia-codec\g722\g722_dec.h" />
     <ClInclude Include="..\src\pjmedia-codec\g722\g722_enc.h" />
   </ItemGroup>

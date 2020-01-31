@@ -365,10 +365,6 @@ static pj_status_t vpx_alloc_codec(pjmedia_vid_codec_factory *factory,
 
     *p_codec = codec;
     return PJ_SUCCESS;
-
-on_error:
-    vpx_dealloc_codec(factory, codec);
-    return PJMEDIA_CODEC_EFAILED;
 }
 
 static pj_status_t vpx_dealloc_codec(pjmedia_vid_codec_factory *factory,
@@ -854,7 +850,7 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
             }
         
 	    pj_memcpy(vpx_data->dec_buf + whole_len,
-		      packets[i].buf + desc_len, packet_size);
+		      (char *)packets[i].buf + desc_len, packet_size);
 	    whole_len += packet_size;
     	}
     }
@@ -912,7 +908,7 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     	int y;
 
     	for (y = 0; y < h; ++y) {
-    	    pj_memcpy(output->buf + pos, buf, w);
+    	    pj_memcpy((char *)output->buf + pos, buf, w);
     	    pos += w;
       	    buf += stride;
     	}

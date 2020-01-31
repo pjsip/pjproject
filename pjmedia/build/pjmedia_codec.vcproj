@@ -3628,6 +3628,10 @@
 					/>
 				</FileConfiguration>
 			</File>
+      <File
+				RelativePath="..\src\pjmedia-codec\vpx.c"
+				>
+      </File>        
 			<Filter
 				Name="g722 Files"
 				>
@@ -3737,6 +3741,10 @@
 				RelativePath="..\include\pjmedia-codec\types.h"
 				>
 			</File>
+      <File
+				RelativePath="..\include\pjmedia-codec\vpx.h"
+				>
+      </File>      
 		</Filter>
 	</Files>
 	<Globals>
