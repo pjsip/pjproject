@@ -569,7 +569,19 @@ static pj_status_t init_openssl(void)
 #endif
 
 	SSL_free(ssl);
+
+	/* On OpenSSL 1.1.1, omitting SSL_SESSION_free() will cause 
+	 * memory leak (e.g: as reported by Address Sanitizer). But using
+	 * SSL_SESSION_free() may cause crash (due to double free?) on 1.0.x.
+	 * As OpenSSL docs specifies to not calling SSL_SESSION_free() after
+	 * SSL_free(), perhaps it is safer to obey this, the leak amount seems
+	 * to be relatively small (<500 bytes) and should occur once only in
+	 * the library lifetime.
+#if OPENSSL_VERSION_NUMBER >= 0x10101000L
 	SSL_SESSION_free(ssl_sess);
+#endif
+	 */
+
 	SSL_CTX_free(ctx);
     }
 
