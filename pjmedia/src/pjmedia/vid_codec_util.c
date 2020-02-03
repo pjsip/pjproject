@@ -815,22 +815,28 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
 						     PJ_TRUE);
 
 	if (fmtp.max_fr > 0) {
-	    vfd->fps.num   = fmtp.max_fr;
-	    vfd->fps.denum = 1;
+	    if ((float)vfd->fps.num/vfd->fps.denum > (float)fmtp.max_fr) {
+	    	vfd->fps.num   = fmtp.max_fr;
+	    	vfd->fps.denum = 1;
+	    }
 	}
 	
 	if (fmtp.max_fs > 0) {
 	    unsigned max_res = ((int)pj_isqrt(fmtp.max_fs * 8)) * 16;
 	    
-	    /* Do we need to maintain the aspect ratio or scale down
-	     * to some predetermined resolution instead (for example,
-	     * if the requested resolution is 640x480 and max_res is
-	     * 600, should we scale down to 480xx360)?
-	     */
-	    if (vfd->size.w > max_res)
-		vfd->size.w = max_res;
-	    if (vfd->size.h > max_res)
-	    	vfd->size.h = max_res;
+	    if (vfd->size.w > max_res || vfd->size.h > max_res) {
+	        /* Here we maintain the aspect ratio. Or should we scale down
+	         * to some predetermined resolution instead (for example,
+	         * if the requested resolution is 640x480 and max_res is
+	         * 600, should we scale down to 480x360)?
+	         */
+	    	unsigned larger = (vfd->size.w > vfd->size.h)?
+	    			  vfd->size.w: vfd->size.h;
+	    	float scale = (float)max_res/larger;
+
+	    	vfd->size.w = (int)(scale * vfd->size.w);
+	    	vfd->size.h = (int)(scale * vfd->size.h);
+	    }
 	}
     }
 
