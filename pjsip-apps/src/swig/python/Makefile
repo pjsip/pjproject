@@ -3,18 +3,18 @@ PYTHON_SO=_pjsua2.so
 USE_PYTHON3?=1
 
 ifeq ($(USE_PYTHON3),1)
-  PYTHON_EXE=python3.6
-  PYTHON_PKG_DIR=$(HOME)/.local/lib/python3.6/site-packages
+  PYTHON_EXE=python3
 else
-  PYTHON_EXE=python2.7
-  PYTHON_PKG_DIR=$(HOME)/.local/lib/python2.7/site-packages
+  PYTHON_EXE=python2
 endif
 
 #PYTHON_SETUP_FLAGS = --inplace 
 ifeq ($(OS),Windows_NT)
+  PYTHON_PKG_DIR := $(shell $(PYTHON_EXE) -m site --user-site | sed 's/\\/\//g')
   PYTHON_SETUP_FLAGS += --compiler=mingw32
   GCC_EXE=gcc.exe
 else
+  PYTHON_PKG_DIR := $(shell $(PYTHON_EXE) -m site --user-site)
   GCC_EXE=
 endif
 

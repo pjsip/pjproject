@@ -1335,13 +1335,13 @@ void Endpoint::on_call_rx_reinvite(pjsua_call_id call_id,
     OnCallRxReinviteParam prm;
     prm.offer.fromPj(*offer);
     prm.rdata.fromPj(*rdata);
-    prm.async = PJ2BOOL(*async);
+    prm.isAsync = PJ2BOOL(*async);
     prm.statusCode = *code;
     prm.opt.fromPj(*opt);
     
     call->onCallRxReinvite(prm);
     
-    *async = prm.async;
+    *async = prm.isAsync;
     *code = prm.statusCode;
     *opt = prm.opt.toPj();
 }

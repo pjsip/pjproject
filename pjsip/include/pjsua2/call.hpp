@@ -893,7 +893,7 @@ struct OnCallRxReinviteParam
      * On input, it is false. Set to true if app wants to manually answer
      * the re-INVITE.
      */
-    bool		async;
+    bool		isAsync;
     
     /**
      * Status code to be returned for answering the offer. On input,
