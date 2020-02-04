@@ -136,6 +136,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 
 /* Forward decls */
 static pj_bool_t on_data_sent(pj_ice_strans *ice_st, pj_ssize_t sent);
+static void check_pending_send(pj_ice_strans *ice_st);
 static void ice_st_on_destroy(void *obj);
 static void destroy_ice_st(pj_ice_strans *ice_st);
 #define ice_st_perror(ice_st,msg,rc) pjnath_perror(ice_st->obj_name,msg,rc)
@@ -1629,7 +1630,9 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
     /* Check that default candidate for the component exists */
     if (comp->default_cand >= comp->cand_cnt) {
 	status = PJ_EINVALIDOP;
-	goto on_return;
+	if (call_cb)
+    	    on_data_sent(ice_st, -status);
+    	return status;
     }
 
     /* Protect with group lock, since this may cause race condition with
@@ -1741,13 +1744,7 @@ on_return:
     if (call_cb) {
     	on_data_sent(ice_st, (status == PJ_SUCCESS? data_len: -status));
     } else {
-        pj_grp_lock_acquire(ice_st->grp_lock);
-    	if (ice_st->num_buf > 0) {
-    	    ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
-    	    pj_assert (ice_st->buf_idx == ice_st->empty_idx);
-    	}
-    	ice_st->is_pending = PJ_FALSE;
-    	pj_grp_lock_release(ice_st->grp_lock);
+    	check_pending_send(ice_st);
     }
 
     return status;
@@ -2014,6 +2011,26 @@ static void ice_rx_data(pj_ice_sess *ice,
     }
 }
 
+static void check_pending_send(pj_ice_strans *ice_st)
+{
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    if (ice_st->num_buf > 0)
+        ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
+    
+    if (ice_st->num_buf > 0 && ice_st->buf_idx != ice_st->empty_idx) {
+	/* There's some pending send. Send it one by one. */
+        pending_send *ps = &ice_st->send_buf[ice_st->buf_idx];
+
+	pj_grp_lock_release(ice_st->grp_lock);
+    	send_data(ice_st, ps->comp_id, ps->buffer, ps->data_len,
+    	    	  &ps->dst_addr, ps->dst_addr_len, PJ_FALSE, PJ_TRUE);
+    } else {
+    	ice_st->is_pending = PJ_FALSE;
+    	pj_grp_lock_release(ice_st->grp_lock);
+    }
+}
+
 /* Notifification when asynchronous send operation via STUN/TURN
  * has completed.
  */
@@ -2026,22 +2043,7 @@ static pj_bool_t on_data_sent(pj_ice_strans *ice_st, pj_ssize_t sent)
 	(*ice_st->cb.on_data_sent)(ice_st, sent);
     }
 
-    pj_grp_lock_acquire(ice_st->grp_lock);
-
-    if (ice_st->num_buf > 0)
-        ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
-    
-    if (ice_st->num_buf > 0 && ice_st->buf_idx != ice_st->empty_idx) {
-	/* There's still more pending send. Send it one by one. */
-        pending_send *ps = &ice_st->send_buf[ice_st->buf_idx];
-
-	pj_grp_lock_release(ice_st->grp_lock);
-    	send_data(ice_st, ps->comp_id, ps->buffer, ps->data_len,
-    	    	  &ps->dst_addr, ps->dst_addr_len, PJ_FALSE, PJ_TRUE);
-    } else {
-    	ice_st->is_pending = PJ_FALSE;
-    	pj_grp_lock_release(ice_st->grp_lock);
-    }
+    check_pending_send(ice_st);
 
     return PJ_TRUE;
 }
