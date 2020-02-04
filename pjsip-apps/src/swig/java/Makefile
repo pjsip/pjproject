@@ -1,6 +1,14 @@
 include ../../../../build.mak
 include ../../../../build/common.mak
 
+SWIG_FLAGS=-I../../../../pjlib/include \
+		   -I../../../../pjlib-util/include \
+		   -I../../../../pjmedia/include \
+		   -I../../../../pjsip/include \
+		   -I../../../../pjnath/include -c++ 
+SRC_DIR=../../../../pjsip/include
+SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
+
 ifneq ($(findstring android,$(TARGET_NAME)),)
  OS=android
  ifeq ("$(JAVA_HOME)","")
