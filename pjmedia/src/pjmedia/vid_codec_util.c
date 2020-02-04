@@ -840,6 +840,36 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_apply_fmtp(
 	}
     }
 
+    if (param->dir & PJMEDIA_DIR_DECODING) {
+	/* Here we just want to find the highest fps and resolution possible
+	 * from the fmtp and set it as the decoder param.
+	 */
+	pjmedia_vid_codec_vpx_fmtp fmtp;
+	pjmedia_video_format_detail *vfd;
+	pj_status_t status;
+
+	/* Get remote param */
+	status = pjmedia_vid_codec_vpx_parse_fmtp(&param->dec_fmtp,
+						  &fmtp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	vfd = pjmedia_format_get_video_format_detail(&param->dec_fmt,
+						     PJ_TRUE);
+
+	if (fmtp.max_fr > 0) {
+	    vfd->fps.num   = fmtp.max_fr;
+	    vfd->fps.denum = 1;
+	}
+	
+	if (fmtp.max_fs > 0) {
+	    unsigned max_res = ((int)pj_isqrt(fmtp.max_fs * 8)) * 16;
+	    
+	    vfd->size.w = max_res;
+	    vfd->size.h = max_res;
+	}
+    }
+
     return PJ_SUCCESS;
 }
 
