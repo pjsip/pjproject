@@ -451,7 +451,9 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
     cfg.rc_buf_initial_sz = 400;
     cfg.rc_buf_optimal_sz = 500;
     cfg.rc_buf_sz = 600;
-    cfg.kf_max_dist = 999999;
+    /* kf max distance is 60s. */
+    cfg.kf_max_dist = 60 * vpx_data->prm->enc_fmt.det.vid.fps.num/
+    		      vpx_data->prm->enc_fmt.det.vid.fps.denum;
     cfg.rc_resize_allowed = 0;
     cfg.rc_dropframe_thresh = 25;
 
