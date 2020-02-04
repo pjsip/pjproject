@@ -899,6 +899,9 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
 	                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
     }
 
+    if (img->d_w * img->d_h * 3/2 > output->size)
+    	return PJMEDIA_CODEC_EFRMTOOSHORT;
+
     output->type = PJMEDIA_FRAME_TYPE_VIDEO;
     output->timestamp = packets[0].timestamp;
 
