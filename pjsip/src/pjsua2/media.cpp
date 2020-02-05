@@ -1846,7 +1846,7 @@ void CodecOpusConfig::fromPj(const pjmedia_codec_opus_config &config)
     bit_rate = config.bit_rate;
     packet_loss = config.packet_loss;
     complexity = config.complexity;
-    cbr = config.cbr;
+    cbr = PJ2BOOL(config.cbr);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1326,7 +1326,7 @@ static pj_status_t stun_on_send_msg(pj_stun_session *stun,
     PJ_UNUSED_ARG(token);
 
     sess = (pj_turn_session*) pj_stun_session_get_user_data(stun);
-    if (*sess->cb.on_stun_send_pkt) {
+    if (sess->cb.on_stun_send_pkt) {
     	return (*sess->cb.on_stun_send_pkt)(sess, (const pj_uint8_t*)pkt,
 				       	    (unsigned)pkt_size,
 				       	    dst_addr, addr_len);

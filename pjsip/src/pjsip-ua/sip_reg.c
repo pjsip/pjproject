@@ -45,7 +45,7 @@
  */
 #define REGC_TSX_TIMEOUT	33000
 
-enum { NOEXP = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED };
+#define NOEXP			PJSIP_REGC_EXPIRATION_NOT_SPECIFIED
 
 static const pj_str_t XUID_PARAM_NAME = { "x-uid", 5 };
 

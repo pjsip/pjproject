@@ -168,6 +168,7 @@ struct SLayerPEncCtx
 };
 
 static void log_print(void* ctx, int level, const char* string) {
+    PJ_UNUSED_ARG(ctx);
     PJ_LOG(4,("[OPENH264_LOG]", "[L%d] %s", level, string));
 }
 

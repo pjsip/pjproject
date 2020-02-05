@@ -59,7 +59,8 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 				     void **p_echo )
 {
     speex_ec *echo;
-    int i, sampling_rate;
+    int sampling_rate;
+    unsigned i;
 
     *p_echo = NULL;
 

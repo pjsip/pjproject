@@ -786,7 +786,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_vpx_parse_fmtp(
 	    vpx_fmtp->max_fr = PJ_MAX(tmp, vpx_fmtp->max_fr);
 	} else if (pj_stricmp(&fmtp->param[i].name, &PROFILE_ID) == 0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    vpx_fmtp->profile_id = PJ_MAX(tmp, vpx_fmtp->profile_id);
+	    vpx_fmtp->profile_id = (pj_uint8_t)
+				   PJ_MAX(tmp, vpx_fmtp->profile_id);
 	}
     }
 
