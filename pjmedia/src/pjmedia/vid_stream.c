@@ -1207,7 +1207,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	/* Send rate control */
 	if (stream->info.rc_cfg.method==PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
 	{
-	    pj_timestamp now, next_send_ts, total_send_ts;
+	    pj_timestamp next_send_ts, total_send_ts;
 
 	    total_send_ts.u64 = total_sent * stream->ts_freq.u64 * 8 /
 				stream->info.rc_cfg.bandwidth;

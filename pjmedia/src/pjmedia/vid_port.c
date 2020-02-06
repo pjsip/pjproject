@@ -792,7 +792,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
         const pjmedia_video_format_info *vfi;
         const pjmedia_format *fmt;
 	pjmedia_video_apply_fmt_param vafp;
-	pj_status_t status;
 	pjmedia_frame frame;
 
 	pj_bzero(&frame, sizeof(pjmedia_frame));

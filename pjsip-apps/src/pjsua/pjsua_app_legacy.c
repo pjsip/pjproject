@@ -631,19 +631,19 @@ static void vid_handle_menu(char *menuin)
 
 		    li_list[0] = '\0';
 		    for (j=0; j<info.listener_cnt; ++j) {
-			char s[10];
-			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+			char str_info[10];
+			pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
 					 info.listeners[j],
 					 (j==info.listener_cnt-1)?"":",");
-			pj_ansi_strcat(li_list, s);
+			pj_ansi_strcat(li_list, str_info);
 		    }
 		    tr_list[0] = '\0';
 		    for (j=0; j<info.transmitter_cnt; ++j) {
-			char s[10];
-			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+			char str_info[10];
+			pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
 					 info.transmitters[j],
 					 (j==info.transmitter_cnt-1)?"":",");
-			pj_ansi_strcat(tr_list, s);
+			pj_ansi_strcat(tr_list, str_info);
 		    }
 		    pjmedia_fourcc_name(info.format.id, s);
 		    s[4] = ' ';

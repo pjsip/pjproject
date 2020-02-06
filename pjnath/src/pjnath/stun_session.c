@@ -622,8 +622,8 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
      * race scenario with on_cache_timeout().
      */
     while (!pj_list_empty(&sess->cached_response_list)) {
-	pj_stun_tx_data *tdata = sess->cached_response_list.next;
-	destroy_tdata(tdata, PJ_TRUE);
+	pj_stun_tx_data *tmp_tdata = sess->cached_response_list.next;
+	destroy_tdata(tmp_tdata, PJ_TRUE);
     }
 
     pj_grp_lock_dec_ref(sess->grp_lock);

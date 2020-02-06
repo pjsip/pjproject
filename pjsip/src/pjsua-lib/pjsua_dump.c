@@ -371,15 +371,15 @@ static void dump_media_session(const char *indent,
 
 	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
 	    if (pjsua_snd_is_active()) {
-	    	pjmedia_echo_stat stat;
+	    	pjmedia_echo_stat ec_stat;
 	    	pj_status_t status;
 	    	
-	    	status = pjsua_get_ec_stat(&stat);
+	    	status = pjsua_get_ec_stat(&ec_stat);
 	    	if (status == PJ_SUCCESS) {
 		    len = pj_ansi_snprintf(p, end-p, "   %s  EC stat: %.*s\n",
 		    			   indent,
-		    			   (int)stat.stat_info.slen,
-		    			   stat.stat_info.ptr);
+		    			   (int)ec_stat.stat_info.slen,
+		    			   ec_stat.stat_info.ptr);
 		    if (len < 1 || len >= end-p) {
 	    	    	*p = '\0';
 	    	    	return;
