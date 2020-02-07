@@ -2761,6 +2761,8 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS) {
+        pjsip_regc *regc = pjsua_var.acc[acc_id].regc;
+
         if (pjsua_var.acc[acc_id].cfg.allow_via_rewrite &&
             pjsua_var.acc[acc_id].via_addr.host.slen > 0)
         {
@@ -2781,14 +2783,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	/* Increment ref counter and release PJSUA lock here, to avoid
 	 * deadlock while making sure that regc won't be destroyed.
 	 */
-	pjsip_regc_add_ref(pjsua_var.acc[acc_id].regc);
+	pjsip_regc_add_ref(regc);
 	PJSUA_UNLOCK();
 	
 	//pjsua_process_msg_data(tdata, NULL);
-	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
+	status = pjsip_regc_send( regc, tdata );
 	
 	PJSUA_LOCK();
-	if (pjsip_regc_dec_ref(pjsua_var.acc[acc_id].regc) == PJ_EGONE) {
+	if (pjsip_regc_dec_ref(regc) == PJ_EGONE) {
 	    /* regc has been deleted. */
 	    goto on_return;
 	}
