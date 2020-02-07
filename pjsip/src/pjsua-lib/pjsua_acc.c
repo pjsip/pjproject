@@ -2169,7 +2169,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	    pj_addr_str_print(&input_str, param->rdata->pkt_info.src_port, 
 			      addr, sizeof(addr), 1);
 	    PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
-				 "destination:%s:%d, interval:%ds",
+				 "destination:%s, interval:%ds",
 				 acc->index, addr, acc->cfg.ka_interval));
 	} else {
 	    acc->ka_timer.id = PJ_FALSE;
