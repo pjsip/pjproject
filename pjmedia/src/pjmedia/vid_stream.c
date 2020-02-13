@@ -2391,6 +2391,22 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
 
 
 /*
+ * Send RTCP PLI.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_pli(
+						pjmedia_vid_stream *stream)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    if (stream->transport) {
+	return send_rtcp(stream, PJ_FALSE, PJ_FALSE, PJ_FALSE, PJ_TRUE);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Initialize the video stream rate control with default settings.
  */
 PJ_DEF(void)
