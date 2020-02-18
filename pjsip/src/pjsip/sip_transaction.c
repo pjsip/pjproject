@@ -1295,6 +1295,9 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	    if (tsx->pending_tx) {
 		tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
 		tsx->pending_tx = NULL;
+
+		/* Decrease pending send counter */
+		pj_grp_lock_dec_ref(tsx->grp_lock);
 	    }
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	}
@@ -1856,8 +1859,10 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	/* Decrease pending send counter, but only if the transaction layer
 	 * hasn't been shutdown.
 	 */
-	if (mod_tsx_layer.mod.id >= 0)
-	    pj_grp_lock_dec_ref(tsx->grp_lock);
+	// If tsx has cancelled itself from this transmit notification
+	// it should have also decreased pending send counter.
+	//if (mod_tsx_layer.mod.id >= 0)
+	//    pj_grp_lock_dec_ref(tsx->grp_lock);
 
 	return;
     }
@@ -2024,6 +2029,10 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 			       pj_ssize_t sent)
 {
     pjsip_transaction *tsx = (pjsip_transaction*) token;
+
+    /* Check if the transaction layer has been shutdown. */
+    if (mod_tsx_layer.mod.id < 0)
+	return;
 
     /* In other circumstances, locking tsx->grp_lock AFTER transport mutex
      * will introduce deadlock if another thread is currently sending a
@@ -2224,6 +2233,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
 	if (status != PJ_SUCCESS) {
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	    pj_grp_lock_dec_ref(tsx->grp_lock);
 	    pjsip_tx_data_dec_ref(tdata);
 	    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
@@ -2243,6 +2253,8 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
 	if (status != PJ_SUCCESS) {
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+	    pj_grp_lock_dec_ref(tsx->grp_lock);
 	    pjsip_tx_data_dec_ref(tdata);
 	    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
 	    tsx->pending_tx = NULL;

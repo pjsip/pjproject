@@ -274,13 +274,9 @@ int tsx_destroy_test()
 	    "resolve and destroy, wait",
 	    &tsx_create_and_send_req,
 	    "sip:user@somehost",
-	    3000, /* Wait for DNS timeout, dec ref to the group lock is done in DNS+send callback */
+	    1,
 	    15000
 	},
-#if 0
-	/* These tests rely on TCP connect timeout (so group lock reference count becomes 0 and group lock objects destroys are initiated).
-	 * Unfortunately TCP connect timeout may take longer in some OS, e.g: Linux, MacOS, so let's disable this test for now.
-	 */
 	{
 	    "tcp connect and destroy",
 	    &tsx_create_and_send_req,
@@ -289,13 +285,12 @@ int tsx_destroy_test()
 	    1000
 	},
 	{
-	    "tcp connect and destroy",
+	    "tcp connect and destroy 2",
 	    &tsx_create_and_send_req,
 	    "sip:user@10.125.36.63:58517;transport=tcp",
-	    22000, /* Wait for TCP connect timeout, dec ref to the group lock is done in send callback */
+	    1,
 	    60000
 	},
-#endif
     };
     int rc;
     unsigned i;
