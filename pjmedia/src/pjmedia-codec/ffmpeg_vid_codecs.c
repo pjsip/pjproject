@@ -1710,7 +1710,16 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
      * Normally, encoded buffer is allocated more than needed, so lets just
      * bzero the input buffer end/pad, hope it will be just fine.
      */
+#if LIBAVCODEC_VER_AT_LEAST(56,35)
+    /* 2015-07-27 - lavc 56.56.100 / 56.35.0 - avcodec.h
+    *  29d147c / 059a9348 
+    * - Rename FF_INPUT_BUFFER_PADDING_SIZE and FF_MIN_BUFFER_SIZE
+    *   to AV_INPUT_BUFFER_PADDING_SIZE and AV_INPUT_BUFFER_MIN_SIZE.
+    */
+    pj_bzero(avpacket.data+avpacket.size, AV_INPUT_BUFFER_PADDING_SIZE);
+#else
     pj_bzero(avpacket.data+avpacket.size, FF_INPUT_BUFFER_PADDING_SIZE);
+#endif
 
     output->bit_info = 0;
     output->timestamp = input->timestamp;
