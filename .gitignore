@@ -9,6 +9,11 @@ output/
 .vs/
 **/build/**/*.vcproj.*.user
 UpgradeLog.htm
+# VS 2015 stuff
+*.pdb
+*.db
+*.opendb
+samples.log
 
 # GNU stuff
 config.log
@@ -35,4 +40,3 @@ pjsip-apps/src/swig/csharp/pjsua2xamarin/
 pjsip-apps/src/swig/python/build/
 pjsip-apps/src/swig/python/pjsua2.py
 pjsip-apps/src/swig/python/pjsua2_wrap.*
-
