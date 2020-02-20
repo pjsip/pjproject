@@ -2,13 +2,13 @@ pjlib/include/pj/config_site.h
 lib/
 bin/
 output/
-Debug/
 
 # VS stuff
 *.ncb
 *.suo
 .vs/
 **/build/**/*.vcproj.*.user
+**/build/**/*.vcxproj.*.user
 UpgradeLog.htm
 # VS 2015 stuff
 *.pdb
