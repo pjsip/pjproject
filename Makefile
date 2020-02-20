@@ -113,8 +113,11 @@ pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
 pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
 	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
 
-pjsua-test:
+pjsua-test: cmp_wav
 	cd tests/pjsua && python runall.py
+
+cmp_wav:
+	cd tests/pjsua/tools && make
 
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
