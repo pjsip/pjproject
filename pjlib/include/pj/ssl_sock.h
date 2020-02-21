@@ -708,6 +708,11 @@ typedef enum pj_ssl_sock_proto
      */
     PJ_SSL_SOCK_PROTO_TLS1_2  = (1 << 4),
 
+    /**
+     * TLSv1.3 protocol.
+     */
+    PJ_SSL_SOCK_PROTO_TLS1_3  = (1 << 5),
+
     /** 
      * Certain backend implementation e.g:OpenSSL, has feature to enable all
      * protocol. 
