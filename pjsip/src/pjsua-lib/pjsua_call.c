@@ -1195,6 +1195,12 @@ pj_status_t create_temp_sdp(pj_pool_t *pool,
 	    }
 	}
 
+	/* Disable media if it has zero format/codec */
+	if (m->desc.fmt_count == 0) {
+	    m->desc.fmt[m->desc.fmt_count++] = pj_str("0");
+	    pjmedia_sdp_media_deactivate(pool, m);
+	}
+
 	sdp->media[sdp->media_count++] = m;
     }	   
 
