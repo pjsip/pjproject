@@ -567,7 +567,6 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     pj_uint8_t *pkt;
     int len, max_len;
     pj_status_t status;
-    pjmedia_vid_channel *channel = stream->enc;
 
     /* Build RTCP RR/SR packet */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
@@ -643,8 +642,7 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
     status = pjmedia_transport_send_rtcp(stream->transport, pkt, len);
     if (status != PJ_SUCCESS) {
 	if (stream->rtcp_tx_err_cnt++ == 0) {
-	    LOGERR_((channel->port.info.name.ptr, status,
-		     "Error sending RTCP"));
+	    LOGERR_((stream->name.ptr, status, "Error sending RTCP"));
 	}
 	if (stream->rtcp_tx_err_cnt > SEND_ERR_COUNT_TO_REPORT) {
 	    stream->rtcp_tx_err_cnt = 0;
