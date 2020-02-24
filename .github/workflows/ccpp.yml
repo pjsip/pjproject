@@ -9,6 +9,10 @@ jobs:
     
     steps:
     - uses: actions/checkout@v2
+    - name: install dependencies
+      run: sudo apt-get install -y sip-tester
+    - name: config site
+      run: echo "#define PJMEDIA_SRTP_HAS_DTLS 1" > pjlib/include/pj/config_site.h
     - name: configure
       run: ./configure
     - name: make
