@@ -994,8 +994,9 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
     /* Done */
     inc_vid_win(wid);
     call_med->strm.v.cap_win_id = wid;
-    PJ_LOG(4,(THIS_FILE, "Call %d: video capture set up with dev %d, wid=%d",
-	      call_med->call->index, call_med->strm.v.cap_dev, wid));
+    PJ_LOG(4,(THIS_FILE, "Call %d media %d: video capture set up with "
+    			 "dev %d, wid=%d", call_med->call->index,
+    			 call_med->idx, call_med->strm.v.cap_dev, wid));
 
     PJSUA_UNLOCK();
 
@@ -1283,7 +1284,9 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	dec_vid_win(call_med->strm.v.cap_win_id);
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
 	
-	PJ_LOG(4,(THIS_FILE, "Preview video window released"));
+	PJ_LOG(4,(THIS_FILE, "Call %d media %d: Preview video window "
+			     "released", call_med->call->index,
+    			     call_med->idx));
     }
 
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
@@ -1298,7 +1301,9 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
 
-	PJ_LOG(4,(THIS_FILE, "Stream video window released"));
+	PJ_LOG(4,(THIS_FILE, "Call %d media %d: Stream video window "
+			     "released", call_med->call->index,
+    			     call_med->idx));
     }
     PJSUA_UNLOCK();
 
