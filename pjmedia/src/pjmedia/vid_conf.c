@@ -608,10 +608,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	    break;
     }
 
-    if (i != src_port->listener_cnt) {
+    if (i != src_port->listener_cnt && j != dst_port->transmitter_cnt) {
 	unsigned k;
 
-	pj_assert(j != dst_port->transmitter_cnt);
 	pj_assert(src_port->listener_cnt > 0 && 
 		  src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
 	pj_assert(dst_port->transmitter_cnt > 0 && 
@@ -735,8 +734,8 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		status = pjmedia_port_get_frame(src->port, &frame);
 		if (status != PJ_SUCCESS) {
 		    PJ_PERROR(5, (THIS_FILE, status,
-				  "Failed to get frame from port [%s]!",
-				  src->port->info.name.ptr));
+				  "Failed to get frame from port %d [%s]!",
+				  src->idx, src->port->info.name.ptr));
 		}
 
 		/* Update next src put/get */
@@ -750,9 +749,10 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    status = render_src_frame(src, sink, j);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(5, (THIS_FILE, status,
-			      "Failed to render frame from port [%s] to [%s]",
-			      src->port->info.name.ptr,
-			      sink->port->info.name.ptr));
+			      "Failed to render frame from port %d [%s] to "
+			      "%d [%s]",
+			      src->idx, src->port->info.name.ptr,
+			      sink->idx, sink->port->info.name.ptr));
 	    }
 
 	    got_frame = PJ_TRUE;
