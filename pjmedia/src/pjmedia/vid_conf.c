@@ -57,8 +57,6 @@ struct pjmedia_vid_conf
     pj_mutex_t		 *mutex;	/**< Conference mutex.		    */
     struct vconf_port	**ports;	/**< Array of ports.		    */
     pjmedia_clock	 *clock;	/**< Clock.			    */
-    pj_status_t		 *last_err;	/**< Last error status.		    */
-    unsigned		 *last_err_cnt;	/**< Last error count.		    */
 };
 
 
@@ -104,6 +102,9 @@ typedef struct vconf_port
     pj_pool_t	       **render_pool;	/**< Array of pool for render state */
     render_state       **render_states;	/**< Array of render_state (one for
 					     each transmitter).		    */
+
+    pj_status_t		  last_err;	/**< Last error status.		    */
+    unsigned		  last_err_cnt;	/**< Last error count.		    */
 } vconf_port;
 
 
@@ -157,16 +158,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_create(
 		      pj_pool_zalloc(pool, vid_conf->opt.max_slot_cnt *
 					   sizeof(vconf_port*));
     PJ_ASSERT_RETURN(vid_conf->ports, PJ_ENOMEM);
-
-    /* Allocate last error status */
-    vid_conf->last_err = (pj_status_t *)
-		      	 pj_pool_zalloc(pool, vid_conf->opt.max_slot_cnt *
-					sizeof(pj_status_t));
-    PJ_ASSERT_RETURN(vid_conf->last_err, PJ_ENOMEM);
-    vid_conf->last_err_cnt = (unsigned *)
-		      	     pj_pool_zalloc(pool, vid_conf->opt.max_slot_cnt *
-					    sizeof(unsigned));
-    PJ_ASSERT_RETURN(vid_conf->last_err_cnt, PJ_ENOMEM);
 
     /* Create mutex */
     status = pj_mutex_create_recursive(pool, CONF_NAME, &vid_conf->mutex);
@@ -623,9 +614,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	    break;
     }
 
-    if (i != src_port->listener_cnt && j != dst_port->transmitter_cnt) {
+    if (i != src_port->listener_cnt) {
 	unsigned k;
 
+	pj_assert(j != dst_port->transmitter_cnt);
 	pj_assert(src_port->listener_cnt > 0 && 
 		  src_port->listener_cnt < vid_conf->opt.max_slot_cnt);
 	pj_assert(dst_port->transmitter_cnt > 0 && 
@@ -749,8 +741,8 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		status = pjmedia_port_get_frame(src->port, &frame);
 		if (status != PJ_SUCCESS) {
 		    PJ_PERROR(5, (THIS_FILE, status,
-				  "Failed to get frame from port %d [%s]!",
-				  src->idx, src->port->info.name.ptr));
+				  "Failed to get frame from port [%s]!",
+				  src->port->info.name.ptr));
 		}
 
 		/* Update next src put/get */
@@ -764,10 +756,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    status = render_src_frame(src, sink, j);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(5, (THIS_FILE, status,
-			      "Failed to render frame from port %d [%s] to "
-			      "%d [%s]",
-			      src->idx, src->port->info.name.ptr,
-			      sink->idx, sink->port->info.name.ptr));
+			      "Failed to render frame from port [%s] to [%s]",
+			      src->port->info.name.ptr,
+			      sink->port->info.name.ptr));
 	    }
 
 	    got_frame = PJ_TRUE;
@@ -787,21 +778,20 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
 	if (got_frame && status != PJ_SUCCESS) {
-	    if (vid_conf->last_err[i] != status ||
-	        vid_conf->last_err_cnt[i] > MAX_ERR_COUNT ||
-	        status != PJ_EINVALIDOP)
+	    if (sink->last_err != status ||
+	        sink->last_err_cnt > MAX_ERR_COUNT)
 	    {
 	    	PJ_PERROR(5, (THIS_FILE, status,
 			      "Failed to put frame to port %d [%s]!",
 			      sink->idx, sink->port->info.name.ptr));
-		vid_conf->last_err[i] = status;
-		vid_conf->last_err_cnt[i] = 1;
+		sink->last_err = status;
+		sink->last_err_cnt = 1;
 	    } else {
-	    	vid_conf->last_err_cnt[i]++;
+	    	sink->last_err_cnt++;
 	    }
 	} else {
-	    vid_conf->last_err[i] = status;
-	    vid_conf->last_err_cnt[i] = 0;
+	    sink->last_err = status;
+	    sink->last_err_cnt = 0;
 	}
 
 	/* Update next put/get, careful that it may have been updated
