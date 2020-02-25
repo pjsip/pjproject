@@ -778,16 +778,17 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
 	if (got_frame && status != PJ_SUCCESS) {
+	    sink->last_err_cnt++;
 	    if (sink->last_err != status ||
-	        sink->last_err_cnt > MAX_ERR_COUNT)
+	        sink->last_err_cnt % MAX_ERR_COUNT == 0)
 	    {
-	    	PJ_PERROR(5, (THIS_FILE, status,
-			      "Failed to put frame to port %d [%s]!",
-			      sink->idx, sink->port->info.name.ptr));
+		if (sink->last_err != status)
+		    sink->last_err_cnt = 1;
 		sink->last_err = status;
-		sink->last_err_cnt = 1;
-	    } else {
-	    	sink->last_err_cnt++;
+	    	PJ_PERROR(5, (THIS_FILE, status,
+			      "Failed (%d time(s)) to put frame to port %d"
+			      " [%s]!", sink->last_err_cnt,
+			      sink->idx, sink->port->info.name.ptr));
 	    }
 	} else {
 	    sink->last_err = status;
