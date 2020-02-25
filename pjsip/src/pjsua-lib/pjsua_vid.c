@@ -994,6 +994,9 @@ static pj_status_t setup_vid_capture(pjsua_call_media *call_med)
     /* Done */
     inc_vid_win(wid);
     call_med->strm.v.cap_win_id = wid;
+    PJ_LOG(4,(THIS_FILE, "Call %d media %d: video capture set up with "
+    			 "dev %d, wid=%d", call_med->call->index,
+    			 call_med->idx, call_med->strm.v.cap_dev, wid));
 
     PJSUA_UNLOCK();
 
@@ -1280,6 +1283,10 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	/* Decrement ref count of preview video window */
 	dec_vid_win(call_med->strm.v.cap_win_id);
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
+	
+	PJ_LOG(4,(THIS_FILE, "Call %d media %d: Preview video window "
+			     "released", call_med->call->index,
+    			     call_med->idx));
     }
 
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
@@ -1293,6 +1300,10 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	/* Decrement ref count of stream video window */
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
+
+	PJ_LOG(4,(THIS_FILE, "Call %d media %d: Stream video window "
+			     "released", call_med->call->index,
+    			     call_med->idx));
     }
     PJSUA_UNLOCK();
 
@@ -1433,7 +1444,6 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id)
     wid = pjsua_vid_preview_get_win(id);
     if (wid == PJSUA_INVALID_ID) {
 	PJSUA_UNLOCK();
-	pj_log_pop_indent();
 	return PJ_ENOTFOUND;
     }
 
