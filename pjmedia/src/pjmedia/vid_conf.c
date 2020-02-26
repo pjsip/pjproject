@@ -36,6 +36,9 @@
  */
 #define AUTO_STOP_CLOCK 0
 
+/* Maximum number of consecutive errors that will only be printed once. */
+#define MAX_ERR_COUNT 150
+
 /* Clockrate for video timestamp unit */
 #define TS_CLOCK_RATE	90000
 
@@ -99,6 +102,9 @@ typedef struct vconf_port
     pj_pool_t	       **render_pool;	/**< Array of pool for render state */
     render_state       **render_states;	/**< Array of render_state (one for
 					     each transmitter).		    */
+
+    pj_status_t		  last_err;	/**< Last error status.		    */
+    unsigned		  last_err_cnt;	/**< Last error count.		    */
 } vconf_port;
 
 
@@ -771,10 +777,22 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    frame.size = sink->put_buf_size;
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(5, (THIS_FILE, status,
-			  "Failed to put frame to port [%s]!",
-			  sink->port->info.name.ptr));
+	if (got_frame && status != PJ_SUCCESS) {
+	    sink->last_err_cnt++;
+	    if (sink->last_err != status ||
+	        sink->last_err_cnt % MAX_ERR_COUNT == 0)
+	    {
+		if (sink->last_err != status)
+		    sink->last_err_cnt = 1;
+		sink->last_err = status;
+	    	PJ_PERROR(5, (THIS_FILE, status,
+			      "Failed (%d time(s)) to put frame to port %d"
+			      " [%s]!", sink->last_err_cnt,
+			      sink->idx, sink->port->info.name.ptr));
+	    }
+	} else {
+	    sink->last_err = status;
+	    sink->last_err_cnt = 0;
 	}
 
 	/* Update next put/get, careful that it may have been updated
