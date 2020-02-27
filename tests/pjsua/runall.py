@@ -78,10 +78,6 @@ for f in os.listdir("scripts-sipp"):
     if f.endswith(".xml"):
 	tests.append("mod_sipp.py scripts-sipp/" + f)
 
-# Filter-out excluded tests
-for pat in excluded_tests:
-    tests = [t for t in tests if t.find(pat)==-1]
-
 
 resume_script=""
 shell_cmd=""
@@ -101,6 +97,8 @@ while len(sys.argv):
                 print "  --resume,-r RESUME"
                 print "      RESUME is string/substring to specify where to resume tests."
                 print "      If this argument is omited, tests will start from the beginning."
+                print "  --disable,-d TEST_NAME"
+                print "      Disable a specific test that contains the specified TEST_NAME."
                 print "  --shell,-s SHELL"
                 print "      Run the tests with the specified SHELL cmd. This can also be"
                 print "      used to run the test with ccdash. Example:"
@@ -142,6 +140,15 @@ while len(sys.argv):
                         sys.argv.pop(0)
                         sys.stderr.write("Error: argument value required")
                         sys.exit(1)
+        elif sys.argv[0] == '-d' or sys.argv[0] == '--disable':
+                if len(sys.argv) > 1:
+			excluded_tests.append(sys.argv[1])
+			sys.argv.pop(0)
+			sys.argv.pop(0)
+                else:
+                        sys.argv.pop(0)
+                        sys.stderr.write("Error: argument value required")
+                        sys.exit(1)        	
 	else:
 		# should be run.py options
 		break
@@ -164,6 +171,10 @@ try:
     os.mkdir("logs")
 except:
     print "Warning: failed in creating directory 'logs'"
+
+# Filter-out excluded tests
+for pat in excluded_tests:
+    tests = [t for t in tests if t.find(pat)==-1]
 
 # Now run the tests
 total_cnt = len(tests)
