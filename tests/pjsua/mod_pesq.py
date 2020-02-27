@@ -85,8 +85,11 @@ def test_func(t):
 	pesq_sample_rate_opt = "+" + clock_rate + "000"
 
 	# UA1 making call
-	ua1.send("m")
-	ua1.send(t.inst_params[1].uri)
+	if ua1.use_telnet:
+		ua1.send("call new " + t.inst_params[1].uri)
+	else:
+		ua1.send("m")
+		ua1.send(t.inst_params[1].uri)
 	ua1.expect(const.STATE_CALLING)
 
 	# UA2 wait until call established
@@ -99,12 +102,16 @@ def test_func(t):
 	# Disconnect mic -> rec file, to avoid echo recorded when using sound device
 	# Disconnect stream -> spk, make it silent
 	# Connect stream -> rec file, start recording
-	ua2.send("cd 0 1\ncd 4 0\ncc 4 1")
+	ua2.send("cd 0 1")
+	ua2.send("cd 4 0")
+	ua2.send("cc 4 1")
 
 	# Disconnect mic -> stream, make stream purely sending from file
 	# Disconnect stream -> spk, make it silent
 	# Connect file -> stream, start sending
-	ua1.send("cd 0 4\ncd 4 0\ncc 1 4")
+	ua1.send("cd 0 4")
+	ua1.send("cd 4 0")
+	ua1.send("cc 1 4")
 
 	time.sleep(inwavlen)
 
