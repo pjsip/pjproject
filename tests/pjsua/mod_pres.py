@@ -26,8 +26,11 @@ def test_func(t):
 		time.sleep(1)
 
 	# U1 adds U2 as buddy
-	u1.send("+b")
-	u1.send(uri2)
+	if u1.use_telnet:
+		u1.send("im add_b " + uri2)
+	else:
+		u1.send("+b")
+		u1.send(uri2)
 	u1.expect("Subscription state changed NULL --> SENT")
 	u1.expect("Presence subscription.*is ACCEPTED")
 	if not u2.inst_param.have_publish:
@@ -43,8 +46,11 @@ def test_func(t):
 	u2.sync_stdout()
 
 	# U2 adds U1 as buddy
-	u2.send("+b")
-	u2.send(uri1)
+	if u2.use_telnet:
+		u2.send("im add_b " + uri1)
+	else:
+		u2.send("+b")
+		u2.send(uri1)
 	u2.expect("Subscription state changed NULL --> SENT")
 	u2.expect("Presence subscription.*is ACCEPTED")
 	if not u1.inst_param.have_publish:
@@ -61,12 +67,18 @@ def test_func(t):
 
 	# Set current account in both U1 and U2
 	if acc1!="-1":
-		u1.send(">")
-		u1.send(acc1)
+		if u1.use_telnet:
+			u1.send("acc prev " + acc1)
+		else:
+			u1.send(">")
+			u1.send(acc1)
 		u1.expect("Current account changed")
 	if acc2!="-1":
-		u2.send(">")
-		u2.send(acc2)
+		if u2.use_telnet:
+			u2.send("acc prev " + acc2)
+		else:
+			u2.send(">")
+			u2.send(acc2)
 		u2.expect("Current account changed")
 
 	# Synchronize stdout
@@ -74,7 +86,10 @@ def test_func(t):
 	u2.sync_stdout()
 
 	# u2 toggles online status
-	u2.send("t")
+	if u2.use_telnet:
+		u2.send("im tog_state")
+	else:
+		u2.send("t")
 	u1.expect(uri2 + ".*status.*Offline")
 	u2.expect("offline")
 	
@@ -83,7 +98,10 @@ def test_func(t):
 	u2.sync_stdout()
 
 	# u1 toggles online status
-	u1.send("t")
+	if u1.use_telnet:
+		u1.send("im tog_state")
+	else:
+		u1.send("t")
 	u2.expect(uri1 + ".*status.*Offline")
 	u1.expect("offline")
 
@@ -92,8 +110,11 @@ def test_func(t):
 	u2.sync_stdout()
 
 	# u2 set online status to On the phone
-	u2.send("T")
-	u2.send("3")
+	if u2.use_telnet:
+		u2.send("im pre_text 3")
+	else:
+		u2.send("T")
+		u2.send("3")
 	u1.expect(uri2 + ".*status.*On the phone")
 	u2.expect("On the phone")
 	
@@ -106,11 +127,15 @@ def test_func(t):
 	u2.sync_stdout()
 
 	# U1 send IM
-	im_text = "Hello World from U1"
-	u1.send("i")
-	u1.send(uri2)
-	u2.expect(" is typing")
-	u1.send(im_text)
+	if u1.use_telnet:
+		im_text = "Hello-World-from-U1"
+		u1.send("im send_im %s %s" % (uri2, im_text))
+	else:
+		im_text = "Hello World from U1"
+		u1.send("i")
+		u1.send(uri2)
+		u2.expect(" is typing")
+		u1.send(im_text)
 	u1.expect(im_text+".*delivered successfully")
 	u2.expect("MESSAGE from.*"+im_text)
 	
