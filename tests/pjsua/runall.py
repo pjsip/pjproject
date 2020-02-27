@@ -26,8 +26,6 @@ excluded_tests = [ "svn",
 		   "scripts-media-playrec/100_resample_lf_8_22.py",	# related to clock-rate 22 kHz problem
 		   "scripts-media-playrec/100_resample_lf_11",		# related to clock-rate 11 kHz problem
 		   "pesq",						                    # temporarily disabling all pesq related test due to unreliability
-		   "amrnb",						# external codec required
-		   "g7221",						# external codec required
            # TODO check all tests below for false negatives
            "pjmedia-test",
            "pjsip-test",
@@ -100,7 +98,7 @@ while len(sys.argv):
                 print "      RESUME is string/substring to specify where to resume tests."
                 print "      If this argument is omited, tests will start from the beginning."
                 print "  --disable,-d TEST_NAME"
-                print "	     Disable a specific test that contains the specified TEST_NAME."
+                print "      Disable a specific test that contains the specified TEST_NAME."
                 print "  --shell,-s SHELL"
                 print "      Run the tests with the specified SHELL cmd. This can also be"
                 print "      used to run the test with ccdash. Example:"
