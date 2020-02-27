@@ -493,22 +493,28 @@ static void get_audio_codec_id(pj_cli_dyn_choice_param *param)
 	unsigned i, count = PJ_ARRAY_SIZE(c);
 	char codec_id[64];
 	char desc[128];
+	pj_str_t all_codec_id = pj_str("*");
 
 	pjsua_enum_codecs(c, &count);
-	for (i=0; i<count; ++i) {
+	for (i=0; i<=count; ++i) {
+	    pj_str_t cid;
+	    cid = (i==count?all_codec_id : c[i].codec_id);
+
 	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
-			     "%.*s", (int)c[i].codec_id.slen,
-			     c[i].codec_id.ptr);
+			     "%.*s", (int)cid.slen, cid.ptr);
 
-	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
-
-	    pj_ansi_snprintf(desc, sizeof(desc),
-			     "Audio, prio: %d%s%.*s",
-			     c[i].priority,
-			     c[i].desc.slen? " - ":"",
-			     (int)c[i].desc.slen,
-			     c[i].desc.ptr);
-
+	    if (i < count) {
+		pj_ansi_snprintf(desc, sizeof(desc),
+				 "Audio, prio: %d%s%.*s",
+				 c[i].priority,
+				 c[i].desc.slen ? " - " : "",
+				 (int)c[i].desc.slen,
+				 c[i].desc.ptr);
+	    } else {
+		pj_ansi_snprintf(desc, sizeof(desc), "Audio (All)");
+	    }
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value,
+		       codec_id);
 	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
 		break;
@@ -617,32 +623,45 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
 	unsigned i, count = PJ_ARRAY_SIZE(ci);
 	char codec_id[64];
 	char desc[128];
+	pj_str_t all_codec_id = pj_str("*");
 
 	pjsua_vid_enum_codecs(ci, &count);
-	for (i=0; i<count; ++i) {
+	for (i = 0; i <= count; ++i) {
 	    pjmedia_vid_codec_param cp;
 	    pjmedia_video_format_detail *vfd;
 	    pj_status_t status = PJ_SUCCESS;
+	    pj_str_t cur_ci;
 
-	    status = pjsua_vid_codec_get_param(&ci[i].codec_id, &cp);
-	    if (status != PJ_SUCCESS)
-		continue;
+	    pj_bzero(&cur_ci, sizeof(cur_ci));
+	    if (i < count) {
+		status = pjsua_vid_codec_get_param(&ci[i].codec_id, &cp);
+		if (status != PJ_SUCCESS)
+		    continue;
 
+		cur_ci = ci[i].codec_id;
+
+	    } else {
+		cur_ci = all_codec_id;
+	    }
 	    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
 	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
-			     "%.*s", (int)ci[i].codec_id.slen,
-			     ci[i].codec_id.ptr);
+			     "%.*s", (int)cur_ci.slen,
+			     cur_ci.ptr);
 
-	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
+	    if (i < count) {
+		pj_ansi_snprintf(desc, sizeof(desc),
+				 "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]",
+				 ci[i].priority,
+				 (vfd->fps.num*1.0 / vfd->fps.denum),
+				 vfd->avg_bps / 1000, vfd->max_bps / 1000,
+				 vfd->size.w, vfd->size.h);
+	    } else {
+		pj_ansi_snprintf(desc, sizeof(desc), "Video (All)");
+	    }
 
-	    pj_ansi_snprintf(desc, sizeof(desc),
-	    		     "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]",
-	    		     ci[i].priority,
-			     (vfd->fps.num*1.0/vfd->fps.denum),
-			     vfd->avg_bps/1000, vfd->max_bps/1000,
-			     vfd->size.w, vfd->size.h);
-
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value,
+		       codec_id);
 	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
 		break;
