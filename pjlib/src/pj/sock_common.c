@@ -129,7 +129,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    pj_bzero(addr->sin_zero_pad, sizeof(addr->sin_zero_pad));
 
     if (str_addr && str_addr->slen) {
 	addr->sin_addr = pj_inet_addr(str_addr);
@@ -210,7 +210,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    pj_bzero(addr->sin_zero_pad, sizeof(addr->sin_zero_pad));
     pj_sockaddr_in_set_port(addr, port);
     return pj_sockaddr_in_set_str_addr(addr, str_addr);
 }

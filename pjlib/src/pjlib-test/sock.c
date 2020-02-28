@@ -162,11 +162,11 @@ static int format_test(void)
 #endif	/* PJ_HAS_IPV6 */
 
     /* Test that pj_sockaddr_in_init() initialize the whole structure, 
-     * including sin_zero.
+     * including sin_zero_pad.
      */
     pj_sockaddr_in_init(&addr2, 0, 1000);
     pj_bzero(zero, sizeof(zero));
-    if (pj_memcmp(addr2.sin_zero, zero, sizeof(addr2.sin_zero)) != 0)
+    if (pj_memcmp(addr2.sin_zero_pad, zero, sizeof(addr2.sin_zero_pad)) != 0)
 	return -35;
 
     /* pj_gethostname() */

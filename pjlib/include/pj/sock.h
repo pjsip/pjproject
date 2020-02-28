@@ -543,7 +543,8 @@ struct pj_sockaddr_in
 #endif
     pj_uint16_t	sin_port;	/**< Transport layer port number.   */
     pj_in_addr	sin_addr;	/**< IP address.		    */
-    char	sin_zero[PJ_SOCKADDR_IN_SIN_ZERO_LEN]; /**< Padding.*/
+    char	sin_zero_pad[PJ_SOCKADDR_IN_SIN_ZERO_LEN];
+    				/**< Padding.			    */
 };
 
 /* Must undefine s6_addr because of pj_in6_addr below.
