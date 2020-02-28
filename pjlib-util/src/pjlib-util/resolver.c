@@ -1147,8 +1147,8 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 	    pj_stricmp(&pkt->ans[i].name, resname)==0 &&
 	    rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
 	{
-	    rec->addr[rec->addr_count++].s_addr =
-		pkt->ans[i].rdata.a.ip_addr.s_addr;
+	    rec->addr[rec->addr_count++].addr =
+		pkt->ans[i].rdata.a.ip_addr.addr;
 	}
     }
 

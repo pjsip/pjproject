@@ -249,7 +249,7 @@ PJ_DEF(void) pj_ice_calc_foundation(pj_pool_t *pool,
     pj_uint32_t val;
 
     if (base_addr->addr.sa_family == pj_AF_INET()) {
-	val = pj_ntohl(base_addr->ipv4.sin_addr.s_addr);
+	val = pj_ntohl(base_addr->ipv4.sin_addr.addr);
     } else {
 	val = pj_hash_calc(0, pj_sockaddr_get_addr(base_addr),
 			   pj_sockaddr_get_addr_len(base_addr));

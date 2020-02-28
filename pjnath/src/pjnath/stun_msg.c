@@ -956,7 +956,7 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 
     if (attr->sockaddr.addr.sa_family == pj_AF_INET()) {
 	attr->sockaddr.ipv4.sin_port ^= pj_htons(PJ_STUN_MAGIC >> 16);
-	attr->sockaddr.ipv4.sin_addr.s_addr ^= pj_htonl(PJ_STUN_MAGIC);
+	attr->sockaddr.ipv4.sin_addr.addr ^= pj_htonl(PJ_STUN_MAGIC);
     } else if (attr->sockaddr.addr.sa_family == pj_AF_INET6()) {
 	unsigned i;
 	pj_uint8_t *dst = (pj_uint8_t*) &attr->sockaddr.ipv6.sin6_addr;
@@ -1026,7 +1026,7 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
 	    pj_uint32_t addr;
 	    pj_uint16_t port;
 
-	    addr = ca->sockaddr.ipv4.sin_addr.s_addr;
+	    addr = ca->sockaddr.ipv4.sin_addr.addr;
 	    port = ca->sockaddr.ipv4.sin_port;
 
 	    port ^= pj_htons(PJ_STUN_MAGIC >> 16);

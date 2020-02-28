@@ -120,7 +120,7 @@ static pj_status_t if_enum_by_af(int af,
 	 * which doesn't seem to have practical use.
 	 */
 	if (af==pj_AF_INET() &&
-	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.addr) >> 24) == 0)
 	{
 	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
 		    get_addr(ad), ad->sa_family));
@@ -219,7 +219,7 @@ static pj_status_t if_enum_by_af(int af,
 	 * which doesn't seem to have practical use.
 	 */
 	if (af==pj_AF_INET() &&
-	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.addr) >> 24) == 0)
 	{
 	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
 		    get_addr(ad), ad->sa_family));
@@ -313,7 +313,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 	 * which doesn't seem to have practical use.
 	 */
 	if (af==pj_AF_INET() &&
-	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.addr) >> 24) == 0)
 	{
 	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
 		    get_addr(ad), ad->sa_family));
@@ -410,9 +410,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
     if (status != PJ_SUCCESS)
 	return status;
     
-    routes[0].ipv4.if_addr.s_addr = itf.ipv4.sin_addr.s_addr;
-    routes[0].ipv4.dst_addr.s_addr = 0;
-    routes[0].ipv4.mask.s_addr = 0;
+    routes[0].ipv4.if_addr.addr = itf.ipv4.sin_addr.addr;
+    routes[0].ipv4.dst_addr.addr = 0;
+    routes[0].ipv4.mask.addr = 0;
     *p_cnt = 1;
 
     return PJ_SUCCESS;

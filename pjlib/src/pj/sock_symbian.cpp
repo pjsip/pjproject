@@ -287,7 +287,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
     TBuf<PJ_INET_ADDRSTRLEN> str16(0);
 
     /* (Symbian IP address is in host byte order) */
-    TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
+    TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.addr), (TUint)0);
     temp_addr.Output(str16);
  
     return pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
@@ -418,7 +418,7 @@ PJ_DEF(pj_status_t) pj_inet_ntop(int af, const void *src,
 	pj_memcpy(&inaddr, src, 4);
 
 	/* Symbian IP address is in host byte order */
-	TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.s_addr), (TUint)0);
+	TInetAddr temp_addr((TUint32)pj_ntohl(inaddr.addr), (TUint)0);
 	temp_addr.Output(str16);
  
 	pj_unicode_to_ansi((const wchar_t*)str16.PtrZ(), str16.Length(),
@@ -568,7 +568,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
-    addr.sin_addr.s_addr = pj_htonl(addr32);
+    addr.sin_addr.addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);
 
     return pj_sock_bind(sock, &addr, sizeof(pj_sockaddr_in));

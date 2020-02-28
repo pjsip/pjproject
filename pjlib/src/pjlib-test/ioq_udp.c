@@ -116,7 +116,7 @@ static pj_ioqueue_callback test_cb =
 };
 
 #if defined(PJ_WIN32) || defined(PJ_WIN64)
-#  define S_ADDR S_un.S_addr
+#  define S_ADDR S_un.addr
 #else
 #  define S_ADDR s_addr
 #endif

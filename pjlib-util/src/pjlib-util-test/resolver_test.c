@@ -544,7 +544,7 @@ static int a_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x01020304;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x01020304;
 
     /* CNAME to confuse the parser */
     pkt.ans[1].name = pj_str("ahost");
@@ -558,7 +558,7 @@ static int a_parser_test(void)
     pkt.ans[2].type = PJ_DNS_TYPE_A;
     pkt.ans[2].dnsclass = 1;
     pkt.ans[2].ttl = 1;
-    pkt.ans[2].rdata.a.ip_addr.s_addr = 0x0203;
+    pkt.ans[2].rdata.a.ip_addr.addr = 0x0203;
 
 
     rc = pj_dns_parse_a_response(&pkt, &rec);
@@ -566,7 +566,7 @@ static int a_parser_test(void)
     pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
     pj_assert(rec.alias.slen == 0);
     pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].s_addr == 0x01020304);
+    pj_assert(rec.addr[0].addr == 0x01020304);
 
     /* Answer with the target corresponds to a CNAME entry, but not
      * as the first record, and with additions of some CNAME and A
@@ -585,7 +585,7 @@ static int a_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x02020202;
 
     /* CNAME entry corresponding to the query */
     pkt.ans[1].name = pj_str("ahost");
@@ -606,14 +606,14 @@ static int a_parser_test(void)
     pkt.ans[3].type = PJ_DNS_TYPE_A;
     pkt.ans[3].dnsclass = 1;
     pkt.ans[3].ttl = 1;
-    pkt.ans[3].rdata.a.ip_addr.s_addr = 0x03030303;
+    pkt.ans[3].rdata.a.ip_addr.addr = 0x03030303;
 
     rc = pj_dns_parse_a_response(&pkt, &rec);
     pj_assert(rc == PJ_SUCCESS);
     pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
     pj_assert(pj_strcmp2(&rec.alias, "ahostalias")==0);
     pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].s_addr == 0x02020202);
+    pj_assert(rec.addr[0].addr == 0x02020202);
 
     /*
      * No query section.
@@ -655,7 +655,7 @@ static int a_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x02020202;
 
     rc = pj_dns_parse_a_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
@@ -706,7 +706,7 @@ static int a_parser_test(void)
     pkt.ans[1].type = PJ_DNS_TYPE_A;
     pkt.ans[1].dnsclass = 1;
     pkt.ans[1].ttl = 1;
-    pkt.ans[1].rdata.a.ip_addr.s_addr = 0x01020304;
+    pkt.ans[1].rdata.a.ip_addr.addr = 0x01020304;
 
     rc = pj_dns_parse_a_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
@@ -746,7 +746,7 @@ static int addr_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x01020304;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x01020304;
 
     /* CNAME to confuse the parser */
     pkt.ans[1].name = pj_str("ahost");
@@ -760,7 +760,7 @@ static int addr_parser_test(void)
     pkt.ans[2].type = PJ_DNS_TYPE_A;
     pkt.ans[2].dnsclass = 1;
     pkt.ans[2].ttl = 1;
-    pkt.ans[2].rdata.a.ip_addr.s_addr = 0x0203;
+    pkt.ans[2].rdata.a.ip_addr.addr = 0x0203;
 
     /* Additional RR corresponding to the query, DNS AAAA RR */
     pkt.ans[3].name = pj_str("ahost");
@@ -775,7 +775,7 @@ static int addr_parser_test(void)
     pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
     pj_assert(rec.alias.slen == 0);
     pj_assert(rec.addr_count == 2);
-    pj_assert(rec.addr[0].af==pj_AF_INET() && rec.addr[0].ip.v4.s_addr == 0x01020304);
+    pj_assert(rec.addr[0].af==pj_AF_INET() && rec.addr[0].ip.v4.addr == 0x01020304);
     pj_assert(rec.addr[1].af==pj_AF_INET6() && rec.addr[1].ip.v6.u6_addr32[0] == 0x01020304);
 
     /* Answer with the target corresponds to a CNAME entry, but not
@@ -795,7 +795,7 @@ static int addr_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x02020202;
 
     /* CNAME entry corresponding to the query */
     pkt.ans[1].name = pj_str("ahost");
@@ -816,14 +816,14 @@ static int addr_parser_test(void)
     pkt.ans[3].type = PJ_DNS_TYPE_A;
     pkt.ans[3].dnsclass = 1;
     pkt.ans[3].ttl = 1;
-    pkt.ans[3].rdata.a.ip_addr.s_addr = 0x03030303;
+    pkt.ans[3].rdata.a.ip_addr.addr = 0x03030303;
 
     rc = pj_dns_parse_addr_response(&pkt, &rec);
     pj_assert(rc == PJ_SUCCESS);
     pj_assert(pj_strcmp2(&rec.name, "ahost")==0);
     pj_assert(pj_strcmp2(&rec.alias, "ahostalias")==0);
     pj_assert(rec.addr_count == 1);
-    pj_assert(rec.addr[0].ip.v4.s_addr == 0x02020202);
+    pj_assert(rec.addr[0].ip.v4.addr == 0x02020202);
 
     /*
      * No query section.
@@ -865,7 +865,7 @@ static int addr_parser_test(void)
     pkt.ans[0].type = PJ_DNS_TYPE_A;
     pkt.ans[0].dnsclass = 1;
     pkt.ans[0].ttl = 1;
-    pkt.ans[0].rdata.a.ip_addr.s_addr = 0x02020202;
+    pkt.ans[0].rdata.a.ip_addr.addr = 0x02020202;
 
     rc = pj_dns_parse_addr_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
@@ -916,7 +916,7 @@ static int addr_parser_test(void)
     pkt.ans[1].type = PJ_DNS_TYPE_A;
     pkt.ans[1].dnsclass = 1;
     pkt.ans[1].ttl = 1;
-    pkt.ans[1].rdata.a.ip_addr.s_addr = 0x01020304;
+    pkt.ans[1].rdata.a.ip_addr.addr = 0x01020304;
 
     rc = pj_dns_parse_addr_response(&pkt, &rec);
     pj_assert(rc == PJLIB_UTIL_EDNSNOANSWERREC);
@@ -942,7 +942,7 @@ static void dns_callback(void *user_data,
     PJ_ASSERT_ON_FAIL(resp, return);
     PJ_ASSERT_ON_FAIL(resp->hdr.anscount == 1, return);
     PJ_ASSERT_ON_FAIL(resp->ans[0].type == PJ_DNS_TYPE_A, return);
-    PJ_ASSERT_ON_FAIL(resp->ans[0].rdata.a.ip_addr.s_addr == IP_ADDR0, return);
+    PJ_ASSERT_ON_FAIL(resp->ans[0].rdata.a.ip_addr.addr == IP_ADDR0, return);
 
 }
 
@@ -970,7 +970,7 @@ static int simple_test(void)
     r->ans[0].type = PJ_DNS_TYPE_A;
     r->ans[0].dnsclass = 1;
     r->ans[0].name = name;
-    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
+    r->ans[0].rdata.a.ip_addr.addr = IP_ADDR0;
 
     g_server[1].action = ACTION_REPLY;
     r = &g_server[1].resp;
@@ -984,7 +984,7 @@ static int simple_test(void)
     r->ans[0].type = PJ_DNS_TYPE_A;
     r->ans[0].dnsclass = 1;
     r->ans[0].name = name;
-    r->ans[0].rdata.a.ip_addr.s_addr = IP_ADDR0;
+    r->ans[0].rdata.a.ip_addr.addr = IP_ADDR0;
 
     status = pj_dns_resolver_start_query(resolver, &name, PJ_DNS_TYPE_A, 0,
 					 &dns_callback, NULL, NULL);
@@ -1238,7 +1238,7 @@ static void action1_1(const pj_dns_parsed_packet *pkt,
 	res->ans[1].dnsclass = 1;
 	res->ans[1].ttl = 1;
 	res->ans[1].name = pj_str(alias);
-	res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR1;
+	res->ans[1].rdata.a.ip_addr.addr = IP_ADDR1;
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_AAAA) {
 	char *alias = "sipalias.somedomain.com";
@@ -1284,7 +1284,7 @@ static void srv_cb_1(void *user_data,
 
     /* IPv4 only */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR1, return);
+    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].ip.v4.addr == IP_ADDR1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT1, return);
 
     
@@ -1327,7 +1327,7 @@ static void srv_cb_1c(void *user_data,
     /* IPv4 and IPv6 */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 2, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR1, return);
+		      rec->entry[0].server.addr[0].ip.v4.addr == IP_ADDR1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
 		      rec->entry[0].server.addr[1].ip.v6.u6_addr32[0] == IP_ADDR1, return);
 }
@@ -1526,7 +1526,7 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
 	res->ans[1].dnsclass = 1;
 	res->ans[1].name = pj_str(alias);
 	res->ans[1].ttl = 1;
-	res->ans[1].rdata.a.ip_addr.s_addr = IP_ADDR2;
+	res->ans[1].rdata.a.ip_addr.addr = IP_ADDR2;
 
     } else if (pkt->q[0].type == PJ_DNS_TYPE_AAAA) {
 	char *alias = "sipalias01." TARGET;
@@ -1574,7 +1574,7 @@ static void srv_cb_2(void *user_data,
     /* IPv4 only */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, return);
+		      rec->entry[0].server.addr[0].ip.v4.addr == IP_ADDR2, return);
 }
 
 static void srv_cb_2a(void *user_data,
@@ -1598,7 +1598,7 @@ static void srv_cb_2a(void *user_data,
     /* IPv4 and IPv6 */
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 2, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, return);
+		      rec->entry[0].server.addr[0].ip.v4.addr == IP_ADDR2, return);
     PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
 		      rec->entry[0].server.addr[1].ip.v6.u6_addr32[0] == IP_ADDR2, return);
 }
@@ -1778,7 +1778,7 @@ static void action3_1(const pj_dns_parsed_packet *pkt,
 	    res->ans[i].dnsclass = 1;
 	    res->ans[i].ttl = 1;
 	    res->ans[i].name = res->q[0].name;
-	    res->ans[i].rdata.a.ip_addr.s_addr = IP_ADDR3+i;
+	    res->ans[i].rdata.a.ip_addr.addr = IP_ADDR3+i;
 	}
     }
 
@@ -1810,7 +1810,7 @@ static void srv_cb_3(void *user_data,
 	pj_assert(rec->entry[i].server.addr_count == PJ_DNS_MAX_IP_IN_A_REC);
 
 	for (j=0; j<PJ_DNS_MAX_IP_IN_A_REC; ++j) {
-	    pj_assert(rec->entry[i].server.addr[j].ip.v4.s_addr == IP_ADDR3+j);
+	    pj_assert(rec->entry[i].server.addr[j].ip.v4.addr == IP_ADDR3+j);
 	}
     }
 

@@ -371,7 +371,7 @@ static int test_resolve(const char *title,
 	    pj_sockaddr_in *ra = (pj_sockaddr_in *)&ref->entry[i].addr;
 	    pj_sockaddr_in *rb = (pj_sockaddr_in *)&result.servers.entry[i].addr;
 
-	    if (ra->sin_addr.s_addr != rb->sin_addr.s_addr) {
+	    if (ra->sin_addr.addr != rb->sin_addr.addr) {
 		PJ_LOG(3,(THIS_FILE, "  test_resolve() error 20: IP address mismatch"));
 		return 20;
 	    }
@@ -451,7 +451,7 @@ static int round_robin_test(pj_pool_t *pool)
 	    a1 = pj_inet_addr(&tmp);
 	    a2 = (pj_sockaddr_in*) &result.servers.entry[0].addr;
 
-	    if (a1.s_addr == a2->sin_addr.s_addr) {
+	    if (a1.addr == a2->sin_addr.addr) {
 		server_hit[j].hits++;
 		break;
 	    }

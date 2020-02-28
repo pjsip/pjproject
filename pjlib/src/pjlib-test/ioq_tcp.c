@@ -823,7 +823,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
 
 	    // Check addresses
 	    if (server[i].local_addr.sin_family != pj_AF_INET() ||
-		server[i].local_addr.sin_addr.s_addr == 0 ||
+		server[i].local_addr.sin_addr.addr == 0 ||
 		server[i].local_addr.sin_port == 0)
 	    {
 		app_perror("...ERROR address not set", rc);
@@ -832,7 +832,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
 	    }
 
 	    if (server[i].rem_addr.sin_family != pj_AF_INET() ||
-		server[i].rem_addr.sin_addr.s_addr == 0 ||
+		server[i].rem_addr.sin_addr.addr == 0 ||
 		server[i].rem_addr.sin_port == 0)
 	    {
 		app_perror("...ERROR address not set", rc);

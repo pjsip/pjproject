@@ -132,7 +132,7 @@ static pj_bool_t enable_ipv6_test()
     pj_bool_t retval = PJ_TRUE;
     if (pj_gethostip(pj_AF_INET6(), &addr) == PJ_SUCCESS) {
 	const pj_in6_addr *a = &addr.ipv6.sin6_addr;
-	if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80) {
+	if (a->addr[0] == 0xFE && (a->addr[1] & 0xC0) == 0x80) {
 	    retval = PJ_FALSE;
 	    PJ_LOG(3,(THIS_FILE, INDENT "Skipping IPv6 test due to link-local "
 		     "address"));

@@ -311,7 +311,7 @@ static pj_status_t init_sip()
 
 	pj_bzero(&addr, sizeof(addr));
 	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
+	addr.sin_addr.addr = 0;
 	addr.sin_port = pj_htons((pj_uint16_t)app.sip_port);
 
 	if (app.local_addr.slen) {

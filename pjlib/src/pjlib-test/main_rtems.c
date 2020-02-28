@@ -237,7 +237,7 @@ send_udp(const char *target)
     rc = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
     assert("bind error" && rc==0);
 
-    addr.sin_addr.s_addr = inet_addr(target);
+    addr.sin_addr.addr = inet_addr(target);
     addr.sin_port = htons(4444);
 
     while(1) {
@@ -264,7 +264,7 @@ static void test_sock(void)
 
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    addr.sin_addr.addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(5000);
 
     rc = bind(sock, (struct sockaddr*)&addr, sizeof(addr));

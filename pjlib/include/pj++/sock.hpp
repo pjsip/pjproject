@@ -60,7 +60,7 @@ public:
     //
     pj_uint32_t get_ip_address() const
     {
-	return pj_sockaddr_in_get_addr(this).s_addr;
+	return pj_sockaddr_in_get_addr(this).addr;
     }
 
     //
@@ -103,7 +103,7 @@ public:
     bool operator==(const Pj_Inet_Addr &rhs) const
     {
 	return sin_family == rhs.sin_family &&
-               sin_addr.s_addr == rhs.sin_addr.s_addr &&
+               sin_addr.addr == rhs.sin_addr.addr &&
                sin_port == rhs.sin_port;
     }
 

@@ -650,13 +650,13 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	    /* Ignore loopback addresses if cfg->stun.loop_addr is unset */
 	    if (stun_cfg->loop_addr==PJ_FALSE) {
 		if (stun_cfg->af == pj_AF_INET() && 
-		    (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127)
+		    (pj_ntohl(addr->ipv4.sin_addr.addr)>>24)==127)
 		{
 		    continue;
 		}
 		else if (stun_cfg->af == pj_AF_INET6()) {
 		    pj_in6_addr in6addr = {{0}};
-		    in6addr.s6_addr[15] = 1;
+		    in6addr.addr[15] = 1;
 		    if (pj_memcmp(&in6addr, &addr->ipv6.sin6_addr,
 				  sizeof(in6addr))==0)
 		    {
@@ -670,7 +670,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	     */
 	    if (stun_cfg->af == pj_AF_INET6() && i != 0) {
 		const pj_in6_addr *a = &addr->ipv6.sin6_addr;
-		if (a->s6_addr[0] == 0xFE && (a->s6_addr[1] & 0xC0) == 0x80)
+		if (a->addr[0] == 0xFE && (a->addr[1] & 0xC0) == 0x80)
 		    continue;
 	    }
 

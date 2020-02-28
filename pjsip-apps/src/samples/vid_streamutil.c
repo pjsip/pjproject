@@ -565,7 +565,7 @@ int main(int argc, char *argv[])
 
     /* Verify arguments. */
     if (dir & PJMEDIA_DIR_ENCODING) {
-	if (remote_addr.sin_addr.s_addr == 0) {
+	if (remote_addr.sin_addr.addr == 0) {
 	    printf("Error: remote address must be set\n");
 	    return 1;
 	}

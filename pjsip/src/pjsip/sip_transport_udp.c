@@ -573,7 +573,7 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	/* If bound address specifies "0.0.0.0", get the IP address
 	 * of local hostname.
 	 */
-	if (tmp_addr.ipv4.sin_addr.s_addr == PJ_INADDR_ANY) {
+	if (tmp_addr.ipv4.sin_addr.addr == PJ_INADDR_ANY) {
 	    pj_sockaddr hostip;
 
 	    status = pj_gethostip(pj_AF_INET(), &hostip);

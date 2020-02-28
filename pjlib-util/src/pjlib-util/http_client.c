@@ -1034,7 +1034,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 	if (status != PJ_SUCCESS ||
 	    !pj_sockaddr_has_addr(&http_req->addr) ||
 	    (http_req->param.addr_family==pj_AF_INET() &&
-	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE))
+	     http_req->addr.ipv4.sin_addr.addr==PJ_INADDR_NONE))
 	{
 	    goto on_return;
         }

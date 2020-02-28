@@ -54,7 +54,7 @@ PJ_BEGIN_DECL
  *   }
  *
  *   // process address...
- *   addr.sin_addr.s_addr = *(pj_uint32_t*)he.h_addr;
+ *   addr.sin_addr.addr = *(pj_uint32_t*)he.h_addr;
  *   ...
  * </pre>
  *

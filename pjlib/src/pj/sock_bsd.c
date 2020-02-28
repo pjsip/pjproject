@@ -233,7 +233,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
     return inet_ntoa(*(struct in_addr*)&inaddr);
 #else
     struct in_addr addr;
-    //addr.s_addr = inaddr.s_addr;
+    //addr.addr = inaddr.addr;
     pj_memcpy(&addr, &inaddr, sizeof(addr));
     return inet_ntoa(addr);
 #endif
@@ -601,7 +601,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
     PJ_SOCKADDR_SET_LEN(&addr, sizeof(pj_sockaddr_in));
     addr.sin_family = PJ_AF_INET;
     pj_bzero(addr.sin_zero, sizeof(addr.sin_zero));
-    addr.sin_addr.s_addr = pj_htonl(addr32);
+    addr.sin_addr.addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);
 
     return pj_sock_bind(sock, &addr, sizeof(pj_sockaddr_in));

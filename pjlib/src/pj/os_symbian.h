@@ -267,7 +267,7 @@ public:
 	{
 		pj_addr.addr.sa_family = PJ_AF_INET;
 	    PJ_ASSERT_RETURN(*addr_len>=(int)sizeof(pj_sockaddr_in), PJ_ETOOSMALL);
-	    pj_addr.ipv4.sin_addr.s_addr = pj_htonl(sym_addr.Address());
+	    pj_addr.ipv4.sin_addr.addr = pj_htonl(sym_addr.Address());
 	    pj_addr.ipv4.sin_port = pj_htons((pj_uint16_t) sym_addr.Port());
 	    *addr_len = sizeof(pj_sockaddr_in);
 	} else if (fam == PJ_AF_INET6) {
@@ -296,7 +296,7 @@ public:
     	if (pj_addr.addr.sa_family == PJ_AF_INET) {
     	    PJ_ASSERT_RETURN(addrlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
 	    sym_addr.Init(KAfInet);
-    	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.s_addr));
+    	    sym_addr.SetAddress((TUint32)pj_ntohl(pj_addr.ipv4.sin_addr.addr));
     	    sym_addr.SetPort(pj_ntohs(pj_addr.ipv4.sin_port));
     	} else if (pj_addr.addr.sa_family == PJ_AF_INET6) {
     	    TIp6Addr ip6;

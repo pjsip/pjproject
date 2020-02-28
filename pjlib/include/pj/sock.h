@@ -484,15 +484,26 @@ typedef enum pj_socket_sd_type
  */
 #define PJ_INVALID_SOCKET   (-1)
 
-/* Must undefine s_addr because of pj_in_addr below */
-#undef s_addr
+/* Must undefine s_addr because of pj_in_addr below.
+ * Note: unfortunately, this may cause build failure to anyone who
+ * uses this macro.
+ */
+//#undef s_addr
+
+/* This macro is used only for backward compatibility in apps which
+ * access pj_in_addr.addr . If it causes any issue, comment this
+ * and access pj_in_addr.addr directly.
+ */
+#ifndef s_addr
+    #define s_addr addr
+#endif
 
 /**
  * This structure describes Internet address.
  */
 typedef struct pj_in_addr
 {
-    pj_uint32_t	s_addr;		/**< The 32bit IP address.	    */
+    pj_uint32_t	addr;		/**< The 32bit IP address.	    */
 } pj_in_addr;
 
 
@@ -535,8 +546,19 @@ struct pj_sockaddr_in
     char	sin_zero[PJ_SOCKADDR_IN_SIN_ZERO_LEN]; /**< Padding.*/
 };
 
+/* Must undefine s6_addr because of pj_in6_addr below.
+ * Note: unfortunately, this may cause build failure to anyone who
+ * uses this macro.
+ */
+//#undef s6_addr
 
-#undef s6_addr
+/* This macro is used only for backward compatibility in apps which
+ * access pj_in_addr.s6_addr . If it causes any issue, comment this
+ * and access pj_in6_addr.addr directly.
+ */
+#ifndef s6_addr
+    #define s6_addr addr
+#endif
 
 /**
  * This structure describes IPv6 address.
@@ -544,7 +566,7 @@ struct pj_sockaddr_in
 typedef union pj_in6_addr
 {
     /* This is the main entry */
-    pj_uint8_t  s6_addr[16];   /**< 8-bit array */
+    pj_uint8_t  addr[16];   /**< 8-bit array */
 
     /* While these are used for proper alignment */
     pj_uint32_t	u6_addr32[4];

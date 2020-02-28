@@ -97,7 +97,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	 * error, so let's just hardcode it.
 	 */
 	pj_sockaddr_init(pj_AF_INET6(), &hostip, NULL, 0);
-	hostip.ipv6.sin6_addr.s6_addr[15] = 1;
+	hostip.ipv6.sin6_addr.addr[15] = 1;
     } else {
 	status = pj_gethostip(GET_AF(use_ipv6), &hostip);
 	if (status != PJ_SUCCESS)
@@ -699,7 +699,7 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 	     * error, so let's just hardcode it.
 	     */
 	    pj_sockaddr_init(pj_AF_INET6(), &alloc->alloc_addr, NULL, 0);
-	    alloc->alloc_addr.ipv6.sin6_addr.s6_addr[15] = 1;
+	    alloc->alloc_addr.ipv6.sin6_addr.addr[15] = 1;
 	} else {
 	    status = pj_gethostip(GET_AF(use_ipv6), &alloc->alloc_addr);
 	    if (status != PJ_SUCCESS) {

@@ -214,7 +214,7 @@ static pj_status_t init_stack(void)
 	pj_sockaddr_in addr;
 
 	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
+	addr.sin_addr.addr = 0;
 	addr.sin_port = pj_htons((pj_uint16_t)global.port);
 
 	status = pjsip_udp_transport_start( global.endpt, &addr, 
@@ -266,7 +266,7 @@ static pj_status_t init_proxy(void)
 	for (i=0; i<addr_cnt; ++i) {
 	    char addr[PJ_INET_ADDRSTRLEN];
 	    
-	    if (addr_list[i].ipv4.sin_addr.s_addr == pri_addr.ipv4.sin_addr.s_addr)
+	    if (addr_list[i].ipv4.sin_addr.addr == pri_addr.ipv4.sin_addr.addr)
 		continue;
 
 	    pj_inet_ntop(pj_AF_INET(), &addr_list[i].ipv4.sin_addr, addr,

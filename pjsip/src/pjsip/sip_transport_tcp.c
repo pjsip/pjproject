@@ -279,7 +279,7 @@ static pj_status_t update_factory_addr(struct tcp_listener *listener,
 	status = pj_sockaddr_init(af, &tmp, &addr_name->host,
 				  (pj_uint16_t)addr_name->port);
 	if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
-	    (af == pj_AF_INET() && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
+	    (af == pj_AF_INET() && tmp.ipv4.sin_addr.addr == PJ_INADDR_NONE))
 	{
 	    /* Invalid address */
 	    return PJ_EINVAL;

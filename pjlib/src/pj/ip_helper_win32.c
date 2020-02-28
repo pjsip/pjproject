@@ -255,7 +255,7 @@ static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 #endif
 
 	ifs[*p_cnt].ipv4.sin_family = PJ_AF_INET;
-	ifs[*p_cnt].ipv4.sin_addr.s_addr = pTab->table[i].dwAddr;
+	ifs[*p_cnt].ipv4.sin_addr.addr = pTab->table[i].dwAddr;
 	(*p_cnt)++;
     }
 
@@ -322,13 +322,13 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 		    (const pj_sockaddr_in*)pAddr->lpSockaddr;
 
 		/* Ignore 0.0.0.0 address (interface is down?) */
-		if (addr_in->sin_addr.s_addr == 0)
+		if (addr_in->sin_addr.addr == 0)
 		    continue;
 
 		/* Ignore 0.0.0.0/8 address. This is a special address
 		 * which doesn't seem to have practical use.
 		 */
-		if ((pj_ntohl(addr_in->sin_addr.s_addr) >> 24) == 0)
+		if ((pj_ntohl(addr_in->sin_addr.addr) >> 24) == 0)
 		    continue;
 	    }
 
@@ -451,9 +451,9 @@ PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,
 	if (j==pIpTab->dwNumEntries)
 	    continue;	/* Interface not found */
 
-	routes[*p_cnt].ipv4.if_addr.s_addr = pIpTab->table[j].dwAddr;
-	routes[*p_cnt].ipv4.dst_addr.s_addr = prTab->table[i].dwForwardDest;
-	routes[*p_cnt].ipv4.mask.s_addr = prTab->table[i].dwForwardMask;
+	routes[*p_cnt].ipv4.if_addr.addr = pIpTab->table[j].dwAddr;
+	routes[*p_cnt].ipv4.dst_addr.addr = prTab->table[i].dwForwardDest;
+	routes[*p_cnt].ipv4.mask.addr = prTab->table[i].dwForwardMask;
 
 	(*p_cnt)++;
     }

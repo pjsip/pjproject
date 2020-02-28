@@ -322,7 +322,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
     for (i=0; i<sock_cnt && status==PJ_SUCCESS; ++i) {
 	if (srv_cnt == 1) {
 	    mapped_addr[i].sin_family = pj_AF_INET();
-	    mapped_addr[i].sin_addr.s_addr = rec[i].srv[0].mapped_addr;
+	    mapped_addr[i].sin_addr.addr = rec[i].srv[0].mapped_addr;
 	    mapped_addr[i].sin_port = (pj_uint16_t)rec[i].srv[0].mapped_port;
 
 	    if (rec[i].srv[0].mapped_addr == 0 || rec[i].srv[0].mapped_port == 0) {
@@ -333,7 +333,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 	           rec[i].srv[0].mapped_port == rec[i].srv[1].mapped_port)
 	{
 	    mapped_addr[i].sin_family = pj_AF_INET();
-	    mapped_addr[i].sin_addr.s_addr = rec[i].srv[0].mapped_addr;
+	    mapped_addr[i].sin_addr.addr = rec[i].srv[0].mapped_addr;
 	    mapped_addr[i].sin_port = (pj_uint16_t)rec[i].srv[0].mapped_port;
 
 	    if (rec[i].srv[0].mapped_addr == 0 || rec[i].srv[0].mapped_port == 0) {

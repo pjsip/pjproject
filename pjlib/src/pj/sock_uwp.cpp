@@ -1217,7 +1217,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     pj_bzero(&addr, sizeof(addr));
     addr.sin_family = PJ_AF_INET;
-    addr.sin_addr.s_addr = pj_htonl(addr32);
+    addr.sin_addr.addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);
 
     return pj_sock_bind(sock, &addr, sizeof(pj_sockaddr_in));

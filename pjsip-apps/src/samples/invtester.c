@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
 	pj_sockaddr_in addr;
 
 	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
+	addr.sin_addr.addr = 0;
 	addr.sin_port = pj_htons(PORT);
 
 	status = pjsip_udp_transport_start( sip_endpt, &addr, NULL, 1, NULL);

@@ -479,14 +479,14 @@ int main(int argc, char *argv[])
 	    {
 		pj_str_t t = pj_str(pj_optarg);
 		pj_in_addr a = pj_inet_addr(&t);
-		filter.ip_src = a.s_addr;
+		filter.ip_src = a.addr;
 	    }
 	    break;
 	case OPT_DST_IP:
 	    {
 		pj_str_t t = pj_str(pj_optarg);
 		pj_in_addr a = pj_inet_addr(&t);
-		filter.ip_dst = a.s_addr;
+		filter.ip_dst = a.addr;
 	    }
 	    break;
 	case OPT_SRC_PORT:

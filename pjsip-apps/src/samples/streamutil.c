@@ -250,8 +250,8 @@ static pj_status_t create_stream( pj_pool_t *pool,
 	    struct pj_ip_mreq imr;
 	
 	    pj_memset(&imr, 0, sizeof(struct pj_ip_mreq));
-	    imr.imr_multiaddr.s_addr = mcast_addr->sin_addr.s_addr;
-	    imr.imr_interface.s_addr = pj_htonl(PJ_INADDR_ANY);
+	    imr.imr_multiaddr.addr = mcast_addr->sin_addr.addr;
+	    imr.imr_interface.addr = pj_htonl(PJ_INADDR_ANY);
 	    status = pj_sock_setsockopt(si.rtp_sock, pj_SOL_IP(),
 	    				pj_IP_ADD_MEMBERSHIP(),
 				   	&imr, sizeof(struct pj_ip_mreq));
@@ -574,7 +574,7 @@ int main(int argc, char *argv[])
         || is_dtls_client || is_dtls_server
 #endif
        ) {
-	if (remote_addr.sin_addr.s_addr == 0) {
+	if (remote_addr.sin_addr.addr == 0) {
 	    printf("Error: remote address must be set\n");
 	    return 1;
 	}

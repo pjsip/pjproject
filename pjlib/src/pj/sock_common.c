@@ -125,7 +125,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
     PJ_CHECK_STACK();
 
     PJ_ASSERT_RETURN(!str_addr || str_addr->slen < PJ_MAX_HOSTNAME, 
-                     (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+                     (addr->sin_addr.addr=PJ_INADDR_NONE, PJ_EINVAL));
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
@@ -133,7 +133,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
 
     if (str_addr && str_addr->slen) {
 	addr->sin_addr = pj_inet_addr(str_addr);
-	if (addr->sin_addr.s_addr == PJ_INADDR_NONE) {
+	if (addr->sin_addr.addr == PJ_INADDR_NONE) {
     	    pj_addrinfo ai;
 	    unsigned count = 1;
 	    pj_status_t status;
@@ -148,7 +148,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
 	}
 
     } else {
-	addr->sin_addr.s_addr = 0;
+	addr->sin_addr.addr = 0;
     }
 
     return PJ_SUCCESS;
@@ -206,7 +206,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 				         const pj_str_t *str_addr,
 					 pj_uint16_t port)
 {
-    PJ_ASSERT_RETURN(addr, (addr->sin_addr.s_addr=PJ_INADDR_NONE, PJ_EINVAL));
+    PJ_ASSERT_RETURN(addr, (addr->sin_addr.addr=PJ_INADDR_NONE, PJ_EINVAL));
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
@@ -352,10 +352,10 @@ PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
     } else if (a->addr.sa_family == PJ_AF_INET6) {
 	pj_uint8_t zero[24];
 	pj_bzero(zero, sizeof(zero));
-	return pj_memcmp(a->ipv6.sin6_addr.s6_addr, zero, 
+	return pj_memcmp(a->ipv6.sin6_addr.addr, zero, 
 			 sizeof(pj_in6_addr)) != 0;
     } else
-	return a->ipv4.sin_addr.s_addr != PJ_INADDR_ANY;
+	return a->ipv4.sin_addr.addr != PJ_INADDR_ANY;
 }
 
 /*
@@ -483,7 +483,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr,
 PJ_DEF(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr)
 {
     pj_in_addr in_addr;
-    in_addr.s_addr = pj_ntohl(addr->sin_addr.s_addr);
+    in_addr.addr = pj_ntohl(addr->sin_addr.addr);
     return in_addr;
 }
 
@@ -493,7 +493,7 @@ PJ_DEF(pj_in_addr) pj_sockaddr_in_get_addr(const pj_sockaddr_in *addr)
 PJ_DEF(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
 				     pj_uint32_t hostaddr)
 {
-    addr->sin_addr.s_addr = pj_htonl(hostaddr);
+    addr->sin_addr.addr = pj_htonl(hostaddr);
 }
 
 /*
@@ -932,7 +932,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	for (i=0; i<cand_cnt; ++i) {
 	    unsigned j;
 	    for (j=0; j<PJ_ARRAY_SIZE(spec_ipv4); ++j) {
-		    pj_uint32_t a = pj_ntohl(cand_addr[i].ipv4.sin_addr.s_addr);
+		    pj_uint32_t a = pj_ntohl(cand_addr[i].ipv4.sin_addr.addr);
 		    pj_uint32_t pa = spec_ipv4[j].addr;
 		    pj_uint32_t pm = spec_ipv4[j].mask;
 
@@ -946,7 +946,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	for (i=0; i<PJ_ARRAY_SIZE(spec_ipv6); ++i) {
 		unsigned j;
 		for (j=0; j<cand_cnt; ++j) {
-		    pj_uint8_t *a = cand_addr[j].ipv6.sin6_addr.s6_addr;
+		    pj_uint8_t *a = cand_addr[j].ipv6.sin6_addr.addr;
 		    pj_uint8_t am[16];
 		    pj_uint8_t *pa = spec_ipv6[i].addr;
 		    pj_uint8_t *pm = spec_ipv6[i].mask;
@@ -985,13 +985,13 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     /* If else fails, returns loopback interface as the last resort */
     if (selected_cand == -1) {
 	if (af==PJ_AF_INET) {
-	    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
+	    addr->ipv4.sin_addr.addr = pj_htonl (0x7f000001);
 	} else {
-	    pj_in6_addr *s6_addr;
+	    pj_in6_addr *in6_addr;
 
-	    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
-	    pj_bzero(s6_addr, sizeof(pj_in6_addr));
-	    s6_addr->s6_addr[15] = 1;
+	    in6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
+	    pj_bzero(in6_addr, sizeof(pj_in6_addr));
+	    in6_addr->addr[15] = 1;
 	}
 	TRACE_((THIS_FILE, "Loopback IP %s returned",
 		pj_sockaddr_print(addr, strip, sizeof(strip), 3)));
