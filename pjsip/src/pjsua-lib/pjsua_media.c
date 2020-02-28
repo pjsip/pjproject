@@ -673,7 +673,19 @@ static pj_status_t create_loop_media_transport(
     opt.af = af;
     if (cfg->bound_addr.slen)
         opt.addr = cfg->bound_addr;
-    opt.port = cfg->port;
+
+    if (acc->next_rtp_port == 0 || cfg->port == 0)
+	acc->next_rtp_port = (pj_uint16_t)cfg->port;
+
+    if (cfg->port > 0 && cfg->port_range > 0 &&
+        (acc->next_rtp_port > cfg->port + cfg->port_range ||
+         acc->next_rtp_port < cfg->port))
+    {
+        acc->next_rtp_port = (pj_uint16_t)cfg->port;
+    }
+    opt.port = acc->next_rtp_port;
+    acc->next_rtp_port += 2;
+
     opt.disable_rx=!pjsua_var.acc[call_med->call->acc_id].cfg.enable_loopback;
     status = pjmedia_transport_loop_create2(pjsua_var.med_endpt, &opt,
     					    &call_med->tp);
