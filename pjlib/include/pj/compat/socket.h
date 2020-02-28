@@ -61,7 +61,7 @@
  */
 #if defined(_MSC_VER) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 #   ifndef s_addr
-#	define s_addr  S_un.addr
+#	define s_addr  S_un.S_addr
 #   endif
 
 #   if !defined(IPPROTO_IPV6) && (_WIN32_WINNT == 0x0500)
@@ -179,8 +179,8 @@
 
 /*
  * And undefine these..
- * Note: unfortunately, this may cause build failure to anyone who
- * uses these standard macros.
+ * Note (see issue #2311): unfortunately, this may cause build failure
+ * to anyone who uses these standard macros.
  */
 // #undef s_addr
 // #undef s6_addr

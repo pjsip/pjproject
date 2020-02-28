@@ -485,8 +485,8 @@ typedef enum pj_socket_sd_type
 #define PJ_INVALID_SOCKET   (-1)
 
 /* Must undefine s_addr because of pj_in_addr below.
- * Note: unfortunately, this may cause build failure to anyone who
- * uses this macro.
+ * Note (see issue #2311): unfortunately, this may cause build failure to
+ * anyone who uses this macro.
  */
 //#undef s_addr
 
@@ -547,8 +547,8 @@ struct pj_sockaddr_in
 };
 
 /* Must undefine s6_addr because of pj_in6_addr below.
- * Note: unfortunately, this may cause build failure to anyone who
- * uses this macro.
+ * Note (see issue #2311): unfortunately, this may cause build failure to
+ * anyone who uses this macro.
  */
 //#undef s6_addr
 
