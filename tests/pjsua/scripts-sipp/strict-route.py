@@ -7,3 +7,7 @@ PJSUA = ["--null-audio --max-calls=1 --id=sip:pjsua@localhost --username=pjsua -
 PJSUA_EXPECTS = [[0, "ACK sip:proxy@.* SIP/2\.0", ""],
 		 [0, const.STATE_CONFIRMED, "h"]
  		 ]
+
+PJSUA_CLI_EXPECTS = [[0, "ACK sip:proxy@.* SIP/2\.0", ""],
+		 [0, const.STATE_CONFIRMED, "call hangup"]
+ 		 ]

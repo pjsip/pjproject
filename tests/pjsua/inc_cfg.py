@@ -50,7 +50,7 @@ class InstanceParam:
 			have_publish=False,	# Have publish?
 			echo_enabled=DEFAULT_ECHO, 
 			trace_enabled=DEFAULT_TRACE,
-            telnet_enabled = DEFAULT_TELNET,
+			telnet_enabled = DEFAULT_TELNET,
 			enable_buffer = False):
 		# Instance name
 		self.name = name
@@ -123,7 +123,7 @@ class TestParam:
 	# flag if this tes should be skipped
 	skip = None
 	# list of Expect instances, to be filled at run-time by
-        # the test program	
+	# the test program	
 	process = []
 	# the function for test body
 	test_func = None

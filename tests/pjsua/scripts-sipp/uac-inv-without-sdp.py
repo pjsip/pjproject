@@ -9,3 +9,8 @@ PJSUA_EXPECTS = [[0, const.EVENT_INCOMING_CALL, "a"],
 		 [0, const.MEDIA_ACTIVE, ""],
 		 [0, const.STATE_CONFIRMED, "h"]
 		 ]
+
+PJSUA_CLI_EXPECTS = [[0, const.EVENT_INCOMING_CALL, "call answer 200"],
+		 [0, const.MEDIA_ACTIVE, ""],
+		 [0, const.STATE_CONFIRMED, "call hangup"]
+		 ]
