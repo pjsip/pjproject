@@ -2507,8 +2507,9 @@ public:
  */
 struct MediaFmtChangedEvent
 {
-    unsigned newWidth;      /**< The new width.     */
-    unsigned newHeight;     /**< The new height.    */
+    unsigned newWidth;		/**< The new width.			*/
+    unsigned newHeight;		/**< The new height.			*/
+    bool     isDecodingStream;	/**< Event publisher is decoding stream.*/
 };
 
 /**

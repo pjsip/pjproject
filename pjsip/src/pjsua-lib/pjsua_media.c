@@ -1568,6 +1568,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 
 #if PJSUA_HAS_VIDEO
 	case PJMEDIA_EVENT_FMT_CHANGED:
+	    event->data.fmt_changed.is_dec_stream = PJ_FALSE;
 	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 		if (event->epub == w->vp_rend) {
@@ -1606,6 +1607,9 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		    pjsua_vid_conf_disconnect(dec_pid, pi.listeners[i]);
 		    pjsua_vid_conf_connect(dec_pid, pi.listeners[i], NULL);
 		}
+		/* Check if event publisher is decoding stream. */
+		event->data.fmt_changed.is_dec_stream =
+						    (strm_dec == event->epub);
 	    }
 	    break;
 

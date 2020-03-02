@@ -125,6 +125,10 @@ typedef struct pjmedia_event_fmt_changed_data
 
     /** The new media format. */
     pjmedia_format	new_fmt;
+
+    /** Event publisher is decoding stream. */
+    pj_bool_t		is_dec_stream;
+
 } pjmedia_event_fmt_changed_data;
 
 /**
