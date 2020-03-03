@@ -24,5 +24,5 @@ jobs:
       run: ./configure
     - name: make
       run: make
-    - name: pjsua test
-      run: make pjsua-test
+    - name: unit test
+      run: make selftest
