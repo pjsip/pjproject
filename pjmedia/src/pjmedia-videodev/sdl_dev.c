@@ -1191,9 +1191,24 @@ static pj_status_t set_cap(void *data)
 	return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
 	pjmedia_rect_size *new_size = (pjmedia_rect_size *)pval;
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	pj_status_t status;
+
+	/**
+	 * Exit full-screen if engaged, since resizing while in full-screen is
+         * not supported.
+	 */
+	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+	    SDL_SetWindowFullscreen(strm->window, 0);
 
 	SDL_SetWindowSize(strm->window, new_size->w, new_size->h);
-        return resize_disp(strm, new_size);
+	status = resize_disp(strm, new_size);
+
+	/* Restore full-screen if it was engaged. */
+	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+	    SDL_SetWindowFullscreen(strm->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+	return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*)pval;
 	pj_status_t status = PJ_SUCCESS;
