@@ -140,7 +140,19 @@ class Expect(threading.Thread):
             fullcmd = G_EXE + " " + inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
-            self.telnet = telnetlib.Telnet('localhost', port=self.inst_param.telnet_port, timeout=60)
+            
+            # start telnet-ing to pjsua, raise exception if telnet fails after 5s
+            t0 = time.time()
+            while self.proc.poll() == None and self.telnet is None:
+                try:
+                    time.sleep(0.01)
+                    self.telnet = telnetlib.Telnet('127.0.0.1', port=self.inst_param.telnet_port, timeout=60)
+                except Exception as e:
+                    t1 = time.time()
+                    dur = int(t1 - t0)
+                    if dur > 5:
+                        raise inc.TestError(self.name + ": Timeout connecting to pjsua: " + repr(e))
+
             self.running = True
             while self.proc.poll() == None:
                 line = self.telnet.read_until('\n', 60)

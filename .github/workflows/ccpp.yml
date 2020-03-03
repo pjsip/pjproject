@@ -12,10 +12,12 @@ jobs:
     - name: install dependencies
       run: sudo apt-get install -y sip-tester
     - name: config site
-      run: echo "#define PJMEDIA_SRTP_HAS_DTLS 1" > pjlib/include/pj/config_site.h
+      run: |
+        echo "#define PJMEDIA_SRTP_HAS_DTLS 1" > pjlib/include/pj/config_site.h
+        echo "#define PJ_EXCLUDE_BENCHMARK_TESTS 1" > pjlib/include/pj/config_site.h
     - name: configure
       run: ./configure
     - name: make
       run: make
-    - name: unit test
-      run: make selftest
+    - name: pjsua test
+      run: make pjsua-test

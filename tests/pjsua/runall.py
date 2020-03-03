@@ -214,3 +214,4 @@ if fails_cnt == 0:
 else:
     print str(tests_cnt) + " tests completed, " +  str(fails_cnt) + " test(s) failed"
 
+sys.exit(fails_cnt)
