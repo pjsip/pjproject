@@ -52,7 +52,10 @@ def test_func(t):
         u2.send("+b")
         u2.send(uri1)
     u2.expect("Subscription state changed NULL --> SENT")
-    u2.expect("Presence subscription.*is ACCEPTED")
+    # sometime it is NULL->SENT->ACCEPTED->ACTIVE
+    # some othertime NULL->SENT->ACTIVE
+    #u2.expect("Presence subscription.*is ACCEPTED")
+    u2.expect("Presence subscription.*is ACTIVE")
     if not u1.inst_param.have_publish:
         # Process incoming SUBSCRIBE in U1
         # Finds out which account gets the subscription in U1
