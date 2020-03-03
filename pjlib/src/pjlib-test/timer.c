@@ -963,9 +963,11 @@ int timer_test()
     if (rc != 0)
 	return rc;
 
+#if WITH_BENCHMARK
     rc = timer_bench_test();
     if (rc != 0)
 	return rc;
+#endif
 
     return 0;
 }

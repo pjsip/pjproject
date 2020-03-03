@@ -21,6 +21,12 @@
 #include <pjlib-util.h>
 #include <pjnath.h>
 
+#if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
+#   define WITH_BENCHMARK	    0
+#else
+#   define WITH_BENCHMARK	    1
+#endif
+
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
 #define INCLUDE_STUN_SOCK_TEST	    1

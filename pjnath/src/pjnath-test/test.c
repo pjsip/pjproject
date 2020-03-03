@@ -168,7 +168,7 @@ int check_pjlib_state(pj_stun_config *cfg,
 
 pj_pool_factory *mem;
 
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
 		      PJ_LOG_HAS_MICRO_SEC;
 
 pj_log_func *orig_log_func;

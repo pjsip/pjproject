@@ -267,7 +267,7 @@ int tsx_destroy_test()
 	    "normal unable to resolve",
 	    &tsx_create_and_send_req,
 	    "sip:user@somehost",
-	    15000,
+	    20000,
 	    1
 	},
 	{
@@ -275,7 +275,7 @@ int tsx_destroy_test()
 	    &tsx_create_and_send_req,
 	    "sip:user@somehost",
 	    1,
-	    15000
+	    20000
 	},
 	{
 	    "tcp connect and destroy",

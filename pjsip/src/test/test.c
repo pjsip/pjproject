@@ -49,7 +49,7 @@
 pjsip_endpoint *endpt;
 pj_caching_pool caching_pool;
 int log_level = 3;
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | PJ_LOG_HAS_SENDER |
 		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 static pj_oshandle_t fd_report;
