@@ -143,7 +143,7 @@ class Expect(threading.Thread):
             
             # start telnet-ing to pjsua, raise exception if telnet fails after 5s
             t0 = time.time()
-            while self.proc.poll() == None and self.telnet is None:
+            while self.proc.poll() is None and self.telnet is None:
                 try:
                     time.sleep(0.01)
                     self.telnet = telnetlib.Telnet('127.0.0.1', port=self.inst_param.telnet_port, timeout=60)
@@ -154,7 +154,7 @@ class Expect(threading.Thread):
                         raise inc.TestError(self.name + ": Timeout connecting to pjsua: " + repr(e))
 
             self.running = True
-            while self.proc.poll() == None:
+            while self.proc.poll() is None:
                 line = self.telnet.read_until('\n', 60)
                 if line == "" or const.DESTROYED in line:
                     break;
@@ -174,7 +174,7 @@ class Expect(threading.Thread):
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
             self.running = True
-            while self.proc.poll() == None:
+            while self.proc.poll() is None:
                 line = self.proc.stdout.readline()
                 if line == "":
                     break;
@@ -283,18 +283,18 @@ def handle_error(errmsg, t, close_processes = True):
             is_err = False
             try:
                 ret = p.expect(const.DESTROYED, False)
-                if not ret:
+                if ret is None:
                     is_err = True
             except:
                 is_err = True
-            if is_err:
+            if is_err and p.proc.poll() is None:
                 if sys.hexversion >= 0x02060000:
                     p.proc.terminate()
                 else:
                     p.wait()
             else:
                 p.wait()
-                
+
     print "Test completed with error: " + errmsg
     sys.exit(1)
 
