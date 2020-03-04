@@ -1747,6 +1747,40 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
     return PJ_TRUE;
 }
 
+#if defined(PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE) && PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE!=0
+static pj_bool_t cert_cmp_wildcard( pj_str_t* remote_name,
+                                    pj_str_t* subject )
+{
+    pj_str_t wo_wildcard;
+    char* name_pos;
+
+    if( pj_strlen( subject ) < 1 ) {
+        return PJ_FALSE;
+    }
+
+    if( pj_strnicmp2(subject, "*.", 2) != 0 ) {
+        return !pj_stricmp(remote_name, subject);
+    }
+
+    /* AWH: How does this work?
+    /*      When the subject string seems to begin with a wildcard, we cut the asterisk and try to find the rest in remote_name.
+     *      If we do find the substring in remote_name, it must be at the end.
+     *      For that, we add to the position pj_stristr() returns the length of the substring which must equal the entire length of remote_name.
+     */
+
+    /* remove wildcard character and search for string */
+    wo_wildcard.ptr = subject->ptr + 1;
+    wo_wildcard.slen = subject->slen - 1;
+
+    name_pos = pj_stristr( remote_name, &wo_wildcard );
+
+    if( ! name_pos ) {
+        return PJ_FALSE;
+    }
+
+    return (remote_name->slen == ((name_pos + wo_wildcard.slen) - remote_name->ptr)) ? PJ_TRUE : PJ_FALSE;
+}
+#endif
 
 /* 
  * Callback from ioqueue when asynchronous connect() operation completes.
@@ -1839,7 +1873,11 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	    switch (serv_cert->subj_alt_name.entry[i].type) {
 	    case PJ_SSL_CERT_NAME_DNS:
 	    case PJ_SSL_CERT_NAME_IP:
+#if defined(PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE) && PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE!=0
+		matched = cert_cmp_wildcard(remote_name, cert_name);
+#else
 		matched = !pj_stricmp(remote_name, cert_name);
+#endif
 		break;
 	    case PJ_SSL_CERT_NAME_URI:
 		if (pj_strnicmp2(cert_name, "sip:", 4) == 0 ||
@@ -1851,7 +1889,11 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 		    p = pj_strchr(cert_name, ':') + 1;
 		    pj_strset(&host_part, p, cert_name->slen - 
 					     (p - cert_name->ptr));
+#if defined(PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE) && PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE!=0
+		    matched = cert_cmp_wildcard(remote_name, &host_part);
+#else
 		    matched = !pj_stricmp(remote_name, &host_part);
+#endif
 		}
 		break;
 	    default:
@@ -1863,9 +1905,14 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	 * certificate, try with Common Name of Subject field.
 	 */
 	if (!matched) {
+#if defined(PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE) && PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE!=0
+	    matched = cert_cmp_wildcard(remote_name, &serv_cert->subject.cn);
+#else
 	    matched = !pj_stricmp(remote_name, &serv_cert->subject.cn);
+#endif
 	}
 
+#if !defined(PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE) || PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE==0
 	if (!matched) {
 	    if (pj_strnicmp2(&serv_cert->subject.cn, "*.", 2) == 0) {
 		PJ_LOG(1,(tls->base.obj_name,
@@ -1874,6 +1921,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	    }
 	    ssl_info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
 	}
+#endif
     }
 
     /* Prevent immediate transport destroy as application may access it 

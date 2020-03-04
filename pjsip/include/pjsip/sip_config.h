@@ -382,6 +382,22 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_DONT_SWITCH_TO_TCP	0
 #endif
 
+/**
+ * Even though RFC 5922 (section 7.2) forbids the use of wildcard certificates,
+ * some providers use them anyway and they won't or
+ * (by the way their systems are designed) cannot change to non-wildcard certificates.
+ *
+ * This option will specify whether wildcard certificates are accepted.
+ *
+ * If this option is disabled, you can still connect to endpoints
+ * that present wildcard certificates, provided that server verification is turned off.
+ *
+ * Default is 0 (no).
+ */
+#ifndef PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE
+#   define PJSIP_ACCEPT_TLS_WILDCARD_CERTIFICATE	0
+#endif
+
 
 /**
  * As specified RFC 3261 section 8.1.2, when request-URI uses "sips" scheme,
