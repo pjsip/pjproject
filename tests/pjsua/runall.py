@@ -82,7 +82,7 @@ for f in os.listdir("scripts-sipp"):
 
 resume_script=""
 shell_cmd=""
-with_log=False
+with_log=True
 
 # Parse arguments
 sys.argv.pop(0)
@@ -105,8 +105,9 @@ while len(sys.argv):
         print "    Run the tests with the specified SHELL cmd. This can also be"
         print "    used to run the test with ccdash. Example:"
         print "    --shell '/bin/sh -c'"
-        print "  --logs"
-        print "    Generate log files, the log files will be put in 'logs' dir."
+        print "  --no-log"
+        print "    Do not generate log files. By default log files will be generated"
+        print "    and put in 'logs' dir."
         print ""
         print "  run.py-OPTIONS are applicable here"
         sys.exit(0)
@@ -154,9 +155,9 @@ while len(sys.argv):
             sys.argv.pop(0)
             sys.stderr.write("Error: argument value required")
             sys.exit(1)        	
-    elif sys.argv[0] == '--logs':
+    elif sys.argv[0] == '--no-log':
         sys.argv.pop(0)
-        with_log=True
+        with_log=False
     else:
         # should be run.py options
         break
@@ -185,7 +186,7 @@ for t in tests:
     if shell_cmd:
         cmdline = "%s '%s'" % (shell_cmd, cmdline)
     t0 = time.time()
-    msg = "Running %d/%d: %s..." % (tests_cnt+1, total_cnt, cmdline)
+    msg = "Running %3d/%d: %s..." % (tests_cnt+1, total_cnt, cmdline)
     sys.stdout.write(msg)
     sys.stdout.flush()
     if with_log:
@@ -202,7 +203,9 @@ for t in tests:
         dur = int(t1 - t0)
         print " failed!! [" + str(dur) + "s]"
         if with_log:
-            print "Please check '" + logname + "' for the test log."
+            lines = open(logname, "r").readlines()
+            print ''.join(lines)
+            print "Log file: '" + logname + "'."
         fails_cnt += 1
     else:
         dur = int(t1 - t0)
