@@ -24,8 +24,16 @@
    <action>
     <ereg regexp="branch=([^;]*)"
           search_in="hdr"
-          header="Via"
+          header="Via:"
           assign_to="1,2"/>
+    <ereg regexp=".*"
+          search_in="hdr"
+	  header="CSeq:"
+	  assign_to="cseq" />
+    <ereg regexp=".*"
+          search_in="hdr"
+	  header="To:"
+	  assign_to="to" />
     <assign assign_to="1" variable="2"/>
     </action>
   </recv>
@@ -63,15 +71,19 @@
     ]]>
   </send>
 
+  <!-- Receive ACK -->
+  <recv request="ACK" optional="false">
+  </recv>
+
   <!-- Call leg 2: 200/OK -->
   <send>
     <![CDATA[
       SIP/2.0 200 OK
       Via: SIP/2.0/UDP 127.0.0.1;received=127.0.0.1;rport=5080;branch=[$2]
       [last_From:]
-      [last_To:];tag=UA_2
+      To:[$to];tag=UA_2
       [last_Call-ID:]
-      [last_CSeq:]
+      CSeq:[$cseq]
       Contact: <sip:UA_2@[local_ip]:[local_port]>
       Content-Type: application/sdp
 
@@ -85,15 +97,9 @@
     ]]>
   </send>
 
-  <!-- Receive ACK -->
-  <recv request="ACK"
-        optional="false"
-        rtd="true"
-        crlf="true">
-  </recv>
 
-  <!-- Receive BYE -->
-  <recv request="BYE" crlf="true">
+  <!-- Receive BYE (for leg 2) -->
+  <recv request="BYE" optional="false">
   </recv>
 
   <!-- Send 200/OK to BYE -->
@@ -109,12 +115,8 @@
   </send>
 
 
-
   <!-- Receive ACK -->
-  <recv request="ACK"
-        optional="false"
-        rtd="true"
-        crlf="true">
+  <recv request="ACK" optional="false">
   </recv>
 
 
