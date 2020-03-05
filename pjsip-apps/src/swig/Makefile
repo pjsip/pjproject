@@ -24,9 +24,9 @@ all clean dep depend distclean print realclean install uninstall: $(LANG)
 
 java python csharp:
 ifeq ($(CMD_is_lang),)
-	$(MAKE) $(MAKE_FLAGS) -C $@ $(MAKECMDGOALS)
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@ $(MAKECMDGOALS)
 else
-	$(MAKE) $(MAKE_FLAGS) -C $@
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@
 endif
 
 symbols.i: symbols.lst
