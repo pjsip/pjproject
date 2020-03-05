@@ -25,4 +25,4 @@ jobs:
     - name: make
       run: make
     - name: unit test
-      run: make pjsua-test
+      run: make selftest
