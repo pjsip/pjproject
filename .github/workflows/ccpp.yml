@@ -206,15 +206,13 @@ jobs:
       run: make
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
-    - name: build cmp_wav
-      run: cd tests/pjsua/tools && make
-    - name: pjsua test
-      run: cd tests/pjsua && mkdir -p logs && python runall.py -d ice -d srtp -d prack -d simplecall -d 400_tel_uri -d 200_tcp
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test
+      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
 
   build-mac-default-full-bundle-2:
-  # full bundle 2: running pjsip test
+  # full bundle 2: running pjnath test
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
@@ -226,6 +224,26 @@ jobs:
       run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: unit tests
+      run: make pjnath-test
+
+  build-mac-default-full-bundle-3:
+  # full bundle 3: running pjsip test
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install opencore-amr
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: configure
+      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+    - name: make
+      run: make
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
       run: make pjsip-test
 
@@ -272,15 +290,13 @@ jobs:
       run: make
     - name: swig bindings
       run: cd pjsip-apps/src/swig && make
-    - name: build cmp_wav
-      run: cd tests/pjsua/tools && make
-    - name: pjsua test
-      run: cd tests/pjsua && mkdir -p logs && python runall.py -d ice -d srtp -d prack -d simplecall -d 400_tel_uri -d 200_tcp
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
-      run: make pjlib-test pjmedia-test pjlib-util-test
+      run: make pjlib-test pjmedia-test pjlib-util-test pjsua-test
 
   build-mac-video-openh264-2:
-  # video 2: running pjsip test
+  # video 2: running pjnath test
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
@@ -292,6 +308,26 @@ jobs:
       run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
+    - name: unit tests
+      run: make pjnath-test
+
+  build-mac-video-openh264-3:
+  # video 3: running pjsip test
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install openh264 libvpx opencore-amr
+    - name: config site
+      run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
+    - name: configure
+      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+    - name: make
+      run: make
+    - name: disable firewall
+      run: sudo /usr/libexec/ApplicationFirewall/socketfilterfw --setglobalstate off
     - name: unit tests
       run: make pjsip-test
 
