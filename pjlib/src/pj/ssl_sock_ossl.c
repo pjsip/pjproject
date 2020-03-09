@@ -455,11 +455,96 @@ static int openssl_init_count;
 /* OpenSSL application data index */
 static int sslsock_idx;
 
+#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
+    && OPENSSL_VERSION_NUMBER < 0x10100000
+
+/* OpenSSL thread lock initialization counter. */
+static int openssl_lock_init_count;
+
+/* OpenSSL locking list. */
+pj_lock_t **ossl_locks;
+
+/* OpenSSL number locks. */
+unsigned ossl_num_locks;
+
+#if     OPENSSL_VERSION_NUMBER >= 0x10000000
+static void ossl_set_thread_id(CRYPTO_THREADID *id)
+{
+    CRYPTO_THREADID_set_numeric(id,
+                     (unsigned long)pj_thread_get_os_handle(pj_thread_this()));
+}
+
+#else
+
+static unsigned long ossl_thread_id(void)
+{
+    return ((unsigned long)pj_thread_get_os_handle(pj_thread_this()));
+}
+#endif
+
+static void ossl_lock(int mode, int id, const char *file, int line)
+{
+    PJ_UNUSED_ARG(file);
+    PJ_UNUSED_ARG(line);
+    if (mode & CRYPTO_LOCK) {
+        if (ossl_locks[id]) {
+            //PJ_LOG(6, (THIS_FILE, "Lock File (%s) Line(%d)", file, line));
+            pj_lock_acquire(ossl_locks[id]);
+        }
+    } else {
+        if (ossl_locks[id]) {
+            //PJ_LOG(6, (THIS_FILE, "Unlock File (%s) Line(%d)", file, line));
+            pj_lock_release(ossl_locks[id]);
+        }
+    }
+}
+
+static pj_status_t init_ossl_lock(pj_pool_t* pool) {    
+    if (openssl_lock_init_count == 0) {        
+        ossl_num_locks = CRYPTO_num_locks();
+        ossl_locks = (pj_lock_t **)pj_pool_calloc(pool,
+                                                  ossl_num_locks,
+                                                  sizeof(pj_lock_t*));
+
+        if (ossl_locks) {
+            unsigned i = 0;
+            for (; i < ossl_num_locks; ++i) {
+                pj_lock_create_simple_mutex(pool, "ossl_lock%p",
+                                            &ossl_locks[i]);
+            }
+#if     OPENSSL_VERSION_NUMBER >= 0x10000000
+            CRYPTO_THREADID_set_callback(ossl_set_thread_id);
+#else
+            CRYPTO_set_id_callback(ossl_thread_id);
+#endif
+
+            CRYPTO_set_locking_callback(ossl_lock);
+        } else {
+            return PJ_ENOMEM;
+        }
+    }
+    openssl_lock_init_count++;
+    return PJ_SUCCESS;
+}
+
+#endif
 
 /* Initialize OpenSSL */
-static pj_status_t init_openssl(void)
+static pj_status_t init_openssl(pj_ssl_sock_t *ssock)
 {
     pj_status_t status;
+
+#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
+    && OPENSSL_VERSION_NUMBER < 0x10100000
+
+    if (ssock && ssock->pool) {
+        status = init_ossl_lock(ssock->pool);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
+#else
+    PJ_UNUSED_ARG(ssock);
+#endif
 
     if (openssl_init_count)
 	return PJ_SUCCESS;
@@ -593,9 +678,37 @@ static pj_status_t init_openssl(void)
 
 
 /* Shutdown OpenSSL */
-static void shutdown_openssl(void)
+static void shutdown_openssl(pj_ssl_sock_t *ssock)
 {
     PJ_UNUSED_ARG(openssl_init_count);
+
+#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
+    && OPENSSL_VERSION_NUMBER < 0x10100000
+
+    if (ssock) {
+        openssl_lock_init_count--;
+
+        if (openssl_lock_init_count == 0) {
+            unsigned i = 0;
+
+#if     OPENSSL_VERSION_NUMBER >= 0x10000000
+            CRYPTO_THREADID_set_callback(NULL);
+#else
+            CRYPTO_set_id_callback(NULL);
+#endif
+            CRYPTO_set_locking_callback(NULL);
+
+            for (; i < ossl_num_locks; ++i) {
+                if (ossl_locks[i]) {
+                    pj_lock_destroy(ossl_locks[i]);
+                    ossl_locks[i] = NULL;
+                }
+            }
+        }
+    }
+#else
+    PJ_UNUSED_ARG(ssock);
+#endif
 }
 
 
@@ -749,7 +862,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     cert = ssock->cert;
 
     /* Make sure OpenSSL library has been initialized */
-    init_openssl();
+    init_openssl(ssock);
 
     set_entropy(ssock);
 
@@ -1210,7 +1323,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     /* Potentially shutdown OpenSSL library if this is the last
      * context exists.
      */
-    shutdown_openssl();
+    shutdown_openssl(ssock);
 }
 
 
@@ -1250,8 +1363,8 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 static void ssl_ciphers_populate()
 {
     if (ssl_cipher_num == 0 || ssl_curves_num == 0) {
-	init_openssl();
-	shutdown_openssl();
+	init_openssl(NULL);
+	shutdown_openssl(NULL);
     }
 }
 

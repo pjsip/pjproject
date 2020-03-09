@@ -1024,6 +1024,15 @@
 #  define PJ_SSL_SOCK_MAX_CURVES   32
 #endif
 
+/**
+ * Use SSL backend thread locking.
+ *
+ * Default: 0 (No)
+ */
+#ifndef PJ_SSL_SOCK_USE_THREAD_LOCK
+#  define PJ_SSL_SOCK_USE_THREAD_LOCK   0
+#endif
+
 
 /**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
