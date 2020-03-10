@@ -514,9 +514,14 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 	    call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
 	}
 
-	if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
-	    (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
-	    stat.tx.pkt)
+	/* Don't check for direction and transmitted packets count as we
+	 * assume that RTP timestamp remains increasing when outgoing
+	 * direction is disabled/paused.
+	 */
+	//if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
+	//    (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
+	//    stat.tx.pkt)
+	if (pjmedia_stream_get_stat(strm, &stat) == PJ_SUCCESS)
 	{
 	    /* Save RTP timestamp & sequence, so when media session is
 	     * restarted, those values will be restored as the initial
