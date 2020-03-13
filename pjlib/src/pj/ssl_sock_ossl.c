@@ -455,11 +455,12 @@ static int openssl_init_count;
 /* OpenSSL application data index */
 static int sslsock_idx;
 
-#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
-    && OPENSSL_VERSION_NUMBER < 0x10100000
+#if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
+    PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
 
-/* OpenSSL thread lock initialization counter. */
-static int openssl_lock_init_count;
+/* Thread lock pool.*/
+pj_caching_pool 	 cp;
+pj_pool_t 		*lock_pool;
 
 /* OpenSSL locking list. */
 pj_lock_t **ossl_locks;
@@ -486,6 +487,10 @@ static void ossl_lock(int mode, int id, const char *file, int line)
 {
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
+
+    if (openssl_init_count == 0)
+        return;
+
     if (mode & CRYPTO_LOCK) {
         if (ossl_locks[id]) {
             //PJ_LOG(6, (THIS_FILE, "Lock File (%s) Line(%d)", file, line));
@@ -499,52 +504,49 @@ static void ossl_lock(int mode, int id, const char *file, int line)
     }
 }
 
-static pj_status_t init_ossl_lock(pj_pool_t* pool) {    
-    if (openssl_lock_init_count == 0) {        
-        ossl_num_locks = CRYPTO_num_locks();
-        ossl_locks = (pj_lock_t **)pj_pool_calloc(pool,
-                                                  ossl_num_locks,
-                                                  sizeof(pj_lock_t*));
+static pj_status_t init_ossl_lock()
+{
+    pj_caching_pool_init(&cp, NULL, 0);
 
-        if (ossl_locks) {
-            unsigned i = 0;
-            for (; i < ossl_num_locks; ++i) {
-                pj_lock_create_simple_mutex(pool, "ossl_lock%p",
-                                            &ossl_locks[i]);
-            }
+    lock_pool = pj_pool_create(&cp.factory,
+                               "ossl-lock",
+                               64,
+                               64,
+                               NULL);
+
+    if (!lock_pool)
+        return PJ_ENOMEM;
+
+    ossl_num_locks = CRYPTO_num_locks();
+    ossl_locks = (pj_lock_t **)pj_pool_calloc(lock_pool,
+                                              ossl_num_locks,
+                                              sizeof(pj_lock_t*));
+
+    if (ossl_locks) {
+        unsigned i = 0;
+        for (; i < ossl_num_locks; ++i) {
+            pj_lock_create_simple_mutex(lock_pool, "ossl_lock%p",
+                                        &ossl_locks[i]);
+        }
 #if     OPENSSL_VERSION_NUMBER >= 0x10000000
-            CRYPTO_THREADID_set_callback(ossl_set_thread_id);
+        CRYPTO_THREADID_set_callback(ossl_set_thread_id);
 #else
-            CRYPTO_set_id_callback(ossl_thread_id);
+        CRYPTO_set_id_callback(ossl_thread_id);
 #endif
 
-            CRYPTO_set_locking_callback(ossl_lock);
-        } else {
-            return PJ_ENOMEM;
-        }
+        CRYPTO_set_locking_callback(ossl_lock);
+    } else {
+        return PJ_ENOMEM;
     }
-    openssl_lock_init_count++;
     return PJ_SUCCESS;
 }
 
 #endif
 
 /* Initialize OpenSSL */
-static pj_status_t init_openssl(pj_ssl_sock_t *ssock)
+static pj_status_t init_openssl()
 {
     pj_status_t status;
-
-#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
-    && OPENSSL_VERSION_NUMBER < 0x10100000
-
-    if (ssock && ssock->pool) {
-        status = init_ossl_lock(ssock->pool);
-        if (status != PJ_SUCCESS)
-            return status;
-    }
-#else
-    PJ_UNUSED_ARG(ssock);
-#endif
 
     if (openssl_init_count)
 	return PJ_SUCCESS;
@@ -673,6 +675,14 @@ static pj_status_t init_openssl(pj_ssl_sock_t *ssock)
     /* Create OpenSSL application data index for SSL socket */
     sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
 
+#if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
+    PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
+
+    status = init_ossl_lock();
+    if (status != PJ_SUCCESS)
+        return status;
+#endif
+
     return status;
 }
 
@@ -680,34 +690,34 @@ static pj_status_t init_openssl(pj_ssl_sock_t *ssock)
 /* Shutdown OpenSSL */
 static void shutdown_openssl(pj_ssl_sock_t *ssock)
 {
-    PJ_UNUSED_ARG(openssl_init_count);
+    PJ_UNUSED_ARG(ssock);
+#if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
+    PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
 
-#if defined(PJ_SSL_SOCK_USE_THREAD_LOCK) && PJ_SSL_SOCK_USE_THREAD_LOCK != 0 \
-    && OPENSSL_VERSION_NUMBER < 0x10100000
-
-    if (ssock) {
-        openssl_lock_init_count--;
-
-        if (openssl_lock_init_count == 0) {
-            unsigned i = 0;
+    if (openssl_init_count) {
+        unsigned i = 0;
 
 #if     OPENSSL_VERSION_NUMBER >= 0x10000000
-            CRYPTO_THREADID_set_callback(NULL);
+        CRYPTO_THREADID_set_callback(NULL);
 #else
-            CRYPTO_set_id_callback(NULL);
+        CRYPTO_set_id_callback(NULL);
 #endif
-            CRYPTO_set_locking_callback(NULL);
+        CRYPTO_set_locking_callback(NULL);
 
-            for (; i < ossl_num_locks; ++i) {
-                if (ossl_locks[i]) {
-                    pj_lock_destroy(ossl_locks[i]);
-                    ossl_locks[i] = NULL;
-                }
+        for (; i < ossl_num_locks; ++i) {
+            if (ossl_locks[i]) {
+                pj_lock_destroy(ossl_locks[i]);
+                ossl_locks[i] = NULL;
             }
         }
+        if (lock_pool) {
+            pj_pool_release(lock_pool);
+            lock_pool = NULL;
+        }
+        pj_caching_pool_destroy(&cp);
+
+        openssl_init_count = 0;
     }
-#else
-    PJ_UNUSED_ARG(ssock);
 #endif
 }
 
@@ -862,7 +872,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     cert = ssock->cert;
 
     /* Make sure OpenSSL library has been initialized */
-    init_openssl(ssock);
+    init_openssl();
 
     set_entropy(ssock);
 

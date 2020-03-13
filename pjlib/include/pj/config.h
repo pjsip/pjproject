@@ -1025,12 +1025,15 @@
 #endif
 
 /**
- * Use SSL backend thread locking.
+ * Use OpenSSL thread locking callback. This is only applicable for OpenSSL
+ * version prior to 1.1.0
  *
- * Default: 0 (No)
+ * Default: 1 (enabled)
  */
-#ifndef PJ_SSL_SOCK_USE_THREAD_LOCK
-#  define PJ_SSL_SOCK_USE_THREAD_LOCK   0
+#ifndef PJ_SSL_SOCK_OSSL_USE_THREAD_CB
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
+#else
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
 #endif
 
 
