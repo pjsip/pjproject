@@ -459,14 +459,14 @@ static int sslsock_idx;
     PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
 
 /* Thread lock pool.*/
-pj_caching_pool 	 cp;
-pj_pool_t 		*lock_pool;
+static pj_caching_pool 	 cp;
+static pj_pool_t 	*lock_pool;
 
 /* OpenSSL locking list. */
-pj_lock_t **ossl_locks;
+static pj_lock_t **ossl_locks;
 
 /* OpenSSL number locks. */
-unsigned ossl_num_locks;
+static unsigned ossl_num_locks;
 
 #if     OPENSSL_VERSION_NUMBER >= 0x10000000
 static void ossl_set_thread_id(CRYPTO_THREADID *id)
@@ -504,7 +504,7 @@ static void ossl_lock(int mode, int id, const char *file, int line)
     }
 }
 
-static void release_thread_cb()
+static void release_thread_cb(void)
 {
     unsigned i = 0;
 
@@ -574,7 +574,7 @@ static pj_status_t init_ossl_lock()
 #endif
 
 /* Initialize OpenSSL */
-static pj_status_t init_openssl()
+static pj_status_t init_openssl(void)
 {
     pj_status_t status;
 
@@ -717,8 +717,9 @@ static pj_status_t init_openssl()
 }
 
 /* Shutdown OpenSSL */
-static void shutdown_openssl()
+static void shutdown_openssl(void)
 {
+    PJ_UNUSED_ARG(openssl_init_count);
 }
 
 /* SSL password callback. */
