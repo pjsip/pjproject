@@ -811,8 +811,11 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 	tx_data_list_t *tl;
 
 	/* Return error if final response has been sent. */
-	if (dd->inv->state >= PJSIP_INV_STATE_CONNECTING)
+	if (dd->inv->state >= PJSIP_INV_STATE_CONNECTING) {
+	    /* Release the cloned tdata. */
+	    pjsip_tx_data_dec_ref(tdata);
 	    return PJ_EINVALIDOP;
+	}
 	
 	/* Create UAS state if we don't have one */
 	if (dd->uas_state == NULL) {
