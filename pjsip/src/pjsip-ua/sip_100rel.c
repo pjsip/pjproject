@@ -809,6 +809,10 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 	char rseq_str[32];
 	pj_str_t rseq;
 	tx_data_list_t *tl;
+
+	/* Return error if final response has been sent. */
+	if (dd->inv->state >= PJSIP_INV_STATE_CONNECTING)
+	    return PJ_EINVALIDOP;
 	
 	/* Create UAS state if we don't have one */
 	if (dd->uas_state == NULL) {
