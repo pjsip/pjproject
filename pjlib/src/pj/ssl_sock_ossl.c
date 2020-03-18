@@ -504,8 +504,34 @@ static void ossl_lock(int mode, int id, const char *file, int line)
     }
 }
 
+static void release_thread_cb()
+{
+    unsigned i = 0;
+
+#if     OPENSSL_VERSION_NUMBER >= 0x10000000
+    CRYPTO_THREADID_set_callback(NULL);
+#else
+    CRYPTO_set_id_callback(NULL);
+#endif
+    CRYPTO_set_locking_callback(NULL);
+
+    for (; i < ossl_num_locks; ++i) {
+        if (ossl_locks[i]) {
+            pj_lock_destroy(ossl_locks[i]);
+            ossl_locks[i] = NULL;
+        }
+    }
+    if (lock_pool) {
+        pj_pool_release(lock_pool);
+        lock_pool = NULL;
+    }
+    pj_caching_pool_destroy(&cp);
+}
+
 static pj_status_t init_ossl_lock()
 {
+    pj_status_t status = PJ_SUCCESS;
+
     pj_caching_pool_init(&cp, NULL, 0);
 
     lock_pool = pj_pool_create(&cp.factory,
@@ -533,12 +559,16 @@ static pj_status_t init_ossl_lock()
 #else
         CRYPTO_set_id_callback(ossl_thread_id);
 #endif
-
         CRYPTO_set_locking_callback(ossl_lock);
+        status = pj_atexit(&release_thread_cb);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, (THIS_FILE, status,
+                      "Cannot set OpenSSL thread callback unrelease method"));
+        }
     } else {
-        return PJ_ENOMEM;
+        status = PJ_ENOMEM;
     }
-    return PJ_SUCCESS;
+    return status;
 }
 
 #endif
@@ -686,41 +716,10 @@ static pj_status_t init_openssl()
     return status;
 }
 
-
 /* Shutdown OpenSSL */
-static void shutdown_openssl(pj_ssl_sock_t *ssock)
+static void shutdown_openssl()
 {
-    PJ_UNUSED_ARG(ssock);
-#if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
-    PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
-
-    if (openssl_init_count) {
-        unsigned i = 0;
-
-#if     OPENSSL_VERSION_NUMBER >= 0x10000000
-        CRYPTO_THREADID_set_callback(NULL);
-#else
-        CRYPTO_set_id_callback(NULL);
-#endif
-        CRYPTO_set_locking_callback(NULL);
-
-        for (; i < ossl_num_locks; ++i) {
-            if (ossl_locks[i]) {
-                pj_lock_destroy(ossl_locks[i]);
-                ossl_locks[i] = NULL;
-            }
-        }
-        if (lock_pool) {
-            pj_pool_release(lock_pool);
-            lock_pool = NULL;
-        }
-        pj_caching_pool_destroy(&cp);
-
-        openssl_init_count = 0;
-    }
-#endif
 }
-
 
 /* SSL password callback. */
 static int password_cb(char *buf, int num, int rwflag, void *user_data)
@@ -1333,7 +1332,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     /* Potentially shutdown OpenSSL library if this is the last
      * context exists.
      */
-    shutdown_openssl(ssock);
+    shutdown_openssl();
 }
 
 
@@ -1373,8 +1372,8 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 static void ssl_ciphers_populate()
 {
     if (ssl_cipher_num == 0 || ssl_curves_num == 0) {
-	init_openssl(NULL);
-	shutdown_openssl(NULL);
+	init_openssl();
+	shutdown_openssl();
     }
 }
 
