@@ -575,9 +575,8 @@ static pj_status_t init_ossl_lock()
         CRYPTO_set_locking_callback(ossl_lock);
         status = pj_atexit(&release_thread_cb);
         if (status != PJ_SUCCESS) {
-            PJ_PERROR(1, (THIS_FILE, status,
-                  "Cannot set OpenSSL lock thread callback unrelease method"));
-            release_thread_cb();
+            PJ_PERROR(1, (THIS_FILE, status, "Warning! Unable to set OpenSSL "
+                          "lock thread callback unrelease method."));
         }
     } else {
         status = PJ_ENOMEM;
