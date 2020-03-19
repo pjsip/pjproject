@@ -524,8 +524,10 @@ static void release_thread_cb(void)
     if (lock_pool) {
         pj_pool_release(lock_pool);
         lock_pool = NULL;
+        pj_caching_pool_destroy(&cp);
     }
-    pj_caching_pool_destroy(&cp);
+    ossl_locks = NULL;
+    ossl_num_locks = 0;
 }
 
 static pj_status_t init_ossl_lock()
