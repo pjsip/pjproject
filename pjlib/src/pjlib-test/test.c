@@ -39,7 +39,7 @@ int param_echo_sock_type;
 const char *param_echo_server = ECHO_SERVER_ADDRESS;
 int param_echo_port = ECHO_SERVER_START_PORT;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
-		      PJ_LOG_HAS_MICRO_SEC;
+		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 int null_func()
 {

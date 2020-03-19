@@ -19,6 +19,12 @@
  */
 #include <pj/types.h>
 
+#if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
+#   define WITH_BENCHMARK	    0
+#else
+#   define WITH_BENCHMARK	    1
+#endif
+
 #define INCLUDE_XML_TEST	    1
 #define INCLUDE_JSON_TEST	    1
 #define INCLUDE_ENCRYPTION_TEST	    1
