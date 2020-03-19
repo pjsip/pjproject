@@ -305,6 +305,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
 	pjsua_call_answer2(call_id, &opt, app_config.auto_answer, NULL,
 			   NULL);
+	pjsua_call_answer2(call_id, &opt, 180, NULL,
+			   NULL);
     }
     
     if (app_config.auto_answer < 200) {

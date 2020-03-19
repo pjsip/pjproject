@@ -600,7 +600,14 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     final = tdata->msg->line.status.code >= 200;
 
     if (dd->uas_state->retransmit_count == 1) {
-	pjsip_tsx_send_msg(dd->inv->invite_tsx, tdata);
+	pj_status_t status;
+	
+	status = pjsip_tsx_send_msg(dd->inv->invite_tsx, tdata);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3, (THIS_FILE, status,
+			 "Failed to send message"));
+	    return;
+	}
     } else {
 	pjsip_tsx_retransmit_no_state(dd->inv->invite_tsx, tdata);
     }
@@ -810,13 +817,6 @@ PJ_DEF(pj_status_t) pjsip_100rel_tx_response(pjsip_inv_session *inv,
 	pj_str_t rseq;
 	tx_data_list_t *tl;
 
-	/* Return error if final response has been sent. */
-	if (dd->inv->state >= PJSIP_INV_STATE_CONNECTING) {
-	    /* Release the cloned tdata. */
-	    pjsip_tx_data_dec_ref(tdata);
-	    return PJ_EINVALIDOP;
-	}
-	
 	/* Create UAS state if we don't have one */
 	if (dd->uas_state == NULL) {
 	    dd->uas_state = PJ_POOL_ZALLOC_T(inv->dlg->pool,
