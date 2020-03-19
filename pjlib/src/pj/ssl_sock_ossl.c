@@ -542,8 +542,12 @@ static pj_status_t init_ossl_lock()
                                64,
                                NULL);
 
-    if (!lock_pool)
-        return PJ_ENOMEM;
+    if (!lock_pool) {
+        status = PJ_ENOMEM;
+        PJ_PERROR(1, (THIS_FILE, status,"Fail creating OpenSSL lock pool"));
+        pj_caching_pool_destroy(&cp);
+        return status;
+    }
 
     ossl_num_locks = CRYPTO_num_locks();
     ossl_locks = (pj_lock_t **)pj_pool_calloc(lock_pool,
@@ -552,10 +556,17 @@ static pj_status_t init_ossl_lock()
 
     if (ossl_locks) {
         unsigned i = 0;
-        for (; i < ossl_num_locks; ++i) {
-            pj_lock_create_simple_mutex(lock_pool, "ossl_lock%p",
-                                        &ossl_locks[i]);
+        for (; (i < ossl_num_locks) && (status == PJ_SUCCESS); ++i) {
+            status = pj_lock_create_simple_mutex(lock_pool, "ossl_lock%p",
+                                                 &ossl_locks[i]);
         }
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(1, (THIS_FILE, status,
+                          "Fail creating mutex for OpenSSL lock"));
+            release_thread_cb();
+            return status;
+        }
+
 #if     OPENSSL_VERSION_NUMBER >= 0x10000000
         CRYPTO_THREADID_set_callback(ossl_set_thread_id);
 #else
@@ -565,10 +576,13 @@ static pj_status_t init_ossl_lock()
         status = pj_atexit(&release_thread_cb);
         if (status != PJ_SUCCESS) {
             PJ_PERROR(1, (THIS_FILE, status,
-                      "Cannot set OpenSSL thread callback unrelease method"));
+                  "Cannot set OpenSSL lock thread callback unrelease method"));
+            release_thread_cb();
         }
     } else {
         status = PJ_ENOMEM;
+        PJ_PERROR(1, (THIS_FILE, status,"Fail creating OpenSSL locks"));
+        release_thread_cb();
     }
     return status;
 }
