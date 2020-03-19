@@ -2200,6 +2200,15 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     /* == Apply the new capture device == */
     PJSUA_LOCK();
+
+    /* If media does not have active preview, simply set capture device ID */
+    if (call_med->strm.v.cap_win_id == PJSUA_INVALID_ID) {
+	call_med->strm.v.cap_dev = cap_dev;
+
+	/* That's it */
+	goto on_sync_and_return;
+    }
+
     wid = call_med->strm.v.cap_win_id;
     w = &pjsua_var.win[wid];
     pj_assert(w->type == PJSUA_WND_TYPE_PREVIEW && w->vp_cap);
@@ -2215,9 +2224,8 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 	w->preview_cap_id = cap_dev;
 	call_med->strm.v.cap_dev = cap_dev;
 
-	PJSUA_UNLOCK();
-	/* Yay, change capturer done! */
-	return PJ_SUCCESS;
+	/* Yay, change capturer done! Now return */
+	goto on_sync_and_return;
     }
 
     /* Oh no, it doesn't support fast switching. Do normal change then,
@@ -2299,7 +2307,12 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     call_med->strm.v.cap_dev = cap_dev;
     call_med->strm.v.cap_win_id = new_wid;
     dec_vid_win(wid);
-    
+
+on_sync_and_return:
+
+    /* Sync provisional media from call media */
+    pj_memcpy(&call->media_prov[med_idx], call_med, sizeof(call->media[0]));
+
     PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
@@ -2406,6 +2419,9 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
     	
     	PJSUA_UNLOCK();
     }
+
+    /* Sync provisional media from call media */
+    pj_memcpy(&call->media_prov[med_idx], call_med, sizeof(call->media[0]));
 
     return status;
 }
