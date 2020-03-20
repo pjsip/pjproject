@@ -3273,10 +3273,11 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	}
 
     } else {
-	/* Ignore request to transmit. */
-	PJ_ASSERT_RETURN(event->type == PJSIP_EVENT_TX_MSG && 
-			 event->body.tx_msg.tdata == tsx->last_tx, 
+	PJ_ASSERT_RETURN(event->type == PJSIP_EVENT_TX_MSG, 
 			 PJ_EINVALIDOP);
+	/* Ignore request to transmit a new message. */
+	if (event->body.tx_msg.tdata != tsx->last_tx)
+	    return PJ_EINVALIDOP;
     }
 
     return PJ_SUCCESS;
