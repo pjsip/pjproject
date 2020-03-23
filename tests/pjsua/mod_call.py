@@ -35,8 +35,7 @@ def test_func(t):
         time.sleep(1)
         
     # Check if ICE is used
-    caller_use_ice = "--use-ice" in caller.inst_param.arg
-    callee_use_ice = "--use-ice" in callee.inst_param.arg
+    use_ice = ("--use-ice" in caller.inst_param.arg) and ("--use-ice" in callee.inst_param.arg)
 
     # Check if DTLS-SRTP is used
     use_dtls_srtp = "--srtp-keying=1" in caller.inst_param.arg
@@ -84,9 +83,8 @@ def test_func(t):
     callee.sync_stdout()
     
     # Wait ICE nego before checking media
-    if caller_use_ice:
+    if use_ice:
         caller.expect("ICE negotiation success")
-    if callee_use_ice:
         callee.expect("ICE negotiation success")
         
     # Wait DTLS-SRTP nego before checking media
