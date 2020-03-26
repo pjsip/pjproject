@@ -974,7 +974,21 @@ static pj_bool_t is_transport_valid(pjsip_transport *tp, pjsip_tpmgr *tpmgr,
 				    const pjsip_transport_key *key,
 				    int key_len)
 {
-    return (pj_hash_get(tpmgr->table, key, key_len, NULL) == (void*)tp);
+    pj_bool_t result = PJ_FALSE;
+    if(pj_hash_get(tpmgr->table, key, key_len, NULL) == (void*)tp) {
+        result = PJ_TRUE;
+    } else {
+        /* If not found in hash table, then search in the tp_list */
+        transport *tp_iter = tpmgr->tp_list.next;
+        while (tp_iter != &tpmgr->tp_list) {
+            if (tp_iter->tp == tp) {
+                result = PJ_TRUE;
+                break;
+            }
+            tp_iter = tp_iter->next;
+        }
+    }
+    return result;
 }
 
 /*
