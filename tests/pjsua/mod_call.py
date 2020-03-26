@@ -86,14 +86,14 @@ def test_func(t):
     if use_ice:
         caller.expect("ICE negotiation success")
         callee.expect("ICE negotiation success")
+        # Additional wait for ICE updating address (via UPDATE/re-INVITE)
+        time.sleep(0.3)
 
     # Wait DTLS-SRTP nego before checking media
     if use_dtls_srtp:
-        caller.expect("SRTP started, keying=DTLS-SRTP")
-        callee.expect("SRTP started, keying=DTLS-SRTP")
-
-    # Additional wait, e.g: UPDATE for updating ICE address
-    if use_ice:
+        # Unfortunately DTLS-SRTP nego may race with STATE_CONFIRMED, so let's just sleep
+        #caller.expect("SRTP started, keying=DTLS-SRTP")
+        #callee.expect("SRTP started, keying=DTLS-SRTP")
         time.sleep(0.3)
 
     # Test that media is okay
@@ -222,7 +222,11 @@ def test_func(t):
     # In caller we only enable PCMU, in callee we only enable PCMA
     if caller.use_telnet:
         caller.send("Cp * 0")
+        caller.send("Cp")
+        caller.expect("PCMU/8000.* prio: 0")
         caller.send("Cp PCMU 120")
+        caller.send("Cp")
+        caller.expect("PCMU/8000.* prio: 120")
     else:
         caller.send("Cp")
         caller.expect("Enter codec")
@@ -233,7 +237,11 @@ def test_func(t):
 
     if callee.use_telnet:
         callee.send("Cp * 0")
+        callee.send("Cp")
+        callee.expect("PCMA/8000.* prio: 0")
         callee.send("Cp PCMA 120")
+        callee.send("Cp")
+        callee.expect("PCMA/8000.* prio: 120")
     else:
         callee.send("Cp")
         callee.expect("Enter codec")

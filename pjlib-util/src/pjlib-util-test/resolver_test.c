@@ -376,8 +376,15 @@ static int server_thread(void *p)
 	}
 
 	/* Verify packet */
-	pj_assert(req->hdr.qdcount == 1);
-	pj_assert(req->q[0].dnsclass == 1);
+	if (req->hdr.qdcount != 1) {
+	    PJ_LOG(5,(THIS_FILE, "server receive multiple queries in a packet"));
+	    continue;
+	}
+
+	if (req->q[0].dnsclass != 1) {
+	    PJ_LOG(5,(THIS_FILE, "server receive query with invalid DNS class"));
+	    continue;
+	}
 
 	/* Simulate network RTT */
 	pj_thread_sleep(50);
@@ -1553,78 +1560,82 @@ static void action2_1(const pj_dns_parsed_packet *pkt,
     *p_res = res;
 }
 
+#define SRV_CB_CHECK(cond, err) if(!(cond)) { *cb_err=err; goto on_return; }
+
 static void srv_cb_2(void *user_data,
 		     pj_status_t status,
 		     const pj_dns_srv_record *rec)
 {
-    PJ_UNUSED_ARG(user_data);
+    int *cb_err = (int*)user_data;
 
-    pj_sem_post(sem);
-
-    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
-    PJ_ASSERT_ON_FAIL(rec->count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 0, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 0, return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias01." TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT2, return);
+    SRV_CB_CHECK(status == PJ_SUCCESS, -10);
+    SRV_CB_CHECK(rec->count == 1, -20);
+    SRV_CB_CHECK(rec->entry[0].priority == 0, -30);
+    SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
+			    "sipalias01." TARGET)==0, -60);
+    SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv4 only */
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, return);
+    SRV_CB_CHECK(rec->entry[0].server.addr_count == 1, -80);
+    SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
+		 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
+
+on_return:
+    pj_sem_post(sem);
 }
 
 static void srv_cb_2a(void *user_data,
 		      pj_status_t status,
 		      const pj_dns_srv_record *rec)
 {
-    PJ_UNUSED_ARG(user_data);
+    int *cb_err = (int*)user_data;
 
-    pj_sem_post(sem);
-
-    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
-    PJ_ASSERT_ON_FAIL(rec->count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 0, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 0, return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias01." TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT2, return);
+    SRV_CB_CHECK(status == PJ_SUCCESS, -10);
+    SRV_CB_CHECK(rec->count == 1, -20);
+    SRV_CB_CHECK(rec->entry[0].priority == 0, -30);
+    SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
+			    "sipalias01." TARGET)==0, -60);
+    SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv4 and IPv6 */
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 2, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
-		      rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
-		      rec->entry[0].server.addr[1].ip.v6.u6_addr32[0] == IP_ADDR2, return);
+    SRV_CB_CHECK(rec->entry[0].server.addr_count == 2, -80);
+    SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET() &&
+		 rec->entry[0].server.addr[0].ip.v4.s_addr == IP_ADDR2, -90);
+    SRV_CB_CHECK(rec->entry[0].server.addr[1].af == pj_AF_INET6() &&
+		 rec->entry[0].server.addr[1].ip.v6.u6_addr32[0] == IP_ADDR2,
+		 -100);
+
+on_return:
+    pj_sem_post(sem);
 }
 
 static void srv_cb_2b(void *user_data,
 		      pj_status_t status,
 		      const pj_dns_srv_record *rec)
 {
-    PJ_UNUSED_ARG(user_data);
+    int *cb_err = (int*)user_data;
 
-    pj_sem_post(sem);
-
-    PJ_ASSERT_ON_FAIL(status == PJ_SUCCESS, return);
-    PJ_ASSERT_ON_FAIL(rec->count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].priority == 0, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].weight == 0, return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(pj_strcmp2(&rec->entry[0].server.alias, "sipalias01." TARGET)==0,
-		      return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].port == PORT2, return);
+    SRV_CB_CHECK(status == PJ_SUCCESS, -10);
+    SRV_CB_CHECK(rec->count == 1, -20);
+    SRV_CB_CHECK(rec->entry[0].priority == 0, -30);
+    SRV_CB_CHECK(rec->entry[0].weight == 0, -40);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.name, TARGET)==0, -50);
+    SRV_CB_CHECK(pj_strcmp2(&rec->entry[0].server.alias,
+			    "sipalias01." TARGET)==0, -60);
+    SRV_CB_CHECK(rec->entry[0].port == PORT2, -70);
 
     /* IPv6 only */
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr_count == 1, return);
-    PJ_ASSERT_ON_FAIL(rec->entry[0].server.addr[0].af == pj_AF_INET6() &&
-		      rec->entry[0].server.addr[0].ip.v6.u6_addr32[0] == IP_ADDR2, return);
+    SRV_CB_CHECK(rec->entry[0].server.addr_count == 1, -80);
+    SRV_CB_CHECK(rec->entry[0].server.addr[0].af == pj_AF_INET6() &&
+		 rec->entry[0].server.addr[0].ip.v6.u6_addr32[0] == IP_ADDR2,
+		 -90);
+
+on_return:
+    pj_sem_post(sem);
 }
 
 static int srv_resolver_fallback_test(void)
@@ -1632,6 +1643,7 @@ static int srv_resolver_fallback_test(void)
     pj_status_t status;
     pj_str_t domain = pj_str(TARGET);
     pj_str_t res_name = pj_str("_sip._udp.");
+    int cb_err = 0;
 
     /* Fallback test */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): fallback test"));
@@ -1642,13 +1654,18 @@ static int srv_resolver_fallback_test(void)
     g_server[1].action_cb = &action2_1;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_2, NULL);
+				&cb_err, &srv_cb_2, NULL);
     if (status != PJ_SUCCESS) {
 	app_perror("   srv_resolve error", status);
-	pj_assert(status == PJ_SUCCESS);
+	return -10;
     }
 
     pj_sem_wait(sem);
+
+    if (cb_err != 0) {
+	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+	return -20;
+    }
 
     /* Subsequent query should just get the response from the cache */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): cache test"));
@@ -1656,16 +1673,23 @@ static int srv_resolver_fallback_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_2, NULL);
+				&cb_err, &srv_cb_2, NULL);
     if (status != PJ_SUCCESS) {
 	app_perror("   srv_resolve error", status);
-	pj_assert(status == PJ_SUCCESS);
+	return -30;
     }
 
     pj_sem_wait(sem);
 
-    pj_assert(g_server[0].pkt_count == 0);
-    pj_assert(g_server[1].pkt_count == 0);
+    if (cb_err != 0) {
+	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+	return -40;
+    }
+
+    if (g_server[0].pkt_count != 0 || g_server[1].pkt_count != 0) {
+	PJ_LOG(3,("test", "   srv_resolve() not from cache"));
+	return -50;
+    }
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1680,13 +1704,18 @@ static int srv_resolver_fallback_test(void)
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
 				PJ_DNS_SRV_FALLBACK_A | PJ_DNS_SRV_FALLBACK_AAAA,
-				NULL, &srv_cb_2a, NULL);
+				&cb_err, &srv_cb_2a, NULL);
     if (status != PJ_SUCCESS) {
 	app_perror("   srv_resolve error", status);
-	pj_assert(status == PJ_SUCCESS);
+	return -60;
     }
 
     pj_sem_wait(sem);
+
+    if (cb_err != 0) {
+	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+	return -70;
+    }
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1701,13 +1730,18 @@ static int srv_resolver_fallback_test(void)
 
     status = pj_dns_srv_resolve(&domain, &res_name, PORT2, pool, resolver,
 				PJ_DNS_SRV_FALLBACK_AAAA,
-				NULL, &srv_cb_2b, NULL);
+				&cb_err, &srv_cb_2b, NULL);
     if (status != PJ_SUCCESS) {
 	app_perror("   srv_resolve error", status);
-	pj_assert(status == PJ_SUCCESS);
+	return -80;
     }
 
     pj_sem_wait(sem);
+
+    if (cb_err != 0) {
+	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+	return -90;
+    }
 
     /* Clear cache */
     pj_thread_sleep(1000);
@@ -1790,30 +1824,31 @@ static void srv_cb_3(void *user_data,
 		     const pj_dns_srv_record *rec)
 {
     unsigned i;
+    int *cb_err = (int*)user_data;
 
-    PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(status);
     PJ_UNUSED_ARG(rec);
 
-    pj_assert(status == PJ_SUCCESS);
-    pj_assert(rec->count == PJ_DNS_SRV_MAX_ADDR);
+    SRV_CB_CHECK(status == PJ_SUCCESS, -10);
+    SRV_CB_CHECK(rec->count == PJ_DNS_SRV_MAX_ADDR, -20);
 
     for (i=0; i<PJ_DNS_SRV_MAX_ADDR; ++i) {
 	unsigned j;
 
-	pj_assert(rec->entry[i].priority == i);
-	pj_assert(rec->entry[i].weight == 2);
+	SRV_CB_CHECK(rec->entry[i].priority == i, -30);
+	SRV_CB_CHECK(rec->entry[i].weight == 2, -40);
 	//pj_assert(pj_strcmp2(&rec->entry[i].server.name, "sip." DOMAIN3)==0);
-	pj_assert(rec->entry[i].server.alias.slen == 0);
-	pj_assert(rec->entry[i].port == PORT3+i);
+	SRV_CB_CHECK(rec->entry[i].server.alias.slen == 0, -50);
+	SRV_CB_CHECK(rec->entry[i].port == PORT3+i, -60);
 
-	pj_assert(rec->entry[i].server.addr_count == PJ_DNS_MAX_IP_IN_A_REC);
+	SRV_CB_CHECK(rec->entry[i].server.addr_count == PJ_DNS_MAX_IP_IN_A_REC, -70);
 
 	for (j=0; j<PJ_DNS_MAX_IP_IN_A_REC; ++j) {
-	    pj_assert(rec->entry[i].server.addr[j].ip.v4.s_addr == IP_ADDR3+j);
+	    SRV_CB_CHECK(rec->entry[i].server.addr[j].ip.v4.s_addr == IP_ADDR3+j, -80);
 	}
     }
 
+on_return:
     pj_sem_post(sem);
 }
 
@@ -1822,6 +1857,7 @@ static int srv_resolver_many_test(void)
     pj_status_t status;
     pj_str_t domain = pj_str(DOMAIN3);
     pj_str_t res_name = pj_str("_sip._udp.");
+    int cb_err = 0;
 
     /* Successful scenario */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): too many entries test"));
@@ -1835,12 +1871,20 @@ static int srv_resolver_many_test(void)
     g_server[1].pkt_count = 0;
 
     status = pj_dns_srv_resolve(&domain, &res_name, 1, pool, resolver, PJ_TRUE,
-				NULL, &srv_cb_3, NULL);
-    pj_assert(status == PJ_SUCCESS);
+				&cb_err, &srv_cb_3, NULL);
+    if (status != PJ_SUCCESS) {
+	app_perror("   srv_resolve error", status);
+	return -10;
+    }
 
     pj_sem_wait(sem);
 
-    return status;
+    if (cb_err != 0) {
+	PJ_LOG(3,("test", "   srv_resolve cb error, code=%d", cb_err));
+	return -20;
+    }
+
+    return 0;
 }
 
 
@@ -1871,9 +1915,17 @@ int resolver_test(void)
     if (rc != 0)
 	goto on_error;
 
-    srv_resolver_test();
-    srv_resolver_fallback_test();
-    srv_resolver_many_test();
+    rc = srv_resolver_test();
+    if (rc != 0)
+	goto on_error;
+
+    rc = srv_resolver_fallback_test();
+    if (rc != 0)
+	goto on_error;
+
+    rc = srv_resolver_many_test();
+    if (rc != 0)
+	goto on_error;
 
     destroy();
 
@@ -1894,9 +1946,17 @@ int resolver_test(void)
     if (rc != 0)
 	goto on_error;
 
-    srv_resolver_test();
-    srv_resolver_fallback_test();
-    srv_resolver_many_test();
+    rc = srv_resolver_test();
+    if (rc != 0)
+	goto on_error;
+
+    rc = srv_resolver_fallback_test();
+    if (rc != 0)
+	goto on_error;
+
+    rc = srv_resolver_many_test();
+    if (rc != 0)
+	goto on_error;
 
     destroy();
 #endif

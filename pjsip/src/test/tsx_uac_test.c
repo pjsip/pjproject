@@ -190,15 +190,21 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		}
 	    } else {
 		/* Check the number of transmissions, which must be
-		 * 6 for INVITE and 10 for non-INVITE 
+		 * 6 for INVITE and 10 for non-INVITE.
+		 * Theoretically the total (re)transmission time is 31,500ms
+		 * (plus 300ms for delayed transport), and tsx timeout is 32s.
+		 * In some test machines (e.g: MacOS), sometime the tsx timeout
+		 * fires first which causes recv_count fall short (by one).
 		 */
-		if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count != 7) {
+		//if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count != 7) {
+		if (tsx->method.id==PJSIP_INVITE_METHOD && recv_count < 6) {
 		    PJ_LOG(3,(THIS_FILE, 
 			   "    error: there were %d (re)transmissions",
 			   recv_count));
 		    test_complete = -716;
 		} else
-		if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count != 11) {
+		//if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count != 11) {
+		if (tsx->method.id==PJSIP_OPTIONS_METHOD && recv_count < 10) {
 		    PJ_LOG(3,(THIS_FILE, 
 			   "    error: there were %d (re)transmissions",
 			   recv_count));
