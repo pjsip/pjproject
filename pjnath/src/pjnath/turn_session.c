@@ -311,7 +311,8 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     stun_cb.on_request_complete = &stun_on_request_complete;
     stun_cb.on_rx_indication = &stun_on_rx_indication;
     status = pj_stun_session_create(&sess->stun_cfg, sess->obj_name, &stun_cb,
-				    PJ_FALSE, sess->grp_lock, &sess->stun);
+				    PJ_FALSE, sess->grp_lock, &sess->stun,
+				    conn_type);
     if (status != PJ_SUCCESS) {
 	do_destroy(sess);
 	return status;

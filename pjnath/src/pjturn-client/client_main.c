@@ -155,7 +155,7 @@ static int init()
 
 	name[strlen(name)-1] = '0'+i;
 	status = pj_stun_sock_create(&g.stun_config, name, pj_AF_INET(), 
-				     &stun_sock_cb, &ss_cfg,
+				     PJ_STUN_TP_UDP, &stun_sock_cb, &ss_cfg,
 				     &g.peer[i], &g.peer[i].stun_sock);
 	if (status != PJ_SUCCESS) {
 	    my_perror("pj_stun_sock_create()", status);

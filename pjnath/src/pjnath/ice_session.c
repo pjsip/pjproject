@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjnath/ice_session.h>
+#include <pjnath/stun_session.h>
 #include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -44,7 +45,10 @@ static const char *cand_type_names[] =
 static const char *check_state_name[] = 
 {
     "Frozen",
+    "Needs Retry",
+    "Needs First Packet",
     "Waiting",
+    "Pending",
     "In Progress",
     "Succeeded",
     "Failed"
@@ -75,7 +79,8 @@ enum timer_type
 				     valid check for every components.	*/
     TIMER_START_NOMINATED_CHECK,/**< Controlling agent start connectivity
 				     checks with USE-CANDIDATE flag.	*/
-    TIMER_KEEP_ALIVE		/**< ICE keep-alive timer.		*/
+    TIMER_KEEP_ALIVE,		/**< ICE keep-alive timer.		*/
+    TIMER_CONNECTION_TIMEOUT
 
 };
 
@@ -123,6 +128,8 @@ typedef struct timer_data
 {
     pj_ice_sess		    *ice;
     pj_ice_sess_checklist   *clist;
+    /* TODO (remove), for now, needed for the NEEDS_FIRST_PACKET state */
+    unsigned                first_packet_counter;
 } timer_data;
 
 
@@ -133,6 +140,7 @@ typedef struct timer_data
 
 /* Forward declarations */
 static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te);
+static void on_tcp_connect_timeout(pj_ice_sess *ice);
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now);
 static void ice_on_destroy(void *obj);
@@ -291,7 +299,8 @@ static pj_status_t init_comp(pj_ice_sess *ice,
     status = pj_stun_session_create(&ice->stun_cfg, NULL, 
 			            &sess_cb, PJ_TRUE,
 			            ice->grp_lock,
-				    &comp->stun_sess);
+			            &comp->stun_sess,
+				    PJ_STUN_TP_UDP);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -717,7 +726,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 					 const pj_sockaddr_t *base_addr,
 					 const pj_sockaddr_t *rel_addr,
 					 int addr_len,
-					 unsigned *p_cand_id)
+					 unsigned *p_cand_id,
+					 pj_ice_cand_transport transport)
 {
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
@@ -740,6 +750,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->comp_id = (pj_uint8_t)comp_id;
     lcand->transport_id = (pj_uint8_t)transport_id;
     lcand->type = type;
+    lcand->transport = transport;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
     lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
     pj_sockaddr_cp(&lcand->addr, addr);
@@ -1081,6 +1092,17 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		return PJNATH_EICENOHOSTCAND;
 	    }
 	}
+
+	/* Section 6.2, RFC 6544 (https://tools.ietf.org/html/rfc6544)
+	 * When the agent prunes the check list, it MUST also remove any pair
+	 * for which the local candidate is a passive TCP candidate
+	 */
+	if (clist->checks[i].lcand->transport == PJ_CAND_TCP_PASSIVE) {
+	    pj_array_erase(clist->checks, sizeof(clist->checks[0]),
+			   clist->count, i);
+	    --clist->count;
+	    --i;
+	}
     }
 
     /* Next remove a pair if its local and remote candidates are identical
@@ -1182,6 +1204,9 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	break;
     case TIMER_KEEP_ALIVE:
 	ice_keep_alive(ice, PJ_TRUE);
+	break;
+    case TIMER_CONNECTION_TIMEOUT:
+	on_tcp_connect_timeout(ice);
 	break;
     case TIMER_NONE:
 	/* Nothing to do, just to get rid of gcc warning */
@@ -1619,6 +1644,43 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
     return PJ_FALSE;
 }
 
+static void on_tcp_connect_timeout(pj_ice_sess* ice)
+{
+    pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,&ice->timer,
+				   TIMER_NONE);
+
+    pj_bool_t first_found = PJ_FALSE, set_timer = PJ_FALSE;
+
+    for (int i = 0; i<ice->clist.count && !set_timer; ++i) {
+	pj_ice_sess_check *check = &ice->clist.checks[i];
+	if (check->state == PJ_ICE_SESS_CHECK_STATE_PENDING) {
+	    if (first_found) {
+		set_timer = PJ_TRUE;
+	    } else {
+		first_found = PJ_TRUE;
+		if (*ice->cb.close_tcp_connection)
+		    (*ice->cb.close_tcp_connection)(ice, &ice->clist, i);
+
+		check_set_state(ice, check,
+		    PJ_ICE_SESS_CHECK_STATE_FAILED, PJ_ECANCELLED);
+		on_check_complete(ice, check);
+	    }
+	}
+    }
+
+    if (set_timer && ice->timer.id == TIMER_NONE) {
+	/* Reschedule */
+	pj_time_val delay = {
+	    .sec  = 0,
+	    .msec = 1500
+	};
+	pj_time_val_normalize(&delay);
+	pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+				    &ice->timer, &delay,
+				    TIMER_CONNECTION_TIMEOUT,
+				    ice->grp_lock);
+    }
+}
 
 /* Create checklist by pairing local candidates with remote candidates */
 PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
@@ -1705,6 +1767,30 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 		continue;
 	    }
 
+	    /* Section 6.2, RFC 6544 (https://tools.ietf.org/html/rfc6544)
+	     * As with UDP, check lists are formed only by full ICE implementations.
+	     * When forming candidate pairs, the following types of TCP candidates
+	     * can be paired with each other:
+	     *
+	     * Local           Remote
+	     * Candidate       Candidate
+	     * ---------------------------
+	     * tcp-so          tcp-so
+	     * tcp-active      tcp-passive
+	     * tcp-passive     tcp-active
+	     */
+	    if ((lcand->transport == PJ_CAND_UDP &&
+		 rcand->transport != PJ_CAND_UDP) ||
+		(lcand->transport == PJ_CAND_TCP_PASSIVE &&
+		 rcand->transport != PJ_CAND_TCP_ACTIVE) ||
+		(lcand->transport == PJ_CAND_TCP_ACTIVE &&
+		 rcand->transport != PJ_CAND_TCP_PASSIVE) ||
+		(lcand->transport == PJ_CAND_TCP_SO &&
+		 rcand->transport != PJ_CAND_TCP_SO))
+	    {
+		continue;
+	    }
+
 
 	    chk->lcand = lcand;
 	    chk->rcand = rcand;
@@ -1749,6 +1835,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     td = PJ_POOL_ZALLOC_T(ice->pool, timer_data);
     td->ice = ice;
     td->clist = clist;
+    td->first_packet_counter = 1;
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
 
@@ -1761,6 +1848,36 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     return PJ_SUCCESS;
 }
 
+static pj_status_t send_connectivity_check(pj_ice_sess *ice,
+					   pj_ice_sess_checklist *clist,
+					   unsigned check_id,
+					   pj_bool_t nominate,
+					   pj_ice_msg_data *msg_data)
+{
+    pj_ice_sess_check      *check;
+    const pj_ice_sess_cand *lcand;
+    const pj_ice_sess_cand *rcand;
+    pj_ice_sess_comp       *comp;
+
+    check = &clist->checks[check_id];
+    lcand = check->lcand;
+    rcand = check->rcand;
+    comp  = find_comp(ice, lcand->comp_id);
+
+    /* Note that USERNAME and MESSAGE-INTEGRITY will be added by the
+     * STUN session.
+     */
+
+    /* Initiate STUN transaction to send the request */
+
+    return pj_stun_session_send_msg(comp->stun_sess, msg_data, PJ_FALSE, 
+				    pj_stun_session_tp_type(comp->stun_sess)==
+				    PJ_STUN_TP_UDP,
+				    &rcand->addr, 
+				    pj_sockaddr_get_len(&rcand->addr),
+				    check->tdata);
+}
+
 /* Perform check on the specified candidate pair. */
 static pj_status_t perform_check(pj_ice_sess *ice, 
 				 pj_ice_sess_checklist *clist,
@@ -1771,19 +1888,17 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     pj_ice_msg_data *msg_data;
     pj_ice_sess_check *check;
     const pj_ice_sess_cand *lcand;
-    const pj_ice_sess_cand *rcand;
     pj_uint32_t prio;
     pj_status_t status;
 
     check = &clist->checks[check_id];
     lcand = check->lcand;
-    rcand = check->rcand;
     comp = find_comp(ice, lcand->comp_id);
 
+    pj_log_push_indent();
     LOG5((ice->obj_name, 
 	 "Sending connectivity check for check %s", 
 	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), clist, check)));
-    pj_log_push_indent();
 
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
@@ -1831,32 +1946,92 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 				    &ice->tie_breaker);
 
     } else {
+	if (nominate) {
+	    check->nominated = PJ_TRUE;
+	}
 	pj_stun_msg_add_uint64_attr(check->tdata->pool, check->tdata->msg, 
 				    PJ_STUN_ATTR_ICE_CONTROLLED,
 				    &ice->tie_breaker);
     }
 
+#if PJ_HAS_TCP
+    switch (lcand->transport) {
+    case PJ_CAND_UDP:
+        status = send_connectivity_check(ice, clist, check_id,
+                                         nominate, msg_data);
+        break;
+    case PJ_CAND_TCP_ACTIVE:
+        switch (check->state) {
+        case PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY:
+            status = (*ice->cb.reconnect_tcp_connection)(ice, clist, check_id);
+            break;
+        case PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET:
+            status = send_connectivity_check(ice, clist, check_id,
+                                             nominate, msg_data);
+            break;
+        default:
+            pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+                                           &ice->timer, TIMER_NONE);
+            status = (*ice->cb.wait_tcp_connection)(ice, clist, check_id);
+            if (ice->timer.id != TIMER_NONE) {
+                pj_assert(!"Not expected any timer active");
+            } else {
+                pj_time_val delay = {
+                    .sec  = 0,
+                    .msec = 1500,
+                };
+                pj_time_val_normalize(&delay);
+                pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+                                                  &ice->timer, &delay,
+                                                  TIMER_CONNECTION_TIMEOUT,
+                                                  ice->grp_lock);
+            }
+            break;
+        }
+        break;
+    case PJ_CAND_TCP_PASSIVE:
+    case PJ_CAND_TCP_SO:
+    default:
+        if (lcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+            status = (*ice->cb.select_turn_dataconn)(ice, clist, check_id);
+            if (ice->timer.id == TIMER_NONE) {
+				pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+											&ice->timer, TIMER_NONE);
+                pj_time_val delay = {
+                    .sec  = 0,
+                    .msec = 1500
+                };
+                pj_time_val_normalize(&delay);
+                pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+                                                  &ice->timer, &delay,
+                                                  TIMER_CONNECTION_TIMEOUT,
+                                                  ice->grp_lock);
+            }
+        } else {
+            status = send_connectivity_check(ice, clist, check_id,
+                                             nominate, msg_data);
+	}
+        break;
+    }
+#else
+    status = send_connectivity_check(ice, clist, check_id, nominate, msg_data);
+#endif
 
-    /* Note that USERNAME and MESSAGE-INTEGRITY will be added by the 
-     * STUN session.
-     */
-
-    /* Initiate STUN transaction to send the request */
-    status = pj_stun_session_send_msg(comp->stun_sess, msg_data, PJ_FALSE, 
-				      PJ_TRUE, &rcand->addr, 
-				      pj_sockaddr_get_len(&rcand->addr),
-				      check->tdata);
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_SUCCESS) {
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS,
+			status);
+    } else if (status == PJ_EPENDING) {
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_PENDING, status);
+    } else if (check->rcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+	/* TODO (sblin) remove this - https://github.com/coturn/coturn/issues/408 */
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET,
+			status);
+    } else {
 	check->tdata = NULL;
 	pjnath_perror(ice->obj_name, "Error sending STUN request", status);
-	pj_log_pop_indent();
-	return status;
     }
-
-    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS, 
-	            PJ_SUCCESS);
     pj_log_pop_indent();
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -1893,39 +2068,95 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     pj_log_push_indent();
 
     /* Send STUN Binding request for check with highest priority on
+     * Retry state.
+     */
+
+    if (start_count == 0) {
+	for (i = 0; i < clist->count; ++i) {
+	    pj_ice_sess_check *check = &clist->checks[i];
+	    // Reconnect closed TURN sockets
+	    if (check->state == PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY) {
+		status = perform_check(ice, clist, i, ice->is_nominating);
+		if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+		    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				    status);
+		    on_check_complete(ice, check);
+		}
+		++start_count;
+		break;
+	    }
+	}
+    }
+
+    if (start_count == 0) {
+	// TODO (sblin) remove - https://github.com/coturn/coturn/issues/408
+	pj_bool_t inc_counter = PJ_TRUE;
+	for (i = 0; i < clist->count; ++i) {
+	    pj_ice_sess_check *check = &clist->checks[i];
+	    if (check->state == PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET) {
+		if (inc_counter) {
+		    td->first_packet_counter += 1;
+		    inc_counter = PJ_FALSE;
+		}
+		if (td->first_packet_counter % 50 == 0) {
+		    status = perform_check(ice, clist, i, ice->is_nominating);
+		    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+			check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+					status);
+			on_check_complete(ice, check);
+		    }
+		}
+		++start_count;
+		break;
+	    }
+	}
+    }
+
+    /* Send STUN Binding request for check with highest priority on
      * Waiting state.
      */
-    for (i=0; i<clist->count; ++i) {
-	pj_ice_sess_check *check = &clist->checks[i];
 
-	if (check->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
-	    status = perform_check(ice, clist, i, ice->is_nominating);
-	    if (status != PJ_SUCCESS) {
-		check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
-				status);
-		on_check_complete(ice, check);
+    if (start_count == 0) {
+	for (i = 0; i < clist->count; ++i) {
+	    pj_ice_sess_check *check = &clist->checks[i];
+
+	    if (check->state == PJ_ICE_SESS_CHECK_STATE_WAITING) {
+		status = perform_check(ice, clist, i, ice->is_nominating);
+		if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+		    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				    status);
+		    on_check_complete(ice, check);
+		}
+		++start_count;
+		break;
 	    }
-
-	    ++start_count;
-	    break;
 	}
     }
 
     /* If we don't have anything in Waiting state, perform check to
      * highest priority pair that is in Frozen state.
      */
-    if (start_count==0) {
-	for (i=0; i<clist->count; ++i) {
+    if (start_count == 0) {
+	for (i = 0; i < clist->count; ++i) {
 	    pj_ice_sess_check *check = &clist->checks[i];
 
 	    if (check->state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
 		status = perform_check(ice, clist, i, ice->is_nominating);
-		if (status != PJ_SUCCESS) {
-		    check_set_state(ice, check,
-		    		    PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+		if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+		    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
 		    on_check_complete(ice, check);
 		}
+		++start_count;
+		break;
+	    }
+	}
+    }
 
+    if (start_count == 0) {
+	// If all sockets are pending, do nothing
+	for (i = 0; i < clist->count; ++i) {
+	    pj_ice_sess_check *check = &clist->checks[i];
+	    if (check->state == PJ_ICE_SESS_CHECK_STATE_PENDING) {
 		++start_count;
 		break;
 	    }
@@ -1933,14 +2164,14 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     }
 
     /* Cannot start check because there's no suitable candidate pair.
-     */
+    */
     if (start_count!=0) {
 	/* Schedule for next timer */
 	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 
 	pj_time_val_normalize(&timeout);
 	pj_timer_heap_schedule_w_grp_lock(th, te, &timeout, PJ_TRUE,
-	                                  ice->grp_lock);
+					  ice->grp_lock);
     }
 
     pj_grp_lock_release(ice->grp_lock);
@@ -2181,6 +2412,192 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
     return status;
 }
 
+static pj_ice_sess_check* get_current_check_at_state(pj_ice_sess *ice,
+                                                     pj_sockaddr_t *remote_addr,
+                                                     pj_ice_sess_check_state state,
+                                                     int *current_check)
+{
+    if (!ice || !remote_addr)
+        return NULL;
+    // NOTE: Multiple checks can have the same remote, we only take care of the first
+    // First, check if the TCP is really connected. If not, abort
+    pj_ice_sess_check *check = NULL;
+    for (int i = 0; i < ice->clist.count; ++i) {
+        // Find related check
+        pj_ice_sess_check *c = &ice->clist.checks[i];
+        /* Host candidate not found this this srflx! */
+        if (pj_sockaddr_cmp(remote_addr, &c->rcand->addr) == 0) {
+            if (c->tdata == NULL || c->state != state)
+                continue;
+            /* Match */
+            check = c;
+            if (current_check) *current_check = i;
+            break;
+        }
+    }
+    return check;
+}
+
+void ice_sess_on_peer_connection(pj_ice_sess *ice,
+				 pj_uint8_t transport_id,
+				 pj_status_t status,
+				 pj_sockaddr_t* remote_addr)
+{
+    // The TCP link is now ready. We can now send the first STUN message (send
+    // connectivity check) This should trigger on_stun_request_complete when
+    // finished
+    if (!remote_addr)
+	return;
+
+    int current_check = -1;
+    pj_ice_sess_check *check = get_current_check_at_state(ice,remote_addr,
+							  PJ_ICE_SESS_CHECK_STATE_PENDING,
+							  &current_check);
+    if (!check) {
+	// Handle peer reflexive candidates (incoming are still waiting here)
+	check = get_current_check_at_state(ice, remote_addr,
+					   PJ_ICE_SESS_CHECK_STATE_WAITING,
+					   &current_check);
+	if (!check) {
+	    return;
+	}
+    }
+
+    if (status != PJ_SUCCESS) {
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+	on_check_complete(ice, check);
+	return;
+    }
+
+    // TCP is correctly connected. Craft the message to send
+    const pj_ice_sess_cand *lcand = check->lcand;
+    const pj_ice_sess_cand *rcand = check->rcand;
+    if (check->tdata == NULL) {
+	LOG5((ice->obj_name, "Error sending STUN request, empty data"));
+	return;
+    }
+    pj_ice_msg_data *msg_data =
+	PJ_POOL_ZALLOC_T(check->tdata->pool, pj_ice_msg_data);
+
+    msg_data->transport_id = transport_id;
+    msg_data->has_req_data = PJ_TRUE;
+    msg_data->data.req.ice = ice;
+    msg_data->data.req.clist = &ice->clist;
+    msg_data->data.req.ckid = current_check;
+
+    pj_ice_sess_comp *comp = find_comp(ice, lcand->comp_id);
+    pj_status_t status_send_msg;
+    // Note that USERNAME and MESSAGE-INTEGRITY will be added by the
+    // STUN session.
+
+    // Initiate STUN transaction to send the request
+    status_send_msg = pj_stun_session_send_msg(comp->stun_sess, msg_data,
+					       PJ_FALSE, PJ_FALSE, &rcand->addr,
+					       pj_sockaddr_get_len(&rcand->addr),
+					       check->tdata);
+    if (status_send_msg == PJ_EBUSY /* EBUSY */) {
+        check->state = PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET;
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET,
+			status_send_msg);
+	return;
+    }
+    if (status_send_msg == 120033 /* BROKEN PIPE */) {
+	check->state = PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY;
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY,
+			status_send_msg);
+	return;
+    }
+
+    if ((status_send_msg == 120104 || status_send_msg == 130054)/* CONNECTION RESET BY PEER */
+	&& rcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+	/**
+	 * This part of the code is triggered when using ICE over TCP via TURN
+	 * In fact, the other peer has to authorize this peer to connect to
+	 * the relayed candidate. This is done by set_perm from the other case.
+	 * But from this side, we can't know if the peer has authorized us. If it's
+	 * not the case, the connection will got a CONNECTION RESET BY PEER status.
+	 * In this case, we can try to reconnect a bit after and this until the check
+	 * reached its timeout.
+	 */
+	check->state = PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY;
+	check_set_state(ice, check,PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY,
+			status_send_msg);
+    } else if (status_send_msg != PJ_SUCCESS) {
+	check->tdata = NULL;
+	pjnath_perror(ice->obj_name, "Error sending STUN request", status_send_msg);
+	pj_log_pop_indent();
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
+	on_check_complete(ice, check);
+    } else if (rcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET, status);
+    } else {
+	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS, status);
+    }
+}
+
+void ice_sess_on_peer_reset_connection(pj_ice_sess *ice,
+				       pj_uint8_t transport_id,
+				       pj_sockaddr_t* remote_addr)
+{
+    // The TCP link is reseted
+    if (!remote_addr)
+	return;
+
+    pj_ice_sess_check *check = get_current_check_at_state(ice, remote_addr,
+							  PJ_ICE_SESS_CHECK_STATE_PENDING,
+							  NULL);
+    if (!check) {
+	// Just check if it's not the first packet failing
+	check = get_current_check_at_state(ice, remote_addr,
+					   PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET,
+					   NULL);
+	if (!check)
+	    return;
+    }
+
+    const pj_ice_sess_cand *rcand = check->rcand;
+    if (rcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+	check->state = PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY;
+	check_set_state(ice, check,
+			PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY, 120104);
+    }
+}
+
+void ice_sess_on_peer_packet(pj_ice_sess *ice,
+			     pj_uint8_t transport_id,
+			     pj_sockaddr_t* remote_addr)
+{
+    // The TCP link received its bind  request response
+    if (!ice || !remote_addr) {
+	return;
+    }
+    pj_ice_sess_check *check =
+	get_current_check_at_state(ice, remote_addr,
+				   PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET,
+				   NULL);
+    if (!check) {
+	return;
+    }
+
+    const pj_ice_sess_cand *rcand = check->rcand;
+    if (rcand->type == PJ_ICE_CAND_TYPE_RELAYED) {
+	check->state = PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS;
+	check_set_state(ice, check,
+			PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS, PJ_SUCCESS);
+    }
+}
+
+
+void ice_select_incoming_turn(pj_ice_sess *ice,
+			      pj_ice_sess_checklist *clist,
+			      unsigned check_id)
+{
+    check_set_state(ice, &clist->checks[check_id],
+		    PJ_ICE_SESS_CHECK_STATE_SUCCEEDED, PJ_SUCCESS);
+    update_comp_check(ice, clist->checks[check_id].lcand->comp_id,
+		      &clist->checks[check_id]);
+    on_check_complete(ice, &clist->checks[check_id]);
+}
 
 /* This callback is called when outgoing STUN request completed */
 static void on_stun_request_complete(pj_stun_session *stun_sess,
@@ -2411,7 +2828,9 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				      &check->lcand->base_addr, 
 				      &check->lcand->base_addr,
 				      pj_sockaddr_get_len(&xaddr->sockaddr),
-				      &cand_id);
+				      &cand_id,
+				      check->rcand->transport == PJ_CAND_UDP ?
+				      PJ_CAND_UDP : PJ_CAND_TCP_PASSIVE);
 	if (status != PJ_SUCCESS) {
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, 
 			    status);
@@ -2673,7 +3092,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     msg_data->has_req_data = PJ_FALSE;
 
     /* Send the response */
-    status = pj_stun_session_send_msg(sess, msg_data, PJ_TRUE, PJ_TRUE,
+    status = pj_stun_session_send_msg(sess, msg_data, PJ_TRUE,
+                                      pj_stun_session_tp_type(sess) ==
+                                      PJ_STUN_TP_UDP,
 				      src_addr, src_addr_len, tdata);
 
 
@@ -2794,12 +3215,12 @@ static void handle_incoming_check(pj_ice_sess *ice,
     /* Just get candidate with the highest priority and same transport ID
      * for the specified  component ID in the checklist.
      */
-    for (i=0; i<ice->clist.count; ++i) {
-	pj_ice_sess_check *c = &ice->clist.checks[i];
-	if (c->lcand->comp_id == rcheck->comp_id &&
-	    c->lcand->transport_id == rcheck->transport_id) 
+    for (i=0; i<ice->lcand_cnt; ++i) {
+	pj_ice_sess_cand* lcand_tmp = &ice->lcand[i];
+	if (lcand_tmp->comp_id == rcheck->comp_id &&
+	    lcand_tmp->transport_id == rcheck->transport_id)
 	{
-	    lcand = c->lcand;
+	    lcand = lcand_tmp;
 	    break;
 	}
     }
