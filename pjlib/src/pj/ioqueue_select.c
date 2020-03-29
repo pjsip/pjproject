@@ -339,19 +339,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
      * an fd that is higher than FD_SETSIZE.
      */
     if (sizeof(fd_set) < FD_SETSIZE && sock >= FD_SETSIZE) {
-    PJ_LOG(1, ("pjlib", "Failed to register socket to ioqueue because "
-		   	    "socket fd is too big (fd=%d/FD_SETSIZE=%d)",
-		   	    sock, FD_SETSIZE));
-    	return PJ_ETOOBIG;
+	PJ_LOG(1, ("pjlib", "Failed to register socket to ioqueue because "
+			    "socket fd is too big (fd=%d/FD_SETSIZE=%d)",
+		   sock, FD_SETSIZE));
+	return PJ_ETOOBIG;
     }
 
     pj_lock_acquire(ioqueue->lock);
 
     if (ioqueue->count >= ioqueue->max) {
-        PJ_LOG(1, ("pjlib", "Failed to register socket %d to ioqueue because "
-                   "current key count %d reaches max key count %d (PJ_ETOOMANY)",
-                   sock, ioqueue->count, ioqueue->max));
-        rc = PJ_ETOOMANY;
+	PJ_LOG(1, ("pjlib", "Failed to register socket %d to ioqueue because "
+			    "current key count %d reaches max key count %d (PJ_ETOOMANY)",
+		   sock, ioqueue->count, ioqueue->max));
+	rc = PJ_ETOOMANY;
 	goto on_return;
     }
 
@@ -365,7 +365,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
-        PJ_LOG(1, ("pjlib", "Failed to get free list of ioqueue key (PJ_ETOOMANY)"));
+	PJ_LOG(1, ("pjlib", "Failed to get free list of ioqueue key (PJ_ETOOMANY)"));
 	rc = PJ_ETOOMANY;
 	goto on_return;
     }
