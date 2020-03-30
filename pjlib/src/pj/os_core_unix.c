@@ -1620,10 +1620,18 @@ PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t *sem)
                pj_thread_this()->obj_name));
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (sem->sem != NULL) {
-        dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_FOREVER);
+    if (sem->sem == NULL) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
-    return PJ_SUCCESS;
+
+    long result = dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_FOREVER);
+    if (result == 0) {
+        PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", pj_thread_this()->obj_name));
+        return PJ_SUCCESS;
+    } else {
+        PJ_LOG(6, (sem->obj_name, "Semaphore: thread %s FAILED to acquire", pj_thread_this()->obj_name));
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
 #else
     int result = sem_wait( sem->sem );
     if (result == 0) {
@@ -1647,16 +1655,22 @@ PJ_DEF(pj_status_t) pj_sem_wait(pj_sem_t *sem)
 PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t *sem)
 {
 #if PJ_HAS_THREADS
-    
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (sem->sem != NULL) {
-        dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_NOW);
-    }
-    return PJ_SUCCESS;
-#else
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    if (sem->sem == NULL) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
+
+    long result = dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_NOW);
+    if (result == 0) {
+        PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", pj_thread_this()->obj_name));
+        return PJ_SUCCESS;
+    } else {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
+#else
     int result = sem_trywait( sem->sem );
     if (result == 0) {
         PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", pj_thread_this()->obj_name));
@@ -1683,15 +1697,23 @@ PJ_LOG(6, (sem->obj_name, "Semaphore released by thread %s",
 pj_thread_this()->obj_name));
     
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (sem->sem != NULL) {
-        dispatch_semaphore_signal(sem->sem);
+    if (sem->sem == NULL) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
+
+    long result = dispatch_semaphore_signal(sem->sem);
+    if (result == 0) {
+        return PJ_SUCCESS;
+    } else {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
 #else
     int result = sem_post( sem->sem );
-    if (result == 0)
+    if (result == 0) {
         return PJ_SUCCESS;
-    
-    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    } else {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
 #endif
     
 #else
