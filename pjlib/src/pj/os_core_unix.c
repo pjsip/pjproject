@@ -1650,7 +1650,7 @@ PJ_DEF(pj_status_t) pj_sem_trywait(pj_sem_t *sem)
     
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     if (sem->sem != NULL) {
-        dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_FOREVER);
+        dispatch_semaphore_wait(sem->sem, DISPATCH_TIME_NOW);
     }
     return PJ_SUCCESS;
 #else
