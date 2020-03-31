@@ -1734,10 +1734,15 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
     PJ_LOG(6, (sem->obj_name, "Semaphore destroyed by thread %s",
                pj_thread_this()->obj_name));
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (sem->sem != NULL) {
-        dispatch_semaphore_signal(sem->sem);
-        sem->sem = NULL;
+    if (sem->sem == NULL) {
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
+    
+    long result = 0;
+    do {
+        result = dispatch_semaphore_signal(sem->sem);
+    } while (result > 0);
+    sem->sem = NULL;
     return PJ_SUCCESS;
 #else
     int result = sem_destroy( sem->sem );
