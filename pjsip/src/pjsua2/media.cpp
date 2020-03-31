@@ -1404,13 +1404,15 @@ VideoMedia VideoPreview::getVideoMedia() PJSUA2_THROW(Error)
  */
 void VideoPreview::updateDevId()
 {
-    PJSUA_LOCK();
+#if PJSUA_HAS_VIDEO
     if (winId != PJSUA_INVALID_ID) {
+	PJSUA_LOCK();
 	pjsua_vid_win *w = &pjsua_var.win[winId];
 	pj_assert(w->type == PJSUA_WND_TYPE_PREVIEW);
 	devId = w->preview_cap_id;
+	PJSUA_UNLOCK();
     }
-    PJSUA_UNLOCK();
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
