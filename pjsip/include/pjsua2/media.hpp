@@ -1987,6 +1987,8 @@ public:
 
 private:
     pjmedia_vid_dev_index devId;
+    pjsua_vid_win_id winId;
+    void updateDevId();
 };
 
 /**
