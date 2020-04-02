@@ -755,7 +755,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     pj_get_timestamp(&t1);
     TRACE_((THIS_FILE, "ioqueue_poll() returns %d, time=%d usec",
-		       processed, pj_elapsed_usec(&t2, &t1)));
+		       processed_cnt, pj_elapsed_usec(&t2, &t1)));
 
     return processed_cnt;
 }
