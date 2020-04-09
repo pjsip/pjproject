@@ -137,7 +137,7 @@ class Expect(threading.Thread):
         
     def run(self):
         if self.use_telnet:
-            fullcmd = G_EXE + " " + inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
+            fullcmd = G_EXE + " " + inst_param.arg + " --blah --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
             
@@ -343,8 +343,12 @@ for inst_param in script.test.inst_params:
                 continue
             break
     else:
+        t0 = time.time()
         while p.telnet is None:
             time.sleep(0.1)
+            dur = int(time.time() - t0)
+            if dur > 5:
+                handle_error("Timeout connecting to pjsua", script.test)
 
     # add running instance
     script.test.process.append(p)
