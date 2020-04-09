@@ -189,8 +189,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		    test_complete = -715;
 		}
 	    } else {
-		/* Check the number of transmissions, which must be
-		 * 6 for INVITE and 10 for non-INVITE.
+		/* Check the number of (re)transmissions, which must be
+		 * 6 or 7 for INVITE and 10 or 11 for non-INVITE.
 		 * Theoretically the total (re)transmission time is 31,500ms
 		 * (plus 300ms for delayed transport), and tsx timeout is 32s.
 		 * In some test machines (e.g: MacOS), sometime the tsx timeout
