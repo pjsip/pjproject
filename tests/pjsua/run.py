@@ -137,7 +137,7 @@ class Expect(threading.Thread):
         
     def run(self):
         if self.use_telnet:
-            fullcmd = G_EXE + " " + inst_param.arg + " --blah --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
+            fullcmd = G_EXE + " " + inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
             
