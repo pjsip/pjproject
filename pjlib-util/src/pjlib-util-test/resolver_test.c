@@ -1051,13 +1051,12 @@ static int dns_test(void)
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
-    /* Now only server 0 should get packet, since both servers are
+    /* Now only one of the servers should get packet, since both servers are
      * in STATE_ACTIVE state
      */
-    pj_assert((g_server[0].pkt_count == 1 && g_server[1].pkt_count == 0) ||
-	      (g_server[1].pkt_count == 1 && g_server[0].pkt_count == 0));
+    pj_assert(g_server[0].pkt_count + g_server[1].pkt_count == 1);
 
-    /* Wait to allow probing period to complete */
+    /* Wait to allow active period to complete and get into probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
 			 set.good_ns_ttl));
     pj_thread_sleep(set.good_ns_ttl * 1000);
@@ -1080,9 +1079,12 @@ static int dns_test(void)
 
     pj_sem_wait(sem);
 
+    /* Both servers must get packet as both are in probing state */
+    pj_assert(g_server[0].pkt_count == 1 && g_server[1].pkt_count == 1);
+
     /*
      * Check that both servers still receive requests, since they are
-     * in probing state.
+     * in probing & active state.
      */
     PJ_LOG(3,(THIS_FILE, "  checking both NS during probing period"));
     g_server[0].action = ACTION_IGNORE;
@@ -1098,13 +1100,12 @@ static int dns_test(void)
 	return -1000;
 
     pj_sem_wait(sem);
-    pj_thread_sleep(set.qretr_delay *  set.qretr_count);
+    pj_thread_sleep(1000);
 
-    /* Both servers must get requests */
-    pj_assert(g_server[0].pkt_count >= 1);
-    pj_assert(g_server[1].pkt_count == 1);
+    /* Both servers must get packet as both are in probing & active state */
+    pj_assert(g_server[0].pkt_count == 1 && g_server[1].pkt_count == 1);
 
-    /* Wait to allow probing period to complete */
+    /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
 			 set.qretr_delay * 
 			 (set.qretr_count+2) / 1000));
@@ -1130,11 +1131,11 @@ static int dns_test(void)
     pj_sem_wait(sem);
     pj_thread_sleep(1000);
 
-    /* Both servers must get requests */
+    /* Only server 1 get the request */
     pj_assert(g_server[0].pkt_count == 0);
     pj_assert(g_server[1].pkt_count == 1);
 
-    /* Wait to allow probing period to complete */
+    /* Wait to allow active & bad period to complete, both will be in probing state */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",
 			 set.good_ns_ttl));
     pj_thread_sleep(set.good_ns_ttl * 1000);
@@ -1156,10 +1157,10 @@ static int dns_test(void)
 
     pj_sem_wait(sem);
 
-    /* Wait to allow probing period to complete */
+    /* Wait to allow probing period to complete, server 0 remains active, server 1 will be bad */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state (%d sec)",
 			 set.qretr_delay * (set.qretr_count+2) / 1000));
-    pj_thread_sleep(set.qretr_delay * (set.qretr_count + 2));
+    pj_thread_sleep(1000 + set.qretr_delay * (set.qretr_count + 2));
 
     /*
      * Now only server 0 should get requests.
@@ -1372,6 +1373,8 @@ static int srv_resolver_test(void)
     pj_str_t domain = pj_str("somedomain.com");
     pj_str_t res_name = pj_str("_sip._udp.");
 
+    /* Last servers state: server 0=active, server 1=bad*/
+
     /* Successful scenario */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): success scenario"));
 
@@ -1394,10 +1397,9 @@ static int srv_resolver_test(void)
     pj_assert(g_server[1].pkt_count == 0);
 
 
-    /* Wait until cache expires and nameserver state moves out from STATE_PROBING */
-    PJ_LOG(3,(THIS_FILE, "  waiting for cache to expire (~15 secs).."));
-    pj_thread_sleep(1000 + 
-		    ((set.qretr_count + 2) * set.qretr_delay));
+    /* Wait until cache expires */
+    PJ_LOG(3,(THIS_FILE, "  waiting for cache to expire (~1 secs).."));
+    pj_thread_sleep(1000 + 100);
 
 
     /* DNS SRV option PJ_DNS_SRV_RESOLVE_AAAA */
@@ -1417,7 +1419,6 @@ static int srv_resolver_test(void)
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
-
     pj_thread_sleep(1000);
 
     /* DNS SRV option PJ_DNS_SRV_RESOLVE_AAAA_ONLY */
@@ -1437,7 +1438,6 @@ static int srv_resolver_test(void)
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
-
     pj_thread_sleep(1000);
 
 
@@ -1465,7 +1465,7 @@ static int srv_resolver_test(void)
     /* Since TTL is one, subsequent queries should fail */
     PJ_LOG(3,(THIS_FILE, "  srv_resolve(): cache expires scenario"));
 
-    pj_thread_sleep(1000);
+    pj_thread_sleep(1000 + 100);
 
     g_server[0].action = PJ_DNS_RCODE_NXDOMAIN;
     g_server[1].action = PJ_DNS_RCODE_NXDOMAIN;
@@ -1475,7 +1475,7 @@ static int srv_resolver_test(void)
     pj_assert(status == PJ_SUCCESS);
 
     pj_sem_wait(sem);
-
+    pj_thread_sleep(1000);
 
     return status;
 }
