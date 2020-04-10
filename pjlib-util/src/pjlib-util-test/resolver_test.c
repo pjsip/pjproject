@@ -1080,7 +1080,7 @@ static int dns_test(void)
     pj_sem_wait(sem);
 
     /* Both servers must get packet as both are in probing state */
-    pj_assert(g_server[0].pkt_count == 1 && g_server[1].pkt_count == 1);
+    pj_assert(g_server[0].pkt_count >= 1 && g_server[1].pkt_count == 1);
 
     /*
      * Check that both servers still receive requests, since they are
@@ -1103,7 +1103,7 @@ static int dns_test(void)
     pj_thread_sleep(1000);
 
     /* Both servers must get packet as both are in probing & active state */
-    pj_assert(g_server[0].pkt_count == 1 && g_server[1].pkt_count == 1);
+    pj_assert(g_server[0].pkt_count >= 1 && g_server[1].pkt_count == 1);
 
     /* Wait to allow probing period to complete, server 0 will be in bad state */
     PJ_LOG(3,(THIS_FILE, "  waiting for probing state to end (%d sec)",
