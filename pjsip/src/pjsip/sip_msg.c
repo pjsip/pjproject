@@ -188,13 +188,13 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[411], "Length Required");
     pj_strset2( &status_phrase[412], "Conditional Request Failed");
     pj_strset2( &status_phrase[413], "Request Entity Too Large");
-    pj_strset2( &status_phrase[414], "Request URI Too Long");
+    pj_strset2( &status_phrase[414], "Request-URI Too Long");
     pj_strset2( &status_phrase[415], "Unsupported Media Type");
     pj_strset2( &status_phrase[416], "Unsupported URI Scheme");
     pj_strset2( &status_phrase[417], "Unknown Resource-Priority");
     pj_strset2( &status_phrase[420], "Bad Extension");
     pj_strset2( &status_phrase[421], "Extension Required");
-    pj_strset2( &status_phrase[422], "Session Timer Too Small");
+    pj_strset2( &status_phrase[422], "Session Interval Too Small");
     pj_strset2( &status_phrase[423], "Interval Too Brief");
     pj_strset2( &status_phrase[424], "Bad Location Information");
     pj_strset2( &status_phrase[428], "Use Identity Header");
@@ -223,11 +223,11 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[493], "Undecipherable");
     pj_strset2( &status_phrase[494], "Security Agreement Required");
 
-    pj_strset2( &status_phrase[500], "Internal Server Error");
+    pj_strset2( &status_phrase[500], "Server Internal Error");
     pj_strset2( &status_phrase[501], "Not Implemented");
     pj_strset2( &status_phrase[502], "Bad Gateway");
     pj_strset2( &status_phrase[503], "Service Unavailable");
-    pj_strset2( &status_phrase[504], "Server Timeout");
+    pj_strset2( &status_phrase[504], "Server Time-out");
     pj_strset2( &status_phrase[505], "Version Not Supported");
     pj_strset2( &status_phrase[513], "Message Too Large");
     pj_strset2( &status_phrase[555], "Push Notification Service Not Supported");
