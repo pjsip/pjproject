@@ -88,7 +88,8 @@ static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test7";
 static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test8";
 static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAC-Test9";
 
-#define      TEST1_ALLOWED_DIFF	    (150)
+// An effort to accommodate CPU load spike on some test machines.
+#define      TEST1_ALLOWED_DIFF	    500 //(150)
 #define      TEST4_RETRANSMIT_CNT   3
 #define	     TEST5_RETRANSMIT_CNT   3
 
@@ -1099,9 +1100,12 @@ static int tsx_uac_retransmit_test(void)
     } sub_test[] = 
     {
 	{ &pjsip_invite_method, 0},
-	{ &pjsip_invite_method, TEST1_ALLOWED_DIFF*2},
+	//{ &pjsip_invite_method, TEST1_ALLOWED_DIFF*2},
+	{ &pjsip_invite_method, 300},
+
 	{ &pjsip_options_method, 0},
-	{ &pjsip_options_method, TEST1_ALLOWED_DIFF*2}
+	//{ &pjsip_options_method, TEST1_ALLOWED_DIFF*2}
+	{ &pjsip_options_method, 300}
     };
 
     PJ_LOG(3,(THIS_FILE, "  test1: basic uac retransmit and timeout test"));
