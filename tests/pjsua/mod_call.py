@@ -84,17 +84,18 @@ def test_func(t):
     
     # Wait ICE nego before checking media
     if use_ice:
-        caller.expect("ICE negotiation success")
-        callee.expect("ICE negotiation success")
+        # Unfortunately ICE nego may race with STATE_CONFIRMED (esp. on callee side), so let's just sleep
+        #caller.expect("ICE negotiation success")
+        #callee.expect("ICE negotiation success")
         # Additional wait for ICE updating address (via UPDATE/re-INVITE)
-        time.sleep(0.3)
+        time.sleep(0.5)
 
     # Wait DTLS-SRTP nego before checking media
     if use_dtls_srtp:
         # Unfortunately DTLS-SRTP nego may race with STATE_CONFIRMED, so let's just sleep
         #caller.expect("SRTP started, keying=DTLS-SRTP")
         #callee.expect("SRTP started, keying=DTLS-SRTP")
-        time.sleep(0.3)
+        time.sleep(0.5)
 
     # Test that media is okay
     check_media(caller, callee)
