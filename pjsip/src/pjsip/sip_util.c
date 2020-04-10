@@ -1219,7 +1219,8 @@ static void stateless_send_transport_cb( void *token,
 	    pj_memcpy(via->branch_param.ptr, PJSIP_RFC3261_BRANCH_ID,
 		      PJSIP_RFC3261_BRANCH_LEN);
 	    tmp.ptr = via->branch_param.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
-	    *(tmp.ptr-2) = 80; *(tmp.ptr-1) = 106;
+	    *(tmp.ptr-2) = 'P';
+	    *(tmp.ptr-1) = 'j';
 	    pj_generate_unique_string(&tmp);
 	}
 

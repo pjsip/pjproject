@@ -357,8 +357,8 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
 	          PJSIP_RFC3261_BRANCH_LEN);
 
 	tmp.ptr = branch.ptr + PJSIP_RFC3261_BRANCH_LEN + 2;
-	*(tmp.ptr-2) = (pj_int8_t)(branch.slen+73); 
-	*(tmp.ptr-1) = (pj_int8_t)(branch.slen+99);
+	*(tmp.ptr-2) = 'P';
+	*(tmp.ptr-1) = 'j';
 	pj_generate_unique_string( &tmp );
 
 	branch.slen = PJSIP_MAX_BRANCH_LEN;
@@ -378,8 +378,8 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
 			       34 + PJSIP_RFC3261_BRANCH_LEN);
     pj_memcpy(branch.ptr, PJSIP_RFC3261_BRANCH_ID, PJSIP_RFC3261_BRANCH_LEN);
     branch.slen = PJSIP_RFC3261_BRANCH_LEN;
-    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN) = (pj_int8_t)(branch.slen+73);
-    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN+1) = (pj_int8_t)(branch.slen+99);
+    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN) = 'P';
+    *(branch.ptr+PJSIP_RFC3261_BRANCH_LEN+1) = 'j';
     digest2str(digest, branch.ptr+PJSIP_RFC3261_BRANCH_LEN+2);
     branch.slen = 34 + PJSIP_RFC3261_BRANCH_LEN;
 
