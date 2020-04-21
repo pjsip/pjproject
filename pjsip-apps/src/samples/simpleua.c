@@ -408,6 +408,13 @@ int main(int argc, char *argv[])
 
 #endif	/* PJMEDIA_HAS_VIDEO */
     
+    pool = pj_pool_create( &cp.factory,	    /* pool factory	    */
+			   "simpleua",	 /* pool name.	    */
+			   4000,	    /* init size	    */
+			   4000,	    /* increment size	    */
+			   NULL		    /* callback on error    */
+			   );
+
     /* Create event manager */
     status = pjmedia_event_mgr_create(pool, 0, NULL);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
