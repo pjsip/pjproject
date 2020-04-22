@@ -937,7 +937,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 
     /* Create memory pool for application. */
-    pjsua_var.pool = pjsua_pool_create("pjsua", 1000, 1000);
+    pjsua_var.pool = pjsua_pool_create("pjsua", PJSUA_POOL_LEN, PJSUA_POOL_INC);
     if (pjsua_var.pool == NULL) {
 	pj_log_pop_indent();
 	status = PJ_ENOMEM;
