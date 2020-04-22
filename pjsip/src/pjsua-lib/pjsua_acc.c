@@ -460,7 +460,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     if (acc->pool)
 	pj_pool_reset(acc->pool);
     else
-	acc->pool = pjsua_pool_create("acc%p", 512, 256);
+	acc->pool = pjsua_pool_create("acc%p", PJSUA_POOL_ACC_LEN, PJSUA_POOL_ACC_INC);
 
     /* Copy config */
     pjsua_acc_config_dup(acc->pool, &pjsua_var.acc[id].cfg, cfg);

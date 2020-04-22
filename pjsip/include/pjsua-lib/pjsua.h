@@ -300,6 +300,19 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_POOL_INC		1000
 #endif
 
+/**
+ * Initial memory block for PJSUA account.
+ */
+#ifndef PJSUA_POOL_ACC_LEN
+#   define PJSUA_POOL_ACC_LEN	512
+#endif
+
+/**
+ * Memory increment for PJSUA account.
+ */
+#ifndef PJSUA_POOL_ACC_INC
+#   define PJSUA_POOL_ACC_INC	256
+#endif
 
 /**
  * Maximum proxies in account.
