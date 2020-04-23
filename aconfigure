@@ -706,6 +706,7 @@ GREP
 CPP
 ac_cross_compile
 ac_shlib_suffix
+ac_cflags
 ac_build_mak_vars
 ac_pjdir
 CC_CFLAGS
@@ -3952,6 +3953,7 @@ if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 
 
 
+
 case $host in
     *mingw* | *cygw* | *win32* | *w32* )
 	if pwd -W 2&> /dev/null; then
@@ -5138,8 +5140,10 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
 
 if test "x$ac_cv_c_bigendian" = "xyes"; then
   CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
+  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
 else
   CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
+  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
 fi
 
 

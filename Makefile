@@ -132,10 +132,8 @@ install:
 		sed -e "s!@INCLUDEDIR@!$(includedir)!" | \
 		sed -e "s!@LIBDIR@!$(libdir)!" | \
 		sed -e "s/@PJ_VERSION@/$(PJ_VERSION)/" | \
-		sed -e "s!@PJ_LDLIBS@!!" | \
-		sed -e "s!@PJ_LDXXLIBS@!$(PJ_LDXXLIBS)!" | \
-		sed -e "s!@PJ_INSTALL_CFLAGS@!!" | \
-		sed -e "s!@PJ_INSTALL_CXXFLAGS@!$(PJ_INSTALL_CXXFLAGS)!" > $(DESTDIR)/$(libdir)/pkgconfig/libpjproject.pc
+		sed -e "s!@PJ_INSTALL_LDFLAGS@!$(PJ_INSTALL_LDFLAGS)!" | \
+		sed -e "s!@PJ_INSTALL_CFLAGS@!$(PJ_INSTALL_CFLAGS)!" > $(DESTDIR)/$(libdir)/pkgconfig/libpjproject.pc
 
 uninstall:
 	$(RM) $(DESTDIR)$(libdir)/pkgconfig/libpjproject.pc
