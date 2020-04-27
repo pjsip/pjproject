@@ -24,11 +24,14 @@
 
 using namespace pj;
 
-#define HAS_TEST0 0
-#define HAS_TEST1 1
-#define HAS_TEST2 0
-#define HAS_TEST3 0
-#define HAS_TEST4 0
+/* Valid test number:
+ * 0: JSON account config test
+ * 1: call test
+ * 2: JSON endpoint config test
+ * 3: media player and recorder test
+ * 4: simple registration test
+ */
+#define USE_TEST 1
 
 class MyAccount;
 
@@ -179,7 +182,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 }
 
 
-#if HAS_TEST1
+#if USE_TEST == 1
 static void mainProg1(Endpoint &ep)
 {
     // Init library
@@ -231,7 +234,7 @@ static void mainProg1(Endpoint &ep)
 #endif
 
 
-#if HAS_TEST2
+#if USE_TEST == 2
 static void mainProg2()
 {
     string json_str;
@@ -279,7 +282,7 @@ static void mainProg2()
 #endif
 
 
-#if HAS_TEST3
+#if USE_TEST == 3
 static void mainProg3(Endpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
@@ -340,7 +343,7 @@ static void mainProg3(Endpoint &ep)
 #endif
 
 
-#if HAS_TEST0
+#if USE_TEST == 0
 static void mainProg()
 {
     string json_str;
@@ -394,7 +397,7 @@ static void mainProg()
 #endif
 
 
-#if HAS_TEST4
+#if USE_TEST == 4
 static void mainProg4(Endpoint &ep)
 {
     // Init library
@@ -434,19 +437,19 @@ int main()
     try {
 	ep.libCreate();
 
-#if HAS_TEST0
+#if USE_TEST == 0
 	mainProg(ep);
 #endif
-#if HAS_TEST1
+#if USE_TEST == 1
 	mainProg1(ep);
 #endif
-#if HAS_TEST2
+#if USE_TEST == 2
 	mainProg2(ep);
 #endif
-#if HAS_TEST3
+#if USE_TEST == 3
 	mainProg3(ep);
 #endif
-#if HAS_TEST4
+#if USE_TEST == 4
 	mainProg4(ep);
 #endif
 
