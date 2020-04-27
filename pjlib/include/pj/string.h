@@ -69,11 +69,17 @@ PJ_BEGIN_DECL
  *  - @ref page_pjlib_string_test
  */
 
-/* Check if a string is truncated and if yes, put a suffix of ".."
+/**
+ * Check if a string is truncated and if yes, put a suffix of ".."
  * to indicate the truncation.
+ * This macro is used to check the result of pj_ansi_snprintf()
+ *
+ * @param ret	    The return value of pj_ansi_snprintf().
+ * @param str	    The string.
+ * @param len	    The length 
  */
-#define PJ_CHECK_TRUNC_STR(ret, s, len) \
-    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((s) + (len) - 3, "..")
+#define PJ_CHECK_TRUNC_STR(ret, str, len) \
+    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
 
 /**
  * Create string initializer from a normal C string.
