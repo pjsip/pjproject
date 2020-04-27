@@ -24,6 +24,12 @@
 
 using namespace pj;
 
+#define HAS_TEST0 0
+#define HAS_TEST1 1
+#define HAS_TEST2 0
+#define HAS_TEST3 0
+#define HAS_TEST4 0
+
 class MyAccount;
 
 class MyCall : public Call
@@ -127,7 +133,6 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
 {
     PJ_UNUSED_ARG(prm);
 
-    unsigned i;
     CallInfo ci = getInfo();
     AudioMedia aud_med;
     AudioMedia& play_dev_med =
@@ -174,6 +179,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 }
 
 
+#if HAS_TEST1
 static void mainProg1(Endpoint &ep)
 {
     // Init library
@@ -222,7 +228,10 @@ static void mainProg1(Endpoint &ep)
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
     delete acc; /* Will delete all calls too */
 }
+#endif
 
+
+#if HAS_TEST2
 static void mainProg2()
 {
     string json_str;
@@ -267,8 +276,10 @@ static void mainProg2()
 	pj_file_delete("jsontest.js");
     }
 }
+#endif
 
 
+#if HAS_TEST3
 static void mainProg3(Endpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
@@ -326,8 +337,10 @@ static void mainProg3(Endpoint &ep)
 	pj_thread_sleep(5000);
     }
 }
+#endif
 
 
+#if HAS_TEST0
 static void mainProg()
 {
     string json_str;
@@ -378,8 +391,10 @@ static void mainProg()
 	std::cout << json_str << std::endl << std::endl;
     }
 }
+#endif
 
 
+#if HAS_TEST4
 static void mainProg4(Endpoint &ep)
 {
     // Init library
@@ -408,6 +423,7 @@ static void mainProg4(Endpoint &ep)
 
     delete acc;
 }
+#endif
 
 
 int main()
@@ -418,7 +434,22 @@ int main()
     try {
 	ep.libCreate();
 
+#if HAS_TEST0
+	mainProg(ep);
+#endif
+#if HAS_TEST1
 	mainProg1(ep);
+#endif
+#if HAS_TEST2
+	mainProg2(ep);
+#endif
+#if HAS_TEST3
+	mainProg3(ep);
+#endif
+#if HAS_TEST4
+	mainProg4(ep);
+#endif
+
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;

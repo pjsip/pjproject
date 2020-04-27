@@ -493,6 +493,7 @@ static int main_func(int argc, char *argv[])
     
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS) {
+        app_perror(THIS_FILE, "Video init failed", status);
 	rc = 130;
         goto on_return;
     }

@@ -822,9 +822,11 @@ static void on_transport_state(pjsip_transport *tp,
     case PJSIP_TP_STATE_DISCONNECTED:
 	{
 	    char buf[100];
+	    int len;
 
-	    snprintf(buf, sizeof(buf), "SIP %s transport is disconnected "
-		    "from %s", tp->type_name, host_port);
+	    len = pj_ansi_snprintf(buf, sizeof(buf), "SIP %s transport is "
+	    	      "disconnected from %s", tp->type_name, host_port);
+	    PJ_CHECK_TRUNC_STR(len, buf, sizeof(buf));
 	    pjsua_perror(THIS_FILE, buf, info->status);
 	}
 	break;
