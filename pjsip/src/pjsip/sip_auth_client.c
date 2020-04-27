@@ -1194,6 +1194,10 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	    break;
 
 	hchal = (const pjsip_www_authenticate_hdr*)hdr;
+	if (pj_stricmp(&hchal->challenge.digest.algorithm, &pjsip_MD5_STR)) {
+	    hdr = hdr->next;
+	    continue;
+	}
 	++chal_cnt;
 
 	/* Find authentication session for this realm, create a new one
