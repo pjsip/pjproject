@@ -69,6 +69,12 @@ PJ_BEGIN_DECL
  *  - @ref page_pjlib_string_test
  */
 
+/* Check if a string is truncated and if yes, put a suffix of ".."
+ * to indicate the truncation.
+ */
+#define PJ_CHECK_TRUNC_STR(ret, s, len) \
+    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((s) + (len) - 3, "..")
+
 /**
  * Create string initializer from a normal C string.
  *
