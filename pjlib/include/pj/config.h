@@ -804,6 +804,19 @@
 #  define PJ_HAS_SEMAPHORE	    1
 #endif
 
+/**
+ * Use dispatch semaphores on Darwin.
+ *
+ * Default: 1 on Darwin, 0 otherwise
+ */
+#ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
+#   if defined(PJ_DARWINOS)
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
+#   else
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
+#   endif
+#endif
+
 
 /**
  * Event object (for synchronization, e.g. in Win32)
