@@ -546,6 +546,9 @@ on_return:
     pj_pool_release(pool);
     pj_log_set_level(orig_log_level);
 
+    /* Avoid compile warning */
+    PJ_UNUSED_ARG(encode_decode_test);
+
     return rc;
 }
 

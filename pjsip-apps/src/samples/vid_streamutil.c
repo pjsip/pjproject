@@ -104,10 +104,6 @@ static const char *desc =
 #define DEF_RENDERER_HEIGHT		    480
 
 
-/* Prototype */
-static void print_stream_stat(pjmedia_vid_stream *stream,
-			      const pjmedia_vid_codec_param *codec_param);
-
 /* Hexa string to octet array */
 int my_hex_string_to_octet_string(char *raw, char *hex, int len)
 {
