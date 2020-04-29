@@ -24,6 +24,15 @@
 
 using namespace pj;
 
+/* Valid test number:
+ * 0: JSON account config test
+ * 1: call test
+ * 2: JSON endpoint config test
+ * 3: media player and recorder test
+ * 4: simple registration test
+ */
+#define USE_TEST 1
+
 class MyAccount;
 
 class MyCall : public Call
@@ -127,7 +136,6 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
 {
     PJ_UNUSED_ARG(prm);
 
-    unsigned i;
     CallInfo ci = getInfo();
     AudioMedia aud_med;
     AudioMedia& play_dev_med =
@@ -174,6 +182,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 }
 
 
+#if USE_TEST == 1
 static void mainProg1(Endpoint &ep)
 {
     // Init library
@@ -222,7 +231,10 @@ static void mainProg1(Endpoint &ep)
     std::cout << "*** PJSUA2 SHUTTING DOWN ***" << std::endl;
     delete acc; /* Will delete all calls too */
 }
+#endif
 
+
+#if USE_TEST == 2
 static void mainProg2()
 {
     string json_str;
@@ -267,8 +279,10 @@ static void mainProg2()
 	pj_file_delete("jsontest.js");
     }
 }
+#endif
 
 
+#if USE_TEST == 3
 static void mainProg3(Endpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
@@ -326,8 +340,10 @@ static void mainProg3(Endpoint &ep)
 	pj_thread_sleep(5000);
     }
 }
+#endif
 
 
+#if USE_TEST == 0
 static void mainProg()
 {
     string json_str;
@@ -378,8 +394,10 @@ static void mainProg()
 	std::cout << json_str << std::endl << std::endl;
     }
 }
+#endif
 
 
+#if USE_TEST == 4
 static void mainProg4(Endpoint &ep)
 {
     // Init library
@@ -408,6 +426,7 @@ static void mainProg4(Endpoint &ep)
 
     delete acc;
 }
+#endif
 
 
 int main()
@@ -418,7 +437,22 @@ int main()
     try {
 	ep.libCreate();
 
+#if USE_TEST == 0
+	mainProg(ep);
+#endif
+#if USE_TEST == 1
 	mainProg1(ep);
+#endif
+#if USE_TEST == 2
+	mainProg2(ep);
+#endif
+#if USE_TEST == 3
+	mainProg3(ep);
+#endif
+#if USE_TEST == 4
+	mainProg4(ep);
+#endif
+
 	ret = PJ_SUCCESS;
     } catch (Error & err) {
 	std::cout << "Exception: " << err.info() << std::endl;

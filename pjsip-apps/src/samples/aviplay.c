@@ -25,8 +25,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "util.h"
-
 /**
  * \page page_pjmedia_samples_aviplay_c Samples: Playing AVI File to
  * Video and Sound Devices
@@ -56,6 +54,7 @@
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
+#include "util.h"
 
 /* For logging purpose. */
 #define THIS_FILE   "aviplay.c"
@@ -493,6 +492,7 @@ static int main_func(int argc, char *argv[])
     
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS) {
+        app_perror(THIS_FILE, "Video init failed", status);
 	rc = 130;
         goto on_return;
     }

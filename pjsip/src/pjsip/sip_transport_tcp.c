@@ -330,6 +330,7 @@ static void update_transport_info(struct tcp_listener *listener)
     enum { INFO_LEN = 100 };
     char local_addr[PJ_INET6_ADDRSTRLEN + 10];
     char pub_addr[PJ_INET6_ADDRSTRLEN + 10];
+    int len;
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
     /* Set transport info. */
@@ -341,9 +342,10 @@ static void update_transport_info(struct tcp_listener *listener)
     pj_addr_str_print(&listener->factory.addr_name.host, 
 		      listener->factory.addr_name.port, pub_addr, 
 		      sizeof(pub_addr), 1);
-    pj_ansi_snprintf(
+    len = pj_ansi_snprintf(
 	    listener->factory.info, INFO_LEN, "tcp %s [published as %s]",
 	    local_addr, pub_addr);
+    PJ_CHECK_TRUNC_STR(len, listener->factory.info, INFO_LEN);
 
     if (listener->asock) {	
 	char addr[PJ_INET6_ADDRSTRLEN+10];

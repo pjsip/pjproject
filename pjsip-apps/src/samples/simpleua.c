@@ -272,13 +272,14 @@ int main(int argc, char *argv[])
      */
     {
 	pj_sockaddr addr;
+	int af = AF;
 
-	pj_sockaddr_init(AF, &addr, NULL, (pj_uint16_t)SIP_PORT);
+	pj_sockaddr_init(af, &addr, NULL, (pj_uint16_t)SIP_PORT);
 	
-	if (AF == pj_AF_INET()) {
+	if (af == pj_AF_INET()) {
 	    status = pjsip_udp_transport_start( g_endpt, &addr.ipv4, NULL, 
 						1, NULL);
-	} else if (AF == pj_AF_INET6()) {
+	} else if (af == pj_AF_INET6()) {
 	    status = pjsip_udp_transport_start6(g_endpt, &addr.ipv6, NULL,
 						1, NULL);
 	} else {
