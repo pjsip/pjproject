@@ -1062,6 +1062,14 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 		    hdr = hdr->next;
 		    pj_list_erase(sent_auth);
 		    continue;
+		} else
+		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
+		    pj_stricmp(&sent_auth->credential.digest.algorithm,
+		               &hchal->challenge.digest.algorithm)==0)
+		{
+		    /* Same 'digest' scheme but different algo */
+		    hdr = hdr->next;
+		    continue;
 		} else {
 		    /* Found previous authorization attempt */
 		    break;
@@ -1155,7 +1163,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 {
     pjsip_tx_data *tdata;
     const pjsip_hdr *hdr;
-    unsigned chal_cnt;
+    unsigned chal_cnt, auth_cnt;
     pjsip_via_hdr *via;
     pj_status_t status;
 
@@ -1178,6 +1186,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
      */
     hdr = rdata->msg_info.msg->hdr.next;
     chal_cnt = 0;
+    auth_cnt = 0;
     while (hdr != &rdata->msg_info.msg->hdr) {
 	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
@@ -1194,10 +1203,6 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	    break;
 
 	hchal = (const pjsip_www_authenticate_hdr*)hdr;
-	if (pj_stricmp(&hchal->challenge.digest.algorithm, &pjsip_MD5_STR)) {
-	    hdr = hdr->next;
-	    continue;
-	}
 	++chal_cnt;
 
 	/* Find authentication session for this realm, create a new one
@@ -1226,8 +1231,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	 */
 	status = process_auth(tdata->pool, hchal, tdata->msg->line.req.uri,
 			      tdata, sess, cached_auth, &hauth);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    /* Process next header. */
+	    hdr = hdr->next;
+	    continue;
+	}
 
 	if (pj_pool_get_used_size(cached_auth->pool) >
 	    PJSIP_AUTH_CACHED_POOL_MAX_SIZE) 
@@ -1240,11 +1248,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 
 	/* Process next header. */
 	hdr = hdr->next;
+	auth_cnt++;
     }
 
     /* Check if challenge is present */
     if (chal_cnt == 0)
 	return PJSIP_EAUTHNOCHAL;
+
+    /* Check if any authorization header has been created */
+    if (auth_cnt == 0)
+	return PJSIP_EAUTHNOAUTH;
 
     /* Remove branch param in Via header. */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
