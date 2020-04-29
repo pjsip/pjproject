@@ -777,6 +777,7 @@ AC_ARG_ENABLE(video,
                 enable_v4l2="no"
                 enable_openh264="no"
                 enable_libyuv="no"
+                enable_vpx="no"
                fi],
 	      [])
 
