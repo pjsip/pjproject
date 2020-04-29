@@ -1024,6 +1024,18 @@
 #  define PJ_SSL_SOCK_MAX_CURVES   32
 #endif
 
+/**
+ * Use OpenSSL thread locking callback. This is only applicable for OpenSSL
+ * version prior to 1.1.0
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_SSL_SOCK_OSSL_USE_THREAD_CB
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
+#else
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
+#endif
+
 
 /**
  * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
