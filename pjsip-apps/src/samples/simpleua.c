@@ -364,6 +364,9 @@ int main(int argc, char *argv[])
 #endif
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+    /* Create pool. */
+    pool = pjmedia_endpt_create_pool(g_med_endpt, "Media pool", 512, 512);	
+
     /* 
      * Add PCMA/PCMU codec to the media endpoint. 
      */
@@ -375,7 +378,6 @@ int main(int argc, char *argv[])
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     /* Init video subsystem */
-    pool = pjmedia_endpt_create_pool(g_med_endpt, "Video subsystem", 512, 512);
     status = pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     status = pjmedia_converter_mgr_create(pool, NULL);
