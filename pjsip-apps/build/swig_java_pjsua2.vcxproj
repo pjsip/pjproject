@@ -23,7 +23,6 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}</ProjectGuid>
     <TargetName>pjsua2</TargetName>
-    <OutDir>..\src\swig\java\output\</OutDir>
     <RootNamespace>swig_java_pjsua2</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -75,6 +74,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <_ProjectFileVersion>14.0.25431.1</_ProjectFileVersion>
+    <OutDir>..\src\swig\java\output\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -191,7 +191,7 @@
 %40echo on
 %40echo Building pjsua2.dll to $(OutputDir)
 mkdir $(OutDir)org\pjsip\pjsua2
-swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(ProjectDir)..\..\pjsip\include -I$(ProjectDir)..\..\pjlib\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
 javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
 %40echo Building sample app
 javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
@@ -216,7 +216,7 @@ javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
 %40echo on
 %40echo Building pjsua2.dll to $(OutDir)
 mkdir $(OutDir)org\pjsip\pjsua2
-swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(ProjectDir)..\..\pjsip\include -I$(ProjectDir)..\..\pjlib\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
 javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
 %40echo Building sample app
 javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
@@ -241,7 +241,7 @@ javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
 %40echo on
 %40echo Building pjsua2.dll to $(OutDir)
 mkdir $(OutDir)org\pjsip\pjsua2
-swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(ProjectDir)..\..\pjsip\include -I$(ProjectDir)..\..\pjlib\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
 javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
 %40echo Building sample app
 javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
@@ -266,7 +266,7 @@ javac -d $(OutDir) -classpath $(OutDir) $(OutDir)..\sample.java
 %40echo on
 %40echo Building pjsua2.dll to $(OutDir)
 mkdir $(OutDir)org\pjsip\pjsua2
-swig -c++ -java  -package org.pjsip.pjsua2 -I$(SolutionDir)pjsip\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
+swig -c++ -java  -package org.pjsip.pjsua2 -I$(ProjectDir)..\..\pjsip\include -I$(ProjectDir)..\..\pjlib\include -outdir $(OutDir)org\pjsip\pjsua2 -o $(OutDir)pjsua2_wrap.cpp %(FullPath)
 javac -d $(OutDir) $(OutDir)org\pjsip\pjsua2\*.java
 %40echo Building sample app
 javac -d $(OutDir) -classpath $(OutDir) ..\src\swig\java\android\app\src\main\java\org\pjsip\pjsua2\app\MyApp.java
