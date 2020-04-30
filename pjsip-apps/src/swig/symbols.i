@@ -442,7 +442,8 @@ typedef enum pjmedia_format_id
   PJMEDIA_FORMAT_MJPEG = ((('G' << 24) | ('P' << 16)) | ('J' << 8)) | 'M',
   PJMEDIA_FORMAT_MPEG1VIDEO = ((('V' << 24) | ('1' << 16)) | ('P' << 8)) | 'M',
   PJMEDIA_FORMAT_MPEG2VIDEO = ((('V' << 24) | ('2' << 16)) | ('P' << 8)) | 'M',
-  PJMEDIA_FORMAT_MPEG4 = ((('4' << 24) | ('G' << 16)) | ('P' << 8)) | 'M'
+  PJMEDIA_FORMAT_MPEG4 = ((('4' << 24) | ('G' << 16)) | ('P' << 8)) | 'M',
+  PJMEDIA_FORMAT_INVALID = 0xFFFFFFFF
 } pjmedia_format_id;
 
 typedef enum pjmedia_vid_packing
