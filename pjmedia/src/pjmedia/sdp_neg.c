@@ -1071,6 +1071,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
     pjmedia_sdp_media *answer;
     const pjmedia_sdp_media *master, *slave;
     unsigned nclockrate = 0, clockrate[PJMEDIA_MAX_SDP_FMT];
+    unsigned ntel_clockrate = 0, tel_clockrate[PJMEDIA_MAX_SDP_FMT];
 
     /* If offer has zero port, just clone the offer */
     if (offer->desc.port == 0) {
@@ -1172,12 +1173,6 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		    if (!answer_with_multiple_codecs && found_matching_codec)
 			continue;
 		    is_codec = 1;
-		} else {
-		    if (!answer_with_multiple_codecs &&
-		        found_matching_telephone_event)
-		    {
-			continue;
-		    }
 		}
 		
 		/* Find paylaod in our initial SDP with matching 
@@ -1230,6 +1225,18 @@ static pj_status_t match_offer(pj_pool_t *pool,
 				if (k == nclockrate)
 				    clockrate[nclockrate++] = or_.clock_rate;
 			    } else {
+			    	unsigned k;
+
+				/* Keep track of tel-event clock rate,
+				 * to prevent duplicate.
+				 */
+				for (k=0; k<ntel_clockrate; ++k)
+				    if (tel_clockrate[k] == or_.clock_rate)
+					break;
+				if (k < ntel_clockrate)
+				    continue;
+				
+				tel_clockrate[ntel_clockrate++] = or_.clock_rate;
 				found_matching_telephone_event = 1;
 			    }
 
