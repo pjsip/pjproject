@@ -1580,7 +1580,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 #   if defined(PJ_SEMAPHORE_USE_DISPATCH_SEM) && PJ_SEMAPHORE_USE_DISPATCH_SEM != 0
     sem->sem = dispatch_semaphore_create(initial);
     if (sem->sem == NULL)
-        return PJ_FALSE;
+        return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
 #   else
     /* MacOS X doesn't support anonymous semaphore */
     {
