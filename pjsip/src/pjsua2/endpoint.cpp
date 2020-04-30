@@ -2236,7 +2236,7 @@ CodecOpusConfig Endpoint::getCodecOpusConfig() const PJSUA2_THROW(Error)
 void Endpoint::setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
 				  PJSUA2_THROW(Error)
 {
-   const pj_str_t codec_id = {"opus", 4};
+   const pj_str_t codec_id = {(char *)"opus", 4};
    pjmedia_codec_param param;
    pjmedia_codec_opus_config new_opus_cfg;
 

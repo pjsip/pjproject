@@ -3346,7 +3346,7 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     	for (i = 0; i < sizeof(pjsua_var.tpdata); i++) {
     	    if (tfla2_prm.ret_tp==(const void *)pjsua_var.tpdata[i].data.tp) {
     	    	if (pjsua_var.tpdata[i].has_bound_addr) {
-		    pj_strdup(acc->pool, &addr->host,
+		    pj_strdup(pool, &addr->host,
 		    	      &pjsua_var.tpdata[i].data.tp->local_name.host);
 	    	    addr->port = (pj_uint16_t)
 	    	    		 pjsua_var.tpdata[i].data.tp->local_name.port;

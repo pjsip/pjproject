@@ -635,7 +635,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NO_STDERR:
 #if !defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0
-	    freopen("/dev/null", "w", stderr);
+	    if (!freopen("/dev/null", "w", stderr)) {
+		PJ_LOG(4,(THIS_FILE, "Failed reopening dev/null"));
+	    }
 #endif
 	    break;
 

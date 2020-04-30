@@ -1172,6 +1172,12 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		    if (!answer_with_multiple_codecs && found_matching_codec)
 			continue;
 		    is_codec = 1;
+		} else {
+		    if (!answer_with_multiple_codecs &&
+		        found_matching_telephone_event)
+		    {
+			continue;
+		    }
 		}
 		
 		/* Find paylaod in our initial SDP with matching 

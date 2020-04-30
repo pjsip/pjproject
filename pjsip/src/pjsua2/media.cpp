@@ -25,6 +25,8 @@
 using namespace pj;
 using namespace std;
 
+#include <pjsua-lib/pjsua_internal.h>
+
 #define THIS_FILE		"media.cpp"
 #define MAX_FILE_NAMES 		64
 #define MAX_DEV_COUNT		64
@@ -1333,7 +1335,7 @@ pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
 }
 
 VideoPreview::VideoPreview(int dev_id) 
-: devId(dev_id)
+: devId(dev_id), winId(PJSUA_INVALID_ID)
 {
 
 }
@@ -1352,6 +1354,11 @@ void VideoPreview::start(const VideoPreviewOpParam &param) PJSUA2_THROW(Error)
 #if PJSUA_HAS_VIDEO
     pjsua_vid_preview_param prm = param.toPj();
     PJSUA2_CHECK_EXPR(pjsua_vid_preview_start(devId, &prm));
+
+    /* Device may be fast-switched and VideoPreview will not aware of that,
+     * so better keep win ID too.
+     */
+    winId = pjsua_vid_preview_get_win(devId);
 #else
     PJ_UNUSED_ARG(param);
     PJ_UNUSED_ARG(devId);
@@ -1361,14 +1368,15 @@ void VideoPreview::start(const VideoPreviewOpParam &param) PJSUA2_THROW(Error)
 void VideoPreview::stop() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
-    pjsua_vid_preview_stop(devId);
+    updateDevId();
+    PJSUA2_CHECK_EXPR(pjsua_vid_preview_stop(devId));
 #endif
 }
 
 VideoWindow VideoPreview::getVideoWindow()
 {
 #if PJSUA_HAS_VIDEO
-    return (VideoWindow(pjsua_vid_preview_get_win(devId)));
+    return (VideoWindow(winId));
 #else
     return (VideoWindow(PJSUA_INVALID_ID));
 #endif
@@ -1377,6 +1385,7 @@ VideoWindow VideoPreview::getVideoWindow()
 VideoMedia VideoPreview::getVideoMedia() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
+    updateDevId();
     pjsua_conf_port_id id = pjsua_vid_preview_get_vid_conf_port(devId);
     if (id != PJSUA_INVALID_ID) {
 	VideoMediaHelper vm;
@@ -1387,6 +1396,22 @@ VideoMedia VideoPreview::getVideoMedia() PJSUA2_THROW(Error)
     }
 #else
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+/* Device may be fastswitched and VideoPreview will not aware of that,
+ * this function will update the VideoPreview device ID.
+ */
+void VideoPreview::updateDevId()
+{
+#if PJSUA_HAS_VIDEO
+    if (winId != PJSUA_INVALID_ID) {
+	PJSUA_LOCK();
+	pjsua_vid_win *w = &pjsua_var.win[winId];
+	pj_assert(w->type == PJSUA_WND_TYPE_PREVIEW);
+	devId = w->preview_cap_id;
+	PJSUA_UNLOCK();
+    }
 #endif
 }
 

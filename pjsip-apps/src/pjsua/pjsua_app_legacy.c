@@ -308,7 +308,7 @@ static void vid_show_help()
 
 static void vid_handle_menu(char *menuin)
 {
-    char *argv[8];
+    char *argv[8] = {NULL};
     int argc = 0;
 
     /* Tokenize */

@@ -452,9 +452,10 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 
     for (i=0; i<count; ++i) {
 	char slot_id[8];
-	char desc[256];
+	char desc[512];
 	char txlist[256];
 	unsigned j;
+	int len;
 	pjsua_conf_port_info info;
 
 	pjsua_conf_get_port_info(id[i], &info);
@@ -470,7 +471,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	    pj_ansi_strcat(txlist, s);
 	}
 
-	pj_ansi_snprintf(desc,
+	len = pj_ansi_snprintf(desc,
 	       sizeof(desc),
 	       "[%2dKHz/%dms/%d] %20.*s  transmitting to: %s",
 	       info.clock_rate/1000,
@@ -479,6 +480,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	       (int)info.name.slen,
 	       info.name.ptr,
 	       txlist);
+	PJ_CHECK_TRUNC_STR(len, desc, sizeof(desc));
 
 	pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	if (++param->cnt >= param->max_cnt)

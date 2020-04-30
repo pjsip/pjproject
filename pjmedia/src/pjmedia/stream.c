@@ -1318,12 +1318,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     }
 #endif
 
-    /* Don't do anything if stream is paused */
-    if (channel->paused) {
-	stream->enc_buf_pos = stream->enc_buf_count = 0;
-	return PJ_SUCCESS;
-    }
-
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
 	ts_len = ((unsigned)frame->size >> 1) /
@@ -1333,9 +1327,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 		 PJMEDIA_PIA_CCNT(&stream->port.info);
     else
 	ts_len = 0;
-
-    /* Increment transmit duration */
-    stream->tx_duration += ts_len;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     /* Handle special case for audio codec with RTP timestamp inconsistence
@@ -1348,6 +1339,23 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 #else
     rtp_ts_len = ts_len;
 #endif
+
+    /* Don't do anything if stream is paused, except updating RTP timestamp */
+    if (channel->paused) {
+	stream->enc_buf_pos = stream->enc_buf_count = 0;
+
+	/* Update RTP session's timestamp. */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp, 0, 0, 0, rtp_ts_len,
+					 NULL, NULL);
+
+	/* Update RTCP stats with last RTP timestamp. */
+	stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(channel->rtp.out_hdr.ts);
+
+	return PJ_SUCCESS;
+    }
+
+    /* Increment transmit duration */
+    stream->tx_duration += ts_len;
 
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
