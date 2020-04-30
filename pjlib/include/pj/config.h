@@ -810,7 +810,7 @@
  * Default: 1 on Darwin, 0 otherwise
  */
 #ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
-#   if defined(PJ_DARWINOS)
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
 #	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
 #   else
 #	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
