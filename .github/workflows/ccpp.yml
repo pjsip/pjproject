@@ -24,7 +24,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="-g -fPIC" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: swig bindings
@@ -42,7 +42,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: ./configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: unit tests
@@ -58,7 +58,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: ./configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: unit tests
@@ -110,7 +110,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-fPIC -DHAS_VID_CODEC_TEST=0" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="-g -fPIC -DHAS_VID_CODEC_TEST=0" CXXFLAGS="-g -fPIC" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: swig bindings
@@ -132,7 +132,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: ./configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: unit tests
@@ -152,7 +152,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: ./configure
+      run: CFLAGS="-g" LDFLAGS="-rdynamic" ./configure
     - name: make
       run: make
     - name: unit tests
@@ -197,11 +197,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install opencore-amr sipp
+      run: brew install opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: swig bindings
@@ -221,7 +221,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -239,7 +239,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -255,6 +255,8 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install swig
     - name: configure
       run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-fPIC" ./configure
     - name: make
@@ -267,6 +269,8 @@ jobs:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v2
+    - name: install dependencies
+      run: brew install swig
     - name: configure
       run: CFLAGS="-fPIC" CXXFLAGS="-fPIC" ./configure --with-gnutls=/usr/local/
     - name: make
@@ -281,11 +285,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openh264 libvpx opencore-amr sipp 
+      run: brew install openh264 libvpx opencore-amr swig sipp 
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-fPIC" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include -DHAS_VID_CODEC_TEST=0 -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: swig bindings
@@ -305,7 +309,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -323,7 +327,7 @@ jobs:
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h && echo "#define PJMEDIA_HAS_VIDEO 1" >> config_site.h
     - name: configure
-      run: CFLAGS="-I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" ./configure
     - name: make
       run: make
     - name: disable firewall
@@ -337,7 +341,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install x264 libvpx nasm
+      run: brew install x264 libvpx nasm swig
     - name: get ffmpeg
       run: git clone --single-branch --branch release/4.2 https://github.com/FFmpeg/FFmpeg.git
     - name: configure ffmpeg
@@ -359,7 +363,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install libvpx
+      run: brew install libvpx swig
     - name: config site
       run: echo -e "#define PJMEDIA_HAS_VIDEO 1\n#define PJMEDIA_HAS_VID_TOOLBOX_CODEC 1\n" > pjlib/include/pj/config_site.h
     - name: configure

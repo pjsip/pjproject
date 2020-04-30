@@ -42,7 +42,7 @@ FDEVNULL = None
 # SIPp executable path and param
 #SIPP_PATH = '"C:\\devs\\bin\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
-SIPP_PORT    = 6000
+SIPP_PORT    = 50070
 SIPP_PARAM = "-m 1 -i 127.0.0.1 -p " + str(SIPP_PORT)
 SIPP_TIMEOUT = 60
 # On BG mode, SIPp doesn't require special terminal

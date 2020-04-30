@@ -33,6 +33,33 @@ static void usage()
     puts(" -l,--log-level N    Set log level (0-6)");
 }
 
+#if PJ_LINUX || PJ_DARWINOS
+
+#include <execinfo.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+static void print_stack(int sig)
+{
+    void *array[16];
+    size_t size;
+
+    size = backtrace(array, 16);
+    fprintf(stderr, "Error: signal %d:\n", sig);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+    exit(1);
+}
+
+static void init_signals()
+{
+    signal(SIGSEGV, &print_stack);
+}
+
+#else
+#define init_signals()
+#endif
+
 int main(int argc, char *argv[])
 {
     int interractive = 0;
@@ -40,6 +67,8 @@ int main(int argc, char *argv[])
     char **opt_arg;
 
     PJ_UNUSED_ARG(argc);
+
+    init_signals();
 
     /* Parse arguments. */
     opt_arg = argv+1;
