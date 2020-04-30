@@ -27,13 +27,37 @@
       [last_CSeq:]
       WWW-Authenticate: Digest realm="sip.linphone.org", nonce="PARV4gAAAADgw3asAADW8zsi5BEAAAAA", opaque="+GNywA==", algorithm=SHA-256, qop="auth"
       WWW-Authenticate: Digest realm="sip.linphone.org", nonce="PARV4gAAAADgw3asAADW8zsi5BEAAAAA", opaque="+GNywA==", algorithm=MD5, qop="auth"
+      WWW-Authenticate: Digest realm="sip.linphone.org", nonce="PARV4gAAAADgw3asAADW8zsi5BEAAAAA", opaque="+GNywA==", algorithm=MD2, qop="auth"
       Content-Length: 0
     ]]>
   </send>
 
   <recv request="REGISTER" crlf="true">
+    <action>
+      <ereg regexp=".*"
+            search_in="hdr"
+	    header="Authorization:"
+	    assign_to="have_auth" />
+    </action>
   </recv>
 
+  <nop next="resp_okay" test="have_auth" />
+  
+  <send next="end">
+    <![CDATA[
+      SIP/2.0 403 no auth
+      [last_Via:];received=1.1.1.1;rport=1111
+      [last_From:]
+      [last_To:];tag=[call_number]
+      [last_Call-ID:]
+      [last_CSeq:]
+      [last_Contact:]
+      Content-Length: 0
+    ]]>
+  </send>
+
+  <label id="resp_okay" />
+  
   <send>
     <![CDATA[
       SIP/2.0 200 OK
@@ -47,6 +71,7 @@
     ]]>
   </send>
 
+  <label id="end" />
 
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>

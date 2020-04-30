@@ -1065,7 +1065,7 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 		} else
 		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
 		    pj_stricmp(&sent_auth->credential.digest.algorithm,
-		               &hchal->challenge.digest.algorithm)==0)
+		               &hchal->challenge.digest.algorithm)!=0)
 		{
 		    /* Same 'digest' scheme but different algo */
 		    hdr = hdr->next;
