@@ -1278,6 +1278,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
 
     info->slot = slot;
     info->name = conf_port->name;
+    if (conf_port->port) {
+        pjmedia_format_copy(&info->format, &conf_port->port->info.fmt);
+    } else {
+        pj_bzero(&info->format, sizeof(info->format));
+        info->format.id = PJMEDIA_FORMAT_INVALID;
+    }
     info->tx_setting = conf_port->tx_setting;
     info->rx_setting = conf_port->rx_setting;
     info->listener_cnt = conf_port->listener_cnt;
