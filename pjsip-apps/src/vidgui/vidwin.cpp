@@ -34,7 +34,6 @@ VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
     setAttribute(Qt::WA_UpdatesDisabled);
     setAttribute(Qt::WA_PaintOnScreen);
     setAttribute(Qt::WA_NoSystemBackground);
-    setAttribute(Qt::WA_PaintOutsidePaintEvent);
     setUpdatesEnabled(false);
 
     pj_bzero(&hwnd, sizeof(hwnd));
