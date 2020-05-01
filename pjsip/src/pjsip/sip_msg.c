@@ -183,7 +183,7 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[406], "Not Acceptable");
     pj_strset2( &status_phrase[407], "Proxy Authentication Required");
     pj_strset2( &status_phrase[408], "Request Timeout");
-    pj_strset2( &status_phrase[408], "Conflict");
+    pj_strset2( &status_phrase[409], "Conflict");
     pj_strset2( &status_phrase[410], "Gone");
     pj_strset2( &status_phrase[411], "Length Required");
     pj_strset2( &status_phrase[412], "Conditional Request Failed");
