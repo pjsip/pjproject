@@ -49,6 +49,8 @@ struct pj_stun_session
 
     pj_stun_tx_data	 pending_request_list;
     pj_stun_tx_data	 cached_response_list;
+
+    pj_stun_tp_type	 conn_type;
 };
 
 #define SNAME(s_)		    ((s_)->pool->obj_name)
@@ -524,7 +526,8 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
 					    const pj_stun_session_cb *cb,
 					    pj_bool_t fingerprint,
 					    pj_grp_lock_t *grp_lock,
-					    pj_stun_session **p_sess)
+					    pj_stun_session **p_sess,
+					    pj_stun_tp_type conn_type)
 {
     pj_pool_t	*pool;
     pj_stun_session *sess;
@@ -545,6 +548,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
     sess->use_fingerprint = fingerprint;
     sess->log_flag = 0xFFFF;
+    sess->conn_type = conn_type;
 
     if (grp_lock) {
 	sess->grp_lock = grp_lock;
@@ -1538,3 +1542,12 @@ on_return:
     return status;
 }
 
+PJ_DECL(pj_stun_session_cb *) pj_stun_session_callback(pj_stun_session *sess)
+{
+    return sess ? &sess->cb : NULL;
+}
+
+PJ_DECL(pj_stun_tp_type) pj_stun_session_tp_type(pj_stun_session *sess)
+{
+    return sess ? sess->conn_type : PJ_STUN_TP_UDP;
+}

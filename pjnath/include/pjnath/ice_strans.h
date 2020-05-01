@@ -274,6 +274,13 @@ typedef struct pj_ice_strans_stun_cfg
      */
     pj_bool_t		 ignore_stun_error;
 
+    /**
+     * Type of connection to the STUN server.
+     *
+     * Default is PJ_STUN_TP_UDP.
+     */
+    pj_stun_tp_type conn_type;
+
 } pj_ice_strans_stun_cfg;
 
 
@@ -288,6 +295,13 @@ typedef struct pj_ice_strans_turn_cfg
      * Default value is pj_AF_INET() (IPv4)
      */
     int			 af;
+
+    /**
+     * If we want to use UDP or TCP as described by RFC 6544.
+     * This will discover candidates via TCP sockets. Then it will
+     * transfer messages on the transport via TCP.
+     */
+    pj_ice_tp_type protocol;
 
     /**
      * Optional TURN socket settings. The default values will be
@@ -367,6 +381,13 @@ typedef struct pj_ice_strans_cfg
      * The default value is pj_AF_INET() (IPv4).
      */
     int			 af;
+
+    /**
+     * If we want to use UDP or TCP as described by RFC 6544.
+     * This will discover candidates via TCP sockets. Then it will
+     * transfer messages on the transport via TCP.
+     */
+    pj_ice_tp_type protocol;
 
     /**
      * STUN configuration which contains the timer heap and

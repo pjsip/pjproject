@@ -255,8 +255,9 @@ static pj_status_t create_client(pj_stun_config *cfg,
     pj_bzero(&cb, sizeof(cb));
     cb.on_status = &stun_sock_on_status;
     cb.on_rx_data = &stun_sock_on_rx_data;
-    status = pj_stun_sock_create(cfg, NULL, GET_AF(use_ipv6), &cb, &sock_cfg, 
-				 client, &client->sock);
+    status = pj_stun_sock_create(cfg, NULL, GET_AF(use_ipv6),
+				 PJ_STUN_TP_UDP,
+				 &cb, &sock_cfg, client, &client->sock);
     if (status != PJ_SUCCESS) {
 	app_perror("   pj_stun_sock_create()", status);
 	pj_pool_release(pool);
@@ -585,7 +586,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
 	PJ_LOG(3,(THIS_FILE, "     sending to %s", pj_sockaddr_print(&info.srv_addr, txt, sizeof(txt), 3)));
     }
     status = pj_stun_sock_sendto(client->sock, NULL, &ret, sizeof(ret),
-				 0, &info.srv_addr, 
+				 0, &info.srv_addr,
 				 pj_sockaddr_get_len(&info.srv_addr));
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	app_perror("    error: server sending data", status);
