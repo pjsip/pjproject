@@ -655,7 +655,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		    continue;
 		}
 		else if (stun_cfg->af == pj_AF_INET6()) {
-		    pj_in6_addr in6addr = {{0}};
+		    pj_in6_addr in6addr = {{{0}}};
 		    in6addr.s6_addr[15] = 1;
 		    if (pj_memcmp(&in6addr, &addr->ipv6.sin6_addr,
 				  sizeof(in6addr))==0)

@@ -31,6 +31,9 @@ using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/* Avoid conflict with predefined standard macros. */
+#undef max
+#undef min
 
 MathStat::MathStat()
 : n(0), max(0), min(0), last(0), mean(0)

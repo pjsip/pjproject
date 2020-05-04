@@ -35,7 +35,7 @@ int generic_transport_test(pjsip_transport *tp)
 
     /* Check that local address name is valid. */
     {
-	struct pj_in_addr addr;
+	pj_in_addr addr;
 
 	if (pj_inet_pton(pj_AF_INET(), &tp->local_name.host,
 			 &addr) == PJ_SUCCESS)

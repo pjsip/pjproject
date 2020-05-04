@@ -129,7 +129,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_set_str_addr( pj_sockaddr_in *addr,
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    pj_bzero(addr->sin_zero_pad, sizeof(addr->sin_zero_pad));
 
     if (str_addr && str_addr->slen) {
 	addr->sin_addr = pj_inet_addr(str_addr);
@@ -210,7 +210,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_in_init( pj_sockaddr_in *addr,
 
     PJ_SOCKADDR_RESET_LEN(addr);
     addr->sin_family = PJ_AF_INET;
-    pj_bzero(addr->sin_zero, sizeof(addr->sin_zero));
+    pj_bzero(addr->sin_zero_pad, sizeof(addr->sin_zero_pad));
     pj_sockaddr_in_set_port(addr, port);
     return pj_sockaddr_in_set_str_addr(addr, str_addr);
 }
@@ -987,11 +987,11 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	if (af==PJ_AF_INET) {
 	    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
 	} else {
-	    pj_in6_addr *s6_addr;
+	    pj_in6_addr *s6_addr_;
 
-	    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
-	    pj_bzero(s6_addr, sizeof(pj_in6_addr));
-	    s6_addr->s6_addr[15] = 1;
+	    s6_addr_ = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
+	    pj_bzero(s6_addr_, sizeof(pj_in6_addr));
+	    s6_addr_->s6_addr[15] = 1;
 	}
 	TRACE_((THIS_FILE, "Loopback IP %s returned",
 		pj_sockaddr_print(addr, strip, sizeof(strip), 3)));
