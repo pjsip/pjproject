@@ -1042,7 +1042,7 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
     pjsip_hdr *hdr;
     pj_status_t status;
 
-    /* See if we have sent authorization header for this realm */
+    /* See if we have sent authorization header for this realm (and scheme) */
     hdr = tdata->msg->hdr.next;
     while (hdr != &tdata->msg->hdr) {
 	if ((hchal->type == PJSIP_H_WWW_AUTHENTICATE &&
@@ -1052,7 +1052,8 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 	{
 	    sent_auth = (pjsip_authorization_hdr*) hdr;
 	    if (pj_stricmp(&hchal->challenge.common.realm,
-			   &sent_auth->credential.common.realm )==0)
+			   &sent_auth->credential.common.realm)==0 &&
+		pj_stricmp(&hchal->scheme, &sent_auth->scheme)==0)
 	    {
 		/* If this authorization has empty response, remove it. */
 		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
