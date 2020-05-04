@@ -2064,10 +2064,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	    if (pjmedia_sdp_neg_get_state(inv->neg) !=
 	    	PJMEDIA_SDP_NEG_STATE_DONE)
 	    {
-	    	PJ_LOG(4,(inv->obj_name, "Ignoring %s response "
-		          "because SDP negotiation is in progress",
+	    	PJ_LOG(4,(inv->obj_name, "SDP negotiation in progress, "
+	    		  "message body in %s response is ignored",
 		          (st_code/10==18? "early" : "final" )));
-	    	return PJ_EINVALIDOP;
+	    	return PJ_SUCCESS;
 	    }
 
 	    PJ_LOG(4,(inv->obj_name, "Received %s response "
