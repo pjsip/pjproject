@@ -1428,6 +1428,24 @@
 
 
 /**
+ * Reset jitter buffer and return silent audio on stream playback start
+ * (first get_frame()). This is useful to avoid possible noise that may be
+ * introduced by discard algorithm and neutralize latency when audio device
+ * is started later than the stream.
+ *
+ * Set this to N>0 to allow N silent audio frames returned on stream playback
+ * start, this will allow about N frames to be buffered in the jitter buffer
+ * before the playback is started (prefetching effect).
+ * Set this to zero to disable this feature.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_STREAM_SOFT_START
+#   define PJMEDIA_STREAM_SOFT_START		    1
+#endif
+
+
+/**
  * Video stream will discard old picture from the jitter buffer as soon as
  * new picture is received, to reduce latency.
  *
