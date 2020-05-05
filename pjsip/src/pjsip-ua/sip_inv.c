@@ -2061,6 +2061,15 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	{
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
 
+	    if (pjmedia_sdp_neg_get_state(inv->neg) !=
+	    	PJMEDIA_SDP_NEG_STATE_DONE)
+	    {
+	    	PJ_LOG(4,(inv->obj_name, "SDP negotiation in progress, "
+	    		  "message body in %s response is ignored",
+		          (st_code/10==18? "early" : "final" )));
+	    	return PJ_SUCCESS;
+	    }
+
 	    PJ_LOG(4,(inv->obj_name, "Received %s response "
 		      "after SDP negotiation has been done in early "
 		      "media. Renegotiating SDP..",
