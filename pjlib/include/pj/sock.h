@@ -26,6 +26,7 @@
  */
 
 #include <pj/types.h>
+#include <pj/compat/socket.h>
 
 PJ_BEGIN_DECL 
 
@@ -501,7 +502,6 @@ typedef struct pj_in_addr
 } pj_in_addr;
 
 #else
-#include <pj/compat/socket.h>
 typedef struct in_addr pj_in_addr;
 #endif
 
