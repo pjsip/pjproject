@@ -5576,13 +5576,18 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		found_idx = pj_strtok(&input, &delim, &token, 0);
 		if (found_idx != input.slen) {
 		    /* Get signal/digit */
-		    const pj_str_t STR_SIGNAL = { "Signal=", 7 };
-		    const pj_str_t STR_DURATION = { "Duration=", 9 };
+		    const pj_str_t STR_SIGNAL = { "Signal", 6 };
+		    const pj_str_t STR_DURATION = { "Duration", 8 };
 		    char *val;
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-			info.digit = *(val+STR_SIGNAL.slen);
+				pj_ssize_t idx1 = val - input.ptr;
+				pj_ssize_t idx2 = 0;
+				while ( (*(val + STR_SIGNAL.slen + idx2) == 32 || *(val + STR_SIGNAL.slen + idx2) == 61) &&
+					(idx1 + idx2 < input.slen))
+					idx2++;
+			info.digit = *(val+STR_SIGNAL.slen + idx2);
 			is_handled = PJ_TRUE;
 
 			/* Get duration */
@@ -5592,9 +5597,14 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			val = pj_strstr(&input, &STR_DURATION);
 			if (val) {
 			    pj_str_t val_str;
+				pj_ssize_t idx1 = val - input.ptr;
+				pj_ssize_t idx2 = 0;
+				while ((*(val + STR_DURATION.slen + idx2) == 32 || *(val + STR_DURATION.slen + idx2) == 61) &&
+					(idx1 + idx2 < input.slen))
+					idx2++;
 
-			    val_str.ptr = val + STR_DURATION.slen;
-			    val_str.slen = input.slen - STR_DURATION.slen;
+			    val_str.ptr = val + STR_DURATION.slen + idx2;
+			    val_str.slen = input.slen - STR_DURATION.slen - idx2;
 			    info.duration = pj_strtoul(&val_str);
 			}
 		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
