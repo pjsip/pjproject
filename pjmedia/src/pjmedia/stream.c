@@ -164,6 +164,7 @@ struct pjmedia_stream
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
     char		     jb_last_frm;   /**< Last frame type from jb    */
     unsigned		     jb_last_frm_cnt;/**< Last JB frame type counter*/
+    unsigned		     soft_start_cnt;/**< Stream soft start counter */
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -514,6 +515,19 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
     /* Return no frame is channel is paused */
     if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
+
+    if (stream->soft_start_cnt) {
+	if (stream->soft_start_cnt == PJMEDIA_STREAM_SOFT_START) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Resetting jitter buffer in stream playback start"));
+	    pj_mutex_lock( stream->jb_mutex );
+	    pjmedia_jbuf_reset(stream->jb);
+	    pj_mutex_unlock( stream->jb_mutex );
+	}
+	--stream->soft_start_cnt;
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
@@ -2364,6 +2378,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->last_dtmf = -1;
     stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
     stream->rtcp_fb_nack.pid = -1;
+    stream->soft_start_cnt = PJMEDIA_STREAM_SOFT_START;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
@@ -3121,6 +3136,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 
     if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 0;
+	stream->soft_start_cnt = PJMEDIA_STREAM_SOFT_START;
 	PJ_LOG(4,(stream->port.info.name.ptr, "Decoder stream resumed"));
     }
 
