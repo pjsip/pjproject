@@ -59,7 +59,7 @@
 #endif
 
 #define NUM_BANDS		3
-#define NUM_SAMPLES		80
+#define NUM_SAMPLES		160
 #define BUF_LEN			NUM_SAMPLES * NUM_BANDS
 
 /* Set this to 0 to disable metrics calculation. */
@@ -324,7 +324,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         status = WebRtcAecm_Process(echo->AEC_inst, &rec_frm[frm_idx],
         			    (echo->NS_inst? buf_ptr: NULL),
-        			    out_buf_ptr, FRAME_LEN,
+        			    out_buf_ptr, NUM_SAMPLES,
         			    echo->tail);
 #else
         {
@@ -333,15 +333,15 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
             unsigned j;
 
       	    for (j = 0; j < echo->num_bands; j++) {
-            	bands_in[j] = &buf_ptr[FRAME_LEN * j];
-            	bands_out[j] = &out_buf_ptr[FRAME_LEN * j];
+            	bands_in[j] = &buf_ptr[NUM_SAMPLES * j];
+            	bands_out[j] = &out_buf_ptr[NUM_SAMPLES * j];
             }
 
             status = WebRtcAec_Process(echo->AEC_inst,
         			       (const sample* const*)bands_in,
                                        echo->num_bands,
                                        (sample* const*)bands_out,
-                                       FRAME_LEN, (int16_t)echo->tail, 0);
+                                       NUM_SAMPLES, (int16_t)echo->tail, 0);
         }
 #endif
         if (status != 0) {
