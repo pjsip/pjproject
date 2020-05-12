@@ -1250,7 +1250,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_EC_OPT:
-	    cfg->media_cfg.ec_options = my_atoi(pj_optarg);
+	    cfg->media_cfg.ec_options = my_atoi(pj_optarg) |
+	    				PJMEDIA_ECHO_USE_SW_ECHO;
 	    break;
 
 	case OPT_QUALITY:

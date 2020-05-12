@@ -58,7 +58,9 @@
 
 #endif
 
-#define BUF_LEN			160
+#define NUM_BANDS		3
+#define NUM_SAMPLES		80
+#define BUF_LEN			NUM_SAMPLES * NUM_BANDS
 
 /* Set this to 0 to disable metrics calculation. */
 #define SHOW_DELAY_METRICS	1
@@ -72,6 +74,7 @@ typedef struct webrtc_ec
     unsigned	tail;
     unsigned    clock_rate;
     unsigned	channel_count;
+    unsigned	num_bands;
     unsigned    subframe_len;
     sample      tmp_buf[BUF_LEN];
     sample      tmp_buf2[BUF_LEN];
@@ -153,11 +156,11 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     echo->samples_per_frame = samples_per_frame;
     echo->tail = tail_ms;
     echo->clock_rate = clock_rate;
-    /* SWB is processed as 160 frame size */
     if (clock_rate > 8000)
-        echo->subframe_len = 160;
+        echo->num_bands = (unsigned)(clock_rate / 16000);
     else
-    	echo->subframe_len = 80;
+    	echo->num_bands = 1;
+    echo->subframe_len = NUM_SAMPLES * echo->num_bands;
     echo->options = options;
     
     /* Create WebRTC AEC */
@@ -297,7 +300,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
         
         /* Feed farend buffer */
         status = WebRtcAec_BufferFarend(echo->AEC_inst, buf_ptr,
-                                        echo->subframe_len);
+                                        NUM_SAMPLES);
         if (status != 0) {
             print_webrtc_aec_error("Buffer farend", echo->AEC_inst);
             return PJ_EUNKNOWN;
@@ -321,12 +324,25 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         status = WebRtcAecm_Process(echo->AEC_inst, &rec_frm[frm_idx],
         			    (echo->NS_inst? buf_ptr: NULL),
-        			    out_buf_ptr, echo->subframe_len,
+        			    out_buf_ptr, FRAME_LEN,
         			    echo->tail);
 #else
-        status = WebRtcAec_Process(echo->AEC_inst, &buf_ptr,
-                                   echo->channel_count, &out_buf_ptr,
-                                   echo->subframe_len, (int16_t)echo->tail, 0);
+        {
+            const sample *bands_in[NUM_BANDS];
+            sample *bands_out[NUM_BANDS];
+            unsigned j;
+
+      	    for (j = 0; j < echo->num_bands; j++) {
+            	bands_in[j] = &buf_ptr[FRAME_LEN * j];
+            	bands_out[j] = &out_buf_ptr[FRAME_LEN * j];
+            }
+
+            status = WebRtcAec_Process(echo->AEC_inst,
+        			       (const sample* const*)bands_in,
+                                       echo->num_bands,
+                                       (sample* const*)bands_out,
+                                       FRAME_LEN, (int16_t)echo->tail, 0);
+        }
 #endif
         if (status != 0) {
             print_webrtc_aec_error("Process echo", echo->AEC_inst);
