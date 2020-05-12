@@ -435,6 +435,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
     if (endpt->has_telephone_event) {
 	used_pt[used_pt_num++] = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+
+#  if PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES==0
+	televent_num = 1;
+	televent_clockrates[0] = 8000;
+#  endif
+
     }
 #endif
 
@@ -587,7 +593,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 
 	/* List clock rate of audio codecs for generating telephone-event */
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
-	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0 && \
+	    PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES != 0
 	if (endpt->has_telephone_event) {
 	    unsigned j;
 

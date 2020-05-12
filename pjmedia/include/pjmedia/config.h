@@ -864,6 +864,20 @@
 
 
 /**
+ * This macro declares whether PJMEDIA should generate multiple
+ * telephone-event formats in SDP offer, i.e: one for each audio codec
+ * clock rate (see also ticket #2088). If this macro is set to zero, only
+ * one telephone event format will be generated and it uses clock rate 8kHz
+ * (old behavior before ticket #2088).
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES
+#   define PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES   1
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
