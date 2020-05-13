@@ -52,13 +52,19 @@
     #define AecConfig AecmConfig
     typedef short sample;
 #else
+    #include <webrtc/common_audio/channel_buffer.h>
+    #include <webrtc/modules/audio_processing/splitting_filter.h>
     #include <webrtc/modules/audio_processing/ns/include/noise_suppression.h>
 
     typedef float sample;
 
+    using webrtc::IFChannelBuffer;
+    using webrtc::SplittingFilter;
 #endif
 
-#define BUF_LEN			160
+#define NUM_BANDS		3
+#define NUM_SAMPLES		160
+#define BUF_LEN			NUM_SAMPLES * NUM_BANDS
 
 /* Set this to 0 to disable metrics calculation. */
 #define SHOW_DELAY_METRICS	1
@@ -73,6 +79,7 @@ typedef struct webrtc_ec
     unsigned    clock_rate;
     unsigned	channel_count;
     unsigned    subframe_len;
+    unsigned	num_bands;
     sample      tmp_buf[BUF_LEN];
     sample      tmp_buf2[BUF_LEN];
 } webrtc_ec;
@@ -153,11 +160,11 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     echo->samples_per_frame = samples_per_frame;
     echo->tail = tail_ms;
     echo->clock_rate = clock_rate;
-    /* SWB is processed as 160 frame size */
     if (clock_rate > 8000)
-        echo->subframe_len = 160;
+        echo->num_bands = (unsigned)(clock_rate /16000);
     else
-    	echo->subframe_len = 80;
+    	echo->num_bands = 1;
+    echo->subframe_len = NUM_SAMPLES * echo->num_bands;
     echo->options = options;
     
     /* Create WebRTC AEC */
@@ -186,7 +193,7 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
      * a good initial estimate is necessary for good EC quality in
      * the beginning of a call.
      */
-    WebRtcAec_enable_delay_agnostic(WebRtcAec_aec_core(echo->AEC_inst), 1);
+    //WebRtcAec_enable_delay_agnostic(WebRtcAec_aec_core(echo->AEC_inst), 1);
     
     set_config(echo->AEC_inst, options);
 
@@ -273,7 +280,7 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 					    void *reserved )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
-    int status;
+    int status = 0;
     unsigned i, j, frm_idx = 0;
     const sample * buf_ptr;
     sample * out_buf_ptr;
@@ -285,19 +292,40 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
     
     for(i = echo->samples_per_frame / echo->subframe_len; i > 0; i--) {
-#if PJMEDIA_WEBRTC_AEC_USE_MOBILE
-	buf_ptr = &play_frm[frm_idx];
-#else
+#if !PJMEDIA_WEBRTC_AEC_USE_MOBILE
+	IFChannelBuffer cbuf_1(echo->subframe_len, echo->channel_count,
+			       echo->num_bands);
+	IFChannelBuffer cbuf_2(echo->subframe_len, echo->channel_count,
+			       echo->num_bands);
+	SplittingFilter *split = NULL;
+
         for (j = 0; j < echo->subframe_len; j++) {
             echo->tmp_buf[j] = rec_frm[frm_idx+j];
             echo->tmp_buf2[j] = play_frm[frm_idx+j];
         }
         buf_ptr = echo->tmp_buf2;
-#endif
-        
+	
+	if (echo->num_bands > 1) {
+	    split = new SplittingFilter(echo->channel_count, echo->num_bands,
+			      	    	echo->subframe_len);
+	    pj_memcpy(cbuf_1.fbuf()->channels()[0], buf_ptr,
+		      sizeof(sample) * echo->subframe_len);
+	    split->Analysis(&cbuf_1, &cbuf_2);
+	}
+
+        /* Feed farend buffer */
+        status = WebRtcAec_BufferFarend(echo->AEC_inst,
+        				(split? cbuf_2.fbuf()->bands(0)[0]:
+        				 buf_ptr),
+                                	NUM_SAMPLES);
+
+#else
+	buf_ptr = &play_frm[frm_idx];
+
         /* Feed farend buffer */
         status = WebRtcAec_BufferFarend(echo->AEC_inst, buf_ptr,
                                         echo->subframe_len);
+#endif
         if (status != 0) {
             print_webrtc_aec_error("Buffer farend", echo->AEC_inst);
             return PJ_EUNKNOWN;
@@ -321,12 +349,29 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
         status = WebRtcAecm_Process(echo->AEC_inst, &rec_frm[frm_idx],
         			    (echo->NS_inst? buf_ptr: NULL),
-        			    out_buf_ptr, echo->subframe_len,
+        			    out_buf_ptr, NUM_SAMPLES,
         			    echo->tail);
 #else
-        status = WebRtcAec_Process(echo->AEC_inst, &buf_ptr,
-                                   echo->channel_count, &out_buf_ptr,
-                                   echo->subframe_len, (int16_t)echo->tail, 0);
+	if (echo->num_bands > 1) {
+	    pj_memcpy(cbuf_2.fbuf()->channels()[0], buf_ptr,
+		      sizeof(sample) * echo->subframe_len);
+	    split->Analysis(&cbuf_2, &cbuf_1);
+	} else {
+	    pj_memcpy(cbuf_1.fbuf()->channels()[0], buf_ptr,
+		      sizeof(sample) * echo->subframe_len);
+	}
+
+        status = WebRtcAec_Process(echo->AEC_inst, cbuf_1.fbuf()->bands(0),
+                                   echo->num_bands, cbuf_2.fbuf()->bands(0),
+                                   NUM_SAMPLES, (int16_t)echo->tail, 0);
+
+	if (echo->num_bands > 1) {
+	    split->Synthesis(&cbuf_2, &cbuf_1);
+            out_buf_ptr = (sample *)cbuf_1.fbuf()->channels()[0];
+	} else {
+            out_buf_ptr = (sample *)cbuf_2.fbuf()->channels()[0];
+	}
+	
 #endif
         if (status != 0) {
             print_webrtc_aec_error("Process echo", echo->AEC_inst);

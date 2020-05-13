@@ -78,7 +78,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			wsola.o audiodev.o videodev.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
-export PJMEDIA_CXXFLAGS += $(_CXXFLAGS)
+export PJMEDIA_CXXFLAGS += $(_CXXFLAGS) -std=c++11
 export PJMEDIA_LDFLAGS += $(PJLIB_LDLIB) \
 			  $(PJLIB_UTIL_LDLIB) \
 			  $(PJNATH_LDLIB) \

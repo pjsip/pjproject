@@ -27,6 +27,9 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 
 export WEBRTC_SRCDIR = ../../webrtc/src/webrtc/
 export WEBRTC_OBJS = \
+	base/checks.o						   \
+	modules/audio_processing/splitting_filter.o                \
+	modules/audio_processing/three_band_filter_bank.o          \
 	modules/audio_processing/aec/aec_core.o                    \
 	modules/audio_processing/aec/aec_rdft.o                    \
 	modules/audio_processing/aec/aec_resampler.o               \
@@ -39,8 +42,11 @@ export WEBRTC_OBJS = \
 	modules/audio_processing/ns/nsx_core.o                     \
 	modules/audio_processing/utility/delay_estimator_wrapper.o \
 	modules/audio_processing/utility/delay_estimator.o         \
+	common_audio/audio_util.o				   \
+	common_audio/channel_buffer.o				   \
 	common_audio/fft4g.o                                       \
 	common_audio/ring_buffer.o                                 \
+	common_audio/sparse_fir_filter.o                           \
 	common_audio/signal_processing/complex_bit_reverse.o       \
 	common_audio/signal_processing/complex_fft.o               \
 	common_audio/signal_processing/copy_set_operations.o       \
@@ -55,12 +61,13 @@ export WEBRTC_OBJS = \
 	common_audio/signal_processing/spl_init.o                  \
 	common_audio/signal_processing/spl_sqrt.o                  \
 	common_audio/signal_processing/spl_sqrt_floor.o            \
+	common_audio/signal_processing/splitting_filter.o          \
 	common_audio/signal_processing/vector_scaling_operations.o \
 	$(WEBRTC_SRC)
 
 
 export WEBRTC_CFLAGS = $(_CFLAGS) $(WEBRTC_OTHER_CFLAGS)
-export WEBRTC_CXXFLAGS = $(WEBRTC_CFLAGS)
+export WEBRTC_CXXFLAGS = $(WEBRTC_CFLAGS) -std=c++11
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
