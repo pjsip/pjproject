@@ -182,6 +182,7 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
     struct mem_player *player;
     char *endpos;
     pj_size_t size_needed, size_written;
+    pj_bool_t delayed_cb = PJ_FALSE;
 
     PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
 		     PJ_EINVALIDOP);
@@ -190,41 +191,42 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
     if (player->eof) {
 	pj_status_t status = PJ_SUCCESS;
+	pj_bool_t no_loop = (player->options & PJMEDIA_MEM_NO_LOOP);
 
 	/* Call callback, if any */
 	if (player->cb2) {
-	    pj_bool_t no_loop = (player->options & PJMEDIA_MEM_NO_LOOP);
-
 	    if (!player->subscribed) {
-	    	status = pjmedia_event_subscribe(NULL, &player_on_event,
+		pj_status_t status2;
+	    	status2 = pjmedia_event_subscribe(NULL, &player_on_event,
 	    				         player, player);
-	    	player->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
-	    			    PJ_FALSE;
+	    	player->subscribed = (status2 == PJ_SUCCESS)? PJ_TRUE:
+	    			     PJ_FALSE;
 	    }
 
 	    if (player->subscribed && player->eof != 2) {
-	    	pjmedia_event event;
-
 	    	if (no_loop) {
+	    	    pjmedia_event event;
+
 	    	    /* To prevent the callback from being called repeatedly */
 	    	    player->eof = 2;
-	    	} else {
-	    	    player->eof = PJ_FALSE;
-	    	}
 
-	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
-	                      	   NULL, player);
-	    	pjmedia_event_publish(NULL, player, &event,
-	                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	    	    pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	       NULL, player);
+	    	    pjmedia_event_publish(NULL, player, &event,
+					  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+		    /* Should not access player port after this since
+		     * it might have been destroyed by the callback.
+		     */
+		} else {
+		    delayed_cb = PJ_TRUE;
+		}
 	    }
 
-	    /* Should not access player port after this since
-	     * it might have been destroyed by the callback.
-	     */
-	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	    frame->size = 0;
-	    
-	    return (no_loop? PJ_EEOF: PJ_SUCCESS);
+	    if (no_loop) {
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		frame->size = 0;
+		return PJ_EEOF;
+	    }
 
 	} else if (player->cb) {
 	    status = (*player->cb)(this_port, player->user_data);
@@ -234,7 +236,7 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 	 * return immediately (and don't try to access player port since
 	 * it might have been destroyed by the callback).
 	 */
-	if ((status != PJ_SUCCESS) || (player->options & PJMEDIA_MEM_NO_LOOP))
+	if ((status != PJ_SUCCESS) || no_loop)
 	{
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame->size = 0;
@@ -284,6 +286,17 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     player->timestamp.u64 += PJMEDIA_PIA_SPF(&this_port->info);
+
+    if (delayed_cb) {
+	pjmedia_event event;
+	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+          		   NULL, player);
+	pjmedia_event_publish(NULL, player, &event,
+			      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	/* Should not access player port after this since
+	* it might have been destroyed by the callback.
+	*/
+    }
 
     return PJ_SUCCESS;
 }
