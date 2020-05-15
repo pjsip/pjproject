@@ -502,6 +502,9 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
      */
     if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
 	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &ack_e);
+    } else if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+        pjsip_tx_data_dec_ref(inv->last_ack);
+        inv->last_ack = NULL;
     }
 
     return PJ_SUCCESS;
