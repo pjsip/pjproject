@@ -1019,6 +1019,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TSX_1XX_RETRANS_DELAY	60
 #endif
 
+/**
+ * Terminate INVITE transaction when TCP/TLS transport is disconnected.
+ * This setting does not apply for disconnection during sending. For initial
+ * INVITE, terminating the transaction will cause call to be disconnected.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJSIP_STOP_INVITE_TSX_ON_TP_DOWN
+#   define PJSIP_STOP_INVITE_TSX_ON_TP_DOWN	1
+#endif
+
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
 /* User agent. */

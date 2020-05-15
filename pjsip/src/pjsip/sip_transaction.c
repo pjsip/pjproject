@@ -137,6 +137,7 @@ static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
 #define RETRANSMIT_TIMER	1
 #define TIMEOUT_TIMER		2
 #define TRANSPORT_ERR_TIMER	3
+#define TRANSPORT_DOWN_TIMER	4
 
 /* Flags for tsx_set_state() */
 enum
@@ -1124,58 +1125,84 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
         return;
     }
 
-    if (entry->id == TRANSPORT_ERR_TIMER) {
+    if (entry->id == TRANSPORT_ERR_TIMER ||
+	entry->id == TRANSPORT_DOWN_TIMER)
+    {
 	/* Posted transport error event */
 	entry->id = 0;
 	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
 	    pjsip_tsx_state_e prev_state;
 	    pj_time_val timeout = { 0, 0 };
+	    pj_bool_t stop_tsx = PJ_TRUE;
+
+	    if (PJSIP_STOP_INVITE_TSX_ON_TP_DOWN==0 &&
+		tsx->method.id==PJSIP_INVITE_METHOD &&
+		entry->id == TRANSPORT_DOWN_TIMER)
+	    {
+		/* Transport disconnected (while idle/not-sending) */
+		stop_tsx = PJ_FALSE;
+		PJ_LOG(5,(tsx->obj_name, "Transport error",
+			 (entry==&tsx->retransmit_timer ? "Retransmit":"Timeout")));
+	    }
 
 	    pj_grp_lock_acquire(tsx->grp_lock);
-	    prev_state = tsx->state;
 
 	    /* Release transport as it's no longer working. */
 	    tsx_update_transport(tsx, NULL);
 
-	    if (tsx->status_code < 200) {
-		pj_str_t err;
-		char errmsg[PJ_ERR_MSG_SIZE];
+	    if (!stop_tsx) {
 
-		err = pj_strerror(tsx->transport_err, errmsg, sizeof(errmsg));
-		tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+		/* Don't terminate tsx, so just release group lock */
+		pj_grp_lock_release(tsx->grp_lock);
+	    
+	    } else {
+		
+		/* Terminating tsx */
+		prev_state = tsx->state;
+
+		if (tsx->status_code < 200) {
+		    pj_str_t err;
+		    char errmsg[PJ_ERR_MSG_SIZE];
+
+		    err = pj_strerror(tsx->transport_err, errmsg,
+				      sizeof(errmsg));
+		    tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR,
+					&err);
+		}
+
+		/* Set transaction state etc, but don't notify TU now,
+		 * otherwise we'll get a deadlock. See:
+		 * https://trac.pjsip.org/repos/ticket/1646
+		 */
+		/* Also don't schedule tsx handler, otherwise we'll get race
+		 * condition of TU notifications due to delayed TERMINATED
+		 * state TU notification. It happened in multiple worker threads
+		 * environment between TERMINATED & DESTROYED! See:
+		 * https://trac.pjsip.org/repos/ticket/1902
+		 */
+		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
+			       PJSIP_EVENT_TRANSPORT_ERROR, NULL,
+			       NO_NOTIFY | NO_SCHEDULE_HANDLER);
+
+		pj_grp_lock_release(tsx->grp_lock);
+
+		/* Now notify TU about state change, WITHOUT holding the
+		 * group lock. It should be safe to do so; transaction will
+		 * not get destroyed because group lock reference counter
+		 * has been incremented by the timer heap.
+		 */
+		if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
+		    pjsip_event e;
+		    PJSIP_EVENT_INIT_TSX_STATE(e, tsx,
+					       PJSIP_EVENT_TRANSPORT_ERROR,
+					       NULL, prev_state);
+		    (*tsx->tsx_user->on_tsx_state)(tsx, &e);
+		}
+
+		/* Now let's schedule the tsx handler */
+		tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout,
+				   TIMEOUT_TIMER);
 	    }
-
-	    /* Set transaction state etc, but don't notify TU now,
-	     * otherwise we'll get a deadlock. See:
-	     * https://trac.pjsip.org/repos/ticket/1646
-	     */
-	    /* Also don't schedule tsx handler, otherwise we'll get race
-	     * condition of TU notifications due to delayed TERMINATED
-	     * state TU notification. It happened in multiple worker threads
-	     * environment between TERMINATED & DESTROYED! See:
-	     * https://trac.pjsip.org/repos/ticket/1902
-	     */
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
-	                   PJSIP_EVENT_TRANSPORT_ERROR, NULL,
-			   NO_NOTIFY | NO_SCHEDULE_HANDLER);
-	    pj_grp_lock_release(tsx->grp_lock);
-
-	    /* Now notify TU about state change, WITHOUT holding the
-	     * group lock. It should be safe to do so; transaction will
-	     * not get destroyed because group lock reference counter
-	     * has been incremented by the timer heap.
-	     */
-	    if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
-		pjsip_event e;
-		PJSIP_EVENT_INIT_TSX_STATE(e, tsx,
-		                           PJSIP_EVENT_TRANSPORT_ERROR, NULL,
-					   prev_state);
-		(*tsx->tsx_user->on_tsx_state)(tsx, &e);
-	    }
-
-	    /* Now let's schedule the tsx handler */
-	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout,
-			       TIMEOUT_TIMER);
 	}
     } else {
 	pjsip_event event;
@@ -2100,7 +2127,7 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 	if (tsx->state < PJSIP_TSX_STATE_COMPLETED) {
 	    tsx_cancel_timer(tsx, &tsx->timeout_timer);
 	    tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
-			       TRANSPORT_ERR_TIMER);
+			       TRANSPORT_DOWN_TIMER);
 	}
 	unlock_timer(tsx);
     }
