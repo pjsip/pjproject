@@ -1141,8 +1141,9 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    {
 		/* Transport disconnected (while idle/not-sending) */
 		stop_tsx = PJ_FALSE;
-		PJ_LOG(5,(tsx->obj_name, "Transport error",
-			 (entry==&tsx->retransmit_timer ? "Retransmit":"Timeout")));
+		PJ_LOG(5,(tsx->obj_name,
+		          "INVITE transaction configured to not be terminated"
+			  " on transport disconnected event"));
 	    }
 
 	    pj_grp_lock_acquire(tsx->grp_lock);
