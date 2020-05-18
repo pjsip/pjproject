@@ -22,7 +22,8 @@ Build instructions:
 
     Mac OS X
     --------
-      $ qmake -spec macx-g++
+      $ (for Qt5)qmake -spec macx-clang
+        (for Qt4)qmake -spec macx-g++
       $ make
 
     Linux 
