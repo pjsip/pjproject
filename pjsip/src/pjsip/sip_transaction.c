@@ -1117,6 +1117,7 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 {
     pjsip_transaction *tsx = (pjsip_transaction*) entry->user_data;
+    int entry_id = entry->id;
 
     PJ_UNUSED_ARG(theap);
 
@@ -1125,8 +1126,8 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
         return;
     }
 
-    if (entry->id == TRANSPORT_ERR_TIMER ||
-	entry->id == TRANSPORT_DOWN_TIMER)
+    if (entry_id == TRANSPORT_ERR_TIMER ||
+	entry_id == TRANSPORT_DOWN_TIMER)
     {
 	/* Posted transport error event */
 	entry->id = 0;
@@ -1137,7 +1138,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 
 	    if (PJSIP_STOP_INVITE_TSX_ON_TP_DOWN==0 &&
 		tsx->method.id==PJSIP_INVITE_METHOD &&
-		entry->id == TRANSPORT_DOWN_TIMER)
+		entry_id == TRANSPORT_DOWN_TIMER)
 	    {
 		/* Transport disconnected (while idle/not-sending) */
 		stop_tsx = PJ_FALSE;
