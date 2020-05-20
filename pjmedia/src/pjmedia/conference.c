@@ -1078,6 +1078,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 		  dst_port->transmitter_cnt < conf->max_ports);
 	pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE), 
 		       src_port->listener_cnt, i);
+        pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
+                       src_port->listener_cnt, i);
 	--conf->connect_cnt;
 	--src_port->listener_cnt;
 	--dst_port->transmitter_cnt;
