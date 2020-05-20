@@ -182,6 +182,14 @@ typedef struct pj_ice_strans_cb
 			    pj_ssize_t sent);
 
     /**
+     * An optional callback that will be called by the ICE transport when a
+     * valid pair has been found during ICE negotiation.
+     *
+     * @param ice_st	    The ICE stream transport.
+     */
+    void (*on_valid_pair)(pj_ice_strans *ice_st);
+
+    /**
      * Callback to report status of various ICE operations.
      * 
      * @param ice_st	    The ICE stream transport.
