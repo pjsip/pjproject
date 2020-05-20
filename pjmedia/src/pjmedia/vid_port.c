@@ -919,8 +919,10 @@ static pj_status_t vidstream_event_cb(pjmedia_event *event,
 {
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     
+    pjmedia_event new_event;
+    pj_memcpy(&new_event, event, sizeof(*event));
     /* Just republish the event to our client */
-    return pjmedia_event_publish(NULL, vp, event, 0);
+    return pjmedia_event_publish(NULL, vp, &new_event, PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 }
 
 static pj_status_t client_port_event_cb(pjmedia_event *event,
