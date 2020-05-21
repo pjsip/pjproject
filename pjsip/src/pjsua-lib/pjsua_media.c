@@ -1648,6 +1648,8 @@ pj_status_t call_media_on_event(pjmedia_event *event,
             eve = pjsua_var.event_list.next;
             pj_list_erase(eve);
     	}
+
+    	pj_mutex_unlock(pjsua_var.timer_mutex);
     	
     	if (call) {
     	    eve->call_id = call->index;
