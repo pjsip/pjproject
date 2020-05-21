@@ -969,8 +969,9 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 	return status;
     }
 
-    /* Init timer entry list */
+    /* Init timer entry and event list */
     pj_list_init(&pjsua_var.timer_list);
+    pj_list_init(&pjsua_var.event_list);
 
     /* Create timer mutex */
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer", 

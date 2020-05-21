@@ -425,6 +425,15 @@ typedef struct pjsua_timer_list
 } pjsua_timer_list;
 
 
+typedef struct pjsua_event_list 
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_event_list);
+    pjmedia_event       event;
+    pjsua_call_id	call_id;
+    unsigned           	med_idx;
+} pjsua_event_list;
+
+
 /**
  * Global pjsua application data.
  */
@@ -536,8 +545,9 @@ struct pjsua_data
     pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
 #endif
 
-    /* Timer entry list */
+    /* Timer entry and event list */
     pjsua_timer_list	 timer_list;
+    pjsua_event_list	 event_list;
     pj_mutex_t          *timer_mutex;
 };
 
