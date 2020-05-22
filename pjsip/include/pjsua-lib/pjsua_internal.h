@@ -443,6 +443,7 @@ struct pjsua_data
     /* Control: */
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
+    pj_pool_t		*timer_pool;/**< pjsua's timer pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
     unsigned		 mutex_nesting_level; /**< Mutex nesting level.	*/
     pj_thread_t		*mutex_owner; /**< Mutex owner.			*/

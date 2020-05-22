@@ -1643,7 +1643,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
     	pj_mutex_lock(pjsua_var.timer_mutex);
 
     	if (pj_list_empty(&pjsua_var.event_list)) {
-            eve = PJ_POOL_ALLOC_T(pjsua_var.pool, pjsua_event_list);
+            eve = PJ_POOL_ALLOC_T(pjsua_var.timer_pool, pjsua_event_list);
     	} else {
             eve = pjsua_var.event_list.next;
             pj_list_erase(eve);
