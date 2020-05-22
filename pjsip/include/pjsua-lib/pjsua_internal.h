@@ -425,6 +425,15 @@ typedef struct pjsua_timer_list
 } pjsua_timer_list;
 
 
+typedef struct pjsua_event_list 
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_event_list);
+    pjmedia_event       event;
+    pjsua_call_id	call_id;
+    unsigned           	med_idx;
+} pjsua_event_list;
+
+
 /**
  * Global pjsua application data.
  */
@@ -434,6 +443,7 @@ struct pjsua_data
     /* Control: */
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
+    pj_pool_t		*timer_pool;/**< pjsua's timer pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
     unsigned		 mutex_nesting_level; /**< Mutex nesting level.	*/
     pj_thread_t		*mutex_owner; /**< Mutex owner.			*/
@@ -536,8 +546,9 @@ struct pjsua_data
     pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
 #endif
 
-    /* Timer entry list */
+    /* Timer entry and event list */
     pjsua_timer_list	 timer_list;
+    pjsua_event_list	 event_list;
     pj_mutex_t          *timer_mutex;
 };
 

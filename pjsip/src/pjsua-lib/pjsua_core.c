@@ -936,12 +936,13 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     /* Init caching pool. */
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 
-    /* Create memory pool for application. */
+    /* Create memory pools for application and internal use. */
     pjsua_var.pool = pjsua_pool_create("pjsua", 1000, 1000);
-    if (pjsua_var.pool == NULL) {
+    pjsua_var.timer_pool = pjsua_pool_create("pjsua_timer", 500, 500);
+    if (pjsua_var.pool == NULL || pjsua_var.timer_pool == NULL) {
 	pj_log_pop_indent();
 	status = PJ_ENOMEM;
-	pjsua_perror(THIS_FILE, "Unable to create pjsua pool", status);
+	pjsua_perror(THIS_FILE, "Unable to create pjsua/timer pool", status);
 	pj_shutdown();
 	return status;
     }
@@ -969,8 +970,9 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 	return status;
     }
 
-    /* Init timer entry list */
+    /* Init timer entry and event list */
     pj_list_init(&pjsua_var.timer_list);
+    pj_list_init(&pjsua_var.event_list);
 
     /* Create timer mutex */
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer", 
@@ -2041,7 +2043,11 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
         pjsua_var.timer_mutex = NULL;
     }
 
-    /* Destroy pool and pool factory. */
+    /* Destroy pools and pool factory. */
+    if (pjsua_var.timer_pool) {
+	pj_pool_release(pjsua_var.timer_pool);
+	pjsua_var.timer_pool = NULL;
+    }
     if (pjsua_var.pool) {
 	pj_pool_release(pjsua_var.pool);
 	pjsua_var.pool = NULL;
@@ -3331,7 +3337,7 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
     pj_mutex_lock(pjsua_var.timer_mutex);
 
     if (pj_list_empty(&pjsua_var.timer_list)) {
-        tmr = PJ_POOL_ALLOC_T(pjsua_var.pool, pjsua_timer_list);
+        tmr = PJ_POOL_ALLOC_T(pjsua_var.timer_pool, pjsua_timer_list);
     } else {
         tmr = pjsua_var.timer_list.next;
         pj_list_erase(tmr);
