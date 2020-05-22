@@ -1514,7 +1514,7 @@ pj_status_t on_media_event(pjmedia_event *event, void *user_data)
 }
 
 /* Call on_call_media_event() callback using timer */
-void call_med_event_cb(void *user_data)
+static void call_med_event_cb(void *user_data)
 {
     pjsua_event_list *eve = (pjsua_event_list *)user_data;
     
