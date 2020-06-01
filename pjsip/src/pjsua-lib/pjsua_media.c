@@ -3001,6 +3001,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
         call_med->tp_orig = NULL;
+        call_med->rem_srtp_use = PJ_FALSE;
     }
 
     pj_log_pop_indent();
