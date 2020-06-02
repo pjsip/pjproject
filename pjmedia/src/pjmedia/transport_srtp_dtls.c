@@ -1253,9 +1253,6 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
             pj_sockaddr rem_rtp;
             pj_sockaddr rem_rtcp;
 
-            pj_bzero(&rem_rtp, sizeof(rem_rtp));
-            pj_bzero(&rem_rtcp, sizeof(rem_rtcp));
-
             status = get_rem_addrs(ds, sdp_remote, media_index, &rem_rtp,
                                    &rem_rtcp);
             if (status == PJ_SUCCESS) {
@@ -1268,7 +1265,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         }
 
 	/* Check if remote signals DTLS re-nego by changing its
-	 * setup/fingerprint in SDP.
+	 * setup/fingerprint in SDP or changed in media transport address.
 	 */
 	if ((last_setup != DTLS_SETUP_UNKNOWN && last_setup != ds->setup) ||
 	    (last_rem_fp.slen &&
@@ -1414,6 +1411,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     pj_ice_strans_state ice_state;
     pj_bool_t use_rtcp_mux = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+    struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
 
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_media_start()"));
@@ -1494,6 +1492,8 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     /* SRTP key is not ready, SRTP start is pending */
     ds->srtp->keying_pending_cnt++;
     ds->pending_start = PJ_TRUE;
+
+    srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
 
     /* If our DTLS setup is ACTIVE:
      * - start DTLS nego after ICE nego, or
