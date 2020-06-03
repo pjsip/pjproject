@@ -521,10 +521,14 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsip_media_type media_type;
     pjsua_im_data *im_data;
     pjsua_acc *acc;
+    pj_bool_t content_in_msg_data;
     pj_status_t status;
 
+    content_in_msg_data = msg_data && (msg_data->msg_body.slen ||
+				       msg_data->multipart_ctype.type.slen);
+
     /* To and message body must be specified. */
-    PJ_ASSERT_RETURN(to && content, PJ_EINVAL);
+    PJ_ASSERT_RETURN(to && (content || content_in_msg_data), PJ_EINVAL);
 
     acc = &pjsua_var.acc[acc_id];
 
@@ -589,22 +593,25 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     im_data->user_data = user_data;
 
 
-    /* Set default media type if none is specified */
-    if (mime_type == NULL) {
-	mime_type = &mime_text_plain;
-    }
+    /* Add message body, if content is set */
+    if (content) {
+	/* Set default media type if none is specified */
+	if (mime_type == NULL) {
+	    mime_type = &mime_text_plain;
+	}
 
-    /* Parse MIME type */
-    pjsua_parse_media_type(tdata->pool, mime_type, &media_type);
+	/* Parse MIME type */
+	pjsua_parse_media_type(tdata->pool, mime_type, &media_type);
 
-    /* Add message body */
-    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
-					      &media_type.subtype, 
-					      &im_data->body);
-    if (tdata->msg->body == NULL) {
-	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
-	pjsip_tx_data_dec_ref(tdata);
-	return PJ_ENOMEM;
+	/* Add message body */
+	tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
+						  &media_type.subtype, 
+						  &im_data->body);
+	if (tdata->msg->body == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
+	    pjsip_tx_data_dec_ref(tdata);
+	    return PJ_ENOMEM;
+	}
     }
 
     /* Add additional headers etc. */
