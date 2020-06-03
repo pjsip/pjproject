@@ -31,6 +31,12 @@ using namespace std;
 #define MAX_FILE_NAMES 		64
 #define MAX_DEV_COUNT		64
 
+#define CHECK_PORT_ID(port_id) \
+    if (port_id==PJSUA_INVALID_ID) \
+	PJSUA2_RAISE_ERROR3(PJ_EINVAL, __FUNCTION__, \
+			    "Media port not registered")
+
+
 ///////////////////////////////////////////////////////////////////////////////
 void MediaFormatAudio::fromPj(const pjmedia_format &format)
 {
@@ -207,6 +213,8 @@ int AudioMedia::getPortId() const
 
 ConfPortInfo AudioMedia::getPortInfoFromId(int port_id) PJSUA2_THROW(Error)
 {
+    CHECK_PORT_ID(port_id);
+
     pjsua_conf_port_info pj_info;
     ConfPortInfo pi;
 
@@ -217,37 +225,53 @@ ConfPortInfo AudioMedia::getPortInfoFromId(int port_id) PJSUA2_THROW(Error)
 
 void AudioMedia::startTransmit(const AudioMedia &sink) const PJSUA2_THROW(Error)
 {
-    PJSUA2_CHECK_EXPR( pjsua_conf_connect(id, sink.id) );
+    pjsua_conf_port_id sink_id = sink.id;
+    CHECK_PORT_ID(id);
+    CHECK_PORT_ID(sink_id);
+
+    PJSUA2_CHECK_EXPR( pjsua_conf_connect(id, sink_id) );
 }
 
 void AudioMedia::startTransmit2(const AudioMedia &sink,
 				const AudioMediaTransmitParam &param) const
      PJSUA2_THROW(Error)
 {
+    pjsua_conf_port_id sink_id = sink.id;
+    CHECK_PORT_ID(id);
+    CHECK_PORT_ID(sink_id);
+
     pjsua_conf_connect_param pj_param;
     
     pjsua_conf_connect_param_default(&pj_param);
     pj_param.level = param.level;
-    PJSUA2_CHECK_EXPR( pjsua_conf_connect2(id, sink.id, &pj_param) );
+    PJSUA2_CHECK_EXPR( pjsua_conf_connect2(id, sink_id, &pj_param) );
 }
 
 void AudioMedia::stopTransmit(const AudioMedia &sink) const PJSUA2_THROW(Error)
 {
-    PJSUA2_CHECK_EXPR( pjsua_conf_disconnect(id, sink.id) );
+    pjsua_conf_port_id sink_id = sink.id;
+    CHECK_PORT_ID(id);
+    CHECK_PORT_ID(sink_id);
+
+    PJSUA2_CHECK_EXPR( pjsua_conf_disconnect(id, sink_id) );
 }
 
 void AudioMedia::adjustRxLevel(float level) PJSUA2_THROW(Error)
 {
+    CHECK_PORT_ID(id);
     PJSUA2_CHECK_EXPR( pjsua_conf_adjust_tx_level(id, level) );
 }
 
 void AudioMedia::adjustTxLevel(float level) PJSUA2_THROW(Error)
 {
+    CHECK_PORT_ID(id);
     PJSUA2_CHECK_EXPR( pjsua_conf_adjust_rx_level(id, level) );
 }
 
 unsigned AudioMedia::getRxLevel() const PJSUA2_THROW(Error)
 {
+    CHECK_PORT_ID(id);
+
     unsigned level;
     PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, &level, NULL) );
     return level * 100 / 255;
@@ -255,6 +279,8 @@ unsigned AudioMedia::getRxLevel() const PJSUA2_THROW(Error)
 
 unsigned AudioMedia::getTxLevel() const PJSUA2_THROW(Error)
 {
+    CHECK_PORT_ID(id);
+
     unsigned level;
     PJSUA2_CHECK_EXPR( pjsua_conf_get_signal_level(id, NULL, &level) );
     return level * 100 / 255;
@@ -1995,6 +2021,8 @@ int VideoMedia::getPortId() const
 VidConfPortInfo VideoMedia::getPortInfoFromId(int port_id) PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
+    CHECK_PORT_ID(port_id);
+
     pjsua_vid_conf_port_info pj_info;
     VidConfPortInfo pi;
 
@@ -2013,7 +2041,11 @@ void VideoMedia::startTransmit(const VideoMedia &sink,
 {
     PJ_UNUSED_ARG(param);
 #if PJSUA_HAS_VIDEO
-    PJSUA2_CHECK_EXPR( pjsua_vid_conf_connect(id, sink.id, NULL) );
+    pjsua_conf_port_id sink_id = sink.id;
+    CHECK_PORT_ID(id);
+    CHECK_PORT_ID(sink_id);
+
+    PJSUA2_CHECK_EXPR( pjsua_vid_conf_connect(id, sink_id, NULL) );
 #else
     PJ_UNUSED_ARG(sink);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
@@ -2024,7 +2056,11 @@ void VideoMedia::stopTransmit(const VideoMedia &sink) const
 			      PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
-    PJSUA2_CHECK_EXPR( pjsua_vid_conf_disconnect(id, sink.id) );
+    pjsua_conf_port_id sink_id = sink.id;
+    CHECK_PORT_ID(id);
+    CHECK_PORT_ID(sink_id);
+
+    PJSUA2_CHECK_EXPR( pjsua_vid_conf_disconnect(id, sink_id) );
 #else
     PJ_UNUSED_ARG(sink);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
