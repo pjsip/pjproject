@@ -5579,33 +5579,51 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		    const pj_str_t STR_SIGNAL = { "Signal", 6 };
 		    const pj_str_t STR_DURATION = { "Duration", 8 };
 		    char *val;
+		    pj_ssize_t idx;
+		    pj_ssize_t count_equal_sign;
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-				pj_ssize_t idx1 = val - input.ptr;
-				pj_ssize_t idx2 = 0;
-				while ( (*(val + STR_SIGNAL.slen + idx2) == 32 || *(val + STR_SIGNAL.slen + idx2) == 61) &&
-					(idx1 + idx2 < input.slen))
-					idx2++;
-			info.digit = *(val+STR_SIGNAL.slen + idx2);
-			is_handled = PJ_TRUE;
+			idx = 0;
+			count_equal_sign = 0;
+			while ((*(val + STR_SIGNAL.slen + idx) == 32 || *(val + STR_SIGNAL.slen + idx) == 61) &&
+			    (val - input.ptr + STR_SIGNAL.slen + idx < input.slen)) {
+			    if (*(val + STR_SIGNAL.slen + idx) == 61)
+				count_equal_sign++;
+			    idx++;
+			}
+
+			if (count_equal_sign == 1 && (val - input.ptr + STR_SIGNAL.slen + idx < input.slen)) {
+			    info.digit = *(val+STR_SIGNAL.slen + idx);
+			    is_handled = PJ_TRUE;
+			} else {
+			    PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			}
 
 			/* Get duration */
 			input.ptr += token.slen + 2;
 			input.slen -= (token.slen + 2);
 
 			val = pj_strstr(&input, &STR_DURATION);
-			if (val) {
+			if (val && is_handled) {
 			    pj_str_t val_str;
-				pj_ssize_t idx1 = val - input.ptr;
-				pj_ssize_t idx2 = 0;
-				while ((*(val + STR_DURATION.slen + idx2) == 32 || *(val + STR_DURATION.slen + idx2) == 61) &&
-					(idx1 + idx2 < input.slen))
-					idx2++;
+			    idx = 0;
+			    count_equal_sign = 0;
+			    while ((*(val + STR_DURATION.slen + idx) == 32 || *(val + STR_DURATION.slen + idx) == 61) && 
+			        (val - input.ptr + STR_DURATION.slen + idx < input.slen)) {
+				if (*(val + STR_DURATION.slen + idx) == 61)
+				    count_equal_sign++;
+			        idx++;
+			    }
 
-			    val_str.ptr = val + STR_DURATION.slen + idx2;
-			    val_str.slen = input.slen - STR_DURATION.slen - idx2;
-			    info.duration = pj_strtoul(&val_str);
+			    if (count_equal_sign == 1 && (val - input.ptr + STR_DURATION.slen + idx < input.slen)) {
+			        val_str.ptr = val + STR_DURATION.slen + idx;
+			        val_str.slen = input.slen - STR_DURATION.slen - idx;
+			        info.duration = pj_strtoul(&val_str);
+			    } else {
+				is_handled = PJ_FALSE;
+				PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			    }
 			}
 		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
 			(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index, 
