@@ -1265,7 +1265,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         }
 
 	/* Check if remote signals DTLS re-nego by changing its
-	 * setup/fingerprint in SDP or changed in media transport address.
+	 * setup/fingerprint in SDP or media transport address in SDP.
 	 */
 	if ((last_setup != DTLS_SETUP_UNKNOWN && last_setup != ds->setup) ||
 	    (last_rem_fp.slen &&
