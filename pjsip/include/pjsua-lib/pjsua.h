@@ -5664,10 +5664,11 @@ PJ_DECL(pj_status_t) pjsua_call_send_dtmf(pjsua_call_id call_id,
  * @param call_id	Call identification.
  * @param mime_type	Optional MIME type. If NULL, then "text/plain" is 
  *			assumed.
- * @param content	The message content.
+ * @param content	The message content. Can be NULL if msg_data specifies
+ *			body and/or multipart.
  * @param msg_data	Optional list of headers etc to be included in outgoing
  *			request. The body descriptor in the msg_data is 
- *			ignored.
+ *			ignored if parameter 'content' is set.
  * @param user_data	Optional user data, which will be given back when
  *			the IM callback is called.
  *
@@ -6214,10 +6215,11 @@ extern const pjsip_method pjsip_info_method;
  * @param to		Remote URI.
  * @param mime_type	Optional MIME type. If NULL, then "text/plain" is 
  *			assumed.
- * @param content	The message content.
+ * @param content	The message content. Can be NULL if msg_data specifies
+ *			body and/or multipart.
  * @param msg_data	Optional list of headers etc to be included in outgoing
  *			request. The body descriptor in the msg_data is 
- *			ignored.
+ *			ignored if parameter 'content' is set.
  * @param user_data	Optional user data, which will be given back when
  *			the IM callback is called.
  *

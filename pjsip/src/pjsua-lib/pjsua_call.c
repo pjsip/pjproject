@@ -3473,23 +3473,31 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     pjsip_media_type ctype;
     pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
+    pj_bool_t content_in_msg_data;
     pj_status_t status;
+
+    content_in_msg_data = msg_data && (msg_data->msg_body.slen ||
+				       msg_data->multipart_ctype.type.slen);
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
+    
+    /* Message body must be specified. */
+    PJ_ASSERT_RETURN(content || content_in_msg_data, PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Call %d sending %d bytes MESSAGE..",
-        	          call_id, (int)content->slen));
+    if (content) {
+	PJ_LOG(4,(THIS_FILE, "Call %d sending %d bytes MESSAGE..",
+        		      call_id, (int)content->slen));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Call %d sending MESSAGE..",
+        		      call_id));
+    }
+
     pj_log_push_indent();
 
     status = acquire_call("pjsua_call_send_im()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
-
-    /* Set default media type if none is specified */
-    if (mime_type == NULL) {
-	mime_type = &mime_text_plain;
-    }
 
     /* Create request message. */
     status = pjsip_dlg_create_request( call->inv->dlg, &pjsip_message_method,
@@ -3503,16 +3511,24 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     pjsip_msg_add_hdr( tdata->msg,
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
-    /* Parse MIME type */
-    pjsua_parse_media_type(tdata->pool, mime_type, &ctype);
+    /* Add message body, if content is set */
+    if (content) {
+	/* Set default media type if none is specified */
+	if (mime_type == NULL) {
+	    mime_type = &mime_text_plain;
+	}
 
-    /* Create "text/plain" message body. */
-    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &ctype.type,
-					      &ctype.subtype, content);
-    if (tdata->msg->body == NULL) {
-	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
-	pjsip_tx_data_dec_ref(tdata);
-	goto on_return;
+	/* Parse MIME type */
+	pjsua_parse_media_type(tdata->pool, mime_type, &ctype);
+
+	/* Create "text/plain" message body. */
+	tdata->msg->body = pjsip_msg_body_create( tdata->pool, &ctype.type,
+						  &ctype.subtype, content);
+	if (tdata->msg->body == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
+	    pjsip_tx_data_dec_ref(tdata);
+	    goto on_return;
+	}
     }
 
     /* Add additional headers etc */
