@@ -411,9 +411,15 @@ static void im_callback(void *token, pjsip_event *e)
 	}
 
 	if (pjsua_var.ua_cfg.cb.on_pager_status) {
+	    pj_str_t im_body = im_data->body;
+	    if (im_body.slen==0) {
+		pjsip_msg_body *body = tsx->last_tx->msg->body;
+		pj_strset(&im_body, body->data, body->len);
+	    }
+
 	    pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id, 
 					        &im_data->to,
-						&im_data->body,
+						&im_body,
 						im_data->user_data,
 						(pjsip_status_code) 
 						    tsx->status_code,
@@ -422,15 +428,21 @@ static void im_callback(void *token, pjsip_event *e)
 
 	if (pjsua_var.ua_cfg.cb.on_pager_status2) {
 	    pjsip_rx_data *rdata;
+	    pj_str_t im_body = im_data->body;
 
 	    if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
 		rdata = e->body.tsx_state.src.rdata;
 	    else
 		rdata = NULL;
 
+	    if (im_body.slen==0) {
+		pjsip_msg_body *body = tsx->last_tx->msg->body;
+		pj_strset(&im_body, body->data, body->len);
+	    }
+
 	    pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id, 
 					         &im_data->to,
-					 	 &im_data->body,
+					 	 &im_body,
 						 im_data->user_data,
 						 (pjsip_status_code) 
 						    tsx->status_code,
@@ -589,12 +601,13 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     im_data->acc_id = acc_id;
     im_data->call_id = PJSUA_INVALID_ID;
     pj_strdup_with_null(tdata->pool, &im_data->to, to);
-    pj_strdup_with_null(tdata->pool, &im_data->body, content);
     im_data->user_data = user_data;
 
 
     /* Add message body, if content is set */
     if (content) {
+	pj_strdup_with_null(tdata->pool, &im_data->body, content);
+
 	/* Set default media type if none is specified */
 	if (mime_type == NULL) {
 	    mime_type = &mime_text_plain;

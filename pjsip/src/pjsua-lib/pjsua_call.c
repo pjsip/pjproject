@@ -3539,7 +3539,8 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     im_data->acc_id = call->acc_id;
     im_data->call_id = call_id;
     im_data->to = call->inv->dlg->remote.info_str;
-    pj_strdup_with_null(tdata->pool, &im_data->body, content);
+    if (content)
+	pj_strdup_with_null(tdata->pool, &im_data->body, content);
     im_data->user_data = user_data;
 
 
@@ -5465,9 +5466,15 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    /* im_data can be NULL if this is typing indication */
 
 	    if (im_data && pjsua_var.ua_cfg.cb.on_pager_status) {
+		pj_str_t im_body = im_data->body;
+		if (im_body.slen==0) {
+		    pjsip_msg_body *body = tsx->last_tx->msg->body;
+		    pj_strset(&im_body, body->data, body->len);
+		}
+
 		pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id,
 						    &im_data->to,
-						    &im_data->body,
+						    &im_body,
 						    im_data->user_data,
 						    (pjsip_status_code)
 						    	tsx->status_code,
