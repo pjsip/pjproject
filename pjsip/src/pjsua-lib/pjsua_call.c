@@ -5579,22 +5579,20 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		    const pj_str_t STR_SIGNAL = { "Signal", 6 };
 		    const pj_str_t STR_DURATION = { "Duration", 8 };
 		    char *val;
-		    pj_ssize_t idx;
 		    pj_ssize_t count_equal_sign;
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-			idx = 0;
 			count_equal_sign = 0;
-			while ((*(val + STR_SIGNAL.slen + idx) == 32 || *(val + STR_SIGNAL.slen + idx) == 61) &&
-			    (val - input.ptr + STR_SIGNAL.slen + idx < input.slen)) {
-			    if (*(val + STR_SIGNAL.slen + idx) == 61)
+			char* p = val + STR_SIGNAL.slen;
+			while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+			    if(*p == '=')
 				count_equal_sign++;
-			    idx++;
+			    ++p;
 			}
 
-			if (count_equal_sign == 1 && (val - input.ptr + STR_SIGNAL.slen + idx < input.slen)) {
-			    info.digit = *(val+STR_SIGNAL.slen + idx);
+			if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			    info.digit = *p;
 			    is_handled = PJ_TRUE;
 			} else {
 			    PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
@@ -5607,18 +5605,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			val = pj_strstr(&input, &STR_DURATION);
 			if (val && is_handled) {
 			    pj_str_t val_str;
-			    idx = 0;
 			    count_equal_sign = 0;
-			    while ((*(val + STR_DURATION.slen + idx) == 32 || *(val + STR_DURATION.slen + idx) == 61) && 
-			        (val - input.ptr + STR_DURATION.slen + idx < input.slen)) {
-				if (*(val + STR_DURATION.slen + idx) == 61)
+			    char* p = val + STR_DURATION.slen;
+			    while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+				if (*p == '=')
 				    count_equal_sign++;
-			        idx++;
+			        ++p;
 			    }
 
-			    if (count_equal_sign == 1 && (val - input.ptr + STR_DURATION.slen + idx < input.slen)) {
-			        val_str.ptr = val + STR_DURATION.slen + idx;
-			        val_str.slen = input.slen - STR_DURATION.slen - idx;
+			    if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			        val_str.ptr = p;
+			        val_str.slen = input.slen - (p - input.ptr);
 			        info.duration = pj_strtoul(&val_str);
 			    } else {
 				is_handled = PJ_FALSE;
