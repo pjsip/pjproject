@@ -5622,14 +5622,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 				PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
 			    }
 			}
-		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
-			(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index, 
-							      &info);
 
-			status = pjsip_endpt_create_response(tsx->endpt, rdata,
-							    200, NULL, &tdata);
-			if (status == PJ_SUCCESS)
-			    status = pjsip_tsx_send_msg(tsx, tdata);
+			if (is_handled) {
+			    info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+			    (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index,
+				&info);
+
+			    status = pjsip_endpt_create_response(tsx->endpt, rdata,
+				200, NULL, &tdata);
+			    if (status == PJ_SUCCESS)
+				status = pjsip_tsx_send_msg(tsx, tdata);
+			}
 		    }
 		}
 	    } 
