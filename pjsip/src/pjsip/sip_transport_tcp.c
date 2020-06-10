@@ -778,6 +778,9 @@ static void tcp_flush_pending_tx(struct tcp_transport *tcp)
         if (pending_tx->timeout.sec > 0 &&
             PJ_TIME_VAL_GT(now, pending_tx->timeout))
         {
+            pj_lock_release(tcp->base.lock);
+	    on_data_sent(tcp->asock, op_key, -PJ_ETIMEDOUT);
+            pj_lock_acquire(tcp->base.lock);
             continue;
         }
 
