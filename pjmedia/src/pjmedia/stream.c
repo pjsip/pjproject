@@ -186,12 +186,17 @@ struct pjmedia_stream
     int			     rx_event_pt;   /**< Incoming pt for dtmf.	    */
     int			     last_dtmf;	    /**< Current digit, or -1.	    */
     pj_uint32_t		     last_dtmf_dur; /**< Start ts for cur digit.    */
+    pj_bool_t                last_dtmf_ended;
     unsigned		     rx_dtmf_count; /**< # of digits in dtmf rx buf.*/
     char		     rx_dtmf_buf[32];/**< Incoming DTMF buffer.	    */
 
     /* DTMF callback */
     void		    (*dtmf_cb)(pjmedia_stream*, void*, int);
     void		     *dtmf_cb_user_data;
+
+    void                    (*dtmf_event_cb)(pjmedia_stream*, void*,
+                                             const pjmedia_stream_dtmf_event*);
+    void                     *dtmf_event_cb_user_data;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     /* Enable support to handle codecs with inconsistent clock rate
@@ -1699,9 +1704,14 @@ static void dump_bin(const char *buf, unsigned len)
  * Handle incoming DTMF digits.
  */
 static void handle_incoming_dtmf( pjmedia_stream *stream,
+                                  const pj_timestamp *timestamp,
 				  const void *payload, unsigned payloadlen)
 {
     pjmedia_rtp_dtmf_event *event = (pjmedia_rtp_dtmf_event*) payload;
+    pj_uint16_t event_duration;
+    pjmedia_stream_dtmf_event dtmf_event;
+    pj_bool_t is_event_end;
+    pj_bool_t emit_event;
 
     /* Check compiler packing. */
     pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
@@ -1711,16 +1721,6 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
 	return;
 
     //dump_bin(payload, payloadlen);
-
-    /* Check if this is the same/current digit of the last packet. */
-    if (stream->last_dtmf != -1 &&
-	event->event == stream->last_dtmf &&
-	pj_ntohs(event->duration) >= stream->last_dtmf_dur)
-    {
-	/* Yes, this is the same event. */
-	stream->last_dtmf_dur = pj_ntohs(event->duration);
-	return;
-    }
 
     /* Ignore unknown event. */
 #if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
@@ -1734,22 +1734,68 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
 	return;
     }
 
+    /* Extract event data. */
+    event_duration = pj_ntohs(event->duration);
+    is_event_end = (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_END_MASK) != 0;
+
+    /* Check if this is the same/current digit of the last packet. */
+    if (stream->last_dtmf != -1 &&
+	event->event == stream->last_dtmf &&
+	event_duration >= stream->last_dtmf_dur)
+    {
+        /* Emit all updates but hide duplicate end frames. */
+        emit_event = !is_event_end || stream->last_dtmf_ended != is_event_end;
+
+	/* Yes, this is the same event. */
+	stream->last_dtmf_dur = event_duration;
+        stream->last_dtmf_ended = is_event_end;
+
+        /* If DTMF callback is installed and end of event hasn't been reported
+         * already, call it.
+         */
+        if (stream->dtmf_event_cb && emit_event) {
+            dtmf_event.digit = digitmap[event->event];
+            dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+                (stream->codec_param.info.clock_rate / 1000));
+            dtmf_event.duration = (pj_uint16_t)(event_duration /
+                (stream->codec_param.info.clock_rate / 1000));
+            dtmf_event.flags = PJMEDIA_STREAM_DTMF_IS_UPDATE;
+            if (is_event_end) {
+                dtmf_event.flags |= PJMEDIA_STREAM_DTMF_IS_END;
+            }
+            stream->dtmf_event_cb(stream, stream->dtmf_event_cb_user_data,
+                                  &dtmf_event);
+        }
+	return;
+    }
+
     /* New event! */
     PJ_LOG(5,(stream->port.info.name.ptr, "Received DTMF digit %c, vol=%d",
     	      digitmap[event->event],
-    	      (event->e_vol & 0x3F)));
+    	      (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_VOLUME_MASK)));
 
     stream->last_dtmf = event->event;
-    stream->last_dtmf_dur = pj_ntohs(event->duration);
+    stream->last_dtmf_dur = event_duration;
+    stream->last_dtmf_ended = is_event_end;
 
     /* If DTMF callback is installed, call the callback, otherwise keep
      * the DTMF digits in the buffer.
      */
-    if (stream->dtmf_cb) {
-
+    if (stream->dtmf_event_cb) {
+        dtmf_event.digit = digitmap[event->event];
+        dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+            (stream->codec_param.info.clock_rate / 1000));
+        dtmf_event.duration = (pj_uint16_t)(event_duration /
+            (stream->codec_param.info.clock_rate / 1000));
+        dtmf_event.flags = 0;
+        if (is_event_end) {
+            dtmf_event.flags |= PJMEDIA_STREAM_DTMF_IS_END;
+        }
+        stream->dtmf_event_cb(stream, stream->dtmf_event_cb_user_data,
+                              &dtmf_event);
+    } else if (stream->dtmf_cb) {
 	stream->dtmf_cb(stream, stream->dtmf_cb_user_data,
 			digitmap[event->event]);
-
     } else {
 	/* By convention, we use jitter buffer's mutex to access shared
 	 * DTMF variables.
@@ -1881,6 +1927,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
+        pj_timestamp ts;
+
 	/* Ignore out-of-order packet as it will be detected as new
 	 * digit. Also ignore duplicate packet as it serves no use.
 	 */
@@ -1888,7 +1936,10 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    goto on_return;
 	}
 
-	handle_incoming_dtmf(stream, payload, payloadlen);
+        /* Get the timestamp of the event */
+	ts.u64 = pj_ntohl(hdr->ts);
+
+	handle_incoming_dtmf(stream, &ts, payload, payloadlen);
 	goto on_return;
     }
 
@@ -3284,6 +3335,27 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 
     stream->dtmf_cb = cb;
     stream->dtmf_cb_user_data = user_data;
+
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *stream,
+                                                           void (*cb)(pjmedia_stream*,
+                                                                      void *user_data,
+                                                                      const pjmedia_stream_dtmf_event *event),
+                                                           void *user_data)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    /* By convention, we use jitter buffer's mutex to access DTMF
+     * digits resources.
+     */
+    pj_mutex_lock(stream->jb_mutex);
+
+    stream->dtmf_event_cb = cb;
+    stream->dtmf_event_cb_user_data = user_data;
 
     pj_mutex_unlock(stream->jb_mutex);
 

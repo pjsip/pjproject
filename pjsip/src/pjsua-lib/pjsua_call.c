@@ -5589,7 +5589,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    pj_status_t status;
 	    pj_bool_t is_handled = PJ_FALSE;
 
-	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2) {
+	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2 ||
+                pjsua_var.ua_cfg.cb.on_dtmf_event)
+            {
 		pjsua_dtmf_info info;
 		pj_str_t delim, token, input;
 		pj_ssize_t found_idx;
@@ -5641,6 +5643,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			        val_str.slen = input.slen - (p - input.ptr);
 			        info.duration = pj_strtoul(&val_str);
 			    } else {
+                                info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
 				is_handled = PJ_FALSE;
 				PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
 			    }
@@ -5648,8 +5651,29 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
 			if (is_handled) {
 			    info.method = PJSUA_DTMF_METHOD_SIP_INFO;
-			    (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index,
-				&info);
+                            if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
+		                pjsua_dtmf_event evt;
+                                pj_timestamp begin_of_time, timestamp;
+                                /* Use the current instant as the events start
+                                 * time.
+                                 */
+                                begin_of_time.u64 = 0;
+                                pj_get_timestamp(&timestamp);
+                                evt.method = info.method;
+                                evt.timestamp = pj_elapsed_msec(&begin_of_time,
+                                                                &timestamp);
+                                evt.digit = info.digit;
+                                evt.duration = info.duration;
+                                /* There is only one message indicating the full
+                                 * duration of the digit.
+                                 */
+                                evt.flags = PJMEDIA_STREAM_DTMF_IS_END;
+                                (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call->index,
+                                                                     &evt);
+                            } else {
+			        (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index,
+							              &info);
+                            }
 
 			    status = pjsip_endpt_create_response(tsx->endpt, rdata,
 				200, NULL, &tdata);

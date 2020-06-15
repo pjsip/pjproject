@@ -827,6 +827,13 @@ typedef enum pjsua_dtmf_method {
 
 
 /**
+ * Constant to specify unknown duration in \a pjsua_dtmf_info and
+ * \a pjsua_dtmf_event.
+ */
+#define PJSUA_UNKNOWN_DTMF_DURATION     ((unsigned)-1)
+
+
+/**
  * This will contain the information of the callback \a on_dtmf_digit2.
  */
 typedef struct pjsua_dtmf_info {
@@ -836,17 +843,66 @@ typedef struct pjsua_dtmf_info {
     pjsua_dtmf_method method;
 
     /**
-     * DTMF ASCII digit
+     * DTMF ASCII digit.
      */    
     unsigned digit;
 
     /**
-     * DTMF signal duration which might be included when sending DTMF using 
-     * SIP INFO.
+     * DTMF signal duration. If the duration is unknown, this value is set to
+     * PJSUA_UNKNOWN_DTMF_DURATION.
      */
     unsigned duration;
 
 } pjsua_dtmf_info;
+
+
+/**
+ * This will contain the information of the callback \a on_dtmf_event.
+ */
+typedef struct pjsua_dtmf_event {
+    /**
+     * The method used to send DTMF.
+     */
+    pjsua_dtmf_method method;
+
+    /**
+     * The timestamp identifying the begin of the event. Timestamp units are
+     * expressed in milliseconds.
+     * Note that this value should only be used to compare multiple events
+     * received via the same method relatively to each other, as the time-base
+     * is randomized.
+     */
+    unsigned timestamp;
+
+    /**
+     * DTMF ASCII digit.
+     */
+    unsigned digit;
+
+    /**
+     * DTMF signal duration in milliseconds. Interpretation of the duration
+     * depends on the flag PJMEDIA_STREAM_DTMF_IS_END.
+     * If PJMEDIA_STREAM_DTMF_IS_END is set, this contains the total duration
+     * of the DTMF signal or PJSUA_UNKNOWN_DTMF_DURATION if the duration is
+     * unknown.
+     * If PJMEDIA_STREAM_DTMF_IS_END is not set, this contains the duration
+     * of the DTMF signal received up to this point in time.
+     * A duration of "0" indicates an infinitely long duration.
+     */
+    unsigned duration;
+
+    /**
+     * Flags indicating additional information about the DTMF event.
+     * If PJMEDIA_STREAM_DTMF_IS_UPDATE is set, the event was already
+     * indicated earlier. The new indication contains an updated event
+     * duration.
+     * If PJMEDIA_STREAM_DTMF_IS_END is set, the event has ended and this
+     * indication contains the final event duration. Note that end
+     * indications might get lost. Hence it is not guaranteed to receive
+     * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
+     */
+    unsigned flags;
+} pjsua_dtmf_event;
 
 
 /**
@@ -1014,7 +1070,7 @@ typedef struct pjsua_callback
     /**
      * Notify application upon incoming DTMF digits using RFC 2833 payload 
      * formats. This callback will not be called if app implements \a
-     * on_dtmf_digit2().
+     * on_dtmf_digit2() or \a on_dtmf_event().
      *
      * @param call_id	The call index.
      * @param digit	DTMF ASCII digit.
@@ -1023,12 +1079,24 @@ typedef struct pjsua_callback
 
     /**
      * Notify application upon incoming DTMF digits using the method specified 
-     * in \a pjsua_dtmf_method.
+     * in \a pjsua_dtmf_method. This callback will not be called if app
+     * implements \a on_dtmf_event().
      *
      * @param call_id	The call index.
      * @param info	The DTMF info.
      */
     void (*on_dtmf_digit2)(pjsua_call_id call_id, const pjsua_dtmf_info *info);
+
+    /**
+     * Notify application upon incoming DTMF digits using the method specified 
+     * in \a pjsua_dtmf_method. Includes additional information about events
+     * received via RTP.
+     *
+     * @param call_id	The call index.
+     * @param event	The DTMF event.
+     */
+    void (*on_dtmf_event)(pjsua_call_id call_id,
+                          const pjsua_dtmf_event *event);
 
     /**
      * Notify application on call being transferred (i.e. REFER is received).
