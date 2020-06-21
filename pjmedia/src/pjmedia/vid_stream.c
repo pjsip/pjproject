@@ -1279,7 +1279,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
                                 pjmedia_frame *frame)
 {
     pjmedia_vid_channel *channel = stream->dec;
-    pj_uint32_t last_ts = 0, frm_ts = 0;
+    pj_uint32_t last_ts = -1, frm_ts = 0;
     int frm_first_seq = 0, frm_last_seq = 0;
     pj_bool_t got_frame = PJ_FALSE;
     unsigned cnt, frm_pkt_cnt = 0, frm_cnt = 0;
@@ -1305,7 +1305,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 		continue;
 	    }
 
-	    if (last_ts == 0) {
+	    if (last_ts == -1) {
 		last_ts = ts;
 
 		/* Init timestamp and first seq of the first frame */
