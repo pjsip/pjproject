@@ -53,6 +53,7 @@
 #define os_epoll_ctl		epoll_ctl
 #define os_epoll_wait		epoll_wait
 
+
 #define THIS_FILE   "ioq_epoll"
 
 //#define TRACE_(expr) PJ_LOG(3,expr)
@@ -107,6 +108,15 @@ struct pj_ioqueue_t
 /* Scan closing keys to be put to free list again */
 static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 #endif
+
+
+/* Old epoll may not have EPOLLEXCLUSIVE */
+#ifdef EPOLLEXCLUSIVE
+#  define HAS_EPOLLEXCLUSIVE	1
+#else
+#  define EPOLLEXCLUSIVE	0
+#endif
+
 
 /*
  * pj_ioqueue_name()
@@ -327,7 +337,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     }
 */
     /* os_epoll_ctl. */
-    ev.events = EPOLLIN | EPOLLERR;
+    ev.events = EPOLLIN | EPOLLERR | EPOLLEXCLUSIVE;
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
@@ -517,9 +527,17 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
     if (event_type == WRITEABLE_EVENT) {
 	struct epoll_event ev;
 
-	ev.events = EPOLLIN | EPOLLERR;
+#if HAS_EPOLLEXCLUSIVE
+	ev.events = 0;
+	ev.epoll_data = NULL;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+#endif
+
+	ev.events = EPOLLIN | EPOLLERR | EPOLLEXCLUSIVE;
 	ev.epoll_data = (epoll_data_type)key;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+	os_epoll_ctl( ioqueue->epfd,
+		      HAS_EPOLLEXCLUSIVE? EPOLL_CTL_ADD:EPOLL_CTL_MOD,
+		      key->fd, &ev);
     }	
 }
 
@@ -536,9 +554,17 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
     if (event_type == WRITEABLE_EVENT) {
 	struct epoll_event ev;
 
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLERR;
+#if HAS_EPOLLEXCLUSIVE
+	ev.events = 0;
+	ev.epoll_data = NULL;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+#endif
+
+	ev.events = EPOLLIN | EPOLLOUT | EPOLLERR | EPOLLEXCLUSIVE;
 	ev.epoll_data = (epoll_data_type)key;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+	os_epoll_ctl( ioqueue->epfd,
+		      HAS_EPOLLEXCLUSIVE? EPOLL_CTL_ADD:EPOLL_CTL_MOD,
+		      key->fd, &ev);
     }	
 }
 
