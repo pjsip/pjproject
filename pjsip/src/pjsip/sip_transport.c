@@ -1067,6 +1067,19 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
 	return;
 
     entry->id = PJ_FALSE;
+
+    /* Set is_destroying flag under transport manager mutex to avoid
+     * race condition with pjsip_tpmgr_acquire_transport2().
+     */
+    pj_lock_acquire(tp->tpmgr->lock);
+    if (pj_atomic_get(tp->ref_cnt) == 0) {
+	tp->is_destroying = PJ_TRUE;
+    } else {
+	pj_lock_release(tp->tpmgr->lock);
+	return;
+    }
+    pj_lock_release(tp->tpmgr->lock);
+
     pjsip_transport_destroy(tp);
 }
 
@@ -2252,6 +2265,13 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    return PJSIP_ETPNOTSUITABLE;
 	}
 
+	/* Make sure the transport is not being destroyed */
+	if (seltp->is_destroying) {
+	    pj_lock_release(mgr->lock);
+	    TRACE_((THIS_FILE,"Transport to be acquired is being destroyed"));
+	    return PJ_ENOTFOUND;
+	}
+
 	/* We could also verify that the destination address is reachable
 	 * from this transport (i.e. both are equal), but if application
 	 * has requested a specific transport to be used, assume that
@@ -2307,8 +2327,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    if (tp_entry) {
 		transport *tp_iter = tp_entry;
 		do {
-		    /* Don't use transport being shutdown */
-		    if (!tp_iter->tp->is_shutdown) {
+		    /* Don't use transport being shutdown/destroyed */
+		    if (!tp_iter->tp->is_shutdown &&
+			!tp_iter->tp->is_destroying)
+		    {
 			if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
 			    sel->u.listener)
 			{
@@ -2378,7 +2400,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    TRACE_((THIS_FILE, "Transport found but from different listener"));
 	}
 
-	if (tp_ref!=NULL && !tp_ref->is_shutdown) {
+	if (tp_ref!=NULL && !tp_ref->is_shutdown && !tp_ref->is_destroying) {
 	    /*
 	     * Transport found!
 	     */
