@@ -770,11 +770,15 @@ static void ice_init_complete_cb(void *user_data)
     if (call_med->med_create_cb) {
 	pjsua_call *call = NULL;
 	pjsip_dialog *dlg = NULL;
+	pj_status_t status;
 
-	if (acquire_call("ice_init_complete_cb", call_med->call->index,
-	                 &call, &dlg) != PJ_SUCCESS)
-	{
-	    /* Call have been terminated */
+	status = acquire_call("ice_init_complete_cb", call_med->call->index,
+			      &call, &dlg);
+	if (status != PJ_SUCCESS) {
+	    if (status != PJSIP_ESESSIONTERMINATED) {
+		/* Retry, if call is still active */
+		pjsua_schedule_timer2(&ice_init_complete_cb, call_med, 10);
+	    }
 	    return;
 	}
 
@@ -792,11 +796,15 @@ static void ice_failed_nego_cb(void *user_data)
     int call_id = (int)(pj_ssize_t)user_data;
     pjsua_call *call = NULL;
     pjsip_dialog *dlg = NULL;
+    pj_status_t status;
 
-    if (acquire_call("ice_failed_nego_cb", call_id,
-                     &call, &dlg) != PJ_SUCCESS)
-    {
-	/* Call have been terminated */
+    status = acquire_call("ice_failed_nego_cb", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+	if (status != PJSIP_ESESSIONTERMINATED) {
+	    /* Retry, if call is still active */
+	    pjsua_schedule_timer2(&ice_failed_nego_cb,
+				  (void*)(pj_ssize_t)call_id, 10);
+	}
 	return;
     }
 
