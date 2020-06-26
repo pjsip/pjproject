@@ -739,10 +739,60 @@ struct OnDtmfDigitParam
     string		digit;
 
     /**
-     * DTMF signal duration which might be included when sending DTMF using 
-     * SIP INFO.
+     * DTMF signal duration. If the duration is unknown, this value is set to
+     * PJSUA_UNKNOWN_DTMF_DURATION.
      */
     unsigned		duration;
+};
+
+/**
+ * This structure contains parameters for Call::onDtmfEvent()
+ * callback.
+ */
+struct OnDtmfEventParam
+{
+    /**
+     * DTMF sending method.
+     */
+    pjsua_dtmf_method   method;
+
+    /**
+     * The timestamp identifying the begin of the event. Timestamp units are
+     * expressed in milliseconds.
+     * Note that this value should only be used to compare multiple events
+     * received via the same method relatively to each other, as the time-base
+     * is randomized.
+     */
+    unsigned            timestamp;
+
+    /**
+     * DTMF ASCII digit.
+     */
+    string              digit;
+
+    /**
+     * DTMF signal duration in milliseconds. Interpretation of the duration
+     * depends on the flag PJMEDIA_STREAM_DTMF_IS_END.
+     * depends on the method.
+     * If the method is PJSUA_DTMF_METHOD_SIP_INFO, this contains the total
+     * duration of the DTMF signal or PJSUA_UNKNOWN_DTMF_DURATION if no signal
+     * duration was indicated.
+     * If the method is PJSUA_DTMF_METHOD_RFC2833, this contains the total
+     * duration of the DTMF signal received up to this point in time.
+     */
+    unsigned            duration;
+
+    /**
+     * Flags indicating additional information about the DTMF event.
+     * If PJMEDIA_STREAM_DTMF_IS_UPDATE is set, the event was already
+     * indicated earlier. The new indication contains an updated event
+     * duration.
+     * If PJMEDIA_STREAM_DTMF_IS_END is set, the event has ended and this
+     * indication contains the final event duration. Note that end
+     * indications might get lost. Hence it is not guaranteed to receive
+     * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
+     */
+    unsigned            flags;
 };
 
 /**
@@ -1737,7 +1787,15 @@ public:
      */
     virtual void onDtmfDigit(OnDtmfDigitParam &prm)
     { PJ_UNUSED_ARG(prm); }
-    
+
+    /**
+     * Notify application upon incoming DTMF events.
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onDtmfEvent(OnDtmfEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
     /**
      * Notify application on call being transferred (i.e. REFER is received).
      * Application can decide to accept/reject transfer request by setting

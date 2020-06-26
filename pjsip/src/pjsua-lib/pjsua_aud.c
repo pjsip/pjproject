@@ -569,6 +569,7 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 	call_id = (pjsua_call_id)(pj_ssize_t)user_data;
 	info.method = PJSUA_DTMF_METHOD_RFC2833;
 	info.digit = digit;
+        info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
 	(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call_id, &info);
     } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
 	/* For discussions about call mutex protection related to this
@@ -579,6 +580,32 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 
 	call_id = (pjsua_call_id)(pj_ssize_t)user_data;
 	(*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
+    }
+
+    pj_log_pop_indent();
+}
+
+/*
+ * DTMF callback from the stream.
+ */
+static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
+                                const pjmedia_stream_dtmf_event *event)
+{
+    pjsua_call_id call_id;
+    pjsua_dtmf_event evt;
+
+    PJ_UNUSED_ARG(strm);
+
+    pj_log_push_indent();
+
+    if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
+        call_id = (pjsua_call_id)(pj_ssize_t)user_data;
+        evt.method = PJSUA_DTMF_METHOD_RFC2833;
+        evt.timestamp = event->timestamp;
+        evt.digit = event->digit;
+        evt.duration = event->duration;
+        evt.flags = event->flags;
+        (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call_id, &evt);
     }
 
     pj_log_pop_indent();
@@ -658,8 +685,12 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	/* If DTMF callback is installed by application, install our
 	 * callback to the session.
 	 */
-	if (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
-	    pjsua_var.ua_cfg.cb.on_dtmf_digit2) 
+        if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
+            pjmedia_stream_set_dtmf_event_callback(call_med->strm.a.stream,
+                                              &dtmf_event_callback,
+                                              (void*)(pj_ssize_t)(call->index));
+        } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+	           pjsua_var.ua_cfg.cb.on_dtmf_digit2) 
 	{
 	    pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
 					     &dtmf_callback,
