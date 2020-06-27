@@ -129,7 +129,6 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_1ton(pj_int16_t multi[],
 
     PJ_ASSERT_RETURN(mono && multi && channel_count && samples_per_frame, 
 		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
 
     PJ_UNUSED_ARG(options);
 
