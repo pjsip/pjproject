@@ -20,6 +20,7 @@
 #include "test.h"
 
 #if defined(PJ_SUNOS) && PJ_SUNOS!=0
+
 #include <signal.h>
 static void init_signals()
 {
@@ -29,6 +30,29 @@ static void init_signals()
     act.sa_handler = SIG_IGN;
 
     sigaction(SIGALRM, &act, NULL);
+}
+
+#elif PJ_LINUX || PJ_DARWINOS
+
+#include <execinfo.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+static void print_stack(int sig)
+{
+    void *array[16];
+    size_t size;
+
+    size = backtrace(array, 16);
+    fprintf(stderr, "Error: signal %d:\n", sig);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+    exit(1);
+}
+
+static void init_signals()
+{
+    signal(SIGSEGV, &print_stack);
 }
 
 #else

@@ -343,8 +343,12 @@ for inst_param in script.test.inst_params:
                 continue
             break
     else:
+        t0 = time.time()
         while p.telnet is None:
             time.sleep(0.1)
+            dur = int(time.time() - t0)
+            if dur > 5:
+                handle_error("Timeout connecting to pjsua", script.test)
 
     # add running instance
     script.test.process.append(p)

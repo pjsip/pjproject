@@ -323,9 +323,19 @@ static void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	(*mod_inv.cb.on_state_changed)(inv, e);
     pjsip_inv_dec_ref(inv);
 
-    /* Only decrement when previous state is not already DISCONNECTED */
+    /* The above callback may change the state, so we need to be careful here
+     * and only decrement inv under the following conditions:
+     * 1. If the state parameter is DISCONNECTED, and previous state is not
+     *    already DISCONNECTED.
+     *    This is to make sure that dec_ref() is not called more than once.
+     * 2. If current state is PJSIP_INV_STATE_DISCONNECTED.
+     *    This is to make sure that dec_ref() is not called if user restarts
+     *    inv within the callback. Note that this check must be last since
+     *    inv may have already been destroyed.
+     */
     if (state == PJSIP_INV_STATE_DISCONNECTED &&
-	prev_state != PJSIP_INV_STATE_DISCONNECTED) 
+	prev_state != PJSIP_INV_STATE_DISCONNECTED &&
+	inv->state == PJSIP_INV_STATE_DISCONNECTED) 
     {
 	pjsip_inv_dec_ref(inv);
     }
@@ -502,6 +512,13 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
      */
     if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
 	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &ack_e);
+    } else if (inv->state == PJSIP_INV_STATE_DISCONNECTED && inv->last_ack) {
+        /* Avoid possible leaked tdata when invite session is already
+         * destroyed.
+         * https://github.com/pjsip/pjproject/pull/2432
+         */
+        pjsip_tx_data_dec_ref(inv->last_ack);
+        inv->last_ack = NULL;
     }
 
     return PJ_SUCCESS;
@@ -2060,6 +2077,15 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	   )
 	{
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
+
+	    if (pjmedia_sdp_neg_get_state(inv->neg) !=
+	    	PJMEDIA_SDP_NEG_STATE_DONE)
+	    {
+	    	PJ_LOG(4,(inv->obj_name, "SDP negotiation in progress, "
+	    		  "message body in %s response is ignored",
+		          (st_code/10==18? "early" : "final" )));
+	    	return PJ_SUCCESS;
+	    }
 
 	    PJ_LOG(4,(inv->obj_name, "Received %s response "
 		      "after SDP negotiation has been done in early "

@@ -155,6 +155,20 @@ struct pjmedia_rtp_dtmf_event
 };
 
 /**
+ * Mask for the E ("End") bit of telephony-events payload.
+ *
+ * @see pjmedia_rtp_dtmf_event
+ */
+#define PJMEDIA_RTP_DTMF_EVENT_END_MASK     0x80
+
+/**
+ * Mask for the Volume field of telephony-events payload.
+ *
+ * @see pjmedia_rtp_dtmf_event
+ */
+#define PJMEDIA_RTP_DTMF_EVENT_VOLUME_MASK  0x3F
+
+/**
  * @see pjmedia_rtp_dtmf_event
  */
 typedef struct pjmedia_rtp_dtmf_event pjmedia_rtp_dtmf_event;

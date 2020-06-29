@@ -892,6 +892,20 @@
 
 
 /**
+ * This macro declares whether PJMEDIA should generate multiple
+ * telephone-event formats in SDP offer, i.e: one for each audio codec
+ * clock rate (see also ticket #2088). If this macro is set to zero, only
+ * one telephone event format will be generated and it uses clock rate 8kHz
+ * (old behavior before ticket #2088).
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES
+#   define PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES   1
+#endif
+
+
+/**
  * Maximum tones/digits that can be enqueued in the tone generator.
  */
 #ifndef PJMEDIA_TONEGEN_MAX_DIGITS
@@ -1452,6 +1466,24 @@
  */
 #ifndef PJMEDIA_JBUF_PRO_DISC_T2
 #   define PJMEDIA_JBUF_PRO_DISC_T2		    10000
+#endif
+
+
+/**
+ * Reset jitter buffer and return silent audio on stream playback start
+ * (first get_frame()). This is useful to avoid possible noise that may be
+ * introduced by discard algorithm and neutralize latency when audio device
+ * is started later than the stream.
+ *
+ * Set this to N>0 to allow N silent audio frames returned on stream playback
+ * start, this will allow about N frames to be buffered in the jitter buffer
+ * before the playback is started (prefetching effect).
+ * Set this to zero to disable this feature.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_STREAM_SOFT_START
+#   define PJMEDIA_STREAM_SOFT_START		    1
 #endif
 
 

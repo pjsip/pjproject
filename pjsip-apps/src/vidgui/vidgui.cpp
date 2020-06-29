@@ -293,7 +293,7 @@ void MainWin::call()
 	char uri[256];
 	pjsua_call_setting call_setting;
 
-	pj_ansi_strncpy(uri, dst.toAscii().data(), sizeof(uri));
+	pj_ansi_strncpy(uri, dst.toUtf8().data(), sizeof(uri));
 	pj_str_t uri2 = pj_str((char*)uri);
 
 	pj_assert(currentCall_ == -1);

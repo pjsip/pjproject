@@ -523,7 +523,7 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 			       pkt_len);
 
     /* Send RTCP */
-    send_rtcp(stream, PJ_TRUE, PJ_FALSE);
+    send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE, PJ_FALSE);
 
     /* Update stats in case the stream is paused */
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
@@ -1527,7 +1527,8 @@ static pj_status_t get_frame(pjmedia_port *port,
 			stream->dec : stream->enc,
 		       "changed");
 
-	pjmedia_event_publish(NULL, port, &stream->fmt_event, 0);
+	pjmedia_event_publish(NULL, port, &stream->fmt_event,
+			      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 
 	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
     }

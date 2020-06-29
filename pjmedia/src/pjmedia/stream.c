@@ -164,6 +164,7 @@ struct pjmedia_stream
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
     char		     jb_last_frm;   /**< Last frame type from jb    */
     unsigned		     jb_last_frm_cnt;/**< Last JB frame type counter*/
+    unsigned		     soft_start_cnt;/**< Stream soft start counter */
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -185,12 +186,17 @@ struct pjmedia_stream
     int			     rx_event_pt;   /**< Incoming pt for dtmf.	    */
     int			     last_dtmf;	    /**< Current digit, or -1.	    */
     pj_uint32_t		     last_dtmf_dur; /**< Start ts for cur digit.    */
+    pj_bool_t                last_dtmf_ended;
     unsigned		     rx_dtmf_count; /**< # of digits in dtmf rx buf.*/
     char		     rx_dtmf_buf[32];/**< Incoming DTMF buffer.	    */
 
     /* DTMF callback */
     void		    (*dtmf_cb)(pjmedia_stream*, void*, int);
     void		     *dtmf_cb_user_data;
+
+    void                    (*dtmf_event_cb)(pjmedia_stream*, void*,
+                                             const pjmedia_stream_dtmf_event*);
+    void                     *dtmf_event_cb_user_data;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     /* Enable support to handle codecs with inconsistent clock rate
@@ -514,6 +520,19 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
     /* Return no frame is channel is paused */
     if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
+
+    if (stream->soft_start_cnt) {
+	if (stream->soft_start_cnt == PJMEDIA_STREAM_SOFT_START) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Resetting jitter buffer in stream playback start"));
+	    pj_mutex_lock( stream->jb_mutex );
+	    pjmedia_jbuf_reset(stream->jb);
+	    pj_mutex_unlock( stream->jb_mutex );
+	}
+	--stream->soft_start_cnt;
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
@@ -1318,12 +1337,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     }
 #endif
 
-    /* Don't do anything if stream is paused */
-    if (channel->paused) {
-	stream->enc_buf_pos = stream->enc_buf_count = 0;
-	return PJ_SUCCESS;
-    }
-
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
 	ts_len = ((unsigned)frame->size >> 1) /
@@ -1333,9 +1346,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 		 PJMEDIA_PIA_CCNT(&stream->port.info);
     else
 	ts_len = 0;
-
-    /* Increment transmit duration */
-    stream->tx_duration += ts_len;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     /* Handle special case for audio codec with RTP timestamp inconsistence
@@ -1348,6 +1358,23 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 #else
     rtp_ts_len = ts_len;
 #endif
+
+    /* Don't do anything if stream is paused, except updating RTP timestamp */
+    if (channel->paused) {
+	stream->enc_buf_pos = stream->enc_buf_count = 0;
+
+	/* Update RTP session's timestamp. */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp, 0, 0, 0, rtp_ts_len,
+					 NULL, NULL);
+
+	/* Update RTCP stats with last RTP timestamp. */
+	stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(channel->rtp.out_hdr.ts);
+
+	return PJ_SUCCESS;
+    }
+
+    /* Increment transmit duration */
+    stream->tx_duration += ts_len;
 
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
@@ -1677,9 +1704,14 @@ static void dump_bin(const char *buf, unsigned len)
  * Handle incoming DTMF digits.
  */
 static void handle_incoming_dtmf( pjmedia_stream *stream,
+                                  const pj_timestamp *timestamp,
 				  const void *payload, unsigned payloadlen)
 {
     pjmedia_rtp_dtmf_event *event = (pjmedia_rtp_dtmf_event*) payload;
+    pj_uint16_t event_duration;
+    pjmedia_stream_dtmf_event dtmf_event;
+    pj_bool_t is_event_end;
+    pj_bool_t emit_event;
 
     /* Check compiler packing. */
     pj_assert(sizeof(pjmedia_rtp_dtmf_event)==4);
@@ -1689,16 +1721,6 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
 	return;
 
     //dump_bin(payload, payloadlen);
-
-    /* Check if this is the same/current digit of the last packet. */
-    if (stream->last_dtmf != -1 &&
-	event->event == stream->last_dtmf &&
-	pj_ntohs(event->duration) >= stream->last_dtmf_dur)
-    {
-	/* Yes, this is the same event. */
-	stream->last_dtmf_dur = pj_ntohs(event->duration);
-	return;
-    }
 
     /* Ignore unknown event. */
 #if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
@@ -1712,22 +1734,68 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
 	return;
     }
 
+    /* Extract event data. */
+    event_duration = pj_ntohs(event->duration);
+    is_event_end = (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_END_MASK) != 0;
+
+    /* Check if this is the same/current digit of the last packet. */
+    if (stream->last_dtmf != -1 &&
+	event->event == stream->last_dtmf &&
+	event_duration >= stream->last_dtmf_dur)
+    {
+        /* Emit all updates but hide duplicate end frames. */
+        emit_event = !is_event_end || stream->last_dtmf_ended != is_event_end;
+
+	/* Yes, this is the same event. */
+	stream->last_dtmf_dur = event_duration;
+        stream->last_dtmf_ended = is_event_end;
+
+        /* If DTMF callback is installed and end of event hasn't been reported
+         * already, call it.
+         */
+        if (stream->dtmf_event_cb && emit_event) {
+            dtmf_event.digit = digitmap[event->event];
+            dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+                (stream->codec_param.info.clock_rate / 1000));
+            dtmf_event.duration = (pj_uint16_t)(event_duration /
+                (stream->codec_param.info.clock_rate / 1000));
+            dtmf_event.flags = PJMEDIA_STREAM_DTMF_IS_UPDATE;
+            if (is_event_end) {
+                dtmf_event.flags |= PJMEDIA_STREAM_DTMF_IS_END;
+            }
+            stream->dtmf_event_cb(stream, stream->dtmf_event_cb_user_data,
+                                  &dtmf_event);
+        }
+	return;
+    }
+
     /* New event! */
     PJ_LOG(5,(stream->port.info.name.ptr, "Received DTMF digit %c, vol=%d",
     	      digitmap[event->event],
-    	      (event->e_vol & 0x3F)));
+    	      (event->e_vol & PJMEDIA_RTP_DTMF_EVENT_VOLUME_MASK)));
 
     stream->last_dtmf = event->event;
-    stream->last_dtmf_dur = pj_ntohs(event->duration);
+    stream->last_dtmf_dur = event_duration;
+    stream->last_dtmf_ended = is_event_end;
 
     /* If DTMF callback is installed, call the callback, otherwise keep
      * the DTMF digits in the buffer.
      */
-    if (stream->dtmf_cb) {
-
+    if (stream->dtmf_event_cb) {
+        dtmf_event.digit = digitmap[event->event];
+        dtmf_event.timestamp = (pj_uint32_t)(timestamp->u64 /
+            (stream->codec_param.info.clock_rate / 1000));
+        dtmf_event.duration = (pj_uint16_t)(event_duration /
+            (stream->codec_param.info.clock_rate / 1000));
+        dtmf_event.flags = 0;
+        if (is_event_end) {
+            dtmf_event.flags |= PJMEDIA_STREAM_DTMF_IS_END;
+        }
+        stream->dtmf_event_cb(stream, stream->dtmf_event_cb_user_data,
+                              &dtmf_event);
+    } else if (stream->dtmf_cb) {
 	stream->dtmf_cb(stream, stream->dtmf_cb_user_data,
 			digitmap[event->event]);
-
     } else {
 	/* By convention, we use jitter buffer's mutex to access shared
 	 * DTMF variables.
@@ -1859,6 +1927,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
+        pj_timestamp ts;
+
 	/* Ignore out-of-order packet as it will be detected as new
 	 * digit. Also ignore duplicate packet as it serves no use.
 	 */
@@ -1866,7 +1936,10 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    goto on_return;
 	}
 
-	handle_incoming_dtmf(stream, payload, payloadlen);
+        /* Get the timestamp of the event */
+	ts.u64 = pj_ntohl(hdr->ts);
+
+	handle_incoming_dtmf(stream, &ts, payload, payloadlen);
 	goto on_return;
     }
 
@@ -2356,6 +2429,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->last_dtmf = -1;
     stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
     stream->rtcp_fb_nack.pid = -1;
+    stream->soft_start_cnt = PJMEDIA_STREAM_SOFT_START;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
@@ -3113,6 +3187,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_resume( pjmedia_stream *stream,
 
     if ((dir & PJMEDIA_DIR_DECODING) && stream->dec) {
 	stream->dec->paused = 0;
+	stream->soft_start_cnt = PJMEDIA_STREAM_SOFT_START;
 	PJ_LOG(4,(stream->port.info.name.ptr, "Decoder stream resumed"));
     }
 
@@ -3260,6 +3335,27 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 
     stream->dtmf_cb = cb;
     stream->dtmf_cb_user_data = user_data;
+
+    pj_mutex_unlock(stream->jb_mutex);
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *stream,
+                                                           void (*cb)(pjmedia_stream*,
+                                                                      void *user_data,
+                                                                      const pjmedia_stream_dtmf_event *event),
+                                                           void *user_data)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    /* By convention, we use jitter buffer's mutex to access DTMF
+     * digits resources.
+     */
+    pj_mutex_lock(stream->jb_mutex);
+
+    stream->dtmf_event_cb = cb;
+    stream->dtmf_event_cb_user_data = user_data;
 
     pj_mutex_unlock(stream->jb_mutex);
 

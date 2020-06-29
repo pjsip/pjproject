@@ -804,6 +804,19 @@
 #  define PJ_HAS_SEMAPHORE	    1
 #endif
 
+/**
+ * Use dispatch semaphores on Darwin.
+ *
+ * Default: 1 on Darwin, 0 otherwise
+ */
+#ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
+#   else
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
+#   endif
+#endif
+
 
 /**
  * Event object (for synchronization, e.g. in Win32)
@@ -1022,6 +1035,18 @@
  */
 #ifndef PJ_SSL_SOCK_MAX_CURVES
 #  define PJ_SSL_SOCK_MAX_CURVES   32
+#endif
+
+/**
+ * Use OpenSSL thread locking callback. This is only applicable for OpenSSL
+ * version prior to 1.1.0
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_SSL_SOCK_OSSL_USE_THREAD_CB
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
+#else
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
 #endif
 
 

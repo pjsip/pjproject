@@ -1340,11 +1340,14 @@ void systest_save_result(const char *filename)
     pj_file_write(fd, textbuf, &size);
 
     for (i=0; i<test_item_count; ++i) {
+        int len;
 	test_item_t *ti = &test_items[i];
-	pj_ansi_snprintf(textbuf, sizeof(textbuf),
+
+	len = pj_ansi_snprintf(textbuf, sizeof(textbuf),
 			 "\r\nTEST %d: %s %s\r\n",
 			 i, ti->title,
 			 (ti->skipped? "Skipped" : (ti->success ? "Success" : "Failed")));
+	PJ_CHECK_TRUNC_STR(len, textbuf, sizeof(textbuf));
 	size = strlen(textbuf);
 	pj_file_write(fd, textbuf, &size);
 

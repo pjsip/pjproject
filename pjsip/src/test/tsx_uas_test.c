@@ -140,7 +140,9 @@ static unsigned tp_flag;
 
 
 #define TEST_TIMEOUT_ERROR	-30
-#define MAX_ALLOWED_DIFF	150
+
+// An effort to accommodate CPU load spike on some test machines.
+#define MAX_ALLOWED_DIFF	500 //150
 
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e);
 static pj_bool_t on_rx_message(pjsip_rx_data *rdata);

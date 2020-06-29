@@ -6483,6 +6483,7 @@ $as_echo "Video is disabled" >&6; }
                 enable_v4l2="no"
                 enable_openh264="no"
                 enable_libyuv="no"
+                enable_vpx="no"
                fi
 fi
 
@@ -7595,8 +7596,8 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
    ac_openh264_cflags="-DPJMEDIA_HAS_OPENH264_CODEC=1 $OPENH264_CFLAGS"
 		  		   ac_openh264_ldflags="$OPENH264_LDFLAGS $OPENH264_LIBS"
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 else
 
@@ -7681,8 +7682,8 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
    ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
 		  		   ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 else
 
@@ -7844,8 +7845,8 @@ ippStaticInit();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -7971,8 +7972,8 @@ extern USC_Fxns USC_G729AFP_Fxns;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -8933,8 +8934,8 @@ if ac_fn_c_try_link "$LINENO"; then :
 
 				   $as_echo "#define PJMEDIA_HAS_BCG729 1" >>confdefs.h
 
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 else
 

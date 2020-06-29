@@ -770,11 +770,15 @@ static void ice_init_complete_cb(void *user_data)
     if (call_med->med_create_cb) {
 	pjsua_call *call = NULL;
 	pjsip_dialog *dlg = NULL;
+	pj_status_t status;
 
-	if (acquire_call("ice_init_complete_cb", call_med->call->index,
-	                 &call, &dlg) != PJ_SUCCESS)
-	{
-	    /* Call have been terminated */
+	status = acquire_call("ice_init_complete_cb", call_med->call->index,
+			      &call, &dlg);
+	if (status != PJ_SUCCESS) {
+	    if (status != PJSIP_ESESSIONTERMINATED) {
+		/* Retry, if call is still active */
+		pjsua_schedule_timer2(&ice_init_complete_cb, call_med, 10);
+	    }
 	    return;
 	}
 
@@ -792,11 +796,15 @@ static void ice_failed_nego_cb(void *user_data)
     int call_id = (int)(pj_ssize_t)user_data;
     pjsua_call *call = NULL;
     pjsip_dialog *dlg = NULL;
+    pj_status_t status;
 
-    if (acquire_call("ice_failed_nego_cb", call_id,
-                     &call, &dlg) != PJ_SUCCESS)
-    {
-	/* Call have been terminated */
+    status = acquire_call("ice_failed_nego_cb", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+	if (status != PJSIP_ESESSIONTERMINATED) {
+	    /* Retry, if call is still active */
+	    pjsua_schedule_timer2(&ice_failed_nego_cb,
+				  (void*)(pj_ssize_t)call_id, 10);
+	}
 	return;
     }
 
@@ -1513,6 +1521,20 @@ pj_status_t on_media_event(pjmedia_event *event, void *user_data)
     return status;
 }
 
+/* Call on_call_media_event() callback using timer */
+static void call_med_event_cb(void *user_data)
+{
+    pjsua_event_list *eve = (pjsua_event_list *)user_data;
+    
+    (*pjsua_var.ua_cfg.cb.on_call_media_event)(eve->call_id,
+					       eve->med_idx,
+					       &eve->event);
+
+    pj_mutex_lock(pjsua_var.timer_mutex);
+    pj_list_push_back(&pjsua_var.event_list, eve);
+    pj_mutex_unlock(pjsua_var.timer_mutex);
+}
+
 /* Callback to receive media events of a call */
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data)
@@ -1624,14 +1646,29 @@ pj_status_t call_media_on_event(pjmedia_event *event,
     }
 
     if (pjsua_var.ua_cfg.cb.on_call_media_event) {
-	if (call) {
-	    (*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
-						       call_med->idx, event);
-	} else {
+	pjsua_event_list *eve = NULL;
+ 
+    	pj_mutex_lock(pjsua_var.timer_mutex);
+
+    	if (pj_list_empty(&pjsua_var.event_list)) {
+            eve = PJ_POOL_ALLOC_T(pjsua_var.timer_pool, pjsua_event_list);
+    	} else {
+            eve = pjsua_var.event_list.next;
+            pj_list_erase(eve);
+    	}
+
+    	pj_mutex_unlock(pjsua_var.timer_mutex);
+    	
+    	if (call) {
+    	    eve->call_id = call->index;
+    	    eve->med_idx = call_med->idx;
+    	} else {
 	    /* Also deliver non call events such as audio device error */
-	    (*pjsua_var.ua_cfg.cb.on_call_media_event)(PJSUA_INVALID_ID,
-						       0, event);
-	}
+    	    eve->call_id = PJSUA_INVALID_ID;
+    	    eve->med_idx = 0;
+    	}
+    	pj_memcpy(&eve->event, event, sizeof(pjmedia_event));
+    	pjsua_schedule_timer2(&call_med_event_cb, eve, 1);
     }
 
     return status;
@@ -3001,6 +3038,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
         call_med->tp_orig = NULL;
+        call_med->rem_srtp_use = PJMEDIA_SRTP_UNKNOWN;
     }
 
     pj_log_pop_indent();

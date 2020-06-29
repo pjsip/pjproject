@@ -80,7 +80,36 @@ static void setup_signal_handler(void)
     SetConsoleCtrlHandler(&CtrlHandler, TRUE);
 }
 
+#elif PJ_LINUX || PJ_DARWINOS
+
+#include <execinfo.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+static void print_stack(int sig)
+{
+    void *array[16];
+    size_t size;
+
+    size = backtrace(array, 16);
+    fprintf(stderr, "Error: signal %d:\n", sig);
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
+    exit(1);
+}
+
+static void setup_socket_signal()
+{
+    signal(SIGPIPE, SIG_IGN);
+}
+
+static void setup_signal_handler(void)
+{
+    signal(SIGSEGV, &print_stack);
+}
+
 #else
+
 #include <signal.h>
 
 static void setup_socket_signal()
@@ -89,6 +118,7 @@ static void setup_socket_signal()
 }
 
 static void setup_signal_handler(void) {}
+
 #endif
 
 int main_func(int argc, char *argv[])

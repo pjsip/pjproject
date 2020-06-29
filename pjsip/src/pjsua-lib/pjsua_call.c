@@ -3473,23 +3473,31 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     pjsip_media_type ctype;
     pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
+    pj_bool_t content_in_msg_data;
     pj_status_t status;
+
+    content_in_msg_data = msg_data && (msg_data->msg_body.slen ||
+				       msg_data->multipart_ctype.type.slen);
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
+    
+    /* Message body must be specified. */
+    PJ_ASSERT_RETURN(content || content_in_msg_data, PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Call %d sending %d bytes MESSAGE..",
-        	          call_id, (int)content->slen));
+    if (content) {
+	PJ_LOG(4,(THIS_FILE, "Call %d sending %d bytes MESSAGE..",
+        		      call_id, (int)content->slen));
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Call %d sending MESSAGE..",
+        		      call_id));
+    }
+
     pj_log_push_indent();
 
     status = acquire_call("pjsua_call_send_im()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
-
-    /* Set default media type if none is specified */
-    if (mime_type == NULL) {
-	mime_type = &mime_text_plain;
-    }
 
     /* Create request message. */
     status = pjsip_dlg_create_request( call->inv->dlg, &pjsip_message_method,
@@ -3503,16 +3511,24 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     pjsip_msg_add_hdr( tdata->msg,
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
-    /* Parse MIME type */
-    pjsua_parse_media_type(tdata->pool, mime_type, &ctype);
+    /* Add message body, if content is set */
+    if (content) {
+	/* Set default media type if none is specified */
+	if (mime_type == NULL) {
+	    mime_type = &mime_text_plain;
+	}
 
-    /* Create "text/plain" message body. */
-    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &ctype.type,
-					      &ctype.subtype, content);
-    if (tdata->msg->body == NULL) {
-	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
-	pjsip_tx_data_dec_ref(tdata);
-	goto on_return;
+	/* Parse MIME type */
+	pjsua_parse_media_type(tdata->pool, mime_type, &ctype);
+
+	/* Create "text/plain" message body. */
+	tdata->msg->body = pjsip_msg_body_create( tdata->pool, &ctype.type,
+						  &ctype.subtype, content);
+	if (tdata->msg->body == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
+	    pjsip_tx_data_dec_ref(tdata);
+	    goto on_return;
+	}
     }
 
     /* Add additional headers etc */
@@ -3523,7 +3539,8 @@ PJ_DEF(pj_status_t) pjsua_call_send_im( pjsua_call_id call_id,
     im_data->acc_id = call->acc_id;
     im_data->call_id = call_id;
     im_data->to = call->inv->dlg->remote.info_str;
-    pj_strdup_with_null(tdata->pool, &im_data->body, content);
+    if (content)
+	pj_strdup_with_null(tdata->pool, &im_data->body, content);
     im_data->user_data = user_data;
 
 
@@ -5449,9 +5466,15 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    /* im_data can be NULL if this is typing indication */
 
 	    if (im_data && pjsua_var.ua_cfg.cb.on_pager_status) {
+		pj_str_t im_body = im_data->body;
+		if (im_body.slen==0) {
+		    pjsip_msg_body *body = tsx->last_tx->msg->body;
+		    pj_strset(&im_body, body->data, body->len);
+		}
+
 		pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id,
 						    &im_data->to,
-						    &im_data->body,
+						    &im_body,
 						    im_data->user_data,
 						    (pjsip_status_code)
 						    	tsx->status_code,
@@ -5566,7 +5589,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    pj_status_t status;
 	    pj_bool_t is_handled = PJ_FALSE;
 
-	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2) {
+	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2 ||
+                pjsua_var.ua_cfg.cb.on_dtmf_event)
+            {
 		pjsua_dtmf_info info;
 		pj_str_t delim, token, input;
 		pj_ssize_t found_idx;
@@ -5576,35 +5601,85 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		found_idx = pj_strtok(&input, &delim, &token, 0);
 		if (found_idx != input.slen) {
 		    /* Get signal/digit */
-		    const pj_str_t STR_SIGNAL = { "Signal=", 7 };
-		    const pj_str_t STR_DURATION = { "Duration=", 9 };
+		    const pj_str_t STR_SIGNAL = { "Signal", 6 };
+		    const pj_str_t STR_DURATION = { "Duration", 8 };
 		    char *val;
+		    pj_ssize_t count_equal_sign;
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-			info.digit = *(val+STR_SIGNAL.slen);
-			is_handled = PJ_TRUE;
+			count_equal_sign = 0;
+			char* p = val + STR_SIGNAL.slen;
+			while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+			    if(*p == '=')
+				count_equal_sign++;
+			    ++p;
+			}
+
+			if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			    info.digit = *p;
+			    is_handled = PJ_TRUE;
+			} else {
+			    PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			}
 
 			/* Get duration */
 			input.ptr += token.slen + 2;
 			input.slen -= (token.slen + 2);
 
 			val = pj_strstr(&input, &STR_DURATION);
-			if (val) {
+			if (val && is_handled) {
 			    pj_str_t val_str;
+			    count_equal_sign = 0;
+			    char* p = val + STR_DURATION.slen;
+			    while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+				if (*p == '=')
+				    count_equal_sign++;
+			        ++p;
+			    }
 
-			    val_str.ptr = val + STR_DURATION.slen;
-			    val_str.slen = input.slen - STR_DURATION.slen;
-			    info.duration = pj_strtoul(&val_str);
+			    if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			        val_str.ptr = p;
+			        val_str.slen = input.slen - (p - input.ptr);
+			        info.duration = pj_strtoul(&val_str);
+			    } else {
+                                info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
+				is_handled = PJ_FALSE;
+				PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			    }
 			}
-		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
-			(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index, 
-							      &info);
 
-			status = pjsip_endpt_create_response(tsx->endpt, rdata,
-							    200, NULL, &tdata);
-			if (status == PJ_SUCCESS)
-			    status = pjsip_tsx_send_msg(tsx, tdata);
+			if (is_handled) {
+			    info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+                            if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
+		                pjsua_dtmf_event evt;
+                                pj_timestamp begin_of_time, timestamp;
+                                /* Use the current instant as the events start
+                                 * time.
+                                 */
+                                begin_of_time.u64 = 0;
+                                pj_get_timestamp(&timestamp);
+                                evt.method = info.method;
+                                evt.timestamp = pj_elapsed_msec(&begin_of_time,
+                                                                &timestamp);
+                                evt.digit = info.digit;
+                                evt.duration = info.duration;
+                                /* There is only one message indicating the full
+                                 * duration of the digit.
+                                 */
+                                evt.flags = PJMEDIA_STREAM_DTMF_IS_END;
+                                (*pjsua_var.ua_cfg.cb.on_dtmf_event)(call->index,
+                                                                     &evt);
+                            } else {
+			        (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index,
+							              &info);
+                            }
+
+			    status = pjsip_endpt_create_response(tsx->endpt, rdata,
+				200, NULL, &tdata);
+			    if (status == PJ_SUCCESS)
+				status = pjsip_tsx_send_msg(tsx, tdata);
+			}
 		    }
 		}
 	    } 

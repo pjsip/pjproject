@@ -89,6 +89,7 @@ static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] =
 
 
 /* ICE callbacks */
+static void	   on_valid_pair(pj_ice_sess *ice);
 static void	   on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 			      unsigned comp_id,
@@ -655,7 +656,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		    continue;
 		}
 		else if (stun_cfg->af == pj_AF_INET6()) {
-		    pj_in6_addr in6addr = {{0}};
+		    pj_in6_addr in6addr = {{{0}}};
 		    in6addr.s6_addr[15] = 1;
 		    if (pj_memcmp(&in6addr, &addr->ipv6.sin6_addr,
 				  sizeof(in6addr))==0)
@@ -1204,6 +1205,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
     /* Init callback */
     pj_bzero(&ice_cb, sizeof(ice_cb));
+    ice_cb.on_valid_pair   = &on_valid_pair;
     ice_cb.on_ice_complete = &on_ice_complete;
     ice_cb.on_rx_data = &ice_rx_data;
     ice_cb.on_tx_pkt = &ice_tx_pkt;
@@ -1792,6 +1794,86 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto2(pj_ice_strans *ice_st,
     		     dst_addr_len, PJ_TRUE, PJ_FALSE);
 }
 
+static void on_valid_pair(pj_ice_sess *ice)
+{
+    pj_time_val t;
+    unsigned msec;
+    pj_ice_strans *ice_st = (pj_ice_strans *)ice->user_data;
+    pj_ice_strans_cb cb   = ice_st->cb;
+    pj_status_t status    = PJ_SUCCESS;
+
+    pj_grp_lock_add_ref(ice_st->grp_lock);
+
+    pj_gettimeofday(&t);
+    PJ_TIME_VAL_SUB(t, ice_st->start_time);
+    msec = PJ_TIME_VAL_MSEC(t);
+
+    if (cb.on_valid_pair) {
+	unsigned i;
+	enum {
+	    msg_disable_ind = 0xFFFF & ~(PJ_STUN_SESS_LOG_TX_IND |
+	                                 PJ_STUN_SESS_LOG_RX_IND)
+	};
+
+	PJ_LOG(4,
+	       (ice_st->obj_name, "First ICE candidate nominated in %ds:%03d",
+	        msec / 1000, msec % 1000));
+
+	for (i = 0; i < ice_st->comp_cnt; ++i) {
+	    const pj_ice_sess_check *check;
+	    pj_ice_strans_comp *comp = ice_st->comp[i];
+
+	    check = pj_ice_strans_get_valid_pair(ice_st, i + 1);
+	    if (check) {
+		char lip[PJ_INET6_ADDRSTRLEN + 10];
+		char rip[PJ_INET6_ADDRSTRLEN + 10];
+		unsigned tp_idx = GET_TP_IDX(check->lcand->transport_id);
+		unsigned tp_typ = GET_TP_TYPE(check->lcand->transport_id);
+
+		pj_sockaddr_print(&check->lcand->addr, lip, sizeof(lip), 3);
+		pj_sockaddr_print(&check->rcand->addr, rip, sizeof(rip), 3);
+
+		if (tp_typ == TP_TURN) {
+		    /* Activate channel binding for the remote address
+		     * for more efficient data transfer using TURN.
+		     */
+		    status = pj_turn_sock_bind_channel(
+		            comp->turn[tp_idx].sock, &check->rcand->addr,
+		            sizeof(check->rcand->addr));
+
+		    /* Disable logging for Send/Data indications */
+		    PJ_LOG(5, (ice_st->obj_name,
+		               "Disabling STUN Indication logging for "
+		               "component %d",
+		               i + 1));
+		    pj_turn_sock_set_log(comp->turn[tp_idx].sock,
+		                         msg_disable_ind);
+		    comp->turn[tp_idx].log_off = PJ_TRUE;
+		}
+
+		PJ_LOG(4, (ice_st->obj_name,
+		           " Comp %d: "
+		           "sending from %s candidate %s to "
+		           "%s candidate %s",
+		           i + 1, pj_ice_get_cand_type_name(check->lcand->type),
+		           lip, pj_ice_get_cand_type_name(check->rcand->type),
+		           rip));
+
+	    } else {
+		PJ_LOG(4, (ice_st->obj_name, "Comp %d: disabled", i + 1));
+	    }
+	}
+
+	ice_st->state = (status == PJ_SUCCESS) ? PJ_ICE_STRANS_STATE_RUNNING :
+	                                         PJ_ICE_STRANS_STATE_FAILED;
+
+	pj_log_push_indent();
+	(*cb.on_valid_pair)(ice_st);
+	pj_log_pop_indent();
+    }
+
+    pj_grp_lock_dec_ref(ice_st->grp_lock);
+}
 
 /*
  * Callback called by ICE session when ICE processing is complete, either

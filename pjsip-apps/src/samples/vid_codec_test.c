@@ -43,10 +43,6 @@
 #include "util.h"
 
 
-static const char *desc = 
- " vid_vodec_test                                                       \n"
-;
-
 #define THIS_FILE	"vid_vodec_test.c"
 
 
@@ -60,10 +56,6 @@ static const char *desc =
 #define DEF_RENDERER_WIDTH		    640
 #define DEF_RENDERER_HEIGHT		    480
 
-
-/* Prototype */
-static void print_stream_stat(pjmedia_vid_stream *stream,
-			      const pjmedia_vid_codec_param *codec_param);
 
 /* Prototype for LIBSRTP utility in file datatypes.c */
 int hex_string_to_octet_string(char *raw, char *hex, int len);
@@ -126,13 +118,6 @@ static void deinit_codecs()
 
 }
 
-/*
- * usage()
- */
-static void usage()
-{
-    puts(desc);
-}
 
 static void show_diff(const pj_uint8_t *buf1, const pj_uint8_t *buf2,
                       unsigned size)
@@ -407,7 +392,6 @@ int main(int argc, char *argv[])
 	pjmedia_frame frm_yuv, frm_enc[MAX_FRAMES];
 	pj_bool_t has_more = PJ_FALSE;
 	const pj_uint8_t start_nal[] = { 0, 0, 1 };
-	unsigned i;
 
 	++ read_cnt;
 
@@ -522,6 +506,9 @@ on_exit:
 
     /* Shutdown PJLIB */
     pj_shutdown();
+
+    /* Avoid compile warning */
+    PJ_UNUSED_ARG(app_perror);
 
     return (status == PJ_SUCCESS) ? 0 : 1;
 }
