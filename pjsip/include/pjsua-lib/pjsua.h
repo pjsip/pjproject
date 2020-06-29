@@ -303,15 +303,15 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 /**
  * Initial memory block for PJSUA account.
  */
-#ifndef PJSUA_POOL_ACC_LEN
-#   define PJSUA_POOL_ACC_LEN	512
+#ifndef PJSUA_POOL_LEN_ACC
+#   define PJSUA_POOL_LEN_ACC	512
 #endif
 
 /**
  * Memory increment for PJSUA account.
  */
-#ifndef PJSUA_POOL_ACC_INC
-#   define PJSUA_POOL_ACC_INC	256
+#ifndef PJSUA_POOL_INC_ACC
+#   define PJSUA_POOL_INC_ACC	256
 #endif
 
 /**

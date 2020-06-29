@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
     pj_status_t status;
 
     mgr = PJ_POOL_ZALLOC_T(pool, pjmedia_event_mgr);
-    mgr->pool = pj_pool_create(pool->factory, "evt mgr", PJMEDIA_POOL_EVTMGR_LEN, PJMEDIA_POOL_EVTMGR_INC, NULL);
+    mgr->pool = pj_pool_create(pool->factory, "evt mgr", PJMEDIA_POOL_LEN_EVTMGR, PJMEDIA_POOL_INC_EVTMGR, NULL);
     pj_list_init(&mgr->esub_list);
     pj_list_init(&mgr->free_esub_list);
 

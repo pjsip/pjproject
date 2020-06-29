@@ -61,15 +61,15 @@
 /**
  * Initial memory block for event manager.
  */
-#ifndef PJMEDIA_POOL_EVTMGR_LEN
-#   define PJMEDIA_POOL_EVTMGR_LEN		500
+#ifndef PJMEDIA_POOL_LEN_EVTMGR
+#   define PJMEDIA_POOL_LEN_EVTMGR		500
 #endif
 
 /**
  * Memory increment for evnt manager.
  */
-#ifndef PJMEDIA_POOL_EVTMGR_INC
-#   define PJMEDIA_POOL_EVTMGR_INC		500
+#ifndef PJMEDIA_POOL_INC_EVTMGR
+#   define PJMEDIA_POOL_INC_EVTMGR		500
 #endif
 
 /**
