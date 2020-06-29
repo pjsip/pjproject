@@ -183,12 +183,10 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
     if (status != PJ_SUCCESS)
 	return status;
 
+    // If downstream provides non PCM frames, skip conversion and return silence
+    // For example, empty ConfBridge gives PJMEDIA_FRAME_TYPE_NONE
     if (tmp_frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	frame->type = tmp_frame.type;
-	frame->timestamp = tmp_frame.timestamp;
-	frame->size = tmp_frame.size;
-	if (tmp_frame.size && tmp_frame.buf == sport->get_buf)
-	    pj_memcpy(frame->buf, tmp_frame.buf, tmp_frame.size);
+	pj_bzero(frame->buf, frame->size);
 	return PJ_SUCCESS;
     }
 
