@@ -93,6 +93,7 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_nto1(pj_int16_t mono[],
 	    for(j = 0; j < channel_count; ++j)
 		tmp += multi[i+j];
 
+	    tmp = tmp / (int)channel_count;
 	    if (tmp > 32767) tmp = 32767;
 	    else if (tmp < -32768) tmp = -32768;
 	    *mono = (pj_int16_t) tmp;
