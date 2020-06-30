@@ -946,6 +946,9 @@ static void tls_flush_pending_tx(struct tls_transport *tls)
         if (pending_tx->timeout.sec > 0 &&
             PJ_TIME_VAL_GT(now, pending_tx->timeout))
         {
+            pj_lock_release(tls->base.lock);
+	    on_data_sent(tls->ssock, op_key, -PJ_ETIMEDOUT);
+            pj_lock_acquire(tls->base.lock);
             continue;
         }
 

@@ -5599,35 +5599,63 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		found_idx = pj_strtok(&input, &delim, &token, 0);
 		if (found_idx != input.slen) {
 		    /* Get signal/digit */
-		    const pj_str_t STR_SIGNAL = { "Signal=", 7 };
-		    const pj_str_t STR_DURATION = { "Duration=", 9 };
+		    const pj_str_t STR_SIGNAL = { "Signal", 6 };
+		    const pj_str_t STR_DURATION = { "Duration", 8 };
 		    char *val;
+		    pj_ssize_t count_equal_sign;
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-			info.digit = *(val+STR_SIGNAL.slen);
-			is_handled = PJ_TRUE;
+			count_equal_sign = 0;
+			char* p = val + STR_SIGNAL.slen;
+			while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+			    if(*p == '=')
+				count_equal_sign++;
+			    ++p;
+			}
+
+			if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			    info.digit = *p;
+			    is_handled = PJ_TRUE;
+			} else {
+			    PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			}
 
 			/* Get duration */
 			input.ptr += token.slen + 2;
 			input.slen -= (token.slen + 2);
 
 			val = pj_strstr(&input, &STR_DURATION);
-			if (val) {
+			if (val && is_handled) {
 			    pj_str_t val_str;
+			    count_equal_sign = 0;
+			    char* p = val + STR_DURATION.slen;
+			    while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
+				if (*p == '=')
+				    count_equal_sign++;
+			        ++p;
+			    }
 
-			    val_str.ptr = val + STR_DURATION.slen;
-			    val_str.slen = input.slen - STR_DURATION.slen;
-			    info.duration = pj_strtoul(&val_str);
+			    if (count_equal_sign == 1 && (p - input.ptr < input.slen)) {
+			        val_str.ptr = p;
+			        val_str.slen = input.slen - (p - input.ptr);
+			        info.duration = pj_strtoul(&val_str);
+			    } else {
+				is_handled = PJ_FALSE;
+				PJ_LOG(2, (THIS_FILE, "Invalid dtmf-relay format"));
+			    }
 			}
-		    	info.method = PJSUA_DTMF_METHOD_SIP_INFO;
-			(*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index, 
-							      &info);
 
-			status = pjsip_endpt_create_response(tsx->endpt, rdata,
-							    200, NULL, &tdata);
-			if (status == PJ_SUCCESS)
-			    status = pjsip_tsx_send_msg(tsx, tdata);
+			if (is_handled) {
+			    info.method = PJSUA_DTMF_METHOD_SIP_INFO;
+			    (*pjsua_var.ua_cfg.cb.on_dtmf_digit2)(call->index,
+				&info);
+
+			    status = pjsip_endpt_create_response(tsx->endpt, rdata,
+				200, NULL, &tdata);
+			    if (status == PJ_SUCCESS)
+				status = pjsip_tsx_send_msg(tsx, tdata);
+			}
 		    }
 		}
 	    } 

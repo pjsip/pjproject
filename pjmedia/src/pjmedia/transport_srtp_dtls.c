@@ -898,10 +898,11 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     return PJ_SUCCESS;
 }
 
-
 static pj_status_t get_rem_addrs(dtls_srtp *ds,
 				 const pjmedia_sdp_session *sdp_remote,
-				 unsigned media_index)
+				 unsigned media_index,
+                                 pj_sockaddr *rem_rtp,
+                                 pj_sockaddr *rem_rtcp)
 {
     pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
     pjmedia_sdp_conn *conn;
@@ -918,7 +919,7 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 	}
     }
     if (af != pj_AF_UNSPEC()) {
-	pj_sockaddr_init(af, &ds->rem_addr, &conn->addr,
+	pj_sockaddr_init(af, rem_rtp, &conn->addr,
 			 m_rem->desc.port);
     } else {
 	return PJ_EAFNOTSUP;
@@ -936,22 +937,22 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 	status = pjmedia_sdp_attr_get_rtcp(a, &rtcp);
 	if (status == PJ_SUCCESS) {
 	    if (rtcp.addr.slen) {
-		pj_sockaddr_init(af, &ds->rem_rtcp, &rtcp.addr,
+		pj_sockaddr_init(af, rem_rtcp, &rtcp.addr,
 				 (pj_uint16_t)rtcp.port);
 	    } else {
-		pj_sockaddr_init(af, &ds->rem_rtcp, NULL,
+		pj_sockaddr_init(af, rem_rtcp, NULL,
 				 (pj_uint16_t)rtcp.port);
-		pj_memcpy(pj_sockaddr_get_addr(&ds->rem_rtcp),
-			  pj_sockaddr_get_addr(&ds->rem_addr),
-			  pj_sockaddr_get_addr_len(&ds->rem_addr));
+		pj_memcpy(pj_sockaddr_get_addr(rem_rtcp),
+			  pj_sockaddr_get_addr(rem_rtp),
+			  pj_sockaddr_get_addr_len(rem_rtp));
 	    }
 	}
     }
-    if (!pj_sockaddr_has_addr(&ds->rem_rtcp)) {
+    if (!pj_sockaddr_has_addr(rem_rtcp)) {
 	int rtcp_port;
-	pj_memcpy(&ds->rem_rtcp, &ds->rem_addr, sizeof(pj_sockaddr));
-	rtcp_port = pj_sockaddr_get_port(&ds->rem_addr) + 1;
-	pj_sockaddr_set_port(&ds->rem_rtcp, (pj_uint16_t)rtcp_port);
+	pj_memcpy(rem_rtcp, rem_rtp, sizeof(pj_sockaddr));
+	rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
+	pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
     }
 
     return PJ_SUCCESS;
@@ -1235,6 +1236,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	/* As answerer */
 	dtls_setup last_setup = ds->setup;
 	pj_str_t last_rem_fp = ds->rem_fingerprint;
+        pj_bool_t rem_addr_changed = PJ_FALSE;
 
 	/* Parse a=setup and a=fingerprint */
 	status = parse_setup_finger_attr(ds, PJ_TRUE, sdp_remote,
@@ -1247,12 +1249,28 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 		    (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
 	pjmedia_sdp_media_add_attr(m_loc, a);
 
+        if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
+            pj_sockaddr rem_rtp;
+            pj_sockaddr rem_rtcp;
+
+            status = get_rem_addrs(ds, sdp_remote, media_index, &rem_rtp,
+                                   &rem_rtcp);
+            if (status == PJ_SUCCESS) {
+                if (pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
+                    pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp))
+                {
+                    rem_addr_changed = PJ_TRUE;
+                }
+            }
+        }
+
 	/* Check if remote signals DTLS re-nego by changing its
-	 * setup/fingerprint in SDP.
+	 * setup/fingerprint in SDP or media transport address in SDP.
 	 */
 	if ((last_setup != DTLS_SETUP_UNKNOWN && last_setup != ds->setup) ||
 	    (last_rem_fp.slen &&
-	     pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t))))
+	     pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t)))||
+            (rem_addr_changed))
 	{
 	    ssl_destroy(ds);
 	    ds->nego_started = PJ_FALSE;
@@ -1306,8 +1324,10 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	ap.user_data = ds->srtp;
 	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 
-	if (sdp_remote)
-	    get_rem_addrs(ds, sdp_remote, media_index);
+        if (sdp_remote) {
+            get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
+                          &ds->rem_rtcp);
+        }
 
 	if (pj_sockaddr_has_addr(&ds->rem_addr)) {
 	    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
@@ -1391,6 +1411,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     pj_ice_strans_state ice_state;
     pj_bool_t use_rtcp_mux = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+    struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
 
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_media_start()"));
@@ -1472,6 +1493,8 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     ds->srtp->keying_pending_cnt++;
     ds->pending_start = PJ_TRUE;
 
+    srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
+
     /* If our DTLS setup is ACTIVE:
      * - start DTLS nego after ICE nego, or
      * - start it now if there is no ICE.
@@ -1492,8 +1515,10 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    ap.user_data = ds->srtp;
 
 	    /* Attach ourselves to member transport for DTLS nego. */
-	    if (!pj_sockaddr_has_addr(&ds->rem_addr))
-		get_rem_addrs(ds, sdp_remote, media_index);
+            if (!pj_sockaddr_has_addr(&ds->rem_addr)) {
+                get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
+                              &ds->rem_rtcp);
+            }
 
 	    if (pj_sockaddr_has_addr(&ds->rem_addr))
 		pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);

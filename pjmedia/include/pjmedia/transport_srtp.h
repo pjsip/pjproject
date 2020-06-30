@@ -115,6 +115,13 @@ typedef enum pjmedia_srtp_use
     PJMEDIA_SRTP_DISABLED,
 
     /**
+     * When this flag is specified, SRTP setting is unknown. This is to set
+     * the initial remote's SRTP usage. It will be set later after remote's
+     * policy in the SDP is received.
+     */
+    PJMEDIA_SRTP_UNKNOWN = PJMEDIA_SRTP_DISABLED,
+
+    /**
      * When this flag is specified, SRTP will be advertised as optional and
      * incoming SRTP offer will be accepted.
      */
