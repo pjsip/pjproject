@@ -183,8 +183,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_init( pjmedia_endpt *endpt )
     g722_codec_factory.endpt = endpt;
     g722_codec_factory.pcm_shift = PJMEDIA_G722_DEFAULT_PCM_SHIFT;
 
-    g722_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "g722", G722_POOL_INIT_SIZE, 
-						        G722_POOL_INC_SIZE);
+    g722_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "g722",
+						        G722_POOL_INIT_SIZE, G722_POOL_INC_SIZE);
     if (!g722_codec_factory.pool)
 	return PJ_ENOMEM;
 
