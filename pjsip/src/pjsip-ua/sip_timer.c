@@ -411,10 +411,8 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 	    if (status == PJ_SUCCESS)
 		status = pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
 	    if (status == PJ_SUCCESS) {
-	        pjmedia_sdp_session *sdp_copy;
-		
-		sdp_copy = pjmedia_sdp_session_clone(tdata->pool, offer);
-		status = pjsip_create_sdp_body(tdata->pool, sdp_copy, &body);
+		status = pjsip_create_sdp_body(tdata->pool, 
+					(pjmedia_sdp_session*)offer, &body);
 		tdata->msg->body = body;
 	    }
 	}
