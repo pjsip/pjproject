@@ -639,14 +639,13 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 
     if (!opt) {
 	pjsua_call_cleanup_flag(&call->opt);
-	return PJ_SUCCESS;
+    } else {
+    	call->opt = *opt;
     }
 
 #if !PJMEDIA_HAS_VIDEO
-    pj_assert(opt->vid_cnt == 0);
+    pj_assert(call->opt.vid_cnt == 0);
 #endif
-
-    call->opt = *opt;
 
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
     	pjsua_media_channel_deinit(call->index);
