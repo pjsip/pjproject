@@ -175,7 +175,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_init( pjmedia_endpt *endpt )
 
     g722_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "g722",
 						        PJMEDIA_POOL_LEN_G722_CODEC,
-                                PJMEDIA_POOL_INC_G722_CODEC);
+						        PJMEDIA_POOL_INC_G722_CODEC);
     if (!g722_codec_factory.pool)
 	return PJ_ENOMEM;
 
