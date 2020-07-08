@@ -1643,33 +1643,25 @@ AC_ARG_ENABLE(darwin-ssl,
 		case $target in
 	  	*darwin*)
 	            SAVED_CFLAGS="$CFLAGS"
-	            CFLAGS="$CFLAGS -Werror"
+	            CFLAGS="-Werror"
+	            SAVED_LIBS="$LIBS"
+	            LIBS="-framework Security"
 		    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <Security/SecureTransport.h>]],
-			[SSLContextRef ssl_ctx;
-			 SSLReHandshake(ssl_ctx);
-			 ])],
+			[if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
+			     SSLContextRef ssl_ctx;
+			     SSLReHandshake(ssl_ctx);
+			 }])],
 			[ac_ssl_backend=darwin],)
+		    CFLAGS="$SAVED_CFLAGS"
+		    LIBS="$SAVED_LIBS"
 	            if test "x$ac_ssl_backend" = "xdarwin"; then
 		        AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
 		        AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_DARWIN)
 		        LIBS="$LIBS -framework Security"
-	  	        AC_MSG_RESULT([Checking if Darwin SSL is available... yes, using Secure Transport])
+	  	        AC_MSG_RESULT([Checking if Darwin SSL is available... yes])
 	            else
-	            	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <Network/Network.h>]],
-			    [nw_connection_t connection;
-			     nw_connection_start(connection);
-			     ])],
-			    [ac_ssl_backend=darwin],)
-	            	if test "x$ac_ssl_backend" = "xdarwin"; then
-		            AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
-		            AC_DEFINE(PJ_SSL_SOCK_IMP, PJ_SSL_SOCK_IMP_APPLE)
-		            LIBS="$LIBS -framework Network -framework Security"
-	            	    AC_MSG_RESULT([Checking if Darwin SSL is available... yes, using Network framework (only for MacOS 10.14+ and iOS 12.0+)])
-			else
-	                    AC_MSG_RESULT([Checking if Darwin SSL is available... no])
-	                fi
+	                AC_MSG_RESULT([Checking if Darwin SSL is available... no])
 		    fi
-		    CFLAGS="$SAVED_CFLAGS"
 		    ;;
 		esac
 	      ])
