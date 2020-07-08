@@ -987,7 +987,8 @@
 #define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
 #define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
 #define PJ_SSL_SOCK_IMP_DARWIN      3	/**< Using Apple's Secure
-					     Transport (deprecated).*/
+					     Transport (deprecated in
+					     MacOS 10.15 & iOS 13.0)*/
 #define PJ_SSL_SOCK_IMP_APPLE       4	/**< Using Apple's Network 
 					     framework.	    	    */
 
