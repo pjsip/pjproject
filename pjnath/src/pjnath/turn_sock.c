@@ -1401,9 +1401,6 @@ static void turn_on_state(pj_turn_session *sess,
     if (new_state >= PJ_TURN_STATE_DESTROYING && turn_sock->sess) {
 	pj_time_val delay = {0, 0};
 
-	turn_sock->sess = NULL;
-	pj_turn_session_set_user_data(sess, NULL);
-
 	pj_timer_heap_cancel_if_active(turn_sock->cfg.timer_heap,
 	                               &turn_sock->timer, 0);
 	pj_timer_heap_schedule_w_grp_lock(turn_sock->cfg.timer_heap,
