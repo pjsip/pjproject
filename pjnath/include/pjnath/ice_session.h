@@ -573,6 +573,38 @@ typedef struct pj_ice_rx_check
 
 
 /**
+ * This enumeration describes the modes of trickle ICE.
+ */
+typedef enum pj_ice_sess_trickle
+{
+    /**
+     * Trickle ICE is disabled, i.e: regular ICE mode.
+     */
+    PJ_ICE_SESS_TRICKLE_DISABLED,
+
+    /**
+     * Half trickle ICE. This mode has better interoperability when remote
+     * capability of ICE trickle is unknown at ICE initialization.
+     *
+     * As ICE initiator, it will convey all local ICE candidates to remote
+     * (just like regular ICE) and be ready to receive either response,
+     * trickle or regular ICE. As ICE answerer, it will do trickle ICE if
+     * it receives an offer with trickle ICE indication, otherwise it will do
+     * regular ICE.
+     */
+    PJ_ICE_SESS_TRICKLE_HALF,
+
+    /**
+     * Full trickle ICE. Only use this mode if remote supports trickle ICE.
+     * The discovery whether remote supports trickle ICE should be done prior
+     * to ICE initialization (by application).
+     */
+    PJ_ICE_SESS_TRICKLE_FULL
+
+} pj_ice_sess_trickle;
+
+
+/**
  * This structure describes various ICE session options. Application
  * configure the ICE session with these options by calling 
  * #pj_ice_sess_set_options().
@@ -606,6 +638,12 @@ typedef struct pj_ice_sess_options
      * this timer.
      */
     int			controlled_agent_want_nom_timeout;
+
+    /**
+     * Trickle ICE mode.
+     * Default value is PJ_ICE_SESS_TRICKLE_HALF.
+     */
+    pj_ice_sess_trickle	trickle;
 
 } pj_ice_sess_options;
 
@@ -915,6 +953,37 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
 			      const pj_str_t *rem_passwd,
 			      unsigned rem_cand_cnt,
 			      const pj_ice_sess_cand rem_cand[]);
+
+
+/**
+ * Update check list after new local or remote ICE candidates are added, this
+ * function is only applicable when trickle ICE is not disabled.
+ * Application typically would call this function after finding
+ * (and conveying) new local ICE candidates to remote, or after receiving
+ * remote ICE candidates.
+ *
+ * Note that ICE connectivity check will automatically start if check list
+ * has any candidate pair.
+ *
+ * @param ice		ICE session instance.
+ * @param rem_ufrag	Remote ufrag, as seen in the SDP received from 
+ *			the remote agent.
+ * @param rem_passwd	Remote password, as seen in the SDP received from
+ *			the remote agent.
+ * @param rem_cand_cnt	Number of remote candidates.
+ * @param rem_cand	Remote candidate array. Remote candidates are
+ *			gathered from the SDP received from the remote 
+ *			agent.
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) 
+pj_ice_sess_update_check_list(pj_ice_sess *ice,
+			      const pj_str_t *rem_ufrag,
+			      const pj_str_t *rem_passwd,
+			      unsigned rem_cand_cnt,
+			      const pj_ice_sess_cand rem_cand[]);
+
 
 /**
  * Start ICE periodic check. This function will return immediately, and
