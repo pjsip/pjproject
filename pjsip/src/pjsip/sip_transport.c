@@ -1401,8 +1401,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     mgr = tp->tpmgr;
     pj_lock_acquire(mgr->lock);
 
-    /* Do nothing if transport is being shutdown already */
-    if (tp->is_shutdown) {
+    /* Do nothing if transport is being shutdown/destroyed already */
+    if (tp->is_shutdown || tp->is_destroying) {
 	pj_lock_release(mgr->lock);
 	pj_lock_release(tp->lock);
 	return PJ_SUCCESS;
@@ -2642,7 +2642,7 @@ PJ_DEF(pj_status_t) pjsip_transport_add_state_listener (
 
     PJ_ASSERT_RETURN(tp && cb && key, PJ_EINVAL);
 
-    if (tp->is_shutdown) {
+    if (tp->is_shutdown || tp->is_destroying) {
 	*key = NULL;
 	return PJ_EINVALIDOP;
     }

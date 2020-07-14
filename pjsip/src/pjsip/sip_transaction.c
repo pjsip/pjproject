@@ -2411,7 +2411,7 @@ static void tsx_update_transport( pjsip_transaction *tsx,
 	pjsip_transport_add_ref(tp);
 	pjsip_transport_add_state_listener(tp, &tsx_tp_state_callback, tsx,
 					    &tsx->tp_st_key);
-        if (tp->is_shutdown) {
+	if (tp->is_shutdown || tp->is_destroying) {
 	    pjsip_transport_state_info info;
 
 	    pj_bzero(&info, sizeof(info));
