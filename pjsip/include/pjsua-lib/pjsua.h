@@ -286,6 +286,33 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 /** Forward declaration for pj_stun_resolve_result */
 typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
+/**
+ * Initial memory block for PJSUA.
+ */
+#ifndef PJSUA_POOL_LEN
+#   define PJSUA_POOL_LEN		1000
+#endif
+
+/**
+ * Memory increment for PJSUA.
+ */
+#ifndef PJSUA_POOL_INC
+#   define PJSUA_POOL_INC		1000
+#endif
+
+/**
+ * Initial memory block for PJSUA account.
+ */
+#ifndef PJSUA_POOL_LEN_ACC
+#   define PJSUA_POOL_LEN_ACC	512
+#endif
+
+/**
+ * Memory increment for PJSUA account.
+ */
+#ifndef PJSUA_POOL_INC_ACC
+#   define PJSUA_POOL_INC_ACC	256
+#endif
 
 /**
  * Maximum proxies in account.

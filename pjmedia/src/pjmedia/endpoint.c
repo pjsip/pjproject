@@ -122,7 +122,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
     PJ_ASSERT_RETURN(pf && p_endpt, PJ_EINVAL);
     PJ_ASSERT_RETURN(worker_cnt <= MAX_THREADS, PJ_EINVAL);
 
-    pool = pj_pool_create(pf, "med-ept", 512, 512, NULL);
+    pool = pj_pool_create(pf, "med-ept", PJMEDIA_POOL_LEN_ENDPT,
+						PJMEDIA_POOL_INC_ENDPT, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 

@@ -144,6 +144,19 @@
 #   define PJMEDIA_HAS_G722_CODEC    1
 #endif
 
+/**
+ * Initial memory block for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_LEN_G722_CODEC
+#   define PJMEDIA_POOL_LEN_G722_CODEC  1000
+#endif
+
+/**
+ * Memory increment for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_INC_G722_CODEC
+#   define PJMEDIA_POOL_INC_G722_CODEC  1000
+#endif
 
 /**
  * Default G.722 codec encoder and decoder level adjustment. The G.722
