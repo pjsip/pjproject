@@ -5454,8 +5454,12 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			       &inv->dlg->local.info_str, rdata);
 
     }
-    else if (tsx->role == PJSIP_ROLE_UAC &&
-	     pjsip_method_cmp(&tsx->method, &pjsip_message_method)==0)
+    else if (e->type == PJSIP_EVENT_TSX_STATE &&
+	     tsx->role == PJSIP_ROLE_UAC &&
+	     pjsip_method_cmp(&tsx->method, &pjsip_message_method)==0 &&
+	     (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
+	     (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	      e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)))
     {
 	/* Handle outgoing pager status */
 	if (tsx->status_code >= 200) {
@@ -5464,20 +5468,41 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    im_data = (pjsua_im_data*) tsx->mod_data[pjsua_var.mod.id];
 	    /* im_data can be NULL if this is typing indication */
 
-	    if (im_data && pjsua_var.ua_cfg.cb.on_pager_status) {
-		pj_str_t im_body = im_data->body;
-		if (im_body.slen==0) {
-		    pjsip_msg_body *body = tsx->last_tx->msg->body;
-		    pj_strset(&im_body, body->data, body->len);
-		}
+	    if (im_data) {
+            pj_str_t im_body = im_data->body;
+			if (im_body.slen==0) {
+			    pjsip_msg_body *body = tsx->last_tx->msg->body;
+			    pj_strset(&im_body, body->data, body->len);
+			}
 
-		pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id,
+	        if (pjsua_var.ua_cfg.cb.on_pager_status) {
+			pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id,
+							    &im_data->to,
+							    &im_body,
+							    im_data->user_data,
+							    (pjsip_status_code)
+							    tsx->status_code,
+							    &tsx->status_text);
+            }
+
+	        if (pjsua_var.ua_cfg.cb.on_pager_status2) {
+	        pjsip_rx_data* rdata;
+
+	        if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+            rdata = e->body.tsx_state.src.rdata;
+            else
+            rdata = NULL;
+
+            pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id,
 						    &im_data->to,
 						    &im_body,
 						    im_data->user_data,
 						    (pjsip_status_code)
 						    	tsx->status_code,
-						    &tsx->status_text);
+						    &tsx->status_text,
+						    tsx->last_tx,
+						    rdata, im_data->acc_id);
+	        }
 	    }
 	}
     } else if (tsx->role == PJSIP_ROLE_UAC &&
