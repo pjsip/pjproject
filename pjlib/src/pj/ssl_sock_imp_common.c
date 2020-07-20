@@ -1981,7 +1981,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect2(
     pj_status_t status;
 #ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
     status = network_start_connect(ssock, connect_param);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_EPENDING)
 	goto on_error;
 #else
     pj_activesock_cb asock_cb;
