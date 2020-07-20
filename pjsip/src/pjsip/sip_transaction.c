@@ -2042,6 +2042,38 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
      */
     pj_grp_lock_acquire(tsx->grp_lock);
     tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+
+    if (sent > 0) {
+	/* Pending destroy? */
+	if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY) {
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED,
+			   PJSIP_EVENT_UNKNOWN, NULL, 0 );
+	    pj_grp_lock_release(tsx->grp_lock);
+	    return;
+	}
+
+	/* Need to transmit a message? */
+	if (tsx->transport_flag & TSX_HAS_PENDING_SEND) {
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_SEND);
+	    tsx_send_msg(tsx, tsx->last_tx);
+	}
+
+	/* Need to reschedule retransmission?
+	 * Note that when sending a pending message above, tsx_send_msg()
+	 * may set the flag TSX_HAS_PENDING_TRANSPORT.
+	 * Please refer to ticket #1875.
+	 */
+	if (tsx->transport_flag & TSX_HAS_PENDING_RESCHED &&
+	    !(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT))
+	{
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
+
+	    /* Only update when transport turns out to be unreliable. */
+	    if (!tsx->is_reliable) {
+		tsx_resched_retransmission(tsx);
+	    }
+	}
+    }
     pj_grp_lock_release(tsx->grp_lock);
 
     if (sent < 0) {

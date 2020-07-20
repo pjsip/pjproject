@@ -732,7 +732,11 @@ PJ_DEF(pj_status_t) pjsip_tx_data_clone(const pjsip_tx_data *src,
     if (src->msg->body)
 	msg->body = pjsip_msg_body_clone(dst->pool, src->msg->body);
 
-    dst->is_pending = src->is_pending;
+    /* We shouldn't copy is_pending since it's src's internal state,
+     * indicating that it's currently being sent by the transport.
+     * While the cloned tdata is of course not.
+     */
+    //dst->is_pending = src->is_pending;
 
     PJ_LOG(5,(THIS_FILE,
 	     "Tx data %s cloned",
