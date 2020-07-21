@@ -46,8 +46,9 @@
  * "Because Grand Central Dispatch manages the relationship between the tasks
  * you provide and the threads on which those tasks run, you should generally
  * avoid calling POSIX thread routines from your task code"
- * So make sure we don't call any PJLIB functions, not even pj_log(), inside
- * any dispatch function block.
+ * So we will forward network events to our own separate thread (each SSL
+ * socket instance will have its own thread) and make sure that we don't call
+ * any PJLIB functions, not even pj_log(), inside any dispatch function block.
  */
 
 /* Maximum ciphers */
@@ -130,7 +131,7 @@ typedef struct applessl_sock_t {
  * Static/internal functions.
  *******************************************************************
  */
-
+ 
 #define PJ_SSL_ERRNO_START		(PJ_ERRNO_START_USER + \
 					 PJ_ERRNO_SPACE_SIZE*6)
 
@@ -567,7 +568,7 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 	assock->event.type = EVENT_DATA_SENT;
 	assock->event.body.data_sent_ev.send_key = send_key;
 	if (error != NULL) {
-	    assock->event.body.data_sent_ev.sent = 0;
+	    assock->event.body.data_sent_ev.sent = (errno > 0)? -errno: errno;
 	} else {
 	   assock->event.body.data_sent_ev.sent =
 	       dispatch_data_get_size(content);
@@ -950,7 +951,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 	if (error) {
     	    errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
-            status = PJ_EEOF;
+            status = PJ_STATUS_FROM_OS(errno);
             call_cb = PJ_TRUE;	
 	}
 
@@ -1154,7 +1155,9 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
     	return PJ_EINVALIDOP;
     }
 
-    network_setup_connection(ssock, connection);
+    status = network_setup_connection(ssock, connection);
+    if (status != PJ_SUCCESS)
+    	return status;
     
     /* Save remote address */
     pj_sockaddr_cp(&ssock->rem_addr, remaddr);
@@ -1163,7 +1166,7 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
     ssock->addr_len = addr_len;
     pj_sockaddr_cp(&ssock->local_addr, localaddr);
     
-    return PJ_SUCCESS;
+    return PJ_EPENDING;
 }
 
 
