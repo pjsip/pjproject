@@ -672,6 +672,8 @@ struct pj_ice_sess
     pj_bool_t		 is_complete;		    /**< Complete?	    */
     pj_bool_t		 is_destroying;		    /**< Destroy is called  */
     pj_bool_t            valid_pair_found;          /**< First pair found   */
+    pj_bool_t		 is_trickling;		    /**< End-of-candidates ind
+							 sent/received?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 timer;			    /**< ICE timer.	    */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */

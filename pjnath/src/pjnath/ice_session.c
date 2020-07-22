@@ -451,6 +451,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
 {
     PJ_ASSERT_RETURN(ice && opt, PJ_EINVAL);
     pj_memcpy(&ice->opt, opt, sizeof(*opt));
+    ice->is_trickling = (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED);
     LOG5((ice->obj_name, "ICE nomination type set to %s",
 	  (ice->opt.aggressive ? "aggressive" : "regular")));
     return PJ_SUCCESS;
@@ -1621,60 +1622,55 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 }
 
 
-/* Create checklist by pairing local candidates with remote candidates */
-PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
+/* Add remote candidates and generate checklist */
+pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
-			      const pj_str_t *rem_ufrag,
-			      const pj_str_t *rem_passwd,
 			      unsigned rem_cand_cnt,
 			      const pj_ice_sess_cand rem_cand[])
 {
     pj_ice_sess_checklist *clist;
-    char buf[128];
-    pj_str_t username;
-    timer_data *td;
-    unsigned i, j;
     unsigned highest_comp = 0;
+    unsigned i, j;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rem_cand_cnt &&
-		     rem_cand, PJ_EINVAL);
-    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
-		     PJ_ETOOMANY);
-
-    pj_grp_lock_acquire(ice->grp_lock);
-
-    /* Save credentials */
-    username.ptr = buf;
-
-    pj_strcpy(&username, rem_ufrag);
-    pj_strcat2(&username, ":");
-    pj_strcat(&username, &ice->rx_ufrag);
-
-    pj_strdup(ice->pool, &ice->tx_uname, &username);
-    pj_strdup(ice->pool, &ice->tx_ufrag, rem_ufrag);
-    pj_strdup(ice->pool, &ice->tx_pass, rem_passwd);
-
-    pj_strcpy(&username, &ice->rx_ufrag);
-    pj_strcat2(&username, ":");
-    pj_strcat(&username, rem_ufrag);
-
-    pj_strdup(ice->pool, &ice->rx_uname, &username);
-
-
     /* Save remote candidates */
-    ice->rcand_cnt = 0;
     for (i=0; i<rem_cand_cnt; ++i) {
 	pj_ice_sess_cand *cn = &ice->rcand[ice->rcand_cnt];
 
-	/* Ignore candidate which has no matching component ID */
-	if (rem_cand[i].comp_id==0 || rem_cand[i].comp_id > ice->comp_cnt) {
-	    continue;
+	if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	    /* Trickle ICE:
+	     * Make sure that candidate has not been added
+	     */
+	    for (j=0; j<ice->rcand_cnt; ++j) {
+		const pj_ice_sess_cand *c1 = &rem_cand[i];
+		const pj_ice_sess_cand *c2 = &ice->rcand[j];
+		if (c1->comp_id==c2->comp_id &&
+		    pj_strcmp(&c1->foundation, &c2->foundation)==0)
+		{
+		    break;
+		}
+	    }
+
+	    /* Skip candidate, it has been added */
+	    if (j < ice->rcand_cnt)
+		continue;
+
+	}
+	
+	if (!ice->is_trickling) {
+	    /* Regular ICE or after end-of-candidates indication:
+	     * Ignore candidate which has no matching component ID
+	     */
+	    if (rem_cand[i].comp_id==0 || rem_cand[i].comp_id > ice->comp_cnt)
+	    {
+		continue;
+	    }
+
+	    if (rem_cand[i].comp_id > highest_comp)
+		highest_comp = rem_cand[i].comp_id;
 	}
 
-	if (rem_cand[i].comp_id > highest_comp)
-	    highest_comp = rem_cand[i].comp_id;
-
+	/* Add this candidate */
 	pj_memcpy(cn, &rem_cand[i], sizeof(pj_ice_sess_cand));
 	pj_strdup(ice->pool, &cn->foundation, &rem_cand[i].foundation);
 	ice->rcand_cnt++;
@@ -1690,12 +1686,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 	    pj_ice_sess_check *chk = NULL;
 
 	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
-		pj_grp_lock_release(ice->grp_lock);
 		return PJ_ETOOMANY;
-	    } 
-
-           chk = &clist->checks[clist->count];
-
+	    }
+	    
 	    /* A local candidate is paired with a remote candidate if
 	     * and only if the two candidates have the same component ID 
 	     * and have the same IP address version. 
@@ -1706,7 +1699,24 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 		continue;
 	    }
 
+	    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+		/* Trickle ICE:
+		 * Make sure that pair has not been added to checklist
+		 */
+		unsigned k;
+		for (k=0; k<clist->count; ++k) {
+		    chk = &clist->checks[k];
+		    if (chk->lcand == lcand && chk->rcand == rcand)
+			break;
+		}
 
+		/* Pair has been added */
+		if (k < clist->count)
+		    continue;
+	    }
+
+	    /* Add the pair */
+	    chk = &clist->checks[clist->count];
 	    chk->lcand = lcand;
 	    chk->rcand = rcand;
 	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
@@ -1718,9 +1728,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     }
 
     /* This could happen if candidates have no matching address families */
-    if (clist->count == 0) {
+    if (clist->count==0 && !ice->is_trickling) {
 	LOG4((ice->obj_name,  "Error: no checklist can be created"));
-	pj_grp_lock_release(ice->grp_lock);
 	return PJ_ENOTFOUND;
     }
 
@@ -1729,23 +1738,67 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     /* Prune the checklist */
     status = prune_checklist(ice, clist);
-    if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(ice->grp_lock);
+    if (status != PJ_SUCCESS)
 	return status;
-    }
 
     /* Disable our components which don't have matching component */
-    for (i=highest_comp; i<ice->comp_cnt; ++i) {
-	if (ice->comp[i].stun_sess) {
-	    pj_stun_session_destroy(ice->comp[i].stun_sess);
-	    pj_bzero(&ice->comp[i], sizeof(ice->comp[i]));
+    if (!ice->is_trickling) {
+	for (i=highest_comp; i<ice->comp_cnt; ++i) {
+	    if (ice->comp[i].stun_sess) {
+		pj_stun_session_destroy(ice->comp[i].stun_sess);
+		pj_bzero(&ice->comp[i], sizeof(ice->comp[i]));
+	    }
 	}
+	ice->comp_cnt = highest_comp;
     }
-    ice->comp_cnt = highest_comp;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Create checklist by pairing local candidates with remote candidates */
+PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
+			      pj_ice_sess *ice,
+			      const pj_str_t *rem_ufrag,
+			      const pj_str_t *rem_passwd,
+			      unsigned rem_cand_cnt,
+			      const pj_ice_sess_cand rem_cand[])
+{
+    pj_ice_sess_checklist *clist;
+    char buf[128];
+    pj_str_t username;
+    timer_data *td;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rem_cand_cnt &&
+		     rem_cand, PJ_EINVAL);
+    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
+		     PJ_ETOOMANY);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+
+    /* Save credentials */
+    username.ptr = buf;
+
+    pj_strcpy(&username, rem_ufrag);
+    pj_strcat2(&username, ":");
+    pj_strcat(&username, &ice->rx_ufrag);
+    pj_strdup(ice->pool, &ice->tx_uname, &username);
+
+    pj_strdup(ice->pool, &ice->tx_ufrag, rem_ufrag);
+    pj_strdup(ice->pool, &ice->tx_pass, rem_passwd);
+
+    pj_strcpy(&username, &ice->rx_ufrag);
+    pj_strcat2(&username, ":");
+    pj_strcat(&username, rem_ufrag);
+    pj_strdup(ice->pool, &ice->rx_uname, &username);
+
+    status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
 
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
      */
+    clist = &ice->clist;
     clist->timer.id = PJ_FALSE;
     td = PJ_POOL_ZALLOC_T(ice->pool, timer_data);
     td->ice = ice;
@@ -1753,13 +1806,49 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
 
-
     /* Log checklist */
     dump_checklist("Checklist created:", ice, clist);
 
     pj_grp_lock_release(ice->grp_lock);
 
-    return PJ_SUCCESS;
+    return status;
+}
+
+
+/* Update checklist by pairing local candidates with remote candidates */
+PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
+			      pj_ice_sess *ice,
+			      const pj_str_t *rem_ufrag,
+			      const pj_str_t *rem_passwd,
+			      unsigned rem_cand_cnt,
+			      const pj_ice_sess_cand rem_cand[])
+{
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
+			     (rem_ufrag && rem_passwd && rem_cand)),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
+		     PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED,
+		     PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+    
+    /* Verify remote ufrag & passwd, if remote candidate specified */
+    if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
+			 pj_strcmp(&ice->tx_pass, rem_passwd)))
+    {
+	status = PJ_EINVAL;
+    }
+
+    if (status == PJ_SUCCESS) {
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+    }
+
+    pj_grp_lock_release(ice->grp_lock);
+
+    return status;
 }
 
 /* Perform check on the specified candidate pair. */
