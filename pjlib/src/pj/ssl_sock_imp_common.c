@@ -622,8 +622,7 @@ static void ssl_on_destroy(void *arg)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)arg;
 
-    if (ssl_destroy(ssock) == PJ_EPENDING)
-    	return;
+    ssl_destroy(ssock);
 
     if (ssock->circ_buf_input_mutex) {
         pj_lock_destroy(ssock->circ_buf_input_mutex);

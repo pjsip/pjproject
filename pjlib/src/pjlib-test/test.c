@@ -66,7 +66,7 @@ int test_inner(void)
 
     //pj_dump_config();
     pj_caching_pool_init( &caching_pool, NULL, 0 );
-
+/*
 #if INCLUDE_ERRNO_TEST
     DO_TEST( errno_test() );
 #endif
@@ -170,7 +170,7 @@ int test_inner(void)
 #if INCLUDE_FILE_TEST
     DO_TEST( file_test() );
 #endif
-
+*/
 #if INCLUDE_SSLSOCK_TEST
     DO_TEST( ssl_sock_test() );
 #endif

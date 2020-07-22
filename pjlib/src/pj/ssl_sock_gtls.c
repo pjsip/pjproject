@@ -1,3 +1,4 @@
+/* $Id$ */
 /*
  * Copyright (C) 2018-2018 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2014-2017 Savoir-faire Linux.
@@ -796,7 +797,7 @@ out:
 
 
 /* Destroy GnuTLS credentials and session. */
-static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
+static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
@@ -820,8 +821,6 @@ static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
-    
-    return PJ_SUCCESS;
 }
 
 

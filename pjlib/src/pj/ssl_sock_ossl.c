@@ -1,3 +1,4 @@
+/* $Id$ */
 /* 
  * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -1328,7 +1329,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
 
 /* Destroy SSL context and instance */
-static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
+static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
@@ -1348,8 +1349,6 @@ static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
      * context exists.
      */
     shutdown_openssl();
-    
-    return PJ_SUCCESS;
 }
 
 

@@ -25,7 +25,7 @@
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
 
-#define THIS_FILE               "ssl_sock_apple.c"
+#define THIS_FILE               "ssl_sock_apple.m"
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 #define SSL_SOCK_IMP_USE_OWN_NETWORK
@@ -46,15 +46,35 @@
  * "Because Grand Central Dispatch manages the relationship between the tasks
  * you provide and the threads on which those tasks run, you should generally
  * avoid calling POSIX thread routines from your task code"
- * So we will forward network events to our own separate thread (each SSL
- * socket instance will have its own thread) and make sure that we don't call
- * any PJLIB functions, not even pj_log(), inside any dispatch function block.
+ *
+ * Since network events happen in a dispatch function block, we need to make
+ * sure not to call any PJLIB functions there (not even pj_pool_alloc() nor
+ * pj_log()). Instead, we will post those events to a singleton event manager
+ * to be polled by ioqueue polling thread(s).
  */
 
-/* Maximum ciphers */
-#define MAX_CIPHERS             100
+/* Secure socket structure definition. */
+typedef struct applessl_sock_t {
+    pj_ssl_sock_t  	base;
 
-typedef enum event_id
+    nw_listener_t 	listener;
+    nw_connection_t     connection;
+    dispatch_queue_t	queue;
+    dispatch_semaphore_t ev_semaphore;
+
+    SecTrustRef		trust;
+    tls_ciphersuite_t	cipher;
+    sec_identity_t	identity;
+} applessl_sock_t;
+
+
+/*
+ *******************************************************************
+ * Event manager
+ *******************************************************************
+ */
+ 
+ typedef enum event_id
 {
     EVENT_ACCEPT,
     EVENT_CONNECT,
@@ -66,7 +86,11 @@ typedef enum event_id
 
 typedef struct event_t
 {
-    event_id type;
+    PJ_DECL_LIST_MEMBER(struct event_t);
+
+    event_id 		 type;
+    pj_ssl_sock_t 	*ssock;
+    pj_bool_t		 async;
 
     union
     {
@@ -99,32 +123,201 @@ typedef struct event_t
 	    void 		*data;
 	    pj_size_t 		 size;
 	    pj_status_t 	 status;
-	    pj_size_t 		*remainder;
+	    pj_size_t 		 remainder;
         } data_read_ev;
 
     } body;
 } event_t;
 
-/* Secure socket structure definition. */
-typedef struct applessl_sock_t {
-    pj_ssl_sock_t  	base;
+typedef struct event_manager
+{
+    NSLock	*lock;
+    event_t	 event_list;
+    event_t	 free_event_list;
+} event_manager;
 
-    nw_listener_t 	listener;
-    nw_connection_t     connection;
-    SecTrustRef		trust;
-    tls_ciphersuite_t	cipher;
-    sec_identity_t	identity;
+static event_manager *event_mgr = NULL;
 
-    dispatch_queue_t	queue;
-    pj_thread_t	       *cb_thread;
-    pj_bool_t		thread_quit;
-    event_t		event;
-    NSLock	       *lock;
+/*
+ *******************************************************************
+ * Event manager's functions
+ *******************************************************************
+ */
 
-    dispatch_semaphore_t cb_semaphore;
-    dispatch_semaphore_t ev_semaphore;
-} applessl_sock_t;
+static pj_status_t verify_cert(applessl_sock_t *assock, pj_ssl_cert_t *cert);
 
+static void event_manager_destroy()
+{
+    event_manager *mgr = event_mgr;
+    
+    event_mgr = NULL;
+
+    while (!pj_list_empty(&mgr->free_event_list)) {
+    	event_t *event = mgr->free_event_list.next;
+        pj_list_erase(event);
+        free(event);
+    }
+
+    while (!pj_list_empty(&mgr->event_list)) {
+    	event_t *event = mgr->event_list.next;
+        pj_list_erase(event);
+        free(event);
+    }
+    
+    [mgr->lock release];
+
+    free(mgr);
+}
+
+static pj_status_t event_manager_create()
+{
+    event_manager *mgr;
+    
+    if (event_mgr)
+    	return PJ_SUCCESS;
+    
+    mgr = malloc(sizeof(event_manager));
+    if (!mgr) return PJ_ENOMEM;
+
+    mgr->lock = [[NSLock alloc]init];
+    pj_list_init(&mgr->event_list);
+    pj_list_init(&mgr->free_event_list);
+
+    event_mgr = mgr;
+    pj_atexit(&event_manager_destroy);
+
+    return PJ_SUCCESS;
+}
+
+/* Post event to the event manager. If the event is posted
+ * synchronously, the function will wait until the event is processed.
+ */
+static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
+					    event_t *event_item,
+					    pj_bool_t async)
+{
+    event_manager *mgr = event_mgr;
+    event_t *event;
+    
+    [mgr->lock lock];
+
+    if (pj_list_empty(&mgr->free_event_list)) {
+        event = malloc(sizeof(event_t));
+    } else {
+        event = mgr->free_event_list.next;
+        pj_list_erase(event);
+    }
+    
+    pj_memcpy(event, event_item, sizeof(event_t));
+    event->ssock = ssock;
+    event->async = async;
+    pj_list_push_back(&mgr->event_list, event);
+    
+    [mgr->lock unlock];
+    
+    if (!async) {
+	dispatch_semaphore_wait(((applessl_sock_t *)ssock)->ev_semaphore,
+			        DISPATCH_TIME_FOREVER);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Remove all events associated with the socket. */
+static void event_manager_remove_events(pj_ssl_sock_t *ssock)
+{
+    event_t *event;
+    	
+    [event_mgr->lock lock];
+    event = event_mgr->event_list.next;
+    while (event != &event_mgr->event_list) {
+    	event_t *event_ = event;
+
+    	event = event->next;
+    	if (event_->ssock == ssock) {
+    	    pj_list_erase(event_);
+	    /* If not async, signal the waiting socket */
+	    if (!event_->async) {
+	        applessl_sock_t * assock;
+	        assock = (applessl_sock_t *)event_->ssock;
+	    	dispatch_semaphore_signal(assock->ev_semaphore);
+	    }
+    	}
+    }
+    [event_mgr->lock unlock];
+}
+
+pj_status_t ssl_network_event_poll()
+{
+    if (!event_mgr)
+    	return PJ_SUCCESS;
+
+    while (!pj_list_empty(&event_mgr->event_list)) {
+    	applessl_sock_t * assock;
+    	event_t *event;
+    	pj_bool_t ret = PJ_TRUE;
+    	
+    	[event_mgr->lock lock];
+    	/* Check again, this time by holding the lock */
+    	if (pj_list_empty(&event_mgr->event_list)) {
+    	    [event_mgr->lock unlock];
+    	    break;
+    	}
+    	event = event_mgr->event_list.next;
+    	pj_list_erase(event);
+    	[event_mgr->lock unlock];
+
+	assock = (applessl_sock_t *)event->ssock;
+	switch (event->type) {
+	    case EVENT_ACCEPT:
+		ret = ssock_on_accept_complete(event->ssock,
+		    PJ_INVALID_SOCKET,
+		    event->body.accept_ev.newconn,
+	    	    &event->body.accept_ev.src_addr,
+	    	    event->body.accept_ev.src_addr_len,
+	    	    event->body.accept_ev.status);
+	    	break;
+	    case EVENT_CONNECT:
+	    	ret = ssock_on_connect_complete(event->ssock,
+	    	    event->body.connect_ev.status);
+	    	break;
+	    case EVENT_VERIFY_CERT:
+	    	verify_cert(assock, event->ssock->cert);
+	    	break;
+	    case EVENT_HANDSHAKE_COMPLETE:
+	        event->ssock->ssl_state = SSL_STATE_ESTABLISHED;
+	    	ret = on_handshake_complete(event->ssock,
+	    	    event->body.handshake_ev.status);
+	    	break;
+	    case EVENT_DATA_SENT:
+	    	ret = ssock_on_data_sent(event->ssock,
+	    	    event->body.data_sent_ev.send_key,
+	    	    event->body.data_sent_ev.sent);
+	    	break;
+	    case EVENT_DATA_READ:
+	    	ret = ssock_on_data_read(event->ssock,
+	    	    event->body.data_read_ev.data,
+	    	    event->body.data_read_ev.size,
+	    	    event->body.data_read_ev.status,
+	    	    &event->body.data_read_ev.remainder);
+	    	break;
+	    default:
+	    	break;
+	}
+
+	/* If not async and not destroyed, signal the waiting socket */
+	if (ret && !event->async && ret) {
+	    dispatch_semaphore_signal(assock->ev_semaphore);
+	}
+	
+    	/* Put the event into the free list to be reused */
+    	[event_mgr->lock lock];
+    	pj_list_push_back(&event_mgr->free_event_list, event);
+    	[event_mgr->lock unlock];	
+    }
+
+    return 0;
+}
 
 /*
  *******************************************************************
@@ -472,62 +665,6 @@ on_return:
     return status;
 }
 
-/* Thread for calling callbacks.
- * Limitation: Currently, only one event per ssl sock can be processed
- * at a time.
- * 
- * To avoid race condition (the event gets overwritten by another event),
- * ssl sock needs to wait on ev_semaphore until the callback is completed.
- */
-static int cb_thread(void *arg)
-{
-    applessl_sock_t *assock = (applessl_sock_t *)arg;
-
-    while (1) {
-	dispatch_semaphore_wait(assock->cb_semaphore, DISPATCH_TIME_FOREVER);
-	if (assock->thread_quit) break;
-	switch (assock->event.type) {
-	    case EVENT_ACCEPT:
-		ssock_on_accept_complete(&assock->base,
-		    PJ_INVALID_SOCKET,
-		    assock->event.body.accept_ev.newconn,
-	    	    &assock->event.body.accept_ev.src_addr,
-	    	    assock->event.body.accept_ev.src_addr_len,
-	    	    assock->event.body.accept_ev.status);
-	    	break;
-	    case EVENT_CONNECT:
-	    	ssock_on_connect_complete(&assock->base,
-	    	    assock->event.body.connect_ev.status);
-	    	break;
-	    case EVENT_VERIFY_CERT:
-	    	verify_cert(assock, assock->base.cert);
-	    	break;
-	    case EVENT_HANDSHAKE_COMPLETE:
-	        assock->base.ssl_state = SSL_STATE_ESTABLISHED;
-	    	on_handshake_complete(&assock->base,
-	    	    assock->event.body.handshake_ev.status);
-	    	break;
-	    case EVENT_DATA_SENT:
-	    	ssock_on_data_sent(&assock->base,
-	    	    assock->event.body.data_sent_ev.send_key,
-	    	    assock->event.body.data_sent_ev.sent);
-	    	break;
-	    case EVENT_DATA_READ:
-	    	ssock_on_data_read(&assock->base,
-	    	    assock->event.body.data_read_ev.data,
-	    	    assock->event.body.data_read_ev.size,
-	    	    assock->event.body.data_read_ev.status,
-	    	    assock->event.body.data_read_ev.remainder);
-	    	break;
-	    default:
-	    	break;
-	}
-	dispatch_semaphore_signal(assock->ev_semaphore);
-    }
-
-    return 0;
-}
-
 
 /*
  *******************************************************************
@@ -554,6 +691,8 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
     		       NW_CONNECTION_DEFAULT_MESSAGE_CONTEXT, true,
     		       ^(nw_error_t error)
     {
+    	event_t event;
+
 	if (error != NULL) {
     	    errno = nw_error_get_error_code(error);
     	    if (errno == 89) {
@@ -564,18 +703,15 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
     	    }
         }
 
-	[assock->lock lock];
-	assock->event.type = EVENT_DATA_SENT;
-	assock->event.body.data_sent_ev.send_key = send_key;
+	event.type = EVENT_DATA_SENT;
+	event.body.data_sent_ev.send_key = send_key;
 	if (error != NULL) {
-	    assock->event.body.data_sent_ev.sent = (errno > 0)? -errno: errno;
+	    event.body.data_sent_ev.sent = (errno > 0)? -errno: errno;
 	} else {
-	   assock->event.body.data_sent_ev.sent =
-	       dispatch_data_get_size(content);
+	    event.body.data_sent_ev.sent = dispatch_data_get_size(content);
 	}
-	dispatch_semaphore_signal(assock->cb_semaphore);
-	dispatch_semaphore_wait(assock->ev_semaphore, DISPATCH_TIME_FOREVER);
-	[assock->lock unlock];
+
+	event_manager_post_event(ssock, &event, PJ_TRUE);
     });
     dispatch_release(content);
     
@@ -633,21 +769,17 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
                     ^(dispatch_data_t region, size_t offset,
                       const void *buffer, size_t inSize)
             	{
-                    pj_size_t remainder = 0;
+            	    event_t event;
 
 		    memcpy(ssock->asock_rbuf[i], buffer, inSize);
 
-		    [assock->lock lock];
-		    assock->event.type = EVENT_DATA_READ;
-		    assock->event.body.data_read_ev.data =
-		    	ssock->asock_rbuf[i];
-		    assock->event.body.data_read_ev.size = inSize;
-		    assock->event.body.data_read_ev.status = status;
-		    assock->event.body.data_read_ev.remainder = &remainder;
-		    dispatch_semaphore_signal(assock->cb_semaphore);
-		    dispatch_semaphore_wait(assock->ev_semaphore,
-		    			    DISPATCH_TIME_FOREVER);
-		    [assock->lock unlock];
+		    event.type = EVENT_DATA_READ;
+		    event.body.data_read_ev.data = ssock->asock_rbuf[i];
+		    event.body.data_read_ev.size = inSize;
+		    event.body.data_read_ev.status = status;
+		    event.body.data_read_ev.remainder = 0;
+
+		    event_manager_post_event(ssock, &event, PJ_FALSE);
 
 		    schedule_next_receive();
 		    Block_release(schedule_next_receive);
@@ -656,19 +788,16 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
                 });
             } else {
             	if (status != PJ_SUCCESS) {
-            	    /* Report read error to application */
-                    pj_size_t remainder = 0;
+            	    event_t event;
 
-		    [assock->lock lock];
-		    assock->event.type = EVENT_DATA_READ;
-		    assock->event.body.data_read_ev.data = NULL;
-		    assock->event.body.data_read_ev.size = 0;
-		    assock->event.body.data_read_ev.status = status;
-		    assock->event.body.data_read_ev.remainder = &remainder;
-		    dispatch_semaphore_signal(assock->cb_semaphore);
-		    dispatch_semaphore_wait(assock->ev_semaphore,
-		    			    DISPATCH_TIME_FOREVER);
-		    [assock->lock unlock];
+            	    /* Report read error to application */
+		    event.type = EVENT_DATA_READ;
+		    event.body.data_read_ev.data = NULL;
+		    event.body.data_read_ev.size = 0;
+		    event.body.data_read_ev.status = status;
+		    event.body.data_read_ev.remainder = 0;
+
+		    event_manager_post_event(ssock, &event, PJ_TRUE);
             	}
             
 	    	schedule_next_receive();
@@ -820,6 +949,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	    ^(sec_protocol_metadata_t metadata, sec_trust_t trust_ref,
 	      sec_protocol_verify_complete_t complete)
 	{
+	    event_t event;
 	    bool result = true;
 
     	    assock->trust = trust_ref? sec_trust_copy_ref(trust_ref): nil;
@@ -827,21 +957,15 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	    assock->cipher =
 	      sec_protocol_metadata_get_negotiated_tls_ciphersuite(metadata);
 
-	    [assock->lock lock];
-
 	    /* For client, call on_connect_complete() callback first. */
 	    if (!ssock->is_server) {
-	    	assock->event.type = EVENT_CONNECT;
-	    	assock->event.body.connect_ev.status = PJ_SUCCESS;
-	    	dispatch_semaphore_signal(assock->cb_semaphore);
-	   	dispatch_semaphore_wait(assock->ev_semaphore, DISPATCH_TIME_FOREVER);
+	    	event.type = EVENT_CONNECT;
+	    	event.body.connect_ev.status = PJ_SUCCESS;
+	    	event_manager_post_event(ssock, &event, PJ_FALSE);
 	    }
 
-	    assock->event.type = EVENT_VERIFY_CERT;
-	    dispatch_semaphore_signal(assock->cb_semaphore);
-	    dispatch_semaphore_wait(assock->ev_semaphore, DISPATCH_TIME_FOREVER);
-
-	    [assock->lock unlock];
+	    event.type = EVENT_VERIFY_CERT;
+	    event_manager_post_event(ssock, &event, PJ_FALSE);
 
 	    /* Check the result of cert verification. */
 	    if (ssock->verify_status != PJ_SSL_CERT_ESUCCESS) {
@@ -938,8 +1062,6 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     if (status != PJ_SUCCESS)
         return status;
 
-    /* Hold a reference until cancelled */
-    nw_retain(assock->connection);
     nw_connection_set_queue(assock->connection, assock->queue);
 
     nw_connection_set_state_changed_handler(assock->connection,
@@ -948,7 +1070,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     	pj_status_t status = PJ_SUCCESS;
     	pj_bool_t call_cb = PJ_FALSE;
 
-	if (error) {
+	if (error && state != nw_connection_state_cancelled) {
     	    errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
@@ -986,12 +1108,11 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 	}
 
 	if (call_cb) {
-	    [assock->lock lock];
-	    assock->event.type = EVENT_HANDSHAKE_COMPLETE;
-	    assock->event.body.handshake_ev.status = status;
-	    dispatch_semaphore_signal(assock->cb_semaphore);
-	    dispatch_semaphore_wait(assock->ev_semaphore, DISPATCH_TIME_FOREVER);
-	    [assock->lock unlock];
+	    event_t event;
+
+	    event.type = EVENT_HANDSHAKE_COMPLETE;
+	    event.body.handshake_ev.status = status;
+	    event_manager_post_event(ssock, &event, PJ_TRUE);
 
 	    if (ssock->is_server && status == PJ_SUCCESS) {
     	        status = network_start_read(ssock, ssock->param.async_cnt,
@@ -1065,20 +1186,18 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     {
 	nw_endpoint_t endpoint = nw_connection_copy_endpoint(connection);
 	const struct sockaddr *address;
+	event_t event;
 	
 	address = nw_endpoint_get_address(endpoint);
 
-	[assock->lock lock];
-	assock->event.type = EVENT_ACCEPT;
-	assock->event.body.accept_ev.newconn = connection;
-	pj_sockaddr_cp(&assock->event.body.accept_ev.src_addr, address);
-	assock->event.body.accept_ev.src_addr_len =
-	    pj_sockaddr_get_addr_len(address);	
-	assock->event.body.accept_ev.status = PJ_SUCCESS;
-	dispatch_semaphore_signal(assock->cb_semaphore);
-	dispatch_semaphore_wait(assock->ev_semaphore,
-	    			DISPATCH_TIME_FOREVER);
-	[assock->lock unlock];
+	event.type = EVENT_ACCEPT;
+	event.body.accept_ev.newconn = connection;
+	pj_sockaddr_cp(&event.body.accept_ev.src_addr, address);
+	event.body.accept_ev.src_addr_len = pj_sockaddr_get_addr_len(address);
+	event.body.accept_ev.status = PJ_SUCCESS;
+	
+	nw_retain(connection);
+	event_manager_post_event(ssock, &event, PJ_TRUE);
 	
 	nw_release(endpoint);
     });
@@ -1155,6 +1274,9 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
     	return PJ_EINVALIDOP;
     }
 
+    /* Hold a reference until cancelled */
+    nw_retain(connection);
+
     status = network_setup_connection(ssock, connection);
     if (status != PJ_SUCCESS)
     	return status;
@@ -1179,30 +1301,20 @@ static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
 static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
 {
     applessl_sock_t *assock;
-    pj_status_t status;
+    
+    /* Create event manager */
+    if (event_manager_create() != PJ_SUCCESS)
+    	return NULL;
     
     assock = PJ_POOL_ZALLOC_T(pool, applessl_sock_t);    
 
     assock->queue = dispatch_queue_create("ssl_queue", DISPATCH_QUEUE_SERIAL);
-    assock->lock = [[NSLock alloc]init];
-
-    assock->cb_semaphore = dispatch_semaphore_create(0);
-    assock->ev_semaphore = dispatch_semaphore_create(0);
-    
-    if (!assock->queue || !assock->lock || !assock->cb_semaphore ||
-        !assock->ev_semaphore)
-    {
+    assock->ev_semaphore = dispatch_semaphore_create(0);    
+    if (!assock->queue || !assock->ev_semaphore) {
     	ssl_destroy(&assock->base);
     	return NULL;
     }
-
-    status = pj_thread_create(pool, "ssl_thread", &cb_thread,
-			      assock, 0, 0, &assock->cb_thread);
-    if (status != PJ_SUCCESS){
-        ssl_destroy(&assock->base);
-    	return NULL;
-    }
-    
+        
     return (pj_ssl_sock_t *)assock;
 }
 
@@ -1237,18 +1349,8 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
     pj_lock_release(ssock->write_mutex);
 }
 
-static void on_timer2(pj_timer_heap_t *th, struct pj_timer_entry *te)
-{
-    pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)te->user_data;
-
-    PJ_UNUSED_ARG(th);
-
-    te->id = TIMER_NONE;
-    ssl_on_destroy(ssock);
-}
-
 /* Destroy Apple SSL. */
-static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
+static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
 
@@ -1265,63 +1367,18 @@ static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
   	assock->listener = nil;
     }
 
-    if (pj_thread_this() == assock->cb_thread) {
-    	/* We are being destroyed from inside the callback thread,
-    	 * which is still using objects such as lock and semaphores,
-    	 * so we need to schedule a timer to destroy ourselves.
-    	 */
-        if (ssock->param.timer_heap) {
-	    pj_time_val interval = {0, PJ_SSL_SOCK_DELAYED_CLOSE_TIMEOUT};
-	    pj_status_t status;
+    event_manager_remove_events(ssock);
 
-	    if (ssock->timer.id != TIMER_NONE) {
-		pj_timer_heap_cancel(ssock->param.timer_heap,
-				     &ssock->timer);
-	    }
-
-	    pj_timer_entry_init(&ssock->timer, 0, ssock, &on_timer2);
-	    pj_time_val_normalize(&interval);
-	    status = pj_timer_heap_schedule(ssock->param.timer_heap, 
-					    &ssock->timer,
-					    &interval);
-	    if (status != PJ_SUCCESS) {
-	    	PJ_PERROR(3,(ssock->pool->obj_name, status,
-			     "Failed to schedule a delayed destroy. "
-			     "Memory leak will occur."));
-		return PJ_EINVALIDOP;
-	    } else {
-	    	return PJ_EPENDING;
-	    }
-        } else {
-	    PJ_LOG(3, (ssock->pool->obj_name,
-		       "Unable to completely destroy SSL without "
-            	       "timer heap. Memory leak will occur."));
-            pj_assert(ssock->param.timer_heap);
-            return PJ_EBUG;
-        }
+    /* Important: if we are called from a blocking dispatch block,
+     * we need to signal it before destroying ourselves.
+     */
+    if (assock->ev_semaphore) {
+    	dispatch_semaphore_signal(assock->ev_semaphore);
     }
 
     if (assock->queue) {
     	dispatch_release(assock->queue);
     	assock->queue = NULL;
-    }
-
-    if (assock->cb_thread) {
-    	assock->thread_quit = PJ_TRUE;
-    	dispatch_semaphore_signal(assock->cb_semaphore);
-    	pj_thread_join(assock->cb_thread);
-    	pj_thread_destroy(assock->cb_thread);
-    	assock->cb_thread = NULL;
-    }
-
-    if (assock->lock) {
-        [assock->lock release];
-        assock->lock = nil;
-    }
-    
-    if (assock->cb_semaphore) {
-    	dispatch_release(assock->cb_semaphore);
-    	assock->cb_semaphore = nil;
     }
 
     if (assock->ev_semaphore) {
@@ -1332,8 +1389,6 @@ static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
-    
-    return PJ_SUCCESS;
 }
 
 

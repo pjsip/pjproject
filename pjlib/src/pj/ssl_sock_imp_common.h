@@ -242,11 +242,8 @@ inline static pj_status_t io_write(pj_ssl_sock_t *ssock, circ_buf_t *cb,
 static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool);
 /* Create and initialize new SSL context and instance */
 static pj_status_t ssl_create(pj_ssl_sock_t *ssock);
-/* Destroy SSL context and instance. If ssl_sock can't be destroyed
- * immediately, it must return PJ_EPENDING here and manually schedule
- * to call ssl_on_destroy() at a later time.
- */
-static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock);
+/* Destroy SSL context and instance */
+static void ssl_destroy(pj_ssl_sock_t *ssock);
 /* Reset SSL socket state */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock);
 

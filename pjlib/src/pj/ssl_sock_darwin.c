@@ -498,7 +498,7 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
 
 /* Destroy Darwin SSL. */
-static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
+static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     darwinssl_sock_t *dssock = (darwinssl_sock_t *)ssock;
 
@@ -513,8 +513,6 @@ static pj_status_t ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
-    
-    return PJ_SUCCESS;
 }
 
 
