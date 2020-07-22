@@ -906,7 +906,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
  * after receiving remote answer.
  */
 static pj_status_t process_answer(pj_pool_t *pool,
-				  pjmedia_sdp_session *offer,
+				  pjmedia_sdp_session *local_offer,
 				  pjmedia_sdp_session *answer,
 				  pj_bool_t allow_asym,
 				  pjmedia_sdp_session **p_active)
@@ -914,10 +914,14 @@ static pj_status_t process_answer(pj_pool_t *pool,
     unsigned omi = 0; /* Offer media index */
     unsigned ami = 0; /* Answer media index */
     pj_bool_t has_active = PJ_FALSE;
+    pjmedia_sdp_session *offer;
     pj_status_t status;
 
     /* Check arguments. */
-    PJ_ASSERT_RETURN(pool && offer && answer && p_active, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && local_offer && answer && p_active, PJ_EINVAL);
+
+    /* Duplicate local offer SDP. */
+    offer = pjmedia_sdp_session_clone(pool, local_offer);
 
     /* Check that media count match between offer and answer */
     // Ticket #527, different media count is allowed for more interoperability,

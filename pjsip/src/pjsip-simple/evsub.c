@@ -306,7 +306,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
     pj_list_init(&mod_evsub.pkg_list);
 
     /* Create pool: */
-    mod_evsub.pool = pjsip_endpt_create_pool(endpt, "evsub", 512, 512);
+    mod_evsub.pool = pjsip_endpt_create_pool(endpt, "evsub",
+                                        PJSIP_POOL_EVSUB_LEN,
+                                        PJSIP_POOL_EVSUB_INC);
     if (!mod_evsub.pool)
 	return PJ_ENOMEM;
 

@@ -535,7 +535,7 @@ static int cancel( pj_timer_heap_t *ht,
     PJ_CHECK_STACK();
 
     // Check to see if the timer_id is out of range
-    if (entry->_timer_id < 0 || (pj_size_t)entry->_timer_id > ht->max_size) {
+    if (entry->_timer_id < 1 || (pj_size_t)entry->_timer_id >= ht->max_size) {
 	entry->_timer_id = -1;
     	return 0;
     }

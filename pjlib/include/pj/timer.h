@@ -120,7 +120,10 @@ typedef struct pj_timer_entry
 
     /** 
      * Internal unique timer ID, which is assigned by the timer heap. 
-     * Application should not touch this ID.
+     * Positive values indicate that the timer entry is running, 
+     * while -1 means that it's not. Any other value may indicate that it 
+     * hasn't been properly initialised or is in a bad state.
+     * Application should not touch this ID. 
      */
     pj_timer_id_t _timer_id;
 

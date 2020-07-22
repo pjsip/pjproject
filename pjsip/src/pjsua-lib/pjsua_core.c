@@ -937,7 +937,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 
     /* Create memory pools for application and internal use. */
-    pjsua_var.pool = pjsua_pool_create("pjsua", 1000, 1000);
+    pjsua_var.pool = pjsua_pool_create("pjsua", PJSUA_POOL_LEN, PJSUA_POOL_INC);
     pjsua_var.timer_pool = pjsua_pool_create("pjsua_timer", 500, 500);
     if (pjsua_var.pool == NULL || pjsua_var.timer_pool == NULL) {
 	pj_log_pop_indent();
