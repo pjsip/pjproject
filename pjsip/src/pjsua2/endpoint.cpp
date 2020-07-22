@@ -1185,6 +1185,60 @@ void Endpoint::on_dtmf_digit2(pjsua_call_id call_id,
     Endpoint::instance().utilAddPendingJob(job);
 }
 
+struct PendingOnDtmfEventCallback : public PendingJob
+{
+    int call_id;
+    OnDtmfEventParam prm;
+
+    virtual void execute(bool is_pending)
+    {
+        PJ_UNUSED_ARG(is_pending);
+
+        Call *call = Call::lookup(call_id);
+        if (!call)
+            return;
+
+        call->onDtmfEvent(prm);
+
+        /* If this event indicates a new DTMF digit, invoke onDtmfDigit
+         * as well.
+         * Note that the duration is pretty much useless in this context as it
+         * will most likely equal the ptime of one frame received via RTP in
+         * milliseconds. Since the application can't receive updates to the
+         * duration via this interface and the total duration of the event is
+         * not known yet, just indicate an unknown duration.
+         */
+        if (!(prm.flags & PJMEDIA_STREAM_DTMF_IS_UPDATE)) {
+            OnDtmfDigitParam prmBasic;
+            prmBasic.method = prm.method;
+            prmBasic.digit = prm.digit;
+            prmBasic.duration = PJSUA_UNKNOWN_DTMF_DURATION;
+            call->onDtmfDigit(prmBasic);
+        }
+    }
+};
+
+void Endpoint::on_dtmf_event(pjsua_call_id call_id,
+                             const pjsua_dtmf_event* event)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return;
+    }
+
+    PendingOnDtmfEventCallback *job = new PendingOnDtmfEventCallback;
+    job->call_id = call_id;
+    char buf[10];
+    pj_ansi_sprintf(buf, "%c", event->digit);
+    job->prm.method = event->method;
+    job->prm.timestamp = event->timestamp;
+    job->prm.digit = string(buf);
+    job->prm.duration = event->duration;
+    job->prm.flags = event->flags;
+
+    Endpoint::instance().utilAddPendingJob(job);
+}
+
 void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code,
@@ -1680,7 +1734,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
     //ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
-    ua_cfg.cb.on_dtmf_digit2            = &Endpoint::on_dtmf_digit2;
+    //ua_cfg.cb.on_dtmf_digit2            = &Endpoint::on_dtmf_digit2;
+    ua_cfg.cb.on_dtmf_event             = &Endpoint::on_dtmf_event;
     ua_cfg.cb.on_call_transfer_request2 = &Endpoint::on_call_transfer_request2;
     ua_cfg.cb.on_call_transfer_status   = &Endpoint::on_call_transfer_status;
     ua_cfg.cb.on_call_replace_request2  = &Endpoint::on_call_replace_request2;
