@@ -375,6 +375,11 @@ struct pj_ice_sess_check
     pj_ice_sess_cand	*rcand;
 
     /**
+     * Foundation index, referring to foundation array defined in checklist.
+     */
+    int			 foundation_idx;
+
+    /**
      * Check priority.
      */
     pj_timestamp	 prio;
@@ -451,6 +456,16 @@ struct pj_ice_sess_checklist
      * Array of candidate pairs (checks).
      */
     pj_ice_sess_check	     checks[PJ_ICE_MAX_CHECKS];
+
+    /**
+     * Number of foundations.
+     */
+    unsigned		     foundation_cnt;
+
+    /**
+     * Array of foundations, check foundation index refers to this array.
+     */
+    pj_str_t		     foundation[PJ_ICE_MAX_CHECKS];
 
     /**
      * A timer used to perform periodic check for this checklist.

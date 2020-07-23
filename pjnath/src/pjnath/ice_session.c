@@ -1622,7 +1622,38 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 }
 
 
-/* Add remote candidates and generate checklist */
+/* Get foundation index of a check pair. This function can also be used for
+ * adding a new foundation (combination of local & remote cands foundations)
+ * to checklist.
+ */
+int get_check_foundation_idx(pj_ice_sess *ice,
+			     const pj_ice_sess_cand *lcand,
+			     const pj_ice_sess_cand *rcand,
+			     pj_bool_t add_if_not_found)
+{
+    pj_ice_sess_checklist *clist = &ice->clist;
+    char fnd_str[65];
+    unsigned i;
+
+    pj_ansi_snprintf(fnd_str, sizeof(fnd_str), "%.*s|%.*s",
+		     (int)lcand->foundation.slen, lcand->foundation.ptr,
+		     (int)rcand->foundation.slen, rcand->foundation.ptr);
+    for (i=0; i<clist->foundation_cnt; ++i) {
+	if (pj_strcmp2(&clist->foundation[i], fnd_str) == 0)
+	    return i;
+    }
+
+    if (add_if_not_found && clist->foundation_cnt < PJ_ICE_MAX_CHECKS) {
+	pj_strdup2(ice->pool, &clist->foundation[i], fnd_str);
+	++clist->foundation_cnt;
+	return i;
+    }
+
+    return -1;
+}
+
+
+/* Add remote candidates and create/update checklist */
 pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
 			      unsigned rem_cand_cnt,
@@ -1719,9 +1750,60 @@ pj_status_t add_rcand_and_update_checklist(
 	    chk = &clist->checks[clist->count];
 	    chk->lcand = lcand;
 	    chk->rcand = rcand;
-	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
-
 	    chk->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+	    chk->foundation_idx = get_check_foundation_idx(ice, lcand, rcand,
+							   PJ_TRUE);
+	    pj_assert(chk->foundation_idx >= 0);
+
+	    /* Set the check state */
+	    if (!ice->is_trickling) {
+		chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
+	    } else {
+		unsigned k;
+
+		/* For this foundation, unfreeze if this pair has the lowest
+		 * comp ID, or the highest priority among existing pairs with
+		 * same comp ID.
+		 */
+		for (k=0; k<clist->count; ++k) {
+		    if (clist->checks[k].foundation_idx != chk->foundation_idx)
+			continue;
+
+		    /* Unfreeze if there is already check in Succeeded */
+		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+		    {
+			k = clist->count;
+			break;
+		    }
+
+		    /* Don't unfreeze if there is already check in Waiting or
+		     * In Progress.
+		     */
+		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_WAITING ||
+		        clist->checks[k].state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS)
+		    {
+			break;
+		    }
+
+		    /* Don't unfreeze if this pair does not have the lowest
+		     * comp ID.
+		     */
+		    if (clist->checks[k].lcand->comp_id < lcand->comp_id)
+			break;
+
+		    /* Don't unfreeze if this pair has the lowest comp ID, but
+		     * does not have the highest prio.
+		     */
+		    if (clist->checks[k].lcand->comp_id == lcand->comp_id &&
+			pj_cmp_timestamp(&clist->checks[k].prio, &chk->prio) >=0)
+		    {
+			break;
+		    }
+		}
+
+		if (k == clist->count)
+		     chk->state = PJ_ICE_SESS_CHECK_STATE_WAITING;
+	    }
 
 	    clist->count++;
 	}
