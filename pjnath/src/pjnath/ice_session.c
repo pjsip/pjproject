@@ -1679,7 +1679,9 @@ pj_status_t add_rcand_and_update_checklist(
     /* Generate checklist */
     clist = &ice->clist;
     for (i=0; i<ice->lcand_cnt; ++i) {
-	for (j=0; j<ice->rcand_cnt; ++j) {
+	/* First index of remote cand to be paired with this local cand */
+	unsigned rstart = (i >= ice->lcand_paired)? 0 : ice->rcand_paired;
+	for (j=rstart; j<ice->rcand_cnt; ++j) {
 
 	    pj_ice_sess_cand *lcand = &ice->lcand[i];
 	    pj_ice_sess_cand *rcand = &ice->rcand[j];
@@ -1699,10 +1701,13 @@ pj_status_t add_rcand_and_update_checklist(
 		continue;
 	    }
 
+#if 0
+	    /* Trickle ICE:
+	     * Make sure that pair has not been added to checklist
+	     */
+	    // Should not happen, paired cands are already marked using
+	    // lcand_paired & rcand_paired.
 	    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
-		/* Trickle ICE:
-		 * Make sure that pair has not been added to checklist
-		 */
 		unsigned k;
 		for (k=0; k<clist->count; ++k) {
 		    chk = &clist->checks[k];
@@ -1714,6 +1719,8 @@ pj_status_t add_rcand_and_update_checklist(
 		if (k < clist->count)
 		    continue;
 	    }
+#endif
+
 
 	    /* Add the pair */
 	    chk = &clist->checks[clist->count];
@@ -1732,6 +1739,10 @@ pj_status_t add_rcand_and_update_checklist(
 	LOG4((ice->obj_name,  "Error: no checklist can be created"));
 	return PJ_ENOTFOUND;
     }
+
+    /* Update paired candidate counts */
+    ice->lcand_paired = ice->lcand_cnt;
+    ice->rcand_paired = ice->rcand_cnt;
 
     /* Sort checklist based on priority */
     sort_checklist(ice, clist);

@@ -696,10 +696,14 @@ struct pj_ice_sess
     /* Local candidates */
     unsigned		 lcand_cnt;		    /**< # of local cand.   */
     pj_ice_sess_cand	 lcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
+    unsigned		 lcand_paired;		    /**< # of local cand
+							 paired (trickling) */
 
     /* Remote candidates */
     unsigned		 rcand_cnt;		    /**< # of remote cand.  */
     pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
+    unsigned		 rcand_paired;		    /**< # of remote cand
+							 paired (trickling) */
 
     /** Array of transport datas */
     pj_ice_msg_data	 tp_data[PJ_ICE_MAX_STUN + PJ_ICE_MAX_TURN];
