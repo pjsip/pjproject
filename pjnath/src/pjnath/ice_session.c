@@ -1033,6 +1033,21 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
     }
 }
 
+/* Remove a check pair from checklist */
+void remove_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
+		  unsigned check_idx,
+		  const char *reason)
+{
+    LOG5((ice->obj_name, "Check %s pruned (%s)",
+	  dump_check(ice->tmp.txt, sizeof(ice->tmp.txt),
+		     clist, &clist->checks[check_idx]),
+	  reason));
+
+    pj_array_erase(clist->checks, sizeof(clist->checks[0]),
+		   clist->count, check_idx);
+    --clist->count;
+}
+
 /* Prune checklist, this must have been done after the checklist
  * is sorted.
  */
@@ -1103,6 +1118,14 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 	    pj_ice_sess_cand *rjcand = clist->checks[j].rcand;
 	    const char *reason = NULL;
 
+	    /* Only discard Frozen/Waiting checks */
+	    if (clist->checks[j].state != PJ_ICE_SESS_CHECK_STATE_FROZEN &&
+		clist->checks[j].state != PJ_ICE_SESS_CHECK_STATE_WAITING)
+	    {
+		++j;
+		continue;
+	    }
+
 	    if ((licand == ljcand) && (ricand == rjcand)) {
 		reason = "duplicate found";
 	    } else if ((rjcand == ricand) &&
@@ -1114,15 +1137,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 
 	    if (reason != NULL) {
 		/* Found duplicate, remove it */
-		LOG5((ice->obj_name, "Check %s pruned (%s)",
-		      dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
-				 &ice->clist, &clist->checks[j]),
-		      reason));
-
-		pj_array_erase(clist->checks, sizeof(clist->checks[0]),
-			       clist->count, j);
-		--clist->count;
-
+		remove_check(ice, clist, j, reason);
 	    } else {
 		++j;
 	    }
@@ -1341,8 +1356,8 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 
 	for (i=0; i<ice->clist.count; ++i) {
 	    pj_ice_sess_check *c = &ice->clist.checks[i];
-	    if (pj_strcmp(&c->lcand->foundation, &check->lcand->foundation)==0
-		 && c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN)
+	    if (c->foundation_idx == check->foundation_idx &&
+		c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN)
 	    {
 		check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
 	    }
@@ -1622,7 +1637,38 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 }
 
 
-/* Add remote candidates and generate checklist */
+/* Get foundation index of a check pair. This function can also be used for
+ * adding a new foundation (combination of local & remote cands foundations)
+ * to checklist.
+ */
+int get_check_foundation_idx(pj_ice_sess *ice,
+			     const pj_ice_sess_cand *lcand,
+			     const pj_ice_sess_cand *rcand,
+			     pj_bool_t add_if_not_found)
+{
+    pj_ice_sess_checklist *clist = &ice->clist;
+    char fnd_str[65];
+    unsigned i;
+
+    pj_ansi_snprintf(fnd_str, sizeof(fnd_str), "%.*s|%.*s",
+		     (int)lcand->foundation.slen, lcand->foundation.ptr,
+		     (int)rcand->foundation.slen, rcand->foundation.ptr);
+    for (i=0; i<clist->foundation_cnt; ++i) {
+	if (pj_strcmp2(&clist->foundation[i], fnd_str) == 0)
+	    return i;
+    }
+
+    if (add_if_not_found && clist->foundation_cnt < PJ_ICE_MAX_CHECKS) {
+	pj_strdup2(ice->pool, &clist->foundation[i], fnd_str);
+	++clist->foundation_cnt;
+	return i;
+    }
+
+    return -1;
+}
+
+
+/* Add remote candidates and create/update checklist */
 pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
 			      unsigned rem_cand_cnt,
@@ -1644,8 +1690,8 @@ pj_status_t add_rcand_and_update_checklist(
 	    for (j=0; j<ice->rcand_cnt; ++j) {
 		const pj_ice_sess_cand *c1 = &rem_cand[i];
 		const pj_ice_sess_cand *c2 = &ice->rcand[j];
-		if (c1->comp_id==c2->comp_id &&
-		    pj_strcmp(&c1->foundation, &c2->foundation)==0)
+		if (c1->comp_id==c2->comp_id && c1->type == c2->type &&
+		    pj_sockaddr_cmp(&c1->base_addr, &c2->base_addr)==0)
 		{
 		    break;
 		}
@@ -1688,7 +1734,28 @@ pj_status_t add_rcand_and_update_checklist(
 	    pj_ice_sess_check *chk = NULL;
 
 	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
-		return PJ_ETOOMANY;
+		// Instead of returning error, discard Failed/low-prio check
+		//return PJ_ETOOMANY;
+
+		/* Discard any Failed check */
+		unsigned k, discarded=0;
+		for (k=0; k < clist->count; ) {
+		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_FAILED)
+		    {
+			remove_check(ice, clist, k, "too many, drop Failed");
+			++discarded;
+		    } else {
+			++k;
+		    }
+		}
+
+		/* If none, discard the lowest prio */
+		if (discarded == 0) {
+		    /* Re-sort before discarding the last */
+		    sort_checklist(ice, clist);
+		    remove_check(ice, clist, clist->count-1,
+				 "too many, drop low-prio");
+		}
 	    }
 	    
 	    /* A local candidate is paired with a remote candidate if
@@ -1715,7 +1782,7 @@ pj_status_t add_rcand_and_update_checklist(
 			break;
 		}
 
-		/* Pair has been added */
+		/* Pair already exists */
 		if (k < clist->count)
 		    continue;
 	    }
@@ -1726,9 +1793,60 @@ pj_status_t add_rcand_and_update_checklist(
 	    chk = &clist->checks[clist->count];
 	    chk->lcand = lcand;
 	    chk->rcand = rcand;
-	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
-
 	    chk->prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
+	    chk->foundation_idx = get_check_foundation_idx(ice, lcand, rcand,
+							   PJ_TRUE);
+	    pj_assert(chk->foundation_idx >= 0);
+
+	    /* Check if the check can be unfrozen */
+	    if (ice->is_trickling) {
+		unsigned k;
+
+		/* For this foundation, unfreeze if this pair has the lowest
+		 * comp ID, or the highest priority among existing pairs with
+		 * same comp ID, or any other checks in Succeeded.
+		 */
+		for (k=0; k<clist->count; ++k) {
+		    if (clist->checks[k].foundation_idx != chk->foundation_idx)
+			continue;
+
+		    /* Unfreeze if there is already check in Succeeded */
+		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+		    {
+			k = clist->count;
+			break;
+		    }
+
+		    /* Don't unfreeze if there is already check in Waiting or
+		     * In Progress.
+		     */
+		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_WAITING ||
+		        clist->checks[k].state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS)
+		    {
+			break;
+		    }
+
+		    /* Don't unfreeze if this pair does not have the lowest
+		     * comp ID.
+		     */
+		    if (clist->checks[k].lcand->comp_id < lcand->comp_id)
+			break;
+
+		    /* Don't unfreeze if this pair has the lowest comp ID, but
+		     * does not have the highest prio.
+		     */
+		    if (clist->checks[k].lcand->comp_id == lcand->comp_id &&
+			pj_cmp_timestamp(&clist->checks[k].prio, &chk->prio) > 0)
+		    {
+			break;
+		    }
+		}
+
+		/* Unfreeze */
+		if (k == clist->count)
+		     check_set_state(ice, chk, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
+	    }
 
 	    clist->count++;
 	}
@@ -1744,13 +1862,15 @@ pj_status_t add_rcand_and_update_checklist(
     ice->lcand_paired = ice->lcand_cnt;
     ice->rcand_paired = ice->rcand_cnt;
 
-    /* Sort checklist based on priority */
-    sort_checklist(ice, clist);
+    if (clist->count > 0) {
+	/* Sort checklist based on priority */
+	sort_checklist(ice, clist);
 
-    /* Prune the checklist */
-    status = prune_checklist(ice, clist);
-    if (status != PJ_SUCCESS)
-	return status;
+	/* Prune the checklist */
+	status = prune_checklist(ice, clist);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Disable our components which don't have matching component */
     if (!ice->is_trickling) {
@@ -1805,6 +1925,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     pj_strdup(ice->pool, &ice->rx_uname, &username);
 
     status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+    if (status != PJ_SUCCESS) {
+	pj_grp_lock_release(ice->grp_lock);
+	return status;
+    }
 
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
@@ -1836,6 +1960,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 {
     pj_status_t status = PJ_SUCCESS;
 
+    PJ_ASSERT_RETURN(ice->clist.timer.user_data, PJ_EINVALIDOP);
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
@@ -1856,6 +1981,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     if (status == PJ_SUCCESS) {
 	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
     }
+
+    /* Log checklist */
+    if (status == PJ_SUCCESS)
+	dump_checklist("Checklist updated:", ice, &ice->clist);
 
     pj_grp_lock_release(ice->grp_lock);
 
@@ -2117,19 +2246,6 @@ static void periodic_timer(pj_timer_heap_t *th,
 }
 
 
-/* Utility: find string in string array */
-static const pj_str_t *find_str(const pj_str_t *strlist[], unsigned count,
-				const pj_str_t *str)
-{
-    unsigned i;
-    for (i=0; i<count; ++i) {
-	if (pj_strcmp(strlist[i], str)==0)
-	    return strlist[i];
-    }
-    return NULL;
-}
-
-
 /*
  * Start ICE periodic check. This function will return immediately, and
  * application will be notified about the connectivity check status in
@@ -2138,10 +2254,8 @@ static const pj_str_t *find_str(const pj_str_t *strlist[], unsigned count,
 PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 {
     pj_ice_sess_checklist *clist;
-    const pj_ice_sess_cand *cand0;
-    const pj_str_t *flist[PJ_ICE_MAX_CAND]; // XXX
     pj_ice_rx_check *rcheck;
-    unsigned i, flist_cnt = 0;
+    unsigned i;
     pj_time_val delay;
     pj_status_t status;
 
@@ -2173,48 +2287,38 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
      */
 
     clist = &ice->clist;
+    for (i=0; i < clist->foundation_cnt; ++i) {
+	unsigned k;
+	pj_ice_sess_check *chk = NULL;
 
-    /* Pickup the first pair for component 1. */
-    for (i=0; i<clist->count; ++i) {
-	if (clist->checks[i].lcand->comp_id == 1)
-	    break;
-    }
-    if (i == clist->count) {
-	pj_assert(!"Unable to find checklist for component 1");
-	pj_grp_lock_release(ice->grp_lock);
-	pj_log_pop_indent();
-	return PJNATH_EICEINCOMPID;
-    }
+	for (k=0; k < clist->count; ++k) {
+	    if (clist->checks[k].foundation_idx != i)
+		continue;
 
-    /* Set this check to WAITING only if state is frozen. It may be possible
-     * that this check has already been started by a trigger check
-     */
-    if (clist->checks[i].state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
-	check_set_state(ice, &clist->checks[i], 
-			PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
-    }
-
-    cand0 = clist->checks[i].lcand;
-    flist[flist_cnt++] = &clist->checks[i].lcand->foundation;
-
-    /* Find all of the other pairs in that check list with the same
-     * component ID, but different foundations, and sets all of their
-     * states to Waiting as well.
-     */
-    for (++i; i<clist->count; ++i) {
-	const pj_ice_sess_cand *cand1;
-
-	cand1 = clist->checks[i].lcand;
-
-	if (cand1->comp_id==cand0->comp_id &&
-	    find_str(flist, flist_cnt, &cand1->foundation)==NULL)
-	{
-	    if (clist->checks[i].state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
-		check_set_state(ice, &clist->checks[i], 
-				PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+	    /* First pair of this foundation */
+	    if (chk == NULL) {
+		chk = &clist->checks[k];
+		continue;
 	    }
-	    flist[flist_cnt++] = &cand1->foundation;
+
+	    /* Found the lowest comp ID so far */
+	    if (clist->checks[k].lcand->comp_id < chk->lcand->comp_id) {
+		chk = &clist->checks[k];
+		continue;
+	    }
+
+	    /* Found the lowest comp ID and the highest prio so far */
+	    if (clist->checks[k].lcand->comp_id == chk->lcand->comp_id &&
+		pj_cmp_timestamp(&clist->checks[k].prio, &chk->prio) > 0)
+	    {
+		chk = &clist->checks[k];
+		continue;
+	    }
 	}
+
+	/* Unfreeze */
+	if (chk)
+	    check_set_state(ice, chk, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
     }
 
     /* First, perform all pending triggered checks, simultaneously. */
