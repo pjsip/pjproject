@@ -1667,6 +1667,35 @@ int get_check_foundation_idx(pj_ice_sess *ice,
     return -1;
 }
 
+/* Discard a pair check with Failed state or lowest prio (as long as lower
+ * than prio_lower_than.
+ */
+int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
+		  const pj_timestamp *prio_lower_than)
+{
+    /* Discard any Failed check */
+    unsigned k;
+    for (k=0; k < clist->count; ++k) {
+	if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_FAILED) {
+	    remove_check(ice, clist, k, "too many, drop Failed");
+	    return 1;
+	}
+    }
+
+    /* If none, discard the lowest prio */
+    /* Re-sort before discarding the last */
+    sort_checklist(ice, clist);
+    if (!prio_lower_than ||
+	pj_cmp_timestamp(&clist->checks[k].prio, prio_lower_than) < 0)
+    {
+	remove_check(ice, clist, clist->count-1,
+		     "too many, drop low-prio");
+	return 1;
+    }
+
+    return 0;
+}
+
 
 /* Add remote candidates and create/update checklist */
 pj_status_t add_rcand_and_update_checklist(
@@ -1700,7 +1729,6 @@ pj_status_t add_rcand_and_update_checklist(
 	    /* Skip candidate, it has been added */
 	    if (j < ice->rcand_cnt)
 		continue;
-
 	}
 	
 	if (!ice->is_trickling) {
@@ -1734,28 +1762,12 @@ pj_status_t add_rcand_and_update_checklist(
 	    pj_ice_sess_check *chk = NULL;
 
 	    if (clist->count >= PJ_ICE_MAX_CHECKS) {
-		// Instead of returning error, discard Failed/low-prio check
+		// Instead of returning PJ_ETOOMANY, discard Failed/low-prio.
+		// If this check is actually the lowest prio, just skip it.
 		//return PJ_ETOOMANY;
-
-		/* Discard any Failed check */
-		unsigned k, discarded=0;
-		for (k=0; k < clist->count; ) {
-		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_FAILED)
-		    {
-			remove_check(ice, clist, k, "too many, drop Failed");
-			++discarded;
-		    } else {
-			++k;
-		    }
-		}
-
-		/* If none, discard the lowest prio */
-		if (discarded == 0) {
-		    /* Re-sort before discarding the last */
-		    sort_checklist(ice, clist);
-		    remove_check(ice, clist, clist->count-1,
-				 "too many, drop low-prio");
-		}
+		pj_timestamp max_prio = CALC_CHECK_PRIO(ice, lcand, rcand);
+		if (discard_check(ice, clist, &max_prio) == 0)
+		    continue;
 	    }
 	    
 	    /* A local candidate is paired with a remote candidate if
@@ -1960,7 +1972,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 {
     pj_status_t status = PJ_SUCCESS;
 
-    PJ_ASSERT_RETURN(ice->clist.timer.user_data, PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
@@ -2292,7 +2304,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	pj_ice_sess_check *chk = NULL;
 
 	for (k=0; k < clist->count; ++k) {
-	    if (clist->checks[k].foundation_idx != i)
+	    if (clist->checks[k].foundation_idx != (int)i)
 		continue;
 
 	    /* First pair of this foundation */
@@ -2765,11 +2777,11 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	            pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICE_CONTROLLED, 0);
     }
 
-    /* Handle the case when request comes before answer is received.
+    /* Handle the case when request comes before SDP answer is received.
      * We need to put credential in the response, and since we haven't
-     * got the response, copy the username from the request.
+     * got the SDP answer, copy the username from the request.
      */
-    if (ice->rcand_cnt == 0) {
+    if (ice->tx_ufrag.slen == 0) {
 	pj_stun_string_attr *uname_attr;
 
 	uname_attr = (pj_stun_string_attr*)
@@ -2890,7 +2902,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
      * don't have checklist yet, so just save this check in a pending
      * triggered check array to be acted upon later.
      */
-    if (ice->rcand_cnt == 0) {
+    if (ice->tx_ufrag.slen == 0) {
 	rcheck = PJ_POOL_ZALLOC_T(ice->pool, pj_ice_rx_check);
     } else {
 	rcheck = &tmp_rcheck;
@@ -2905,7 +2917,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     rcheck->priority = prio_attr->value;
     rcheck->role_attr = role_attr;
 
-    if (ice->rcand_cnt == 0) {
+    if (ice->tx_ufrag.slen == 0) {
 	/* We don't have answer yet, so keep this request for later */
 	LOG4((ice->obj_name, "Received an early check for comp %d",
 	      rcheck->comp_id));
