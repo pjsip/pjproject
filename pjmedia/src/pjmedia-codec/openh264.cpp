@@ -972,6 +972,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     const pj_uint8_t nal_start[] = { 0, 0, 1 };
     SBufferInfo sDstBufInfo;
     pj_bool_t has_frame = PJ_FALSE;
+    pj_bool_t kf_requested = PJ_FALSE;
     unsigned buf_pos, whole_len = 0;
     unsigned i, frm_cnt;
     pj_status_t status = PJ_SUCCESS;
@@ -1056,7 +1057,18 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	start = oh264_data->dec_buf + buf_pos;
 
 	/* Decode */
-	oh264_data->dec->DecodeFrame2( start, frm_size, pData, &sDstBufInfo);
+	ret = oh264_data->dec->DecodeFrame2( start, frm_size, pData,
+					     &sDstBufInfo);
+
+	if (ret != dsErrorFree && !kf_requested) {
+	    /* Broadcast missing keyframe event */
+	    pjmedia_event event;
+	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
+			       &packets[0].timestamp, codec);
+	    pjmedia_event_publish(NULL, codec, &event,
+				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	    kf_requested = PJ_TRUE;
+	}
 
 	if (0 && sDstBufInfo.iBufferStatus == 1) {
 	    // Better to just get the frame later after all NALs are consumed
@@ -1100,13 +1112,14 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     }
 
     if (ret != dsErrorFree) {
-	pjmedia_event event;
-
-	/* Broadcast missing keyframe event */
-	pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
-	                   &packets[0].timestamp, codec);
-	pjmedia_event_publish(NULL, codec, &event,
-	                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	if (!kf_requested) {
+	    /* Broadcast missing keyframe event */
+	    pjmedia_event event;
+	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
+	                       &packets[0].timestamp, codec);
+	    pjmedia_event_publish(NULL, codec, &event,
+				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	}
 
 	if (has_frame) {
 	    PJ_LOG(5,(oh264_data->pool->obj_name,
