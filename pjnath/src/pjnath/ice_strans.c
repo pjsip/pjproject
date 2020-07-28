@@ -1469,7 +1469,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ice_st && rem_ufrag && rem_passwd &&
-		     rem_cand_cnt && rem_cand, PJ_EINVAL);
+		     ((ice_st->ice && ice_st->ice->is_trickling) ||
+		      (rem_cand_cnt && rem_cand)), PJ_EINVAL);
 
     /* Mark start time */
     pj_gettimeofday(&ice_st->start_time);
@@ -1481,7 +1482,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	return status;
 
     /* If we have TURN candidate, now is the time to create the permissions */
-    for (n = 0; n < ice_st->cfg.turn_tp_cnt; ++n) {
+    for (n = 0; n < ice_st->cfg.turn_tp_cnt && rem_cand_cnt; ++n) {
 	unsigned i;
 
 	for (i=0; i<ice_st->comp_cnt; ++i) {
@@ -1523,6 +1524,68 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     ice_st->state = PJ_ICE_STRANS_STATE_NEGO;
     return status;
 }
+
+/*
+ * Update check list after discovering and conveying new local ICE candidate,
+ * or receiving update of remote ICE candidates in trickle ICE.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
+					 pj_ice_strans *ice_st,
+					 const pj_str_t *rem_ufrag,
+					 const pj_str_t *rem_passwd,
+					 unsigned rem_cand_cnt,
+					 const pj_ice_sess_cand rem_cand[])
+{
+    unsigned n;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice_st && ((rem_cand_cnt==0) ||
+			        (rem_ufrag && rem_passwd && rem_cand)),
+		     PJ_EINVAL);
+
+    /* If we have TURN candidate, update the permissions */
+    for (n = 0; n < ice_st->cfg.turn_tp_cnt && rem_cand_cnt; ++n) {
+	unsigned i;
+
+	for (i=0; i<ice_st->comp_cnt; ++i) {
+	    pj_ice_strans_comp *comp = ice_st->comp[i];
+	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
+	    unsigned j, count=0;
+
+	    if (!comp->turn[n].sock)
+		continue;
+
+	    /* Gather remote addresses for this component */
+	    for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
+		if (rem_cand[j].comp_id==i+1 &&
+		    rem_cand[j].addr.addr.sa_family==
+		    ice_st->cfg.turn_tp[n].af)
+		{
+		    pj_sockaddr_cp(&addrs[count++], &rem_cand[j].addr);
+		}
+	    }
+
+	    if (count && !comp->turn[n].err_cnt && comp->turn[n].sock) {
+		status = pj_turn_sock_set_perm(comp->turn[n].sock, count,
+					       addrs, 0);
+		if (status != PJ_SUCCESS) {
+		    pj_ice_strans_stop_ice(ice_st);
+		    return status;
+		}
+	    }
+	}
+    }
+
+    status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
+					   rem_cand_cnt, rem_cand);
+    if (status != PJ_SUCCESS) {
+	pj_ice_strans_stop_ice(ice_st);
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Get valid pair.
@@ -2340,6 +2403,13 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    /* Otherwise update the address */
 		    pj_sockaddr_cp(&cand->addr, &info.mapped_addr);
 		    cand->status = PJ_SUCCESS;
+
+		    /* Invoke on_new_candidate() callback */
+		    if (op == PJ_STUN_SOCK_BINDING_OP &&
+			ice_st->cb.on_new_candidate)
+		    {
+			(*ice_st->cb.on_new_candidate)(ice_st, cand);
+		    }
 		}
 
 		PJ_LOG(4,(comp->ice_st->obj_name,
@@ -2562,6 +2632,11 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		  comp->comp_id, cand_idx, cand->transport_id,
 		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
+
+	/* Invoke on_new_candidate() callback */
+	if (comp->ice_st->cb.on_new_candidate) {
+	    (*comp->ice_st->cb.on_new_candidate)(comp->ice_st, cand);
+	}
 
 	sess_init_update(comp->ice_st);
 

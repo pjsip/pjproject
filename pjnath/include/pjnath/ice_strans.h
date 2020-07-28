@@ -200,6 +200,17 @@ typedef struct pj_ice_strans_cb
 			       pj_ice_strans_op op,
 			       pj_status_t status);
 
+    /**
+     * Callback to report a new ICE local candidate, e.g: after successful
+     * STUN Binding, after a successful TURN allocation. Trickle ICE can use
+     * this callback to convey the new candidate to remote agent.
+     *
+     * @param ice_st	    The ICE stream transport.
+     * @param cand	    The new local candidate.
+     */
+    void    (*on_new_candidate)(pj_ice_strans *ice_st,
+				const pj_ice_sess_cand *cand);
+
 } pj_ice_strans_cb;
 
 
@@ -908,6 +919,29 @@ PJ_DECL(pj_status_t) pj_ice_strans_change_role(pj_ice_strans *ice_st,
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
+					     unsigned rcand_cnt,
+					     const pj_ice_sess_cand rcand[]);
+
+/**
+ * Update check list after discovering and conveying new local ICE candidate,
+ * or receiving update of remote ICE candidates in trickle ICE. This function
+ * can only be called when trickle ICE is enabled and after ICE connectivity
+ * checks are started using pj_ice_strans_start_ice().
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
+ *			the remote agent.
+ * @param rem_passwd	Remote password, as seen in the SDP received from
+ *			the remote agent.
+ * @param rcand_cnt	Number of new remote candidates in the array.
+ * @param rcand		New remote candidates array.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_update_check_list(
+					     pj_ice_strans *ice_st,
 					     const pj_str_t *rem_ufrag,
 					     const pj_str_t *rem_passwd,
 					     unsigned rcand_cnt,

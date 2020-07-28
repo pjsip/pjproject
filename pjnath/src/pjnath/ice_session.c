@@ -1913,8 +1913,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     timer_data *td;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd && rem_cand_cnt &&
-		     rem_cand, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd &&
+		     ((rem_cand_cnt && rem_cand) || ice->is_trickling),
+		     PJ_EINVAL);
     PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
 		     PJ_ETOOMANY);
 
