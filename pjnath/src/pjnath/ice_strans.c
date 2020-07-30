@@ -1543,6 +1543,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 			        (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
 
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
     /* If we have TURN candidate, update the permissions */
     for (n = 0; n < ice_st->cfg.turn_tp_cnt && rem_cand_cnt; ++n) {
 	unsigned i;
@@ -1570,18 +1572,23 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 					       addrs, 0);
 		if (status != PJ_SUCCESS) {
 		    pj_ice_strans_stop_ice(ice_st);
+		    pj_grp_lock_release(ice_st->grp_lock);
 		    return status;
 		}
 	    }
 	}
     }
 
+    /* Update checklist */
     status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
 					   rem_cand_cnt, rem_cand);
     if (status != PJ_SUCCESS) {
 	pj_ice_strans_stop_ice(ice_st);
+	pj_grp_lock_release(ice_st->grp_lock);
 	return status;
     }
+
+    pj_grp_lock_release(ice_st->grp_lock);
 
     return PJ_SUCCESS;
 }

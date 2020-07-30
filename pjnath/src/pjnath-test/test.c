@@ -222,6 +222,10 @@ static int test_inner(void)
     DO_TEST(ice_test());
 #endif
 
+#if INCLUDE_TRICKLE_ICE_TEST
+    DO_TEST(trickle_ice_test());
+#endif
+
 #if INCLUDE_STUN_SOCK_TEST
     DO_TEST(stun_sock_test());
 #endif

@@ -1834,7 +1834,7 @@ pj_status_t add_rcand_and_update_checklist(
 		     * In Progress.
 		     */
 		    if (clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_WAITING ||
-		        clist->checks[k].state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS)
+		        clist->checks[k].state==PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS)
 		    {
 			break;
 		    }
@@ -1969,21 +1969,32 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 			      const pj_str_t *rem_ufrag,
 			      const pj_str_t *rem_passwd,
 			      unsigned rem_cand_cnt,
-			      const pj_ice_sess_cand rem_cand[])
+			      const pj_ice_sess_cand rem_cand[],
+			      pj_bool_t trickle_done)
 {
     pj_status_t status = PJ_SUCCESS;
 
-    PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
 		     PJ_ETOOMANY);
-    PJ_ASSERT_RETURN(ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED,
-		     PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
 
-    pj_grp_lock_acquire(ice->grp_lock);
+    /* Ignore if trickle has been stopped (e.g: nomination started) */
+    if (!ice->is_trickling) {
+	LOG5((ice->obj_name,
+	      "Cannot update checklist after trickling stopped"));
+	return PJ_EINVALIDOP;
+    }
     
+    pj_grp_lock_acquire(ice->grp_lock);
+
+    if (trickle_done) {
+	LOG5((ice->obj_name, "Trickling done."));
+	ice->is_trickling = PJ_FALSE;
+    }
+
     /* Verify remote ufrag & passwd, if remote candidate specified */
     if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
 			 pj_strcmp(&ice->tx_pass, rem_passwd)))
@@ -2203,6 +2214,12 @@ static void start_nominated_check(pj_ice_sess *ice)
     pj_log_push_indent();
 
     pj_assert(ice->is_nominating == PJ_FALSE);
+
+    /* Stop trickling if not yet */
+    if (ice->is_trickling) {
+	ice->is_trickling = PJ_FALSE;
+	LOG5((ice->obj_name, "Trickling stopped as nomination started."));
+    }
 
     /* Stop our timer if it's active */
     if (ice->timer.id == TIMER_START_NOMINATED_CHECK) {

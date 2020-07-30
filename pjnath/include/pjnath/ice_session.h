@@ -995,6 +995,10 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
  * @param rem_cand	Remote candidate array. Remote candidates are
  *			gathered from the SDP received from the remote 
  *			agent.
+ * @param trickle_done	Flag to indicate end of trickling, set to PJ_TRUE
+ *			after all local candidates have been gathered and
+ *			after receiving end-of-candidate indication from
+ *			remote.
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
@@ -1003,7 +1007,8 @@ pj_ice_sess_update_check_list(pj_ice_sess *ice,
 			      const pj_str_t *rem_ufrag,
 			      const pj_str_t *rem_passwd,
 			      unsigned rem_cand_cnt,
-			      const pj_ice_sess_cand rem_cand[]);
+			      const pj_ice_sess_cand rem_cand[],
+			      pj_bool_t trickle_done);
 
 
 /**

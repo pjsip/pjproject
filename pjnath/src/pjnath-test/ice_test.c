@@ -70,6 +70,7 @@ struct test_cfg
     struct test_result expected;/* Expected result		*/
 
     pj_bool_t   nom_regular;	/* Use regular nomination?	*/
+    pj_ice_sess_trickle trickle;    /* Trickle ICE mode		*/
 };
 
 /* ICE endpoint state */
@@ -122,6 +123,9 @@ static void ice_on_rx_data(pj_ice_strans *ice_st,
 static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_ice_strans_op op,
 			        pj_status_t status);
+static void ice_on_new_candidate(pj_ice_strans *ice_st,
+				 const pj_ice_sess_cand *cand);
+
 static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
 
 #if USE_IPV6
@@ -235,9 +239,11 @@ static int create_ice_strans(struct test_sess *test_sess,
     pj_bzero(&ice_cb, sizeof(ice_cb));
     ice_cb.on_rx_data = &ice_on_rx_data;
     ice_cb.on_ice_complete = &ice_on_ice_complete;
+    ice_cb.on_new_candidate = &ice_on_new_candidate;
 
     /* Init ICE stream transport configuration structure */
     pj_ice_strans_cfg_default(&ice_cfg);
+    ice_cfg.opt.trickle = ept->cfg.trickle;
     pj_memcpy(&ice_cfg.stun_cfg, test_sess->stun_cfg, sizeof(pj_stun_config));
     if ((ept->cfg.enable_stun & SRV)==SRV || (ept->cfg.enable_turn & SRV)==SRV)
 	ice_cfg.resolver = test_sess->resolver;
@@ -452,6 +458,25 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
     }
 }
 
+static void ice_on_new_candidate(pj_ice_strans *ice_st,
+				 const pj_ice_sess_cand *cand)
+{
+    struct ice_ept *ept;
+    char buf1[PJ_INET6_ADDRSTRLEN+10];
+    char buf2[PJ_INET6_ADDRSTRLEN+10];
+
+    ept = (struct ice_ept*) pj_ice_strans_get_user_data(ice_st);
+    if (!ept)
+	return;
+
+    PJ_LOG(3,(THIS_FILE, INDENT "Discovered a new candidate: "
+	      "comp=%d, type=%s, addr=%s, baseaddr=%s",
+	      cand->comp_id,
+	      pj_ice_get_cand_type_name(cand->type),
+	      pj_sockaddr_print(&cand->addr, buf1, sizeof(buf1), 3),
+	      pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3)
+	      ));
+}
 
 /* Start ICE negotiation on the endpoint, based on parameter from
  * the other endpoint.
@@ -1225,6 +1250,164 @@ int ice_conc_test(void)
 on_return:
     destroy_stun_config(&stun_cfg);
     pj_pool_release(pool);
+
+    return rc;
+}
+
+
+/* Simple trickle ICE test */
+int trickle_ice_test(void)
+{
+    pj_pool_t *pool;
+    pj_stun_config stun_cfg_buf, *stun_cfg;
+    pjlib_state pjlib_state;
+    struct test_sess *sess;
+    struct test_cfg caller_cfg;
+    struct test_cfg callee_cfg;
+    struct sess_param test_param;
+    unsigned server_flag;
+    unsigned i;
+    int rc;
+
+    PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
+    pj_log_push_indent();
+
+    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
+
+    stun_cfg = &stun_cfg_buf;
+    rc = create_stun_config(pool, stun_cfg);
+    if (rc != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	pj_log_pop_indent();
+	return -10;
+    }
+
+    capture_pjlib_state(stun_cfg, &pjlib_state);
+
+    set_client_server_flag(SERVER_IPV4, CLIENT_IPV4, CLIENT_IPV4,
+			   &server_flag, &caller_cfg.client_flag,
+			   &callee_cfg.client_flag);
+
+    pj_bzero(&test_param, sizeof(test_param));
+    caller_cfg.trickle = PJ_ICE_SESS_TRICKLE_FULL;
+    callee_cfg.trickle = PJ_ICE_SESS_TRICKLE_FULL;
+
+    rc = create_sess(stun_cfg, server_flag, &caller_cfg, &callee_cfg,
+		     &test_param, &sess);
+    if (rc != 0) {
+	pj_pool_release(pool);
+	pj_log_pop_indent();
+	return rc;
+    }
+
+    for (i=0; i<sess->param->worker_cnt; ++i) {
+	pj_status_t status;
+
+	status = pj_thread_create(sess->pool, "worker_thread",
+				  worker_thread_proc, sess, 0, 0,
+				  &sess->worker_threads[i]);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(3,(THIS_FILE, INDENT "err: create thread"));
+	    rc = -50;
+	    goto on_return;
+	}
+    }
+
+    /* Init ICE on caller */
+    rc = pj_ice_strans_init_ice(sess->caller.ice, sess->caller.cfg.role,
+				&sess->caller.ufrag, &sess->caller.pass);
+    if (rc != PJ_SUCCESS) {
+	app_perror(INDENT "err: caller pj_ice_strans_init_ice()", rc);
+	rc = -100;
+	goto on_return;
+    }
+
+    /* Init ICE on callee */
+    rc = pj_ice_strans_init_ice(sess->callee.ice, sess->callee.cfg.role,
+				&sess->callee.ufrag, &sess->callee.pass);
+    if (rc != PJ_SUCCESS) {
+	app_perror(INDENT "err: callee pj_ice_strans_init_ice()", rc);
+	rc = -110;
+	goto on_return;
+    }
+
+    /* Start ICE on callee */
+    rc = start_ice(&sess->callee, &sess->caller);
+    if (rc != PJ_SUCCESS) {
+	int retval = (rc == sess->callee.cfg.expected.start_status)?0:-120;
+	rc = retval;
+	goto on_return;
+    }
+
+    /* Start ICE on caller */
+    rc = start_ice(&sess->caller, &sess->callee);
+    if (rc != PJ_SUCCESS) {
+	int retval = (rc == sess->caller.cfg.expected.start_status)?0:-130;
+	rc = retval;
+	goto on_return;
+    }
+
+
+    WAIT_UNTIL(30000, ALL_DONE, rc);
+    if (!ALL_DONE) {
+	PJ_LOG(3,(THIS_FILE, INDENT "err: negotiation timed-out"));
+	rc = -140;
+	goto on_return;
+    }
+
+    if (sess->caller.result.nego_status != sess->caller.cfg.expected.nego_status) {
+	app_perror(INDENT "err: caller negotiation failed", sess->caller.result.nego_status);
+	rc = -150;
+	goto on_return;
+    }
+
+    if (sess->callee.result.nego_status != sess->callee.cfg.expected.nego_status) {
+	app_perror(INDENT "err: callee negotiation failed", sess->callee.result.nego_status);
+	rc = -160;
+	goto on_return;
+    }
+
+    /* Verify that both agents have agreed on the same pair */
+    rc = check_pair(&sess->caller, &sess->callee, -170);
+    if (rc != 0) {
+	goto on_return;
+    }
+    rc = check_pair(&sess->callee, &sess->caller, -180);
+    if (rc != 0) {
+	goto on_return;
+    }
+
+    /* Looks like everything is okay */
+
+    /* Destroy ICE stream transports first to let it de-allocate
+     * TURN relay (otherwise there'll be timer/memory leak, unless
+     * we wait for long time in the last poll_events() below).
+     */
+    if (sess->caller.ice) {
+	pj_ice_strans_destroy(sess->caller.ice);
+	sess->caller.ice = NULL;
+    }
+
+    if (sess->callee.ice) {
+	pj_ice_strans_destroy(sess->callee.ice);
+	sess->callee.ice = NULL;
+    }
+
+on_return:
+    /* Wait.. */
+    poll_events(stun_cfg, 200, PJ_FALSE);
+
+    /* Now destroy everything */
+    destroy_sess(sess, 500);
+
+    /* Flush events */
+    poll_events(stun_cfg, 100, PJ_FALSE);
+
+    rc = check_pjlib_state(stun_cfg, &pjlib_state);
+
+    destroy_stun_config(stun_cfg);
+    pj_pool_release(pool);
+    pj_log_pop_indent();
 
     return rc;
 }
