@@ -206,11 +206,13 @@ typedef struct pj_ice_strans_cb
      * this callback to convey the new candidate to remote agent.
      *
      * @param ice_st	    The ICE stream transport.
-     * @param cand	    The new local candidate, or NULL to indicate
-     *			    end of local candidate.
+     * @param cand	    The new local candidate, can be NULL when the last
+     *			    local candidate initialization failed/timeout.
+     * @param last	    PJ_TRUE if this is the last of local candidate.
      */
     void    (*on_new_candidate)(pj_ice_strans *ice_st,
-				const pj_ice_sess_cand *cand);
+				const pj_ice_sess_cand *cand,
+				pj_bool_t last);
 
 } pj_ice_strans_cb;
 

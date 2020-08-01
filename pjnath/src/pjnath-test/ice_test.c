@@ -124,7 +124,8 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_ice_strans_op op,
 			        pj_status_t status);
 static void ice_on_new_candidate(pj_ice_strans *ice_st,
-				 const pj_ice_sess_cand *cand);
+				 const pj_ice_sess_cand *cand,
+				 pj_bool_t last);
 
 static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
 
@@ -459,7 +460,8 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 }
 
 static void ice_on_new_candidate(pj_ice_strans *ice_st,
-				 const pj_ice_sess_cand *cand)
+				 const pj_ice_sess_cand *cand,
+				 pj_bool_t last)
 {
     struct ice_ept *ept;
     char buf1[PJ_INET6_ADDRSTRLEN+10];
@@ -470,11 +472,12 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
 	return;
 
     PJ_LOG(3,(THIS_FILE, INDENT "Discovered a new candidate: "
-	      "comp=%d, type=%s, addr=%s, baseaddr=%s",
+	      "comp=%d, type=%s, addr=%s, baseaddr=%s, last=%d",
 	      cand->comp_id,
 	      pj_ice_get_cand_type_name(cand->type),
 	      pj_sockaddr_print(&cand->addr, buf1, sizeof(buf1), 3),
-	      pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3)
+	      pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3),
+	      last
 	      ));
 }
 

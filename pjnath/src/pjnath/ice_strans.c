@@ -956,6 +956,13 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     /* Check if all candidates are ready (this may call callback) */
     sess_init_update(ice_st);
 
+    /* If ICE init done, invoke on_new_candidate() callback */
+    if (ice_st->cb.on_new_candidate &&
+	ice_st->state==PJ_ICE_STRANS_STATE_READY)
+    {
+	(*ice_st->cb.on_new_candidate)(ice_st, NULL, PJ_TRUE);
+    }
+
     pj_log_pop_indent();
 
     return PJ_SUCCESS;
@@ -1123,12 +1130,6 @@ static void sess_init_update(pj_ice_strans *ice_st)
     /* All candidates have been gathered or there's no successful
      * candidate for a component.
      */
-
-    /* Notify end of local candidate */
-    if (ice_st->ice->is_trickling && ice_st->cb.on_new_candidate) {
-	(*ice_st->cb.on_new_candidate)(ice_st, NULL);
-    }
-
     ice_st->cb_called = PJ_TRUE;
     ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
@@ -2350,6 +2351,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 				    "Binding discovery complete" :
 				    "srflx address changed";
 		pj_bool_t dup = PJ_FALSE;
+		pj_bool_t init_done;
 
 		if (info.mapped_addr.addr.sa_family == pj_AF_INET() &&
 		    cand->base_addr.addr.sa_family == pj_AF_INET6())
@@ -2418,13 +2420,6 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    /* Otherwise update the address */
 		    pj_sockaddr_cp(&cand->addr, &info.mapped_addr);
 		    cand->status = PJ_SUCCESS;
-
-		    /* Invoke on_new_candidate() callback */
-		    if (op == PJ_STUN_SOCK_BINDING_OP &&
-			ice_st->cb.on_new_candidate)
-		    {
-			(*ice_st->cb.on_new_candidate)(ice_st, cand);
-		    }
 		}
 
 		PJ_LOG(4,(comp->ice_st->obj_name,
@@ -2435,7 +2430,16 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 					     sizeof(ipaddr), 3)));
 
 		sess_init_update(ice_st);
-		
+
+		/* Invoke on_new_candidate() callback */
+		init_done = (ice_st->state==PJ_ICE_STRANS_STATE_READY);
+		if (op == PJ_STUN_SOCK_BINDING_OP &&
+		    ice_st->cb.on_new_candidate && (!dup || init_done))
+		{
+		    (*ice_st->cb.on_new_candidate) (ice_st, (dup? cand:NULL),
+						    init_done);
+		}
+
 		if (op == PJ_STUN_SOCK_MAPPED_ADDR_CHANGE &&
 		    ice_st->cb.on_ice_complete)
 		{
@@ -2456,6 +2460,8 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
 			  "STUN binding request failed", status);
 	    } else {
+		pj_bool_t init_done;
+
 		PJ_LOG(4,(ice_st->obj_name,
 			  "STUN error is ignored for comp %d",
 			  comp->comp_id));
@@ -2470,6 +2476,14 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		}
 
 		sess_init_update(ice_st);
+
+		/* Invoke on_new_candidate() callback */
+		init_done = (ice_st->state==PJ_ICE_STRANS_STATE_READY);
+		if (op == PJ_STUN_SOCK_BINDING_OP &&
+		    ice_st->cb.on_new_candidate && init_done)
+		{
+		    (*ice_st->cb.on_new_candidate) (ice_st, NULL, PJ_TRUE);
+		}
 	    }
 	}
 	break;
@@ -2648,12 +2662,14 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
 
+	sess_init_update(comp->ice_st);
+
 	/* Invoke on_new_candidate() callback */
 	if (comp->ice_st->cb.on_new_candidate) {
-	    (*comp->ice_st->cb.on_new_candidate)(comp->ice_st, cand);
+	    (*comp->ice_st->cb.on_new_candidate)
+			(comp->ice_st, cand,
+			 (comp->ice_st->state==PJ_ICE_STRANS_STATE_READY));
 	}
-
-	sess_init_update(comp->ice_st);
 
     } else if ((old_state == PJ_TURN_STATE_RESOLVING ||
                 old_state == PJ_TURN_STATE_RESOLVED ||
@@ -2705,6 +2721,13 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	}
 
 	sess_init_update(comp->ice_st);
+
+	/* Invoke on_new_candidate() callback */
+	if (comp->ice_st->cb.on_new_candidate &&
+	    comp->ice_st->state==PJ_ICE_STRANS_STATE_READY)
+	{
+	    (*comp->ice_st->cb.on_new_candidate)(comp->ice_st, NULL, PJ_TRUE);
+	}
 
     } else if (new_state >= PJ_TURN_STATE_DEALLOCATING) {
 	pj_turn_session_info info;
