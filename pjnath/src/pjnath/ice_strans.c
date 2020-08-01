@@ -1123,6 +1123,12 @@ static void sess_init_update(pj_ice_strans *ice_st)
     /* All candidates have been gathered or there's no successful
      * candidate for a component.
      */
+
+    /* Notify end of local candidate */
+    if (ice_st->ice->is_trickling && ice_st->cb.on_new_candidate) {
+	(*ice_st->cb.on_new_candidate)(ice_st, NULL);
+    }
+
     ice_st->cb_called = PJ_TRUE;
     ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
@@ -1534,7 +1540,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 					 const pj_str_t *rem_ufrag,
 					 const pj_str_t *rem_passwd,
 					 unsigned rem_cand_cnt,
-					 const pj_ice_sess_cand rem_cand[])
+					 const pj_ice_sess_cand rem_cand[],
+					 pj_bool_t trickle_done)
 {
     unsigned n;
     pj_status_t status;
@@ -1581,7 +1588,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 
     /* Update checklist */
     status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rem_cand_cnt, rem_cand);
+					   rem_cand_cnt, rem_cand,
+					   trickle_done);
     if (status != PJ_SUCCESS) {
 	pj_ice_strans_stop_ice(ice_st);
 	pj_grp_lock_release(ice_st->grp_lock);

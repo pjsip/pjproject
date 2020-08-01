@@ -206,7 +206,8 @@ typedef struct pj_ice_strans_cb
      * this callback to convey the new candidate to remote agent.
      *
      * @param ice_st	    The ICE stream transport.
-     * @param cand	    The new local candidate.
+     * @param cand	    The new local candidate, or NULL to indicate
+     *			    end of local candidate.
      */
     void    (*on_new_candidate)(pj_ice_strans *ice_st,
 				const pj_ice_sess_cand *cand);
@@ -937,6 +938,10 @@ PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
  *			the remote agent.
  * @param rcand_cnt	Number of new remote candidates in the array.
  * @param rcand		New remote candidates array.
+ * @param trickle_done	Flag to indicate end of trickling, set to PJ_TRUE
+ *			after all local candidates have been gathered and
+ *			after receiving end-of-candidate indication from
+ *			remote.
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
@@ -945,7 +950,8 @@ PJ_DECL(pj_status_t) pj_ice_strans_update_check_list(
 					     const pj_str_t *rem_ufrag,
 					     const pj_str_t *rem_passwd,
 					     unsigned rcand_cnt,
-					     const pj_ice_sess_cand rcand[]);
+					     const pj_ice_sess_cand rcand[],
+					     pj_bool_t trickle_done);
 
 /**
  * Retrieve the candidate pair that has been nominated and successfully

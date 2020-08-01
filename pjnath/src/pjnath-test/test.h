@@ -29,7 +29,7 @@
 
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
-#define INCLUDE_TRICKLE_ICE_TEST    1
+#define INCLUDE_TRICKLE_ICE_TEST    0
 #define INCLUDE_STUN_SOCK_TEST	    1
 #define INCLUDE_TURN_SOCK_TEST	    1
 #define INCLUDE_CONCUR_TEST    	    1
@@ -53,6 +53,7 @@ int sess_auth_test(void);
 int stun_sock_test(void);
 int turn_sock_test(void);
 int ice_test(void);
+int trickle_ice_test(void);
 int concur_test(void);
 int test_main(void);
 
