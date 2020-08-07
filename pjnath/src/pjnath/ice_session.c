@@ -1297,7 +1297,23 @@ static void update_comp_check(pj_ice_sess *ice, unsigned comp_id,
     if (comp->valid_check == NULL) {
 	comp->valid_check = check;
     } else {
-	if (CMP_CHECK_PRIO(comp->valid_check, check) < 0)
+	pj_bool_t update = PJ_FALSE;
+
+	/* Update component's valid check with conditions:
+	 * - it is the first nominated check, or
+	 * - it has higher prio, as long as nomination status is NOT degraded
+	 *   (existing is nominated -> new is not-nominated).
+	 */
+	if (!comp->nominated_check && check->nominated)
+	{
+	    update = PJ_TRUE;
+	} else if (CMP_CHECK_PRIO(comp->valid_check, check) < 0 &&
+		   (!comp->nominated_check || check->nominated))
+	{
+	    update = PJ_TRUE;
+	}
+
+	if (update)
 	    comp->valid_check = check;
     }
 
