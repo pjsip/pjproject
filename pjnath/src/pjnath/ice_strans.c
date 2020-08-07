@@ -1504,8 +1504,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	    }
 
 	    if (count && !comp->turn[n].err_cnt && comp->turn[n].sock) {
-		status = pj_turn_sock_set_perm(comp->turn[n].sock, count,
-					       addrs, 0);
+		status = pj_turn_sock_set_perm(
+				    comp->turn[n].sock, count,
+				    addrs, PJ_ICE_ST_USE_TURN_PERMANENT_PERM);
 		if (status != PJ_SUCCESS) {
 		    pj_ice_strans_stop_ice(ice_st);
 		    return status;
