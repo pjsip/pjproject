@@ -5607,8 +5607,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
 		    val = pj_strstr(&input, &STR_SIGNAL);
 		    if (val) {
-			count_equal_sign = 0;
 			char* p = val + STR_SIGNAL.slen;
+			count_equal_sign = 0;
 			while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
 			    if(*p == '=')
 				count_equal_sign++;
@@ -5629,8 +5629,8 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			val = pj_strstr(&input, &STR_DURATION);
 			if (val && is_handled) {
 			    pj_str_t val_str;
-			    count_equal_sign = 0;
 			    char* p = val + STR_DURATION.slen;
+			    count_equal_sign = 0;
 			    while ((p - input.ptr < input.slen) && (*p == ' ' || *p == '=')) {
 				if (*p == '=')
 				    count_equal_sign++;
