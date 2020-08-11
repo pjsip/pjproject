@@ -64,9 +64,9 @@ enum tp_type
 #   define HOST_PREF   65535
 #   define RELAY_PREF  65535
 #else
-#   define SRFLX_PREF  0
-#   define HOST_PREF   0
-#   define RELAY_PREF  0
+#   define SRFLX_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define HOST_PREF   ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define RELAY_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
 #endif
 
 
