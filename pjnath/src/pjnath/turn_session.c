@@ -886,7 +886,12 @@ PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
 	}
     }
 
-    pj_assert(attr_added != 0);
+    /* No address to set */
+    if (attr_added == 0) {
+	pj_stun_msg_destroy_tdata(sess->stun, tdata);
+	pj_grp_lock_release(sess->grp_lock);
+	return PJ_SUCCESS;
+    }
 
     /* Send the request */
     status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 

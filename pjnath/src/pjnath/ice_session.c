@@ -735,7 +735,29 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 
     if (ice->lcand_cnt >= PJ_ARRAY_SIZE(ice->lcand)) {
 	status = PJ_ETOOMANY;
-	goto on_error;
+	goto on_return;
+    }
+
+    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	/* Trickle ICE:
+	 * Make sure that candidate has not been added
+	 */
+	for (i=0; i<ice->lcand_cnt; ++i) {
+	    const pj_ice_sess_cand *c = &ice->lcand[i];
+	    if (c->comp_id==comp_id && c->type == type &&
+		pj_sockaddr_cmp(&c->addr, addr)==0 &&
+		pj_sockaddr_cmp(&c->base_addr, base_addr)==0)
+	    {
+		break;
+	    }
+	}
+
+	/* Skip candidate, it has been added */
+	if (i < ice->lcand_cnt) {
+	    if (p_cand_id)
+		*p_cand_id = i;
+	    goto on_return;
+	}
     }
 
     lcand = &ice->lcand[ice->lcand_cnt];
@@ -786,7 +808,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 
     ++ice->lcand_cnt;
 
-on_error:
+on_return:
     pj_grp_lock_release(ice->grp_lock);
     return status;
 }
@@ -1704,13 +1726,18 @@ pj_status_t add_rcand_and_update_checklist(
 			      const pj_ice_sess_cand rem_cand[])
 {
     pj_ice_sess_checklist *clist;
-    unsigned highest_comp = 0;
     unsigned i, j;
     pj_status_t status;
 
     /* Save remote candidates */
     for (i=0; i<rem_cand_cnt; ++i) {
 	pj_ice_sess_cand *cn = &ice->rcand[ice->rcand_cnt];
+
+	/* Check component ID */
+	if (rem_cand[i].comp_id==0 || rem_cand[i].comp_id > ice->comp_cnt)
+	{
+	    continue;
+	}
 
 	if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
 	    /* Trickle ICE:
@@ -1731,19 +1758,6 @@ pj_status_t add_rcand_and_update_checklist(
 		continue;
 	}
 	
-	if (!ice->is_trickling) {
-	    /* Regular ICE or after end-of-candidates indication:
-	     * Ignore candidate which has no matching component ID
-	     */
-	    if (rem_cand[i].comp_id==0 || rem_cand[i].comp_id > ice->comp_cnt)
-	    {
-		continue;
-	    }
-
-	    if (rem_cand[i].comp_id > highest_comp)
-		highest_comp = rem_cand[i].comp_id;
-	}
-
 	/* Add this candidate */
 	pj_memcpy(cn, &rem_cand[i], sizeof(pj_ice_sess_cand));
 	pj_strdup(ice->pool, &cn->foundation, &rem_cand[i].foundation);
@@ -1884,8 +1898,17 @@ pj_status_t add_rcand_and_update_checklist(
 	    return status;
     }
 
-    /* Disable our components which don't have matching component */
+    /* Regular ICE or trickle ICE after end-of-candidates indication:
+     * Disable our components which don't have matching component
+     */
     if (!ice->is_trickling) {
+	unsigned highest_comp = 0;
+
+	for (i=0; i<ice->rcand_cnt; ++i) {
+	    if (ice->rcand[i].comp_id > highest_comp)
+		highest_comp = ice->rcand[i].comp_id;
+	}
+
 	for (i=highest_comp; i<ice->comp_cnt; ++i) {
 	    if (ice->comp[i].stun_sess) {
 		pj_stun_session_destroy(ice->comp[i].stun_sess);
@@ -1893,6 +1916,22 @@ pj_status_t add_rcand_and_update_checklist(
 	    }
 	}
 	ice->comp_cnt = highest_comp;
+    }
+
+    /* For trickle ICE: start the periodic check, if not yet */
+    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED && clist->count > 0)
+    {
+	if (!pj_timer_entry_running(&ice->clist.timer)) {
+	    pj_time_val delay = {0, 0};
+	    status = pj_timer_heap_schedule_w_grp_lock(
+						    ice->stun_cfg.timer_heap,
+						    &clist->timer, &delay,
+						    PJ_TRUE,
+						    ice->grp_lock);
+	    if (status == PJ_SUCCESS) {
+		LOG5((ice->obj_name, "Periodic timer scheduled.."));
+	    }
+	}
     }
 
     return PJ_SUCCESS;
@@ -2292,7 +2331,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
     /* Checklist must have been created */
-    PJ_ASSERT_RETURN(ice->clist.count > 0, PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(ice->clist.count > 0 || ice->is_trickling,
+		     PJ_EINVALIDOP);
 
     /* Lock session */
     pj_grp_lock_acquire(ice->grp_lock);

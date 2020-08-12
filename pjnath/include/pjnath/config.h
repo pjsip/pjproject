@@ -286,7 +286,7 @@
 /**
  * Maximum number of ICE components.
  */
-#define PJ_ICE_MAX_COMP				    (2<<PJ_ICE_COMP_BITS)
+#define PJ_ICE_MAX_COMP				    (1<<PJ_ICE_COMP_BITS)
 
 /**
  * Use the priority value according to the ice-draft.

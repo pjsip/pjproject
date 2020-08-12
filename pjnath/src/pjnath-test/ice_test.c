@@ -82,6 +82,9 @@ struct ice_ept
 
     pj_str_t		 ufrag;	/* username fragment.		*/
     pj_str_t		 pass;	/* password			*/
+
+    /* Trickle ICE */
+    pj_bool_t		 last_cand; /* Got last candidate?	*/
 };
 
 /* Session param */
@@ -471,9 +474,11 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
     if (!ept)
 	return;
 
-    PJ_LOG(3,(THIS_FILE, INDENT "Discovered a new candidate: "
+    ept->last_cand = last;
+
+    PJ_LOG(3,(THIS_FILE, INDENT "%p: discovered a new candidate "
 	      "comp=%d, type=%s, addr=%s, baseaddr=%s, last=%d",
-	      cand->comp_id,
+	      ept->ice, cand->comp_id,
 	      pj_ice_get_cand_type_name(cand->type),
 	      pj_sockaddr_print(&cand->addr, buf1, sizeof(buf1), 3),
 	      pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3),
@@ -487,18 +492,21 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
 static pj_status_t start_ice(struct ice_ept *ept, const struct ice_ept *remote)
 {
     pj_ice_sess_cand rcand[32];
-    unsigned i, rcand_cnt = 0;
+    unsigned rcand_cnt = 0;
     pj_status_t status;
 
     /* Enum remote candidates */
-    for (i=0; i<remote->cfg.comp_cnt; ++i) {
-	unsigned cnt = PJ_ARRAY_SIZE(rcand) - rcand_cnt;
-	status = pj_ice_strans_enum_cands(remote->ice, i+1, &cnt, rcand+rcand_cnt);
-	if (status != PJ_SUCCESS) {
-	    app_perror(INDENT "err: pj_ice_strans_enum_cands()", status);
-	    return status;
+    if (ept->cfg.trickle == PJ_ICE_SESS_TRICKLE_DISABLED) {
+	unsigned i;
+	for (i=0; i<remote->cfg.comp_cnt; ++i) {
+	    unsigned cnt = PJ_ARRAY_SIZE(rcand) - rcand_cnt;
+	    status = pj_ice_strans_enum_cands(remote->ice, i+1, &cnt, rcand+rcand_cnt);
+	    if (status != PJ_SUCCESS) {
+		app_perror(INDENT "err: pj_ice_strans_enum_cands()", status);
+		return status;
+	    }
+	    rcand_cnt += cnt;
 	}
-	rcand_cnt += cnt;
     }
 
     status = pj_ice_strans_start_ice(ept->ice, &remote->ufrag, &remote->pass,
@@ -1257,64 +1265,150 @@ on_return:
     return rc;
 }
 
-
-/* Simple trickle ICE test */
-int trickle_ice_test(void)
+struct timer_data
 {
-    pj_pool_t *pool;
-    pj_stun_config stun_cfg_buf, *stun_cfg;
+    struct test_sess	*sess;
+    unsigned		 caller_last_cand_cnt[PJ_ICE_MAX_COMP];
+    unsigned		 callee_last_cand_cnt[PJ_ICE_MAX_COMP];
+};
+
+
+/* Timer callback to check & signal new candidates */
+static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
+{
+    struct timer_data *data = (struct timer_data*)te->user_data;
+    struct test_sess *sess = data->sess;
+    struct ice_ept *caller = &sess->caller;
+    struct ice_ept *callee = &sess->callee;
+    pj_bool_t caller_last_cand, callee_last_cand;
+    unsigned i;
+    pj_status_t rc;
+
+    /* ICE transport may have been destroyed */
+    if (!caller->ice || !callee->ice)
+	return;
+
+    caller_last_cand = caller->last_cand;
+    callee_last_cand = callee->last_cand;
+    //PJ_LOG(3,(THIS_FILE, INDENT "End-of-cand: caller=%d callee=%d",
+    //		caller_last_cand, callee_last_cand));
+
+    for (i = 0; i < caller->cfg.comp_cnt; ++i) {
+	pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
+	unsigned j, cnt;
+
+	/* Check caller candidates */
+	cnt = PJ_ICE_ST_MAX_CAND;
+	rc = pj_ice_strans_enum_cands(caller->ice, i+1, &cnt, cand);
+	if (rc != PJ_SUCCESS) {
+	    app_perror(INDENT "err: caller pj_ice_strans_enum_cands()", rc);
+	    continue;
+	}
+
+	if (cnt > data->caller_last_cand_cnt[i]) {
+	    unsigned new_cnt = cnt - data->caller_last_cand_cnt[i];
+
+	    /* Update remote with new candidates */
+	    rc = pj_ice_strans_update_check_list(callee->ice,
+						 &caller->ufrag,
+						 &caller->pass,
+						 new_cnt, &cand[cnt - new_cnt],
+						 caller_last_cand);
+	    if (rc != PJ_SUCCESS) {
+		app_perror(INDENT "err: callee pj_ice_strans_update_check_list()", rc);
+		continue;
+	    }
+
+	    data->caller_last_cand_cnt[i] = cnt;
+	    PJ_LOG(4,(THIS_FILE, INDENT "Updated callee with %d new candidates %s",
+		      new_cnt, (caller_last_cand?"(last)":"")));
+
+	    for (j = 0; j < new_cnt; ++j) {
+		pj_ice_sess_cand *c = &cand[cnt - new_cnt + j];
+		char buf1[PJ_INET6_ADDRSTRLEN+10];
+		char buf2[PJ_INET6_ADDRSTRLEN+10];
+		PJ_LOG(4,(THIS_FILE, INDENT
+			  "%d: comp=%d, type=%s, addr=%s, baseaddr=%s",
+			  j+1, c->comp_id,
+			  pj_ice_get_cand_type_name(c->type),
+			  pj_sockaddr_print(&c->addr, buf1, sizeof(buf1), 3),
+			  pj_sockaddr_print(&c->base_addr, buf2, sizeof(buf2), 3)
+			  ));
+	    }
+	}
+
+	/* Check callee candidates */
+	cnt = PJ_ICE_ST_MAX_CAND;
+	rc = pj_ice_strans_enum_cands(callee->ice, i+1, &cnt, cand);
+	if (rc != PJ_SUCCESS) {
+	    app_perror(INDENT "err: caller pj_ice_strans_enum_cands()", rc);
+	    continue;
+	}
+
+	if (cnt > data->callee_last_cand_cnt[i]) {
+	    unsigned new_cnt = cnt - data->callee_last_cand_cnt[i];
+
+	    /* Update remote with new candidates */
+	    rc = pj_ice_strans_update_check_list(caller->ice,
+						 &callee->ufrag,
+						 &callee->pass,
+						 new_cnt, &cand[cnt - new_cnt],
+						 callee_last_cand);
+	    if (rc != PJ_SUCCESS) {
+		app_perror(INDENT "err: caller pj_ice_strans_update_check_list()", rc);
+		continue;
+	    }
+
+	    data->callee_last_cand_cnt[i] = cnt;
+	    PJ_LOG(4,(THIS_FILE, INDENT "Updated caller with %d new candidates %s",
+		      new_cnt, (callee_last_cand?"(last)":"")));
+
+	    for (j = 0; j < new_cnt; ++j) {
+		pj_ice_sess_cand *c = &cand[cnt - new_cnt + j];
+		char buf1[PJ_INET6_ADDRSTRLEN+10];
+		char buf2[PJ_INET6_ADDRSTRLEN+10];
+		PJ_LOG(4,(THIS_FILE, INDENT
+			  "%d: comp=%d, type=%s, addr=%s, baseaddr=%s",
+			  j+1, c->comp_id,
+			  pj_ice_get_cand_type_name(c->type),
+			  pj_sockaddr_print(&c->addr, buf1, sizeof(buf1), 3),
+			  pj_sockaddr_print(&c->base_addr, buf2, sizeof(buf2), 3)
+			  ));
+	    }
+	}
+    }
+
+    if (!caller_last_cand || !callee_last_cand) {
+	/* Reschedule until all candidates are gathered */
+	pj_time_val timeout = {0, 10};
+	pj_time_val_normalize(&timeout);
+	pj_timer_heap_schedule(th, te, &timeout);
+	//PJ_LOG(3,(THIS_FILE, INDENT "Rescheduled new candidate check"));
+    }
+}
+
+
+static int perform_trickle_test(const char *title,
+				pj_stun_config *stun_cfg,
+				unsigned server_flag,
+				struct test_cfg *caller_cfg,
+				struct test_cfg *callee_cfg,
+				struct sess_param *test_param)
+{
     pjlib_state pjlib_state;
     struct test_sess *sess;
-    struct test_cfg caller_cfg;
-    struct test_cfg callee_cfg;
-    struct sess_param test_param;
-    unsigned server_flag;
-    unsigned i;
+    struct timer_data timer_data;
+    pj_timer_entry te_new_cand;
     int rc;
 
-    PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
-    pj_log_push_indent();
-
-    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
-
-    stun_cfg = &stun_cfg_buf;
-    rc = create_stun_config(pool, stun_cfg);
-    if (rc != PJ_SUCCESS) {
-	pj_pool_release(pool);
-	pj_log_pop_indent();
-	return -10;
-    }
+    PJ_LOG(3,(THIS_FILE, INDENT "%s", title));
 
     capture_pjlib_state(stun_cfg, &pjlib_state);
 
-    set_client_server_flag(SERVER_IPV4, CLIENT_IPV4, CLIENT_IPV4,
-			   &server_flag, &caller_cfg.client_flag,
-			   &callee_cfg.client_flag);
-
-    pj_bzero(&test_param, sizeof(test_param));
-    caller_cfg.trickle = PJ_ICE_SESS_TRICKLE_FULL;
-    callee_cfg.trickle = PJ_ICE_SESS_TRICKLE_FULL;
-
-    rc = create_sess(stun_cfg, server_flag, &caller_cfg, &callee_cfg,
-		     &test_param, &sess);
-    if (rc != 0) {
-	pj_pool_release(pool);
-	pj_log_pop_indent();
+    rc = create_sess(stun_cfg, server_flag, caller_cfg, callee_cfg,
+		     test_param, &sess);
+    if (rc != 0)
 	return rc;
-    }
-
-    for (i=0; i<sess->param->worker_cnt; ++i) {
-	pj_status_t status;
-
-	status = pj_thread_create(sess->pool, "worker_thread",
-				  worker_thread_proc, sess, 0, 0,
-				  &sess->worker_threads[i]);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,(THIS_FILE, INDENT "err: create thread"));
-	    rc = -50;
-	    goto on_return;
-	}
-    }
 
     /* Init ICE on caller */
     rc = pj_ice_strans_init_ice(sess->caller.ice, sess->caller.cfg.role,
@@ -1350,6 +1444,17 @@ int trickle_ice_test(void)
 	goto on_return;
     }
 
+    /* Start polling new candidate */
+    if (!sess->caller.last_cand || !sess->callee.last_cand) {
+	pj_time_val timeout = {0, 10};
+
+	pj_bzero(&timer_data, sizeof(timer_data));
+	timer_data.sess = sess;
+
+	pj_time_val_normalize(&timeout);
+	pj_timer_entry_init(&te_new_cand, 0, &timer_data, &timer_new_cand);
+	pj_timer_heap_schedule(stun_cfg->timer_heap, &te_new_cand, &timeout);
+    }
 
     WAIT_UNTIL(30000, ALL_DONE, rc);
     if (!ALL_DONE) {
@@ -1357,6 +1462,9 @@ int trickle_ice_test(void)
 	rc = -140;
 	goto on_return;
     }
+
+    if (rc != 0)
+	goto on_return;
 
     if (sess->caller.result.nego_status != sess->caller.cfg.expected.nego_status) {
 	app_perror(INDENT "err: caller negotiation failed", sess->caller.result.nego_status);
@@ -1406,9 +1514,71 @@ on_return:
     /* Flush events */
     poll_events(stun_cfg, 100, PJ_FALSE);
 
-    rc = check_pjlib_state(stun_cfg, &pjlib_state);
+    if (rc == 0)
+	rc = check_pjlib_state(stun_cfg, &pjlib_state);
 
-    destroy_stun_config(stun_cfg);
+    return rc;
+}
+
+
+/* Simple trickle ICE test */
+int trickle_ice_test(void)
+{
+    pj_pool_t *pool;
+    pj_stun_config stun_cfg;
+    struct sess_param test_param;
+    unsigned i;
+    int rc;
+
+    struct sess_cfg_t {
+	const char	*title;
+	unsigned	 server_flag;
+	struct test_cfg	 ua1;
+	struct test_cfg	 ua2;
+    } cfg[] = {
+    {
+	"With turn-only",
+	0x1FFF,
+	/*Role  comp# host? stun? turn? flag?        ans_del snd_del des_del */
+	{ROLE1,	1,    NO,   NO,   YES,  CLIENT_IPV4, 0,	     0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2,	1,    NO,   NO,   YES,  CLIENT_IPV4, 0,	     0,	     0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
+    },
+    {
+	"With host+stun+turn",
+	0x1FFF,
+	/*Role  comp# host? stun? turn? flag?        ans_del snd_del des_del */
+	{ROLE1,	1,    YES,  YES,  YES,  CLIENT_IPV4, 0,	     0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2,	1,    YES,  YES,  YES,  CLIENT_IPV4, 0,	     0,	     0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
+    }};
+
+    PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
+    pj_log_push_indent();
+
+    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
+
+    rc = create_stun_config(pool, &stun_cfg);
+    if (rc != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	pj_log_pop_indent();
+	return -10;
+    }
+
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg); ++i) {
+	cfg[i].ua1.trickle = PJ_ICE_SESS_TRICKLE_FULL;
+	cfg[i].ua2.trickle = PJ_ICE_SESS_TRICKLE_FULL;
+	pj_bzero(&test_param, sizeof(test_param));
+
+	rc = perform_trickle_test(cfg[i].title,
+				  &stun_cfg,
+				  cfg[i].server_flag,
+				  &cfg[i].ua1,
+				  &cfg[i].ua2,
+				  &test_param);
+	if (rc != 0)
+	    break;
+    }
+
+    destroy_stun_config(&stun_cfg);
     pj_pool_release(pool);
     pj_log_pop_indent();
 
