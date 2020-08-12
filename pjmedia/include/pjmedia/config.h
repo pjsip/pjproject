@@ -45,6 +45,34 @@
 #endif
 
 /**
+ * Initial memory block for media endpoint.
+ */
+#ifndef PJMEDIA_POOL_LEN_ENDPT
+#   define PJMEDIA_POOL_LEN_ENDPT		512
+#endif
+
+/**
+ * Memory increment for media endpoint.
+ */
+#ifndef PJMEDIA_POOL_INC_ENDPT
+#   define PJMEDIA_POOL_INC_ENDPT		512
+#endif
+
+/**
+ * Initial memory block for event manager.
+ */
+#ifndef PJMEDIA_POOL_LEN_EVTMGR
+#   define PJMEDIA_POOL_LEN_EVTMGR		500
+#endif
+
+/**
+ * Memory increment for evnt manager.
+ */
+#ifndef PJMEDIA_POOL_INC_EVTMGR
+#   define PJMEDIA_POOL_INC_EVTMGR		500
+#endif
+
+/**
  * Specify whether we prefer to use audio switch board rather than 
  * conference bridge.
  *
