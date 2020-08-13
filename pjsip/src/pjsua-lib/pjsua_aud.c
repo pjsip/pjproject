@@ -646,6 +646,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
 	si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
 	si->jb_max = pjsua_var.media_cfg.jb_max;
+        si->jb_discard_algo = pjsua_var.media_cfg.jb_discard_algo;
 
 	/* Set SSRC and CNAME */
 	si->ssrc = call_med->ssrc;

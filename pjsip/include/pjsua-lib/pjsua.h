@@ -6708,6 +6708,14 @@ struct pjsua_media_config
     int			jb_max;
 
     /**
+     * Set the algorithm the jitter buffer uses to discard frames in order to
+     * adjust the latency.
+     *
+     * Default: PJMEDIA_JB_DISCARD_PROGRESSIVE
+     */
+    pjmedia_jb_discard_algo jb_discard_algo;
+
+    /**
      * Enable ICE
      */
     pj_bool_t		enable_ice;
