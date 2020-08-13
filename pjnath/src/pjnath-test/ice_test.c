@@ -476,14 +476,17 @@ static void ice_on_new_candidate(pj_ice_strans *ice_st,
 
     ept->last_cand = last;
 
-    PJ_LOG(3,(THIS_FILE, INDENT "%p: discovered a new candidate "
-	      "comp=%d, type=%s, addr=%s, baseaddr=%s, last=%d",
-	      ept->ice, cand->comp_id,
-	      pj_ice_get_cand_type_name(cand->type),
-	      pj_sockaddr_print(&cand->addr, buf1, sizeof(buf1), 3),
-	      pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3),
-	      last
-	      ));
+    if (cand) {
+	PJ_LOG(4,(THIS_FILE, INDENT "%p: discovered a new candidate "
+		  "comp=%d, type=%s, addr=%s, baseaddr=%s, end=%d",
+		  ept->ice, cand->comp_id,
+		  pj_ice_get_cand_type_name(cand->type),
+		  pj_sockaddr_print(&cand->addr, buf1, sizeof(buf1), 3),
+		  pj_sockaddr_print(&cand->base_addr, buf2, sizeof(buf2), 3),
+		  last));
+    } else if (ept->ice && last) {
+	PJ_LOG(4,(THIS_FILE, INDENT "%p: end of candidate", ept->ice));
+    }
 }
 
 /* Start ICE negotiation on the endpoint, based on parameter from
@@ -1290,7 +1293,7 @@ static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
 
     caller_last_cand = caller->last_cand;
     callee_last_cand = callee->last_cand;
-    //PJ_LOG(3,(THIS_FILE, INDENT "End-of-cand: caller=%d callee=%d",
+    //PJ_LOG(3,(THIS_FILE, INDENT "End-of-cand status: caller=%d callee=%d",
     //		caller_last_cand, callee_last_cand));
 
     for (i = 0; i < caller->cfg.comp_cnt; ++i) {

@@ -2441,7 +2441,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    ice_st->cb.on_new_candidate && (!dup || init_done))
 		{
 		    (*ice_st->cb.on_new_candidate)
-					(ice_st, (dup? cand:NULL), init_done);
+					(ice_st, (dup? NULL:cand), init_done);
 		}
 
 		if (op == PJ_STUN_SOCK_MAPPED_ADDR_CHANGE &&

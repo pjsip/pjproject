@@ -202,8 +202,13 @@ typedef struct pj_ice_strans_cb
 
     /**
      * Callback to report a new ICE local candidate, e.g: after successful
-     * STUN Binding, after a successful TURN allocation. Trickle ICE can use
-     * this callback to convey the new candidate to remote agent.
+     * STUN Binding, after a successful TURN allocation. Only new candidates
+     * whose type is server reflexive or relayed will be notified via this
+     * callback. This callback also indicates end-of-candidate via parameter
+     * 'last'.
+     *
+     * Trickle ICE can use this callback to convey the new candidate
+     * to remote agent and monitor end-of-candidate indication.
      *
      * @param ice_st	    The ICE stream transport.
      * @param cand	    The new local candidate, can be NULL when the last
