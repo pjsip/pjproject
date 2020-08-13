@@ -666,6 +666,25 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
 #endif
 
+        if (pjsua_var.ua_cfg.cb.on_stream_precreate) {
+            pjsua_on_stream_precreate_param prm;
+            prm.stream_idx = strm_idx;
+            prm.stream_info.type = PJMEDIA_TYPE_AUDIO;
+            prm.stream_info.info.aud = *si;
+            (*pjsua_var.ua_cfg.cb.on_stream_precreate)(call->index, &prm);
+
+            /* Copy back only the fields which are allowed to be changed. */
+            si->jb_init = prm.stream_info.info.aud.jb_init;
+            si->jb_min_pre = prm.stream_info.info.aud.jb_min_pre;
+            si->jb_max_pre = prm.stream_info.info.aud.jb_max_pre;
+            si->jb_max = prm.stream_info.info.aud.jb_max;
+            si->jb_discard_algo = prm.stream_info.info.aud.jb_discard_algo;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+            si->use_ka = prm.stream_info.info.aud.use_ka;
+#endif
+            si->rtcp_sdes_bye_disabled = prm.stream_info.info.aud.rtcp_sdes_bye_disabled;
+        }
+
 	/* Create session based on session info. */
 	status = pjmedia_stream_create(pjsua_var.med_endpt, NULL, si,
 				       call_med->tp, NULL,

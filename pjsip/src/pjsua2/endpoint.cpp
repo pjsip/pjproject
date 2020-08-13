@@ -1098,6 +1098,32 @@ void Endpoint::on_call_sdp_created(pjsua_call_id call_id,
     }
 }
 
+void Endpoint::on_stream_precreate(pjsua_call_id call_id,
+                                   pjsua_on_stream_precreate_param *param)
+{
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+        return;
+    }
+
+    OnStreamPreCreateParam prm;
+    prm.streamIdx = param->stream_idx;
+    prm.streamInfo.fromPj(param->stream_info);
+
+    call->onStreamPreCreate(prm);
+
+    /* Copy back only the fields which are allowed to be changed. */
+    param->stream_info.info.aud.jb_init = prm.streamInfo.jbInit;
+    param->stream_info.info.aud.jb_min_pre = prm.streamInfo.jbMinPre;
+    param->stream_info.info.aud.jb_max_pre = prm.streamInfo.jbMaxPre;
+    param->stream_info.info.aud.jb_max = prm.streamInfo.jbMax;
+    param->stream_info.info.aud.jb_discard_algo = prm.streamInfo.jbDiscardAlgo;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+    param->stream_info.info.aud.use_ka = prm.streamInfo.useKa;
+#endif
+    param->stream_info.info.aud.rtcp_sdes_bye_disabled = prm.streamInfo.rtcpSdesByeDisabled;
+}
+
 void Endpoint::on_stream_created2(pjsua_call_id call_id,
 				  pjsua_on_stream_created_param *param)
 {
@@ -1735,6 +1761,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
     ua_cfg.cb.on_call_tsx_state         = &Endpoint::on_call_tsx_state;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;
+    ua_cfg.cb.on_stream_precreate       = &Endpoint::on_stream_precreate;
     ua_cfg.cb.on_stream_created2        = &Endpoint::on_stream_created2;
     ua_cfg.cb.on_stream_destroyed       = &Endpoint::on_stream_destroyed;
     //ua_cfg.cb.on_dtmf_digit             = &Endpoint::on_dtmf_digit;
