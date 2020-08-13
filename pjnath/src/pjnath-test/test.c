@@ -190,7 +190,7 @@ static int test_inner(void)
 
     mem = &caching_pool.factory;
 
-#if 0
+#if 1
     pj_log_set_level(3);
     pj_log_set_decor(param_log_decor);
     PJ_UNUSED_ARG(test_log_func);

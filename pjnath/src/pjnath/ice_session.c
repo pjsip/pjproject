@@ -2693,7 +2693,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    /* Match */
 	    lcand = &ice->lcand[i];
 
-#if 1
+#if 0
 	    /* Verify lcand==check->lcand, this may happen when a STUN socket
 	     * corresponds to multiple host candidates.
 	     */
