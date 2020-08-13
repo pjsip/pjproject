@@ -27,17 +27,17 @@
 #   define WITH_BENCHMARK	    1
 #endif
 
-#define INCLUDE_STUN_TEST	    0
+#define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
 #define INCLUDE_TRICKLE_ICE_TEST    1
-#define INCLUDE_STUN_SOCK_TEST	    0
-#define INCLUDE_TURN_SOCK_TEST	    0
-#define INCLUDE_CONCUR_TEST    	    0
+#define INCLUDE_STUN_SOCK_TEST	    1
+#define INCLUDE_TURN_SOCK_TEST	    1
+#define INCLUDE_CONCUR_TEST    	    1
 
 #define GET_AF(use_ipv6) (use_ipv6?pj_AF_INET6():pj_AF_INET())
 
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
-#   define USE_IPV6	0
+#   define USE_IPV6	1
 #else
 #   define USE_IPV6	0
 #endif

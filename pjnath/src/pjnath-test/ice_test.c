@@ -1284,7 +1284,7 @@ static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
     struct ice_ept *caller = &sess->caller;
     struct ice_ept *callee = &sess->callee;
     pj_bool_t caller_last_cand, callee_last_cand;
-    unsigned i;
+    unsigned i, ncomp;
     pj_status_t rc;
 
     /* ICE transport may have been destroyed */
@@ -1296,7 +1296,8 @@ static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
     //PJ_LOG(3,(THIS_FILE, INDENT "End-of-cand status: caller=%d callee=%d",
     //		caller_last_cand, callee_last_cand));
 
-    for (i = 0; i < caller->cfg.comp_cnt; ++i) {
+    ncomp = PJ_MIN(caller->cfg.comp_cnt, callee->cfg.comp_cnt);
+    for (i = 0; i < ncomp; ++i) {
 	pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
 	unsigned j, cnt;
 
@@ -1316,7 +1317,7 @@ static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
 						 &caller->ufrag,
 						 &caller->pass,
 						 new_cnt, &cand[cnt - new_cnt],
-						 caller_last_cand);
+						 caller_last_cand && (i==ncomp-1));
 	    if (rc != PJ_SUCCESS) {
 		app_perror(INDENT "err: callee pj_ice_strans_update_check_list()", rc);
 		continue;
@@ -1356,7 +1357,7 @@ static void timer_new_cand(pj_timer_heap_t *th, pj_timer_entry *te)
 						 &callee->ufrag,
 						 &callee->pass,
 						 new_cnt, &cand[cnt - new_cnt],
-						 callee_last_cand);
+						 callee_last_cand && (i==ncomp-1));
 	    if (rc != PJ_SUCCESS) {
 		app_perror(INDENT "err: caller pj_ice_strans_update_check_list()", rc);
 		continue;
@@ -1404,7 +1405,8 @@ static int perform_trickle_test(const char *title,
     pj_timer_entry te_new_cand;
     int rc;
 
-    PJ_LOG(3,(THIS_FILE, INDENT "%s", title));
+    PJ_LOG(3,(THIS_FILE, "%s, %d vs %d components",
+	      title, caller_cfg->comp_cnt, callee_cfg->comp_cnt));
 
     capture_pjlib_state(stun_cfg, &pjlib_state);
 
@@ -1448,7 +1450,8 @@ static int perform_trickle_test(const char *title,
     }
 
     /* Start polling new candidate */
-    if (!sess->caller.last_cand || !sess->callee.last_cand) {
+    //if (!sess->caller.last_cand || !sess->callee.last_cand)
+    {
 	pj_time_val timeout = {0, 10};
 
 	pj_bzero(&timer_data, sizeof(timer_data));
@@ -1540,18 +1543,26 @@ int trickle_ice_test(void)
 	struct test_cfg	 ua2;
     } cfg[] = {
     {
+	"With host-only",
+	0x1FFF,
+	/*Role  comp# host? stun? turn? flag?        ans_del snd_del des_del */
+	{ROLE1, 1,    YES,  NO,   NO,   CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2, 1,    YES,  NO,   NO,   CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
+    },
+    {
 	"With turn-only",
 	0x1FFF,
 	/*Role  comp# host? stun? turn? flag?        ans_del snd_del des_del */
-	{ROLE1,	1,    NO,   NO,   YES,  CLIENT_IPV4, 0,	     0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
-	{ROLE2,	1,    NO,   NO,   YES,  CLIENT_IPV4, 0,	     0,	     0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
+	{ROLE1, 1,    NO,   NO,   YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2, 1,    NO,   NO,   YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
     },
     {
-	"With host+stun+turn",
+	/* STUN candidates will be pruned */
+	"With host+turn",
 	0x1FFF,
 	/*Role  comp# host? stun? turn? flag?        ans_del snd_del des_del */
-	{ROLE1,	1,    YES,  YES,  YES,  CLIENT_IPV4, 0,	     0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
-	{ROLE2,	1,    YES,  YES,  YES,  CLIENT_IPV4, 0,	     0,	     0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
+	{ROLE1, 1,    YES,  YES,  YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}},
+	{ROLE2, 1,    YES,  YES,  YES,  CLIENT_IPV4, 0,      0,      0,      {PJ_SUCCESS, PJ_SUCCESS, PJ_SUCCESS}}
     }};
 
     PJ_LOG(3,(THIS_FILE, "Trickle ICE"));
@@ -1566,19 +1577,23 @@ int trickle_ice_test(void)
 	return -10;
     }
 
-    for (i = 0; i < PJ_ARRAY_SIZE(cfg); ++i) {
+    for (i = 0; i < PJ_ARRAY_SIZE(cfg) && !rc; ++i) {
+	unsigned c1, c2;
 	cfg[i].ua1.trickle = PJ_ICE_SESS_TRICKLE_FULL;
 	cfg[i].ua2.trickle = PJ_ICE_SESS_TRICKLE_FULL;
-	pj_bzero(&test_param, sizeof(test_param));
-
-	rc = perform_trickle_test(cfg[i].title,
-				  &stun_cfg,
-				  cfg[i].server_flag,
-				  &cfg[i].ua1,
-				  &cfg[i].ua2,
-				  &test_param);
-	if (rc != 0)
-	    break;
+	for (c1 = 1; c1 <= 2 && !rc; ++c1) {
+	    for (c2 = 1; c2 <= 2 && !rc; ++c2) {
+		pj_bzero(&test_param, sizeof(test_param));
+		cfg[i].ua1.comp_cnt = c1;
+		cfg[i].ua2.comp_cnt = c2;
+		rc = perform_trickle_test(cfg[i].title,
+					  &stun_cfg,
+					  cfg[i].server_flag,
+					  &cfg[i].ua1,
+					  &cfg[i].ua2,
+					  &test_param);
+	    }
+	}
     }
 
     destroy_stun_config(&stun_cfg);

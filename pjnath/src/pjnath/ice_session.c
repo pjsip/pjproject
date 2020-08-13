@@ -1351,115 +1351,11 @@ static void update_comp_check(pj_ice_sess *ice, unsigned comp_id,
     }
 }
 
-/* This function is called when one check completes */
-static pj_bool_t on_check_complete(pj_ice_sess *ice,
-				   pj_ice_sess_check *check)
+/* Check if ICE nego completed */
+static pj_bool_t check_ice_complete(pj_ice_sess *ice)
 {
-    pj_ice_sess_comp *comp;
     unsigned i;
-
-    pj_assert(check->state >= PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
-
-    comp = find_comp(ice, check->lcand->comp_id);
-
-    /* 7.1.2.2.2.  Updating Pair States
-     * 
-     * The agent sets the state of the pair that generated the check to
-     * Succeeded.  The success of this check might also cause the state of
-     * other checks to change as well.  The agent MUST perform the following
-     * two steps:
-     * 
-     * 1.  The agent changes the states for all other Frozen pairs for the
-     *     same media stream and same foundation to Waiting.  Typically
-     *     these other pairs will have different component IDs but not
-     *     always.
-     */
-    if (check->err_code==PJ_SUCCESS) {
-
-	for (i=0; i<ice->clist.count; ++i) {
-	    pj_ice_sess_check *c = &ice->clist.checks[i];
-	    if (c->foundation_idx == check->foundation_idx &&
-		c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN)
-	    {
-		check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
-	    }
-	}
-
-	LOG5((ice->obj_name, "Check %d is successful%s",
-	     GET_CHECK_ID(&ice->clist, check),
-	     (check->nominated ? "  and nominated" : "")));
-
-	/* On the first valid pair, we call the callback, if present */
-	if (ice->valid_pair_found == PJ_FALSE) {
-	    ice->valid_pair_found = PJ_TRUE;
-
-	    if (ice->cb.on_valid_pair) {
-		(*ice->cb.on_valid_pair)(ice);
-	    }
-	}
-    }
-
-    /* 8.2.  Updating States
-     * 
-     * For both controlling and controlled agents, the state of ICE
-     * processing depends on the presence of nominated candidate pairs in
-     * the valid list and on the state of the check list:
-     *
-     * o  If there are no nominated pairs in the valid list for a media
-     *    stream and the state of the check list is Running, ICE processing
-     *    continues.
-     *
-     * o  If there is at least one nominated pair in the valid list:
-     *
-     *    - The agent MUST remove all Waiting and Frozen pairs in the check
-     *      list for the same component as the nominated pairs for that
-     *      media stream
-     *
-     *    - If an In-Progress pair in the check list is for the same
-     *      component as a nominated pair, the agent SHOULD cease
-     *      retransmissions for its check if its pair priority is lower
-     *      than the lowest priority nominated pair for that component
-     */
-    if (check->err_code==PJ_SUCCESS && check->nominated) {
-
-	for (i=0; i<ice->clist.count; ++i) {
-
-	    pj_ice_sess_check *c = &ice->clist.checks[i];
-
-	    if (c->lcand->comp_id == check->lcand->comp_id) {
-
-		if (c->state < PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS) {
-
-		    /* Just fail Frozen/Waiting check */
-		    LOG5((ice->obj_name, 
-			 "Check %s to be failed because state is %s",
-			 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
-				    &ice->clist, c), 
-			 check_state_name[c->state]));
-		    check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_FAILED,
-				    PJ_ECANCELLED);
-
-		} else if (c->state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS
-			   && (PJ_ICE_CANCEL_ALL ||
-			        CMP_CHECK_PRIO(c, check) < 0)) {
-
-		    /* State is IN_PROGRESS, cancel transaction */
-		    if (c->tdata) {
-			LOG5((ice->obj_name, 
-			     "Cancelling check %s (In Progress)",
-			     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
-					&ice->clist, c)));
-			pj_stun_session_cancel_req(comp->stun_sess, 
-						   c->tdata, PJ_FALSE, 0);
-			c->tdata = NULL;
-			check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_FAILED,
-					PJ_ECANCELLED);
-		    }
-		}
-	    }
-	}
-    }
-
+    pj_bool_t no_pending_check = PJ_FALSE;
 
     /* Still in 8.2.  Updating States
      * 
@@ -1518,14 +1414,17 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
      * See if all checks in the checklist have completed. If we do,
      * then mark ICE processing as failed.
      */
-    for (i=0; i<ice->clist.count; ++i) {
-	pj_ice_sess_check *c = &ice->clist.checks[i];
-	if (c->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
-	    break;
+    if (!ice->is_trickling) {
+	for (i=0; i<ice->clist.count; ++i) {
+	    pj_ice_sess_check *c = &ice->clist.checks[i];
+	    if (c->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
+		break;
+	    }
 	}
+	no_pending_check = (i == ice->clist.count);
     }
 
-    if (i == ice->clist.count) {
+    if (no_pending_check) {
 	/* All checks have completed, but we don't have nominated pair.
 	 * If agent's role is controlled, check if all components have
 	 * valid pair. If it does, this means the controlled agent has
@@ -1614,7 +1513,8 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
      * and see if they have a valid pair, if we are controlling and we haven't
      * started our nominated check yet.
      */
-    if (check->err_code == PJ_SUCCESS && 
+    /* Always scan regardless the last connectivity check result */
+    if (/*check->err_code == PJ_SUCCESS && */
 	ice->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
 	!ice->is_nominating &&
 	ice->timer.id == TIMER_NONE) 
@@ -1656,6 +1556,118 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 
     /* We still have checks to perform */
     return PJ_FALSE;
+}
+
+/* This function is called when one check completes */
+static pj_bool_t on_check_complete(pj_ice_sess *ice,
+				   pj_ice_sess_check *check)
+{
+    pj_ice_sess_comp *comp;
+    unsigned i;
+
+    pj_assert(check->state >= PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
+
+    comp = find_comp(ice, check->lcand->comp_id);
+
+    /* 7.1.2.2.2.  Updating Pair States
+     * 
+     * The agent sets the state of the pair that generated the check to
+     * Succeeded.  The success of this check might also cause the state of
+     * other checks to change as well.  The agent MUST perform the following
+     * two steps:
+     * 
+     * 1.  The agent changes the states for all other Frozen pairs for the
+     *     same media stream and same foundation to Waiting.  Typically
+     *     these other pairs will have different component IDs but not
+     *     always.
+     */
+    if (check->err_code==PJ_SUCCESS) {
+
+	for (i=0; i<ice->clist.count; ++i) {
+	    pj_ice_sess_check *c = &ice->clist.checks[i];
+	    if (c->foundation_idx == check->foundation_idx &&
+		c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN)
+	    {
+		check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
+	    }
+	}
+
+	LOG5((ice->obj_name, "Check %d is successful%s",
+	     GET_CHECK_ID(&ice->clist, check),
+	     (check->nominated ? " and nominated" : "")));
+
+	/* On the first valid pair, we call the callback, if present */
+	if (ice->valid_pair_found == PJ_FALSE) {
+	    ice->valid_pair_found = PJ_TRUE;
+
+	    if (ice->cb.on_valid_pair) {
+		(*ice->cb.on_valid_pair)(ice);
+	    }
+	}
+    }
+
+    /* 8.2.  Updating States
+     * 
+     * For both controlling and controlled agents, the state of ICE
+     * processing depends on the presence of nominated candidate pairs in
+     * the valid list and on the state of the check list:
+     *
+     * o  If there are no nominated pairs in the valid list for a media
+     *    stream and the state of the check list is Running, ICE processing
+     *    continues.
+     *
+     * o  If there is at least one nominated pair in the valid list:
+     *
+     *    - The agent MUST remove all Waiting and Frozen pairs in the check
+     *      list for the same component as the nominated pairs for that
+     *      media stream
+     *
+     *    - If an In-Progress pair in the check list is for the same
+     *      component as a nominated pair, the agent SHOULD cease
+     *      retransmissions for its check if its pair priority is lower
+     *      than the lowest priority nominated pair for that component
+     */
+    if (check->err_code==PJ_SUCCESS && check->nominated) {
+
+	for (i=0; i<ice->clist.count; ++i) {
+
+	    pj_ice_sess_check *c = &ice->clist.checks[i];
+
+	    if (c->lcand->comp_id == check->lcand->comp_id) {
+
+		if (c->state < PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS) {
+
+		    /* Just fail Frozen/Waiting check */
+		    LOG5((ice->obj_name, 
+			 "Check %s to be failed because state is %s",
+			 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+				    &ice->clist, c), 
+			 check_state_name[c->state]));
+		    check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				    PJ_ECANCELLED);
+
+		} else if (c->state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS
+			   && (PJ_ICE_CANCEL_ALL ||
+			        CMP_CHECK_PRIO(c, check) < 0)) {
+
+		    /* State is IN_PROGRESS, cancel transaction */
+		    if (c->tdata) {
+			LOG5((ice->obj_name, 
+			     "Cancelling check %s (In Progress)",
+			     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+					&ice->clist, c)));
+			pj_stun_session_cancel_req(comp->stun_sess, 
+						   c->tdata, PJ_FALSE, 0);
+			c->tdata = NULL;
+			check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_FAILED,
+					PJ_ECANCELLED);
+		    }
+		}
+	    }
+	}
+    }
+
+    return check_ice_complete(ice);
 }
 
 
@@ -1916,6 +1928,12 @@ pj_status_t add_rcand_and_update_checklist(
 	    }
 	}
 	ice->comp_cnt = highest_comp;
+
+	/* If using trickle ICE and end-of-candidate has been signalled,
+	 * check if ICE nego completion.
+	 */
+	if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED)
+	    check_ice_complete(ice);
     }
 
     /* For trickle ICE: start the periodic check, if not yet */
@@ -2097,6 +2115,8 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     msg_data->data.req.ice = ice;
     msg_data->data.req.clist = clist;
     msg_data->data.req.ckid = check_id;
+    msg_data->data.req.lcand = check->lcand;
+    msg_data->data.req.rcand = check->rcand;
 
     /* Add PRIORITY */
 #if PJNATH_ICE_PRIO_STD
@@ -2473,7 +2493,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     pj_ice_sess_checklist *clist;
     pj_stun_xor_mapped_addr_attr *xaddr;
     const pj_sockaddr_t *source_addr = src_addr;
-    unsigned i;
+    unsigned i, ckid;
 
     PJ_UNUSED_ARG(stun_sess);
     PJ_UNUSED_ARG(src_addr_len);
@@ -2482,12 +2502,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
     ice = msg_data->data.req.ice;
     clist = msg_data->data.req.clist;
-    check = &clist->checks[msg_data->data.req.ckid];
-    
-
-    /* Mark STUN transaction as complete */
-    pj_assert(tdata == check->tdata);
-    check->tdata = NULL;
+    ckid = msg_data->data.req.ckid;
+    check = &clist->checks[ckid];
 
     pj_grp_lock_acquire(ice->grp_lock);
 
@@ -2496,6 +2512,30 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	pj_grp_lock_release(ice->grp_lock);
 	return;
     }
+
+    /* Verify check (check ID may change as trickle ICE re-sort the list */
+    if (tdata != check->tdata) {
+	/* Okay, it was re-sorted, lookup using lcand & rcand */
+	for (i = 0; i < clist->count; ++i) {
+	    if (clist->checks[i].lcand == msg_data->data.req.lcand &&
+		clist->checks[i].rcand == msg_data->data.req.rcand)
+	    {
+		check = &clist->checks[i];
+		ckid = i;
+		break;
+	    }
+	}
+	if (i == clist->count) {
+	    /* Should not happen */
+	    pj_assert(!"Check not found");
+	    pj_grp_lock_release(ice->grp_lock);
+	    return;
+	}
+    }
+
+    /* Mark STUN transaction as complete */
+    pj_assert(tdata == check->tdata);
+    check->tdata = NULL;
 
     /* Init lcand to NULL. lcand will be found from the mapped address
      * found in the response.
@@ -2543,7 +2583,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    LOG4((ice->obj_name, "Resending check because of role conflict"));
 	    pj_log_push_indent();
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
-	    perform_check(ice, clist, msg_data->data.req.ckid, 
+	    perform_check(ice, clist, ckid,
 			  check->nominated || ice->is_nominating);
 	    pj_log_pop_indent();
 	    pj_grp_lock_release(ice->grp_lock);
@@ -2652,6 +2692,47 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	{
 	    /* Match */
 	    lcand = &ice->lcand[i];
+
+#if 1
+	    /* Verify lcand==check->lcand, this may happen when a STUN socket
+	     * corresponds to multiple host candidates.
+	     */
+	    if (lcand != check->lcand) {
+		unsigned j;
+
+		pj_log_push_indent();
+		LOG4((ice->obj_name,
+		     "Check %s%s: local candidate mismatch",
+		     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt),
+				&ice->clist, check),
+		     (check->nominated ? " (nominated)" : " (not nominated)")));
+
+
+		/* Local candidate does not belong to this check! Set current
+		 * check state to Failed.
+		 */
+		check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
+				PJNATH_ESTUNNOMAPPEDADDR);
+
+		/* Find the matching check */
+		for (j = 0; j < clist->count; ++j) {
+		    if (clist->checks[j].lcand == lcand &&
+			clist->checks[j].rcand == check->rcand)
+		    {
+			check = &clist->checks[j];
+			break;
+		    }
+		}
+		if (j == clist->count) {
+		    on_check_complete(ice, check);
+		    pj_log_pop_indent();
+		    pj_grp_lock_release(ice->grp_lock);
+		    return;
+		}
+
+		pj_log_pop_indent();
+	    }
+#endif
 	    break;
 	}
     }
@@ -2697,7 +2778,6 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
 	/* Update local candidate */
 	lcand = &ice->lcand[cand_id];
-
     }
 
     /* 7.1.2.2.3.  Constructing a Valid Pair

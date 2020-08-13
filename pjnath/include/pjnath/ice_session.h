@@ -170,6 +170,8 @@ typedef struct pj_ice_sess pj_ice_sess;
 /** Forward declaration for pj_ice_sess_check */
 typedef struct pj_ice_sess_check pj_ice_sess_check;
 
+/** Forward declaration for pj_ice_sess_cand */
+typedef struct pj_ice_sess_cand pj_ice_sess_cand;
 
 /**
  * This structure describes ICE component. 
@@ -221,6 +223,8 @@ typedef struct pj_ice_msg_data
 	    pj_ice_sess		    *ice;   /**< ICE session	*/
 	    pj_ice_sess_checklist   *clist; /**< Checklist	*/
 	    unsigned		     ckid;  /**< Check ID	*/
+	    pj_ice_sess_cand	    *lcand; /**< Local cand	*/
+	    pj_ice_sess_cand	    *rcand; /**< Remote cand	*/
 	} req;
     } data;
 
@@ -235,7 +239,7 @@ typedef struct pj_ice_msg_data
  * (server reflexive, relayed or host), priority, foundation, and
  * base.
  */
-typedef struct pj_ice_sess_cand
+struct pj_ice_sess_cand
 {
     /**
      * The candidate type, as described in #pj_ice_cand_type enumeration.
@@ -309,7 +313,7 @@ typedef struct pj_ice_sess_cand
      */
     pj_sockaddr		 rel_addr;
 
-} pj_ice_sess_cand;
+};
 
 
 /**
