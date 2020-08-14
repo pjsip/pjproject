@@ -333,6 +333,7 @@ static pj_status_t stream_init(const struct stream_cfg *cfg, struct stream **p_s
 	si.jb_min_pre = g_app.cfg.rx_jb_min_pre;
 	si.jb_max_pre = g_app.cfg.rx_jb_max_pre;
 	si.jb_max = g_app.cfg.rx_jb_max;
+        si.jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
     }
 
     /* Get the codec info and param */

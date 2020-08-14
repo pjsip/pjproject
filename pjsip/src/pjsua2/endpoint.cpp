@@ -349,6 +349,7 @@ void MediaConfig::fromPj(const pjsua_media_config &mc)
     this->jbMinPre = mc.jb_min_pre;
     this->jbMaxPre = mc.jb_max_pre;
     this->jbMax = mc.jb_max;
+    this->jbDiscardAlgo = mc.jb_discard_algo;
     this->sndAutoCloseTime = mc.snd_auto_close_time;
     this->vidPreviewEnableNative = PJ2BOOL(mc.vid_preview_enable_native);
 }
@@ -380,6 +381,7 @@ pjsua_media_config MediaConfig::toPj() const
     mcfg.jb_min_pre = this->jbMinPre;
     mcfg.jb_max_pre = this->jbMaxPre;
     mcfg.jb_max = this->jbMax;
+    mcfg.jb_discard_algo = this->jbDiscardAlgo;
     mcfg.snd_auto_close_time = this->sndAutoCloseTime;
     mcfg.vid_preview_enable_native = this->vidPreviewEnableNative;
 
@@ -411,6 +413,7 @@ void MediaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_INT     ( this_node, jbMinPre);
     NODE_READ_INT     ( this_node, jbMaxPre);
     NODE_READ_INT     ( this_node, jbMax);
+    NODE_READ_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_READ_INT     ( this_node, sndAutoCloseTime);
     NODE_READ_BOOL    ( this_node, vidPreviewEnableNative);
 }
@@ -440,6 +443,7 @@ void MediaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_INT     ( this_node, jbMinPre);
     NODE_WRITE_INT     ( this_node, jbMaxPre);
     NODE_WRITE_INT     ( this_node, jbMax);
+    NODE_WRITE_NUM_T   ( this_node, pjmedia_jb_discard_algo, jbDiscardAlgo);
     NODE_WRITE_INT     ( this_node, sndAutoCloseTime);
     NODE_WRITE_BOOL    ( this_node, vidPreviewEnableNative);
 }

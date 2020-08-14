@@ -2682,6 +2682,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Set up jitter buffer */
     pjmedia_jbuf_set_adaptive( stream->jb, jb_init, jb_min_pre, jb_max_pre);
+    pjmedia_jbuf_set_discard(stream->jb, info->jb_discard_algo);
 
     /* Create decoder channel: */
 
