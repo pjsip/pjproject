@@ -64,9 +64,9 @@ enum tp_type
 #   define HOST_PREF   65535
 #   define RELAY_PREF  65535
 #else
-#   define SRFLX_PREF  0
-#   define HOST_PREF   0
-#   define RELAY_PREF  0
+#   define SRFLX_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define HOST_PREF   ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define RELAY_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
 #endif
 
 
@@ -418,7 +418,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	cand = &comp->cand_list[comp->cand_cnt];
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 	cand->status = PJ_EPENDING;
-	cand->local_pref = RELAY_PREF;
+	cand->local_pref = (pj_uint16_t)(RELAY_PREF - idx);
 	cand->transport_id = tp_id;
 	cand->comp_id = (pj_uint8_t) comp->comp_id;
 	new_cand = PJ_TRUE;
@@ -480,7 +480,8 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
         || lcand->status != rcand->status
         || lcand->comp_id != rcand->comp_id
         || lcand->transport_id != rcand->transport_id
-        || lcand->local_pref != rcand->local_pref
+	// local pref is no longer a constant, so it may be different
+        //|| lcand->local_pref != rcand->local_pref
         || lcand->prio != rcand->prio
         || pj_sockaddr_cmp(&lcand->addr, &rcand->addr) != 0
         || pj_sockaddr_cmp(&lcand->base_addr, &rcand->base_addr) != 0)
@@ -539,7 +540,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
     cand = &comp->cand_list[comp->cand_cnt];
     cand->type = PJ_ICE_CAND_TYPE_SRFLX;
     cand->status = PJ_EPENDING;
-    cand->local_pref = SRFLX_PREF;
+    cand->local_pref = (pj_uint16_t)(SRFLX_PREF - idx);
     cand->transport_id = CREATE_TP_ID(TP_STUN, idx);
     cand->comp_id = (pj_uint8_t) comp->comp_id;
 
@@ -679,7 +680,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 
 	    cand->type = PJ_ICE_CAND_TYPE_HOST;
 	    cand->status = PJ_SUCCESS;
-	    cand->local_pref = HOST_PREF;
+	    cand->local_pref = (pj_uint16_t)(HOST_PREF - cand_cnt);
 	    cand->transport_id = CREATE_TP_ID(TP_STUN, idx);
 	    cand->comp_id = (pj_uint8_t) comp->comp_id;
 	    pj_sockaddr_cp(&cand->addr, addr);
@@ -1503,8 +1504,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	    }
 
 	    if (count && !comp->turn[n].err_cnt && comp->turn[n].sock) {
-		status = pj_turn_sock_set_perm(comp->turn[n].sock, count,
-					       addrs, 0);
+		status = pj_turn_sock_set_perm(
+				    comp->turn[n].sock, count,
+				    addrs, PJ_ICE_ST_USE_TURN_PERMANENT_PERM);
 		if (status != PJ_SUCCESS) {
 		    pj_ice_strans_stop_ice(ice_st);
 		    return status;
