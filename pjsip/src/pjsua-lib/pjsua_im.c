@@ -394,6 +394,12 @@ static void im_callback(void *token, pjsip_event *e)
 		    return;
 		}
 		pjsip_auth_clt_deinit(&auth);
+
+		/* Don't invoke callback if another callback (with auth,
+		 * different tsx) has been called.
+		 */
+                if (im_data2->acc_id == PJSUA_INVALID_ID)
+                    return;
 	    }
 	}
 
@@ -450,6 +456,9 @@ static void im_callback(void *token, pjsip_event *e)
 						 tsx->last_tx,
 						 rdata, im_data->acc_id);
 	}
+
+	/* Reset acc_id after invoking callback */
+	im_data->acc_id = PJSUA_INVALID_ID;
     }
 }
 
