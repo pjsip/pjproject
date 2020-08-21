@@ -923,6 +923,8 @@ static pj_status_t create_ice_media_transport(
     unsigned comp_cnt;
     pj_status_t status;
     pj_bool_t use_ipv6, use_nat64;
+    pj_bool_t trickle_async = PJ_FALSE;
+    pjmedia_sdp_session *rem_sdp;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
     use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
@@ -952,20 +954,45 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
+    rem_sdp = call_med->call->async_call.rem_sdp;
 
-    if (call_med->call->async_call.rem_sdp) {
+    if (rem_sdp) {
     	/* Match the default address family according to the offer */
         const pj_str_t ID_IP6 = { "IP6", 3};
     	const pjmedia_sdp_media *m;
 	const pjmedia_sdp_conn *c;
 
-    	m = call_med->call->async_call.rem_sdp->media[call_med->idx];
-	c = m->conn? m->conn : call_med->call->async_call.rem_sdp->conn;
+	m = rem_sdp->media[call_med->idx];
+	c = m->conn? m->conn : rem_sdp->conn;
 
 	if (pj_stricmp(&c->addr_type, &ID_IP6) == 0)
 	    ice_cfg.af = pj_AF_INET6();
     } else if (use_ipv6 || use_nat64) {
     	ice_cfg.af = pj_AF_INET6();
+    }
+
+    /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
+    if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	if (rem_sdp) {
+	    const pj_str_t ICE_OPT_STR = {"ice-options", 11};
+	    const pj_str_t TRICKLE_STR = {"trickle", 7};
+	    const pjmedia_sdp_attr *a;
+
+	    /* As answerer: and when remote signals trickle ICE in SDP */
+	    a = pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+				      &ICE_OPT_STR, NULL);
+	    if (!a) {
+		const pjmedia_sdp_media *m = rem_sdp->media[call_med->idx];
+		a = pjmedia_sdp_attr_find(m->attr_count, m->attr,
+					  &ICE_OPT_STR, NULL);
+	    }
+	    if (a) {
+		trickle_async = (pj_strstr(&a->value, &TRICKLE_STR) != NULL);
+	    }
+	} else {
+	    /* As offerer: and when trickle ICE mode is full */
+	    trickle_async = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);
+	}
     }
 
     /* If STUN transport is configured, initialize STUN transport settings */
@@ -1128,7 +1155,7 @@ static pj_status_t create_ice_media_transport(
     }
 
     /* Wait until transport is initialized, or time out */
-    if (!async) {
+    if (!async && !trickle_async) {
 	pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
 	pjsip_dialog *dlg = call_med->call->inv ?
 				call_med->call->inv->dlg : NULL;

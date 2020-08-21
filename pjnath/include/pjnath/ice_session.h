@@ -660,6 +660,7 @@ typedef struct pj_ice_sess_options
 
     /**
      * Trickle ICE mode.
+     *
      * Default value is PJ_ICE_SESS_TRICKLE_HALF.
      */
     pj_ice_sess_trickle	trickle;

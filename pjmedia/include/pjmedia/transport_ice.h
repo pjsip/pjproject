@@ -74,6 +74,25 @@ typedef struct pjmedia_ice_cb
 			        pj_status_t status,
 				void *user_data);
 
+    /**
+     * Callback to report a new ICE local candidate, e.g: after successful
+     * STUN Binding, after a successful TURN allocation. Only new candidates
+     * whose type is server reflexive or relayed will be notified via this
+     * callback. This callback also indicates end-of-candidate via parameter
+     * 'last'.
+     *
+     * Trickle ICE can use this callback to convey the new candidate
+     * to remote agent and monitor end-of-candidate indication.
+     *
+     * @param tp	PJMEDIA ICE transport.
+     * @param cand	The new local candidate, can be NULL when the last
+     *			local candidate initialization failed/timeout.
+     * @param last	PJ_TRUE if this is the last of local candidate.
+     */
+    void    (*on_new_candidate)(pjmedia_transport *tp,
+				const pj_ice_sess_cand *cand,
+				pj_bool_t last);
+
 } pjmedia_ice_cb;
 
 
@@ -276,6 +295,36 @@ PJ_DECL(pj_status_t) pjmedia_ice_add_ice_cb(pjmedia_transport *tp,
 PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
 					       const pjmedia_ice_cb *cb,
 					       void *user_data);
+
+
+/**
+ * Update check list after discovering and conveying new local ICE candidate,
+ * or receiving update of remote ICE candidates in trickle ICE. This function
+ * can only be called when trickle ICE is enabled and after ICE connectivity
+ * checks are started, i.e: after pjmedia_transport_media_start() has been
+ * invoked.
+ *
+ * @param tp		The ICE media transport.
+ * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
+ *			the remote agent.
+ * @param rem_passwd	Remote password, as seen in the SDP received from
+ *			the remote agent.
+ * @param rcand_cnt	Number of new remote candidates in the array.
+ * @param rcand		New remote candidates array.
+ * @param trickle_done	Flag to indicate end of trickling, set to PJ_TRUE
+ *			after all local candidates have been gathered and
+ *			after receiving end-of-candidate indication from
+ *			remote.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_update_check_list(
+					     pjmedia_transport *tp,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
+					     unsigned rcand_cnt,
+					     const pj_ice_sess_cand rcand[],
+					     pj_bool_t trickle_done);
 
 
 PJ_END_DECL

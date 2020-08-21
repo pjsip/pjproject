@@ -162,6 +162,9 @@ static void ice_on_rx_data(pj_ice_strans *ice_st,
 static void ice_on_ice_complete(pj_ice_strans *ice_st, 
 				pj_ice_strans_op op,
 			        pj_status_t status);
+static void ice_on_new_candidate(pj_ice_strans *ice_st,
+				 const pj_ice_sess_cand *cand,
+			         pj_bool_t last);
 
 /*
  * Clean up ICE resources.
@@ -281,6 +284,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     pj_bzero(&ice_st_cb, sizeof(ice_st_cb));
     ice_st_cb.on_ice_complete = &ice_on_ice_complete;
     ice_st_cb.on_rx_data = &ice_on_rx_data;
+    ice_st_cb.on_new_candidate = &ice_on_new_candidate;
 
     /* Configure RTP socket buffer settings, if not set */
     if (ice_st_cfg.comp[COMP_RTP-1].so_rcvbuf_size == 0) {
@@ -389,6 +393,28 @@ PJ_DEF(pj_status_t) pjmedia_ice_remove_ice_cb( pjmedia_transport *tp,
     pj_grp_lock_release(grp_lock);
 
     return (il != &tp_ice->listener? PJ_SUCCESS : PJ_ENOTFOUND);
+}
+
+
+/*
+ * Update check list after discovering and conveying new local ICE candidate,
+ * or receiving update of remote ICE candidates in trickle ICE.
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_update_check_list(
+					     pjmedia_transport *tp,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
+					     unsigned rcand_cnt,
+					     const pj_ice_sess_cand rcand[],
+					     pj_bool_t trickle_done)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+
+    PJ_ASSERT_RETURN(tp_ice && tp_ice->ice_st, PJ_EINVAL);
+
+    return pj_ice_strans_update_check_list(tp_ice->ice_st,
+					   rem_ufrag, rem_passwd,
+					   rcand_cnt, rcand, trickle_done);
 }
 
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
@@ -2111,6 +2137,31 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 				       il->user_data);
 	} else if (il->cb.on_ice_complete) {
 	    (*il->cb.on_ice_complete)(&tp_ice->base, op, result);
+	}
+    }
+}
+
+
+static void ice_on_new_candidate(pj_ice_strans *ice_st,
+				 const pj_ice_sess_cand *cand,
+			         pj_bool_t last)
+{
+    struct transport_ice *tp_ice;
+    ice_listener *il;
+
+    tp_ice = (struct transport_ice*) pj_ice_strans_get_user_data(ice_st);
+    if (!tp_ice) {
+	/* Destroy on progress */
+	return;
+    }
+
+    /* Notify application */
+    if (tp_ice->cb.on_new_candidate)
+	(*tp_ice->cb.on_new_candidate)(&tp_ice->base, cand, last);
+
+    for (il=tp_ice->listener.next; il!=&tp_ice->listener; il=il->next) {
+	if (il->cb.on_new_candidate) {
+	    (*il->cb.on_new_candidate)(&tp_ice->base, cand, last);
 	}
     }
 }

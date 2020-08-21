@@ -2038,10 +2038,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 		     PJ_ETOOMANY);
     PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
 
-    /* Ignore if trickle has been stopped (e.g: nomination started) */
+    /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
     if (!ice->is_trickling) {
 	LOG5((ice->obj_name,
-	      "Cannot update checklist after trickling stopped"));
+	      "Cannot update checklist when ICE trickling is disabled or
+	      " has been ended"));
 	return PJ_EINVALIDOP;
     }
     
@@ -2528,13 +2529,14 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	if (i == clist->count) {
 	    /* Should not happen */
 	    pj_assert(!"Check not found");
+	    check->tdata = NULL;
 	    pj_grp_lock_release(ice->grp_lock);
 	    return;
 	}
     }
 
     /* Mark STUN transaction as complete */
-    pj_assert(tdata == check->tdata);
+    //pj_assert(tdata == check->tdata);
     check->tdata = NULL;
 
     /* Init lcand to NULL. lcand will be found from the mapped address
