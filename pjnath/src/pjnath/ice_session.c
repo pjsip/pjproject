@@ -2041,7 +2041,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
     if (!ice->is_trickling) {
 	LOG5((ice->obj_name,
-	      "Cannot update checklist when ICE trickling is disabled or
+	      "Cannot update checklist when ICE trickling is disabled or"
 	      " has been ended"));
 	return PJ_EINVALIDOP;
     }
