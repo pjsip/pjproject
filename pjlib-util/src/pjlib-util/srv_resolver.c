@@ -573,7 +573,10 @@ static void dns_callback(void *user_data,
 	srv = (struct srv_target*)((pj_int8_t*)common-sizeof(struct common));
 	query_job = srv->parent;
     } else {
-	pj_assert(!"Unexpected user data!");
+	PJ_LOG(5,(THIS_FILE, "Discarded unexpected DNS type %s in answer",
+			     pj_dns_get_type_name(common->type)));
+	// Should not assert for something not under our control
+	//pj_assert(!"Unexpected user data!");
 	return;
     }
 
