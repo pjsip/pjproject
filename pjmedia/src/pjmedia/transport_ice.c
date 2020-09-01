@@ -44,6 +44,7 @@ struct sdp_state
     pj_bool_t		ice_mismatch;	/* Address doesn't match candidates */
     pj_bool_t		ice_restart;	/* Offer to restart ICE		    */
     pj_ice_sess_role	local_role;	/* Our role			    */
+    pj_bool_t		has_trickle;	/* Has trickle ICE attribute	    */
 };
 
 /* ICE listener */
@@ -78,6 +79,7 @@ struct transport_ice
     unsigned		 addr_len;	/**< Length of addresses.	    */
 
     pj_bool_t		 use_ice;
+    pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
     pj_sockaddr		 rtp_src_addr;	/**< Actual source RTP address.	    */
     unsigned		 rtp_src_cnt;   /**< How many pkt from this addr.   */
     pj_sockaddr		 rtcp_src_addr;	/**< Actual source RTCP address.    */
@@ -201,6 +203,9 @@ static const pj_str_t STR_RTCP		= { "rtcp", 4 };
 static const pj_str_t STR_RTCP_MUX	= { "rtcp-mux", 8 };
 static const pj_str_t STR_BANDW_RR	= { "RR", 2 };
 static const pj_str_t STR_BANDW_RS	= { "RS", 2 };
+static const pj_str_t STR_ICE_OPTIONS	= { "ice-options", 11 };
+static const pj_str_t STR_TRICKLE	= { "trickle", 7 };
+static const pj_str_t STR_END_OF_CAND	= { "end-of-candidates", 17 };
 
 enum {
     COMP_RTP = 1,
@@ -268,6 +273,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     tp_ice->initial_sdp = PJ_TRUE;
     tp_ice->oa_role = ROLE_NONE;
     tp_ice->use_ice = PJ_FALSE;
+    tp_ice->trickle_ice = cfg->opt.trickle;
     pj_list_init(&tp_ice->listener);
     pj_list_init(&tp_ice->listener_empty);
 
@@ -534,7 +540,8 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 					 unsigned media_index,
 					 unsigned comp_cnt,
 					 pj_bool_t restart_session,
-					 pj_bool_t rtcp_mux)
+					 pj_bool_t rtcp_mux,
+					 pj_bool_t trickle)
 {
     enum { 
 	ATTR_BUF_LEN = 160,	/* Max len of a=candidate attr */
@@ -799,6 +806,30 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
     	m->attr[m->attr_count++] = add_attr;
     }
 
+    /* Trickle ICE: signal remote with "a=ice-options:trickle" */
+    if (trickle) {
+	pj_str_t value;
+	char tmp_buf[8];
+
+	attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
+				       &STR_TRICKLE);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+
+	/* Also print "a=end-of-candidates" if ICE state is ready */
+	if (pj_ice_strans_get_state(tp_ice->ice_st)==PJ_ICE_STRANS_STATE_READY)
+	{
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_END_OF_CAND.ptr,
+					   NULL);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	}
+
+	/* Also add media ID attribute "a=mid" */
+	pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "%d", media_index+1);
+	value = pj_str(tmp_buf);
+	attr = pjmedia_sdp_attr_create(sdp_pool, "mid", &value);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -934,7 +965,9 @@ static pj_status_t create_initial_offer(struct transport_ice *tp_ice,
     /* Encode ICE in SDP */
     status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
 				   tp_ice->comp_cnt, PJ_FALSE,
-				   tp_ice->enable_rtcp_mux);
+				   tp_ice->enable_rtcp_mux,
+				   tp_ice->trickle_ice !=
+					PJ_ICE_SESS_TRICKLE_DISABLED);
     if (status != PJ_SUCCESS) {
 	set_no_ice(tp_ice, "Error encoding SDP answer", status);
 	return status;
@@ -1160,14 +1193,26 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	}
     }
 
+    /* Check trickle ICE indication */
+    if (tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	const pjmedia_sdp_attr *attr;
+	attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				     &STR_ICE_OPTIONS, NULL);
+	sdp_state->has_trickle = (attr &&
+				  pj_strcmp(&attr->value, &STR_TRICKLE)==0);
+    } else {
+	sdp_state->has_trickle = PJ_FALSE;
+    }
+
     PJ_LOG(4,(tp_ice->base.name, 
 	      "Processing SDP: support ICE=%u, common comp_cnt=%u, "
-	      "ice_mismatch=%u, ice_restart=%u, local_role=%s",
+	      "ice_mismatch=%u, ice_restart=%u, local_role=%s, trickle=%u",
 	      (sdp_state->match_comp_cnt != 0), 
 	      sdp_state->match_comp_cnt, 
 	      sdp_state->ice_mismatch, 
 	      sdp_state->ice_restart,
-	      pj_ice_sess_role_name(sdp_state->local_role)));
+	      pj_ice_sess_role_name(sdp_state->local_role),
+	      sdp_state->has_trickle));
 
     return PJ_SUCCESS;
 
@@ -1236,6 +1281,7 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
 					 unsigned media_index)
 {
     const pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
+    pj_bool_t with_trickle;
     pj_status_t status;
 
     /* Check if media is removed (just in case) */
@@ -1268,9 +1314,12 @@ static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
     }
 
     /* Encode ICE in SDP */
+    with_trickle = tp_ice->rem_offer_state.has_trickle &&
+		   tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED;
     status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
 				   tp_ice->rem_offer_state.match_comp_cnt,
-				   PJ_FALSE, tp_ice->use_rtcp_mux);
+				   PJ_FALSE, tp_ice->use_rtcp_mux,
+				   with_trickle);
     if (status != PJ_SUCCESS) {
 	set_no_ice(tp_ice, "Error encoding SDP answer", status);
 	return status;
@@ -1296,7 +1345,8 @@ static pj_status_t create_subsequent_offer(struct transport_ice *tp_ice,
 
     comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
     return encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
-				 comp_cnt, PJ_FALSE, tp_ice->enable_rtcp_mux);
+				 comp_cnt, PJ_FALSE, tp_ice->enable_rtcp_mux,
+				 PJ_FALSE);
 }
 
 
@@ -1338,13 +1388,15 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
 				       tp_ice->rem_offer_state.match_comp_cnt,
 				       tp_ice->rem_offer_state.ice_restart,
-				       tp_ice->use_rtcp_mux);
+				       tp_ice->use_rtcp_mux, PJ_FALSE);
 	if (status != PJ_SUCCESS)
 	    return status;
 
 	/* Done */
 
     } else {
+	pj_bool_t with_trickle;
+
 	/*
 	 * Received subsequent offer while we DON'T have ICE active.
 	 */
@@ -1372,10 +1424,13 @@ static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
 	    return status;
 	}
 
+	with_trickle = tp_ice->rem_offer_state.has_trickle &&
+		       tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED;
 	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
 				       tp_ice->rem_offer_state.match_comp_cnt,
 				       tp_ice->rem_offer_state.ice_restart,
-				       tp_ice->use_rtcp_mux);
+				       tp_ice->use_rtcp_mux,
+				       with_trickle);
 	if (status != PJ_SUCCESS)
 	    return status;
 

@@ -375,7 +375,17 @@ enum pjsip_inv_option
      * Session timer extension will always be used even when peer doesn't
      * support/want session timer.
      */
-    PJSIP_INV_ALWAYS_USE_TIMER	= 128
+    PJSIP_INV_ALWAYS_USE_TIMER	= 128,
+
+    /**
+     * Indicate support for trickle ICE
+     */
+    PJSIP_INV_SUPPORT_TRICKLE_ICE = 256,
+
+    /**
+     * Require trickle ICE support.
+     */
+    PJSIP_INV_REQUIRE_TRICKLE_ICE = 512,
 
 };
 
