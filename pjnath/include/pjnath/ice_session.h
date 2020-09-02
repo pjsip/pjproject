@@ -242,6 +242,11 @@ typedef struct pj_ice_msg_data
 struct pj_ice_sess_cand
 {
     /**
+     * The candidate ID.
+     */
+    unsigned		 id;
+
+    /**
      * The candidate type, as described in #pj_ice_cand_type enumeration.
      */
     pj_ice_cand_type	 type;

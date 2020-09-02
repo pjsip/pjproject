@@ -138,6 +138,8 @@ typedef struct pjmedia_stream_info
     int			jb_max_pre; /**< Jitter buffer maximum prefetch
 					 delay in msec (-1 for default).    */
     int			jb_max;	    /**< Jitter buffer max delay in msec.   */
+    pjmedia_jb_discard_algo jb_discard_algo;
+                                    /**< Jitter buffer discard algorithm.   */
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch

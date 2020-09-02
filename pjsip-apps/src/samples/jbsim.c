@@ -28,6 +28,7 @@
 
 /* Include PJMEDIA and PJLIB */
 #include <pjmedia.h>
+#include <pjmedia/event.h>
 #include <pjmedia-codec.h>
 #include <pjlib.h>
 #include <pjlib-util.h>
@@ -333,6 +334,7 @@ static pj_status_t stream_init(const struct stream_cfg *cfg, struct stream **p_s
 	si.jb_min_pre = g_app.cfg.rx_jb_min_pre;
 	si.jb_max_pre = g_app.cfg.rx_jb_max_pre;
 	si.jb_max = g_app.cfg.rx_jb_max;
+        si.jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
     }
 
     /* Get the codec info and param */
@@ -427,6 +429,7 @@ static void test_destroy(void)
     }
     if (g_app.pool)
 	pj_pool_release(g_app.pool);
+    pjmedia_event_mgr_destroy(NULL);
     pj_caching_pool_destroy( &g_app.cp );
     pj_shutdown();
 }
@@ -478,6 +481,13 @@ static pj_status_t test_init(void)
     status = pjmedia_transport_loop_create(g_app.endpt, &g_app.loop);
     if (status != PJ_SUCCESS) {
 	jbsim_perror("Error creating loop transport", status);
+	goto on_error;
+    }
+
+    /* Create event manager */
+    status = pjmedia_event_mgr_create(g_app.pool, 0, NULL);
+    if (status != PJ_SUCCESS) {
+	jbsim_perror("Error creating event manager", status);
 	goto on_error;
     }
 

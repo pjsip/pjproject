@@ -457,6 +457,17 @@
 #endif
 
 
+/**
+ * This constant specifies whether ICE stream transport should allow TURN
+ * client session to automatically renew permission for all remote candidates.
+ *
+ * Default: PJ_FALSE
+ */
+#ifndef PJ_ICE_ST_USE_TURN_PERMANENT_PERM
+#   define PJ_ICE_ST_USE_TURN_PERMANENT_PERM	    PJ_FALSE
+#endif
+
+
 /** ICE session pool initial size. */
 #ifndef PJNATH_POOL_LEN_ICE_SESS
 #   define PJNATH_POOL_LEN_ICE_SESS		    512

@@ -1773,6 +1773,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     si.rx_event_pt = 101;
     si.ssrc = pj_rand();
     si.jb_init = si.jb_min_pre = si.jb_max_pre = si.jb_max = -1;
+    si.jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
 
     /* Create loop transport */
     status = pjmedia_transport_loop_create(sp->endpt, &sp->transport);

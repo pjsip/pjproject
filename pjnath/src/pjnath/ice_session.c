@@ -690,9 +690,9 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_sess *ice,
 	   (((256 - comp_id) & 0xFF) << 0);
 #else
     enum {
-	type_mask   = ((2 << PJ_ICE_CAND_TYPE_PREF_BITS) - 1),
-	local_mask  = ((2 << PJ_ICE_LOCAL_PREF_BITS) - 1),
-	comp_mask   = ((2 << PJ_ICE_COMP_BITS) - 1),
+	type_mask   = ((1 << PJ_ICE_CAND_TYPE_PREF_BITS) - 1),
+	local_mask  = ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1),
+	comp_mask   = ((1 << PJ_ICE_COMP_BITS) - 1),
 
 	comp_shift  = 0,
 	local_shift = (PJ_ICE_COMP_BITS),
@@ -763,10 +763,12 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     }
 
     lcand = &ice->lcand[ice->lcand_cnt];
+    lcand->id = ice->lcand_cnt;
     lcand->comp_id = (pj_uint8_t)comp_id;
     lcand->transport_id = (pj_uint8_t)transport_id;
     lcand->type = type;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
+    lcand->local_pref = local_pref;
     lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
     pj_sockaddr_cp(&lcand->addr, addr);
     pj_sockaddr_cp(&lcand->base_addr, base_addr);
@@ -794,7 +796,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     LOG4((ice->obj_name, 
 	 "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
 	 "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
-	 ice->lcand_cnt, 
+	 lcand->id,
 	 lcand->comp_id, 
 	 cand_type_names[lcand->type],
 	 (int)lcand->foundation.slen,
@@ -806,7 +808,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 lcand->prio, lcand->prio));
 
     if (p_cand_id)
-	*p_cand_id = ice->lcand_cnt;
+	*p_cand_id = lcand->id;
 
     ++ice->lcand_cnt;
 
@@ -1338,7 +1340,23 @@ static void update_comp_check(pj_ice_sess *ice, unsigned comp_id,
     if (comp->valid_check == NULL) {
 	comp->valid_check = check;
     } else {
-	if (CMP_CHECK_PRIO(comp->valid_check, check) < 0)
+	pj_bool_t update = PJ_FALSE;
+
+	/* Update component's valid check with conditions:
+	 * - it is the first nominated check, or
+	 * - it has higher prio, as long as nomination status is NOT degraded
+	 *   (existing is nominated -> new is not-nominated).
+	 */
+	if (!comp->nominated_check && check->nominated)
+	{
+	    update = PJ_TRUE;
+	} else if (CMP_CHECK_PRIO(comp->valid_check, check) < 0 &&
+		   (!comp->nominated_check || check->nominated))
+	{
+	    update = PJ_TRUE;
+	}
+
+	if (update)
 	    comp->valid_check = check;
     }
 
@@ -1775,7 +1793,7 @@ pj_status_t add_rcand_and_update_checklist(
 	/* Add this candidate */
 	pj_memcpy(cn, &rem_cand[i], sizeof(pj_ice_sess_cand));
 	pj_strdup(ice->pool, &cn->foundation, &rem_cand[i].foundation);
-	ice->rcand_cnt++;
+	cn->id = ice->rcand_cnt++;
     }
 
     /* Generate checklist */
@@ -2123,10 +2141,11 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 
     /* Add PRIORITY */
 #if PJNATH_ICE_PRIO_STD
-    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535, 
+    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535 - lcand->id,
 			  lcand->comp_id);
 #else
-    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 0, 
+    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX,
+			  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1) - lcand->id,
 			  lcand->comp_id);
 #endif
     pj_stun_msg_add_uint_attr(check->tdata->pool, check->tdata->msg, 
@@ -2764,7 +2783,13 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	status = pj_ice_sess_add_cand(ice, check->lcand->comp_id, 
 				      msg_data->transport_id,
 				      PJ_ICE_CAND_TYPE_PRFLX,
-				      65535, &foundation,
+#if PJNATH_ICE_PRIO_STD
+				      65535 - ice->lcand_cnt,
+#else
+				      ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1) -
+				      ice->lcand_cnt,
+#endif
+				      &foundation,
 				      &xaddr->sockaddr, 
 				      &check->lcand->base_addr, 
 				      &check->lcand->base_addr,

@@ -598,6 +598,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Set default jitter buffer parameter. */
     si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
+    si->jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
 
     /* Get local RTCP-FB info */
     status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local, stream_idx,
