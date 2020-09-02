@@ -757,7 +757,7 @@ static void ice_init_complete_cb(void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
 
-    if (call_med->call == NULL)
+    if (call_med->call == NULL || call_med->tp_ready == PJ_SUCCESS)
 	return;
 
     /* No need to acquire_call() if we only change the tp_ready flag
@@ -923,7 +923,7 @@ static pj_status_t create_ice_media_transport(
     unsigned comp_cnt;
     pj_status_t status;
     pj_bool_t use_ipv6, use_nat64;
-    pj_bool_t trickle_async = PJ_FALSE;
+    pj_bool_t trickle = PJ_FALSE;
     pjmedia_sdp_session *rem_sdp;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
@@ -987,11 +987,11 @@ static pj_status_t create_ice_media_transport(
 					  &ICE_OPT_STR, NULL);
 	    }
 	    if (a) {
-		trickle_async = (pj_strstr(&a->value, &TRICKLE_STR) != NULL);
+		trickle = (pj_strstr(&a->value, &TRICKLE_STR) != NULL);
 	    }
 	} else {
 	    /* As offerer: and when trickle ICE mode is full */
-	    trickle_async = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);
+	    trickle = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);
 	}
     }
 
@@ -1139,7 +1139,7 @@ static pj_status_t create_ice_media_transport(
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;
     pj_ansi_snprintf(name, sizeof(name), "icetp%02d", call_med->idx);
-    call_med->tp_ready = PJ_EPENDING;
+    call_med->tp_ready = trickle? PJ_SUCCESS : PJ_EPENDING;
 
     comp_cnt = 1;
     if (PJMEDIA_ADVERTISE_RTCP && !acc_cfg->ice_cfg.ice_no_rtcp)
@@ -1155,7 +1155,7 @@ static pj_status_t create_ice_media_transport(
     }
 
     /* Wait until transport is initialized, or time out */
-    if (!async && !trickle_async) {
+    if (!async && !trickle) {
 	pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
 	pjsip_dialog *dlg = call_med->call->inv ?
 				call_med->call->inv->dlg : NULL;

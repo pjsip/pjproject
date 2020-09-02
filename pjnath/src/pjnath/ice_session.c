@@ -323,7 +323,9 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
     opt->nominated_check_delay = PJ_ICE_NOMINATED_CHECK_DELAY;
     opt->controlled_agent_want_nom_timeout = 
 	ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT;
-    //opt->trickle = PJ_ICE_SESS_TRICKLE_HALF;
+    opt->trickle = PJ_ICE_SESS_TRICKLE_HALF;
+    /* Should disable aggressive if trickle ICE is enabled */
+    opt->aggressive = PJ_FALSE;
 }
 
 /*
@@ -1939,7 +1941,7 @@ pj_status_t add_rcand_and_update_checklist(
     /* For trickle ICE: start the periodic check, if not yet */
     if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED && clist->count > 0)
     {
-	if (!pj_timer_entry_running(&ice->clist.timer)) {
+	if (!pj_timer_entry_running(&clist->timer)) {
 	    pj_time_val delay = {0, 0};
 	    status = pj_timer_heap_schedule_w_grp_lock(
 						    ice->stun_cfg.timer_heap,
@@ -1994,12 +1996,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     pj_strcat(&username, rem_ufrag);
     pj_strdup(ice->pool, &ice->rx_uname, &username);
 
-    status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
-    if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(ice->grp_lock);
-	return status;
-    }
-
     /* Init timer entry in the checklist. Initially the timer ID is FALSE
      * because timer is not running.
      */
@@ -2010,6 +2006,12 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     td->clist = clist;
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
+
+    status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+    if (status != PJ_SUCCESS) {
+	pj_grp_lock_release(ice->grp_lock);
+	return status;
+    }
 
     /* Log checklist */
     dump_checklist("Checklist created:", ice, clist);
@@ -2346,8 +2348,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     pj_ice_sess_checklist *clist;
     pj_ice_rx_check *rcheck;
     unsigned i;
-    pj_time_val delay;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
@@ -2430,12 +2431,11 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
      * instead to reduce stack usage:
      * return start_periodic_check(ice->stun_cfg.timer_heap, &clist->timer);
      */
-    delay.sec = delay.msec = 0;
-    status = pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
-                                               &clist->timer, &delay,
-                                               PJ_TRUE, ice->grp_lock);
-    if (status != PJ_SUCCESS) {
-	clist->timer.id = PJ_FALSE;
+    if (!pj_timer_entry_running(&clist->timer)) {
+	pj_time_val delay = {0, 0};
+	status = pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+						   &clist->timer, &delay,
+						   PJ_TRUE, ice->grp_lock);
     }
 
     pj_grp_lock_release(ice->grp_lock);

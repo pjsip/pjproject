@@ -810,13 +810,16 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
     if (trickle) {
 	pj_str_t value;
 	char tmp_buf[8];
+	pj_ice_strans_state ice_state;
 
 	attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
 				       &STR_TRICKLE);
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
 	/* Also print "a=end-of-candidates" if ICE state is ready */
-	if (pj_ice_strans_get_state(tp_ice->ice_st)==PJ_ICE_STRANS_STATE_READY)
+	ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
+	if (ice_state == PJ_ICE_STRANS_STATE_READY ||
+	    ice_state == PJ_ICE_STRANS_STATE_SESS_READY)
 	{
 	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_END_OF_CAND.ptr,
 					   NULL);

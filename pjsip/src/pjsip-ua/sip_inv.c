@@ -1810,7 +1810,8 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
 {
     /* If all extensions are enabled, nothing to do */
     if ((inv_option & PJSIP_INV_SUPPORT_100REL) &&
-	(inv_option & PJSIP_INV_SUPPORT_TIMER))
+	(inv_option & PJSIP_INV_SUPPORT_TIMER) &&
+	(inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE))
     {
 	return;
     }
@@ -1946,7 +1947,8 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 
     /* Add Require header. */
     if ((inv->options & PJSIP_INV_REQUIRE_100REL) ||
-	(inv->options & PJSIP_INV_REQUIRE_TIMER)) 
+	(inv->options & PJSIP_INV_REQUIRE_TIMER) ||
+	(inv->options & PJSIP_INV_REQUIRE_TRICKLE_ICE))
     {
 	pjsip_require_hdr *hreq;
 
@@ -1956,6 +1958,8 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 	    hreq->values[hreq->count++] = pj_str("100rel");
 	if (inv->options & PJSIP_INV_REQUIRE_TIMER)
 	    hreq->values[hreq->count++] = pj_str("timer");
+	if (inv->options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
+	    hreq->values[hreq->count++] = pj_str("trickle-ice");
 
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) hreq);
     }
