@@ -1778,8 +1778,8 @@ pj_status_t add_rcand_and_update_checklist(
 	    for (j=0; j<ice->rcand_cnt; ++j) {
 		const pj_ice_sess_cand *c1 = &rem_cand[i];
 		const pj_ice_sess_cand *c2 = &ice->rcand[j];
-		if (c1->comp_id==c2->comp_id && c1->type == c2->type &&
-		    pj_sockaddr_cmp(&c1->base_addr, &c2->base_addr)==0)
+		if (c1->comp_id==c2->comp_id && c1->type==c2->type &&
+		    pj_sockaddr_cmp(&c1->addr, &c2->addr)==0)
 		{
 		    break;
 		}

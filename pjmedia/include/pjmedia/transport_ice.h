@@ -298,11 +298,18 @@ PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
 
 
 /**
- * Update check list after discovering and conveying new local ICE candidate,
- * or receiving update of remote ICE candidates in trickle ICE. This function
- * can only be called when trickle ICE is enabled and after ICE connectivity
- * checks are started, i.e: after pjmedia_transport_media_start() has been
- * invoked.
+ * Update check list after new local or remote ICE candidates are added,
+ * or signal ICE session that trickling is done. Application typically would
+ * call this function after finding (and conveying) new local ICE candidates
+ * to remote, after receiving remote ICE candidates, or after receiving
+ * end-of-candidates indication.
+ *
+ * After check list is updated, ICE connectivity check will automatically
+ * start if check list has any candidate pair.
+ *
+ * This function is only applicable when trickle ICE is not disabled and
+ * after ICE connectivity checks are started, i.e: after
+ * pjmedia_transport_media_start() has been invoked.
  *
  * @param tp		The ICE media transport.
  * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
