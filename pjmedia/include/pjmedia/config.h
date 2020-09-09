@@ -1625,10 +1625,10 @@
  *
  * Setting this to 0 will disable it.
  *
- * Default : 0
+ * Default : 2
  */
 #ifndef PJMEDIA_STREAM_START_KA_CNT
-#   define PJMEDIA_STREAM_START_KA_CNT	0
+#   define PJMEDIA_STREAM_START_KA_CNT	2
 #endif
 
 
@@ -1638,8 +1638,8 @@
  *
  * Default : 1000
  */
-#ifndef PJMEDIA_STREAM_START_KA_NTERVAL_MSEC
-#   define PJMEDIA_STREAM_START_KA_NTERVAL_MSEC  1000
+#ifndef PJMEDIA_STREAM_START_KA_INTERVAL_MSEC
+#   define PJMEDIA_STREAM_START_KA_INTERVAL_MSEC  1000
 #endif
 
 

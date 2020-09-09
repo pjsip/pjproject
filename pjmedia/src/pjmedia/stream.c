@@ -244,8 +244,6 @@ struct pjmedia_stream
     unsigned	             start_ka_interval;/**< The keepalive sending
                                                     interval after the stream
                                                     is created              */
-    pj_timestamp	     last_start_ka_tx; /**< Timestamp of the last
-                                                    keepalive sent          */
 #endif
 
     pj_sockaddr		     rem_rtp_addr;     /**< Remote RTP address	    */
@@ -1332,29 +1330,23 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      */
     if (stream->use_ka)
     {
+        pj_uint32_t dtx_duration, ka_interval;
+
+        dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
+                                           &frame->timestamp);
         if (stream->start_ka_count) {
-            pj_timestamp now;
-            unsigned elapse_time;
+            ka_interval = stream->start_ka_interval *
+                                  PJMEDIA_PIA_SRATE(&stream->port.info) / 1000;
+        }  else {
+            ka_interval = PJMEDIA_STREAM_KA_INTERVAL *
+                                        PJMEDIA_PIA_SRATE(&stream->port.info);
+        }
+        if (dtx_duration > ka_interval) {
+            send_keep_alive_packet(stream);
+            stream->last_frm_ts_sent = frame->timestamp;
 
-            pj_get_timestamp(&now);
-            elapse_time = pj_elapsed_msec(&stream->last_start_ka_tx, &now);
-	    if ((elapse_time > stream->start_ka_interval))
-	    {
-	        send_keep_alive_packet(stream);
-	        stream->last_start_ka_tx = now;
+            if (stream->start_ka_count)
                 stream->start_ka_count--;
-	    }
-        } else {
-	    pj_uint32_t dtx_duration;
-
-	    dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
-					       &frame->timestamp);
-	    if ((dtx_duration > PJMEDIA_STREAM_KA_INTERVAL *
-                 PJMEDIA_PIA_SRATE(&stream->port.info)))
-	    {
-	        send_keep_alive_packet(stream);
-	        stream->last_frm_ts_sent = frame->timestamp;
-	    }
         }
     }
 #endif
@@ -2895,7 +2887,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     /* NAT hole punching by sending KA packet via RTP transport. */
-    if (stream->use_ka)
+    if (stream->use_ka && (stream->start_ka_count == 0))
 	send_keep_alive_packet(stream);
 #endif
 

@@ -73,7 +73,7 @@ typedef struct pjmedia_stream_ka_config
     /**
      * The keepalive sending interval after the stream is created.
      *
-     * Default: PJMEDIA_STREAM_START_KA_NTERVAL_MSEC
+     * Default: PJMEDIA_STREAM_START_KA_INTERVAL_MSEC
      */
     unsigned			    start_interval;
 
