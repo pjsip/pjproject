@@ -55,7 +55,39 @@ typedef struct pjmedia_stream_rtp_sess_info
 
 } pjmedia_stream_rtp_sess_info;
 
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 
+/**
+ * Structure of configuration settings for stream keepalive after it
+ * is created.
+ */
+typedef struct pjmedia_stream_ka_config
+{
+    /**
+     * The number of keepalive to be sent after the stream is created.
+     *
+     * Default: PJMEDIA_STREAM_START_KA_CNT
+     */
+    unsigned			    start_count;
+
+    /**
+     * The keepalive sending interval after the stream is created.
+     *
+     * Default: PJMEDIA_STREAM_START_KA_NTERVAL_MSEC
+     */
+    unsigned			    start_interval;
+
+} pjmedia_stream_ka_config;
+
+/**
+ * Initialize the stream send keep-alive with default settings.
+ *
+ * @param cfg		Stream send keep-alive structure to be initialized.
+ */
+PJ_DECL(void)
+pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg);
+
+#endif
 
 /**
  * This is internal function for parsing SDP format parameter of specific

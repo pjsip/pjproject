@@ -85,7 +85,7 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_channel pjmedia_channel;
 
-/** 
+/**
  * This structure describes media stream information. Each media stream
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
@@ -145,6 +145,8 @@ typedef struct pjmedia_stream_info
     pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
+    pjmedia_stream_ka_config ka_cfg;
+                                    /**< Stream send kep-alive settings.    */
 #endif
     pj_bool_t           rtcp_sdes_bye_disabled; 
                                     /**< Disable automatic sending of RTCP

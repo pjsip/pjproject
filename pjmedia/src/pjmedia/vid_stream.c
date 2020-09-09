@@ -164,6 +164,14 @@ struct pjmedia_vid_stream
 						    enabled?		    */
     pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
 					            packet		    */
+    unsigned	             start_ka_count;   /**< The number of keep-alive
+                                                    to be sent after it is
+                                                    created                 */
+    unsigned	             start_ka_interval;/**< The keepalive sending
+                                                    interval after the stream
+                                                    is created              */
+    pj_timestamp	     last_start_ka_tx; /**< Timestamp of the last
+                                                    keepalive sent          */
 #endif
 
 #if TRACE_JB
@@ -1052,17 +1060,29 @@ static pj_status_t put_frame(pjmedia_port *port,
      */
     if (stream->use_ka)
     {
-	pj_uint32_t dtx_duration;
+        if (stream->start_ka_count) {
+            unsigned elapse_time;
 
-	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
-					   &frame->timestamp);
+            pj_get_timestamp(&now);
+            elapse_time = pj_elapsed_msec(&stream->last_start_ka_tx, &now);
+	    if ((elapse_time > stream->start_ka_interval))
+	    {
+	        send_keep_alive_packet(stream);
+	        stream->last_start_ka_tx = now;
+                stream->start_ka_count--;
+	    }
+        } else {
+	    pj_uint32_t dtx_duration;
 
-        if (dtx_duration >
-	    PJMEDIA_STREAM_KA_INTERVAL * stream->info.codec_info.clock_rate)
-	{
-	    send_keep_alive_packet(stream);
-	    stream->last_frm_ts_sent = frame->timestamp;
-	}
+	    dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
+					       &frame->timestamp);
+            if ((dtx_duration > PJMEDIA_STREAM_KA_INTERVAL *
+                 stream->info.codec_info.clock_rate))
+	    {
+	        send_keep_alive_packet(stream);
+	        stream->last_frm_ts_sent = frame->timestamp;
+	    }
+        }
     }
 #endif
 
@@ -1765,6 +1785,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
+    stream->start_ka_count = info->ka_cfg.start_count;
+    stream->start_ka_interval = info->ka_cfg.start_interval;
 #endif
     stream->num_keyframe = info->sk_cfg.count;
 

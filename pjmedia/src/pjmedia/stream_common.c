@@ -21,6 +21,18 @@
 
 #define THIS_FILE	"stream_common.c"
 
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+
+PJ_DEF(void)
+pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->start_count = PJMEDIA_STREAM_START_KA_CNT;
+    cfg->start_interval = PJMEDIA_STREAM_START_KA_NTERVAL_MSEC;
+}
+
+#endif
+
 /*
  * Parse fmtp for specified format/payload type.
  */

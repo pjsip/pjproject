@@ -1619,6 +1619,29 @@
 #endif
 
 
+/**
+ * Specify the number of keep-alive needed to be sent after the stream is
+ * created.
+ *
+ * Setting this to 0 will disable it.
+ *
+ * Default : 0
+ */
+#ifndef PJMEDIA_STREAM_START_KA_CNT
+#   define PJMEDIA_STREAM_START_KA_CNT	0
+#endif
+
+
+/**
+ * Specify the interval to send keep-alive after the stream is created,
+ * in msec.
+ *
+ * Default : 1000
+ */
+#ifndef PJMEDIA_STREAM_START_KA_NTERVAL_MSEC
+#   define PJMEDIA_STREAM_START_KA_NTERVAL_MSEC  1000
+#endif
+
 
 /**
  * @}

@@ -238,6 +238,14 @@ struct pjmedia_stream
 						    enabled?		    */
     pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
 					            packet		    */
+    unsigned	             start_ka_count;   /**< The number of keep-alive
+                                                    to be sent after it is
+                                                    created                 */
+    unsigned	             start_ka_interval;/**< The keepalive sending
+                                                    interval after the stream
+                                                    is created              */
+    pj_timestamp	     last_start_ka_tx; /**< Timestamp of the last
+                                                    keepalive sent          */
 #endif
 
     pj_sockaddr		     rem_rtp_addr;     /**< Remote RTP address	    */
@@ -1324,16 +1332,30 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      */
     if (stream->use_ka)
     {
-	pj_uint32_t dtx_duration;
+        if (stream->start_ka_count) {
+            pj_timestamp now;
+            unsigned elapse_time;
 
-	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
-					   &frame->timestamp);
-	if (dtx_duration >
-	    PJMEDIA_STREAM_KA_INTERVAL * PJMEDIA_PIA_SRATE(&stream->port.info))
-	{
-	    send_keep_alive_packet(stream);
-	    stream->last_frm_ts_sent = frame->timestamp;
-	}
+            pj_get_timestamp(&now);
+            elapse_time = pj_elapsed_msec(&stream->last_start_ka_tx, &now);
+	    if ((elapse_time > stream->start_ka_interval))
+	    {
+	        send_keep_alive_packet(stream);
+	        stream->last_start_ka_tx = now;
+                stream->start_ka_count--;
+	    }
+        } else {
+	    pj_uint32_t dtx_duration;
+
+	    dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
+					       &frame->timestamp);
+	    if ((dtx_duration > PJMEDIA_STREAM_KA_INTERVAL *
+                 PJMEDIA_PIA_SRATE(&stream->port.info)))
+	    {
+	        send_keep_alive_packet(stream);
+	        stream->last_frm_ts_sent = frame->timestamp;
+	    }
+        }
     }
 #endif
 
@@ -2433,6 +2455,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
+    stream->start_ka_count = info->ka_cfg.start_count;
+    stream->start_ka_interval = info->ka_cfg.start_interval;
 #endif
 
     stream->cname = info->cname;
