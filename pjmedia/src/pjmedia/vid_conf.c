@@ -550,6 +550,30 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 	++src_port->listener_cnt;
 	++dst_port->transmitter_cnt;
 
+	if (src_port->listener_cnt == 1) {
+    	    /* If this is the first listener, initialize source's buffer
+    	     * with black color.
+    	     */
+	    const pjmedia_video_format_info *vfi;
+	    pjmedia_video_apply_fmt_param vafp;
+
+	    vfi = pjmedia_get_video_format_info(NULL,
+	    					src_port->port->info.fmt.id);
+	    pj_bzero(&vafp, sizeof(vafp));
+	    vafp.size = src_port->port->info.fmt.det.vid.size;
+	    (*vfi->apply_fmt)(vfi, &vafp);
+
+	    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
+	    	pj_memset(src_port->get_buf, 0, vafp.framebytes);
+	    } else if (src_port->port->info.fmt.id == PJMEDIA_FORMAT_I420 ||
+	  	       src_port->port->info.fmt.id == PJMEDIA_FORMAT_YV12)
+	    {	    	
+	    	pj_memset(src_port->get_buf, 16, vafp.plane_bytes[0]);
+	    	pj_memset((pj_uint8_t*)src_port->get_buf + vafp.plane_bytes[0],
+		      	  0x80, vafp.plane_bytes[1] * 2);
+	    }
+	}
+
 	update_render_state(vid_conf, dst_port);
 
 	++vid_conf->connect_cnt;
