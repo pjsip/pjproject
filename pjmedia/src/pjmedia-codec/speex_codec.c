@@ -851,7 +851,8 @@ static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
 	/* Bit info contains start bit offset of the frame */
 	frames[count].bit_info = bit_ptr;
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[count].timestamp.u64 = ts->u64 + count * samples_per_frame;
+	frames[count].timestamp.u64 = ts->u64 +
+				      (pj_uint64_t)count * samples_per_frame;
 	frames[count].size = spx->dec_bits.charPtr - char_ptr;
 	if (spx->dec_bits.bitPtr)
 	    ++frames[count].size;

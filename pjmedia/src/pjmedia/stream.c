@@ -2111,7 +2111,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
 	    /* Adjust the timestamp of the parsed frames */
 	    for (i=0; i<count; ++i) {
-		frames[i].timestamp.u64 = ts.u64 + ts_span * i;
+		frames[i].timestamp.u64 = ts.u64 + (pj_uint64_t)ts_span * i;
 	    }
 
 	} else {
