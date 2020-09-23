@@ -27,7 +27,7 @@
 static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
 {
     pj_status_t status;
-    pj_uint16_t i = 0;
+    unsigned i = 0;
     pj_str_t s;
     pjsip_transport *udp_tp;
     pj_sockaddr_in rem_addr;    

@@ -31,7 +31,7 @@ PJ_DEF(void) pj_array_insert( void *array,
     if (count && pos < count) {
 	pj_memmove( (char*)array + (pos+1)*elem_size,
 		    (char*)array + pos*elem_size,
-		    (count-pos)*elem_size);
+		    (count-pos)*(pj_size_t)elem_size);
     }
     pj_memmove((char*)array + pos*elem_size, value, elem_size);
 }
@@ -45,7 +45,7 @@ PJ_DEF(void) pj_array_erase( void *array,
     if (pos < count-1) {
 	pj_memmove( (char*)array + pos*elem_size,
 		    (char*)array + (pos+1)*elem_size,
-		    (count-pos-1)*elem_size);
+		    (count-pos-1)*(pj_size_t)elem_size);
     }
 }
 

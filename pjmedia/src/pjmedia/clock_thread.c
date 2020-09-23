@@ -179,7 +179,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;
     clock->timestamp_inc = (unsigned)(param->usec_interval *
                                       param->clock_rate /
-				      USEC_IN_SEC);
+				      (unsigned)USEC_IN_SEC);
     clock->options = options;
     clock->cb = cb;
     clock->user_data = user_data;
@@ -266,7 +266,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_modify(pjmedia_clock *clock,
                           USEC_IN_SEC;
     clock->timestamp_inc = (unsigned)(param->usec_interval *
                                       param->clock_rate /
-				      USEC_IN_SEC);
+				      (unsigned)USEC_IN_SEC);
 
     return PJ_SUCCESS;
 }

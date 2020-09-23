@@ -625,7 +625,7 @@ static void on_retransmit(pj_timer_heap_t *timer_heap,
     if (dd->uas_state->retransmit_count < 6) {
 	delay.sec = 0;
 	delay.msec = (1 << dd->uas_state->retransmit_count) * 
-		     pjsip_cfg()->tsx.t1;
+		     (long)pjsip_cfg()->tsx.t1;
 	pj_time_val_normalize(&delay);
     } else {
 	delay.sec = 1;
