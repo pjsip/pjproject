@@ -440,13 +440,9 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 
     if (new_cand) {
 	/* Commit the relayed candidate before pj_turn_sock_alloc(), as
-	 * otherwise there can be race condition:
-	 * 1. pj_turn_sock_alloc() return PJ_SUCCESS.
-	 * 2. Context switch occurs, allocation process fails quickly before
-	 *    the the candidate is commited.
-	 * 3. Back to this context, candidate is now commited with status
-	 *    PJ_EPENDING, this status will never be updated.
-	. */
+	 * otherwise there can be race condition, please check
+	 * https://github.com/pjsip/pjproject/pull/2525 for more info.
+	 */
 	comp->cand_cnt++;
     }
 
@@ -462,13 +458,6 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 			      &turn_cfg->alloc_param);
     if (status != PJ_SUCCESS) {
 	///sess_dec_ref(ice_st);
-
-	/* Upon synchronous allocation failure, there are two alternatives:
-	 * - uncommit the candidate (if it is a new one), or
-	 * - update the candidate status.
-	 */
-	// if (new_cand)
-	//    comp->cand_cnt--;
 	cand->status = status;
 	return status;
     }
