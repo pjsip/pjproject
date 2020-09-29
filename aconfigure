@@ -5956,6 +5956,12 @@ case $target in
 		ac_os_objs="$ac_os_objs sock_qos_bsd.o"
 		;;
 	esac
+	# SSL
+	case $target in
+	  *darwin*)
+		ac_os_objs="$ac_os_objs ssl_sock_apple.o"
+		;;
+	esac
 	# UUID
 	case $target in
 	  *android*)

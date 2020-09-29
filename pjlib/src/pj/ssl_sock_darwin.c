@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
  *
@@ -409,32 +408,42 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 			     ~PJ_SSL_SOCK_PROTO_SSL2;
     }
 
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL2) {
-    	if (!min_proto) min_proto = kSSLProtocol2;
-	max_proto = kSSLProtocol2;
-    }
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
-    	if (!min_proto) min_proto = kSSLProtocol3;
-	max_proto = kSSLProtocol3;
-    }
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
-    	if (!min_proto) min_proto = kTLSProtocol1;
-	max_proto = kTLSProtocol1;
-    }
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
-    	if (!min_proto) min_proto = kTLSProtocol11;
-	max_proto = kTLSProtocol11;
-    }
-    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
-    	if (!min_proto) min_proto = kTLSProtocol12;
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+	max_proto = kTLSProtocol13;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
 	max_proto = kTLSProtocol12;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+	max_proto = kTLSProtocol11;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+	max_proto = kTLSProtocol1;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+	max_proto = kSSLProtocol3;
+    } else {
+	PJ_LOG(3, (THIS_FILE, "Unsupported TLS/SSL protocol"));
+	return PJ_EINVAL;
     }
-    if (min_proto != kSSLProtocolUnknown) {
+
+    if (ssock->param.proto & PJ_SSL_SOCK_PROTO_SSL3) {
+	min_proto = kSSLProtocol3;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1) {
+	min_proto = kTLSProtocol1;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_1) {
+	min_proto = kTLSProtocol11;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_2) {
+	min_proto = kTLSProtocol12;
+    } else if (ssock->param.proto & PJ_SSL_SOCK_PROTO_TLS1_3) {
+	min_proto = kTLSProtocol13;
+    }
+
+    /* According to the doc, we can't set min/max proto for TLS protocol
+     * higher than 1.0. The runtime error given is -9830 (Illegal parameter).
+     */
+    if (min_proto != kSSLProtocolUnknown && min_proto <= kTLSProtocol1) {
         err = SSLSetProtocolVersionMin(ssl_ctx, min_proto);
         if (err != noErr) pj_status_from_err(dssock, "SetVersionMin", err);
     }
 
-    if (max_proto != kSSLProtocolUnknown) {
+    if (max_proto != kSSLProtocolUnknown && max_proto <= kTLSProtocol1) {
         err = SSLSetProtocolVersionMax(ssl_ctx, max_proto);
         if (err != noErr) pj_status_from_err(dssock, "SetVersionMax", err);
     }
