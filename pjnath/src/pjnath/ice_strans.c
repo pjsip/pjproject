@@ -438,6 +438,14 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	return status;
     }
 
+    if (new_cand) {
+	/* Commit the relayed candidate before pj_turn_sock_alloc(), as
+	 * otherwise there can be race condition, please check
+	 * https://github.com/pjsip/pjproject/pull/2525 for more info.
+	 */
+	comp->cand_cnt++;
+    }
+
     /* Add pending job */
     ///sess_add_ref(ice_st);
 
@@ -450,12 +458,8 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 			      &turn_cfg->alloc_param);
     if (status != PJ_SUCCESS) {
 	///sess_dec_ref(ice_st);
+	cand->status = status;
 	return status;
-    }
-
-    if (new_cand) {
-	/* Commit the relayed candidate. */
-	comp->cand_cnt++;
     }
 
     PJ_LOG(4,(ice_st->obj_name,
