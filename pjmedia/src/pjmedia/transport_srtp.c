@@ -302,6 +302,11 @@ typedef struct transport_srtp
      */
     unsigned		 keying_pending_cnt;
 
+    /* RTP SSRC in receiving direction, used in getting and setting SRTP
+     * roll over counter (ROC) on SRTP restart.
+     */
+    pj_uint32_t		 rx_ssrc;
+
 } transport_srtp;
 
 
@@ -817,6 +822,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     transport_srtp  *srtp = (transport_srtp*) tp;
     srtp_policy_t    tx_;
     srtp_policy_t    rx_;
+    uint32_t	     rx_roc = 0;
     srtp_err_status_t err;
     int		     cr_tx_idx = 0;
     int		     au_tx_idx = 0;
@@ -829,6 +835,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     pj_lock_acquire(srtp->mutex);
 
     if (srtp->session_inited) {
+	srtp_get_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, &rx_roc);
 	pjmedia_transport_srtp_stop(tp);
     }
 
@@ -911,8 +918,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     else
 	rx_.rtp.sec_serv    = sec_serv_none;
     rx_.key		    = (uint8_t*)srtp->rx_key;
-    rx_.ssrc.type	    = ssrc_any_inbound;
-    rx_.ssrc.value	    = 0;
+    if (rx_roc != 0 && srtp->rx_ssrc != 0) {
+	rx_.ssrc.type	    = ssrc_specific;
+	rx_.ssrc.value	    = srtp->rx_ssrc;
+    } else {
+	rx_.ssrc.type	    = ssrc_any_inbound;
+	rx_.ssrc.value	    = 0;
+    }
     rx_.rtp.sec_serv	    = crypto_suites[cr_rx_idx].service;
     rx_.rtp.cipher_type	    = crypto_suites[cr_rx_idx].cipher_type;
     rx_.rtp.cipher_key_len  = crypto_suites[cr_rx_idx].cipher_key_len;
@@ -927,6 +939,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 	srtp_dealloc(srtp->srtp_tx_ctx);
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	goto on_return;
+    }
+    if (rx_roc != 0 && srtp->rx_ssrc != 0) {
+	srtp_set_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, rx_roc);
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
@@ -1038,9 +1053,6 @@ static pj_status_t start_srtp(transport_srtp *srtp)
 	return PJ_SUCCESS;
     }
 
-    /* Reset probation counts */
-    srtp->probation_cnt = PROBATION_CNT_INIT;
-
     /* Got policy_local & policy_remote, let's initalize the SRTP */
 
     /* Ticket #1075: media_start() is called whenever media description
@@ -1056,6 +1068,9 @@ static pj_status_t start_srtp(transport_srtp *srtp)
 					      &srtp->rx_policy_neg);
 	if (status != PJ_SUCCESS)
 	    return status;
+
+	/* Reset probation counts */
+	srtp->probation_cnt = PROBATION_CNT_INIT;
 
 	PJ_LOG(4, (srtp->pool->obj_name,
 		   "SRTP started, keying=%s, crypto=%s",
@@ -1395,6 +1410,11 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	pjmedia_srtp_crypto tx, rx;
 	pj_status_t status;
 
+	/* Stop SRTP first, otherwise srtp_start() will maintain current
+	 * roll-over counter.
+	 */
+	pjmedia_transport_srtp_stop((pjmedia_transport*)srtp);
+
 	tx = srtp->tx_policy;
 	rx = srtp->rx_policy;
 	status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
@@ -1415,6 +1435,9 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	cb = srtp->rtp_cb;
 	cb2 = srtp->rtp_cb2;
 	cb_data = srtp->user_data;
+
+	/* Save SSRC after successful SRTP unprotect */
+	srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
     }
 
     pj_lock_release(srtp->mutex);

@@ -765,7 +765,7 @@ static void rx_tick(const pj_time_val *t)
 
     pkt_interval = PJMEDIA_PIA_SPF(&port->info) * 1000 /
 		   PJMEDIA_PIA_SRATE(&port->info) *
-		   g_app.cfg.rx_snd_burst;
+		   (long)g_app.cfg.rx_snd_burst;
 
     if (PJ_TIME_VAL_GTE(*t, strm->state.rx.next_schedule)) {
 	unsigned i;

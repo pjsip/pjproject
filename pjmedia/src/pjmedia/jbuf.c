@@ -198,7 +198,7 @@ static pj_status_t jb_framelist_init( pj_pool_t *pool,
     framelist->max_count    = max_count;
     framelist->content	    = (char*)
 			      pj_pool_alloc(pool,
-					    framelist->frame_size*
+					    (pj_size_t)framelist->frame_size*
 					    framelist->max_count);
     framelist->frame_type   = (int*)
 			      pj_pool_alloc(pool,

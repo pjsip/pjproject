@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2019-2019 Teluu Inc. (http://www.teluu.com)
  *
@@ -263,5 +262,33 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size);
 static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
 			     pj_ssize_t size, int *nwritten);
 
+#ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
+
+static void ssl_close_sockets(pj_ssl_sock_t *ssock);
+
+static pj_status_t network_send(pj_ssl_sock_t *ssock,
+				pj_ioqueue_op_key_t *send_key,
+				const void *data,
+				pj_ssize_t *size,
+				unsigned flags);
+static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
+				      unsigned async_count,
+				      unsigned buff_size,
+				      void *readbuf[],
+				      pj_uint32_t flags);
+static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
+			 		pj_pool_t *pool,
+			  		const pj_sockaddr_t *localaddr,
+			  		int addr_len,
+			  		const pj_ssl_sock_param *newsock_param);
+static pj_status_t network_start_connect(pj_ssl_sock_t *ssock,
+		       pj_ssl_start_connect_param *connect_param);
+static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
+					    void *connection);
+static pj_status_t network_get_localaddr(pj_ssl_sock_t *ssock,
+					 pj_sockaddr_t *addr,
+					 int *namelen);
+
+#endif
+
 #endif /* __SSL_SOCK_IMP_COMMON_H__ */
-       

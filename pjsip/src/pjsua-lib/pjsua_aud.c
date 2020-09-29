@@ -1679,13 +1679,15 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
 				    unsigned bits_per_sample)
 {
     pj_status_t status;
+    pj_bool_t speaker_only = (pjsua_var.snd_mode & PJSUA_SND_DEV_SPEAKER_ONLY);
 
     /* Normalize device ID with new convention about default device ID */
     if (playback_dev == PJMEDIA_AUD_DEFAULT_CAPTURE_DEV)
 	playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     /* Create default parameters for the device */
-    status = pjmedia_aud_dev_default_param(capture_dev, param);
+    status = pjmedia_aud_dev_default_param((speaker_only? playback_dev:
+    					    capture_dev), param);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error retrieving default audio "
 				"device parameters", status);
@@ -1939,7 +1941,7 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     }
 
     /* Update sound device name. */
-    {
+    if (!speaker_only) {
 	pjmedia_aud_dev_info rec_info;
 	pjmedia_aud_stream *strm;
 	pjmedia_aud_param si;
@@ -2016,8 +2018,11 @@ static void close_snd_dev(void)
 	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
 	pjmedia_aud_stream_get_param(strm, &param);
 
-	if (pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
+	if (param.rec_id == PJSUA_SND_NO_DEV ||
+	    pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
+	{
 	    cap_info.name[0] = '\0';
+	}
 	if (pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
 	    play_info.name[0] = '\0';
 
