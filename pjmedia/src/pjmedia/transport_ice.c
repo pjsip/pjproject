@@ -212,6 +212,21 @@ enum {
     COMP_RTCP = 2
 };
 
+
+/* Forward declaration of internal functions */
+
+static int print_sdp_cand_attr(char *buffer, int max_len,
+			       const pj_ice_sess_cand *cand);
+static void get_ice_attr(const pjmedia_sdp_session *rem_sdp,
+			 const pjmedia_sdp_media *rem_m,
+			 const pjmedia_sdp_attr **p_ice_ufrag,
+			 const pjmedia_sdp_attr **p_ice_pwd);
+static pj_status_t parse_cand(const char *obj_name,
+			      pj_pool_t *pool,
+			      const pj_str_t *orig_input,
+			      pj_ice_sess_cand *cand);
+
+
 /*
  * Create ICE media transport.
  */
@@ -402,11 +417,35 @@ PJ_DEF(pj_status_t) pjmedia_ice_remove_ice_cb( pjmedia_transport *tp,
 }
 
 
-/*
- * Update check list after discovering and conveying new local ICE candidate,
+/* Check if trickle support is signalled in the specified SDP. */
+PJ_DEF(pj_bool_t) pjmedia_ice_sdp_has_trickle( const pjmedia_sdp_session *sdp,
+					       unsigned med_idx)
+{
+    const pjmedia_sdp_media *m;
+    const pjmedia_sdp_attr *a;
+
+    PJ_ASSERT_RETURN(sdp && med_idx < sdp->media_count, PJ_EINVAL);
+
+    /* Find in media level */
+    m = sdp->media[med_idx];
+    a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_ICE_OPTIONS, NULL);
+    if (a && pj_strstr(&a->value, &STR_TRICKLE))
+	return PJ_TRUE;
+
+    /* Find in session level */
+    a = pjmedia_sdp_attr_find(sdp->attr_count, sdp->attr, &STR_ICE_OPTIONS,
+			      NULL);
+    if (a && pj_strstr(&a->value, &STR_TRICKLE))
+	return PJ_TRUE;
+
+    return PJ_FALSE;
+}
+
+
+/* Update check list after discovering and conveying new local ICE candidate,
  * or receiving update of remote ICE candidates in trickle ICE.
  */
-PJ_DEF(pj_status_t) pjmedia_ice_update_check_list(
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 					     pjmedia_transport *tp,
 					     const pj_str_t *rem_ufrag,
 					     const pj_str_t *rem_passwd,
@@ -422,6 +461,160 @@ PJ_DEF(pj_status_t) pjmedia_ice_update_check_list(
 					   rem_ufrag, rem_passwd,
 					   rcand_cnt, rcand, trickle_done);
 }
+
+
+/* Fetch trickle ICE info from the specified SDP. */
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_parse_sdp(
+					    const pjmedia_sdp_session *sdp,
+					    unsigned media_index,
+					    pj_str_t *mid,
+					    pj_str_t *ufrag,
+					    pj_str_t *passwd,
+					    unsigned *cand_cnt,
+					    pj_ice_sess_cand cand[],
+					    pj_bool_t *end_of_cand)
+{
+    const pjmedia_sdp_media *m;
+    const pjmedia_sdp_attr *a;
+
+    PJ_ASSERT_RETURN(sdp && media_index < sdp->media_count, PJ_EINVAL);
+
+    m = sdp->media[media_index];
+
+    if (mid) {
+	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "mid", NULL);
+	if (a) {
+	    *mid = a->value;
+	} else {
+	    pj_bzero(mid, sizeof(*mid));
+	}
+    }
+
+    if (ufrag && passwd) {
+	const pjmedia_sdp_attr *a_ufrag, *a_pwd;
+	get_ice_attr(sdp, m, &a_ufrag, &a_pwd);
+	if (a_ufrag && a_pwd) {
+	    *ufrag = a_ufrag->value;
+	    *passwd = a_pwd->value;
+	} else {
+	    pj_bzero(ufrag, sizeof(*ufrag));
+	    pj_bzero(passwd, sizeof(*passwd));
+	}
+    }
+
+    if (cand_cnt && cand && *cand_cnt > 0) {
+	pj_status_t status;
+	unsigned i, cnt = 0;
+
+	for (i=0; i<m->attr_count && cnt<*cand_cnt; ++i) {
+	    a = m->attr[i];
+	    if (pj_strcmp(&a->name, &STR_CANDIDATE)!=0)
+		continue;
+
+	    /* Parse candidate */
+	    status = parse_cand("trickle-ice", NULL, &a->value, &cand[cnt]);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,("trickle-ice", status,
+			     "Error in parsing SDP candidate attribute '%.*s', "
+			     "candidate is ignored",
+			     (int)a->value.slen, a->value.ptr));
+		continue;
+	    }
+	    ++cnt;
+	}
+	*cand_cnt = cnt;
+    }
+
+    if (end_of_cand) {
+	a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_END_OF_CAND,
+				  NULL);
+	*end_of_cand = (a != NULL);
+    }
+    return PJ_SUCCESS;
+}
+
+
+/* Generate SDP attributes for trickle ICE in the specified SDP. */
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_update_sdp(
+					    pj_pool_t *sdp_pool,
+					    pjmedia_sdp_session *sdp,
+					    unsigned media_index,
+					    const pj_str_t *ufrag,
+					    const pj_str_t *passwd,
+					    unsigned cand_cnt,
+					    const pj_ice_sess_cand cand[],
+					    pj_bool_t end_of_cand)
+{
+    pjmedia_sdp_media *m;
+    pjmedia_sdp_attr *a;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(sdp_pool && sdp, PJ_EINVAL);
+    PJ_ASSERT_RETURN(media_index < sdp->media_count, PJ_EINVAL);
+
+    m = sdp->media[media_index];
+
+    /* Add media ID attribute "a=mid" */
+    a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "mid", NULL);
+    if (!a) {
+	pj_str_t value;
+	char tmp_buf[8];
+	pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "%d", media_index+1);
+	value = pj_str(tmp_buf);
+	a = pjmedia_sdp_attr_create(sdp_pool, "mid", &value);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+    }
+
+    /* Add ice-ufrag & ice-pwd attributes */
+    if (ufrag && passwd) {
+	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr, ufrag);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+
+	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, passwd);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+    }
+
+    /* Add "a=trickle-options:trickle" */
+    a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_ICE_OPTIONS, NULL);
+    if (!a || !pj_strstr(&a->value, &STR_TRICKLE)) {
+	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
+				    &STR_TRICKLE);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+    }
+
+    /* Add candidates */
+    for (i=0; i<cand_cnt; ++i) {
+	enum {
+	    ATTR_BUF_LEN = 160,	/* Max len of a=candidate attr */
+	    RATTR_BUF_LEN= 160	/* Max len of a=remote-candidates attr */
+	};
+	char attr_buf[ATTR_BUF_LEN];
+	pj_str_t value;
+
+	value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN, &cand[i]);
+	if (value.slen < 0) {
+	    pj_assert(!"Not enough attr_buf to print candidate");
+	    return PJ_EBUG;
+	}
+
+	value.ptr = attr_buf;
+	a = pjmedia_sdp_attr_create(sdp_pool, STR_CANDIDATE.ptr, &value);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+    }
+
+    /* Add "a=end-of-candidates" */
+    if (end_of_cand) {
+	a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_END_OF_CAND,
+				  NULL);
+	if (!a) {
+	    a = pjmedia_sdp_attr_create(sdp_pool, STR_END_OF_CAND.ptr, NULL);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 /* Disable ICE when SDP from remote doesn't contain a=candidate line */
 static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
@@ -806,31 +999,22 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
     	m->attr[m->attr_count++] = add_attr;
     }
 
-    /* Trickle ICE: signal remote with "a=ice-options:trickle" */
+    /* Add trickle ICE attributes */
     if (trickle) {
-	pj_str_t value;
-	char tmp_buf[8];
 	pj_ice_strans_state ice_state;
+	pj_bool_t end_of_cand;
 
-	attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
-				       &STR_TRICKLE);
-	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
-
-	/* Also print "a=end-of-candidates" if ICE state is ready */
 	ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
-	if (ice_state == PJ_ICE_STRANS_STATE_READY ||
-	    ice_state == PJ_ICE_STRANS_STATE_SESS_READY)
-	{
-	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_END_OF_CAND.ptr,
-					   NULL);
-	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
-	}
+	end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
+		       ice_state == PJ_ICE_STRANS_STATE_SESS_READY);
 
-	/* Also add media ID attribute "a=mid" */
-	pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "%d", media_index+1);
-	value = pj_str(tmp_buf);
-	attr = pjmedia_sdp_attr_create(sdp_pool, "mid", &value);
-	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp_local,
+						media_index, NULL, NULL,
+						0, NULL, end_of_cand);
+	if (status != PJ_SUCCESS) {
+	    pj_assert(!"pjmedia_ice_trickle_encode_sdp() failed");
+	    return status;
+	}
     }
 
     return PJ_SUCCESS;
@@ -859,7 +1043,11 @@ static pj_status_t parse_cand(const char *obj_name,
 	TRACE__((obj_name, "Expecting ICE foundation in candidate"));
 	goto on_return;
     }
-    pj_strdup(pool, &cand->foundation, &token);
+    if (pool) {
+	pj_strdup(pool, &cand->foundation, &token);
+    } else {
+	cand->foundation = token;
+    }
 
     /* Component ID */
     found_idx = pj_strtok(orig_input, &delim, &token, found_idx + token.slen);
@@ -1198,11 +1386,8 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 
     /* Check trickle ICE indication */
     if (tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED) {
-	const pjmedia_sdp_attr *attr;
-	attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
-				     &STR_ICE_OPTIONS, NULL);
-	sdp_state->has_trickle = (attr &&
-				  pj_strcmp(&attr->value, &STR_TRICKLE)==0);
+	sdp_state->has_trickle = pjmedia_ice_sdp_has_trickle(rem_sdp,
+							     media_index);
     } else {
 	sdp_state->has_trickle = PJ_FALSE;
     }

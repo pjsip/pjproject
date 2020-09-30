@@ -974,21 +974,8 @@ static pj_status_t create_ice_media_transport(
     /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
     if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
 	if (rem_sdp) {
-	    const pj_str_t ICE_OPT_STR = {"ice-options", 11};
-	    const pj_str_t TRICKLE_STR = {"trickle", 7};
-	    const pjmedia_sdp_attr *a;
-
 	    /* As answerer: and when remote signals trickle ICE in SDP */
-	    a = pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
-				      &ICE_OPT_STR, NULL);
-	    if (!a) {
-		const pjmedia_sdp_media *m = rem_sdp->media[call_med->idx];
-		a = pjmedia_sdp_attr_find(m->attr_count, m->attr,
-					  &ICE_OPT_STR, NULL);
-	    }
-	    if (a) {
-		trickle = (pj_strstr(&a->value, &TRICKLE_STR) != NULL);
-	    }
+	    trickle = pjmedia_ice_sdp_has_trickle(rem_sdp, call_med->idx);
 	} else {
 	    /* As offerer: and when trickle ICE mode is full */
 	    trickle = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);

@@ -2784,7 +2784,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				      msg_data->transport_id,
 				      PJ_ICE_CAND_TYPE_PRFLX,
 #if PJNATH_ICE_PRIO_STD
-				      65535 - ice->lcand_cnt,
+				      65535 - (pj_uint16_t)ice->lcand_cnt,
 #else
 				      ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1) -
 				      ice->lcand_cnt,

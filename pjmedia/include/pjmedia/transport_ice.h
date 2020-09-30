@@ -298,6 +298,20 @@ PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
 
 
 /**
+ * Check if trickle support is signalled in the specified SDP. This function
+ * will check trickle indication in the media level first, if not found, it
+ * will check in the session level.
+ *
+ * @param sdp		The SDP.
+ * @param med_idx	The media index to be checked.
+ *
+ * @return		PJ_TRUE if trickle ICE indication is found.
+ */
+PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
+					       unsigned med_idx);
+
+
+/**
  * Update check list after new local or remote ICE candidates are added,
  * or signal ICE session that trickling is done. Application typically would
  * call this function after finding (and conveying) new local ICE candidates
@@ -325,13 +339,70 @@ PJ_DECL(pj_status_t) pjmedia_ice_remove_ice_cb(pjmedia_transport *tp,
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_ice_update_check_list(
-					     pjmedia_transport *tp,
-					     const pj_str_t *rem_ufrag,
-					     const pj_str_t *rem_passwd,
-					     unsigned rcand_cnt,
-					     const pj_ice_sess_cand rcand[],
-					     pj_bool_t trickle_done);
+PJ_DECL(pj_status_t) pjmedia_ice_trickle_update(
+					    pjmedia_transport *tp,
+					    const pj_str_t *rem_ufrag,
+					    const pj_str_t *rem_passwd,
+					    unsigned rcand_cnt,
+					    const pj_ice_sess_cand rcand[],
+					    pj_bool_t trickle_done);
+
+
+/**
+ * Decode trickle ICE info from the specified SDP.
+ *
+ * @param sdp		The SDP containing trickle ICE info.
+ * @param media_index	The media index.
+ * @param mid		Output, media ID.
+ * @param ufrag		Output, ufrag.
+ * @param passwd	Output, password.
+ * @param cand_cnt	On input, maximum number of candidate array.
+ *			On output, the number of candidates.
+ * @param cand		Output, the candidates.
+ * @param end_of_cand	Output, end of candidate indication.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
+					    const pjmedia_sdp_session *sdp,
+					    unsigned media_index,
+					    pj_str_t *mid,
+					    pj_str_t *ufrag,
+					    pj_str_t *passwd,
+					    unsigned *cand_cnt,
+					    pj_ice_sess_cand cand[],
+					    pj_bool_t *end_of_cand);
+
+
+/**
+ * Encode trickle ICE info into the specified SDP. This function may generate
+ * the following SDP attributes:
+ * - Media ID, "a=mid", currently this is the media_index.
+ * - ICE ufrag & password, "a=ice-ufrag" & "a=ice-pwd".
+ * - Trickle ICE support indication, "a=ice-options:trickle".
+ * - ICE candidates, "a=candidate".
+ * - End of candidate indication, "a=end-of-candidates".
+ *
+ * @param sdp_pool	The memory pool for generating SDP attributes.
+ * @param sdp		The SDP to be updated.
+ * @param media_index	The media index.
+ * @param ufrag		The ufrag, optional.
+ * @param passwd	The password, optional.
+ * @param cand_cnt	The number of local candidates, can be zero.
+ * @param cand		The local candidates.
+ * @param end_of_cand	End of candidate indication.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
+					    pj_pool_t *sdp_pool,
+					    pjmedia_sdp_session *sdp,
+					    unsigned media_index,
+					    const pj_str_t *ufrag,
+					    const pj_str_t *passwd,
+					    unsigned cand_cnt,
+					    const pj_ice_sess_cand cand[],
+					    pj_bool_t end_of_cand);
 
 
 PJ_END_DECL
