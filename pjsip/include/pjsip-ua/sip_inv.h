@@ -131,7 +131,7 @@ typedef struct pjsip_inv_callback
      * This callback is called when the invite usage module has created 
      * a new dialog and invite because of forked outgoing request.
      *
-     * This callback is mandatory.
+     * This callback is optional.
      *
      * @param inv	The new invite session.
      * @param e		The event which has caused the dialog to fork.

@@ -827,7 +827,7 @@ PJ_DEF(pj_status_t) pjsip_inv_usage_init( pjsip_endpoint *endpt,
     PJ_ASSERT_RETURN(endpt && cb, PJ_EINVAL);
 
     /* Some callbacks are mandatory */
-    PJ_ASSERT_RETURN(cb->on_state_changed && cb->on_new_session, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cb->on_state_changed, PJ_EINVAL);
 
     /* Check if module already registered. */
     PJ_ASSERT_RETURN(mod_inv.mod.id == -1, PJ_EINVALIDOP);
