@@ -79,7 +79,6 @@ struct transport_ice
     unsigned		 addr_len;	/**< Length of addresses.	    */
 
     pj_bool_t		 use_ice;
-    pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
     pj_sockaddr		 rtp_src_addr;	/**< Actual source RTP address.	    */
     unsigned		 rtp_src_cnt;   /**< How many pkt from this addr.   */
     pj_sockaddr		 rtcp_src_addr;	/**< Actual source RTCP address.    */
@@ -89,6 +88,10 @@ struct transport_ice
 
     unsigned		 tx_drop_pct;	/**< Percent of tx pkts to drop.    */
     unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
+
+    pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
+    unsigned		 last_cand_cnt[PJ_ICE_MAX_COMP];
+					/**< Last local candidate count.    */
 
     void	       (*rtp_cb)(void*,
 			         void*,
@@ -271,6 +274,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     pj_ice_strans_cb ice_st_cb;
     pj_ice_strans_cfg ice_st_cfg;
     struct transport_ice *tp_ice;
+    unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(endpt && comp_cnt && cfg && p_tp, PJ_EINVAL);
@@ -326,6 +330,14 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 	pj_pool_release(pool);
 	*p_tp = NULL;
 	return status;
+    }
+
+    /* Update last local candidate count, this usually host candidates that
+     * will be signalled to remote via regular SDP offer (e.g: SIP INVITE).
+     */
+    for (i = 0; i < comp_cnt; ++i) {
+	tp_ice->last_cand_cnt[i] =
+			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
     }
 
     /* Sync to ICE */
@@ -535,7 +547,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_parse_sdp(
 
 
 /* Generate SDP attributes for trickle ICE in the specified SDP. */
-PJ_DEF(pj_status_t) pjmedia_ice_trickle_update_sdp(
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 					    pj_pool_t *sdp_pool,
 					    pjmedia_sdp_session *sdp,
 					    unsigned media_index,
@@ -613,6 +625,72 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update_sdp(
     }
 
     return PJ_SUCCESS;
+}
+
+
+/* Add any new local candidates to the specified SDP to be conveyed to
+ * remote (e.g: via SIP INFO).
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
+					    pjmedia_transport *tp,
+					    pj_pool_t *sdp_pool,
+					    unsigned media_index,
+					    pjmedia_sdp_session *sdp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_str_t ufrag, pwd;
+    pj_ice_strans_state ice_state;
+    pj_bool_t end_of_cand;
+    pj_bool_t has_update = PJ_FALSE;
+    pj_status_t status;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(tp && sdp_pool && sdp, PJ_EINVAL);
+
+    if (pj_ice_strans_has_sess(tp_ice->ice_st))
+	return PJ_EINVALIDOP;
+
+    ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
+    end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
+		   ice_state == PJ_ICE_STRANS_STATE_SESS_READY);
+
+    /* Get ufrag and pwd from current session */
+    pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &ufrag, &pwd, NULL, NULL);
+
+    for (i = 0; i < tp_ice->comp_cnt; ++i) {
+	pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
+	unsigned cnt, new_cnt;
+
+	/* Check if there is any new local candidate */
+	cnt = PJ_ICE_ST_MAX_CAND;
+	status = pj_ice_strans_enum_cands(tp_ice->ice_st, i+1, &cnt, cand);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3,(tp_ice->base.name, status,
+			 "Failed enumerating local candidates for comp-id=%d",
+			 i+1));
+	    continue;
+	}
+	if (cnt <= tp_ice->last_cand_cnt[i])
+	    continue;
+
+	/* Yes, let's update the SDP with the candidates */
+
+	new_cnt = cnt - tp_ice->last_cand_cnt[i];
+	status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp, media_index,
+						&ufrag, &pwd,
+						new_cnt, &cand[cnt-new_cnt],
+						end_of_cand);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(3,(tp_ice->base.name, status,
+			 "Failed adding new local candidates to SDP for comp-"
+			 "id=%d", i+1));
+	    continue;
+	}
+
+	has_update = PJ_TRUE;
+    }
+
+    return (has_update? PJ_SUCCESS : PJ_ENOTFOUND);
 }
 
 
