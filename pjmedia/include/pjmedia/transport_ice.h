@@ -157,10 +157,11 @@ enum pjmedia_transport_ice_options
     /**
      * The standard (rfc5245) specify that ice-mismatch attribute is used
      * due to a mismatch of candidates with the default destination for media
-     * signaled in the SDP. However rfc8445 specify that ALGs, can alter
-     * signaling information in ways that break ICE and triggered ice mismatch.
-     * (e.g., by rewriting IP addresses in SDP). So disabling ice mismatch
-     * is required on some scenario.
+     * signaled in the SDP. The purpose is to identify some poorly ALGs that
+     * alter signaling information in ways that break ICE
+     * (e.g., by rewriting IP addresses in SDP). Specifying this option is
+     * to disable the ice mismatch check and allow ICE to continue
+     * if such scenario occur.
      */
     PJMEDIA_ICE_DISABLE_ICE_MISMATCH = 2
 };
