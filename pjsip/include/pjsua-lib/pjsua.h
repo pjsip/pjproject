@@ -4765,7 +4765,6 @@ typedef enum pjsua_vid_req_keyframe_method
 
     /**
      * Requesting keyframe via Picture Loss Indication of RTCP feedback.
-     * This is currently not supported.
      */
     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI	= 2
 
