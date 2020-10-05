@@ -589,6 +589,44 @@ struct StreamInfo
      */
     VidCodecParam       vidCodecParam;
 
+    /**
+     * Jitter buffer init delay in msec.
+     */
+    int                 jbInit;
+
+    /**
+     * Jitter buffer minimum prefetch delay in msec.
+     */
+    int                 jbMinPre;
+
+    /**
+     * Jitter buffer maximum prefetch delay in msec.
+     */
+    int                 jbMaxPre;
+
+    /**
+     * Jitter buffer max delay in msec.
+     */
+    int                 jbMax;
+
+    /**
+     * Jitter buffer discard algorithm.
+     */
+    pjmedia_jb_discard_algo jbDiscardAlgo;
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    /**
+     * Stream keep-alive and NAT hole punch (see #PJMEDIA_STREAM_ENABLE_KA) is
+     * enabled?
+     */
+    bool                useKa;
+#endif
+
+    /**
+     * Disable automatic sending of RTCP SDES and BYE.
+     */
+    bool                rtcpSdesByeDisabled;
+
 public:
     /**
      * Default constructor
@@ -669,6 +707,23 @@ struct OnCallSdpCreatedParam
      * The remote SDP, will be empty if local is SDP offerer.
      */
     SdpSession remSdp;
+};
+
+/**
+ * This structure contains parameters for Call::onStreamPreCreate()
+ * callback.
+ */
+struct OnStreamPreCreateParam
+{
+    /**
+     * Stream index in the media session, read-only.
+     */
+    unsigned    streamIdx;
+
+    /**
+     * Parameters that the stream will be created from.
+     */
+    StreamInfo streamInfo;
 };
 
 /**
@@ -1759,7 +1814,18 @@ public:
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
     { PJ_UNUSED_ARG(prm); }
-    
+
+    /**
+     * Notify application when an audio media session is about to be created
+     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * called *after* the session has been created). The application may change
+     * stream parameters like the jitter buffer size.
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onStreamPreCreate(OnStreamPreCreateParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
     /**
      * Notify application when audio media session is created and before it is
      * registered to the conference bridge. Application may return different

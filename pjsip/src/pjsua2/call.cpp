@@ -327,6 +327,15 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         codecName = pj2Str(info.info.aud.fmt.encoding_name);
         codecClockRate = info.info.aud.fmt.clock_rate;
         audCodecParam.fromPj(*info.info.aud.param);
+        jbInit = info.info.aud.jb_init;
+        jbMinPre = info.info.aud.jb_min_pre;
+        jbMaxPre = info.info.aud.jb_max_pre;
+        jbMax = info.info.aud.jb_max;
+        jbDiscardAlgo = info.info.aud.jb_discard_algo;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+        useKa = PJ2BOOL(info.info.aud.use_ka);
+#endif
+        rtcpSdesByeDisabled = PJ2BOOL(info.info.aud.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
         proto = info.info.vid.proto;
         dir = info.info.vid.dir;
@@ -337,8 +346,17 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         txPt = info.info.vid.tx_pt;
         rxPt = info.info.vid.rx_pt;
         codecName = pj2Str(info.info.vid.codec_info.encoding_name);
-        codecClockRate = info.info.vid.codec_info.clock_rate;        
-	vidCodecParam.fromPj(*info.info.vid.codec_param);
+        codecClockRate = info.info.vid.codec_info.clock_rate;
+        vidCodecParam.fromPj(*info.info.vid.codec_param);
+        jbInit = info.info.vid.jb_init;
+        jbMinPre = info.info.vid.jb_min_pre;
+        jbMaxPre = info.info.vid.jb_max_pre;
+        jbMax = info.info.vid.jb_max;
+        jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+        useKa = PJ2BOOL(info.info.vid.use_ka);
+#endif
+        rtcpSdesByeDisabled = PJ2BOOL(info.info.vid.rtcp_sdes_bye_disabled);
     }
 }
 
