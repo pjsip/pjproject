@@ -171,28 +171,6 @@ static void tls_on_destroy(void *arg);
 
 static void wipe_buf(pj_str_t *buf);
 
-/*
- * Internal:
- *  determine if an address is a valid IP address, and if it is,
- *  return the IP version (4 or 6).
- */
-static int get_ip_addr_ver(const pj_str_t *host)
-{
-    pj_in_addr dummy;
-    pj_in6_addr dummy6;
-
-    /* First check if this is an IPv4 address */
-    if (pj_inet_pton(pj_AF_INET(), host, &dummy) == PJ_SUCCESS)
-	return 4;
-
-    /* Then check if this is an IPv6 address */
-    if (pj_inet_pton(pj_AF_INET6(), host, &dummy6) == PJ_SUCCESS)
-	return 6;
-
-    /* Not an IP address */
-    return 0;
-}
-
 static void tls_perror(const char *sender, const char *title,
 		       pj_status_t status, pj_str_t *remote_name)
 {
@@ -1206,10 +1184,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     ssock_param.timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
-    if (get_ip_addr_ver(&remote_name) == 0) {
-        ssock_param.server_name = remote_name; /* Literal IP addresses are not
-                                                * permitted */
-    }
+    ssock_param.server_name = remote_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
     ssock_param.verify_peer = PJ_FALSE; /* avoid SSL socket closing the socket
