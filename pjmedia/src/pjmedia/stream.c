@@ -2887,7 +2887,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     /* NAT hole punching by sending KA packet via RTP transport. */
-    if (stream->use_ka && (stream->start_ka_count == 0))
+    if (stream->use_ka)
 	send_keep_alive_packet(stream);
 #endif
 
