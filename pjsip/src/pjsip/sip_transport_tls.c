@@ -171,6 +171,7 @@ static void tls_on_destroy(void *arg);
 
 static void wipe_buf(pj_str_t *buf);
 
+
 static void tls_perror(const char *sender, const char *title,
 		       pj_status_t status, pj_str_t *remote_name)
 {
