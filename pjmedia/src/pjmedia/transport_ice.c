@@ -1073,16 +1073,14 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	if (!comp1_found && cand.comp_id==COMP_RTP)
 	{
             if ((disable_ice_mismatch) ||
-                (!disable_ice_mismatch &&
-                 pj_sockaddr_cmp(&rem_conn_addr, &cand.addr) == 0))
+                (pj_sockaddr_cmp(&rem_conn_addr, &cand.addr) == 0))
             {
                 comp1_found = PJ_TRUE;
             }
 	} else if (!comp2_found && cand.comp_id==COMP_RTCP)
 	{
             if ((disable_ice_mismatch) ||
-                (!disable_ice_mismatch &&
-                 pj_sockaddr_cmp(&rtcp_addr, &cand.addr) == 0))
+                (pj_sockaddr_cmp(&rtcp_addr, &cand.addr) == 0))
             {
                 comp2_found = PJ_TRUE;
             }
