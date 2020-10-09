@@ -1262,6 +1262,30 @@
 
 
 /**
+ * Specify the number of keep-alive needed to be sent after the stream is
+ * created.
+ *
+ * Setting this to 0 will disable it.
+ *
+ * Default : 2
+ */
+#ifndef PJMEDIA_STREAM_START_KA_CNT
+#   define PJMEDIA_STREAM_START_KA_CNT	2
+#endif
+
+
+/**
+ * Specify the interval to send keep-alive after the stream is created,
+ * in msec.
+ *
+ * Default : 1000
+ */
+#ifndef PJMEDIA_STREAM_START_KA_INTERVAL_MSEC
+#   define PJMEDIA_STREAM_START_KA_INTERVAL_MSEC  1000
+#endif
+
+
+/**
  * Specify the number of identical consecutive error that will be ignored when 
  * receiving RTP/RTCP data before the library tries to restart the transport.
  *
@@ -1616,30 +1640,6 @@
  */
 #ifndef PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC
 #   define PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC	    100
-#endif
-
-
-/**
- * Specify the number of keep-alive needed to be sent after the stream is
- * created.
- *
- * Setting this to 0 will disable it.
- *
- * Default : 2
- */
-#ifndef PJMEDIA_STREAM_START_KA_CNT
-#   define PJMEDIA_STREAM_START_KA_CNT	2
-#endif
-
-
-/**
- * Specify the interval to send keep-alive after the stream is created,
- * in msec.
- *
- * Default : 1000
- */
-#ifndef PJMEDIA_STREAM_START_KA_INTERVAL_MSEC
-#   define PJMEDIA_STREAM_START_KA_INTERVAL_MSEC  1000
 #endif
 
 
