@@ -393,6 +393,14 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_SEPARATE_WORKER_FOR_TIMER	0
 #endif
 
+/**
+ * Default options that will be passed when creating ice transport.
+ * See #pjmedia_transport_ice_options.
+ */
+#ifndef PJSUA_ICE_TRANSPORT_OPTION
+#   define PJSUA_ICE_TRANSPORT_OPTION	0
+#endif
+
 
 /**
  * This enumeration represents pjsua state.
