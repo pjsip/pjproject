@@ -4189,6 +4189,13 @@ typedef struct pjsua_acc_config
      * Default: PJ_FALSE (disabled)
      */
     pj_bool_t	     use_stream_ka;
+
+    /**
+     * Specify the keepalive configuration for stream.
+     *
+     * Default: see #pjmedia_stream_ka_config
+     */
+    pjmedia_stream_ka_config stream_ka_cfg;
 #endif
 
     /**

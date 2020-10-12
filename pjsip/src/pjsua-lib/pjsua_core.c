@@ -365,6 +365,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 			 PJSUA_REG_USE_ACC_PROXY;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     cfg->use_stream_ka = (PJMEDIA_STREAM_ENABLE_KA != 0);
+    pjmedia_stream_ka_config_default(&cfg->stream_ka_cfg);
 #endif
     pj_list_init(&cfg->reg_hdr_list);
     pj_list_init(&cfg->sub_hdr_list);
