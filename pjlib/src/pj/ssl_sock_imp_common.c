@@ -183,6 +183,25 @@ static pj_status_t circ_write(circ_buf_t *cb,
  * Helper functions.
  *******************************************************************
  */
+
+/* Check IP address version. */
+static int get_ip_addr_ver(const pj_str_t *host)
+{
+    pj_in_addr dummy;
+    pj_in6_addr dummy6;
+
+    /* First check if this is an IPv4 address */
+    if (pj_inet_pton(pj_AF_INET(), host, &dummy) == PJ_SUCCESS)
+	return 4;
+
+    /* Then check if this is an IPv6 address */
+    if (pj_inet_pton(pj_AF_INET6(), host, &dummy6) == PJ_SUCCESS)
+	return 6;
+
+    /* Not an IP address */
+    return 0;
+}
+
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
 /* Close sockets */
 static void ssl_close_sockets(pj_ssl_sock_t *ssock)
