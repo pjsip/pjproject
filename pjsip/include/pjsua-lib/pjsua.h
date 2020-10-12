@@ -3120,7 +3120,7 @@ PJ_DECL(pj_status_t) pjsua_transport_register(pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DEF(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
+PJ_DECL(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
 					      pjsua_transport_id *p_id);
 
 /**
