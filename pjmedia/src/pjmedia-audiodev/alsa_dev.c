@@ -702,6 +702,9 @@ static pj_status_t open_playback (struct alsa_stream* stream,
 	tmp_buf_size = (rate / 1000) * param->output_latency_ms;
     else
 	tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+    if (tmp_buf_size < tmp_period_size * 2)
+        tmp_buf_size = tmp_period_size * 2;
+    tmp_buf_size *= param->channel_count;
     snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
 					    &tmp_buf_size);
     stream->param.output_latency_ms = tmp_buf_size / (rate / 1000);
@@ -825,6 +828,9 @@ static pj_status_t open_capture (struct alsa_stream* stream,
 	tmp_buf_size = (rate / 1000) * param->input_latency_ms;
     else
 	tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_REC_LATENCY;
+    if (tmp_buf_size < tmp_period_size * 2)
+        tmp_buf_size = tmp_period_size * 2;
+    tmp_buf_size *= param->channel_count;
     snd_pcm_hw_params_set_buffer_size_near (stream->ca_pcm, params,
 					    &tmp_buf_size);
     stream->param.input_latency_ms = tmp_buf_size / (rate / 1000);
