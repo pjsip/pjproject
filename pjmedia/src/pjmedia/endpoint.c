@@ -773,9 +773,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	    break;
 	}
 
-	/* Must support RTP packetization and bidirectional */
-	if ((codec_info[i].packings & PJMEDIA_VID_PACKING_PACKETS) == 0 ||
-	    codec_info[i].dir != PJMEDIA_DIR_ENCODING_DECODING)
+        /* Must support RTP packetization */
+        if ((codec_info[i].packings & PJMEDIA_VID_PACKING_PACKETS) == 0)
 	{
 	    continue;
 	}
