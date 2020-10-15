@@ -1417,7 +1417,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
      */
     if (tdata->dest_info.addr.count == 0) {
 	/* Copy the destination host name to TX data */
-	pj_strdup(tdata->pool, &tdata->dest_info.name, &dest_info.addr.host);
+	if (!tdata->dest_info.name.slen) {
+	    pj_strdup(tdata->pool, &tdata->dest_info.name,
+	    	      &dest_info.addr.host);
+	}
 
 	pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
 			     &stateless_send_resolver_callback);
@@ -1810,8 +1813,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 	}
     } else {
 	/* Copy the destination host name to TX data */
-	pj_strdup(tdata->pool, &tdata->dest_info.name, 
-		  &res_addr->dst_host.addr.host);
+	if (!tdata->dest_info.name.slen) {
+	    pj_strdup(tdata->pool, &tdata->dest_info.name, 
+		      &res_addr->dst_host.addr.host);
+	}
 
 	pjsip_endpt_resolve(endpt, tdata->pool, &res_addr->dst_host, 
 			    send_state, &send_response_resolver_cb);

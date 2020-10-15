@@ -2321,6 +2321,17 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 				tp_ref = tp_iter->tp;
 				break;
 			    }
+			} else if ((type & PJSIP_TRANSPORT_SECURE) && tdata) {
+			    /* For secure transport, make sure tdata's
+			     * destination host matches the transport's
+			     * remote host.
+			     */
+			    if (!pj_stricmp(&tdata->dest_info.name,
+				  	    &tp_iter->tp->remote_name.host))
+			    {
+			    	tp_ref = tp_iter->tp;
+			    	break;
+			    }
 			} else {
 			    tp_ref = tp_iter->tp;
 			    break;

@@ -467,6 +467,10 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
     /* Save the remote info. */
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+    
+    /* Save initial remote host from transport's info */
+    pj_strdup(dlg->pool, &dlg->initial_remote,
+    	      &rdata->tp_info.transport->remote_name.host);
 
 
     /* Init remote's contact from Contact header.
@@ -1191,6 +1195,19 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
 	if (status != PJ_SUCCESS)
 	    return status;
     }
+
+    /* Save the initial destination used to send the request message. */
+    if (!dlg->initial_remote.slen) {
+    	pjsip_host_info dest_info;
+
+    	pjsip_get_request_dest(tdata, &dest_info);
+	pj_strdup(dlg->pool, &dlg->initial_remote, &dest_info.addr.host);
+    }
+
+    /* Copy the initial destination host to tdata. This information can be
+     * used later by transport for transport selection.
+     */
+    pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_remote);
 
     /* Done. */
     *p_tdata = tdata;
