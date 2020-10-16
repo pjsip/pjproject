@@ -810,6 +810,7 @@ else
 	ac_pjmedia_video=android_os
 	AC_SUBST(ac_pjmedia_video_has_android)
 	AC_SUBST(ac_android_cflags)
+	AC_SUBST(ac_pjmedia_has_amediacodec)
 	SAVED_LIBS="$LIBS"
 	LIBS="-lGLESv2 -lEGL -landroid -lgcc -lc"
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_android=yes],[ac_pjmedia_video_has_android=no])
@@ -822,6 +823,12 @@ else
 	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... no])
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
+	AC_CHECK_LIB(mediandk,AMediaCodec_createDecoderByType,[ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"])
+	if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
+		AC_MSG_RESULT([Checking if Android AMediaCodec library is available... yes])
+	else
+		AC_MSG_RESULT([Checking if Android AMediaCodec library is available... no])
+	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os

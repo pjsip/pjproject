@@ -612,6 +612,34 @@
 #   define PJMEDIA_HAS_VPX_CODEC_VP9		0
 #endif
 
+
+/**
+ * Enable Android MediaCodec AVC/H264 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_ANMED_AVC
+#   define PJMEDIA_HAS_ANMED_AVC		1
+#endif
+
+/**
+ * Enable Android MediaCodec VP8 codec.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_HAS_ANMED_VP8
+#   define PJMEDIA_HAS_ANMED_VP8		0
+#endif
+
+/**
+ * Enable Android MediaCodec VP9 codec.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_HAS_ANMED_VP9
+#   define PJMEDIA_HAS_ANMED_VP9		0
+#endif
+
 /**
  * @}
  */
