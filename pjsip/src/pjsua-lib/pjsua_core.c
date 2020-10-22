@@ -2900,6 +2900,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
     switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
 	    status = pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
+	    break;
 	case PJSIP_TRANSPORT_TLS:
 	case PJSIP_TRANSPORT_TCP:
 	    /* This will close the TCP listener, but existing TCP/TLS
@@ -2907,6 +2908,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 	     */
 	    status = (*pjsua_var.tpdata[id].data.factory->destroy)
 			(pjsua_var.tpdata[id].data.factory);
+	    break;
 	default:
 	    return PJ_EINVAL;
     }
