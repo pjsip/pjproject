@@ -90,8 +90,7 @@ struct transport_ice
     unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
 
     pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
-    unsigned		 last_cand_cnt[PJ_ICE_MAX_COMP];
-					/**< Last local candidate count.    */
+    unsigned		 last_cand_cnt; /**< Last local candidate count.    */
 
     void	       (*rtp_cb)(void*,
 			         void*,
@@ -336,7 +335,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
      * will be signalled to remote via regular SDP offer (e.g: SIP INVITE).
      */
     for (i = 0; i < comp_cnt; ++i) {
-	tp_ice->last_cand_cnt[i] =
+	tp_ice->last_cand_cnt +=
 			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
     }
 
@@ -476,7 +475,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 
 
 /* Fetch trickle ICE info from the specified SDP. */
-PJ_DEF(pj_status_t) pjmedia_ice_trickle_parse_sdp(
+PJ_DEF(pj_status_t) pjmedia_ice_trickle_decode_sdp(
 					    const pjmedia_sdp_session *sdp,
 					    unsigned media_index,
 					    pj_str_t *mid,
@@ -540,6 +539,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_parse_sdp(
     if (end_of_cand) {
 	a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_END_OF_CAND,
 				  NULL);
+	if (!a) {
+	    a = pjmedia_sdp_attr_find(sdp->attr_count, sdp->attr,
+				      &STR_END_OF_CAND, NULL);
+	}
 	*end_of_cand = (a != NULL);
     }
     return PJ_SUCCESS;
@@ -557,40 +560,63 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 					    const pj_ice_sess_cand cand[],
 					    pj_bool_t end_of_cand)
 {
-    pjmedia_sdp_media *m;
+    pjmedia_sdp_media *m = NULL;
     pjmedia_sdp_attr *a;
     unsigned i;
 
     PJ_ASSERT_RETURN(sdp_pool && sdp, PJ_EINVAL);
-    PJ_ASSERT_RETURN(media_index < sdp->media_count, PJ_EINVAL);
 
-    m = sdp->media[media_index];
+    /* Find media by checking "a=mid"*/
+    for (i = 0; i < sdp->media_count; ++i) {
+	m = sdp->media[i];
+	a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
+	if (a && (unsigned)pj_strtol(&a->value) == media_index)
+	    break;
+    }
 
-    /* Add media ID attribute "a=mid" */
-    a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "mid", NULL);
-    if (!a) {
+    /* Media not exist, try to add it */
+    if (i == sdp->media_count) {
 	pj_str_t value;
 	char tmp_buf[8];
+
+	if (sdp->media_count >= PJMEDIA_MAX_SDP_MEDIA) {
+	    PJ_LOG(3,(THIS_FILE,"Trickle ICE failed to encode candidates, "
+				"the specified SDP has too many media"));
+	    return PJ_ETOOMANY;
+	}
+
+	/* Add a new media to the SDP */
+	m = PJ_POOL_ZALLOC_T(sdp_pool, pjmedia_sdp_media);
+	m->desc.media = pj_str("audio");
+	m->desc.fmt_count = 1;
+	m->desc.fmt[0] = pj_str("0");
+	m->desc.transport = pj_str("RTP/AVP");
+	sdp->media[sdp->media_count++] = m;
+
+	/* Add media ID attribute "a=mid" */
 	pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "%d", media_index+1);
 	value = pj_str(tmp_buf);
 	a = pjmedia_sdp_attr_create(sdp_pool, "mid", &value);
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
     }
 
+    /* Add "a=ice-options:trickle" in session level */
+    a = pjmedia_sdp_attr_find(sdp->attr_count, sdp->attr, &STR_ICE_OPTIONS,
+			      NULL);
+    if (!a || !pj_strstr(&a->value, &STR_TRICKLE)) {
+	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
+				    &STR_TRICKLE);
+	pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
+    }
+
     /* Add ice-ufrag & ice-pwd attributes */
-    if (ufrag && passwd) {
+    if (ufrag && passwd &&
+	!pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_ICE_UFRAG, NULL))
+    {
 	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr, ufrag);
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
 
 	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, passwd);
-	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
-    }
-
-    /* Add "a=trickle-options:trickle" */
-    a = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_ICE_OPTIONS, NULL);
-    if (!a || !pj_strstr(&a->value, &STR_TRICKLE)) {
-	a = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_OPTIONS.ptr,
-				    &STR_TRICKLE);
 	pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
     }
 
@@ -628,6 +654,21 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 }
 
 
+static pj_bool_t any_new_local_cand(pjmedia_transport *tp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    unsigned i, cand_cnt = 0;
+
+    pj_assert(tp && pj_ice_strans_has_sess(tp_ice->ice_st));
+
+    /* Count all local candidates */
+    for (i = 0; i < tp_ice->comp_cnt; ++i) {
+	cand_cnt += pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
+    }
+    return (cand_cnt > tp_ice->last_cand_cnt);
+}
+
+
 /* Add any new local candidates to the specified SDP to be conveyed to
  * remote (e.g: via SIP INFO).
  */
@@ -635,20 +676,25 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    pjmedia_transport *tp,
 					    pj_pool_t *sdp_pool,
 					    unsigned media_index,
-					    pjmedia_sdp_session *sdp)
+					    pj_bool_t forced,
+					    pjmedia_sdp_session *sdp,
+					    pj_bool_t *p_end_of_cand)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_str_t ufrag, pwd;
     pj_ice_strans_state ice_state;
+    pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
+    unsigned cand_cnt, i;
     pj_bool_t end_of_cand;
-    pj_bool_t has_update = PJ_FALSE;
     pj_status_t status;
-    unsigned i;
 
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp, PJ_EINVAL);
 
     if (pj_ice_strans_has_sess(tp_ice->ice_st))
 	return PJ_EINVALIDOP;
+
+    if (!forced && !any_new_local_cand(tp))
+	return PJ_ENOTFOUND;
 
     ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
     end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
@@ -657,40 +703,44 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     /* Get ufrag and pwd from current session */
     pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &ufrag, &pwd, NULL, NULL);
 
+    cand_cnt = 0;
     for (i = 0; i < tp_ice->comp_cnt; ++i) {
-	pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
-	unsigned cnt, new_cnt;
+	unsigned cnt = PJ_ICE_MAX_CAND - cand_cnt;
 
-	/* Check if there is any new local candidate */
-	cnt = PJ_ICE_ST_MAX_CAND;
-	status = pj_ice_strans_enum_cands(tp_ice->ice_st, i+1, &cnt, cand);
+	/* Get all local candidates for this comp */
+	status = pj_ice_strans_enum_cands(tp_ice->ice_st, i+1,
+					  &cnt, &cand[cand_cnt]);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(tp_ice->base.name, status,
 			 "Failed enumerating local candidates for comp-id=%d",
 			 i+1));
 	    continue;
 	}
-	if (cnt <= tp_ice->last_cand_cnt[i])
-	    continue;
-
-	/* Yes, let's update the SDP with the candidates */
-
-	new_cnt = cnt - tp_ice->last_cand_cnt[i];
-	status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp, media_index,
-						&ufrag, &pwd,
-						new_cnt, &cand[cnt-new_cnt],
-						end_of_cand);
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(3,(tp_ice->base.name, status,
-			 "Failed adding new local candidates to SDP for comp-"
-			 "id=%d", i+1));
-	    continue;
-	}
-
-	has_update = PJ_TRUE;
+	cand_cnt += cnt;
     }
 
-    return (has_update? PJ_SUCCESS : PJ_ENOTFOUND);
+    /* Update the SDP with all local candidates (not just the new ones).
+     * https://tools.ietf.org/html/draft-ietf-mmusic-trickle-ice-sip-18:
+     * 4.4. Delivering Candidates in INFO Requests: the agent MUST
+     * repeat in the INFO request body all candidates that were previously
+     * sent under the same combination of "a=ice-pwd:" and "a=ice-ufrag:"
+     * in the same order as they were sent before.
+     */
+    status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp, media_index,
+					    &ufrag, &pwd, cand_cnt, cand,
+					    end_of_cand);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(3,(tp_ice->base.name, status,
+		     "Failed adding new local candidates to SDP"));
+    }
+
+    pj_assert(tp_ice->last_cand_cnt <= cand_cnt);
+    tp_ice->last_cand_cnt = cand_cnt;
+
+    if (p_end_of_cand)
+	*p_end_of_cand = end_of_cand;
+
+    return PJ_SUCCESS;
 }
 
 
@@ -1081,6 +1131,18 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
     if (trickle) {
 	pj_ice_strans_state ice_state;
 	pj_bool_t end_of_cand;
+
+	/* Add media ID attribute "a=mid" */
+	attr = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "mid", NULL);
+	if (!attr) {
+	    char tmp_buf[8];
+	    pj_str_t value;
+
+	    pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf), "%d", media_index+1);
+	    value = pj_str(tmp_buf);
+	    attr = pjmedia_sdp_attr_create(sdp_pool, "mid", &value);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	}
 
 	ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
 	end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||

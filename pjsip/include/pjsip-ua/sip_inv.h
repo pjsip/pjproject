@@ -1071,6 +1071,25 @@ PJ_DECL(pj_status_t) pjsip_create_sdp_body(pj_pool_t *pool,
 PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata);
 
 
+/**
+ * Retrieve SDP information from an incoming message. Application should
+ * prefer to use this function rather than parsing the SDP manually since
+ * this function supports multipart message body.
+ *
+ * This function will only parse the SDP once, the first time it is called
+ * on the same message. Subsequent call on the same message will just pick
+ * up the already parsed SDP from the message.
+ *
+ * @param rdata		The incoming message.
+ * @param med_type	The SDP media type.
+ *
+ * @return		The SDP info.
+ */
+PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
+					    pjsip_rx_data *rdata,
+					    const pjsip_media_type *med_type);
+
+
 PJ_END_DECL
 
 /**

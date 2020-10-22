@@ -965,7 +965,16 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+
 PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
+{
+    return pjsip_rdata_get_sdp_info2(rdata, NULL);
+}
+
+
+PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
+					    pjsip_rx_data *rdata,
+					    const pjsip_media_type *med_type)
 {
     pjsip_rdata_sdp_info *sdp_info;
     pjsip_msg_body *body = rdata->msg_info.msg->body;
@@ -982,7 +991,11 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
     PJ_ASSERT_RETURN(mod_inv.mod.id >= 0, sdp_info);
     rdata->endpt_info.mod_data[mod_inv.mod.id] = sdp_info;
 
-    pjsip_media_type_init2(&app_sdp, "application", "sdp");
+    if (!med_type) {
+	pjsip_media_type_init2(&app_sdp, "application", "sdp");
+    } else {
+	pj_memcpy(&app_sdp, med_type, sizeof(app_sdp));
+    }
 
     if (body && ctype_hdr &&
 	pj_stricmp(&ctype_hdr->media.type, &app_sdp.type)==0 &&

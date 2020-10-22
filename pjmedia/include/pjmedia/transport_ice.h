@@ -406,11 +406,17 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 
 
 /**
- * Add any new local candidates to the specified SDP to be conveyed to
- * remote (e.g: via SIP INFO).
+ * Check for new local candidates, and if any new or forced, update the
+ * specified SDP with all current local candidates to be conveyed to remote
+ * (e.g: via SIP INFO).
  *
  * @param tp		The ICE media transport.
  * @param sdp_pool	The memory pool for generating SDP attributes.
+ * @param media_index	The media index.
+ * @param forced	Update SDP with any current local candidates.
+ * @param sdp		The SDP.
+ * @param p_end_of_cand Optional, pointer to receive the indication that
+ *			candidate gathering has been completed.
  *
  * @return		PJ_SUCCESS if any new local candidates is found and
  *			SDP is updated with the candidates,
@@ -421,7 +427,9 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    pjmedia_transport *tp,
 					    pj_pool_t *sdp_pool,
 					    unsigned media_index,
-					    pjmedia_sdp_session *sdp);
+					    pj_bool_t forced,
+					    pjmedia_sdp_session *sdp,
+					    pj_bool_t *p_end_of_cand);
 
 
 PJ_END_DECL

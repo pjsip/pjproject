@@ -849,6 +849,16 @@ static void on_ice_complete(pjmedia_transport *tp,
 				      (void*)(pj_ssize_t)call->index, 1);
 	    }
         }
+
+	/* Stop trickling */
+	if (call->trickle_ice.trickling) {
+	    call->trickle_ice.trickling = PJ_FALSE;
+	    pjsua_cancel_timer(&call->trickle_ice.timer);
+	    PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle stopped trickling as "
+		      "ICE nego completed",
+		      call->index));
+	}
+
 	/* Check if default ICE transport address is changed */
         call->reinv_ice_sent = PJ_FALSE;
 	pjsua_call_schedule_reinvite_check(call, 0);
@@ -976,10 +986,18 @@ static pj_status_t create_ice_media_transport(
 	if (rem_sdp) {
 	    /* As answerer: and when remote signals trickle ICE in SDP */
 	    trickle = pjmedia_ice_sdp_has_trickle(rem_sdp, call_med->idx);
+	    if (trickle) {
+		call_med->call->trickle_ice.remote_sup = PJ_TRUE;
+		call_med->call->trickle_ice.enabled = PJ_TRUE;
+	    }
 	} else {
 	    /* As offerer: and when trickle ICE mode is full */
 	    trickle = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);
+	    call_med->call->trickle_ice.enabled = PJ_TRUE;
 	}
+
+	/* Check if trickle ICE can start trickling/sending SIP INFO */
+	pjsua_ice_check_start_trickling(call_med->call, NULL);
     }
 
     /* If STUN transport is configured, initialize STUN transport settings */
@@ -3395,6 +3413,23 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    status = PJMEDIA_SDP_EINSDP;
 	    goto on_error;
 #endif
+	}
+
+	/* Find and save "a=mid". Currently this is for trickle ICE. Trickle
+	 * ICE match media in SDP of SIP INFO by comparing this attribute,
+	 * so remote SDP must be received first before remote SDP in SIP INFO
+	 * can be processed.
+	 */
+	{
+	    const pjmedia_sdp_media *m = (const pjmedia_sdp_media*)
+					 &remote_sdp->media[mi];
+	    pjmedia_sdp_attr *a;
+
+	    a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
+	    if (a)
+		call_med->rem_mid = a->value;
+	    else
+		pj_bzero(&call_med->rem_mid, sizeof(call_med->rem_mid));
 	}
 
 	/* Apply media update action */
