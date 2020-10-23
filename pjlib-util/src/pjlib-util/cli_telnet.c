@@ -407,6 +407,7 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 	} else {
 	    /* Get the oldest history */
 	    in_history = sess->history->prev;
+	    pj_list_erase(in_history);
 	}
     } else {
 	pj_list_insert_nodes_after(in_history->prev, in_history->next);
