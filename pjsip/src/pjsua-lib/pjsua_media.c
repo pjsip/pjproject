@@ -2027,7 +2027,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 	    call->med_ch_info.status = status;
 	    call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
 	}
-	pjsua_media_prov_clean_up(call_id);
+	pjsua_media_prov_clean_up(call);
         goto on_return;
     }
 
@@ -2070,7 +2070,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                 call->med_ch_info.med_idx = mi;
                 call->med_ch_info.state = call_med->tp_st;
                 call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
-		pjsua_media_prov_clean_up(call_id);
+		pjsua_media_prov_clean_up(call);
 		goto on_return;
 	    }
 
@@ -2091,15 +2091,14 @@ on_return:
 /* Clean up media transports in provisional media that is not used by
  * call media.
  */
-void pjsua_media_prov_clean_up(pjsua_call_id call_id)
+void pjsua_media_prov_clean_up(pjsua_call *call)
 {
-    pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned i;
 
     if (call->med_prov_cnt > call->med_cnt) {
         PJ_LOG(4,(THIS_FILE, "Call %d: cleaning up provisional media, "
         		     "prov_med_cnt=%d, med_cnt=%d",
-			     call_id, call->med_prov_cnt, call->med_cnt));
+			     call->index, call->med_prov_cnt, call->med_cnt));
     }
 
     for (i = 0; i < call->med_prov_cnt; ++i) {
@@ -2199,7 +2198,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 * are not used by call media and currently there is no notification
 	 * from PJSIP level regarding the reoffer rejection.
 	 */
-	pjsua_media_prov_clean_up(call_id);
+	pjsua_media_prov_clean_up(call);
 
 	/* Updating media session, copy from call media state. */
 	pj_memcpy(call->media_prov, call->media,
@@ -2422,7 +2421,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                     return PJ_EPENDING;
                 }
 
-                pjsua_media_prov_clean_up(call_id);
+                pjsua_media_prov_clean_up(call);
 		goto on_error;
 	    }
 	} else {
@@ -2989,9 +2988,8 @@ static void stop_media_stream(pjsua_call *call, unsigned med_idx)
     pj_log_pop_indent();
 }
 
-static void stop_media_session(pjsua_call_id call_id)
+static void stop_media_session(pjsua_call *call)
 {
-    pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
 
     for (mi=0; mi<call->med_cnt; ++mi) {
@@ -2999,9 +2997,8 @@ static void stop_media_session(pjsua_call_id call_id)
     }
 }
 
-pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
+pj_status_t pjsua_media_channel_deinit(pjsua_call *call)
 {
-    pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
 
     for (mi=0; mi<call->med_cnt; ++mi) {
@@ -3016,13 +3013,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
         }
     }
 
-    PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
+    PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call->index));
     pj_log_push_indent();
 
-    stop_media_session(call_id);
+    stop_media_session(call);
 
     /* Clean up media transports */
-    pjsua_media_prov_clean_up(call_id);
+    pjsua_media_prov_clean_up(call);
     call->med_prov_cnt = 0;
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];

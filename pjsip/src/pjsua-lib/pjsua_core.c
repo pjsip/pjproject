@@ -1885,7 +1885,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    /* TODO: check if we're not allowed to send to network in the
 	     *       "flags", and if so do not do TURN allocation...
 	     */
-	    pjsua_media_channel_deinit(i);
+	    pjsua_media_channel_deinit(&pjsua_var.calls[i]);
 	}
 
 	/* Set all accounts to offline */

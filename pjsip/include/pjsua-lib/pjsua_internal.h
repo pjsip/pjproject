@@ -491,6 +491,8 @@ struct pjsua_data
     unsigned		 call_cnt;		/**< Call counter.	*/
     pjsua_call		 calls[PJSUA_MAX_CALLS];/**< Calls array.	*/
     pjsua_call_id	 next_call_id;		/**< Next call id to use*/
+    pjsua_call		 hangup_calls[PJSUA_MAX_CALLS];/**< Calls in
+    						     hangup process.	*/
 
     /* Buddy; */
     unsigned		 buddy_cnt;		    /**< Buddy count.	*/
@@ -694,7 +696,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
-pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
+pj_status_t pjsua_media_channel_deinit(pjsua_call *call);
 
 /*
  * Error message when media operation is requested while another is in progress
@@ -712,7 +714,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 void pjsua_call_cleanup_flag(pjsua_call_setting *opt);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
-void pjsua_media_prov_clean_up(pjsua_call_id call_id);
+void pjsua_media_prov_clean_up(pjsua_call *call);
 
 /* Callback to receive media events */
 pj_status_t on_media_event(pjmedia_event *event, void *user_data);

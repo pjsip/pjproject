@@ -577,7 +577,7 @@ on_error:
     }
 
     if (call_id != -1) {
-	pjsua_media_channel_deinit(call_id);
+	pjsua_media_channel_deinit(call);
 	reset_call(call_id);
     }
 
@@ -648,7 +648,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 #endif
 
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
-    	pjsua_media_channel_deinit(call->index);
+    	pjsua_media_channel_deinit(call);
     }
 
     /* If call is established or media channel hasn't been initialized,
@@ -979,7 +979,7 @@ on_error:
     }
 
     if (call_id != -1) {
-	pjsua_media_channel_deinit(call_id);
+	pjsua_media_channel_deinit(call);
 	reset_call(call_id);
     }
 
@@ -1312,7 +1312,7 @@ on_incoming_call_med_tp_complete2(pjsua_call_id call_id,
 
     /* pjsua_media_channel_deinit() has been called. */
     if (call->async_call.med_ch_deinit) {
-        pjsua_media_channel_deinit(call->index);
+        pjsua_media_channel_deinit(call);
         call->med_ch_cb = NULL;
         pjsip_dlg_dec_lock(dlg);
         PJSUA_UNLOCK();
@@ -1344,7 +1344,7 @@ on_return:
 	    if (status_ == PJ_SUCCESS && response)
 	        status_ = pjsip_inv_send_msg(call->inv, response);
 	}
-        pjsua_media_channel_deinit(call->index);
+        pjsua_media_channel_deinit(call);
     }
 
     /* Set the callback to NULL to indicate that the async operation
@@ -1904,7 +1904,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         pjsip_dlg_respond(dlg, rdata, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL, NULL);
 	pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
 
-	pjsua_media_channel_deinit(call->index);
+	pjsua_media_channel_deinit(call);
 	call->inv = NULL;
 	call->async_call.dlg = NULL;
 
@@ -1944,7 +1944,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_inv_terminate(inv, response->msg->line.status.code,
 				PJ_FALSE);
 	}
-	pjsua_media_channel_deinit(call->index);
+	pjsua_media_channel_deinit(call);
 	call->inv = NULL;
 	call->async_call.dlg = NULL;
 	goto on_return;
@@ -1953,7 +1953,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
-	    pjsua_media_channel_deinit(call->index);
+	    pjsua_media_channel_deinit(call);
 	    call->inv = NULL;
 	    call->async_call.dlg = NULL;
 	    goto on_return;
@@ -2204,7 +2204,9 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_memcpy(&info->setting, &call->opt, sizeof(call->opt));
 
     /* state, state_text */
-    if (call->inv) {
+    if (call->hanging_up) {
+        info->state = PJSIP_INV_STATE_DISCONNECTED;
+    } else if (call->inv) {
         info->state = call->inv->state;
         if (call->inv->role == PJSIP_ROLE_UAS &&
             info->state == PJSIP_INV_STATE_NULL)
@@ -2463,7 +2465,7 @@ on_answer_call_med_tp_complete(pjsua_call_id call_id,
 
     /* pjsua_media_channel_deinit() has been called. */
     if (call->async_call.med_ch_deinit) {
-        pjsua_media_channel_deinit(call->index);
+        pjsua_media_channel_deinit(call);
         call->med_ch_cb = NULL;
         PJSUA_UNLOCK();
         return PJ_SUCCESS;
@@ -2503,7 +2505,7 @@ on_return:
 	        status_ = pjsip_inv_send_msg(call->inv, tdata);
         }
 
-        pjsua_media_channel_deinit(call->index);
+        pjsua_media_channel_deinit(call);
     }
 
     /* Set the callback to NULL to indicate that the async operation
@@ -2732,7 +2734,8 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
     pjsip_tx_data *tdata;
-
+    pjsua_call_id cid;
+    pj_bool_t immediate = PJ_FALSE;
 
     if (call_id<0 || call_id>=(int)pjsua_var.ua_cfg.max_calls) {
 	PJ_LOG(1,(THIS_FILE, "pjsua_call_hangup(): invalid call id %d",
@@ -2750,6 +2753,74 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	goto on_return;
 
     call->hanging_up = PJ_TRUE;
+
+    /* Find a free slot in hangup_calls array, in order to be able to
+     * immediately hangup the call.
+     */
+    for (cid = call_id; cid < (int)pjsua_var.ua_cfg.max_calls; ++cid) {
+	if (pjsua_var.hangup_calls[cid].inv == NULL &&
+            pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
+        {
+	    immediate = PJ_TRUE;
+	    break;
+	}
+    }
+    if (!immediate) {
+    	for (cid = 0; cid < call_id; ++cid) {
+	    if (pjsua_var.hangup_calls[cid].inv == NULL &&
+                pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
+            {
+		immediate = PJ_TRUE;
+		break;
+	    }
+	}
+    }
+    
+    if (immediate) {
+	pjsip_event user_event;
+
+    	pjsua_call *hangup_call = &pjsua_var.hangup_calls[cid];
+
+    	pj_memcpy(hangup_call, call, sizeof(pjsua_call));
+
+    	/* Use user event rather than NULL to avoid crash in
+	 * unsuspecting app.
+	 */
+	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);    	
+    	if (pjsua_var.ua_cfg.cb.on_call_state)
+	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index, &user_event);
+
+	PJSUA_LOCK();
+
+	/* Free call */
+	call->inv = NULL;
+	pj_assert(pjsua_var.call_cnt > 0);
+	--pjsua_var.call_cnt;
+
+	/* Reset call */
+	call->incoming_data = NULL;
+	reset_call(call->index);
+
+	PJSUA_UNLOCK();
+	
+	call = hangup_call;
+	call->index = cid + pjsua_var.ua_cfg.max_calls;
+
+    	if (call->inv) {
+    	    call->inv->dlg->mod_data[pjsua_var.mod.id] = call;
+    	    call->inv->mod_data[pjsua_var.mod.id] = call;
+    	} else if (call->async_call.dlg) {
+    	    call->async_call.dlg->mod_data[pjsua_var.mod.id] = call;
+    	}
+
+        PJ_LOG(4,(THIS_FILE, "Call %d hanging up will be processed in "
+        		     "the background with new call index %d.",
+        		     call_id, call->index));
+
+    } else {
+        PJ_LOG(4,(THIS_FILE, "Too many call hangup in progress. Immediate "
+        		     "call hangup not possible."));
+    }
 
     /* If media transport creation is not yet completed, we will hangup
      * the call in the media transport creation callback instead.
@@ -4299,14 +4370,14 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
 	e->type == PJSIP_EVENT_TSX_STATE &&
-	call->inv &&
+	call->inv && !call->hanging_up &&
 	pjsua_var.ua_cfg.cb.on_call_tsx_state)
     {
 	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index,
 						 e->body.tsx_state.tsx, e);
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_state)
+    if (pjsua_var.ua_cfg.cb.on_call_state && !call->hanging_up)
 	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
 
     /* Re-acquire the locks. */
@@ -4320,16 +4391,19 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
 	PJSUA_LOCK();
 
-	pjsua_media_channel_deinit(call->index);
+	pjsua_media_channel_deinit(call);
 
 	/* Free call */
 	call->inv = NULL;
+	call->async_call.dlg = NULL;
 
-	pj_assert(pjsua_var.call_cnt > 0);
-	--pjsua_var.call_cnt;
+	if (call->index < pjsua_var.ua_cfg.max_calls) {
+	    pj_assert(pjsua_var.call_cnt > 0);
+	    --pjsua_var.call_cnt;
 
-	/* Reset call */
-	reset_call(call->index);
+	    /* Reset call */
+	    reset_call(call->index);
+	}
 
 	pjsua_check_snd_dev_idle();
 
@@ -4457,7 +4531,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
 	/* Clean up provisional media */
-	pjsua_media_prov_clean_up(call->index);
+	pjsua_media_prov_clean_up(call);
 
 	/* Do not deinitialize media since this may be a re-INVITE or
 	 * UPDATE (which in this case the media should not get affected
@@ -4465,7 +4539,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	 * when call is disconnected anyway.
 	 */
 	/* Stop/destroy media, if any */
-	/*pjsua_media_channel_deinit(call->index);*/
+	/*pjsua_media_channel_deinit(call);*/
 
 	/* Disconnect call if we're not in the middle of initializing an
 	 * UAS dialog and if this is not a re-INVITE
@@ -4526,7 +4600,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	/* No need to deinitialize; media will be shutdown when call
 	 * state is disconnected anyway.
 	 */
-	/*pjsua_media_channel_deinit(call->index);*/
+	/*pjsua_media_channel_deinit(call);*/
 	goto on_return;
     }
 
@@ -5523,7 +5597,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             /* Either we get non-2xx or media update failed,
              * clean up provisional media.
              */
-	    pjsua_media_prov_clean_up(call->index);
+	    pjsua_media_prov_clean_up(call);
         }
     } else if (tsx->role == PJSIP_ROLE_UAC &&
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
@@ -5539,7 +5613,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             /* Either we get non-2xx or media update failed,
              * clean up provisional media.
              */
-	    pjsua_media_prov_clean_up(call->index);
+	    pjsua_media_prov_clean_up(call);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
 	tsx->state==PJSIP_TSX_STATE_TRYING &&
