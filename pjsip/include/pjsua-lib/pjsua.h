@@ -3175,16 +3175,18 @@ PJ_DECL(pj_status_t) pjsua_transport_set_enable(pjsua_transport_id id,
 
 
 /**
- * Close the transport. If transport is forcefully closed, it will be
- * immediately closed, and any pending transactions that are using the
- * transport may not terminate properly (it may even crash). Otherwise, 
- * the system will wait until all transactions are closed while preventing 
- * new users from using the transport, and will close the transport when 
- * it is safe to do so.
+ * Close the transport. The system will wait until all transactions are
+ * closed while preventing new users from using the transport, and will
+ * close the transport when it is safe to do so.
+ *
+ * NOTE: Forcefully closing transport (force = PJ_TRUE) is deprecated,
+ * since any pending transactions that are using the transport may not
+ * terminate properly and can even crash. Application wishing to immediately
+ * close the transport for the purpose of restarting it should use
+ * #pjsua_handle_ip_change() instead.
  *
  * @param id		Transport ID.
- * @param force		Non-zero to immediately close the transport. This
- *			is not recommended!
+ * @param force		Must be PJ_FALSE. force = PJ_TRUE is deprecated.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */

@@ -2880,20 +2880,27 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
     tp_type = pjsua_var.tpdata[id].type & ~PJSIP_TRANSPORT_IPV6;
 
-    /* Note: destroy() may not work if there are objects still referencing
-     *	     the transport.
-     */
     if (force) {
-	switch (tp_type) {
+    	/* Forcefully closing transport is deprecated, since any pending
+    	 * transactions that are using the transport may not terminate
+    	 * properly and can even crash.
+    	 */
+	PJ_LOG(1, (THIS_FILE, "pjsua_transport_close(force=PJ_TRUE) is "
+			      "deprecated."));
+    	
+    	/* To minimize the effect to users, we shouldn't hard-deprecate this
+    	 * and let it continue as if force is false.
+    	 */
+    	// return PJ_EINVAL;
+    }
+
+    /* If force is not specified, transports will be closed at their
+     * convenient time.
+     */
+    switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
 	    status = pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
-	    if (status  != PJ_SUCCESS)
-		return status;
-	    status = pjsip_transport_destroy(pjsua_var.tpdata[id].data.tp);
-	    if (status != PJ_SUCCESS)
-		return status;
 	    break;
-
 	case PJSIP_TRANSPORT_TLS:
 	case PJSIP_TRANSPORT_TCP:
 	    /* This will close the TCP listener, but existing TCP/TLS
@@ -2901,41 +2908,21 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 	     */
 	    status = (*pjsua_var.tpdata[id].data.factory->destroy)
 			(pjsua_var.tpdata[id].data.factory);
-	    if (status != PJ_SUCCESS)
-		return status;
-
 	    break;
-
 	default:
 	    return PJ_EINVAL;
-	}
-	
-    } else {
-	/* If force is not specified, transports will be closed at their
-	 * convenient time. However this will leak PJSUA-API transport
-	 * descriptors as PJSUA-API wouldn't know when exactly the
-	 * transport is closed thus it can't cleanup PJSUA transport
-	 * descriptor.
-	 */
-	switch (tp_type) {
-	case PJSIP_TRANSPORT_UDP:
-	    return pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
-	case PJSIP_TRANSPORT_TLS:
-	case PJSIP_TRANSPORT_TCP:
-	    return (*pjsua_var.tpdata[id].data.factory->destroy)
-			(pjsua_var.tpdata[id].data.factory);
-	default:
-	    return PJ_EINVAL;
-	}
     }
 
-    /* Cleanup pjsua data when force is applied */
-    if (force) {
-	pjsua_var.tpdata[id].type = PJSIP_TRANSPORT_UNSPECIFIED;
-	pjsua_var.tpdata[id].data.ptr = NULL;
+    /* Cleanup pjsua data. We don't need to keep the transport
+     * descriptor, the transport will be destroyed later by the last user
+     * which decrements the transport's reference.
+     */
+    if (status == PJ_SUCCESS) {
+    	pjsua_var.tpdata[id].type = PJSIP_TRANSPORT_UNSPECIFIED;
+    	pjsua_var.tpdata[id].data.ptr = NULL;
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 
