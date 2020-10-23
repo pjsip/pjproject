@@ -129,6 +129,12 @@ static void reinv_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 /* Check and send reinvite for lock codec and ICE update */
 static pj_status_t process_pending_reinvite(pjsua_call *call);
 
+/* Timer callbacks for trickle ICE */
+static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
+				      struct pj_timer_entry *te);
+static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
+				    struct pj_timer_entry *te);
+
 /*
  * Reset call descriptor.
  */
@@ -161,7 +167,8 @@ static void reset_call(pjsua_call_id id)
     pjsua_call_setting_default(&call->opt);
     pj_timer_entry_init(&call->reinv_timer, PJ_FALSE,
 			(void*)(pj_size_t)id, &reinv_timer_cb);
-    pj_timer_entry_init(&call->trickle_ice.timer, 0, call, NULL);
+    pj_timer_entry_init(&call->trickle_ice.timer, 0, call,
+			&trickle_ice_send_sip_info);
 }
 
 /* Get DTMF method type name */
@@ -4173,8 +4180,8 @@ static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
 
     PJ_UNUSED_ARG(th);
 
-    /* If trickling has been started or dialog established both sides,
-     * stop 18x retransmission.
+    /* If trickling has been started or dialog has been established on
+     * both sides, stop 18x retransmission.
      */
     if (call->trickle_ice.trickling || call->trickle_ice.remote_dlg_est)
 	return;
@@ -4287,13 +4294,24 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 				      struct pj_timer_entry *te)
 {
     pjsua_call *call = (pjsua_call*)te->user_data;
-    pj_pool_t *pool;
+    pj_pool_t *tmp_pool = NULL;
     pj_bool_t all_end_of_cand, use_med_prov;
     pjmedia_sdp_session *sdp;
     unsigned i, med_cnt;
+    char *body;
+    pjsua_msg_data msg_data;
+    pjsip_generic_string_hdr hdr1, hdr2;
     pj_status_t status = PJ_SUCCESS;
+    pj_bool_t need_send = PJ_FALSE;
+
+    pj_str_t SIP_INFO = pj_str("INFO");
+    pj_str_t CONTENT_DISP_STR = {"Content-Disposition", 19};
+    pj_str_t INFO_PKG_STR = {"Info-Package", 12};
+    pj_str_t TRICKLE_ICE_STR = {"trickle-ice", 11};
 
     PJ_UNUSED_ARG(th);
+
+    PJSUA_LOCK();
 
     /* Check if any pending INFO already */
     if (call->trickle_ice.pending_info)
@@ -4302,14 +4320,11 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
     PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle sending SIP INFO",
 	      call->index));
 
-    // TODO: check which pool to use, don't use inv->pool_prov as its
-    //       lifetime only until SDP nego completion.
-    pool = call->inv->pool;
+    /* Create temporary pool */
+    tmp_pool = pjsua_pool_create("tmp_ice", 128, 128);
 
-    // Create empty SDP
-    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
-
-    PJSUA_LOCK();
+    /* Create empty SDP */
+    sdp = PJ_POOL_ZALLOC_T(tmp_pool, pjmedia_sdp_session);
 
     /* Generate SDP for SIP INFO */
     all_end_of_cand = PJ_TRUE;
@@ -4328,45 +4343,39 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 	else
 	    continue;
 
-	status = pjmedia_ice_trickle_send_local_cand(tp, pool, i, (te->id==2),
+	status = pjmedia_ice_trickle_send_local_cand(tp, tmp_pool, i,
+						     (te->id==2),
 						     sdp, &end_of_cand);
 	if (status != PJ_SUCCESS || !end_of_cand)
 	    all_end_of_cand = PJ_FALSE;
+
+	need_send |= (status==PJ_SUCCESS);
     }
+
+    if (!need_send)
+	goto on_return;
 
     /* Generate and send SIP INFO */
-    {
-	char body[1024];
-	pjsua_msg_data msg_data;
-	pjsip_generic_string_hdr hdr_info_pkg, hdr_ctn_disp;
+    pjsua_msg_data_init(&msg_data);
 
-	pj_str_t SIP_INFO = pj_str("INFO");
-	pj_str_t CONTENT_DISP_STR = {"Content-Disposition", 19};
-	pj_str_t INFO_PKG_STR = {"Info-Package", 12};
-	pj_str_t TRICKLE_ICE_STR = {"trickle-ice", 11};
+    pjsip_generic_string_hdr_init2(&hdr1, &INFO_PKG_STR, &TRICKLE_ICE_STR);
+    pj_list_push_back(&msg_data.hdr_list, &hdr1);
+    pjsip_generic_string_hdr_init2(&hdr2, &CONTENT_DISP_STR, &INFO_PKG_STR);
+    pj_list_push_back(&msg_data.hdr_list, &hdr2);
 
-	pjsua_msg_data_init(&msg_data);
-
-	pjsip_generic_string_hdr_init2(&hdr_info_pkg, &INFO_PKG_STR,
-				       &TRICKLE_ICE_STR);
-	pj_list_push_back(&msg_data.hdr_list, &hdr_info_pkg);
-
-	pjsip_generic_string_hdr_init2(&hdr_ctn_disp, &CONTENT_DISP_STR,
-				       &INFO_PKG_STR);
-	pj_list_push_back(&msg_data.hdr_list, &hdr_ctn_disp);
-
-	msg_data.content_type = pj_str("application/trickle-ice-sdpfrag");
-	if (pjmedia_sdp_print(sdp, body, sizeof(body)) == -1) {
-	    PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle failed to print SDP "
-				 "for SIP INFO due to insufficient buffer",
-				 call->index));
-	}
-	msg_data.msg_body = pj_str(body);
-
-	status = pjsua_call_send_request(call->index, &SIP_INFO, &msg_data);
-	if (status != PJ_SUCCESS)
-	    goto on_return;
+    msg_data.content_type = pj_str("application/trickle-ice-sdpfrag");
+    body = pj_pool_alloc(tmp_pool, PJSIP_MAX_PKT_LEN);
+    if (pjmedia_sdp_print(sdp, body, PJSIP_MAX_PKT_LEN) == -1) {
+	PJ_LOG(3,(THIS_FILE,
+		  "Warning! Call %d: ICE trickle failed to print SDP for "
+		  "SIP INFO due to insufficient buffer", call->index));
+	goto on_return;
     }
+    msg_data.msg_body = pj_str(body);
+
+    status = pjsua_call_send_request(call->index, &SIP_INFO, &msg_data);
+    if (status != PJ_SUCCESS)
+	goto on_return;
 
     /* Set flag for pending SIP INFO */
     call->trickle_ice.pending_info = PJ_TRUE;
@@ -4379,6 +4388,9 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
     }
 
 on_return:
+    if (tmp_pool)
+	pj_pool_release(tmp_pool);
+
     /* Reschedule if we are trickling */
     if (call->trickle_ice.trickling) {
 	pj_time_val delay = {0, 100};
