@@ -273,7 +273,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
     pj_ice_strans_cb ice_st_cb;
     pj_ice_strans_cfg ice_st_cfg;
     struct transport_ice *tp_ice;
-    unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(endpt && comp_cnt && cfg && p_tp, PJ_EINVAL);
@@ -329,14 +328,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
 	pj_pool_release(pool);
 	*p_tp = NULL;
 	return status;
-    }
-
-    /* Update last local candidate count, this usually host candidates that
-     * will be signalled to remote via regular SDP offer (e.g: SIP INVITE).
-     */
-    for (i = 0; i < comp_cnt; ++i) {
-	tp_ice->last_cand_cnt +=
-			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
     }
 
     /* Sync to ICE */
@@ -570,7 +561,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
     for (i = 0; i < sdp->media_count; ++i) {
 	m = sdp->media[i];
 	a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
-	if (a && (unsigned)pj_strtol(&a->value) == media_index)
+	if (a && (unsigned)pj_strtol(&a->value) == media_index+1)
 	    break;
     }
 
@@ -1810,6 +1801,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 				        unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    unsigned i;
     pj_status_t status;
 
     /* Validate media transport */
@@ -1853,6 +1845,15 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    status = create_subsequent_offer(tp_ice, sdp_pool, sdp_local,
 					     media_index);
 	}
+    }
+
+    /* Update last local candidate count. In trickle ICE, this usually host
+     * candidates only as STUN & TURN candidates gathering takes time to
+     * complete.
+     */
+    for (i = 0; i < tp_ice->comp_cnt; ++i) {
+	tp_ice->last_cand_cnt +=
+			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
     }
 
     if (status==PJ_SUCCESS) {

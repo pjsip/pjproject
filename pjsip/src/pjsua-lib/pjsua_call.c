@@ -4431,7 +4431,7 @@ void pjsua_ice_check_start_trickling(pjsua_call *call, pjsip_event *e)
 	return;
 
     /* Make sure the dialog state is established */
-    if (inv->dlg->state != PJSIP_DIALOG_STATE_ESTABLISHED)
+    if (!inv || inv->dlg->state != PJSIP_DIALOG_STATE_ESTABLISHED)
 	return;
 
     /* First, make sure remote dialog is also established. */
