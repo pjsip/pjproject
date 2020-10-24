@@ -357,6 +357,7 @@ for p in script.test.process:
     try:
         # Wait until registration completes
         if p.inst_param.have_reg:
+            p.send("rr")
             p.expect(p.inst_param.uri+".*registration success")
          # Synchronize stdout
         if not p.use_telnet:
@@ -380,7 +381,7 @@ if script.test.test_func != None:
 # Shutdown all instances
 for p in script.test.process:
     # Unregister if we have_reg to make sure that next tests
-    # won't wail
+    # won't fail
     if p.inst_param.have_reg:
         p.send("ru")
         p.expect(p.inst_param.uri+".*unregistration success")
