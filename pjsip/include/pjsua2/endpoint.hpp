@@ -1795,6 +1795,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
+    static void on_stream_precreate(pjsua_call_id call_id,
+                                    pjsua_on_stream_precreate_param *param);
     static void on_stream_created2(pjsua_call_id call_id,
 				   pjsua_on_stream_created_param *param);
     static void on_stream_destroyed(pjsua_call_id call_id,

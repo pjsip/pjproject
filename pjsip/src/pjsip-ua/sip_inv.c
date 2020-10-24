@@ -3326,6 +3326,33 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	    goto on_error;
 	}
 
+	/* Check if this is delayed manual ACK (see #416) */
+	if (mod_inv.cb.on_send_ack &&
+	    tdata->msg->line.req.method.id == PJSIP_ACK_METHOD &&
+	    tdata == inv->last_ack)
+	{
+	    pjsip_dlg_inc_lock(inv->dlg);
+
+	    /* Set state to CONFIRMED (if we're not in CONFIRMED yet).
+	     * But don't set it to CONFIRMED if we're already DISCONNECTED
+	     * (this may have been a late 200/OK response.
+	     */
+	    if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
+		pjsip_event ack_e;
+		PJSIP_EVENT_INIT_TX_MSG(ack_e, inv->last_ack);
+		inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &ack_e);
+	    } else if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+		/* Avoid possible leaked tdata when invite session is
+		 * already destroyed.
+		 * https://github.com/pjsip/pjproject/pull/2432
+		 */
+		pjsip_tx_data_dec_ref(inv->last_ack);
+		inv->last_ack = NULL;
+	    }
+
+	    pjsip_dlg_dec_lock(inv->dlg);
+	}
+
     } else {
 	pjsip_cseq_hdr *cseq;
 

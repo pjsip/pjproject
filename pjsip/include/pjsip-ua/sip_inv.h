@@ -255,7 +255,8 @@ typedef struct pjsip_inv_callback
      * sending of the ACK request (for example, when it needs to 
      * wait for answer from the other call leg, in 3PCC scenarios). 
      *
-     * Application creates the ACK request
+     * Application MUST create the ACK request using pjsip_inv_create_ack()
+     * and send it using pjsip_inv_send_msg().
      *
      * Once it has sent the ACK request, the framework will keep 
      * this ACK request in the cache. Subsequent receipt of 2xx response
@@ -975,7 +976,7 @@ PJ_DECL(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
  *
  * Note that if the invite session has a pending offer to be answered 
  * (for example when the last 2xx response to INVITE contains an offer), 
- * application MUST have set the SDP answer with #pjsip_create_sdp_body()
+ * application MUST have set the SDP answer with #pjsip_inv_set_sdp_answer()
  * prior to creating the ACK request. In this case, the ACK request
  * will be added with SDP message body.
  *

@@ -531,6 +531,58 @@ typedef struct pjsua_reg_info
 
 
 /**
+ * Media stream info.
+ */
+typedef struct pjsua_stream_info
+{
+    /** Media type of this stream. */
+    pjmedia_type type;
+
+    /** Stream info (union). */
+    union {
+	/** Audio stream info */
+	pjmedia_stream_info	aud;
+
+	/** Video stream info */
+	pjmedia_vid_stream_info	vid;
+    } info;
+
+} pjsua_stream_info;
+
+
+/**
+ * Media stream statistic.
+ */
+typedef struct pjsua_stream_stat
+{
+    /** RTCP statistic. */
+    pjmedia_rtcp_stat	rtcp;
+
+    /** Jitter buffer statistic. */
+    pjmedia_jb_state	jbuf;
+
+} pjsua_stream_stat;
+
+
+/**
+ * Structure to be passed to on stream precreate callback.
+ * See #on_stream_precreate().
+ */
+typedef struct pjsua_on_stream_precreate_param
+{
+    /**
+     * Stream index in the media session, read-only.
+     */
+    unsigned            stream_idx;
+
+    /**
+     * Parameters that the stream will be created from.
+     */
+    pjsua_stream_info   stream_info;
+} pjsua_on_stream_precreate_param;
+
+
+/**
  * Structure to be passed to on stream created callback.
  * See #on_stream_created2().
  */
@@ -1047,6 +1099,17 @@ typedef struct pjsua_callback
 			        pj_pool_t *pool,
 			        const pjmedia_sdp_session *rem_sdp);
 
+    /**
+     * Notify application when an audio media session is about to be created
+     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * called *after* the session has been created). The application may change
+     * stream parameters like the jitter buffer size.
+     *
+     * @param call_id       Call identification.
+     * @param param         The on stream precreate callback parameter.
+     */
+    void (*on_stream_precreate)(pjsua_call_id call_id,
+                                pjsua_on_stream_precreate_param *param);
 
     /**
      * Notify application when audio media session is created and before it is
@@ -3057,7 +3120,7 @@ PJ_DECL(pj_status_t) pjsua_transport_register(pjsip_transport *tp,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DEF(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
+PJ_DECL(pj_status_t) pjsua_tpfactory_register( pjsip_tpfactory *tf,
 					      pjsua_transport_id *p_id);
 
 /**
@@ -4765,7 +4828,6 @@ typedef enum pjsua_vid_req_keyframe_method
 
     /**
      * Requesting keyframe via Picture Loss Indication of RTCP feedback.
-     * This is currently not supported.
      */
     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI	= 2
 
@@ -5015,40 +5077,6 @@ typedef enum pjsua_call_flag
     PJSUA_CALL_UPDATE_TARGET = 64
 
 } pjsua_call_flag;
-
-
-/**
- * Media stream info.
- */
-typedef struct pjsua_stream_info
-{
-    /** Media type of this stream. */
-    pjmedia_type type;
-
-    /** Stream info (union). */
-    union {
-	/** Audio stream info */
-	pjmedia_stream_info	aud;
-
-	/** Video stream info */
-	pjmedia_vid_stream_info	vid;
-    } info;
-
-} pjsua_stream_info;
-
-
-/**
- * Media stream statistic.
- */
-typedef struct pjsua_stream_stat
-{
-    /** RTCP statistic. */
-    pjmedia_rtcp_stat	rtcp;
-
-    /** Jitter buffer statistic. */
-    pjmedia_jb_state	jbuf;
-
-} pjsua_stream_stat;
 
 /**
  * This enumeration represents video stream operation on a call.
