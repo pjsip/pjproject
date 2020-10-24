@@ -1808,7 +1808,6 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 				        unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    unsigned i;
     pj_status_t status;
 
     /* Validate media transport */
@@ -1854,20 +1853,23 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	}
     }
 
-    /* Update last local candidate count. In trickle ICE, this usually host
-     * candidates only as STUN & TURN candidates gathering takes time to
-     * complete.
-     */
-    for (i = 0; i < tp_ice->comp_cnt; ++i) {
-	tp_ice->last_cand_cnt +=
-			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
-    }
-
     if (status==PJ_SUCCESS) {
 	if (rem_sdp)
 	    tp_ice->oa_role = ROLE_ANSWERER;
 	else
 	    tp_ice->oa_role = ROLE_OFFERER;
+
+	if (tp_ice->use_ice) {
+	    /* Update last local candidate count, so trickle ICE can identify
+	     * if there is any new local candidate.
+	     */
+	    unsigned i;
+	    tp_ice->last_cand_cnt = 0;
+	    for (i = 0; i < tp_ice->comp_cnt; ++i) {
+		tp_ice->last_cand_cnt +=
+			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
+	    }
+	}
     }
 
     return status;
