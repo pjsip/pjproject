@@ -3053,6 +3053,12 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     stop_media_session(call_id);
 
+    /* Stop trickle ICE timer */
+    if (call->trickle_ice.trickling) {
+	call->trickle_ice.trickling = PJ_FALSE;
+	pjsua_cancel_timer(&call->trickle_ice.timer);
+    }
+
     /* Clean up media transports */
     pjsua_media_prov_clean_up(call_id);
     call->med_prov_cnt = 0;

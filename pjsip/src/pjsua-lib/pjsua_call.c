@@ -4260,21 +4260,16 @@ static void trickle_ice_recv_sip_info(pjsua_call *call, pjsip_rx_data *rdata)
 	for (j = 0; j < med_cnt; ++j) {
 	    pjsua_call_media *cm = use_med_prov? &call->media_prov[j] :
 						 &call->media[j];
+	    tp = cm->tp_orig;
 
-	    if (pj_strcmp(&cm->rem_mid, &mid)==0) {
-		if (cm->tp && cm->tp->type == PJMEDIA_TRANSPORT_TYPE_ICE)
-		{
-		    tp = cm->tp;
-		} else if (cm->tp_orig &&
-			   cm->tp_orig->type==PJMEDIA_TRANSPORT_TYPE_ICE)
-		{
-		    tp = cm->tp_orig;
-		}
+	    if (tp && tp->type == PJMEDIA_TRANSPORT_TYPE_ICE &&
+		pj_strcmp(&cm->rem_mid, &mid) == 0)
+	    {
 		break;
 	    }
 	}
 
-	if (tp == NULL)
+	if (j == med_cnt)
 	    continue;
 
 	/* Update ICE checklist */
@@ -4298,11 +4293,11 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
     pj_bool_t all_end_of_cand, use_med_prov;
     pjmedia_sdp_session *sdp;
     unsigned i, med_cnt;
-    char *body;
     pjsua_msg_data msg_data;
     pjsip_generic_string_hdr hdr1, hdr2;
     pj_status_t status = PJ_SUCCESS;
-    pj_bool_t need_send = PJ_FALSE;
+    pj_bool_t forced, need_send = PJ_FALSE;
+    pj_sockaddr orig_addr;
 
     pj_str_t SIP_INFO = pj_str("INFO");
     pj_str_t CONTENT_DISP_STR = {"Content-Disposition", 19};
@@ -4313,9 +4308,33 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 
     PJSUA_LOCK();
 
+    /* Check provisional media or active media to use */
+    use_med_prov = call->med_prov_cnt > call->med_cnt;
+    med_cnt = use_med_prov? call->med_prov_cnt : call->med_cnt;
+
     /* Check if any pending INFO already */
     if (call->trickle_ice.pending_info)
 	goto on_return;
+
+    /* Check if any new candidate, if not forced */
+    forced = (te->id == 2);
+    if (!forced) {
+	for (i = 0; i < med_cnt; ++i) {
+	    pjsua_call_media *cm = use_med_prov? &call->media_prov[i] :
+						 &call->media[i];
+	    pjmedia_transport *tp = cm->tp_orig;
+
+	    if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
+		continue;
+
+	    if (pjmedia_ice_trickle_has_new_cand(tp))
+		break;
+	}
+
+	/* No new local candidate */
+	if (i == med_cnt)
+	    goto on_return;
+    }
 
     PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle sending SIP INFO",
 	      call->index));
@@ -4324,27 +4343,24 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
     tmp_pool = pjsua_pool_create("tmp_ice", 128, 128);
 
     /* Create empty SDP */
-    sdp = PJ_POOL_ZALLOC_T(tmp_pool, pjmedia_sdp_session);
+    pj_sockaddr_init(pj_AF_INET(), &orig_addr, NULL, 0);
+    status = pjmedia_endpt_create_base_sdp(pjsua_var.med_endpt, tmp_pool,
+					   NULL, &orig_addr, &sdp);
+    if (status != PJ_SUCCESS)
+	goto on_return;
 
     /* Generate SDP for SIP INFO */
     all_end_of_cand = PJ_TRUE;
-    use_med_prov = call->med_prov_cnt > call->med_cnt;
-    med_cnt = use_med_prov? call->med_prov_cnt : call->med_cnt;
     for (i = 0; i < med_cnt; ++i) {
 	pjsua_call_media *cm = use_med_prov? &call->media_prov[i] :
 					     &call->media[i];
-	pjmedia_transport *tp = NULL;
+	pjmedia_transport *tp = cm->tp_orig;
 	pj_bool_t end_of_cand = PJ_FALSE;
 
-	if (cm->tp && cm->tp->type == PJMEDIA_TRANSPORT_TYPE_ICE)
-	    tp = cm->tp;
-	else if (cm->tp_orig && cm->tp_orig->type==PJMEDIA_TRANSPORT_TYPE_ICE)
-	    tp = cm->tp_orig;
-	else
+	if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
 	    continue;
 
 	status = pjmedia_ice_trickle_send_local_cand(tp, tmp_pool, i,
-						     (te->id==2),
 						     sdp, &end_of_cand);
 	if (status != PJ_SUCCESS || !end_of_cand)
 	    all_end_of_cand = PJ_FALSE;
@@ -4364,14 +4380,15 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
     pj_list_push_back(&msg_data.hdr_list, &hdr2);
 
     msg_data.content_type = pj_str("application/trickle-ice-sdpfrag");
-    body = pj_pool_alloc(tmp_pool, PJSIP_MAX_PKT_LEN);
-    if (pjmedia_sdp_print(sdp, body, PJSIP_MAX_PKT_LEN) == -1) {
+    msg_data.msg_body.ptr = pj_pool_alloc(tmp_pool, PJSIP_MAX_PKT_LEN);
+    msg_data.msg_body.slen = pjmedia_sdp_print(sdp, msg_data.msg_body.ptr,
+					       PJSIP_MAX_PKT_LEN);
+    if (msg_data.msg_body.slen == -1) {
 	PJ_LOG(3,(THIS_FILE,
 		  "Warning! Call %d: ICE trickle failed to print SDP for "
 		  "SIP INFO due to insufficient buffer", call->index));
 	goto on_return;
     }
-    msg_data.msg_body = pj_str(body);
 
     status = pjsua_call_send_request(call->index, &SIP_INFO, &msg_data);
     if (status != PJ_SUCCESS)
@@ -6130,6 +6147,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		 pj_stricmp(&body->content_type.subtype,
 			    &STR_TRICKLE_ICE_SDP)==0)
 	{
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
 	    /* Trickle ICE tasks:
 	     * - UAS receiving INFO, cease 18x retrans & start trickling
 	     */
@@ -6137,6 +6157,12 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
 	    /* Process the SIP INFO content */
 	    trickle_ice_recv_sip_info(call, rdata);
+
+	    /* Send 200 response, regardless */
+	    status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						 200, NULL, &tdata);
+	    if (status == PJ_SUCCESS)
+		status = pjsip_tsx_send_msg(tsx, tdata);
 	}
 
     } else if (tsx->role == PJSIP_ROLE_UAC && 

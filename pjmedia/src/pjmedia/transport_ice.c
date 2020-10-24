@@ -645,12 +645,14 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 }
 
 
-static pj_bool_t any_new_local_cand(pjmedia_transport *tp)
+PJ_DEF(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     unsigned i, cand_cnt = 0;
 
-    pj_assert(tp && pj_ice_strans_has_sess(tp_ice->ice_st));
+    /* Make sure ICE transport has session already */
+    if (!tp_ice->ice_st || !pj_ice_strans_has_sess(tp_ice->ice_st))
+	return PJ_FALSE;
 
     /* Count all local candidates */
     for (i = 0; i < tp_ice->comp_cnt; ++i) {
@@ -667,7 +669,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    pjmedia_transport *tp,
 					    pj_pool_t *sdp_pool,
 					    unsigned media_index,
-					    pj_bool_t forced,
 					    pjmedia_sdp_session *sdp,
 					    pj_bool_t *p_end_of_cand)
 {
@@ -681,11 +682,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp, PJ_EINVAL);
 
-    if (pj_ice_strans_has_sess(tp_ice->ice_st))
+    /* Make sure ICE transport has session already */
+    if (!tp_ice->ice_st || !pj_ice_strans_has_sess(tp_ice->ice_st))
 	return PJ_EINVALIDOP;
-
-    if (!forced && !any_new_local_cand(tp))
-	return PJ_ENOTFOUND;
 
     ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
     end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
