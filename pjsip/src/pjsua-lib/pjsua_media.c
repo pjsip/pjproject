@@ -1119,8 +1119,8 @@ static pj_status_t create_ice_media_transport(
 	++comp_cnt;
 
     status = pjmedia_ice_create3(pjsua_var.med_endpt, name, comp_cnt,
-				 &ice_cfg, &ice_cb, 0, call_med,
-				 &call_med->tp);
+				 &ice_cfg, &ice_cb, PJSUA_ICE_TRANSPORT_OPTION,
+                                 call_med, &call_med->tp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create ICE media transport",
 		     status);

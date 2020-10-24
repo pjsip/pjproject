@@ -1907,7 +1907,9 @@ static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
     /* Set server name to connect */
-    if (ssock->param.server_name.slen) {
+    if (ssock->param.server_name.slen &&
+        get_ip_addr_ver(&ssock->param.server_name) == 0)
+    {
 	/* Server name is null terminated already */
 	if (!SSL_set_tlsext_host_name(ossock->ossl_ssl, 
 				      ssock->param.server_name.ptr))

@@ -185,6 +185,8 @@ typedef struct pjmedia_vid_stream_info
     pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
+    pjmedia_stream_ka_config ka_cfg;
+                                    /**< Stream send kep-alive settings.    */
 #endif
 
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
