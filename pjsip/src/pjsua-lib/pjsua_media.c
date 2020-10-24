@@ -3421,8 +3421,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	 * can be processed.
 	 */
 	{
-	    const pjmedia_sdp_media *m = (const pjmedia_sdp_media*)
-					 &remote_sdp->media[mi];
+	    const pjmedia_sdp_media *m = remote_sdp->media[mi];
 	    pjmedia_sdp_attr *a;
 
 	    a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
