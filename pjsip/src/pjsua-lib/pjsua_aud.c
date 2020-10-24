@@ -664,6 +664,8 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 	/* Enable/disable stream keep-alive and NAT hole punch. */
 	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
+
+        si->ka_cfg = pjsua_var.acc[call->acc_id].cfg.stream_ka_cfg;
 #endif
 
         if (pjsua_var.ua_cfg.cb.on_stream_precreate) {

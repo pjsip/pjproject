@@ -1101,7 +1101,9 @@ static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
     gnutls_sock_t *gssock = (gnutls_sock_t *)ssock;
 
     /* Set server name to connect */
-    if (ssock->param.server_name.slen) {
+    if (ssock->param.server_name.slen &&
+        get_ip_addr_ver(&ssock->param.server_name) == 0)
+    {
         int ret;
         /* Server name is null terminated already */
         ret = gnutls_server_name_set(gssock->session, GNUTLS_NAME_DNS,

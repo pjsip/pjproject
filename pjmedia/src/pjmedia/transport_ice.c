@@ -1433,6 +1433,8 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
      */
     for (i=0; i<rem_m->attr_count; ++i) {
 	pj_ice_sess_cand cand;
+        unsigned disable_ice_mismatch = tp_ice->options &
+                                        PJMEDIA_ICE_DISABLE_ICE_MISMATCH;
 
 	if (pj_strcmp(&rem_m->attr[i]->name, &STR_CANDIDATE)!=0)
 	    continue;
@@ -1448,14 +1450,20 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	    continue;
 	}
 
-	if (!comp1_found && cand.comp_id==COMP_RTP &&
-	    pj_sockaddr_cmp(&rem_conn_addr, &cand.addr)==0) 
+	if (!comp1_found && cand.comp_id==COMP_RTP)
 	{
-	    comp1_found = PJ_TRUE;
-	} else if (!comp2_found && cand.comp_id==COMP_RTCP &&
-		    pj_sockaddr_cmp(&rtcp_addr, &cand.addr)==0) 
+            if ((disable_ice_mismatch) ||
+                (pj_sockaddr_cmp(&rem_conn_addr, &cand.addr) == 0))
+            {
+                comp1_found = PJ_TRUE;
+            }
+	} else if (!comp2_found && cand.comp_id==COMP_RTCP)
 	{
-	    comp2_found = PJ_TRUE;
+            if ((disable_ice_mismatch) ||
+                (pj_sockaddr_cmp(&rtcp_addr, &cand.addr) == 0))
+            {
+                comp2_found = PJ_TRUE;
+            }
 	}
 
 	if (cand.comp_id == COMP_RTCP)

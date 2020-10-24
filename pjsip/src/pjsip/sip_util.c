@@ -779,13 +779,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 	    pjsip_hdr_clone(cancel_tdata->pool, req_tdata->saved_strict_route);
     }
 
-    /* Copy the destination host name from the original request */
-    pj_strdup(cancel_tdata->pool, &cancel_tdata->dest_info.name,
-	      &req_tdata->dest_info.name);
-
-    /* Finally copy the destination info from the original request */
+    /* Copy the destination info from the original request */
     pj_memcpy(&cancel_tdata->dest_info, &req_tdata->dest_info,
 	      sizeof(req_tdata->dest_info));
+
+    /* Finally, copy the destination host name from the original request */
+    pj_strdup(cancel_tdata->pool, &cancel_tdata->dest_info.name,
+	      &req_tdata->dest_info.name);
 
     /* Done.
      * Return the transmit buffer containing the CANCEL request.
