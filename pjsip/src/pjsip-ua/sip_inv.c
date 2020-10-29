@@ -2448,9 +2448,6 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     status = pjsip_tx_data_clone(inv->last_answer, 0, &last_res);
     if (status != PJ_SUCCESS)
 	goto on_return;
-    old_res = inv->last_answer;
-    inv->last_answer = last_res;
-    pjsip_tx_data_dec_ref(old_res);
 
     /* Modify last response. */
     status = pjsip_dlg_modify_response(inv->dlg, last_res, st_code, st_text);
@@ -2474,6 +2471,13 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
     /* Cleanup Allow & Supported headers from disabled extensions */
     cleanup_allow_sup_hdr(inv->options, last_res, NULL, NULL);
+
+    /* Update inv->last_answer */
+    old_res = inv->last_answer;
+    inv->last_answer = last_res;
+
+    /* Release old answer */
+    pjsip_tx_data_dec_ref(old_res);
 
     *p_tdata = last_res;
 
