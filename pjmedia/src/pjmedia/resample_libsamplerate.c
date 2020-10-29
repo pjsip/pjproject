@@ -116,10 +116,10 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
     }
 
     /* Kick off. The first process may return samples a lot less than
-     * samples_per_frame (perhaps on some platforms only, such as Mac OSX),
-     * which will cause 'extra' mechanism active and will introduce click
-     * noise, so let's feed the engine with silent audio here to avoid that.
-     * This will introduce delay at most one audio frame length.
+     * samples_per_frame, which will cause 'extra' mechanism active and
+     * will introduce click noise, so let's feed the engine with silent
+     * audio here to avoid that. This will introduce delay at most one
+     * audio frame length.
      */
     {
 	SRC_DATA src_data;
