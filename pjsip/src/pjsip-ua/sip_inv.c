@@ -2424,6 +2424,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					pjsip_tx_data **p_tdata )
 {
     pjsip_tx_data *last_res;
+    pjsip_tx_data *old_res;
     pj_status_t status;
 
     /* Verify arguments. */
@@ -2474,8 +2475,11 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
     cleanup_allow_sup_hdr(inv->options, last_res, NULL, NULL);
 
     /* Update last_answer */
-    pjsip_tx_data_dec_ref(inv->last_answer);
+    old_res = inv->last_answer;
     inv->last_answer = last_res;
+
+    /* Release old answer */
+    pjsip_tx_data_dec_ref(old_res);
 
     *p_tdata = last_res;
 
