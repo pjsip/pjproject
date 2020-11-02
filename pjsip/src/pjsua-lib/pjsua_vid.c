@@ -111,6 +111,15 @@ pj_status_t pjsua_vid_subsys_init(void)
     }
 #endif
 
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_ANDROID_MEDIACODEC
+    status = pjmedia_codec_and_media_vid_init(NULL, &pjsua_var.cp.factory);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing AMediaCodec library",
+		     status);
+	goto on_error;
+    }
+#endif
+
     status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video subsystem",
@@ -177,6 +186,11 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
 #if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
     pjmedia_codec_vpx_vid_deinit();
+#endif
+
+#if defined(PJMEDIA_HAS_ANDROID_MEDIACODEC) && \
+    PJMEDIA_HAS_ANDROID_MEDIACODEC != 0
+    pjmedia_codec_and_media_vid_deinit();
 #endif
 
     if (pjmedia_vid_codec_mgr_instance())

@@ -618,8 +618,8 @@
  *
  * Default: 1
  */
-#ifndef PJMEDIA_HAS_ANMED_AVC
-#   define PJMEDIA_HAS_ANMED_AVC		1
+#ifndef PJMEDIA_HAS_ANMED_H264
+#   define PJMEDIA_HAS_AND_MEDIA_H264		1
 #endif
 
 /**
@@ -627,8 +627,8 @@
  *
  * Default: 0 (disabled)
  */
-#ifndef PJMEDIA_HAS_ANMED_VP8
-#   define PJMEDIA_HAS_ANMED_VP8		0
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP8
+#   define PJMEDIA_HAS_AND_MEDIA_VP8		0
 #endif
 
 /**
@@ -636,8 +636,8 @@
  *
  * Default: 0 (disabled)
  */
-#ifndef PJMEDIA_HAS_ANMED_VP9
-#   define PJMEDIA_HAS_ANMED_VP9		0
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP9
+#   define PJMEDIA_HAS_AND_MEDIA_VP9		0
 #endif
 
 /**

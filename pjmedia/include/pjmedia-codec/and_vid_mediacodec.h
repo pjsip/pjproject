@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C)2020 Teluu Inc. (http://www.teluu.com)
  *
@@ -49,8 +48,9 @@ PJ_BEGIN_DECL
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_anmed_vid_init(pjmedia_vid_codec_mgr *mgr,
-                                                  pj_pool_factory *pf);
+PJ_DECL(pj_status_t) pjmedia_codec_and_media_vid_init(
+				    pjmedia_vid_codec_mgr *mgr,
+                                    pj_pool_factory *pf);
 
 /**
  * Unregister Android Mediacodec video codecs factory from the video codec
@@ -58,7 +58,7 @@ PJ_DECL(pj_status_t) pjmedia_codec_anmed_vid_init(pjmedia_vid_codec_mgr *mgr,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_anmed_vid_deinit(void);
+PJ_DECL(pj_status_t) pjmedia_codec_and_media_vid_deinit(void);
 
 
 /**
