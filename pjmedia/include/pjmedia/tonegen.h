@@ -200,6 +200,16 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *tonegen);
 
 
 /**
+ * Instruct the tone generator to stop looping of the current tone set.
+ *
+ * @param tonegen	    The tone generator instance.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_tonegen_stop_loop(pjmedia_port *tonegen);
+
+
+/**
  * Rewind the playback. This will start the playback to the first
  * tone in the playback list.
  *
