@@ -3785,6 +3785,41 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     /* Start re-registration */
     acc->auto_rereg.attempt_cnt++;
+
+    /* Generate new contact as the current contact may use a disconnected
+     * transport. Only do this when outbound is not active and contact is not
+     * rewritten (where the contact address may really be used by server to
+     * contact the UA).
+     */
+    if (acc->rfc5626_status != OUTBOUND_ACTIVE && !acc->contact_rewritten) {
+	pj_str_t tmp_contact;
+	pj_pool_t *pool;
+
+	pool = pjsua_pool_create("tmpregc", 512, 512);
+
+	status = pjsua_acc_create_uac_contact(pool, &tmp_contact, acc->index,
+					      &acc->cfg.reg_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE,
+			 "Unable to generate suitable Contact header"
+			 " for re-registration", status);
+	    pj_pool_release(pool);
+	    schedule_reregistration(acc);
+	    goto on_return;
+	}
+
+	if (pj_strcmp(&tmp_contact, &acc->contact)) {
+	    if (acc->contact.slen < tmp_contact.slen) {
+		pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
+	    } else {
+		pj_strcpy(&acc->contact, &tmp_contact);
+	    }
+	    update_regc_contact(acc);
+	    pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
+	}
+	pj_pool_release(pool);
+    }
+
     status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
     if (status != PJ_SUCCESS)
 	schedule_reregistration(acc);
@@ -3910,6 +3945,10 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 	if (acc->via_tp == (void*)tp) {
 	    pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
 	    acc->via_tp = NULL;
+
+	    /* Also reset regc's Via addr */
+	    if (acc->regc)
+		pjsip_regc_set_via_sent_by(acc->regc, NULL, NULL);
 	}
 
 	/* Release transport immediately if regc is using it
