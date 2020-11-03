@@ -5574,6 +5574,40 @@ PJ_DECL(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 				       const pjsua_msg_data *msg_data);
 
 /**
+ * Hangup call by using method that is appropriate according to the
+ * call state. This function is different than answering the call with
+ * 3xx-6xx response (with #pjsua_call_answer()), in that this function
+ * will hangup the call regardless of the state and role of the call,
+ * while #pjsua_call_answer() only works with incoming calls on EARLY
+ * state.
+ *
+ * If parameter immediate is set to PJ_TRUE, call DISCONNECTED state
+ * will be immediately reported to app and the call slot can be reused.
+ * The only exception is if media transport creation is in progress
+ * during call setup. In this case, the hangup will be pending upon
+ * the completion of the media transport.
+ * The library will then process the call hangup, such as notifying
+ * the remote and cleaning up used resources, in the background.
+ *
+ * @param call_id	Call identification.
+ * @param immediate	Set to PJ_TRUE to hangup the call immediately.
+ * @param code		Optional status code to be sent when we're rejecting
+ *			incoming call. If the value is zero, "603/Decline"
+ *			will be sent.
+ * @param reason	Optional reason phrase to be sent when we're rejecting
+ *			incoming call.  If NULL, default text will be used.
+ * @param msg_data	Optional list of headers etc to be added to outgoing
+ *			request/response message.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_hangup2(pjsua_call_id call_id,
+				        pj_bool_t immediate,
+				        unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data);
+
+/**
  * Accept or reject redirection response. Application MUST call this function
  * after it signaled PJSIP_REDIRECT_PENDING in the \a on_call_redirected() 
  * callback, to notify the call whether to accept or reject the redirection

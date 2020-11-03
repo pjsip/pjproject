@@ -1,4 +1,3 @@
-/* $Id$ */
 /*
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -33,6 +32,16 @@
  * Max UPDATE/re-INVITE retry to lock codec
  */
 #define LOCK_CODEC_MAX_RETRY	     5
+
+/* Call is in the process of hanging up. */
+#define IS_CALL_HANGING_UP(call) \
+    	(call->hanging_up /*&& call->index >= pjsua_var.ua_cfg.max_calls*/)
+
+/* Retry interval of trying to hangup a call. */
+#define CALL_HANGUP_RETRY_INTERVAL   5000
+
+/* Max number of hangup retries. */
+#define CALL_HANGUP_MAX_RETRY	     4
 
 /* Determine whether we should restart ICE upon receiving a re-INVITE
  * with no SDP.
@@ -125,6 +134,9 @@ static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 
 /* Timer callback to send re-INVITE/UPDATE to lock codec or ICE update */
 static void reinv_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
+
+/* Timer callback to hangup the call */
+static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 
 /* Check and send reinvite for lock codec and ICE update */
 static pj_status_t process_pending_reinvite(pjsua_call *call);
@@ -556,6 +568,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 
 on_error:
     if (inv == NULL && call_id != -1 && !cb_called &&
+        !IS_CALL_HANGING_UP(call) &&
 	pjsua_var.ua_cfg.cb.on_call_state)
     {
 	/* Use user event rather than NULL to avoid crash in
@@ -2003,8 +2016,9 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	     * so let's process the answer/hangup now.
 	     */
 	    if (call->async_call.call_var.inc_call.hangup) {
-		pjsua_call_hangup(call_id, call->last_code, &call->last_text,
-				  NULL);
+		pjsua_call_hangup2(call_id,
+		    call->async_call.call_var.inc_call.immediate,
+		    call->last_code, &call->last_text, NULL);
 	    } else if (call->med_ch_cb == NULL && call->inv) {
 		process_pending_call_answer(call);
 	    }
@@ -2049,14 +2063,13 @@ PJ_DEF(pj_bool_t) pjsua_call_is_active(pjsua_call_id call_id)
 }
 
 
-/* Acquire lock to the specified call_id */
-pj_status_t acquire_call(const char *title,
-				pjsua_call_id call_id,
-				pjsua_call **p_call,
-				pjsip_dialog **p_dlg)
+/* Acquire lock to the specified call */
+pj_status_t acquire_call2(const char *title,
+			  pjsua_call *call,
+			  pjsua_call **p_call,
+			  pjsip_dialog **p_dlg)
 {
     unsigned retry;
-    pjsua_call *call = NULL;
     pj_bool_t has_pjsua_lock = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
     pj_time_val time_start, timeout;
@@ -2087,7 +2100,6 @@ pj_status_t acquire_call(const char *title,
 	}
 
 	has_pjsua_lock = PJ_TRUE;
-	call = &pjsua_var.calls[call_id];
         if (call->inv)
             dlg = call->inv->dlg;
         else
@@ -2095,7 +2107,8 @@ pj_status_t acquire_call(const char *title,
 
 	if (dlg == NULL) {
 	    PJSUA_UNLOCK();
-	    PJ_LOG(3,(THIS_FILE, "Invalid call_id %d in %s", call_id, title));
+	    PJ_LOG(3,(THIS_FILE, "Invalid call_id %d in %s", call->index,
+	    			 title));
 	    return PJSIP_ESESSIONTERMINATED;
 	}
 
@@ -2127,6 +2140,15 @@ pj_status_t acquire_call(const char *title,
     *p_dlg = dlg;
 
     return PJ_SUCCESS;
+}
+
+/* Acquire lock to the specified call_id */
+pj_status_t acquire_call(const char *title,
+			 pjsua_call_id call_id,
+			 pjsua_call **p_call,
+			 pjsip_dialog **p_dlg)
+{
+    return acquire_call2(title, &pjsua_var.calls[call_id], p_call, p_dlg);
 }
 
 
@@ -2721,6 +2743,125 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
 }
 
 
+static pj_status_t call_inv_end_session(pjsua_call *call,
+					pj_bool_t immediate,
+					unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    if (code==0) {
+	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
+	    code = PJSIP_SC_OK;
+	else if (call->inv->role == PJSIP_ROLE_UAS)
+	    code = PJSIP_SC_DECLINE;
+	else
+	    code = PJSIP_SC_REQUEST_TERMINATED;
+    }
+
+    status = pjsip_inv_end_session(call->inv, code, reason, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE,
+		     "Failed to create end session message",
+		     status);
+	goto on_return;
+    }
+
+    /* pjsip_inv_end_session may return PJ_SUCCESS with NULL
+     * as p_tdata when INVITE transaction has not been answered
+     * with any provisional responses.
+     */
+    if (tdata == NULL) {
+	goto on_return;
+    }
+
+    /* Add additional headers etc */
+    pjsua_process_msg_data( tdata, msg_data);
+
+    /* Send the message */
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE,
+		     "Failed to send end session message",
+		     status);
+	goto on_return;
+    }
+    
+on_return:
+    if (status != PJ_SUCCESS) {
+    	if (immediate) {
+    	    pj_time_val delay;
+
+    	    /* Schedule a retry */
+    	    if (call->hangup_retry >= CALL_HANGUP_MAX_RETRY) {
+    	    	/* Forcefully terminate the invite session. */
+    	    	pjsip_inv_terminate(call->inv, call->hangup_code, PJ_TRUE);
+    	    	return PJ_SUCCESS;
+    	    }
+    	    
+    	    if (call->hangup_retry == 0) {
+    	    	pj_timer_entry_init(&call->hangup_timer, PJ_FALSE,
+				    (void*)call, &hangup_timer_cb);
+
+    	    	call->hangup_code = code;
+    	    	if (reason) {
+    	    	    pj_strdup(call->inv->pool_prov, &call->hangup_reason,
+    	    	    	      reason);
+    	    	}
+    	    	if (msg_data) {
+    	     	    call->hangup_msg_data = pjsua_msg_data_clone(
+    	     				        call->inv->pool_prov,
+    	     				        msg_data);
+    	     	}
+    	    }
+
+	    delay.sec = 0;
+    	    delay.msec = CALL_HANGUP_RETRY_INTERVAL;
+    	    pj_time_val_normalize(&delay);
+    	    call->hangup_timer.id = PJ_TRUE;
+    	    pjsua_schedule_timer(&call->hangup_timer, &delay);
+    	    call->hangup_retry++;
+
+       	    PJ_LOG(4, (THIS_FILE, "Will retry call %d hangup in %d msec",
+                             	  call->index, CALL_HANGUP_RETRY_INTERVAL));
+    	    
+    	    return PJ_SUCCESS;
+    	} else {
+	    call->hanging_up = PJ_FALSE;
+    	}
+    }
+
+    return status;
+}
+
+/* Timer callback to hangup call */
+static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
+{
+    pjsua_call* call = (pjsua_call *)entry->user_data;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    pj_log_push_indent();
+
+    status = acquire_call2("hangup_timer_cb()", call, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	return;
+    }
+
+    call->hangup_timer.id = PJ_FALSE;
+    call_inv_end_session(call, PJ_TRUE, call->hangup_code,
+    			 &call->hangup_reason, call->hangup_msg_data);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    pj_log_pop_indent();
+}
+
 /*
  * Hangup call by using method that is appropriate according to the
  * call state.
@@ -2730,12 +2871,19 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 				      const pj_str_t *reason,
 				      const pjsua_msg_data *msg_data)
 {
+    return pjsua_call_hangup2(call_id, PJ_FALSE, code, reason, msg_data);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_hangup2(pjsua_call_id call_id,
+				       pj_bool_t immediate,
+				       unsigned code,
+				       const pj_str_t *reason,
+				       const pjsua_msg_data *msg_data)
+{
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
-    pjsip_tx_data *tdata;
-    pjsua_call_id cid;
-    pj_bool_t immediate = PJ_FALSE;
+    pj_bool_t immediate_ = PJ_FALSE;
 
     if (call_id<0 || call_id>=(int)pjsua_var.ua_cfg.max_calls) {
 	PJ_LOG(1,(THIS_FILE, "pjsua_call_hangup(): invalid call id %d",
@@ -2754,74 +2902,6 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 
     call->hanging_up = PJ_TRUE;
 
-    /* Find a free slot in hangup_calls array, in order to be able to
-     * immediately hangup the call.
-     */
-    for (cid = call_id; cid < (int)pjsua_var.ua_cfg.max_calls; ++cid) {
-	if (pjsua_var.hangup_calls[cid].inv == NULL &&
-            pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
-        {
-	    immediate = PJ_TRUE;
-	    break;
-	}
-    }
-    if (!immediate) {
-    	for (cid = 0; cid < call_id; ++cid) {
-	    if (pjsua_var.hangup_calls[cid].inv == NULL &&
-                pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
-            {
-		immediate = PJ_TRUE;
-		break;
-	    }
-	}
-    }
-    
-    if (immediate) {
-	pjsip_event user_event;
-
-    	pjsua_call *hangup_call = &pjsua_var.hangup_calls[cid];
-
-    	pj_memcpy(hangup_call, call, sizeof(pjsua_call));
-
-    	/* Use user event rather than NULL to avoid crash in
-	 * unsuspecting app.
-	 */
-	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);    	
-    	if (pjsua_var.ua_cfg.cb.on_call_state)
-	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index, &user_event);
-
-	PJSUA_LOCK();
-
-	/* Free call */
-	call->inv = NULL;
-	pj_assert(pjsua_var.call_cnt > 0);
-	--pjsua_var.call_cnt;
-
-	/* Reset call */
-	call->incoming_data = NULL;
-	reset_call(call->index);
-
-	PJSUA_UNLOCK();
-	
-	call = hangup_call;
-	call->index = cid + pjsua_var.ua_cfg.max_calls;
-
-    	if (call->inv) {
-    	    call->inv->dlg->mod_data[pjsua_var.mod.id] = call;
-    	    call->inv->mod_data[pjsua_var.mod.id] = call;
-    	} else if (call->async_call.dlg) {
-    	    call->async_call.dlg->mod_data[pjsua_var.mod.id] = call;
-    	}
-
-        PJ_LOG(4,(THIS_FILE, "Call %d hanging up will be processed in "
-        		     "the background with new call index %d.",
-        		     call_id, call->index));
-
-    } else {
-        PJ_LOG(4,(THIS_FILE, "Too many call hangup in progress. Immediate "
-        		     "call hangup not possible."));
-    }
-
     /* If media transport creation is not yet completed, we will hangup
      * the call in the media transport creation callback instead.
      */
@@ -2829,12 +2909,14 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	((call->inv != NULL) && (call->inv->state == PJSIP_INV_STATE_NULL)))
     {
         PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
-                             "of media transport", call_id));
+                             "of media transport", call->index));
 
-	if (call->inv && call->inv->role == PJSIP_ROLE_UAS)
+	if (call->inv && call->inv->role == PJSIP_ROLE_UAS) {
 	    call->async_call.call_var.inc_call.hangup = PJ_TRUE;
-	else
+	    call->async_call.call_var.inc_call.immediate = immediate;
+	} else {
 	    call->async_call.call_var.out_call.hangup = PJ_TRUE;
+	}
 
         if (code == 0)
             call->last_code = PJSIP_SC_REQUEST_TERMINATED;
@@ -2848,46 +2930,113 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
         goto on_return;
     }
 
-    if (code==0) {
-	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
-	    code = PJSIP_SC_OK;
-	else if (call->inv->role == PJSIP_ROLE_UAS)
-	    code = PJSIP_SC_DECLINE;
-	else
-	    code = PJSIP_SC_REQUEST_TERMINATED;
+    if (immediate) {
+    	pjsua_call_id cid;
+
+    	/* Find a free slot in hangup_calls array, in order to be able to
+     	 * immediately hangup the call.
+     	 */
+    	PJSUA_LOCK();
+    	for (cid = call_id; cid < (int)pjsua_var.ua_cfg.max_calls; ++cid) {
+	    if (pjsua_var.hangup_calls[cid].inv == NULL &&
+                pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
+            {
+	    	immediate_ = PJ_TRUE;
+	    	break;
+	    }
+    	}
+    	if (!immediate_) {
+    	    for (cid = 0; cid < call_id; ++cid) {
+	    	if (pjsua_var.hangup_calls[cid].inv == NULL &&
+                    pjsua_var.hangup_calls[cid].async_call.dlg == NULL)
+            	{
+		    immediate_ = PJ_TRUE;
+		    break;
+	    	}
+	    }
+    	}
+
+	if (immediate_) {
+    	    pjsua_call *hangup_call = &pjsua_var.hangup_calls[cid];
+	    pjsip_event user_event;
+
+	    pj_gettimeofday(&call->dis_time);
+	    if (call->res_time.sec == 0)
+	        pj_gettimeofday(&call->res_time);
+	
+	    call->last_code = PJSIP_SC_REQUEST_TERMINATED;
+	    pj_strncpy(&call->last_text,
+	    	       pjsip_get_status_text(call->last_code),
+		       sizeof(call->last_text_buf_));
+
+    	    /* Call callback which will report DISCONNECTED state.
+    	     * Use user event rather than NULL to avoid crash in
+	     * unsuspecting app.
+	     */
+	    PJSUA_UNLOCK();
+	    PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
+    	    if (pjsua_var.ua_cfg.cb.on_call_state) {
+	    	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
+	    					     &user_event);
+	    }
+    	    PJSUA_LOCK();
+
+    	    /* We have to destroy media session before we reset the call
+    	     * (which will also reset the call medias) below. This is
+    	     * important to avoid media callbacks which will have invalid
+    	     * user data.
+    	     */
+	    pjsua_media_channel_deinit(call);
+
+	    pjsua_check_snd_dev_idle();
+
+    	    /* Stop reinvite timer, if it is active. */
+    	    if (call->reinv_timer.id) {
+		pjsua_cancel_timer(&call->reinv_timer);
+		call->reinv_timer.id = PJ_FALSE;
+    	    }
+
+    	    /* Copy the call to a backup variable so we can continue
+    	     * the hangup process transparently.
+    	     */
+    	    pj_memcpy(hangup_call, call, sizeof(pjsua_call));
+
+	    /* Free call. */
+	    pj_assert(pjsua_var.call_cnt > 0);
+	    --pjsua_var.call_cnt;
+
+	    /* Reset call. */
+	    reset_call(call->index);
+	    hangup_call->incoming_data = NULL;
+
+	    /* Now, we operate from the backup variable. Change the call
+	     * index to avoid mixup with the original call objects.
+	     */
+	    call = hangup_call;
+	    call->index = cid + pjsua_var.ua_cfg.max_calls;
+
+    	    /* Make sure the user data now points to the backup call. */
+    	    call->inv->dlg->mod_data[pjsua_var.mod.id] = call;
+    	    call->inv->mod_data[pjsua_var.mod.id] = call;
+
+            PJ_LOG(4,(THIS_FILE, "Call %d hanging up will be processed in "
+        		         "the background with new call index %d.",
+        		         call_id, call->index));
+
+    	} else {
+            PJ_LOG(3,(THIS_FILE, "Too many call hangup in progress. Immediate "
+        		         "call hangup not possible."));
+        }
+ 	PJSUA_UNLOCK();
     }
 
-    status = pjsip_inv_end_session(call->inv, code, reason, &tdata);
+    status = call_inv_end_session(call, immediate_, code, reason, msg_data);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE,
-		     "Failed to create end session message",
-		     status);
-	call->hanging_up = PJ_FALSE;
-	goto on_return;
-    }
-
-    /* pjsip_inv_end_session may return PJ_SUCCESS with NULL
-     * as p_tdata when INVITE transaction has not been answered
-     * with any provisional responses.
-     */
-    if (tdata == NULL)
-	goto on_return;
-
-    /* Add additional headers etc */
-    pjsua_process_msg_data( tdata, msg_data);
-
-    /* Send the message */
-    status = pjsip_inv_send_msg(call->inv, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE,
-		     "Failed to send end session message",
-		     status);
-	call->hanging_up = PJ_FALSE;
-	goto on_return;
+    	goto on_return;
     }
 
     /* Stop reinvite timer, if it is active */
-    if (call->reinv_timer.id) {
+    if (!immediate_ && call->reinv_timer.id) {
 	pjsua_cancel_timer(&call->reinv_timer);
 	call->reinv_timer.id = PJ_FALSE;
     }
@@ -4232,7 +4381,15 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    if (!call) {
+    if (!call || IS_CALL_HANGING_UP(call)) {
+    	if (call && inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+ 	    PJ_LOG(4,(THIS_FILE, "Call %d disconnection process complete.",
+                                 call->index));
+
+	    /* Free call */
+	    pj_bzero(call, sizeof(*call));
+    	}
+
 	pj_log_pop_indent();
 	return;
     }
@@ -4370,14 +4527,14 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
 	e->type == PJSIP_EVENT_TSX_STATE &&
-	call->inv && !call->hanging_up &&
+	call->inv &&
 	pjsua_var.ua_cfg.cb.on_call_tsx_state)
     {
 	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index,
 						 e->body.tsx_state.tsx, e);
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_state && !call->hanging_up)
+    if (pjsua_var.ua_cfg.cb.on_call_state)
 	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
 
     /* Re-acquire the locks. */
@@ -4397,13 +4554,11 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	call->inv = NULL;
 	call->async_call.dlg = NULL;
 
-	if (call->index < pjsua_var.ua_cfg.max_calls) {
-	    pj_assert(pjsua_var.call_cnt > 0);
-	    --pjsua_var.call_cnt;
+	pj_assert(pjsua_var.call_cnt > 0);
+	--pjsua_var.call_cnt;
 
-	    /* Reset call */
-	    reset_call(call->index);
-	}
+	/* Reset call */
+	reset_call(call->index);
 
 	pjsua_check_snd_dev_idle();
 
@@ -4733,6 +4888,8 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     pj_bool_t async = PJ_FALSE;
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (IS_CALL_HANGING_UP(call))
+    	return;
 
     /* Supply candidate answer */
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
@@ -4907,9 +5064,11 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     pj_log_push_indent();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
-    if (pjsua_call_media_is_changing(call)) {
+    if (IS_CALL_HANGING_UP(call) || pjsua_call_media_is_changing(call)) {
 	*offer = NULL;
-	PJ_LOG(1,(THIS_FILE, "Unable to create offer" ERR_MEDIA_CHANGING));
+	PJ_LOG(1,(THIS_FILE, "Unable to create offer%s",
+		  IS_CALL_HANGING_UP(call)? ", call hanging up":
+		  ERR_MEDIA_CHANGING));
 	goto on_return;
     }
     
@@ -5026,7 +5185,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    /* Since no subscription is desired, assume that call has been
 	     * transferred successfully.
 	     */
-	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	    if (call && !IS_CALL_HANGING_UP(call) &&
+	    	pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	    {
 		const pj_str_t ACCEPTED = { "Accepted", 8 };
 		pj_bool_t cont = PJ_FALSE;
 		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index,
@@ -5047,7 +5208,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    /* Notify application about call transfer progress.
 	     * Initially notify with 100/Accepted status.
 	     */
-	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	    if (call && !IS_CALL_HANGING_UP(call) &&
+	        pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	    {
 		const pj_str_t ACCEPTED = { "Accepted", 8 };
 		pj_bool_t cont = PJ_FALSE;
 		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index,
@@ -5084,7 +5247,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 
 	}
 
-	if (!call || !event || !pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	if (!call || IS_CALL_HANGING_UP(call) || !event ||
+	    !pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	{
 	    /* Application is not interested with call progress status */
 	    goto on_return;
 	}
@@ -5224,9 +5389,11 @@ static void on_call_transferred( pjsip_inv_session *inv,
     pjsip_evsub *sub;
     pjsua_call_setting call_opt;
 
-    pj_log_push_indent();
-
     existing_call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (IS_CALL_HANGING_UP(existing_call))
+    	return;
+
+    pj_log_push_indent();
 
     /* Find the Refer-To header */
     refer_to = (pjsip_generic_string_hdr*)
@@ -5457,7 +5624,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    if (call == NULL)
+    if (call == NULL || IS_CALL_HANGING_UP(call))
 	goto on_return;
 
     if (call->inv == NULL) {
@@ -5820,6 +5987,9 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 {
     pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
     pjsip_redirect_op op;
+
+    if (IS_CALL_HANGING_UP(call))
+    	return PJSIP_REDIRECT_STOP;
 
     pj_log_push_indent();
 

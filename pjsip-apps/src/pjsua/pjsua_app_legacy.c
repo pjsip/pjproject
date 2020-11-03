@@ -911,7 +911,7 @@ static void ui_hangup_call(char menuin[])
 	pjsua_call_hangup_all();
     } else {
 	/* Hangup current calls */
-	pjsua_call_hangup(current_call, 0, NULL, NULL);
+	pjsua_call_hangup2(current_call, PJ_TRUE, 0, NULL, NULL);
     }
 }
 
