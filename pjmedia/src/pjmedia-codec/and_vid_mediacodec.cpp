@@ -852,14 +852,13 @@ static pj_bool_t codec_exists(const pj_str_t *codec_name)
     return PJ_TRUE;
 }
 
-void add_codec(const struct and_media_codec *codec,
-	       unsigned *count,
-	       pjmedia_vid_codec_info *info)
+void add_codec(struct and_media_codec *codec,
+	       unsigned *count, pjmedia_vid_codec_info *info)
 {
-    info[*count].fmt_id = and_media_codec->fmt_id;
-    info[*count].pt = and_media_codec->pt;
-    info[*count].encoding_name = pj_str((char *)and_media_codec->name);
-    info[*count].encoding_desc = pj_str((char *)and_media_codec->description);
+    info[*count].fmt_id = codec->fmt_id;
+    info[*count].pt = codec->pt;
+    info[*count].encoding_name = pj_str((char *)codec->name);
+    info[*count].encoding_desc = pj_str((char *)codec->description);
 
     info[*count].clock_rate = 90000;
     info[*count].dir = PJMEDIA_DIR_ENCODING_DECODING;
@@ -948,9 +947,10 @@ static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
 
 	and_media_codec[i].encoder_name = enc_name;
 	and_media_codec[i].decoder_name = dec_name;
-	PJ_LOG(4, (THIS_FILE, "Found encoder: %.*s and decoder: %.*s ",
-		enc_name->slen, enc_name->ptr, dec_name->slen, dec_name->ptr));
-	add_codec(&and_media_codec[i], count, info);
+	PJ_LOG(4, (THIS_FILE, "Found encoder [%d]: %.*s and decoder: %.*s ",
+		   *count, enc_name->slen, enc_name->ptr, dec_name->slen,
+		   dec_name->ptr));
+	add_codec(&and_media_codec[*count], count, info);
 	and_media_codec[i].enabled = PJ_TRUE;
     }
 
