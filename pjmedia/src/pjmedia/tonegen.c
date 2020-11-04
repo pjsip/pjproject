@@ -522,7 +522,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_stop_loop(pjmedia_port *port)
     TRACE_((THIS_FILE, "tonegen_stop_loop()"));
 
     pj_lock_acquire(tonegen->lock);
-    tonegen->playback_options &= !PJMEDIA_TONEGEN_LOOP;
+    tonegen->playback_options &= ~PJMEDIA_TONEGEN_LOOP;
     pj_lock_release(tonegen->lock);
 
     return PJ_SUCCESS;
