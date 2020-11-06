@@ -675,10 +675,53 @@ static pj_status_t init_openssl(void)
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
     && OPENSSL_VERSION_NUMBER >= 0x1000200fL
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
+	ssl_curves_num = EC_get_builtin_curves(NULL, 0);
+#else
 	ssl_curves_num = SSL_get_shared_curve(ssl,-1);
+
 	if (ssl_curves_num > PJ_ARRAY_SIZE(ssl_curves))
 	    ssl_curves_num = PJ_ARRAY_SIZE(ssl_curves);
+#endif
 
+	if( ssl_curves_num > 0 ) {
+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL
+	    EC_builtin_curve * curves = NULL;
+
+	    curves = OPENSSL_malloc((int)sizeof(*curves) * ssl_curves_num);
+	    if (!EC_get_builtin_curves(curves, ssl_curves_num)) {
+		OPENSSL_free(curves);
+		curves = NULL;
+		ssl_curves_num = 0;
+	    }
+
+	    n = ssl_curves_num;
+	    ssl_curves_num = 0;
+
+	    for (i = 0; i < n; i++) {
+		nid = curves[i].nid;
+
+		if ( 0 != get_cid_from_nid(nid) ) {
+		    cname = OBJ_nid2sn(nid);
+
+		    if (!cname)
+			cname = OBJ_nid2sn(nid);
+
+		    if (cname) {
+			ssl_curves[ssl_curves_num].id = get_cid_from_nid(nid);
+			ssl_curves[ssl_curves_num].name = cname;
+
+			ssl_curves_num++;
+
+			if (ssl_curves_num >= PJ_SSL_SOCK_MAX_CURVES )
+			    break;
+		    }
+		}
+	    }
+
+	    if(curves)
+		OPENSSL_free(curves);
+#else
 	for (i = 0; i < ssl_curves_num; i++) {
 	    nid = SSL_get_shared_curve(ssl, i);
 
@@ -693,6 +736,9 @@ static pj_status_t init_openssl(void)
 
 	    ssl_curves[i].id   = get_cid_from_nid(nid);
 	    ssl_curves[i].name = cname;
+	}
+#endif
+
 	}
 #else
 	PJ_UNUSED_ARG(nid);
