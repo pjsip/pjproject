@@ -511,6 +511,22 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *port)
     return PJ_SUCCESS;
 }
 
+/*
+ * Instruct the tone generator to stop looping of the current tone set.
+ */
+PJ_DEF(pj_status_t) pjmedia_tonegen_stop_loop(pjmedia_port *port)
+{
+    struct tonegen *tonegen = (struct tonegen*) port;
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
+
+    TRACE_((THIS_FILE, "tonegen_stop_loop()"));
+
+    pj_lock_acquire(tonegen->lock);
+    tonegen->playback_options &= ~PJMEDIA_TONEGEN_LOOP;
+    pj_lock_release(tonegen->lock);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Instruct the tone generator to stop current processing.
