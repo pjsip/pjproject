@@ -2291,6 +2291,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     if (param->status!=PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "SIP registration error", 
 		     param->status);
+
+	if (param->status == PJSIP_EBUSY) {
+	    pj_log_pop_indent();
+            PJSUA_UNLOCK();
+	    return;
+	}
+
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
 	acc->contact.slen = 0;
