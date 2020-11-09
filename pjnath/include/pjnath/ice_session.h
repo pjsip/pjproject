@@ -602,7 +602,7 @@ typedef struct pj_ice_rx_check
 typedef enum pj_ice_sess_trickle
 {
     /**
-     * Trickle ICE is disabled, i.e: regular ICE mode.
+     * Trickle ICE is disabled.
      */
     PJ_ICE_SESS_TRICKLE_DISABLED,
 
@@ -666,7 +666,7 @@ typedef struct pj_ice_sess_options
     /**
      * Trickle ICE mode.
      *
-     * Default value is PJ_ICE_SESS_TRICKLE_HALF.
+     * Default value is PJ_ICE_SESS_TRICKLE_DISABLED.
      */
     pj_ice_sess_trickle	trickle;
 

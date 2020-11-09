@@ -182,6 +182,7 @@ static void usage(void)
     puts  ("Media Transport Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
     puts  ("  --ice-regular       Use ICE regular nomination (default: aggressive)");
+    puts  ("  --ice-trickle=N     Use trickle ICE? 0:disabled, 1:half, 2:full (default=0)");
     puts  ("  --ice-max-hosts=N   Set maximum number of ICE host candidates");
     puts  ("  --ice-no-rtcp       Disable RTCP component in ICE (default: no)");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
@@ -370,7 +371,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
-	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_ICE_TRICKLE,
+	   OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV,
 	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD, OPT_TURN_TLS, 
 	   OPT_TURN_TLS_CA_FILE, OPT_TURN_TLS_CERT_FILE, 
@@ -462,9 +464,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	{ "use-ice",    0, 0, OPT_USE_ICE},
 	{ "ice-regular",0, 0, OPT_ICE_REGULAR},
-	{ "use-turn",	0, 0, OPT_USE_TURN},
+	{ "ice-trickle",1, 0, OPT_ICE_TRICKLE},
 	{ "ice-max-hosts",1, 0, OPT_ICE_MAX_HOSTS},
 	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
+	{ "use-turn",	0, 0, OPT_USE_TURN},
 	{ "turn-srv",	1, 0, OPT_TURN_SRV},
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
 #if PJ_HAS_SSL_SOCK
@@ -1007,6 +1010,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_ICE_REGULAR:
 	    cfg->media_cfg.ice_opt.aggressive =
 		    cur_acc->ice_cfg.ice_opt.aggressive = PJ_FALSE;
+	    break;
+
+	case OPT_ICE_TRICKLE:
+	    cfg->media_cfg.ice_opt.trickle =
+		    cur_acc->ice_cfg.ice_opt.trickle = my_atoi(pj_optarg);
+
+	    if (!pj_isdigit(*pj_optarg) || cfg->media_cfg.ice_opt.trickle>2) {
+		PJ_LOG(1,(THIS_FILE, "Invalid value for --ice-trickle option"));
+		return -1;
+	    }
+
+	    /* Automatically disable ICE aggressive mode */
+	    if (cfg->media_cfg.ice_opt.trickle > 0) {
+		cfg->media_cfg.ice_opt.aggressive =
+			cur_acc->ice_cfg.ice_opt.aggressive = PJ_FALSE;
+	    }
 	    break;
 
 	case OPT_USE_TURN:
@@ -1831,6 +1850,12 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 
     if (acc_cfg->ice_cfg.ice_opt.aggressive == PJ_FALSE)
 	pj_strcat2(result, "--ice-regular\n");
+
+    if (acc_cfg->ice_cfg.ice_opt.trickle > 0) {
+	pj_ansi_sprintf(line, "--ice-trickle %d\n",
+			acc_cfg->ice_cfg.ice_opt.trickle);
+	pj_strcat2(result, line);
+    }
 
     if (acc_cfg->turn_cfg.enable_turn)
 	pj_strcat2(result, "--use-turn\n");

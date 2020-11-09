@@ -323,9 +323,7 @@ PJ_DEF(void) pj_ice_sess_options_default(pj_ice_sess_options *opt)
     opt->nominated_check_delay = PJ_ICE_NOMINATED_CHECK_DELAY;
     opt->controlled_agent_want_nom_timeout = 
 	ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT;
-    opt->trickle = PJ_ICE_SESS_TRICKLE_HALF;
-    /* Should disable aggressive if trickle ICE is enabled */
-    opt->aggressive = PJ_FALSE;
+    opt->trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
 }
 
 /*
@@ -454,6 +452,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
     PJ_ASSERT_RETURN(ice && opt, PJ_EINVAL);
     pj_memcpy(&ice->opt, opt, sizeof(*opt));
     ice->is_trickling = (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED);
+
+    /* Disable aggressive when ICE trickle is active */
+    if (ice->is_trickling)
+	ice->opt.aggressive = PJ_FALSE;
     LOG5((ice->obj_name, "ICE nomination type set to %s",
 	  (ice->opt.aggressive ? "aggressive" : "regular")));
     return PJ_SUCCESS;
@@ -1967,7 +1969,9 @@ pj_status_t add_rcand_and_update_checklist(
 						    PJ_TRUE,
 						    ice->grp_lock);
 	    if (status == PJ_SUCCESS) {
-		LOG5((ice->obj_name, "Periodic timer scheduled.."));
+		LOG5((ice->obj_name,
+		      "Trickle ICE starts periodic check now because "
+		      "check pair is available"));
 	    }
 	}
     }

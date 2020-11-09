@@ -226,6 +226,11 @@ struct pj_ice_strans
     pj_bool_t		     destroy_req;/**< Destroy has been called?	*/
     pj_bool_t		     cb_called;	/**< Init error callback called?*/
     pj_bool_t		     call_send_cb;/**< Need to call send cb?	*/
+
+    pj_bool_t		     rem_cand_end;/**< Trickle ICE: remote has
+					       signalled end of candidate? */
+    pj_bool_t		     loc_cand_end;/**< Trickle ICE: local has
+					       signalled end of candidate? */
 };
 
 
@@ -961,9 +966,11 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     /* Check if all candidates are ready (this may call callback) */
     sess_init_update(ice_st);
 
-    /* If ICE init done, invoke on_new_candidate() callback */
-    if (ice_st->cb.on_new_candidate &&
-	ice_st->state==PJ_ICE_STRANS_STATE_READY)
+    /* If ICE init done, notify app about end of candidate gathering via
+     * on_new_candidate() callback.
+     */
+    if (ice_st->state==PJ_ICE_STRANS_STATE_READY &&
+	ice_st->cb.on_new_candidate)
     {
 	(*ice_st->cb.on_new_candidate)(ice_st, NULL, PJ_TRUE);
     }
@@ -1140,6 +1147,13 @@ static void sess_init_update(pj_ice_strans *ice_st)
     if (ice_st->cb.on_ice_complete)
 	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT,
 				      status);
+
+    /* Tell ICE session that trickling is done */
+    ice_st->loc_cand_end = PJ_TRUE;
+    if (ice_st->ice && ice_st->ice->is_trickling && ice_st->rem_cand_end) {
+	pj_ice_sess_update_check_list(ice_st->ice, NULL, NULL, 0, NULL,
+				      PJ_TRUE);
+    }
 }
 
 /*
@@ -1568,7 +1582,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 					 const pj_str_t *rem_passwd,
 					 unsigned rem_cand_cnt,
 					 const pj_ice_sess_cand rem_cand[],
-					 pj_bool_t trickle_done)
+					 pj_bool_t rcand_end)
 {
     pj_status_t status;
 
@@ -1586,9 +1600,12 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
     }
 
     /* Update checklist */
+    if (rcand_end && !ice_st->rem_cand_end)
+	ice_st->rem_cand_end = PJ_TRUE;
     status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
 					   rem_cand_cnt, rem_cand,
-					   trickle_done);
+					   (ice_st->rem_cand_end &&
+					    ice_st->loc_cand_end));
     if (status != PJ_SUCCESS) {
 	pj_ice_strans_stop_ice(ice_st);
 	pj_grp_lock_release(ice_st->grp_lock);
@@ -2420,7 +2437,8 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    cand->status = PJ_SUCCESS;
 
 		    /* Add the candidate (for trickle ICE) */
-		    status = pj_ice_sess_add_cand(
+		    if (ice_st->ice) {
+			status = pj_ice_sess_add_cand(
 					ice_st->ice,
 					comp->comp_id,
 					cand->transport_id,
@@ -2432,6 +2450,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 					&cand->rel_addr,
 					pj_sockaddr_get_len(&cand->addr),
 					NULL);
+		    }
 		}
 
 		PJ_LOG(4,(comp->ice_st->obj_name,
@@ -2674,8 +2693,12 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
 
-	/* For trickle ICE, setup TURN permission for remote candidates */
-	if (comp->ice_st->cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	/* For trickle ICE, add the candidate to ICE session and setup TURN
+	 * permission for remote candidates.
+	 */
+	if (comp->ice_st->cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
+	    pj_ice_strans_has_sess(comp->ice_st))
+	{
 	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
 	    pj_ice_sess *sess = comp->ice_st->ice;
 	    unsigned j, count=0;

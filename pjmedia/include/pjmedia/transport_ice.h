@@ -329,9 +329,6 @@ PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
  * to remote, after receiving remote ICE candidates, or after receiving
  * end-of-candidates indication.
  *
- * After check list is updated, ICE connectivity check will automatically
- * start if check list has any candidate pair.
- *
  * This function is only applicable when trickle ICE is not disabled and
  * after ICE connectivity checks are started, i.e: after
  * pjmedia_transport_media_start() has been invoked.
@@ -343,10 +340,8 @@ PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
  *			the remote agent.
  * @param rcand_cnt	Number of new remote candidates in the array.
  * @param rcand		New remote candidates array.
- * @param trickle_done	Flag to indicate end of trickling, set to PJ_TRUE
- *			after all local candidates have been gathered and
- *			after receiving end-of-candidate indication from
- *			remote.
+ * @param rcand_end	Set to PJ_TRUE if remote has signalled
+ *			end-of-candidate.
  *
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
@@ -356,7 +351,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_update(
 					    const pj_str_t *rem_passwd,
 					    unsigned rcand_cnt,
 					    const pj_ice_sess_cand rcand[],
-					    pj_bool_t trickle_done);
+					    pj_bool_t rcand_end);
 
 
 /**

@@ -453,7 +453,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 					     const pj_str_t *rem_passwd,
 					     unsigned rcand_cnt,
 					     const pj_ice_sess_cand rcand[],
-					     pj_bool_t trickle_done)
+					     pj_bool_t rcand_end)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
@@ -461,7 +461,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 
     return pj_ice_strans_update_check_list(tp_ice->ice_st,
 					   rem_ufrag, rem_passwd,
-					   rcand_cnt, rcand, trickle_done);
+					   rcand_cnt, rcand, rcand_end);
 }
 
 
@@ -722,6 +722,15 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(3,(tp_ice->base.name, status,
 		     "Failed adding new local candidates to SDP"));
+    }
+
+    /* Update ICE checklist if there is any new local candidate and
+     * checklist has been created (e.g: ICE nego is running).
+     */
+    if (tp_ice->last_cand_cnt < cand_cnt &&
+	pj_ice_strans_sess_is_running(tp_ice->ice_st))
+    {
+	pjmedia_ice_trickle_update(tp, NULL, NULL, 0, NULL, PJ_FALSE);
     }
 
     pj_assert(tp_ice->last_cand_cnt <= cand_cnt);
@@ -2154,6 +2163,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_ice_sess_cand cand;
+    pj_sockaddr_t *addr;
     pj_status_t status;
 
     pj_bzero(&info->sock_info, sizeof(info->sock_info));
@@ -2164,17 +2174,57 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     if (status != PJ_SUCCESS)
 	return status;
 
-    pj_sockaddr_cp(&info->sock_info.rtp_addr_name, &cand.addr);
+    /* Address of the default candidate may not be available (e.g:
+     * STUN/TURN address is still being resolved), so let's find address
+     * of any other candidate, if still not available, the draft RFC
+     * seems to allow us using "0.0.0.0:9" in SDP.
+     */
+    addr = NULL;
+    if (pj_sockaddr_has_addr(&cand.addr)) {
+	addr = &cand.addr;
+    } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
+	unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
+	pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
+	pj_ice_strans_enum_cands(tp_ice->ice_st, 1, &cnt, cands);
+	for (i = 0; i < cnt && !addr; ++i) {
+	    if (pj_sockaddr_has_addr(&cands[i].addr))
+		addr = &cands[i].addr;
+	}
+    }
+    if (addr) {
+	pj_sockaddr_cp(&info->sock_info.rtp_addr_name, addr);
+    } else {
+	pj_sockaddr_init(PJ_AF_INET, &info->sock_info.rtp_addr_name, NULL, 9);
+    }
 
     /* Get RTCP default address */
     if (tp_ice->use_rtcp_mux) {
-	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, &cand.addr);
+	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, addr);
     } else if (tp_ice->comp_cnt > 1) {
 	status = pj_ice_strans_get_def_cand(tp_ice->ice_st, 2, &cand);
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, &cand.addr);
+	/* Address of the default candidate may not be available (e.g:
+	 * STUN/TURN address is still being resolved), so let's find address
+	 * of any other candidate. If none is available, SDP must not include
+	 * "a=rtcp" attribute.
+	 */
+	addr = NULL;
+	if (pj_sockaddr_has_addr(&cand.addr)) {
+	    addr = &cand.addr;
+	} else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
+	    unsigned i, cnt = PJ_ICE_ST_MAX_CAND;
+	    pj_ice_sess_cand cands[PJ_ICE_ST_MAX_CAND];
+	    pj_ice_strans_enum_cands(tp_ice->ice_st, 2, &cnt, cands);
+	    for (i = 0; i < cnt && !addr; ++i) {
+		if (pj_sockaddr_has_addr(&cands[i].addr))
+		    addr = &cands[i].addr;
+	    }
+	}
+	if (addr) {
+	    pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, addr);
+	}
     }
 
     /* Set remote address originating RTP & RTCP if this transport has 
