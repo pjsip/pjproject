@@ -991,12 +991,14 @@ static void check_set_state(pj_ice_sess *ice, pj_ice_sess_check *check,
 			    pj_ice_sess_check_state st, 
 			    pj_status_t err_code)
 {
-    pj_assert(check->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
-
     LOG5((ice->obj_name, "Check %s: state changed from %s to %s",
 	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), &ice->clist, check),
 	 check_state_name[check->state],
 	 check_state_name[st]));
+
+    /* Put the assert after printing log for debugging purpose */
+    pj_assert(check->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
+
     check->state = st;
     check->err_code = err_code;
 }

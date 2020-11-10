@@ -4410,11 +4410,12 @@ on_return:
 
     /* Reschedule if we are trickling */
     if (call->trickle_ice.trickling) {
-	pj_time_val delay = {0, 100};
+	pj_time_val delay = {0, PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL};
 
 	/* Reset forced mode after successfully sending forced SIP INFO */
 	te->id = (status==PJ_SUCCESS? 0 : 2);
 
+	pj_time_val_normalize(&delay);
 	pjsua_schedule_timer(te, &delay);
     }
 
