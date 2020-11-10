@@ -1756,7 +1756,7 @@ int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
 
 
 /* Add remote candidates and create/update checklist */
-pj_status_t add_rcand_and_update_checklist(
+static pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
 			      unsigned rem_cand_cnt,
 			      const pj_ice_sess_cand rem_cand[])
@@ -1960,8 +1960,12 @@ pj_status_t add_rcand_and_update_checklist(
 	    check_ice_complete(ice);
     }
 
-    /* For trickle ICE: start the periodic check, if not yet */
-    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED && clist->count > 0)
+    /* For trickle ICE: resume the periodic check, it may be halted when
+     * there is no available check pair.
+     */
+    if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
+	clist->count > 0 &&
+	clist->state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING)
     {
 	if (!pj_timer_entry_running(&clist->timer)) {
 	    pj_time_val delay = {0, 0};
@@ -1972,7 +1976,7 @@ pj_status_t add_rcand_and_update_checklist(
 						    ice->grp_lock);
 	    if (status == PJ_SUCCESS) {
 		LOG5((ice->obj_name,
-		      "Trickle ICE starts periodic check now because "
+		      "Trickle ICE resumes periodic check because "
 		      "check pair is available"));
 	    }
 	}
@@ -2031,6 +2035,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     clist->timer.user_data = (void*)td;
     clist->timer.cb = &periodic_timer;
 
+    ice->clist.count = 0;
+    ice->lcand_paired = ice->rcand_paired = 0;
     status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
     if (status != PJ_SUCCESS) {
 	pj_grp_lock_release(ice->grp_lock);
