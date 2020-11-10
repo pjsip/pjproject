@@ -106,6 +106,7 @@ static void setup_socket_signal()
 static void setup_signal_handler(void)
 {
     signal(SIGSEGV, &print_stack);
+    signal(SIGABRT, &print_stack);
 }
 
 #else
