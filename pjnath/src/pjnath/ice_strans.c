@@ -1747,18 +1747,20 @@ static pj_status_t send_data(pj_ice_strans *ice_st,
     	}
     }
 
-    /* If ICE is available, send data with ICE, otherwise send with the
-     * default candidate selected during initialization.
+    /* If ICE is available, send data with ICE. If ICE nego is not completed
+     * yet, ICE will try to send using any valid candidate pair. For any
+     * failure, it will fallback to sending with the default candidate
+     * selected during initialization.
      *
      * https://trac.pjsip.org/repos/ticket/1416:
      * Once ICE has failed, also send data with the default candidate.
      */
-    if (ice_st->ice && ice_st->state == PJ_ICE_STRANS_STATE_RUNNING) {
+    if (ice_st->ice && ice_st->state <= PJ_ICE_STRANS_STATE_RUNNING) {
 	status = pj_ice_sess_send_data(ice_st->ice, comp_id, buf, data_len);
-	
-	pj_grp_lock_release(ice_st->grp_lock);
-	
-	goto on_return;
+	if (status == PJ_SUCCESS || status == PJ_EPENDING) {
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    goto on_return;
+	}
     } 
 
     pj_grp_lock_release(ice_st->grp_lock);

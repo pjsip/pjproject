@@ -1048,16 +1048,19 @@ PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
 
 
 /**
- * Send outgoing packet using this transport. 
+ * Send outgoing packet using this transport.
  * Application can send data (normally RTP or RTCP packets) at any time
  * by calling this function. This function takes a destination
  * address as one of the arguments, and this destination address should
  * be taken from the default transport address of the component (that is
- * the address in SDP c= and m= lines, or in a=rtcp attribute). 
- * If ICE negotiation is in progress, this function will send the data 
- * to the destination address. Otherwise if ICE negotiation has completed
- * successfully, this function will send the data to the nominated remote 
- * address, as negotiated by ICE.
+ * the address in SDP c= and m= lines, or in a=rtcp attribute).
+ * If ICE negotiation is in progress, this function will try to send the data
+ * via any valid candidate pair (which has passed ICE connectivity test).
+ * If ICE negotiation has completed successfully, this function will send
+ * the data to the nominated remote address, as negotiated by ICE.
+ * If the ICE negotiation fails or valid candidate pair is not available,
+ * this function will send the data using default candidate to the specified
+ * destination address.
  *
  * Note that application shouldn't mix using pj_ice_strans_sendto() and
  * pj_ice_strans_sendto2() to avoid inconsistent calling of
