@@ -2287,10 +2287,11 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	}
     }
 
-    /* Cannot start check because there's no suitable candidate pair.
+    /* Schedule next check for next candidate pair, unless there is no
+     * suitable candidate pair (all pairs have been checked or empty
+     * checklist).
      */
     if (start_count!=0) {
-	/* Schedule for next timer */
 	pj_time_val timeout = {0, PJ_ICE_TA_VAL};
 
 	pj_time_val_normalize(&timeout);
@@ -2423,26 +2424,30 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	pj_ice_sess_check *chk = NULL;
 
 	for (k=0; k < clist->count; ++k) {
-	    if (clist->checks[k].foundation_idx != (int)i)
+	    pj_ice_sess_check *c = &clist->checks[k];
+	    if (c->foundation_idx != (int)i ||
+		c->state != PJ_ICE_SESS_CHECK_STATE_FROZEN)
+	    {
 		continue;
+	    }
 
 	    /* First pair of this foundation */
 	    if (chk == NULL) {
-		chk = &clist->checks[k];
+		chk = c;
 		continue;
 	    }
 
 	    /* Found the lowest comp ID so far */
-	    if (clist->checks[k].lcand->comp_id < chk->lcand->comp_id) {
-		chk = &clist->checks[k];
+	    if (c->lcand->comp_id < chk->lcand->comp_id) {
+		chk = c;
 		continue;
 	    }
 
 	    /* Found the lowest comp ID and the highest prio so far */
-	    if (clist->checks[k].lcand->comp_id == chk->lcand->comp_id &&
-		pj_cmp_timestamp(&clist->checks[k].prio, &chk->prio) > 0)
+	    if (c->lcand->comp_id == chk->lcand->comp_id &&
+		pj_cmp_timestamp(&c->prio, &chk->prio) > 0)
 	    {
-		chk = &clist->checks[k];
+		chk = c;
 		continue;
 	    }
 	}
