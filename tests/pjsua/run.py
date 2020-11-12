@@ -221,7 +221,7 @@ class Expect(threading.Thread):
                         self.lock.release()
                         raise inc.TestError(self.name + ": " + line)
 
-            self.output = '\n'.join(lines[found_at+1:]) if found_at >= 0 else ""
+            self.output = '\n'.join(lines[found_at+1:])+"\n" if found_at >= 0 else ""
             self.lock.release()
             
             if found_at >= 0:
