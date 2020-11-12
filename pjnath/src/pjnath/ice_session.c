@@ -452,10 +452,18 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
     PJ_ASSERT_RETURN(ice && opt, PJ_EINVAL);
     pj_memcpy(&ice->opt, opt, sizeof(*opt));
     ice->is_trickling = (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED);
+    if (ice->is_trickling) {
+	LOG5((ice->obj_name, "ICE trickle mode (%s) is active%s",
+	      (ice->opt.trickle!=PJ_ICE_SESS_TRICKLE_HALF? "half":"full")));
 
-    /* Disable aggressive when ICE trickle is active */
-    if (ice->is_trickling)
-	ice->opt.aggressive = PJ_FALSE;
+	if (ice->opt.aggressive) {
+	    /* Disable aggressive when ICE trickle is active */
+	    ice->opt.aggressive = PJ_FALSE;
+	    LOG4((ice->obj_name, "Warning: aggressive nomination is disabled",
+				 " as trickle ICE is active"));
+	}
+    }
+
     LOG5((ice->obj_name, "ICE nomination type set to %s",
 	  (ice->opt.aggressive ? "aggressive" : "regular")));
     return PJ_SUCCESS;

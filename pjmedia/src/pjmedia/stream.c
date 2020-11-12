@@ -1939,24 +1939,6 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	goto on_return;
     }
 
-    /* Handle incoming DTMF. */
-    if (hdr->pt == stream->rx_event_pt) {
-        pj_timestamp ts;
-
-	/* Ignore out-of-order packet as it will be detected as new
-	 * digit. Also ignore duplicate packet as it serves no use.
-	 */
-	if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
-	    goto on_return;
-	}
-
-        /* Get the timestamp of the event */
-	ts.u64 = pj_ntohl(hdr->ts);
-
-	handle_incoming_dtmf(stream, &ts, payload, payloadlen);
-	goto on_return;
-    }
-
     /* See if source address of RTP packet is different than the
      * configured address, and check if we need to tell the
      * media transport to switch RTP remote address.
@@ -2011,6 +1993,24 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
 	    }
 	}
+    }
+
+    /* Handle incoming DTMF. */
+    if (hdr->pt == stream->rx_event_pt) {
+        pj_timestamp ts;
+
+	/* Ignore out-of-order packet as it will be detected as new
+	 * digit. Also ignore duplicate packet as it serves no use.
+	 */
+	if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
+	    goto on_return;
+	}
+
+        /* Get the timestamp of the event */
+	ts.u64 = pj_ntohl(hdr->ts);
+
+	handle_incoming_dtmf(stream, &ts, payload, payloadlen);
+	goto on_return;
     }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
