@@ -163,6 +163,10 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
+    # Trigger address switch before checking media
+    if use_stun and not use_ice:
+        hole_punch(caller, callee)
+
     # Test that media is okay
     check_media(caller, callee)
     check_media(callee, caller)
@@ -200,6 +204,10 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
+    # Trigger address switch before checking media
+    if use_stun and not use_ice:
+        hole_punch(caller, callee)
+
     # Test that media is okay
     # Wait for some time for ICE negotiation
     ##time.sleep(0.6)
@@ -223,6 +231,10 @@ def test_func(t):
     caller.sync_stdout()
     callee.sync_stdout()
 
+    # Trigger address switch before checking media
+    if use_stun and not use_ice:
+        hole_punch(caller, callee)
+
     # Test that media is okay
     ##time.sleep(0.1)
     check_media(caller, callee)
@@ -241,6 +253,10 @@ def test_func(t):
     # Synchronize stdout
     caller.sync_stdout()
     callee.sync_stdout()
+
+    # Trigger address switch before checking media
+    if use_stun and not use_ice:
+        hole_punch(caller, callee)
 
     # Test that media is okay
     ##time.sleep(0.1)
