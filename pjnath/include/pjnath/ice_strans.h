@@ -721,6 +721,19 @@ PJ_DECL(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
 					       const pj_ice_sess_options *opt);
 
 /**
+ * Update number of components of the ICE stream transport. This can only
+ * reduce the number of components from the initial value specified in
+ * pj_ice_strans_create() and before ICE session is initialized.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param comp_cnt	Number of components.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_update_comp_cnt(pj_ice_strans *ice_st,
+						   unsigned comp_cnt);
+
+/**
  * Get the group lock for this ICE stream transport.
  *
  * @param ice_st	The ICE stream transport.

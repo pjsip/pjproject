@@ -4360,8 +4360,8 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 	if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
 	    continue;
 
-	status = pjmedia_ice_trickle_send_local_cand(tp, tmp_pool, i,
-						     sdp, &end_of_cand);
+	status = pjmedia_ice_trickle_send_local_cand(tp, tmp_pool, sdp,
+						     &end_of_cand);
 	if (status != PJ_SUCCESS || !end_of_cand)
 	    all_end_of_cand = PJ_FALSE;
 
@@ -4545,7 +4545,10 @@ void pjsua_ice_check_start_trickling(pjsua_call *call, pjsip_event *e)
 		return;
 	    }
 
-	    pj_assert(rdata);
+	    /* Check for incoming PRACK or INFO to stop 18x retransmission */
+	    if (!rdata)
+		return;
+
 	    msg = rdata->msg_info.msg;
 	    if (has_100rel) {
 		/* With 100rel, has received PRACK? */

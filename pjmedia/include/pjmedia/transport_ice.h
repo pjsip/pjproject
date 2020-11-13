@@ -383,7 +383,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
 /**
  * Encode trickle ICE info into the specified SDP. This function may generate
  * the following SDP attributes:
- * - Media ID, "a=mid", currently this is the media_index.
+ * - Media ID, "a=mid".
  * - ICE ufrag & password, "a=ice-ufrag" & "a=ice-pwd".
  * - Trickle ICE support indication, "a=ice-options:trickle".
  * - ICE candidates, "a=candidate".
@@ -391,7 +391,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
  *
  * @param sdp_pool	The memory pool for generating SDP attributes.
  * @param sdp		The SDP to be updated.
- * @param media_index	The media index.
+ * @param mid		The media ID.
  * @param ufrag		The ufrag, optional.
  * @param passwd	The password, optional.
  * @param cand_cnt	The number of local candidates, can be zero.
@@ -403,7 +403,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_decode_sdp(
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 					    pj_pool_t *sdp_pool,
 					    pjmedia_sdp_session *sdp,
-					    unsigned media_index,
+					    const pj_str_t *mid,
 					    const pj_str_t *ufrag,
 					    const pj_str_t *passwd,
 					    unsigned cand_cnt,
@@ -428,7 +428,6 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
  *
  * @param tp		The ICE media transport.
  * @param sdp_pool	The memory pool for generating SDP attributes.
- * @param media_index	The media index.
  * @param sdp		The SDP.
  * @param p_end_of_cand Optional, pointer to receive the indication that
  *			candidate gathering has been completed.
@@ -441,7 +440,6 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    pjmedia_transport *tp,
 					    pj_pool_t *sdp_pool,
-					    unsigned media_index,
 					    pjmedia_sdp_session *sdp,
 					    pj_bool_t *p_end_of_cand);
 

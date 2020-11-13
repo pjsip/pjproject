@@ -619,9 +619,10 @@ typedef enum pj_ice_sess_trickle
     PJ_ICE_SESS_TRICKLE_HALF,
 
     /**
-     * Full trickle ICE. Only use this mode if remote supports trickle ICE.
-     * The discovery whether remote supports trickle ICE should be done prior
-     * to ICE initialization (by application).
+     * Full trickle ICE. Only use this mode if it is known that that remote
+     * supports trickle ICE. The discovery whether remote supports trickle
+     * ICE should be done prior to ICE initialization and done by application
+     * (ICE does not provide the discovery mechanism).
      */
     PJ_ICE_SESS_TRICKLE_FULL
 
@@ -636,7 +637,8 @@ typedef enum pj_ice_sess_trickle
 typedef struct pj_ice_sess_options
 {
     /**
-     * Specify whether to use aggressive nomination.
+     * Specify whether to use aggressive nomination. This setting can only
+     * be enabled when trickle ICE is disabled.
      */
     pj_bool_t		aggressive;
 
@@ -664,7 +666,8 @@ typedef struct pj_ice_sess_options
     int			controlled_agent_want_nom_timeout;
 
     /**
-     * Trickle ICE mode.
+     * Trickle ICE mode. Note that, when enabled, aggressive nomination will
+     * be automatically disabled.
      *
      * Default value is PJ_ICE_SESS_TRICKLE_DISABLED.
      */
@@ -1008,7 +1011,7 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
  *			gathered from the SDP received from the remote 
  *			agent.
  * @param trickle_done	Flag to indicate end of trickling, set to PJ_TRUE
- *			after all local candidates have been gathered and
+ *			after all local candidates have been gathered AND
  *			after receiving end-of-candidate indication from
  *			remote.
  *

@@ -1200,6 +1200,49 @@ PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
     return PJ_SUCCESS;
 }
 
+/*
+ * Update number of components of the ICE stream transport.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_update_comp_cnt( pj_ice_strans *ice_st,
+						   unsigned comp_cnt)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(ice_st && comp_cnt < ice_st->comp_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice == NULL, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    for (i=comp_cnt; i<ice_st->comp_cnt; ++i) {
+	pj_ice_strans_comp *comp = ice_st->comp[i];
+	unsigned j;
+
+	/* Destroy the component */
+	for (j = 0; j < ice_st->cfg.stun_tp_cnt; ++j) {
+	    if (comp->stun[j].sock) {
+		pj_stun_sock_destroy(comp->stun[j].sock);
+		comp->stun[j].sock = NULL;
+	    }
+	}
+	for (j = 0; j < ice_st->cfg.turn_tp_cnt; ++j) {
+	    if (comp->turn[j].sock) {
+		pj_turn_sock_destroy(comp->turn[j].sock);
+		comp->turn[j].sock = NULL;
+	    }
+	}
+	comp->cand_cnt = 0;
+	ice_st->comp[i] = NULL;
+    }
+    ice_st->comp_cnt = comp_cnt;
+    pj_grp_lock_release(ice_st->grp_lock);
+
+    PJ_LOG(4,(ice_st->obj_name,
+	      "Updated ICE stream transport components number to %d",
+	      comp_cnt));
+
+    return PJ_SUCCESS;
+}
+
 /**
  * Get the group lock for this ICE stream transport.
  */
@@ -2439,7 +2482,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    cand->status = PJ_SUCCESS;
 
 		    /* Add the candidate (for trickle ICE) */
-		    if (ice_st->ice) {
+		    if (pj_ice_strans_has_sess(ice_st)) {
 			status = pj_ice_sess_add_cand(
 					ice_st->ice,
 					comp->comp_id,
@@ -2649,9 +2692,11 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		break;
 	    }
 	}
-	pj_assert(cand != NULL);
 
 	pj_grp_lock_release(comp->ice_st->grp_lock);
+
+	if (cand == NULL)
+	    goto on_return;
 
 	/* Update candidate */
 	pj_sockaddr_cp(&cand->addr, &rel_info.relay_addr);
@@ -2846,6 +2891,7 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	}
     }
 
+on_return:
     pj_grp_lock_dec_ref(comp->ice_st->grp_lock);
 
     pj_log_pop_indent();
