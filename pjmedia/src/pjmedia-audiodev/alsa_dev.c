@@ -672,8 +672,15 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_playback: set channels: %d",
 		       param->channel_count));
-    snd_pcm_hw_params_set_channels (stream->pb_pcm, params,
-				    param->channel_count);
+    result = snd_pcm_hw_params_set_channels (stream->pb_pcm, params,
+					     param->channel_count);
+    if (result < 0) {
+	PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
+		   "playback device '%s'", param->channel_count,
+		   stream->af->devs[param->play_id].name));
+	snd_pcm_close (stream->pb_pcm);
+	return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Set clock rate */
     rate = param->clock_rate;
@@ -797,8 +804,15 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_capture: set channels: %d",
 	    param->channel_count));
-    snd_pcm_hw_params_set_channels (stream->ca_pcm, params,
-				    param->channel_count);
+    result = snd_pcm_hw_params_set_channels (stream->ca_pcm, params,
+					     param->channel_count);
+    if (result < 0) {
+	PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
+		   "capture device '%s'", param->channel_count,
+		   stream->af->devs[param->rec_id].name));
+	snd_pcm_close (stream->ca_pcm);
+	return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Set clock rate */
     rate = param->clock_rate;
