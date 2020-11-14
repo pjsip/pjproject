@@ -241,6 +241,12 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 		RETURN_ERROR(status);
 	    }
 
+	    {
+		int val = 1;
+		pj_sock_setsockopt(sock_fd, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
+				   &val, sizeof(val));
+	    }
+
 	    status = pj_sock_bind(sock_fd, &bound_addr, 
 				  pj_sockaddr_get_len(&bound_addr));
 	    if (status != PJ_SUCCESS) {
