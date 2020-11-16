@@ -491,6 +491,13 @@ struct AccountNatConfig : public PersistentObject
     bool		iceEnabled;
 
     /**
+     * Set trickle ICE mode for ICE media transport.
+     *
+     * Default: PJ_ICE_SESS_TRICKLE_DISABLED
+     */
+    pj_ice_sess_trickle	iceTrickle;
+
+    /**
      * Set the maximum number of ICE host candidates.
      *
      * Default: -1 (maximum not set)

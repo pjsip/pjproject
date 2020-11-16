@@ -153,6 +153,7 @@ typedef enum pj_ssl_sock_proto
   PJ_SSL_SOCK_PROTO_TLS1 = 1 << 2,
   PJ_SSL_SOCK_PROTO_TLS1_1 = 1 << 3,
   PJ_SSL_SOCK_PROTO_TLS1_2 = 1 << 4,
+  PJ_SSL_SOCK_PROTO_TLS1_3 = 1 << 5,
   PJ_SSL_SOCK_PROTO_SSL23 = (1 << 16) - 1,
   PJ_SSL_SOCK_PROTO_ALL = PJ_SSL_SOCK_PROTO_SSL23,
   PJ_SSL_SOCK_PROTO_DTLS1 = 1 << 16
@@ -182,6 +183,13 @@ typedef enum pj_ssl_cert_verify_flag_t
   PJ_SSL_CERT_EIDENTITY_NOT_MATCH = 1 << 30,
   PJ_SSL_CERT_EUNKNOWN = 1 << 31
 } pj_ssl_cert_verify_flag_t;
+
+typedef enum pj_ice_sess_trickle
+{
+  PJ_ICE_SESS_TRICKLE_DISABLED,
+  PJ_ICE_SESS_TRICKLE_HALF,
+  PJ_ICE_SESS_TRICKLE_FULL
+} pj_ice_sess_trickle;
 
 typedef enum pj_stun_nat_type
 {
@@ -235,12 +243,14 @@ typedef enum pjmedia_event_type
   PJMEDIA_EVENT_RX_RTCP_FB = ((('B' << 24) | ('F' << 16)) | ('T' << 8)) | 'R',
   PJMEDIA_EVENT_AUD_DEV_ERROR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'A',
   PJMEDIA_EVENT_VID_DEV_ERROR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'V',
-  PJMEDIA_EVENT_MEDIA_TP_ERR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'T'
+  PJMEDIA_EVENT_MEDIA_TP_ERR = ((('R' << 24) | ('R' << 16)) | ('E' << 8)) | 'T',
+  PJMEDIA_EVENT_CALLBACK = (((' ' << 24) | (' ' << 16)) | ('B' << 8)) | 'C'
 } pjmedia_event_type;
 
 typedef enum pjmedia_srtp_use
 {
   PJMEDIA_SRTP_DISABLED,
+  PJMEDIA_SRTP_UNKNOWN = PJMEDIA_SRTP_DISABLED,
   PJMEDIA_SRTP_OPTIONAL,
   PJMEDIA_SRTP_MANDATORY
 } pjmedia_srtp_use;
@@ -285,6 +295,7 @@ typedef enum pjmedia_vid_dev_cap
   PJMEDIA_VID_DEV_CAP_ORIENTATION = 128,
   PJMEDIA_VID_DEV_CAP_SWITCH = 256,
   PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS = 512,
+  PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN = 1024,
   PJMEDIA_VID_DEV_CAP_MAX = 16384
 } pjmedia_vid_dev_cap;
 
@@ -431,6 +442,7 @@ typedef enum pjmedia_format_id
   PJMEDIA_FORMAT_I420 = ((('0' << 24) | ('2' << 16)) | ('4' << 8)) | 'I',
   PJMEDIA_FORMAT_IYUV = PJMEDIA_FORMAT_I420,
   PJMEDIA_FORMAT_YV12 = ((('2' << 24) | ('1' << 16)) | ('V' << 8)) | 'Y',
+  PJMEDIA_FORMAT_NV12 = ((('2' << 24) | ('1' << 16)) | ('V' << 8)) | 'N',
   PJMEDIA_FORMAT_NV21 = ((('1' << 24) | ('2' << 16)) | ('V' << 8)) | 'N',
   PJMEDIA_FORMAT_I422 = ((('2' << 24) | ('2' << 16)) | ('4' << 8)) | 'I',
   PJMEDIA_FORMAT_I420JPEG = ((('0' << 24) | ('2' << 16)) | ('4' << 8)) | 'J',
@@ -439,6 +451,8 @@ typedef enum pjmedia_format_id
   PJMEDIA_FORMAT_H263 = ((('3' << 24) | ('6' << 16)) | ('2' << 8)) | 'H',
   PJMEDIA_FORMAT_H263P = ((('3' << 24) | ('6' << 16)) | ('2' << 8)) | 'P',
   PJMEDIA_FORMAT_H264 = ((('4' << 24) | ('6' << 16)) | ('2' << 8)) | 'H',
+  PJMEDIA_FORMAT_VP8 = ((('0' << 24) | ('8' << 16)) | ('P' << 8)) | 'V',
+  PJMEDIA_FORMAT_VP9 = ((('0' << 24) | ('9' << 16)) | ('P' << 8)) | 'V',
   PJMEDIA_FORMAT_MJPEG = ((('G' << 24) | ('P' << 16)) | ('J' << 8)) | 'M',
   PJMEDIA_FORMAT_MPEG1VIDEO = ((('V' << 24) | ('1' << 16)) | ('P' << 8)) | 'M',
   PJMEDIA_FORMAT_MPEG2VIDEO = ((('V' << 24) | ('2' << 16)) | ('P' << 8)) | 'M',
@@ -568,7 +582,7 @@ typedef enum pjsip_status_code
   PJSIP_SC_REJECTED = 608,
   PJSIP_SC_TSX_TIMEOUT = PJSIP_SC_REQUEST_TIMEOUT,
   PJSIP_SC_TSX_TRANSPORT_ERROR = PJSIP_SC_SERVICE_UNAVAILABLE,
-  PJSIP_SC__force_32bit = 0x7FFFFFFF  
+  PJSIP_SC__force_32bit = 0x7FFFFFFF
 } pjsip_status_code;
 
 typedef enum pjsip_hdr_e
@@ -626,6 +640,7 @@ typedef enum pjsip_transport_type_e
   PJSIP_TRANSPORT_UDP,
   PJSIP_TRANSPORT_TCP,
   PJSIP_TRANSPORT_TLS,
+  PJSIP_TRANSPORT_DTLS,
   PJSIP_TRANSPORT_SCTP,
   PJSIP_TRANSPORT_LOOP,
   PJSIP_TRANSPORT_LOOP_DGRAM,
@@ -633,7 +648,8 @@ typedef enum pjsip_transport_type_e
   PJSIP_TRANSPORT_IPV6 = 128,
   PJSIP_TRANSPORT_UDP6 = PJSIP_TRANSPORT_UDP + PJSIP_TRANSPORT_IPV6,
   PJSIP_TRANSPORT_TCP6 = PJSIP_TRANSPORT_TCP + PJSIP_TRANSPORT_IPV6,
-  PJSIP_TRANSPORT_TLS6 = PJSIP_TRANSPORT_TLS + PJSIP_TRANSPORT_IPV6
+  PJSIP_TRANSPORT_TLS6 = PJSIP_TRANSPORT_TLS + PJSIP_TRANSPORT_IPV6,
+  PJSIP_TRANSPORT_DTLS6 = PJSIP_TRANSPORT_DTLS + PJSIP_TRANSPORT_IPV6
 } pjsip_transport_type_e;
 
 enum pjsip_transport_flags_e
@@ -659,6 +675,7 @@ typedef enum pjsip_ssl_method
   PJSIP_TLSV1_METHOD = 31,
   PJSIP_TLSV1_1_METHOD = 32,
   PJSIP_TLSV1_2_METHOD = 33,
+  PJSIP_TLSV1_3_METHOD = 34,
   PJSIP_SSLV23_METHOD = 23
 } pjsip_ssl_method;
 
