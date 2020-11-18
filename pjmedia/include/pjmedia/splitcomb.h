@@ -113,7 +113,10 @@ PJ_DECL(pj_status_t) pjmedia_splitcomb_set_channel(pjmedia_port *splitcomb,
  * @param options	    Normally is zero, but the lower 8-bit of the 
  *			    options can be used to specify the number of 
  *			    buffers in the circular buffer. If zero, then
- *			    default number will be used (default: 8).
+ *			    default number will be used (default: 8). The second
+ *			    lowest 8 bits can be used to specify the options for
+ *			    the underlying delay buffer (see
+ *			    #pjmedia_delay_buf_flag for the possible options).
  * @param p_chport	    The media port created with reverse phase for
  *			    the specified audio channel.
  *
