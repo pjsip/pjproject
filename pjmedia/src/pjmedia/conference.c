@@ -1661,11 +1661,17 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
+    /* Skip port if it is disabled */
+    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+	cport->tx_level = 0;
+	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
      */
-    if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->transmitter_cnt==0) {
-
+    else if ((cport->tx_setting == PJMEDIA_PORT_MUTE) ||
+	     (cport->transmitter_cnt == 0)) {
 	pjmedia_frame frame;
 
 	/* Clear left-over samples in tx_buffer, if any, so that it won't
@@ -1698,11 +1704,6 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    }
 	}
 
-	cport->tx_level = 0;
-	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
-
-    } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
 	cport->tx_level = 0;
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
