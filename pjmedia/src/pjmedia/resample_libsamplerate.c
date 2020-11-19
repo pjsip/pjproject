@@ -67,7 +67,8 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 					     pjmedia_resample **p_resample)
 {
     pjmedia_resample *resample;
-    int type, err;
+    int type, err, i=0;
+    enum { MAX_KICKOFF = 10 };
 
     PJ_ASSERT_RETURN(pool && p_resample && rate_in &&
 		     rate_out && samples_per_frame, PJ_EINVAL);
@@ -113,6 +114,30 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 	PJ_LOG(4,(THIS_FILE, "Error creating resample: %s", 
 		  src_strerror(err)));
 	return PJMEDIA_ERROR;
+    }
+
+    /* Kick off. Some initial processes may return samples less than
+     * samples_per_frame for unknown reason (lookahead buffering?), which
+     * will cause false 'extra' mechanism and introduce click noise in
+     * the whole session. So now, let's feed the engine with silent
+     * audio frames, until full frame is returned, to avoid that.
+     */
+    while (++i <= MAX_KICKOFF) {
+	SRC_DATA src_data;
+	pj_bzero(&src_data, sizeof(src_data));
+	src_data.data_in = resample->frame_in;
+	src_data.data_out = resample->frame_out;
+	src_data.input_frames = resample->in_samples;
+	src_data.output_frames = resample->out_samples;
+	src_data.src_ratio = resample->ratio;
+	src_process(resample->state, &src_data);
+	if (src_data.output_frames_gen == (int)resample->out_samples)
+	    break;
+
+	PJ_LOG(5,(THIS_FILE,
+	       "Resample kickoff #%d: output_frames_gen=%d (expected=%d)%s",
+	       i, src_data.output_frames_gen, resample->out_samples,
+	       (i==MAX_KICKOFF?", warning: kickoff failed!":"")));
     }
 
     /* Done */
