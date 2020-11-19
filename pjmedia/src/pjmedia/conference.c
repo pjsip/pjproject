@@ -1120,24 +1120,20 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && sink_slot<conf->max_ports, PJ_EINVAL);
 
+    pj_mutex_lock(conf->mutex);
+
     /* Remove this port from transmit array of other ports. */
     for (i=0; i<conf->max_ports; ++i) {
 	unsigned j;
 	struct conf_port *src_port;
 
-	pj_mutex_lock(conf->mutex);
-
 	src_port = conf->ports[i];
 
-	if (!src_port) {
-	    pj_mutex_unlock(conf->mutex);
+	if (!src_port)
 	    continue;
-	}
 
-	if (src_port->listener_cnt == 0) {
-	    pj_mutex_unlock(conf->mutex);
+	if (src_port->listener_cnt == 0)
 	    continue;
-	}
 
 	for (j=0; j<src_port->listener_cnt; ++j) {
 	    if (src_port->listener_slots[j] == sink_slot) {
@@ -1151,13 +1147,13 @@ pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
 		break;
 	    }
 	}
-
-	pj_mutex_unlock(conf->mutex);
     }
 
     if (conf->connect_cnt == 0) {
 	pause_sound(conf);
     }
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1197,11 +1193,11 @@ pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
 	--conf->connect_cnt;
     }
 
-    pj_mutex_unlock(conf->mutex);
-
     if (conf->connect_cnt == 0) {
 	pause_sound(conf);
     }
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1252,15 +1248,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
     conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 
-    pj_mutex_unlock(conf->mutex);
-
     /* disconnect port from all sources which are transmitting to it */
     pjmedia_conf_disconnect_port_from_sources(conf, port);
 
     /* disconnect port from all sinks to which it is transmitting to */
     pjmedia_conf_disconnect_port_from_sinks(conf, port);
-
-    pj_mutex_lock(conf->mutex);
 
     /* Destroy resample if this conf port has it. */
     if (conf_port->rx_resample) {
