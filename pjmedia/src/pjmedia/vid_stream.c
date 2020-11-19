@@ -1295,6 +1295,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 {
     pjmedia_vid_channel *channel = stream->dec;
     pj_uint32_t last_ts = 0, frm_ts = 0;
+    pj_bool_t last_ts_inited = PJ_FALSE;
     int frm_first_seq = 0, frm_last_seq = 0;
     pj_bool_t got_frame = PJ_FALSE;
     unsigned cnt, frm_pkt_cnt = 0, frm_cnt = 0;
@@ -1314,18 +1315,19 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	pjmedia_jbuf_peek_frame(stream->jb, cnt, NULL, NULL,
 				&ptype, NULL, &ts, &seq);
 	if (ptype == PJMEDIA_JB_NORMAL_FRAME) {
-	    if (stream->last_dec_ts ==  ts) {
+	    if (stream->last_dec_ts == ts) {
 		/* Remove any late packet (the frame has been decoded) */
 		pjmedia_jbuf_remove_frame(stream->jb, 1);
 		continue;
 	    }
 
-	    if (last_ts == 0) {
+	    if (!last_ts_inited) {
 		last_ts = ts;
 
 		/* Init timestamp and first seq of the first frame */
 		frm_ts = ts;
 		frm_first_seq = seq;
+		last_ts_inited = PJ_TRUE;
 	    }
 	    if (ts != last_ts) {
 		last_ts = ts;
