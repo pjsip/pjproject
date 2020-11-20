@@ -371,17 +371,34 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
-    - name: set config site
-      run:
-        echo "" > pjlib/include/pj/config_site.h
+    - name: get swig
+      run: Invoke-WebRequest -Uri "https://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.1/swigwin-4.0.1.zip"  -OutFile ".\swigwin.zip"
       shell: powershell
-    - name: Add msbuild to PATH
-      uses: microsoft/setup-msbuild@v1.0.0
-      with:
-        vs-version: 14.0
+    - name: expand swig
+      run: |
+        Expand-Archive -LiteralPath .\swigwin.zip -DestinationPath .\swigwin\; pwd
+        cd swigwin\swigwin-4.0.1
+        Add-Content ..\..\swig_path.txt $pwd.Path
+      shell: powershell
+    - name: config site
+      run:
+        type nul > pjlib/include/pj/config_site.h
+      shell: cmd
     - name: MSBuild
-      working-directory: .
-      run: msbuild pjproject-vs14.sln /p:PlatformToolset=v142 /p:Configuration=Release /p:Platform=win32
+      run: |
+        call "%PROGRAMFILES(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild pjproject-vs14.sln /p:PlatformToolset=v142 /p:Configuration=Debug /p:Platform=win32
+      shell: cmd
+    - name: build swig
+      run: |
+        set /P SWIG_PATH=<swig_path.txt
+        set PATH=%PATH%;%SWIG_PATH%
+        dir pjlib/include/pj/config_site.h
+        type pjlib/include/pj/config_site.h
+        call "%PROGRAMFILES(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
+        set INCLUDE=%INCLUDE%;%JAVA_HOME%\include;%JAVA_HOME%\include\win32
+        cd pjsip-apps/build
+        msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v142 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
       shell: cmd
 
   build-windows-with-openssl-unit-test-1:
@@ -469,40 +486,6 @@ jobs:
         $env:PATH+=";$env:OPENSSL_DIR\bin"
         cd pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe
       shell: powershell
-
-  build-windows-swig:
-    runs-on: windows-latest
-    steps:
-    - uses: actions/checkout@master
-    - name: get swig
-      run: Invoke-WebRequest -Uri "https://nchc.dl.sourceforge.net/project/swig/swigwin/swigwin-4.0.1/swigwin-4.0.1.zip"  -OutFile ".\swigwin.zip"
-      shell: powershell
-    - name: expand swig
-      run: |
-        Expand-Archive -LiteralPath .\swigwin.zip -DestinationPath .\swigwin\; pwd
-        cd swigwin\swigwin-4.0.1
-        Add-Content ..\..\swig_path.txt $pwd.Path
-      shell: powershell
-    - name: set config site
-      run:
-        type nul > pjlib/include/pj/config_site.h
-      shell: cmd
-    - name: MSBuild
-      run: |
-        call "%PROGRAMFILES(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
-        msbuild pjproject-vs14.sln /p:PlatformToolset=v142 /p:Configuration=Debug /p:Platform=win32
-      shell: cmd
-    - name: build swig
-      run: |
-        set /P SWIG_PATH=<swig_path.txt
-        set PATH=%PATH%;%SWIG_PATH%
-        dir pjlib/include/pj/config_site.h
-        type pjlib/include/pj/config_site.h
-        call "%PROGRAMFILES(x86)%\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\VsDevCmd.bat"
-        set INCLUDE=%INCLUDE%;%JAVA_HOME%\include;%JAVA_HOME%\include\win32
-        cd pjsip-apps/build
-        msbuild swig_java_pjsua2.vcxproj /p:PlatformToolset=v142 /p:Configuration=Debug /p:Platform=win32 /p:UseEnv=true
-      shell: cmd
 
   build-windows-gnu-tls:
     runs-on: windows-latest
