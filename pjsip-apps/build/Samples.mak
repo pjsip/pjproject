@@ -55,6 +55,8 @@ EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
 PJSUA2_EXES := $(foreach file, $(PJSUA2_SAMPLES), $(file)$(HOST_EXE))
 endif
 
+export PJSUA2_SAMPLE_CXXFLAGS := $(SDL_CFLAGS)
+
 .PHONY: $(EXES)
 .PHONY: $(PJSUA2_EXES)
 

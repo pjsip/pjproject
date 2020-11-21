@@ -290,6 +290,14 @@ export PJMEDIA_VIDEODEV_OBJS += ios_opengl_dev.o
 endif
 
 #
+# Directshow video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO_DEV_HAS_DSHOW),yes)
+export PJMEDIA_VIDEODEV_OBJS += dshow_dev.o dshowclasses.o
+export CFLAGS += -I$(THIRD_PARTY)/BaseClasses
+endif
+
+#
 # Android video device
 #
 ifeq ($(AC_PJMEDIA_VIDEO),android_os)

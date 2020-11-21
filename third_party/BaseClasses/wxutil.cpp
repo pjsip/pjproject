@@ -384,7 +384,7 @@ void * __stdcall memmoveInternal(void * dst, const void * src, size_t count)
 {
     void * ret = dst;
 
-#ifdef _X86_
+#if defined(_X86_) && defined(_MSC_VER)
     if (dst <= src || (char *)dst >= ((char *)src + count)) {
 
         /*
@@ -432,6 +432,7 @@ memmove_done:
     return ret;
 }
 
+#ifdef _MSC_VER
 HRESULT AMSafeMemMoveOffset(
     __in_bcount(dst_size) void * dst,
     __in size_t dst_size,
@@ -458,6 +459,7 @@ HRESULT AMSafeMemMoveOffset(
     memmoveInternal( (BYTE *)dst+cb_dst_offset, (BYTE *)src+cb_src_offset, count);
     return S_OK;
 }
+#endif
 
 
 #ifdef DEBUG

@@ -187,6 +187,13 @@ AC_PJMEDIA_VIDEO_HAS_VTOOLBOX = @ac_pjmedia_video_has_vtoolbox@
 AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL = @ac_pjmedia_video_has_ios_opengl@
 DARWIN_CFLAGS = @ac_darwin_cflags@
 
+# mingw
+AC_PJMEDIA_VIDEO_DEV_HAS_DSHOW = @ac_pjmedia_video_dev_has_dshow@
+ifeq (@ac_pjmedia_video_dev_has_dshow@,yes)
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libbaseclasses-$(LIB_SUFFIX)
+APP_THIRD_PARTY_LIBS += -lbaseclasses-$(TARGET_NAME)
+endif
+
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
 

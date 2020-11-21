@@ -23,6 +23,11 @@
 #else
 #define AM_NOVTABLE
 #endif
+#else
+  #include <sal.h>
+  #include <sal2.h>
+  #define AM_NOVTABLE
+  #pragma GCC diagnostic ignored "-Wwrite-strings"
 #endif	// MSC_VER
 
 
@@ -192,6 +197,13 @@ const LONGLONG MAX_TIME = 0x7FFFFFFFFFFFFFFF;   /* Maximum LONGLONG value */
 //#include <strmctl.h>    // IAMStreamControl support
 //#include <edevdefs.h>   // External device control interface defines
 //#include <audevcod.h>   // audio filter device error event codes
+
+#ifndef	_MSC_VER
+
+#define min(a,b) ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+#include <amvideo2.h>
+
+#endif
 
 
 #else

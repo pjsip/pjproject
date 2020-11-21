@@ -21,7 +21,7 @@
 // Enlarged integer divide - 64-bits / 32-bits > 32-bits
 //
 
-#ifndef _X86_
+#if !defined(_X86_) || !defined(_MSC_VER)
 
 #define LLtoU64(x) (*(unsigned __int64*)(void*)(&(x)))
 
