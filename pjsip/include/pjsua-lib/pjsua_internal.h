@@ -212,7 +212,7 @@ struct pjsua_call
 	pj_bool_t	 remote_sup;
 	pj_bool_t	 remote_dlg_est;
 	pj_bool_t	 trickling;
-	unsigned	 retrans18x_count;
+	int		 retrans18x_count;
 	pj_bool_t	 pending_info;
 	pj_timer_entry	 timer;
     } trickle_ice;

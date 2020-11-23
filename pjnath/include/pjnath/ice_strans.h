@@ -1071,7 +1071,7 @@ PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
  * via any valid candidate pair (which has passed ICE connectivity test).
  * If ICE negotiation has completed successfully, this function will send
  * the data to the nominated remote address, as negotiated by ICE.
- * If the ICE negotiation fails or valid candidate pair is not available,
+ * If the ICE negotiation fails or valid candidate pair is not yet available,
  * this function will send the data using default candidate to the specified
  * destination address.
  *

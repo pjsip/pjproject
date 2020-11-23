@@ -4205,9 +4205,11 @@ static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
 
     /* Schedule next retransmission */
     if (call->trickle_ice.retrans18x_count < 6) {
+	pj_uint32_t tmp;
+	tmp = (1 << call->trickle_ice.retrans18x_count) * pjsip_cfg()->tsx.t1;
 	delay.sec = 0;
-	delay.msec = (1 << call->trickle_ice.retrans18x_count)*
-		     pjsip_cfg()->tsx.t1;
+	delay.msec = tmp;
+	pj_time_val_normalize(&delay);
     } else {
 	delay.sec = 1;
 	delay.msec = 500;

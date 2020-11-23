@@ -2056,7 +2056,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     pj_grp_lock_release(ice->grp_lock);
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 
@@ -2097,6 +2097,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
 			 pj_strcmp(&ice->tx_pass, rem_passwd)))
     {
+	LOG5((ice->obj_name, "Invalid remote ufrag/pwd in adding "
+	      "remote candidates."));
 	status = PJ_EINVAL;
     }
 
@@ -2740,6 +2742,13 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    lcand = &ice->lcand[i];
 
 #if 0
+	    // The following code tries to verify if the STUN request belongs
+	    // to the correct ICE check (so if it doesn't, it will set current
+	    // ICE check state to FAILED (why?) and try to find the correct
+	    // check). However, ICE check verification has been added in
+	    // the beginning of this function, so the following block should
+	    // not be needed anymore.
+
 	    /* Verify lcand==check->lcand, this may happen when a STUN socket
 	     * corresponds to multiple host candidates.
 	     */

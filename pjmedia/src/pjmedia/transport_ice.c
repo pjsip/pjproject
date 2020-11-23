@@ -1152,7 +1152,8 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 						&tp_ice->sdp_mid, NULL, NULL,
 						0, NULL, end_of_cand);
 	if (status != PJ_SUCCESS) {
-	    pj_assert(!"pjmedia_ice_trickle_encode_sdp() failed");
+	    PJ_PERROR(3,(tp_ice->base.name, status,
+			 "Failed in adding trickle ICE attributes"));
 	    return status;
 	}
     }
