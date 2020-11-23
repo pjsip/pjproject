@@ -39,6 +39,12 @@
  */
 #define RESTART_ICE_ON_REINVITE      1
 
+/* Retry interval of trying to hangup a call. */
+#define CALL_HANGUP_RETRY_INTERVAL   5000
+
+/* Max number of hangup retries. */
+#define CALL_HANGUP_MAX_RETRY	     4
+
 /*
  * The INFO method.
  */
@@ -125,6 +131,9 @@ static void xfer_server_on_evsub_state( pjsip_evsub *sub, pjsip_event *event);
 
 /* Timer callback to send re-INVITE/UPDATE to lock codec or ICE update */
 static void reinv_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
+
+/* Timer callback to hangup the call */
+static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 
 /* Check and send reinvite for lock codec and ICE update */
 static pj_status_t process_pending_reinvite(pjsua_call *call);
@@ -556,6 +565,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 
 on_error:
     if (inv == NULL && call_id != -1 && !cb_called &&
+    	!call->hanging_up &&
 	pjsua_var.ua_cfg.cb.on_call_state)
     {
 	/* Use user event rather than NULL to avoid crash in
@@ -2204,7 +2214,9 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_memcpy(&info->setting, &call->opt, sizeof(call->opt));
 
     /* state, state_text */
-    if (call->inv) {
+    if (call->hanging_up) {
+        info->state = PJSIP_INV_STATE_DISCONNECTED;
+    } else if (call->inv) {
         info->state = call->inv->state;
         if (call->inv->role == PJSIP_ROLE_UAS &&
             info->state == PJSIP_INV_STATE_NULL)
@@ -2719,6 +2731,118 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
 }
 
 
+static pj_status_t call_inv_end_session(pjsua_call *call,
+					unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data)
+{
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    if (code==0) {
+	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
+	    code = PJSIP_SC_OK;
+	else if (call->inv->role == PJSIP_ROLE_UAS)
+	    code = PJSIP_SC_DECLINE;
+	else
+	    code = PJSIP_SC_REQUEST_TERMINATED;
+    }
+
+    status = pjsip_inv_end_session(call->inv, code, reason, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE,
+		     "Failed to create end session message",
+		     status);
+	goto on_return;
+    }
+
+    /* pjsip_inv_end_session may return PJ_SUCCESS with NULL
+     * as p_tdata when INVITE transaction has not been answered
+     * with any provisional responses.
+     */
+    if (tdata == NULL) {
+	goto on_return;
+    }
+
+    /* Add additional headers etc */
+    pjsua_process_msg_data( tdata, msg_data);
+
+    /* Send the message */
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE,
+		     "Failed to send end session message",
+		     status);
+	goto on_return;
+    }
+    
+on_return:
+    if (status != PJ_SUCCESS) {
+    	pj_time_val delay;
+
+    	/* Schedule a retry */
+    	if (call->hangup_retry >= CALL_HANGUP_MAX_RETRY) {
+    	    /* Forcefully terminate the invite session. */
+    	    pjsip_inv_terminate(call->inv, call->hangup_code, PJ_TRUE);
+    	    return PJ_SUCCESS;
+    	}
+    	    
+    	if (call->hangup_retry == 0) {
+    	    pj_timer_entry_init(&call->hangup_timer, PJ_FALSE,
+				(void*)call, &hangup_timer_cb);
+
+    	    call->hangup_code = code;
+    	    if (reason) {
+    	    	pj_strdup(call->inv->pool_prov, &call->hangup_reason,
+    	    	    	  reason);
+    	    }
+    	    if (msg_data) {
+    	     	call->hangup_msg_data = pjsua_msg_data_clone(
+    	     				    call->inv->pool_prov,
+    	     				    msg_data);
+    	    }
+    	}
+
+	delay.sec = 0;
+    	delay.msec = CALL_HANGUP_RETRY_INTERVAL;
+    	pj_time_val_normalize(&delay);
+    	call->hangup_timer.id = PJ_TRUE;
+    	pjsua_schedule_timer(&call->hangup_timer, &delay);
+    	call->hangup_retry++;
+
+       	PJ_LOG(4, (THIS_FILE, "Will retry call %d hangup in %d msec",
+                              call->index, CALL_HANGUP_RETRY_INTERVAL));
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Timer callback to hangup call */
+static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry)
+{
+    pjsua_call* call = (pjsua_call *)entry->user_data;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+
+    pj_log_push_indent();
+
+    status = acquire_call("hangup_timer_cb()", call->index, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	return;
+    }
+
+    call->hangup_timer.id = PJ_FALSE;
+    call_inv_end_session(call, call->hangup_code, &call->hangup_reason,
+    			 call->hangup_msg_data);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    pj_log_pop_indent();
+}
+
 /*
  * Hangup call by using method that is appropriate according to the
  * call state.
@@ -2731,8 +2855,6 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
-    pjsip_tx_data *tdata;
-
 
     if (call_id<0 || call_id>=(int)pjsua_var.ua_cfg.max_calls) {
 	PJ_LOG(1,(THIS_FILE, "pjsua_call_hangup(): invalid call id %d",
@@ -2749,77 +2871,79 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    call->hanging_up = PJ_TRUE;
+    if (!call->hanging_up) {
+    	pj_bool_t later = PJ_FALSE;
+	pjsip_event user_event;
 
-    /* If media transport creation is not yet completed, we will hangup
-     * the call in the media transport creation callback instead.
-     */
-    if ((call->med_ch_cb && !call->inv) ||
-	((call->inv != NULL) && (call->inv->state == PJSIP_INV_STATE_NULL)))
-    {
-        PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
-                             "of media transport", call_id));
+	call->hanging_up = PJ_TRUE;
 
-	if (call->inv && call->inv->role == PJSIP_ROLE_UAS)
-	    call->async_call.call_var.inc_call.hangup = PJ_TRUE;
-	else
-	    call->async_call.call_var.out_call.hangup = PJ_TRUE;
+	pj_gettimeofday(&call->dis_time);
+	if (call->res_time.sec == 0)
+	    pj_gettimeofday(&call->res_time);
 
-        if (code == 0)
-            call->last_code = PJSIP_SC_REQUEST_TERMINATED;
-        else
-            call->last_code = (pjsip_status_code)code;
-        if (reason) {
-            pj_strncpy(&call->last_text, reason,
-		       sizeof(call->last_text_buf_));
-        }
+    	if (code==0) {
+	    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED)
+	        code = PJSIP_SC_OK;
+	    else if (call->inv && call->inv->role == PJSIP_ROLE_UAS)
+	    	code = PJSIP_SC_DECLINE;
+	    else
+	    	code = PJSIP_SC_REQUEST_TERMINATED;
+    	}
+    	
+	call->last_code = code;
+	pj_strncpy(&call->last_text,
+	    	   pjsip_get_status_text(call->last_code),
+		   sizeof(call->last_text_buf_));
 
-        goto on_return;
+    	/* If media transport creation is not yet completed, we will continue
+    	 * from the media transport creation callback instead.
+         */
+    	if ((call->med_ch_cb && !call->inv) ||
+	    ((call->inv != NULL) &&
+	     (call->inv->state == PJSIP_INV_STATE_NULL)))
+    	{
+            PJ_LOG(4,(THIS_FILE, "Will continue call %d hangup upon "
+                             	 "completion of media transport", call_id));
+
+	    if (call->inv && call->inv->role == PJSIP_ROLE_UAS)
+	    	call->async_call.call_var.inc_call.hangup = PJ_TRUE;
+	    else
+	    	call->async_call.call_var.out_call.hangup = PJ_TRUE;
+
+            if (reason) {
+            	pj_strncpy(&call->last_text, reason,
+		       	   sizeof(call->last_text_buf_));
+            }
+            
+            later = PJ_TRUE;
+    	}
+    	
+    	/* Stop reinvite timer, if it is active. */
+    	if (call->reinv_timer.id) {
+	    pjsua_cancel_timer(&call->reinv_timer);
+	    call->reinv_timer.id = PJ_FALSE;
+    	}
+
+    	/* Call callback which will report DISCONNECTED state.
+    	 * Use user event rather than NULL to avoid crash in
+	 * unsuspecting app.
+	 */
+	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
+    	if (pjsua_var.ua_cfg.cb.on_call_state) {
+	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
+	    					 &user_event);
+	}
+
+    	/* Destroy media session. */
+    	pjsua_media_channel_deinit(call_id);
+
+	pjsua_check_snd_dev_idle();
+	
+	if (later)
+	    goto on_return;
     }
 
-    if (code==0) {
-	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)
-	    code = PJSIP_SC_OK;
-	else if (call->inv->role == PJSIP_ROLE_UAS)
-	    code = PJSIP_SC_DECLINE;
-	else
-	    code = PJSIP_SC_REQUEST_TERMINATED;
-    }
-
-    status = pjsip_inv_end_session(call->inv, code, reason, &tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE,
-		     "Failed to create end session message",
-		     status);
-	call->hanging_up = PJ_FALSE;
-	goto on_return;
-    }
-
-    /* pjsip_inv_end_session may return PJ_SUCCESS with NULL
-     * as p_tdata when INVITE transaction has not been answered
-     * with any provisional responses.
-     */
-    if (tdata == NULL)
-	goto on_return;
-
-    /* Add additional headers etc */
-    pjsua_process_msg_data( tdata, msg_data);
-
-    /* Send the message */
-    status = pjsip_inv_send_msg(call->inv, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE,
-		     "Failed to send end session message",
-		     status);
-	call->hanging_up = PJ_FALSE;
-	goto on_return;
-    }
-
-    /* Stop reinvite timer, if it is active */
-    if (call->reinv_timer.id) {
-	pjsua_cancel_timer(&call->reinv_timer);
-	call->reinv_timer.id = PJ_FALSE;
-    }
+    call_inv_end_session(call, code, reason, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -4299,14 +4423,14 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
 	e->type == PJSIP_EVENT_TSX_STATE &&
-	call->inv &&
+	!call->hanging_up && call->inv &&
 	pjsua_var.ua_cfg.cb.on_call_tsx_state)
     {
 	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index,
 						 e->body.tsx_state.tsx, e);
     }
 
-    if (pjsua_var.ua_cfg.cb.on_call_state)
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_state)
 	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
 
     /* Re-acquire the locks. */
