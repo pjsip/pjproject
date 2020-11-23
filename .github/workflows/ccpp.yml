@@ -182,7 +182,7 @@ jobs:
 
   build-mac-default:
   # checking pure lib source distribution with plain configure & make
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: configure
@@ -193,7 +193,7 @@ jobs:
   build-mac-default-full-bundle-1:
   # full bundle: enable all codecs + AEC + DTLS
   # full bundle 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -213,7 +213,7 @@ jobs:
 
   build-mac-default-full-bundle-2:
   # full bundle 2: running pjnath test
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -231,7 +231,7 @@ jobs:
 
   build-mac-default-full-bundle-3:
   # full bundle 3: running pjsip test
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -252,7 +252,7 @@ jobs:
 
   build-mac-openssl:
   # TLS: with OpenSSL
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -266,7 +266,7 @@ jobs:
 
   build-mac-gnu-tls:
   # TLS: with GnuTLS
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -281,7 +281,7 @@ jobs:
   build-mac-video-openh264-1:
   # video: video enabled with vpx and openh264
   # video 1: running pjlib, pjlib-util, pjmedia, and pjsua tests
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -301,7 +301,7 @@ jobs:
 
   build-mac-video-openh264-2:
   # video 2: running pjnath test
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -319,7 +319,7 @@ jobs:
 
   build-mac-video-openh264-3:
   # video 3: running pjsip test
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -337,7 +337,7 @@ jobs:
 
   build-mac-video-ffmpeg:
   # video enabled with vpx and ffmpeg and x264
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
@@ -359,7 +359,7 @@ jobs:
 
   build-mac-video-vid-toolbox:
   # video enabled with vpx and video toolbox
-    runs-on: macos-latest
+    runs-on: macos-11.0
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
