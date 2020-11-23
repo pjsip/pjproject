@@ -2895,6 +2895,22 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    	   pjsip_get_status_text(call->last_code),
 		   sizeof(call->last_text_buf_));
 
+    	/* Stop reinvite timer, if it is active. */
+    	if (call->reinv_timer.id) {
+	    pjsua_cancel_timer(&call->reinv_timer);
+	    call->reinv_timer.id = PJ_FALSE;
+    	}
+
+    	/* Call callback which will report DISCONNECTED state.
+    	 * Use user event rather than NULL to avoid crash in
+	 * unsuspecting app.
+	 */
+	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
+    	if (pjsua_var.ua_cfg.cb.on_call_state) {
+	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
+	    					 &user_event);
+	}
+
     	/* If media transport creation is not yet completed, we will continue
     	 * from the media transport creation callback instead.
          */
@@ -2914,33 +2930,14 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
             	pj_strncpy(&call->last_text, reason,
 		       	   sizeof(call->last_text_buf_));
             }
-            
-            later = PJ_TRUE;
-    	}
-    	
-    	/* Stop reinvite timer, if it is active. */
-    	if (call->reinv_timer.id) {
-	    pjsua_cancel_timer(&call->reinv_timer);
-	    call->reinv_timer.id = PJ_FALSE;
-    	}
 
-    	/* Call callback which will report DISCONNECTED state.
-    	 * Use user event rather than NULL to avoid crash in
-	 * unsuspecting app.
-	 */
-	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
-    	if (pjsua_var.ua_cfg.cb.on_call_state) {
-	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
-	    					 &user_event);
+            goto on_return;
+    	} else {
+    	    /* Destroy media session. */
+    	    pjsua_media_channel_deinit(call_id);
+
+	    pjsua_check_snd_dev_idle();
 	}
-
-    	/* Destroy media session. */
-    	pjsua_media_channel_deinit(call_id);
-
-	pjsua_check_snd_dev_idle();
-	
-	if (later)
-	    goto on_return;
     }
 
     call_inv_end_session(call, code, reason, msg_data);
