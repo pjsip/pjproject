@@ -54,14 +54,14 @@ doc:
 		    exit 1; \
 		fi; \
 	done
-	
+
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
 	pjnath/lib/libpjnath-$(TARGET_NAME).a \
 	pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
 	pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME).a \
 	pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
-    	pjsip/lib/libpjsip-$(TARGET_NAME).a \
+	pjsip/lib/libpjsip-$(TARGET_NAME).a \
 	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \
 	pjsip/lib/libpjsip-simple-$(TARGET_NAME).a \
 	pjsip/lib/libpjsua-$(TARGET_NAME).a
@@ -133,6 +133,7 @@ install:
 		sed -e "s!@LIBDIR@!$(libdir)!" | \
 		sed -e "s/@PJ_VERSION@/$(PJ_VERSION)/" | \
 		sed -e "s!@PJ_INSTALL_LDFLAGS@!$(PJ_INSTALL_LDFLAGS)!" | \
+		sed -e "s!@PJ_INSTALL_LDFLAGS_PRIVATE@!$(PJ_INSTALL_LDFLAGS_PRIVATE)!" | \
 		sed -e "s!@PJ_INSTALL_CFLAGS@!$(PJ_INSTALL_CFLAGS)!" > $(DESTDIR)/$(libdir)/pkgconfig/libpjproject.pc
 
 uninstall:
