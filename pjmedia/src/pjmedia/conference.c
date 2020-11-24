@@ -1107,6 +1107,102 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Disconnect port from all sources
+ */
+PJ_DEF(pj_status_t)
+pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
+					   unsigned sink_slot)
+{
+    unsigned i;
+
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf && sink_slot<conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Remove this port from transmit array of other ports. */
+    for (i=0; i<conf->max_ports; ++i) {
+	unsigned j;
+	struct conf_port *src_port;
+
+	src_port = conf->ports[i];
+
+	if (!src_port)
+	    continue;
+
+	if (src_port->listener_cnt == 0)
+	    continue;
+
+	for (j=0; j<src_port->listener_cnt; ++j) {
+	    if (src_port->listener_slots[j] == sink_slot) {
+		pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
+			       src_port->listener_cnt, j);
+		pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
+			       src_port->listener_cnt, j);
+		pj_assert(conf->connect_cnt > 0);
+		--conf->connect_cnt;
+		--src_port->listener_cnt;
+		break;
+	    }
+	}
+    }
+
+    if (conf->connect_cnt == 0) {
+	pause_sound(conf);
+    }
+
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Disconnect port from all sinks
+ */
+PJ_DEF(pj_status_t)
+pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
+					 unsigned src_slot)
+{
+    struct conf_port *src_port;
+
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
+    src_port = conf->ports[src_slot];
+    if (!src_port) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
+
+    /* Update transmitter_cnt of ports we're transmitting to */
+    while (src_port->listener_cnt) {
+	unsigned dst_slot;
+	struct conf_port *dst_port;
+
+	dst_slot = src_port->listener_slots[src_port->listener_cnt-1];
+	dst_port = conf->ports[dst_slot];
+	--dst_port->transmitter_cnt;
+	--src_port->listener_cnt;
+	pj_assert(conf->connect_cnt > 0);
+	--conf->connect_cnt;
+    }
+
+    if (conf->connect_cnt == 0) {
+	pause_sound(conf);
+    }
+
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Get number of ports currently registered to the conference bridge.
  */
@@ -1131,7 +1227,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 					      unsigned port )
 {
     struct conf_port *conf_port;
-    unsigned i;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && port < conf->max_ports, PJ_EINVAL);
@@ -1153,43 +1248,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
     conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 
-    /* Remove this port from transmit array of other ports. */
-    for (i=0; i<conf->max_ports; ++i) {
-	unsigned j;
-	struct conf_port *src_port;
+    /* disconnect port from all sources which are transmitting to it */
+    pjmedia_conf_disconnect_port_from_sources(conf, port);
 
-	src_port = conf->ports[i];
-
-	if (!src_port)
-	    continue;
-
-	if (src_port->listener_cnt == 0)
-	    continue;
-
-	for (j=0; j<src_port->listener_cnt; ++j) {
-	    if (src_port->listener_slots[j] == port) {
-		pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
-			       src_port->listener_cnt, j);
-		pj_assert(conf->connect_cnt > 0);
-		--conf->connect_cnt;
-		--src_port->listener_cnt;
-		break;
-	    }
-	}
-    }
-
-    /* Update transmitter_cnt of ports we're transmitting to */
-    while (conf_port->listener_cnt) {
-	unsigned dst_slot;
-	struct conf_port *dst_port;
-
-	dst_slot = conf_port->listener_slots[conf_port->listener_cnt-1];
-	dst_port = conf->ports[dst_slot];
-	--dst_port->transmitter_cnt;
-	--conf_port->listener_cnt;
-	pj_assert(conf->connect_cnt > 0);
-	--conf->connect_cnt;
-    }
+    /* disconnect port from all sinks to which it is transmitting to */
+    pjmedia_conf_disconnect_port_from_sinks(conf, port);
 
     /* Destroy resample if this conf port has it. */
     if (conf_port->rx_resample) {
@@ -1217,12 +1280,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     --conf->port_cnt;
 
     pj_mutex_unlock(conf->mutex);
-
-
-    /* Stop sound if there's no connection. */
-    if (conf->connect_cnt == 0) {
-	pause_sound(conf);
-    }
 
     return PJ_SUCCESS;
 }
