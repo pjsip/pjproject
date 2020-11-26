@@ -42,6 +42,7 @@
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/vid_toolbox.h>
 #include <pjmedia-codec/vpx.h>
+#include <pjmedia-codec/and_aud_mediacodec.h>
 #include <pjmedia-codec/and_vid_mediacodec.h>
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

@@ -612,13 +612,30 @@
 #   define PJMEDIA_HAS_VPX_CODEC_VP9		0
 #endif
 
+/**
+ * Enable Android MediaCodec AMRNB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRNB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRNB		1
+#endif
+
+/**
+ * Enable Android MediaCodec AMRWB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRWB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRWB		1
+#endif
 
 /**
  * Enable Android MediaCodec AVC/H264 codec.
  *
  * Default: 1
  */
-#ifndef PJMEDIA_HAS_ANMED_H264
+#ifndef PJMEDIA_HAS_AND_MEDIA_H264
 #   define PJMEDIA_HAS_AND_MEDIA_H264		1
 #endif
 
