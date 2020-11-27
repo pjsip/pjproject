@@ -394,6 +394,22 @@ static pj_str_t ssl_strerror(pj_status_t status,
     return errstr;
 }
 
+/* Additional ciphers recognized by SSL_set_cipher_list()
+   but not returned from SSL_get_ciphers().
+   NOTE: ids are designed to not conflict with those from
+         SSL_get_cipher() which get masked to the lower 24
+         bits before use. 
+*/
+static const struct ssl_ciphers_t ADDITIONAL_CIPHERS[] = {
+        {0xFF000000, "DEFAULT"},
+        {0xFF000001, "@SECLEVEL=1"},
+        {0xFF000002, "@SECLEVEL=2"},
+        {0xFF000003, "@SECLEVEL=3"},
+        {0xFF000004, "@SECLEVEL=4"},
+        {0xFF000005, "@SECLEVEL=5"}
+};
+static const int ADDITIONAL_CIPHER_COUNT = 
+    sizeof (ADDITIONAL_CIPHERS) / sizeof (ADDITIONAL_CIPHERS[0]);
 
 /*
  *******************************************************************
@@ -657,8 +673,8 @@ static pj_status_t init_openssl(void)
 	sk_cipher = SSL_get_ciphers(ssl);
 
 	n = sk_SSL_CIPHER_num(sk_cipher);
-	if (n > PJ_ARRAY_SIZE(ssl_ciphers))
-	    n = PJ_ARRAY_SIZE(ssl_ciphers);
+	if (n > PJ_ARRAY_SIZE(ssl_ciphers) - ADDITIONAL_CIPHER_COUNT)
+	    n = PJ_ARRAY_SIZE(ssl_ciphers) - ADDITIONAL_CIPHER_COUNT;
 
 	for (i = 0; i < n; ++i) {
 	    const SSL_CIPHER *c;
@@ -667,6 +683,11 @@ static pj_status_t init_openssl(void)
 				    (pj_uint32_t)SSL_CIPHER_get_id(c) &
 				    0x00FFFFFF;
 	    ssl_ciphers[i].name = SSL_CIPHER_get_name(c);
+	}
+
+	/* Add cipher aliases not returned from SSL_get_ciphers() */
+	for (i = 0; i < ADDITIONAL_CIPHER_COUNT; ++i) {
+	    ssl_ciphers[n++] = ADDITIONAL_CIPHERS[i];
 	}
 	ssl_cipher_num = n;
 
@@ -1012,8 +1033,15 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ssock);
     }
+    ossock->ossl_ctx = ctx;
+
     if (ssl_opt)
 	SSL_CTX_set_options(ctx, ssl_opt);
+
+    /* Set cipher list */
+    status = set_cipher_list(ssock);
+    if (status != PJ_SUCCESS)
+        return status;
 
     /* Apply credentials */
     if (cert) {
@@ -1332,7 +1360,6 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     }
 
     /* Create SSL instance */
-    ossock->ossl_ctx = ctx;
     ossock->ossl_ssl = SSL_new(ossock->ossl_ctx);
     if (ossock->ossl_ssl == NULL) {
 	return GET_SSL_STATUS(ssock);
@@ -1347,11 +1374,6 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	mode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
 
     SSL_set_verify(ossock->ossl_ssl, mode, &verify_cb);
-
-    /* Set cipher list */
-    status = set_cipher_list(ssock);
-    if (status != PJ_SUCCESS)
-	return status;
 
     /* Set curve list */
     status = set_curves_list(ssock);
@@ -1466,7 +1488,7 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     int j, ret;
 
     if (ssock->param.ciphers_num == 0) {
-	ret = SSL_set_cipher_list(ossock->ossl_ssl, PJ_SSL_SOCK_OSSL_CIPHERS);
+	ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, PJ_SSL_SOCK_OSSL_CIPHERS);
     	if (ret < 1) {
 	    return GET_SSL_STATUS(ssock);
     	}    
@@ -1485,10 +1507,10 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     pj_strset(&cipher_list, buf, 0);
 
     /* Set SSL with ALL available ciphers */
-    SSL_set_cipher_list(ossock->ossl_ssl, "ALL:COMPLEMENTOFALL");
+    SSL_CTX_set_cipher_list(ossock->ossl_ctx, "ALL:COMPLEMENTOFALL");
 
     /* Generate user specified cipher list in OpenSSL format */
-    sk_cipher = SSL_get_ciphers(ossock->ossl_ssl);
+    sk_cipher = SSL_CTX_get_ciphers(ossock->ossl_ctx);
     for (i = 0; i < ssock->param.ciphers_num; ++i) {
 	for (j = 0; j < sk_SSL_CIPHER_num(sk_cipher); ++j) {
 	    const SSL_CIPHER *c;
@@ -1518,13 +1540,36 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 		break;
 	    }
 	}	
+
+	for (j = 0; j < ADDITIONAL_CIPHER_COUNT; ++j) {
+	    if (ssock->param.ciphers[i] == ADDITIONAL_CIPHERS[j].id) {
+		const char *c_name = ADDITIONAL_CIPHERS[j].name;
+
+		/* Check buffer size */
+		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 >
+		    BUF_SIZE)
+		{
+		    pj_assert(!"Insufficient temporary buffer for cipher");
+		    return PJ_ETOOMANY;
+		}
+
+		/* Add colon separator */
+		if (cipher_list.slen)
+		    pj_strcat2(&cipher_list, ":");
+
+		/* Add the cipher */
+		pj_strcat2(&cipher_list, c_name);
+		break;
+	    }
+	}
+
     }
 
     /* Put NULL termination in the generated cipher list */
     cipher_list.ptr[cipher_list.slen] = '\0';
 
     /* Finally, set chosen cipher list */
-    ret = SSL_set_cipher_list(ossock->ossl_ssl, buf);
+    ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, buf);
     if (ret < 1) {
 	pj_pool_release(tmp_pool);
 	return GET_SSL_STATUS(ssock);
