@@ -1506,22 +1506,12 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
     pj_strset(&cipher_list, buf, 0);
 
-    /* Set SSL with ALL available ciphers */
-    SSL_CTX_set_cipher_list(ossock->ossl_ctx, "ALL:COMPLEMENTOFALL");
-
     /* Generate user specified cipher list in OpenSSL format */
-    sk_cipher = SSL_CTX_get_ciphers(ossock->ossl_ctx);
     for (i = 0; i < ssock->param.ciphers_num; ++i) {
-	for (j = 0; j < sk_SSL_CIPHER_num(sk_cipher); ++j) {
-	    const SSL_CIPHER *c;
-	    c = sk_SSL_CIPHER_value(sk_cipher, j);
-	    if (ssock->param.ciphers[i] == (pj_ssl_cipher)
-					   ((pj_uint32_t)SSL_CIPHER_get_id(c) &
-					   0x00FFFFFF))
+	for (j = 0; j < ssl_cipher_num; ++j) {
+	    if (ssock->param.ciphers[i] == ssl_ciphers[j].id)
 	    {
-		const char *c_name;
-
-		c_name = SSL_CIPHER_get_name(c);
+		const char *c_name = ssl_ciphers[j].name;
 
 		/* Check buffer size */
 		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 >
@@ -1540,29 +1530,6 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 		break;
 	    }
 	}	
-
-	for (j = 0; j < ADDITIONAL_CIPHER_COUNT; ++j) {
-	    if (ssock->param.ciphers[i] == ADDITIONAL_CIPHERS[j].id) {
-		const char *c_name = ADDITIONAL_CIPHERS[j].name;
-
-		/* Check buffer size */
-		if (cipher_list.slen + pj_ansi_strlen(c_name) + 2 >
-		    BUF_SIZE)
-		{
-		    pj_assert(!"Insufficient temporary buffer for cipher");
-		    return PJ_ETOOMANY;
-		}
-
-		/* Add colon separator */
-		if (cipher_list.slen)
-		    pj_strcat2(&cipher_list, ":");
-
-		/* Add the cipher */
-		pj_strcat2(&cipher_list, c_name);
-		break;
-	    }
-	}
-
     }
 
     /* Put NULL termination in the generated cipher list */
