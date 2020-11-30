@@ -7,8 +7,8 @@ RULES_MAK := $(PJDIR)/build/rules.mak
 ###############################################################################
 # Gather all flags.
 #
-export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS)
-export _CXXFLAGS:= $(PJ_CXXFLAGS) $(CFLAGS)
+export _CFLAGS 	:= $(PJ_CFLAGS) $(CFLAGS) $(PJ_VIDEO_CFLAGS)
+export _CXXFLAGS:= $(PJ_CXXFLAGS) $(CFLAGS) $(PJ_VIDEO_CFLAGS)
 export _LDFLAGS := $(PJ_LDFLAGS) $(PJ_LDLIBS) $(LDFLAGS)
 export _LDXXFLAGS := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
 
@@ -54,8 +54,6 @@ ifeq ($(EXCLUDE_APP),0)
 EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
 PJSUA2_EXES := $(foreach file, $(PJSUA2_SAMPLES), $(file)$(HOST_EXE))
 endif
-
-export PJSUA2_SAMPLE_CXXFLAGS := $(SDL_CFLAGS)
 
 .PHONY: $(EXES)
 .PHONY: $(PJSUA2_EXES)
