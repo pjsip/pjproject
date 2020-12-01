@@ -25,8 +25,7 @@ enum {
     RESPOND_STUN    = 1,
     WITH_MAPPED	    = 2,
     WITH_XOR_MAPPED = 4,
-
-    ECHO	    = 8
+    SEND_ECHO	    = 8
 };
 
 /*
@@ -125,7 +124,7 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
 
 	pj_pool_release(pool);
 
-    } else if (srv->flag & ECHO) {
+    } else if (srv->flag & SEND_ECHO) {
 	/* Send back */
 	sent = size;
 	pj_activesock_sendto(asock, &srv->send_key, data, &sent, 0, 
@@ -574,7 +573,7 @@ static int keep_alive_test(pj_stun_config *cfg, pj_bool_t use_ipv6)
     PJ_LOG(3,(THIS_FILE, "    sending/receiving data"));
 
     /* Change server operation mode to echo back data */
-    srv->flag = ECHO;
+    srv->flag = SEND_ECHO;
 
     /* Reset server */
     srv->rx_cnt = 0;

@@ -5160,6 +5160,12 @@ case $target in
 
 	$as_echo "#define WIN32_LEAN_AND_MEAN 1" >>confdefs.h
 
+	case $target in
+	    *w64-mingw* )
+		$as_echo "#define PJ_WIN64 1" >>confdefs.h
+
+	    ;;
+	esac
 	;;
     *darwin*)
 	$as_echo "#define PJ_DARWINOS 1" >>confdefs.h
