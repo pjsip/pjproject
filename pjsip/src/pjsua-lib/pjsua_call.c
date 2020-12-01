@@ -1037,7 +1037,7 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
     replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
 
     /* Notify application */
-    if (pjsua_var.ua_cfg.cb.on_call_replaced)
+    if (!replaced_call->hanging_up && pjsua_var.ua_cfg.cb.on_call_replaced)
 	pjsua_var.ua_cfg.cb.on_call_replaced(replaced_call->index,
 					     call->index);
 
@@ -1506,13 +1506,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsua_call_cleanup_flag(&call->opt);
 
 	/* Notify application */
-	if (pjsua_var.ua_cfg.cb.on_call_replace_request) {
+	if (!replaced_call->hanging_up &&
+	    pjsua_var.ua_cfg.cb.on_call_replace_request)
+	{
 	    pjsua_var.ua_cfg.cb.on_call_replace_request(replaced_call->index,
 							rdata,
 							&st_code, &st_text);
 	}
 
-	if (pjsua_var.ua_cfg.cb.on_call_replace_request2) {
+	if (!replaced_call->hanging_up &&
+	    pjsua_var.ua_cfg.cb.on_call_replace_request2)
+	{
 	    pjsua_var.ua_cfg.cb.on_call_replace_request2(replaced_call->index,
 							 rdata,
 							 &st_code, &st_text,
@@ -2872,10 +2876,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	goto on_return;
 
     if (!call->hanging_up) {
-    	pj_bool_t later = PJ_FALSE;
 	pjsip_event user_event;
-
-	call->hanging_up = PJ_TRUE;
 
 	pj_gettimeofday(&call->dis_time);
 	if (call->res_time.sec == 0)
@@ -2901,16 +2902,6 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    call->reinv_timer.id = PJ_FALSE;
     	}
 
-    	/* Call callback which will report DISCONNECTED state.
-    	 * Use user event rather than NULL to avoid crash in
-	 * unsuspecting app.
-	 */
-	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
-    	if (pjsua_var.ua_cfg.cb.on_call_state) {
-	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
-	    					 &user_event);
-	}
-
     	/* If media transport creation is not yet completed, we will continue
     	 * from the media transport creation callback instead.
          */
@@ -2930,14 +2921,25 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
             	pj_strncpy(&call->last_text, reason,
 		       	   sizeof(call->last_text_buf_));
             }
-
-            goto on_return;
     	} else {
     	    /* Destroy media session. */
     	    pjsua_media_channel_deinit(call_id);
 
 	    pjsua_check_snd_dev_idle();
 	}
+
+	call->hanging_up = PJ_TRUE;
+
+    	/* Call callback which will report DISCONNECTED state.
+    	 * Use user event rather than NULL to avoid crash in
+	 * unsuspecting app.
+	 */
+	PJSIP_EVENT_INIT_USER(user_event, 0, 0, 0, 0);
+    	if (pjsua_var.ua_cfg.cb.on_call_state) {
+	    (*pjsua_var.ua_cfg.cb.on_call_state)(call->index,
+	    					 &user_event);
+	}
+
     }
 
     call_inv_end_session(call, code, reason, msg_data);
@@ -4655,7 +4657,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     pjsua_call_schedule_reinvite_check(call, 0);
 
     /* Call application callback, if any */
-    if (pjsua_var.ua_cfg.cb.on_call_media_state)
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_media_state)
 	pjsua_var.ua_cfg.cb.on_call_media_state(call->index);
 
 on_return:
@@ -4780,6 +4782,8 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     pj_bool_t async = PJ_FALSE;
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (call->hanging_up)
+     	return;
 
     /* Supply candidate answer */
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
@@ -4954,9 +4958,11 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     pj_log_push_indent();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
-    if (pjsua_call_media_is_changing(call)) {
+    if (call->hanging_up || pjsua_call_media_is_changing(call)) {
 	*offer = NULL;
-	PJ_LOG(1,(THIS_FILE, "Unable to create offer" ERR_MEDIA_CHANGING));
+	PJ_LOG(1,(THIS_FILE, "Unable to create offer%s",
+ 		  call->hanging_up? ", call hanging up":
+ 		  ERR_MEDIA_CHANGING));
 	goto on_return;
     }
     
@@ -5073,7 +5079,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    /* Since no subscription is desired, assume that call has been
 	     * transferred successfully.
 	     */
-	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	    if (call && !call->hanging_up &&
+	        pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	    {
 		const pj_str_t ACCEPTED = { "Accepted", 8 };
 		pj_bool_t cont = PJ_FALSE;
 		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index,
@@ -5094,7 +5102,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    /* Notify application about call transfer progress.
 	     * Initially notify with 100/Accepted status.
 	     */
-	    if (call && pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	    if (call && !call->hanging_up &&
+	        pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	    {
 		const pj_str_t ACCEPTED = { "Accepted", 8 };
 		pj_bool_t cont = PJ_FALSE;
 		(*pjsua_var.ua_cfg.cb.on_call_transfer_status)(call->index,
@@ -5131,7 +5141,9 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 
 	}
 
-	if (!call || !event || !pjsua_var.ua_cfg.cb.on_call_transfer_status) {
+	if (!call || call->hanging_up || !event ||
+	    !pjsua_var.ua_cfg.cb.on_call_transfer_status)
+	{
 	    /* Application is not interested with call progress status */
 	    goto on_return;
 	}
@@ -5274,6 +5286,10 @@ static void on_call_transferred( pjsip_inv_session *inv,
     pj_log_push_indent();
 
     existing_call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    if (existing_call->hanging_up) {
+	pjsip_dlg_respond( inv->dlg, rdata, 487, NULL, NULL, NULL);
+    	goto on_return;
+    }
 
     /* Find the Refer-To header */
     refer_to = (pjsip_generic_string_hdr*)
@@ -5507,7 +5523,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     if (call == NULL)
 	goto on_return;
 
-    if (call->inv == NULL) {
+    if (call->inv == NULL || call->hanging_up) {
 	/* Call has been disconnected. */
 	goto on_return;
     }
@@ -5895,7 +5911,7 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 
     pj_log_push_indent();
 
-    if (pjsua_var.ua_cfg.cb.on_call_redirected) {
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_redirected) {
 	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index,
 							 target, e);
     } else {

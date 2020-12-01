@@ -1317,6 +1317,20 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
+static void on_stream_created2(pjsua_call_id call_id,
+			       pjsua_on_stream_created_param *param)
+{
+printf("on stream created\n");
+}
+
+static void on_stream_destroyed(pjsua_call_id call_id,
+                                pjmedia_stream *strm,
+				unsigned stream_idx)
+{
+printf("on stream destroyed\n");
+}
+
+
 static pj_status_t app_init(void)
 {
     pjsua_transport_id transport_id = -1;
@@ -1350,6 +1364,9 @@ static pj_status_t app_init(void)
     }
 
     /* Initialize application callbacks */
+    app_config.cfg.cb.on_stream_created2 = &on_stream_created2;
+    app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
+
     app_config.cfg.cb.on_call_state = &on_call_state;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
