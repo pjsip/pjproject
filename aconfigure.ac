@@ -165,7 +165,7 @@ case $target in
 	AC_DEFINE(PJ_WIN32_WINNT,0x0400)
 	AC_DEFINE(WIN32_LEAN_AND_MEAN)
 	case $target in
-	    *w64-mingw* )
+	    *_64-w64-mingw* )
 		AC_DEFINE(PJ_WIN64,1)
 	    ;;
 	esac
