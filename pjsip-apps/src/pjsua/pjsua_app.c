@@ -205,8 +205,11 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    find_next_call();
 	}
 
-	/* Dump media state upon disconnected */
-	if (1) {
+	/* Dump media state upon disconnected.
+	 * Moved to on_stream_destroyed() since media has been deactivated
+	 * upon disconnection.
+	 */
+	if (0) {
 	    PJ_LOG(5,(THIS_FILE, 
 		      "Call %d disconnected, dumping media stats..", 
 		      call_id));
@@ -268,6 +271,21 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	if (current_call==PJSUA_INVALID_ID)
 	    current_call = call_id;
 
+    }
+}
+
+/*
+ * Handler when audio stream is destroyed.
+ */
+static void on_stream_destroyed(pjsua_call_id call_id,
+                                pjmedia_stream *strm,
+				unsigned stream_idx)
+{
+    if (1) {
+	PJ_LOG(5,(THIS_FILE, 
+		  "Call %d stream %d destroyed, dumping media stats..", 
+		  call_id, stream_idx));
+	log_call_dump(call_id);
     }
 }
 
@@ -1317,19 +1335,6 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
-static void on_stream_created2(pjsua_call_id call_id,
-			       pjsua_on_stream_created_param *param)
-{
-printf("on stream created\n");
-}
-
-static void on_stream_destroyed(pjsua_call_id call_id,
-                                pjmedia_stream *strm,
-				unsigned stream_idx)
-{
-printf("on stream destroyed\n");
-}
-
 
 static pj_status_t app_init(void)
 {
@@ -1364,10 +1369,8 @@ static pj_status_t app_init(void)
     }
 
     /* Initialize application callbacks */
-    app_config.cfg.cb.on_stream_created2 = &on_stream_created2;
-    app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
-
     app_config.cfg.cb.on_call_state = &on_call_state;
+    app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;

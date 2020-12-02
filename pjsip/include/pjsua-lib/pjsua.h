@@ -5557,6 +5557,12 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
  * while #pjsua_call_answer() only works with incoming calls on EARLY
  * state.
  *
+ * After calling this function, media will immediately be deinitialized
+ * (call media callbacks, if any, will still be received) and then,
+ * on_call_state() will be called with state DISCONNECTED. No further
+ * call callbacks will be received after this.
+ * Note that on_call_tsx_state() will not be called when using this API.
+ *
  * @param call_id	Call identification.
  * @param code		Optional status code to be sent when we're rejecting
  *			incoming call. If the value is zero, "603/Decline"

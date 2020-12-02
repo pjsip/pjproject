@@ -2058,7 +2058,8 @@ PJ_DEF(pj_bool_t) pjsua_call_is_active(pjsua_call_id call_id)
 {
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
-    return pjsua_var.calls[call_id].inv != NULL &&
+    return !pjsua_var.calls[call_id].hanging_up &&
+    	   pjsua_var.calls[call_id].inv != NULL &&
 	   pjsua_var.calls[call_id].inv->state != PJSIP_INV_STATE_DISCONNECTED;
 }
 
@@ -2921,14 +2922,15 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
             	pj_strncpy(&call->last_text, reason,
 		       	   sizeof(call->last_text_buf_));
             }
+
+	    call->hanging_up = PJ_TRUE;
     	} else {
     	    /* Destroy media session. */
     	    pjsua_media_channel_deinit(call_id);
 
+	    call->hanging_up = PJ_TRUE;
 	    pjsua_check_snd_dev_idle();
 	}
-
-	call->hanging_up = PJ_TRUE;
 
     	/* Call callback which will report DISCONNECTED state.
     	 * Use user event rather than NULL to avoid crash in
@@ -2942,7 +2944,8 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 
     }
 
-    call_inv_end_session(call, code, reason, msg_data);
+    if (call->inv)
+    	call_inv_end_session(call, code, reason, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
@@ -4413,6 +4416,16 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	}
     }
 
+    /* Destroy media session when invite session is disconnected. */
+    if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
+	PJSUA_LOCK();
+
+	if (!call->hanging_up)
+	    pjsua_media_channel_deinit(call->index);
+	
+	PJSUA_UNLOCK();
+    }
+
     /* Release locks before calling callbacks, to avoid deadlock. */
     while (PJSUA_LOCK_IS_LOCKED()) {
     	num_locks++;
@@ -4438,12 +4451,10 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 
     /* call->inv may be NULL now */
 
-    /* Destroy media session when invite session is disconnected. */
+    /* Finally, free call when invite session is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 
 	PJSUA_LOCK();
-
-	pjsua_media_channel_deinit(call->index);
 
 	/* Free call */
 	call->inv = NULL;
@@ -5915,10 +5926,12 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index,
 							 target, e);
     } else {
-	PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
-		  "(callback not implemented by application). Disconnecting "
-		  "call.",
-		  call->index));
+	if (!call->hanging_up) {
+	    PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
+		      "(callback not implemented by application). "
+		      "Disconnecting call.",
+		      call->index));
+	}
 	op = PJSIP_REDIRECT_STOP;
     }
 

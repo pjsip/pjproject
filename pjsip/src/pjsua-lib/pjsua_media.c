@@ -1549,7 +1549,6 @@ pj_status_t call_media_on_event(pjmedia_event *event,
     char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
-    pj_assert(call && call_med);
     pjmedia_fourcc_name(event->type, ev_name);
     PJ_LOG(5,(THIS_FILE, "Call %d: Media %d: Received media event, type=%s, "
 			 "src=%p, epub=%p",
