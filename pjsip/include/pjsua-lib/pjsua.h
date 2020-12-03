@@ -5277,9 +5277,11 @@ pjsua_call_send_dtmf_param_default(pjsua_call_send_dtmf_param *param);
 PJ_DECL(unsigned) pjsua_call_get_max_count(void);
 
 /**
- * Get number of currently active calls.
+ * Get the number of current calls. The number includes active calls
+ * (pjsua_call_is_active(call_id) == PJ_TRUE), as well as calls that
+ * are no longer active but still in the process of hanging up.
  *
- * @return		Number of currently active calls.
+ * @return		Number of current calls.
  */
 PJ_DECL(unsigned) pjsua_call_get_count(void);
 
@@ -5557,10 +5559,17 @@ pjsua_call_answer_with_sdp(pjsua_call_id call_id,
  * while #pjsua_call_answer() only works with incoming calls on EARLY
  * state.
  *
- * After calling this function, media will immediately be deinitialized
- * (call media callbacks, if any, will still be received) and then,
- * on_call_state() will be called with state DISCONNECTED. No further
- * call callbacks will be received after this.
+ * After calling this function, media will be deinitialized (call media
+ * callbacks, if any, will still be received) and then, on_call_state()
+ * will be immediately called with state DISCONNECTED. No further
+ * call callbacks will be received after this. The call hangup process
+ * itself (sending BYE, waiting for the response, and resource cleanup)
+ * will continue in the background and the call slot can be reused only
+ * after this process is completed. If application has limited call slots
+ * and would like to check if there are any free slots remaining, it can
+ * query the number of free slots using the APIs:
+ * pjsua_call_get_max_count()-pjsua_call_get_count()
+ *
  * Note that on_call_tsx_state() will not be called when using this API.
  *
  * @param call_id	Call identification.
