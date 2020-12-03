@@ -830,10 +830,10 @@ else
 	  ac_pjmedia_video=windows_os
 	  AC_SUBST(ac_pjmedia_video_dev_has_dshow)
 	  ac_pjmedia_video_dev_has_dshow=yes
-	  AC_SUBST(ac_v4l2_cflags)
-	  ac_v4l2_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
-	  AC_SUBST(ac_v4l2_ldflags)
-	  ac_v4l2_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	  AC_SUBST(ac_dshow_cflags)
+	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+	  AC_SUBST(ac_dshow_ldflags)
+	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
 	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
 	fi
 	;;

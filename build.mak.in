@@ -190,6 +190,8 @@ DARWIN_CFLAGS = @ac_darwin_cflags@
 # mingw
 AC_PJMEDIA_VIDEO_DEV_HAS_DSHOW = @ac_pjmedia_video_dev_has_dshow@
 ifeq (@ac_pjmedia_video_dev_has_dshow@,yes)
+DSHOW_CFLAGS = @ac_dshow_cflags@
+DSHOW_LDFLAGS = @ac_dshow_ldflags@
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libbaseclasses-$(LIB_SUFFIX)
 APP_THIRD_PARTY_LIBS += -lbaseclasses-$(TARGET_NAME)
 endif
@@ -198,9 +200,9 @@ endif
 ANDROID_CFLAGS = @ac_android_cflags@
 
 # PJMEDIA features exclusion
-PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
+PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
 		   $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(DARWIN_CFLAGS)
-PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
+PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDFLAGS) \
                    $(OPENH264_LDFLAGS) $(VPX_LDFLAGS)
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
