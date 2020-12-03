@@ -2753,6 +2753,12 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
 	    code = PJSIP_SC_REQUEST_TERMINATED;
     }
 
+    /* Stop hangup timer, if it is active. */
+    if (call->hangup_timer.id) {
+	pjsua_cancel_timer(&call->hangup_timer);
+	call->hangup_timer.id = PJ_FALSE;
+    }
+
     status = pjsip_inv_end_session(call->inv, code, reason, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE,
