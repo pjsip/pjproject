@@ -6550,6 +6550,18 @@ $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
 	;;
+  *mingw*)
+	if test "$enable_video" = "yes"; then
+	  ac_pjmedia_video=windows_os
+
+	  ac_pjmedia_video_dev_has_dshow=yes
+
+	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+
+	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	fi
+	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os
 
