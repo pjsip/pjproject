@@ -205,6 +205,12 @@ struct pjsua_call
 					    created yet. This temporary 
 					    variable is used to handle such 
 					    case, see ticket #1916.	    */
+
+    pj_timer_entry	 hangup_timer;	/**< Hangup retry timer.	    */
+    unsigned		 hangup_retry;	/**< Number of hangup retries.	    */
+    unsigned		 hangup_code;	/**< Hangup code.	    	    */
+    pj_str_t		 hangup_reason;	/**< Hangup reason.	    	    */
+    pjsua_msg_data	*hangup_msg_data;/**< Hangup message data.	    */
 };
 
 

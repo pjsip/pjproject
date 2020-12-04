@@ -1100,7 +1100,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    }
 	}
 
-        if (pjsua_var.ua_cfg.cb.on_stream_precreate) {
+        if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
             prm.stream_idx = call_med->idx;
             prm.stream_info.type = PJMEDIA_TYPE_VIDEO;
@@ -1869,7 +1869,7 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
     }
 
     /* Notify application */
-    if (pjsua_var.ua_cfg.cb.on_call_sdp_created) {
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_sdp_created) {
 	(*pjsua_var.ua_cfg.cb.on_call_sdp_created)(call_id, sdp,
 						   call->inv->pool_prov,
 						   NULL);

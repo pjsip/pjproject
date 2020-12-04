@@ -534,7 +534,9 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 	    call_med->rtp_tx_ts = stat.rtp_tx_last_ts;
 	}
 
-	if (pjsua_var.ua_cfg.cb.on_stream_destroyed) {
+	if (!call_med->call->hanging_up &&
+	    pjsua_var.ua_cfg.cb.on_stream_destroyed)
+	{
 	    pjsua_var.ua_cfg.cb.on_stream_destroyed(call_med->call->index,
 	                                            strm, call_med->idx);
 	}
@@ -558,15 +560,19 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 			  int digit)
 {
+    pjsua_call_id call_id;
+
     PJ_UNUSED_ARG(strm);
+
+    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
+    if (pjsua_var.calls[call_id].hanging_up)
+    	return;
 
     pj_log_push_indent();
 
     if (pjsua_var.ua_cfg.cb.on_dtmf_digit2) {
-	pjsua_call_id call_id;
 	pjsua_dtmf_info info;
 
-	call_id = (pjsua_call_id)(pj_ssize_t)user_data;
 	info.method = PJSUA_DTMF_METHOD_RFC2833;
 	info.digit = digit;
         info.duration = PJSUA_UNKNOWN_DTMF_DURATION;
@@ -576,9 +582,6 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 	 * callback, please see ticket #460:
 	 *	http://trac.pjsip.org/repos/ticket/460#comment:4
 	 */    
-	pjsua_call_id call_id;
-
-	call_id = (pjsua_call_id)(pj_ssize_t)user_data;
 	(*pjsua_var.ua_cfg.cb.on_dtmf_digit)(call_id, digit);
     }
 
@@ -596,10 +599,13 @@ static void dtmf_event_callback(pjmedia_stream *strm, void *user_data,
 
     PJ_UNUSED_ARG(strm);
 
+    call_id = (pjsua_call_id)(pj_ssize_t)user_data;
+    if (pjsua_var.calls[call_id].hanging_up)
+    	return;
+
     pj_log_push_indent();
 
     if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
-        call_id = (pjsua_call_id)(pj_ssize_t)user_data;
         evt.method = PJSUA_DTMF_METHOD_RFC2833;
         evt.timestamp = event->timestamp;
         evt.digit = event->digit;
@@ -668,7 +674,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
         si->ka_cfg = pjsua_var.acc[call->acc_id].cfg.stream_ka_cfg;
 #endif
 
-        if (pjsua_var.ua_cfg.cb.on_stream_precreate) {
+        if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
             prm.stream_idx = strm_idx;
             prm.stream_info.type = PJMEDIA_TYPE_AUDIO;
@@ -707,12 +713,13 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	/* If DTMF callback is installed by application, install our
 	 * callback to the session.
 	 */
-        if (pjsua_var.ua_cfg.cb.on_dtmf_event) {
+        if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_dtmf_event) {
             pjmedia_stream_set_dtmf_event_callback(call_med->strm.a.stream,
                                               &dtmf_event_callback,
                                               (void*)(pj_ssize_t)(call->index));
-        } else if (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
-	           pjsua_var.ua_cfg.cb.on_dtmf_digit2) 
+        } else if (!call->hanging_up &&
+        	   (pjsua_var.ua_cfg.cb.on_dtmf_digit || 
+	            pjsua_var.ua_cfg.cb.on_dtmf_digit2))
 	{
 	    pjmedia_stream_set_dtmf_callback(call_med->strm.a.stream,
 					     &dtmf_callback,
@@ -729,7 +736,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	 * Note: application may modify media_port to point to different
 	 * media port
 	 */
-	if (pjsua_var.ua_cfg.cb.on_stream_created2) {
+	if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_created2) {
 	    pjsua_on_stream_created_param prm;
 	    
 	    prm.stream = call_med->strm.a.stream;
@@ -741,7 +748,8 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 	    call_med->strm.a.destroy_port = prm.destroy_port;
 	    call_med->strm.a.media_port = prm.port;
 
-	} else if (pjsua_var.ua_cfg.cb.on_stream_created) {
+	} else if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_created)
+	{
 	    (*pjsua_var.ua_cfg.cb.on_stream_created)(call->index,
 						  call_med->strm.a.stream,
 						  strm_idx,

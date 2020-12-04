@@ -808,7 +808,8 @@ static void ice_failed_nego_cb(void *user_data)
 	return;
     }
 
-    pjsua_var.ua_cfg.cb.on_call_media_state(call_id);
+    if (!call->hanging_up)
+    	pjsua_var.ua_cfg.cb.on_call_media_state(call_id);
 
     if (dlg)
         pjsip_dlg_dec_lock(dlg);
@@ -843,7 +844,9 @@ static void on_ice_complete(pjmedia_transport *tp,
         } else {
 	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	    call_med->dir = PJMEDIA_DIR_NONE;
-	    if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
+	    if (call && !call->hanging_up &&
+	        pjsua_var.ua_cfg.cb.on_call_media_state)
+	    {
 		/* Defer the callback to a timer */
 		pjsua_schedule_timer2(&ice_failed_nego_cb,
 				      (void*)(pj_ssize_t)call->index, 1);
@@ -860,7 +863,9 @@ static void on_ice_complete(pjmedia_transport *tp,
 		         "ICE keep alive failure for transport %d:%d",
 		         call->index, call_med->idx));
 	}
-        if (pjsua_var.ua_cfg.cb.on_call_media_transport_state) {
+        if (!call->hanging_up &&
+            pjsua_var.ua_cfg.cb.on_call_media_transport_state)
+        {
             pjsua_med_tp_state_info info;
 
             pj_bzero(&info, sizeof(info));
@@ -1544,7 +1549,6 @@ pj_status_t call_media_on_event(pjmedia_event *event,
     char ev_name[5];
     pj_status_t status = PJ_SUCCESS;
 
-    pj_assert(call && call_med);
     pjmedia_fourcc_name(event->type, ev_name);
     PJ_LOG(5,(THIS_FILE, "Call %d: Media %d: Received media event, type=%s, "
 			 "src=%p, epub=%p",
@@ -1660,6 +1664,9 @@ pj_status_t call_media_on_event(pjmedia_event *event,
     	pj_mutex_unlock(pjsua_var.timer_mutex);
     	
     	if (call) {
+    	    if (call->hanging_up)
+    	    	return status;
+
     	    eve->call_id = call->index;
     	    eve->med_idx = call_med->idx;
     	} else {
@@ -1678,7 +1685,8 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 void pjsua_set_media_tp_state(pjsua_call_media *call_med,
                               pjsua_med_tp_st tp_st)
 {
-    if (pjsua_var.ua_cfg.cb.on_call_media_transport_state &&
+    if (!call_med->call->hanging_up &&
+        pjsua_var.ua_cfg.cb.on_call_media_transport_state &&
         call_med->tp_st != tp_st)
     {
         pjsua_med_tp_state_info info;
@@ -1713,7 +1721,9 @@ static void on_srtp_nego_complete(pjmedia_transport *tp,
     if (result != PJ_SUCCESS) {
 	call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	call_med->dir = PJMEDIA_DIR_NONE;
-	if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
+	if (call && !call->hanging_up &&
+	    pjsua_var.ua_cfg.cb.on_call_media_state)
+	{
 	    /* Defer the callback to a timer */
 	    pjsua_schedule_timer2(&ice_failed_nego_cb,
 				  (void*)(pj_ssize_t)call->index, 1);
@@ -2910,7 +2920,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     call->rem_offerer = (rem_sdp != NULL);
 
     /* Notify application */
-    if (pjsua_var.ua_cfg.cb.on_call_sdp_created) {
+    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_sdp_created) {
 	(*pjsua_var.ua_cfg.cb.on_call_sdp_created)(call_id, sdp,
 						   pool, rem_sdp);
     }
