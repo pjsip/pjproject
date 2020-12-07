@@ -34,7 +34,10 @@ PJ_BEGIN_DECL
  * @ingroup PJMEDIA_CODEC_VID_CODECS
  * @{
  *
- * Android Mediacodec (AVC/H264+VP8+VP9) codec wrapper for Android.
+ *
+ * Video MediaCodec codec wrapper for Android.
+ *
+ * This codec wrapper contains varius codecs: i.e: H.264/AVC, VP8 and VP9.
  */
 
 /**

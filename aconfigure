@@ -650,6 +650,7 @@ openssl_h_present
 ac_ssl_backend
 ac_ssl_has_aes_gcm
 ac_no_ssl
+ac_no_mediacodec
 ac_vpx_ldflags
 ac_vpx_cflags
 ac_openh264_ldflags
@@ -681,7 +682,6 @@ ac_darwin_cflags
 ac_pjmedia_video_has_ios_opengl
 ac_pjmedia_video_has_vtoolbox
 ac_pjmedia_video_has_darwin
-ac_pjmedia_has_amediacodec
 ac_android_cflags
 ac_pjmedia_video_has_android
 ac_pjmedia_video
@@ -824,6 +824,7 @@ enable_ipp
 with_ipp
 with_ipp_samples
 with_ipp_arch
+enable_android_mediacodec
 with_ssl
 with_gnutls
 enable_darwin_ssl
@@ -1496,6 +1497,8 @@ Optional Features:
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
                           --with-ipp-samples options
+  --disable-android-mediacodec
+                          Exclude Android MediaCodec (default: autodetect)
   --disable-darwin-ssl    Exclude Darwin SSL (default: autodetect)
   --disable-ssl           Exclude SSL support the build (default: autodetect)
 
@@ -6519,7 +6522,6 @@ else
 	ac_pjmedia_video=android_os
 
 
-
 	SAVED_LIBS="$LIBS"
 	LIBS="-lGLESv2 -lEGL -landroid -lgcc -lc"
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -6551,53 +6553,6 @@ $as_echo "Checking if OpenGL ES 2 is available... yes" >&6; }
 $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for AMediaCodec_createDecoderByType in -lmediandk" >&5
-$as_echo_n "checking for AMediaCodec_createDecoderByType in -lmediandk... " >&6; }
-if ${ac_cv_lib_mediandk_AMediaCodec_createDecoderByType+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lmediandk  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char AMediaCodec_createDecoderByType ();
-int
-main ()
-{
-return AMediaCodec_createDecoderByType ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=yes
-else
-  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&5
-$as_echo "$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&6; }
-if test "x$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" = xyes; then :
-  ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"
-fi
-
-	if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... yes" >&5
-$as_echo "Checking if Android AMediaCodec library is available... yes" >&6; }
-	else
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... no" >&5
-$as_echo "Checking if Android AMediaCodec library is available... no" >&6; }
-	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os
@@ -8062,6 +8017,73 @@ export IPP_LIBS=$IPP_LIBS"
 else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Skipping Intel IPP settings (not wanted)" >&5
 $as_echo "Skipping Intel IPP settings (not wanted)" >&6; }
+fi
+
+
+
+# Check whether --enable-android-mediacodec was given.
+if test "${enable_android_mediacodec+set}" = set; then :
+  enableval=$enable_android_mediacodec; if test "$enable_android_mediacodec" = "no"; then
+	     ac_no_mediacodec=1
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android MediaCodec support is disabled... yes" >&5
+$as_echo "Checking if Android MediaCodec support is disabled... yes" >&6; }
+	        fi
+else
+
+		case $target in
+        *android*)
+	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for AMediaCodec_createDecoderByType in -lmediandk" >&5
+$as_echo_n "checking for AMediaCodec_createDecoderByType in -lmediandk... " >&6; }
+if ${ac_cv_lib_mediandk_AMediaCodec_createDecoderByType+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmediandk  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char AMediaCodec_createDecoderByType ();
+int
+main ()
+{
+return AMediaCodec_createDecoderByType ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=yes
+else
+  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&5
+$as_echo "$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&6; }
+if test "x$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" = xyes; then :
+  ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"
+fi
+
+	      if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
+		    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... yes" >&5
+$as_echo "Checking if Android AMediaCodec library is available... yes" >&6; }
+		    $as_echo "#define PJMEDIA_HAS_ANDROID_MEDIACODEC 1" >>confdefs.h
+
+	      else
+		    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... no" >&5
+$as_echo "Checking if Android AMediaCodec library is available... no" >&6; }
+	      fi
+		  ;;
+		esac
+
 fi
 
 

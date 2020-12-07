@@ -24,7 +24,8 @@
  * @file pjmedia-codec.h
  * @brief Include all codecs API in PJMEDIA-CODEC
  */
-
+#include <pjmedia-codec/and_aud_mediacodec.h>
+#include <pjmedia-codec/and_vid_mediacodec.h>
 #include <pjmedia-codec/audio_codecs.h>
 #include <pjmedia-codec/bcg729.h>
 #include <pjmedia-codec/ffmpeg_vid_codecs.h>
@@ -42,8 +43,6 @@
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/vid_toolbox.h>
 #include <pjmedia-codec/vpx.h>
-#include <pjmedia-codec/and_aud_mediacodec.h>
-#include <pjmedia-codec/and_vid_mediacodec.h>
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */
 

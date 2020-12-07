@@ -165,6 +165,12 @@ typedef pj_status_t (*pack_cb)(and_media_private_t *codec_data,
 			       unsigned nframes, void *pkt, pj_size_t *pkt_size,
 			       pj_size_t max_pkt_size);
 
+/* This callback is useful for preparing a frame before pass it to decoder.
+ */
+typedef void (*predecode_cb)(and_media_private_t  *codec_data,
+			     const pjmedia_frame *rtp_frame,
+			     pjmedia_frame *out);
+
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB || PJMEDIA_HAS_AND_MEDIA_AMRWB
 /* Custom callback implementations. */
 static pj_status_t parse_amr(and_media_private_t *codec_data, void *pkt,
@@ -173,6 +179,9 @@ static pj_status_t parse_amr(and_media_private_t *codec_data, void *pkt,
 static  pj_status_t pack_amr(and_media_private_t *codec_data, unsigned nframes,
 			     void *pkt, pj_size_t *pkt_size,
 			     pj_size_t max_pkt_size);
+static void predecode_amr(and_media_private_t  *codec_data,
+			  const pjmedia_frame *input,
+			  pjmedia_frame *out);
 #endif
 
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB
@@ -213,6 +222,8 @@ static struct and_media_codec {
 
     parse_cb	     parse;		/* Callback to parse bitstream.	    */
     pack_cb	     pack;		/* Callback to pack bitstream.	    */
+    predecode_cb     predecode;         /* Callback to prepare bitstream
+                                           before passing it to decoder.    */
 
     pjmedia_codec_fmtp dec_fmtp;	/* Decoder's fmtp params.	    */
 }
@@ -222,7 +233,7 @@ and_media_codec[] =
 #   if PJMEDIA_HAS_AND_MEDIA_AMRNB
     {0, "AMR", "audio/3gpp", NULL, NULL,
         PJMEDIA_RTP_PT_AMR, 8000, 1, 160, 7400, 12200, 2, 1, 1,
-	&parse_amr, &pack_amr,
+	&parse_amr, &pack_amr, &predecode_amr,
         {1, {{{(char *)"octet-align", 11}, {(char *)"1", 1}}}}
     },
 #   endif
@@ -230,7 +241,7 @@ and_media_codec[] =
 #   if PJMEDIA_HAS_AND_MEDIA_AMRWB
     {0, "AMR-WB", "audio/amr-wb", NULL, NULL,
         PJMEDIA_RTP_PT_AMRWB, 16000, 1, 320, 15850, 23850, 2, 1, 1,
-        &parse_amr, &pack_amr,
+        &parse_amr, &pack_amr, &predecode_amr,
 	{1, {{{(char *)"octet-align", 11}, {(char *)"1", 1}}}}
     },
 #   endif
@@ -314,6 +325,26 @@ static pj_status_t parse_amr(and_media_private_t *codec_data, void *pkt,
 	s->enc_mode = cmr;
     }
     return PJ_SUCCESS;
+}
+
+static void predecode_amr(and_media_private_t *codec_data,
+			  const pjmedia_frame *input,
+			  pjmedia_frame *out)
+{
+    pjmedia_codec_amr_bit_info *info;
+    pj_uint8_t *bitstream = (pj_uint8_t *)out->buf;
+    pjmedia_codec_amr_pack_setting *setting;
+    struct and_media_codec *and_media_data =
+					&and_media_codec[codec_data->codec_idx];
+
+    out->buf = &bitstream[1];
+    setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
+
+    pjmedia_codec_amr_predecode(input, setting, out);
+    info = (pjmedia_codec_amr_bit_info*)&out->bit_info;
+    bitstream[0] = (info->frame_type << 3) | (info->good_quality << 2);
+    out->buf = &bitstream[0];
+    ++out->size;
 }
 
 #endif /* PJMEDIA_HAS_AND_MEDIA_AMRNB || PJMEDIA_HAS_AND_MEDIA_AMRWB */
@@ -1190,16 +1221,16 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
 					&and_media_codec[codec_data->codec_idx];
     unsigned samples_per_frame;
     unsigned i;
-    pjmedia_frame input_;
+
     pj_uint8_t pt;
     pj_ssize_t buf_idx = -1;
-    pj_uint8_t *bitstream = NULL;
     pj_uint8_t *input_buf;
     pj_size_t input_size;
     pj_size_t output_size;
     media_status_t am_status;
     AMediaCodecBufferInfo buf_info;
     pj_uint8_t *output_buf;
+    pjmedia_frame input_;
 
     pj_bzero(&input_, sizeof(pjmedia_frame));
     pt = and_media_data->pt;
@@ -1213,23 +1244,6 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
 	goto on_return;
     }
 
-#if PJMEDIA_HAS_AND_MEDIA_AMRNB || PJMEDIA_HAS_AND_MEDIA_AMRWB
-    if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
-	pjmedia_codec_amr_bit_info *info;
-	pj_uint8_t input_data[61];
-	bitstream = input_data;
-	pjmedia_codec_amr_pack_setting *setting;
-
-	input_.size = (pt == PJMEDIA_RTP_PT_AMR? 31: 60);
-	input_.buf = &bitstream[1];
-	setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
-
-	pjmedia_codec_amr_predecode(input, setting, &input_);
-	info = (pjmedia_codec_amr_bit_info*)&input_.bit_info;
-	bitstream[0] = (info->frame_type << 3) | (info->good_quality << 2);
-	++input_.size;
-    }
-#endif
     buf_idx = AMediaCodec_dequeueInputBuffer(codec_data->dec,
 					     CODEC_DEQUEUE_TIMEOUT);
 
@@ -1247,7 +1261,15 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
 		  "return input_buf=%d, size=%d", input_buf, input_size));
 	goto on_return;
     }
-    pj_memcpy(input_buf, bitstream, input_.size);
+
+    if (and_media_data->predecode) {
+	input_.buf = input_buf;
+	and_media_data->predecode(codec_data, input, &input_);
+    } else {
+	input_.size = input->size;
+	pj_memcpy(input_buf, input->buf, input->size);
+    }
+
     am_status = AMediaCodec_queueInputBuffer(codec_data->dec,
 					     buf_idx,
 					     0,

@@ -140,7 +140,7 @@ export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o openh264.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o silk.o opus.o $(CODEC_OBJS) \
                         g7221_sdp_match.o amr_sdp_match.o passthrough.o \
-                        vpx.o and_aud_mediacodec.o and_vid_mediacodec.o
+                        vpx.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
 export PJMEDIA_CODEC_CXXFLAGS += $(_CXXFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
