@@ -334,12 +334,9 @@ static void predecode_amr(and_media_private_t *codec_data,
     pjmedia_codec_amr_bit_info *info;
     pj_uint8_t *bitstream = (pj_uint8_t *)out->buf;
     pjmedia_codec_amr_pack_setting *setting;
-    struct and_media_codec *and_media_data =
-					&and_media_codec[codec_data->codec_idx];
 
     out->buf = &bitstream[1];
     setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
-
     pjmedia_codec_amr_predecode(input, setting, out);
     info = (pjmedia_codec_amr_bit_info*)&out->bit_info;
     bitstream[0] = (info->frame_type << 3) | (info->good_quality << 2);
@@ -624,9 +621,9 @@ static pj_status_t and_media_enum_codecs(pjmedia_codec_factory *factory,
     {
 	unsigned enc_idx, dec_idx;
 	pj_str_t *enc_name = NULL;
-	unsigned num_enc;
+	unsigned num_enc = 0;
 	pj_str_t *dec_name = NULL;
-	unsigned num_dec;
+	unsigned num_dec = 0;
 
 	switch (and_media_codec[i].pt) {
 
@@ -850,7 +847,6 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
     and_media_private_t *codec_data = (and_media_private_t*) codec->codec_data;
     struct and_media_codec *and_media_data =
 					&and_media_codec[codec_data->codec_idx];
-    unsigned i;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(codec && attr, PJ_EINVAL);
@@ -869,6 +865,7 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
 	amr_settings_t *s;
 	pj_uint8_t octet_align = 0;
 	pj_int8_t enc_mode;
+	unsigned i;
 
 	enc_mode = pjmedia_codec_amr_get_mode(attr->info.avg_bps);
 

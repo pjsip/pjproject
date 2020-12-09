@@ -3631,8 +3631,12 @@
       <File
 				RelativePath="..\src\pjmedia-codec\vpx.c"
 				>
-      </File>        
-			<Filter
+      </File>
+      <File
+				RelativePath="..\src\pjmedia-codec\vpx_packetizer.c"
+				>
+      </File>
+      <Filter
 				Name="g722 Files"
 				>
 				<File
@@ -3744,8 +3748,12 @@
       <File
 				RelativePath="..\include\pjmedia-codec\vpx.h"
 				>
-      </File>      
-		</Filter>
+      </File>
+      <File
+				RelativePath="..\include\pjmedia-codec\vpx_packetizer.h"
+				>
+      </File>
+    </Filter>
 	</Files>
 	<Globals>
 	</Globals>

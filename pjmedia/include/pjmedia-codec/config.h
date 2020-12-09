@@ -642,19 +642,19 @@
 /**
  * Enable Android MediaCodec VP8 codec.
  *
- * Default: 0 (disabled)
+ * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_VP8
-#   define PJMEDIA_HAS_AND_MEDIA_VP8		0
+#   define PJMEDIA_HAS_AND_MEDIA_VP8		1
 #endif
 
 /**
  * Enable Android MediaCodec VP9 codec.
  *
- * Default: 0 (disabled)
+ * Default: 1
  */
 #ifndef PJMEDIA_HAS_AND_MEDIA_VP9
-#   define PJMEDIA_HAS_AND_MEDIA_VP9		0
+#   define PJMEDIA_HAS_AND_MEDIA_VP9		1
 #endif
 
 /**

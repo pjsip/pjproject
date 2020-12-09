@@ -80,6 +80,9 @@
     <ClCompile Include="..\src\pjmedia-codec\vpx.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia-codec\vpx_packetizer.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\pjmedia-codec\g722\g722_dec.h">
@@ -155,6 +158,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjmedia-codec\vpx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\pjmedia-codec\vpx_packetizer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
