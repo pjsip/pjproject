@@ -134,7 +134,7 @@ install:
 		sed -e "s/@PJ_VERSION@/$(PJ_VERSION)/" | \
 		sed -e "s!@PJ_INSTALL_LDFLAGS@!$(PJ_INSTALL_LDFLAGS)!" | \
 		sed -e "s!@PJ_INSTALL_LDFLAGS_PRIVATE@!$(PJ_INSTALL_LDFLAGS_PRIVATE)!" | \
-		sed -e "s!@PJ_INSTALL_CFLAGS@!$(PJ_INSTALL_CFLAGS)!" > $(DESTDIR)/$(libdir)/pkgconfig/libpjproject.pc
+		sed -e "s!@PJ_INSTALL_CFLAGS@!$(PJ_INSTALL_CFLAGS)!" > $(DESTDIR)$(libdir)/pkgconfig/libpjproject.pc
 
 uninstall:
 	$(RM) $(DESTDIR)$(libdir)/pkgconfig/libpjproject.pc

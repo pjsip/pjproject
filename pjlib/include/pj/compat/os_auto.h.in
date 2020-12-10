@@ -30,6 +30,7 @@
 #undef PJ_OS_NAME
 
 /* Legacy macros */
+#undef PJ_WIN64
 #undef PJ_WIN32
 #undef PJ_WIN32_WINNT
 #undef WIN32_LEAN_AND_MEAN
