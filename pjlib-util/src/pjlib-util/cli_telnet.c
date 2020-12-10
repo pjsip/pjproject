@@ -385,13 +385,13 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 {
     cmd_history *in_history;
     pj_str_t cmd;
-    cmd.ptr = cmd_val;
-    cmd.slen = pj_ansi_strlen(cmd_val)-1;
-
-    if (cmd.slen == 0)
-	return PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+
+    cmd = pj_str(cmd_val);
+    pj_strtrim(&cmd);
+    if (cmd.slen == 0)
+	return PJ_SUCCESS;
 
     /* Find matching history */
     in_history = pj_list_search(sess->history, (void*)&cmd, compare_str);
@@ -407,11 +407,12 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 	} else {
 	    /* Get the oldest history */
 	    in_history = sess->history->prev;
+	    pj_list_erase(in_history);
 	}
+	pj_strncpy(&in_history->command, &cmd, PJ_CLI_MAX_CMDBUF);
     } else {
-	pj_list_insert_nodes_after(in_history->prev, in_history->next);
+	pj_list_erase(in_history);
     }
-    pj_strcpy(&in_history->command, pj_strtrim(&cmd));
     pj_list_push_front(sess->history, in_history);
     sess->active_history = sess->history;
 
