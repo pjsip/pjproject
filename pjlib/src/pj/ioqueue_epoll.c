@@ -110,11 +110,25 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 #endif
 
 
-/* Use EPOLLEXCLUSIVE or EPOLLONESHOT to signal one thread only at a time */
-#if defined(EPOLLEXCLUSIVE)
+/* EPOLLEXCLUSIVE or EPOLLONESHOT is reported to cause perm handshake error
+ * on OpenSSL 1.0.2, so let's disable this when using OpenSSL older than
+ * version 1.1.0.
+ */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+
+#  include <openssl/opensslv.h>
+#  if OPENSSL_VERSION_NUMBER < 0x10100000L
+#    define DONT_USE_EXCL_ONESHOT
+#  endif
+
+#endif
+
+/* Use EPOLLEXCLUSIVE or EPOLLONESHOT to signal one thread only at a time. */
+#if defined(EPOLLEXCLUSIVE) && !defined(DONT_USE_EXCL_ONESHOT)
 #  define USE_EPOLLEXCLUSIVE	1
 #  define USE_EPOLLONESHOT	0
-#elif defined(EPOLLONESHOT)
+#elif defined(EPOLLONESHOT) && !defined(DONT_USE_EXCL_ONESHOT)
 #  define USE_EPOLLEXCLUSIVE	0
 #  define USE_EPOLLONESHOT	1
 #else
@@ -128,7 +142,13 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
  */
 PJ_DEF(const char*) pj_ioqueue_name(void)
 {
+#if USE_EPOLLEXCLUSIVE
+    return "epoll-exclusive";
+#elif USE_EPOLLONESHOT
+    return "epoll-oneshot";
+#else
     return "epoll";
+#endif
 }
 
 /*
