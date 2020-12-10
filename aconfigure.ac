@@ -772,10 +772,12 @@ fi
 
 AC_SUBST(ac_pjmedia_video)
 
-# Disable video on mingw
+# Disable video on mingw by default (but respect --enable-video=yes)
 case $target in
  *mingw*)
+	if test ! "$enable_video" = "yes"; then
 	enable_video="no"
+	fi
 	;;
 esac
 
@@ -827,6 +829,18 @@ else
 	  AC_MSG_RESULT([Checking if OpenGL ES 2 is available... no])
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
+	;;
+  *mingw*)
+	if test "$enable_video" = "yes"; then
+	  ac_pjmedia_video=windows_os
+	  AC_SUBST(ac_pjmedia_video_dev_has_dshow)
+	  ac_pjmedia_video_dev_has_dshow=yes
+	  AC_SUBST(ac_dshow_cflags)
+	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+	  AC_SUBST(ac_dshow_ldflags)
+	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os
@@ -1082,6 +1096,7 @@ AC_ARG_ENABLE(sdl,
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
+			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			AC_MSG_RESULT([Unsupported SDL version])

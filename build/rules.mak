@@ -169,6 +169,11 @@ $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(OBJDIRS)
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
+$(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(OBJDIRS)
+	$(CXX) $($(APP)_CXXFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
+		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
+		$(subst /,$(HOST_PSEP),$<)
+
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(OBJDIRS)
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
