@@ -31,7 +31,7 @@
 #endif
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
-#define CERT_PRIVKEY_PASS	    ""
+#define CERT_PRIVKEY_PASS	    "privkeypass"
 
 #define TEST_LOAD_FROM_FILES 1
 
