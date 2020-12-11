@@ -361,6 +361,32 @@ PJ_DECL(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 
 
 /**
+ * Disconnect unidirectional audio from all sources to the specified sink slot.
+ *
+ * @param conf		The conference bridge.
+ * @param sink_slot	Sink slot.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
+					   unsigned sink_slot);
+
+
+/**
+ * Disconnect unidirectional audio from the specified source to all sink slots.
+ *
+ * @param conf		The conference bridge.
+ * @param src_slot	Source slot.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
+					 unsigned src_slot);
+
+
+/**
  * Get number of ports currently registered to the conference bridge.
  *
  * @param conf		The conference bridge.

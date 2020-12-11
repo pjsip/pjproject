@@ -39,6 +39,10 @@ else
 endif
 endif
 
+ifneq ($(findstring windows_os,@ac_pjmedia_video@),)
+DIRS += baseclasses
+endif
+
 ifneq (@ac_external_srtp@,0)
 # External SRTP
 else

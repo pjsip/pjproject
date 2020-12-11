@@ -216,6 +216,12 @@ struct pjsua_call
 	pj_bool_t	 pending_info;
 	pj_timer_entry	 timer;
     } trickle_ice;
+
+    pj_timer_entry	 hangup_timer;	/**< Hangup retry timer.	    */
+    unsigned		 hangup_retry;	/**< Number of hangup retries.	    */
+    unsigned		 hangup_code;	/**< Hangup code.	    	    */
+    pj_str_t		 hangup_reason;	/**< Hangup reason.	    	    */
+    pjsua_msg_data	*hangup_msg_data;/**< Hangup message data.	    */
 };
 
 

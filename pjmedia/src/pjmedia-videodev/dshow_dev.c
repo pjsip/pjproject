@@ -38,6 +38,8 @@
 
 #ifdef _MSC_VER
 #   pragma warning(pop)
+#else
+#include <amvideo2.h>
 #endif
 
 #pragma comment(lib, "Strmiids.lib")

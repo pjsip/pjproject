@@ -681,6 +681,9 @@ ac_darwin_cflags
 ac_pjmedia_video_has_ios_opengl
 ac_pjmedia_video_has_vtoolbox
 ac_pjmedia_video_has_darwin
+ac_dshow_ldflags
+ac_dshow_cflags
+ac_pjmedia_video_dev_has_dshow
 ac_android_cflags
 ac_pjmedia_video_has_android
 ac_pjmedia_video
@@ -5160,6 +5163,12 @@ case $target in
 
 	$as_echo "#define WIN32_LEAN_AND_MEAN 1" >>confdefs.h
 
+	case $target in
+	    *_64-w64-mingw* )
+		$as_echo "#define PJ_WIN64 1" >>confdefs.h
+
+	    ;;
+	esac
 	;;
     *darwin*)
 	$as_echo "#define PJ_DARWINOS 1" >>confdefs.h
@@ -6475,10 +6484,12 @@ fi
 
 
 
-# Disable video on mingw
+# Disable video on mingw by default (but respect --enable-video=yes)
 case $target in
  *mingw*)
+	if test ! "$enable_video" = "yes"; then
 	enable_video="no"
+	fi
 	;;
 esac
 
@@ -6549,6 +6560,18 @@ $as_echo "Checking if OpenGL ES 2 is available... yes" >&6; }
 $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
+	;;
+  *mingw*)
+	if test "$enable_video" = "yes"; then
+	  ac_pjmedia_video=windows_os
+
+	  ac_pjmedia_video_dev_has_dshow=yes
+
+	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+
+	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os
@@ -7058,6 +7081,7 @@ $as_echo "not found" >&6; }
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
+			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Unsupported SDL version" >&5
