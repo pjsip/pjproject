@@ -42,6 +42,7 @@ struct pjsua_call_media
     pjsua_call		*call;	    /**< Parent call.			    */
     pjmedia_type	 type;	    /**< Media type.			    */
     unsigned		 idx;       /**< This media index in parent call.   */
+    pj_str_t		 rem_mid;   /**< Remote SDP "a=mid" attribute.	    */
     pjsua_call_media_status state;  /**< Media state.			    */
     pjsua_call_media_status prev_state;/**< Previous media state.           */
     pjmedia_dir		 dir;       /**< Media direction.		    */
@@ -205,6 +206,16 @@ struct pjsua_call
 					    created yet. This temporary 
 					    variable is used to handle such 
 					    case, see ticket #1916.	    */
+
+    struct {
+	pj_bool_t	 enabled;
+	pj_bool_t	 remote_sup;
+	pj_bool_t	 remote_dlg_est;
+	pj_bool_t	 trickling;
+	int		 retrans18x_count;
+	pj_bool_t	 pending_info;
+	pj_timer_entry	 timer;
+    } trickle_ice;
 
     pj_timer_entry	 hangup_timer;	/**< Hangup retry timer.	    */
     unsigned		 hangup_retry;	/**< Number of hangup retries.	    */
@@ -701,6 +712,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
+
+void pjsua_ice_check_start_trickling(pjsua_call *call, pjsip_event *e);
 
 /*
  * Error message when media operation is requested while another is in progress

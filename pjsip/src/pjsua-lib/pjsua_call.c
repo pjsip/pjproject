@@ -138,6 +138,12 @@ static void hangup_timer_cb(pj_timer_heap_t *th, pj_timer_entry *entry);
 /* Check and send reinvite for lock codec and ICE update */
 static pj_status_t process_pending_reinvite(pjsua_call *call);
 
+/* Timer callbacks for trickle ICE */
+static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
+				      struct pj_timer_entry *te);
+static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
+				    struct pj_timer_entry *te);
+
 /*
  * Reset call descriptor.
  */
@@ -170,6 +176,8 @@ static void reset_call(pjsua_call_id id)
     pjsua_call_setting_default(&call->opt);
     pj_timer_entry_init(&call->reinv_timer, PJ_FALSE,
 			(void*)(pj_size_t)id, &reinv_timer_cb);
+    pj_timer_entry_init(&call->trickle_ice.timer, 0, call,
+			&trickle_ice_send_sip_info);
 }
 
 /* Get DTMF method type name */
@@ -192,6 +200,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     pjsip_inv_callback inv_cb;
     unsigned i;
     const pj_str_t str_norefersub = { "norefersub", 10 };
+    const pj_str_t str_trickle_ice = { "trickle-ice", 11 };
     pj_status_t status;
 
     /* Init calls array. */
@@ -238,6 +247,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Add "INFO" in Allow header, for DTMF and video key frame request. */
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
 			       NULL, 1, &pjsip_info_method.name);
+
+    /* Add "trickle-ice" in Supported header */
+    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
+			       NULL, 1, &str_trickle_ice);
 
     return status;
 }
@@ -479,6 +492,11 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	    options |= PJSIP_INV_REQUIRE_TIMER;
 	else if (acc->cfg.use_timer == PJSUA_SIP_TIMER_ALWAYS)
 	    options |= PJSIP_INV_ALWAYS_USE_TIMER;
+    }
+    if (acc->cfg.ice_cfg.enable_ice &&
+	acc->cfg.ice_cfg.ice_opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED)
+    {
+	options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
     }
 
     status = pjsip_inv_create_uac( dlg, offer, options, &inv);
@@ -1647,8 +1665,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_TIMER;
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
 	options |= PJSIP_INV_REQUIRE_100REL;
-    if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice)
+    if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice) {
 	options |= PJSIP_INV_SUPPORT_ICE;
+	if (pjsua_var.acc[acc_id].cfg.ice_cfg.ice_opt.trickle !=
+	    PJ_ICE_SESS_TRICKLE_DISABLED)
+	{
+	    options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
+	}
+    }
     if (pjsua_var.acc[acc_id].cfg.use_timer == PJSUA_SIP_TIMER_REQUIRED)
 	options |= PJSIP_INV_REQUIRE_TIMER;
     else if (pjsua_var.acc[acc_id].cfg.use_timer == PJSUA_SIP_TIMER_ALWAYS)
@@ -4279,6 +4303,454 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 }
 
 
+static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
+				    struct pj_timer_entry *te)
+{
+    pjsua_call *call = (pjsua_call*)te->user_data;
+    pjsip_tx_data *tdata;
+    pj_time_val delay;
+
+    PJ_UNUSED_ARG(th);
+
+    /* If trickling has been started or dialog has been established on
+     * both sides, stop 18x retransmission.
+     */
+    if (call->trickle_ice.trickling || call->trickle_ice.remote_dlg_est)
+	return;
+
+    /* Make sure last tdata is 18x response */
+    tdata = call->inv->invite_tsx->last_tx;
+    if (tdata->msg->type != PJSIP_RESPONSE_MSG ||
+	tdata->msg->line.status.code/10 != 18)
+    {
+	return;
+    }
+
+    /* Retransmit 18x */
+    ++call->trickle_ice.retrans18x_count;
+    PJ_LOG(4,(THIS_FILE,
+	      "Call %d: ICE trickle retransmitting 18x (retrans #%d)",
+	      call->index, call->trickle_ice.retrans18x_count));
+
+    pjsip_tx_data_add_ref(tdata);
+    pjsip_tsx_retransmit_no_state(call->inv->invite_tsx, tdata);
+
+    /* Schedule next retransmission */
+    if (call->trickle_ice.retrans18x_count < 6) {
+	pj_uint32_t tmp;
+	tmp = (1 << call->trickle_ice.retrans18x_count) * pjsip_cfg()->tsx.t1;
+	delay.sec = 0;
+	delay.msec = tmp;
+	pj_time_val_normalize(&delay);
+    } else {
+	delay.sec = 1;
+	delay.msec = 500;
+    }
+    pjsua_schedule_timer(te, &delay);
+}
+
+
+static void trickle_ice_recv_sip_info(pjsua_call *call, pjsip_rx_data *rdata)
+{
+    pjsip_media_type med_type;
+    pjsip_rdata_sdp_info *sdp_info;
+    pj_status_t status;
+    unsigned i, j, med_cnt;
+    pj_bool_t use_med_prov;
+
+    pjsip_media_type_init2(&med_type, "application", "trickle-ice-sdpfrag");
+
+    /* Parse the SDP */
+    sdp_info = pjsip_rdata_get_sdp_info2(rdata, &med_type);
+    if (!sdp_info->sdp) {
+	pj_status_t err = sdp_info->body.ptr? sdp_info->sdp_err:PJ_ENOTFOUND;
+	pjsua_perror(THIS_FILE, "Failed to parse trickle ICE SDP in "
+				"incoming INFO", err);
+	return;
+    }
+
+    PJSUA_LOCK();
+
+    /* Retrieve the candidates from the SDP */
+    use_med_prov = call->med_prov_cnt > call->med_cnt;
+    med_cnt = use_med_prov? call->med_prov_cnt : call->med_cnt;
+    for (i = 0; i < sdp_info->sdp->media_count; ++i) {
+	pjmedia_transport *tp = NULL;
+	pj_str_t mid, ufrag, pwd;
+	unsigned cand_cnt = PJ_ICE_ST_MAX_CAND;
+	pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
+	pj_bool_t end_of_cand;
+
+	status = pjmedia_ice_trickle_decode_sdp(sdp_info->sdp, i, &mid,
+						&ufrag, &pwd,
+						&cand_cnt, cand,
+						&end_of_cand);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Failed to retrive ICE candidates from "
+				    "SDP in incoming INFO", status);
+	    continue;
+	}
+
+	for (j = 0; j < med_cnt; ++j) {
+	    pjsua_call_media *cm = use_med_prov? &call->media_prov[j] :
+						 &call->media[j];
+	    tp = cm->tp_orig;
+
+	    if (tp && tp->type == PJMEDIA_TRANSPORT_TYPE_ICE &&
+		pj_strcmp(&cm->rem_mid, &mid) == 0)
+	    {
+		break;
+	    }
+	}
+
+	if (j == med_cnt)
+	    continue;
+
+	/* Update ICE checklist */
+	status = pjmedia_ice_trickle_update(tp, &ufrag, &pwd, cand_cnt, cand,
+					    end_of_cand);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Failed to update ICE checklist from "
+				    "incoming INFO", status);
+	}
+    }
+
+    PJSUA_UNLOCK();
+}
+
+
+static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
+				      struct pj_timer_entry *te)
+{
+    pjsua_call *call = (pjsua_call*)te->user_data;
+    pj_pool_t *tmp_pool = NULL;
+    pj_bool_t all_end_of_cand, use_med_prov;
+    pjmedia_sdp_session *sdp;
+    unsigned i, med_cnt;
+    pjsua_msg_data msg_data;
+    pjsip_generic_string_hdr hdr1, hdr2;
+    pj_status_t status = PJ_SUCCESS;
+    pj_bool_t forced, need_send = PJ_FALSE;
+    pj_sockaddr orig_addr;
+
+    pj_str_t SIP_INFO		= {"INFO", 4};
+    pj_str_t CONTENT_DISP_STR	= {"Content-Disposition", 19};
+    pj_str_t INFO_PKG_STR	= {"Info-Package", 12};
+    pj_str_t TRICKLE_ICE_STR	= {"trickle-ice", 11};
+
+    PJ_UNUSED_ARG(th);
+
+    PJSUA_LOCK();
+
+    /* Check provisional media or active media to use */
+    use_med_prov = call->med_prov_cnt > call->med_cnt;
+    med_cnt = use_med_prov? call->med_prov_cnt : call->med_cnt;
+
+    /* Check if any pending INFO already */
+    if (call->trickle_ice.pending_info)
+	goto on_return;
+
+    /* Check if any new candidate, if not forced */
+    forced = (te->id == 2);
+    if (!forced) {
+	for (i = 0; i < med_cnt; ++i) {
+	    pjsua_call_media *cm = use_med_prov? &call->media_prov[i] :
+						 &call->media[i];
+	    pjmedia_transport *tp = cm->tp_orig;
+
+	    if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
+		continue;
+
+	    if (pjmedia_ice_trickle_has_new_cand(tp))
+		break;
+	}
+
+	/* No new local candidate */
+	if (i == med_cnt)
+	    goto on_return;
+    }
+
+    PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle sending SIP INFO",
+	      call->index));
+
+    /* Create temporary pool */
+    tmp_pool = pjsua_pool_create("tmp_ice", 128, 128);
+
+    /* Create empty SDP */
+    pj_sockaddr_init(pj_AF_INET(), &orig_addr, NULL, 0);
+    status = pjmedia_endpt_create_base_sdp(pjsua_var.med_endpt, tmp_pool,
+					   NULL, &orig_addr, &sdp);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Generate SDP for SIP INFO */
+    all_end_of_cand = PJ_TRUE;
+    for (i = 0; i < med_cnt; ++i) {
+	pjsua_call_media *cm = use_med_prov? &call->media_prov[i] :
+					     &call->media[i];
+	pjmedia_transport *tp = cm->tp_orig;
+	pj_bool_t end_of_cand = PJ_FALSE;
+
+	if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
+	    continue;
+
+	status = pjmedia_ice_trickle_send_local_cand(tp, tmp_pool, sdp,
+						     &end_of_cand);
+	if (status != PJ_SUCCESS || !end_of_cand)
+	    all_end_of_cand = PJ_FALSE;
+
+	need_send |= (status==PJ_SUCCESS);
+    }
+
+    if (!need_send)
+	goto on_return;
+
+    /* Generate and send SIP INFO */
+    pjsua_msg_data_init(&msg_data);
+
+    pjsip_generic_string_hdr_init2(&hdr1, &INFO_PKG_STR, &TRICKLE_ICE_STR);
+    pj_list_push_back(&msg_data.hdr_list, &hdr1);
+    pjsip_generic_string_hdr_init2(&hdr2, &CONTENT_DISP_STR, &INFO_PKG_STR);
+    pj_list_push_back(&msg_data.hdr_list, &hdr2);
+
+    msg_data.content_type = pj_str("application/trickle-ice-sdpfrag");
+    msg_data.msg_body.ptr = pj_pool_alloc(tmp_pool, PJSIP_MAX_PKT_LEN);
+    msg_data.msg_body.slen = pjmedia_sdp_print(sdp, msg_data.msg_body.ptr,
+					       PJSIP_MAX_PKT_LEN);
+    if (msg_data.msg_body.slen == -1) {
+	PJ_LOG(3,(THIS_FILE,
+		  "Warning! Call %d: ICE trickle failed to print SDP for "
+		  "SIP INFO due to insufficient buffer", call->index));
+	goto on_return;
+    }
+
+    status = pjsua_call_send_request(call->index, &SIP_INFO, &msg_data);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Set flag for pending SIP INFO */
+    call->trickle_ice.pending_info = PJ_TRUE;
+
+    if (all_end_of_cand) {
+	PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle stopped trickling "
+			     "as local candidate gathering completed",
+			     call->index));
+	call->trickle_ice.trickling = PJ_FALSE;
+    }
+
+on_return:
+    if (tmp_pool)
+	pj_pool_release(tmp_pool);
+
+    /* Reschedule if we are trickling */
+    if (call->trickle_ice.trickling) {
+	pj_time_val delay = {0, PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL};
+
+	/* Reset forced mode after successfully sending forced SIP INFO */
+	te->id = (status==PJ_SUCCESS? 0 : 2);
+
+	pj_time_val_normalize(&delay);
+	pjsua_schedule_timer(te, &delay);
+    }
+
+    PJSUA_UNLOCK();
+}
+
+
+/* Before sending INFO can be started, UA needs to confirm these:
+ * 1. dialog is established (perhaps early) at both sides,
+ * 2. trickle ICE is supported by peer.
+ *
+ * This function needs to be called when:
+ * - UAS sending 18x, to start 18x retrans
+ * - UAC receiving 18x, to forcefully send SIP INFO & start trickling
+ * - UAS receiving INFO, to cease 18x retrans & start trickling
+ * - UAS receiving PRACK, to start trickling
+ * - UAC/UAS receiving remote SDP (and check for trickle ICE support),
+ *   to start trickling.
+ */
+void pjsua_ice_check_start_trickling(pjsua_call *call, pjsip_event *e)
+{
+    pjsip_inv_session *inv = call->inv;
+    pj_bool_t forced_trickling = PJ_FALSE;
+
+    /* Make sure trickling/sending-INFO has not been started */
+    if (call->trickle_ice.trickling)
+	return;
+
+    /* Make sure trickle ICE is enabled */
+    if (!call->trickle_ice.enabled)
+	return;
+
+    /* Make sure the dialog state is established */
+    if (!inv || inv->dlg->state != PJSIP_DIALOG_STATE_ESTABLISHED)
+	return;
+
+    /* First, make sure remote dialog is also established. */
+    if (inv->state == PJSIP_INV_STATE_CONFIRMED) {
+	/* Set flag indicating remote dialog is established */
+	call->trickle_ice.remote_dlg_est = PJ_TRUE;
+    } else if (inv->state > PJSIP_INV_STATE_CONFIRMED) {
+	/* Call is terminating/terminated (just trying to be safe) */
+	call->trickle_ice.remote_dlg_est = PJ_FALSE;
+    } else if (!call->trickle_ice.remote_dlg_est && e) {
+	/* Call is being initialized */
+	pjsip_msg *msg = NULL;
+	pjsip_rx_data *rdata = NULL;
+	pjsip_tx_data *tdata = NULL;
+	pj_bool_t has_100rel = (inv->options & PJSIP_INV_REQUIRE_100REL);
+	pj_timer_entry *te = &call->trickle_ice.timer;
+
+	if (e->type == PJSIP_EVENT_TSX_STATE &&
+	    e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+	{
+	    rdata = e->body.tsx_state.src.rdata;
+	} else if (e->type == PJSIP_EVENT_TSX_STATE &&
+		   e->body.tsx_state.type == PJSIP_EVENT_TX_MSG)
+	{
+	    tdata = e->body.tsx_state.src.tdata;
+	} else {
+	    return;
+	}
+
+	/* UAC must have received 18x at this point, so dialog must have been
+	 * established at the remote side.
+	 */
+	if (inv->role == PJSIP_ROLE_UAC) {
+	    /* UAC needs to send SIP INFO when receiving 18x and 100rel is not
+	     * active.
+	     * Note that 18x may not have SDP (so we don't know if remote
+	     * supports trickle ICE), but we should send INFO anyway, as the
+	     * draft allows start trickling without answer.
+	     */
+	    if (!has_100rel && rdata &&
+		rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG &&
+		rdata->msg_info.msg->line.status.code/10 == 18)
+	    {
+		pjsip_rdata_sdp_info *sdp_info;
+		sdp_info = pjsip_rdata_get_sdp_info(rdata);
+		if (sdp_info->sdp) {
+		    unsigned i;
+		    for (i = 0; i < sdp_info->sdp->media_count; ++i) {
+			if (pjmedia_ice_sdp_has_trickle(sdp_info->sdp, i)) {
+			    call->trickle_ice.remote_sup = PJ_TRUE;
+			    break;
+			}
+		    }
+		} else {
+		    /* Start sending SIP INFO forcefully */
+		    forced_trickling = PJ_TRUE;
+		}
+
+		if (forced_trickling || call->trickle_ice.remote_sup) {
+		    PJ_LOG(4,(THIS_FILE,
+			      "Call %d: ICE trickle started after UAC "
+			      "receiving 18x (with%s SDP)",
+			      call->index, sdp_info->sdp?"":"out"));
+		}
+	    }
+	}
+
+	/* But if we are the UAS, we need to wait for SIP PRACK or INFO to
+	 * confirm dialog state at remote. And while waiting, 18x needs to be
+	 * retransmitted.
+	 */
+	else {
+
+	    if (tdata && e->body.tsx_state.tsx == inv->invite_tsx &&
+		call->trickle_ice.retrans18x_count == 0)
+	    {
+		/* Ignite 18x retransmission */
+		msg = tdata->msg;
+		if (msg->type == PJSIP_RESPONSE_MSG &&
+		    msg->line.status.code/10 == 18)
+		{
+		    pj_time_val delay;
+		    delay.sec = pjsip_cfg()->tsx.t1 / 1000;
+		    delay.msec = pjsip_cfg()->tsx.t1 % 1000;
+		    pj_assert(!pj_timer_entry_running(te));
+		    te->cb = &trickle_ice_retrans_18x;
+		    pjsua_schedule_timer(te, &delay);
+
+		    PJ_LOG(4,(THIS_FILE,
+			      "Call %d: ICE trickle start retransmitting 18x",
+			      call->index));
+		}
+		return;
+	    }
+
+	    /* Check for incoming PRACK or INFO to stop 18x retransmission */
+	    if (!rdata)
+		return;
+
+	    msg = rdata->msg_info.msg;
+	    if (has_100rel) {
+		/* With 100rel, has received PRACK? */
+		if (msg->type != PJSIP_REQUEST_MSG ||
+		    pjsip_method_cmp(&msg->line.req.method,
+				     pjsip_get_prack_method()))
+		{
+		    return;
+		}
+	    } else {
+		pj_str_t INFO_PKG_STR = {"Info-Package", 12};
+		pjsip_generic_string_hdr *hdr;
+
+		/* Without 100rel, has received INFO? */
+		if (msg->type != PJSIP_REQUEST_MSG ||
+		    pjsip_method_cmp(&msg->line.req.method,
+				     &pjsip_info_method))
+		{
+		    return;
+		}
+
+		/* With Info-Package header containing 'trickle-ice' */
+		hdr = (pjsip_generic_string_hdr*)
+		      pjsip_msg_find_hdr_by_name(msg, &INFO_PKG_STR, NULL);
+		if (!hdr || pj_strcmp2(&hdr->hvalue, "trickle-ice"))
+		    return;
+
+		/* Set the flag indicating remote supports trickle ICE */
+		call->trickle_ice.remote_sup = PJ_TRUE;
+	    }
+	    PJ_LOG(4,(THIS_FILE,
+		      "Call %d: ICE trickle stop retransmitting 18x after "
+		      "receiving %s",
+		      call->index, (has_100rel?"PRACK":"INFO")));
+	}
+
+	/* Set flag indicating remote dialog is established.
+	 * Any 18x retransmission should be ceased automatically.
+	 */
+	call->trickle_ice.remote_dlg_est = PJ_TRUE;
+    }
+
+    /* Check if ICE trickling can be started */
+    if (!forced_trickling &&
+	(!call->trickle_ice.remote_dlg_est || !call->trickle_ice.remote_sup))
+    {
+	return;
+    }
+
+    /* Let's start trickling (or sending SIP INFO) */
+    if (!call->trickle_ice.trickling) {
+	pj_timer_entry *te = &call->trickle_ice.timer;
+	pj_time_val delay = {0,0};
+
+	call->trickle_ice.trickling = PJ_TRUE;
+
+	pjsua_cancel_timer(te);
+	te->id = forced_trickling? 2 : 0;
+	te->cb = &trickle_ice_send_sip_info;
+	pjsua_schedule_timer(te, &delay);
+
+	PJ_LOG(4,(THIS_FILE,
+		  "Call %d: ICE trickle start trickling",
+		  call->index));
+    }
+}
+
+
 /*
  * This callback receives notification from invite session when the
  * session state has changed.
@@ -5531,6 +6003,12 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e)
 {
+    /* Incoming INFO request for media control, DTMF, trickle ICE, etc. */
+    const pj_str_t STR_APPLICATION	 = { "application", 11};
+    const pj_str_t STR_MEDIA_CONTROL_XML = { "media_control+xml", 17 };
+    const pj_str_t STR_DTMF_RELAY	 = { "dtmf-relay", 10 };
+    const pj_str_t STR_TRICKLE_ICE_SDP	 = { "trickle-ice-sdpfrag", 19 };
+
     pjsua_call *call;
 
     pj_log_push_indent();
@@ -5721,22 +6199,13 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    pjsua_media_prov_clean_up(call->index);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
-	tsx->state==PJSIP_TSX_STATE_TRYING &&
-	pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0)
+	       tsx->state==PJSIP_TSX_STATE_TRYING &&
+	       pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0)
     {
-	/*
-	 * Incoming INFO request for media control.
-	 */
-	const pj_str_t STR_APPLICATION	     = { "application", 11};
-	const pj_str_t STR_MEDIA_CONTROL_XML = { "media_control+xml", 17 };
-	/*
-	 * Incoming INFO request for DTMF.
-	 */	
-	const pj_str_t STR_DTMF_RELAY  = { "dtmf-relay", 10 };
-
 	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 	pjsip_msg_body *body = rdata->msg_info.msg->body;
 
+	/* Check Media Control content in the INFO message */
 	if (body && body->len &&
 	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
 	    pj_stricmp(&body->content_type.subtype, &STR_MEDIA_CONTROL_XML)==0)
@@ -5759,9 +6228,12 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		if (status == PJ_SUCCESS)
 		    status = pjsip_tsx_send_msg(tsx, tdata);
 	    }
-	} else if (body && body->len &&
-	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
-	    pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
+	}
+
+	/* Check DTMF content in the INFO message */
+	else if (body && body->len &&
+		 pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+		 pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
 	{
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
@@ -5770,7 +6242,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    if (pjsua_var.ua_cfg.cb.on_dtmf_digit2 ||
                 pjsua_var.ua_cfg.cb.on_dtmf_event)
             {
-		pjsua_dtmf_info info;
+		pjsua_dtmf_info info = {0};
 		pj_str_t delim, token, input;
 		pj_ssize_t found_idx;
 
@@ -5869,16 +6341,44 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		    status = pjsip_tsx_send_msg(tsx, tdata);
 	    }
 	}
+
+	/* Check Trickle ICE content in the INFO message */
+	else if (body && body->len &&
+		 pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+		 pj_stricmp(&body->content_type.subtype,
+			    &STR_TRICKLE_ICE_SDP)==0)
+	{
+	    pjsip_tx_data *tdata;
+	    pj_status_t status;
+
+	    /* Trickle ICE tasks:
+	     * - UAS receiving INFO, cease 18x retrans & start trickling
+	     */
+	    if (call->trickle_ice.enabled) {
+		pjsua_ice_check_start_trickling(call, e);
+
+		/* Process the SIP INFO content */
+		trickle_ice_recv_sip_info(call, rdata);
+
+		/* Send 200 response, regardless */
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     200, NULL, &tdata);
+	    } else {
+		/* Trickle ICE not enabled, send 400 response */
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     400, NULL, &tdata);
+	    }
+	    if (status == PJ_SUCCESS)
+		status = pjsip_tsx_send_msg(tsx, tdata);
+	}
+
     } else if (tsx->role == PJSIP_ROLE_UAC && 
 	       pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0 &&
 	       (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
 	       (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
 	        e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)))
     {
-	const pj_str_t STR_APPLICATION = { "application", 11};
-	const pj_str_t STR_DTMF_RELAY  = { "dtmf-relay", 10 };
 	pjsip_msg_body *body = NULL;
-	pj_bool_t dtmf_info = PJ_FALSE;
 	
 	if (e->body.tsx_state.type == PJSIP_EVENT_TX_MSG)
 	    body = e->body.tsx_state.src.tdata->msg->body;
@@ -5889,13 +6389,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	if (body && body->len &&
 	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
 	    pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
-	{
-	    dtmf_info = PJ_TRUE;
-	}
-
-	if (dtmf_info && (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
-			 (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
-	           e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED))) 
 	{
 	    /* Status of outgoing INFO request */
 	    if (tsx->status_code >= 200 && tsx->status_code < 300) {
@@ -5911,7 +6404,36 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 			  tsx->status_text.ptr));
 	    }
 	}
+
+	/* Check Trickle ICE content in the INFO message */
+	else if (body && body->len &&
+		 pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+		 pj_stricmp(&body->content_type.subtype,
+			    &STR_TRICKLE_ICE_SDP)==0)
+	{
+	    /* Reset pending SIP INFO for Trickle ICE */
+	    call->trickle_ice.pending_info = PJ_FALSE;
+	}
+    } else if (inv->state < PJSIP_INV_STATE_CONFIRMED &&
+	       pjsip_method_cmp(&tsx->method, pjsip_get_invite_method())==0 &&
+	       tsx->state == PJSIP_TSX_STATE_PROCEEDING &&
+	       tsx->status_code/10 == 18)
+    {
+	/* Trickle ICE tasks:
+	 * - UAS sending 18x, start 18x retrans
+	 * - UAC receiving 18x, forcefully send SIP INFO & start trickling
+	 */
+	pjsua_ice_check_start_trickling(call, e);
+    } else if (tsx->role == PJSIP_ROLE_UAS &&
+	       pjsip_method_cmp(&tsx->method, pjsip_get_prack_method())==0 &&
+	       tsx->state==PJSIP_TSX_STATE_TRYING)
+    {
+	/* Trickle ICE tasks:
+	 * - UAS receiving PRACK, start trickling
+	 */
+	pjsua_ice_check_start_trickling(call, e);
     }
+
 
 on_return:
     pj_log_pop_indent();

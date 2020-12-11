@@ -389,6 +389,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
     NODE_READ_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_READ_BOOL    ( this_node, iceEnabled);
+    NODE_READ_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
     NODE_READ_INT     ( this_node, iceMaxHostCands);
     NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
     NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
@@ -422,6 +423,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_WRITE_BOOL    ( this_node, iceEnabled);
+    NODE_WRITE_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
     NODE_WRITE_INT     ( this_node, iceMaxHostCands);
     NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
     NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
@@ -635,6 +637,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.nat64_opt		= natConfig.nat64Opt;
     ret.ice_cfg_use		= PJSUA_ICE_CONFIG_USE_CUSTOM;
     ret.ice_cfg.enable_ice	= natConfig.iceEnabled;
+    ret.ice_cfg.ice_opt.trickle	= natConfig.iceTrickle;
     ret.ice_cfg.ice_max_host_cands = natConfig.iceMaxHostCands;
     ret.ice_cfg.ice_opt.aggressive = natConfig.iceAggressiveNomination;
     ret.ice_cfg.ice_opt.nominated_check_delay =
@@ -792,6 +795,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     natConfig.nat64Opt		= prm.nat64_opt;
     if (prm.ice_cfg_use == PJSUA_ICE_CONFIG_USE_CUSTOM) {
 	natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
+	natConfig.iceTrickle = prm.ice_cfg.ice_opt.trickle;
 	natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
 	natConfig.iceAggressiveNomination =
 			PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);

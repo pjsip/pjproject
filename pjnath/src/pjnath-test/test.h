@@ -29,6 +29,7 @@
 
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
+#define INCLUDE_TRICKLE_ICE_TEST    1
 #define INCLUDE_STUN_SOCK_TEST	    1
 #define INCLUDE_TURN_SOCK_TEST	    1
 #define INCLUDE_CONCUR_TEST    	    1
@@ -52,10 +53,13 @@ int sess_auth_test(void);
 int stun_sock_test(void);
 int turn_sock_test(void);
 int ice_test(void);
+int trickle_ice_test(void);
 int concur_test(void);
 int test_main(void);
 
-extern void app_perror(const char *title, pj_status_t rc);
+#define app_perror(msg, rc) app_perror_dbg(msg, rc, __FILE__, __LINE__)
+extern void app_perror_dbg(const char *msg, pj_status_t rc,
+			   const char *file, int line);
 extern void app_set_sock_nb(pj_sock_t sock);
 extern pj_pool_factory *mem;
 

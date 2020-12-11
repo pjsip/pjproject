@@ -393,12 +393,26 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #   define PJSUA_SEPARATE_WORKER_FOR_TIMER	0
 #endif
 
+
 /**
  * Default options that will be passed when creating ice transport.
  * See #pjmedia_transport_ice_options.
  */
 #ifndef PJSUA_ICE_TRANSPORT_OPTION
 #   define PJSUA_ICE_TRANSPORT_OPTION	0
+#endif
+
+/**
+ * Interval of checking for any new ICE candidate when trickle ICE is active.
+ * Trickle ICE gathers local ICE candidates, such as STUN and TURN candidates,
+ * in the background, while SDP offer/answer negotiation is being performed.
+ * Later, when any new ICE candidate is found, the endpoint will convey
+ * the candidate to the remote endpoint via SIP INFO.
+ *
+ * Default: 100 ms
+ */
+#ifndef PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL
+#   define PJSUA_TRICKLE_ICE_NEW_CAND_CHECK_INTERVAL	100
 #endif
 
 

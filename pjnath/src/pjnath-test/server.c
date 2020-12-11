@@ -29,6 +29,8 @@
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS	    ""
 
+#define RETURN_ERROR(rc)	    {app_perror("", rc);return rc;}
+
 static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
 				       void *data,
 				       pj_size_t size,
@@ -101,7 +103,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     } else {
 	status = pj_gethostip(GET_AF(use_ipv6), &hostip);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    RETURN_ERROR(status);
     }
 
     pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
@@ -122,7 +124,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 				      0, &test_srv->dns_server);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	/* Add DNS A record for the domain, for fallback */
@@ -161,14 +163,14 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 					  &test_srv->stun_sock, NULL);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	status = pj_activesock_start_recvfrom(test_srv->stun_sock, pool,
 					      MAX_STUN_PKT, 0);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	if (test_srv->dns_server && (flags & CREATE_STUN_SERVER_DNS_SRV)) {
@@ -222,7 +224,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
 	    if (status != PJ_SUCCESS) {
 		destroy_test_server(test_srv);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_start_recvfrom(test_srv->turn_sock, pool,
@@ -236,20 +238,26 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	    status = pj_sock_socket(GET_AF(use_ipv6), pj_SOCK_STREAM(), 0,
 				    &sock_fd);
 	    if (status != PJ_SUCCESS) {
-		return status;
+		RETURN_ERROR(status);
+	    }
+
+	    {
+		int val = 1;
+		pj_sock_setsockopt(sock_fd, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
+				   &val, sizeof(val));
 	    }
 
 	    status = pj_sock_bind(sock_fd, &bound_addr, 
 				  pj_sockaddr_get_len(&bound_addr));
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_sock_listen(sock_fd, 4);
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_create(pool, sock_fd, pj_SOCK_STREAM(), 
@@ -259,7 +267,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 					  &test_srv->turn_sock);
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_start_accept(test_srv->turn_sock,
@@ -309,7 +317,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 #endif
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	if (test_srv->dns_server && (flags & CREATE_TURN_SERVER_DNS_SRV)) {

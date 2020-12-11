@@ -898,6 +898,8 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 	options |= PJSIP_INV_SUPPORT_100REL;
     if (options & PJSIP_INV_REQUIRE_TIMER)
 	options |= PJSIP_INV_SUPPORT_TIMER;
+    if (options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
+	options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
 
     /* Create the session */
     inv = PJ_POOL_ZALLOC_T(dlg->pool, pjsip_inv_session);
@@ -963,7 +965,16 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+
 PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
+{
+    return pjsip_rdata_get_sdp_info2(rdata, NULL);
+}
+
+
+PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
+					    pjsip_rx_data *rdata,
+					    const pjsip_media_type *med_type)
 {
     pjsip_rdata_sdp_info *sdp_info;
     pjsip_msg_body *body = rdata->msg_info.msg->body;
@@ -980,7 +991,11 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
     PJ_ASSERT_RETURN(mod_inv.mod.id >= 0, sdp_info);
     rdata->endpt_info.mod_data[mod_inv.mod.id] = sdp_info;
 
-    pjsip_media_type_init2(&app_sdp, "application", "sdp");
+    if (!med_type) {
+	pjsip_media_type_init2(&app_sdp, "application", "sdp");
+    } else {
+	pj_memcpy(&app_sdp, med_type, sizeof(app_sdp));
+    }
 
     if (body && ctype_hdr &&
 	pj_stricmp(&ctype_hdr->media.type, &app_sdp.type)==0 &&
@@ -1060,6 +1075,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 	*options |= PJSIP_INV_SUPPORT_TIMER;
     if (*options & PJSIP_INV_REQUIRE_ICE)
 	*options |= PJSIP_INV_SUPPORT_ICE;
+    if (*options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
+	*options |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
 
     if (rdata) {
         /* Get the message in rdata */
@@ -1286,6 +1303,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 	const pj_str_t STR_100REL = { "100rel", 6};
 	const pj_str_t STR_TIMER = { "timer", 5};
 	const pj_str_t STR_ICE = { "ice", 3 };
+	const pj_str_t STR_TRICKLE_ICE = { "trickle-ice", 11 };
 
 	for (i=0; i<sup_hdr->count; ++i) {
 	    if (pj_stricmp(&sup_hdr->values[i], &STR_100REL)==0)
@@ -1294,6 +1312,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 		rem_option |= PJSIP_INV_SUPPORT_TIMER;
 	    else if (pj_stricmp(&sup_hdr->values[i], &STR_ICE)==0)
 		rem_option |= PJSIP_INV_SUPPORT_ICE;
+	    else if (pj_stricmp(&sup_hdr->values[i], &STR_TRICKLE_ICE)==0)
+		rem_option |= PJSIP_INV_SUPPORT_TRICKLE_ICE;
 	}
     }
 
@@ -1308,6 +1328,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 	const pj_str_t STR_REPLACES = { "replaces", 8 };
 	const pj_str_t STR_TIMER = { "timer", 5 };
 	const pj_str_t STR_ICE = { "ice", 3 };
+	const pj_str_t STR_TRICKLE_ICE = { "trickle-ice", 11 };
 	unsigned unsupp_cnt = 0;
 	pj_str_t unsupp_tags[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 	
@@ -1333,6 +1354,11 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 		pj_stricmp(&req_hdr->values[i], &STR_ICE)==0)
 	    {
 		rem_option |= PJSIP_INV_REQUIRE_ICE;
+
+	    } else if ((*options & PJSIP_INV_SUPPORT_TRICKLE_ICE) &&
+		pj_stricmp(&req_hdr->values[i], &STR_TRICKLE_ICE)==0)
+	    {
+		rem_option |= PJSIP_INV_REQUIRE_TRICKLE_ICE;
 
 	    } else if (!pjsip_endpt_has_capability(endpt, PJSIP_H_SUPPORTED,
 						   NULL, &req_hdr->values[i]))
@@ -1381,9 +1407,11 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
      * by peer.
      */
     if ( msg && (((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
-	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0) ||
-	 ((*options & PJSIP_INV_REQUIRE_TIMER)!=0 && 
-	  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0)))
+                  (rem_option & PJSIP_INV_SUPPORT_100REL)==0) ||
+                 ((*options & PJSIP_INV_REQUIRE_TIMER)!=0 && 
+                  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0) ||
+                 ((*options & PJSIP_INV_REQUIRE_TRICKLE_ICE)!=0 && 
+                  (rem_option & PJSIP_INV_SUPPORT_TRICKLE_ICE)==0)))
     {
 	code = PJSIP_SC_EXTENSION_REQUIRED;
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
@@ -1399,6 +1427,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
 		req_hdr->values[req_hdr->count++] = pj_str("100rel");
 	    if (*options & PJSIP_INV_REQUIRE_TIMER)
 		req_hdr->values[req_hdr->count++] = pj_str("timer");
+	    if (*options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
+		req_hdr->values[req_hdr->count++] = pj_str("trickle-ice");
 
 	    pj_list_push_back(&res_hdr_list, req_hdr);
 
@@ -1427,6 +1457,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
     if (rem_option & PJSIP_INV_REQUIRE_TIMER) {
 	    pj_assert(*options & PJSIP_INV_SUPPORT_TIMER);
 	    *options |= PJSIP_INV_REQUIRE_TIMER;
+    }
+    if (rem_option & PJSIP_INV_REQUIRE_TRICKLE_ICE) {
+	    pj_assert(*options & PJSIP_INV_SUPPORT_TRICKLE_ICE);
+	    *options |= PJSIP_INV_REQUIRE_TRICKLE_ICE;
     }
 
 on_return:
@@ -1789,7 +1823,8 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
 {
     /* If all extensions are enabled, nothing to do */
     if ((inv_option & PJSIP_INV_SUPPORT_100REL) &&
-	(inv_option & PJSIP_INV_SUPPORT_TIMER))
+	(inv_option & PJSIP_INV_SUPPORT_TIMER) &&
+	(inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE))
     {
 	return;
     }
@@ -1811,6 +1846,11 @@ static void cleanup_allow_sup_hdr(unsigned inv_option,
     if ((inv_option & PJSIP_INV_SUPPORT_TIMER) == 0 && sup_hdr) {
 	const pj_str_t STR_TIMER = { "timer", 5 };
 	remove_val_from_array_hdr(sup_hdr, &STR_TIMER);
+    }
+
+    if ((inv_option & PJSIP_INV_SUPPORT_TRICKLE_ICE) == 0 && sup_hdr) {
+	const pj_str_t STR_TRICKLE_ICE = { "trickle-ice", 11 };
+	remove_val_from_array_hdr(sup_hdr, &STR_TRICKLE_ICE);
     }
 
     if ((inv_option & PJSIP_INV_SUPPORT_100REL) == 0) {
@@ -1920,7 +1960,8 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 
     /* Add Require header. */
     if ((inv->options & PJSIP_INV_REQUIRE_100REL) ||
-	(inv->options & PJSIP_INV_REQUIRE_TIMER)) 
+	(inv->options & PJSIP_INV_REQUIRE_TIMER) ||
+	(inv->options & PJSIP_INV_REQUIRE_TRICKLE_ICE))
     {
 	pjsip_require_hdr *hreq;
 
@@ -1930,6 +1971,8 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 	    hreq->values[hreq->count++] = pj_str("100rel");
 	if (inv->options & PJSIP_INV_REQUIRE_TIMER)
 	    hreq->values[hreq->count++] = pj_str("timer");
+	if (inv->options & PJSIP_INV_REQUIRE_TRICKLE_ICE)
+	    hreq->values[hreq->count++] = pj_str("trickle-ice");
 
 	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) hreq);
     }

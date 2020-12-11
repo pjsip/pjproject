@@ -54,6 +54,8 @@ if not CPP_PATH:
 	sys.exit(1)
 
 # Hardcoded!
+# Note for win32:
+# - temporarily comment "#include <pj/compat/socket.h>" in pj/sock.h (line ~29)
 if sys.platform == 'win32':
 	PYCPARSER_DIR="D:/work/tool/pycparser-master"
 elif sys.platform == "linux2":

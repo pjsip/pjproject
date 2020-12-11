@@ -53,6 +53,7 @@ static void print_stack(int sig)
 static void init_signals()
 {
     signal(SIGSEGV, &print_stack);
+    signal(SIGABRT, &print_stack);
 }
 
 #else

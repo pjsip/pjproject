@@ -757,7 +757,7 @@ static void ice_init_complete_cb(void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
 
-    if (call_med->call == NULL)
+    if (call_med->call == NULL || call_med->tp_ready == PJ_SUCCESS)
 	return;
 
     /* No need to acquire_call() if we only change the tp_ready flag
@@ -852,6 +852,16 @@ static void on_ice_complete(pjmedia_transport *tp,
 				      (void*)(pj_ssize_t)call->index, 1);
 	    }
         }
+
+	/* Stop trickling */
+	if (call->trickle_ice.trickling) {
+	    call->trickle_ice.trickling = PJ_FALSE;
+	    pjsua_cancel_timer(&call->trickle_ice.timer);
+	    PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle stopped trickling as "
+		      "ICE nego completed",
+		      call->index));
+	}
+
 	/* Check if default ICE transport address is changed */
         call->reinv_ice_sent = PJ_FALSE;
 	pjsua_call_schedule_reinvite_check(call, 0);
@@ -928,6 +938,8 @@ static pj_status_t create_ice_media_transport(
     unsigned comp_cnt;
     pj_status_t status;
     pj_bool_t use_ipv6, use_nat64;
+    pj_bool_t trickle = PJ_FALSE;
+    pjmedia_sdp_session *rem_sdp;
 
     acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
     use_ipv6 = (acc_cfg->ipv6_media_use != PJSUA_IPV6_DISABLED);
@@ -957,20 +969,40 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.resolver = pjsua_var.resolver;
     
     ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
+    rem_sdp = call_med->call->async_call.rem_sdp;
 
-    if (call_med->call->async_call.rem_sdp) {
+    if (rem_sdp) {
     	/* Match the default address family according to the offer */
         const pj_str_t ID_IP6 = { "IP6", 3};
     	const pjmedia_sdp_media *m;
 	const pjmedia_sdp_conn *c;
 
-    	m = call_med->call->async_call.rem_sdp->media[call_med->idx];
-	c = m->conn? m->conn : call_med->call->async_call.rem_sdp->conn;
+	m = rem_sdp->media[call_med->idx];
+	c = m->conn? m->conn : rem_sdp->conn;
 
 	if (pj_stricmp(&c->addr_type, &ID_IP6) == 0)
 	    ice_cfg.af = pj_AF_INET6();
     } else if (use_ipv6 || use_nat64) {
     	ice_cfg.af = pj_AF_INET6();
+    }
+
+    /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
+    if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+	if (rem_sdp) {
+	    /* As answerer: and when remote signals trickle ICE in SDP */
+	    trickle = pjmedia_ice_sdp_has_trickle(rem_sdp, call_med->idx);
+	    if (trickle) {
+		call_med->call->trickle_ice.remote_sup = PJ_TRUE;
+		call_med->call->trickle_ice.enabled = PJ_TRUE;
+	    }
+	} else {
+	    /* As offerer: and when trickle ICE mode is full */
+	    trickle = (ice_cfg.opt.trickle==PJ_ICE_SESS_TRICKLE_FULL);
+	    call_med->call->trickle_ice.enabled = PJ_TRUE;
+	}
+
+	/* Check if trickle ICE can start trickling/sending SIP INFO */
+	pjsua_ice_check_start_trickling(call_med->call, NULL);
     }
 
     /* If STUN transport is configured, initialize STUN transport settings */
@@ -1117,7 +1149,7 @@ static pj_status_t create_ice_media_transport(
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;
     pj_ansi_snprintf(name, sizeof(name), "icetp%02d", call_med->idx);
-    call_med->tp_ready = PJ_EPENDING;
+    call_med->tp_ready = trickle? PJ_SUCCESS : PJ_EPENDING;
 
     comp_cnt = 1;
     if (PJMEDIA_ADVERTISE_RTCP && !acc_cfg->ice_cfg.ice_no_rtcp)
@@ -1133,7 +1165,7 @@ static pj_status_t create_ice_media_transport(
     }
 
     /* Wait until transport is initialized, or time out */
-    if (!async) {
+    if (!async && !trickle) {
 	pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
 	pjsip_dialog *dlg = call_med->call->inv ?
 				call_med->call->inv->dlg : NULL;
@@ -3031,6 +3063,12 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     stop_media_session(call_id);
 
+    /* Stop trickle ICE timer */
+    if (call->trickle_ice.trickling) {
+	call->trickle_ice.trickling = PJ_FALSE;
+	pjsua_cancel_timer(&call->trickle_ice.timer);
+    }
+
     /* Clean up media transports */
     pjsua_media_prov_clean_up(call_id);
     call->med_prov_cnt = 0;
@@ -3391,6 +3429,22 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    status = PJMEDIA_SDP_EINSDP;
 	    goto on_error;
 #endif
+	}
+
+	/* Find and save "a=mid". Currently this is for trickle ICE. Trickle
+	 * ICE match media in SDP of SIP INFO by comparing this attribute,
+	 * so remote SDP must be received first before remote SDP in SIP INFO
+	 * can be processed.
+	 */
+	{
+	    const pjmedia_sdp_media *m = remote_sdp->media[mi];
+	    pjmedia_sdp_attr *a;
+
+	    a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
+	    if (a)
+		call_med->rem_mid = a->value;
+	    else
+		pj_bzero(&call_med->rem_mid, sizeof(call_med->rem_mid));
 	}
 
 	/* Apply media update action */

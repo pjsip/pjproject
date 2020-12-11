@@ -21,14 +21,16 @@
 #include <pjlib.h>
 #include <pj/compat/socket.h>
 
-void app_perror(const char *msg, pj_status_t rc)
+void app_perror_dbg(const char *msg, pj_status_t rc,
+		    const char *file, int line)
 {
     char errbuf[256];
 
     PJ_CHECK_STACK();
 
     pj_strerror(rc, errbuf, sizeof(errbuf));
-    PJ_LOG(1,("test", "%s: [pj_status_t=%d] %s", msg, rc, errbuf));
+    PJ_LOG(1,("test", "%s:%d: %s: [pj_status_t=%d] %s", file, line, msg,
+	      rc, errbuf));
 }
 
 /* Set socket to nonblocking. */
@@ -220,6 +222,10 @@ static int test_inner(void)
 
 #if INCLUDE_ICE_TEST
     DO_TEST(ice_test());
+#endif
+
+#if INCLUDE_TRICKLE_ICE_TEST
+    DO_TEST(trickle_ice_test());
 #endif
 
 #if INCLUDE_STUN_SOCK_TEST
