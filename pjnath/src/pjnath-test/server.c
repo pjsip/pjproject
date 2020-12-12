@@ -27,7 +27,7 @@
 #define CERT_CA_FILE		    CERT_DIR "cacert.pem"
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
-#define CERT_PRIVKEY_PASS	    ""
+#define CERT_PRIVKEY_PASS	    "privkeypass"
 
 #define RETURN_ERROR(rc)	    {app_perror("", rc);return rc;}
 
