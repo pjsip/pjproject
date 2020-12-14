@@ -1162,9 +1162,21 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 		    int i = 0, cnt = 0;
 		    for (; i < sk_X509_INFO_num(inf); i++) {
 			X509_INFO *itmp = sk_X509_INFO_value(inf, i);
-			if (itmp->x509) {
-			    X509_STORE_add_cert(cts, itmp->x509);
+			if (!itmp->x509)
+			    continue;
+
+			rc = X509_STORE_add_cert(cts, itmp->x509);
+			if (rc == 1) {
 			    ++cnt;
+			} else {
+#if PJ_LOG_MAX_LEVEL >= 4
+			    char buf[256];
+			    PJ_LOG(4,(ssock->pool->obj_name,
+				      "Error adding CA cert: %s",
+				      X509_NAME_oneline(
+					X509_get_subject_name(itmp->x509),
+					buf, sizeof(buf))));
+#endif
 			}
 		    }
 		    PJ_LOG(4,(ssock->pool->obj_name,
