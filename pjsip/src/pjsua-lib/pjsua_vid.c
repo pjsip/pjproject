@@ -1114,7 +1114,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    }
 	}
 
-        if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_stream_precreate) {
+        if (pjsua_var.ua_cfg.cb.on_stream_precreate) {
             pjsua_on_stream_precreate_param prm;
             prm.stream_idx = call_med->idx;
             prm.stream_info.type = PJMEDIA_TYPE_VIDEO;
@@ -1865,7 +1865,7 @@ static void call_get_vid_strm_info(pjsua_call *call,
 
 /* Send SDP reoffer. */
 static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
-				    pjmedia_sdp_session *sdp)
+				    const pjmedia_sdp_session *sdp)
 {
     pjsua_call *call;
     pjsip_tx_data *tdata;
@@ -1880,13 +1880,6 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
 	PJ_LOG(3,(THIS_FILE, "Can not re-INVITE call that is not confirmed"));
 	pjsip_dlg_dec_lock(dlg);
 	return PJSIP_ESESSIONSTATE;
-    }
-
-    /* Notify application */
-    if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_sdp_created) {
-	(*pjsua_var.ua_cfg.cb.on_call_sdp_created)(call_id, sdp,
-						   call->inv->pool_prov,
-						   NULL);
     }
 
     /* Create re-INVITE with new offer */

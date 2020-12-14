@@ -90,17 +90,17 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
     /* Set payload header */
     bits[0] = 0;
     if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP8) {
-	    /* Set N: Non-reference frame */
+	/* Set N: Non-reference frame */
         if (!is_keyframe) bits[0] |= 0x20;
         /* Set S: Start of VP8 partition. */
         if (*bits_pos == 0) bits[0] |= 0x10;
     } else if (pktz->cfg.fmt_id == PJMEDIA_FORMAT_VP9) {
-	    /* Set P: Inter-picture predicted frame */
+	/* Set P: Inter-picture predicted frame */
         if (!is_keyframe) bits[0] |= 0x40;
         /* Set B: Start of a frame */
         if (*bits_pos == 0) bits[0] |= 0x8;
         /* Set E: End of a frame */
-        if (*bits_pos + payload_len == bits_len) {
+        if (*bits_pos + *payload_len == bits_len) {
             bits[0] |= 0x4;
 	}
     }
