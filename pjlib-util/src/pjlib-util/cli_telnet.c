@@ -1872,10 +1872,6 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
             goto on_exit;
     }
 
-    if (fe->cfg.on_started) {
-	(*fe->cfg.on_started)(PJ_SUCCESS);
-    }
-
     return PJ_SUCCESS;
 
 on_exit:
@@ -1929,6 +1925,10 @@ static pj_status_t telnet_restart(cli_telnet_fe *fe)
     status = telnet_start(fe);
     if (status != PJ_SUCCESS)
 	goto on_exit;
+
+    if (fe->cfg.on_started) {
+	(*fe->cfg.on_started)(PJ_SUCCESS);
+    }
 
     TRACE_((THIS_FILE, "Telnet restarted"));
 
