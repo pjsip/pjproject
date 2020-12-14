@@ -114,13 +114,13 @@ static struct cmd_xml_t cmd_xmls[] = {
      "    <ARG name='whom' type='text' desc='Whom to say to'/>"
      "</CMD>",
      &say},
-    {"<CMD name='vid' id='1' desc='Video Command'>"
-     "   <CMD name='help' id='2' desc='Show Help' />"
-     "   <CMD name='enable' id='3' desc='Enable Video' />"
-     "   <CMD name='disable' id='4' desc='Disable Video' />"
-     "   <CMD name='call' id='5' desc='Video call' >"
-     "            <CMD name='add' id='6' desc='Add Call' />"
-     "            <CMD name='cap' id='7' desc='Capture Call' >"
+    {"<CMD name='vid' id='7' desc='Video Command'>"
+     "   <CMD name='help' id='72' desc='Show Help' />"
+     "   <CMD name='enable' id='73' desc='Enable Video' />"
+     "   <CMD name='disable' id='74' desc='Disable Video' />"
+     "   <CMD name='call' id='75' desc='Video call' >"
+     "            <CMD name='add' id='756' desc='Add Call' />"
+     "            <CMD name='cap' id='757' desc='Capture Call' >"
      "               <ARG name='streamno' type='int' desc='Stream No' id='1'/>"
      "               <ARG name='devid' type='int' desc='Device Id' id='2'/>"
      "            </CMD>"
@@ -128,7 +128,7 @@ static struct cmd_xml_t cmd_xmls[] = {
      "</CMD>",
      NULL},
     {"<CMD name='disable_codec' id='8' desc='Disable codec'>"
-     "	<ARG name='codec_list' type='choice' id='3' desc='Codec list'>"
+     "	<ARG name='codec_list' type='choice' id='38' desc='Codec list'>"
      "	    <CHOICE value='g711' desc='G711 Codec'/>"
      "	    <CHOICE value='g722' desc='G722 Codec'/>"
      "	</ARG>"
@@ -176,9 +176,13 @@ int main()
     for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
         xml = pj_str(cmd_xmls[i].xml);	
         status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
-	    cmd_xmls[i].handler, NULL, get_codec_list);
-        if (status != PJ_SUCCESS)
+					 cmd_xmls[i].handler, NULL,
+					 get_codec_list);
+        if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status,
+			 "Failed adding command from XML #%d", i));
 	    goto on_return;
+	}
     }
 
     /*
