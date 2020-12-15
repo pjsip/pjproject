@@ -1931,7 +1931,7 @@ pj_ssl_sock_start_accept2(pj_ssl_sock_t *ssock,
     pj_activesock_cfg_default(&asock_cfg);
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
-    asock_cfg.whole_data = PJ_TRUE;
+    asock_cfg.whole_data = PJ_FALSE;
     asock_cfg.grp_lock = ssock->param.grp_lock;
 
     pj_bzero(&asock_cb, sizeof(asock_cb));

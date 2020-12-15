@@ -53,6 +53,7 @@
 #define os_epoll_ctl		epoll_ctl
 #define os_epoll_wait		epoll_wait
 
+
 #define THIS_FILE   "ioq_epoll"
 
 //#define TRACE_(expr) PJ_LOG(3,expr)
@@ -108,12 +109,46 @@ struct pj_ioqueue_t
 static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 #endif
 
+
+/* EPOLLEXCLUSIVE or EPOLLONESHOT is reported to cause perm handshake error
+ * on OpenSSL 1.0.2, so let's disable this when using OpenSSL older than
+ * version 1.1.0.
+ */
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+
+#  include <openssl/opensslv.h>
+#  if OPENSSL_VERSION_NUMBER < 0x10100000L
+#    define DONT_USE_EXCL_ONESHOT
+#  endif
+
+#endif
+
+/* Use EPOLLEXCLUSIVE or EPOLLONESHOT to signal one thread only at a time. */
+#if defined(EPOLLEXCLUSIVE) && !defined(DONT_USE_EXCL_ONESHOT)
+#  define USE_EPOLLEXCLUSIVE	1
+#  define USE_EPOLLONESHOT	0
+#elif defined(EPOLLONESHOT) && !defined(DONT_USE_EXCL_ONESHOT)
+#  define USE_EPOLLEXCLUSIVE	0
+#  define USE_EPOLLONESHOT	1
+#else
+#  define USE_EPOLLEXCLUSIVE	0
+#  define USE_EPOLLONESHOT	0
+#endif
+
+
 /*
  * pj_ioqueue_name()
  */
 PJ_DEF(const char*) pj_ioqueue_name(void)
 {
+#if USE_EPOLLEXCLUSIVE
+    return "epoll-exclusive";
+#elif USE_EPOLLONESHOT
+    return "epoll-oneshot";
+#else
     return "epoll";
+#endif
 }
 
 /*
@@ -328,6 +363,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 */
     /* os_epoll_ctl. */
     ev.events = EPOLLIN | EPOLLERR;
+#if USE_EPOLLEXCLUSIVE
+    ev.events |= EPOLLEXCLUSIVE;
+#elif USE_EPOLLONESHOT
+    ev.events |= EPOLLONESHOT;
+#endif
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
@@ -517,9 +557,18 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
     if (event_type == WRITEABLE_EVENT) {
 	struct epoll_event ev;
 
-	ev.events = EPOLLIN | EPOLLERR;
 	ev.epoll_data = (epoll_data_type)key;
+	ev.events = EPOLLIN | EPOLLERR;
+#if USE_EPOLLEXCLUSIVE
+	ev.events |= EPOLLEXCLUSIVE;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
+#elif USE_EPOLLONESHOT
+	ev.events |= EPOLLONESHOT;
 	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#else
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#endif
     }	
 }
 
@@ -533,13 +582,31 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
-    if (event_type == WRITEABLE_EVENT) {
+#if USE_EPOLLONESHOT==0
+    /* When not using EPOLLONESHOT, only rearm write event,
+     * otherwise, rearm all events.
+     */
+    if (event_type == WRITEABLE_EVENT)
+#endif
+    {
 	struct epoll_event ev;
 
-	ev.events = EPOLLIN | EPOLLOUT | EPOLLERR;
 	ev.epoll_data = (epoll_data_type)key;
+	ev.events = EPOLLIN | EPOLLERR;
+	if (event_type == WRITEABLE_EVENT)
+	    ev.events |= EPOLLOUT;
+
+#if USE_EPOLLEXCLUSIVE
+	ev.events |= EPOLLEXCLUSIVE;
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
+#elif USE_EPOLLONESHOT
+	ev.events |= EPOLLONESHOT;
 	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-    }	
+#else
+	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#endif
+    }
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
