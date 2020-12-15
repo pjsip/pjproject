@@ -1039,6 +1039,13 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 		}
 		SSL_CTX_free(ctx);
 		return status;
+	    } else {
+		PJ_LOG(4,(ssock->pool->obj_name,
+			  "CA certificates loaded from '%s%s%s'",
+			  cert->CA_file.ptr,
+			  ((cert->CA_file.slen && cert->CA_path.slen)?
+				" + ":""),
+			  cert->CA_path.ptr));
 	    }
 	}
     
@@ -1062,6 +1069,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 			     cert->cert_file.ptr));
 		SSL_CTX_free(ctx);
 		return status;
+	    } else {
+		PJ_LOG(4,(ssock->pool->obj_name,
+			  "Certificate chain loaded from '%s'",
+			  cert->cert_file.ptr));
 	    }
 	}
 
@@ -1079,6 +1090,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 			     cert->privkey_file.ptr));
 		SSL_CTX_free(ctx);
 		return status;
+	    } else {
+		PJ_LOG(4,(ssock->pool->obj_name,
+			  "Private key loaded from '%s'",
+			  cert->privkey_file.ptr));
 	    }
 
 #if !defined(OPENSSL_NO_DH)
@@ -1124,6 +1139,9 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 			BIO_free(cbio);
 			SSL_CTX_free(ctx);
 			return status;
+		    } else {
+			PJ_LOG(4,(ssock->pool->obj_name,
+				  "Certificate chain loaded from buffer"));
 		    }
 		    X509_free(xcert);
 		}
@@ -1141,13 +1159,29 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 								  NULL, NULL);
 
 		if (inf != NULL) {
-		    int i = 0;		    
+		    int i = 0, cnt = 0;
 		    for (; i < sk_X509_INFO_num(inf); i++) {
 			X509_INFO *itmp = sk_X509_INFO_value(inf, i);
-			if (itmp->x509) {
-			    X509_STORE_add_cert(cts, itmp->x509);
+			if (!itmp->x509)
+			    continue;
+
+			rc = X509_STORE_add_cert(cts, itmp->x509);
+			if (rc == 1) {
+			    ++cnt;
+			} else {
+#if PJ_LOG_MAX_LEVEL >= 4
+			    char buf[256];
+			    PJ_LOG(4,(ssock->pool->obj_name,
+				      "Error adding CA cert: %s",
+				      X509_NAME_oneline(
+					X509_get_subject_name(itmp->x509),
+					buf, sizeof(buf))));
+#endif
 			}
 		    }
+		    PJ_LOG(4,(ssock->pool->obj_name,
+			      "CA certificates loaded from buffer (cnt=%d)",
+			      cnt));
 		}
 		sk_X509_INFO_pop_free(inf, X509_INFO_free);
 		BIO_free(cbio);
@@ -1161,7 +1195,8 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	    kbio = BIO_new_mem_buf((void*)cert->privkey_buf.ptr,
 				   cert->privkey_buf.slen);
 	    if (kbio != NULL) {
-		pkey = PEM_read_bio_PrivateKey(kbio, NULL, 0, NULL);
+		pkey = PEM_read_bio_PrivateKey(kbio, NULL, &password_cb,
+					       cert);
 		if (pkey) {
 		    rc = SSL_CTX_use_PrivateKey(ctx, pkey);
 		    if (rc != 1) {
@@ -1172,9 +1207,16 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 			BIO_free(kbio);
 			SSL_CTX_free(ctx);
 			return status;
+		    } else {
+			PJ_LOG(4,(ssock->pool->obj_name,
+				  "Private key loaded from buffer"));
 		    }
 		    EVP_PKEY_free(pkey);
+		} else {
+		    PJ_LOG(1,(ssock->pool->obj_name,
+			      "Error reading private key from buffer"));
 		}
+
 		if (ssock->is_server) {
 		    dh = PEM_read_bio_DHparams(kbio, NULL, NULL, NULL);
 		    if (dh != NULL) {
@@ -1319,8 +1361,16 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                 BIO_free(new_bio);
         }
 
-        if (ca_dn != NULL)
-            SSL_CTX_set_client_CA_list(ctx, ca_dn);
+	if (ca_dn != NULL) {
+	    SSL_CTX_set_client_CA_list(ctx, ca_dn);
+	    PJ_LOG(4,(ssock->pool->obj_name,
+		      "CA certificates loaded from %s",
+		      (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
+	} else {
+	    PJ_LOG(1,(ssock->pool->obj_name,
+		      "Error reading CA certificates from %s",
+		      (cert->CA_file.slen?cert->CA_file.ptr:"buffer")));
+	}
     }
 
     /* Early sensitive data cleanup after OpenSSL context setup. However,
