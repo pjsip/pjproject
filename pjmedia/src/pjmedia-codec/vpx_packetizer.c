@@ -38,6 +38,17 @@ struct pjmedia_vpx_packetizer
 };
 
 /*
+ * Initialize VPX packetizer.
+ */
+PJ_DEF(void) pjmedia_vpx_packetizer_cfg_default(pjmedia_vpx_packetizer_cfg *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+
+    cfg->fmt_id = PJMEDIA_FORMAT_VP8;
+    cfg->mtu =PJMEDIA_MAX_VID_PAYLOAD_SIZE;
+}
+
+/*
  * Create vpx packetizer.
  */
 PJ_DEF(pj_status_t) pjmedia_vpx_packetizer_create(
@@ -59,9 +70,8 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetizer_create(
     if (cfg) {
 	pj_memcpy(&p_->cfg, cfg, sizeof(*cfg));
     } else {
-	p_->cfg.fmt_id = PJMEDIA_FORMAT_VP8;
+	pjmedia_vpx_packetizer_cfg_default(&p_->cfg);
     }
-
     *p = p_;
 
     return PJ_SUCCESS;

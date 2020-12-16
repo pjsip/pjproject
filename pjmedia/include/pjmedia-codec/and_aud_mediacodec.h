@@ -45,6 +45,8 @@
  * General codec settings for this codec such as VAD and PLC can be
  * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param.
  * Please see the documentation of #pjmedia_codec_param for more info.
+ * Note that MediaCodec doesn't provide internal VAD/PLC feature, they will be
+ * provided by PJMEDIA instead.
  *
  * \subsubsection bitrate Bitrate
  *

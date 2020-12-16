@@ -125,6 +125,14 @@ static struct and_media_factory {
     pj_mutex_t        	    *mutex;
 } and_media_factory;
 
+typedef enum and_aud_codec_id {
+    /* AMRNB codec. */
+    AND_AUD_CODEC_AMRNB,
+
+    /* AMRWB codec. */
+    AND_AUD_CODEC_AMRWB
+} and_aud_codec_id;
+
 /* Android MediaCodec codecs private data. */
 typedef struct and_media_private {
     int			 codec_idx;	    /**< Codec index.		    */
@@ -211,6 +219,7 @@ static struct and_media_codec {
     pj_str_t        *decoder_name;      /* Decoder name.                    */
 
     pj_uint8_t	     pt;		/* Payload type.		    */
+    and_aud_codec_id codec_id;		/* Codec id.                        */
     unsigned	     clock_rate;	/* Codec's clock rate.		    */
     unsigned	     channel_count;	/* Codec's channel count.	    */
     unsigned	     samples_per_frame;	/* Codec's samples count.	    */
@@ -232,16 +241,16 @@ and_media_codec[] =
 {
 #   if PJMEDIA_HAS_AND_MEDIA_AMRNB
     {0, "AMR", "audio/3gpp", NULL, NULL,
-        PJMEDIA_RTP_PT_AMR, 8000, 1, 160, 7400, 12200, 2, 1, 1,
-	&parse_amr, &pack_amr, &predecode_amr,
+        PJMEDIA_RTP_PT_AMR, AND_AUD_CODEC_AMRNB, 8000, 1, 160, 7400, 12200,
+        2, 0, 0, &parse_amr, &pack_amr, &predecode_amr,
         {1, {{{(char *)"octet-align", 11}, {(char *)"1", 1}}}}
     },
 #   endif
 
 #   if PJMEDIA_HAS_AND_MEDIA_AMRWB
     {0, "AMR-WB", "audio/amr-wb", NULL, NULL,
-        PJMEDIA_RTP_PT_AMRWB, 16000, 1, 320, 15850, 23850, 2, 1, 1,
-        &parse_amr, &pack_amr, &predecode_amr,
+        PJMEDIA_RTP_PT_AMRWB, AND_AUD_CODEC_AMRWB, 16000, 1, 320, 15850, 23850,
+        2, 0, 0, &parse_amr, &pack_amr, &predecode_amr,
 	{1, {{{(char *)"octet-align", 11}, {(char *)"1", 1}}}}
     },
 #   endif
@@ -552,7 +561,8 @@ static pj_status_t and_media_default_attr (pjmedia_codec_factory *factory,
 
     for (i = 0; i < PJ_ARRAY_SIZE(and_media_codec); ++i) {
 	pj_str_t name = pj_str((char*)and_media_codec[i].name);
-	if ((pj_stricmp(&id->encoding_name, &name) == 0) &&
+	if ((and_media_codec[i].enabled) &&
+	    (pj_stricmp(&id->encoding_name, &name) == 0) &&
 	    (id->clock_rate == (unsigned)and_media_codec[i].clock_rate) &&
 	    (id->channel_cnt == (unsigned)and_media_codec[i].channel_count) &&
 	    (id->pt == (unsigned)and_media_codec[i].pt))
@@ -625,9 +635,9 @@ static pj_status_t and_media_enum_codecs(pjmedia_codec_factory *factory,
 	pj_str_t *dec_name = NULL;
 	unsigned num_dec = 0;
 
-	switch (and_media_codec[i].pt) {
+	switch (and_media_codec[i].codec_id) {
 
-	case PJMEDIA_RTP_PT_AMR:
+	case AND_AUD_CODEC_AMRNB:
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB
 	    enc_name = &AMRNB_encoder[0];
 	    dec_name = &AMRNB_decoder[0];
@@ -635,7 +645,7 @@ static pj_status_t and_media_enum_codecs(pjmedia_codec_factory *factory,
 	    num_dec = PJ_ARRAY_SIZE(AMRNB_decoder);
 #endif
 	    break;
-	case PJMEDIA_RTP_PT_AMRWB:
+	case AND_AUD_CODEC_AMRWB:
 #if PJMEDIA_HAS_AND_MEDIA_AMRWB
 	    enc_name = &AMRWB_encoder[0];
 	    dec_name = &AMRWB_decoder[0];
@@ -859,8 +869,8 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
     and_media_data->clock_rate = attr->info.clock_rate;
 
 #if PJMEDIA_HAS_AND_MEDIA_AMRNB
-    if (and_media_data->pt == PJMEDIA_RTP_PT_AMR ||
-	and_media_data->pt == PJMEDIA_RTP_PT_AMRWB)
+    if (and_media_data->codec_id == AND_AUD_CODEC_AMRNB ||
+	and_media_data->codec_id == AND_AUD_CODEC_AMRWB)
     {
 	amr_settings_t *s;
 	pj_uint8_t octet_align = 0;
@@ -910,9 +920,9 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
 		l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 
 		while (l--) {
-		    if ((and_media_data->pt==PJMEDIA_RTP_PT_AMR &&
+		    if ((and_media_data->codec_id == AND_AUD_CODEC_AMRNB &&
 			 *p>='0' && *p<='7') ||
-		        (and_media_data->pt==PJMEDIA_RTP_PT_AMRWB &&
+		        (and_media_data->codec_id == AND_AUD_CODEC_AMRWB &&
 		         *p>='0' && *p<='8'))
 		    {
 			pj_int8_t tmp = (pj_int8_t)(*p - '0' - enc_mode);
@@ -939,12 +949,12 @@ static pj_status_t and_media_codec_open(pjmedia_codec *codec,
 	codec_data->codec_setting = s;
 
 	s->enc_setting.amr_nb = (pj_uint8_t)
-				(and_media_data->pt == PJMEDIA_RTP_PT_AMR);
+			      (and_media_data->codec_id == AND_AUD_CODEC_AMRNB);
 	s->enc_setting.octet_aligned = octet_align;
 	s->enc_setting.reorder = 0;
 	s->enc_setting.cmr = 15;
 	s->dec_setting.amr_nb = (pj_uint8_t)
-				(and_media_data->pt == PJMEDIA_RTP_PT_AMR);
+			      (and_media_data->codec_id == AND_AUD_CODEC_AMRNB);
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = 0;
 	/* Apply encoder mode/bitrate */

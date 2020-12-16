@@ -52,6 +52,14 @@ typedef struct pjmedia_vpx_packetizer_cfg
 }
 pjmedia_vpx_packetizer_cfg;
 
+/**
+ * Use this function to initialize VPX packetizer config.
+ *
+ * @param cfg	The VPX packetizer config to be initialized.
+ */
+PJ_DECL(void) pjmedia_vpx_packetizer_cfg_default(
+					    pjmedia_vpx_packetizer_cfg *cfg);
+
 
 /**
  * Create VPX packetizer.
