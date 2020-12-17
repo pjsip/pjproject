@@ -319,6 +319,250 @@ static pj_status_t sdes_media_create( pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
+static pj_status_t check_crypto_as_answerer(struct transport_srtp *srtp,
+                                            pj_pool_t *sdp_pool,
+                                            pj_uint32_t rem_proto,
+                                            const pjmedia_sdp_media *m_rem,
+                                            pjmedia_sdp_media *m_loc,
+                                            pj_bool_t generate_attr)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_bool_t check_crypto = !generate_attr;
+
+    /* Generate transport */
+    switch (srtp->setting.use) {
+    case PJMEDIA_SRTP_DISABLED:
+        /* Should never reach here */
+        if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP)
+            return PJMEDIA_SRTP_ESDPINTRANSPORT;
+        return PJ_SUCCESS;
+    case PJMEDIA_SRTP_OPTIONAL:
+        break;
+    case PJMEDIA_SRTP_MANDATORY:
+        if (rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
+            return PJMEDIA_SRTP_ESDPINTRANSPORT;
+        break;
+    }
+
+    if (generate_attr &&
+        pjmedia_sdp_media_find_attr(m_loc, &ID_CRYPTO, NULL) == NULL)
+    {
+        check_crypto = PJ_TRUE;
+    }
+
+    /* Generate crypto attribute if not yet */
+    if (check_crypto) {
+        pjmedia_srtp_crypto tmp_rx_crypto;
+        pj_bool_t has_crypto_attr = PJ_FALSE;
+        int matched_idx = -1;
+        int chosen_tag = 0;
+        unsigned i, j;
+        int tags[64]; /* assume no more than 64 crypto attrs in a media */
+        unsigned cr_attr_count = 0;
+        enum { MAXLEN = 512 };
+        char buffer[MAXLEN];
+        int buffer_len;
+        pjmedia_sdp_attr *attr;
+        pj_str_t attr_value;
+
+        /* Find supported crypto-suite, get the tag, and assign
+         * policy_local.
+         */
+        for (i = 0; i < m_rem->attr_count; ++i) {
+            if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
+                continue;
+
+            has_crypto_attr = PJ_TRUE;
+
+            status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
+                                       &tmp_rx_crypto,
+                                       &tags[cr_attr_count]);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            /* Check duplicated tag */
+            for (j = 0; j < cr_attr_count; ++j) {
+                if (tags[j] == tags[cr_attr_count]) {
+                    //DEACTIVATE_MEDIA(sdp_pool, m_loc);
+                    return PJMEDIA_SRTP_ESDPDUPCRYPTOTAG;
+                }
+            }
+
+            if (matched_idx == -1) {
+                /* lets see if the crypto-suite offered is supported */
+                for (j = 0; j < srtp->setting.crypto_count; ++j)
+                    if (pj_stricmp(&tmp_rx_crypto.name,
+                                   &srtp->setting.crypto[j].name) == 0)
+                    {
+                        int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
+
+                        if (cs_idx == -1)
+                            return PJMEDIA_SRTP_ENOTSUPCRYPTO;
+
+                        if (tmp_rx_crypto.key.slen !=
+                            (int)crypto_suites[cs_idx].cipher_key_len)
+                            return PJMEDIA_SRTP_EINKEYLEN;
+
+                        srtp->rx_policy_neg = tmp_rx_crypto;
+                        chosen_tag = tags[cr_attr_count];
+                        matched_idx = j;
+                        break;
+                    }
+            }
+            cr_attr_count++;
+        }
+
+        /* Check crypto negotiation result */
+        switch (srtp->setting.use) {
+        case PJMEDIA_SRTP_DISABLED:
+            /* Should never reach here */
+            break;
+
+        case PJMEDIA_SRTP_OPTIONAL:
+            /* Bypass SDES if remote uses RTP/AVP and:
+             * - has no crypto-attr, or
+             * - has no matching crypto
+             */
+            if ((!has_crypto_attr || matched_idx == -1) &&
+                !PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto,
+                                           PJMEDIA_TP_PROFILE_SRTP))
+            {
+                return PJ_SUCCESS;
+            }
+            break;
+
+        case PJMEDIA_SRTP_MANDATORY:
+            /* Do nothing, intentional */
+            break;
+        }
+
+        /* No crypto attr */
+        if (!has_crypto_attr) {
+            //DEACTIVATE_MEDIA(sdp_pool, m_loc);
+            return PJMEDIA_SRTP_ESDPREQCRYPTO;
+        }
+
+        /* No crypto match */
+        if (matched_idx == -1) {
+            //DEACTIVATE_MEDIA(sdp_pool, m_loc);
+            return PJMEDIA_SRTP_ENOTSUPCRYPTO;
+        }
+
+        if (generate_attr) {
+            /* we have to generate crypto answer,
+             * with srtp->tx_policy_neg matched the offer
+             * and rem_tag contains matched offer tag.
+             */
+            buffer_len = MAXLEN;
+            status = generate_crypto_attr_value(
+                                            srtp->pool, buffer, &buffer_len,
+                                            &srtp->setting.crypto[matched_idx],
+                                            chosen_tag);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            /* If buffer_len==0, just skip the crypto attribute. */
+            if (buffer_len) {
+                pj_strset(&attr_value, buffer, buffer_len);
+                attr = pjmedia_sdp_attr_create(sdp_pool, ID_CRYPTO.ptr,
+                                               &attr_value);
+                m_loc->attr[m_loc->attr_count++] = attr;
+            }
+        }
+        srtp->tx_policy_neg = srtp->setting.crypto[matched_idx];
+        /* At this point, we get valid rx_policy_neg & tx_policy_neg. */
+    }
+
+    /* Update transport description in local media SDP */
+    m_loc->desc.transport = m_rem->desc.transport;
+
+    return status;
+}
+
+static pj_status_t check_crypto_as_offerer(struct transport_srtp *srtp,
+                                           pj_pool_t *pool,
+                                           pjmedia_sdp_media *m_rem,
+                                           pjmedia_sdp_media *m_loc,
+                                           pjmedia_srtp_crypto loc_crypto[],
+                                           int loc_cryto_cnt)
+{
+    pj_status_t status = PJ_SUCCESS;
+    pj_bool_t has_crypto_attr = PJ_FALSE;
+    pjmedia_srtp_crypto tmp_tx_crypto;
+    unsigned i, j;
+    int rem_tag;
+
+    /* find supported crypto-suite, get the tag, and assign policy_local */
+    for (i=0; i<m_rem->attr_count; ++i) {
+        pj_bool_t found_tx_policy = PJ_FALSE;
+
+	if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
+	    continue;
+
+	/* more than one crypto attribute in media answer */
+	if (has_crypto_attr && srtp->offerer_side) {
+	    DEACTIVATE_MEDIA(pool, m_loc);
+	    return PJMEDIA_SRTP_ESDPAMBIGUEANS;
+	}
+
+	has_crypto_attr = PJ_TRUE;
+
+	status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
+				   &tmp_tx_crypto, &rem_tag);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+        if (srtp->offerer_side) {
+            /* Tag range check, our tags in the offer must be in the SRTP
+             * setting range, so does the remote answer's. The remote answer's
+             * tag must not exceed the tag range of the local offer.
+             */
+            if (rem_tag < 1 || rem_tag >(int)srtp->setting.crypto_count ||
+                rem_tag > loc_cryto_cnt)
+            {
+                DEACTIVATE_MEDIA(pool, m_loc);
+                return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
+            }
+
+            /* match the crypto name */
+            if (pj_stricmp(&tmp_tx_crypto.name, &loc_crypto[rem_tag - 1].name))
+            {
+                DEACTIVATE_MEDIA(pool, m_loc);
+                return PJMEDIA_SRTP_ECRYPTONOTMATCH;
+            }
+        }
+	/* Find the crypto from the setting. */
+	for (j = 0; j < (int)srtp->setting.crypto_count; ++j) {
+	    if (pj_stricmp(&tmp_tx_crypto.name, 
+			   &srtp->setting.crypto[j].name) == 0) 
+	    {
+		srtp->tx_policy_neg = srtp->setting.crypto[j];
+                found_tx_policy = PJ_TRUE;
+		break;
+	    }		
+	}
+        if (!srtp->offerer_side && found_tx_policy) {
+            break;
+        }
+
+	srtp->rx_policy_neg = tmp_tx_crypto;
+    }
+
+    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
+	/* should never reach here */
+	return PJ_SUCCESS;
+    } else if (srtp->setting.use == PJMEDIA_SRTP_OPTIONAL) {
+	if (!has_crypto_attr)
+	    return PJ_SUCCESS;
+    } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
+	if (!has_crypto_attr) {
+	    DEACTIVATE_MEDIA(pool, m_loc);
+	    return PJMEDIA_SRTP_ESDPREQCRYPTO;
+	}
+    }
+    return status;
+}
+
 static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 				    pj_pool_t *sdp_pool,
 				    pjmedia_sdp_session *sdp_local,
@@ -333,7 +577,7 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
     pj_status_t status;
     pjmedia_sdp_attr *attr;
     pj_str_t attr_value;
-    unsigned i, j;
+    unsigned i;
 
     m_rem = sdp_remote ? sdp_remote->media[media_index] : NULL;
     m_loc = sdp_local->media[media_index];
@@ -429,151 +673,20 @@ static pj_status_t sdes_encode_sdp( pjmedia_transport *tp,
 	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
 	PJMEDIA_TP_PROTO_TRIM_FLAG(rem_proto, PJMEDIA_TP_PROFILE_RTCP_FB);
 
-	/* Generate transport */
-	switch (srtp->setting.use) {
-	    case PJMEDIA_SRTP_DISABLED:
-		/* Should never reach here */
-		if (rem_proto == PJMEDIA_TP_PROTO_RTP_SAVP)
-		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
-		return PJ_SUCCESS;
-	    case PJMEDIA_SRTP_OPTIONAL:
-		break;
-	    case PJMEDIA_SRTP_MANDATORY:
-		if (rem_proto != PJMEDIA_TP_PROTO_RTP_SAVP)
-		    return PJMEDIA_SRTP_ESDPINTRANSPORT;
-		break;
-	}
-
-	/* Generate crypto attribute if not yet */
-	if (pjmedia_sdp_media_find_attr(m_loc, &ID_CRYPTO, NULL) == NULL) {
-
-	    pjmedia_srtp_crypto tmp_rx_crypto;
-	    pj_bool_t has_crypto_attr = PJ_FALSE;
-	    int matched_idx = -1;
-	    int chosen_tag = 0;
-	    int tags[64]; /* assume no more than 64 crypto attrs in a media */
-	    unsigned cr_attr_count = 0;
-
-	    /* Find supported crypto-suite, get the tag, and assign
-	     * policy_local.
-	     */
-	    for (i=0; i<m_rem->attr_count; ++i) {
-		if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
-		    continue;
-
-		has_crypto_attr = PJ_TRUE;
-
-		status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
-					   &tmp_rx_crypto,
-					   &tags[cr_attr_count]);
-		if (status != PJ_SUCCESS)
-		    return status;
-
-		/* Check duplicated tag */
-		for (j=0; j<cr_attr_count; ++j) {
-		    if (tags[j] == tags[cr_attr_count]) {
-			//DEACTIVATE_MEDIA(sdp_pool, m_loc);
-			return PJMEDIA_SRTP_ESDPDUPCRYPTOTAG;
-		    }
-		}
-
-		if (matched_idx == -1) {
-		    /* lets see if the crypto-suite offered is supported */
-		    for (j=0; j<srtp->setting.crypto_count; ++j)
-			if (pj_stricmp(&tmp_rx_crypto.name,
-				       &srtp->setting.crypto[j].name) == 0)
-			{
-			    int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
-			    
-	    		    if (cs_idx == -1)
-	    		        return PJMEDIA_SRTP_ENOTSUPCRYPTO;
-
-			    if (tmp_rx_crypto.key.slen !=
-				(int)crypto_suites[cs_idx].cipher_key_len)
-				return PJMEDIA_SRTP_EINKEYLEN;
-
-			    srtp->rx_policy_neg = tmp_rx_crypto;
-			    chosen_tag = tags[cr_attr_count];
-			    matched_idx = j;
-    			    break;
-			}
-		}
-		cr_attr_count++;
-	    }
-
-	    /* Check crypto negotiation result */
-	    switch (srtp->setting.use) {
-		case PJMEDIA_SRTP_DISABLED:
-		    /* Should never reach here */
-		    break;
-
-		case PJMEDIA_SRTP_OPTIONAL:
-		    /* Bypass SDES if remote uses RTP/AVP and:
-		     * - has no crypto-attr, or
-		     * - has no matching crypto
-		     */
-		    if ((!has_crypto_attr || matched_idx == -1) &&
-			!PJMEDIA_TP_PROTO_HAS_FLAG(rem_proto,
-						   PJMEDIA_TP_PROFILE_SRTP))
-		    {
-			return PJ_SUCCESS;
-		    }
-		    break;
-
-		case PJMEDIA_SRTP_MANDATORY:
-		    /* Do nothing, intentional */
-		    break;
-	    }
-
-	    /* No crypto attr */
-	    if (!has_crypto_attr) {
-		//DEACTIVATE_MEDIA(sdp_pool, m_loc);
-		return PJMEDIA_SRTP_ESDPREQCRYPTO;
-	    }
-
-	    /* No crypto match */
-	    if (matched_idx == -1) {
-		//DEACTIVATE_MEDIA(sdp_pool, m_loc);
-		return PJMEDIA_SRTP_ENOTSUPCRYPTO;
-	    }
-
-	    /* we have to generate crypto answer,
-	     * with srtp->tx_policy_neg matched the offer
-	     * and rem_tag contains matched offer tag.
-	     */
-	    buffer_len = MAXLEN;
-	    status = generate_crypto_attr_value(
-					srtp->pool, buffer, &buffer_len,
-					&srtp->setting.crypto[matched_idx],
-					chosen_tag);
-	    if (status != PJ_SUCCESS)
-		return status;
-
-	    srtp->tx_policy_neg = srtp->setting.crypto[matched_idx];
-
-	    /* If buffer_len==0, just skip the crypto attribute. */
-	    if (buffer_len) {
-		pj_strset(&attr_value, buffer, buffer_len);
-		attr = pjmedia_sdp_attr_create(sdp_pool, ID_CRYPTO.ptr,
-					       &attr_value);
-		m_loc->attr[m_loc->attr_count++] = attr;
-	    }
-
-	    /* At this point, we get valid rx_policy_neg & tx_policy_neg. */
-	}
-
-	/* Update transport description in local media SDP */
-	m_loc->desc.transport = m_rem->desc.transport;
+        status = check_crypto_as_answerer(srtp, sdp_pool, rem_proto, m_rem,
+                                          m_loc, PJ_TRUE);
+        if (status != PJ_SUCCESS)
+            return status;
     }
 
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t fill_local_crypto(pj_pool_t *pool,
-			             const pjmedia_sdp_media *m_loc, 
-			             pjmedia_srtp_crypto loc_crypto[],
-			             int *count)
+static pj_status_t fill_crypto(pj_pool_t *pool,
+			       const pjmedia_sdp_media *m_loc,
+			       pjmedia_srtp_crypto loc_crypto[],
+			       int *count)
 {
     int i;
     int crypto_count = 0;
@@ -605,7 +718,6 @@ static pj_status_t fill_local_crypto(pj_pool_t *pool,
     return status;
 }
 
-
 static pj_status_t sdes_media_start( pjmedia_transport *tp,
 				     pj_pool_t *pool,
 				     const pjmedia_sdp_session *sdp_local,
@@ -615,22 +727,17 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
     struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
     pjmedia_sdp_media *m_rem, *m_loc;
     pj_status_t status;
-    unsigned i;
+    int i;
     pjmedia_srtp_crypto	loc_crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
     int loc_cryto_cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
-    pjmedia_srtp_crypto tmp_tx_crypto;
-    pj_bool_t has_crypto_attr = PJ_FALSE;
-    int rem_tag;
-    int j;
-
+    pj_bool_t update_crypto = PJ_FALSE;
+    pj_uint32_t rem_proto;
 
     m_rem = sdp_remote->media[media_index];
     m_loc = sdp_local->media[media_index];
 
     /* Verify media transport, it has to be RTP/AVP or RTP/SAVP */
     {
-	pj_uint32_t rem_proto;
-
 	/* Get transport protocol and drop any RTCP-FB flag */
 	rem_proto = pjmedia_sdp_transport_get_proto(&m_rem->desc.transport);
 	PJMEDIA_TP_PROTO_TRIM_FLAG(rem_proto, PJMEDIA_TP_PROFILE_RTCP_FB);
@@ -646,12 +753,6 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	else
 	    srtp->peer_use = PJMEDIA_SRTP_OPTIONAL;
     }
-
-    /* For answerer side, this function will just have to start SRTP as
-     * SRTP crypto policies have been populated in media_encode_sdp().
-     */
-    if (!srtp->offerer_side)
-	return PJ_SUCCESS;
 
     /* Check remote media transport & set local media transport
      * based on SRTP usage option.
@@ -671,76 +772,75 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	    //DEACTIVATE_MEDIA(pool, m_loc);
 	    //return PJMEDIA_SDP_EINPROTO;
 	//}
-	fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+	fill_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
     } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
 	if (srtp->peer_use != PJMEDIA_SRTP_MANDATORY) {
 	    DEACTIVATE_MEDIA(pool, m_loc);
 	    return PJMEDIA_SDP_EINPROTO;
 	}
-	fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+	fill_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
     }
 
-    /* find supported crypto-suite, get the tag, and assign policy_local */
-    for (i=0; i<m_rem->attr_count; ++i) {
-	if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
-	    continue;
+    /* Check local crypto with settings. */
+    for (i = 0; i < loc_cryto_cnt; ++i) {
+        pj_bool_t update_name = PJ_FALSE;
+        pj_bool_t update_key = PJ_FALSE;
+        if ((unsigned)i > srtp->setting.crypto_count) {
+            update_name = PJ_TRUE;
+            update_key = PJ_TRUE;
+        } else {
+            update_name = pj_stricmp(&srtp->setting.crypto[i].name,
+                           &loc_crypto[i].name);
+            update_key = pj_stricmp(&srtp->setting.crypto[i].key,
+                            &loc_crypto[i].key);
+        }
+        if (update_name) {
+            pj_strdup(srtp->pool, &srtp->setting.crypto[i].name,
+                      &loc_crypto[i].name);
+        }
+        if (update_key) {
+            pj_strdup(srtp->pool, &srtp->setting.crypto[i].key,
+                      &loc_crypto[i].key);
+        }
+        update_crypto = update_name | update_key;
+    }
+    srtp->setting.crypto_count = loc_cryto_cnt;
 
-	/* more than one crypto attribute in media answer */
-	if (has_crypto_attr) {
-	    DEACTIVATE_MEDIA(pool, m_loc);
+    if (srtp->offerer_side) {
+        status = check_crypto_as_offerer(srtp, pool, m_rem, m_loc, loc_crypto,
+                                         loc_cryto_cnt);
+    } else {
+        /* As answerer, the policy is set on encode SDP. Change the policy if
+         * SDP is changed.
+         */
+        if (loc_cryto_cnt > 1) {
 	    return PJMEDIA_SRTP_ESDPAMBIGUEANS;
 	}
 
-	has_crypto_attr = PJ_TRUE;
+        if (!update_crypto) {
+            pjmedia_srtp_crypto	rem_crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
+            int rem_cryto_cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
 
-	status = parse_attr_crypto(srtp->pool, m_rem->attr[i],
-				   &tmp_tx_crypto, &rem_tag);
-	if (status != PJ_SUCCESS)
-	    return status;
+            fill_crypto(srtp->pool, m_rem, rem_crypto, &rem_cryto_cnt);
 
-
-	/* Tag range check, our tags in the offer must be in the SRTP 
-	 * setting range, so does the remote answer's. The remote answer's 
-	 * tag must not exceed the tag range of the local offer.
-	 */
-	if (rem_tag < 1 || rem_tag > (int)srtp->setting.crypto_count ||
-	    rem_tag > loc_cryto_cnt) 
-	{
-	    DEACTIVATE_MEDIA(pool, m_loc);
-	    return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
-	}
-
-	/* match the crypto name */
-	if (pj_stricmp(&tmp_tx_crypto.name, &loc_crypto[rem_tag-1].name))
-	{
-	    DEACTIVATE_MEDIA(pool, m_loc);
-	    return PJMEDIA_SRTP_ECRYPTONOTMATCH;
-	}
-
-	/* Find the crypto from the setting. */
-	for (j = 0; j < (int)srtp->setting.crypto_count; ++j) {
-	    if (pj_stricmp(&tmp_tx_crypto.name, 
-			   &srtp->setting.crypto[j].name) == 0) 
-	    {
-		srtp->tx_policy_neg = srtp->setting.crypto[j];
-		break;
-	    }		
-	}
-
-	srtp->rx_policy_neg = tmp_tx_crypto;
-    }
-
-    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
-	/* should never reach here */
-	return PJ_SUCCESS;
-    } else if (srtp->setting.use == PJMEDIA_SRTP_OPTIONAL) {
-	if (!has_crypto_attr)
-	    return PJ_SUCCESS;
-    } else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
-	if (!has_crypto_attr) {
-	    DEACTIVATE_MEDIA(pool, m_loc);
-	    return PJMEDIA_SRTP_ESDPREQCRYPTO;
-	}
+            /* Check if the policy used is different with the SDP. */
+            for (i=0; i<rem_cryto_cnt; ++i) {
+                if (!pj_stricmp(&rem_crypto[i].name,
+                                &srtp->rx_policy_neg.name) &&
+                    !pj_stricmp(&rem_crypto[i].key,
+                                &srtp->rx_policy_neg.key))
+                {
+                    break;
+                }
+            }
+            update_crypto = (i == rem_cryto_cnt);
+        }
+        if (update_crypto) {
+            status = check_crypto_as_answerer(srtp, pool, rem_proto, m_rem,
+                                              m_loc, PJ_FALSE);
+            if (status != PJ_SUCCESS)
+                return status;
+        }
     }
 
     /* At this point, we get valid rx_policy_neg & tx_policy_neg. */
