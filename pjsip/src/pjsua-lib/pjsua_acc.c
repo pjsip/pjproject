@@ -3822,7 +3822,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 		pj_strcpy(&acc->contact, &tmp_contact);
 	    }
 	    update_regc_contact(acc);
-	    pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
+	    if (acc->regc)
+		pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
 	}
 	pj_pool_release(pool);
     }
