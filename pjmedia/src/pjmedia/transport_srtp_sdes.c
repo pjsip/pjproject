@@ -727,7 +727,7 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
     struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
     pjmedia_sdp_media *m_rem, *m_loc;
     pj_status_t status;
-    int i;
+    int i, j;
     pjmedia_srtp_crypto	loc_crypto[PJMEDIA_SRTP_MAX_CRYPTOS];
     int loc_cryto_cnt = PJMEDIA_SRTP_MAX_CRYPTOS;
     pj_bool_t update_crypto = PJ_FALSE;
@@ -781,30 +781,22 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	fill_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
     }
 
-    /* Check local crypto with settings. */
-    for (i = 0; i < loc_cryto_cnt; ++i) {
-        pj_bool_t update_name = PJ_FALSE;
-        pj_bool_t update_key = PJ_FALSE;
-        if ((unsigned)i > srtp->setting.crypto_count) {
-            update_name = PJ_TRUE;
-            update_key = PJ_TRUE;
-        } else {
-            update_name = pj_stricmp(&srtp->setting.crypto[i].name,
-                           &loc_crypto[i].name);
-            update_key = pj_stricmp(&srtp->setting.crypto[i].key,
-                            &loc_crypto[i].key);
+    /* Check if SDP contains crypto key that is different than in
+     * the settings.
+     */
+    for (i = 0; (unsigned)i < srtp->setting.crypto_count; ++i) {
+        for (j = 0; j < loc_cryto_cnt; ++j) {
+            if (!pj_stricmp(&srtp->setting.crypto[i].name,
+                            &loc_crypto[j].name) &&
+                pj_stricmp(&srtp->setting.crypto[i].key,
+                           &loc_crypto[j].key))
+            {
+                pj_strdup(srtp->pool, &srtp->setting.crypto[i].key,
+                          &loc_crypto[j].key);
+                update_crypto = PJ_TRUE;
+            }
         }
-        if (update_name) {
-            pj_strdup(srtp->pool, &srtp->setting.crypto[i].name,
-                      &loc_crypto[i].name);
-        }
-        if (update_key) {
-            pj_strdup(srtp->pool, &srtp->setting.crypto[i].key,
-                      &loc_crypto[i].key);
-        }
-        update_crypto = update_name | update_key;
     }
-    srtp->setting.crypto_count = loc_cryto_cnt;
 
     if (srtp->offerer_side) {
         status = check_crypto_as_offerer(srtp, pool, m_rem, m_loc, loc_crypto,
