@@ -1477,9 +1477,11 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	AudioStreamBasicDescription streamFormat = strm->streamFormat;
 	BOOL isiOSAppOnMac = false;
 
+#ifdef __IPHONE_14_0
 	if (@available(iOS 14.0, *)) {
     	    isiOSAppOnMac = [NSProcessInfo processInfo].isiOSAppOnMac;
 	}
+#endif
 
 	/* Set the stream format */
    	if (strm->param.ec_enabled
