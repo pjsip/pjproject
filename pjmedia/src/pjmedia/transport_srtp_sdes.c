@@ -647,6 +647,40 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	    srtp->peer_use = PJMEDIA_SRTP_OPTIONAL;
     }
 
+    /* For answerer side, SRTP crypto policies have been populated in
+     * media_encode_sdp(). Check if the key changes on the local SDP.
+     */
+    if (!srtp->offerer_side) {
+        if (srtp->tx_policy_neg.name.slen == 0)
+            return PJ_SUCCESS;
+
+        /* Get the local crypto. */
+        fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
+
+        if (loc_cryto_cnt == 0)
+            return PJ_SUCCESS;
+
+        if ((pj_stricmp(&srtp->tx_policy_neg.name,
+                        &loc_crypto[0].name) == 0) &&
+            (pj_stricmp(&srtp->tx_policy_neg.key,
+                        &loc_crypto[0].key) != 0))
+        {
+	    srtp->tx_policy_neg = loc_crypto[0];
+            for (i = 0; i<srtp->setting.crypto_count ;++i) {
+                if ((pj_stricmp(&srtp->setting.crypto[i].name,
+                                &loc_crypto[0].name) == 0) &&
+                    (pj_stricmp(&srtp->setting.crypto[i].key,
+                                 &loc_crypto[0].key) != 0))
+                {
+                    pj_strdup(pool, &srtp->setting.crypto[i].key,
+                              &loc_crypto[0].key);
+                }
+            }
+	}
+
+        return PJ_SUCCESS;
+    }
+
     /* Check remote media transport & set local media transport
      * based on SRTP usage option.
      */
@@ -672,31 +706,6 @@ static pj_status_t sdes_media_start( pjmedia_transport *tp,
 	    return PJMEDIA_SDP_EINPROTO;
 	}
 	fill_local_crypto(srtp->pool, m_loc, loc_crypto, &loc_cryto_cnt);
-    }
-
-    /* For answerer side, SRTP crypto policies have been populated in
-     * media_encode_sdp(). Check if the key changes on the local SDP.
-     */
-    if (!srtp->offerer_side) {
-        if ((pj_stricmp(&srtp->tx_policy_neg.name,
-                        &loc_crypto[0].name) == 0) &&
-            (pj_stricmp(&srtp->tx_policy_neg.key,
-                        &loc_crypto[0].key) != 0))
-        {
-	    srtp->tx_policy_neg = loc_crypto[0];
-            for (i = 0; i<srtp->setting.crypto_count ;++i) {
-                if ((pj_stricmp(&srtp->setting.crypto[i].name,
-                                &loc_crypto[0].name) == 0) &&
-                    (pj_stricmp(&srtp->setting.crypto[i].key,
-                                 &loc_crypto[0].key) != 0))
-                {
-                    pj_strdup(pool, &srtp->setting.crypto[i].key,
-                              &loc_crypto[0].key);
-                }
-            }
-	}
-
-        return PJ_SUCCESS;
     }
 
     /* find supported crypto-suite, get the tag, and assign policy_local */
