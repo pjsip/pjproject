@@ -178,7 +178,9 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = af;
-    hint.ai_socktype = pj_SOCK_DGRAM() | pj_SOCK_STREAM();
+    /* Zero value of ai_socktype means the implementation shall attempt
+     * to resolve the service name for all supported socket types */
+    hint.ai_socktype = 0;
 
     rc = getaddrinfo(nodecopy, NULL, &hint, &res);
     if (rc != 0)
@@ -191,6 +193,11 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	/* Ignore unwanted address families */
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
 	    continue;
+
+	if (res->ai_socktype != pj_SOCK_DGRAM()
+                    && res->ai_socktype != pj_SOCK_STREAM()) {
+	        continue;
+	}
 
 	/* Store canonical name (possibly truncating the name) */
 	if (res->ai_canonname) {
