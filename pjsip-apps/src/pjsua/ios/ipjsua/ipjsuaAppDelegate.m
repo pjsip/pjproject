@@ -132,26 +132,8 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 - (void)pjsuaStart
 {
     // TODO: read from config?
-//    const char **argv = pjsua_app_def_argv;
-//    int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
-    const char *argv[] = { "pjsua",
-//"--use-tls",
-        "--use-cli",
-        "--no-cli-console",
-        "--cli-telnet-port=0",
-        "--quality=4",
-        "--id=Ming/404<sip:404@pjsip.org>",
-        "--realm=*",
-        "--username=404",
-        "--password=pw404",
-        "--registrar=sip:pjsip.org",
-        "--proxy=sip:sip.pjsip.org;transport=tcp",
-        "--stun-srv=stun.pjsip.org",
-        "--use-ice",
-        "--auto-answer=200",
-//           "--video",
-        NULL };
-    int argc = PJ_ARRAY_SIZE(argv) -1;
+    const char **argv = pjsua_app_def_argv;
+    int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
     pj_status_t status;
     
     isShuttingDown = false;
