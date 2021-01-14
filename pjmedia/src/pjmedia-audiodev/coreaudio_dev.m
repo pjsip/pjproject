@@ -1475,10 +1475,20 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	AURenderCallbackStruct output_cb;
 	AudioStreamBasicDescription streamFormat = strm->streamFormat;
+	BOOL isiOSAppOnMac = false;
+
+#ifdef __IPHONE_14_0
+	if (@available(iOS 14.0, *)) {
+    	    isiOSAppOnMac = [NSProcessInfo processInfo].isiOSAppOnMac;
+	}
+#endif
 
 	/* Set the stream format */
-#if COREAUDIO_MAC
-   	if (strm->param.ec_enabled) {
+   	if (strm->param.ec_enabled
+#if !COREAUDIO_MAC
+	    && isiOSAppOnMac
+#endif   	
+   	) {
    	    /* When using VPIO on Mac, we need to use float data. Using
    	     * signed integer will generate no errors, but strangely,
    	     * no sound will be played.
@@ -1491,7 +1501,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     	    streamFormat.mBytesPerPacket   = streamFormat.mBytesPerFrame *
 					     streamFormat.mFramesPerPacket;
 	}
-#endif
+
 	ostatus = AudioUnitSetProperty(*io_unit,
 	                               kAudioUnitProperty_StreamFormat,
 	                               kAudioUnitScope_Input,
