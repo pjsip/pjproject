@@ -2069,8 +2069,11 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 	    call->med_ch_info.status = status;
 	    call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
 	}
-	pjsua_media_prov_clean_up(call_id);
-        goto on_return;
+
+	/* Revert back provisional media. */
+	pjsua_media_prov_revert(call_id);
+
+	goto on_return;
     }
 
     /* Tell the media transport of a new offer/answer session */
@@ -2112,7 +2115,10 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                 call->med_ch_info.med_idx = mi;
                 call->med_ch_info.state = call_med->tp_st;
                 call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
-		pjsua_media_prov_clean_up(call_id);
+
+		/* Revert back provisional media. */
+		pjsua_media_prov_revert(call_id);
+
 		goto on_return;
 	    }
 
@@ -2170,7 +2176,24 @@ void pjsua_media_prov_clean_up(pjsua_call_id call_id)
 	}
     }
     
-    call->med_prov_cnt = 0;
+    // Cleaning up unused media transports should not change provisional
+    // media count.
+    //call->med_prov_cnt = 0;
+}
+
+
+/* Revert back provisional media. */
+void pjsua_media_prov_revert(pjsua_call_id call_id)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+
+    /* Clean up unused media transport */
+    pjsua_media_prov_clean_up(call_id);
+
+    /* Copy provisional media from active media */
+    pj_memcpy(call->media_prov, call->media,
+	      sizeof(call->media[0]) * call->med_cnt);
+    call->med_prov_cnt = call->med_cnt;
 }
 
 
@@ -2464,7 +2487,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
                     return PJ_EPENDING;
                 }
 
-                pjsua_media_prov_clean_up(call_id);
+		/* Revert back provisional media. */
+		pjsua_media_prov_revert(call_id);
+
 		goto on_error;
 	    }
 	} else {
