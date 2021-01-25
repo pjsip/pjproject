@@ -190,6 +190,9 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     /* Enumerate each item in the result */
     for (i=0; i<*count && res; res=res->ai_next) {
+	unsigned j;
+	pj_bool_t duplicate_found = PJ_FALSE;
+
 	/* Ignore unwanted address families */
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
 	    continue;
@@ -197,6 +200,18 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	if (res->ai_socktype != pj_SOCK_DGRAM()
                     && res->ai_socktype != pj_SOCK_STREAM()) {
 	        continue;
+	}
+
+	/* Add current address in the resulting list if there
+	 * is no duplicates only. */
+	for (j = 0; j < i; j++) {
+	    if (!pj_memcmp(&ai[j].ai_addr, res->ai_addr, res->ai_addrlen)) {
+		duplicate_found = PJ_TRUE;
+		break;
+	    }
+	}
+	if (duplicate_found) {
+	    continue;
 	}
 
 	/* Store canonical name (possibly truncating the name) */
