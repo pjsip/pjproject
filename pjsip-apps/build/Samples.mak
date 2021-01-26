@@ -55,6 +55,10 @@ EXES := $(foreach file, $(SAMPLES), $(file)$(HOST_EXE))
 PJSUA2_EXES := $(foreach file, $(PJSUA2_SAMPLES), $(file)$(HOST_EXE))
 endif
 
+ifeq ($(PJ_EXCLUDE_PJSUA2),1)
+PJSUA2_EXES :=
+endif
+
 .PHONY: $(EXES)
 .PHONY: $(PJSUA2_EXES)
 

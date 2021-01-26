@@ -121,8 +121,10 @@ cmp_wav:
 
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
-#	cp -af $(APP_LIB_FILES) $(DESTDIR)$(libdir)/
-	cp -af $(APP_LIBXX_FILES) $(DESTDIR)$(libdir)/
+	cp -af $(APP_LIB_FILES) $(DESTDIR)$(libdir)/
+	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
+	    cp -af $(PJ_DIR)/pjsip/lib/libpjsua2-$(LIB_SUFFIX) $(DESTDIR)$(libdir)/; \
+	fi
 	mkdir -p $(DESTDIR)$(includedir)/
 	for d in pjlib pjlib-util pjnath pjmedia pjsip; do \
 		cp -RLf $$d/include/* $(DESTDIR)$(includedir)/; \
