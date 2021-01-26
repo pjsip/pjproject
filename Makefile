@@ -147,5 +147,5 @@ uninstall:
 		done; \
 	done
 	rmdir $(DESTDIR)$(includedir) 2> /dev/null || true
-	$(RM) $(addprefix $(DESTDIR)$(libdir)/,$(notdir $(APP_LIB_FILES)))
+	$(RM) $(addprefix $(DESTDIR)$(libdir)/,$(notdir $(APP_LIBXX_FILES)))
 	rmdir $(DESTDIR)$(libdir) 2> /dev/null || true
