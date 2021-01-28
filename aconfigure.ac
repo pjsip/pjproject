@@ -468,6 +468,17 @@ AC_ARG_ENABLE(shared,
 	      AC_MSG_RESULT([Building shared libraries... no])
 	      )
 
+AC_SUBST(ac_no_pjsua2)
+AC_ARG_ENABLE(pjsua2,
+	      AS_HELP_STRING([--disable-pjsua2],
+			     [Exclude pjsua2 library and application from the build]),
+	      [if test "$enable_pjsua2" = "no"; then
+		[ac_no_pjsua2=1]
+		AC_MSG_RESULT([Building pjsua2 library and application... no])
+	       fi],
+	      AC_MSG_RESULT([Building pjsua2 library and application... yes])
+	      )
+
 
 dnl ######################
 dnl # OS specific files

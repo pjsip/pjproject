@@ -24,6 +24,10 @@ ifeq (@ac_shared_libraries@,1)
 export PJ_SHARED_LIBRARIES := 1
 endif
 
+ifeq (@ac_no_pjsua2@,1)
+export PJ_EXCLUDE_PJSUA2 := 1
+endif
+
 ifndef EXCLUDE_APP
 ifeq ($(findstring android,$(TARGET_NAME)),)
 export EXCLUDE_APP := 0
@@ -287,6 +291,10 @@ APP_LIB_FILES += $(ADD_LIB_FILES)
 
 APP_LIBXX_FILES += $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX) \
 	$(ADD_LIB_FILES)
+endif
+
+ifeq ($(PJ_EXCLUDE_PJSUA2),1)
+export PJSUA2_LIB_LDLIB :=
 endif
 
 export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \

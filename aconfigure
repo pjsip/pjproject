@@ -700,6 +700,7 @@ ac_external_srtp_lib
 ac_external_srtp
 ac_external_gsm
 ac_external_speex
+ac_no_pjsua2
 ac_shared_libraries
 ac_linux_poll
 ac_os_objs
@@ -791,6 +792,7 @@ enable_option_checking
 enable_floating_point
 enable_epoll
 enable_shared
+enable_pjsua2
 with_external_speex
 with_external_gsm
 with_external_srtp
@@ -1473,6 +1475,8 @@ Optional Features:
                           Disable floating point where possible
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --enable-shared         Build shared libraries
+  --disable-pjsua2        Exclude pjsua2 library and application from the
+                          build
   --disable-resample      Disable resampling implementations
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-video         Disable video feature
@@ -5937,6 +5941,21 @@ $as_echo "Building shared libraries... yes" >&6; }
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building shared libraries... no" >&5
 $as_echo "Building shared libraries... no" >&6; }
+
+fi
+
+
+
+# Check whether --enable-pjsua2 was given.
+if test "${enable_pjsua2+set}" = set; then :
+  enableval=$enable_pjsua2; if test "$enable_pjsua2" = "no"; then
+		ac_no_pjsua2=1
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Building pjsua2 library and application... no" >&5
+$as_echo "Building pjsua2 library and application... no" >&6; }
+	       fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building pjsua2 library and application... yes" >&5
+$as_echo "Building pjsua2 library and application... yes" >&6; }
 
 fi
 
