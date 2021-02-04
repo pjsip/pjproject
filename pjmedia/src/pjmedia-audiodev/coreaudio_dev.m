@@ -1475,18 +1475,25 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	AURenderCallbackStruct output_cb;
 	AudioStreamBasicDescription streamFormat = strm->streamFormat;
-	BOOL isiOSAppOnMac = false;
+	BOOL isiOSAppOnMacOrMacCatalyst = false;
 
 #ifdef __IPHONE_14_0
 	if (@available(iOS 14.0, *)) {
-    	    isiOSAppOnMac = [NSProcessInfo processInfo].isiOSAppOnMac;
+        if ([NSProcessInfo processInfo].isiOSAppOnMac) {
+            isiOSAppOnMacOrMacCatalyst = true;
+        }
 	}
+    if (@available(iOS 13.0, *)) {
+            if ([NSProcessInfo processInfo].isMacCatalystApp) {
+                isiOSAppOnMacOrMacCatalyst = true;
+            }
+    }
 #endif
 
 	/* Set the stream format */
    	if (strm->param.ec_enabled
 #if !COREAUDIO_MAC
-	    && isiOSAppOnMac
+	    && isiOSAppOnMacOrMacCatalyst
 #endif   	
    	) {
    	    /* When using VPIO on Mac, we need to use float data. Using
