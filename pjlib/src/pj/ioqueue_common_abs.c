@@ -1326,6 +1326,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
         op_rec = op_rec->next;
     }
 
+    /* Clear connecting operation. */
+    if (key->connecting) {
+        key->connecting = 0;
+        ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
+        ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
+    }
+
     pj_ioqueue_unlock_key(key);
     
     return PJ_EINVALIDOP;
