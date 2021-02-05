@@ -74,6 +74,8 @@ $(PJSUA_EXE):
 	    if test -f $$F; then \
 	      tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
 	      ln -sf $$F ../src/pjsua/ios/$$tmp; \
+	      mkdir -p ../src/pjsua/ios-swift/Libraries \
+	      ln -sf $$F ../src/pjsua/ios-swift/Libraries/$$tmp; \
 	    fi; \
 	  done; \
 	fi;
@@ -101,5 +103,6 @@ clean depend realclean:
 	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
 	    tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
 	    rm -f ../src/pjsua/ios/$$tmp; \
+	    rm -f ../src/pjsua/ios-swift/Libraries/$$tmp; \
 	  done; \
 	fi;
