@@ -51,9 +51,9 @@ struct ipjsua_swiftApp: App {
                                         &tcp_cfg, &transport_id);
 
         /* Init account config */
-        let id = strdup("Test<sip:401@pjsip.org>");
-        let username = strdup("401");
-        let passwd = strdup("pw401");
+        let id = strdup("Test<sip:test@pjsip.org>");
+        let username = strdup("test");
+        let passwd = strdup("password");
         let realm = strdup("*");
         let registrar = strdup("sip:pjsip.org");
         let proxy = strdup("sip:sip.pjsip.org;transport=tcp");

@@ -36,7 +36,7 @@ struct VidView: UIViewRepresentable {
 
 struct ContentView: View {
     @State private var calling = false
-    @State private var dest: String = "sip:402@pjsip.org"
+    @State private var dest: String = "sip:test@pjsip.org"
     @State private var call_id: pjsua_call_id = PJSUA_INVALID_ID.rawValue
     @EnvironmentObject var vinfo: VidInfo;
 
