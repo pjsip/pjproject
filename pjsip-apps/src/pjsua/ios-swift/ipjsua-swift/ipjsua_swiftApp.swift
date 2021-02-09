@@ -1,9 +1,24 @@
-//
-//  ipjsua_swiftApp.swift
-//  ipjsua-swift
-//
-//  Created by Ming on 4/2/21.
-//
+/*
+ * Copyright (C) 2021-2021 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
+
+/* This is a simple Swift demo app that shows an example of how to use
+ * PJSUA API to make one audio+video call to another user.
+ */
 
 import SwiftUI
 
@@ -36,8 +51,8 @@ struct ipjsua_swiftApp: App {
         pjsua_media_config_default(&media_cfg);
 
         /* Initialize application callbacks */
-        let on_call_media_state_ptr: @convention(c) (pjsua_call_id) -> () = on_call_media_state
-        cfg.cb.on_call_media_state = on_call_media_state_ptr;
+        cfg.cb.on_call_state = on_call_state;
+        cfg.cb.on_call_media_state = on_call_media_state;
 
         /* Init pjsua */
         status = pjsua_init(&cfg, &log_cfg, &media_cfg);
@@ -53,7 +68,7 @@ struct ipjsua_swiftApp: App {
         /* Init account config */
         let id = strdup("Test<sip:test@pjsip.org>");
         let username = strdup("test");
-        let passwd = strdup("password");
+        let passwd = strdup("pwd");
         let realm = strdup("*");
         let registrar = strdup("sip:pjsip.org");
         let proxy = strdup("sip:sip.pjsip.org;transport=tcp");
@@ -91,6 +106,17 @@ struct ipjsua_swiftApp: App {
     }
 }
 
+private func on_call_state(call_id: pjsua_call_id, e: UnsafeMutablePointer<pjsip_event>?) {
+    var ci = pjsua_call_info();
+    pjsua_call_get_info(call_id, &ci);
+    if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
+        /* UIView update must be done in the main thread */
+        DispatchQueue.main.sync {
+            AppDelegate.Shared.vinfo.vid_win = nil;
+        }
+    }
+}
+
 private func tupleToArray<Tuple, Value>(tuple: Tuple) -> [Value] {
     let tupleMirror = Mirror(reflecting: tuple)
     return tupleMirror.children.compactMap { (child: Mirror.Child) -> Value? in
@@ -122,7 +148,8 @@ private func on_call_media_state(call_id: pjsua_call_id) {
                 var wi = pjsua_vid_win_info();
                     
                 if (pjsua_vid_win_get_info(wid, &wi) == PJ_SUCCESS.rawValue) {
-                    let vid_win:UIView = Unmanaged<UIView>.fromOpaque(wi.hwnd.info.ios.window).takeUnretainedValue();
+                    let vid_win:UIView =
+                        Unmanaged<UIView>.fromOpaque(wi.hwnd.info.ios.window).takeUnretainedValue();
 
                     /* UIView update must be done in the main thread */
                     DispatchQueue.main.sync {
