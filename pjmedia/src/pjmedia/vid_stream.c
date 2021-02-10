@@ -1080,14 +1080,20 @@ static pj_status_t put_frame(pjmedia_port *port,
         }
     }
 #endif
-
-    /* Don't do anything if stream is paused */
-    if (channel->paused) {
-	return PJ_SUCCESS;
-    }
-
     /* Get frame length in timestamp unit */
     rtp_ts_len = stream->frame_ts_len;
+
+    /* Don't do anything if stream is paused, except updating RTP timestamp */
+    if (channel->paused) {
+	/* Update RTP session's timestamp. */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp, 0, 0, 0, rtp_ts_len,
+					 NULL, NULL);
+
+        /* Update RTCP stats with last RTP timestamp. */
+	stream->rtcp.stat.rtp_tx_last_ts =
+                                        pj_ntohl(channel->rtp.out_hdr.ts);
+	return PJ_SUCCESS;
+    }
 
     /* Empty video frame? Just update RTP timestamp for now */
     if (frame->type==PJMEDIA_FRAME_TYPE_VIDEO && frame->size==0) {

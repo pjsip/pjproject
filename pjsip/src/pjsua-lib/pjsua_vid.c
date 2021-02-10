@@ -1220,25 +1220,25 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	    pj_log_pop_indent();
 	}
 
+        /* Retrieve stream encoding port */
+        status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
+                                             PJMEDIA_DIR_ENCODING,
+                                             &media_port);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        /* Register stream encoding to conf, using tmp_pool should be fine
+         * as bridge will create its own pool (using tmp_pool factory).
+         */
+        status = pjsua_vid_conf_add_port(tmp_pool, media_port, NULL,
+                                         &call_med->strm.v.strm_enc_slot);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
 	/* Setup encoding direction */
 	if (si->dir & PJMEDIA_DIR_ENCODING) {
 	    PJ_LOG(4,(THIS_FILE, "Setting up TX.."));
 	    pj_log_push_indent();
-
-	    /* Retrieve stream encoding port */
-	    status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
-						 PJMEDIA_DIR_ENCODING,
-						 &media_port);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
-
-	    /* Register stream encoding to conf, using tmp_pool should be fine
-	     * as bridge will create its own pool (using tmp_pool factory).
-	     */
-	    status = pjsua_vid_conf_add_port(tmp_pool, media_port, NULL,
-					     &call_med->strm.v.strm_enc_slot);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
 
 	    if (!call->local_hold && acc->cfg.vid_out_auto_transmit) {
 	    	status = setup_vid_capture(call_med);
@@ -1327,9 +1327,14 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     }
     PJSUA_UNLOCK();
 
-    if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
-	(pjmedia_vid_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
-	stat.tx.pkt)
+    /* Don't check for direction and transmitted packets count as we
+     * assume that RTP timestamp remains increasing when outgoing
+     * direction is disabled/paused.
+     */
+     //if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
+     //    (pjmedia_vid_stream_get_stat(strm, &stat) == PJ_SUCCESS) &&
+     //    stat.tx.pkt)
+    if (pjmedia_vid_stream_get_stat(strm, &stat) == PJ_SUCCESS)
     {
 	/* Save RTP timestamp & sequence, so when media session is
 	 * restarted, those values will be restored as the initial
