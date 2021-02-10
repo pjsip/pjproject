@@ -119,7 +119,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 	  pj_parsed_time pt;
 
 	  pj_gettimeofday(&tv);
-	  /* TODO: convert time to GMT! (unsupported by pjlib) */
+	  pj_time_local_to_gmt(&tv);
 	  pj_time_decode( &tv, &pt);
 
 	  tslen = pj_ansi_snprintf(buf, sizeof(buf),
