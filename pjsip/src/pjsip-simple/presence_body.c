@@ -117,9 +117,18 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 	  int tslen = 0;
 	  pj_time_val tv;
 	  pj_parsed_time pt;
+	  pj_status_t s;
 
 	  pj_gettimeofday(&tv);
-	  pj_time_local_to_gmt(&tv);
+
+	  /* Convert time to GMT (some platforms may not support it
+	   * such as WinCE).
+	   */
+	  s = pj_time_local_to_gmt(&tv);
+	  if (s != PJ_SUCCESS) {
+	      PJ_PERROR(4,(THIS_FILE,s,
+			   "Warning: failed to convert PIDF time to GMT"));
+	  }
 	  pj_time_decode( &tv, &pt);
 
 	  tslen = pj_ansi_snprintf(buf, sizeof(buf),
