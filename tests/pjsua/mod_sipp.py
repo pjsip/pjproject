@@ -205,10 +205,14 @@ def exec_pjsua_expects(t, sipp):
         ua_idx = expect[0]
         expect_st = expect[1]
         send_cmd = resolve_driver_macros(expect[2])
+        timeout = expect[3] if len(expect)>=4 else 0
         # Handle exception in pjsua flow, to avoid zombie SIPp process
         try:
             if expect_st != "":
-                ua[ua_idx].expect(expect_st, raise_on_error = True)
+                if timeout > 0:
+                    ua[ua_idx].expect(expect_st, raise_on_error = True, timeout = timeout)
+                else:
+                    ua[ua_idx].expect(expect_st, raise_on_error = True)
             if send_cmd != "":
                 ua[ua_idx].send(send_cmd)
         except TestError, e:

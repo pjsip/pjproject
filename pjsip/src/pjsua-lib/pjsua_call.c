@@ -5068,8 +5068,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
-	/* Clean up provisional media */
-	pjsua_media_prov_clean_up(call->index);
+	/* Revert back provisional media. */
+	pjsua_media_prov_revert(call->index);
 
 	/* Do not deinitialize media since this may be a re-INVITE or
 	 * UPDATE (which in this case the media should not get affected
@@ -6178,9 +6178,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             (tsx->status_code/100 != 2 || !call->med_update_success))
         {
             /* Either we get non-2xx or media update failed,
-             * clean up provisional media.
+             * revert back provisional media.
              */
-	    pjsua_media_prov_clean_up(call->index);
+	    pjsua_media_prov_revert(call->index);
         }
     } else if (tsx->role == PJSIP_ROLE_UAC &&
                pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0 &&
@@ -6194,9 +6194,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
             (tsx->status_code/100 != 2 || !call->med_update_success))
         {
             /* Either we get non-2xx or media update failed,
-             * clean up provisional media.
+             * revert back provisional media.
              */
-	    pjsua_media_prov_clean_up(call->index);
+	    pjsua_media_prov_revert(call->index);
         }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
 	       tsx->state==PJSIP_TSX_STATE_TRYING &&

@@ -1932,13 +1932,8 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, current_sdp);
 
-    /* Clean up provisional media before using it */
-    pjsua_media_prov_clean_up(call->index);
-
-    /* Update provisional media from call media */
-    call->med_prov_cnt = call->med_cnt;
-    pj_memcpy(call->media_prov, call->media,
-	      sizeof(call->media[0]) * call->med_cnt);
+    /* Clean up & sync provisional media before using it */
+    pjsua_media_prov_revert(call->index);
 
     /* Initialize call media */
     call_med = &call->media_prov[call->med_prov_cnt++];
@@ -2044,13 +2039,8 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	med_idx = first_active;
     }
 
-    /* Clean up provisional media before using it */
-    pjsua_media_prov_clean_up(call->index);
-
-    /* Update provisional media from call media */
-    call->med_prov_cnt = call->med_cnt;
-    pj_memcpy(call->media_prov, call->media,
-	      sizeof(call->media[0]) * call->med_cnt);
+    /* Clean up & sync provisional media before using it */
+    pjsua_media_prov_revert(call->index);
 
     call_med = &call->media_prov[med_idx];
 
@@ -2163,7 +2153,9 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 on_error:
 	if (status != PJ_SUCCESS) {
-	    pjsua_media_prov_clean_up(call->index);
+	    /* Revert back provisional media. */
+	    pjsua_media_prov_revert(call->index);
+
 	    return status;
 	}
     

@@ -196,7 +196,7 @@ class Expect(threading.Thread):
             self.proc.stdin.writelines(cmd + "\n")
             self.proc.stdin.flush()
         
-    def expect(self, pattern, raise_on_error=True, title=""):
+    def expect(self, pattern, raise_on_error=True, title="", timeout=15):
         # no prompt for telnet
         if self.use_telnet and pattern==const.PROMPT:
             return
@@ -234,7 +234,7 @@ class Expect(threading.Thread):
             else:
                 t1 = time.time()
                 dur = int(t1 - t0)
-                if dur > 15:
+                if dur > timeout:
                     self.trace("Timed-out!")
                     if raise_on_error:
                         raise inc.TestError(self.name + " " + title + ": Timeout expecting pattern: \"" + pattern + "\"")
