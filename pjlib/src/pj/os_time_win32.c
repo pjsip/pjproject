@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/os.h>
+#include <pj/errno.h>
 #include <pj/string.h>
 #include <pj/log.h>
 #include <windows.h>
@@ -293,11 +294,67 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
 /**
  * Convert local time to GMT.
  */
-PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv);
+PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv)
+{
+#ifdef WINCE_TIME
+    return PJ_ENOTSUP;
+#else
+    LARGE_INTEGER li;
+    FILETIME ft_local;
+    FILETIME ft_gmt;
+
+    li.QuadPart = tv->sec;
+    li.QuadPart += base_time.QuadPart;
+    li.QuadPart *= SECS_TO_FT_MULT;
+
+    ft_local.dwLowDateTime = li.LowPart;
+    ft_local.dwHighDateTime = li.HighPart;
+
+    if (LocalFileTimeToFileTime(&ft_local, &ft_gmt) == 0)
+	return PJ_EINVAL;
+
+    li.LowPart = ft_gmt.dwLowDateTime;
+    li.HighPart = ft_gmt.dwHighDateTime;
+    li.QuadPart /= SECS_TO_FT_MULT;
+    li.QuadPart -= base_time.QuadPart;
+
+    tv->sec = li.LowPart;
+
+    return PJ_SUCCESS;
+#endif
+}
 
 /**
  * Convert GMT to local time.
  */
-PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv);
+PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
+{
+#ifdef WINCE_TIME
+    return PJ_ENOTSUP;
+#else
+    LARGE_INTEGER li;
+    FILETIME ft_local;
+    FILETIME ft_gmt;
+
+    li.QuadPart = tv->sec;
+    li.QuadPart += base_time.QuadPart;
+    li.QuadPart *= SECS_TO_FT_MULT;
+
+    ft_gmt.dwLowDateTime = li.LowPart;
+    ft_gmt.dwHighDateTime = li.HighPart;
+
+    if (FileTimeToLocalFileTime(&ft_gmt, &ft_local) == 0)
+	return PJ_EINVAL;
+
+    li.LowPart = ft_local.dwLowDateTime;
+    li.HighPart = ft_local.dwHighDateTime;
+    li.QuadPart /= SECS_TO_FT_MULT;
+    li.QuadPart -= base_time.QuadPart;
+
+    tv->sec = li.LowPart;
+
+    return PJ_SUCCESS;
+#endif
+}
 
 
