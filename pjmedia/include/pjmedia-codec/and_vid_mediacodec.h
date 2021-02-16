@@ -24,7 +24,7 @@
 
 /**
  * @file pjmedia-codec/and_vid_mediacodec.h
- * @brief Android Mediacodec video codec
+ * @brief Android video Mediacodec codecs.
  */
 
 PJ_BEGIN_DECL
@@ -38,6 +38,9 @@ PJ_BEGIN_DECL
  * Video MediaCodec codec wrapper for Android.
  *
  * This codec wrapper contains varius codecs: i.e: H.264/AVC, VP8 and VP9.
+ * The H.264 codec wrapper only supports non-interleaved packetization
+ * mode. If remote uses a different mode (e.g: single-nal), this will cause
+ * unpacketization issue and affect decoding process.
  */
 
 /**
