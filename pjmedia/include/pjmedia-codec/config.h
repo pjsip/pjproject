@@ -658,6 +658,30 @@
 #endif
 
 /**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software encoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC 	1
+#endif
+
+/**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software decoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
+#endif
+
+/**
  * @}
  */
 

@@ -259,31 +259,41 @@ static pj_status_t decode_vpx(pjmedia_vid_codec *codec,
                               pjmedia_frame *output);
 #endif
 
+
 #if PJMEDIA_HAS_AND_MEDIA_H264
-
-static pj_str_t H264_encoder[] = {{(char *)"OMX.google.h264.encoder\0",
-				  23}};
-
-static pj_str_t H264_decoder[] = {{(char *)"OMX.qcom.video.decoder.avc\0", 26},
+static pj_str_t H264_sw_encoder[] = {{(char *)"OMX.google.h264.encoder\0",
+				      23}};
+static pj_str_t H264_hw_encoder[] =
+				  {{(char *)"OMX.qcom.video.encoder.avc\0", 26},
+			          {(char *)"OMX.Exynos.avc.Encoder\0", 22}};
+static pj_str_t H264_sw_decoder[] = {{(char *)"OMX.google.h264.decoder\0",
+				      23}};
+static pj_str_t H264_hw_decoder[] =
+				  {{(char *)"OMX.qcom.video.decoder.avc\0", 26},
 			          {(char *)"OMX.Exynos.avc.dec\0", 18}};
 #endif
 
 #if PJMEDIA_HAS_AND_MEDIA_VP8
-
-static pj_str_t VP8_encoder[] = {{(char *)"OMX.google.vp8.encoder\0", 23}};
-
-static pj_str_t VP8_decoder[] = {{(char *)"OMX.qcom.video.decoder.vp8\0", 26},
+static pj_str_t VP8_sw_encoder[] = {{(char *)"OMX.google.vp8.encoder\0", 23}};
+static pj_str_t VP8_hw_encoder[] =
+				 {{(char *)"OMX.qcom.video.encoder.vp8\0", 26},
+			         {(char *)"OMX.Exynos.vp8.Encoder\0", 22}};
+static pj_str_t VP8_sw_decoder[] = {{(char *)"OMX.google.vp8.decoder\0", 23}};
+static pj_str_t VP8_hw_decoder[] =
+				 {{(char *)"OMX.qcom.video.decoder.vp8\0", 26},
 			         {(char *)"OMX.Exynos.vp8.dec\0", 18}};
 #endif
 
 #if PJMEDIA_HAS_AND_MEDIA_VP9
-
-static pj_str_t VP9_encoder[] = {{(char *)"OMX.google.vp9.encoder\0", 23}};
-
-static pj_str_t VP9_decoder[] = {{(char *)"OMX.qcom.video.decoder.vp9\0", 26},
-				 {(char *)"OMX.Exynos.vp9.dec\0", 18}};
+static pj_str_t VP9_sw_encoder[] = {{(char *)"OMX.google.vp9.encoder\0", 23}};
+static pj_str_t VP9_hw_encoder[] =
+				 {{(char *)"OMX.qcom.video.encoder.vp9\0", 26},
+			         {(char *)"OMX.Exynos.vp9.Encoder\0", 22}};
+static pj_str_t VP9_sw_decoder[] = {{(char *)"OMX.google.vp9.decoder\0", 23}};
+static pj_str_t VP9_hw_decoder[] =
+				 {{(char *)"OMX.qcom.video.decoder.vp9\0", 26},
+			         {(char *)"OMX.Exynos.vp9.dec\0", 18}};
 #endif
-
 
 static struct and_media_codec {
     int		       enabled;		  /* Is this codec enabled?	     */
@@ -616,6 +626,81 @@ void add_codec(struct and_media_codec *codec,
     ++*count;
 }
 
+static void get_codec_name(pj_bool_t is_enc,
+	                   pj_bool_t prio,
+			   pjmedia_format_id fmt_id,
+			   pj_str_t **codec_name,
+			   unsigned *codec_num)
+{
+    pj_bool_t use_sw_enc = PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC;
+    pj_bool_t use_sw_dec = PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC;
+
+    *codec_num = 0;
+
+    switch (fmt_id) {
+
+    case PJMEDIA_FORMAT_H264:
+	if (is_enc) {
+	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
+		*codec_name = &H264_sw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(H264_sw_encoder);
+	    } else {
+		*codec_name = &H264_hw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(H264_hw_encoder);
+	    }
+	} else {
+	    if ((prio && use_sw_dec) || (!prio && !use_sw_dec)) {
+		*codec_name = &H264_sw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(H264_sw_decoder);
+	    } else {
+		*codec_name = &H264_hw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(H264_hw_decoder);
+	    }
+	}
+	break;
+    case PJMEDIA_FORMAT_VP8:
+	if (is_enc) {
+	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
+		*codec_name = &VP8_sw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP8_sw_encoder);
+	    } else {
+		*codec_name = &VP8_hw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP8_hw_encoder);
+	    }
+	} else {
+	    if ((prio && use_sw_dec) || (!prio && !use_sw_dec)) {
+		*codec_name = &VP8_sw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP8_sw_decoder);
+	    } else {
+		*codec_name = &VP8_hw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP8_hw_decoder);
+	    }
+	}
+	break;
+    case PJMEDIA_FORMAT_VP9:
+	if (is_enc) {
+	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
+		*codec_name = &VP9_sw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP9_sw_encoder);
+	    } else {
+		*codec_name = &VP9_hw_encoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP9_hw_encoder);
+	    }
+	} else {
+	    if ((prio && use_sw_dec) || (!prio && !use_sw_dec)) {
+		*codec_name = &VP9_sw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP9_sw_decoder);
+	    } else {
+		*codec_name = &VP9_hw_decoder[0];
+		*codec_num = PJ_ARRAY_SIZE(VP9_hw_decoder);
+	    }
+	}
+	break;
+    default:
+	break;
+    }
+}
+
 static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
                                    unsigned *count,
                                    pjmedia_vid_codec_info info[])
@@ -630,61 +715,52 @@ static pj_status_t and_media_enum_info(pjmedia_vid_codec_factory *factory,
     for (i = 0, *count = 0; i < PJ_ARRAY_SIZE(and_media_codec) && *count < max;
 	 ++i)
     {
-	unsigned enc_idx, dec_idx;
+	unsigned enc_idx = 0;
+	unsigned dec_idx = 0;
 	pj_str_t *enc_name = NULL;
 	unsigned num_enc;
 	pj_str_t *dec_name = NULL;
 	unsigned num_dec;
 
-	switch (and_media_codec[i].fmt_id) {
-
-	case PJMEDIA_FORMAT_H264:
-#if PJMEDIA_HAS_AND_MEDIA_H264
-	    enc_name = &H264_encoder[0];
-	    dec_name = &H264_decoder[0];
-	    num_enc = PJ_ARRAY_SIZE(H264_encoder);
-	    num_dec = PJ_ARRAY_SIZE(H264_decoder);
-#endif
-	    break;
-	case PJMEDIA_FORMAT_VP8:
-#if PJMEDIA_HAS_AND_MEDIA_VP8
-	    enc_name = &VP8_encoder[0];
-	    dec_name = &VP8_decoder[0];
-	    num_enc = PJ_ARRAY_SIZE(VP8_encoder);
-	    num_dec = PJ_ARRAY_SIZE(VP8_decoder);
-#endif
-
-	    break;
-	case PJMEDIA_FORMAT_VP9:
-#if PJMEDIA_HAS_AND_MEDIA_VP9
-	    enc_name = &VP9_encoder[0];
-	    dec_name = &VP9_decoder[0];
-	    num_enc = PJ_ARRAY_SIZE(VP9_encoder);
-	    num_dec = PJ_ARRAY_SIZE(VP9_decoder);
-#endif
-	    break;
-	default:
-	    continue;
-	};
-	if (!enc_name || !dec_name) {
-	    continue;
-	}
+	get_codec_name(PJ_TRUE, PJ_TRUE, and_media_codec[i].fmt_id,
+		       &enc_name, &num_enc);
 
 	for (enc_idx = 0; enc_idx < num_enc ;++enc_idx, ++enc_name) {
 	    if (codec_exists(enc_name)) {
 		break;
 	    }
 	}
-	if (enc_idx == num_enc)
-	    continue;
+	if (enc_idx == num_enc) {
+	    get_codec_name(PJ_TRUE, PJ_FALSE, and_media_codec[i].fmt_id,
+			   &enc_name, &num_enc);
 
+	    for (enc_idx = 0; enc_idx < num_enc ;++enc_idx, ++enc_name) {
+		if (codec_exists(enc_name)) {
+		    break;
+		}
+	    }
+	    if (enc_idx == num_enc)
+		continue;
+	}
+
+	get_codec_name(PJ_FALSE, PJ_TRUE, and_media_codec[i].fmt_id,
+		       &dec_name, &num_dec);
 	for (dec_idx = 0; dec_idx < num_dec ;++dec_idx, ++dec_name) {
 	    if (codec_exists(dec_name)) {
 		break;
 	    }
 	}
-	if (dec_idx == num_dec)
-	    continue;
+	if (dec_idx == num_dec) {
+	    get_codec_name(PJ_FALSE, PJ_FALSE, and_media_codec[i].fmt_id,
+			   &dec_name, &num_dec);
+	    for (enc_idx = 0; enc_idx < num_enc ;++enc_idx, ++enc_name) {
+		if (codec_exists(enc_name)) {
+		    break;
+		}
+	    }
+	    if (dec_idx == num_dec)
+		continue;
+	}
 
 	and_media_codec[i].encoder_name = enc_name;
 	and_media_codec[i].decoder_name = dec_name;
@@ -1403,6 +1479,7 @@ static pj_status_t open_h264(and_media_codec_data *and_media_data)
     else
         return PJ_ENOTSUP;
 
+    /* Android H264 only supports Non Interleaved mode. */
     pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
     status = pjmedia_h264_packetizer_create(and_media_data->pool, &pktz_cfg,
                                             &h264_data->pktz);
