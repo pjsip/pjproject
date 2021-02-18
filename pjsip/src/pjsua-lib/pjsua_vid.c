@@ -1280,16 +1280,6 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
     
-    /* Unregister video stream ports (encode+decode) from conference */
-    if (call_med->strm.v.strm_enc_slot != PJSUA_INVALID_ID) {
-	pjsua_vid_conf_remove_port(call_med->strm.v.strm_enc_slot);
-	call_med->strm.v.strm_enc_slot = PJSUA_INVALID_ID;
-    }
-    if (call_med->strm.v.strm_dec_slot != PJSUA_INVALID_ID) {
-	pjsua_vid_conf_remove_port(call_med->strm.v.strm_dec_slot);
-	call_med->strm.v.strm_dec_slot = PJSUA_INVALID_ID;
-    }
-
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     PJSUA_LOCK();
@@ -1326,6 +1316,16 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     			     call_med->idx));
     }
     PJSUA_UNLOCK();
+
+    /* Unregister video stream ports (encode+decode) from conference */
+    if (call_med->strm.v.strm_enc_slot != PJSUA_INVALID_ID) {
+	pjsua_vid_conf_remove_port(call_med->strm.v.strm_enc_slot);
+	call_med->strm.v.strm_enc_slot = PJSUA_INVALID_ID;
+    }
+    if (call_med->strm.v.strm_dec_slot != PJSUA_INVALID_ID) {
+	pjsua_vid_conf_remove_port(call_med->strm.v.strm_dec_slot);
+	call_med->strm.v.strm_dec_slot = PJSUA_INVALID_ID;
+    }
 
     /* Don't check for direction and transmitted packets count as we
      * assume that RTP timestamp remains increasing when outgoing
