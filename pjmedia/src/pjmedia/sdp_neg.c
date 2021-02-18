@@ -449,16 +449,16 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_send_local_offer( pj_pool_t *pool,
 						       neg->active_local_sdp);
 
 #if PJMEDIA_SDP_NEG_COMPARE_BEFORE_INC_VERSION
-    	if (pjmedia_sdp_session_cmp(neg->active_local_sdp, 
+    	if (pjmedia_sdp_session_cmp(neg->neg_local_sdp, 
     				    neg->initial_sdp, 0) != PJ_SUCCESS)
     	{
-	    neg->active_local_sdp->origin.version++;
+	    neg->neg_local_sdp->origin.version++;
     	}    
 #else
-    	neg->active_local_sdp->origin.version++;
+    	neg->neg_local_sdp->origin.version++;
 #endif
 
-	*offer = neg->active_local_sdp;
+	*offer = neg->neg_local_sdp;
 
     } else {
 	/* We assume that we're in STATE_LOCAL_OFFER.
