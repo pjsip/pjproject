@@ -104,7 +104,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
 
-    cfg->max_calls = ((PJSUA_MAX_CALLS) < 4) ? (PJSUA_MAX_CALLS) : 4;
+    cfg->max_calls = ((PJSUA_MAX_CALLS) > 4) ? (PJSUA_MAX_CALLS) : 4;
     cfg->thread_cnt = PJSUA_SEPARATE_WORKER_FOR_TIMER? 2 : 1;
     cfg->nat_type_in_sdp = 1;
     cfg->stun_ignore_failure = PJ_TRUE;
