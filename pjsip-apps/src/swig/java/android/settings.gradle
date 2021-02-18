@@ -1,1 +1,3 @@
+include ':app-kotlin'
+include ':pjsua2'
 include ':app'

@@ -71,6 +71,24 @@ using namespace pj;
 #ifdef SWIGJAVA
 %include "enumtypeunsafe.swg"
 %javaconst(1);
+
+%pragma(java) jniclasscode=%{
+  static {
+    try {
+	System.loadLibrary("openh264");
+    } catch (UnsatisfiedLinkError e) {
+	System.err.println("Failed to load native library openh264\n" + e);
+	System.out.println("This could be safely ignored if you " +
+			   "don't use OpenH264 video codec.");
+    }
+    try {
+	System.loadLibrary("pjsua2");
+    } catch (UnsatisfiedLinkError e) {
+	System.err.println("Failed to load native library pjsua2\n" + e);
+    }
+  }
+%}
+
 #endif
 
 %include "symbols.i"
@@ -195,4 +213,3 @@ using namespace pj;
 #endif
 
 %include "pjsua2/endpoint.hpp"
-
