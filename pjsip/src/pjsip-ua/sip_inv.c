@@ -5154,10 +5154,8 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		    status = pjmedia_sdp_neg_send_local_offer(inv->pool_prov,
 							      inv->neg, 
 							      &active_sdp);
-		    if (status == PJ_SUCCESS) {
+		    if (status == PJ_SUCCESS)
 			sdp = (pjmedia_sdp_session*) active_sdp;
-			sdp->origin.version++;
-		    }
 		}
 
 		if (sdp) {
