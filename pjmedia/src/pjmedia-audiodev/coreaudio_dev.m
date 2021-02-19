@@ -1475,18 +1475,23 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	AURenderCallbackStruct output_cb;
 	AudioStreamBasicDescription streamFormat = strm->streamFormat;
-	BOOL isiOSAppOnMac = false;
+	BOOL isMacCatalystApp = false;
 
-#ifdef __IPHONE_14_0
-	if (@available(iOS 14.0, *)) {
-    	    isiOSAppOnMac = [NSProcessInfo processInfo].isiOSAppOnMac;
+#ifdef __IPHONE_13_0
+	if (@available(iOS 13.0, *)) {
+            /* According to Apple's doc, the property isMacCatalystApp is true
+	     * when the process is:
+             * - A Mac app built with Mac Catalyst, or an iOS app running on Apple silicon.
+             * - Running on a Mac.
+             */
+            isMacCatalystApp = [NSProcessInfo processInfo].isMacCatalystApp;
 	}
 #endif
 
 	/* Set the stream format */
    	if (strm->param.ec_enabled
 #if !COREAUDIO_MAC
-	    && isiOSAppOnMac
+	    && isMacCatalystApp
 #endif   	
    	) {
    	    /* When using VPIO on Mac, we need to use float data. Using
