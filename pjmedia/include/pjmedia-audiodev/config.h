@@ -113,6 +113,18 @@ PJ_BEGIN_DECL
 #endif
 
 
+/**
+ * This setting controls coreaudio should always use VPIO.
+ * Audio component might be switched from VPIO if ec is disabled,
+ * which has lower volume output. Use this to force using VPIO
+ * regardless the ec settings.
+ *
+ */
+#ifndef PJMEDIA_AUDIO_DEV_COREAUDIO_ALWAYS_USE_VPIO
+#   define PJMEDIA_AUDIO_DEV_COREAUDIO_ALWAYS_USE_VPIO	0
+#endif
+
+
  /**
   * This setting controls whether WMME support should be included.
   */

@@ -268,13 +268,20 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
     desc.componentFlags = 0;
     desc.componentFlagsMask = 0;
 
+#if PJMEDIA_AUDIO_DEV_COREAUDIO_ALWAYS_USE_VPIO == 0
     cf->io_comp = AudioComponentFindNext(NULL, &desc);
     if (cf->io_comp == NULL)
 	return PJMEDIA_EAUD_INIT; // cannot find IO unit;
+#endif
 
     desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
     if (AudioComponentFindNext(NULL, &desc) != NULL)
     	cf->has_vpio = PJ_TRUE;
+
+#if PJMEDIA_AUDIO_DEV_COREAUDIO_ALWAYS_USE_VPIO
+    if (cf->has_vpio == PJ_FALSE)
+        return PJMEDIA_EAUD_INIT;
+#endif
 
     status = ca_factory_refresh(f);
     if (status != PJ_SUCCESS)
@@ -2037,12 +2044,17 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
 	AudioComponent io_comp;
         
 	desc.componentType = kAudioUnitType_Output;
+#if PJMEDIA_AUDIO_DEV_COREAUDIO_ALWAYS_USE_VPIO
+	desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+#else
 	desc.componentSubType = (*(pj_bool_t*)pval)?
         			kAudioUnitSubType_VoiceProcessingIO :
-#if COREAUDIO_MAC
+#if     COREAUDIO_MAC
         			kAudioUnitSubType_HALOutput;
 #else
-				kAudioUnitSubType_RemoteIO;
+                    kAudioUnitSubType_RemoteIO;
+#endif
+
 #endif
 	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
 	desc.componentFlags = 0;
