@@ -313,7 +313,7 @@ static struct and_media_codec {
 
     pjmedia_codec_fmtp dec_fmtp;	  /* Decoder's fmtp params.	     */
 }
-and_media_codec[] {
+and_media_codec[] = {
 #if PJMEDIA_HAS_AND_MEDIA_H264
     {0, "H264",	"Android MediaCodec H264 codec", "video/avc",
         NULL, NULL,
@@ -639,6 +639,7 @@ static void get_codec_name(pj_bool_t is_enc,
 
     switch (fmt_id) {
 
+#if PJMEDIA_HAS_AND_MEDIA_H264
     case PJMEDIA_FORMAT_H264:
 	if (is_enc) {
 	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
@@ -658,6 +659,8 @@ static void get_codec_name(pj_bool_t is_enc,
 	    }
 	}
 	break;
+#endif
+#if PJMEDIA_HAS_AND_MEDIA_VP8
     case PJMEDIA_FORMAT_VP8:
 	if (is_enc) {
 	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
@@ -677,6 +680,8 @@ static void get_codec_name(pj_bool_t is_enc,
 	    }
 	}
 	break;
+#endif
+#if PJMEDIA_HAS_AND_MEDIA_VP9
     case PJMEDIA_FORMAT_VP9:
 	if (is_enc) {
 	    if ((prio && use_sw_enc) || (!prio && !use_sw_enc)) {
@@ -696,6 +701,7 @@ static void get_codec_name(pj_bool_t is_enc,
 	    }
 	}
 	break;
+#endif
     default:
 	break;
     }
