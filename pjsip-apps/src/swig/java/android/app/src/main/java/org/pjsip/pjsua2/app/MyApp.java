@@ -280,21 +280,7 @@ class MyAccountConfig
 }
 
 
-class MyApp {
-    static {
-	try{
-	    System.loadLibrary("openh264");
-            // Ticket #1937: libyuv is now included as static lib
-            //System.loadLibrary("yuv");
-	} catch (UnsatisfiedLinkError e) {
-	    System.out.println("UnsatisfiedLinkError: " + e.getMessage());
-	    System.out.println("This could be safely ignored if you " +
-			       "don't need video.");
-	}
-	System.loadLibrary("pjsua2");
-	System.out.println("Library loaded");
-    }
-
+class MyApp extends pjsua2 {
     public static Endpoint ep = new Endpoint();
     public static MyAppObserver observer;
     public ArrayList<MyAccount> accList = new ArrayList<MyAccount>();

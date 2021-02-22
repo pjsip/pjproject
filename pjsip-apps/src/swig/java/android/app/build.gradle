@@ -7,16 +7,6 @@ android {
         applicationId "org.pjsip.pjsua2.app"
         minSdkVersion 11
         targetSdkVersion 26
-
-        ndk {
-            moduleName "libpjsua2"
-        }
-
-        externalNativeBuild {
-            cmake {
-                arguments "-DANDROID_STL=c++_shared"
-            }
-        }
     }
 
     buildTypes {
@@ -25,4 +15,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+}
+
+dependencies {
+    implementation project(path: ':pjsua2')
 }
