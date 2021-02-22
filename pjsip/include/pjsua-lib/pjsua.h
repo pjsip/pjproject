@@ -395,6 +395,18 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 
 
 /**
+ * Specify whether pjsua should disable automatically sending initial
+ * answer 100/Trying for incoming calls. If disabled, application can
+ * later send 100/Trying if it wishes using pjsua_call_answer().
+ *
+ * Default: 0 (automatic sending enabled)
+ */
+#ifndef PJSUA_DISABLE_AUTO_SEND_100
+#   define PJSUA_DISABLE_AUTO_SEND_100	0
+#endif
+
+
+/**
  * Default options that will be passed when creating ice transport.
  * See #pjmedia_transport_ice_options.
  */

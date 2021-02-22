@@ -1988,6 +1988,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	goto on_return;
 
     } else {
+#if !PJSUA_DISABLE_AUTO_SEND_100
 	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
@@ -1996,6 +1997,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    call->async_call.dlg = NULL;
 	    goto on_return;
 	}
+#endif
     }
 
     /* Only do this after sending 100/Trying (really! see the long comment
