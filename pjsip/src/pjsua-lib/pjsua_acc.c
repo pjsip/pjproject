@@ -2364,13 +2364,22 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    /* Check and update Service-Route header */
 	    update_service_route(acc, param->rdata);
 
-	    PJ_LOG(3, (THIS_FILE, 
-		       "%s: registration success, status=%d (%.*s), "
-		       "will re-register in %d seconds", 
-		       pjsua_var.acc[acc->index].cfg.id.ptr,
-		       param->code,
-		       (int)param->reason.slen, param->reason.ptr,
-		       param->expiration));
+            if (PJSUA_REG_AUTO_REG) {
+                PJ_LOG(3, (THIS_FILE,
+                           "%s: registration success, status=%d (%.*s), "
+                           "will re-register in %d seconds",
+                           pjsua_var.acc[acc->index].cfg.id.ptr,
+                           param->code,
+                           (int)param->reason.slen, param->reason.ptr,
+                           param->expiration));
+            } else {
+                PJ_LOG(3, (THIS_FILE,
+                           "%s: registration success, status=%d (%.*s), "
+                           "auto re-register disabled",
+                           pjsua_var.acc[acc->index].cfg.id.ptr,
+                           param->code,
+                           (int)param->reason.slen, param->reason.ptr));
+            }
 
 	    /* Start keep-alive timer if necessary. */
 	    update_keep_alive(acc, PJ_TRUE, param);
@@ -2732,7 +2741,8 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    goto on_return;
 	}
 
-	status = pjsip_regc_register(pjsua_var.acc[acc_id].regc, 1, 
+	status = pjsip_regc_register(pjsua_var.acc[acc_id].regc,
+                                     PJSUA_REG_AUTO_REG,
 				     &tdata);
 
 	if (0 && status == PJ_SUCCESS && pjsua_var.acc[acc_id].cred_cnt) {
