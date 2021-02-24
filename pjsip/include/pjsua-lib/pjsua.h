@@ -2017,10 +2017,9 @@ typedef struct pjsua_config
 
     /** 
      * Maximum calls to support (default: 4). The value specified here
-     * must be smaller than the compile time maximum settings 
-     * PJSUA_MAX_CALLS, which by default is 32. To increase this 
-     * limit, the library must be recompiled with new PJSUA_MAX_CALLS
-     * value.
+     * must be smaller than or equal to the compile time maximum settings
+     * PJSUA_MAX_CALLS. To increase this limit, the library must be
+     * recompiled with new PJSUA_MAX_CALLS value.
      */
     unsigned	    max_calls;
 
@@ -4806,7 +4805,7 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
  * Maximum simultaneous calls.
  */
 #ifndef PJSUA_MAX_CALLS
-#   define PJSUA_MAX_CALLS	    32
+#   define PJSUA_MAX_CALLS	    4
 #endif
 
 /**
