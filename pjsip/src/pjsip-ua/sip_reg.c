@@ -165,12 +165,21 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     return PJ_SUCCESS;
 }
 
-
 PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
+{
+    return pjsip_regc_destroy2(regc, PJ_TRUE);
+}
+
+PJ_DEF(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force)
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
     pj_lock_acquire(regc->lock);
+    if (!force && regc->has_tsx) {
+    	pj_lock_release(regc->lock);
+    	return PJ_EBUSY;
+    }
+
     if (regc->has_tsx || pj_atomic_get(regc->busy_ctr) != 0) {
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
@@ -1460,17 +1469,22 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     /* Now send the message */
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
 				      regc, &regc_tsx_callback);
+ 
+     /* Reacquire the lock */
+    pj_lock_acquire(regc->lock);
+
     if (status!=PJ_SUCCESS) {
 	/* On failure, regc_tsx_callback() may not be called, so we need
 	 * to reset regc->has_tsx here (see also ticket #1936).
+	 * But note that we are releasing the lock when sending the request
+	 * above, so there can be a race with another registration send.
 	 */
-	regc->has_tsx = PJ_FALSE;
+	if (cseq == regc->cseq_hdr->cseq) {
+	    regc->has_tsx = PJ_FALSE;
+	}
 
 	PJ_PERROR(4,(THIS_FILE, status, "Error sending request"));
     }
-
-    /* Reacquire the lock */
-    pj_lock_acquire(regc->lock);
 
     /* Get last transport used and add reference to it */
     if (tdata->tp_info.transport != regc->last_transport &&

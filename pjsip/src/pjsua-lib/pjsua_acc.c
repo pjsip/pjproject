@@ -2289,6 +2289,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * Print registration status.
      */
     if (param->status!=PJ_SUCCESS) {
+    	pj_status_t status;
+
 	pjsua_perror(THIS_FILE, "SIP registration error", 
 		     param->status);
 
@@ -2298,14 +2300,26 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    return;
 	}
 
-	pjsip_regc_destroy(acc->regc);
-	acc->regc = NULL;
-	acc->contact.slen = 0;
-	acc->reg_mapped_addr.slen = 0;
-	acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	/* This callback is called without holding the registration's lock,
+	 * so there can be a race condition with another registration
+	 * process. Therefore, we must not forcefully try to destroy
+	 * the registration here.
+	 */
+	status = pjsip_regc_destroy2(acc->regc, PJ_FALSE);
+	if (status == PJ_SUCCESS) {
+	    acc->regc = NULL;
+	    acc->contact.slen = 0;
+	    acc->reg_mapped_addr.slen = 0;
+	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
 	
-	/* Stop keep-alive timer if any. */
-	update_keep_alive(acc, PJ_FALSE, NULL);
+	    /* Stop keep-alive timer if any. */
+	    update_keep_alive(acc, PJ_FALSE, NULL);
+	} else {
+	    /* Another registration is in progress. */
+	    pj_assert(status == PJ_EBUSY);
+	    pjsua_perror(THIS_FILE, "Deleting registration failed", 
+		     	 status);	    
+	}
 
     } else if (param->code < 0 || param->code >= 300) {
 	PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 

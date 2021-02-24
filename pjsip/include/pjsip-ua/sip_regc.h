@@ -156,6 +156,24 @@ PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
 
+
+/**
+ * Destroy client registration structure. If a registration transaction is
+ * in progress:
+ * - if force is PJ_TRUE, then the structure will be deleted only after
+ *   a final response has been received, and in this case, the callback
+ *   won't be called (this behavior is the same as calling
+ *   pjsip_regc_destroye()).
+ * - if force is PJ_FALSE, the function will return PJ_EBUSY
+ *
+ * @param regc	    The client registration structure.
+ * @param force	    Specify if the function must destroy the structure.
+ *
+ * @return	    PJ_SUCCESS on success, or PJ_EBUSY.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
+
+
 /**
  * Get registration info.
  *
