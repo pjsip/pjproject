@@ -3364,8 +3364,8 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_start( pjsua_transport_id id,
  *
  * Default: 1 (enabled)
  */
-#ifndef PJSUA_REG_AUTO_REG
-#   define PJSUA_REG_AUTO_REG	1
+#ifndef PJSUA_REG_AUTO_REREG
+#   define PJSUA_REG_AUTO_REREG     1
 #endif
 
 /**
