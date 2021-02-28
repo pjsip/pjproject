@@ -400,7 +400,7 @@ static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
     while (*n != NULL) {
 	char *name = snd_device_name_get_hint(*n, "NAME");
 	if (name != NULL) {
-	    if (0 != strcmp("null", name))
+	     if (0 == strncmp("plughw", name,6)||0 == strncmp("default", name,7))
 		add_dev(af, name);
 	    free(name);
 	}
