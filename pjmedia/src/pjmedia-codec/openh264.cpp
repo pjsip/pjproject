@@ -56,6 +56,8 @@
 #define MAX_RX_WIDTH		1200
 #define MAX_RX_HEIGHT		800
 
+/* OpenH264 default PT */
+#define OH264_PT                PJMEDIA_RTP_PT_H264
 
 /*
  * Factory operations.
@@ -248,7 +250,7 @@ static pj_status_t oh264_test_alloc(pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory == &oh264_factory.base, PJ_EINVAL);
 
     if (info->fmt_id == PJMEDIA_FORMAT_H264 &&
-	info->pt != 0)
+	info->pt == OH264_PT)
     {
 	return PJ_SUCCESS;
     }
@@ -304,7 +306,7 @@ static pj_status_t oh264_enum_info(pjmedia_vid_codec_factory *factory,
 
     *count = 1;
     info->fmt_id = PJMEDIA_FORMAT_H264;
-    info->pt = PJMEDIA_RTP_PT_H264;
+    info->pt = OH264_PT;
     info->encoding_name = pj_str((char*)"H264");
     info->encoding_desc = pj_str((char*)"OpenH264 codec");
     info->clock_rate = 90000;

@@ -126,7 +126,11 @@ enum pjmedia_video_pt
      PJMEDIA_RTP_PT_H264_RSV4,
 
      PJMEDIA_RTP_PT_VP8,
+     PJMEDIA_RTP_PT_VP8_RSV1,
+     PJMEDIA_RTP_PT_VP8_RSV2,
      PJMEDIA_RTP_PT_VP9,
+     PJMEDIA_RTP_PT_VP9_RSV1,
+     PJMEDIA_RTP_PT_VP9_RSV2,
 
      /* Caution!
       * Ensure the value of the last pt above is <= 127.

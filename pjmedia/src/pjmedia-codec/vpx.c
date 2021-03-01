@@ -56,6 +56,10 @@
 
 #define MAX_RX_RES		1200
 
+/* VPX VP8 default PT */
+#define VPX_VP8_PT		PJMEDIA_RTP_PT_VP8
+/* VPX VP9 default PT */
+#define VPX_VP9_PT		PJMEDIA_RTP_PT_VP9
 
 /*
  * Factory operations.
@@ -229,8 +233,8 @@ static pj_status_t vpx_test_alloc(pjmedia_vid_codec_factory *factory,
 {
     PJ_ASSERT_RETURN(factory == &vpx_factory.base, PJ_EINVAL);
 
-    if ((info->fmt_id == PJMEDIA_FORMAT_VP8 ||
-         info->fmt_id == PJMEDIA_FORMAT_VP9) && info->pt != 0)
+    if (((info->fmt_id == PJMEDIA_FORMAT_VP8) && (info->pt == VPX_VP8_PT)) ||
+        ((info->fmt_id == PJMEDIA_FORMAT_VP9) && (info->pt == VPX_VP9_PT)))
     {
 	return PJ_SUCCESS;
     }
@@ -291,7 +295,7 @@ static pj_status_t vpx_enum_info(pjmedia_vid_codec_factory *factory,
 
 #if PJMEDIA_HAS_VPX_CODEC_VP8
     info[i].fmt_id = PJMEDIA_FORMAT_VP8;
-    info[i].pt = PJMEDIA_RTP_PT_VP8;
+    info[i].pt = VPX_VP8_PT;
     info[i].encoding_name = pj_str((char*)"VP8");
     info[i].encoding_desc = pj_str((char*)"VPX VP8 codec");
     i++;
@@ -300,7 +304,7 @@ static pj_status_t vpx_enum_info(pjmedia_vid_codec_factory *factory,
 #if PJMEDIA_HAS_VPX_CODEC_VP9
     if (i + 1 < *count) {
     	info[i].fmt_id = PJMEDIA_FORMAT_VP9;
-    	info[i].pt = PJMEDIA_RTP_PT_VP9;
+        info[i].pt = VPX_VP9_PT;
     	info[i].encoding_name = pj_str((char*)"VP9");
     	info[i].encoding_desc = pj_str((char*)"VPX VP9 codec");
     	i++;
