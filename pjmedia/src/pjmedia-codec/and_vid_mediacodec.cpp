@@ -72,6 +72,10 @@
 /* Timeout until the buffer is ready in ms. */
 #define CODEC_DEQUEUE_TIMEOUT 	20
 
+#define AND_MED_H264_PT 	PJMEDIA_RTP_PT_H264_RSV2
+#define AND_MED_VP8_PT 		PJMEDIA_RTP_PT_VP8_RSV1
+#define AND_MED_VP9_PT 		PJMEDIA_RTP_PT_VP9_RSV1
+
 /*
  * Factory operations.
  */
@@ -317,7 +321,7 @@ and_media_codec[] = {
 #if PJMEDIA_HAS_AND_MEDIA_H264
     {0, "H264",	"Android MediaCodec H264 codec", "video/avc",
         NULL, NULL,
-        PJMEDIA_RTP_PT_H264, PJMEDIA_FORMAT_H264, KEYFRAME_INTERVAL,
+        AND_MED_H264_PT, PJMEDIA_FORMAT_H264, KEYFRAME_INTERVAL,
         &open_h264, &process_encode_h264, &encode_more_h264, &decode_h264,
         {2, {{{(char *)"profile-level-id", 16}, {(char *)"42e01e", 6}},
              {{(char *)" packetization-mode", 19}, {(char *)"1", 1}}}
@@ -327,7 +331,7 @@ and_media_codec[] = {
 #if PJMEDIA_HAS_AND_MEDIA_VP8
     {0, "VP8",	"Android MediaCodec VP8 codec", "video/x-vnd.on2.vp8",
         NULL, NULL,
-        PJMEDIA_RTP_PT_VP8, PJMEDIA_FORMAT_VP8, KEYFRAME_INTERVAL,
+        AND_MED_VP8_PT, PJMEDIA_FORMAT_VP8, KEYFRAME_INTERVAL,
         &open_vpx, NULL, &encode_more_vpx, &decode_vpx,
         {2, {{{(char *)"max-fr", 6}, {(char *)"30", 2}},
              {{(char *)" max-fs", 7}, {(char *)"580", 3}}}
@@ -337,7 +341,7 @@ and_media_codec[] = {
 #if PJMEDIA_HAS_AND_MEDIA_VP9
     {0, "VP9",	"Android MediaCodec VP9 codec", "video/x-vnd.on2.vp9",
 	NULL, NULL,
-        PJMEDIA_RTP_PT_VP9, PJMEDIA_FORMAT_VP9, KEYFRAME_INTERVAL,
+	AND_MED_VP9_PT, PJMEDIA_FORMAT_VP9, KEYFRAME_INTERVAL,
         &open_vpx, NULL, &encode_more_vpx, &decode_vpx,
         {2, {{{(char *)"max-fr", 6}, {(char *)"30", 2}},
              {{(char *)" max-fs", 7}, {(char *)"580", 3}}}
@@ -530,7 +534,7 @@ static pj_status_t and_media_test_alloc(pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory == &and_media_factory.base, PJ_EINVAL);
 
     for (i = 0; i < PJ_ARRAY_SIZE(and_media_codec); ++i) {
-        if (and_media_codec[i].enabled && info->pt != 0 &&
+        if (and_media_codec[i].enabled && info->pt == and_media_codec[i].pt &&
             (info->fmt_id == and_media_codec[i].fmt_id))
         {
             return PJ_SUCCESS;
