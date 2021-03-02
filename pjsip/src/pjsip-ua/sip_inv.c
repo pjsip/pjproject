@@ -4146,14 +4146,7 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 	return PJ_TRUE;	/* Handled */
 
     } 
-    /* Process 502/503 error */
-    else if ((tsx->state == PJSIP_TSX_STATE_TERMINATED) &&
-	     (tsx->status_code == 503 || tsx->status_code == 502))
-    {
-	pjsip_timer_handle_refresh_error(inv, e);
 
-	return PJ_TRUE;
-    }    
     else {
 	return PJ_FALSE; /* Unhandled */
     }
@@ -5309,6 +5302,11 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	    if (tsx == inv->invite_tsx)
 		inv->invite_tsx = NULL;
+
+	    /* Process 502/503 error for session timer refresh */
+	    if (tsx->status_code == 503 || tsx->status_code == 502) {
+		pjsip_timer_handle_refresh_error(inv, e);
+	    }
 	}
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
