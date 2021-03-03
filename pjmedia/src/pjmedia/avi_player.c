@@ -21,6 +21,7 @@
  * Default file player/writer buffer size.
  */
 #include <pjmedia/avi_stream.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/avi.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
@@ -397,19 +398,26 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             }
         } else {
             /* Check supported audio formats here */
-            if ((avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_PCM &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_ALAW &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_ULAW &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_WAVE_FMT_TAG_PCM) ||
-                avi_hdr.strf_hdr[i].strf_audio_hdr.bits_per_sample != 16)
+	    strf_audio_hdr_t *hdr = (strf_audio_hdr_t*)
+				    &avi_hdr.strf_hdr[i].strf_audio_hdr;
+            if (hdr->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM &&
+		hdr->bits_per_sample == 16)
+	    {
+		fmt_id = PJMEDIA_FORMAT_PCM;
+	    }
+	    else if (hdr->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW)
+	    {
+		fmt_id = PJMEDIA_FORMAT_PCMA;
+	    }
+	    else if (hdr->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW)
+	    {
+		fmt_id = PJMEDIA_FORMAT_PCMU;
+	    }
+	    else
             {
                 PJ_LOG(4, (THIS_FILE, "Unsupported audio stream"));
                 continue;
             }
-            /* Normalize format ID */
-            fmt_id = avi_hdr.strl_hdr[i].codec;
-            if (avi_hdr.strl_hdr[i].codec == PJMEDIA_WAVE_FMT_TAG_PCM)
-        	fmt_id = PJMEDIA_FORMAT_PCM;
         }
 
         if (nstr > 0) {
@@ -500,7 +508,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                                       20000 /* fport[i]->usec_per_frame */,
                                       strf_hdr->bytes_per_sec * 8,
                                       strf_hdr->bytes_per_sec * 8);
-        }
+
+	    /* Set format to PCM (we will decode PCMA/U) */
+	    if (fport[i]->fmt_id == PJMEDIA_FORMAT_PCMA ||
+		fport[i]->fmt_id == PJMEDIA_FORMAT_PCMU)
+	    {
+		fport[i]->base.info.fmt.id = PJMEDIA_FORMAT_PCM;
+		fport[i]->base.info.fmt.det.aud.bits_per_sample = 16;
+	    }
+	}
 
         pj_strdup2(pool, &fport[i]->base.info.name, filename);
     }
@@ -731,6 +747,14 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
         pj_file_setpos(fport->fd, fport->start_data, PJ_SEEK_SET);
     }
 
+    /* For PCMU/A audio stream, reduce frame size to half (temporarily). */
+    if (fport->base.info.fmt.type == PJMEDIA_TYPE_AUDIO &&
+	(fport->fmt_id == PJMEDIA_FORMAT_PCMA ||
+	 fport->fmt_id == PJMEDIA_FORMAT_PCMU))
+    {
+	frame->size >>= 1;
+    }
+
     /* Fill frame buffer. */
     size_to_read = frame->size;
     do {
@@ -822,9 +846,34 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
         break;
 
     } while(1);
-
     frame->timestamp.u64 = fport->next_ts.u64;
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+
+	/* Decode PCMU/A frame */
+	if (fport->fmt_id == PJMEDIA_FORMAT_PCMA ||
+	    fport->fmt_id == PJMEDIA_FORMAT_PCMU)
+	{
+	    unsigned i;
+	    pj_uint16_t *dst;
+	    pj_uint8_t *src;
+
+	    dst = (pj_uint16_t*)frame->buf + frame->size - 1;
+	    src = (pj_uint8_t*)frame->buf + frame->size - 1;
+
+	    if (fport->fmt_id == PJMEDIA_FORMAT_PCMU) {
+		for (i = 0; i < frame->size; ++i) {
+		    *dst-- = (pj_uint16_t) pjmedia_ulaw2linear(*src--);
+		}
+	    } else {
+		for (i = 0; i < frame->size; ++i) {
+		    *dst-- = (pj_uint16_t) pjmedia_alaw2linear(*src--);
+		}
+	    }
+
+	    /* Return back the frame size */
+	    frame->size <<= 1;
+	}
+
 	if (fport->usec_per_frame) {
 	    fport->next_ts.u64 += (fport->usec_per_frame *
 				   fport->base.info.fmt.det.aud.clock_rate /
