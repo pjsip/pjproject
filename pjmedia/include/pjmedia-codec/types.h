@@ -118,15 +118,19 @@ enum pjmedia_video_pt
 {
      /* Video payload types */
      PJMEDIA_RTP_PT_VID_START = (PJMEDIA_RTP_PT_DYNAMIC-1),
-     PJMEDIA_RTP_PT_H263P,
-     PJMEDIA_RTP_PT_H264,
-     PJMEDIA_RTP_PT_H264_RSV1,
-     PJMEDIA_RTP_PT_H264_RSV2,
-     PJMEDIA_RTP_PT_H264_RSV3,
+     PJMEDIA_RTP_PT_H263P,      /* used by ffmpeg avcodec     */
+     PJMEDIA_RTP_PT_H264,       /* used by OpenH264           */
+     PJMEDIA_RTP_PT_H264_RSV1,  /* used by video toolbox      */
+     PJMEDIA_RTP_PT_H264_RSV2,  /* used by MediaCodec         */
+     PJMEDIA_RTP_PT_H264_RSV3,  /* used by ffmpeg avcodec     */
      PJMEDIA_RTP_PT_H264_RSV4,
 
-     PJMEDIA_RTP_PT_VP8,
-     PJMEDIA_RTP_PT_VP9,
+     PJMEDIA_RTP_PT_VP8,        /* used by VPX                */
+     PJMEDIA_RTP_PT_VP8_RSV1,   /* used by MediaCodec         */
+     PJMEDIA_RTP_PT_VP8_RSV2,
+     PJMEDIA_RTP_PT_VP9,        /* used by VPX                */
+     PJMEDIA_RTP_PT_VP9_RSV1,   /* used by MediaCodec         */
+     PJMEDIA_RTP_PT_VP9_RSV2,
 
      /* Caution!
       * Ensure the value of the last pt above is <= 127.

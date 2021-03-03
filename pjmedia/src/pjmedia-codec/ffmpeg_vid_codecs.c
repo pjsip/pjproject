@@ -81,6 +81,8 @@
 #endif
 #define AVCODEC_HAS_DECODE(c)		(c->decode)
 
+/* AVCodec H264 default PT */
+#define AVC_H264_PT                       PJMEDIA_RTP_PT_H264_RSV3
 
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
@@ -285,7 +287,7 @@ static ffmpeg_codec_desc codec_desc[] =
 {
 #if PJMEDIA_HAS_FFMPEG_CODEC_H264
     {
-	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
+	{PJMEDIA_FORMAT_H264, AVC_H264_PT, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
 	0,
 	{720, 480},	{15, 1},	256000, 256000,
