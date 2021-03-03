@@ -3357,15 +3357,17 @@ PJ_DECL(pj_status_t) pjsua_transport_lis_start( pjsua_transport_id id,
 #endif
 
 /**
- * Set this to 0 to disable auto re-registration. This is useful for app
- * that uses Push Notification and doesn't require auto re-registration.
- * App can periodically send refresh registration or send it before making
- * a call. See https://github.com/pjsip/pjproject/pull/2652 for more info.
+ * When the registration is successfull, the auto registration refresh will
+ * be sent before it expires. Setting this to 0 will disable it.
+ * This is useful for app that uses Push Notification and doesn't require auto
+ * registration refresh. App can periodically send refresh registration or
+ * send it before making a call.=
+ * See https://github.com/pjsip/pjproject/pull/2652 for more info.
  *
  * Default: 1 (enabled)
  */
-#ifndef PJSUA_REG_AUTO_REREG
-#   define PJSUA_REG_AUTO_REREG     1
+#ifndef PJSUA_REG_AUTO_REG_REFRESH
+#   define PJSUA_REG_AUTO_REG_REFRESH     1
 #endif
 
 /**

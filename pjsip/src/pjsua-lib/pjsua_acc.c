@@ -2364,7 +2364,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    /* Check and update Service-Route header */
 	    update_service_route(acc, param->rdata);
 
-#if         PJSUA_REG_AUTO_REREG
+#if         PJSUA_REG_AUTO_REG_REFRESH
 
             PJ_LOG(3, (THIS_FILE,
                         "%s: registration success, status=%d (%.*s), "
@@ -2745,7 +2745,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	}
 
 	status = pjsip_regc_register(pjsua_var.acc[acc_id].regc,
-                                     PJSUA_REG_AUTO_REREG,
+                                     PJSUA_REG_AUTO_REG_REFRESH,
 				     &tdata);
 
 	if (0 && status == PJ_SUCCESS && pjsua_var.acc[acc_id].cred_cnt) {
