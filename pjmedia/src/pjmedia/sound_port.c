@@ -240,17 +240,20 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 		     PJ_EBUG);
 
     /* Get device caps */
-    if (snd_port->aud_param.dir & PJMEDIA_DIR_CAPTURE) {
+    if ((snd_port->aud_param.dir & PJMEDIA_DIR_CAPTURE) ||
+        (snd_port->aud_param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
 	pjmedia_aud_dev_info dev_info;
+        pjmedia_aud_dev_index dev_id =
+            (snd_port->aud_param.dir & PJMEDIA_DIR_CAPTURE) ?
+            snd_port->aud_param.rec_id :
+            snd_port->aud_param.play_id;
 
-	status = pjmedia_aud_dev_get_info(snd_port->aud_param.rec_id, 
-					  &dev_info);
+	status = pjmedia_aud_dev_get_info(dev_id, &dev_info);
 	if (status != PJ_SUCCESS)
 	    return status;
 
 	snd_port->aud_caps = dev_info.caps;
-    } else {
-	snd_port->aud_caps = 0;
     }
 
     /* Process EC settings */
@@ -562,8 +565,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
     pj_status_t status;
 
     /* Sound must be opened in full-duplex mode */
-    PJ_ASSERT_RETURN(snd_port && 
-		     snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK,
+    PJ_ASSERT_RETURN(snd_port,
 		     PJ_EINVALIDOP);
 
     /* Determine whether we use device or software EC */

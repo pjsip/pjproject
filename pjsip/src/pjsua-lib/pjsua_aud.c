@@ -1877,14 +1877,20 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
     pj_log_push_indent();
 
     if (speaker_only) {
-	status = pjmedia_snd_port_create_player(pjsua_var.snd_pool,
-						-1,
-						param->base.clock_rate,
-						param->base.channel_count,
-						param->base.samples_per_frame,
-						param->base.bits_per_sample, 
-						0,
-						&pjsua_var.snd_port);
+	pjmedia_snd_port_param cp_param;
+	int dev_id = param->base.play_id;
+
+	/* Normalize dev_id */
+	if (dev_id < 0)
+	    dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
+	pjmedia_snd_port_param_default(&cp_param);
+	pj_memcpy(&cp_param.base, &param->base, sizeof(cp_param.base));
+	cp_param.base.dir = PJMEDIA_DIR_PLAYBACK;
+	cp_param.base.play_id = dev_id;
+
+	status = pjmedia_snd_port_create2(pjsua_var.snd_pool, &cp_param,
+					  &pjsua_var.snd_port);
 
     } else {
 	status = pjmedia_snd_port_create2(pjsua_var.snd_pool,
