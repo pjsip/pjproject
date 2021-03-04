@@ -564,9 +564,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
     pjmedia_aud_param prm;
     pj_status_t status;
 
-    /* Sound must be opened in full-duplex mode */
-    PJ_ASSERT_RETURN(snd_port,
-		     PJ_EINVALIDOP);
+    PJ_ASSERT_RETURN(snd_port &&
+                     ((snd_port->dir & PJMEDIA_DIR_CAPTURE)||
+                      (snd_port->dir & PJMEDIA_DIR_PLAYBACK)), PJ_EINVALIDOP);
 
     /* Determine whether we use device or software EC */
     if ((snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) == 0 &&
