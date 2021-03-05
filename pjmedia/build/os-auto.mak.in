@@ -71,6 +71,7 @@ AC_NO_G7221_CODEC=@ac_no_g7221_codec@
 AC_NO_OPENCORE_AMRNB=@ac_no_opencore_amrnb@
 AC_NO_OPENCORE_AMRWB=@ac_no_opencore_amrwb@
 AC_NO_BCG729=@ac_no_bcg729@
+AC_NO_ANDROID_MEDIACODEC=@ac_no_mediacodec@
 
 export CODEC_OBJS=
 
@@ -143,6 +144,11 @@ ifeq ($(AC_NO_BCG729),)
 export CODEC_OBJS += bcg729.o
 endif
 
+ifeq ($(AC_NO_ANDROID_MEDIACODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_ANDROID_MEDIACODEC=0
+else
+export CODEC_OBJS += and_aud_mediacodec.o and_vid_mediacodec.o
+endif
 
 #
 # SRTP

@@ -30,6 +30,8 @@
 #   pragma comment( lib, "vpx.lib")
 #endif
 
+#include <pjmedia-codec/vpx_packetizer.h>
+
 /* VPX */
 #include <vpx/vpx_encoder.h>
 #include <vpx/vpx_decoder.h>
@@ -146,6 +148,7 @@ typedef struct vpx_codec_data
     pj_pool_t			*pool;
     pjmedia_vid_codec_param	*prm;
     pj_bool_t			 whole;
+    pjmedia_vpx_packetizer	*pktz;
 
     /* Encoder */
     vpx_codec_iface_t 		*(*enc_if)();
@@ -405,6 +408,7 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
     pjmedia_vid_codec_vpx_fmtp   vpx_fmtp;
     vpx_codec_enc_cfg_t cfg;
     vpx_codec_err_t res;
+    pjmedia_vpx_packetizer_cfg  pktz_cfg;
     unsigned max_res = MAX_RX_RES;
     pj_status_t	status;
 
@@ -500,6 +504,15 @@ static pj_status_t vpx_codec_open(pjmedia_vid_codec *codec,
 
     /* Need to update param back after values are negotiated */
     pj_memcpy(codec_param, param, sizeof(*codec_param));
+
+    pj_bzero(&pktz_cfg, sizeof(pktz_cfg));
+    pktz_cfg.mtu = param->enc_mtu;
+    pktz_cfg.fmt_id = param->enc_fmt.id;
+
+    status = pjmedia_vpx_packetizer_create(vpx_data->pool, &pktz_cfg,
+                                           &vpx_data->pktz);
+    if (status != PJ_SUCCESS)
+        return status;
 
     return PJ_SUCCESS;
 }
@@ -640,6 +653,7 @@ static pj_status_t vpx_codec_encode_more(pjmedia_vid_codec *codec,
                                          pj_bool_t *has_more)
 {
     struct vpx_codec_data *vpx_data;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(codec && out_size && output && has_more,
                      PJ_EINVAL);
@@ -648,155 +662,35 @@ static pj_status_t vpx_codec_encode_more(pjmedia_vid_codec *codec,
     
     if (vpx_data->enc_processed < vpx_data->enc_frame_size) {
     	unsigned payload_desc_size = 1;
-        unsigned max_size = vpx_data->prm->enc_mtu - payload_desc_size;
-        unsigned remaining_size = vpx_data->enc_frame_size -
-        			  vpx_data->enc_processed;
-        unsigned payload_len = PJ_MIN(remaining_size, max_size);
-        pj_uint8_t *p = (pj_uint8_t *)output->buf;
+    	pj_size_t payload_len = out_size;
+    	pj_uint8_t *p = (pj_uint8_t *)output->buf;
 
-	if (payload_len + payload_desc_size > out_size)
-	    return PJMEDIA_CODEC_EFRMTOOSHORT;
+    	status = pjmedia_vpx_packetize(vpx_data->pktz,
+				       vpx_data->enc_frame_size,
+				       &vpx_data->enc_processed,
+				       vpx_data->enc_frame_is_keyframe,
+				       &p,
+				       &payload_len);
 
+    	if (status != PJ_SUCCESS) {
+    	    return status;
+    	}
+        pj_memcpy(p + payload_desc_size,
+        	  (vpx_data->enc_frame_whole + vpx_data->enc_processed),
+        	  payload_len);
+        output->size = payload_len + payload_desc_size;
         output->timestamp = vpx_data->ets;
         output->type = PJMEDIA_FRAME_TYPE_VIDEO;
         output->bit_info = 0;
         if (vpx_data->enc_frame_is_keyframe) {
             output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
         }
-
-        /* Set payload header */
-        p[0] = 0;
-        if (vpx_data->prm->enc_fmt.id == PJMEDIA_FORMAT_VP8) {
-	    /* Set N: Non-reference frame */
-            if (!vpx_data->enc_frame_is_keyframe) p[0] |= 0x20;
-            /* Set S: Start of VP8 partition. */
-            if (vpx_data->enc_processed == 0) p[0] |= 0x10;
-        } else if (vpx_data->prm->enc_fmt.id == PJMEDIA_FORMAT_VP9) {
-	    /* Set P: Inter-picture predicted frame */
-            if (!vpx_data->enc_frame_is_keyframe) p[0] |= 0x40;
-            /* Set B: Start of a frame */
-            if (vpx_data->enc_processed == 0) p[0] |= 0x8;
-            /* Set E: End of a frame */
-            if (vpx_data->enc_processed + payload_len ==
-            	vpx_data->enc_frame_size)
-            {
-	    	p[0] |= 0x4;
-	    }
-	}
-
-        pj_memcpy(p + payload_desc_size,
-        	  (vpx_data->enc_frame_whole + vpx_data->enc_processed),
-        	  payload_len);
-        output->size = payload_len + payload_desc_size;
-
         vpx_data->enc_processed += payload_len;
         *has_more = (vpx_data->enc_processed < vpx_data->enc_frame_size);
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
-
-
-static pj_status_t vpx_unpacketize(struct vpx_codec_data *vpx_data,
-				   const pj_uint8_t *buf,
-                                   pj_size_t   packet_size,
-				   unsigned   *p_desc_len)
-{
-    unsigned desc_len = 1;
-    pj_uint8_t *p = (pj_uint8_t *)buf;
-
-#define INC_DESC_LEN() {if (++desc_len >= packet_size) return PJ_ETOOSMALL;}
-
-    if (packet_size <= desc_len) return PJ_ETOOSMALL;
-
-    if (vpx_data->prm->enc_fmt.id == PJMEDIA_FORMAT_VP8) {
-        /*  0 1 2 3 4 5 6 7
-         * +-+-+-+-+-+-+-+-+
-         * |X|R|N|S|R| PID | (REQUIRED)
-         */
-	/* X: Extended control bits present. */
-	if (p[0] & 0x80) {
-	    INC_DESC_LEN();
-	    /* |I|L|T|K| RSV   | */
-	    /* I: PictureID present. */
-	    if (p[1] & 0x80) {
-	    	INC_DESC_LEN();
-	    	/* If M bit is set, the PID field MUST contain 15 bits. */
-	    	if (p[2] & 0x80) INC_DESC_LEN();
-	    }
-	    /* L: TL0PICIDX present. */
-	    if (p[1] & 0x40) INC_DESC_LEN();
-	    /* T: TID present or K: KEYIDX present. */
-	    if ((p[1] & 0x20) || (p[1] & 0x10)) INC_DESC_LEN();
-	}
-
-    } else if (vpx_data->prm->enc_fmt.id == PJMEDIA_FORMAT_VP9) {
-        /*  0 1 2 3 4 5 6 7
-         * +-+-+-+-+-+-+-+-+
-         * |I|P|L|F|B|E|V|-| (REQUIRED)
-         */
-        /* I: Picture ID (PID) present. */
-	if (p[0] & 0x80) {
-	    INC_DESC_LEN();
-	    /* If M bit is set, the PID field MUST contain 15 bits. */
-	    if (p[1] & 0x80) INC_DESC_LEN();
-	}
-	/* L: Layer indices present. */
-	if (p[0] & 0x20) {
-	    INC_DESC_LEN();
-	    if (!(p[0] & 0x10)) INC_DESC_LEN();
-	}
-	/* F: Flexible mode.
-	 * I must also be set to 1, and if P is set, there's up to 3
-	 * reference index.
-	 */
-	if ((p[0] & 0x10) && (p[0] & 0x80) && (p[0] & 0x40)) {
-	    unsigned char *q = p + desc_len;
-
-	    INC_DESC_LEN();
-	    if (*q & 0x1) {
-	    	q++;
-	    	INC_DESC_LEN();
-	    	if (*q & 0x1) {
-	    	    q++;
-	    	    INC_DESC_LEN();
-	    	}
-	    }
-	}
-	/* V: Scalability structure (SS) data present. */
-	if (p[0] & 0x2) {
-	    unsigned char *q = p + desc_len;
-	    unsigned N_S = (*q >> 5) + 1;
-	    
-	    INC_DESC_LEN();
-	    /* Y: Each spatial layer's frame resolution present. */
-	    if (*q & 0x10) desc_len += N_S * 4;
-	    
-	    /* G: PG description present flag. */
-	    if (*q & 0x8) {
-	    	unsigned j;
-	    	unsigned N_G = *(p + desc_len);
-
-	    	INC_DESC_LEN();
-	    	for (j = 0; j< N_G; j++) {
-	    	    unsigned R;
-
-	    	    q = p + desc_len;
-	    	    INC_DESC_LEN();
-	    	    R = (*q & 0x0F) >> 2;
-	    	    desc_len += R;
-	    	    if (desc_len >= packet_size)
-	    	    	return PJ_ETOOSMALL;
-	    	}
-	    }
-	}
-    }
-#undef INC_DESC_LEN
-
-    *p_desc_len = desc_len;
-    return PJ_SUCCESS;
-}
-
 
 static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
                                      pj_size_t count,
@@ -841,20 +735,20 @@ static pj_status_t vpx_codec_decode_(pjmedia_vid_codec *codec,
     	    unsigned desc_len;
     	    unsigned packet_size = packets[i].size;
     	    pj_status_t status;
-    	
-    	    status = vpx_unpacketize(vpx_data, packets[i].buf, packet_size,
-    				     &desc_len);
+
+            status = pjmedia_vpx_unpacketize(vpx_data->pktz, packets[i].buf,
+                                             packet_size, &desc_len);
     	    if (status != PJ_SUCCESS) {
 	    	PJ_LOG(4,(THIS_FILE, "Unpacketize error"));
 	    	return status;
     	    }
 
-    	    packet_size -= desc_len;	
+	    packet_size -= desc_len;
     	    if (whole_len + packet_size > vpx_data->dec_buf_size) {
 	    	PJ_LOG(4,(THIS_FILE, "Decoding buffer overflow [2]"));
 	    	return PJMEDIA_CODEC_EFRMTOOSHORT;
             }
-        
+
 	    pj_memcpy(vpx_data->dec_buf + whole_len,
 		      (char *)packets[i].buf + desc_len, packet_size);
 	    whole_len += packet_size;

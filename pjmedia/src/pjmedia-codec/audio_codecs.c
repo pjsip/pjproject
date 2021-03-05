@@ -44,6 +44,14 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 
     PJ_ASSERT_RETURN(c->ilbc.mode==20 || c->ilbc.mode==30, PJ_EINVAL);
 
+#if PJMEDIA_HAS_ANDROID_MEDIACODEC
+    /* Register Android MediaCodec */
+    status = pjmedia_codec_and_media_aud_init(endpt);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+#endif
+
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     status = pjmedia_codec_passthrough_init2(endpt, &c->passthrough.setting);
     if (status != PJ_SUCCESS)
