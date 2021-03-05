@@ -24,7 +24,7 @@ import pjsua as pj
 
 # Logging callback
 def log_cb(level, str, len):
-    print str,
+    print(str)
 
 # Callback to receive events from Call
 class MyCallCallback(pj.CallCallback):
@@ -33,9 +33,9 @@ class MyCallCallback(pj.CallCallback):
 
     # Notification when call state has changed
     def on_state(self):
-        print "Call is ", self.call.info().state_text,
-        print "last code =", self.call.info().last_code, 
-        print "(" + self.call.info().last_reason + ")"
+        print("Call is ", self.call.info().state_text)
+        print("last code =", self.call.info().last_code)
+        print("(" + self.call.info().last_reason + ")")
         
     # Notification when call's media state has changed.
     def on_media_state(self):
@@ -45,12 +45,12 @@ class MyCallCallback(pj.CallCallback):
             call_slot = self.call.info().conf_slot
             lib.conf_connect(call_slot, 0)
             lib.conf_connect(0, call_slot)
-            print "Hello world, I can talk!"
+            print("Hello world, I can talk!")
 
 
 # Check command line argument
 if len(sys.argv) != 2:
-    print "Usage: simplecall.py <dst-URI>"
+    print("Usage: simplecall.py <dst-URI>")
     sys.exit(1)
 
 try:
@@ -73,7 +73,7 @@ try:
     call = acc.make_call(sys.argv[1], MyCallCallback())
 
     # Wait for ENTER before quitting
-    print "Press <ENTER> to quit"
+    print("Press <ENTER> to quit")
     input = sys.stdin.readline().rstrip("\r\n")
 
     # We're done, shutdown the library
@@ -81,8 +81,7 @@ try:
     lib = None
 
 except pj.Error, e:
-    print "Exception: " + str(e)
+    print("Exception: " + str(e))
     lib.destroy()
     lib = None
     sys.exit(1)
-
