@@ -70,8 +70,8 @@ export YUV_OBJS = \
 	scale_win.o         \
 	video_common.o
 
-export YUV_CFLAGS = -fomit-frame-pointer $(_CFLAGS)
-export YUV_CXXFLAGS = -fomit-frame-pointer $(_CXXFLAGS)
+export YUV_CFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CFLAGS)
+export YUV_CXXFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CXXFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

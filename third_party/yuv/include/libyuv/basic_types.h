@@ -26,12 +26,6 @@
 #  pragma warning(disable:4996) // This function or variable may be unsafe.
 #endif
 
-#if defined(__GNUC__)
-#  pragma GCC diagnostic ignored "-Wmemset-elt-size"
-#  pragma GCC diagnostic ignored "-Wstrict-aliasing"
-#endif
-
-
 #ifndef GG_LONGLONG
 #ifndef INT_TYPES_DEFINED
 #define INT_TYPES_DEFINED
