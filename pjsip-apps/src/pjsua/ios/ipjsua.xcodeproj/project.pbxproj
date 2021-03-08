@@ -22,7 +22,6 @@
 		3AA3200018F3FB4C00112C3D /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF318F3FB4C00112C3D /* Foundation.framework */; };
 		3AA3200118F3FB4C00112C3D /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF418F3FB4C00112C3D /* CoreGraphics.framework */; };
 		3AA3200218F3FB4C00112C3D /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AA31FF518F3FB4C00112C3D /* UIKit.framework */; };
-		3AB0EC581DA76B39008A0F62 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AB0EC571DA76B39008A0F62 /* libc++.tbd */; };
 		3ADCCD171715338D0007BE8E /* pjsua.png in Resources */ = {isa = PBXBuildFile; fileRef = 3ADCCD161715338D0007BE8E /* pjsua.png */; };
 		3ADCCD2D172E40120007BE8E /* pjsua_app_cli.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */; };
 		3ADCCD2E172E40120007BE8E /* pjsua_app_common.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD29172E40120007BE8E /* pjsua_app_common.c */; };
@@ -78,7 +77,6 @@
 		3AA31FF318F3FB4C00112C3D /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		3AA31FF418F3FB4C00112C3D /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		3AA31FF518F3FB4C00112C3D /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
-		3AB0EC571DA76B39008A0F62 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
 		3ADCCD161715338D0007BE8E /* pjsua.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = pjsua.png; sourceTree = "<group>"; };
 		3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_cli.c; path = ../../pjsua_app_cli.c; sourceTree = "<group>"; };
 		3ADCCD29172E40120007BE8E /* pjsua_app_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_common.c; path = ../../pjsua_app_common.c; sourceTree = "<group>"; };
@@ -101,7 +99,6 @@
 		3AF0582716F050780046B835 /* en */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = en; path = en.lproj/ipjsuaViewController_iPad.xib; sourceTree = "<group>"; };
 		3AF252FF1EFBD15E00213893 /* libyuv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libyuv.a; sourceTree = "<group>"; };
 		3AF253011EFBD36E00213893 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
-		741C73BA1F0E64AF00887FB6 /* libopenh264.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libopenh264.a; path = "../../../../../../../../../../openh264-1.6.0/lib_armv7/lib/libopenh264.a"; sourceTree = "<group>"; };
 		7485A6AD1F09AAE500122F1A /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
 		7485A6AE1F09AAE500122F1A /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
 		7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
@@ -133,7 +130,6 @@
 				3A6FDEF0223B3BEC001726FD /* Security.framework in Frameworks */,
 				7485A6B11F09B2D500122F1A /* SystemConfiguration.framework in Frameworks */,
 				3AF253021EFBD36E00213893 /* VideoToolbox.framework in Frameworks */,
-				3AB0EC581DA76B39008A0F62 /* libc++.tbd in Frameworks */,
 				E5E991EC1B67A45500017E67 /* libpjmedia-codec.a in Frameworks */,
 				3AA31FF818F3FB4C00112C3D /* CFNetwork.framework in Frameworks */,
 				E5E991E61B67A45500017E67 /* libg7221codec.a in Frameworks */,
@@ -207,10 +203,8 @@
 			isa = PBXGroup;
 			children = (
 				3A6FDEEF223B3BEC001726FD /* Security.framework */,
-				741C73BA1F0E64AF00887FB6 /* libopenh264.a */,
 				7485A6B01F09B2D500122F1A /* SystemConfiguration.framework */,
 				3AF253011EFBD36E00213893 /* VideoToolbox.framework */,
-				3AB0EC571DA76B39008A0F62 /* libc++.tbd */,
 				3AA31FE918F3FB4C00112C3D /* AudioToolbox.framework */,
 				3AA31FEA18F3FB4C00112C3D /* AVFoundation.framework */,
 				3AA31FEB18F3FB4C00112C3D /* CFNetwork.framework */,
