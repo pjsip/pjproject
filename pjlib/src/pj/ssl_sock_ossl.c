@@ -1533,7 +1533,6 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     char *buf = NULL;
     enum { BUF_SIZE = 8192 };
     pj_str_t cipher_list;
-    STACK_OF(SSL_CIPHER) *sk_cipher;
     unsigned i;
     int j, ret;
 

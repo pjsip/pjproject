@@ -27,6 +27,11 @@ Notes:
   #if defined(_MSC_VER)
   #  pragma warning(disable:4996) // This function or variable may be unsafe.
   #endif
+
+  #if defined(__GNUC__)
+  #  pragma GCC diagnostic ignored "-Wmemset-elt-size"
+  #  pragma GCC diagnostic ignored "-Wstrict-aliasing"
+  #endif
   --
 
 * Modify compare_row.h:
@@ -35,4 +40,4 @@ Notes:
     diff += __popcnt(x);
     --------------------------------------------------------------------------------------
     So, we use the default method HammingDistance_C() to calculate Hamming Distance.
-    
+
