@@ -288,9 +288,13 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
     // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
     [self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+
+#if 0
+    /* setKeepAliveTimeout is deprecated. Use PushKit instead. */
     [application setKeepAliveTimeout:KEEP_ALIVE_INTERVAL handler: ^{
 	[self performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
     }];
+#endif
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application
