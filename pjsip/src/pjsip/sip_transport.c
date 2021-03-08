@@ -2335,6 +2335,19 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		    if (!tp_iter->tp->is_shutdown &&
 			!tp_iter->tp->is_destroying)
 		    {
+			if ((type & PJSIP_TRANSPORT_SECURE) && tdata) {
+			    /* For secure transport, make sure tdata's
+			     * destination host matches the transport's
+			     * remote host.
+			     */
+			    if (pj_stricmp(&tdata->dest_info.name,
+				  	   &tp_iter->tp->remote_name.host))
+			    {
+			    	tp_iter = tp_iter->next;
+			    	continue;
+			    }
+			}
+
 			if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
 			    sel->u.listener)
 			{

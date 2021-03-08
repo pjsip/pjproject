@@ -467,6 +467,10 @@ pj_status_t create_uas_dialog( pjsip_user_agent *ua,
 
     /* Save the remote info. */
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
+    
+    /* Save initial destination host from transport's info */
+    pj_strdup(dlg->pool, &dlg->initial_dest,
+    	      &rdata->tp_info.transport->remote_name.host);
 
 
     /* Init remote's contact from Contact header.
@@ -1192,6 +1196,12 @@ static pj_status_t dlg_create_request_throw( pjsip_dialog *dlg,
 	    return status;
     }
 
+    /* Copy the initial destination host to tdata. This information can be
+     * used later by transport for transport selection.
+     */
+    if (dlg->initial_dest.slen)
+    	pj_strdup(tdata->pool, &tdata->dest_info.name, &dlg->initial_dest);
+
     /* Done. */
     *p_tdata = tdata;
 
@@ -1822,6 +1832,11 @@ static void dlg_update_routeset(pjsip_dialog *dlg, const pjsip_rx_data *rdata)
      * transaction as the initial transaction that establishes dialog.
      */
     if (dlg->role == PJSIP_ROLE_UAC) {
+    	/* Save initial destination host from transport's info. */
+    	if (!dlg->initial_dest.slen) {
+    	    pj_strdup(dlg->pool, &dlg->initial_dest,
+    	      	      &rdata->tp_info.transport->remote_name.host);
+    	}
 
 	/* Ignore subsequent request from remote */
 	if (msg->type != PJSIP_RESPONSE_MSG)
