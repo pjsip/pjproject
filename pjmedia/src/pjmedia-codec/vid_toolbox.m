@@ -182,6 +182,7 @@ typedef struct vtool_codec_data
 /* Prototypes */
 static OSStatus create_decoder(struct vtool_codec_data *vtool_data);
 
+#if TARGET_OS_IPHONE
 static void dispatch_sync_on_main_queue(void (^block)(void))
 {
     if ([NSThread isMainThread]) {
@@ -190,6 +191,7 @@ static void dispatch_sync_on_main_queue(void (^block)(void))
         dispatch_sync(dispatch_get_main_queue(), block);
     }
 }
+#endif
 
 PJ_DEF(pj_status_t) pjmedia_codec_vid_toolbox_init(pjmedia_vid_codec_mgr *mgr,
                                                    pj_pool_factory *pf)
