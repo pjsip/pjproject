@@ -1609,11 +1609,6 @@ static pj_status_t encode_more_h264(and_media_codec_data *and_media_data,
 	*has_more = (and_media_data->enc_processed <
 		     and_media_data->enc_frame_size);
 
-	if (!(*has_more)) {
-	    AMediaCodec_releaseOutputBuffer(and_media_data->enc,
-					    and_media_data->enc_output_buf_idx,
-					    0);
-	}
 	PJ_PERROR(3,(THIS_FILE, status, "pjmedia_h264_packetize() error"));
 	return status;
     }
@@ -1634,9 +1629,6 @@ static pj_status_t encode_more_h264(and_media_codec_data *and_media_data,
 	    and_media_data->enc_frame_size = and_media_data->enc_buf_info.size;
 	} else {
 	    *has_more = PJ_FALSE;
-	    AMediaCodec_releaseOutputBuffer(and_media_data->enc,
-					    and_media_data->enc_output_buf_idx,
-					    0);
 	}
     } else {
 	*has_more = PJ_TRUE;
