@@ -1591,7 +1591,7 @@ static void ui_change_online_status()
 static void ui_conf_list()
 {
     unsigned i, count;
-    pjsua_conf_port_id id[PJSUA_MAX_CALLS];
+    pjsua_conf_port_id id[PJSUA_MAX_CONF_PORTS];
 
     printf("Conference ports:\n");
 
