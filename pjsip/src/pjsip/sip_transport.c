@@ -2304,7 +2304,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	int key_len;
 	pjsip_transport *tp_ref = NULL;
 	transport *tp_entry = NULL;
-
+	unsigned flag = pjsip_transport_get_flag_from_type(type);
 
 	/* If listener is specified, verify that the listener type matches
 	 * the destination type.
@@ -2335,10 +2335,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		    if (!tp_iter->tp->is_shutdown &&
 			!tp_iter->tp->is_destroying)
 		    {
-			if (tdata &&
-			    (pjsip_transport_get_flag_from_type(type) &
-			     PJSIP_TRANSPORT_SECURE))
-			{
+			if ((flag & PJSIP_TRANSPORT_SECURE) && tdata) {
 			    /* For secure transport, make sure tdata's
 			     * destination host matches the transport's
 			     * remote host.
@@ -2372,7 +2369,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	if (tp_ref == NULL &&
 	    (!sel || sel->disable_connection_reuse == PJ_FALSE))
 	{
-	    unsigned flag = pjsip_transport_get_flag_from_type(type);
 	    const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
 
