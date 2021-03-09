@@ -162,11 +162,14 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
         }
     
         /* Setup device orientation change notification */
-        [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-        [[NSNotificationCenter defaultCenter] addObserver:app
-            selector:@selector(orientationChanged:)
-            name:UIDeviceOrientationDidChangeNotification
-            object:[UIDevice currentDevice]];
+        dispatch_async(dispatch_get_main_queue(),
+        ^{
+            [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+            [[NSNotificationCenter defaultCenter] addObserver:app
+                selector:@selector(orientationChanged:)
+                name:UIDeviceOrientationDidChangeNotification
+                object:[UIDevice currentDevice]];
+        });
         
         status = pjsua_app_run(PJ_TRUE);
         if (status != PJ_SUCCESS) {
