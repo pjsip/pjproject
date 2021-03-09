@@ -882,6 +882,9 @@ static pj_status_t get_localaddr(pj_ssl_sock_t *ssock,
 				 pj_sockaddr_t *addr,
 				 int *namelen)
 {
+    PJ_UNUSED_ARG(addr);
+    PJ_UNUSED_ARG(namelen);
+
 #ifdef SSL_SOCK_IMP_USE_OWN_NETWORK
     return network_get_localaddr(ssock, &ssock->local_addr, 
 				 &ssock->addr_len);
@@ -906,6 +909,10 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     pj_activesock_cfg asock_cfg;
     unsigned i;
     pj_status_t status;
+
+#ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
+    PJ_UNUSED_ARG(newconn);
+#endif
 
     if (accept_status != PJ_SUCCESS) {
 	if (ssock_parent->param.cb.on_accept_complete2) {

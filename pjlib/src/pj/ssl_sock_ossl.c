@@ -408,7 +408,7 @@ static const struct ssl_ciphers_t ADDITIONAL_CIPHERS[] = {
         {0xFF000004, "@SECLEVEL=4"},
         {0xFF000005, "@SECLEVEL=5"}
 };
-static const int ADDITIONAL_CIPHER_COUNT = 
+static const unsigned int ADDITIONAL_CIPHER_COUNT = 
     sizeof (ADDITIONAL_CIPHERS) / sizeof (ADDITIONAL_CIPHERS[0]);
 
 /*
@@ -1533,8 +1533,8 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
     char *buf = NULL;
     enum { BUF_SIZE = 8192 };
     pj_str_t cipher_list;
-    unsigned i;
-    int j, ret;
+    unsigned i, j;
+    int ret;
 
     if (ssock->param.ciphers_num == 0) {
 	ret = SSL_CTX_set_cipher_list(ossock->ossl_ctx, PJ_SSL_SOCK_OSSL_CIPHERS);

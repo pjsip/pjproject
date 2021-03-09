@@ -281,6 +281,7 @@ static void on_stream_destroyed(pjsua_call_id call_id,
                                 pjmedia_stream *strm,
 				unsigned stream_idx)
 {
+    PJ_UNUSED_ARG(strm);
     if (1) {
 	PJ_LOG(5,(THIS_FILE, 
 		  "Call %d stream %d destroyed, dumping media stats..", 

@@ -1399,7 +1399,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pj_status_t status;
     pjsip_cseq_hdr *cseq_hdr;
     pjsip_expires_hdr *expires_hdr;
-    pj_uint32_t cseq;
+    pj_int32_t cseq;
 
     pjsip_regc_add_ref(regc);
     pj_lock_acquire(regc->lock);
