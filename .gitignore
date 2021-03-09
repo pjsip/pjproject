@@ -6,11 +6,18 @@ output/
 # VS stuff
 *.ncb
 *.suo
+*.cache
+*.resw
 .vs/
 .vscode/
 **/build/**/*.vcproj.*.user
 **/build/**/*.vcxproj.*.user
-UpgradeLog.htm
+**/build/**/*.vcproj.user
+**/build/**/*.vcxproj.user
+**/Win32/Debug
+**/x64/Debug
+**/x86/Debug
+UpgradeLog*.htm
 # VS 2015 stuff
 *.pdb
 *.db
