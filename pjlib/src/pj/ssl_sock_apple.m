@@ -763,12 +763,13 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 	    };
 
             if (content) {
-                schedule_next_receive = Block_copy(schedule_next_receive);
-
             	dispatch_data_apply(content, 
                     ^(dispatch_data_t region, size_t offset,
                       const void *buffer, size_t inSize)
             	{
+            	    /* This block can be invoked multiple times,
+            	     * each for every contiguous memory region in the content.
+            	     */
             	    event_t event;
 
 		    memcpy(ssock->asock_rbuf[i], buffer, inSize);
@@ -781,11 +782,11 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 
 		    event_manager_post_event(ssock, &event, PJ_FALSE);
 
-		    schedule_next_receive();
-		    Block_release(schedule_next_receive);
-
                     return (bool)true;
                 });
+                
+		schedule_next_receive();
+
             } else {
             	if (status != PJ_SUCCESS) {
             	    event_t event;
