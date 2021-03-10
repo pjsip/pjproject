@@ -1005,7 +1005,12 @@ static void check_set_state(pj_ice_sess *ice, pj_ice_sess_check *check,
 	 check_state_name[st]));
 
     /* Put the assert after printing log for debugging purpose */
-    pj_assert(check->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
+    // There is corner case, nomination (in non-aggressive ICE mode) may be
+    // done using an in-progress pair instead of successful pair, this is
+    // possible because host candidates actually share a single STUN transport
+    // and pair selection for nomination compares transport instead of
+    // candidate. So later the pair will receive double completions.
+    //pj_assert(check->state < PJ_ICE_SESS_CHECK_STATE_SUCCEEDED);
 
     check->state = st;
     check->err_code = err_code;
@@ -1802,6 +1807,16 @@ static pj_status_t add_rcand_and_update_checklist(
 		continue;
 	}
 	
+	/* Available cand slot? */
+	if (ice->rcand_cnt >= PJ_ICE_MAX_CAND) {
+	    char tmp[PJ_INET6_ADDRSTRLEN + 10];
+	    PJ_PERROR(3,(ice->obj_name, PJ_ETOOMANY,
+			 "Cannot add remote candidate %s",
+			 pj_sockaddr_print(&rem_cand[i].addr,
+					   tmp, sizeof(tmp), 3)));
+	    continue;
+	}
+
 	/* Add this candidate */
 	pj_memcpy(cn, &rem_cand[i], sizeof(pj_ice_sess_cand));
 	pj_strdup(ice->pool, &cn->foundation, &rem_cand[i].foundation);
@@ -2014,8 +2029,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd &&
 		     ((rem_cand_cnt && rem_cand) || ice->is_trickling),
 		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
-		     PJ_ETOOMANY);
 
     pj_grp_lock_acquire(ice->grp_lock);
 
@@ -2077,8 +2090,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(rem_cand_cnt + ice->rcand_cnt <= PJ_ICE_MAX_CAND,
-		     PJ_ETOOMANY);
     PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
 
     /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
@@ -2086,7 +2097,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 	LOG5((ice->obj_name,
 	      "Cannot update checklist when ICE trickling is disabled or"
 	      " has been ended"));
-	return PJ_SUCCESS;
+	return PJ_EINVALIDOP;
     }
     
     pj_grp_lock_acquire(ice->grp_lock);

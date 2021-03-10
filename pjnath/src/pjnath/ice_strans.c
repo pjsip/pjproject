@@ -1650,7 +1650,10 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 					   (ice_st->rem_cand_end &&
 					    ice_st->loc_cand_end));
     if (status != PJ_SUCCESS) {
-	pj_ice_strans_stop_ice(ice_st);
+	/* Should not stop ICE here as the checklist should remain intact and
+	 * failure may not be fatal, e.g: wrong/old ufrag, too many rem cand.
+	 */
+	PJ_PERROR(4,(ice_st->obj_name, status, "Failed updating checklist"));
 	pj_grp_lock_release(ice_st->grp_lock);
 	return status;
     }
