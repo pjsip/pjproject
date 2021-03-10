@@ -1135,8 +1135,6 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
 			  		const pj_ssl_sock_param *newsock_param)
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
-    unsigned port;
-    char port_str[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
     nw_parameters_t parameters = NULL;
 
