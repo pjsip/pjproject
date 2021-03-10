@@ -162,11 +162,14 @@ static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
         }
     
         /* Setup device orientation change notification */
-        [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
-        [[NSNotificationCenter defaultCenter] addObserver:app
-            selector:@selector(orientationChanged:)
-            name:UIDeviceOrientationDidChangeNotification
-            object:[UIDevice currentDevice]];
+        dispatch_async(dispatch_get_main_queue(),
+        ^{
+            [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+            [[NSNotificationCenter defaultCenter] addObserver:app
+                selector:@selector(orientationChanged:)
+                name:UIDeviceOrientationDidChangeNotification
+                object:[UIDevice currentDevice]];
+        });
         
         status = pjsua_app_run(PJ_TRUE);
         if (status != PJ_SUCCESS) {
@@ -347,11 +350,11 @@ void displayWindow(pjsua_vid_win_id wid)
 	pjsua_vid_win_info wi;
         
         if (pjsua_vid_win_get_info(i, &wi) == PJ_SUCCESS) {
-            UIView *parent = app.viewController.view;
-            UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                UIView *parent = app.viewController.view;
+                UIView *view = (__bridge UIView *)wi.hwnd.info.ios.window;
             
-            if (view) {
-                dispatch_async(dispatch_get_main_queue(), ^{
+                if (view) {
                     /* Add the video window as subview */
                     if (![view isDescendantOfView:parent])
                         [parent addSubview:view];
@@ -371,8 +374,8 @@ void displayWindow(pjsua_vid_win_id wid)
                                                   parent.bounds.size.height-
                                                   view.bounds.size.height/2.0);
                     }
-                });
-            }
+                }
+            });
         }
     }
 
