@@ -1145,13 +1145,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     	return status;
 
     /* Create listener */
-    port = pj_sockaddr_get_port(localaddr);
-    if (port != 0) {
-    	pj_utoa(port, port_str);
-    	assock->listener = nw_listener_create_with_port(port_str, parameters);
-    } else {
-        assock->listener = nw_listener_create(parameters);
-    }
+    assock->listener = nw_listener_create(parameters);
     nw_release(parameters);
     if (!assock->listener) {
         PJ_LOG(2, (THIS_FILE, "Failed creating listener"));
