@@ -454,7 +454,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
     ice->is_trickling = (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED);
     if (ice->is_trickling) {
 	LOG5((ice->obj_name, "Trickle ICE is active (%s mode)",
-	      (ice->opt.trickle!=PJ_ICE_SESS_TRICKLE_HALF? "half":"full")));
+	      (ice->opt.trickle==PJ_ICE_SESS_TRICKLE_HALF? "half":"full")));
 
 	if (ice->opt.aggressive) {
 	    /* Disable aggressive when ICE trickle is active */
@@ -1072,9 +1072,9 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 }
 
 /* Remove a check pair from checklist */
-void remove_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
-		  unsigned check_idx,
-		  const char *reason)
+static void remove_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
+			 unsigned check_idx,
+			 const char *reason)
 {
     LOG5((ice->obj_name, "Check %s pruned (%s)",
 	  dump_check(ice->tmp.txt, sizeof(ice->tmp.txt),
@@ -1707,10 +1707,10 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
  * adding a new foundation (combination of local & remote cands foundations)
  * to checklist.
  */
-int get_check_foundation_idx(pj_ice_sess *ice,
-			     const pj_ice_sess_cand *lcand,
-			     const pj_ice_sess_cand *rcand,
-			     pj_bool_t add_if_not_found)
+static int get_check_foundation_idx(pj_ice_sess *ice,
+				    const pj_ice_sess_cand *lcand,
+				    const pj_ice_sess_cand *rcand,
+				    pj_bool_t add_if_not_found)
 {
     pj_ice_sess_checklist *clist = &ice->clist;
     char fnd_str[65];
@@ -1736,8 +1736,8 @@ int get_check_foundation_idx(pj_ice_sess *ice,
 /* Discard a pair check with Failed state or lowest prio (as long as lower
  * than prio_lower_than.
  */
-int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
-		  const pj_timestamp *prio_lower_than)
+static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
+			 const pj_timestamp *prio_lower_than)
 {
     /* Discard any Failed check */
     unsigned k;
@@ -1867,7 +1867,10 @@ static pj_status_t add_rcand_and_update_checklist(
 	    chk->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
 	    chk->foundation_idx = get_check_foundation_idx(ice, lcand, rcand,
 							   PJ_TRUE);
-	    pj_assert(chk->foundation_idx >= 0);
+
+	    /* Check if foundation cannot be added (e.g: list is full) */
+	    if (chk->foundation_idx < 0)
+		continue;
 
 	    /* Check if the check can be unfrozen */
 	    if (ice->is_trickling) {
@@ -2079,16 +2082,16 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
 
     /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
-    if (!ice->is_trickling) {
+    if (!ice->is_trickling && rem_cand_cnt) {
 	LOG5((ice->obj_name,
 	      "Cannot update checklist when ICE trickling is disabled or"
 	      " has been ended"));
-	return PJ_EINVALIDOP;
+	return PJ_SUCCESS;
     }
     
     pj_grp_lock_acquire(ice->grp_lock);
 
-    if (trickle_done) {
+    if (trickle_done && ice->is_trickling) {
 	LOG5((ice->obj_name, "Trickling done."));
 	ice->is_trickling = PJ_FALSE;
     }
@@ -2573,8 +2576,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    }
 	}
 	if (i == clist->count) {
-	    /* Should not happen */
-	    pj_assert(!"Check not found");
+	    /* The check may have been pruned */
 	    check->tdata = NULL;
 	    pj_grp_lock_release(ice->grp_lock);
 	    return;

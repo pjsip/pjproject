@@ -474,7 +474,7 @@ struct pj_ice_sess_checklist
     /**
      * Array of foundations, check foundation index refers to this array.
      */
-    pj_str_t		     foundation[PJ_ICE_MAX_CHECKS];
+    pj_str_t		     foundation[PJ_ICE_MAX_CHECKS * 2];
 
     /**
      * A timer used to perform periodic check for this checklist.

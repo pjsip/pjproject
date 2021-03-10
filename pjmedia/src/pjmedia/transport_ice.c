@@ -91,6 +91,7 @@ struct transport_ice
 
     pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
     unsigned		 last_cand_cnt; /**< Last local candidate count.    */
+    pj_bool_t		 end_of_cand;	/**< Local cand gathering done?	    */
     pj_str_t		 sdp_mid;	/**< SDP "a=mid" attribute.	    */
 
     void	       (*rtp_cb)(void*,
@@ -693,8 +694,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 	return PJ_EINVALIDOP;
 
     ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
-    end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
-		   ice_state == PJ_ICE_STRANS_STATE_SESS_READY);
+    end_of_cand = tp_ice->end_of_cand;
 
     /* Get ufrag and pwd from current session */
     pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &ufrag, &pwd, NULL, NULL);
@@ -1145,9 +1145,7 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	}
 
 	ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
-	end_of_cand = (ice_state == PJ_ICE_STRANS_STATE_READY ||
-		       ice_state == PJ_ICE_STRANS_STATE_SESS_READY);
-
+	end_of_cand = tp_ice->end_of_cand;
 	status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp_local,
 						&tp_ice->sdp_mid, NULL, NULL,
 						0, NULL, end_of_cand);
@@ -2598,6 +2596,10 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 	/* Destroy on progress */
 	return;
     }
+
+    /* Set the flag indicating that local candidate gathering is completed */
+    if (op == PJ_ICE_STRANS_OP_INIT && result == PJ_SUCCESS)
+	tp_ice->end_of_cand = PJ_TRUE;
 
     pj_perror(5, tp_ice->base.name, result, "ICE operation complete"
 	      " (op=%d%s)", op,
