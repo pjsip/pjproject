@@ -564,6 +564,7 @@ struct pjsua_data
 #endif
 
     /* Timer entry and event list */
+    pjsua_timer_list	 active_timer_list;
     pjsua_timer_list	 timer_list;
     pjsua_event_list	 event_list;
     pj_mutex_t          *timer_mutex;
@@ -736,6 +737,7 @@ void pjsua_media_prov_revert(pjsua_call_id call_id);
 
 /* Callback to receive media events */
 pj_status_t on_media_event(pjmedia_event *event, void *user_data);
+void call_med_event_cb(void *user_data);
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data);
 

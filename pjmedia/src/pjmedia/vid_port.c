@@ -856,18 +856,26 @@ PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
 
     PJ_LOG(4,(THIS_FILE, "Closing %s..", vp->dev_name.ptr));
 
+    /* Unsubscribe events first, otherwise the event callbacks can be called
+     * and try to access already destroyed objects.
+     */
+    if (vp->strm) {
+        pjmedia_event_unsubscribe(NULL, &vidstream_event_cb, vp, vp->strm);
+    }
+    if (vp->client_port) {
+        pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
+                                  vp->client_port);
+    }
+
     if (vp->clock) {
 	pjmedia_clock_destroy(vp->clock);
 	vp->clock = NULL;
     }
     if (vp->strm) {
-        pjmedia_event_unsubscribe(NULL, &vidstream_event_cb, vp, vp->strm);
 	pjmedia_vid_dev_stream_destroy(vp->strm);
 	vp->strm = NULL;
     }
     if (vp->client_port) {
-        pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
-                                  vp->client_port);
 	if (vp->destroy_client_port)
 	    pjmedia_port_destroy(vp->client_port);
 	vp->client_port = NULL;
