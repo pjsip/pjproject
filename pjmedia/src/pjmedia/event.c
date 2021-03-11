@@ -238,7 +238,7 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
         mgr->mutex = NULL;
     }
 
-    if (mgr->mutex) {
+    if (mgr->cb_mutex) {
         pj_mutex_destroy(mgr->cb_mutex);
         mgr->cb_mutex = NULL;
     }
