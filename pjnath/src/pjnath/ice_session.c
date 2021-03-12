@@ -936,6 +936,37 @@ static pj_timestamp CALC_CHECK_PRIO(const pj_ice_sess *ice,
     return prio;
 }
 
+PJ_INLINE(int) CMP_CHECK_STATE(const pj_ice_sess_check *c1,
+			       const pj_ice_sess_check *c2)
+{
+    /* SUCCEEDED has higher state than non-SUCCEEDED */
+    if (c1->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
+	c2->state != PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+    {
+	return 1;
+    }
+    if (c2->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
+	c1->state != PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+    {
+	return -1;
+    }
+
+    /* FAILED has lower state than non-FAILED */
+    if (c1->state == PJ_ICE_SESS_CHECK_STATE_FAILED &&
+	c2->state != PJ_ICE_SESS_CHECK_STATE_FAILED)
+    {
+	return -1;
+    }
+    if (c2->state == PJ_ICE_SESS_CHECK_STATE_FAILED &&
+	c1->state != PJ_ICE_SESS_CHECK_STATE_FAILED)
+    {
+	return 1;
+    }
+
+    /* Other state, just compare the state value */
+    return (c1->state - c2->state);
+}
+
 
 PJ_INLINE(int) CMP_CHECK_PRIO(const pj_ice_sess_check *c1,
 			      const pj_ice_sess_check *c2)
@@ -1027,7 +1058,9 @@ static void clist_set_state(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
     }
 }
 
-/* Sort checklist based on priority */
+/* Sort checklist based on state & priority, we need to put Successful pairs
+ * on top of the list for pruning.
+ */
 static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 {
     unsigned i;
@@ -1048,7 +1081,12 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 	unsigned j, highest = i;
 
 	for (j=i+1; j<clist->count; ++j) {
-	    if (CMP_CHECK_PRIO(&clist->checks[j], &clist->checks[highest]) > 0) {
+	    int cmp_state = CMP_CHECK_STATE(&clist->checks[j],
+					    &clist->checks[highest]);
+	    if (cmp_state > 0 ||
+		(cmp_state==0 && CMP_CHECK_PRIO(&clist->checks[j],
+						&clist->checks[highest]) > 0))
+	    {
 		highest = j;
 	    }
 	}
@@ -1113,7 +1151,9 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_cand *srflx = clist->checks[i].lcand;
 
-	if (clist->checks[i].lcand->type == PJ_ICE_CAND_TYPE_SRFLX) {
+	if (srflx->type == PJ_ICE_CAND_TYPE_SRFLX ||
+	    srflx->type == PJ_ICE_CAND_TYPE_PRFLX)
+	{
 	    /* Find the base for this candidate */
 	    unsigned j;
 	    for (j=0; j<ice->lcand_cnt; ++j) {
@@ -1123,7 +1163,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		    continue;
 
 		if (pj_sockaddr_cmp(&srflx->base_addr, &host->addr) == 0) {
-		    /* Replace this SRFLX with its BASE */
+		    /* Replace this SRFLX/PRFLX with its BASE */
 		    clist->checks[i].lcand = host;
 		    break;
 		}
@@ -1137,7 +1177,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		      pj_sockaddr_print(&srflx->base_addr, baddr,
 		                        sizeof(baddr), 2),
 		      pj_sockaddr_get_port(&srflx->base_addr),
-		      GET_LCAND_ID(clist->checks[i].lcand)));
+		      GET_LCAND_ID(srflx)));
 		return PJNATH_EICENOHOSTCAND;
 	    }
 	}
@@ -1757,10 +1797,9 @@ static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
     /* Re-sort before discarding the last */
     sort_checklist(ice, clist);
     if (!prio_lower_than ||
-	pj_cmp_timestamp(&clist->checks[k].prio, prio_lower_than) < 0)
+	pj_cmp_timestamp(&clist->checks[k-1].prio, prio_lower_than) < 0)
     {
-	remove_check(ice, clist, clist->count-1,
-		     "too many, drop low-prio");
+	remove_check(ice, clist, k-1, "too many, drop low-prio");
 	return 1;
     }
 
@@ -1775,7 +1814,7 @@ static pj_status_t add_rcand_and_update_checklist(
 			      const pj_ice_sess_cand rem_cand[])
 {
     pj_ice_sess_checklist *clist;
-    unsigned i, j;
+    unsigned i, j, new_pair = 0;
     pj_status_t status;
 
     /* Save remote candidates */
@@ -1937,6 +1976,7 @@ static pj_status_t add_rcand_and_update_checklist(
 	    }
 
 	    clist->count++;
+	    new_pair++;
 	}
     }
 
@@ -1950,11 +1990,18 @@ static pj_status_t add_rcand_and_update_checklist(
     ice->lcand_paired = ice->lcand_cnt;
     ice->rcand_paired = ice->rcand_cnt;
 
+    /* Just return now if the checklist not changed */
+    if (new_pair == 0)
+	return PJ_SUCCESS;
+
+
     if (clist->count > 0) {
 	/* Sort checklist based on priority */
+	//dump_checklist("Checklist before sort:", ice, &ice->clist);
 	sort_checklist(ice, clist);
 
 	/* Prune the checklist */
+	//dump_checklist("Checklist before prune:", ice, &ice->clist);
 	status = prune_checklist(ice, clist);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -2026,11 +2073,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     timer_data *td;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd &&
-		     ((rem_cand_cnt && rem_cand) || ice->is_trickling),
-		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd, PJ_EINVAL);
 
     pj_grp_lock_acquire(ice->grp_lock);
+
+    if (ice->tx_ufrag.slen) {
+	/* Checklist has been created */
+	pj_grp_lock_release(ice->grp_lock);
+	return PJ_SUCCESS;
+    }
 
     /* Save credentials */
     username.ptr = buf;
@@ -2090,20 +2141,27 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
+
+    /* Ignore if remote ufrag has not known yet */
+    if (ice->tx_ufrag.slen == 0) {
+	LOG5((ice->obj_name,
+	      "Cannot update ICE checklist when remote ufrag is unknown"));
+	return PJ_EINVALIDOP;
+    }
 
     /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
     if (!ice->is_trickling && rem_cand_cnt) {
 	LOG5((ice->obj_name,
-	      "Cannot update checklist when ICE trickling is disabled or"
-	      " has been ended"));
-	return PJ_EINVALIDOP;
+	      "Ignored remote candidate update as ICE trickling has ended"));
+	return PJ_SUCCESS;
     }
     
     pj_grp_lock_acquire(ice->grp_lock);
 
     if (trickle_done && ice->is_trickling) {
-	LOG5((ice->obj_name, "Trickling done."));
+	LOG5((ice->obj_name, "Remote signalled end-of-candidates "
+			     "and local candidates gathering completed, "
+			     "will ignore any candidate update"));
 	ice->is_trickling = PJ_FALSE;
     }
 

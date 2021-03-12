@@ -90,7 +90,8 @@ struct transport_ice
     unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
 
     pj_ice_sess_trickle	 trickle_ice;	/**< Trickle ICE mode.		    */
-    unsigned		 last_cand_cnt; /**< Last local candidate count.    */
+    unsigned		 last_send_cand_cnt[PJ_ICE_MAX_COMP];
+					/**< Last local candidate count.    */
     pj_bool_t		 end_of_cand;	/**< Local cand gathering done?	    */
     pj_str_t		 sdp_mid;	/**< SDP "a=mid" attribute.	    */
 
@@ -458,9 +459,20 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 					     pj_bool_t rcand_end)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(tp_ice && tp_ice->ice_st, PJ_EINVAL);
 
+    /* Make sure checklist is created before adding remote candidates. */
+    if (rem_ufrag) {
+	status = pj_ice_strans_create_check_list(tp_ice->ice_st,
+						 rem_ufrag, rem_passwd,
+						 0, NULL, PJ_FALSE);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Finally update the checklist */
     return pj_ice_strans_update_check_list(tp_ice->ice_st,
 					   rem_ufrag, rem_passwd,
 					   rcand_cnt, rcand, rcand_end);
@@ -656,17 +668,21 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 PJ_DEF(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    unsigned i, cand_cnt = 0;
+    unsigned i;
 
     /* Make sure ICE transport has session already */
     if (!tp_ice->ice_st || !pj_ice_strans_has_sess(tp_ice->ice_st))
 	return PJ_FALSE;
 
     /* Count all local candidates */
-    for (i = 0; i < tp_ice->comp_cnt; ++i) {
-	cand_cnt += pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
+    for (i = 0; i < pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st); ++i) {
+	if (tp_ice->last_send_cand_cnt[i] <
+	    pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1))
+	{
+	    return PJ_TRUE;
+	}
     }
-    return (cand_cnt > tp_ice->last_cand_cnt);
+    return PJ_FALSE;
 }
 
 
@@ -681,10 +697,9 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_str_t ufrag, pwd;
-    pj_ice_strans_state ice_state;
     pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
     unsigned cand_cnt, i;
-    pj_bool_t end_of_cand;
+    pj_bool_t end_of_cand, any_update = PJ_FALSE;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp, PJ_EINVAL);
@@ -693,14 +708,13 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     if (!tp_ice->ice_st || !pj_ice_strans_has_sess(tp_ice->ice_st))
 	return PJ_EINVALIDOP;
 
-    ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
     end_of_cand = tp_ice->end_of_cand;
 
     /* Get ufrag and pwd from current session */
     pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &ufrag, &pwd, NULL, NULL);
 
     cand_cnt = 0;
-    for (i = 0; i < tp_ice->comp_cnt; ++i) {
+    for (i = 0; i < pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st); ++i) {
 	unsigned cnt = PJ_ICE_MAX_CAND - cand_cnt;
 
 	/* Get all local candidates for this comp */
@@ -713,6 +727,11 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 	    continue;
 	}
 	cand_cnt += cnt;
+
+	if (cnt > tp_ice->last_send_cand_cnt[i])
+	    any_update = PJ_TRUE;
+
+	tp_ice->last_send_cand_cnt[i] = cnt;
     }
 
     /* Update the SDP with all local candidates (not just the new ones).
@@ -727,20 +746,16 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    end_of_cand);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(3,(tp_ice->base.name, status,
-		     "Failed adding new local candidates to SDP"));
+		     "Failed encoding local candidates to SDP"));
     }
 
     /* Update ICE checklist if there is any new local candidate and
      * checklist has been created (e.g: ICE nego is running).
      */
-    if (tp_ice->last_cand_cnt < cand_cnt &&
-	pj_ice_strans_sess_is_running(tp_ice->ice_st))
+    if (any_update && pj_ice_strans_sess_is_running(tp_ice->ice_st))
     {
 	pjmedia_ice_trickle_update(tp, NULL, NULL, 0, NULL, PJ_FALSE);
     }
-
-    pj_assert(tp_ice->last_cand_cnt <= cand_cnt);
-    tp_ice->last_cand_cnt = cand_cnt;
 
     if (p_end_of_cand)
 	*p_end_of_cand = end_of_cand;
@@ -1134,7 +1149,6 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 
     /* Add trickle ICE attributes */
     if (trickle) {
-	pj_ice_strans_state ice_state;
 	pj_bool_t end_of_cand;
 
 	/* Add media ID attribute "a=mid" */
@@ -1144,7 +1158,6 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 	}
 
-	ice_state = pj_ice_strans_get_state(tp_ice->ice_st);
 	end_of_cand = tp_ice->end_of_cand;
 	status = pjmedia_ice_trickle_encode_sdp(sdp_pool, sdp_local,
 						&tp_ice->sdp_mid, NULL, NULL,
@@ -1837,6 +1850,34 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 				PJ_ICE_SESS_ROLE_CONTROLLED);
     status = pj_ice_strans_init_ice(tp_ice->ice_st, ice_role, NULL, NULL);
 
+    /* For trickle ICE, if remote SDP has been received, create ICE session
+     * checklist manually so we can add & update remote candidates.
+     */
+    if (rem_sdp && status == PJ_SUCCESS) {
+	if (tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED &&
+	    pjmedia_ice_sdp_has_trickle(rem_sdp, media_index))
+	{
+	    pj_str_t ufrag, pwd;
+	    unsigned cand_cnt = PJ_ICE_ST_MAX_CAND;
+	    pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
+	    pj_bool_t end_of_cand;
+
+	    status = pjmedia_ice_trickle_decode_sdp(rem_sdp, media_index,
+						    NULL, &ufrag, &pwd,
+						    &cand_cnt, cand,
+						    &end_of_cand);
+	    if (status == PJ_SUCCESS)
+		status = pj_ice_strans_create_check_list(
+					    tp_ice->ice_st, &ufrag, &pwd,
+					    cand_cnt, cand, end_of_cand);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(tp_ice->base.name, status,
+			     "Failed create checklist for trickling ICE"));
+		return status;
+	    }
+	}
+    }
+
     /* Done */
     return status;
 }
@@ -1904,10 +1945,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    /* Update last local candidate count, so trickle ICE can identify
 	     * if there is any new local candidate.
 	     */
-	    unsigned i;
-	    tp_ice->last_cand_cnt = 0;
-	    for (i = 0; i < tp_ice->comp_cnt; ++i) {
-		tp_ice->last_cand_cnt +=
+	    unsigned i, comp_cnt;
+	    comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+	    for (i = 0; i < comp_cnt; ++i) {
+		tp_ice->last_send_cand_cnt[i] =
 			pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1);
 	    }
 	}

@@ -854,8 +854,8 @@ static void on_ice_complete(pjmedia_transport *tp,
         }
 
 	/* Stop trickling */
-	if (call->trickle_ice.trickling) {
-	    call->trickle_ice.trickling = PJ_FALSE;
+	if (call->trickle_ice.trickling < PJSUA_OP_STATE_DONE) {
+	    call->trickle_ice.trickling = PJSUA_OP_STATE_DONE;
 	    pjsua_cancel_timer(&call->trickle_ice.timer);
 	    PJ_LOG(4,(THIS_FILE, "Call %d: ICE trickle stopped trickling as "
 		      "ICE nego completed",
@@ -987,7 +987,10 @@ static pj_status_t create_ice_media_transport(
     }
 
     /* Should not wait for ICE STUN/TURN ready when trickle ICE is enabled */
-    if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED) {
+    if (ice_cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
+	(call_med->call->inv == NULL || 
+	 call_med->call->inv->state < PJSIP_INV_STATE_CONFIRMED))
+    {
 	if (rem_sdp) {
 	    /* As answerer: and when remote signals trickle ICE in SDP */
 	    trickle = pjmedia_ice_sdp_has_trickle(rem_sdp, call_med->idx);
@@ -1002,7 +1005,10 @@ static pj_status_t create_ice_media_transport(
 	}
 
 	/* Check if trickle ICE can start trickling/sending SIP INFO */
-	pjsua_ice_check_start_trickling(call_med->call, NULL);
+	pjsua_ice_check_start_trickling(call_med->call, PJ_FALSE, NULL);
+    } else {
+	/* For non-initial INVITE, always use regular ICE */
+	ice_cfg.opt.trickle = PJ_ICE_SESS_TRICKLE_DISABLED;
     }
 
     /* If STUN transport is configured, initialize STUN transport settings */
@@ -2492,6 +2498,21 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
 		goto on_error;
 	    }
+
+	    /* Find and save "a=mid". Currently this is for trickle ICE.
+	     * Trickle ICE match media in SDP of SIP INFO by comparing this
+	     * attribute, so remote SDP must be received first before remote
+	     * SDP in SIP INFO can be processed.
+	     */
+	    if (rem_sdp && call_med->rem_mid.slen == 0) {
+		const pjmedia_sdp_media *m = rem_sdp->media[mi];
+		pjmedia_sdp_attr *a;
+
+		a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
+		if (a)
+		    call_med->rem_mid = a->value;
+	    }
+
 	} else {
 	    /* By convention, the media is disabled if transport is NULL 
 	     * or transport state is PJSUA_MED_TP_DISABLED.
@@ -2875,6 +2896,19 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 		}
 	    }
 	}
+
+	/* Find and save "a=mid". Currently this is for trickle ICE. Trickle
+	 * ICE match media in SDP of SIP INFO by comparing this attribute,
+	 * so remote SDP must be received first before remote SDP in SIP INFO
+	 * can be processed.
+	 */
+	if (call_med->rem_mid.slen == 0) {
+	    pjmedia_sdp_attr *a;
+
+	    a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
+	    if (a)
+		call_med->rem_mid = a->value;
+	}
     }
 
     /* Add NAT info in the SDP */
@@ -3089,10 +3123,14 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     stop_media_session(call_id);
 
     /* Stop trickle ICE timer */
-    if (call->trickle_ice.trickling) {
-	call->trickle_ice.trickling = PJ_FALSE;
+    if (call->trickle_ice.trickling > PJSUA_OP_STATE_NULL) {
+	call->trickle_ice.trickling = PJSUA_OP_STATE_NULL;
 	pjsua_cancel_timer(&call->trickle_ice.timer);
     }
+    call->trickle_ice.enabled = PJ_FALSE;
+    call->trickle_ice.pending_info = PJ_FALSE;
+    call->trickle_ice.remote_sup = PJ_FALSE;
+    call->trickle_ice.retrans18x_count = 0;
 
     /* Clean up media transports */
     pjsua_media_prov_clean_up(call_id);
@@ -3454,22 +3492,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    status = PJMEDIA_SDP_EINSDP;
 	    goto on_error;
 #endif
-	}
-
-	/* Find and save "a=mid". Currently this is for trickle ICE. Trickle
-	 * ICE match media in SDP of SIP INFO by comparing this attribute,
-	 * so remote SDP must be received first before remote SDP in SIP INFO
-	 * can be processed.
-	 */
-	{
-	    const pjmedia_sdp_media *m = remote_sdp->media[mi];
-	    pjmedia_sdp_attr *a;
-
-	    a = pjmedia_sdp_media_find_attr2(m, "mid", NULL);
-	    if (a)
-		call_med->rem_mid = a->value;
-	    else
-		pj_bzero(&call_med->rem_mid, sizeof(call_med->rem_mid));
 	}
 
 	/* Apply media update action */

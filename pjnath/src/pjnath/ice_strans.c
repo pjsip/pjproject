@@ -1384,6 +1384,7 @@ PJ_DEF(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st)
 PJ_DEF(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st)
 {
     return ice_st && ice_st->ice && ice_st->ice->rcand_cnt &&
+	   ice_st->ice->clist.state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING &&
 	   !pj_ice_strans_sess_is_complete(ice_st);
 }
 
@@ -1615,6 +1616,36 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     return status;
 }
 
+
+/*
+ * Create ICE check list after receiving remote SDP.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_create_check_list(
+					    pj_ice_strans *ice_st,
+					    const pj_str_t *rem_ufrag,
+					    const pj_str_t *rem_passwd,
+					    unsigned rcand_cnt,
+					    const pj_ice_sess_cand rcand[],
+					    pj_bool_t rcand_end)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice_st && rem_ufrag && rem_passwd, PJ_EINVAL);
+
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag, rem_passwd,
+					   rcand_cnt, rcand);
+    if (status == PJ_SUCCESS && rcand_end)
+	status = pj_ice_strans_update_check_list(ice_st, rem_ufrag, rem_passwd,
+						 0, NULL, PJ_TRUE);
+
+    pj_grp_lock_release(ice_st->grp_lock);
+
+    return status;
+}
+
+
 /*
  * Update check list after discovering and conveying new local ICE candidate,
  * or receiving update of remote ICE candidates in trickle ICE.
@@ -1635,11 +1666,13 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 
     pj_grp_lock_acquire(ice_st->grp_lock);
 
-    /* If we have TURN candidate, update the permissions */
-    status = setup_turn_perm(ice_st, rem_cand_cnt, rem_cand);
-    if (status != PJ_SUCCESS) {
-	pj_ice_strans_stop_ice(ice_st);
-	return status;
+    /* Create TURN permissions if periodic check has started */
+    if (pj_ice_strans_sess_is_running(ice_st)) {
+	status = setup_turn_perm(ice_st, rem_cand_cnt, rem_cand);
+	if (status != PJ_SUCCESS) {
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
     }
 
     /* Update checklist */
