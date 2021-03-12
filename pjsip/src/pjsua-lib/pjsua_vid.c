@@ -1297,13 +1297,61 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
     PJSUA_LOCK();
+
+    /* Unsubscribe events first, otherwise the event callbacks
+     * can be called and access already destroyed objects.
+     */
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
 
 	/* Unsubscribe event */
 	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
                                   w->vp_cap);
+    }
+    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
+	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 
+	/* Unsubscribe event, but stop the render first */
+	pjmedia_vid_port_stop(w->vp_rend);
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                  w->vp_rend);
+    }
+    /* Unsubscribe from video stream events */
+    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
+
+    /* Now that we have unsubscribed from all events, we no longer
+     * receive future events. But we may have scheduled some timers
+     * to call media event callbacks, so we need to wait until those
+     * complete. Note that we can't cancel those timers since timer
+     * implementation doesn't guarantee there's no race between
+     * entry cancellation and the callback being called from poll.
+     */
+    while (1) {
+    	pjsua_timer_list *act_timer;
+
+    	act_timer = pjsua_var.active_timer_list.next;
+    	while (act_timer != &pjsua_var.active_timer_list) {
+    	    if (act_timer->cb == &call_med_event_cb) {
+    	    	pjsua_event_list *eve;
+    	    	
+    	    	eve = (pjsua_event_list *)act_timer->user_data;
+
+    	    	if (eve->call_id == call_med->call->index &&
+    	    	    eve->med_idx == call_med->idx)
+    	    	{
+    	    	    PJSUA_UNLOCK();
+    	    	    pj_thread_sleep(20);
+    	    	    PJSUA_LOCK();
+    	    	    break;
+    	    	}
+    	    }
+    	    act_timer = act_timer->next;    	    
+    	}
+    	if (act_timer == &pjsua_var.active_timer_list)
+    	    break;
+    }
+
+    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 	/* Decrement ref count of preview video window */
 	dec_vid_win(call_med->strm.v.cap_win_id);
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
@@ -1314,13 +1362,6 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     }
 
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
-	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
-
-	/* Unsubscribe event, but stop the render first */
-	pjmedia_vid_port_stop(w->vp_rend);
-	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  w->vp_rend);
-
 	/* Decrement ref count of stream video window */
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
@@ -1360,9 +1401,6 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	call_med->rtp_tx_seq = stat.rtp_tx_last_seq;
 	call_med->rtp_tx_ts = stat.rtp_tx_last_ts;
     }
-
-    /* Unsubscribe from video stream events */
-    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     pjmedia_vid_stream_destroy(strm);
     call_med->strm.v.stream = NULL;
