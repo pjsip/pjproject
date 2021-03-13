@@ -463,19 +463,26 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
 
     PJ_ASSERT_RETURN(tp_ice && tp_ice->ice_st, PJ_EINVAL);
 
-    /* Make sure checklist is created before adding remote candidates. */
-    if (rem_ufrag) {
-	status = pj_ice_strans_create_check_list(tp_ice->ice_st,
-						 rem_ufrag, rem_passwd,
-						 0, NULL, PJ_FALSE);
-	if (status != PJ_SUCCESS)
-	    return status;
+
+    /* Update the checklist */
+    status = pj_ice_strans_update_check_list(tp_ice->ice_st,
+					     rem_ufrag, rem_passwd,
+					     rcand_cnt, rcand, rcand_end);
+    if (status != PJ_SUCCESS)
+	return status;
+
+
+    /* Start ICE if both sides have sent their (initial) SDPs */
+    if (tp_ice->last_send_cand_cnt[0] > 0) {
+	pj_str_t rufrag;
+	pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, NULL, NULL, &rufrag, NULL);
+	if (rufrag.slen > 0) {
+	    status = pj_ice_strans_start_ice(tp_ice->ice_st, NULL, NULL,
+					     0, NULL);
+	}
     }
 
-    /* Finally update the checklist */
-    return pj_ice_strans_update_check_list(tp_ice->ice_st,
-					   rem_ufrag, rem_passwd,
-					   rcand_cnt, rcand, rcand_end);
+    return status;
 }
 
 
@@ -668,14 +675,15 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 PJ_DEF(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    unsigned i;
+    unsigned i, comp_cnt;
 
     /* Make sure ICE transport has session already */
     if (!tp_ice->ice_st || !pj_ice_strans_has_sess(tp_ice->ice_st))
 	return PJ_FALSE;
 
     /* Count all local candidates */
-    for (i = 0; i < pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st); ++i) {
+    comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+    for (i = 0; i < comp_cnt; ++i) {
 	if (tp_ice->last_send_cand_cnt[i] <
 	    pj_ice_strans_get_cands_count(tp_ice->ice_st, i+1))
 	{
@@ -698,8 +706,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_str_t ufrag, pwd;
     pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
-    unsigned cand_cnt, i;
-    pj_bool_t end_of_cand, any_update = PJ_FALSE;
+    unsigned cand_cnt, i, comp_cnt;
+    pj_bool_t end_of_cand;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp, PJ_EINVAL);
@@ -714,7 +722,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &ufrag, &pwd, NULL, NULL);
 
     cand_cnt = 0;
-    for (i = 0; i < pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st); ++i) {
+    comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+    for (i = 0; i < comp_cnt; ++i) {
 	unsigned cnt = PJ_ICE_MAX_CAND - cand_cnt;
 
 	/* Get all local candidates for this comp */
@@ -727,9 +736,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 	    continue;
 	}
 	cand_cnt += cnt;
-
-	if (cnt > tp_ice->last_send_cand_cnt[i])
-	    any_update = PJ_TRUE;
 
 	tp_ice->last_send_cand_cnt[i] = cnt;
     }
@@ -747,14 +753,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_send_local_cand(
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(3,(tp_ice->base.name, status,
 		     "Failed encoding local candidates to SDP"));
-    }
-
-    /* Update ICE checklist if there is any new local candidate and
-     * checklist has been created (e.g: ICE nego is running).
-     */
-    if (any_update && pj_ice_strans_sess_is_running(tp_ice->ice_st))
-    {
-	pjmedia_ice_trickle_update(tp, NULL, NULL, 0, NULL, PJ_FALSE);
     }
 
     if (p_end_of_cand)
@@ -1850,8 +1848,8 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 				PJ_ICE_SESS_ROLE_CONTROLLED);
     status = pj_ice_strans_init_ice(tp_ice->ice_st, ice_role, NULL, NULL);
 
-    /* For trickle ICE, if remote SDP has been received, create ICE session
-     * checklist manually so we can add & update remote candidates.
+    /* For trickle ICE, if remote SDP has been received, process any remote
+     * ICE info now (ICE user fragment and/or initial ICE candidate list).
      */
     if (rem_sdp && status == PJ_SUCCESS) {
 	if (tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED &&
@@ -1867,7 +1865,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 						    &cand_cnt, cand,
 						    &end_of_cand);
 	    if (status == PJ_SUCCESS)
-		status = pj_ice_strans_create_check_list(
+		status = pj_ice_strans_update_check_list(
 					    tp_ice->ice_st, &ufrag, &pwd,
 					    cand_cnt, cand, end_of_cand);
 	    if (status != PJ_SUCCESS) {
@@ -2207,11 +2205,15 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	}
     }
 
-    /* Now start ICE */
-    status = start_ice(tp_ice, tmp_pool, rem_sdp, media_index);
-    if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(tp_ice->base.name, status, "ICE restart failed!"));
-	return status;
+    /* Now start ICE, if not yet (trickle ICE may have started it earlier) */
+    if (!pj_ice_strans_sess_is_running(tp_ice->ice_st) &&
+	!pj_ice_strans_sess_is_complete(tp_ice->ice_st))
+    {
+	status = start_ice(tp_ice, tmp_pool, rem_sdp, media_index);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(tp_ice->base.name, status, "ICE restart failed!"));
+	    return status;
+	}
     }
 
     /* Done */

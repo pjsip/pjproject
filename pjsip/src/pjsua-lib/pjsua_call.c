@@ -4551,6 +4551,17 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 	call->trickle_ice.trickling = PJSUA_OP_STATE_DONE;
     }
 
+    /* Update ICE checklist after conveying local candidates. */
+    for (i = 0; i < med_cnt; ++i) {
+	pjsua_call_media *cm = use_med_prov? &call->media_prov[i] :
+					     &call->media[i];
+	pjmedia_transport *tp = cm->tp_orig;
+	if (!tp || tp->type != PJMEDIA_TRANSPORT_TYPE_ICE)
+	    continue;
+
+	pjmedia_ice_trickle_update(tp, NULL, NULL, 0, NULL, PJ_FALSE);
+    }
+
 on_return:
     if (tmp_pool)
 	pj_pool_release(tmp_pool);

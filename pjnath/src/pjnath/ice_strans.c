@@ -1383,7 +1383,8 @@ PJ_DEF(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st)
  */
 PJ_DEF(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st)
 {
-    return ice_st && ice_st->ice && ice_st->ice->rcand_cnt &&
+    // Trickle ICE can start ICE before remote candidate list is received
+    return ice_st && ice_st->ice && /* ice_st->ice->rcand_cnt && */
 	   ice_st->ice->clist.state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING &&
 	   !pj_ice_strans_sess_is_complete(ice_st);
 }
@@ -1428,7 +1429,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_ufrag_pwd( pj_ice_strans *ice_st,
     if (loc_pwd) *loc_pwd = ice_st->ice->rx_pass;
 
     if (rem_ufrag || rem_pwd) {
-	PJ_ASSERT_RETURN(ice_st->ice->rcand_cnt != 0, PJ_EINVALIDOP);
+	// In trickle ICE, remote may send initial SDP with empty candidates
+	//PJ_ASSERT_RETURN(ice_st->ice->rcand_cnt != 0, PJ_EINVALIDOP);
 	if (rem_ufrag) *rem_ufrag = ice_st->ice->tx_ufrag;
 	if (rem_pwd) *rem_pwd = ice_st->ice->tx_pass;
     }
@@ -1526,21 +1528,22 @@ PJ_DEF(pj_status_t) pj_ice_strans_change_role( pj_ice_strans *ice_st,
     return pj_ice_sess_change_role(ice_st->ice, new_role);
 }
 
-static pj_status_t setup_turn_perm( pj_ice_strans *ice_st,
-				    unsigned rem_cand_cnt,
-				    const pj_ice_sess_cand rem_cand[])
+static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
 {
     unsigned n;
     pj_status_t status;
 
-    for (n = 0; n < ice_st->cfg.turn_tp_cnt && rem_cand_cnt; ++n) {
-	unsigned i;
+    for (n = 0; n < ice_st->cfg.turn_tp_cnt; ++n) {
+	unsigned i, comp_cnt;
 
-	for (i=0; i<ice_st->comp_cnt; ++i) {
+	comp_cnt = pj_ice_strans_get_running_comp_cnt(ice_st);
+	for (i=0; i<comp_cnt; ++i) {
 	    pj_ice_strans_comp *comp = ice_st->comp[i];
 	    pj_turn_session_info info;
 	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
 	    unsigned j, count=0;
+	    unsigned rem_cand_cnt;
+	    pj_ice_sess_cand rem_cand[PJ_ICE_ST_MAX_CAND];
 
 	    if (!comp->turn[n].sock)
 		continue;
@@ -1550,6 +1553,12 @@ static pj_status_t setup_turn_perm( pj_ice_strans *ice_st,
 		continue;
 
 	    /* Gather remote addresses for this component */
+	    rem_cand_cnt = PJ_ARRAY_SIZE(rem_cand);
+	    status = pj_ice_strans_enum_cands(ice_st, i+1,
+					      &rem_cand_cnt, rem_cand);
+	    if (status != PJ_SUCCESS)
+		continue;
+
 	    for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
 		if (rem_cand[j].comp_id==i+1 &&
 		    rem_cand[j].addr.addr.sa_family==
@@ -1585,21 +1594,21 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 {
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice_st && rem_ufrag && rem_passwd &&
-		     ((ice_st->ice && ice_st->ice->is_trickling) ||
-		      (rem_cand_cnt && rem_cand)), PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice, PJ_EINVALIDOP);
 
     /* Mark start time */
     pj_gettimeofday(&ice_st->start_time);
 
-    /* Build check list */
-    status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rem_cand_cnt, rem_cand);
+    /* Update check list */
+    status = pj_ice_strans_update_check_list(ice_st, rem_ufrag, rem_passwd,
+					     rem_cand_cnt, rem_cand,
+					     !ice_st->ice->is_trickling);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* If we have TURN candidate, now is the time to create the permissions */
-    status = setup_turn_perm(ice_st, rem_cand_cnt, rem_cand);
+    status = setup_turn_perm(ice_st);
     if (status != PJ_SUCCESS) {
 	pj_ice_strans_stop_ice(ice_st);
 	return status;
@@ -1613,35 +1622,6 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     }
 
     ice_st->state = PJ_ICE_STRANS_STATE_NEGO;
-    return status;
-}
-
-
-/*
- * Create ICE check list after receiving remote SDP.
- */
-PJ_DECL(pj_status_t) pj_ice_strans_create_check_list(
-					    pj_ice_strans *ice_st,
-					    const pj_str_t *rem_ufrag,
-					    const pj_str_t *rem_passwd,
-					    unsigned rcand_cnt,
-					    const pj_ice_sess_cand rcand[],
-					    pj_bool_t rcand_end)
-{
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(ice_st && rem_ufrag && rem_passwd, PJ_EINVAL);
-
-    pj_grp_lock_acquire(ice_st->grp_lock);
-
-    status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rcand_cnt, rcand);
-    if (status == PJ_SUCCESS && rcand_end)
-	status = pj_ice_strans_update_check_list(ice_st, rem_ufrag, rem_passwd,
-						 0, NULL, PJ_TRUE);
-
-    pj_grp_lock_release(ice_st->grp_lock);
-
     return status;
 }
 
@@ -1663,13 +1643,17 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
     PJ_ASSERT_RETURN(ice_st && ((rem_cand_cnt==0) ||
 			        (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice, PJ_EINVALIDOP);
 
     pj_grp_lock_acquire(ice_st->grp_lock);
 
-    /* Create TURN permissions if periodic check has started */
-    if (pj_ice_strans_sess_is_running(ice_st)) {
-	status = setup_turn_perm(ice_st, rem_cand_cnt, rem_cand);
+    /* Set remote ufrag (if not yet) */
+    if (rem_ufrag) {
+	status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag,
+					       rem_passwd, 0, NULL);
 	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed setting up remote ufrag"));
 	    pj_grp_lock_release(ice_st->grp_lock);
 	    return status;
 	}
@@ -1689,6 +1673,17 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 	PJ_PERROR(4,(ice_st->obj_name, status, "Failed updating checklist"));
 	pj_grp_lock_release(ice_st->grp_lock);
 	return status;
+    }
+
+    /* Update TURN permissions if periodic check has been started. */
+    if (pj_ice_strans_sess_is_running(ice_st)) {
+	status = setup_turn_perm(ice_st);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed setting up TURN permission"));
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
     }
 
     pj_grp_lock_release(ice_st->grp_lock);
