@@ -1543,7 +1543,7 @@ static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
 	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
 	    unsigned j, count=0;
 	    unsigned rem_cand_cnt;
-	    pj_ice_sess_cand rem_cand[PJ_ICE_ST_MAX_CAND];
+	    const pj_ice_sess_cand *rem_cand;
 
 	    if (!comp->turn[n].sock)
 		continue;
@@ -1553,9 +1553,8 @@ static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
 		continue;
 
 	    /* Gather remote addresses for this component */
-	    rem_cand_cnt = PJ_ARRAY_SIZE(rem_cand);
-	    status = pj_ice_strans_enum_cands(ice_st, i+1,
-					      &rem_cand_cnt, rem_cand);
+	    rem_cand_cnt = ice_st->ice->rcand_cnt;
+	    rem_cand = ice_st->ice->rcand;
 	    if (status != PJ_SUCCESS)
 		continue;
 
@@ -1650,7 +1649,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
     /* Set remote ufrag (if not yet) */
     if (rem_ufrag) {
 	status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag,
-					       rem_passwd, 0, NULL);
+					       rem_passwd, rem_cand_cnt,
+					       rem_cand);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(ice_st->obj_name, status,
 			 "Failed setting up remote ufrag"));
@@ -1663,7 +1663,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
     if (rcand_end && !ice_st->rem_cand_end)
 	ice_st->rem_cand_end = PJ_TRUE;
     status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rem_cand_cnt, rem_cand,
+					   rem_ufrag? 0:rem_cand_cnt,
+					   rem_cand,
 					   (ice_st->rem_cand_end &&
 					    ice_st->loc_cand_end));
     if (status != PJ_SUCCESS) {

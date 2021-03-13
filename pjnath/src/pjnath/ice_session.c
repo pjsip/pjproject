@@ -2112,14 +2112,18 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     ice->clist.count = 0;
     ice->lcand_paired = ice->rcand_paired = 0;
-    status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
-    if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(ice->grp_lock);
-	return status;
-    }
 
-    /* Log checklist */
-    dump_checklist("Checklist created:", ice, clist);
+    /* Build checklist only if both sides have candidates already */
+    if (ice->lcand_cnt > 0 && rem_cand_cnt > 0) {
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+	if (status != PJ_SUCCESS) {
+	    pj_grp_lock_release(ice->grp_lock);
+	    return status;
+	}
+
+	/* Log checklist */
+	dump_checklist("Checklist created:", ice, clist);
+    }
 
     pj_grp_lock_release(ice->grp_lock);
 
