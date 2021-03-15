@@ -584,7 +584,9 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 	/* Not STUN message, this probably is a ChannelData */
 	pj_turn_channel_data cd;
 	const pj_turn_channel_data *pcd = (const pj_turn_channel_data*)data;
+	char peer_info[PJ_INET6_ADDRSTRLEN];
 	pj_ssize_t sent;
+	unsigned j;
 
 	if (i==test_srv->turn_alloc_cnt) {
 	    /* Invalid data */
@@ -606,23 +608,26 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 	}
 
 	/* Lookup peer */
-	for (i=0; i<alloc->perm_cnt; ++i) {
-	    if (alloc->chnum[i] == cd.ch_number)
+	for (j=0; j<alloc->perm_cnt; ++j) {
+	    if (alloc->chnum[j] == cd.ch_number)
 		break;
 	}
 
-	if (i==alloc->perm_cnt) {
+	if (j==alloc->perm_cnt) {
 	    PJ_LOG(1,(THIS_FILE, 
 		      "TURN Server: ChannelData discarded: invalid channel number"));
 	    goto on_return;
 	}
 
 	/* Relay the data to peer */
+	pj_sockaddr_print(&alloc->perm[j], peer_info, sizeof(peer_info), 3);
+	PJ_LOG(5,(THIS_FILE, "Relaying %d bytes data from client %s to peer %s",
+			      cd.length, client_info, peer_info));
 	sent = cd.length;
 	pj_activesock_sendto(alloc->sock, &alloc->send_key,
 			     pcd+1, &sent, 0,
-			     &alloc->perm[i],
-			     pj_sockaddr_get_len(&alloc->perm[i]));
+			     &alloc->perm[j],
+			     pj_sockaddr_get_len(&alloc->perm[j]));
 
 	/* Done */
 	goto on_return;
@@ -879,15 +884,15 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 		    break;
 	    }
 
-	    if (i==alloc->perm_cnt) {
+	    if (j==alloc->perm_cnt) {
 		if (alloc->perm_cnt==MAX_TURN_PERM) {
 		    pj_stun_msg_create_response(pool, req, PJ_STUN_SC_INSUFFICIENT_CAPACITY, NULL, &resp);
 		    goto send_pkt;
 		}
-		pj_sockaddr_cp(&alloc->perm[i], &pa->sockaddr);
+		pj_sockaddr_cp(&alloc->perm[j], &pa->sockaddr);
 		++alloc->perm_cnt;
 	    }
-	    alloc->chnum[i] = cn;
+	    alloc->chnum[j] = cn;
 
 	    resp = create_success_response(test_srv, alloc, req, pool, 0, &auth_key);
 
