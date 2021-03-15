@@ -941,28 +941,16 @@ static pj_timestamp CALC_CHECK_PRIO(const pj_ice_sess *ice,
 PJ_INLINE(int) CMP_CHECK_STATE(const pj_ice_sess_check *c1,
 			       const pj_ice_sess_check *c2)
 {
-    /* SUCCEEDED has higher state than non-SUCCEEDED */
+    /* SUCCEEDED has higher state than FAILED */
     if (c1->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
-	c2->state != PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+	c2->state == PJ_ICE_SESS_CHECK_STATE_FAILED)
     {
 	return 1;
     }
     if (c2->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
-	c1->state != PJ_ICE_SESS_CHECK_STATE_SUCCEEDED)
+	c1->state == PJ_ICE_SESS_CHECK_STATE_FAILED)
     {
 	return -1;
-    }
-
-    /* FAILED has lower state than non-FAILED */
-    if (c1->state == PJ_ICE_SESS_CHECK_STATE_FAILED &&
-	c2->state != PJ_ICE_SESS_CHECK_STATE_FAILED)
-    {
-	return -1;
-    }
-    if (c2->state == PJ_ICE_SESS_CHECK_STATE_FAILED &&
-	c1->state != PJ_ICE_SESS_CHECK_STATE_FAILED)
-    {
-	return 1;
     }
 
     /* Other state, just compare the state value */
@@ -2699,7 +2687,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    }
 	}
 	if (i == clist->count) {
-	    /* The check may have been pruned */
+	    /* The check may have been pruned (due to low prio) */
 	    check->tdata = NULL;
 	    pj_grp_lock_release(ice->grp_lock);
 	    return;
@@ -2707,6 +2695,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     }
 
     /* Mark STUN transaction as complete */
+    // Find 'corner case ...'.
     //pj_assert(tdata == check->tdata);
     check->tdata = NULL;
 
