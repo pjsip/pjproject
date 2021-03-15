@@ -704,6 +704,7 @@ struct pj_ice_sess
 							 sent/received?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 timer;			    /**< ICE timer.	    */
+    pj_timer_entry	 timer_end_of_cand;	    /**< End-of-cand timer. */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
 
     pj_stun_config	 stun_cfg;		    /**< STUN settings.	    */

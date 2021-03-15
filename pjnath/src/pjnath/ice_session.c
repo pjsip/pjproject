@@ -145,6 +145,8 @@ static void periodic_timer(pj_timer_heap_t *th,
 			  pj_timer_entry *te);
 static void handle_incoming_check(pj_ice_sess *ice,
 				  const pj_ice_rx_check *rcheck);
+static void end_of_cand_ind_timer(pj_timer_heap_t *th,
+				  pj_timer_entry *te);
 
 /* These are the callbacks registered to the STUN sessions */
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
@@ -1807,6 +1809,28 @@ static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
 }
 
 
+/* Timer callback for end of candidate indication from remote */
+static void end_of_cand_ind_timer(pj_timer_heap_t *th,
+				  pj_timer_entry *te)
+{
+    pj_ice_sess *ice = (pj_ice_sess*)te->user_data;
+    PJ_UNUSED_ARG(th);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+
+    if (ice->is_trickling) {
+	LOG5((ice->obj_name, "End-of-candidate timer timeout, any future "
+			     "remote candidate update will be ignored"));
+	ice->is_trickling = PJ_FALSE;
+
+	/* ICE checks may have been completed/failed */
+	check_ice_complete(ice);
+    }
+
+    pj_grp_lock_release(ice->grp_lock);
+}
+
+
 /* Add remote candidates and create/update checklist */
 static pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
@@ -2049,6 +2073,32 @@ static pj_status_t add_rcand_and_update_checklist(
 		      "check pair is available"));
 	    }
 	}
+    }
+
+    /* For trickle ICE, start timer for end-of-candidates indication from
+     * remote.
+     */
+    if (ice->is_trickling && !trickle_done &&
+	!pj_timer_entry_running(&ice->timer_end_of_cand))
+    {
+	pj_time_val delay = {PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT, 0};
+	pj_timer_entry_init(&ice->timer_end_of_cand, 0, ice,
+			    &end_of_cand_ind_timer);
+	status = pj_timer_heap_schedule_w_grp_lock(
+						ice->stun_cfg.timer_heap,
+						&ice->timer_end_of_cand,
+						&delay, PJ_TRUE,
+						ice->grp_lock);
+	if (status != PJ_SUCCESS) {
+	    LOG4((ice->obj_name,
+		  "Failed to schedule end-of-candidate indication timer"));
+	}
+    } else if (trickle_done &&
+	       pj_timer_entry_running(&ice->timer_end_of_cand))
+    {
+	/* Or stop the timer if trickling is done */
+	pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+				       &ice->timer_end_of_cand, 0);
     }
 
     return PJ_SUCCESS;

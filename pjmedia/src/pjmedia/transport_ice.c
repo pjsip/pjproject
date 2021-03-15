@@ -1558,6 +1558,14 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     if (tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED) {
 	sdp_state->has_trickle = pjmedia_ice_sdp_has_trickle(rem_sdp,
 							     media_index);
+
+	/* Reset ICE mismatch flag if conn addr is default address */
+	if (sdp_state->ice_mismatch && sdp_state->has_trickle) {
+	    pj_sockaddr def_addr;
+	    pj_sockaddr_init(rem_af, &def_addr, NULL, 9);
+	    if (pj_sockaddr_cmp(&rem_conn_addr, &def_addr)==0)
+		sdp_state->ice_mismatch = PJ_FALSE;
+	}
     } else {
 	sdp_state->has_trickle = PJ_FALSE;
     }

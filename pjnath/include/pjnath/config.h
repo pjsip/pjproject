@@ -468,6 +468,22 @@
 #endif
 
 
+/**
+ * For trickle ICE, this macro specifies the maximum time of waiting for
+ * end-of-candidates indication from remote after remote first signal of its
+ * intention of using trickle ICE (e.g: via SDP "a=ice-options:trickle"),
+ * in seconds.
+ *
+ * When the timer expires, ICE assumes that end-of-candidates indication
+ * has been received, and any further remote candidate update will be ignored.
+ *
+ * Default: 60 seconds.
+ */
+#ifndef PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT
+#   define PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT	    60
+#endif
+
+
 /** ICE session pool initial size. */
 #ifndef PJNATH_POOL_LEN_ICE_SESS
 #   define PJNATH_POOL_LEN_ICE_SESS		    512
