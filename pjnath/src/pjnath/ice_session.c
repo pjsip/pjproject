@@ -1811,7 +1811,8 @@ static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
 static pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
 			      unsigned rem_cand_cnt,
-			      const pj_ice_sess_cand rem_cand[])
+			      const pj_ice_sess_cand rem_cand[],
+			      pj_bool_t trickle_done)
 {
     pj_ice_sess_checklist *clist;
     unsigned i, j, new_pair = 0;
@@ -1981,7 +1982,7 @@ static pj_status_t add_rcand_and_update_checklist(
     }
 
     /* This could happen if candidates have no matching address families */
-    if (clist->count==0 && !ice->is_trickling) {
+    if (clist->count==0 && trickle_done) {
 	LOG4((ice->obj_name,  "Error: no checklist can be created"));
 	return PJ_ENOTFOUND;
     }
@@ -1990,12 +1991,7 @@ static pj_status_t add_rcand_and_update_checklist(
     ice->lcand_paired = ice->lcand_cnt;
     ice->rcand_paired = ice->rcand_cnt;
 
-    /* Just return now if the checklist not changed */
-    if (new_pair == 0)
-	return PJ_SUCCESS;
-
-
-    if (clist->count > 0) {
+    if (new_pair) {
 	/* Sort checklist based on priority */
 	//dump_checklist("Checklist before sort:", ice, &ice->clist);
 	sort_checklist(ice, clist);
@@ -2010,7 +2006,7 @@ static pj_status_t add_rcand_and_update_checklist(
     /* Regular ICE or trickle ICE after end-of-candidates indication:
      * Disable our components which don't have matching component
      */
-    if (!ice->is_trickling) {
+    if (trickle_done) {
 	unsigned highest_comp = 0;
 
 	for (i=0; i<ice->rcand_cnt; ++i) {
@@ -2027,7 +2023,7 @@ static pj_status_t add_rcand_and_update_checklist(
 	ice->comp_cnt = highest_comp;
 
 	/* If using trickle ICE and end-of-candidate has been signalled,
-	 * check if ICE nego completion.
+	 * check for ICE nego completion.
 	 */
 	if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED)
 	    check_ice_complete(ice);
@@ -2037,7 +2033,7 @@ static pj_status_t add_rcand_and_update_checklist(
      * there is no available check pair.
      */
     if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
-	clist->count > 0 &&
+	clist->count > 0 && !ice->is_complete &&
 	clist->state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING)
     {
 	if (!pj_timer_entry_running(&clist->timer)) {
@@ -2115,7 +2111,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     /* Build checklist only if both sides have candidates already */
     if (ice->lcand_cnt > 0 && rem_cand_cnt > 0) {
-	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand,
+						!ice->is_trickling);
 	if (status != PJ_SUCCESS) {
 	    pj_grp_lock_release(ice->grp_lock);
 	    return status;
@@ -2146,10 +2143,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
 
+    pj_grp_lock_acquire(ice->grp_lock);
+
     /* Ignore if remote ufrag has not known yet */
     if (ice->tx_ufrag.slen == 0) {
 	LOG5((ice->obj_name,
 	      "Cannot update ICE checklist when remote ufrag is unknown"));
+	pj_grp_lock_release(ice->grp_lock);
 	return PJ_EINVALIDOP;
     }
 
@@ -2157,10 +2157,27 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     if (!ice->is_trickling && rem_cand_cnt) {
 	LOG5((ice->obj_name,
 	      "Ignored remote candidate update as ICE trickling has ended"));
+	pj_grp_lock_release(ice->grp_lock);
 	return PJ_SUCCESS;
     }
     
-    pj_grp_lock_acquire(ice->grp_lock);
+    /* Verify remote ufrag & passwd, if remote candidate specified */
+    if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
+			 pj_strcmp(&ice->tx_pass, rem_passwd)))
+    {
+	LOG5((ice->obj_name, "Ignored remote candidate update due to remote "
+			     "ufrag/pwd mismatch"));
+	rem_cand_cnt = 0;
+    }
+
+    if (status == PJ_SUCCESS) {
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand,
+						trickle_done);
+    }
+
+    /* Log checklist */
+    if (status == PJ_SUCCESS)
+	dump_checklist("Checklist updated:", ice, &ice->clist);
 
     if (trickle_done && ice->is_trickling) {
 	LOG5((ice->obj_name, "Remote signalled end-of-candidates "
@@ -2168,23 +2185,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
 			     "will ignore any candidate update"));
 	ice->is_trickling = PJ_FALSE;
     }
-
-    /* Verify remote ufrag & passwd, if remote candidate specified */
-    if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
-			 pj_strcmp(&ice->tx_pass, rem_passwd)))
-    {
-	LOG5((ice->obj_name, "Invalid remote ufrag/pwd in adding "
-	      "remote candidates."));
-	status = PJ_EINVAL;
-    }
-
-    if (status == PJ_SUCCESS) {
-	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
-    }
-
-    /* Log checklist */
-    if (status == PJ_SUCCESS)
-	dump_checklist("Checklist updated:", ice, &ice->clist);
 
     pj_grp_lock_release(ice->grp_lock);
 

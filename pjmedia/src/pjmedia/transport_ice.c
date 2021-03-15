@@ -462,6 +462,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tp_ice && tp_ice->ice_st, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp_ice->trickle_ice != PJ_ICE_SESS_TRICKLE_DISABLED,
+		     PJ_EINVALIDOP);
 
 
     /* Update the checklist */
@@ -471,14 +473,24 @@ PJ_DEF(pj_status_t) pjmedia_ice_trickle_update(
     if (status != PJ_SUCCESS)
 	return status;
 
-
     /* Start ICE if both sides have sent their (initial) SDPs */
-    if (tp_ice->last_send_cand_cnt[0] > 0) {
-	pj_str_t rufrag;
-	pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, NULL, NULL, &rufrag, NULL);
-	if (rufrag.slen > 0) {
-	    status = pj_ice_strans_start_ice(tp_ice->ice_st, NULL, NULL,
-					     0, NULL);
+    if (!pj_ice_strans_sess_is_running(tp_ice->ice_st)) {
+	unsigned i, comp_cnt;
+
+	comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+	for (i = 0; i < comp_cnt; ++i) {
+	    if (tp_ice->last_send_cand_cnt[i] > 0)
+		break;
+	}
+	if (i != comp_cnt) {
+	    pj_str_t rufrag;
+	    pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, NULL, NULL,
+					&rufrag, NULL);
+	    if (rufrag.slen > 0) {
+		PJ_LOG(3,(THIS_FILE,"Trickle ICE starts connectivity check"));
+		status = pj_ice_strans_start_ice(tp_ice->ice_st, NULL, NULL,
+						 0, NULL);
+	    }
 	}
     }
 

@@ -1637,6 +1637,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 					 const pj_ice_sess_cand rem_cand[],
 					 pj_bool_t rcand_end)
 {
+    pj_bool_t checklist_created;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ice_st && ((rem_cand_cnt==0) ||
@@ -1646,8 +1647,10 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 
     pj_grp_lock_acquire(ice_st->grp_lock);
 
-    /* Set remote ufrag (if not yet) */
-    if (rem_ufrag) {
+    checklist_created = ice_st->ice->tx_ufrag.slen > 0;
+
+    /* Create checklist (if not yet) */
+    if (rem_ufrag && !checklist_created) {
 	status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag,
 					       rem_passwd, rem_cand_cnt,
 					       rem_cand);
@@ -1659,21 +1662,21 @@ PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
 	}
     }
 
-    /* Update checklist */
-    if (rcand_end && !ice_st->rem_cand_end)
-	ice_st->rem_cand_end = PJ_TRUE;
-    status = pj_ice_sess_update_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rem_ufrag? 0:rem_cand_cnt,
-					   rem_cand,
-					   (ice_st->rem_cand_end &&
-					    ice_st->loc_cand_end));
-    if (status != PJ_SUCCESS) {
-	/* Should not stop ICE here as the checklist should remain intact and
-	 * failure may not be fatal, e.g: wrong/old ufrag, too many rem cand.
-	 */
-	PJ_PERROR(4,(ice_st->obj_name, status, "Failed updating checklist"));
-	pj_grp_lock_release(ice_st->grp_lock);
-	return status;
+    /* Update checklist for trickling ICE */
+    if (ice_st->ice->is_trickling) {
+	if (rcand_end && !ice_st->rem_cand_end)
+	    ice_st->rem_cand_end = PJ_TRUE;
+
+	status = pj_ice_sess_update_check_list(
+			    ice_st->ice, rem_ufrag, rem_passwd,
+			    (checklist_created? rem_cand_cnt:0), rem_cand,
+			    (ice_st->rem_cand_end && ice_st->loc_cand_end));
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed updating checklist"));
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
     }
 
     /* Update TURN permissions if periodic check has been started. */
