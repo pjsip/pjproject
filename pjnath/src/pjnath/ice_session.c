@@ -1806,7 +1806,7 @@ static void end_of_cand_ind_timer(pj_timer_heap_t *th,
 
     pj_grp_lock_acquire(ice->grp_lock);
 
-    if (ice->is_trickling) {
+    if (ice->is_trickling && !ice->is_complete) {
 	LOG5((ice->obj_name, "End-of-candidate timer timeout, any future "
 			     "remote candidate update will be ignored"));
 	ice->is_trickling = PJ_FALSE;
@@ -2063,28 +2063,8 @@ static pj_status_t add_rcand_and_update_checklist(
 	}
     }
 
-    /* For trickle ICE, start timer for end-of-candidates indication from
-     * remote.
-     */
-    if (ice->is_trickling && !trickle_done &&
-	!pj_timer_entry_running(&ice->timer_end_of_cand))
-    {
-	pj_time_val delay = {PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT, 0};
-	pj_timer_entry_init(&ice->timer_end_of_cand, 0, ice,
-			    &end_of_cand_ind_timer);
-	status = pj_timer_heap_schedule_w_grp_lock(
-						ice->stun_cfg.timer_heap,
-						&ice->timer_end_of_cand,
-						&delay, PJ_TRUE,
-						ice->grp_lock);
-	if (status != PJ_SUCCESS) {
-	    LOG4((ice->obj_name,
-		  "Failed to schedule end-of-candidate indication timer"));
-	}
-    } else if (trickle_done &&
-	       pj_timer_entry_running(&ice->timer_end_of_cand))
-    {
-	/* Or stop the timer if trickling is done */
+    /* Stop the end-of-candidates indication timer if trickling is done */
+    if (trickle_done && pj_timer_entry_running(&ice->timer_end_of_cand)) {
 	pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
 				       &ice->timer_end_of_cand, 0);
     }
@@ -2596,6 +2576,25 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	status = pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
 						   &clist->timer, &delay,
 						   PJ_TRUE, ice->grp_lock);
+    }
+
+    /* For trickle ICE, start timer for end-of-candidates indication from
+     * remote.
+     */
+    if (ice->is_trickling && !pj_timer_entry_running(&ice->timer_end_of_cand))
+    {
+	pj_time_val delay = {PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT, 0};
+	pj_timer_entry_init(&ice->timer_end_of_cand, 0, ice,
+			    &end_of_cand_ind_timer);
+	status = pj_timer_heap_schedule_w_grp_lock(
+						ice->stun_cfg.timer_heap,
+						&ice->timer_end_of_cand,
+						&delay, PJ_TRUE,
+						ice->grp_lock);
+	if (status != PJ_SUCCESS) {
+	    LOG4((ice->obj_name,
+		  "Failed to schedule end-of-candidate indication timer"));
+	}
     }
 
     pj_grp_lock_release(ice->grp_lock);

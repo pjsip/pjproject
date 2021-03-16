@@ -470,12 +470,16 @@
 
 /**
  * For trickle ICE, this macro specifies the maximum time of waiting for
- * end-of-candidates indication from remote after remote first signal of its
- * intention of using trickle ICE (e.g: via SDP "a=ice-options:trickle"),
- * in seconds.
+ * end-of-candidates indication from remote once ICE connectivity checks
+ * is started, in seconds. When the timer expires, ICE will assume that
+ * end-of-candidates indication is received so any further remote candidate
+ * update will be ignored.
  *
- * When the timer expires, ICE assumes that end-of-candidates indication
- * has been received, and any further remote candidate update will be ignored.
+ * Note that without remote end-of-candidates indication, ICE will not be
+ * able to conclude the ICE negotiation. Also note that the ICE connectivity
+ * checks should only be started after both agents have started trickling
+ * ICE candidates (e.g: both have sent their SDPs, either via normal SDP
+ * offer/answer or SIP INFO).
  *
  * Default: 60 seconds.
  */
