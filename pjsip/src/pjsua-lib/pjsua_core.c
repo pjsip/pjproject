@@ -973,6 +973,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     }
 
     /* Init timer entry and event list */
+    pj_list_init(&pjsua_var.active_timer_list);
     pj_list_init(&pjsua_var.timer_list);
     pj_list_init(&pjsua_var.event_list);
 
@@ -3296,12 +3297,13 @@ static void timer_cb( pj_timer_heap_t *th,
 
     PJ_UNUSED_ARG(th);
 
-    pj_mutex_lock(pjsua_var.timer_mutex);
-    pj_list_push_back(&pjsua_var.timer_list, tmr);
-    pj_mutex_unlock(pjsua_var.timer_mutex);
-
     if (cb)
         (*cb)(user_data);
+
+    pj_mutex_lock(pjsua_var.timer_mutex);
+    pj_list_erase(tmr);
+    pj_list_push_back(&pjsua_var.timer_list, tmr);
+    pj_mutex_unlock(pjsua_var.timer_mutex);
 }
 
 /*
@@ -3343,7 +3345,9 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
 #else
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &tmr->entry, &delay);
 #endif
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_SUCCESS) {
+    	pj_list_push_back(&pjsua_var.active_timer_list, tmr);
+    } else {
         pj_list_push_back(&pjsua_var.timer_list, tmr);
     }
 

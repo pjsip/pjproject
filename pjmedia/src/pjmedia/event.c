@@ -54,6 +54,7 @@ struct pjmedia_event_mgr
     pj_bool_t       is_quitting;
     pj_sem_t       *sem;
     pj_mutex_t     *mutex;
+    pj_mutex_t     *cb_mutex;
     event_queue     ev_queue;
     event_queue    *pub_ev_queue;       /**< publish() event queue.     */
     esub            esub_list;          /**< list of subscribers.       */
@@ -107,15 +108,22 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
             void *user_data = sub->user_data;
             pj_status_t status;
             
-            if (rls_lock)
+            if (rls_lock) {
+                /* To make sure that event unsubscription waits
+                 * until the callback completes.
+                 */
+                pj_mutex_lock(mgr->cb_mutex);
                 pj_mutex_unlock(mgr->mutex);
+            }
 
             status = (*cb)(ev, user_data);
             if (status != PJ_SUCCESS && err == PJ_SUCCESS)
 	        err = status;
 
-            if (rls_lock)
+            if (rls_lock) {
+                pj_mutex_unlock(mgr->cb_mutex);
                 pj_mutex_lock(mgr->mutex);
+            }
         }
 	sub = *next_sub;
     }
@@ -183,6 +191,13 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
         return status;
     }
 
+    status = pj_mutex_create_recursive(mgr->pool, "ev_cb_mutex",
+    				       &mgr->cb_mutex);
+    if (status != PJ_SUCCESS) {
+        pjmedia_event_mgr_destroy(mgr);
+        return status;
+    }
+
     if (!event_manager_instance)
 	event_manager_instance = mgr;
 
@@ -221,6 +236,11 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
     if (mgr->mutex) {
         pj_mutex_destroy(mgr->mutex);
         mgr->mutex = NULL;
+    }
+
+    if (mgr->cb_mutex) {
+        pj_mutex_destroy(mgr->cb_mutex);
+        mgr->cb_mutex = NULL;
     }
 
     if (mgr->pool)
@@ -298,7 +318,16 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
     if (!mgr) mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
+    while(1) {
+    	pj_mutex_lock(mgr->mutex);
+    	if (pj_mutex_trylock(mgr->cb_mutex) == PJ_SUCCESS)
+    	    break;
+    	
+    	/* The callback is currently being called, wait for a while. */
+    	pj_mutex_unlock(mgr->mutex);
+    	pj_thread_sleep(10);
+    }
+
     sub = mgr->esub_list.next;
     while (sub != &mgr->esub_list) {
 	esub *next = sub->next;
@@ -320,6 +349,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
         }
 	sub = next;
     }
+    pj_mutex_unlock(mgr->cb_mutex);
     pj_mutex_unlock(mgr->mutex);
 
     return PJ_SUCCESS;
