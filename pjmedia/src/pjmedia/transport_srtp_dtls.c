@@ -909,6 +909,8 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
     pjmedia_sdp_attr *a;
     int af = pj_AF_UNSPEC();
 
+    PJ_UNUSED_ARG(ds);
+
     /* Get RTP address */
     conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
     if (pj_stricmp2(&conn->net_type, "IN")==0) {
