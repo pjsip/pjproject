@@ -2,7 +2,7 @@
 export PJ_VERSION_MAJOR  := 2
 export PJ_VERSION_MINOR  := 11
 export PJ_VERSION_REV    :=
-export PJ_VERSION_SUFFIX :=
+export PJ_VERSION_SUFFIX := -dev
 
 export PJ_VERSION := $(PJ_VERSION_MAJOR).$(PJ_VERSION_MINOR)
 
