@@ -476,15 +476,19 @@
  * update will be ignored.
  *
  * Note that without remote end-of-candidates indication, ICE will not be
- * able to conclude the ICE negotiation. Also note that the ICE connectivity
- * checks should only be started after both agents have started trickling
- * ICE candidates (e.g: both have sent their SDPs, either via normal SDP
- * offer/answer or SIP INFO).
+ * able to conclude that the ICE negotiation has failed when all pair checks
+ * are completed but there is no valid pair (on the other hand, the ICE
+ * negotiation may be completed as successful before the end-of-candidates
+ * indication is received when valid pairs are found very quickly).
  *
- * Default: 60 seconds.
+ * Also note that the ICE connectivity checks should only be started after
+ * both agents have started trickling ICE candidates (e.g: both have sent
+ * their SDPs, either via normal SDP offer/answer or SIP INFO).
+ *
+ * Default: 40 seconds.
  */
 #ifndef PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT
-#   define PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT	    60
+#   define PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT	    40
 #endif
 
 
