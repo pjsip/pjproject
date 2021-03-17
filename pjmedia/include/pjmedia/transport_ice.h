@@ -323,15 +323,18 @@ PJ_DECL(pj_bool_t) pjmedia_ice_sdp_has_trickle(const pjmedia_sdp_session *sdp,
 
 
 /**
- * Update check list after new local or remote ICE candidates are added,
- * or signal ICE session that trickling is done. Application typically would
- * call this function after finding (and conveying) new local ICE candidates
- * to remote, after receiving remote ICE candidates, or after receiving
- * end-of-candidates indication.
+ * Update check list after remote ICE candidates list are received or after
+ * or local ICE candidates are conveyed. This function may also be called
+ * after end-of-candidates indication is received or conveyed. ICE
+ * connectivity checks will automatically be started if both sides have
+ * conveyed ICE info (ICE user fragment and/or candidate list).
  *
- * This function is only applicable when trickle ICE is not disabled and
- * after ICE connectivity checks are started, i.e: after
- * pjmedia_transport_media_start() has been invoked.
+ * To update the check list after conveying any new local candidates,
+ * application can set the remote ICE parameters to NULL or zero. Note that
+ * the checklist should only be updated after any newly found local candidates
+ * are conveyed to remote, instead of immediately after the finding.
+ *
+ * This function is only applicable when trickle ICE is not disabled.
  *
  * @param tp		The ICE media transport.
  * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
@@ -412,7 +415,8 @@ PJ_DECL(pj_status_t) pjmedia_ice_trickle_encode_sdp(
 
 
 /**
- * Check if trickling ICE has found any new local candidates.
+ * Check if trickling ICE has found any new local candidates since the last
+ * conveyance (via pjmedia_ice_trickle_send_local_cand()).
  *
  * @param tp		The ICE media transport.
  *
@@ -422,9 +426,7 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
 
 
 /**
- * Check for new local candidates, and if any new or forced, update the
- * specified SDP with all current local candidates to be conveyed to remote
- * (e.g: via SIP INFO).
+ * Convey all local candidates via the specified SDP.
  *
  * @param tp		The ICE media transport.
  * @param sdp_pool	The memory pool for generating SDP attributes.
@@ -432,10 +434,7 @@ PJ_DECL(pj_bool_t) pjmedia_ice_trickle_has_new_cand(pjmedia_transport *tp);
  * @param p_end_of_cand Optional, pointer to receive the indication that
  *			candidate gathering has been completed.
  *
- * @return		PJ_SUCCESS if any new local candidates is found and
- *			SDP is updated with the candidates,
- *			PJ_ENOTFOUND if no new local candidate is found,
- *			or the appropriate error code.
+ * @return		PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_trickle_send_local_cand(
 					    pjmedia_transport *tp,

@@ -945,15 +945,15 @@ PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
 					     unsigned rcand_cnt,
 					     const pj_ice_sess_cand rcand[]);
 
+
 /**
- * Update check list after new local or remote ICE candidates are added,
- * or signal ICE session that trickling is done. Application typically would
- * call this function after finding (and conveying) new local ICE candidates
- * to remote, after receiving remote ICE candidates, or after receiving
- * end-of-candidates indication.
+ * Update check list after receiving new remote ICE candidates or after
+ * new local ICE candidates are found and conveyed to remote. This function
+ * can also be called after receiving end of candidate indication from
+ * either remote or local agent.
  *
  * This function is only applicable when trickle ICE is not disabled and
- * after ICE connectivity checks are started using pj_ice_strans_start_ice().
+ * after ICE session has been created using pj_ice_strans_init_ice().
  *
  * @param ice_st	The ICE stream transport.
  * @param rem_ufrag	Remote ufrag, as seen in the SDP received from

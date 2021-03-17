@@ -704,6 +704,7 @@ struct pj_ice_sess
 							 sent/received?	    */
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 timer;			    /**< ICE timer.	    */
+    pj_timer_entry	 timer_end_of_cand;	    /**< End-of-cand timer. */
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
 
     pj_stun_config	 stun_cfg;		    /**< STUN settings.	    */
@@ -990,14 +991,11 @@ pj_ice_sess_create_check_list(pj_ice_sess *ice,
 
 
 /**
- * Update check list after new local or remote ICE candidates are added,
- * or signal ICE session that trickling is done. Application typically would
- * call this function after finding (and conveying) new local ICE candidates
- * to remote, after receiving remote ICE candidates, or after receiving
- * end-of-candidates indication.
- *
- * After check list is updated, ICE connectivity check will automatically
- * start if check list has any candidate pair.
+ * Update check list after receiving new remote ICE candidates or after
+ * new local ICE candidates are found and conveyed to remote. This function
+ * can also be called to indicate that trickling has completed, i.e:
+ * local candidates gathering completed and remote has sent end-of-candidate
+ * indication.
  *
  * This function is only applicable when trickle ICE is not disabled.
  *

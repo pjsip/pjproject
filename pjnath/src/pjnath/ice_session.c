@@ -145,6 +145,8 @@ static void periodic_timer(pj_timer_heap_t *th,
 			  pj_timer_entry *te);
 static void handle_incoming_check(pj_ice_sess *ice,
 				  const pj_ice_rx_check *rcheck);
+static void end_of_cand_ind_timer(pj_timer_heap_t *th,
+				  pj_timer_entry *te);
 
 /* These are the callbacks registered to the STUN sessions */
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
@@ -936,6 +938,25 @@ static pj_timestamp CALC_CHECK_PRIO(const pj_ice_sess *ice,
     return prio;
 }
 
+PJ_INLINE(int) CMP_CHECK_STATE(const pj_ice_sess_check *c1,
+			       const pj_ice_sess_check *c2)
+{
+    /* SUCCEEDED has higher state than FAILED */
+    if (c1->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
+	c2->state == PJ_ICE_SESS_CHECK_STATE_FAILED)
+    {
+	return 1;
+    }
+    if (c2->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED &&
+	c1->state == PJ_ICE_SESS_CHECK_STATE_FAILED)
+    {
+	return -1;
+    }
+
+    /* Other state, just compare the state value */
+    return (c1->state - c2->state);
+}
+
 
 PJ_INLINE(int) CMP_CHECK_PRIO(const pj_ice_sess_check *c1,
 			      const pj_ice_sess_check *c2)
@@ -1027,7 +1048,9 @@ static void clist_set_state(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
     }
 }
 
-/* Sort checklist based on priority */
+/* Sort checklist based on state & priority, we need to put Successful pairs
+ * on top of the list for pruning.
+ */
 static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 {
     unsigned i;
@@ -1048,7 +1071,12 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 	unsigned j, highest = i;
 
 	for (j=i+1; j<clist->count; ++j) {
-	    if (CMP_CHECK_PRIO(&clist->checks[j], &clist->checks[highest]) > 0) {
+	    int cmp_state = CMP_CHECK_STATE(&clist->checks[j],
+					    &clist->checks[highest]);
+	    if (cmp_state > 0 ||
+		(cmp_state==0 && CMP_CHECK_PRIO(&clist->checks[j],
+						&clist->checks[highest]) > 0))
+	    {
 		highest = j;
 	    }
 	}
@@ -1113,7 +1141,9 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
     for (i=0; i<clist->count; ++i) {
 	pj_ice_sess_cand *srflx = clist->checks[i].lcand;
 
-	if (clist->checks[i].lcand->type == PJ_ICE_CAND_TYPE_SRFLX) {
+	if (srflx->type == PJ_ICE_CAND_TYPE_SRFLX ||
+	    srflx->type == PJ_ICE_CAND_TYPE_PRFLX)
+	{
 	    /* Find the base for this candidate */
 	    unsigned j;
 	    for (j=0; j<ice->lcand_cnt; ++j) {
@@ -1123,7 +1153,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		    continue;
 
 		if (pj_sockaddr_cmp(&srflx->base_addr, &host->addr) == 0) {
-		    /* Replace this SRFLX with its BASE */
+		    /* Replace this SRFLX/PRFLX with its BASE */
 		    clist->checks[i].lcand = host;
 		    break;
 		}
@@ -1137,7 +1167,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		      pj_sockaddr_print(&srflx->base_addr, baddr,
 		                        sizeof(baddr), 2),
 		      pj_sockaddr_get_port(&srflx->base_addr),
-		      GET_LCAND_ID(clist->checks[i].lcand)));
+		      GET_LCAND_ID(srflx)));
 		return PJNATH_EICENOHOSTCAND;
 	    }
 	}
@@ -1757,10 +1787,9 @@ static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
     /* Re-sort before discarding the last */
     sort_checklist(ice, clist);
     if (!prio_lower_than ||
-	pj_cmp_timestamp(&clist->checks[k].prio, prio_lower_than) < 0)
+	pj_cmp_timestamp(&clist->checks[k-1].prio, prio_lower_than) < 0)
     {
-	remove_check(ice, clist, clist->count-1,
-		     "too many, drop low-prio");
+	remove_check(ice, clist, k-1, "too many, drop low-prio");
 	return 1;
     }
 
@@ -1768,14 +1797,37 @@ static int discard_check(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
 }
 
 
+/* Timer callback for end of candidate indication from remote */
+static void end_of_cand_ind_timer(pj_timer_heap_t *th,
+				  pj_timer_entry *te)
+{
+    pj_ice_sess *ice = (pj_ice_sess*)te->user_data;
+    PJ_UNUSED_ARG(th);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+
+    if (ice->is_trickling && !ice->is_complete) {
+	LOG5((ice->obj_name, "End-of-candidate timer timeout, any future "
+			     "remote candidate update will be ignored"));
+	ice->is_trickling = PJ_FALSE;
+
+	/* ICE checks may have been completed/failed */
+	check_ice_complete(ice);
+    }
+
+    pj_grp_lock_release(ice->grp_lock);
+}
+
+
 /* Add remote candidates and create/update checklist */
 static pj_status_t add_rcand_and_update_checklist(
 			      pj_ice_sess *ice,
 			      unsigned rem_cand_cnt,
-			      const pj_ice_sess_cand rem_cand[])
+			      const pj_ice_sess_cand rem_cand[],
+			      pj_bool_t trickle_done)
 {
     pj_ice_sess_checklist *clist;
-    unsigned i, j;
+    unsigned i, j, new_pair = 0;
     pj_status_t status;
 
     /* Save remote candidates */
@@ -1937,11 +1989,12 @@ static pj_status_t add_rcand_and_update_checklist(
 	    }
 
 	    clist->count++;
+	    new_pair++;
 	}
     }
 
     /* This could happen if candidates have no matching address families */
-    if (clist->count==0 && !ice->is_trickling) {
+    if (clist->count==0 && trickle_done) {
 	LOG4((ice->obj_name,  "Error: no checklist can be created"));
 	return PJ_ENOTFOUND;
     }
@@ -1950,11 +2003,13 @@ static pj_status_t add_rcand_and_update_checklist(
     ice->lcand_paired = ice->lcand_cnt;
     ice->rcand_paired = ice->rcand_cnt;
 
-    if (clist->count > 0) {
+    if (new_pair) {
 	/* Sort checklist based on priority */
+	//dump_checklist("Checklist before sort:", ice, &ice->clist);
 	sort_checklist(ice, clist);
 
 	/* Prune the checklist */
+	//dump_checklist("Checklist before prune:", ice, &ice->clist);
 	status = prune_checklist(ice, clist);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -1963,7 +2018,7 @@ static pj_status_t add_rcand_and_update_checklist(
     /* Regular ICE or trickle ICE after end-of-candidates indication:
      * Disable our components which don't have matching component
      */
-    if (!ice->is_trickling) {
+    if (trickle_done) {
 	unsigned highest_comp = 0;
 
 	for (i=0; i<ice->rcand_cnt; ++i) {
@@ -1980,7 +2035,7 @@ static pj_status_t add_rcand_and_update_checklist(
 	ice->comp_cnt = highest_comp;
 
 	/* If using trickle ICE and end-of-candidate has been signalled,
-	 * check if ICE nego completion.
+	 * check for ICE nego completion.
 	 */
 	if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED)
 	    check_ice_complete(ice);
@@ -1990,7 +2045,7 @@ static pj_status_t add_rcand_and_update_checklist(
      * there is no available check pair.
      */
     if (ice->opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
-	clist->count > 0 &&
+	clist->count > 0 && !ice->is_complete &&
 	clist->state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING)
     {
 	if (!pj_timer_entry_running(&clist->timer)) {
@@ -2006,6 +2061,12 @@ static pj_status_t add_rcand_and_update_checklist(
 		      "check pair is available"));
 	    }
 	}
+    }
+
+    /* Stop the end-of-candidates indication timer if trickling is done */
+    if (trickle_done && pj_timer_entry_running(&ice->timer_end_of_cand)) {
+	pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap,
+				       &ice->timer_end_of_cand, 0);
     }
 
     return PJ_SUCCESS;
@@ -2026,11 +2087,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     timer_data *td;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd &&
-		     ((rem_cand_cnt && rem_cand) || ice->is_trickling),
-		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice && rem_ufrag && rem_passwd, PJ_EINVAL);
 
     pj_grp_lock_acquire(ice->grp_lock);
+
+    if (ice->tx_ufrag.slen) {
+	/* Checklist has been created */
+	pj_grp_lock_release(ice->grp_lock);
+	return PJ_SUCCESS;
+    }
 
     /* Save credentials */
     username.ptr = buf;
@@ -2061,14 +2126,19 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
     ice->clist.count = 0;
     ice->lcand_paired = ice->rcand_paired = 0;
-    status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
-    if (status != PJ_SUCCESS) {
-	pj_grp_lock_release(ice->grp_lock);
-	return status;
-    }
 
-    /* Log checklist */
-    dump_checklist("Checklist created:", ice, clist);
+    /* Build checklist only if both sides have candidates already */
+    if (ice->lcand_cnt > 0 && rem_cand_cnt > 0) {
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand,
+						!ice->is_trickling);
+	if (status != PJ_SUCCESS) {
+	    pj_grp_lock_release(ice->grp_lock);
+	    return status;
+	}
+
+	/* Log checklist */
+	dump_checklist("Checklist created:", ice, clist);
+    }
 
     pj_grp_lock_release(ice->grp_lock);
 
@@ -2090,39 +2160,49 @@ PJ_DEF(pj_status_t) pj_ice_sess_update_check_list(
     PJ_ASSERT_RETURN(ice && ((rem_cand_cnt==0) ||
 			     (rem_ufrag && rem_passwd && rem_cand)),
 		     PJ_EINVAL);
-    PJ_ASSERT_RETURN(ice->tx_ufrag.slen, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+
+    /* Ignore if remote ufrag has not known yet */
+    if (ice->tx_ufrag.slen == 0) {
+	LOG5((ice->obj_name,
+	      "Cannot update ICE checklist when remote ufrag is unknown"));
+	pj_grp_lock_release(ice->grp_lock);
+	return PJ_EINVALIDOP;
+    }
 
     /* Ignore if trickle has been stopped (e.g: received end-of-candidate) */
     if (!ice->is_trickling && rem_cand_cnt) {
 	LOG5((ice->obj_name,
-	      "Cannot update checklist when ICE trickling is disabled or"
-	      " has been ended"));
-	return PJ_EINVALIDOP;
+	      "Ignored remote candidate update as ICE trickling has ended"));
+	pj_grp_lock_release(ice->grp_lock);
+	return PJ_SUCCESS;
     }
     
-    pj_grp_lock_acquire(ice->grp_lock);
-
-    if (trickle_done && ice->is_trickling) {
-	LOG5((ice->obj_name, "Trickling done."));
-	ice->is_trickling = PJ_FALSE;
-    }
-
     /* Verify remote ufrag & passwd, if remote candidate specified */
     if (rem_cand_cnt && (pj_strcmp(&ice->tx_ufrag, rem_ufrag) ||
 			 pj_strcmp(&ice->tx_pass, rem_passwd)))
     {
-	LOG5((ice->obj_name, "Invalid remote ufrag/pwd in adding "
-	      "remote candidates."));
-	status = PJ_EINVAL;
+	LOG5((ice->obj_name, "Ignored remote candidate update due to remote "
+			     "ufrag/pwd mismatch"));
+	rem_cand_cnt = 0;
     }
 
     if (status == PJ_SUCCESS) {
-	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand);
+	status = add_rcand_and_update_checklist(ice, rem_cand_cnt, rem_cand,
+						trickle_done);
     }
 
     /* Log checklist */
     if (status == PJ_SUCCESS)
 	dump_checklist("Checklist updated:", ice, &ice->clist);
+
+    if (trickle_done && ice->is_trickling) {
+	LOG5((ice->obj_name, "Remote signalled end-of-candidates "
+			     "and local candidates gathering completed, "
+			     "will ignore any candidate update"));
+	ice->is_trickling = PJ_FALSE;
+    }
 
     pj_grp_lock_release(ice->grp_lock);
 
@@ -2498,6 +2578,25 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 						   PJ_TRUE, ice->grp_lock);
     }
 
+    /* For trickle ICE, start timer for end-of-candidates indication from
+     * remote.
+     */
+    if (ice->is_trickling && !pj_timer_entry_running(&ice->timer_end_of_cand))
+    {
+	pj_time_val delay = {PJ_TRICKLE_ICE_END_OF_CAND_TIMEOUT, 0};
+	pj_timer_entry_init(&ice->timer_end_of_cand, 0, ice,
+			    &end_of_cand_ind_timer);
+	status = pj_timer_heap_schedule_w_grp_lock(
+						ice->stun_cfg.timer_heap,
+						&ice->timer_end_of_cand,
+						&delay, PJ_TRUE,
+						ice->grp_lock);
+	if (status != PJ_SUCCESS) {
+	    LOG4((ice->obj_name,
+		  "Failed to schedule end-of-candidate indication timer"));
+	}
+    }
+
     pj_grp_lock_release(ice->grp_lock);
     pj_log_pop_indent();
     return status;
@@ -2587,7 +2686,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    }
 	}
 	if (i == clist->count) {
-	    /* The check may have been pruned */
+	    /* The check may have been pruned (due to low prio) */
 	    check->tdata = NULL;
 	    pj_grp_lock_release(ice->grp_lock);
 	    return;
@@ -2595,6 +2694,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     }
 
     /* Mark STUN transaction as complete */
+    // Find 'corner case ...'.
     //pj_assert(tdata == check->tdata);
     check->tdata = NULL;
 

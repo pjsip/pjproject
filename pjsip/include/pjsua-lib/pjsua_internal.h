@@ -118,6 +118,14 @@ typedef struct call_answer
 } call_answer;
 
 
+/* Generic states */
+typedef enum pjsua_op_state {
+    PJSUA_OP_STATE_NULL,
+    PJSUA_OP_STATE_READY,
+    PJSUA_OP_STATE_RUNNING,
+    PJSUA_OP_STATE_DONE,
+} pjsua_op_state;
+
 /** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
@@ -211,7 +219,7 @@ struct pjsua_call
 	pj_bool_t	 enabled;
 	pj_bool_t	 remote_sup;
 	pj_bool_t	 remote_dlg_est;
-	pj_bool_t	 trickling;
+	pjsua_op_state	 trickling;
 	int		 retrans18x_count;
 	pj_bool_t	 pending_info;
 	pj_timer_entry	 timer;
@@ -714,7 +722,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
 
-void pjsua_ice_check_start_trickling(pjsua_call *call, pjsip_event *e);
+void pjsua_ice_check_start_trickling(pjsua_call *call,
+				     pj_bool_t forceful,
+				     pjsip_event *e);
 
 /*
  * Error message when media operation is requested while another is in progress
