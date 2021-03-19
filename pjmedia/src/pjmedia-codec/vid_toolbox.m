@@ -169,6 +169,7 @@ typedef struct vtool_codec_data
     pj_uint8_t			*dec_buf;
     unsigned			 dec_buf_size;
     CMFormatDescriptionRef	 dec_format;
+    OSStatus             dec_status;
 
     unsigned			 dec_sps_size;
     unsigned			 dec_pps_size;
@@ -1022,10 +1023,10 @@ static void decode_cb(void *decompressionOutputRefCon,
     /* This callback can be called from another, unregistered thread.
      * So do not call pjlib functions here.
      */
-
-    if (status != noErr) return;
-
     vtool_data = (struct vtool_codec_data *)decompressionOutputRefCon;
+    vtool_data->dec_status = status;
+    if (vtool_data->dec_status != noErr)
+        return;
 
     CVPixelBufferLockBaseAddress(imageBuffer,0);
     
@@ -1319,10 +1320,13 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 		    }
 		}
 
-		if (ret != noErr) {
+		if ((ret != noErr) || (vtool_data->dec_status != noErr)) {
+            char *ret_err = (ret != noErr)?"decode err":"cb err";
+            OSStatus err_code = (ret != noErr)?ret:vtool_data->dec_status;
+
 		    PJ_LOG(5,(THIS_FILE, "Failed to decode frame %d of size "
-		    			 "%d: %d", nalu_type, frm_size,
-		    			 ret));
+                                 "%d %s:%d", nalu_type, frm_size, ret_err,
+                                 err_code));
 		} else {
     		    has_frame = PJ_TRUE;
     		    output->type = PJMEDIA_FRAME_TYPE_VIDEO;
