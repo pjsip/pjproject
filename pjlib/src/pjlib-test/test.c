@@ -175,6 +175,10 @@ int test_inner(void)
     DO_TEST( ssl_sock_test() );
 #endif
 
+#if INCLUDE_MATH_TEST
+    DO_TEST( math_test() );
+#endif
+
 #if INCLUDE_ECHO_SERVER
     //echo_server();
     //echo_srv_sync();

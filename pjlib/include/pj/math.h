@@ -144,7 +144,7 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
     /* Return mean value with 'rounding' */
     stat->mean = (int) (stat->fmean_ + 0.5);
 
-    stat->m2_ += (int)(delta * (val-stat->fmean_));
+    stat->m2_ += (delta * (val-stat->fmean_));
 #else
     delta = val - stat->mean;
     stat->mean += delta/stat->n;

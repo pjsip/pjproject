@@ -18413,6 +18413,61 @@ DEP_CPP_MAIN_W=\
 # End Source File
 # Begin Source File
 
+SOURCE="..\..\src\pjlib-test\math.c"
+
+!IF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSII_FP) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSII_FP) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSII) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSII) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE SH4) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE SH4) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE SH3) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE SH3) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSIV) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSIV) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE emulator) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE emulator) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4I) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4I) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSIV_FP) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSIV_FP) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPS16) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPS16) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4T) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE ARMV4T) Debug"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE x86) Release"
+
+!ELSEIF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE x86) Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE="..\..\src\pjlib-test\mutex.c"
 
 !IF  "$(CFG)" == "pjlib_test_wince - Win32 (WCE MIPSII_FP) Release"

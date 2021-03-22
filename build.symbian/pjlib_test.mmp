@@ -36,6 +36,7 @@ SOURCE	ioq_tcp.c
 SOURCE	ioq_udp.c
 SOURCE	ioq_unreg.c
 SOURCE	list.c
+SOURCE	math.c
 SOURCE	mutex.c
 SOURCE	os.c
 SOURCE	pool_wrap.cpp

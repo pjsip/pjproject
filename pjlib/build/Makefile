@@ -47,8 +47,8 @@ export PJLIB_LDFLAGS += $(_LDFLAGS)
 export TEST_SRCDIR = ../src/pjlib-test
 export TEST_OBJS += activesock.o atomic.o echo_clt.o errno.o exception.o \
 		    fifobuf.o file.o hash_test.o ioq_perf.o ioq_udp.o \
-		    ioq_unreg.o ioq_tcp.o \
-		    list.o mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
+		    ioq_unreg.o ioq_tcp.o list.o math.o \
+		    mutex.o os.o pool.o pool_perf.o rand.o rbtree.o \
 		    select.o sleep.o sock.o sock_perf.o ssl_sock.o \
 		    string.o test.o thread.o timer.o timestamp.o \
 		    udp_echo_srv_sync.o udp_echo_srv_ioqueue.o \

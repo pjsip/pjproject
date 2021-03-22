@@ -60,6 +60,9 @@
     <ClCompile Include="..\src\pjlib-test\main_win32.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjlib-test\math.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\pjlib-test\mutex.c">
       <Filter>Source Files</Filter>
     </ClCompile>
