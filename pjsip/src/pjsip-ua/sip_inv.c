@@ -2610,6 +2610,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     /* Create appropriate message. */
     switch (inv->state) {
+    case PJSIP_INV_STATE_NULL:
     case PJSIP_INV_STATE_CALLING:
     case PJSIP_INV_STATE_EARLY:
     case PJSIP_INV_STATE_INCOMING:
@@ -2661,6 +2662,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
 	    /* For UAS, send a final response. */
 	    tdata = inv->invite_tsx->last_tx;
+	    if (tdata == NULL)
+		tdata = inv->last_answer;
+
 	    PJ_ASSERT_RETURN(tdata != NULL, PJ_EINVALIDOP);
 
 	    //status = pjsip_dlg_modify_response(inv->dlg, tdata, st_code,
