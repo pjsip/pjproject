@@ -2267,7 +2267,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     /* Verify the capture device */
     status = pjmedia_vid_dev_get_info(cap_dev, &info);
-    if (status != PJ_SUCCESS || info.dir != PJMEDIA_DIR_CAPTURE)
+    if (status != PJ_SUCCESS || (info.dir & PJMEDIA_DIR_CAPTURE) == 0)
 	return PJ_EINVAL;
 
     /* The specified capture device is being used already */
