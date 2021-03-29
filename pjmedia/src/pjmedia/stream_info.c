@@ -83,7 +83,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap *rtpmap;
     unsigned i, fmti, pt = 0;
-    unsigned rx_ev_clock_rate;
+    unsigned rx_ev_clock_rate = 0;
     pj_status_t status;
 
     /* Find the first codec which is not telephone-event */
