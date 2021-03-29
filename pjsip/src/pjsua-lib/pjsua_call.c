@@ -3424,6 +3424,11 @@ PJ_DEF(pj_status_t) pjsua_call_xfer( pjsua_call_id call_id,
     /* Associate this call with the client subscription */
     pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, call);
 
+    /* Set dialog Route-Set: */
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+    if (!pj_list_empty(&acc->route_set))
+	pjsip_dlg_set_route_set(dlg, &acc->route_set);
+
     /*
      * Create REFER request.
      */

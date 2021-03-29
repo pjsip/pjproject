@@ -1950,8 +1950,13 @@ static void unsubscribe_buddy_presence(pjsua_buddy_id buddy_id)
     pjsua_buddy *buddy;
     pjsip_tx_data *tdata;
     pj_status_t status;
+    int acc_id;
+    pjsua_acc *acc;
 
     buddy = &pjsua_var.buddy[buddy_id];
+    acc_id = pjsua_acc_find_for_outgoing(&buddy->uri);
+
+    acc = &pjsua_var.acc[acc_id];
 
     if (buddy->sub == NULL)
 	return;
@@ -1963,6 +1968,11 @@ static void unsubscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     PJ_LOG(5,(THIS_FILE, "Buddy %d: unsubscribing..", buddy_id));
     pj_log_push_indent();
+
+    /* Set route-set */
+    if (!pj_list_empty(&acc->route_set)) {
+	pjsip_dlg_set_route_set(buddy->dlg, &acc->route_set);
+    }
 
     status = pjsip_pres_initiate( buddy->sub, 0, &tdata);
     if (status == PJ_SUCCESS) {
