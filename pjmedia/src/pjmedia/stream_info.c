@@ -83,6 +83,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap *rtpmap;
     unsigned i, fmti, pt = 0;
+    unsigned rx_ev_clock_rate;
     pj_status_t status;
 
     /* Find the first codec which is not telephone-event */
@@ -315,6 +316,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
 	    si->rx_event_pt = pj_strtoul(&r.pt);
+	    rx_ev_clock_rate = r.clock_rate;
 	    break;
 	}
     }
@@ -330,8 +332,13 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
-	    si->tx_event_pt = pj_strtoul(&r.pt);
-	    break;
+	    /* Check if the clock rate matches local event's clock rate. */
+	    if (r.clock_rate == rx_ev_clock_rate) {
+	    	si->tx_event_pt = pj_strtoul(&r.pt);
+	    	break;
+	    } else if (si->tx_event_pt == -1) {
+	    	si->tx_event_pt = pj_strtoul(&r.pt);
+	    }
 	}
     }
 
