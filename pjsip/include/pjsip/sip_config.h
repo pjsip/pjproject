@@ -1045,6 +1045,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TSX_1XX_RETRANS_DELAY	60
 #endif
 
+/**
+ * Setting to determine if SIP transaction will always terminate upon
+ * transport error. If disabled, then there are certain cases (such as
+ * for INVITE UAS tsx that hasn't been confirmed) when the transaction
+ * can be allowed to continue.
+ *
+ * Default: 1 (transaction always terminated)
+ */
+#ifndef PJSIP_TSX_ALWAYS_TERMINATE_ON_TP_ERROR
+#   define PJSIP_TSX_ALWAYS_TERMINATE_ON_TP_ERROR 1
+#endif
+
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
 /* User agent. */
