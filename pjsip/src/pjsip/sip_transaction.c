@@ -1141,7 +1141,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    /* Release transport as it's no longer working. */
 	    tsx_update_transport(tsx, NULL);
 
-#if !PJSIP_TSX_ALWAYS_TERMINATE_ON_TP_ERROR
+#if PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR
 	    if (tp_disc && tsx->method.id == PJSIP_INVITE_METHOD &&
 	    	tsx->role == PJSIP_ROLE_UAS && tsx->status_code < 200 &&
 	    	!(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) &&
