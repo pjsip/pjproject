@@ -97,6 +97,11 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+	if ((it->ifa_flags & IFF_RUNNING)==0) {
+	    TRACE_((THIS_FILE, "  interface is not running"));
+	    continue; /* Skip when interface is not running */
+	}
+
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	if (it->ifa_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
@@ -208,6 +213,11 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+	if ((iff.ifr_flags & IFF_RUNNING)==0) {
+	    TRACE_((THIS_FILE, "  interface is not running"));
+	    continue; /* Skip when interface is not running */
+	}
+
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	if (iff.ifr_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
@@ -284,6 +294,11 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 	if ((ifreq.ifr_flags & IFF_UP)==0) {
 	    TRACE_((THIS_FILE, "  interface is down"));
 	    continue; /* Skip when interface is down */
+	}
+
+        if ((ifreq.ifr_flags & IFF_RUNNING)==0) {
+	    TRACE_((THIS_FILE, "  interface is not running"));
+	    continue; /* Skip when interface is not running */
 	}
 
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
