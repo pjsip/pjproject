@@ -1710,7 +1710,7 @@ class Call:
 
         Keyword arguments:
         hdr_list   -- Optional list of header (key, value) tuples
-                    to be sent with the message.
+                      to be sent with the message.
         options    -- Must be zero for now.
 
         """
