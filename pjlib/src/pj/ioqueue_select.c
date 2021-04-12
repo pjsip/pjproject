@@ -508,14 +508,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     /* Ticket #520, key will be erased more than once */
     pj_list_erase(key);
 #endif
-    PJ_FD_CLR(key->fd, &ioqueue->rfdset);
-    PJ_FD_CLR(key->fd, &ioqueue->wfdset);
+
+    /* Remove socket from sets and close socket. */
+    if (key->fd != PJ_INVALID_SOCKET) {
+	PJ_FD_CLR(key->fd, &ioqueue->rfdset);
+	PJ_FD_CLR(key->fd, &ioqueue->wfdset);
 #if PJ_HAS_TCP
-    PJ_FD_CLR(key->fd, &ioqueue->xfdset);
+	PJ_FD_CLR(key->fd, &ioqueue->xfdset);
 #endif
 
-    /* Close socket. */
-    if (key->fd != PJ_INVALID_SOCKET) {
         pj_sock_close(key->fd);
         key->fd = PJ_INVALID_SOCKET;
     }
