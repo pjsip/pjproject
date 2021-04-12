@@ -1271,8 +1271,9 @@ class Account:
                     created Call object. If this CallCallback is not
                     specified (i.e. None is given), it must be installed
                     later using call.set_callback().
-        hdr_list -- Optional list of headers to be sent with outgoing
-                    INVITE
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with outgoing INVITE
+
 
         Return:
             Call instance.
@@ -1316,7 +1317,7 @@ class Account:
                        callback
         state       -- Subscription state, from SubscriptionState
         reason      -- Optional reason phrase.
-        hdr_list    -- Optional header list.
+        hdr_list    -- Optional list of header (key, value) tuples.
         """
         lck = self._lib().auto_lock()
         _pjsua.acc_pres_notify(self._id, pres_obj, state, reason, 
@@ -1333,8 +1334,8 @@ class Account:
                         instant message when delivery status callback
                         is called.
         content_type -- MIME type identifying the instant message
-        hdr_list     -- Optional list of headers to be sent with the
-                        request.
+        hdr_list     -- Optional list of header (key, value) tuples
+                        to be sent with the request.
 
         """
         lck = self._lib().auto_lock()
@@ -1654,8 +1655,8 @@ class Call:
         code     -- SIP status code.
         reason   -- Reason phrase. Put empty to send default reason
                     phrase for the status code.
-        hdr_list -- Optional list of headers to be sent with the
-                    message.
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with the message.
 
         """
         lck = self._lib().auto_lock()
@@ -1668,8 +1669,8 @@ class Call:
         Put the call on hold.
 
         Keyword arguments:
-        hdr_list -- Optional list of headers to be sent with the
-                    message.
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with the message.
         """
         lck = self._lib().auto_lock()
         err = _pjsua.call_set_hold(self._id, Lib._create_msg_data(hdr_list))
@@ -1680,8 +1681,8 @@ class Call:
         Release the call from hold.
 
         Keyword arguments:
-        hdr_list -- Optional list of headers to be sent with the
-                    message.
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with the message.
 
         """
         lck = self._lib().auto_lock()
@@ -1694,8 +1695,8 @@ class Call:
         Send re-INVITE and optionally offer new codecs to use.
 
         Keyword arguments:
-        hdr_list   -- Optional list of headers to be sent with the
-                      message.
+        hdr_list   -- Optional list of header (key, value) tuples
+                      to be sent with the message.
 
         """
         lck = self._lib().auto_lock()
@@ -1708,8 +1709,8 @@ class Call:
         Send UPDATE and optionally offer new codecs to use.
 
         Keyword arguments:
-        hdr_list   -- Optional list of headers to be sent with the
-                      message.
+        hdr_list   -- Optional list of header (key, value) tuples
+                    to be sent with the message.
         options    -- Must be zero for now.
 
         """
@@ -1724,8 +1725,8 @@ class Call:
 
         Keyword arguments:
         dest_uri -- Specify the SIP URI to transfer the call to.
-        hdr_list -- Optional list of headers to be sent with the
-                    message.
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with the message.
 
         """
         lck = self._lib().auto_lock()
@@ -1739,8 +1740,8 @@ class Call:
 
         Keyword arguments:
         call     -- The Call object to transfer call to.
-        hdr_list -- Optional list of headers to be sent with the
-                    message.
+        hdr_list -- Optional list of header (key, value) tuples
+                    to be sent with the message.
         options  -- Must be zero for now.
 
         """
@@ -1772,7 +1773,8 @@ class Call:
 
         Keyword arguments:
         method       -- SIP method name.
-        hdr_list     -- Optional header list to be sent with the request.
+        hdr_list     -- Optional list of header (key, value) tuples
+                        to be sent with the request.
         content_type -- Content type to describe the body, if the body
                         is present
         body         -- Optional SIP message body.
@@ -1803,8 +1805,8 @@ class Call:
                         instant message when delivery status callback
                         is called.
         content_type -- MIME type identifying the instant message
-        hdr_list     -- Optional list of headers to be sent with the
-                        request.
+        hdr_list     -- Optional list of header (key, value) tuples
+                        to be sent with the request.
 
         """
         lck = self._lib().auto_lock()
@@ -2002,8 +2004,8 @@ class Buddy:
                         instant message when delivery status callback
                         is called.
         content_type -- MIME type identifying the instant message
-        hdr_list     -- Optional list of headers to be sent with the
-                        request.
+        hdr_list     -- Optional list of header (key, value) tuples
+                        to be sent with the request.
 
         """
         lck = self._lib().auto_lock()
@@ -2018,8 +2020,8 @@ class Buddy:
 
         Keyword argument:
         is_typing -- boolean to indicate wheter user is typing.
-        hdr_list  -- Optional list of headers to be sent with the
-                     request.
+        hdr_list  -- Optional list of header (key, value) tuples
+                     to be sent with the request.
 
         """
         lck = self._lib().auto_lock()
@@ -2960,4 +2962,3 @@ def _Trace(args):
         for arg in args:
             print arg,
         print " **"
-
