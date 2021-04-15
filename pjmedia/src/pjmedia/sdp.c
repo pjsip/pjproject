@@ -551,7 +551,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_ssrc( pj_pool_t *pool,
     						  + 10 /* 32-bit integer */
     						  + 1 /* NULL */);
     attr->value.slen = pj_ansi_snprintf(attr->value.ptr, cname->slen+18,
-    					"%d cname:%.*s", ssrc,
+    					"%u cname:%.*s", ssrc,
 			   	   	(int)cname->slen, cname->ptr);
 
     return attr;
