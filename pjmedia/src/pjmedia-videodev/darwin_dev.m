@@ -1171,10 +1171,10 @@ static pj_status_t darwin_stream_set_cap(pjmedia_vid_dev_stream *s,
         {
             pj_memcpy(&strm->param.disp_size, pval,
                       sizeof(strm->param.disp_size));
-            CGRect r = strm->render_view.bounds;
-            r.size = CGSizeMake(strm->param.disp_size.w,
-                                strm->param.disp_size.h);
             dispatch_sync_on_main_queue(^{
+            	CGRect r = strm->render_view.bounds;
+            	r.size = CGSizeMake(strm->param.disp_size.w,
+                                    strm->param.disp_size.h);
 		strm->render_view.bounds = r;
                 if (strm->prev_layer)
                     strm->prev_layer.frame = r;
