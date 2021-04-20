@@ -1167,6 +1167,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     unsigned chal_cnt, auth_cnt;
     pjsip_via_hdr *via;
     pj_status_t status;
+    pj_status_t last_auth_err;
 
     PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
 		     PJ_EINVAL);
@@ -1188,6 +1189,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     hdr = rdata->msg_info.msg->hdr.next;
     chal_cnt = 0;
     auth_cnt = 0;
+    last_auth_err = PJSIP_EAUTHNOAUTH;
     while (hdr != &rdata->msg_info.msg->hdr) {
 	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
@@ -1233,6 +1235,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	status = process_auth(tdata->pool, hchal, tdata->msg->line.req.uri,
 			      tdata, sess, cached_auth, &hauth);
 	if (status != PJ_SUCCESS) {
+	    last_auth_err = status;
+
 	    /* Process next header. */
 	    hdr = hdr->next;
 	    continue;
@@ -1258,7 +1262,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 
     /* Check if any authorization header has been created */
     if (auth_cnt == 0)
-	return PJSIP_EAUTHNOAUTH;
+	return last_auth_err;
 
     /* Remove branch param in Via header. */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
