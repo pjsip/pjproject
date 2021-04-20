@@ -4,6 +4,7 @@ import sys
 import time
 import re
 import shutil
+import platform
 
 PYTHON = os.path.basename(sys.executable)
 
@@ -28,8 +29,6 @@ excluded_tests = [
     "scripts-media-playrec/100_resample_lf_11",      # related to clock-rate 11 kHz problem
     "pesq",                                          # temporarily disabling all pesq related test due to unreliability
     # TODO check all tests below for false negatives
-    "pjmedia-test",
-    "pjsip-test",
     "call_305_ice_comp_1_2",
     "scripts-sendto/155_err_sdp_bad_syntax",
     "transfer-attended",
@@ -45,6 +44,11 @@ excluded_tests = [
     "uas-register-ip-change",
     "uas-timer-update"
 ]
+
+# Exclude scripts-sipp/uac-reinvite-bad-via-branch on MacOS due to unreliable result
+if platform.system()=='Darwin':
+    excluded_tests.append("scripts-sipp/uac-reinvite-bad-via-branch")
+
 
 # Add basic tests
 for f in os.listdir("scripts-run"):
