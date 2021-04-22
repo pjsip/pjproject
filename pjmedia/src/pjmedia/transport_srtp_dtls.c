@@ -39,7 +39,7 @@
 #endif
 
 /* Set to 1 to enable DTLS-SRTP debugging */
-#define DTLS_DEBUG  0
+#define DTLS_DEBUG  1
 
 /* DTLS-SRTP transport op */
 static pj_status_t dtls_media_create  (pjmedia_transport *tp,
@@ -117,6 +117,7 @@ typedef struct dtls_srtp
     pj_bool_t		 got_keys;	    /* DTLS nego done & keys ready  */
     pjmedia_srtp_crypto	 tx_crypto;
     pjmedia_srtp_crypto	 rx_crypto;
+    pj_bool_t		 use_rtcp_mux;
 
     char		 buf[PJMEDIA_MAX_MTU];
     pjmedia_clock	*clock;		    /* Timer workaround for retrans */
@@ -928,8 +929,8 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
     }
 
     /* Get RTCP address. If "rtcp" attribute is present in the SDP,
-     * set the RTCP address from that attribute. Otherwise, calculate
-     * from RTP address.
+     * set the RTCP address from that attribute, else check for
+     * "rtcp-mux" attribute. Otherwise, calculate from RTP address.
      */
     a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
 			       "rtcp", NULL);
@@ -948,6 +949,12 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 			  pj_sockaddr_get_addr(rem_rtp),
 			  pj_sockaddr_get_addr_len(rem_rtp));
 	    }
+	}
+    } else {
+    	a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
+			       	   "rtcp-mux", NULL);
+	if (a) {
+	    pj_sockaddr_cp(rem_rtcp, rem_rtp);
 	}
     }
     if (!pj_sockaddr_has_addr(rem_rtcp)) {
@@ -1259,7 +1266,8 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
                                    &rem_rtcp);
             if (status == PJ_SUCCESS) {
                 if (pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
-                    pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp))
+                    (!ds->use_rtcp_mux &&
+                     pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp)))
                 {
                     rem_addr_changed = PJ_TRUE;
                 }
@@ -1462,7 +1470,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
 	    		    &info.sock_info.rtcp_addr_name) == 0)
 	{
-	    use_rtcp_mux = PJ_TRUE;
+	    ds->use_rtcp_mux = use_rtcp_mux = PJ_TRUE;
 	}
 	ice_info = (pjmedia_ice_transport_info*)
 		   pjmedia_transport_info_get_spc_info(
