@@ -39,7 +39,7 @@
 #endif
 
 /* Set to 1 to enable DTLS-SRTP debugging */
-#define DTLS_DEBUG  1
+#define DTLS_DEBUG  0
 
 /* DTLS-SRTP transport op */
 static pj_status_t dtls_media_create  (pjmedia_transport *tp,
