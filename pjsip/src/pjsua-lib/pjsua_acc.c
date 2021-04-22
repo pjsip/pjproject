@@ -4119,7 +4119,7 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 	    {
 		acc->ip_change_op = PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS;
 
-		pjsua_call_cleanup_flag(&call_info.setting);
+		pjsua_call_cleanup_setting(&call_info.setting);
 		call_info.setting.flag |=
 					 acc->cfg.ip_change_cfg.reinvite_flags;
 

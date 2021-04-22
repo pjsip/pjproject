@@ -322,6 +322,13 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 /**
+ * Maximum number of call medias to be supported.
+ */
+#ifndef PJSUA_MAX_CALL_MEDIA
+#   define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
+#endif
+
+/**
  * Default value of SRTP mode usage. Valid values are PJMEDIA_SRTP_DISABLED, 
  * PJMEDIA_SRTP_OPTIONAL, and PJMEDIA_SRTP_MANDATORY.
  */
@@ -1048,12 +1055,26 @@ typedef struct pjsua_call_setting
     unsigned         aud_cnt;
 
     /**
+     * Audio streams' direction for this call.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    unsigned	     aud_dir[PJSUA_MAX_CALL_MEDIA];
+
+    /**
      * Number of simultaneous active video streams for this call. Setting
      * this to zero will disable video in this call.
      *
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned         vid_cnt;
+
+    /**
+     * Video streams' direction for this call.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    unsigned	     vid_dir[PJSUA_MAX_CALL_MEDIA];
 
 } pjsua_call_setting;
 

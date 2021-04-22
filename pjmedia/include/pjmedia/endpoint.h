@@ -296,7 +296,7 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_base_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, must be zero for now.
+ * @param options	Option flags, to indicate the audio direction.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -313,7 +313,7 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, must be zero for now.
+ * @param options	Option flags, to indicate the video direction.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.

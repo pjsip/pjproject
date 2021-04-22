@@ -102,10 +102,6 @@ struct pjsua_call_media
                                  int *sip_err_code);
 };
 
-/**
- * Maximum number of SDP "m=" lines to be supported.
- */
-#define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
 
 /* Call answer's list. */
 typedef struct call_answer
@@ -739,7 +735,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 				  int *sip_err_code,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb);
-void pjsua_call_cleanup_flag(pjsua_call_setting *opt);
+void pjsua_call_cleanup_setting(pjsua_call_setting *opt);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 void pjsua_media_prov_clean_up(pjsua_call_id call_id);
