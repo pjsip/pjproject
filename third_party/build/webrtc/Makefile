@@ -27,13 +27,19 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 
 export WEBRTC_SRCDIR = ../../webrtc/src
 export WEBRTC_OBJS = \
+	common_audio/audio_util.o \
 	common_audio/third_party/ooura/fft_size_128/ooura_fft.o \
+	common_audio/resampler/push_sinc_resampler.o \
+	common_audio/resampler/sinc_resampler.o \
+	common_audio/signal_processing/splitting_filter.o \
 	api/audio/channel_layout.o \
 	api/audio/echo_canceller3_config.o \
 	api/audio/echo_canceller3_factory.o \
 	api/audio/echo_detector_creator.o \
 	modules/audio_processing/audio_buffer.o                    \
 	modules/audio_processing/high_pass_filter.o                    \
+	modules/audio_processing/splitting_filter.o                    \
+	modules/audio_processing/three_band_filter_bank.o                    \
 	modules/audio_processing/aec3/adaptive_fir_filter_erl.o                    \
 	modules/audio_processing/aec3/adaptive_fir_filter.o                    \
 	modules/audio_processing/aec3/aec_state.o                    \
@@ -113,6 +119,7 @@ export WEBRTC_OBJS = \
 	modules/audio_processing/aec3/echo_canceller3.o 
 
 export WEBRTC_OBJS += \
+	common_audio/resampler/sinc_resampler_neon.o \
 	common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.o
 
 export WEBRTC_OBJS2 = \

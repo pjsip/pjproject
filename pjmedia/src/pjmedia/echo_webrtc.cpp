@@ -31,6 +31,8 @@
 */
 
 #include "modules/audio_processing/aec3/echo_canceller3.h"
+#include "modules/audio_processing/audio_buffer.h"
+
 using namespace webrtc;
 
 #include "echo_internal.h"
@@ -69,6 +71,11 @@ using namespace webrtc;
 typedef struct webrtc_ec
 {
     void       *AEC_inst;
+    EchoCanceller3 *aec;
+
+    AudioBuffer *cap_buf;
+    AudioBuffer *rend_buf;
+
 //    NsHandle   *NS_inst;
     unsigned    options;
     unsigned	samples_per_frame;
@@ -76,6 +83,8 @@ typedef struct webrtc_ec
     unsigned    clock_rate;
     unsigned	channel_count;
     unsigned    subframe_len;
+    unsigned	frame_length;
+    unsigned	num_bands;
     sample      tmp_buf[BUF_LEN];
     sample      tmp_buf2[BUF_LEN];
 } webrtc_ec;
@@ -165,7 +174,23 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     echo->options = options;
     
     
-    EchoCanceller3 *aec = new EchoCanceller3(EchoCanceller3Config(), 16000, 1, 1);
+    // clock rate can only be 16000, 32000, or 48000
+    echo->frame_length = 160;
+    echo->num_bands = clock_rate/16000;
+    echo->aec = new EchoCanceller3(EchoCanceller3Config(), clock_rate, channel_count, channel_count);
+    
+    echo->cap_buf = new AudioBuffer(clock_rate,
+                        channel_count,
+                        clock_rate,
+                        channel_count,
+                        clock_rate,
+                        channel_count);
+    echo->rend_buf = new AudioBuffer(clock_rate,
+                       channel_count,
+                       clock_rate,
+                       channel_count,
+                       clock_rate,
+                       channel_count);
     
     /* Create WebRTC AEC */
 /*    echo->AEC_inst = WebRtcAec_Create();
@@ -291,6 +316,32 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
     
+    StreamConfig scfg(echo->clock_rate, echo->channel_count);
+
+    echo->aec->AnalyzeCapture(echo->cap_buf);
+    if (echo->clock_rate > 16000) {
+      echo->cap_buf->SplitIntoFrequencyBands();
+      echo->rend_buf->SplitIntoFrequencyBands();
+    }
+
+for (i = 0; i < echo->samples_per_frame; i += echo->frame_length) {
+    echo->cap_buf->CopyFrom(rec_frm + i, scfg);
+    echo->rend_buf->CopyFrom(play_frm + i, scfg);
+
+/*
+      PopulateInputFrame(echo->frame_length, echo->num_bands, frame_index,
+                         &echo->cap_buf->split_bands(0)[0], 0);
+      PopulateInputFrame(echo->frame_length, frame_index,
+                         &echo->rend_buf->channels()[0][0], 0);
+*/
+      echo->aec->AnalyzeRender(echo->rend_buf);
+      echo->aec->ProcessCapture(echo->cap_buf, false);
+      
+      echo->cap_buf->CopyTo(scfg, rec_frm + i);
+}
+    
+    return PJ_SUCCESS; 
+   
     for(i = echo->samples_per_frame / echo->subframe_len; i > 0; i--) {
 #if PJMEDIA_WEBRTC_AEC_USE_MOBILE
 	buf_ptr = &play_frm[frm_idx];
