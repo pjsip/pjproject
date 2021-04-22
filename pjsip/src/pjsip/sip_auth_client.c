@@ -1042,7 +1042,7 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
     pjsip_hdr *hdr;
     pj_status_t status;
 
-    /* See if we have sent authorization header for this realm */
+    /* See if we have sent authorization header for this realm (and scheme) */
     hdr = tdata->msg->hdr.next;
     while (hdr != &tdata->msg->hdr) {
 	if ((hchal->type == PJSIP_H_WWW_AUTHENTICATE &&
@@ -1052,7 +1052,8 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 	{
 	    sent_auth = (pjsip_authorization_hdr*) hdr;
 	    if (pj_stricmp(&hchal->challenge.common.realm,
-			   &sent_auth->credential.common.realm )==0)
+			   &sent_auth->credential.common.realm)==0 &&
+		pj_stricmp(&hchal->scheme, &sent_auth->scheme)==0)
 	    {
 		/* If this authorization has empty response, remove it. */
 		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
@@ -1061,6 +1062,14 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
 		    /* This is empty authorization, remove it. */
 		    hdr = hdr->next;
 		    pj_list_erase(sent_auth);
+		    continue;
+		} else
+		if (pj_stricmp(&sent_auth->scheme, &pjsip_DIGEST_STR)==0 &&
+		    pj_stricmp(&sent_auth->credential.digest.algorithm,
+		               &hchal->challenge.digest.algorithm)!=0)
+		{
+		    /* Same 'digest' scheme but different algo */
+		    hdr = hdr->next;
 		    continue;
 		} else {
 		    /* Found previous authorization attempt */
@@ -1155,9 +1164,10 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 {
     pjsip_tx_data *tdata;
     const pjsip_hdr *hdr;
-    unsigned chal_cnt;
+    unsigned chal_cnt, auth_cnt;
     pjsip_via_hdr *via;
     pj_status_t status;
+    pj_status_t last_auth_err;
 
     PJ_ASSERT_RETURN(sess && rdata && old_request && new_request,
 		     PJ_EINVAL);
@@ -1178,6 +1188,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
      */
     hdr = rdata->msg_info.msg->hdr.next;
     chal_cnt = 0;
+    auth_cnt = 0;
+    last_auth_err = PJSIP_EAUTHNOAUTH;
     while (hdr != &rdata->msg_info.msg->hdr) {
 	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
@@ -1222,8 +1234,13 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	 */
 	status = process_auth(tdata->pool, hchal, tdata->msg->line.req.uri,
 			      tdata, sess, cached_auth, &hauth);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    last_auth_err = status;
+
+	    /* Process next header. */
+	    hdr = hdr->next;
+	    continue;
+	}
 
 	if (pj_pool_get_used_size(cached_auth->pool) >
 	    PJSIP_AUTH_CACHED_POOL_MAX_SIZE) 
@@ -1236,11 +1253,16 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 
 	/* Process next header. */
 	hdr = hdr->next;
+	auth_cnt++;
     }
 
     /* Check if challenge is present */
     if (chal_cnt == 0)
 	return PJSIP_EAUTHNOCHAL;
+
+    /* Check if any authorization header has been created */
+    if (auth_cnt == 0)
+	return last_auth_err;
 
     /* Remove branch param in Via header. */
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
