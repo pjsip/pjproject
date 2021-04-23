@@ -622,6 +622,10 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ac_main_obj
 ac_host
+ac_webrtc_aec3_ldflags
+ac_webrtc_aec3_cflags
+ac_webrtc_aec3_instset
+ac_no_webrtc_aec3
 ac_webrtc_ldflags
 ac_webrtc_cflags
 ac_webrtc_instset
@@ -693,6 +697,7 @@ ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
 ac_pjmedia_resample
+ac_external_webrtc_aec3
 ac_external_webrtc
 ac_external_yuv
 ac_srtp_shutdown_present
@@ -799,6 +804,7 @@ with_external_gsm
 with_external_srtp
 with_external_yuv
 with_external_webrtc
+with_external_webrtc_aec3
 enable_resample
 enable_sound
 with_external_pa
@@ -846,6 +852,7 @@ with_bcg729
 enable_bcg729
 enable_libyuv
 enable_libwebrtc
+enable_libwebrtc_aec3
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1521,6 +1528,8 @@ Optional Features:
   --disable-bcg729        Disable bcg729 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
+  --disable-libwebrtc-aec3
+                          Exclude libwebrtc-aec3 in the build
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1549,6 +1558,12 @@ Optional Packages:
                           in "third_party" directory. When this option is set,
                           make sure that webrtc is accessible to use (hint:
                           use CFLAGS and LDFLAGS env var to set the
+                          include/lib paths)
+  --with-external-webrtc-aec3
+                          Use external webrtc AEC3 development files, not the
+                          one in "third_party" directory. When this option is
+                          set, make sure that webrtc is accessible to use
+                          (hint: use CFLAGS and LDFLAGS env var to set the
                           include/lib paths)
   --with-external-pa      Use external PortAudio development files. When this
                           option is set, make sure that PortAudio is
@@ -6354,6 +6369,44 @@ fi
 
 
 
+ac_external_webrtc_aec3=0
+
+
+# Check whether --with-external-webrtc-aec3 was given.
+if test "${with_external_webrtc_aec3+set}" = set; then :
+  withval=$with_external_webrtc_aec3;
+	if test "x$with_external_webrtc_aec3" != "xno"; then
+		# Test webrtc AEC3 installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external webrtc AEC3 is installed" >&5
+$as_echo_n "checking if external webrtc AEC3 is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "modules/audio_processing/aec3/echo_canceller3.h"
+
+int
+main ()
+{
+EchoCanceller3 ec(EchoCanceller3Config(), 16000, 1, 1);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_webrtc_aec3="1"
+
+else
+  as_fn_error $? "Unable to use external webrtc AEC3. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
 ac_pjmedia_resample=libresample
 
 # Check whether --enable-resample was given.
@@ -9174,6 +9227,93 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    	 ;;
                              *)
                                  ac_webrtc_instset=sse2
+                                 ;;
+                         esac
+			;;
+		     *)
+			;;
+		esac
+
+fi
+
+
+
+
+
+
+
+# Check whether --enable-libwebrtc_aec3 was given.
+if test "${enable_libwebrtc_aec3+set}" = set; then :
+  enableval=$enable_libwebrtc_aec3; if test "$enable_libwebrtc_aec3" = "no"; then
+		ac_no_webrtc_aec3=1
+		$as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is disabled...yes" >&5
+$as_echo "Checking if libwebrtc-aec3 is disabled...yes" >&6; }
+	       fi
+else
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is disabled...no" >&5
+$as_echo "Checking if libwebrtc-aec3 is disabled...no" >&6; }
+		  case $target in
+		      *-apple-darwin_ios*)
+			case $target in
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    *arm*)
+				ac_webrtc_aec3_instset=neon
+			    	;;
+			    *)
+				ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		      *android*)
+			case $TARGET_ABI in
+			    armeabi-v7a)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
+			    	;;
+			    armeabi)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+			    	;;
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    mips64*)
+			    	ac_webrtc_aec3_instset=generic
+			        ;;
+			    mips*)
+			    	ac_webrtc_aec3_instset=mips
+			        ;;
+			    x86*)
+			    	ac_webrtc_aec3_instset=sse2
+			    	;;
+			    *)
+				ac_webrtc_aec3_instset=generic
+			    	;;
+			esac
+		        ;;
+		     *mingw* | *cygw*)
+			ac_webrtc_aec3_instset=sse2
+			ac_webrtc_aec3_cflags="-msse2"
+			;;
+		     *win32* | *w32* | *darwin* | *linux*)
+                         case $target in
+                             armv7l*gnueabihf)
+                                 ac_webrtc_aec3_instset=neon
+                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ;;
+			     arm-apple-darwin*)
+				 ac_webrtc_aec3_instset=neon
+				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	 ;;
+                             *)
+                                 ac_webrtc_aec3_instset=sse2
                                  ;;
                          esac
 			;;

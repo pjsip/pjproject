@@ -228,8 +228,8 @@ depend:
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
 	     echo "$(OBJDIR)/" | tr -d '\n' >> $(DEP_FILE); \
-	     if echo $$F | grep -q .cpp$$; then \
-		dep="$(CC) -M $(DEPCXXFLAGS) $$F"; \
+	     if echo $$F | grep -q ".c[c|pp]"$$; then \
+		dep="$(CXX) -M $(DEPCXXFLAGS) $$F"; \
 	     else \
 		dep="$(CC) -M $(DEPCFLAGS) $$F"; \
 	     fi; \

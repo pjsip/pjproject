@@ -152,6 +152,20 @@ endif
 endif
 endif
 
+ifneq (@ac_no_webrtc_aec3@,1)
+ifeq (@ac_external_webrtc_aec3@,1)
+APP_THIRD_PARTY_EXT += -lwebrtc-aec3
+else
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc-aec3-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lwebrtc-aec3-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lwebrtc-aec3
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc-aec3.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libwebrtc.$(SHLIB_SUFFIX)
+endif
+endif
+endif
+
 
 # Additional flags
 @ac_build_mak_vars@

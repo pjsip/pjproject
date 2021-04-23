@@ -23,7 +23,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC != 0
+#if defined(PJMEDIA_HAS_WEBRTC_AEC3) && PJMEDIA_HAS_WEBRTC_AEC3 != 0
 
 #include "modules/audio_processing/aec3/echo_canceller3.h"
 #include "modules/audio_processing/ns/noise_suppressor.h"
@@ -33,7 +33,7 @@ using namespace webrtc;
 
 #include "echo_internal.h"
 
-#define THIS_FILE		"echo_webrtc.cpp"
+#define THIS_FILE		"echo_webrtc_aec3.cpp"
 
 typedef struct webrtc_ec
 {
