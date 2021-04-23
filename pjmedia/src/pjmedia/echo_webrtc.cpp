@@ -26,6 +26,7 @@
 #if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC != 0
 
 #include "modules/audio_processing/aec3/echo_canceller3.h"
+#include "modules/audio_processing/ns/noise_suppressor.h"
 #include "modules/audio_processing/audio_buffer.h"
 
 using namespace webrtc;
@@ -43,9 +44,10 @@ typedef struct webrtc_ec
     unsigned	frame_length;
     unsigned	num_bands;
 
-    EchoControl  *aec;
-    AudioBuffer  *cap_buf;
-    AudioBuffer  *rend_buf;
+    EchoControl     *aec;
+    NoiseSuppressor *ns;
+    AudioBuffer     *cap_buf;
+    AudioBuffer     *rend_buf;
 } webrtc_ec;
 
 
@@ -87,29 +89,11 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
     echo->rend_buf = new AudioBuffer(clock_rate, channel_count, clock_rate,
                        		     channel_count, clock_rate, channel_count);
 
-/*
-    if (options & PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR) {
-        echo->NS_inst = WebRtcNs_Create();
-        if (echo->NS_inst) {
-            status = WebRtcNs_Init(echo->NS_inst, clock_rate);
-            if (status != 0) {
-                WebRtcNs_Free(echo->NS_inst);
-                echo->NS_inst = NULL;
-            }
-        }
-        if (!echo->NS_inst) {
-            PJ_LOG(3, (THIS_FILE, "Unable to create WebRTC noise suppressor"));
-        }
-    }
 
-#if PJMEDIA_WEBRTC_AEC_USE_MOBILE
-    PJ_LOG(3, (THIS_FILE, "WebRTC AEC mobile successfully created with "
-			  "options %d", options));
-#else
-    PJ_LOG(3, (THIS_FILE, "WebRTC AEC successfully created with "
-			  "options %d", options));
-#endif
-*/
+    if (options & PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR) {
+	NsConfig cfg;
+	echo->ns = new NoiseSuppressor(cfg, clock_rate, channel_count);
+    }
 
     /* Done */
     *p_echo = echo;
@@ -128,6 +112,10 @@ PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
     if (echo->aec) {
     	delete echo->aec;
     	echo->aec = NULL;
+    }
+    if (echo->ns) {
+    	delete echo->ns;
+    	echo->ns = NULL;
     }
     
     if (echo->cap_buf) {
@@ -190,12 +178,20 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
     	echo->aec->AnalyzeCapture(echo->cap_buf);
       	echo->aec->AnalyzeRender(echo->rend_buf);
       	
+      	if (echo->ns) {
+      	    echo->ns->Analyze(*echo->cap_buf);
+      	}
+      	
       	echo->aec->ProcessCapture(echo->cap_buf, false);
+
+	if (echo->ns) {
+      	    echo->ns->Process(echo->cap_buf);
+	}
 
     	if (echo->clock_rate > 16000) {
       	    echo->cap_buf->MergeFrequencyBands();
 	}
-      
+
      	echo->cap_buf->CopyTo(scfg, rec_frm + i);
     }
     
@@ -208,8 +204,9 @@ PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     EchoCanceller3::Metrics metrics;
-    
-    PJ_ASSERT_RETURN(echo, PJ_EINVAL);
+
+    if (!echo || !echo->aec)
+    	return PJ_EINVAL;    
     
     metrics = echo->aec->GetMetrics();
     p_stat->delay = metrics.delay_ms;

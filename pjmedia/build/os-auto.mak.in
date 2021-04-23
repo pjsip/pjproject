@@ -222,7 +222,7 @@ export CFLAGS += -DPJMEDIA_WEBRTC_AEC_USE_MOBILE=1
 endif
 
 ifeq (@ac_external_webrtc@,0)
-export CFLAGS += -I$(THIRD_PARTY)/webrtc/src
+export CFLAGS += -I$(THIRD_PARTY)/webrtc/src -I$(THIRD_PARTY)/webrtc/src/webrtc_aec3
 endif
 endif
 
