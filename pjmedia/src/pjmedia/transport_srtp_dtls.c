@@ -902,7 +902,8 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 				 const pjmedia_sdp_session *sdp_remote,
 				 unsigned media_index,
                                  pj_sockaddr *rem_rtp,
-                                 pj_sockaddr *rem_rtcp)
+                                 pj_sockaddr *rem_rtcp,
+                                 pj_bool_t *rtcp_mux)
 {
     pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
     pjmedia_sdp_conn *conn;
@@ -955,6 +956,13 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 	pj_memcpy(rem_rtcp, rem_rtp, sizeof(pj_sockaddr));
 	rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
 	pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
+    }
+
+    /* Check if remote indicates the desire to use rtcp-mux in its SDP. */
+    if (rtcp_mux) {
+    	a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
+			       	   "rtcp-mux", NULL);
+	*rtcp_mux = (a? PJ_TRUE: PJ_FALSE);
     }
 
     return PJ_SUCCESS;
@@ -1254,12 +1262,27 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
         if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
             pj_sockaddr rem_rtp;
             pj_sockaddr rem_rtcp;
+            pj_bool_t use_rtcp_mux;
 
             status = get_rem_addrs(ds, sdp_remote, media_index, &rem_rtp,
-                                   &rem_rtcp);
+                                   &rem_rtcp, &use_rtcp_mux);
             if (status == PJ_SUCCESS) {
+            	if (use_rtcp_mux) {
+            	    /* Remote indicates it wants to use rtcp-mux */
+		    pjmedia_transport_info info;
+
+		    pjmedia_transport_info_init(&info);
+		    pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+		    if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+	    		&info.sock_info.rtcp_addr_name))
+		    {
+		    	/* But we do not wish to use rtcp mux */
+	    		use_rtcp_mux = PJ_FALSE;
+		    }
+            	}
                 if (pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
-                    pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp))
+                    (!use_rtcp_mux &&
+                     pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp)))
                 {
                     rem_addr_changed = PJ_TRUE;
                 }
@@ -1328,7 +1351,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 
         if (sdp_remote) {
             get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
-                          &ds->rem_rtcp);
+                          &ds->rem_rtcp, NULL);
         }
 
 	if (pj_sockaddr_has_addr(&ds->rem_addr)) {
@@ -1519,7 +1542,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    /* Attach ourselves to member transport for DTLS nego. */
             if (!pj_sockaddr_has_addr(&ds->rem_addr)) {
                 get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
-                              &ds->rem_rtcp);
+                              &ds->rem_rtcp, NULL);
             }
 
 	    if (pj_sockaddr_has_addr(&ds->rem_addr))
