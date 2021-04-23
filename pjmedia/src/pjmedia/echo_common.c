@@ -149,7 +149,9 @@ static struct ec_operations webrtc_aec_op =
 PJ_DEF(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat)
 {
     pj_bzero(stat, sizeof(pjmedia_echo_stat));
-    stat->median = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
+    stat->delay = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
+    stat->return_loss = (double)PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
+    stat->return_loss_enh = (double)PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->std = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->frac_delay = (float)PJMEDIA_ECHO_STAT_NOT_SPECIFIED;
     stat->duration = PJMEDIA_ECHO_STAT_NOT_SPECIFIED;

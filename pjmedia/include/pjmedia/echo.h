@@ -168,10 +168,22 @@ typedef struct pjmedia_echo_stat
     const char *name;
 
     /**
-     * Echo delay median value (in ms).
+     * Echo delay value (in ms).
      * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
      */
-    int 	median;
+    int 	delay;
+
+    /**
+     * Echo return loss.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    double 	return_loss;
+
+    /**
+     * Echo return loss enhancement.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    double 	return_loss_enh;
 
     /**
      * Echo delay standard deviation (in ms).

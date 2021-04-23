@@ -36,16 +36,16 @@ using namespace webrtc;
 
 typedef struct webrtc_ec
 {
-    EchoCanceller3  *aec;
-    AudioBuffer     *cap_buf;
-    AudioBuffer     *rend_buf;
-
     unsigned    options;
     unsigned	samples_per_frame;
     unsigned    clock_rate;
     unsigned	channel_count;
     unsigned	frame_length;
     unsigned	num_bands;
+
+    EchoControl  *aec;
+    AudioBuffer  *cap_buf;
+    AudioBuffer  *rend_buf;
 } webrtc_ec;
 
 
@@ -152,7 +152,7 @@ PJ_DEF(void) webrtc_aec_reset(void *state )
     
     pj_assert(echo != NULL);
     
-    PJ_LOG(4, (THIS_FILE, "WebRTC AEC reset succeeded"));
+    PJ_LOG(4, (THIS_FILE, "WebRTC AEC3 reset no-op"));
 }
 
 
@@ -173,7 +173,6 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(echo && rec_frm && play_frm, PJ_EINVAL);
-    
 
     for (i = 0; i < echo->samples_per_frame;
     	 i += echo->frame_length)
@@ -208,20 +207,23 @@ PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
 					pjmedia_echo_stat *p_stat)
 {
     webrtc_ec *echo = (webrtc_ec*) state;
-/*
-    if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &p_stat->median,
-    				  &p_stat->std, &p_stat->frac_delay) != 0)
-    {
-        return PJ_EUNKNOWN;
-    }
-*/
-    p_stat->name = "WebRTC AEC";
+    EchoCanceller3::Metrics metrics;
+    
+    PJ_ASSERT_RETURN(echo, PJ_EINVAL);
+    
+    metrics = echo->aec->GetMetrics();
+    p_stat->delay = metrics.delay_ms;
+    p_stat->return_loss = metrics.echo_return_loss;
+    p_stat->return_loss_enh = metrics.echo_return_loss_enhancement;
+
+    p_stat->name = "WebRTC AEC3";
     p_stat->stat_info.ptr = p_stat->buf_;
     p_stat->stat_info.slen =
         pj_ansi_snprintf(p_stat->buf_, sizeof(p_stat->buf_),
-		     	 "WebRTC delay metric: median=%d, std=%d, "
-            	     	 "frac of poor delay=%.02f",
-            	     	 p_stat->median, p_stat->std, p_stat->frac_delay);
+		     	 "WebRTC AEC3 metrics: delay=%d ms, "
+            	     	 "return loss=%.02f, return loss enh=%.02f",
+            	     	 p_stat->delay, p_stat->return_loss,
+            	     	 p_stat->return_loss_enh);
 
     return PJ_SUCCESS;
 }
