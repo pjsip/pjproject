@@ -127,7 +127,7 @@ ifeq (@ac_external_webrtc_aec3@,1)
 # External webrtc AEC3
 else
 DIRS += webrtc_aec3
-WEBRTC_AEC3_OTHER_CFLAGS = -fexceptions -DWEBRTC_POSIX=1 @ac_webrtc_aec3_cflags@
+WEBRTC_AEC3_OTHER_CFLAGS = -fexceptions @ac_webrtc_aec3_cflags@
 ifneq ($(findstring sse2,@ac_webrtc_aec3_instset@),)
 else ifneq ($(findstring neon,@ac_webrtc_aec3_instset@),)
     WEBRTC_AEC3_OTHER_CFLAGS += -DWEBRTC_HAS_NEON

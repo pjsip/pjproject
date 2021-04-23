@@ -232,7 +232,7 @@ endif
 ifeq (@ac_no_webrtc_aec3@,1)
 export CFLAGS += -DPJMEDIA_HAS_WEBRTC_AEC3=0
 else
-export CFLAGS += -DPJMEDIA_HAS_WEBRTC_AEC3=1
+export CFLAGS += -DPJMEDIA_HAS_WEBRTC_AEC3=1 @ac_webrtc_aec3_cflags@
 
 ifeq (@ac_external_webrtc@,0)
 export CFLAGS += -I$(THIRD_PARTY)/webrtc_aec3/src
