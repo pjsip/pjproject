@@ -59,32 +59,34 @@ typedef enum pjmedia_echo_flag
 {
     /**
      * Use any available backend echo canceller algorithm. This is
-     * the default settings. This setting is mutually exclusive with
-     * PJMEDIA_ECHO_SIMPLE and PJMEDIA_ECHO_SPEEX.
+     * the default settings. You can only choose one backend.
      */
     PJMEDIA_ECHO_DEFAULT= 0,
 
     /**
      * Force to use Speex AEC as the backend echo canceller algorithm.
-     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
-     * PJMEDIA_ECHO_WEBRTC.
+     * You can only choose one backend.
      */
     PJMEDIA_ECHO_SPEEX	= 1,
 
     /**
      * If PJMEDIA_ECHO_SIMPLE flag is specified during echo canceller
      * creation, then a simple echo suppressor will be used instead of
-     * an accoustic echo cancellation. This setting is mutually exclusive
-     * with PJMEDIA_ECHO_SPEEX and PJMEDIA_ECHO_WEBRTC.
+     * an accoustic echo cancellation. You can only choose one backend.
      */
     PJMEDIA_ECHO_SIMPLE	= 2,
 
     /**
      * Force to use WebRTC AEC as the backend echo canceller algorithm.
-     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
-     * PJMEDIA_ECHO_SPEEX.
+     * You can only choose one backend.
      */
     PJMEDIA_ECHO_WEBRTC = 3,
+
+    /**
+     * Force to use WebRTC AEC3 as the backend echo canceller algorithm.
+     * You can only choose one backend.
+     */
+    PJMEDIA_ECHO_WEBRTC_AEC3 = 4,
 
     /**
      * For internal use.

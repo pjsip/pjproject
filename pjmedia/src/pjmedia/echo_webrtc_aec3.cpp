@@ -44,6 +44,9 @@ typedef struct webrtc_ec
     unsigned	frame_length;
     unsigned	num_bands;
 
+    pj_bool_t 	get_metrics;
+    EchoControl::Metrics metrics;
+
     EchoControl     *aec;
     NoiseSuppressor *ns;
     AudioBuffer     *cap_buf;
@@ -54,13 +57,13 @@ typedef struct webrtc_ec
 /*
  * Create the AEC.
  */
-PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
-                                      unsigned clock_rate,
-                                      unsigned channel_count,
-                                      unsigned samples_per_frame,
-                                      unsigned tail_ms,
-                                      unsigned options,
-                                      void **p_echo )
+PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
+                                       unsigned clock_rate,
+                                       unsigned channel_count,
+                                       unsigned samples_per_frame,
+                                       unsigned tail_ms,
+                                       unsigned options,
+                                       void **p_echo )
 {
     webrtc_ec *echo;
    
@@ -104,7 +107,7 @@ PJ_DEF(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
 /*
  * Destroy AEC
  */
-PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
+PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     PJ_ASSERT_RETURN(echo, PJ_EINVAL);
@@ -134,7 +137,7 @@ PJ_DEF(pj_status_t) webrtc_aec_destroy(void *state )
 /*
  * Reset AEC
  */
-PJ_DEF(void) webrtc_aec_reset(void *state )
+PJ_DEF(void) webrtc_aec3_reset(void *state )
 {
     webrtc_ec *echo = (webrtc_ec*) state;
     
@@ -147,7 +150,7 @@ PJ_DEF(void) webrtc_aec_reset(void *state )
 /*
  * Perform echo cancellation.
  */
-PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
+PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
 					    pj_int16_t *rec_frm,
 					    const pj_int16_t *play_frm,
 					    unsigned options,
@@ -194,24 +197,41 @@ PJ_DEF(pj_status_t) webrtc_aec_cancel_echo( void *state,
 
      	echo->cap_buf->CopyTo(scfg, rec_frm + i);
     }
-    
+
+    if (echo->get_metrics) {
+    	echo->metrics = echo->aec->GetMetrics();
+    	echo->get_metrics = PJ_FALSE;
+    }
+
     return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
-					pjmedia_echo_stat *p_stat)
+PJ_DEF(pj_status_t) webrtc_aec3_get_stat(void *state,
+					 pjmedia_echo_stat *p_stat)
 {
     webrtc_ec *echo = (webrtc_ec*) state;
-    EchoCanceller3::Metrics metrics;
+    unsigned i = 0;
 
     if (!echo || !echo->aec)
     	return PJ_EINVAL;    
-    
-    metrics = echo->aec->GetMetrics();
-    p_stat->delay = metrics.delay_ms;
-    p_stat->return_loss = metrics.echo_return_loss;
-    p_stat->return_loss_enh = metrics.echo_return_loss_enhancement;
+
+    /* We cannot perform get metrics here since it may cause a race
+     * condition with echo cancellation process and crash with:
+     * "Check failed: !race_checker.RaceDetected()".
+     * (The doc of EchoCanceller3 specifies that "The class is supposed
+     * to be used in a non-concurrent manner").
+     *
+     * So we just do a simple dispatch. Using mutex seems like
+     * an overkill here.
+     */
+    // echo->metrics = echo->aec->GetMetrics();
+    echo->get_metrics = PJ_TRUE;
+    while (echo->get_metrics && i < 100000) i++;
+
+    p_stat->delay = echo->metrics.delay_ms;
+    p_stat->return_loss = echo->metrics.echo_return_loss;
+    p_stat->return_loss_enh = echo->metrics.echo_return_loss_enhancement;
 
     p_stat->name = "WebRTC AEC3";
     p_stat->stat_info.ptr = p_stat->buf_;

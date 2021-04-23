@@ -146,6 +146,23 @@ static struct ec_operations webrtc_aec_op =
 };
 #endif
 
+/*
+ * WebRTC AEC3 prototypes
+ */
+#if defined(PJMEDIA_HAS_WEBRTC_AEC3) && PJMEDIA_HAS_WEBRTC_AEC3!=0
+static struct ec_operations webrtc_aec3_op =
+{
+    "WebRTC AEC3",
+    &webrtc_aec3_create,
+    &webrtc_aec3_destroy,
+    &webrtc_aec3_reset,
+    &webrtc_aec3_cancel_echo,
+    NULL,
+    NULL,
+    &webrtc_aec3_get_stat
+};
+#endif
+
 PJ_DEF(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat)
 {
     pj_bzero(stat, sizeof(pjmedia_echo_stat));
@@ -228,6 +245,13 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
         ec->op = &webrtc_aec_op;
 #endif
         
+#if defined(PJMEDIA_HAS_WEBRTC_AEC3) && PJMEDIA_HAS_WEBRTC_AEC3!=0
+    } else if ((options & PJMEDIA_ECHO_ALGO_MASK)==PJMEDIA_ECHO_WEBRTC_AEC3 ||
+               (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
+    {
+        ec->op = &webrtc_aec3_op;
+#endif
+
     } else {
 	ec->op = &echo_supp_op;
     }

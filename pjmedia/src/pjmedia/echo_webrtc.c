@@ -23,8 +23,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if 0
-//#if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC != 0
+#if defined(PJMEDIA_HAS_WEBRTC_AEC) && PJMEDIA_HAS_WEBRTC_AEC != 0
 
 #include <webrtc/modules/audio_processing/aec/include/echo_cancellation.h>
 #include <webrtc/modules/audio_processing/aecm/include/echo_control_mobile.h>
