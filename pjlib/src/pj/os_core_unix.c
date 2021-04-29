@@ -69,7 +69,9 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
     
     return JNI_VERSION_1_4;
 }
+
 #endif
+
 
 struct pj_thread_t
 {
@@ -303,6 +305,92 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 }
 
 
+/* Thread priority utils for Android (via JNI as NDK does not provide it).
+ * Set priority is probably not enough because it does not change the thread
+ * group in scheduler.
+ * Temporary solution is to call the Java API to set the thread priority.
+ * A cool solution would be to port (if possible) the code from the
+ * android os regarding set_sched groups.
+ */
+#if PJ_ANDROID
+
+#include <jni.h>
+#include <sys/resource.h>
+#include <sys/system_properties.h>
+
+pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env)
+{
+    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
+                               JNI_VERSION_1_4) < 0)
+    {
+        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
+        {
+            jni_env = NULL;
+            return PJ_FALSE;
+        }
+        return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
+#define pj_jni_dettach_jvm(attached) \
+    if (attached) \
+        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
+
+
+static pj_status_t set_android_thread_priority(int priority)
+{
+    jclass process_class;
+    jmethodID set_prio_method;
+    jthrowable exc;
+    pj_status_t result = PJ_SUCCESS;
+    JNIEnv *jni_env = 0;
+    pj_bool_t attached = pj_jni_attach_jvm(&jni_env);
+
+    PJ_ASSERT_RETURN(jni_env, PJ_FALSE);
+
+    /* Get pointer to the java class */
+    process_class = (jclass)(*jni_env)->NewGlobalRef(jni_env,
+                        (*jni_env)->FindClass(jni_env, "android/os/Process"));
+    if (process_class == 0) {
+        PJ_LOG(4, (THIS_FILE, "Unable to find os process class"));
+        result = PJ_EIGNORED;
+        goto on_return;
+    }
+
+    /* Get the id of set thread priority function */
+    set_prio_method = (*jni_env)->GetStaticMethodID(jni_env, process_class,
+                                                    "setThreadPriority",
+                                                    "(I)V");
+    if (set_prio_method == 0) {
+        PJ_LOG(4, (THIS_FILE, "Unable to find setThreadPriority() method"));
+        result = PJ_EIGNORED;
+        goto on_return;
+    }
+
+    /* Set the thread priority */
+    (*jni_env)->CallStaticVoidMethod(jni_env, process_class, set_prio_method,
+                                     priority);
+    exc = (*jni_env)->ExceptionOccurred(jni_env);
+    if (exc) {
+        (*jni_env)->ExceptionDescribe(jni_env);
+        (*jni_env)->ExceptionClear(jni_env);
+        PJ_LOG(4, (THIS_FILE, "Failure in setting thread priority using "
+                              "Java API, fallback to setpriority()"));
+        setpriority(PRIO_PROCESS, 0, priority);
+    } else {
+        PJ_LOG(4, (THIS_FILE, "Setting thread priority successful"));
+    }
+
+on_return:
+    pj_jni_dettach_jvm(attached);
+    return result;
+}
+
+#endif
+
+
 /*
  * Get thread priority value for the thread.
  */
@@ -331,6 +419,12 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 {
 #if PJ_HAS_THREADS
+
+#  if PJ_ANDROID
+    PJ_ASSERT_RETURN(thread==NULL || thread==pj_thread_this(), PJ_EINVAL);
+    set_android_thread_priority(prio);
+#  else
+
     struct sched_param param;
     int policy;
     int rc;
@@ -346,6 +440,9 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 	return PJ_RETURN_OS_ERROR(rc);
 
     return PJ_SUCCESS;
+
+#  endif /* PJ_ANDROID */
+
 #else
     PJ_UNUSED_ARG(thread);
     PJ_UNUSED_ARG(prio);
