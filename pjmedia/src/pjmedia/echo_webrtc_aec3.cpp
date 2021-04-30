@@ -27,6 +27,7 @@
 
 #include "modules/audio_processing/aec3/echo_canceller3.h"
 #include "modules/audio_processing/ns/noise_suppressor.h"
+#include "modules/audio_processing/gain_controller2.h"
 #include "modules/audio_processing/audio_buffer.h"
 
 using namespace webrtc;
@@ -49,6 +50,7 @@ typedef struct webrtc_ec
 
     EchoControl     *aec;
     NoiseSuppressor *ns;
+    GainController2 *agc;
     AudioBuffer     *cap_buf;
     AudioBuffer     *rend_buf;
 } webrtc_ec;
@@ -92,10 +94,14 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
     echo->rend_buf = new AudioBuffer(clock_rate, channel_count, clock_rate,
                        		     channel_count, clock_rate, channel_count);
 
-
     if (options & PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR) {
 	NsConfig cfg;
 	echo->ns = new NoiseSuppressor(cfg, clock_rate, channel_count);
+    }
+
+    if (options & PJMEDIA_ECHO_USE_GAIN_CONTROLLER) {
+	echo->agc = new GainController2();
+	echo->agc->Initialize(clock_rate);
     }
 
     /* Done */
@@ -119,6 +125,10 @@ PJ_DEF(pj_status_t) webrtc_aec3_destroy(void *state )
     if (echo->ns) {
     	delete echo->ns;
     	echo->ns = NULL;
+    }
+    if (echo->agc) {
+    	delete echo->agc;
+    	echo->agc = NULL;
     }
     
     if (echo->cap_buf) {
@@ -183,13 +193,14 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
       	
       	if (echo->ns) {
       	    echo->ns->Analyze(*echo->cap_buf);
+      	    echo->ns->Process(echo->cap_buf);
       	}
       	
       	echo->aec->ProcessCapture(echo->cap_buf, false);
-
-	if (echo->ns) {
-      	    echo->ns->Process(echo->cap_buf);
-	}
+      	
+      	if (echo->agc) {
+      	    echo->agc->Process(echo->cap_buf);
+      	}
 
     	if (echo->clock_rate > 16000) {
       	    echo->cap_buf->MergeFrequencyBands();

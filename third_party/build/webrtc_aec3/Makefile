@@ -30,6 +30,7 @@ export WEBRTC_AEC3_OBJS = \
 	common_audio/audio_util.o \
 	common_audio/third_party/ooura/fft_size_128/ooura_fft.o \
 	common_audio/third_party/ooura/fft_size_256/fft4g.o \
+	common_audio/resampler/push_resampler.o \
 	common_audio/resampler/push_sinc_resampler.o \
 	common_audio/resampler/sinc_resampler.o \
 	common_audio/signal_processing/splitting_filter.o \
@@ -38,6 +39,7 @@ export WEBRTC_AEC3_OBJS = \
 	api/audio/echo_canceller3_factory.o \
 	api/audio/echo_detector_creator.o \
 	modules/audio_processing/audio_buffer.o \
+	modules/audio_processing/gain_controller2.o \
 	modules/audio_processing/high_pass_filter.o \
 	modules/audio_processing/splitting_filter.o \
 	modules/audio_processing/three_band_filter_bank.o \
@@ -115,6 +117,16 @@ export WEBRTC_AEC3_OBJS = \
 	modules/audio_processing/agc2/signal_classifier.o \
 	modules/audio_processing/agc2/vad_with_level.o \
 	modules/audio_processing/agc2/vector_float_frame.o \
+	modules/audio_processing/agc2/rnn_vad/auto_correlation.o \
+	modules/audio_processing/agc2/rnn_vad/features_extraction.o \
+	modules/audio_processing/agc2/rnn_vad/lp_residual.o \
+	modules/audio_processing/agc2/rnn_vad/rnn.o \
+	modules/audio_processing/agc2/rnn_vad/rnn_fc.o \
+	modules/audio_processing/agc2/rnn_vad/rnn_gru.o \
+	modules/audio_processing/agc2/rnn_vad/pitch_search_internal.o \
+	modules/audio_processing/agc2/rnn_vad/pitch_search.o \
+	modules/audio_processing/agc2/rnn_vad/spectral_features_internal.o \
+	modules/audio_processing/agc2/rnn_vad/spectral_features.o \
 	modules/audio_processing/ns/fast_math.o \
 	modules/audio_processing/ns/histograms.o \
 	modules/audio_processing/ns/noise_estimator.o \
@@ -132,6 +144,7 @@ export WEBRTC_AEC3_OBJS = \
 	modules/audio_processing/utility/cascaded_biquad_filter.o \
 	modules/audio_processing/utility/delay_estimator_wrapper.o \
 	modules/audio_processing/utility/delay_estimator.o \
+	modules/audio_processing/utility/pffft_wrapper.o \
 	rtc_base/checks.o \
 	rtc_base/logging.o \
 	rtc_base/platform_thread_types.o \
@@ -148,7 +161,9 @@ export WEBRTC_AEC3_OBJS = \
 	rtc_base/synchronization/yield.o \
 	rtc_base/system/file_wrapper.o \
 	system_wrappers/source/field_trial.o \
-	system_wrappers/source/metrics.o
+	system_wrappers/source/metrics.o \
+	third_party/rnnoise/src/rnn_vad_weights.o \
+	third_party/pffft/src/pffft.o
 
 export WEBRTC_AEC3_OBJS += \
 	common_audio/resampler/sinc_resampler_neon.o \

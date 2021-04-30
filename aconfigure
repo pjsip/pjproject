@@ -9254,8 +9254,8 @@ $as_echo "Checking if libwebrtc-aec3 is disabled...yes" >&6; }
 else
 
 		  # Test if we can build WebRtc AEC3
-		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if WebRtc AEC3 can be compiled" >&5
-$as_echo_n "checking if WebRtc AEC3 can be compiled... " >&6; }
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if WebRtc AEC3 can be compiled with C++17" >&5
+$as_echo_n "checking if WebRtc AEC3 can be compiled with C++17... " >&6; }
 
 		  SAVED_CXXFLAGS="$CXXFLAGS"
 		  CXXFLAGS="$CXXFLAGS -std=c++17"
@@ -9268,7 +9268,6 @@ ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
 
 		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
-#include "absl/base/policy_checks.h"
 
 int
 main ()

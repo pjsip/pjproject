@@ -2220,14 +2220,13 @@ AC_ARG_ENABLE(libwebrtc_aec3,
 	       fi],
 	      [
 		  # Test if we can build WebRtc AEC3
-		  AC_MSG_CHECKING([if WebRtc AEC3 can be compiled])
+		  AC_MSG_CHECKING([if WebRtc AEC3 can be compiled with C++17])
 	
 		  SAVED_CXXFLAGS="$CXXFLAGS"
 		  CXXFLAGS="$CXXFLAGS -std=c++17"
 		  
 		  AC_LANG_PUSH([C++])
-		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include "absl/base/policy_checks.h"
-		  				  ]], [])],
+		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
 		  [AC_MSG_RESULT(yes)
 		   LD="$CXX"],
 		  [AC_MSG_RESULT(no)

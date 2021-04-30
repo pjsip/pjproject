@@ -1,0 +1,18 @@
+The WebRtc source is cloned from the repo:
+https://webrtc.googlesource.com/src
+dated Apr 21 2021
+
+The abseil's source in src/absl is not part of WebRtc and taken separately from:
+https://github.com/abseil/abseil-cpp
+dated Apr 20 2021
+abseil's license can be found in src/absl/LICENSE.
+
+src/third_party's source is obtained from:
+* rnnoise
+https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/rnnoise
+dated Apr 30 2021
+
+* pffft
+https://bitbucket.org/jpommier/pffft/src/master/
+with patches from: https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/pffft/patches/
+dated Apr 30 2021

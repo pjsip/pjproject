@@ -118,6 +118,12 @@ typedef enum pjmedia_echo_flag
      * canceller will also apply noise suppressor method to reduce noise.
      */
     PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR = 128,
+
+    /**
+     * If PJMEDIA_ECHO_USE_GAIN_CONTROLLER flag is specified, the echo
+     * canceller will also apply automatic gain control.
+     */
+    PJMEDIA_ECHO_USE_GAIN_CONTROLLER = 256,
     
     /**
      * Use default aggressiveness setting for the echo canceller algorithm. 
@@ -131,26 +137,26 @@ typedef enum pjmedia_echo_flag
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x100,
+    PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x1000,
     
     /**
      * Use moderate aggressiveness setting for the echo canceller algorithm. 
      * This setting is mutually exclusive with the other aggressiveness
      * settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x200,
+    PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x2000,
     
     /**
      * Use aggressive aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x300,
+    PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x3000,
     
     /**
      * For internal use.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF00
+    PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF000
 
 } pjmedia_echo_flag;
 
