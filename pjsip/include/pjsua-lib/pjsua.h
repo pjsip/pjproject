@@ -1059,7 +1059,7 @@ typedef struct pjsua_call_setting
      *
      * Default: PJMEDIA_DIR_ENCODING_DECODING
      */
-    unsigned	     aud_dir[PJSUA_MAX_CALL_MEDIA];
+    pjmedia_dir	     aud_dir[PJSUA_MAX_CALL_MEDIA];
 
     /**
      * Number of simultaneous active video streams for this call. Setting
@@ -1074,7 +1074,7 @@ typedef struct pjsua_call_setting
      *
      * Default: PJMEDIA_DIR_ENCODING_DECODING
      */
-    unsigned	     vid_dir[PJSUA_MAX_CALL_MEDIA];
+    pjmedia_dir	     vid_dir[PJSUA_MAX_CALL_MEDIA];
 
 } pjsua_call_setting;
 

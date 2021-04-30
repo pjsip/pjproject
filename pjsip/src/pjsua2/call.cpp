@@ -228,20 +228,42 @@ bool CallSetting::isEmpty() const
 
 void CallSetting::fromPj(const pjsua_call_setting &prm)
 {
+    unsigned mi;
+
     this->flag              = prm.flag;
     this->reqKeyframeMethod = prm.req_keyframe_method;
     this->audioCount        = prm.aud_cnt;
+    this->audioDir.clear();
+    for (mi = 0; mi < prm.aud_cnt; mi++) {
+    	this->audioDir.push_back(prm.aud_dir[mi]);
+    }
     this->videoCount        = prm.vid_cnt;
+    this->videoDir.clear();
+    for (mi = 0; mi < prm.vid_cnt; mi++) {
+    	this->videoDir.push_back(prm.vid_dir[mi]);
+    }
 }
 
 pjsua_call_setting CallSetting::toPj() const
 {
     pjsua_call_setting setting;
+    unsigned mi;
+
+    /* This is important to initialize all the media directions. */
+    pjsua_call_setting_default(&setting);
 
     setting.flag                = this->flag;
     setting.req_keyframe_method = this->reqKeyframeMethod;
     setting.aud_cnt             = this->audioCount;
+    for (mi = 0; mi < this->audioCount; mi++) {
+    	if (mi >= this->audioDir.size()) break;
+    	setting.aud_dir[mi] = this->audioDir[mi];
+    }    
     setting.vid_cnt             = this->videoCount;
+    for (mi = 0; mi < this->videoCount; mi++) {
+    	if (mi >= this->videoDir.size()) break;
+    	setting.vid_dir[mi] = this->videoDir[mi];
+    }    
     
     return setting;
 }
