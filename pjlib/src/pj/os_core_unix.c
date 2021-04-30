@@ -422,7 +422,7 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 
 #  if PJ_ANDROID
     PJ_ASSERT_RETURN(thread==NULL || thread==pj_thread_this(), PJ_EINVAL);
-    set_android_thread_priority(prio);
+    return set_android_thread_priority(prio);
 #  else
 
     struct sched_param param;

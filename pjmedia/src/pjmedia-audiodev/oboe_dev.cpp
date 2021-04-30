@@ -23,8 +23,10 @@
 
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
+#include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
+#include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OBOE) &&  PJMEDIA_AUDIO_DEV_HAS_OBOE != 0
@@ -32,6 +34,8 @@
 #define THIS_FILE	"oboe_dev.cpp"
 #define DRIVER_NAME	"Oboe"
 
+#include <semaphore.h>
+#include <android/log.h>
 #include <oboe/Oboe.h>
 
 struct oboe_aud_factory
@@ -61,20 +65,15 @@ struct oboe_aud_stream
     unsigned            samples_per_frame;
     int                 channel_count;
     void               *user_data;
-    pj_bool_t           quit_flag;
     pj_bool_t           running;
 
     /* Capture/record */
     MyOboeEngine       *rec_engine;
-    unsigned            rec_buf_size;
     pjmedia_aud_rec_cb  rec_cb;
-    pj_timestamp        rec_timestamp;
 
     /* Playback */
     MyOboeEngine       *play_engine;
-    unsigned            play_buf_size;
     pjmedia_aud_play_cb play_cb;
-    pj_timestamp        play_timestamp;
 };
 
 /* Factory prototypes */
@@ -259,10 +258,11 @@ class MyOboeEngine : oboe::AudioStreamDataCallback {
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_FALSE), sem(NULL)
+      thread(NULL), thread_quit(PJ_FALSE), buf(NULL)
     {
 	pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
 	dir_st = (dir == PJMEDIA_DIR_CAPTURE? "capture":"playback");
+	pj_set_timestamp32(&ts, 0, 0);
     }
     
     pj_status_t Start() {
@@ -283,16 +283,33 @@ public:
 	sb.setChannelCount(stream->param.channel_count);
 	sb.setSharingMode(oboe::SharingMode::Exclusive);
 	sb.setFormat(oboe::AudioFormat::I16);
-	sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 	sb.setDataCallback(this);
+	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
+				    stream->param.channel_count);
+
+	/* Somehow mic does not work if low latency is specified */
+	if (dir != PJMEDIA_DIR_CAPTURE)
+	    sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 
 	/* Let Oboe do the resampling to minimize latency */
-	sb.setSampleRateConversionQuality(oboe::SampleRateConversionQuality::High);
+	sb.setSampleRateConversionQuality(
+				oboe::SampleRateConversionQuality::High);
 
-	/* Create semaphore */
-        status = pj_sem_create(stream->pool, NULL, 0, 1, &sem);
+	/* Create buffer and its lock */
+	status = pjmedia_circ_buf_create(stream->pool,
+					 stream->param.samples_per_frame * 3,
+					 &buf);
         if (status != PJ_SUCCESS)
             return status;
+
+	if (pthread_mutex_init(&buf_lock, NULL) != 0) {
+	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+	}
+
+	/* Create semaphore */
+        if (sem_init(&sem, 0, 0) != 0) {
+	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+	}
 
 	/* Create thread */
 	thread_quit = PJ_FALSE;
@@ -303,13 +320,23 @@ public:
 
 	/* Open & start oboe stream */
 	oboe::Result result = sb.openStream(&oboe_stream);
-	if (result != oboe::Result::OK){
+	if (result != oboe::Result::OK) {
 	    PJ_LOG(3,(THIS_FILE,
-		      "Oboe stream %s start failed (err=%d - %s)",
+		      "Oboe stream %s open failed (err=%d/%s)",
 		      dir_st, result, oboe::convertToText(result)));
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
+	result = oboe_stream->requestStart();
+	if (result != oboe::Result::OK) {
+	    PJ_LOG(3,(THIS_FILE,
+		      "Oboe stream %s start failed (err=%d/%s)",
+		      dir_st, result, oboe::convertToText(result)));
+	    return PJMEDIA_EAUD_SYSERR;
+	}
+
+	// TODO: more attributes in log, e.g: sharing mode, performance mode,
+	// buffer capacity in frames, audio api, etc
 	PJ_LOG(4, (THIS_FILE, 
 	       "Oboe stream %s started, "
 	       "id=%d, clock_rate=%d, "
@@ -326,37 +353,55 @@ public:
     }
 
     void Stop() {
-	if (thread) {
-	    thread_quit = PJ_TRUE;
-            pj_sem_post(sem);
-            pj_thread_join(thread);
-            pj_thread_destroy(thread);
-            thread = NULL;
-	    
-            pj_sem_destroy(sem);
-            sem = NULL;
-	}
-
 	if (oboe_stream) {
 	    oboe_stream->close();
 	    delete oboe_stream;
 	    oboe_stream = NULL;
-	    PJ_LOG(4, (THIS_FILE, "Oboe stream %s stopped.", dir_st));
 	}
+
+	if (thread) {
+	    thread_quit = PJ_TRUE;
+            sem_post(&sem);
+            pj_thread_join(thread);
+            pj_thread_destroy(thread);
+            thread = NULL;
+            sem_destroy(&sem);
+	    pthread_mutex_destroy(&buf_lock);
+	}
+
+	PJ_LOG(4, (THIS_FILE, "Oboe stream %s stopped.", dir_st));
     }
-    
+
+    /* Oboe callback, here let's just use Android native mutex & semaphore
+     * so we don't need to register the thread to PJLIB.
+     */
     oboe::DataCallbackResult onAudioReady(oboe::AudioStream *oboeStream,
 					  void *audioData,
 					  int32_t numFrames)
     {
+	pj_status_t status;
+
+	pthread_mutex_lock(&buf_lock);
 	if (dir == PJMEDIA_DIR_CAPTURE) {
-	    // copy audio data to circular buffer
-	    // ...
+	    /* Write audio data to circular buffer */
+	    status = pjmedia_circ_buf_write(buf, (pj_int16_t*)audioData,
+				numFrames * stream->param.channel_count);
+	    if (status != PJ_SUCCESS) {
+		__android_log_write(ANDROID_LOG_WARN, THIS_FILE,
+			"Oboe capture failed writing to circ buffer");
+	    }
 	} else {
-	    // copy audio data from circular buffer
-	    // ...
+	    /* Read audio data from circular buffer */
+	    status = pjmedia_circ_buf_read(buf, (pj_int16_t*)audioData,
+				numFrames * stream->param.channel_count);
+	    if (status != PJ_SUCCESS) {
+		__android_log_write(ANDROID_LOG_WARN, THIS_FILE,
+			"Oboe playback failed reading from circ buffer");
+	    }
 	}
-	SignalData();
+	pthread_mutex_unlock(&buf_lock);
+
+	sem_post(&sem);
 
 	return oboe::DataCallbackResult::Continue;
     }
@@ -366,40 +411,91 @@ public:
     }
 
 private:
-    void WaitData() {
-	pj_sem_wait(sem);
-    }
-    
-    void SignalData() {
-	pj_sem_post(sem);
-    }
     
     static int AudioThread(void *arg) {
 	MyOboeEngine *this_ = (MyOboeEngine*)arg;
+	struct oboe_aud_stream *stream = this_->stream;
+	pj_int16_t *tmp_buf;
+	unsigned ts_inc;
 	pj_status_t status;
 
 	/* Try to bump up the thread priority */
-	enum { THREAD_PRIORITY_URGENT_AUDIO = -19 };
+	enum {
+	    THREAD_PRIORITY_AUDIO = -16,
+	    THREAD_PRIORITY_URGENT_AUDIO = -19
+	};
 	status = pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(THIS_FILE, status,
-			 "Warning: failed bumping up thread priority for %s",
+			 "Warning: Oboe %s failed increasing thread priority",
 			 this_->dir_st));
 	}
 
+	tmp_buf = new pj_int16_t[this_->stream->param.samples_per_frame];
+	ts_inc = stream->param.samples_per_frame/stream->param.channel_count;
 	while (1) {
-	    this_->WaitData();
+	    sem_wait(&this_->sem);;
 	    if (this_->thread_quit)
 		break;
-	
+
 	    if (this_->dir == PJMEDIA_DIR_CAPTURE) {
-		// invoke app callback rec_cb()
-		// ...
+		/* Read audio frame from Oboe via circular buffer */
+		pthread_mutex_lock(&this_->buf_lock);
+		status = pjmedia_circ_buf_read(this_->buf, tmp_buf,
+					       stream->param.samples_per_frame);
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(4,(THIS_FILE, status,
+				 "Oboe %s failed reading from circ buffer",
+				 this_->dir_st));
+		}
+		pthread_mutex_unlock(&this_->buf_lock);
+		if (status != PJ_SUCCESS)
+		    continue;
+
+		/* Send audio frame to app via callback rec_cb() */
+		pjmedia_frame frame;
+		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+		frame.size =  stream->param.samples_per_frame * 2;
+		frame.bit_info = 0;
+		frame.buf = (void *)tmp_buf;
+		frame.timestamp = this_->ts;
+		status = (*stream->rec_cb)(stream->user_data, &frame);
+		if (status != PJ_SUCCESS) {
+		    /* App wants to stop audio dev stream */
+		    break;
+		}
 	    } else {
-		// invoke app callback play_cb()
-		// ...
+		/* Get audio frame from app via callback play_cb() */
+		pjmedia_frame frame;
+		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+		frame.size =  stream->param.samples_per_frame * 2;
+		frame.bit_info = 0;
+		frame.buf = (void *)tmp_buf;
+		frame.timestamp = this_->ts;
+		status = (*stream->play_cb)(stream->user_data, &frame);
+
+		/* Send audio frame to Oboe via circular buffer */
+		if (status == PJ_SUCCESS) {
+		    pthread_mutex_lock(&this_->buf_lock);
+		    status = pjmedia_circ_buf_write(this_->buf, tmp_buf,
+					stream->param.samples_per_frame);
+		    if (status != PJ_SUCCESS) {
+		        PJ_PERROR(4,(THIS_FILE, status,
+				     "Oboe %s failed writing to circ buffer",
+				     this_->dir_st));
+		    }
+		    pthread_mutex_unlock(&this_->buf_lock);
+		} else {
+		    /* App wants to stop audio dev stream */
+		    break;
+		}
 	    }
+
+	    /* Increment timestamp */
+	    pj_add_timestamp32(&this_->ts, ts_inc);
 	}
+
+	delete [] tmp_buf;
 	return 0;
     }
 
@@ -410,7 +506,10 @@ private:
     const char			*dir_st;
     pj_thread_t			*thread;
     pj_bool_t			 thread_quit;
-    pj_sem_t			*sem;
+    sem_t			 sem;
+    pjmedia_circ_buf		*buf;
+    pthread_mutex_t		 buf_lock;
+    pj_timestamp		 ts;
 };
 
 
@@ -447,8 +546,6 @@ static pj_status_t oboe_create_stream(pjmedia_aud_dev_factory *f,
     stream->user_data = user_data;
     stream->rec_cb = rec_cb;
     stream->play_cb = play_cb;
-    //buffSize = stream->param.samples_per_frame*stream->param.bits_per_sample/8;
-    //stream->rec_buf_size = stream->play_buf_size = buffSize;
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
 	stream->rec_engine = new MyOboeEngine(stream, PJMEDIA_DIR_CAPTURE);
@@ -544,7 +641,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
 	    goto on_error;
     }
     if (stream->play_engine) {
-	status = stream->rec_engine->Start();
+	status = stream->play_engine->Start();
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
@@ -591,8 +688,6 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
     struct oboe_aud_stream *stream = (struct oboe_aud_stream*)s;
 
     PJ_LOG(4,(THIS_FILE, "Destroying Oboe stream..."));
-
-    stream->quit_flag = PJ_TRUE;
 
     /* Stop the stream */
     strm_stop(s);
