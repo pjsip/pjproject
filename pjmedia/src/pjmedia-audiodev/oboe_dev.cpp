@@ -1,7 +1,5 @@
-/* $Id$ */
 /*
- * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
- * Copyright (C) 2010-2012 Regis Montoya (aka r3gis - www.r3gis.fr)
+ * Copyright (C) 2021 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,18 +32,34 @@
 #define THIS_FILE	"oboe_dev.cpp"
 #define DRIVER_NAME	"Oboe"
 
+#include <jni.h>
 #include <semaphore.h>
 #include <android/log.h>
 #include <oboe/Oboe.h>
 
+
+/* Device info */
+typedef struct aud_dev_info
+{
+    pjmedia_aud_dev_info	 info;		/**< Base info		*/
+    int				 id;		/**< Original dev ID	*/
+} aud_dev_info;
+
+
+/* Oboe factory */
 struct oboe_aud_factory
 {
-    pjmedia_aud_dev_factory base;
-    pj_pool_factory        *pf;
-    pj_pool_t              *pool;
+    pjmedia_aud_dev_factory	 base;
+    pj_pool_factory		*pf;
+    pj_pool_t			*pool;
+
+    pj_pool_t			*dev_pool;	/**< Device list pool  */
+    unsigned			 dev_count;	/**< Device count      */
+    aud_dev_info		*dev_info;	/**< Device info list  */
 };
 
 class MyOboeEngine;
+
 
 /*
  * Sound stream descriptor.
@@ -59,6 +73,7 @@ struct oboe_aud_stream
     pj_str_t            name;
     pjmedia_dir         dir;
     pjmedia_aud_param   param;
+    struct oboe_aud_factory *f;
 
     int                 bytes_per_sample;
     pj_uint32_t         samples_per_sec;
@@ -145,6 +160,7 @@ pjmedia_aud_dev_factory* pjmedia_android_oboe_factory(pj_pool_factory *pf)
     f->pf = pf;
     f->pool = pool;
     f->base.op = &oboe_op;
+    f->dev_pool = pj_pool_create(pf, "oboe_dev", 256, 256, NULL);
 
     return &f->base;
 }
@@ -153,22 +169,275 @@ pjmedia_aud_dev_factory* pjmedia_android_oboe_factory(pj_pool_factory *pf)
 #endif
 
 
+/* JNI stuff for enumerating audio devices. This will invoke Java code
+ * in pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java.
+ */
+#define PJ_AUDDEV_INFO_CLASS_PATH	"org/pjsip/PjAudioDevInfo"
+
+static struct jni_objs_t
+{
+    struct {
+	jclass		 cls;
+	jmethodID	 m_get_cnt;
+	jmethodID	 m_get_info;
+	jmethodID	 m_refresh;
+	jfieldID	 f_id;
+	jfieldID	 f_name;
+	jfieldID	 f_direction;
+	jfieldID	 f_sup_clockrates;
+	jfieldID	 f_sup_channels;
+    } dev_info;
+
+    struct {
+	jclass		 cls;
+	jmethodID	 m_current;
+	jmethodID	 m_get_app;
+    } activity_thread;
+
+} jobjs;
+
+
+/* Declare JNI JVM helper from PJLIB OS */
+extern "C" {
+    pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env);
+    void pj_jni_dettach_jvm(pj_bool_t attached);
+}
+
+#define GET_CLASS(class_path, class_name, cls) \
+    cls = jni_env->FindClass(class_path); \
+    if (cls == NULL || jni_env->ExceptionCheck()) { \
+	jni_env->ExceptionClear(); \
+        PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find class '" \
+			      class_name "'")); \
+        status = PJMEDIA_EAUD_SYSERR; \
+        goto on_return; \
+    } else { \
+        jclass tmp = cls; \
+	cls = (jclass)jni_env->NewGlobalRef(tmp); \
+	jni_env->DeleteLocalRef(tmp); \
+	if (cls == NULL) { \
+	    PJ_LOG(3, (THIS_FILE, "[JNI] Unable to get global ref for " \
+				  "class '" class_name "'")); \
+	    status = PJMEDIA_EAUD_SYSERR; \
+	    goto on_return; \
+	} \
+    }
+#define GET_METHOD_ID(cls, class_name, method_name, signature, id) \
+    id = jni_env->GetMethodID(cls, method_name, signature); \
+    if (id == 0) { \
+        PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find method '" method_name \
+			      "' in class '" class_name "'")); \
+        status = PJMEDIA_EAUD_SYSERR; \
+        goto on_return; \
+    }
+#define GET_SMETHOD_ID(cls, class_name, method_name, signature, id) \
+    id = jni_env->GetStaticMethodID(cls, method_name, signature); \
+    if (id == 0) { \
+        PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find static method '" \
+			      method_name "' in class '" class_name "'")); \
+        status = PJMEDIA_EAUD_SYSERR; \
+        goto on_return; \
+    }
+#define GET_FIELD_ID(cls, class_name, field_name, signature, id) \
+    id = jni_env->GetFieldID(cls, field_name, signature); \
+    if (id == 0) { \
+        PJ_LOG(3, (THIS_FILE, "[JNI] Unable to find field '" field_name \
+			      "' in class '" class_name "'")); \
+        status = PJMEDIA_EAUD_SYSERR; \
+        goto on_return; \
+    }
+
+/* Get Java object IDs (via FindClass, GetMethodID, GetFieldID, etc).
+ * Note that this function should be called from library-loader thread,
+ * otherwise FindClass, etc, may fail, see:
+ * http://developer.android.com/training/articles/perf-jni.html#faq_FindClass
+ */
+static pj_status_t jni_init_ids()
+{
+    JNIEnv *jni_env;
+    pj_status_t status = PJ_SUCCESS;
+    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+
+    /* PjAudioDevInfo class info */
+    GET_CLASS(PJ_AUDDEV_INFO_CLASS_PATH, "PjAudioDevInfo", jobjs.dev_info.cls);
+    GET_SMETHOD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "GetCount", "()I",
+		   jobjs.dev_info.m_get_cnt);
+    GET_SMETHOD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "GetInfo",
+		   "(I)L" PJ_AUDDEV_INFO_CLASS_PATH ";",
+		   jobjs.dev_info.m_get_info);
+    GET_SMETHOD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "RefreshDevices",
+		   "(Landroid/content/Context;)V",
+		   jobjs.dev_info.m_refresh);
+    GET_FIELD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "id", "I",
+		 jobjs.dev_info.f_id);
+    GET_FIELD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "name", "Ljava/lang/String;",
+		 jobjs.dev_info.f_name);
+    GET_FIELD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "direction", "I",
+		 jobjs.dev_info.f_direction);
+    GET_FIELD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "supportedClockRates", "[I",
+		 jobjs.dev_info.f_sup_clockrates);
+    GET_FIELD_ID(jobjs.dev_info.cls, "PjAudioDevInfo", "supportedChannelCounts", "[I",
+		 jobjs.dev_info.f_sup_channels);
+
+    /* ActivityThread class info */
+    GET_CLASS("android/app/ActivityThread", "ActivityThread",
+	      jobjs.activity_thread.cls);
+    GET_SMETHOD_ID(jobjs.activity_thread.cls, "ActivityThread",
+		   "currentActivityThread", "()Landroid/app/ActivityThread;",
+		   jobjs.activity_thread.m_current);
+    GET_METHOD_ID(jobjs.activity_thread.cls, "ActivityThread",
+		   "getApplication", "()Landroid/app/Application;",
+		   jobjs.activity_thread.m_get_app);
+
+on_return:
+    pj_jni_dettach_jvm(with_attach);
+    return status;
+}
+
+#undef GET_CLASS_ID
+#undef GET_METHOD_ID
+#undef GET_SMETHOD_ID
+#undef GET_FIELD_ID
+
+static void jni_deinit_ids()
+{
+    JNIEnv *jni_env;
+    pj_bool_t with_attach = pj_jni_attach_jvm(&jni_env);
+
+    if (jobjs.dev_info.cls) {
+	jni_env->DeleteGlobalRef(jobjs.dev_info.cls);
+	jobjs.dev_info.cls = NULL;
+    }
+
+    if (jobjs.activity_thread.cls) {
+	jni_env->DeleteGlobalRef(jobjs.activity_thread.cls);
+	jobjs.activity_thread.cls = NULL;
+    }
+
+    pj_jni_dettach_jvm(with_attach);
+}
+
+static jobject get_global_context(JNIEnv *jni_env)
+{
+    jobject context = NULL;
+    jobject cur_at = jni_env->CallStaticObjectMethod(
+					jobjs.activity_thread.cls,
+					jobjs.activity_thread.m_current);
+    if (cur_at==NULL)
+	return NULL;
+
+    context = jni_env->CallObjectMethod(cur_at,
+					jobjs.activity_thread.m_get_app);
+    return context;
+}
+
+
 /* API: Init factory */
 static pj_status_t oboe_init(pjmedia_aud_dev_factory *f)
 {
-    PJ_UNUSED_ARG(f);
+    pj_status_t status;
 
-    PJ_LOG(4, (THIS_FILE, "Oboe sound library initialized"));
+    status = jni_init_ids();
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = oboe_refresh(f);
+    if (status != PJ_SUCCESS)
+	return status;
 
     return PJ_SUCCESS;
 }
 
 
 /* API: refresh the list of devices */
-static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *f)
+static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
 {
-    PJ_UNUSED_ARG(f);
-    return PJ_SUCCESS;
+    struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
+    JNIEnv *jni_env;
+    pj_bool_t with_attach;
+    int i, dev_count = 0;
+    pj_status_t status = PJ_SUCCESS;
+
+    /* Clean up device info and pool */
+    f->dev_count = 0;
+    pj_pool_reset(f->dev_pool);
+
+    with_attach = pj_jni_attach_jvm(&jni_env);
+
+    jobject context = get_global_context(jni_env);
+    if (context == NULL) {
+	PJ_LOG(3, (THIS_FILE, "Failed to get context"));
+	status = PJMEDIA_EAUD_SYSERR;
+	goto on_return;
+    }
+
+    /* PjAudioDevInfo::RefreshDevices(Context) */
+    jni_env->CallStaticVoidMethod(jobjs.dev_info.cls,
+				  jobjs.dev_info.m_refresh, context);
+
+    /* dev_count = PjAudioDevInfo::GetCount() */
+    dev_count = jni_env->CallStaticIntMethod(jobjs.dev_info.cls,
+					     jobjs.dev_info.m_get_cnt);
+    if (dev_count < 0) {
+        PJ_LOG(3, (THIS_FILE, "Failed to get camera count"));
+        status = PJMEDIA_EAUD_SYSERR;
+        goto on_return;
+    }
+
+    /* Start querying device info */
+    f->dev_info = (aud_dev_info*)
+		  pj_pool_calloc(f->dev_pool, dev_count,
+				 sizeof(aud_dev_info));
+
+    for (i = 0; i < dev_count; i++) {
+	aud_dev_info *adi = &f->dev_info[f->dev_count];
+	pjmedia_aud_dev_info *base_adi = &adi->info;
+        jobject jdev_info;
+	jint jinttmp;
+
+	/* jdev_info = PjAudioDevInfo::GetInfo(i) */
+	jdev_info = jni_env->CallStaticObjectMethod(
+					    jobjs.dev_info.cls,
+					    jobjs.dev_info.m_get_info,
+					    i);
+	if (jdev_info == NULL)
+	    continue;
+
+	/* Get device ID, direction, etc */
+	adi->id = jni_env->GetIntField(jdev_info, jobjs.dev_info.f_id);
+	jinttmp = jni_env->GetIntField(jdev_info, jobjs.dev_info.f_direction);
+	base_adi->input_count = (jinttmp & PJMEDIA_DIR_CAPTURE);
+	base_adi->output_count = (jinttmp & PJMEDIA_DIR_PLAYBACK);
+	base_adi->caps = 0;
+
+	/* Get name info */
+	jstring jstrtmp = (jstring)jni_env->GetObjectField(jdev_info, jobjs.dev_info.f_name);
+	const char *strtmp = jni_env->GetStringUTFChars(jstrtmp, NULL);
+	pj_ansi_strncpy(base_adi->name, strtmp, sizeof(base_adi->name));
+
+	f->dev_count++;
+
+    on_skip_dev:
+	jni_env->DeleteLocalRef(jdev_info);
+    }
+
+    PJ_LOG(4, (THIS_FILE,
+	       "Oboe audio device initialized with %d device(s):",
+	       f->dev_count));
+
+    for (i = 0; i < f->dev_count; i++) {
+	aud_dev_info *adi = &f->dev_info[i];
+	PJ_LOG(4, (THIS_FILE, "%2d (native id=%d): %s (%s%s%s)",
+		   i, adi->id, adi->info.name,
+		   adi->info.input_count?"in":"",
+		   adi->info.input_count && adi->info.output_count?"+":"",
+		   adi->info.output_count?"out":""
+		));
+    }
+
+on_return:
+    pj_jni_dettach_jvm(with_attach);
+    return status;
 }
 
 
@@ -180,6 +449,8 @@ static pj_status_t oboe_destroy(pjmedia_aud_dev_factory *f)
 
     PJ_LOG(4, (THIS_FILE, "Oboe sound library shutting down.."));
 
+    jni_deinit_ids();
+
     pool = pa->pool;
     pa->pool = NULL;
     pj_pool_release(pool);
@@ -188,41 +459,38 @@ static pj_status_t oboe_destroy(pjmedia_aud_dev_factory *f)
 }
 
 /* API: Get device count. */
-static unsigned oboe_get_dev_count(pjmedia_aud_dev_factory *f)
+static unsigned oboe_get_dev_count(pjmedia_aud_dev_factory *ff)
 {
-    PJ_UNUSED_ARG(f);
-    return 1;
+    struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
+    return f->dev_count;
 }
 
 /* API: Get device info. */
-static pj_status_t oboe_get_dev_info(pjmedia_aud_dev_factory *f,
+static pj_status_t oboe_get_dev_info(pjmedia_aud_dev_factory *ff,
                                         unsigned index,
                                         pjmedia_aud_dev_info *info)
 {
-    PJ_UNUSED_ARG(f);
+    struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
 
-    pj_bzero(info, sizeof(*info));
+    PJ_ASSERT_RETURN(index < f->dev_count, PJMEDIA_EAUD_INVDEV);
 
-    pj_ansi_strcpy(info->name, "Oboe");
-    info->default_samples_per_sec = 8000;
-    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
-    		 PJMEDIA_AUD_DEV_CAP_INPUT_SOURCE;
-    info->input_count = 1;
-    info->output_count = 1;
-    info->routes = PJMEDIA_AUD_DEV_ROUTE_CUSTOM;
+    pj_memcpy(info, &f->dev_info[index].info, sizeof(*info));
 
     return PJ_SUCCESS;
 }
 
 /* API: fill in with default parameter. */
-static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *f,
+static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
                                          unsigned index,
                                          pjmedia_aud_param *param)
 {
+    struct oboe_aud_factory *f = (struct oboe_aud_factory*)ff;
     pjmedia_aud_dev_info adi;
     pj_status_t status;
 
-    status = oboe_get_dev_info(f, index, &adi);
+    PJ_ASSERT_RETURN(index < f->dev_count, PJMEDIA_EAUD_INVDEV);
+
+    status = oboe_get_dev_info(ff, index, &adi);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -264,36 +532,47 @@ public:
 	dir_st = (dir == PJMEDIA_DIR_CAPTURE? "capture":"playback");
 	pj_set_timestamp32(&ts, 0, 0);
     }
-    
+
     pj_status_t Start() {
 	if (oboe_stream)
 	    return PJ_SUCCESS;
-    
+
+	int dev_id = 0;
 	oboe::AudioStreamBuilder sb;
 	pj_status_t status;
 
 	if (dir == PJMEDIA_DIR_CAPTURE) {
 	    sb.setDirection(oboe::Direction::Input);
-	    sb.setDeviceId(stream->param.rec_id);
+	    if (stream->param.rec_id >= 0 &&
+		stream->param.rec_id < stream->f->dev_count)
+	    {
+		dev_id = stream->f->dev_info[stream->param.rec_id].id;
+	    }
 	} else {
 	    sb.setDirection(oboe::Direction::Output);
-	    sb.setDeviceId(stream->param.play_id);
+	    if (stream->param.play_id >= 0 &&
+		stream->param.play_id < stream->f->dev_count)
+	    {
+		dev_id = stream->f->dev_info[stream->param.play_id].id;
+	    }
 	}
+	sb.setDeviceId(dev_id);
 	sb.setSampleRate(stream->param.clock_rate);
 	sb.setChannelCount(stream->param.channel_count);
 	sb.setSharingMode(oboe::SharingMode::Exclusive);
+	sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 	sb.setFormat(oboe::AudioFormat::I16);
 	sb.setDataCallback(this);
 	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
 				    stream->param.channel_count);
 
-	/* Somehow mic does not work if low latency is specified */
-	if (dir != PJMEDIA_DIR_CAPTURE)
-	    sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
-
-	/* Let Oboe do the resampling to minimize latency */
-	sb.setSampleRateConversionQuality(
+	/* Somehow mic does not work (on Samsung S10, no error but callback
+	 * not invoked) if sample rate conversion is specified.
+	 */
+	if (dir == PJMEDIA_DIR_PLAYBACK) {
+	    sb.setSampleRateConversionQuality(
 				oboe::SampleRateConversionQuality::High);
+	}
 
 	/* Create buffer and its lock */
 	status = pjmedia_circ_buf_create(stream->pool,
@@ -316,7 +595,7 @@ public:
         status = pj_thread_create(stream->pool, "android_oboe",
                                   AudioThread, this, 0, 0, &thread);
         if (status != PJ_SUCCESS)
-            return status;    
+            return status;
 
 	/* Open & start oboe stream */
 	oboe::Result result = sb.openStream(&oboe_stream);
@@ -335,19 +614,30 @@ public:
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
-	// TODO: more attributes in log, e.g: sharing mode, performance mode,
-	// buffer capacity in frames, audio api, etc
-	PJ_LOG(4, (THIS_FILE, 
-	       "Oboe stream %s started, "
-	       "id=%d, clock_rate=%d, "
-	       "channel_count=%d, samples_per_frame=%d (%dms)",
-	       dir_st,
-	       stream->param.play_id,
-	       stream->param.clock_rate,
-	       stream->param.channel_count,
-	       stream->param.samples_per_frame,
-	       stream->param.samples_per_frame * 1000 /
-		       stream->param.clock_rate));
+	PJ_LOG(4, (THIS_FILE,
+		"Oboe stream %s started, "
+		"id=%d, clock_rate=%d, channel_count=%d, "
+		"samples_per_frame=%d (%dms), "
+		"API=%d/%s, exclusive=%s, low latency=%s, "
+		"size per callback=%d, buffer capacity=%d, burst size=%d",
+		dir_st,
+		stream->param.play_id,
+		stream->param.clock_rate,
+		stream->param.channel_count,
+		stream->param.samples_per_frame,
+		stream->param.samples_per_frame * 1000 /
+		       stream->param.clock_rate,
+		oboe_stream->getAudioApi(),
+		(oboe_stream->usesAAudio()? "AAudio":"other"),
+		(oboe_stream->getSharingMode()==
+			oboe::SharingMode::Exclusive? "yes":"no"),
+		(oboe_stream->getPerformanceMode()==
+			oboe::PerformanceMode::LowLatency? "yes":"no"),
+		oboe_stream->getFramesPerDataCallback()*
+			stream->param.channel_count,
+		oboe_stream->getBufferCapacityInFrames(),
+		oboe_stream->getFramesPerBurst()
+		));
 
 	return PJ_SUCCESS;
     }
@@ -381,6 +671,9 @@ public:
     {
 	pj_status_t status;
 
+	/* Oboe recommends to avoid mutex in the callback, so we'd need to
+	 * replace circ buf with atomic queue/FIFO later.
+	 */
 	pthread_mutex_lock(&buf_lock);
 	if (dir == PJMEDIA_DIR_CAPTURE) {
 	    /* Write audio data to circular buffer */
@@ -405,13 +698,13 @@ public:
 
 	return oboe::DataCallbackResult::Continue;
     }
-    
+
     ~MyOboeEngine() {
 	Stop();
     }
 
 private:
-    
+
     static int AudioThread(void *arg) {
 	MyOboeEngine *this_ = (MyOboeEngine*)arg;
 	struct oboe_aud_stream *stream = this_->stream;
@@ -431,8 +724,15 @@ private:
 			 this_->dir_st));
 	}
 
-	tmp_buf = new pj_int16_t[this_->stream->param.samples_per_frame];
+	tmp_buf = new pj_int16_t[this_->stream->param.samples_per_frame]();
 	ts_inc = stream->param.samples_per_frame/stream->param.channel_count;
+
+	/* Insert a silent frame to playback buffer */
+	if (this_->dir == PJMEDIA_DIR_PLAYBACK) {
+	    pjmedia_circ_buf_write(this_->buf, tmp_buf,
+				   stream->param.samples_per_frame);
+	}
+
 	while (1) {
 	    sem_wait(&this_->sem);;
 	    if (this_->thread_quit)
@@ -540,6 +840,7 @@ static pj_status_t oboe_create_stream(pjmedia_aud_dev_factory *f,
 
     stream = PJ_POOL_ZALLOC_T(pool, struct oboe_aud_stream);
     stream->pool = pool;
+    stream->f = pa;
     pj_strdup2_with_null(pool, &stream->name, "Oboe stream");
     stream->dir = param->dir;
     pj_memcpy(&stream->param, param, sizeof(*param));
@@ -582,12 +883,6 @@ static pj_status_t strm_get_param(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
-    if (strm_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
-                     &pi->output_vol) == PJ_SUCCESS)
-    {
-        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
-    }
-
     return PJ_SUCCESS;
 }
 
@@ -599,12 +894,9 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
     struct oboe_aud_stream *strm = (struct oboe_aud_stream*)s;
     pj_status_t status = PJMEDIA_EAUD_INVCAP;
 
-    PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
+    PJ_UNUSED_ARG(strm);
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
-    {
-    }
+    PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     return status;
 }
@@ -614,14 +906,11 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
                                 pjmedia_aud_dev_cap cap,
                                 const void *value)
 {
-    struct oboe_aud_stream *stream = (struct oboe_aud_stream*)s;
+    struct oboe_aud_stream *strm = (struct oboe_aud_stream*)s;
+
+    PJ_UNUSED_ARG(strm);
 
     PJ_ASSERT_RETURN(s && value, PJ_EINVAL);
-
-    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
-	(stream->param.dir & PJMEDIA_DIR_PLAYBACK))
-    {
-    }
 
     return PJMEDIA_EAUD_INVCAP;
 }
@@ -645,7 +934,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
-    
+
     stream->running = PJ_TRUE;
     PJ_LOG(4, (THIS_FILE, "Oboe stream started"));
 
@@ -658,7 +947,7 @@ on_error:
 	stream->play_engine->Stop();
 
     PJ_LOG(4, (THIS_FILE, "Failed starting Oboe stream"));
-    
+
     return status;
 }
 

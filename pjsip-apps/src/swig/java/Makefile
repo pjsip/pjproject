@@ -190,13 +190,16 @@ $(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
 
 clean distclean realclean:
 	rm -rf $(LIBPJSUA2_SO) $(OUT_DIR)/* \
-		$(MY_PACKAGE_PATH)/*.java $(MY_PACKAGE_PATH)/*.class
+		$(MY_PACKAGE_PATH)/*.java $(MY_PACKAGE_PATH)/*.class \
+		$(MY_PACKAGE_PATH)/../*.java $(MY_PACKAGE_PATH)/../*.class
 
 java: $(MY_PACKAGE_PATH)/Error.class $(MY_PACKAGE_PATH)/test.class $(MY_PACKAGE_PATH)/sample.class
 ifneq (,$(findstring PJMEDIA_VIDEO_DEV_HAS_ANDROID=1,$(ANDROID_CFLAGS)))
 	@echo "Copying Android camera helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(MY_PACKAGE_PATH)/..
 endif
+	@echo "Copying Android audio device helper components..."
+	cp $(PJDIR)/pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java $(MY_PACKAGE_PATH)/..
 
 $(MY_PACKAGE_PATH)/Error.class: $(MY_PACKAGE_PATH)/Error.java
 	$(MY_JAVAC) -d $(OUT_DIR) $(MY_PACKAGE_PATH)/*.java $(MY_APP_JAVA)

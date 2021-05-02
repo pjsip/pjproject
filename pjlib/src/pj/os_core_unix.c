@@ -318,7 +318,7 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 #include <sys/resource.h>
 #include <sys/system_properties.h>
 
-pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env)
+PJ_DEF(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env)
 {
     if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
                                JNI_VERSION_1_4) < 0)
@@ -334,9 +334,11 @@ pj_bool_t pj_jni_attach_jvm(JNIEnv **jni_env)
     return PJ_FALSE;
 }
 
-#define pj_jni_dettach_jvm(attached) \
-    if (attached) \
+PJ_DEF(void) pj_jni_dettach_jvm(pj_bool_t attached)
+{
+    if (attached)
         (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
+}
 
 
 static pj_status_t set_android_thread_priority(int priority)
@@ -354,7 +356,7 @@ static pj_status_t set_android_thread_priority(int priority)
     process_class = (jclass)(*jni_env)->NewGlobalRef(jni_env,
                         (*jni_env)->FindClass(jni_env, "android/os/Process"));
     if (process_class == 0) {
-        PJ_LOG(4, (THIS_FILE, "Unable to find os process class"));
+        PJ_LOG(5, (THIS_FILE, "Unable to find class android.os.Process"));
         result = PJ_EIGNORED;
         goto on_return;
     }
@@ -364,7 +366,7 @@ static pj_status_t set_android_thread_priority(int priority)
                                                     "setThreadPriority",
                                                     "(I)V");
     if (set_prio_method == 0) {
-        PJ_LOG(4, (THIS_FILE, "Unable to find setThreadPriority() method"));
+        PJ_LOG(5, (THIS_FILE, "Unable to find setThreadPriority() method"));
         result = PJ_EIGNORED;
         goto on_return;
     }
@@ -380,7 +382,8 @@ static pj_status_t set_android_thread_priority(int priority)
                               "Java API, fallback to setpriority()"));
         setpriority(PRIO_PROCESS, 0, priority);
     } else {
-        PJ_LOG(4, (THIS_FILE, "Setting thread priority successful"));
+        PJ_LOG(5, (THIS_FILE, "Setting thread priority to %d successful",
+	           priority));
     }
 
 on_return:
