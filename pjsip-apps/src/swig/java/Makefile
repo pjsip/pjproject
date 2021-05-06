@@ -198,8 +198,10 @@ ifneq (,$(findstring PJMEDIA_VIDEO_DEV_HAS_ANDROID=1,$(ANDROID_CFLAGS)))
 	@echo "Copying Android camera helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-videodev/android/PjCamera*.java $(MY_PACKAGE_PATH)/..
 endif
-	@echo "Copying Android audio device helper components..."
+ifneq (,$(findstring PJMEDIA_AUDIO_DEV_HAS_OBOE=1,$(OBOE_CFLAGS)))
+	@echo "Copying Android Oboe audio device helper components..."
 	cp $(PJDIR)/pjmedia/src/pjmedia-audiodev/android/PjAudioDevInfo.java $(MY_PACKAGE_PATH)/..
+endif
 
 $(MY_PACKAGE_PATH)/Error.class: $(MY_PACKAGE_PATH)/Error.java
 	$(MY_JAVAC) -d $(OUT_DIR) $(MY_PACKAGE_PATH)/*.java $(MY_APP_JAVA)

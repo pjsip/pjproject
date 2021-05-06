@@ -202,6 +202,7 @@ endif
 
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
+OBOE_CFLAGS = @ac_oboe_cflags@
 
 # PJMEDIA features exclusion
 PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \

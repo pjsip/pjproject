@@ -821,6 +821,10 @@ public:
 	    err_thread_registered = true;
 	}
 
+	PJ_LOG(3,(THIS_FILE,
+		  "Oboe stream %s error (%d/%s), trying to restart stream..",
+		  dir_st, result, oboe::convertToText(result)));
+
 	/* Just try to restart */
 	Stop();
 	Start();
