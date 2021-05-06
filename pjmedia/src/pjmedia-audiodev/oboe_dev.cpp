@@ -438,6 +438,9 @@ static pj_status_t oboe_refresh(pjmedia_aud_dev_factory *ff)
     }
 
 on_return:
+    if (context)
+	jni_env->DeleteLocalRef(context);
+
     pj_jni_dettach_jvm(with_attach);
     return status;
 }
@@ -624,11 +627,14 @@ private:
 
 
 /* Interface to Oboe */
-class MyOboeEngine : oboe::AudioStreamDataCallback {
+class MyOboeEngine : oboe::AudioStreamDataCallback,
+		     oboe::AudioStreamErrorCallback
+{
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_FALSE), queue(NULL)
+      thread(NULL), thread_quit(PJ_FALSE), queue(NULL),
+      err_thread_registered(false)
     {
 	pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
 	dir_st = (dir == PJMEDIA_DIR_CAPTURE? "capture":"playback");
@@ -661,10 +667,10 @@ public:
 	sb.setDeviceId(dev_id);
 	sb.setSampleRate(stream->param.clock_rate);
 	sb.setChannelCount(stream->param.channel_count);
-	sb.setSharingMode(oboe::SharingMode::Exclusive);
 	sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 	sb.setFormat(oboe::AudioFormat::I16);
 	sb.setDataCallback(this);
+	sb.setErrorCallback(this);
 	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
 				    stream->param.channel_count);
 
@@ -676,6 +682,11 @@ public:
 	if (dir == PJMEDIA_DIR_PLAYBACK) {
 	    sb.setSampleRateConversionQuality(
 				oboe::SampleRateConversionQuality::High);
+
+	    /* Also if mic is Exclusive, it won't reopen after
+	     * plug/unplug headset (on Samsung S10).
+	     */
+	    sb.setSharingMode(oboe::SharingMode::Exclusive);
 	}
 
 	/* Create queue */
@@ -798,6 +809,23 @@ public:
 	return oboe::DataCallbackResult::Continue;
     }
 
+    void onErrorAfterClose(oboe::AudioStream *oboeStream, oboe::Result result)
+    {
+	/* Register callback thread */
+	if (!err_thread_registered || !pj_thread_is_registered())
+	{
+	    pj_thread_t* tmp_thread;
+	    pj_bzero(err_thread_desc, sizeof(pj_thread_desc));
+	    pj_thread_register("oboe_err_thread", err_thread_desc,
+			       &tmp_thread);
+	    err_thread_registered = true;
+	}
+
+	/* Just try to restart */
+	Stop();
+	Start();
+    }
+
     ~MyOboeEngine() {
 	Stop();
     }
@@ -894,6 +922,9 @@ private:
     sem_t			 sem;
     AtomicQueue			*queue;
     pj_timestamp		 ts;
+    bool			 err_thread_registered;
+    pj_thread_desc		 err_thread_desc;
+
 };
 
 
