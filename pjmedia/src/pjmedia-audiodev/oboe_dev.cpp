@@ -37,6 +37,8 @@
 #include <android/log.h>
 #include <oboe/Oboe.h>
 
+#include <atomic>
+
 
 /* Device info */
 typedef struct aud_dev_info
@@ -522,11 +524,111 @@ static pj_status_t oboe_default_param(pjmedia_aud_dev_factory *ff,
 }
 
 
+/* Atomic queue (ring buffer) for single consumer & single producer.
+ *
+ * Producer invokes 'put(frame)' to put a frame to the back of the queue and
+ * consumer invokes 'get(frame)' to get a frame from the head of the queue.
+ *
+ * For producer, there is write pointer 'ptrWrite' that will be incremented
+ * every time a frame is queued to the back of the queue. If the queue is
+ * almost full (the write pointer is right before the read pointer) the
+ * producer will forcefully discard the oldest frame in the head of the
+ * queue by incrementing read pointer.
+ *
+ * For consumer, there is read pointer 'ptrRead' that will be incremented
+ * every time a frame is fetched from the head of the queue, only if the
+ * pointer is not modified by producer (in case of queue full).
+ */
+class AtomicQueue {
+public:
+
+    AtomicQueue(unsigned max_frame_cnt, unsigned frame_size,
+		const char* name_= "") :
+	maxFrameCnt(max_frame_cnt), frameSize(frame_size),
+	ptrWrite(0), ptrRead(0),
+	buffer(NULL), name(name_)
+    {
+	buffer = new char[maxFrameCnt * frameSize];
+
+	/* Surpress warning when debugging log is disabled */
+	PJ_UNUSED_ARG(name);
+    }
+
+    ~AtomicQueue() {
+	delete [] buffer;
+    }
+
+    /* Get a frame from the head of the queue */
+    bool get(void* frame) {
+        if (ptrRead == ptrWrite)
+            return false;
+
+	unsigned cur_ptr = ptrRead;
+	void *p = &buffer[cur_ptr * frameSize];
+	pj_memcpy(frame, p, frameSize);
+	inc_ptr_read_if_not_yet(cur_ptr);
+
+	//__android_log_print(ANDROID_LOG_INFO, name,
+	//		      "GET: ptrRead=%d ptrWrite=%d\n",
+	//		      ptrRead.load(), ptrWrite.load());
+	return true;
+    }
+
+    /* Put a frame to the back of the queue */
+    void put(void* frame) {
+	unsigned cur_ptr = ptrWrite;
+	void *p = &buffer[cur_ptr * frameSize];
+	pj_memcpy(p, frame, frameSize);
+	unsigned next_ptr = inc_ptr_write(cur_ptr);
+
+	/* Increment read pointer if next write is overlapping (next_ptr == read ptr) */
+	unsigned next_read_ptr = (next_ptr == maxFrameCnt-1)? 0 : (next_ptr+1);
+	ptrRead.compare_exchange_strong(next_ptr, next_read_ptr);
+
+	//__android_log_print(ANDROID_LOG_INFO, name,
+	//		      "PUT: ptrRead=%d ptrWrite=%d\n",
+	//		      ptrRead.load(), ptrWrite.load());
+    }
+
+private:
+
+    unsigned maxFrameCnt;
+    unsigned frameSize;
+    std::atomic<unsigned> ptrWrite;
+    std::atomic<unsigned> ptrRead;
+    char *buffer;
+    const char *name;
+
+    /* Increment read pointer, only if producer not incemented it already.
+     * Producer may increment the read pointer if the write pointer is
+     * right before the read pointer (buffer almost full).
+     */
+    bool inc_ptr_read_if_not_yet(unsigned old_ptr) {
+	unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
+	return ptrRead.compare_exchange_strong(old_ptr, new_ptr);
+    }
+
+    /* Increment write pointer */
+    unsigned inc_ptr_write(unsigned old_ptr) {
+	unsigned new_ptr = (old_ptr == maxFrameCnt-1)? 0 : (old_ptr+1);
+	if (ptrWrite.compare_exchange_strong(old_ptr, new_ptr))
+	    return new_ptr;
+
+        /* Should never happen */
+	pj_assert(!"There is more than one producer!");
+	return old_ptr;
+    }
+
+    AtomicQueue() {}
+};
+
+
+/* Interface to Oboe */
 class MyOboeEngine : oboe::AudioStreamDataCallback {
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_FALSE), buf(NULL)
+      thread(NULL), thread_quit(PJ_FALSE), queue(NULL)
     {
 	pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
 	dir_st = (dir == PJMEDIA_DIR_CAPTURE? "capture":"playback");
@@ -566,24 +668,30 @@ public:
 	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
 				    stream->param.channel_count);
 
-	/* Somehow mic does not work (on Samsung S10, no error but callback
-	 * not invoked) if sample rate conversion is specified.
+	/* Somehow mic does not work on Samsung S10 (get no error and
+	 * low latency, but callback is never invoked) if sample rate
+	 * conversion is specified. If it is not specified (default is None),
+	 * mic does not get low latency on, but it works.
 	 */
 	if (dir == PJMEDIA_DIR_PLAYBACK) {
 	    sb.setSampleRateConversionQuality(
 				oboe::SampleRateConversionQuality::High);
 	}
 
-	/* Create buffer and its lock */
-	status = pjmedia_circ_buf_create(stream->pool,
-					 stream->param.samples_per_frame * 3,
-					 &buf);
-        if (status != PJ_SUCCESS)
-            return status;
+	/* Create queue */
+	unsigned latency = (dir == PJMEDIA_DIR_CAPTURE?
+			    stream->param.input_latency_ms :
+			    stream->param.output_latency_ms);
+	unsigned queue_size = latency * stream->param.clock_rate *
+			      stream->param.channel_count / 1000 /
+			      stream->param.samples_per_frame;
 
-	if (pthread_mutex_init(&buf_lock, NULL) != 0) {
-	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
-	}
+	/* Normalize queue size to be in range of 3-10 frames */
+	if (queue_size < 3) queue_size = 3;
+	if (queue_size > 10) queue_size = 10;
+
+	queue = new AtomicQueue(queue_size, stream->param.samples_per_frame*2,
+				dir_st);
 
 	/* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
@@ -656,7 +764,11 @@ public:
             pj_thread_destroy(thread);
             thread = NULL;
             sem_destroy(&sem);
-	    pthread_mutex_destroy(&buf_lock);
+	}
+
+	if (queue) {
+	    delete queue;
+	    queue = NULL;
 	}
 
 	PJ_LOG(4, (THIS_FILE, "Oboe stream %s stopped.", dir_st));
@@ -669,30 +781,17 @@ public:
 					  void *audioData,
 					  int32_t numFrames)
     {
-	pj_status_t status;
-
-	/* Oboe recommends to avoid mutex in the callback, so we'd need to
-	 * replace circ buf with atomic queue/FIFO later.
-	 */
-	pthread_mutex_lock(&buf_lock);
 	if (dir == PJMEDIA_DIR_CAPTURE) {
-	    /* Write audio data to circular buffer */
-	    status = pjmedia_circ_buf_write(buf, (pj_int16_t*)audioData,
-				numFrames * stream->param.channel_count);
-	    if (status != PJ_SUCCESS) {
-		__android_log_write(ANDROID_LOG_WARN, THIS_FILE,
-			"Oboe capture failed writing to circ buffer");
-	    }
+	    /* Put the audio frame to queue */
+	    queue->put(audioData);
 	} else {
-	    /* Read audio data from circular buffer */
-	    status = pjmedia_circ_buf_read(buf, (pj_int16_t*)audioData,
-				numFrames * stream->param.channel_count);
-	    if (status != PJ_SUCCESS) {
+	    /* Get audio frame from queue */
+	    if (!queue->get(audioData)) {
+		pj_bzero(audioData, stream->param.samples_per_frame*2);
 		__android_log_write(ANDROID_LOG_WARN, THIS_FILE,
-			"Oboe playback failed reading from circ buffer");
+			"Oboe playback failed reading from empty queue");
 	    }
 	}
-	pthread_mutex_unlock(&buf_lock);
 
 	sem_post(&sem);
 
@@ -727,10 +826,9 @@ private:
 	tmp_buf = new pj_int16_t[this_->stream->param.samples_per_frame]();
 	ts_inc = stream->param.samples_per_frame/stream->param.channel_count;
 
-	/* Insert a silent frame to playback buffer */
+	/* Queue a silent frame to playback buffer */
 	if (this_->dir == PJMEDIA_DIR_PLAYBACK) {
-	    pjmedia_circ_buf_write(this_->buf, tmp_buf,
-				   stream->param.samples_per_frame);
+	    this_->queue->put(tmp_buf);
 	}
 
 	while (1) {
@@ -739,18 +837,13 @@ private:
 		break;
 
 	    if (this_->dir == PJMEDIA_DIR_CAPTURE) {
-		/* Read audio frame from Oboe via circular buffer */
-		pthread_mutex_lock(&this_->buf_lock);
-		status = pjmedia_circ_buf_read(this_->buf, tmp_buf,
-					       stream->param.samples_per_frame);
-		if (status != PJ_SUCCESS) {
-		    PJ_PERROR(4,(THIS_FILE, status,
-				 "Oboe %s failed reading from circ buffer",
+		/* Read audio frame from Oboe */
+		if (!this_->queue->get(tmp_buf)) {
+		    PJ_PERROR(4,(THIS_FILE, PJ_ENOTFOUND,
+				 "Oboe %s failed reading from empty queue",
 				 this_->dir_st));
-		}
-		pthread_mutex_unlock(&this_->buf_lock);
-		if (status != PJ_SUCCESS)
 		    continue;
+		}
 
 		/* Send audio frame to app via callback rec_cb() */
 		pjmedia_frame frame;
@@ -774,17 +867,9 @@ private:
 		frame.timestamp = this_->ts;
 		status = (*stream->play_cb)(stream->user_data, &frame);
 
-		/* Send audio frame to Oboe via circular buffer */
+		/* Send audio frame to Oboe */
 		if (status == PJ_SUCCESS) {
-		    pthread_mutex_lock(&this_->buf_lock);
-		    status = pjmedia_circ_buf_write(this_->buf, tmp_buf,
-					stream->param.samples_per_frame);
-		    if (status != PJ_SUCCESS) {
-		        PJ_PERROR(4,(THIS_FILE, status,
-				     "Oboe %s failed writing to circ buffer",
-				     this_->dir_st));
-		    }
-		    pthread_mutex_unlock(&this_->buf_lock);
+		    this_->queue->put(tmp_buf);
 		} else {
 		    /* App wants to stop audio dev stream */
 		    break;
@@ -807,8 +892,7 @@ private:
     pj_thread_t			*thread;
     pj_bool_t			 thread_quit;
     sem_t			 sem;
-    pjmedia_circ_buf		*buf;
-    pthread_mutex_t		 buf_lock;
+    AtomicQueue			*queue;
     pj_timestamp		 ts;
 };
 

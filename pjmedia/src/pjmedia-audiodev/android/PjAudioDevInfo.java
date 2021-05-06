@@ -42,7 +42,7 @@ public class PjAudioDevInfo {
 
     public static PjAudioDevInfo GetInfo(int idx)
     {
-	return devices.get(devices.keyAt(idx));
+	return devices.valueAt(idx);
     }
 
     public static void RefreshDevices(Context context)
