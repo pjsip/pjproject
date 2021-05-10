@@ -1057,18 +1057,18 @@ typedef struct pjsua_call_setting
 
     /**
      * Media direction. This setting will only be used if the flag
-     * PJSUA_CALL_SET_MEDIA_DIR is set. Note that once the media direction
-     * is set, the setting will persist for subsequent offers or answers.
+     * PJSUA_CALL_SET_MEDIA_DIR is set, and it will persist for subsequent
+     * offers or answers.
      * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
-     * mark the stream in the SDP as sendonly or inactive, but cannot
-     * become sendrecv.
+     * mark the stream in the SDP as sendonly or inactive, but will not
+     * become sendrecv in subsequent offers and answers.
      *
      * The index of the media dir will correspond to the provisional media
      * in pjsua_call_info.prov_media.
      * For offers that involve adding new medias (such as initial offer),
      * the index will correspond to all new audio media first, then video.
      * For example, for a new call with 2 audios and 1 video, media_dir[0]
-     * and media_dir[1] will be for the audio, and media_dir[2] video.
+     * and media_dir[1] will be for the audios, and media_dir[2] video.
      *
      * Default: PJMEDIA_DIR_ENCODING_DECODING
      */

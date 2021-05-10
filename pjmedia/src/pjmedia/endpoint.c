@@ -42,7 +42,6 @@ static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
 static const pj_str_t STR_SENDONLY = { "sendonly", 8 };
 static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
-static const pj_str_t STR_INACTIVE = { "inactive", 8 };
 
 
 /* Config to control rtpmap inclusion for static payload types */
