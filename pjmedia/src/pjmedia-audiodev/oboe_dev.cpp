@@ -864,30 +864,42 @@ private:
 	}
 
 	while (1) {
-	    sem_wait(&this_->sem);;
+	    sem_wait(&this_->sem);
 	    if (this_->thread_quit)
 		break;
 
 	    if (this_->dir == PJMEDIA_DIR_CAPTURE) {
-		/* Read audio frame from Oboe */
-		if (!this_->queue->get(tmp_buf)) {
+		unsigned cnt = 0;
+		bool stop_stream = false;
+
+		/* Read audio frames from Oboe */
+		while (this_->queue->get(tmp_buf)) {
+		    /* Send audio frame to app via callback rec_cb() */
+		    pjmedia_frame frame;
+		    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+		    frame.size =  stream->param.samples_per_frame * 2;
+		    frame.bit_info = 0;
+		    frame.buf = (void *)tmp_buf;
+		    frame.timestamp = this_->ts;
+		    status = (*stream->rec_cb)(stream->user_data, &frame);
+		    if (status != PJ_SUCCESS) {
+		        /* App wants to stop audio dev stream */
+			stop_stream = true;
+		        break;
+		    }
+
+		    /* Increment timestamp */
+		    pj_add_timestamp32(&this_->ts, ts_inc);
+		    ++cnt;
+		}
+
+		if (stop_stream)
+		    break;
+
+		if (cnt == 0) {
 		    PJ_PERROR(4,(THIS_FILE, PJ_ENOTFOUND,
 				 "Oboe %s failed reading from empty queue",
 				 this_->dir_st));
-		    continue;
-		}
-
-		/* Send audio frame to app via callback rec_cb() */
-		pjmedia_frame frame;
-		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-		frame.size =  stream->param.samples_per_frame * 2;
-		frame.bit_info = 0;
-		frame.buf = (void *)tmp_buf;
-		frame.timestamp = this_->ts;
-		status = (*stream->rec_cb)(stream->user_data, &frame);
-		if (status != PJ_SUCCESS) {
-		    /* App wants to stop audio dev stream */
-		    break;
 		}
 	    } else {
 		/* Get audio frame from app via callback play_cb() */
@@ -906,10 +918,10 @@ private:
 		    /* App wants to stop audio dev stream */
 		    break;
 		}
-	    }
 
-	    /* Increment timestamp */
-	    pj_add_timestamp32(&this_->ts, ts_inc);
+		/* Increment timestamp */
+		pj_add_timestamp32(&this_->ts, ts_inc);
+	    }
 	}
 
 	delete [] tmp_buf;
