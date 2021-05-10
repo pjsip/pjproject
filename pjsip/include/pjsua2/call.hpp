@@ -298,13 +298,6 @@ struct CallSetting
      * Default: 1
      */
     unsigned        audioCount;
-
-    /**
-     * Audio streams' direction for this call.
-     *
-     * Default: PJMEDIA_DIR_ENCODING_DECODING
-     */
-    std::vector<pjmedia_dir>	audioDir;
     
     /**
      * Number of simultaneous active video streams for this call. Setting
@@ -313,13 +306,6 @@ struct CallSetting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned        videoCount;
-
-    /**
-     * Video streams' direction for this call.
-     *
-     * Default: PJMEDIA_DIR_ENCODING_DECODING
-     */
-    std::vector<pjmedia_dir>	videoDir;
     
 public:
     /**

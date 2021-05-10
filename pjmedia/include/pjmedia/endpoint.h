@@ -60,6 +60,17 @@ typedef enum pjmedia_endpt_flag
 
 } pjmedia_endpt_flag;
 
+/**
+ * This structure specifies various settings that can be passed when creating
+ * audio/video sdp.
+ */
+typedef struct pjmedia_endpt_create_sdp_param
+{
+    /**
+     * Direction of the media.
+     */
+    pjmedia_dir dir;
+} pjmedia_endpt_create_sdp_param;
 
 /**
  * Type of callback to register to pjmedia_endpt_atexit().
@@ -296,16 +307,17 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_base_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, to indicate the audio direction.
+ * @param options	Options parameter, can be NULL.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
-                                                    pj_pool_t *pool,
-                                                    const pjmedia_sock_info*si,
-                                                    unsigned options,
-                                                    pjmedia_sdp_media **p_m);
+PJ_DECL(pj_status_t)
+pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m);
 
 /**
  * Create SDP media line for video media.
@@ -313,16 +325,17 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, to indicate the video direction.
+ * @param options	Options parameter, can be NULL.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
-                                                    pj_pool_t *pool,
-                                                    const pjmedia_sock_info*si,
-                                                    unsigned options,
-                                                    pjmedia_sdp_media **p_m);
+PJ_DECL(pj_status_t)
+pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m);
 
 /**
  * Dump media endpoint capabilities.

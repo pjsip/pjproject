@@ -620,23 +620,15 @@ on_error:
 
 
 /*
- * Cleanup call setting to avoid one time flags, such as
+ * Cleanup call setting flag to avoid one time flags, such as
  * PJSUA_CALL_UNHOLD, PJSUA_CALL_UPDATE_CONTACT, or
  * PJSUA_CALL_NO_SDP_OFFER, to be sticky (ticket #1793).
- *
- * This function will also reset the media direction to default.
  */
-void pjsua_call_cleanup_setting(pjsua_call_setting *opt)
+void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
 {
-    unsigned i;
-
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
 		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA |
 		   PJSUA_CALL_UPDATE_VIA);
-
-    for (i = 0; i < PJSUA_MAX_CALL_MEDIA; i++) {
-    	opt->aud_dir[i] = opt->vid_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
-    }
 }
 
 
@@ -659,8 +651,8 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 			       PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
 
-    for (i = 0; i < PJSUA_MAX_CALL_MEDIA; i++) {
-    	opt->aud_dir[i] = opt->vid_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
+    for (i = 0; i < PJMEDIA_MAX_SDP_MEDIA; i++) {
+    	opt->media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
     }
 }
 
@@ -681,7 +673,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     pj_assert(call);
 
     if (!opt) {
-	pjsua_call_cleanup_setting(&call->opt);
+	pjsua_call_cleanup_flag(&call->opt);
     } else {
     	call->opt = *opt;
     }
@@ -1536,7 +1528,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	/* Copy call setting from the replaced call */
 	call->opt = replaced_call->opt;
-	pjsua_call_cleanup_setting(&call->opt);
+	pjsua_call_cleanup_flag(&call->opt);
 
 	/* Notify application */
 	if (!replaced_call->hanging_up &&
@@ -5345,7 +5337,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	goto on_return;
     }
 
-    pjsua_call_cleanup_setting(&call->opt);
+    pjsua_call_cleanup_flag(&call->opt);
     opt = call->opt;
 
     if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite &&
@@ -5550,7 +5542,7 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 #endif
 
-    pjsua_call_cleanup_setting(&call->opt);
+    pjsua_call_cleanup_flag(&call->opt);
 
     if (pjsua_var.ua_cfg.cb.on_call_tx_offer) {
 	(*pjsua_var.ua_cfg.cb.on_call_tx_offer)(call->index, NULL,
@@ -5877,7 +5869,7 @@ static void on_call_transferred( pjsip_inv_session *inv,
 							&code);
     }
 
-    pjsua_call_cleanup_setting(&existing_call->opt);
+    pjsua_call_cleanup_flag(&existing_call->opt);
     call_opt = existing_call->opt;
     if (pjsua_var.ua_cfg.cb.on_call_transfer_request2) {
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request2)(existing_call->index,

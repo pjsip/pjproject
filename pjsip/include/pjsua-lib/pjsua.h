@@ -322,13 +322,6 @@ typedef struct pj_stun_resolve_result pj_stun_resolve_result;
 #endif
 
 /**
- * Maximum number of call medias to be supported.
- */
-#ifndef PJSUA_MAX_CALL_MEDIA
-#   define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
-#endif
-
-/**
  * Default value of SRTP mode usage. Valid values are PJMEDIA_SRTP_DISABLED, 
  * PJMEDIA_SRTP_OPTIONAL, and PJMEDIA_SRTP_MANDATORY.
  */
@@ -1055,13 +1048,6 @@ typedef struct pjsua_call_setting
     unsigned         aud_cnt;
 
     /**
-     * Audio streams' direction for this call.
-     *
-     * Default: PJMEDIA_DIR_ENCODING_DECODING
-     */
-    pjmedia_dir	     aud_dir[PJSUA_MAX_CALL_MEDIA];
-
-    /**
      * Number of simultaneous active video streams for this call. Setting
      * this to zero will disable video in this call.
      *
@@ -1070,11 +1056,23 @@ typedef struct pjsua_call_setting
     unsigned         vid_cnt;
 
     /**
-     * Video streams' direction for this call.
+     * Media direction. This setting will only be used if the flag
+     * PJSUA_CALL_SET_MEDIA_DIR is set. Note that once the media direction
+     * is set, the setting will persist for subsequent offers or answers.
+     * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
+     * mark the stream in the SDP as sendonly or inactive, but cannot
+     * become sendrecv.
+     *
+     * The index of the media dir will correspond to the provisional media
+     * in pjsua_call_info.prov_media.
+     * For offers that involve adding new medias (such as initial offer),
+     * the index will correspond to all new audio media first, then video.
+     * For example, for a new call with 2 audios and 1 video, media_dir[0]
+     * and media_dir[1] will be for the audio, and media_dir[2] video.
      *
      * Default: PJMEDIA_DIR_ENCODING_DECODING
      */
-    pjmedia_dir	     vid_dir[PJSUA_MAX_CALL_MEDIA];
+    pjmedia_dir	     media_dir[PJMEDIA_MAX_SDP_MEDIA];
 
 } pjsua_call_setting;
 
@@ -5150,7 +5148,12 @@ typedef enum pjsua_call_flag
      * useful in IP address change scenario where IP version has been changed
      * and application needs to update target IP address.
      */
-    PJSUA_CALL_UPDATE_TARGET = 64
+    PJSUA_CALL_UPDATE_TARGET = 64,
+
+    /**
+     * Set media direction as specified in pjsua_call_setting.media_dir.
+     */
+    PJSUA_CALL_SET_MEDIA_DIR = 128
 
 } pjsua_call_flag;
 

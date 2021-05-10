@@ -45,7 +45,8 @@ struct pjsua_call_media
     pj_str_t		 rem_mid;   /**< Remote SDP "a=mid" attribute.	    */
     pjsua_call_media_status state;  /**< Media state.			    */
     pjsua_call_media_status prev_state;/**< Previous media state.           */
-    pjmedia_dir		 dir;       /**< Media direction.		    */
+    pjmedia_dir		 def_dir;   /**< Default media direction.	    */
+    pjmedia_dir		 dir;       /**< Current media direction.	    */
 
     /** The stream */
     struct {
@@ -102,6 +103,10 @@ struct pjsua_call_media
                                  int *sip_err_code);
 };
 
+/**
+ * Maximum number of SDP "m=" lines to be supported.
+ */
+#define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
 
 /* Call answer's list. */
 typedef struct call_answer
@@ -735,7 +740,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 				  int *sip_err_code,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb);
-void pjsua_call_cleanup_setting(pjsua_call_setting *opt);
+void pjsua_call_cleanup_flag(pjsua_call_setting *opt);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 void pjsua_media_prov_clean_up(pjsua_call_id call_id);
