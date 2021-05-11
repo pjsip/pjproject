@@ -68,8 +68,11 @@ typedef struct pjmedia_endpt_create_sdp_param
 {
     /**
      * Direction of the media.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
      */
     pjmedia_dir dir;
+
 } pjmedia_endpt_create_sdp_param;
 
 /**
@@ -77,6 +80,15 @@ typedef struct pjmedia_endpt_create_sdp_param
  */
 typedef void (*pjmedia_endpt_exit_callback)(pjmedia_endpt *endpt);
 
+
+/**
+ * Call this function to initialize \a pjmedia_endpt_create_sdp_param with default 
+ * values.
+ *
+ * @param param	    The param to be initialized.
+ */
+PJ_DECL(void)
+pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param);
 
 /**
  * Create an instance of media endpoint.
@@ -307,7 +319,8 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_base_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Options parameter, can be NULL.
+ * @param options	Options parameter, can be NULL. If set to NULL,
+ *			default values will be used.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -325,7 +338,8 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Options parameter, can be NULL.
+ * @param options	Options parameter, can be NULL. If set to NULL,
+ *			default values will be used.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.

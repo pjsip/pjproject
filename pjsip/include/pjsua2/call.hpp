@@ -314,6 +314,10 @@ struct CallSetting
      * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
      * mark the stream in the SDP as sendonly or inactive, but will not
      * become sendrecv in subsequent offers and answers.
+     * Application can update the media direction in any API or callback
+     * that accepts CallSetting as a parameter, such as via
+     * Call::reinvite/update() or in onCallRxOffer/Reinvite()
+     * callback.
      *
      * The index of the media dir will correspond to the provisional media
      * in CallInfo.provMedia.

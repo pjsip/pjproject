@@ -2788,6 +2788,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	pjmedia_transport_get_info(call_med->tp, &tpinfo);
 
 	/* Ask pjmedia endpoint to create SDP media line */
+	pjmedia_endpt_create_sdp_param_default(&param);
 	param.dir = call_med->dir;
 	switch (call_med->type) {
 	case PJMEDIA_TYPE_AUDIO:

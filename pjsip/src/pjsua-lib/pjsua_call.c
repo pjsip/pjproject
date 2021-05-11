@@ -628,7 +628,7 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
 {
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
 		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA |
-		   PJSUA_CALL_UPDATE_VIA);
+		   PJSUA_CALL_UPDATE_VIA | PJSUA_CALL_SET_MEDIA_DIR);
 }
 
 

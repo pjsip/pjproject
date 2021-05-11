@@ -103,6 +103,13 @@ struct pjmedia_endpt
     exit_cb		  exit_cb_list;
 };
 
+
+PJ_DEF(void)
+pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param)
+{
+    param->dir = PJMEDIA_DIR_ENCODING_DECODING;
+}
+
 /**
  * Initialize and get the instance of media endpoint.
  */
@@ -434,6 +441,7 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 #endif
     unsigned used_pt_num = 0;
     unsigned used_pt[PJMEDIA_MAX_SDP_FMT];
+    pjmedia_endpt_create_sdp_param param;
 
     /* Check that there are not too many codecs */
     PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
@@ -455,8 +463,9 @@ pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 
     /* Create and init basic SDP media */
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    pjmedia_endpt_create_sdp_param_default(&param);
     status = init_sdp_media(m, pool, &STR_AUDIO, si, options? options->dir:
-    			    PJMEDIA_DIR_ENCODING_DECODING);
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -740,6 +749,7 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     pjmedia_sdp_attr *attr;
     unsigned cnt, i;
     unsigned max_bitrate = 0;
+    pjmedia_endpt_create_sdp_param param;
     pj_status_t status;
 
     /* Make sure video codec manager is instantiated */
@@ -747,9 +757,10 @@ pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	pjmedia_vid_codec_mgr_create(endpt->pool, NULL);
 
     /* Create and init basic SDP media */
+    pjmedia_endpt_create_sdp_param_default(&param);
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
     status = init_sdp_media(m, pool, &STR_VIDEO, si, options? options->dir:
-    			    PJMEDIA_DIR_ENCODING_DECODING);
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 
