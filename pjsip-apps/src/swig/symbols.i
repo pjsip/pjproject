@@ -858,7 +858,8 @@ typedef enum pjsua_call_flag
   PJSUA_CALL_NO_SDP_OFFER = 8,
   PJSUA_CALL_REINIT_MEDIA = 16,
   PJSUA_CALL_UPDATE_VIA = 32,
-  PJSUA_CALL_UPDATE_TARGET = 64
+  PJSUA_CALL_UPDATE_TARGET = 64,
+  PJSUA_CALL_SET_MEDIA_DIR = 128
 } pjsua_call_flag;
 
 typedef enum pjsua_create_media_transport_flag
