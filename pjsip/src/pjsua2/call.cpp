@@ -228,20 +228,39 @@ bool CallSetting::isEmpty() const
 
 void CallSetting::fromPj(const pjsua_call_setting &prm)
 {
+    int i, mi;
+
     this->flag              = prm.flag;
     this->reqKeyframeMethod = prm.req_keyframe_method;
     this->audioCount        = prm.aud_cnt;
     this->videoCount        = prm.vid_cnt;
+    this->mediaDir.clear();
+    /* Since we don't know the size of media_dir array, we populate
+     * mediaDir vector up to the element with non-default value.
+     */
+    for (mi = PJMEDIA_MAX_SDP_MEDIA - 1; mi >= 0; mi--) {
+    	if (prm.media_dir[mi] != PJMEDIA_DIR_ENCODING_DECODING) break;
+    }
+    for (i = 0; i <= mi; i++) {
+    	this->mediaDir.push_back(prm.media_dir[i]);
+    }
 }
 
 pjsua_call_setting CallSetting::toPj() const
 {
     pjsua_call_setting setting;
+    unsigned mi;
+
+    /* This is important to initialize media_dir array. */
+    pjsua_call_setting_default(&setting);
 
     setting.flag                = this->flag;
     setting.req_keyframe_method = this->reqKeyframeMethod;
     setting.aud_cnt             = this->audioCount;
     setting.vid_cnt             = this->videoCount;
+    for (mi = 0; mi < this->mediaDir.size(); mi++) {
+    	setting.media_dir[mi] = this->mediaDir[mi];
+    }
     
     return setting;
 }

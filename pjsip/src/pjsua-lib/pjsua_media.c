@@ -2469,6 +2469,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
 	if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
 	    call_med->def_dir = call->opt.media_dir[mi];
+    	    PJ_LOG(4,(THIS_FILE, "Call %d: setting media direction "
+    	    			 "#%d to %d.", call_id, mi,
+    	    			 call_med->def_dir));
 	} else if (!reinit) {
 	    /* Initialize default initial media direction as bidirectional */
 	    call_med->def_dir = PJMEDIA_DIR_ENCODING_DECODING;
@@ -3559,6 +3562,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     		
     		if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
     		    call_med->def_dir = call->opt.media_dir[mi];
+    		    PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
+    		    			 "direction #%d to %d.",
+			  		 call_id, mi, call_med->def_dir));
     		}
 
  		/* If the default direction specifies we do not wish
@@ -3790,6 +3796,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     		
     		if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
     		    call_med->def_dir = call->opt.media_dir[mi];
+    		    PJ_LOG(4,(THIS_FILE, "Call %d: setting video media "
+    		    			 "direction #%d to %d.",
+			  		 call_id, mi, call_med->def_dir));
     		}
 
  		/* If the default direction specifies we do not wish
@@ -3895,7 +3904,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    call_med->rem_srtp_use = srtp_info->peer_use;
 		}
 
-		/* Update audio channel */
+		/* Update video channel */
 		if (media_changed) {
 		    status = pjsua_vid_channel_update(call_med,
 						      call->inv->pool, si,

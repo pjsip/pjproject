@@ -306,6 +306,26 @@ struct CallSetting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned        videoCount;
+
+    /**
+     * Media direction. This setting will only be used if the flag
+     * PJSUA_CALL_SET_MEDIA_DIR is set, and it will persist for subsequent
+     * offers or answers.
+     * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
+     * mark the stream in the SDP as sendonly or inactive, but will not
+     * become sendrecv in subsequent offers and answers.
+     *
+     * The index of the media dir will correspond to the provisional media
+     * in CallInfo.provMedia.
+     * For offers that involve adding new medias (such as initial offer),
+     * the index will correspond to all new audio media first, then video.
+     * For example, for a new call with 2 audios and 1 video, mediaDir[0]
+     * and mediaDir[1] will be for the audios, and mediaDir[2] video.
+     *
+     * Default: empty vector
+     */
+    std::vector<pjmedia_dir> mediaDir;
+
     
 public:
     /**
