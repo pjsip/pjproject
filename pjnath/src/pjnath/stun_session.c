@@ -210,6 +210,7 @@ static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 	    /* "Probably" this is to absorb retransmission */
 	    pj_time_val delay = {0, 300};
 	    pj_stun_client_tsx_schedule_destroy(tdata->client_tsx, &delay);
+	    tdata->is_destroying = PJ_FALSE;
 
 	} else {
 	    pj_list_erase(tdata);
