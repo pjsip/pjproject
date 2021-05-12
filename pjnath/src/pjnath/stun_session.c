@@ -167,15 +167,26 @@ static void tdata_on_destroy(void *arg)
 {
     pj_stun_tx_data *tdata = (pj_stun_tx_data*)arg;
 
+    if (tdata->grp_lock) {
+	pj_grp_lock_dec_ref(tdata->sess->grp_lock);
+    }
+
     pj_pool_safe_release(&tdata->pool);
 }
 
 static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 {
-    TRACE_((THIS_FILE, "tdata %p destroy request, force=%d, tsx=%p", tdata,
-	    force, tdata->client_tsx));
+    TRACE_((THIS_FILE,
+	    "tdata %p destroy request, force=%d, tsx=%p, destroying=%d",
+	    tdata, force, tdata->client_tsx, tdata->is_destroying));
+
+    /* Just return if destroy has been requested before */
+    if (tdata->is_destroying)
+	return;
 
     /* STUN session may have been destroyed, except when tdata is cached. */
+
+    tdata->is_destroying = PJ_TRUE;
 
     if (tdata->res_timer.id != PJ_FALSE) {
 	pj_timer_heap_cancel_if_active(tdata->sess->cfg->timer_heap,
@@ -189,7 +200,6 @@ static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 	    pj_stun_client_tsx_set_data(tdata->client_tsx, NULL);
 	}
 	if (tdata->grp_lock) {
-	    pj_grp_lock_dec_ref(tdata->sess->grp_lock);
 	    pj_grp_lock_dec_ref(tdata->grp_lock);
 	} else {
 	    tdata_on_destroy(tdata);
@@ -204,7 +214,6 @@ static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 	} else {
 	    pj_list_erase(tdata);
 	    if (tdata->grp_lock) {
-		pj_grp_lock_dec_ref(tdata->sess->grp_lock);
 		pj_grp_lock_dec_ref(tdata->grp_lock);
 	    } else {
 		tdata_on_destroy(tdata);
@@ -238,7 +247,7 @@ static void on_cache_timeout(pj_timer_heap_t *timer_heap,
     sess = tdata->sess;
 
     pj_grp_lock_acquire(sess->grp_lock);
-    if (sess->is_destroying) {
+    if (sess->is_destroying || tdata->is_destroying) {
 	pj_grp_lock_release(sess->grp_lock);
 	return;
     }
