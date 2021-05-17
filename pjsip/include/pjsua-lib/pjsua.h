@@ -1055,6 +1055,29 @@ typedef struct pjsua_call_setting
      */
     unsigned         vid_cnt;
 
+    /**
+     * Media direction. This setting will only be used if the flag
+     * PJSUA_CALL_SET_MEDIA_DIR is set, and it will persist for subsequent
+     * offers or answers. 
+     * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
+     * mark the stream in the SDP as sendonly or inactive, but will not
+     * become sendrecv in subsequent offers and answers.
+     * Application can update the media direction in any API or callback
+     * that accepts pjsua_call_setting as a parameter, such as via
+     * pjsua_call_reinvite/update() or in on_call_rx_offer/reinvite()
+     * callback.
+     *
+     * The index of the media dir will correspond to the provisional media
+     * in pjsua_call_info.prov_media.
+     * For offers that involve adding new medias (such as initial offer),
+     * the index will correspond to all new audio media first, then video.
+     * For example, for a new call with 2 audios and 1 video, media_dir[0]
+     * and media_dir[1] will be for the audios, and media_dir[2] video.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    pjmedia_dir	     media_dir[PJMEDIA_MAX_SDP_MEDIA];
+
 } pjsua_call_setting;
 
 
@@ -5129,7 +5152,12 @@ typedef enum pjsua_call_flag
      * useful in IP address change scenario where IP version has been changed
      * and application needs to update target IP address.
      */
-    PJSUA_CALL_UPDATE_TARGET = 64
+    PJSUA_CALL_UPDATE_TARGET = 64,
+
+    /**
+     * Set media direction as specified in pjsua_call_setting.media_dir.
+     */
+    PJSUA_CALL_SET_MEDIA_DIR = 128
 
 } pjsua_call_flag;
 
