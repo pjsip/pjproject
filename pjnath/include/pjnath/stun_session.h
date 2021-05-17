@@ -341,6 +341,7 @@ struct pj_stun_tx_data
     pj_pool_t		*pool;		/**< Pool.			    */
     pj_stun_session	*sess;		/**< The STUN session.		    */
     pj_stun_msg		*msg;		/**< The STUN message.		    */
+    pj_bool_t		 is_destroying; /**< Is destroying?		    */
 
     void		*token;		/**< The token.			    */
 
