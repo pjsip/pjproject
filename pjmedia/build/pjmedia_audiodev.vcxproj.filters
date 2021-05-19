@@ -44,6 +44,9 @@
     <ClCompile Include="..\src\pjmedia-audiodev\wmme_dev.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\pjmedia-audiodev\wasapi_dev.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia-audiodev\audiodev.h">
@@ -61,10 +64,5 @@
     <ClInclude Include="..\include\pjmedia-audiodev\errno.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\src\pjmedia-audiodev\coreaudio_dev.m">
-      <Filter>Source Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

@@ -78,7 +78,7 @@
   <Import Project="..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
     <ProjectGuid>{4281CA5E-1D48-45D4-A991-2718A454B4BA}</ProjectGuid>
-    <RootNamespace>pjmedia_audiodev</RootNamespace>
+    <RootNamespace>pjmedia_audiodev</RootNamespace>    
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
@@ -194,8 +194,7 @@
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
     <PlatformToolset>$(BuildToolset)</PlatformToolset>
-    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
-    </CharacterSet>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -602,9 +601,6 @@
     <ClInclude Include="..\include\pjmedia-audiodev\audiotest.h" />
     <ClInclude Include="..\include\pjmedia-audiodev\config.h" />
     <ClInclude Include="..\include\pjmedia-audiodev\errno.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\src\pjmedia-audiodev\coreaudio_dev.m" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
