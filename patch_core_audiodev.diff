@@ -1,0 +1,14 @@
+diff --git a/pjmedia/src/pjmedia-audiodev/coreaudio_dev.m b/pjmedia/src/pjmedia-audiodev/coreaudio_dev.m
+index d27d54dd4..24621dc5b 100644
+--- a/pjmedia/src/pjmedia-audiodev/coreaudio_dev.m
++++ b/pjmedia/src/pjmedia-audiodev/coreaudio_dev.m
+@@ -2027,7 +2027,8 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
+ #if COREAUDIO_MAC
+         			kAudioUnitSubType_HALOutput;
+ #else
+-				kAudioUnitSubType_RemoteIO;
++				kAudioUnitSubType_VoiceProcessingIO;
++				//kAudioUnitSubType_RemoteIO;
+ #endif
+ 	desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+ 	desc.componentFlags = 0;

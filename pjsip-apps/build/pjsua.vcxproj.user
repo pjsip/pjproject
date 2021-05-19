@@ -1,0 +1,8 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LocalDebuggerCommandArguments>--config-file=D:\work\git\trunk\pjsip-apps\bin\config_local1.txt</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerEnvironment>PATH=%PATH%;C:\Program Files (x86)\Intel\Composer XE 2013\redist\ia32\ipp;C:\Program Files (x86)\Intel\Composer XE 2013\redist\ia32\compiler;d:\Work\trunk\pjsip-apps\bin;d:\work\openh264;d:\work\SDL2-2.0.3\lib\x86;d:\work\OpenSSL-Win32-1.1e\bin;D:\work\OpenSSL-Win32-102j\bin;D:\tmp\tmp\libvpx_build\bin\x86;D:\tmp\tmp\libopus_build\bin\x86</LocalDebuggerEnvironment>
+  </PropertyGroup>
+</Project>

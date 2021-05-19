@@ -1,0 +1,78 @@
+diff --git a/pjsip-apps/src/pjsua/pjsua_app_config.c b/pjsip-apps/src/pjsua/pjsua_app_config.c
+index 046b17b04..6d394c4c6 100644
+--- a/pjsip-apps/src/pjsua/pjsua_app_config.c
++++ b/pjsip-apps/src/pjsua/pjsua_app_config.c
+@@ -789,23 +789,23 @@ static pj_status_t parse_args(int argc, char *argv[],
+ 
+ 	case OPT_TIMER_SE: /** session timer session expiration */
+ 	    cur_acc->timer_setting.sess_expires = (unsigned)pj_strtoul(pj_cstr(&tmp, pj_optarg));
+-	    if (cur_acc->timer_setting.sess_expires < 90) {
+-		PJ_LOG(1,(THIS_FILE,
+-			  "Error: invalid value for --timer-se "
+-			  "(expecting higher than 90)"));
+-		return PJ_EINVAL;
+-	    }
++	 //   if (cur_acc->timer_setting.sess_expires < 90) {
++		//PJ_LOG(1,(THIS_FILE,
++		//	  "Error: invalid value for --timer-se "
++		//	  "(expecting higher than 90)"));
++		//return PJ_EINVAL;
++	 //   }
+ 	    cfg->cfg.timer_setting.sess_expires = cur_acc->timer_setting.sess_expires;
+ 	    break;
+ 
+ 	case OPT_TIMER_MIN_SE: /** session timer minimum session expiration */
+ 	    cur_acc->timer_setting.min_se = (unsigned)pj_strtoul(pj_cstr(&tmp, pj_optarg));
+-	    if (cur_acc->timer_setting.min_se < 90) {
+-		PJ_LOG(1,(THIS_FILE,
+-			  "Error: invalid value for --timer-min-se "
+-			  "(expecting higher than 90)"));
+-		return PJ_EINVAL;
+-	    }
++	 //   if (cur_acc->timer_setting.min_se < 90) {
++		//PJ_LOG(1,(THIS_FILE,
++		//	  "Error: invalid value for --timer-min-se "
++		//	  "(expecting higher than 90)"));
++		//return PJ_EINVAL;
++	 //   }
+ 	    cfg->cfg.timer_setting.min_se = cur_acc->timer_setting.min_se;
+ 	    break;
+ 
+diff --git a/pjsip/src/pjsip-ua/sip_inv.c b/pjsip/src/pjsip-ua/sip_inv.c
+index 341cb9956..839aba61e 100644
+--- a/pjsip/src/pjsip-ua/sip_inv.c
++++ b/pjsip/src/pjsip-ua/sip_inv.c
+@@ -171,8 +171,9 @@ struct tsx_inv_data
+  */
+ static pj_status_t mod_inv_load(pjsip_endpoint *endpt)
+ {
+-    pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6},
+-			    { "UPDATE", 6}};
++    //pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6},
++			 //   { "UPDATE", 6}};
++    pj_str_t allowed[] = {{"INVITE", 6}, {"ACK",3}, {"BYE",3}, {"CANCEL",6}};
+     pj_str_t accepted = { "application/sdp", 15 };
+ 
+     /* Register supported methods: INVITE, ACK, BYE, CANCEL, UPDATE */
+diff --git a/pjsip/src/pjsip-ua/sip_timer.c b/pjsip/src/pjsip-ua/sip_timer.c
+index 8792057db..0d87aeb8b 100644
+--- a/pjsip/src/pjsip-ua/sip_timer.c
++++ b/pjsip/src/pjsip-ua/sip_timer.c
+@@ -30,7 +30,7 @@
+ 
+ 
+ /* Constant of Session Timers */
+-#define ABS_MIN_SE		    90	/* Absolute Min-SE, in seconds	    */
++#define ABS_MIN_SE		    5	/* Absolute Min-SE, in seconds	    */
+ #define REFRESHER_EXPIRE_TIMER_ID   2	/* Refresher expire timer id	    */ 
+ 
+ /* String definitions */
+@@ -480,7 +480,7 @@ static void start_timer(pjsip_inv_session *inv)
+ 
+     stop_timer(inv);
+ 
+-    inv->timer->use_update =
++    inv->timer->use_update = 
+ 	    (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
+ 				      &UPDATE) == PJSIP_DIALOG_CAP_SUPPORTED);
+     if (!inv->timer->use_update) {

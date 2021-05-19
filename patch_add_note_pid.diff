@@ -1,0 +1,48 @@
+diff --git a/pjsip/src/pjsip-simple/presence_body.c b/pjsip/src/pjsip-simple/presence_body.c
+index 0e20fe8ce..69dbe1345 100644
+--- a/pjsip/src/pjsip-simple/presence_body.c
++++ b/pjsip/src/pjsip-simple/presence_body.c
+@@ -132,6 +132,10 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
+ 	  }
+ 	}
+ #endif
++        if (status->info_cnt && status->info[0].rpid.note.slen) {
++            pjpidf_tuple_add_note(pool, pidf_tuple,
++                                  &status->info[0].rpid.note);
++        }
+     }
+ 
+     /* Create <person> (RPID) */
+diff --git a/pjsip/src/pjsip-simple/rpid.c b/pjsip/src/pjsip-simple/rpid.c
+index c667018c9..edeec5a8d 100644
+--- a/pjsip/src/pjsip-simple/rpid.c
++++ b/pjsip/src/pjsip-simple/rpid.c
+@@ -117,27 +117,12 @@ PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
+ 
+     /* Check if we need to add RPID information into the PIDF document. */
+     if (elem->id.slen==0 && 
+-	elem->activity==PJRPID_ACTIVITY_UNKNOWN &&
+-	elem->note.slen==0)
++	elem->activity==PJRPID_ACTIVITY_UNKNOWN)
+     {
+ 	/* No RPID information to be added. */
+ 	return PJ_SUCCESS;
+     }
+ 
+-    /* Add <note> to <tuple> */
+-    if (elem->note.slen != 0) {
+-	pj_xml_node *nd_tuple;
+-
+-	nd_tuple = find_node(pres, "tuple");
+-
+-	if (nd_tuple) {
+-	    nd_note = pj_xml_node_new(pool, &NOTE);
+-	    pj_strdup(pool, &nd_note->content, &elem->note);
+-	    pj_xml_add_node(nd_tuple, nd_note);
+-	    nd_note = NULL;
+-	}
+-    }
+-
+     /* Update namespace */
+     update_namespaces(pres, pool);
+ 

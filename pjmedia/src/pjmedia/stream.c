@@ -1844,6 +1844,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pjmedia_rtp_status seq_st;
     pj_bool_t check_pt;
     pj_status_t status;
+    int flag_badssrc = 0;
     pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
@@ -1888,55 +1889,19 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (channel->paused)
 	goto on_return;
 
-    /* Update RTP session (also checks if RTP session can accept
-     * the incoming packet.
-     */
-    check_pt = (hdr->pt != stream->rx_event_pt) && PJMEDIA_STREAM_CHECK_RTP_PT;
-    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, check_pt);
-#if !PJMEDIA_STREAM_CHECK_RTP_PT 
-    if (!check_pt && hdr->pt != channel->rtp.out_pt &&
-	hdr->pt != stream->rx_event_pt) 
-    { 
-	seq_st.status.flag.badpt = 1; 
-    } 
-#endif 
-    if (seq_st.status.value) {
-	TRC_  ((stream->port.info.name.ptr,
-		"RTP status: badpt=%d, badssrc=%d, dup=%d, "
-		"outorder=%d, probation=%d, restart=%d",
-		seq_st.status.flag.badpt,
-		seq_st.status.flag.badssrc,
-		seq_st.status.flag.dup,
-		seq_st.status.flag.outorder,
-		seq_st.status.flag.probation,
-		seq_st.status.flag.restart));
-
-	if (seq_st.status.flag.badpt) {
-	    PJ_LOG(4,(stream->port.info.name.ptr,
-		      "Bad RTP pt %d (expecting %d)",
-		      hdr->pt, channel->rtp.out_pt));
-	}
-
-	if (!stream->si.has_rem_ssrc && seq_st.status.flag.badssrc) {
-	    PJ_LOG(4,(stream->port.info.name.ptr,
-		      "Changed RTP peer SSRC %d (previously %d)",
-		      channel->rtp.peer_ssrc, stream->rtcp.peer_ssrc));
-	    stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
-	}
-
-
-    }
-
-    /* Skip bad RTP packet */
-    if (seq_st.status.flag.bad) {
-	pkt_discarded = PJ_TRUE;
-	goto on_return;
-    }
-
     /* Ignore if payloadlen is zero */
     if (payloadlen == 0) {
 	pkt_discarded = PJ_TRUE;
 	goto on_return;
+    }
+
+    /* Check SSRC. */
+    if (!channel->rtp.has_peer_ssrc && channel->rtp.peer_ssrc == 0) {
+	channel->rtp.peer_ssrc = pj_ntohl(hdr->ssrc);
+    }
+
+    if (pj_ntohl(hdr->ssrc) != channel->rtp.peer_ssrc) {
+	flag_badssrc = 1;
     }
 
     /* See if source address of RTP packet is different than the
@@ -1944,8 +1909,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
      * media transport to switch RTP remote address.
      */
     if (param->src_addr) {
-        pj_bool_t badssrc = (stream->si.has_rem_ssrc &&
-        		     seq_st.status.flag.badssrc);
+        pj_bool_t badssrc = (stream->si.has_rem_ssrc && flag_badssrc);
 
 	if (pj_sockaddr_cmp(&stream->rem_rtp_addr, param->src_addr) == 0) {
 	    /* We're still receiving from rem_rtp_addr. */
@@ -1993,6 +1957,49 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
 	    }
 	}
+    }
+
+    /* Update RTP session (also checks if RTP session can accept
+     * the incoming packet.
+     */
+    check_pt = (hdr->pt != stream->rx_event_pt) && PJMEDIA_STREAM_CHECK_RTP_PT;
+    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, check_pt);
+#if !PJMEDIA_STREAM_CHECK_RTP_PT
+    if (!check_pt && hdr->pt != channel->rtp.out_pt &&
+	hdr->pt != stream->rx_event_pt)
+    {
+	seq_st.status.flag.badpt = 1;
+    }
+#endif
+    if (seq_st.status.value) {
+	TRC_  ((stream->port.info.name.ptr,
+		"RTP status: badpt=%d, badssrc=%d, dup=%d, "
+		"outorder=%d, probation=%d, restart=%d",
+		seq_st.status.flag.badpt,
+		seq_st.status.flag.badssrc,
+		seq_st.status.flag.dup,
+		seq_st.status.flag.outorder,
+		seq_st.status.flag.probation,
+		seq_st.status.flag.restart));
+
+	if (seq_st.status.flag.badpt) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Bad RTP pt %d (expecting %d)",
+		      hdr->pt, channel->rtp.out_pt));
+	}
+
+	if (!stream->si.has_rem_ssrc && seq_st.status.flag.badssrc) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Changed RTP peer SSRC %d (previously %d)",
+		      channel->rtp.peer_ssrc, stream->rtcp.peer_ssrc));
+	    stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+	}
+    }
+
+    /* Skip bad RTP packet */
+    if (seq_st.status.flag.bad) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
     }
 
     /* Handle incoming DTMF. */

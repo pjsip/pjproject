@@ -234,6 +234,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
 					  pj_bool_t check_pt)
 {
     pjmedia_rtp_status seq_st;
+    int flag_badssrc = 0;
 
     /* for now check_pt MUST be either PJ_TRUE or PJ_FALSE.
      * In the future we might change check_pt from boolean to 
@@ -250,7 +251,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
         ses->peer_ssrc = pj_ntohl(hdr->ssrc);
 
     if (pj_ntohl(hdr->ssrc) != ses->peer_ssrc) {
-	seq_st.status.flag.badssrc = 1;
+	flag_badssrc = 1;
 	if (!ses->has_peer_ssrc)
 	    ses->peer_ssrc = pj_ntohl(hdr->ssrc);
     }
@@ -281,6 +282,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
     if (p_seq_st) {
 	p_seq_st->status.value = seq_st.status.value;
 	p_seq_st->diff = seq_st.diff;
+	p_seq_st->status.flag.badssrc = flag_badssrc;
     }
 }
 

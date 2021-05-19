@@ -1,0 +1,38 @@
+diff --git a/pjsip/include/pjsua2/endpoint.hpp b/pjsip/include/pjsua2/endpoint.hpp
+index fac366fdf..75358d174 100644
+--- a/pjsip/include/pjsua2/endpoint.hpp
++++ b/pjsip/include/pjsua2/endpoint.hpp
+@@ -1870,6 +1870,8 @@ private:
+ 			  pj_status_t status,
+ 			  const pjsua_ip_change_op_info *info);
+ 
++    static void on_aud_prev_play_frame(pjmedia_frame *frame);
++
+ private:
+     void clearCodecInfoList(CodecInfoVector &codec_list);
+     void updateCodecInfoList(pjsua_codec_info pj_codec[], unsigned count,
+diff --git a/pjsip/src/pjsua2/endpoint.cpp b/pjsip/src/pjsua2/endpoint.cpp
+index 4cb14fcc5..df38fd89c 100644
+--- a/pjsip/src/pjsua2/endpoint.cpp
++++ b/pjsip/src/pjsua2/endpoint.cpp
+@@ -1691,6 +1691,11 @@ void Endpoint::on_ip_change_progress(pjsua_ip_change_op op,
+     ep.onIpChangeProgress(param);
+ }
+ 
++void Endpoint::on_aud_prev_play_frame(pjmedia_frame *frame)
++{
++    PJ_LOG(4, (THIS_FILE, "on_aud_prev_play_frame called"));
++}
++
+ ///////////////////////////////////////////////////////////////////////////////
+ /*
+  * Endpoint library operations
+@@ -1783,6 +1788,8 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
+     ua_cfg.cb.on_stun_resolution_complete = 
+     	&Endpoint::stun_resolve_cb;
+ 
++    med_cfg.on_aud_prev_play_frame = &Endpoint::on_aud_prev_play_frame;
++
+     /* Init! */
+     PJSUA2_CHECK_EXPR( pjsua_init(&ua_cfg, &log_cfg, &med_cfg) );
+ 
