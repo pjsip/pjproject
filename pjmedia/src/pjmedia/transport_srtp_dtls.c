@@ -909,6 +909,7 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_attr *a;
     int af = pj_AF_UNSPEC();
+    pj_bool_t use_ice_info = PJ_FALSE;
 
     /* Init RTP & RTCP address */
     pj_bzero(rem_rtp, sizeof(*rem_rtp));
@@ -929,57 +930,59 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 	    if (ice_info->comp_cnt > 1)
 		*rem_rtcp = ice_info->comp[1].rcand_addr;
 
-	    goto check_rtcp_mux;
+	    use_ice_info = PJ_TRUE;
 	}
     }
 
-    /* Get RTP address */
-    conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
-    if (pj_stricmp2(&conn->net_type, "IN")==0) {
-	if (pj_stricmp2(&conn->addr_type, "IP4")==0) {
-	    af = pj_AF_INET();
-	} else if (pj_stricmp2(&conn->addr_type, "IP6")==0) {
-	    af = pj_AF_INET6();
-	}
-    }
-    if (af != pj_AF_UNSPEC()) {
-	pj_sockaddr_init(af, rem_rtp, &conn->addr,
-			 m_rem->desc.port);
-    } else {
-	return PJ_EAFNOTSUP;
-    }
+    /* Get remote addresses from SDP */
+    if (!use_ice_info) {
 
-    /* Get RTCP address. If "rtcp" attribute is present in the SDP,
-     * set the RTCP address from that attribute. Otherwise, calculate
-     * from RTP address.
-     */
-    a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
-			       "rtcp", NULL);
-    if (a) {
-	pjmedia_sdp_rtcp_attr rtcp;
-	pj_status_t status;
-	status = pjmedia_sdp_attr_get_rtcp(a, &rtcp);
-	if (status == PJ_SUCCESS) {
-	    if (rtcp.addr.slen) {
-		pj_sockaddr_init(af, rem_rtcp, &rtcp.addr,
-				 (pj_uint16_t)rtcp.port);
-	    } else {
-		pj_sockaddr_init(af, rem_rtcp, NULL,
-				 (pj_uint16_t)rtcp.port);
-		pj_memcpy(pj_sockaddr_get_addr(rem_rtcp),
-			  pj_sockaddr_get_addr(rem_rtp),
-			  pj_sockaddr_get_addr_len(rem_rtp));
+	/* Get RTP address */
+	conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
+	if (pj_stricmp2(&conn->net_type, "IN")==0) {
+	    if (pj_stricmp2(&conn->addr_type, "IP4")==0) {
+		af = pj_AF_INET();
+	    } else if (pj_stricmp2(&conn->addr_type, "IP6")==0) {
+		af = pj_AF_INET6();
 	    }
 	}
-    }
-    if (!pj_sockaddr_has_addr(rem_rtcp)) {
-	int rtcp_port;
-	pj_memcpy(rem_rtcp, rem_rtp, sizeof(pj_sockaddr));
-	rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
-	pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
-    }
+	if (af != pj_AF_UNSPEC()) {
+	    pj_sockaddr_init(af, rem_rtp, &conn->addr,
+			     m_rem->desc.port);
+	} else {
+	    return PJ_EAFNOTSUP;
+	}
 
-check_rtcp_mux:
+	/* Get RTCP address. If "rtcp" attribute is present in the SDP,
+	 * set the RTCP address from that attribute. Otherwise, calculate
+	 * from RTP address.
+	 */
+	a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
+				   "rtcp", NULL);
+	if (a) {
+	    pjmedia_sdp_rtcp_attr rtcp;
+	    pj_status_t status;
+	    status = pjmedia_sdp_attr_get_rtcp(a, &rtcp);
+	    if (status == PJ_SUCCESS) {
+		if (rtcp.addr.slen) {
+		    pj_sockaddr_init(af, rem_rtcp, &rtcp.addr,
+				     (pj_uint16_t)rtcp.port);
+		} else {
+		    pj_sockaddr_init(af, rem_rtcp, NULL,
+				     (pj_uint16_t)rtcp.port);
+		    pj_memcpy(pj_sockaddr_get_addr(rem_rtcp),
+			      pj_sockaddr_get_addr(rem_rtp),
+			      pj_sockaddr_get_addr_len(rem_rtp));
+		}
+	    }
+	}
+	if (!pj_sockaddr_has_addr(rem_rtcp)) {
+	    int rtcp_port;
+	    pj_memcpy(rem_rtcp, rem_rtp, sizeof(pj_sockaddr));
+	    rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
+	    pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
+	}
+    }
 
     /* Check if remote indicates the desire to use rtcp-mux in its SDP. */
     if (rtcp_mux) {
