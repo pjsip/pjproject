@@ -910,7 +910,28 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
     pjmedia_sdp_attr *a;
     int af = pj_AF_UNSPEC();
 
-    PJ_UNUSED_ARG(ds);
+    /* Init RTP & RTCP address */
+    pj_bzero(rem_rtp, sizeof(*rem_rtp));
+    pj_bzero(rem_rtcp, sizeof(*rem_rtcp));
+
+    /* If underlying transport is ICE, get remote addresses from ICE */
+    if (ds->use_ice) {
+	pjmedia_transport_info info;
+	pjmedia_ice_transport_info *ice_info;
+
+	pjmedia_transport_info_init(&info);
+	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+	ice_info = (pjmedia_ice_transport_info*)
+		   pjmedia_transport_info_get_spc_info(
+				    &info, PJMEDIA_TRANSPORT_TYPE_ICE);
+	if (ice_info) {
+	    *rem_rtp = ice_info->comp[0].rcand_addr;
+	    if (ice_info->comp_cnt > 1)
+		*rem_rtcp = ice_info->comp[1].rcand_addr;
+
+	    goto check_rtcp_mux;
+	}
+    }
 
     /* Get RTP address */
     conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
@@ -957,6 +978,8 @@ static pj_status_t get_rem_addrs(dtls_srtp *ds,
 	rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
 	pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
     }
+
+check_rtcp_mux:
 
     /* Check if remote indicates the desire to use rtcp-mux in its SDP. */
     if (rtcp_mux) {
@@ -1280,8 +1303,12 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	    		use_rtcp_mux = PJ_FALSE;
 		    }
             	}
-                if (pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
+                if (pj_sockaddr_has_addr(&ds->rem_addr) &&
+		    pj_sockaddr_has_addr(&rem_rtp) &&
+		    pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
                     (!use_rtcp_mux &&
+		     pj_sockaddr_has_addr(&ds->rem_rtcp) &&
+		     pj_sockaddr_has_addr(&rem_rtcp) &&
                      pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp)))
                 {
                     rem_addr_changed = PJ_TRUE;
@@ -1492,6 +1519,10 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 				    &info, PJMEDIA_TRANSPORT_TYPE_ICE);
 	ds->use_ice = ice_info && ice_info->active;
 	ice_state = ds->use_ice? ice_info->sess_state : 0;
+
+	/* Update remote RTP & RTCP addresses */
+	get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
+                      &ds->rem_rtcp, NULL);
     }
 
     /* Check if the background DTLS nego has completed */
@@ -1540,11 +1571,6 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    ap.user_data = ds->srtp;
 
 	    /* Attach ourselves to member transport for DTLS nego. */
-            if (!pj_sockaddr_has_addr(&ds->rem_addr)) {
-                get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
-                              &ds->rem_rtcp, NULL);
-            }
-
 	    if (pj_sockaddr_has_addr(&ds->rem_addr))
 		pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
 	    else
