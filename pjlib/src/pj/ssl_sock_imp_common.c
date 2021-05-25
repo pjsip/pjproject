@@ -980,7 +980,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 	    goto on_return;
 
 	pj_grp_lock_add_ref(glock);
-	asock_cfg.grp_lock = ssock->param.grp_lock = glock;
+	ssock->param.grp_lock = glock;
 	pj_grp_lock_add_handler(ssock->param.grp_lock, ssock->pool, ssock,
 				ssl_on_destroy);
     }
@@ -1008,6 +1008,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
+    asock_cfg.grp_lock = ssock->param.grp_lock;
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
     asock_cfg.whole_data = PJ_TRUE;
