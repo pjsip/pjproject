@@ -828,7 +828,7 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 }
 
 
-/* SSL password callback.
+/* SSL certificate verification result callback.
  * Note that this callback seems to be always called from library worker
  * thread, e.g: active socket on_read_complete callback, which should have
  * already been equipped with race condition avoidance mechanism (should not
