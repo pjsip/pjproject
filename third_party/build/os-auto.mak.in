@@ -130,7 +130,16 @@ DIRS += webrtc_aec3
 WEBRTC_AEC3_OTHER_CFLAGS = -fexceptions @ac_webrtc_aec3_cflags@
 ifneq ($(findstring sse2,@ac_webrtc_aec3_instset@),)
     export WEBRTC_AEC3_SRC = \
-	common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.o
+	common_audio/resampler/sinc_resampler_avx2.o \
+	common_audio/resampler/sinc_resampler_sse.o \
+	common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.o \
+	modules/audio_processing/aec3/adaptive_fir_filter_erl_avx2.o \
+	modules/audio_processing/aec3/adaptive_fir_filter_avx2.o \
+	modules/audio_processing/aec3/fft_data_avx2.o \
+	modules/audio_processing/aec3/matched_filter_avx2.o \
+	modules/audio_processing/aec3/vector_math_avx2.o \
+	modules/audio_processing/agc2/rnn_vad/vector_math_avx2.o
+    WEBRTC_AEC3_OTHER_CFLAGS += -mfma
 else ifneq ($(findstring neon,@ac_webrtc_aec3_instset@),)
     export WEBRTC_AEC3_SRC = \
 	common_audio/resampler/sinc_resampler_neon.o \
