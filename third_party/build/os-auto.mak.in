@@ -129,11 +129,13 @@ else
 DIRS += webrtc_aec3
 WEBRTC_AEC3_OTHER_CFLAGS = -fexceptions @ac_webrtc_aec3_cflags@
 ifneq ($(findstring sse2,@ac_webrtc_aec3_instset@),)
+    export WEBRTC_AEC3_SRC = \
+	common_audio/third_party/ooura/fft_size_128/ooura_fft_sse2.o
 else ifneq ($(findstring neon,@ac_webrtc_aec3_instset@),)
+    export WEBRTC_AEC3_SRC = \
+	common_audio/resampler/sinc_resampler_neon.o \
+	common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.o
     WEBRTC_AEC3_OTHER_CFLAGS += -DWEBRTC_HAS_NEON
-else ifneq ($(findstring mips,@ac_webrtc_aec3_instset@),)
-else # Generic fixed point
 endif
 endif
 endif
-

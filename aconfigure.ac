@@ -2264,17 +2264,8 @@ AC_ARG_ENABLE(libwebrtc_aec3,
 				ac_webrtc_aec3_instset=neon
 				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
 			    	;;
-			    mips64*)
-			    	ac_webrtc_aec3_instset=generic
-			        ;;
-			    mips*)
-			    	ac_webrtc_aec3_instset=mips
-			        ;;
 			    x86*)
 			    	ac_webrtc_aec3_instset=sse2
-			    	;;
-			    *)
-				ac_webrtc_aec3_instset=generic
 			    	;;
 			esac
 		        ;;

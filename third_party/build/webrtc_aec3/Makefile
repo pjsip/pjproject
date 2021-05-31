@@ -163,12 +163,8 @@ export WEBRTC_AEC3_OBJS = \
 	system_wrappers/source/field_trial.o \
 	system_wrappers/source/metrics.o \
 	third_party/rnnoise/src/rnn_vad_weights.o \
-	third_party/pffft/src/pffft.o
-
-export WEBRTC_AEC3_OBJS += \
-	common_audio/resampler/sinc_resampler_neon.o \
-	common_audio/third_party/ooura/fft_size_128/ooura_fft_neon.o
-
+	third_party/pffft/src/pffft.o \
+	$(WEBRTC_AEC3_SRC)
 
 export WEBRTC_AEC3_CFLAGS = $(_CFLAGS) $(WEBRTC_AEC3_OTHER_CFLAGS)
 export WEBRTC_AEC3_CXXFLAGS = $(WEBRTC_AEC3_CFLAGS) $(_CXXFLAGS)
