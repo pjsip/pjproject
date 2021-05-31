@@ -9323,7 +9323,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 		  esac
 
 		  case $target in
-		      arm64*)
+		      arm64* | aarch64*)
 			ac_webrtc_aec3_instset=neon
 			ac_webrtc_aec3_cflags+=" -DWEBRTC_ARCH_ARM64"
 			;;

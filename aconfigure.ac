@@ -2260,7 +2260,7 @@ AC_ARG_ENABLE(libwebrtc_aec3,
 		  esac
 
 		  case $target in
-		      arm64*)
+		      arm64* | aarch64*)
 			ac_webrtc_aec3_instset=neon
 			ac_webrtc_aec3_cflags+=" -DWEBRTC_ARCH_ARM64"
 			;;
