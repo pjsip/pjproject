@@ -96,12 +96,19 @@ PJ_DEF(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
 
     if (options & PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR) {
 	NsConfig cfg;
+	/* Valid values are 6, 12, 18, 21 dB */
+	cfg.target_level = NsConfig::SuppressionLevel::k12dB;
 	echo->ns = new NoiseSuppressor(cfg, clock_rate, channel_count);
     }
 
     if (options & PJMEDIA_ECHO_USE_GAIN_CONTROLLER) {
 	echo->agc = new GainController2();
 	echo->agc->Initialize(clock_rate);
+	
+	AudioProcessing::Config::GainController2 cfg;
+	cfg.adaptive_digital.enabled = true;
+	if (GainController2::Validate(cfg))
+	    echo->agc->ApplyConfig(cfg);
     }
 
     /* Done */
@@ -197,7 +204,7 @@ PJ_DEF(pj_status_t) webrtc_aec3_cancel_echo(void *state,
       	}
       	
       	echo->aec->ProcessCapture(echo->cap_buf, false);
-      	
+
       	if (echo->agc) {
       	    echo->agc->Process(echo->cap_buf);
       	}
