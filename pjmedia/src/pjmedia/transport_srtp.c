@@ -112,6 +112,11 @@
  */
 #define PROBATION_CNT_INIT	    100
 
+/* Specify if we should get stream ROC in order to maintain it upon
+ * restart.
+ */
+#define SRTP_MAINTAIN_ROC 0
+
 #define DEACTIVATE_MEDIA(pool, m)   pjmedia_sdp_media_deactivate(pool, m)
 
 #ifdef SRTP_MAX_TRAILER_LEN
@@ -835,7 +840,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     pj_lock_acquire(srtp->mutex);
 
     if (srtp->session_inited) {
+#if SRTP_MAINTAIN_ROC
 	srtp_get_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, &rx_roc);
+#endif
 	pjmedia_transport_srtp_stop(tp);
     }
 
