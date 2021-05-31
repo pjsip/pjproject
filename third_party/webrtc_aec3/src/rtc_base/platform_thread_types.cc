@@ -105,7 +105,7 @@ void SetCurrentThreadName(const char* name) {
   } __except (EXCEPTION_EXECUTE_HANDLER) {  // NOLINT
   }
 #pragma warning(pop)
-#elif defined(WEBRTC_LINUX) || defined(WEBRTC_ANDROID)
+#elif defined(WEBRTC_LINUX) // || defined(WEBRTC_ANDROID)
   prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name));  // NOLINT
 #elif defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
   pthread_setname_np(name);
