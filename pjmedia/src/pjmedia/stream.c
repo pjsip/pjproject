@@ -1865,7 +1865,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
 
     /* Ignore keep-alive packets */
-    if (bytes_read < (pj_ssize_t) sizeof(pjmedia_rtp_hdr))
+    if (bytes_read <= (pj_ssize_t) sizeof(pjmedia_rtp_hdr))
 	return;
 
     /* Update RTP and RTCP session. */
