@@ -121,6 +121,19 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+	/* Ignore 192.0.0.0/29 address.
+	 * Ref: https://datatracker.ietf.org/doc/html/rfc7335#section-4
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 4) ==
+	     201326592) /* 0b1100000000000000000000000000 which is
+	                   192.0.0.0 >> 4 */
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (192.0.0.0/29 class)",
+		    get_addr(ad), ad->sa_family));
+	    continue;
+	}
+
 	/* Ignore 0.0.0.0/8 address. This is a special address
 	 * which doesn't seem to have practical use.
 	 */
@@ -225,6 +238,19 @@ static pj_status_t if_enum_by_af(int af,
 	}
 #endif
 
+	/* Ignore 192.0.0.0/29 address.
+	 * Ref: https://datatracker.ietf.org/doc/html/rfc7335#section-4
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 4) ==
+	     201326592) /* 0b1100000000000000000000000000 which is
+	     		   192.0.0.0 >> 4 */
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (192.0.0.0/29 class)",
+		    get_addr(ad), ad->sa_family));
+	    continue;
+	}
+
 	/* Ignore 0.0.0.0/8 address. This is a special address
 	 * which doesn't seem to have practical use.
 	 */
@@ -322,6 +348,19 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 			       get_addr(&ifreq.ifr_addr),
 			       ifreq.ifr_addr.sa_family));
 	    continue;	/* Not address family that we want, continue */
+	}
+
+	/* Ignore 192.0.0.0/29 address.
+	 * Ref: https://datatracker.ietf.org/doc/html/rfc7335#section-4
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 4) ==
+	     201326592) /* 0b1100000000000000000000000000 which is
+	     		   192.0.0.0 >> 4 */
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (192.0.0.0/29 class)",
+		    get_addr(ad), ad->sa_family));
+	    continue;
 	}
 
 	/* Ignore 0.0.0.0/8 address. This is a special address
