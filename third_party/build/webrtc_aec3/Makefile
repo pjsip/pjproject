@@ -27,6 +27,7 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 
 export WEBRTC_AEC3_SRCDIR = ../../webrtc_aec3/src/
 export WEBRTC_AEC3_OBJS = \
+	absl/types/bad_optional_access.o \
 	common_audio/audio_util.o \
 	common_audio/third_party/ooura/fft_size_128/ooura_fft.o \
 	common_audio/third_party/ooura/fft_size_256/fft4g.o \
