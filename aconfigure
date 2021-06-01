@@ -1528,8 +1528,7 @@ Optional Features:
   --disable-bcg729        Disable bcg729 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
-  --disable-libwebrtc-aec3
-                          Exclude libwebrtc-aec3 in the build
+  --enable-libwebrtc-aec3 Build libwebrtc-aec3 that's included in PJSIP
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -9244,15 +9243,8 @@ fi
 
 # Check whether --enable-libwebrtc_aec3 was given.
 if test "${enable_libwebrtc_aec3+set}" = set; then :
-  enableval=$enable_libwebrtc_aec3; if test "$enable_libwebrtc_aec3" = "no"; then
-		ac_no_webrtc_aec3=1
-		$as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
-
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is disabled...yes" >&5
-$as_echo "Checking if libwebrtc-aec3 is disabled...yes" >&6; }
-	       fi
-else
-
+  enableval=$enable_libwebrtc_aec3;
+           	if test "$enable_libwebrtc_aec3" = "yes"; then
 		  # Test if we can build WebRtc AEC3
 		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if WebRtc AEC3 can be compiled with C++17" >&5
 $as_echo_n "checking if WebRtc AEC3 can be compiled with C++17... " >&6; }
@@ -9281,7 +9273,6 @@ if ac_fn_cxx_try_link "$LINENO"; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 $as_echo "yes" >&6; }
 		   LD="$CXX"
-		   LIBS="$LIBS -lstdc++"
 else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
@@ -9301,41 +9292,81 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 		  case $target in
 		      *-apple-darwin_ios*)
-			ac_webrtc_aec3_cflags="-DWEBRTC_IOS"
-			;;
-		      *android*)
-			ac_webrtc_aec3_cflags="-DWEBRTC_ANDROID"
+			case $target in
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    *arm*)
+				ac_webrtc_aec3_instset=neon
+			    	;;
+			    *)
+				ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
 		        ;;
-		      *darwin*)
-                	ac_webrtc_aec3_cflags="-DWEBRTC_MAC"
-                	case $target in
-                	    arm*)
-				ac_webrtc_aec3_cflags+=" -DWEBRTC_ARCH_ARM64"
-                	        ;;
-                	esac
-			;;
-		      *linux*)
-                	ac_webrtc_aec3_cflags="-DWEBRTC_LINUX"
-                	;;
-		      *mingw* | *cygw* | *win32* | *w32*)
-                	ac_webrtc_aec3_cflags="-DWEBRTC_WIN"
+		      *android*)
+			case $TARGET_ABI in
+			    armeabi-v7a)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
+			    	;;
+			    armeabi)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+			    	;;
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    x86*)
+			    	ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		     *mingw* | *cygw*)
+			ac_webrtc_aec3_instset=sse2
 			ac_webrtc_aec3_cflags="-msse2"
 			;;
+		     *win32* | *w32* | *darwin* | *linux*)
+                         case $target in
+                             armv7l*gnueabihf)
+                                 ac_webrtc_aec3_instset=neon
+                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ;;
+			     arm-apple-darwin*)
+				 ac_webrtc_aec3_instset=neon
+				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	 ;;
+                             *)
+                                 ac_webrtc_aec3_instset=sse2
+                                 ;;
+                         esac
+                         case $target in
+                             *darwin*)
+                                 ac_webrtc_aec3_cflags+=" -DWEBRTC_MAC=1"
+                                 ;;
+                         esac
+			;;
+		     *)
+			;;
 		  esac
+		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+           	else
+           	  ac_no_webrtc_aec3=1
+           	  $as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
 
-		  case $target in
-		      arm64* | aarch64*)
-			ac_webrtc_aec3_instset=neon
-			ac_webrtc_aec3_cflags+=" -DWEBRTC_ARCH_ARM64"
-			;;
-		      arm*)
-			ac_webrtc_aec3_instset=neon
-			;;
-		      *)
-			ac_webrtc_aec3_instset=sse2
-			;;
-		  esac
-		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX"
+             	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is enabled...no" >&5
+$as_echo "Checking if libwebrtc-aec3 is enabled...no" >&6; }
+          	fi
+
+
+else
+  ac_no_webrtc_aec3=1
+	       $as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
+
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is enabled...no" >&5
+$as_echo "Checking if libwebrtc-aec3 is enabled...no" >&6; }
 
 fi
 
