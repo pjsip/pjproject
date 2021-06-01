@@ -1,18 +1,48 @@
 The WebRtc source is cloned from the repo:
 https://webrtc.googlesource.com/src
 dated Apr 21 2021
+license: third_party/webrtc_aec3/LICENSE
 
 The abseil's source in src/absl is not part of WebRtc and taken separately from:
 https://github.com/abseil/abseil-cpp
 dated Apr 20 2021
-abseil's license can be found in src/absl/LICENSE.
+abseil's license: src/absl/LICENSE
 
 src/third_party's source is obtained from:
 * rnnoise
 https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/rnnoise
 dated Apr 30 2021
+license: src/third_party/rnnoise/COPYING
 
 * pffft
 https://bitbucket.org/jpommier/pffft/src/master/
-with patches from: https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/pffft/patches/
 dated Apr 30 2021
+license: src/third_party/pffft/README.txt
+
+Local changes:
+1. Undeclared PR_SET_NAME on Android.
+diff --git a/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc b/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
+index b0243b41d..fc7a09000 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
++++ b/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
+@@ -105,7 +105,7 @@ void SetCurrentThreadName(const char* name) {
+   } __except (EXCEPTION_EXECUTE_HANDLER) {  // NOLINT
+   }
+ #pragma warning(pop)
+-#elif defined(WEBRTC_LINUX) || defined(WEBRTC_ANDROID)
++#elif defined(WEBRTC_LINUX) // || defined(WEBRTC_ANDROID)
+   prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name));  // NOLINT
+ #elif defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
+   pthread_setname_np(name);
+
+2. Error: 'unique_ptr' is not a member of 'std' on Linux.
+diff --git a/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h b/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
+index 3b9971aba..e4e954067 100644
+--- a/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
++++ b/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
+@@ -12,6 +12,7 @@
+ #define MODULES_AUDIO_PROCESSING_AEC3_REVERB_MODEL_ESTIMATOR_H_
+ 
+ #include <array>
++#include <memory>
+ #include <vector>
