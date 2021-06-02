@@ -45,6 +45,7 @@ pjsip-apps/src/pjsua/ios*/lib*.a
 pjsip-apps/src/pjsua/ios/ipjsua.xcodeproj/project.xcworkspace/
 pjsip-apps/src/pjsua/ios/ipjsua.xcworkspace/xcshareddata
 pjsip-apps/src/pjsua/ios-swift/Libraries/
+pjsip-apps/samples/pjsua2/ios-swift-pjsua2/Libraries/
 
 # SWIG Java/Android stuff
 pjsip-apps/src/swig/java/android/app/src/main/java/org/pjsip/pjsua2/*.java
