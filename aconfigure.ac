@@ -673,6 +673,27 @@ AC_ARG_WITH(external-webrtc,
     )
 
 
+dnl # Use external webrtc AEC3 installation
+AC_SUBST(ac_external_webrtc_aec3,0)
+AC_ARG_WITH(external-webrtc-aec3,
+    AS_HELP_STRING([--with-external-webrtc-aec3],
+		   [Use external webrtc AEC3 development files, not the one in "third_party" directory. When this option is set, make sure that webrtc is accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
+    [
+	if test "x$with_external_webrtc_aec3" != "xno"; then
+		# Test webrtc AEC3 installation
+		AC_MSG_CHECKING([if external webrtc AEC3 is installed])
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include "modules/audio_processing/aec3/echo_canceller3.h"
+		]],
+						  [EchoCanceller3 ec(EchoCanceller3Config(), 16000, 1, 1);])],
+				  [AC_MSG_RESULT(yes!!)
+				   ac_external_webrtc_aec3="1"
+				   ],
+				  [AC_MSG_ERROR([Unable to use external webrtc AEC3. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
+	fi
+    ]
+    )
+
+
 dnl # Resample implementation
 AC_SUBST(ac_pjmedia_resample,libresample)
 AC_ARG_ENABLE(resample,
@@ -2181,6 +2202,106 @@ AC_ARG_ENABLE(libwebrtc,
 		     *)
 			;;
 		esac	
+	      ])
+
+
+dnl # Include webrtc AEC3
+AC_SUBST(ac_no_webrtc_aec3)
+AC_SUBST(ac_webrtc_aec3_instset)
+AC_SUBST(ac_webrtc_aec3_cflags)
+AC_SUBST(ac_webrtc_aec3_ldflags)
+AC_ARG_ENABLE(libwebrtc_aec3,
+	      AS_HELP_STRING([--enable-libwebrtc-aec3],
+			     [Build libwebrtc-aec3 that's included in PJSIP]),
+	      [
+           	if test "$enable_libwebrtc_aec3" = "yes"; then
+		  # Test if we can build WebRtc AEC3
+		  AC_MSG_CHECKING([if WebRtc AEC3 can be compiled with C++17])
+	
+		  SAVED_CXXFLAGS="$CXXFLAGS"
+		  CXXFLAGS="$CXXFLAGS -std=c++17"
+		  
+		  AC_LANG_PUSH([C++])
+		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
+		  [AC_MSG_RESULT(yes)
+		   LD="$CXX"],
+		  [AC_MSG_RESULT(no)
+		   CXXFLAGS="$SAVED_CXXFLAGS"
+		   ac_no_webrtc_aec3=1
+		   AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)])
+		  AC_LANG_POP([C++])
+
+		  case $target in
+		      *-apple-darwin_ios*)
+			case $target in
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    *arm*)
+				ac_webrtc_aec3_instset=neon
+			    	;;
+			    *)
+				ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		      *android*)
+			case $TARGET_ABI in
+			    armeabi-v7a)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
+			    	;;
+			    armeabi)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+			    	;;
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    x86*)
+			    	ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		     *mingw* | *cygw*)
+			ac_webrtc_aec3_instset=sse2
+			ac_webrtc_aec3_cflags="-msse2"
+			;;
+		     *win32* | *w32* | *darwin* | *linux*)
+                         case $target in
+                             armv7l*gnueabihf)
+                                 ac_webrtc_aec3_instset=neon
+                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ;;
+			     arm-apple-darwin*)
+				 ac_webrtc_aec3_instset=neon
+				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	 ;;
+                             *)
+                                 ac_webrtc_aec3_instset=sse2
+                                 ;;
+                         esac
+                         case $target in
+                             *darwin*)
+                                 ac_webrtc_aec3_cflags+=" -DWEBRTC_MAC=1"
+                                 ;;
+                         esac
+			;;
+		     *)
+			;;
+		  esac
+		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+           	else
+           	  ac_no_webrtc_aec3=1
+           	  AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
+             	  AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
+          	fi
+	      ],
+	      [ac_no_webrtc_aec3=1
+	       AC_DEFINE(PJMEDIA_HAS_LIBWEBRTC_AEC3,0)
+	       AC_MSG_RESULT([Checking if libwebrtc-aec3 is enabled...no])
 	      ])
 
 
