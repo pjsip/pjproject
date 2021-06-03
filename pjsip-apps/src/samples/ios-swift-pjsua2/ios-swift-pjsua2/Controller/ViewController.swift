@@ -48,11 +48,6 @@ class ViewController: UIViewController {
     //Login Button
     @IBAction func loginClick(_ sender: UIButton) {
         
-        sipUsernameTField.text = "test2"
-        sipPasswordTField.text = "test2"
-        sipIpTField.text = "10.251.11.134"
-        sipPortTField.text = "5060"
-        
         //Check user already logged in. && Form is filled
         if (CPPWrapper().registerStateInfoWrapper() == false
                 && !sipUsernameTField.text!.isEmpty
@@ -119,9 +114,7 @@ class ViewController: UIViewController {
     //Call Button
     @IBAction func callClick(_ sender: UIButton) {
         
-        if(CPPWrapper().registerStateInfoWrapper() != false){
-            sipDestinationUriTField.text = "sip:test3@10.251.11.134:5060"
-            
+        if(CPPWrapper().registerStateInfoWrapper() != false){            
             let vcToPresent = self.storyboard!.instantiateViewController(withIdentifier: "outgoingCallVC") as! OutgoingViewController
             vcToPresent.outgoingCallId = sipDestinationUriTField.text ?? "<SIP-NUMBER>"
             self.present(vcToPresent, animated: true, completion: nil)
