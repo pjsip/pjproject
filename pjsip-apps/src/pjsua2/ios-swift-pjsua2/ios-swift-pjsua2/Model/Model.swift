@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012-2012 Teluu Inc. (http://www.teluu.com)
- * Contributed by Regis Montoya (aka r3gis - www.r3gis.fr)
+ * Contributed by Emre Tufekci (github.com/emretufekci)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
