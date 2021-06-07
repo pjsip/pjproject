@@ -1632,6 +1632,15 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
 
     if (ds->clock)
 	pjmedia_clock_stop(ds->clock);
+    
+    /* Reset DTLS state */
+    ssl_destroy(ds);
+    ds->setup = DTLS_SETUP_UNKNOWN;
+    ds->nego_started = PJ_FALSE;
+    ds->nego_completed = PJ_FALSE;
+    ds->got_keys = PJ_FALSE;
+    ds->rem_fingerprint.slen = 0;
+    ds->rem_fprint_status = PJ_EPENDING;
 
     return PJ_SUCCESS;
 }
