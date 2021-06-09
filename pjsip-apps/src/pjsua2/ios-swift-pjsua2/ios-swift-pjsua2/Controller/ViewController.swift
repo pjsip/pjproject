@@ -50,6 +50,7 @@ class ViewController: UIViewController {
         sipPortTField.addDoneButtonOnKeyboard()
         sipUsernameTField.addDoneButtonOnKeyboard()
         sipPasswordTField.addDoneButtonOnKeyboard()
+        sipDestinationUriTField.addDoneButtonOnKeyboard()
     }
     
     
