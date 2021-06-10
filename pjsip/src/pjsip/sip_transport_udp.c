@@ -143,18 +143,15 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	goto on_return;
 
     if (-bytes_read == PJ_ESOCKETSTOP) {
-	pjsip_udp_transport_res_param res_param;
-	pjsip_udp_transport_res_param_default(&res_param);
-
-	res_param.option = PJSIP_UDP_TRANSPORT_DESTROY_SOCKET;
-	res_param.sock = PJ_INVALID_SOCKET;
-	res_param.local = &tp->base.local_addr;
-	res_param.a_name = &tp->base.local_name;
-
 	--tp->read_loop_spin;
 	/* Try to recover by restarting the transport. */
 	PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
-	status = pjsip_udp_transport_restart3(&tp->base, &res_param);
+	status = pjsip_udp_transport_restart2(
+			    &tp->base,
+			    PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+			    PJ_INVALID_SOCKET,
+			    &tp->base.local_addr,
+			    &tp->base.local_name);
 
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status,
@@ -326,17 +323,14 @@ static void udp_on_write_complete( pj_ioqueue_key_t *key,
 
     if (-bytes_sent == PJ_ESOCKETSTOP) {
 	pj_status_t status;
-	pjsip_udp_transport_res_param res_param;
-	pjsip_udp_transport_res_param_default(&res_param);
-
-	res_param.option = PJSIP_UDP_TRANSPORT_DESTROY_SOCKET;
-	res_param.sock = PJ_INVALID_SOCKET;
-	res_param.local = &tp->base.local_addr;
-	res_param.a_name = &tp->base.local_name;
-
 	/* Try to recover by restarting the transport. */
 	PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
-	status = pjsip_udp_transport_restart3(&tp->base, &res_param);
+	status = pjsip_udp_transport_restart2(
+			    &tp->base,
+			    PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+			    PJ_INVALID_SOCKET,
+			    &tp->base.local_addr,
+			    &tp->base.local_name);
 
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status,
@@ -387,17 +381,14 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 
     if (status != PJ_EPENDING) {
 	if (status == PJ_ESOCKETSTOP) {
-	    pjsip_udp_transport_res_param res_param;
-	    pjsip_udp_transport_res_param_default(&res_param);
-
-	    res_param.option = PJSIP_UDP_TRANSPORT_DESTROY_SOCKET;
-	    res_param.sock = PJ_INVALID_SOCKET;
-	    res_param.local = &tp->base.local_addr;
-	    res_param.a_name = &tp->base.local_name;
-
 	    /* Try to recover by restarting the transport. */
 	    PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
-	    status = pjsip_udp_transport_restart3(&tp->base, &res_param);
+	    status = pjsip_udp_transport_restart2(
+				&tp->base,
+				PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+				PJ_INVALID_SOCKET,
+				&tp->base.local_addr,
+				&tp->base.local_name);
 
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(1,(THIS_FILE, status,
@@ -968,11 +959,6 @@ PJ_DEF(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
     cfg->async_cnt = 1;
 }
 
-PJ_DEF(void) pjsip_udp_transport_res_param_default(
-					  pjsip_udp_transport_res_param* param)
-{
-    pj_bzero(param, sizeof(*param));
-}
 
 /*
  * pjsip_udp_transport_start2()
@@ -1176,26 +1162,10 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
 					         const pj_sockaddr *local,
 					         const pjsip_host_port *a_name)
 {
-    pjsip_udp_transport_res_param param;
-    pjsip_udp_transport_res_param_default(&param);
-    param.option = option;
-    param.sock = sock;
-    param.local = local;
-    param.a_name = a_name;
-    return pjsip_udp_transport_restart3(transport, &param);
-}
-
-PJ_DEF(pj_status_t) pjsip_udp_transport_restart3(pjsip_transport* transport,
- 				    const pjsip_udp_transport_res_param* param)
-{
     struct udp_transport *tp;
     pj_status_t status;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     int i;
-    unsigned option = param->option;
-    pj_sock_t sock = param->sock;
-    const pj_sockaddr* local = param->local;
-    const pjsip_host_port* a_name = param->a_name;
 
     PJ_ASSERT_RETURN(transport != NULL, PJ_EINVAL);
     /* Flag must be specified */
@@ -1272,18 +1242,10 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart3(pjsip_transport* transport,
 	    udp_set_pub_name(tp, a_name);
     }
 
-    /* If unlock method is specified, then unlock here. */
-    if (param->lock && param->unlock)
-	param->unlock();
-
     /* Make sure all udp_on_read_complete() loop spin are stopped */
-    do {	
+    do {
 	pj_thread_sleep(1);
     } while (tp->read_loop_spin);
-
-    /* If unlock method is specified, then re-lock here. */
-    if (param->lock && param->unlock)
-	param->lock();
 
     /* Re-register new or existing socket to ioqueue. */
     status = register_to_ioqueue(tp);

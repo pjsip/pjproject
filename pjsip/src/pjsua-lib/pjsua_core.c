@@ -3734,20 +3734,27 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 
     switch (tp_info.type) {
     case PJSIP_TRANSPORT_UDP:
-    case PJSIP_TRANSPORT_UDP6:
+    case PJSIP_TRANSPORT_UDP6:    
     {
-	pjsip_udp_transport_res_param param;
+	unsigned num_locks = 0;
 
-	pjsip_udp_transport_res_param_default(&param);
-	param.option = PJSIP_UDP_TRANSPORT_DESTROY_SOCKET;
-	param.sock = PJ_INVALID_SOCKET;
-	param.local = &bind_addr;
-	param.unlock = &PJSUA_UNLOCK;
-	param.lock = &PJSUA_LOCK;
+	/* Release locks before restarting the transport, to avoid deadlock. */
+	while (PJSUA_LOCK_IS_LOCKED()) {
+    	    num_locks++;
+    	    PJSUA_UNLOCK();
+	}
 
-	status = pjsip_udp_transport_restart3(
-					    pjsua_var.tpdata[id].data.tp,
-					    &param);
+	status = pjsip_udp_transport_restart2(
+				       pjsua_var.tpdata[id].data.tp,
+				       PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
+				       PJ_INVALID_SOCKET,
+				       &bind_addr,
+				       NULL);
+
+	/* Re-acquire the locks. */
+	for (;num_locks > 0; num_locks--)
+    	    PJSUA_LOCK();
+
     }
 	break;
 
@@ -3859,7 +3866,7 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 		status = restart_listener(i, param->restart_lis_delay);
 	    }
 	}
-	PJSUA_UNLOCK();
+        PJSUA_UNLOCK();
     } else {
 	for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.tpdata); ++i) {
 	    if (pjsua_var.tpdata[i].data.ptr != NULL) {

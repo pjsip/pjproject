@@ -123,55 +123,6 @@ typedef struct pjsip_udp_transport_cfg
 
 } pjsip_udp_transport_cfg;
 
-/**
- * Parameter for restarting SIP UDP transport when calling 
- * pjsip_udp_transport_restart3(). Application should initialize this structure
- * with its default values by calling pjsip_udp_transport_res_param_default().
- */
-typedef struct pjsip_udp_transport_res_param
-{
-    /**
-     * Restart option.
-     */
-    unsigned option;
-
-    /**
-     * Optional socket to be used by the transport.
-     */
-    pj_sock_t sock;
-
-    /**
-     * The address where the socket should be bound to. If this argument 
-     * is NULL, socket will be bound to any available port.
-     */
-    const pj_sockaddr* local;
-
-    /**
-     * Optionally specify the published address for the transport. 
-     * If the socket is not replaced (PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag is
-     * specified), then if this argument is NULL, the previous value will be 
-     * used. If the socket is replaced and this argument is NULL, the bound
-     * address will be used as the published address of the transport.
-     */
-    const pjsip_host_port* a_name;
-
-    /**
-     * Optional callback to unlock any lock when the method is busy waiting
-     * for the read spin loop to finish. If a lock is held prior to restarting
-     * the transport, it might cause a deadlock.
-     * (see: https://github.com/pjsip/pjproject/issues/2717).
-     * Use this callback is unlock the lock temporarily while the method waits
-     * for the read spin loop to finish.
-     */
-    void (*unlock)();
-
-    /**
-     * Optional callback to re-lock the lock after the read spin loop finish.
-     */
-    void (*lock)();
-
-} pjsip_udp_transport_res_param;
-
 
 /**
  * Initialize pjsip_udp_transport_cfg structure with default values for
@@ -182,14 +133,6 @@ typedef struct pjsip_udp_transport_res_param
  */
 PJ_DECL(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
 					      int af);
-
-/**
- * Initialize pjsip_udp_transport_cfg structure with default values.
- *
- * @param param		The param to initialize.
- */
-PJ_DECL(void) pjsip_udp_transport_res_param_default(
-					 pjsip_udp_transport_res_param *param);
 
 
 /**
@@ -420,36 +363,6 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
 					        pj_sock_t sock,
 					        const pj_sockaddr *local,
 					        const pjsip_host_port *a_name);
-
-/**
- * Restart the transport. Several operations are supported by this function:
- *  - if transport was made temporarily unavailable to SIP stack with
- *    pjsip_udp_transport_pause() and PJSIP_UDP_TRANSPORT_KEEP_SOCKET,
- *    application can make the transport available to the SIP stack
- *    again, by specifying PJSIP_UDP_TRANSPORT_KEEP_SOCKET flag here.
- *  - if application wants to replace the internal socket with a new
- *    socket, it must specify PJSIP_UDP_TRANSPORT_DESTROY_SOCKET when
- *    calling this function, so that the internal socket will be destroyed
- *    if it hasn't been closed. In this case, application has two choices
- *    on how to create the new socket: 1) to let the transport create
- *    the new socket, in this case the \a sock option should be set
- *    to \a PJ_INVALID_SOCKET and optionally the \a local parameter can be
- *    filled with the desired address and port where the new socket 
- *    should be bound to, or 2) to specify its own socket to be used
- *    by this transport, by specifying a valid socket in \a sock argument
- *    and set the \a local argument to NULL. In both cases, application
- *    may specify the published address of the socket in \a a_name
- *    argument. This is another version of pjsip_udp_transport_restart() 
- *    able to restart IPv6 transport.
- *
- * @param transport	The UDP transport.
- * @param param		The restart parameter.
- * 
- * @return 		PJ_SUCCESS if transport can be restarted, or
- *			the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsip_udp_transport_restart3(pjsip_transport* transport,
-				   const pjsip_udp_transport_res_param* param);
 
 
 PJ_END_DECL
