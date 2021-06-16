@@ -208,6 +208,9 @@ typedef struct pjsip_cfg_t
 
 	/** Transaction completed timer for INVITE, in msec. Default value is
 	 *  PJSIP_TD_TIMEOUT.
+	 *
+	 *  This setting is also used for transaction timeout timer for both
+	 *  INVITE and non-INVITE.
 	 */
 	unsigned td;
 
@@ -1099,7 +1102,12 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #  define PJSIP_T4_TIMEOUT	5000
 #endif
 
-/** Transaction completed timer for INVITE */
+/**
+ * Transaction completed timer for INVITE.
+ *
+ * This setting is also used for transaction timeout timer for both
+ * INVITE and non-INVITE.
+ */
 #if !defined(PJSIP_TD_TIMEOUT)
 #  define PJSIP_TD_TIMEOUT	32000
 #endif
