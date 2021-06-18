@@ -1068,6 +1068,19 @@ AC_ARG_ENABLE(resample_dll,
 	      AC_MSG_RESULT([Building libresample as shared library... no])
 	      )
 
+dnl # Include Speex resample
+AC_ARG_ENABLE(speex-resample,
+           AS_HELP_STRING([--enable-speex-resample],
+			  [Enable Speex resample]),
+           [
+           if test "$enable_speex_resample" = "yes"; then
+             AC_MSG_RESULT([Checking if Speex resample is enabled... yes])
+             [ac_pjmedia_resample=speex]
+           else
+             AC_MSG_RESULT([Checking if Speex resample is enabled... no])
+           fi
+           ], AC_MSG_RESULT([Checking if Speex resample is enabled... no]))
+
 dnl # SDL alt prefix
 AC_ARG_WITH(sdl,
     AS_HELP_STRING([--with-sdl=DIR],

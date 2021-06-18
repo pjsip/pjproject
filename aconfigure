@@ -816,6 +816,7 @@ enable_speex_codec
 enable_ilbc_codec
 enable_libsamplerate
 enable_resample_dll
+enable_speex_resample
 with_sdl
 enable_sdl
 with_ffmpeg
@@ -1495,6 +1496,7 @@ Optional Features:
   --disable-ilbc-codec    Exclude iLBC codec in the build
   --enable-libsamplerate  Link with libsamplerate when available.
   --enable-resample-dll   Build libresample as shared library
+  --enable-speex-resample Enable Speex resample
   --disable-sdl           Disable SDL (default: not disabled)
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
@@ -6970,6 +6972,24 @@ else
   { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building libresample as shared library... no" >&5
 $as_echo "Building libresample as shared library... no" >&6; }
 
+fi
+
+
+# Check whether --enable-speex-resample was given.
+if test "${enable_speex_resample+set}" = set; then :
+  enableval=$enable_speex_resample;
+           if test "$enable_speex_resample" = "yes"; then
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... yes" >&5
+$as_echo "Checking if Speex resample is enabled... yes" >&6; }
+             ac_pjmedia_resample=speex
+           else
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... no" >&5
+$as_echo "Checking if Speex resample is enabled... no" >&6; }
+           fi
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... no" >&5
+$as_echo "Checking if Speex resample is enabled... no" >&6; }
 fi
 
 
