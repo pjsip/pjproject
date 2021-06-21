@@ -46,3 +46,29 @@ index 3b9971aba..e4e954067 100644
  #include <array>
 +#include <memory>
  #include <vector>
+
+3. Undeclared M_PI on Windows.
+diff --git a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+index d76d35167..5bb6cc48a 100644
+--- a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
++++ b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+@@ -60,6 +60,7 @@
+ #include "pffft.h"
+ #include <stdlib.h>
+ #include <stdio.h>
++#define _USE_MATH_DEFINES
+ #include <math.h>
+ #include <assert.h>
+ 
+4. Failure building logging.cc on Windows
+c_aec3/src/rtc_base/logging.cc
+index a333d8397..e0e669b5e 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/logging.cc
++++ b/third_party/webrtc_aec3/src/rtc_base/logging.cc
+@@ -15,6 +15,7 @@
+ #if RTC_LOG_ENABLED()
+ 
+ #if defined(WEBRTC_WIN)
++#include <winsock2.h>
+ #include <windows.h>
+ #if _MSC_VER < 1900
