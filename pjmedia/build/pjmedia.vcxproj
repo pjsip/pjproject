@@ -477,6 +477,7 @@
     <ClCompile Include="..\src\pjmedia\echo_speex.c" />
     <ClCompile Include="..\src\pjmedia\echo_suppress.c" />
     <ClCompile Include="..\src\pjmedia\echo_webrtc.c" />
+    <ClCompile Include="..\src\pjmedia\echo_webrtc_aec3.cpp" />
     <ClCompile Include="..\src\pjmedia\endpoint.c" />
     <ClCompile Include="..\src\pjmedia\errno.c" />
     <ClCompile Include="..\src\pjmedia\event.c" />

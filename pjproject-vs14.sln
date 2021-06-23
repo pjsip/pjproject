@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29709.97
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{1DFF1CF3-DBD7-4DA4-A36D-663D695EB678}"
 	ProjectSection(SolutionItems) = preProject
@@ -113,6 +113,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwebrtc", "third_party\build\webrtc\libwebrtc.vcxproj", "{5BCF2773-3825-4D91-9D72-3E2F650DF1DB}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "swig_java_pjsua2", "pjsip-apps\build\swig_java_pjsua2.vcxproj", "{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwebrtc_aec3", "third_party\build\webrtc_aec3\libwebrtc_aec3.vcxproj", "{CDC26604-0877-4229-8964-A9205321D242}"
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
@@ -1957,6 +1959,48 @@ Global
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|ARM.ActiveCfg = Release|Win32
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|Win32.ActiveCfg = Release|Win32
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|x64.ActiveCfg = Release|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|ARM.ActiveCfg = Debug|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|ARM.Build.0 = Debug|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|Win32.ActiveCfg = Debug|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|Win32.Build.0 = Debug|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|x64.ActiveCfg = Debug|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug|x64.Build.0 = Debug|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|Any CPU.ActiveCfg = Debug-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|ARM.ActiveCfg = Debug-Dynamic|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|ARM.Build.0 = Debug-Dynamic|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|Win32.ActiveCfg = Debug-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|Win32.Build.0 = Debug-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|x64.ActiveCfg = Debug-Dynamic|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Dynamic|x64.Build.0 = Debug-Dynamic|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|Any CPU.ActiveCfg = Debug-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|ARM.ActiveCfg = Debug-Static|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|ARM.Build.0 = Debug-Static|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|Win32.ActiveCfg = Debug-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|Win32.Build.0 = Debug-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|x64.ActiveCfg = Debug-Static|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Debug-Static|x64.Build.0 = Debug-Static|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|Any CPU.ActiveCfg = Release|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|ARM.ActiveCfg = Release|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|ARM.Build.0 = Release|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|Win32.ActiveCfg = Release|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|Win32.Build.0 = Release|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|x64.ActiveCfg = Release|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release|x64.Build.0 = Release|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|Any CPU.ActiveCfg = Release-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|ARM.ActiveCfg = Release-Dynamic|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|ARM.Build.0 = Release-Dynamic|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|Win32.ActiveCfg = Release-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|Win32.Build.0 = Release-Dynamic|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|x64.ActiveCfg = Release-Dynamic|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Dynamic|x64.Build.0 = Release-Dynamic|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|Any CPU.ActiveCfg = Release-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|ARM.ActiveCfg = Release-Static|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|ARM.Build.0 = Release-Static|ARM
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|Win32.ActiveCfg = Release-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|Win32.Build.0 = Release-Static|Win32
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|x64.ActiveCfg = Release-Static|x64
+		{CDC26604-0877-4229-8964-A9205321D242}.Release-Static|x64.Build.0 = Release-Static|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1972,5 +2016,8 @@ Global
 		{FC9CBB95-624C-4CE8-86A8-3AB5A415AA65} = {87D83489-039E-4123-BE01-CB62EE932A29}
 		{016D497F-0EE0-449E-89F5-BD63F7F9A8A6} = {87D83489-039E-4123-BE01-CB62EE932A29}
 		{9FDF5E33-D15D-409F-876E-4E77727936B9} = {87D83489-039E-4123-BE01-CB62EE932A29}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {75DAE9B9-BF5E-4D6C-8CB6-A93135702FA6}
 	EndGlobalSection
 EndGlobal
