@@ -528,6 +528,9 @@ static void ssl_destroy(dtls_srtp *ds)
 	}
 	SSL_free(ds->ossl_ssl); /* this will also close BIOs */
 	ds->ossl_ssl = NULL;
+	/* thus reset the BIOs as well */
+	ds->ossl_rbio = NULL;
+	ds->ossl_wbio = NULL;
     }
 
     /* Destroy SSL context */
