@@ -73,6 +73,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjsip_test", "pjsip\build\pjsip_test.vcxproj", "{B3F7D4E9-702F-4EB4-ADA8-098D0A83D770}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libpjproject", "pjsip-apps\build\libpjproject.vcxproj", "{23D7679C-764C-4E02-8B29-BB882CEEEFE2}"
+	ProjectSection(ProjectDependencies) = postProject
+		{CDC26604-0877-4229-8964-A9205321D242} = {CDC26604-0877-4229-8964-A9205321D242}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "python_pjsua", "pjsip-apps\build\python_pjsua.vcxproj", "{0C91838B-3372-40B4-A764-DE075A4BC94B}"
 EndProject
