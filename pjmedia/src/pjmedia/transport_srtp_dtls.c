@@ -693,6 +693,8 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
     pj_size_t len;
     pj_status_t status = PJ_SUCCESS;
 
+	if (ds->ossl_wbio == NULL) return PJ_EGONE;
+
     /* Check whether there is data to send */
     if (BIO_ctrl_pending(ds->ossl_wbio) > 0) {
 	/* Yes, get and send it */
@@ -1007,6 +1009,8 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
 {
     char tmp[128];
     pj_size_t nwritten;
+
+	if (ds->ossl_rbio == NULL) return PJ_EGONE;
 
     nwritten = BIO_write(ds->ossl_rbio, data, (int)len);
     if (nwritten < len) {
