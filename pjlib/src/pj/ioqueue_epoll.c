@@ -241,7 +241,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue->queue = pj_pool_calloc(pool, max_fd, sizeof(struct queue));
     PJ_ASSERT_RETURN(ioqueue->queue != NULL, PJ_ENOMEM);
    */
-    PJ_LOG(4, ("pjlib", "epoll I/O Queue created (%p)", ioqueue));
+    PJ_LOG(4, ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
 
     *p_ioqueue = ioqueue;
     return PJ_SUCCESS;
@@ -545,6 +545,29 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     return PJ_SUCCESS;
 }
 
+
+static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
+                                   pj_ioqueue_key_t *key,
+				   pj_uint32_t events)
+{
+    struct epoll_event ev;
+
+    ev.epoll_data = (epoll_data_type)key;
+    ev.events = events;
+
+#if USE_EPOLLEXCLUSIVE
+    ev.events |= EPOLLEXCLUSIVE;
+    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
+#elif USE_EPOLLONESHOT
+    ev.events |= EPOLLONESHOT;
+    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#else
+    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#endif
+}
+
+
 /* ioqueue_remove_from_set()
  * This function is called from ioqueue_dispatch_event() to instruct
  * the ioqueue to remove the specified descriptor from ioqueue's descriptor
@@ -554,22 +577,20 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type)
 {
-    if (event_type == WRITEABLE_EVENT) {
-	struct epoll_event ev;
-
-	ev.epoll_data = (epoll_data_type)key;
-	ev.events = EPOLLIN | EPOLLERR;
-#if USE_EPOLLEXCLUSIVE
-	ev.events |= EPOLLEXCLUSIVE;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
-#elif USE_EPOLLONESHOT
-	ev.events |= EPOLLONESHOT;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+#if USE_EPOLLONESHOT
+    /* For EPOLLONESHOT, always rearm ioqueue for events. */
+    PJ_UNUSED_ARG(event_type);
+    pj_uint32_t ev = EPOLLIN | EPOLLERR;
+    if (key_has_pending_write(key))
+	ev |= EPOLLOUT;
+    update_epoll_event_set(ioqueue, key, ev);
 #else
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+    /* Remove EPOLLOUT if write event received and no pending send */
+    if (event_type == WRITEABLE_EVENT && !key_has_pending_write(key)) {
+	pj_uint32_t ev = EPOLLIN | EPOLLERR;
+	update_epoll_event_set(ioqueue, key, ev);
+    }
 #endif
-    }	
 }
 
 /*
@@ -582,30 +603,13 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
-#if USE_EPOLLONESHOT==0
-    /* When not using EPOLLONESHOT, only rearm write event,
-     * otherwise, rearm all events.
-     */
-    if (event_type == WRITEABLE_EVENT)
-#endif
-    {
-	struct epoll_event ev;
+    /* Add EPOLLOUT if write-event requested (other events are always set) */
+    if (event_type == WRITEABLE_EVENT) {
+	pj_uint32_t ev = EPOLLIN | EPOLLERR;
+	if (key_has_pending_connect(key) || key_has_pending_write(key))
+	    ev |= EPOLLOUT;
 
-	ev.epoll_data = (epoll_data_type)key;
-	ev.events = EPOLLIN | EPOLLERR;
-	if (event_type == WRITEABLE_EVENT)
-	    ev.events |= EPOLLOUT;
-
-#if USE_EPOLLEXCLUSIVE
-	ev.events |= EPOLLEXCLUSIVE;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
-#elif USE_EPOLLONESHOT
-	ev.events |= EPOLLONESHOT;
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-#else
-	os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-#endif
+	update_epoll_event_set(ioqueue, key, ev);
     }
 }
 
