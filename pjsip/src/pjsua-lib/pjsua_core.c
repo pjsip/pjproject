@@ -3734,13 +3734,28 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 
     switch (tp_info.type) {
     case PJSIP_TRANSPORT_UDP:
-    case PJSIP_TRANSPORT_UDP6:
+    case PJSIP_TRANSPORT_UDP6:    
+    {
+	unsigned num_locks = 0;
+
+	/* Release locks before restarting the transport, to avoid deadlock. */
+	while (PJSUA_LOCK_IS_LOCKED()) {
+    	    num_locks++;
+    	    PJSUA_UNLOCK();
+	}
+
 	status = pjsip_udp_transport_restart2(
 				       pjsua_var.tpdata[id].data.tp,
 				       PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
 				       PJ_INVALID_SOCKET,
 				       &bind_addr,
 				       NULL);
+
+	/* Re-acquire the locks. */
+	for (;num_locks > 0; num_locks--)
+    	    PJSUA_LOCK();
+
+    }
 	break;
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
