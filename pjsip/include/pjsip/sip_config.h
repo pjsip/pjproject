@@ -181,6 +181,14 @@ typedef struct pjsip_cfg_t
          */
         pj_bool_t accept_multiple_sdp_answers;
 
+	/**
+	 * Don't disconnect the INVITE session after an outgoing request
+	 * gets timed out or responded with 408 (request timeout).
+	 *
+	 * Default is PJ_FALSE.
+	 */
+	pj_bool_t keep_inv_after_tsx_timeout;
+
     } endpt;
 
     /** Transaction layer settings. */
