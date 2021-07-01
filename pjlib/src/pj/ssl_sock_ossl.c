@@ -130,7 +130,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #     define X509_get_notBefore(x)  X509_get0_notBefore(x)
 #     define X509_get_notAfter(x)   X509_get0_notAfter(x)
 #  endif
-#else
+#elif !USING_LIBRESSL
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
 #endif

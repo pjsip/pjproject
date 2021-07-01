@@ -60,12 +60,35 @@ typedef enum pjmedia_endpt_flag
 
 } pjmedia_endpt_flag;
 
+/**
+ * This structure specifies various settings that can be passed when creating
+ * audio/video sdp.
+ */
+typedef struct pjmedia_endpt_create_sdp_param
+{
+    /**
+     * Direction of the media.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    pjmedia_dir dir;
+
+} pjmedia_endpt_create_sdp_param;
 
 /**
  * Type of callback to register to pjmedia_endpt_atexit().
  */
 typedef void (*pjmedia_endpt_exit_callback)(pjmedia_endpt *endpt);
 
+
+/**
+ * Call this function to initialize \a pjmedia_endpt_create_sdp_param with default 
+ * values.
+ *
+ * @param param	    The param to be initialized.
+ */
+PJ_DECL(void)
+pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param);
 
 /**
  * Create an instance of media endpoint.
@@ -296,16 +319,18 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_base_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, must be zero for now.
+ * @param options	Options parameter, can be NULL. If set to NULL,
+ *			default values will be used.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
-                                                    pj_pool_t *pool,
-                                                    const pjmedia_sock_info*si,
-                                                    unsigned options,
-                                                    pjmedia_sdp_media **p_m);
+PJ_DECL(pj_status_t)
+pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m);
 
 /**
  * Create SDP media line for video media.
@@ -313,16 +338,18 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
  * @param endpt		The media endpoint.
  * @param pool		Pool to allocate memory from.
  * @param si		Socket information.
- * @param options	Option flags, must be zero for now.
+ * @param options	Options parameter, can be NULL. If set to NULL,
+ *			default values will be used.
  * @param p_m		Pointer to receive the created SDP media.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
-                                                    pj_pool_t *pool,
-                                                    const pjmedia_sock_info*si,
-                                                    unsigned options,
-                                                    pjmedia_sdp_media **p_m);
+PJ_DECL(pj_status_t)
+pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m);
 
 /**
  * Dump media endpoint capabilities.

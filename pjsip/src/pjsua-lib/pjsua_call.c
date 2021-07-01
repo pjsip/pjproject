@@ -628,7 +628,7 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
 {
     opt->flag &= ~(PJSUA_CALL_UNHOLD | PJSUA_CALL_UPDATE_CONTACT |
 		   PJSUA_CALL_NO_SDP_OFFER | PJSUA_CALL_REINIT_MEDIA |
-		   PJSUA_CALL_UPDATE_VIA);
+		   PJSUA_CALL_UPDATE_VIA | PJSUA_CALL_SET_MEDIA_DIR);
 }
 
 
@@ -637,6 +637,8 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt)
  */
 PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 {
+    unsigned i;
+
     pj_assert(opt);
 
     pj_bzero(opt, sizeof(*opt));
@@ -648,6 +650,10 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
     opt->req_keyframe_method = PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
 			       PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
+
+    for (i = 0; i < PJMEDIA_MAX_SDP_MEDIA; i++) {
+    	opt->media_dir[i] = PJMEDIA_DIR_ENCODING_DECODING;
+    }
 }
 
 /* 

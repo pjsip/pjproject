@@ -426,7 +426,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1e-dev.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1l-dev.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |
@@ -470,7 +470,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1e-dev.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1l-dev.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |
@@ -550,7 +550,7 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - name: get openssl
-      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1e-dev.zip" -OutFile ".\openssl.zip"
+      run: Invoke-WebRequest -Uri "https://mirror.firedaemon.com/OpenSSL/openssl-1.1.1l-dev.zip" -OutFile ".\openssl.zip"
       shell: powershell
     - name: expand openssl
       run: |

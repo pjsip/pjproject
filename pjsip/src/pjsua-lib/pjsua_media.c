@@ -2467,6 +2467,20 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	    }
 	}
 
+	if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
+	    call_med->def_dir = call->opt.media_dir[mi];
+    	    PJ_LOG(4,(THIS_FILE, "Call %d: setting media direction "
+    	    			 "#%d to %d.", call_id, mi,
+    	    			 call_med->def_dir));
+	} else if (!reinit) {
+	    /* Initialize default initial media direction as bidirectional */
+	    call_med->def_dir = PJMEDIA_DIR_ENCODING_DECODING;
+	}
+	call_med->dir = call_med->def_dir;
+	if (call_med->dir == PJMEDIA_DIR_NONE) {
+	    enabled = PJ_FALSE;
+	}
+
 	if (enabled) {
 	    call_med->enable_rtcp_mux = acc->cfg.enable_rtcp_mux;
 
@@ -2678,6 +2692,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	pjsua_call_media *call_med = &call->media_prov[mi];
 	pjmedia_sdp_media *m = NULL;
 	pjmedia_transport_info tpinfo;
+	pjmedia_endpt_create_sdp_param param;
 	unsigned i;
 
 	if (rem_sdp && mi >= rem_sdp->media_count) {
@@ -2773,15 +2788,19 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	pjmedia_transport_get_info(call_med->tp, &tpinfo);
 
 	/* Ask pjmedia endpoint to create SDP media line */
+	pjmedia_endpt_create_sdp_param_default(&param);
+	param.dir = call_med->dir;
 	switch (call_med->type) {
 	case PJMEDIA_TYPE_AUDIO:
 	    status = pjmedia_endpt_create_audio_sdp(pjsua_var.med_endpt, pool,
-                                                    &tpinfo.sock_info, 0, &m);
+                                                    &tpinfo.sock_info,
+                                                    &param, &m);
 	    break;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	case PJMEDIA_TYPE_VIDEO:
 	    status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
-	                                            &tpinfo.sock_info, 0, &m);
+	                                            &tpinfo.sock_info,
+	                                            &param, &m);
 	    break;
 #endif
 	default:
@@ -3465,7 +3484,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {
-	pjsua_call_media *call_med = &call->media[mi];
+    	const char *STR_SENDRECV = "sendrecv";
+    	const char *STR_SENDONLY = "sendonly";
+     	const char *STR_RECVONLY = "recvonly";
+     	const char *STR_INACTIVE = "inactive";
+     	pjsua_call_media *call_med = &call->media[mi];
 	pj_bool_t media_changed = PJ_FALSE;
 
 	if (mi >= local_sdp->media_count ||
@@ -3532,6 +3555,63 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    if (pjsua_var.media_cfg.no_vad && si->param) {
 	        si->param->setting.vad = 0;
 	    }
+
+	    if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
+	    	si->dir != PJMEDIA_DIR_NONE)
+	    {
+    		pjmedia_dir dir = si->dir;
+    		
+    		if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
+    		    call_med->def_dir = call->opt.media_dir[mi];
+    		    PJ_LOG(4,(THIS_FILE, "Call %d: setting audio media "
+    		    			 "direction #%d to %d.",
+			  		 call_id, mi, call_med->def_dir));
+    		}
+
+ 		/* If the default direction specifies we do not wish
+ 		 * encoding/decoding, clear that direction.
+ 		 */
+     		if ((call_med->def_dir & PJMEDIA_DIR_ENCODING) == 0) {
+ 		    dir &= ~PJMEDIA_DIR_ENCODING;
+     		}
+     		if ((call_med->def_dir & PJMEDIA_DIR_DECODING) == 0) {
+ 		    dir &= ~PJMEDIA_DIR_DECODING;
+     		}
+
+     		if (dir != si->dir) {
+     		    const char *str_attr = NULL;
+ 	    	    pjmedia_sdp_attr *attr;
+ 	    	    pjmedia_sdp_media *m;
+
+     		    if (!need_renego_sdp) {
+ 			pjmedia_sdp_session *local_sdp_renego;
+ 			local_sdp_renego =
+ 			    pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+ 			local_sdp = local_sdp_renego;
+ 			need_renego_sdp = PJ_TRUE;
+     		    }
+
+     		    si->dir = dir;
+     		    m = local_sdp->media[mi];
+
+ 	    	    /* Remove existing directions attributes */
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_SENDRECV);
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_SENDONLY);
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_RECVONLY);
+
+ 		    if (si->dir == PJMEDIA_DIR_ENCODING_DECODING) {
+ 		    	str_attr = STR_SENDRECV;
+ 		    } else if (si->dir == PJMEDIA_DIR_ENCODING) {
+ 		    	str_attr = STR_SENDONLY;
+ 		    } else if (si->dir == PJMEDIA_DIR_DECODING) {
+ 		    	str_attr = STR_RECVONLY;
+ 		    } else {
+ 		    	str_attr = STR_INACTIVE;
+ 		    }
+ 		    attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
+ 		    pjmedia_sdp_media_add_attr(m, attr);
+ 		}
+     	    }
 
 	    /* Check if this media is changed */
 	    stream_info.type = PJMEDIA_TYPE_AUDIO;
@@ -3710,6 +3790,63 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	        si->rtcp_mux = PJ_FALSE;
 	    }
 
+	    if (!pjmedia_sdp_neg_was_answer_remote(call->inv->neg) &&
+	    	si->dir != PJMEDIA_DIR_NONE)
+	    {
+    		pjmedia_dir dir = si->dir;
+    		
+    		if (call->opt.flag & PJSUA_CALL_SET_MEDIA_DIR) {
+    		    call_med->def_dir = call->opt.media_dir[mi];
+    		    PJ_LOG(4,(THIS_FILE, "Call %d: setting video media "
+    		    			 "direction #%d to %d.",
+			  		 call_id, mi, call_med->def_dir));
+    		}
+
+ 		/* If the default direction specifies we do not wish
+ 		 * encoding/decoding, clear that direction.
+ 		 */
+     		if ((call_med->def_dir & PJMEDIA_DIR_ENCODING) == 0) {
+ 		    dir &= ~PJMEDIA_DIR_ENCODING;
+     		}
+     		if ((call_med->def_dir & PJMEDIA_DIR_DECODING) == 0) {
+ 		    dir &= ~PJMEDIA_DIR_DECODING;
+     		}
+
+     		if (dir != si->dir) {
+     		    const char *str_attr = NULL;
+ 	    	    pjmedia_sdp_attr *attr;
+ 	    	    pjmedia_sdp_media *m;
+
+     		    if (!need_renego_sdp) {
+ 			pjmedia_sdp_session *local_sdp_renego;
+ 			local_sdp_renego =
+ 			    pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+ 			local_sdp = local_sdp_renego;
+ 			need_renego_sdp = PJ_TRUE;
+     		    }
+
+     		    si->dir = dir;
+     		    m = local_sdp->media[mi];
+
+ 	    	    /* Remove existing directions attributes */
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_SENDRECV);
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_SENDONLY);
+ 	    	    pjmedia_sdp_media_remove_all_attr(m, STR_RECVONLY);
+
+ 		    if (si->dir == PJMEDIA_DIR_ENCODING_DECODING) {
+ 		    	str_attr = STR_SENDRECV;
+ 		    } else if (si->dir == PJMEDIA_DIR_ENCODING) {
+ 		    	str_attr = STR_SENDONLY;
+ 		    } else if (si->dir == PJMEDIA_DIR_DECODING) {
+ 		    	str_attr = STR_RECVONLY;
+ 		    } else {
+ 		    	str_attr = STR_INACTIVE;
+ 		    }
+ 		    attr = pjmedia_sdp_attr_create(tmp_pool, str_attr, NULL);
+ 		    pjmedia_sdp_media_add_attr(m, attr);
+ 		}
+     	    }
+
 	    /* Check if this media is changed */
 	    stream_info.type = PJMEDIA_TYPE_VIDEO;
 	    stream_info.info.vid = the_si;
@@ -3768,7 +3905,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    call_med->rem_srtp_use = srtp_info->peer_use;
 		}
 
-		/* Update audio channel */
+		/* Update video channel */
 		if (media_changed) {
 		    status = pjsua_vid_channel_update(call_med,
 						      call->inv->pool, si,

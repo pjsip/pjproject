@@ -1,4 +1,3 @@
-/* $Id$ */
 /* 
  * Copyright (C) 2011-2015 Teluu Inc. (http://www.teluu.com)
  *
@@ -357,7 +356,7 @@ PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
 {
     webrtc_ec *echo = (webrtc_ec*) state;
 
-    if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &p_stat->median,
+    if (WebRtcAec_GetDelayMetrics(echo->AEC_inst, &p_stat->delay,
     				  &p_stat->std, &p_stat->frac_delay) != 0)
     {
         return PJ_EUNKNOWN;
@@ -369,7 +368,7 @@ PJ_DEF(pj_status_t) webrtc_aec_get_stat(void *state,
         pj_ansi_snprintf(p_stat->buf_, sizeof(p_stat->buf_),
 		     	 "WebRTC delay metric: median=%d, std=%d, "
             	     	 "frac of poor delay=%.02f",
-            	     	 p_stat->median, p_stat->std, p_stat->frac_delay);
+            	     	 p_stat->delay, p_stat->std, p_stat->frac_delay);
 
     return PJ_SUCCESS;
 }

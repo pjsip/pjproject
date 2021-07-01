@@ -152,7 +152,7 @@ static void usage(void)
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default="
 	   			  xstr(PJSUA_DEFAULT_EC_TAIL_LEN) ")");
     puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
-    puts  ("                        1=speex, 2=suppressor, 3=WebRtc)");
+    puts  ("                        1=speex, 2=suppressor, 3=WebRtc, 4=WebRtc AEC3)");
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is "
     				  xstr(PJSUA_DEFAULT_ILBC_MODE) ")");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
@@ -1270,6 +1270,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_EC_OPT:
 	    cfg->media_cfg.ec_options = my_atoi(pj_optarg);
+	    if (cfg->media_cfg.ec_options > 0)
+	    	cfg->media_cfg.ec_options |= PJMEDIA_ECHO_USE_SW_ECHO;
 	    break;
 
 	case OPT_QUALITY:

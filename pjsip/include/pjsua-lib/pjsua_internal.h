@@ -45,7 +45,8 @@ struct pjsua_call_media
     pj_str_t		 rem_mid;   /**< Remote SDP "a=mid" attribute.	    */
     pjsua_call_media_status state;  /**< Media state.			    */
     pjsua_call_media_status prev_state;/**< Previous media state.           */
-    pjmedia_dir		 dir;       /**< Media direction.		    */
+    pjmedia_dir		 def_dir;   /**< Default media direction.	    */
+    pjmedia_dir		 dir;       /**< Current media direction.	    */
 
     /** The stream */
     struct {

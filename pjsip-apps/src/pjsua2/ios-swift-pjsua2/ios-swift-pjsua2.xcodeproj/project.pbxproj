@@ -1,0 +1,577 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		C337417325BADEEE007785D7 /* Model.swift in Sources */ = {isa = PBXBuildFile; fileRef = C337417225BADEEE007785D7 /* Model.swift */; };
+		C351398125A5F70D00A090AA /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521F25A5EC380037A8AB /* libg7221codec.a */; };
+		C351398225A5F70D00A090AA /* libgsmcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521A25A5EC380037A8AB /* libgsmcodec.a */; };
+		C351398325A5F70D00A090AA /* libilbccodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522825A5EC380037A8AB /* libilbccodec.a */; };
+		C351398425A5F70D00A090AA /* libpj.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522225A5EC380037A8AB /* libpj.a */; };
+		C351398525A5F70D00A090AA /* libpjlib-util.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522625A5EC380037A8AB /* libpjlib-util.a */; };
+		C351398625A5F70D00A090AA /* libpjmedia-audiodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522425A5EC380037A8AB /* libpjmedia-audiodev.a */; };
+		C351398725A5F70D00A090AA /* libpjmedia-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522125A5EC380037A8AB /* libpjmedia-codec.a */; };
+		C351398825A5F70D00A090AA /* libpjmedia-videodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521825A5EC380037A8AB /* libpjmedia-videodev.a */; };
+		C351398925A5F70D00A090AA /* libpjmedia.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521E25A5EC380037A8AB /* libpjmedia.a */; };
+		C351398A25A5F70D00A090AA /* libpjnath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522025A5EC380037A8AB /* libpjnath.a */; };
+		C351398B25A5F70D00A090AA /* libpjsip-simple.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522725A5EC380037A8AB /* libpjsip-simple.a */; };
+		C351398C25A5F70D00A090AA /* libpjsip-ua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521D25A5EC380037A8AB /* libpjsip-ua.a */; };
+		C351398D25A5F70D00A090AA /* libpjsip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522325A5EC380037A8AB /* libpjsip.a */; };
+		C351398E25A5F70D00A090AA /* libpjsua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521925A5EC380037A8AB /* libpjsua.a */; };
+		C351398F25A5F70D00A090AA /* libpjsua2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521C25A5EC380037A8AB /* libpjsua2.a */; };
+		C351399025A5F70D00A090AA /* libresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522925A5EC380037A8AB /* libresample.a */; };
+		C351399125A5F70D00A090AA /* libspeex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8521B25A5EC380037A8AB /* libspeex.a */; };
+		C351399225A5F70D00A090AA /* libsrtp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522525A5EC380037A8AB /* libsrtp.a */; };
+		C351399325A5F70D00A090AA /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522A25A5EC380037A8AB /* libwebrtc.a */; };
+		C351399425A5F70D00A090AA /* libyuv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522B25A5EC380037A8AB /* libyuv.a */; };
+		C374860825B84FA100FBE972 /* OutgoingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C374860725B84FA100FBE972 /* OutgoingViewController.swift */; };
+		C399A57125AF2721000F742A /* IncomingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C399A57025AF2721000F742A /* IncomingViewController.swift */; };
+		C3AB889B25A734B400224276 /* wrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = C3AB889A25A734B400224276 /* wrapper.mm */; };
+		C3AB88A025A7358700224276 /* CustomPJSUA2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3AB889E25A7358700224276 /* CustomPJSUA2.cpp */; };
+		C3B851FF25A5EA6C0037A8AB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */; };
+		C3B8520125A5EA6C0037A8AB /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */; };
+		C3B8520325A5EA6C0037A8AB /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520225A5EA6C0037A8AB /* ViewController.swift */; };
+		C3B8520625A5EA6C0037A8AB /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520425A5EA6C0037A8AB /* Main.storyboard */; };
+		C3B8520825A5EA6D0037A8AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520725A5EA6D0037A8AB /* Assets.xcassets */; };
+		C3B8520B25A5EA6D0037A8AB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */; };
+		C3B8524325A5EC940037A8AB /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524125A5EC940037A8AB /* AVFoundation.framework */; };
+		C3B8524425A5EC940037A8AB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524225A5EC940037A8AB /* Foundation.framework */; };
+		C3B8524725A5ED6D0037A8AB /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */; };
+		C3C4082E25B9A547002C19EB /* ActiveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C4082D25B9A547002C19EB /* ActiveViewController.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		C337417225BADEEE007785D7 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
+		C374860725B84FA100FBE972 /* OutgoingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingViewController.swift; sourceTree = "<group>"; };
+		C399A57025AF2721000F742A /* IncomingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingViewController.swift; sourceTree = "<group>"; };
+		C3AB889A25A734B400224276 /* wrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wrapper.mm; sourceTree = "<group>"; };
+		C3AB889E25A7358700224276 /* CustomPJSUA2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CustomPJSUA2.cpp; sourceTree = "<group>"; };
+		C3AB889F25A7358700224276 /* CustomPJSUA2.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CustomPJSUA2.hpp; sourceTree = "<group>"; };
+		C3AB88AA25A73F3100224276 /* wrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wrapper.h; sourceTree = "<group>"; };
+		C3B851FB25A5EA6C0037A8AB /* ios-swift-pjsua2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ios-swift-pjsua2.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		C3B8520225A5EA6C0037A8AB /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		C3B8520525A5EA6C0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		C3B8520725A5EA6D0037A8AB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C3B8520A25A5EA6D0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		C3B8520C25A5EA6D0037A8AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		C3B8521325A5EBF00037A8AB /* ios-swift-pjsua2-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ios-swift-pjsua2-Bridging-Header.h"; sourceTree = "<group>"; };
+		C3B8521825A5EC380037A8AB /* libpjmedia-videodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjmedia-videodev.a"; path = "../PJSip-Build/pjproject/pjmedia/lib/libpjmedia-videodev.a"; sourceTree = "<group>"; };
+		C3B8521925A5EC380037A8AB /* libpjsua.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpjsua.a; path = "../PJSip-Build/pjproject/pjsip/lib/libpjsua.a"; sourceTree = "<group>"; };
+		C3B8521A25A5EC380037A8AB /* libgsmcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libgsmcodec.a; path = "../PJSip-Build/pjproject/third_party/lib/libgsmcodec.a"; sourceTree = "<group>"; };
+		C3B8521B25A5EC380037A8AB /* libspeex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libspeex.a; path = "../PJSip-Build/pjproject/third_party/lib/libspeex.a"; sourceTree = "<group>"; };
+		C3B8521C25A5EC380037A8AB /* libpjsua2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpjsua2.a; path = "../PJSip-Build/pjproject/pjsip/lib/libpjsua2.a"; sourceTree = "<group>"; };
+		C3B8521D25A5EC380037A8AB /* libpjsip-ua.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjsip-ua.a"; path = "../PJSip-Build/pjproject/pjsip/lib/libpjsip-ua.a"; sourceTree = "<group>"; };
+		C3B8521E25A5EC380037A8AB /* libpjmedia.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpjmedia.a; path = "../PJSip-Build/pjproject/pjmedia/lib/libpjmedia.a"; sourceTree = "<group>"; };
+		C3B8521F25A5EC380037A8AB /* libg7221codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libg7221codec.a; path = "../PJSip-Build/pjproject/third_party/lib/libg7221codec.a"; sourceTree = "<group>"; };
+		C3B8522025A5EC380037A8AB /* libpjnath.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpjnath.a; path = "../PJSip-Build/pjproject/pjnath/lib/libpjnath.a"; sourceTree = "<group>"; };
+		C3B8522125A5EC380037A8AB /* libpjmedia-codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjmedia-codec.a"; path = "../PJSip-Build/pjproject/pjmedia/lib/libpjmedia-codec.a"; sourceTree = "<group>"; };
+		C3B8522225A5EC380037A8AB /* libpj.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpj.a; path = "../PJSip-Build/pjproject/pjlib/lib/libpj.a"; sourceTree = "<group>"; };
+		C3B8522325A5EC380037A8AB /* libpjsip.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libpjsip.a; path = "../PJSip-Build/pjproject/pjsip/lib/libpjsip.a"; sourceTree = "<group>"; };
+		C3B8522425A5EC380037A8AB /* libpjmedia-audiodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjmedia-audiodev.a"; path = "../PJSip-Build/pjproject/pjmedia/lib/libpjmedia-audiodev.a"; sourceTree = "<group>"; };
+		C3B8522525A5EC380037A8AB /* libsrtp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libsrtp.a; path = "../PJSip-Build/pjproject/third_party/lib/libsrtp.a"; sourceTree = "<group>"; };
+		C3B8522625A5EC380037A8AB /* libpjlib-util.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjlib-util.a"; path = "../PJSip-Build/pjproject/pjlib-util/lib/libpjlib-util.a"; sourceTree = "<group>"; };
+		C3B8522725A5EC380037A8AB /* libpjsip-simple.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "libpjsip-simple.a"; path = "../PJSip-Build/pjproject/pjsip/lib/libpjsip-simple.a"; sourceTree = "<group>"; };
+		C3B8522825A5EC380037A8AB /* libilbccodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libilbccodec.a; path = "../PJSip-Build/pjproject/third_party/lib/libilbccodec.a"; sourceTree = "<group>"; };
+		C3B8522925A5EC380037A8AB /* libresample.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libresample.a; path = "../PJSip-Build/pjproject/third_party/lib/libresample.a"; sourceTree = "<group>"; };
+		C3B8522A25A5EC380037A8AB /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libwebrtc.a; path = "../PJSip-Build/pjproject/third_party/lib/libwebrtc.a"; sourceTree = "<group>"; };
+		C3B8522B25A5EC380037A8AB /* libyuv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libyuv.a; path = "../PJSip-Build/pjproject/third_party/lib/libyuv.a"; sourceTree = "<group>"; };
+		C3B8524125A5EC940037A8AB /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		C3B8524225A5EC940037A8AB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		C3C4082D25B9A547002C19EB /* ActiveViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveViewController.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C3B851F825A5EA6C0037A8AB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C351398125A5F70D00A090AA /* libg7221codec.a in Frameworks */,
+				C351398225A5F70D00A090AA /* libgsmcodec.a in Frameworks */,
+				C351398325A5F70D00A090AA /* libilbccodec.a in Frameworks */,
+				C351398425A5F70D00A090AA /* libpj.a in Frameworks */,
+				C351398525A5F70D00A090AA /* libpjlib-util.a in Frameworks */,
+				C351398625A5F70D00A090AA /* libpjmedia-audiodev.a in Frameworks */,
+				C351398725A5F70D00A090AA /* libpjmedia-codec.a in Frameworks */,
+				C351398825A5F70D00A090AA /* libpjmedia-videodev.a in Frameworks */,
+				C351398925A5F70D00A090AA /* libpjmedia.a in Frameworks */,
+				C351398A25A5F70D00A090AA /* libpjnath.a in Frameworks */,
+				C351398B25A5F70D00A090AA /* libpjsip-simple.a in Frameworks */,
+				C351398C25A5F70D00A090AA /* libpjsip-ua.a in Frameworks */,
+				C351398D25A5F70D00A090AA /* libpjsip.a in Frameworks */,
+				C351398E25A5F70D00A090AA /* libpjsua.a in Frameworks */,
+				C351398F25A5F70D00A090AA /* libpjsua2.a in Frameworks */,
+				C351399025A5F70D00A090AA /* libresample.a in Frameworks */,
+				C351399125A5F70D00A090AA /* libspeex.a in Frameworks */,
+				C351399225A5F70D00A090AA /* libsrtp.a in Frameworks */,
+				C351399325A5F70D00A090AA /* libwebrtc.a in Frameworks */,
+				C351399425A5F70D00A090AA /* libyuv.a in Frameworks */,
+				C3B8524725A5ED6D0037A8AB /* AudioToolbox.framework in Frameworks */,
+				C3B8524325A5EC940037A8AB /* AVFoundation.framework in Frameworks */,
+				C3B8524425A5EC940037A8AB /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		C337417125BADEB3007785D7 /* Model */ = {
+			isa = PBXGroup;
+			children = (
+				C337417225BADEEE007785D7 /* Model.swift */,
+			);
+			path = Model;
+			sourceTree = "<group>";
+		};
+		C337417625BADF12007785D7 /* Controller */ = {
+			isa = PBXGroup;
+			children = (
+				C3B8520225A5EA6C0037A8AB /* ViewController.swift */,
+				C399A57025AF2721000F742A /* IncomingViewController.swift */,
+				C374860725B84FA100FBE972 /* OutgoingViewController.swift */,
+				C3C4082D25B9A547002C19EB /* ActiveViewController.swift */,
+			);
+			path = Controller;
+			sourceTree = "<group>";
+		};
+		C337417725BADF22007785D7 /* View */ = {
+			isa = PBXGroup;
+			children = (
+				C3B8520425A5EA6C0037A8AB /* Main.storyboard */,
+				C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */,
+			);
+			path = View;
+			sourceTree = "<group>";
+		};
+		C3B851F225A5EA6C0037A8AB = {
+			isa = PBXGroup;
+			children = (
+				C3B851FD25A5EA6C0037A8AB /* ios-swift-pjsua2 */,
+				C3B851FC25A5EA6C0037A8AB /* Products */,
+				C3B8521725A5EC380037A8AB /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		C3B851FC25A5EA6C0037A8AB /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C3B851FB25A5EA6C0037A8AB /* ios-swift-pjsua2.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		C3B851FD25A5EA6C0037A8AB /* ios-swift-pjsua2 */ = {
+			isa = PBXGroup;
+			children = (
+				C3C1F63A25AC26A300E5E080 /* PJSua2 */,
+				C337417725BADF22007785D7 /* View */,
+				C337417125BADEB3007785D7 /* Model */,
+				C337417625BADF12007785D7 /* Controller */,
+				C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */,
+				C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */,
+				C3B8520725A5EA6D0037A8AB /* Assets.xcassets */,
+				C3B8520C25A5EA6D0037A8AB /* Info.plist */,
+				C3B8521325A5EBF00037A8AB /* ios-swift-pjsua2-Bridging-Header.h */,
+			);
+			path = "ios-swift-pjsua2";
+			sourceTree = "<group>";
+		};
+		C3B8521725A5EC380037A8AB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */,
+				C3B8524125A5EC940037A8AB /* AVFoundation.framework */,
+				C3B8524225A5EC940037A8AB /* Foundation.framework */,
+				C3B8521F25A5EC380037A8AB /* libg7221codec.a */,
+				C3B8521A25A5EC380037A8AB /* libgsmcodec.a */,
+				C3B8522825A5EC380037A8AB /* libilbccodec.a */,
+				C3B8522225A5EC380037A8AB /* libpj.a */,
+				C3B8522625A5EC380037A8AB /* libpjlib-util.a */,
+				C3B8522425A5EC380037A8AB /* libpjmedia-audiodev.a */,
+				C3B8522125A5EC380037A8AB /* libpjmedia-codec.a */,
+				C3B8521825A5EC380037A8AB /* libpjmedia-videodev.a */,
+				C3B8521E25A5EC380037A8AB /* libpjmedia.a */,
+				C3B8522025A5EC380037A8AB /* libpjnath.a */,
+				C3B8522725A5EC380037A8AB /* libpjsip-simple.a */,
+				C3B8521D25A5EC380037A8AB /* libpjsip-ua.a */,
+				C3B8522325A5EC380037A8AB /* libpjsip.a */,
+				C3B8521925A5EC380037A8AB /* libpjsua.a */,
+				C3B8521C25A5EC380037A8AB /* libpjsua2.a */,
+				C3B8522925A5EC380037A8AB /* libresample.a */,
+				C3B8521B25A5EC380037A8AB /* libspeex.a */,
+				C3B8522525A5EC380037A8AB /* libsrtp.a */,
+				C3B8522A25A5EC380037A8AB /* libwebrtc.a */,
+				C3B8522B25A5EC380037A8AB /* libyuv.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C3C1F63A25AC26A300E5E080 /* PJSua2 */ = {
+			isa = PBXGroup;
+			children = (
+				C3AB889E25A7358700224276 /* CustomPJSUA2.cpp */,
+				C3AB889F25A7358700224276 /* CustomPJSUA2.hpp */,
+				C3AB889A25A734B400224276 /* wrapper.mm */,
+				C3AB88AA25A73F3100224276 /* wrapper.h */,
+			);
+			path = PJSua2;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		C3B851FA25A5EA6C0037A8AB /* ios-swift-pjsua2 */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C3B8520F25A5EA6D0037A8AB /* Build configuration list for PBXNativeTarget "ios-swift-pjsua2" */;
+			buildPhases = (
+				C3B851F725A5EA6C0037A8AB /* Sources */,
+				C3B851F825A5EA6C0037A8AB /* Frameworks */,
+				C3B851F925A5EA6C0037A8AB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ios-swift-pjsua2";
+			productName = "NEW-Swift-NoBuild";
+			productReference = C3B851FB25A5EA6C0037A8AB /* ios-swift-pjsua2.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C3B851F325A5EA6C0037A8AB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1210;
+				LastUpgradeCheck = 1210;
+				TargetAttributes = {
+					C3B851FA25A5EA6C0037A8AB = {
+						CreatedOnToolsVersion = 12.1;
+						LastSwiftMigration = 1210;
+					};
+				};
+			};
+			buildConfigurationList = C3B851F625A5EA6C0037A8AB /* Build configuration list for PBXProject "ios-swift-pjsua2" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = C3B851F225A5EA6C0037A8AB;
+			productRefGroup = C3B851FC25A5EA6C0037A8AB /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				C3B851FA25A5EA6C0037A8AB /* ios-swift-pjsua2 */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		C3B851F925A5EA6C0037A8AB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C3B8520B25A5EA6D0037A8AB /* LaunchScreen.storyboard in Resources */,
+				C3B8520825A5EA6D0037A8AB /* Assets.xcassets in Resources */,
+				C3B8520625A5EA6C0037A8AB /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		C3B851F725A5EA6C0037A8AB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C337417325BADEEE007785D7 /* Model.swift in Sources */,
+				C3C4082E25B9A547002C19EB /* ActiveViewController.swift in Sources */,
+				C399A57125AF2721000F742A /* IncomingViewController.swift in Sources */,
+				C3AB889B25A734B400224276 /* wrapper.mm in Sources */,
+				C374860825B84FA100FBE972 /* OutgoingViewController.swift in Sources */,
+				C3B8520325A5EA6C0037A8AB /* ViewController.swift in Sources */,
+				C3B851FF25A5EA6C0037A8AB /* AppDelegate.swift in Sources */,
+				C3B8520125A5EA6C0037A8AB /* SceneDelegate.swift in Sources */,
+				C3AB88A025A7358700224276 /* CustomPJSUA2.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		C3B8520425A5EA6C0037A8AB /* Main.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				C3B8520525A5EA6C0037A8AB /* Base */,
+			);
+			name = Main.storyboard;
+			sourceTree = "<group>";
+		};
+		C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */ = {
+			isa = PBXVariantGroup;
+			children = (
+				C3B8520A25A5EA6D0037A8AB /* Base */,
+			);
+			name = LaunchScreen.storyboard;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		C3B8520D25A5EA6D0037A8AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		C3B8520E25A5EA6D0037A8AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 14.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		C3B8521025A5EA6D0037A8AB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZ7LKWA782;
+				ENABLE_BITCODE = NO;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"PJ_AUTOCONF=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/include\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/include\"",
+					"\"$(SRCROOT)/../../../../pjmedia/include\"",
+					"\"$(SRCROOT)/../../../../pjnath/include\"",
+					"\"$(SRCROOT)/../../../../pjsip/include\"",
+					"\"$(SRCROOT)/../../../../third_party/include\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/ios-swift-pjsua2/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/lib\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
+					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
+					"\"$(SRCROOT)/../../../../pjnath/lib\"",
+					"\"$(SRCROOT)/../../../../pjsip/lib\"",
+					"\"$(SRCROOT)/../../../../third_party/lib\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-swift-pjsua2";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ios-swift-pjsua2/ios-swift-pjsua2-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		C3B8521125A5EA6D0037A8AB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = PZ7LKWA782;
+				ENABLE_BITCODE = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_PREPROCESSOR_DEFINITIONS = "PJ_AUTOCONF=1";
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/include\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/include\"",
+					"\"$(SRCROOT)/../../../../pjmedia/include\"",
+					"\"$(SRCROOT)/../../../../pjnath/include\"",
+					"\"$(SRCROOT)/../../../../pjsip/include\"",
+					"\"$(SRCROOT)/../../../../third_party/include\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/ios-swift-pjsua2/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/lib\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
+					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
+					"\"$(SRCROOT)/../../../../pjnath/lib\"",
+					"\"$(SRCROOT)/../../../../pjsip/lib\"",
+					"\"$(SRCROOT)/../../../../third_party/lib\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-swift-pjsua2";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ios-swift-pjsua2/ios-swift-pjsua2-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C3B851F625A5EA6C0037A8AB /* Build configuration list for PBXProject "ios-swift-pjsua2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3B8520D25A5EA6D0037A8AB /* Debug */,
+				C3B8520E25A5EA6D0037A8AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C3B8520F25A5EA6D0037A8AB /* Build configuration list for PBXNativeTarget "ios-swift-pjsua2" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C3B8521025A5EA6D0037A8AB /* Debug */,
+				C3B8521125A5EA6D0037A8AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = C3B851F325A5EA6C0037A8AB /* Project object */;
+}

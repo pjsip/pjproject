@@ -40,7 +40,8 @@ static const pj_str_t STR_IP6 = { "IP6", 3};
 static const pj_str_t STR_RTP_AVP = { "RTP/AVP", 7 };
 static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
-
+static const pj_str_t STR_SENDONLY = { "sendonly", 8 };
+static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 
 
 /* Config to control rtpmap inclusion for static payload types */
@@ -101,6 +102,13 @@ struct pjmedia_endpt
     /** List of exit callback. */
     exit_cb		  exit_cb_list;
 };
+
+
+PJ_DEF(void)
+pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param)
+{
+    param->dir = PJMEDIA_DIR_ENCODING_DECODING;
+}
 
 /**
  * Initialize and get the instance of media endpoint.
@@ -360,7 +368,8 @@ PJ_DEF(pj_pool_t*) pjmedia_endpt_create_pool( pjmedia_endpt *endpt,
 static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
                                   pj_pool_t *pool,
                                   const pj_str_t *media_type,
-				  const pjmedia_sock_info *sock_info)
+				  const pjmedia_sock_info *sock_info,
+				  pjmedia_dir dir)
 {
     char tmp_addr[PJ_INET6_ADDRSTRLEN];
     pjmedia_sdp_attr *attr;
@@ -398,18 +407,26 @@ static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
 
     /* Add sendrecv attribute. */
     attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = STR_SENDRECV;
+    if (dir == PJMEDIA_DIR_ENCODING) {
+    	attr->name = STR_SENDONLY;
+    } else if (dir == PJMEDIA_DIR_DECODING) {
+    	attr->name = STR_RECVONLY;
+    } else {
+    	attr->name = STR_SENDRECV;
+    }
+
     m->attr[m->attr_count++] = attr;
 
     return PJ_SUCCESS;
 }
 
 /* Create m=audio SDP media line */
-PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
-                                                   pj_pool_t *pool,
-                                                   const pjmedia_sock_info *si,
-                                                   unsigned options,
-                                                   pjmedia_sdp_media **p_m)
+PJ_DEF(pj_status_t)
+pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m)
 {
     const pj_str_t STR_AUDIO = { "audio", 5 };
     pjmedia_sdp_media *m;
@@ -424,8 +441,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 #endif
     unsigned used_pt_num = 0;
     unsigned used_pt[PJMEDIA_MAX_SDP_FMT];
-
-    PJ_UNUSED_ARG(options);
+    pjmedia_endpt_create_sdp_param param;
 
     /* Check that there are not too many codecs */
     PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
@@ -447,7 +463,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 
     /* Create and init basic SDP media */
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-    status = init_sdp_media(m, pool, &STR_AUDIO, si);
+    pjmedia_endpt_create_sdp_param_default(&param);
+    status = init_sdp_media(m, pool, &STR_AUDIO, si, options? options->dir:
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -715,11 +733,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 /* Create m=video SDP media line */
-PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
-                                                   pj_pool_t *pool,
-                                                   const pjmedia_sock_info *si,
-                                                   unsigned options,
-                                                   pjmedia_sdp_media **p_m)
+PJ_DEF(pj_status_t)
+pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m)
 {
 
 
@@ -730,17 +749,18 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     pjmedia_sdp_attr *attr;
     unsigned cnt, i;
     unsigned max_bitrate = 0;
+    pjmedia_endpt_create_sdp_param param;
     pj_status_t status;
-
-    PJ_UNUSED_ARG(options);
 
     /* Make sure video codec manager is instantiated */
     if (!pjmedia_vid_codec_mgr_instance())
 	pjmedia_vid_codec_mgr_create(endpt->pool, NULL);
 
     /* Create and init basic SDP media */
+    pjmedia_endpt_create_sdp_param_default(&param);
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-    status = init_sdp_media(m, pool, &STR_VIDEO, si);
+    status = init_sdp_media(m, pool, &STR_VIDEO, si, options? options->dir:
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 

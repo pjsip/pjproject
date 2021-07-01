@@ -11,7 +11,8 @@ Background
 ----------
    Secret Rabbit Code (aka libsamplerate) is a sample rate conversion
    library, available from http://www.mega-nerd.com/SRC/index.html.
-   It is licensed under dual license, GPL and proprietary.
+   It is licensed under the 2-clause BSD license (initially it was
+   licensed under dual license, GPL and proprietary).
 
    
 Supported Platforms

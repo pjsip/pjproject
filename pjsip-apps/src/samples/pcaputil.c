@@ -269,7 +269,7 @@ static void pcap2wav(const pj_str_t *codec,
     const pj_str_t WAV = {".wav", 4};
     struct pkt
     {
-	pj_uint8_t	 buffer[320];
+	pj_uint8_t	 buffer[PJMEDIA_MAX_MTU];
 	pjmedia_rtp_hdr	*rtp;
 	pj_uint8_t	*payload;
 	unsigned	 payload_len;
@@ -358,7 +358,7 @@ static void pcap2wav(const pj_str_t *codec,
 	struct pkt pkt1;
 	pj_timestamp ts;
 	pjmedia_frame frames[16], pcm_frame;
-	short pcm[320];
+	short pcm[PJMEDIA_MAX_MTU];
 	unsigned i, frame_cnt;
 	long samples_cnt, ts_gap;
 

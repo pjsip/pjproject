@@ -1130,6 +1130,7 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
             si->use_ka = prm.stream_info.info.vid.use_ka;
 #endif
             si->rtcp_sdes_bye_disabled = prm.stream_info.info.vid.rtcp_sdes_bye_disabled;
+	    si->codec_param->enc_fmt = prm.stream_info.info.vid.codec_param->enc_fmt;
         }
 
 	/* Create session based on session info. */

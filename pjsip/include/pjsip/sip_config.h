@@ -181,6 +181,14 @@ typedef struct pjsip_cfg_t
          */
         pj_bool_t accept_multiple_sdp_answers;
 
+	/**
+	 * Don't disconnect the INVITE session after an outgoing request
+	 * gets timed out or responded with 408 (request timeout).
+	 *
+	 * Default is PJ_FALSE.
+	 */
+	pj_bool_t keep_inv_after_tsx_timeout;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -208,6 +216,9 @@ typedef struct pjsip_cfg_t
 
 	/** Transaction completed timer for INVITE, in msec. Default value is
 	 *  PJSIP_TD_TIMEOUT.
+	 *
+	 *  This setting is also used for transaction timeout timer for both
+	 *  INVITE and non-INVITE.
 	 */
 	unsigned td;
 
@@ -1045,6 +1056,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TSX_1XX_RETRANS_DELAY	60
 #endif
 
+/**
+ * Setting to determine if certain SIP UAS transaction, such as
+ * INVITE UAS tsx that hasn't been confirmed, is allowed to continue
+ * upon transport error. If disabled, the transaction will always be
+ * terminated, which is the default behavior prior to the introduction
+ * of this setting.
+ *
+ * Default: 1 (transaction will continue)
+ */
+#ifndef PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR
+#   define PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR 1
+#endif
+
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
 /* User agent. */
@@ -1086,7 +1110,12 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #  define PJSIP_T4_TIMEOUT	5000
 #endif
 
-/** Transaction completed timer for INVITE */
+/**
+ * Transaction completed timer for INVITE.
+ *
+ * This setting is also used for transaction timeout timer for both
+ * INVITE and non-INVITE.
+ */
 #if !defined(PJSIP_TD_TIMEOUT)
 #  define PJSIP_TD_TIMEOUT	32000
 #endif
