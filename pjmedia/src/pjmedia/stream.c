@@ -1889,12 +1889,6 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (channel->paused)
 	goto on_return;
 
-    /* Ignore if payloadlen is zero */
-    if (payloadlen == 0) {
-	pkt_discarded = PJ_TRUE;
-	goto on_return;
-    }
-
     /* Check SSRC. */
     if (!channel->rtp.has_peer_ssrc && channel->rtp.peer_ssrc == 0)
         channel->rtp.peer_ssrc = pj_ntohl(hdr->ssrc);
@@ -2001,6 +1995,12 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 
     /* Skip bad RTP packet */
     if (seq_st.status.flag.bad) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
+
+    /* Ignore if payloadlen is zero */
+    if (payloadlen == 0) {
 	pkt_discarded = PJ_TRUE;
 	goto on_return;
     }
