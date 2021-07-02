@@ -622,6 +622,19 @@ PJ_DECL(pj_status_t) pj_turn_sock_sendto(pj_turn_sock *turn_sock,
 PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
 					       const pj_sockaddr_t *peer,
 					       unsigned addr_len);
+/**
+ * Send Connect request for the specified a peer address.
+ *
+ * @param turn_sock	The TURN transport instance.
+ * @param peer		The remote peer address.
+ * @param addr_len	Length of the address.
+ *
+ * @return		PJ_SUCCESS if the operation has been successful,
+ *			or the appropriate error code on failure.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_connect( pj_turn_sock *turn_sock,
+                        const pj_sockaddr_t *peer,
+                        unsigned addr_len);
 
 
 /**
