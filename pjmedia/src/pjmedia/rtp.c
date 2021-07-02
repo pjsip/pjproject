@@ -233,7 +233,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
 					  pjmedia_rtp_status *p_seq_st,
 					  pj_bool_t check_pt)
 {
-    pjmedia_rtp_status seq_st;    
+    pjmedia_rtp_status seq_st;
 
     /* for now check_pt MUST be either PJ_TRUE or PJ_FALSE.
      * In the future we might change check_pt from boolean to 
@@ -260,7 +260,7 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
 	if (p_seq_st) {
 	    p_seq_st->status.value = seq_st.status.value;
 	    p_seq_st->status.flag.bad = 1;
-	    p_seq_st->status.flag.badpt = 1;	    
+	    p_seq_st->status.flag.badpt = 1;
 	}
 	return;
     }
@@ -281,7 +281,6 @@ PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses,
     if (p_seq_st) {
 	p_seq_st->status.value = seq_st.status.value;
 	p_seq_st->diff = seq_st.diff;
-	p_seq_st->status.flag.badssrc = seq_st.status.flag.badssrc;
     }
 }
 

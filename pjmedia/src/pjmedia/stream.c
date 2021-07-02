@@ -1846,6 +1846,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     pj_status_t status;
     int flag_badssrc = 0;
     pj_bool_t pkt_discarded = PJ_FALSE;
+    pj_bool_t update_rtcp = PJ_TRUE;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -1924,6 +1925,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 		     *   remote address and this packet also has bad ssrc.
 		     */
 	    	    pkt_discarded = PJ_TRUE;
+		    update_rtcp = PJ_FALSE;
 	    	    goto on_return;
 	    	}
 	    	if (stream->si.has_rem_ssrc && !seq_st.status.flag.badssrc &&
@@ -2186,6 +2188,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
 
 on_return:
+    if (!update_rtcp)
+	return;
+
     /* Update RTCP session */
     if (stream->rtcp.peer_ssrc == 0)
 	stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
