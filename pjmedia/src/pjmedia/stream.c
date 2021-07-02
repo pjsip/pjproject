@@ -1893,8 +1893,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
      */
     check_pt = (hdr->pt != stream->rx_event_pt) && PJMEDIA_STREAM_CHECK_RTP_PT;
     pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, check_pt);
-#if !PJMEDIA_STREAM_CHECK_RTP_PT 
-    if (!check_pt && hdr->pt != channel->rtp.out_pt &&
+#if PJMEDIA_STREAM_CHECK_RTP_PT 
+    if (check_pt && hdr->pt != channel->rtp.out_pt &&
 	hdr->pt != stream->rx_event_pt) 
     { 
 	seq_st.status.flag.badpt = 1; 
