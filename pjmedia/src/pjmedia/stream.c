@@ -1843,10 +1843,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_bool_t check_pt;
-    pj_status_t status;
-    int flag_badssrc = 0;
-    pj_bool_t pkt_discarded = PJ_FALSE;
-    pj_bool_t update_rtcp = PJ_TRUE;
+    pj_status_t status;    
+    pj_bool_t pkt_discarded = PJ_FALSE;    
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -1883,29 +1881,23 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (stream->si.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
     	on_rx_rtcp(stream, pkt, bytes_read);
     	return;
-    }
-
-    /* Ignore the packet if decoder is paused */
-    pj_bzero(&seq_st, sizeof(seq_st));
-    if (channel->paused)
-	goto on_return;
-
-    /* Check SSRC. */
-    if (!channel->rtp.has_peer_ssrc && channel->rtp.peer_ssrc == 0)
-        channel->rtp.peer_ssrc = pj_ntohl(hdr->ssrc);
-
-    if (pj_ntohl(hdr->ssrc) != channel->rtp.peer_ssrc) {
-	flag_badssrc = 1;
-	if (!channel->rtp.has_peer_ssrc)
-	    channel->rtp.peer_ssrc = pj_ntohl(hdr->ssrc);
-    }
+    }    
 
     /* See if source address of RTP packet is different than the
      * configured address, and check if we need to tell the
      * media transport to switch RTP remote address.
      */
     if (param->src_addr) {
-        pj_bool_t badssrc = (stream->si.has_rem_ssrc && flag_badssrc);
+	pj_uint32_t peer_ssrc = channel->rtp.peer_ssrc;
+	pj_bool_t badssrc = PJ_FALSE;
+
+	/* Check SSRC. */
+	if (!channel->rtp.has_peer_ssrc && peer_ssrc == 0)
+	    peer_ssrc = pj_ntohl(hdr->ssrc);
+
+	if ((stream->si.has_rem_ssrc) && (pj_ntohl(hdr->ssrc) != peer_ssrc)) {
+	    badssrc = PJ_TRUE;
+	}
 
 	if (pj_sockaddr_cmp(&stream->rem_rtp_addr, param->src_addr) == 0) {
 	    /* We're still receiving from rem_rtp_addr. */
@@ -1924,12 +1916,9 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 		     * - we have ever received packet with bad ssrc from
 		     *   remote address and this packet also has bad ssrc.
 		     */
-	    	    pkt_discarded = PJ_TRUE;
-		    update_rtcp = PJ_FALSE;
-	    	    goto on_return;
+	    	    return;	    	    
 	    	}
-	    	if (stream->si.has_rem_ssrc && !seq_st.status.flag.badssrc &&
-	    	    stream->rem_rtp_flag != 1)
+	    	if (!badssrc && stream->rem_rtp_flag != 1)
 	    	{
 	    	    /* Immediately switch if we receive packet with the
 	    	     * correct ssrc AND we never receive packets with
@@ -1954,6 +1943,12 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
 	    }
 	}
+    }
+
+    pj_bzero(&seq_st, sizeof(seq_st));
+    /* Ignore the packet if decoder is paused */
+    if (channel->paused) {
+	goto on_return;
     }
 
     /* Update RTP session (also checks if RTP session can accept
@@ -2188,9 +2183,6 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     }
 
 on_return:
-    if (!update_rtcp)
-	return;
-
     /* Update RTCP session */
     if (stream->rtcp.peer_ssrc == 0)
 	stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
