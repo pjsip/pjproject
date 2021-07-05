@@ -43,8 +43,11 @@ PJ_BEGIN_DECL
  * @{
  */
 
-/** Length of digest string. */
-#define PJSIP_MD5STRLEN 32
+/** Length of digest MD5 string. */
+#define PJSIP_MD5STRLEN		32
+
+/** Length of digest SHA256 string. */
+#define PJSIP_SHA256STRLEN	64
 
 
 /** Type of data in the credential information in #pjsip_cred_info. */
