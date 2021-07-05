@@ -288,7 +288,7 @@ PJ_DEF(void) pjsip_auth_create_digestSHA256(pj_str_t *result,
 	pj_assert(!"Invalid data_type");
     }
 
-    AUTH_TRACE_((THIS_FILE, " ha1=%.32s", ha1));
+    AUTH_TRACE_((THIS_FILE, " ha1=%.64s", ha1));
 
     /***
      *** ha2 = SHA256(method ":" req_uri)
@@ -300,7 +300,7 @@ PJ_DEF(void) pjsip_auth_create_digestSHA256(pj_str_t *result,
     SHA256_Final( digest, &pms);
     digestNtoStr(digest, 32, ha2);
 
-    AUTH_TRACE_((THIS_FILE, " ha2=%.32s", ha2));
+    AUTH_TRACE_((THIS_FILE, " ha2=%.64s", ha2));
 
     /***
      *** When qop is not used:
@@ -331,7 +331,7 @@ PJ_DEF(void) pjsip_auth_create_digestSHA256(pj_str_t *result,
     result->slen = PJSIP_SHA256STRLEN;
     digestNtoStr(digest, 32, result->ptr);
 
-    AUTH_TRACE_((THIS_FILE, " digest=%.32s", result->ptr));
+    AUTH_TRACE_((THIS_FILE, " digest=%.64s", result->ptr));
     AUTH_TRACE_((THIS_FILE, "Digest created"));
 
 #else
