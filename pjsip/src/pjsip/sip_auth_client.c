@@ -335,15 +335,15 @@ PJ_DEF(void) pjsip_auth_create_digestSHA256(pj_str_t *result,
     AUTH_TRACE_((THIS_FILE, "Digest created"));
 
 #else
-    PJ_UNUSED_ARG(result)
-    PJ_UNUSED_ARG(nonce)
-    PJ_UNUSED_ARG(nc)
-    PJ_UNUSED_ARG(cnonce)
-    PJ_UNUSED_ARG(qop)
-    PJ_UNUSED_ARG(uri)
-    PJ_UNUSED_ARG(realm)
-    PJ_UNUSED_ARG(cred_info)
-    PJ_UNUSED_ARG(method)
+    PJ_UNUSED_ARG(result);
+    PJ_UNUSED_ARG(nonce);
+    PJ_UNUSED_ARG(nc);
+    PJ_UNUSED_ARG(cnonce);
+    PJ_UNUSED_ARG(qop);
+    PJ_UNUSED_ARG(uri);
+    PJ_UNUSED_ARG(realm);
+    PJ_UNUSED_ARG(cred_info);
+    PJ_UNUSED_ARG(method);
 #endif
 }
 
