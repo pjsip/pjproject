@@ -1881,25 +1881,88 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (stream->si.rtcp_mux && hdr->pt >= 64 && hdr->pt <= 95) {
     	on_rx_rtcp(stream, pkt, bytes_read);
     	return;
+    }    
+
+    /* See if source address of RTP packet is different than the
+     * configured address, and check if we need to tell the
+     * media transport to switch RTP remote address.
+     */
+    if (param->src_addr) {
+	pj_uint32_t peer_ssrc = channel->rtp.peer_ssrc;
+	pj_bool_t badssrc = PJ_FALSE;
+
+	/* Check SSRC. */
+	if (!channel->rtp.has_peer_ssrc && peer_ssrc == 0)
+	    peer_ssrc = pj_ntohl(hdr->ssrc);
+
+	if ((stream->si.has_rem_ssrc) && (pj_ntohl(hdr->ssrc) != peer_ssrc)) {
+	    badssrc = PJ_TRUE;
+	}
+
+	if (pj_sockaddr_cmp(&stream->rem_rtp_addr, param->src_addr) == 0) {
+	    /* We're still receiving from rem_rtp_addr. */
+	    stream->rtp_src_cnt = 0;
+	    stream->rem_rtp_flag = badssrc? 2: 1;
+	} else {
+	    stream->rtp_src_cnt++;
+
+	    if (stream->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
+	    	if (stream->rem_rtp_flag == 1 ||
+	    	    (stream->rem_rtp_flag == 2 && badssrc))
+	    	{
+		    /* Only discard if:
+		     * - we have ever received packet with good ssrc from
+		     *   remote address (rem_rtp_addr), or
+		     * - we have ever received packet with bad ssrc from
+		     *   remote address and this packet also has bad ssrc.
+		     */
+	    	    return;	    	    
+	    	}
+	    	if (!badssrc && stream->rem_rtp_flag != 1)
+	    	{
+	    	    /* Immediately switch if we receive packet with the
+	    	     * correct ssrc AND we never receive packets with
+	    	     * good ssrc from rem_rtp_addr.
+	    	     */
+	    	    param->rem_switch = PJ_TRUE;
+	    	}
+	    } else {
+	        /* Switch. We no longer receive packets from rem_rtp_addr. */
+	        param->rem_switch = PJ_TRUE;
+	    }
+
+	    if (param->rem_switch) {
+		/* Set remote RTP address to source address */
+		pj_sockaddr_cp(&stream->rem_rtp_addr, param->src_addr);
+
+		/* Reset counter and flag */
+		stream->rtp_src_cnt = 0;
+		stream->rem_rtp_flag = badssrc? 2: 1;
+
+		/* Update RTCP peer ssrc */
+	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
+	    }
+	}
     }
 
-    /* Ignore the packet if decoder is paused */
     pj_bzero(&seq_st, sizeof(seq_st));
-    if (channel->paused)
+    /* Ignore the packet if decoder is paused */
+    if (channel->paused) {
 	goto on_return;
+    }
 
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
     check_pt = (hdr->pt != stream->rx_event_pt) && PJMEDIA_STREAM_CHECK_RTP_PT;
     pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, check_pt);
-#if !PJMEDIA_STREAM_CHECK_RTP_PT 
+#if !PJMEDIA_STREAM_CHECK_RTP_PT
     if (!check_pt && hdr->pt != channel->rtp.out_pt &&
-	hdr->pt != stream->rx_event_pt) 
-    { 
-	seq_st.status.flag.badpt = 1; 
-    } 
-#endif 
+	hdr->pt != stream->rx_event_pt)
+    {
+	seq_st.status.flag.badpt = 1;
+    }
+#endif
     if (seq_st.status.value) {
 	TRC_  ((stream->port.info.name.ptr,
 		"RTP status: badpt=%d, badssrc=%d, dup=%d, "
@@ -1937,62 +2000,6 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     if (payloadlen == 0) {
 	pkt_discarded = PJ_TRUE;
 	goto on_return;
-    }
-
-    /* See if source address of RTP packet is different than the
-     * configured address, and check if we need to tell the
-     * media transport to switch RTP remote address.
-     */
-    if (param->src_addr) {
-        pj_bool_t badssrc = (stream->si.has_rem_ssrc &&
-        		     seq_st.status.flag.badssrc);
-
-	if (pj_sockaddr_cmp(&stream->rem_rtp_addr, param->src_addr) == 0) {
-	    /* We're still receiving from rem_rtp_addr. */
-	    stream->rtp_src_cnt = 0;
-	    stream->rem_rtp_flag = badssrc? 2: 1;
-	} else {
-	    stream->rtp_src_cnt++;
-
-	    if (stream->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
-	    	if (stream->rem_rtp_flag == 1 ||
-	    	    (stream->rem_rtp_flag == 2 && badssrc))
-	    	{
-		    /* Only discard if:
-		     * - we have ever received packet with good ssrc from
-		     *   remote address (rem_rtp_addr), or
-		     * - we have ever received packet with bad ssrc from
-		     *   remote address and this packet also has bad ssrc.
-		     */
-	    	    pkt_discarded = PJ_TRUE;
-	    	    goto on_return;
-	    	}
-	    	if (stream->si.has_rem_ssrc && !seq_st.status.flag.badssrc &&
-	    	    stream->rem_rtp_flag != 1)
-	    	{
-	    	    /* Immediately switch if we receive packet with the
-	    	     * correct ssrc AND we never receive packets with
-	    	     * good ssrc from rem_rtp_addr.
-	    	     */
-	    	    param->rem_switch = PJ_TRUE;
-	    	}
-	    } else {
-	        /* Switch. We no longer receive packets from rem_rtp_addr. */
-	        param->rem_switch = PJ_TRUE;
-	    }
-
-	    if (param->rem_switch) {
-		/* Set remote RTP address to source address */
-		pj_sockaddr_cp(&stream->rem_rtp_addr, param->src_addr);
-
-		/* Reset counter and flag */
-		stream->rtp_src_cnt = 0;
-		stream->rem_rtp_flag = badssrc? 2: 1;
-
-		/* Update RTCP peer ssrc */
-	    	stream->rtcp.peer_ssrc = pj_ntohl(hdr->ssrc);
-	    }
-	}
     }
 
     /* Handle incoming DTMF. */
