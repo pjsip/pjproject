@@ -1843,8 +1843,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_bool_t check_pt;
-    pj_status_t status;    
-    pj_bool_t pkt_discarded = PJ_FALSE;    
+    pj_status_t status;
+    pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
     if (bytes_read < 0) {
