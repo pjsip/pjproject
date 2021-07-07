@@ -1286,7 +1286,19 @@ void VideoWindow::setWindow(const VideoWindowHandle &win) PJSUA2_THROW(Error)
 void VideoWindow::setFullScreen(bool enabled) PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
-    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_fullscreen(winId, enabled) );
+    pjmedia_vid_dev_fullscreen mode;
+    mode = enabled? PJMEDIA_VID_DEV_FULLSCREEN : PJMEDIA_VID_DEV_WINDOWED;
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_fullscreen(winId, mode) );
+#else
+    PJ_UNUSED_ARG(enabled);
+#endif
+}
+
+void VideoWindow::setFullScreen2(pjmedia_vid_dev_fullscreen mode)
+							PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    PJSUA2_CHECK_EXPR( pjsua_vid_win_set_fullscreen(winId, mode) );
 #else
     PJ_UNUSED_ARG(enabled);
 #endif

@@ -1843,8 +1843,9 @@ PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
 /*
  * Set video window fullscreen.
  */
-PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen( pjsua_vid_win_id wid,
-                                                  pj_bool_t enabled)
+PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen(
+					pjsua_vid_win_id wid,
+					pjmedia_vid_dev_fullscreen mode)
 {
     pjsua_vid_win *w;
     pjmedia_vid_dev_stream *s;
@@ -1862,7 +1863,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen( pjsua_vid_win_id wid,
     }
 
     status = pjmedia_vid_dev_stream_set_cap(s,
-			    PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN, &enabled);
+			    PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN, &mode);
 
     PJSUA_UNLOCK();
 
