@@ -22,8 +22,11 @@
 /* Include OpenSSL libraries for MSVC */
 #  ifdef _MSC_VER 
 #    if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
+#      include <openssl/opensslv.h>
 #      if OPENSSL_VERSION_NUMBER >= 0x10100000L
 #        pragma comment(lib, "libcrypto")
+#        pragma comment(lib, "libssl")
+#        pragma comment(lib, "crypt32")
 #      else
 #        pragma comment(lib, "libeay32")
 #        pragma comment(lib, "ssleay32")

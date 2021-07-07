@@ -45,6 +45,15 @@
 
 #if PJSIP_AUTH_HAS_DIGEST_SHA256
 #  include <openssl/sha.h>
+#  ifdef _MSC_VER
+#    include <openssl/opensslv.h>
+#    if OPENSSL_VERSION_NUMBER >= 0x10100000L
+#      pragma comment(lib, "libcrypto")
+#    else
+#      pragma comment(lib, "libeay32")
+#      pragma comment(lib, "ssleay32")
+#    endif
+#  endif
 #endif
 
 /* A macro just to get rid of type mismatch between char and unsigned char */
