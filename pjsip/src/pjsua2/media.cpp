@@ -1300,7 +1300,7 @@ void VideoWindow::setFullScreen2(pjmedia_vid_dev_fullscreen mode)
 #if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_win_set_fullscreen(winId, mode) );
 #else
-    PJ_UNUSED_ARG(enabled);
+    PJ_UNUSED_ARG(mode);
 #endif
 }
 
