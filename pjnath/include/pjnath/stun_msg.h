@@ -311,7 +311,7 @@ typedef enum pj_stun_msg_type
     /**
      * STUN/TURN Connect Request
      */
-    PJ_STUN_CONNECT_REQUEST             = 0x000a,
+    PJ_STUN_CONNECT_REQUEST                 = 0x000a,
 
     /**
      * STUN/TURN ConnectBind Request

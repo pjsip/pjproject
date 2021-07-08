@@ -137,11 +137,11 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
 					   pj_uint32_t conn_id,
 					   const pj_sockaddr_t *peer_addr,
 					   unsigned addr_len);
-static void turn_on_connect(pj_turn_session *sess,
-                    pj_status_t status,
-                    pj_uint32_t conn_id,
-                    const pj_sockaddr_t *peer_addr,
-                    unsigned addr_len);
+static void turn_on_connect_complete(pj_turn_session *sess,
+				     pj_status_t status,
+				     pj_uint32_t conn_id,
+				     const pj_sockaddr_t *peer_addr,
+				     unsigned addr_len);
 
 static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 			      void *data,
@@ -353,7 +353,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     sess_cb.on_channel_bound = &turn_on_channel_bound;
     sess_cb.on_rx_data = &turn_on_rx_data;
     sess_cb.on_state = &turn_on_state;
-    sess_cb.on_connect = &turn_on_connect;
+    sess_cb.on_connect_complete = &turn_on_connect_complete;
     sess_cb.on_connection_attempt = &turn_on_connection_attempt;
     sess_cb.on_connection_bind_status = &turn_on_connection_bind_status;
     status = pj_turn_session_create(cfg, pool->obj_name, af, conn_type,
@@ -676,13 +676,47 @@ PJ_DEF(pj_status_t) pj_turn_sock_bind_channel( pj_turn_sock *turn_sock,
  * Send Connect request for the specified a peer address.
  */
 PJ_DEF(pj_status_t) pj_turn_sock_connect( pj_turn_sock *turn_sock,
-                        const pj_sockaddr_t *peer,
-                        unsigned addr_len)
+					 const pj_sockaddr_t *peer_addr,
+					 unsigned addr_len)
 {
-    PJ_ASSERT_RETURN(turn_sock && peer && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(turn_sock && peer_addr && addr_len, PJ_EINVAL);
     PJ_ASSERT_RETURN(turn_sock->sess != NULL, PJ_EINVALIDOP);
 
-    return pj_turn_session_connect(turn_sock->sess, peer, addr_len);
+    return pj_turn_session_connect(turn_sock->sess, peer_addr, addr_len);
+}
+
+/**
+ * Close existing connection to the peer address.
+ */
+PJ_DEF(pj_bool_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
+					  const pj_sockaddr_t *peer_addr,
+					  unsigned addr_len)
+
+{
+    unsigned i;
+    char addrtxt[PJ_INET6_ADDRSTRLEN+8];
+
+    PJ_ASSERT_RETURN(turn_sock && peer_addr && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(turn_sock->sess != NULL, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(turn_sock->grp_lock);
+    for (i=0; i < PJ_TURN_MAX_TCP_CONN_CNT; ++i) {
+	tcp_data_conn_t *conn = &turn_sock->data_conn[i];
+	if (conn->state < DATACONN_STATE_CONN_BINDING)
+	    continue;
+	if (pj_sockaddr_cmp(&conn->peer_addr, peer_addr) == 0) {
+	    dataconn_cleanup(conn);
+	    --turn_sock->data_conn_cnt;
+	    pj_grp_lock_release(turn_sock->grp_lock);
+	    return PJ_TRUE;
+	}
+    }
+
+    PJ_LOG(4, (turn_sock->obj_name, "Connection for peer %s is not exist",
+	       pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
+
+    pj_grp_lock_release(turn_sock->grp_lock);
+    return PJ_FALSE;
 }
 
 
@@ -1587,21 +1621,6 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 	return;
     }
 
-    /* Check if app wants to accept this connection */
-    status = PJ_SUCCESS;
-    if (turn_sock->cb.on_connection_attempt) {
-	status = (*turn_sock->cb.on_connection_attempt)(turn_sock, conn_id,
-							peer_addr, addr_len);
-    }
-    /* App rejects it */
-    if (status != PJ_SUCCESS) {
-	pj_perror(4, turn_sock->pool->obj_name, status,
-		  "Rejected connection attempt from peer %s",
-		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
-	pj_grp_lock_release(turn_sock->grp_lock);
-	return;
-    }
-
     /* Find free data connection slot */
     for (i=0; i < PJ_TURN_MAX_TCP_CONN_CNT; ++i) {
 	if (turn_sock->data_conn[i].state == DATACONN_STATE_NULL)
@@ -1786,11 +1805,11 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
     }
 }
 
-static void turn_on_connect(pj_turn_session *sess,
-                    pj_status_t status,
-                    pj_uint32_t conn_id,
-                    const pj_sockaddr_t *peer_addr,
-                    unsigned addr_len)
+static void turn_on_connect_complete(pj_turn_session *sess,
+				     pj_status_t status,
+				     pj_uint32_t conn_id,
+				     const pj_sockaddr_t *peer_addr,
+				     unsigned addr_len)
 {
     pj_turn_sock *turn_sock = (pj_turn_sock*) 
 			      pj_turn_session_get_user_data(sess);

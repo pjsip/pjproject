@@ -1,4 +1,4 @@
-/* $Id$ */
+
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -362,7 +362,7 @@ typedef struct pj_turn_session_cb
 				      unsigned addr_len);
 
     /**
-     * Notification for Connection request sent using
+     * Notification for Connect request sent using
      * pj_turn_session_connect().
      *
      * @param sess	The TURN session.
@@ -371,11 +371,11 @@ typedef struct pj_turn_session_cb
      * @param peer_addr	Peer address.
      * @param addr_len	Length of the peer address.
      */
-    void (*on_connect)(pj_turn_session *sess,
-                pj_status_t status,
-                pj_uint32_t conn_id,
-                const pj_sockaddr_t *peer_addr,
-                unsigned addr_len);
+    void (*on_connect_complete)(pj_turn_session *sess,
+		       pj_status_t status,
+		       pj_uint32_t conn_id,
+		       const pj_sockaddr_t *peer_addr,
+		       unsigned addr_len);
 
 } pj_turn_session_cb;
 
@@ -914,7 +914,16 @@ PJ_DECL(pj_status_t) pj_turn_session_connection_bind(
 					    const pj_sockaddr_t *peer_addr,
 					    unsigned addr_len);
 /**
- * Send Connect request.
+ * Initiate connection to the specified peer using Connect request.
+ * Application must call this function when it uses RFC 6062 (TURN TCP
+ * allocations) to initiate a data connection to a peer. When Connect response
+ * received, on_connect_complete will be called, application must implement
+ * this callback and initiate a new data connection to the specified peer.
+ *
+ * According to RFC 6062, a control connection must be a TCP connection,
+ * and application must send TCP Allocate request
+ * (with pj_turn_session_alloc()，set TURN allocation parameter peer_conn_type
+ * to PJ_TURN_TP_TCP) before calling this function.
  *
  * @param sess		The TURN client session.
  * @param peer_addr	Peer address.
