@@ -137,7 +137,7 @@ class Expect(threading.Thread):
         
     def run(self):
         if self.use_telnet:
-            fullcmd = G_EXE + " " + inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (inst_param.telnet_port)
+            fullcmd = G_EXE + " " + self.inst_param.arg + " --use-cli --no-cli-console --cli-telnet-port=%d" % (self.inst_param.telnet_port)
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
             
@@ -168,8 +168,8 @@ class Expect(threading.Thread):
                 self.lock.release()
             self.running = False
         else:
-            fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
-            if not inst_param.enable_buffer:
+            fullcmd = G_EXE + " " + self.inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
+            if not self.inst_param.enable_buffer:
                 fullcmd = fullcmd + " --stdout-no-buf"
             self.trace("Popen " + fullcmd)
             self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
@@ -326,29 +326,43 @@ print "====== Running " + script.test.title + " ======"
 print "Using " + G_EXE + " as pjsua executable"
 
 for inst_param in script.test.inst_params:
-    try:
-        # Create pjsua's Expect instance from the param
-        p = Expect(inst_param)
-        p.start()
-    except inc.TestError, e:
-        handle_error(e.desc, script.test)
-        
-    # wait process ready
-    if not p.use_telnet:
-        while True:
-            try:
-                p.send("echo 1")
-            except:
+    retry = 0
+    process_running = False
+    while (not process_running) and retry < 3:
+        p = None
+        retry += 1
+        try:
+            # Create pjsua's Expect instance from the param
+            p = Expect(inst_param)
+            p.start()
+        except inc.TestError, e:
+            handle_error(e.desc, script.test)
+
+        # wait process ready
+        if not p.use_telnet:
+            while True:
+                try:
+                    p.send("echo 1")
+                except:
+                    time.sleep(0.1)
+                    continue
+                break
+            process_running = True
+        else:
+            t0 = time.time()
+            while p.telnet is None:
                 time.sleep(0.1)
-                continue
-            break
-    else:
-        t0 = time.time()
-        while p.telnet is None:
-            time.sleep(0.1)
-            dur = int(time.time() - t0)
-            if dur > 5:
-                handle_error("Timeout connecting to pjsua", script.test)
+                dur = int(time.time() - t0)
+                if dur > 5:
+                    break
+            process_running = p.telnet is not None
+
+        # wait before retrying
+        if not process_running and retry < 2:
+            time.sleep(2)
+
+    if not process_running:
+        handle_error("Failed running pjsua", script.test)
 
     # add running instance
     script.test.process.append(p)
