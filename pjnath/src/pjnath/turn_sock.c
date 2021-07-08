@@ -1613,6 +1613,14 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 	return;
     }
 
+    pj_grp_lock_acquire(turn_sock->grp_lock);
+
+    if (turn_sock->data_conn_cnt == PJ_TURN_MAX_TCP_CONN_CNT) {
+	/* Data connection has reached limit */
+	pj_grp_lock_release(turn_sock->grp_lock);
+	return;
+    }
+
     /* Check if app wants to accept this connection */
     status = PJ_SUCCESS;
     if (turn_sock->cb.on_connection_attempt) {
@@ -1624,14 +1632,6 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 	pj_perror(4, turn_sock->pool->obj_name, status,
 		  "Rejected connection attempt from peer %s",
 		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
-	pj_grp_lock_release(turn_sock->grp_lock);
-	return;
-    }
-
-    pj_grp_lock_acquire(turn_sock->grp_lock);
-
-    if (turn_sock->data_conn_cnt == PJ_TURN_MAX_TCP_CONN_CNT) {
-	/* Data connection has reached limit */
 	pj_grp_lock_release(turn_sock->grp_lock);
 	return;
     }
