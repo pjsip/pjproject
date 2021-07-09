@@ -701,6 +701,17 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 	return PJMEDIA_SDPNEG_EINVANSMEDIA;
     }
 
+    /* Check if remote has rejected our offer */
+    if (answer->desc.port == 0) {
+	
+	/* Remote has rejected our offer. 
+	 * Deactivate our media too.
+	 */
+	pjmedia_sdp_media_deactivate(pool, offer);
+
+	/* Don't need to proceed */
+	return PJ_SUCCESS;
+    }
 
     /* Check that transport in the answer match our offer. */
 
@@ -714,18 +725,6 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 	return PJMEDIA_SDPNEG_EINVANSTP;
     }
 
-
-    /* Check if remote has rejected our offer */
-    if (answer->desc.port == 0) {
-	
-	/* Remote has rejected our offer. 
-	 * Deactivate our media too.
-	 */
-	pjmedia_sdp_media_deactivate(pool, offer);
-
-	/* Don't need to proceed */
-	return PJ_SUCCESS;
-    }
 
     /* Ticket #1148: check if remote answer does not set port to zero when
      * offered with port zero. Let's just tolerate it.
