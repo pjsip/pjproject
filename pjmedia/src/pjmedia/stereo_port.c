@@ -183,12 +183,10 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
     if (status != PJ_SUCCESS)
 	return status;
 
+    // If downstream provides non PCM frames, skip conversion and return silence
+    // For example, empty ConfBridge gives PJMEDIA_FRAME_TYPE_NONE
     if (tmp_frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	frame->type = tmp_frame.type;
-	frame->timestamp = tmp_frame.timestamp;
-	frame->size = tmp_frame.size;
-	if (tmp_frame.size && tmp_frame.buf == sport->get_buf)
-	    pj_memcpy(frame->buf, tmp_frame.buf, tmp_frame.size);
+	pj_bzero(frame->buf, frame->size);
 	return PJ_SUCCESS;
     }
 
@@ -196,7 +194,7 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
 	pjmedia_convert_channel_nto1((pj_int16_t*)frame->buf, 
 				     (const pj_int16_t*)tmp_frame.buf,
 				     dn_afd->channel_count,
-				     PJMEDIA_AFD_SPF(s_afd),
+				     PJMEDIA_AFD_SPF(dn_afd),
 				     (sport->options & PJMEDIA_STEREO_MIX), 0);
     } else {
 	pjmedia_convert_channel_1ton((pj_int16_t*)frame->buf, 
