@@ -598,7 +598,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * See also contactRewriteMethod field.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			contactRewriteUse;
 
@@ -623,7 +623,7 @@ struct AccountNatConfig : public PersistentObject
      * TCP socket when it is still connecting. In these cases, this
      * feature will also be turned off.
      *
-     * Default: 1 (yes).
+     * Default: 1 (PJ_TRUE / yes).
      */
     int			contactUseSrcPort;
 
@@ -633,7 +633,7 @@ struct AccountNatConfig : public PersistentObject
      * the REGISTER request, as long as the request uses the same transport
      * instance as the previous REGISTER request.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			viaRewriteUse;
 
@@ -660,7 +660,7 @@ struct AccountNatConfig : public PersistentObject
      * transports. If UDP is used for the registration, the SIP outbound
      * feature will be silently ignored for the account.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			sipOutboundUse;
 
@@ -706,9 +706,25 @@ public:
      * Default constructor
      */
     AccountNatConfig() : sipStunUse(PJSUA_STUN_USE_DEFAULT),
-			 mediaStunUse(PJSUA_STUN_USE_DEFAULT),
-			 nat64Opt(PJSUA_NAT64_DISABLED),
-			 turnConnType(PJ_TURN_TP_UDP)
+      mediaStunUse(PJSUA_STUN_USE_DEFAULT),
+      nat64Opt(PJSUA_NAT64_DISABLED),
+      iceEnabled(false),
+      iceTrickle(PJ_ICE_SESS_TRICKLE_DISABLED),
+      iceMaxHostCands(-1),
+      iceAggressiveNomination(true),
+      iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
+      iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceNoRtcp(false),
+      iceAlwaysUpdate(true),
+      turnConnType(PJ_TURN_TP_UDP),
+      contactRewriteUse(PJ_TRUE),
+      contactRewriteMethod(PJSUA_CONTACT_REWRITE_METHOD),
+      contactUseSrcPort(PJ_TRUE),
+      viaRewriteUse(PJ_TRUE),
+      sdpNatRewriteUse(PJ_FALSE),
+      sipOutboundUse(PJ_TRUE),
+      udpKaIntervalSec(15),
+      udpKaData("\r\n")
     {}
 
     /**
