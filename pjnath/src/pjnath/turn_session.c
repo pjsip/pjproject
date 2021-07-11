@@ -1800,7 +1800,7 @@ static void stun_on_request_complete(pj_stun_session *stun,
     } else if (method == PJ_STUN_CONNECT_METHOD) {
 	/* Handle Connct response */
 	struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
-	pj_uint32_t conn_id;
+	pj_uint32_t conn_id = 0;
 
 	if (status != PJ_SUCCESS ||
 	    !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type))
@@ -1826,7 +1826,6 @@ static void stun_on_request_complete(pj_stun_session *stun,
 	    pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CONNECTION_ID, 0);
 	    if (conn_id_attr == NULL) {
 		status = PJNATH_EINSTUNMSG;
-		conn_id = 0;
 		pj_perror(1, sess->obj_name, status,
 			  "Error: Missing CONNECTION-ID attribute");
 	    }

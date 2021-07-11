@@ -688,7 +688,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_connect( pj_turn_sock *turn_sock,
 /**
  * Close existing connection to the peer address.
  */
-PJ_DEF(pj_bool_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
+PJ_DEF(pj_status_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
 					  const pj_sockaddr_t *peer_addr,
 					  unsigned addr_len)
 
@@ -708,7 +708,7 @@ PJ_DEF(pj_bool_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
 	    dataconn_cleanup(conn);
 	    --turn_sock->data_conn_cnt;
 	    pj_grp_lock_release(turn_sock->grp_lock);
-	    return PJ_TRUE;
+	    return PJ_SUCCESS;
 	}
     }
 
@@ -716,7 +716,7 @@ PJ_DEF(pj_bool_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
 	       pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
 
     pj_grp_lock_release(turn_sock->grp_lock);
-    return PJ_FALSE;
+    return PJ_ENOTFOUND;
 }
 
 
@@ -1839,21 +1839,33 @@ static void turn_on_connect_complete(pj_turn_session *sess,
     char addrtxt[PJ_INET6_ADDRSTRLEN+8];
     unsigned i;
 
+    if (turn_sock == NULL) {
+	/* We've been destroyed */
+	return;
+    }
+
     PJ_ASSERT_ON_FAIL(turn_sock->conn_type == PJ_TURN_TP_TCP &&
 		      turn_sock->alloc_param.peer_conn_type == PJ_TURN_TP_TCP,
 		      return);
     PJ_LOG(5,(turn_sock->pool->obj_name, "Trying to connect to peer %s",
 	      pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
 
-    if (turn_sock == NULL) {
-	/* We've been destroyed */
-	return;
-    }
-
     pj_grp_lock_acquire(turn_sock->grp_lock);
 
     if (turn_sock->data_conn_cnt == PJ_TURN_MAX_TCP_CONN_CNT) {
 	/* Data connection has reached limit */
+
+	status = PJ_ETOOMANY;
+	pj_perror(4, turn_sock->pool->obj_name, status,
+		  "Failed in connect to peer %s",
+		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
+
+	/* Notify app for failure */
+	if (turn_sock->cb.on_connection_status) {
+	    (*turn_sock->cb.on_connection_status)(turn_sock, status, conn_id,
+						  peer_addr, addr_len);
+	}
+
 	pj_grp_lock_release(turn_sock->grp_lock);
 	return;
     }

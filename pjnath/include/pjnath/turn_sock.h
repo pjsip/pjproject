@@ -656,7 +656,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_connect(pj_turn_sock *turn_sock,
  * @return		PJ_SUCCESS if the operation has been successful,
  *			or the appropriate error code on failure.
  */
-PJ_DECL(pj_bool_t) pj_turn_sock_disconnect(pj_turn_sock *turn_sock,
+PJ_DECL(pj_status_t) pj_turn_sock_disconnect(pj_turn_sock *turn_sock,
 					   const pj_sockaddr_t *peer,
 					   unsigned addr_len);
 
