@@ -141,81 +141,12 @@ static pjmedia_aud_stream_op android_strm_op =
     &strm_destroy
 };
 
-extern JavaVM *pj_jni_jvm;
-
-static pj_bool_t attach_jvm(JNIEnv **jni_env)
-{
-    if ((*pj_jni_jvm)->GetEnv(pj_jni_jvm, (void **)jni_env,
-                               JNI_VERSION_1_4) < 0)
-    {
-        if ((*pj_jni_jvm)->AttachCurrentThread(pj_jni_jvm, jni_env, NULL) < 0)
-        {
-            jni_env = NULL;
-            return PJ_FALSE;
-        }
-        return PJ_TRUE;
-    }
-    
-    return PJ_FALSE;
-}
-
-#define detach_jvm(attached) \
-    if (attached) \
-        (*pj_jni_jvm)->DetachCurrentThread(pj_jni_jvm);
-
-/* Thread priority utils */
-/* TODO : port it to pj_thread functions */
-#define THREAD_PRIORITY_AUDIO -16
-#define THREAD_PRIORITY_URGENT_AUDIO -19
-
-pj_status_t set_android_thread_priority(int priority)
-{
-    jclass process_class;
-    jmethodID set_prio_method;
-    jthrowable exc;
-    pj_status_t result = PJ_SUCCESS;
-    JNIEnv *jni_env = 0;
-    pj_bool_t attached = attach_jvm(&jni_env);
-    
-    PJ_ASSERT_RETURN(jni_env, PJ_FALSE);
-
-    /* Get pointer to the java class */
-    process_class = (jclass)(*jni_env)->NewGlobalRef(jni_env, 
-                        (*jni_env)->FindClass(jni_env, "android/os/Process"));
-    if (process_class == 0) {
-        PJ_LOG(4, (THIS_FILE, "Unable to find os process class"));
-        result = PJ_EIGNORED;
-        goto on_return;
-    }
-    
-    /* Get the id of set thread priority function */
-    set_prio_method = (*jni_env)->GetStaticMethodID(jni_env, process_class,
-                                                    "setThreadPriority",
-                                                    "(I)V");
-    if (set_prio_method == 0) {
-        PJ_LOG(4, (THIS_FILE, "Unable to find setThreadPriority() method"));
-        result = PJ_EIGNORED;
-        goto on_return;
-    }
-    
-    /* Set the thread priority */
-    (*jni_env)->CallStaticVoidMethod(jni_env, process_class, set_prio_method,
-                                     priority);    
-    exc = (*jni_env)->ExceptionOccurred(jni_env);
-    if (exc) {
-        (*jni_env)->ExceptionDescribe(jni_env);
-        (*jni_env)->ExceptionClear(jni_env);
-        PJ_LOG(4, (THIS_FILE, "Failure in setting thread priority using "
-                              "Java API, fallback to setpriority()"));
-        setpriority(PRIO_PROCESS, 0, priority);
-    } else {
-        PJ_LOG(4, (THIS_FILE, "Setting thread priority successful"));        
-    }
-
-on_return:
-    detach_jvm(attached);
-    return result;
-}
+PJ_DECL(pj_bool_t) pj_jni_attach_jvm(JNIEnv **jni_env);
+PJ_DECL(void) pj_jni_dettach_jvm(pj_bool_t attached);
+#define attach_jvm(jni_env)	pj_jni_attach_jvm(jni_env)
+#define detach_jvm(attached)	pj_jni_dettach_jvm(attached)
+#define THREAD_PRIORITY_AUDIO		-16
+#define THREAD_PRIORITY_URGENT_AUDIO	-19
 
 
 static int AndroidRecorderCallback(void *userData)
@@ -255,15 +186,8 @@ static int AndroidRecorderCallback(void *userData)
         goto on_return;
     }
     
-    /* Start recording
-     * setpriority(PRIO_PROCESS, 0, -19); //ANDROID_PRIORITY_AUDIO
-     * set priority is probably not enough because it does not change the thread
-     * group in scheduler
-     * Temporary solution is to call the java api to set the thread priority.
-     * A cool solution would be to port (if possible) the code from the
-     * android os regarding set_sched groups
-     */
-    set_android_thread_priority(THREAD_PRIORITY_URGENT_AUDIO);
+    /* Start recording */
+    pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
     (*jni_env)->CallVoidMethod(jni_env, stream->record, record_method);
     
     while (!stream->quit_flag) {
@@ -356,7 +280,7 @@ static int AndroidTrackCallback(void *userData)
     buf = (*jni_env)->GetByteArrayElements(jni_env, outputBuffer, 0);
 
     /* Start playing */
-    set_android_thread_priority(THREAD_PRIORITY_URGENT_AUDIO);
+    pj_thread_set_prio(NULL, THREAD_PRIORITY_URGENT_AUDIO);
     (*jni_env)->CallVoidMethod(jni_env, stream->track, play_method);
 
     while (!stream->quit_flag) {
