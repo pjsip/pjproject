@@ -137,6 +137,11 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
 					   pj_uint32_t conn_id,
 					   const pj_sockaddr_t *peer_addr,
 					   unsigned addr_len);
+static void turn_on_connect_complete(pj_turn_session *sess,
+				     pj_status_t status,
+				     pj_uint32_t conn_id,
+				     const pj_sockaddr_t *peer_addr,
+				     unsigned addr_len);
 
 static pj_bool_t on_data_read(pj_turn_sock *turn_sock,
 			      void *data,
@@ -348,6 +353,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     sess_cb.on_channel_bound = &turn_on_channel_bound;
     sess_cb.on_rx_data = &turn_on_rx_data;
     sess_cb.on_state = &turn_on_state;
+    sess_cb.on_connect_complete = &turn_on_connect_complete;
     sess_cb.on_connection_attempt = &turn_on_connection_attempt;
     sess_cb.on_connection_bind_status = &turn_on_connection_bind_status;
     status = pj_turn_session_create(cfg, pool->obj_name, af, conn_type,
@@ -664,6 +670,53 @@ PJ_DEF(pj_status_t) pj_turn_sock_bind_channel( pj_turn_sock *turn_sock,
     PJ_ASSERT_RETURN(turn_sock->sess != NULL, PJ_EINVALIDOP);
 
     return pj_turn_session_bind_channel(turn_sock->sess, peer, addr_len);
+}
+
+/**
+ * Send Connect request for the specified a peer address.
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_connect( pj_turn_sock *turn_sock,
+					 const pj_sockaddr_t *peer_addr,
+					 unsigned addr_len)
+{
+    PJ_ASSERT_RETURN(turn_sock && peer_addr && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(turn_sock->sess != NULL, PJ_EINVALIDOP);
+
+    return pj_turn_session_connect(turn_sock->sess, peer_addr, addr_len);
+}
+
+/**
+ * Close existing connection to the peer address.
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_disconnect( pj_turn_sock *turn_sock,
+					  const pj_sockaddr_t *peer_addr,
+					  unsigned addr_len)
+
+{
+    unsigned i;
+    char addrtxt[PJ_INET6_ADDRSTRLEN+8];
+
+    PJ_ASSERT_RETURN(turn_sock && peer_addr && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(turn_sock->sess != NULL, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(turn_sock->grp_lock);
+    for (i=0; i < PJ_TURN_MAX_TCP_CONN_CNT; ++i) {
+	tcp_data_conn_t *conn = &turn_sock->data_conn[i];
+	if (conn->state < DATACONN_STATE_CONN_BINDING)
+	    continue;
+	if (pj_sockaddr_cmp(&conn->peer_addr, peer_addr) == 0) {
+	    dataconn_cleanup(conn);
+	    --turn_sock->data_conn_cnt;
+	    pj_grp_lock_release(turn_sock->grp_lock);
+	    return PJ_SUCCESS;
+	}
+    }
+
+    PJ_LOG(4, (turn_sock->obj_name, "Connection for peer %s is not exist",
+	       pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
+
+    pj_grp_lock_release(turn_sock->grp_lock);
+    return PJ_ENOTFOUND;
 }
 
 
@@ -1553,7 +1606,7 @@ static void turn_on_connection_attempt(pj_turn_session *sess,
 		      return);
 
     PJ_LOG(5,(turn_sock->pool->obj_name, "Connection attempt from peer %s",
-	      pj_sockaddr_print(&peer_addr, addrtxt, sizeof(addrtxt), 3)));
+	      pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
 
     if (turn_sock == NULL) {
 	/* We've been destroyed */
@@ -1765,4 +1818,194 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
 	(*turn_sock->cb.on_connection_status)(turn_sock, status, conn_id,
 					      peer_addr, addr_len);
     }
+}
+
+static void turn_on_connect_complete(pj_turn_session *sess,
+				     pj_status_t status,
+				     pj_uint32_t conn_id,
+				     const pj_sockaddr_t *peer_addr,
+				     unsigned addr_len)
+{
+    pj_turn_sock *turn_sock = (pj_turn_sock*) 
+			      pj_turn_session_get_user_data(sess);
+    pj_pool_t *pool;
+    tcp_data_conn_t *new_conn;
+    pj_turn_session_info info;
+    pj_sock_t sock = PJ_INVALID_SOCKET;
+    pj_activesock_cfg asock_cfg;
+    pj_activesock_cb asock_cb;
+    pj_sockaddr bound_addr, *cfg_bind_addr;
+    pj_uint16_t max_bind_retry;
+    char addrtxt[PJ_INET6_ADDRSTRLEN+8];
+    unsigned i;
+
+    if (turn_sock == NULL) {
+	/* We've been destroyed */
+	return;
+    }
+
+    PJ_ASSERT_ON_FAIL(turn_sock->conn_type == PJ_TURN_TP_TCP &&
+		      turn_sock->alloc_param.peer_conn_type == PJ_TURN_TP_TCP,
+		      return);
+    PJ_LOG(5,(turn_sock->pool->obj_name, "Trying to connect to peer %s",
+	      pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
+
+    pj_grp_lock_acquire(turn_sock->grp_lock);
+
+    if (turn_sock->data_conn_cnt == PJ_TURN_MAX_TCP_CONN_CNT) {
+	/* Data connection has reached limit */
+
+	status = PJ_ETOOMANY;
+	pj_perror(4, turn_sock->pool->obj_name, status,
+		  "Failed in connect to peer %s",
+		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
+
+	/* Notify app for failure */
+	if (turn_sock->cb.on_connection_status) {
+	    (*turn_sock->cb.on_connection_status)(turn_sock, status, conn_id,
+						  peer_addr, addr_len);
+	}
+
+	pj_grp_lock_release(turn_sock->grp_lock);
+	return;
+    }
+
+    /* Find free data connection slot */
+    for (i=0; i < PJ_TURN_MAX_TCP_CONN_CNT; ++i) {
+	if (turn_sock->data_conn[i].state == DATACONN_STATE_NULL)
+	    break;
+    }
+
+    /* Verify that a free slot is found */
+    pj_assert(i < PJ_TURN_MAX_TCP_CONN_CNT);
+    ++turn_sock->data_conn_cnt;
+
+    /* Init new data connection */
+    new_conn = &turn_sock->data_conn[i];
+    pj_bzero(new_conn, sizeof(*new_conn));
+    pool = pj_pool_create(turn_sock->cfg.pf, "dataconn", 128, 128, NULL);
+    new_conn->pool = pool;
+    new_conn->id = conn_id;
+    new_conn->turn_sock = turn_sock;
+    pj_sockaddr_cp(&new_conn->peer_addr, peer_addr);
+    new_conn->peer_addr_len = addr_len;
+    pj_ioqueue_op_key_init(&new_conn->send_key, sizeof(new_conn->send_key));
+    new_conn->state = DATACONN_STATE_INITSOCK;
+
+    /* Init socket */
+    status = pj_sock_socket(turn_sock->af, pj_SOCK_STREAM(), 0, &sock);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Bind socket */
+    cfg_bind_addr = &turn_sock->setting.bound_addr;
+    max_bind_retry = MAX_BIND_RETRY;
+    if (turn_sock->setting.port_range &&
+	turn_sock->setting.port_range < max_bind_retry)
+    {
+	max_bind_retry = turn_sock->setting.port_range;
+    }
+    pj_sockaddr_init(turn_sock->af, &bound_addr, NULL, 0);
+    if (cfg_bind_addr->addr.sa_family == pj_AF_INET() ||
+	cfg_bind_addr->addr.sa_family == pj_AF_INET6())
+    {
+	pj_sockaddr_cp(&bound_addr, cfg_bind_addr);
+    }
+    status = pj_sock_bind_random(sock, &bound_addr,
+				 turn_sock->setting.port_range,
+				 max_bind_retry);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Apply socket buffer size */
+    if (turn_sock->setting.so_rcvbuf_size > 0) {
+	unsigned sobuf_size = turn_sock->setting.so_rcvbuf_size;
+	status = pj_sock_setsockopt_sobuf(sock, pj_SO_RCVBUF(), PJ_TRUE,
+					  &sobuf_size);
+	if (status != PJ_SUCCESS) {
+	    pj_perror(3, turn_sock->obj_name, status,
+		      "Failed setting SO_RCVBUF");
+	} else {
+	    if (sobuf_size < turn_sock->setting.so_rcvbuf_size) {
+		PJ_LOG(4, (turn_sock->obj_name,
+			   "Warning! Cannot set SO_RCVBUF as configured,"
+			   " now=%d, configured=%d", sobuf_size,
+			   turn_sock->setting.so_rcvbuf_size));
+	    } else {
+		PJ_LOG(5, (turn_sock->obj_name, "SO_RCVBUF set to %d",
+			   sobuf_size));
+	    }
+	}
+    }
+    if (turn_sock->setting.so_sndbuf_size > 0) {
+	unsigned sobuf_size = turn_sock->setting.so_sndbuf_size;
+	status = pj_sock_setsockopt_sobuf(sock, pj_SO_SNDBUF(), PJ_TRUE,
+					  &sobuf_size);
+	if (status != PJ_SUCCESS) {
+	    pj_perror(3, turn_sock->obj_name, status,
+		      "Failed setting SO_SNDBUF");
+	} else {
+	    if (sobuf_size < turn_sock->setting.so_sndbuf_size) {
+		PJ_LOG(4, (turn_sock->obj_name,
+			   "Warning! Cannot set SO_SNDBUF as configured,"
+			   " now=%d, configured=%d", sobuf_size,
+			   turn_sock->setting.so_sndbuf_size));
+	    } else {
+		PJ_LOG(5, (turn_sock->obj_name, "SO_SNDBUF set to %d",
+			   sobuf_size));
+	    }
+	}
+    }
+
+    /* Create active socket */
+    pj_activesock_cfg_default(&asock_cfg);
+    asock_cfg.grp_lock = turn_sock->grp_lock;
+
+    pj_bzero(&asock_cb, sizeof(asock_cb));
+    asock_cb.on_data_read = &dataconn_on_data_read;
+    asock_cb.on_data_sent = &dataconn_on_data_sent;
+    asock_cb.on_connect_complete = &dataconn_on_connect_complete;
+    status = pj_activesock_create(pool, sock,
+				  pj_SOCK_STREAM(), &asock_cfg,
+				  turn_sock->cfg.ioqueue, &asock_cb,
+				  new_conn, &new_conn->asock);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Connect to TURN server for data connection */
+    pj_turn_session_get_info(turn_sock->sess, &info);
+    status = pj_activesock_start_connect(new_conn->asock,
+					 pool,
+					 &info.server,
+					 pj_sockaddr_get_len(&info.server));
+    if (status == PJ_SUCCESS) {
+	dataconn_on_connect_complete(new_conn->asock, PJ_SUCCESS);
+	pj_grp_lock_release(turn_sock->grp_lock);
+	return;
+    }
+
+on_return:
+    if (status == PJ_EPENDING) {
+	PJ_LOG(5,(pool->obj_name,
+		  "Connecting to peer %s",
+		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3)));
+    } else {
+	/* not PJ_SUCCESS */
+	pj_perror(4, pool->obj_name, status,
+		  "Failed in connect to peer %s",
+		  pj_sockaddr_print(peer_addr, addrtxt, sizeof(addrtxt), 3));
+
+	if (!new_conn->asock && sock != PJ_INVALID_SOCKET)
+	    pj_sock_close(sock);    
+
+	dataconn_cleanup(new_conn);
+	--turn_sock->data_conn_cnt;
+
+	/* Notify app for failure */
+	if (turn_sock->cb.on_connection_status) {
+	    (*turn_sock->cb.on_connection_status)(turn_sock, status, conn_id,
+						  peer_addr, addr_len);
+	}
+    }
+    pj_grp_lock_release(turn_sock->grp_lock);
 }
