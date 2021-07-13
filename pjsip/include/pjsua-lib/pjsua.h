@@ -8309,13 +8309,14 @@ PJ_DECL(pj_status_t) pjsua_vid_win_rotate(pjsua_vid_win_id wid,
  * capability. Currently it is only supported on SDL backend.
  *
  * @param wid		The video window ID.
- * @param enabled   	Set to PJ_TRUE if full screen is desired, PJ_FALSE 
- *			otherwise.
+ * @param mode   	Fullscreen mode, see pjmedia_vid_dev_fullscreen.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_vid_win_set_fullscreen(pjsua_vid_win_id wid,
-                                                  pj_bool_t enabled);
+PJ_DECL(pj_status_t) pjsua_vid_win_set_fullscreen(
+					pjsua_vid_win_id wid,
+					pjmedia_vid_dev_fullscreen mode);
+
 
 /*
  * Video codecs API

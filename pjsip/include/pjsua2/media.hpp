@@ -1880,6 +1880,16 @@ public:
      */
     void setFullScreen(bool enabled) PJSUA2_THROW(Error);
 
+    /**
+     * Set video window full-screen. This operation is valid only when the
+     * underlying video device supports PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN
+     * capability. Currently it is only supported on SDL backend.
+     *
+     * @param mode		Fullscreen mode, see
+     *				pjmedia_vid_dev_fullscreen.
+     */
+    void setFullScreen2(pjmedia_vid_dev_fullscreen mode) PJSUA2_THROW(Error);
+
 private:
     pjsua_vid_win_id		winId;
 };
