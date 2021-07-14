@@ -165,7 +165,7 @@ enum pjmedia_vid_dev_std_index
 /**
  * Enumeration of window fullscreen flags.
  */
-typedef enum pjmedia_vid_dev_fullscreen
+typedef enum pjmedia_vid_dev_fullscreen_flag
 {
     /**
      * Windowed or disable fullscreen.
@@ -183,7 +183,7 @@ typedef enum pjmedia_vid_dev_fullscreen
      */
     PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP = 2
 
-} pjmedia_vid_dev_fullscreen;
+} pjmedia_vid_dev_fullscreen_flag;
 
 
 /**
@@ -497,7 +497,7 @@ typedef struct pjmedia_vid_dev_param
      * only be used if PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN is set in the
      * flags.
      */
-    pjmedia_vid_dev_fullscreen window_fullscreen;
+    pjmedia_vid_dev_fullscreen_flag window_fullscreen;
 
 } pjmedia_vid_dev_param;
 

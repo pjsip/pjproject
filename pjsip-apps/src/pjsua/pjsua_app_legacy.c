@@ -503,7 +503,7 @@ static void vid_handle_menu(char *menuin)
 	} else if (argc==5 && (strcmp(argv[2], "full")==0))
 	{
 	    pjsua_vid_win_id wid = atoi(argv[4]);
-	    pjmedia_vid_dev_fullscreen mode = PJMEDIA_VID_DEV_WINDOWED;
+	    pjmedia_vid_dev_fullscreen_flag mode = PJMEDIA_VID_DEV_WINDOWED;
 	    if (strcmp(argv[3], "on")==0)
 		mode = PJMEDIA_VID_DEV_FULLSCREEN;
 	    else if (strcmp(argv[3], "dt")==0)

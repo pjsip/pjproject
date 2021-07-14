@@ -1114,7 +1114,7 @@ static pj_status_t get_cap(void *data)
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
 	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	pjmedia_vid_dev_fullscreen val = PJMEDIA_VID_DEV_WINDOWED;
+	pjmedia_vid_dev_fullscreen_flag val = PJMEDIA_VID_DEV_WINDOWED;
 	if ((flag & SDL_WINDOW_FULLSCREEN_DESKTOP) ==
 		    SDL_WINDOW_FULLSCREEN_DESKTOP)
 	{
@@ -1122,7 +1122,7 @@ static pj_status_t get_cap(void *data)
 	} else if ((flag & SDL_WINDOW_FULLSCREEN) == SDL_WINDOW_FULLSCREEN) {
 	     val = PJMEDIA_VID_DEV_FULLSCREEN;
 	}
-	*((pjmedia_vid_dev_fullscreen*)pval) = val;
+	*((pjmedia_vid_dev_fullscreen_flag*)pval) = val;
 	return PJ_SUCCESS;
     }
 
@@ -1236,7 +1236,8 @@ static pj_status_t set_cap(void *data)
 	return status;	
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
         Uint32 flag;
-	pjmedia_vid_dev_fullscreen val = *(pjmedia_vid_dev_fullscreen*)pval;
+	pjmedia_vid_dev_fullscreen_flag val =
+				    *(pjmedia_vid_dev_fullscreen_flag*)pval;
 
 	flag = SDL_GetWindowFlags(strm->window);
 	if (val == PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP)

@@ -1886,9 +1886,10 @@ public:
      * capability. Currently it is only supported on SDL backend.
      *
      * @param mode		Fullscreen mode, see
-     *				pjmedia_vid_dev_fullscreen.
+     *				pjmedia_vid_dev_fullscreen_flag.
      */
-    void setFullScreen2(pjmedia_vid_dev_fullscreen mode) PJSUA2_THROW(Error);
+    void setFullScreen2(pjmedia_vid_dev_fullscreen_flag mode)
+							PJSUA2_THROW(Error);
 
 private:
     pjsua_vid_win_id		winId;

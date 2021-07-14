@@ -1845,7 +1845,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
  */
 PJ_DEF(pj_status_t) pjsua_vid_win_set_fullscreen(
 					pjsua_vid_win_id wid,
-					pjmedia_vid_dev_fullscreen mode)
+					pjmedia_vid_dev_fullscreen_flag mode)
 {
     pjsua_vid_win *w;
     pjmedia_vid_dev_stream *s;
