@@ -255,6 +255,8 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
     /* Accepting */
     if (ssock->is_server) {
+	pj_bool_t ret = PJ_TRUE;
+
 	if (status != PJ_SUCCESS) {
 	    /* Handshake failed in accepting, destroy our self silently. */
 
@@ -270,6 +272,12 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
 		      pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
 		      status);
+	    }
+
+	    /* Decrement ref count of parent */
+	    if (ssock->parent->param.grp_lock) {
+		pj_grp_lock_dec_ref(ssock->parent->param.grp_lock);
+		ssock->parent = NULL;
 	    }
 
 	    /* Originally, this is a workaround for ticket #985. However,
@@ -315,23 +323,29 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
 	    return PJ_FALSE;
 	}
+
 	/* Notify application the newly accepted SSL socket */
 	if (ssock->param.cb.on_accept_complete2) {
-	    pj_bool_t ret;
 	    ret = (*ssock->param.cb.on_accept_complete2) 
 		    (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr, 
 		    pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr), 
 		    status);
-	    if (ret == PJ_FALSE)
-		return PJ_FALSE;	
 	} else if (ssock->param.cb.on_accept_complete) {
-	    pj_bool_t ret;
 	    ret = (*ssock->param.cb.on_accept_complete)
 		      (ssock->parent, ssock, (pj_sockaddr_t*)&ssock->rem_addr,
 		       pj_sockaddr_get_len((pj_sockaddr_t*)&ssock->rem_addr));
-	    if (ret == PJ_FALSE)
-		return PJ_FALSE;
 	}
+
+	/* Decrement ref count of parent and reset parent (we don't need it
+	 * anymore, right?).
+	 */
+	if (ssock->parent->param.grp_lock) {
+	    pj_grp_lock_dec_ref(ssock->parent->param.grp_lock);
+	    ssock->parent = NULL;
+	}
+
+	if (ret == PJ_FALSE)
+	    return PJ_FALSE;
     }
 
     /* Connecting */
@@ -930,9 +944,13 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    /* Set parent and add ref count (avoid parent destroy during handshake) */
+    ssock->parent = ssock_parent;
+    if (ssock->parent->param.grp_lock)
+	pj_grp_lock_add_ref(ssock->parent->param.grp_lock);
+
     /* Update new SSL socket attributes */
     ssock->sock = newsock;
-    ssock->parent = ssock_parent;
     ssock->is_server = PJ_TRUE;
     if (ssock_parent->cert) {
 	status = pj_ssl_sock_set_certificate(ssock, ssock->pool, 
@@ -957,16 +975,20 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
 					       ssock->param.async_cnt,
 					       sizeof(void*));
-    if (!ssock->asock_rbuf)
-        return PJ_ENOMEM;
+    if (!ssock->asock_rbuf) {
+	status = PJ_ENOMEM;
+	goto on_return;
+    }
 
     for (i = 0; i<ssock->param.async_cnt; ++i) {
 	ssock->asock_rbuf[i] = (void*) pj_pool_alloc(
 					    ssock->pool, 
 					    ssock->param.read_buffer_size + 
 					    sizeof(read_data_t*));
-        if (!ssock->asock_rbuf[i])
-            return PJ_ENOMEM;
+	if (!ssock->asock_rbuf[i]) {
+	    status = PJ_ENOMEM;
+	    goto on_return;
+	}
     }
 
     /* If listener socket has group lock, automatically create group lock
@@ -980,7 +1002,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 	    goto on_return;
 
 	pj_grp_lock_add_ref(glock);
-	asock_cfg.grp_lock = ssock->param.grp_lock = glock;
+	ssock->param.grp_lock = glock;
 	pj_grp_lock_add_handler(ssock->param.grp_lock, ssock->pool, ssock,
 				ssl_on_destroy);
     }
@@ -1008,6 +1030,7 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
 
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
+    asock_cfg.grp_lock = ssock->param.grp_lock;
     asock_cfg.async_cnt = ssock->param.async_cnt;
     asock_cfg.concurrency = ssock->param.concurrency;
     asock_cfg.whole_data = PJ_TRUE;
