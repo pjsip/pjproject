@@ -327,7 +327,8 @@ static pj_status_t STATUS_FROM_SSL_ERR(char *action, pj_ssl_sock_t *ssock,
 	ERROR_LOG("STATUS_FROM_SSL_ERR", err, ssock);
     }
 
-    ssock->last_err = err;
+    if (ssock)
+	ssock->last_err = err;
     return GET_STATUS_FROM_SSL_ERR(err);
 }
 
@@ -344,7 +345,8 @@ static pj_status_t STATUS_FROM_SSL_ERR2(char *action, pj_ssl_sock_t *ssock,
     /* Dig for more from OpenSSL error queue */
     SSLLogErrors(action, ret, err, len, ssock);
 
-    ssock->last_err = ssl_err;
+    if (ssock)
+	ssock->last_err = ssl_err;
     return GET_STATUS_FROM_SSL_ERR(ssl_err);
 }
 
@@ -786,6 +788,13 @@ static pj_status_t init_openssl(void)
 
     /* Create OpenSSL application data index for SSL socket */
     sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
+    if (sslsock_idx == -1) {
+	status = STATUS_FROM_SSL_ERR2("Init", NULL, -1, ERR_get_error(), 0);
+	PJ_LOG(1,(THIS_FILE,
+	       "Fatal error: failed to get application data index for "
+	       "SSL socket"));
+	return status;
+    }
 
 #if defined(PJ_SSL_SOCK_OSSL_USE_THREAD_CB) && \
     PJ_SSL_SOCK_OSSL_USE_THREAD_CB != 0 && OPENSSL_VERSION_NUMBER < 0x10100000L
@@ -819,21 +828,36 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 }
 
 
-/* SSL password callback. */
+/* SSL certificate verification result callback.
+ * Note that this callback seems to be always called from library worker
+ * thread, e.g: active socket on_read_complete callback, which should have
+ * already been equipped with race condition avoidance mechanism (should not
+ * be destroyed while callback is being invoked).
+ */
 static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 {
-    pj_ssl_sock_t *ssock;
-    SSL *ossl_ssl;
+    pj_ssl_sock_t *ssock = NULL;
+    SSL *ossl_ssl = NULL;
     int err;
 
     /* Get SSL instance */
     ossl_ssl = X509_STORE_CTX_get_ex_data(x509_ctx, 
 				    SSL_get_ex_data_X509_STORE_CTX_idx());
-    pj_assert(ossl_ssl);
+    if (!ossl_ssl) {
+	PJ_LOG(1,(THIS_FILE,
+		  "SSL verification callback failed to get SSL instance"));
+	goto on_return;
+    }
 
     /* Get SSL socket instance */
     ssock = SSL_get_ex_data(ossl_ssl, sslsock_idx);
-    pj_assert(ssock);
+    if (!ssock) {
+	/* SSL socket may have been destroyed */
+	PJ_LOG(1,(THIS_FILE,
+		  "SSL verification callback failed to get SSL socket "
+		  "instance (sslsock_idx=%d).", sslsock_idx));
+	goto on_return;
+    }
 
     /* Store verification status */
     err = X509_STORE_CTX_get_error(x509_ctx);
@@ -911,6 +935,7 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
     if (PJ_FALSE == ssock->param.verify_peer)
 	preverify_ok = 1;
 
+on_return:
     return preverify_ok;
 }
 
@@ -1474,6 +1499,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+
+    /* Detach from SSL instance */
+    if (ossock->ossl_ssl) {
+	SSL_set_ex_data(ossock->ossl_ssl, sslsock_idx, NULL);
+    }
+
     /**
      * Avoid calling SSL_shutdown() if handshake wasn't completed.
      * OpenSSL 1.0.2f complains if SSL_shutdown() is called during an

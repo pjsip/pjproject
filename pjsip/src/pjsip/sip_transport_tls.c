@@ -1333,9 +1333,26 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(src_addr_len);
 
     listener = (struct tls_listener*) pj_ssl_sock_get_user_data(ssock);
+    if (!listener) {
+	/* Listener already destroyed, e.g: after TCP accept but before SSL
+	 * handshake is completed.
+	 */
+	if (new_ssock && accept_status == PJ_SUCCESS) {
+	    /* Close the SSL socket if the accept op is successful */
+	    PJ_LOG(4,(THIS_FILE,
+		      "Incoming TLS connection from %s (sock=%d) is discarded "
+		      "because listener is already destroyed",
+		      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
+		      new_ssock));
+
+	    pj_ssl_sock_close(new_ssock);
+	}
+
+	return PJ_FALSE;
+    }
 
     if (accept_status != PJ_SUCCESS) {
-	if (listener && listener->tls_setting.on_accept_fail_cb) {
+	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_ssl_sock_info ssi;
 
@@ -1358,6 +1375,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     PJ_ASSERT_RETURN(new_ssock, PJ_TRUE);
 
     if (!listener->is_registered) {
+	pj_ssl_sock_close(new_ssock);
+
 	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_bzero(&param, sizeof(param));
@@ -1409,6 +1428,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 			 ssl_info.grp_lock, &tls);
     
     if (status != PJ_SUCCESS) {
+	pj_ssl_sock_close(new_ssock);
+
 	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_bzero(&param, sizeof(param));
