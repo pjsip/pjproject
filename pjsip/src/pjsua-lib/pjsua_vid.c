@@ -34,6 +34,10 @@
 static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
                                             pj_bool_t running_only);
 static void free_vid_win(pjsua_vid_win_id wid);
+static pj_status_t media_event_unsubscribe(pjmedia_event_mgr* mgr,
+					   pjmedia_event_cb* cb,
+					   void* user_data,
+					   void* epub);
 
 /*****************************************************************************
  * pjsua video subsystem.
@@ -235,6 +239,28 @@ PJ_DEF(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p)
     pj_bzero(&p->wnd, sizeof(p->wnd));
 }
 
+static pj_status_t media_event_unsubscribe(pjmedia_event_mgr* mgr,
+					   pjmedia_event_cb* cb,
+					   void* user_data,
+					   void* epub)
+{
+    unsigned num_locks = 0;
+    pj_status_t status;
+
+    /* Release locks before unsubscribing, to avoid deadlock. */
+    while (PJSUA_LOCK_IS_LOCKED()) {
+        num_locks++;
+        PJSUA_UNLOCK();
+    }
+
+    status = pjmedia_event_unsubscribe(mgr, cb, user_data, epub);
+
+    /* Re-acquire the locks. */
+    for (; num_locks > 0; num_locks--)
+        PJSUA_LOCK();
+
+    return status;
+}
 
 /*****************************************************************************
  * Devices.
@@ -875,24 +901,35 @@ on_error:
 static void free_vid_win(pjsua_vid_win_id wid)
 {
     pjsua_vid_win *w = &pjsua_var.win[wid];
+    unsigned num_locks = 0;
     
     PJ_LOG(4,(THIS_FILE, "Window %d: destroying..", wid));
     pj_log_push_indent();
 
+    /* Release locks before unsubscribing/destroying, to avoid deadlock. */
+    while (PJSUA_LOCK_IS_LOCKED()) {
+        num_locks++;
+        PJSUA_UNLOCK();
+    }
+
     if (w->vp_cap) {
 	pjsua_vid_conf_remove_port(w->cap_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
-                                  w->vp_cap);
+				  w->vp_cap);
 	pjmedia_vid_port_stop(w->vp_cap);
 	pjmedia_vid_port_destroy(w->vp_cap);
     }
     if (w->vp_rend) {
 	pjsua_vid_conf_remove_port(w->rend_slot);
         pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
-                                  w->vp_rend);
+				  w->vp_rend);
 	pjmedia_vid_port_stop(w->vp_rend);
 	pjmedia_vid_port_destroy(w->vp_rend);
     }
+    /* Re-acquire the locks. */
+    for (; num_locks > 0; num_locks--)
+        PJSUA_LOCK();
+
     pjsua_vid_win_reset(wid);
 
     pj_log_pop_indent();
@@ -1306,19 +1343,19 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
 
 	/* Unsubscribe event */
-	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  w->vp_cap);
+	media_event_unsubscribe(NULL, &call_media_on_event, call_med,
+				w->vp_cap);
     }
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 
 	/* Unsubscribe event, but stop the render first */
 	pjmedia_vid_port_stop(w->vp_rend);
-	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  w->vp_rend);
+	media_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                w->vp_rend);
     }
     /* Unsubscribe from video stream events */
-    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
+    media_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
     /* Now that we have unsubscribed from all events, we no longer
      * receive future events. But we may have scheduled some timers
@@ -2316,8 +2353,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 	return status;
     }
 
-    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                              w->vp_cap);
+    media_event_unsubscribe(NULL, &call_media_on_event, call_med, w->vp_cap);
     
     /* Disconnect the old capture device to stream encoding port */
     status = pjsua_vid_conf_disconnect(w->cap_slot,
@@ -2402,8 +2438,8 @@ on_error:
 
     if (new_w) {
 	/* Unsubscribe, just in case */
-        pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                  new_w->vp_cap);
+        media_event_unsubscribe(NULL, &call_media_on_event, call_med,
+				new_w->vp_cap);
 
 	/* Release the new capturer */
 	dec_vid_win(new_wid);
@@ -2483,8 +2519,8 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
     	    w = &pjsua_var.win[wid];
 
 	    /* Unsubscribe event */
-	    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                      w->vp_cap);
+	    media_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                    w->vp_cap);
 
 	    /* Disconnect from video conference */
     	    pjsua_vid_conf_disconnect(w->cap_slot,
