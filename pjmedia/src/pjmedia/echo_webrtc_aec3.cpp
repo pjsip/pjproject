@@ -25,6 +25,11 @@
 
 #if defined(PJMEDIA_HAS_WEBRTC_AEC3) && PJMEDIA_HAS_WEBRTC_AEC3 != 0
 
+#ifdef _MSC_VER
+#    pragma warning(disable: 4100)    // Unreferenced parameter
+#    pragma warning(disable: 4244)    // Possible loss of data
+#endif
+
 #include "modules/audio_processing/aec3/echo_canceller3.h"
 #include "modules/audio_processing/ns/noise_suppressor.h"
 #include "modules/audio_processing/gain_controller2.h"

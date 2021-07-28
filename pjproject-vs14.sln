@@ -114,6 +114,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwebrtc", "third_party\bu
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "swig_java_pjsua2", "pjsip-apps\build\swig_java_pjsua2.vcxproj", "{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwebrtc_aec3", "third_party\build\webrtc_aec3\libwebrtc_aec3.vcxproj", "{D738A812-CE37-40A4-B2FA-D81488C12C87}"
+EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
 		pjsip-apps\src\pjsua\winrt\cli\comp\pjsua_cli_shared_comp.vcxitems*{207e7bd4-7b11-4a40-ba3a-cc627762a7b6}*SharedItemsImports = 4
@@ -1957,6 +1959,45 @@ Global
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|ARM.ActiveCfg = Release|Win32
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|Win32.ActiveCfg = Release|Win32
 		{63AC6D7A-5D97-40C2-9AF2-E13AA1F9567C}.Release-Static|x64.ActiveCfg = Release|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug|ARM.ActiveCfg = Debug|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug|x64.ActiveCfg = Debug|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|Any CPU.ActiveCfg = Debug-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|ARM.ActiveCfg = Debug-Dynamic|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|ARM.Build.0 = Debug-Dynamic|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|Win32.ActiveCfg = Debug-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|Win32.Build.0 = Debug-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|x64.ActiveCfg = Debug-Dynamic|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Dynamic|x64.Build.0 = Debug-Dynamic|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|Any CPU.ActiveCfg = Debug-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|ARM.ActiveCfg = Debug-Static|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|ARM.Build.0 = Debug-Static|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|Win32.ActiveCfg = Debug-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|Win32.Build.0 = Debug-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|x64.ActiveCfg = Debug-Static|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Debug-Static|x64.Build.0 = Debug-Static|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|Any CPU.ActiveCfg = Release|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|ARM.ActiveCfg = Release|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|ARM.Build.0 = Release|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|Win32.ActiveCfg = Release|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|Win32.Build.0 = Release|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|x64.ActiveCfg = Release|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release|x64.Build.0 = Release|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|Any CPU.ActiveCfg = Release-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|ARM.ActiveCfg = Release-Dynamic|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|ARM.Build.0 = Release-Dynamic|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|Win32.ActiveCfg = Release-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|Win32.Build.0 = Release-Dynamic|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|x64.ActiveCfg = Release-Dynamic|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Dynamic|x64.Build.0 = Release-Dynamic|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|Any CPU.ActiveCfg = Release-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|ARM.ActiveCfg = Release-Static|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|ARM.Build.0 = Release-Static|ARM
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|Win32.ActiveCfg = Release-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|Win32.Build.0 = Release-Static|Win32
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|x64.ActiveCfg = Release-Static|x64
+		{D738A812-CE37-40A4-B2FA-D81488C12C87}.Release-Static|x64.Build.0 = Release-Static|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

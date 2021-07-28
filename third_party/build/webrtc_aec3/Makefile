@@ -34,7 +34,7 @@ export WEBRTC_AEC3_OBJS = \
 	common_audio/resampler/push_resampler.o \
 	common_audio/resampler/push_sinc_resampler.o \
 	common_audio/resampler/sinc_resampler.o \
-	common_audio/signal_processing/splitting_filter.o \
+	common_audio/signal_processing/splitting_filter2.o \
 	api/audio/channel_layout.o \
 	api/audio/echo_canceller3_config.o \
 	api/audio/echo_canceller3_factory.o \
@@ -161,7 +161,7 @@ export WEBRTC_AEC3_OBJS = \
 	rtc_base/synchronization/mutex.o \
 	rtc_base/synchronization/yield.o \
 	rtc_base/system/file_wrapper.o \
-	system_wrappers/source/cpu_features.o \
+	system_wrappers/source/cpu_features2.o \
 	system_wrappers/source/field_trial.o \
 	system_wrappers/source/metrics.o \
 	third_party/rnnoise/src/rnn_vad_weights.o \
