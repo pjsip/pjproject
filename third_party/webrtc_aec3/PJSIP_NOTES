@@ -46,3 +46,20 @@ index 3b9971aba..e4e954067 100644
  #include <array>
 +#include <memory>
  #include <vector>
+
+3. Visual Studio will choose one implementation from the source code with the same file name.
+   Rename these files:
+   - third_party/webrtc_aec3/src/common_audio/signal_processing/{splitting_filter.c => splitting_filter2.c}
+   - third_party/webrtc_aec3/src/modules/audio_processing/agc2/rnn_vad/{vector_math_avx2.cc => rnn_vector_math_avx2.cc}
+   - third_party/webrtc_aec3/src/system_wrappers/source/{cpu_features.cc => cpu_features2.cc}
+
+4. error C2011: 'sockaddr': 'struct' type redefinition
+diff --git a/third_party/webrtc_aec3/src/rtc_base/logging.cc b/third_party/webrtc_aec3/src/rtc_base/logging.cc
+index a333d8397..e0e669b5e 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/logging.cc
++++ b/third_party/webrtc_aec3/src/rtc_base/logging.cc
+@@ -15,6 +15,7 @@
+ #if RTC_LOG_ENABLED()
+ 
+ #if defined(WEBRTC_WIN)
++#include <winsock2.h>
