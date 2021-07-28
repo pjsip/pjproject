@@ -2087,6 +2087,19 @@ struct VideoSwitchParam
  */
 class VidDevManager {
 public:
+
+    /**
+     * Initialize the video device subsystem. This will register all supported
+     * video device factories to the video device subsystem.
+     *
+     * By default, library will initialize video device subsystem automatically
+     * on library initialization, so application will never need to invoke this
+     * function. However, when PJSUA_DONT_INIT_VID_DEV_SUBSYS is set to
+     * non-zero, application should invoke this function before accessing
+     * video device.
+     */
+    void initSubsys() PJSUA2_THROW(Error);
+
     /**
      * Refresh the list of video devices installed in the system. This function
      * will only refresh the list of video device so all active video streams

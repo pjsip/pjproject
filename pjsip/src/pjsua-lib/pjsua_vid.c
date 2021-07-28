@@ -124,12 +124,15 @@ pj_status_t pjsua_vid_subsys_init(void)
     }
 #endif
 
+#if !defined(PJSUA_DONT_INIT_VID_DEV_SUBSYS) || \
+             PJSUA_DONT_INIT_VID_DEV_SUBSYS==0
     status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video subsystem",
 		     status);
 	goto on_error;
     }
+#endif
 
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
 	if (pjsua_var.win[i].pool == NULL) {
