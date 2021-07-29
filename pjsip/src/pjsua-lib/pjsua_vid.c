@@ -971,6 +971,12 @@ pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med)
     call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
     call_med->strm.v.strm_dec_slot = PJSUA_INVALID_ID;
     call_med->strm.v.strm_enc_slot = PJSUA_INVALID_ID;
+    /*
+     * pjmedia_vid_dev_get_info() will raise assertion when video device
+     * subsys initialization is delayed (see PJSUA_DONT_INIT_VID_DEV_SUBSYS
+     * or #2777). While normalizing default device IDs is not urgent
+     * at this point.
+
     if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
 	pjmedia_vid_dev_info info;
 	pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
@@ -981,6 +987,7 @@ pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med)
 	pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
 	call_med->strm.v.cap_dev = info.id;
     }
+    */
 
     return PJ_SUCCESS;
 }
