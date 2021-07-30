@@ -421,6 +421,35 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
     }
 }
 
+/*
+ * Change timer values used by transaction layer. Currently scheduled
+ * timers will not be changed.
+ * t1 - Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
+ * t2 - Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
+ * t4 - Transaction completed timer for non-INVITE, in msec.
+ *      Default value is PJSIP_T4_TIMEOUT
+ * td - Transaction completed timer for INVITE, in msec.
+ *      Default value is PJSIP_TD_TIMEOUT
+ */
+PJ_DEF(void) pjsip_tsx_set_timers(unsigned t1, unsigned t2, unsigned t4, unsigned td)
+{
+    /* Lock hash table mutex. */
+    pj_mutex_lock(mod_tsx_layer.mutex);
+
+    /* See Initialize timer in pjsip_tsx_layer_init_module() */
+    t1_timer_val.sec  = t1 / 1000;
+    t1_timer_val.msec = t1 % 1000;
+    t2_timer_val.sec  = t2 / 1000;
+    t2_timer_val.msec = t2 % 1000;
+    t4_timer_val.sec  = t4 / 1000;
+    t4_timer_val.msec = t4 % 1000;
+    td_timer_val.sec  = td / 1000;
+    td_timer_val.msec = td % 1000;
+    timeout_timer_val = td_timer_val;
+
+    pj_mutex_unlock(mod_tsx_layer.mutex);
+}
+
 /*****************************************************************************
  **
  ** Transaction layer module
