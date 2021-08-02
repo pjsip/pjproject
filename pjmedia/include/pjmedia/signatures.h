@@ -169,7 +169,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Video ports signatures ('PVxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_PORT_VID(c,d)	PJMEDIA_SIG_CLASS_PORT('V',c,d)
-#define PJMEDIA_SIG_IS_CLASS_PORT_VID(s) ((s)>>24=='P' && (((s)>>16)&0xff)='V')
+#define PJMEDIA_SIG_IS_CLASS_PORT_VID(s) ((s)>>24=='P' && (((s)>>16)&0xff)=='V')
 
 /** AVI player signature. */
 #define PJMEDIA_SIG_PORT_VID_AVI_PLAYER	PJMEDIA_SIG_CLASS_PORT_VID('A','V')
