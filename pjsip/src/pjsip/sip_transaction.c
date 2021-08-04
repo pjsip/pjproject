@@ -423,7 +423,8 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
 
 /*
  * Change timer values used by transaction layer. Currently scheduled
- * timers will not be changed.
+ * timers will not be changed. Any value set to 0 will be left
+ * unchanged.
  * t1 - Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
  * t2 - Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
  * t4 - Transaction completed timer for non-INVITE, in msec.
@@ -433,21 +434,43 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
  */
 PJ_DEF(void) pjsip_tsx_set_timers(unsigned t1, unsigned t2, unsigned t4, unsigned td)
 {
-    /* Lock hash table mutex. */
-    pj_mutex_lock(mod_tsx_layer.mutex);
+    if(t1!=0) {
+	t1_timer_val.sec  = t1 / 1000;
+	t1_timer_val.msec = t1 % 1000;
+	pjsip_cfg()->tsx.t1=t1;
+    }
+    if(t2!=0) {
+	t2_timer_val.sec  = t2 / 1000;
+	t2_timer_val.msec = t2 % 1000;
+	pjsip_cfg()->tsx.t2=t2;
+    }
+    if(t4!=0) {
+	t4_timer_val.sec  = t4 / 1000;
+	t4_timer_val.msec = t4 % 1000;
+	pjsip_cfg()->tsx.t4=t4;
+    }
+    if(td!=0) {
+	td_timer_val.sec  = td / 1000;
+	td_timer_val.msec = td % 1000;
+	timeout_timer_val = td_timer_val;
+	pjsip_cfg()->tsx.td=td;
+    }
+}
 
-    /* See Initialize timer in pjsip_tsx_layer_init_module() */
-    t1_timer_val.sec  = t1 / 1000;
-    t1_timer_val.msec = t1 % 1000;
-    t2_timer_val.sec  = t2 / 1000;
-    t2_timer_val.msec = t2 % 1000;
-    t4_timer_val.sec  = t4 / 1000;
-    t4_timer_val.msec = t4 % 1000;
-    td_timer_val.sec  = td / 1000;
-    td_timer_val.msec = td % 1000;
+/*
+ * (Re)Initializes timer values from `pjsip_cfg()`.
+ */
+PJ_DEF(void) pjsip_tsx_initialize_timer_values(void)
+{
+    t1_timer_val.sec  = pjsip_cfg()->tsx.t1 / 1000;
+    t1_timer_val.msec = pjsip_cfg()->tsx.t1 % 1000;
+    t2_timer_val.sec  = pjsip_cfg()->tsx.t2 / 1000;
+    t2_timer_val.msec = pjsip_cfg()->tsx.t2 % 1000;
+    t4_timer_val.sec  = pjsip_cfg()->tsx.t4 / 1000;
+    t4_timer_val.msec = pjsip_cfg()->tsx.t4 % 1000;
+    td_timer_val.sec  = pjsip_cfg()->tsx.td / 1000;
+    td_timer_val.msec = pjsip_cfg()->tsx.td % 1000;
     timeout_timer_val = td_timer_val;
-
-    pj_mutex_unlock(mod_tsx_layer.mutex);
 }
 
 /*****************************************************************************
@@ -468,20 +491,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
     PJ_ASSERT_RETURN(mod_tsx_layer.endpt==NULL, PJ_EINVALIDOP);
 
     /* Initialize timer values */
-    t1_timer_val.sec  = pjsip_cfg()->tsx.t1 / 1000;
-    t1_timer_val.msec = pjsip_cfg()->tsx.t1 % 1000;
-    t2_timer_val.sec  = pjsip_cfg()->tsx.t2 / 1000;
-    t2_timer_val.msec = pjsip_cfg()->tsx.t2 % 1000;
-    t4_timer_val.sec  = pjsip_cfg()->tsx.t4 / 1000;
-    t4_timer_val.msec = pjsip_cfg()->tsx.t4 % 1000;
-    td_timer_val.sec  = pjsip_cfg()->tsx.td / 1000;
-    td_timer_val.msec = pjsip_cfg()->tsx.td % 1000;
-    /* Changed the initialization below to use td_timer_val instead, to enable
-     * customization to the timeout value.
-     */
-    //timeout_timer_val.sec  = (64 * pjsip_cfg()->tsx.t1) / 1000;
-    //timeout_timer_val.msec = (64 * pjsip_cfg()->tsx.t1) % 1000;
-    timeout_timer_val = td_timer_val;
+    pjsip_tsx_initialize_timer_values();
 
     /*
      * Initialize transaction layer structure.
