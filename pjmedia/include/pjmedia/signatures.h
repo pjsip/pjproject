@@ -112,7 +112,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 /**
  * Macro to generate signature from four ASCII letters.
  */
-#define PJMEDIA_SIGNATURE(a,b,c,d)	PJMEDIA_FOURCC(a,b,c,d)
+#define PJMEDIA_SIGNATURE(a,b,c,d)	PJMEDIA_FOURCC(d,c,b,a)
 
 /*************************************************************************
  * Codec signature ('Cxxx'). Please keep the constant names sorted.
@@ -124,13 +124,13 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Audio codec signatures ('CAxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_AUD_CODEC(c,d) PJMEDIA_SIG_CLASS_CODEC('A',c,d)
-#define PJMEDIA_SIG_IS_CLASS_AUD_CODEC(s) ((s)>>24=='C' && (s)>>16=='A')
+#define PJMEDIA_SIG_IS_CLASS_AUD_CODEC(s) ((s)>>24=='C' && (((s)>>16)&0xff)=='A')
 
 /*************************************************************************
  * Video codec signatures ('CVxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_VID_CODEC(c,d) PJMEDIA_SIG_CLASS_CODEC('V',c,d)
-#define PJMEDIA_SIG_IS_CLASS_VID_CODEC(sig) ((s)>>24=='C' && (s)>>16=='V')
+#define PJMEDIA_SIG_IS_CLASS_VID_CODEC(sig) ((s)>>24=='C' && (((s)>>16)&0xff)=='V')
 
 #define PJMEDIA_SIG_VID_CODEC_FFMPEG	PJMEDIA_SIG_CLASS_VID_CODEC('F','F')
 
@@ -144,7 +144,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Audio ports signatures ('PAxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_PORT_AUD(c,d)	PJMEDIA_SIG_CLASS_PORT('A',c,d)
-#define PJMEDIA_SIG_IS_CLASS_PORT_AUD(s) ((s)>>24=='P' && (s)>>16=='A')
+#define PJMEDIA_SIG_IS_CLASS_PORT_AUD(s) ((s)>>24=='P' && (((s)>>16)&0xff)=='A')
 
 #define PJMEDIA_SIG_PORT_BIDIR		PJMEDIA_SIG_CLASS_PORT_AUD('B','D')
 #define PJMEDIA_SIG_PORT_CONF		PJMEDIA_SIG_CLASS_PORT_AUD('C','F')
@@ -169,7 +169,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Video ports signatures ('PVxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_PORT_VID(c,d)	PJMEDIA_SIG_CLASS_PORT('V',c,d)
-#define PJMEDIA_SIG_IS_CLASS_PORT_VID(s) ((s)>>24=='P' && (s)>>16=='V')
+#define PJMEDIA_SIG_IS_CLASS_PORT_VID(s) ((s)>>24=='P' && (((s)>>16)&0xff)=='V')
 
 /** AVI player signature. */
 #define PJMEDIA_SIG_PORT_VID_AVI_PLAYER	PJMEDIA_SIG_CLASS_PORT_VID('A','V')
@@ -181,7 +181,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Video device signatures ('VDxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_VID_DEV(c,d)	PJMEDIA_SIGNATURE('V','D',c,d)
-#define PJMEDIA_SIG_IS_CLASS_VID_DEV(s) ((s)>>24=='V' && (s)>>16=='D')
+#define PJMEDIA_SIG_IS_CLASS_VID_DEV(s) ((s)>>24=='V' && (((s)>>16)&0xff)=='D')
 
 #define PJMEDIA_SIG_VID_DEV_COLORBAR	PJMEDIA_SIG_CLASS_VID_DEV('C','B')
 #define PJMEDIA_SIG_VID_DEV_SDL		PJMEDIA_SIG_CLASS_VID_DEV('S','D')
@@ -195,7 +195,7 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
  * Other video objects ('VOxx'). Please keep the constant names sorted.
  */
 #define PJMEDIA_SIG_CLASS_VID_OTHER(c,d) PJMEDIA_SIGNATURE('V','O',c,d)
-#define PJMEDIA_SIG_IS_CLASS_VID_OTHER(s) ((s)>>24=='V' && (s)>>16=='O')
+#define PJMEDIA_SIG_IS_CLASS_VID_OTHER(s) ((s)>>24=='V' && (((s)>>16)&0xff)=='O')
 
 #define PJMEDIA_SIG_VID_CONF		PJMEDIA_SIG_CLASS_VID_OTHER('C','F')
 #define PJMEDIA_SIG_VID_PORT		PJMEDIA_SIG_CLASS_VID_OTHER('P','O')
