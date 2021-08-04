@@ -6015,6 +6015,9 @@ case $target in
 	  *android*)
 	  	ac_os_objs="$ac_os_objs guid_android.o"
 	  	;;
+	  *darwin*)
+	  	ac_os_objs="$ac_os_objs guid_darwin.o"
+	  	;;
 	  *)
 		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
 			ac_os_objs="$ac_os_objs guid_uuid.o"
@@ -9379,7 +9382,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
              	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is enabled...no" >&5
 $as_echo "Checking if libwebrtc-aec3 is enabled...no" >&6; }
           	fi
-
 
 else
   ac_no_webrtc_aec3=1
