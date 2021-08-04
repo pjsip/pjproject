@@ -94,8 +94,11 @@ PJ_DEF(pj_ssize_t) pj_strtok(const pj_str_t *str, const pj_str_t *delim,
 {    
     pj_ssize_t str_idx;
 
+    pj_assert(str->slen >= 0);
+    pj_assert(delim->slen >= 0);
+
     tok->slen = 0;
-    if ((str->slen == 0) || ((pj_size_t)str->slen < start_idx)) {
+    if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
 	return str->slen;
     }
     
@@ -119,8 +122,10 @@ PJ_DEF(pj_ssize_t) pj_strtok2(const pj_str_t *str, const char *delim,
 {
     pj_ssize_t str_idx;
 
+    pj_assert(str->slen >= 0);
+
     tok->slen = 0;
-    if ((str->slen == 0) || ((pj_size_t)str->slen < start_idx)) {
+    if ((str->slen <= 0) || ((pj_size_t)str->slen < start_idx)) {
 	return str->slen;
     }
 
@@ -143,6 +148,8 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
 
+    PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
+
     /* Special case when substr is zero */
     if (substr->slen == 0) {
 	return (char*)str->ptr;
@@ -161,6 +168,8 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 {
     const char *s, *ends;
+
+    PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
     /* Special case when substr is zero */
     if (substr->slen == 0) {
@@ -181,6 +190,9 @@ PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     char *end = str->ptr + str->slen;
     register char *p = str->ptr;
+ 
+    pj_assert(str->slen >= 0);
+ 
     while (p < end && pj_isspace(*p))
 	++p;
     str->slen -= (p - str->ptr);
@@ -192,6 +204,9 @@ PJ_DEF(pj_str_t*) pj_strrtrim( pj_str_t *str )
 {
     char *end = str->ptr + str->slen;
     register char *p = end - 1;
+
+    pj_assert(str->slen >= 0);
+
     while (p >= str->ptr && pj_isspace(*p))
         --p;
     str->slen -= ((end - p) - 1);
@@ -243,6 +258,8 @@ PJ_DEF(pj_status_t) pj_strtol2(const pj_str_t *str, long *value)
 
     PJ_CHECK_STACK();
 
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
+
     if (!str || !value) {
         return PJ_EINVAL;
     }
@@ -289,6 +306,8 @@ PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 
     PJ_CHECK_STACK();
 
+    pj_assert(str->slen >= 0);
+
     value = 0;
     for (i=0; i<(unsigned)str->slen; ++i) {
 	if (!pj_isdigit(str->ptr[i]))
@@ -305,6 +324,8 @@ PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
     unsigned i;
 
     PJ_CHECK_STACK();
+
+    pj_assert(str->slen >= 0);
 
     value = 0;
     if (base <= 10) {
@@ -328,7 +349,7 @@ PJ_DEF(unsigned long) pj_strtoul2(const pj_str_t *str, pj_str_t *endptr,
 
     if (endptr) {
 	endptr->ptr = str->ptr + i;
-	endptr->slen = str->slen - i;
+	endptr->slen = (str->slen < 0)? 0: (str->slen - i);
     }
 
     return value;
@@ -341,6 +362,8 @@ PJ_DEF(pj_status_t) pj_strtoul3(const pj_str_t *str, unsigned long *value,
     unsigned i;
 
     PJ_CHECK_STACK();
+
+    PJ_ASSERT_RETURN(str->slen >= 0, PJ_EINVAL);
 
     if (!str || !value) {
         return PJ_EINVAL;
@@ -405,7 +428,9 @@ PJ_DEF(float) pj_strtof(const pj_str_t *str)
     char *pdot;
     float val;
 
-    if (str->slen == 0)
+    pj_assert(str->slen >= 0);
+
+    if (str->slen <= 0)
 	return 0;
 
     pdot = (char*)pj_memchr(str->ptr, '.', str->slen);

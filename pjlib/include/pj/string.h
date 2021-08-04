@@ -46,7 +46,7 @@ PJ_BEGIN_DECL
  *   typedef struct pj_str_t
  *   {
  *       char      *ptr;
- *       pj_size_t  slen;
+ *       pj_ssize_t  slen;
  *   } pj_str_t;
  * </pre>
  *
