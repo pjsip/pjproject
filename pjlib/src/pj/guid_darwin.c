@@ -50,6 +50,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     sguid.slen = pj_ansi_strlen(sguid.ptr);
 
     pj_strncpy(str, &sguid, PJ_GUID_STRING_LENGTH);
+    CFRelease(uuid_str);
 
     return str;
 }
