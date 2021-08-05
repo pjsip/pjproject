@@ -150,8 +150,12 @@ PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
-    /* Special case when substr is zero */
-    if (substr->slen == 0) {
+    /* Check if the string is empty */
+    if (str->slen <= 0)
+    	return NULL;
+
+    /* Special case when substr is empty */
+    if (substr->slen <= 0) {
 	return (char*)str->ptr;
     }
 
@@ -171,7 +175,11 @@ PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 
     PJ_ASSERT_RETURN(str->slen >= 0 && substr->slen >= 0, NULL);
 
-    /* Special case when substr is zero */
+    /* Check if the string is empty */
+    if (str->slen <= 0)
+    	return NULL;
+
+    /* Special case when substr is empty */
     if (substr->slen == 0) {
 	return (char*)str->ptr;
     }

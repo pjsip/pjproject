@@ -147,7 +147,7 @@ PJ_IDEF(pj_str_t*) pj_strncpy_with_null( pj_str_t *dst, const pj_str_t *src,
     pj_assert(max > 0);
 
     if (max <= src->slen)
-	max = max-1;
+	max = (max > 0)? max-1: 0;
     else
 	max = (src->slen < 0)? 0: src->slen;
 
