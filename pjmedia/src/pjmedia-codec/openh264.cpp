@@ -59,11 +59,11 @@
 /* OpenH264 default PT */
 #define OH264_PT                PJMEDIA_RTP_PT_H264
 
-/* Minimum interval between generating two missing keyframe events.
+/* Minimum interval (in msec) between generating two missing keyframe events.
  * This is to avoid sending too many events during consecutive decode
  * failures.
  */
-#define EVENT_KF_MIN_INTERVAL	15
+#define MISSING_KEYFRAME_EV_MIN_INTERVAL	1000
 
 /*
  * Factory operations.
@@ -167,7 +167,8 @@ typedef struct oh264_codec_data
     ISVCDecoder			*dec;
     pj_uint8_t			*dec_buf;
     unsigned			 dec_buf_size;
-    unsigned			 last_event;
+    unsigned			 missing_kf_interval;
+    unsigned			 last_missing_kf_event;
 } oh264_codec_data;
 
 struct SLayerPEncCtx
@@ -380,8 +381,6 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     oh264_data->enc->SetOption(ENCODER_OPTION_TRACE_CALLBACK, &log_cb);
     oh264_data->dec->SetOption(DECODER_OPTION_TRACE_LEVEL, &log_level);
     oh264_data->dec->SetOption(DECODER_OPTION_TRACE_CALLBACK, &log_cb);
-    
-    oh264_data->last_event = EVENT_KF_MIN_INTERVAL;
 
     *p_codec = codec;
     return PJ_SUCCESS;
@@ -594,6 +593,13 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     sDecParam.uiTargetDqLayer		= (pj_uint8_t) - 1;
     sDecParam.eEcActiveIdc          	= ERROR_CON_SLICE_COPY;
     sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
+
+    /* Calculate minimum missing keyframe event interval in frames. */
+    oh264_data->missing_kf_interval =
+	(unsigned)((1.0f * param->dec_fmt.det.vid.fps.num /
+	param->dec_fmt.det.vid.fps.denum) *
+	MISSING_KEYFRAME_EV_MIN_INTERVAL/1000);
+    oh264_data->last_missing_kf_event = oh264_data->missing_kf_interval;
 
     //TODO:
     // Apply "sprop-parameter-sets" here
@@ -994,7 +1000,10 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
 
     oh264_data = (oh264_codec_data*) codec->codec_data;
-    oh264_data->last_event++;
+    oh264_data->last_missing_kf_event++;
+    /* Check if we have recently generated missing keyframe event. */
+    if (oh264_data->last_missing_kf_event < oh264_data->missing_kf_interval)
+    	kf_requested = PJ_TRUE;
 
     /*
      * Step 1: unpacketize the packets/frames
@@ -1072,9 +1081,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	ret = oh264_data->dec->DecodeFrame2( start, frm_size, pData,
 					     &sDstBufInfo);
 
-	if (ret != dsErrorFree && !kf_requested &&
-	    oh264_data->last_event >= EVENT_KF_MIN_INTERVAL)
-	{
+	if (ret != dsErrorFree && !kf_requested) {
 	    /* Broadcast missing keyframe event */
 	    pjmedia_event event;
 	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
@@ -1082,7 +1089,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	    pjmedia_event_publish(NULL, codec, &event,
 				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
 	    kf_requested = PJ_TRUE;
-	    oh264_data->last_event = 0;
+	    oh264_data->last_missing_kf_event = 0;
 	}
 
 	if (0 && sDstBufInfo.iBufferStatus == 1) {
@@ -1127,14 +1134,14 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     }
 
     if (ret != dsErrorFree) {
-	if (!kf_requested && oh264_data->last_event >= EVENT_KF_MIN_INTERVAL) {
+	if (!kf_requested) {
 	    /* Broadcast missing keyframe event */
 	    pjmedia_event event;
 	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
 	                       &packets[0].timestamp, codec);
 	    pjmedia_event_publish(NULL, codec, &event,
 				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
-	    oh264_data->last_event = 0;
+	    oh264_data->last_missing_kf_event = 0;
 	}
 
 	if (has_frame) {
