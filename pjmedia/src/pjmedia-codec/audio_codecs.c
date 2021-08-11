@@ -130,9 +130,16 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 #endif
 
 #if PJMEDIA_HAS_OPUS_CODEC
-    /* Register OPUS */
+    /* Register OPUS */ 
     status = pjmedia_codec_opus_init(endpt);
     if (status != PJ_SUCCESS)
+	return status;
+#endif
+
+#if PJMEDIA_HAS_AAC_CODEC
+	/* Register AAC codecs */
+	status = pjmedia_codec_aac_init(endpt);
+	if (status != PJ_SUCCESS)
 	return status;
 #endif
 

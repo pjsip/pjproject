@@ -530,6 +530,14 @@
 #   define PJMEDIA_CODEC_OPUS_DEFAULT_CBR 		PJ_FALSE
 #endif
 
+ /**
+ * AAC Support
+ * default codec for aac is supported
+ */
+#ifndef PJMEDIA_HAS_AAC_CODEC
+#   define PJMEDIA_HAS_AAC_CODEC 0
+#endif
+
 
 /**
  * Enable G.729 codec using BCG729 backend.

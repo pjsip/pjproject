@@ -509,6 +509,7 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\pjmedia-codec\aac.c" />
     <ClCompile Include="..\src\pjmedia-codec\amr_sdp_match.c" />
     <ClCompile Include="..\src\pjmedia-codec\audio_codecs.c" />
     <ClCompile Include="..\src\pjmedia-codec\bcg729.c" />
@@ -535,6 +536,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia-codec.h" />
+    <ClInclude Include="..\include\pjmedia-codec\aac.h" />
     <ClInclude Include="..\include\pjmedia-codec\amr_helper.h" />
     <ClInclude Include="..\include\pjmedia-codec\amr_sdp_match.h" />
     <ClInclude Include="..\include\pjmedia-codec\audio_codecs.h" />
