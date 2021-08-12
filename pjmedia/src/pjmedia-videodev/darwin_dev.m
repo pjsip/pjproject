@@ -324,7 +324,7 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
 	    NSArray<AVCaptureDeviceType> *dev_types =
 	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera
 #if TARGET_OS_OSX && defined(__MAC_10_15)
-                  , AVCaptureDeviceTypeExternalUnknown
+	    	  , AVCaptureDeviceTypeExternalUnknown
 #endif
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
 	    	  , AVCaptureDeviceTypeBuiltInDuoCamera
