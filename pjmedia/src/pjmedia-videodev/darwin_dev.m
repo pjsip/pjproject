@@ -286,7 +286,7 @@ static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
 /* API: refresh the list of devices */
 static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
 {
-struct darwin_factory *qf = (struct darwin_factory*)f;
+    struct darwin_factory *qf = (struct darwin_factory*)f;
     struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
