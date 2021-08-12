@@ -268,19 +268,37 @@ pjmedia_vid_dev_factory* pjmedia_darwin_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
 {
+    return darwin_factory_refresh(f);
+}
+
+/* API: destroy factory */
+static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
+{
     struct darwin_factory *qf = (struct darwin_factory*)f;
+    pj_pool_t *pool = qf->pool;
+
+    qf->pool = NULL;
+    pj_pool_release(pool);
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
+{
+struct darwin_factory *qf = (struct darwin_factory*)f;
     struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
-    
+
     set_preset_str();
-    
+
     /* Initialize input and output devices here */
     qf->dev_info = (struct darwin_dev_info*)
 		   pj_pool_calloc(qf->pool, MAX_DEV_COUNT,
 				  sizeof(struct darwin_dev_info));
     qf->dev_count = 0;
-    
+
 #if TARGET_OS_IPHONE
     /* Init output device */
     qdi = &qf->dev_info[qf->dev_count++];
@@ -290,7 +308,7 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
 #endif
-    
+
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
@@ -305,6 +323,9 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     	    AVCaptureDeviceDiscoverySession *dds;
 	    NSArray<AVCaptureDeviceType> *dev_types =
 	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera
+#if TARGET_OS_OSX && defined(__MAC_10_15)
+                  , AVCaptureDeviceTypeExternalUnknown
+#endif
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
 	    	  , AVCaptureDeviceTypeBuiltInDuoCamera
 	    	  , AVCaptureDeviceTypeBuiltInTelephotoCamera
@@ -353,7 +374,7 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
             qdi->dev = device;
         }
     }
-    
+
     /* Set front camera to be the first input device (as default dev) */
     if (front_idx != -1 && front_idx != first_idx) {
         struct darwin_dev_info tmp_dev_info = qf->dev_info[first_idx];
@@ -370,17 +391,17 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
                           PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
                           PJMEDIA_VID_DEV_CAP_ORIENTATION;
-	
+
 	for (l = 0; l < PJ_ARRAY_SIZE(darwin_fmts); l++) {
             pjmedia_format *fmt;
-            
+
             /* Simple renderer UIView only supports BGRA */
             if (qdi->info.dir == PJMEDIA_DIR_RENDER &&
                 darwin_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
             {
                 continue;
             }
-            
+
             if (qdi->info.dir == PJMEDIA_DIR_RENDER) {
                 fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                 pjmedia_format_init_video(fmt,
@@ -391,7 +412,7 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
             } else {
                 int m;
                 AVCaptureDevice *dev = qdi->dev;
-                
+
                 /* Set supported size for capture device */
                 for(m = 0;
                     m < PJ_ARRAY_SIZE(darwin_sizes) &&
@@ -416,11 +437,11 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
                           	darwin_sizes[m].supported_size_w,
                                 DEFAULT_FPS, 1);
                     }
-                }                
+                }
             }
 	}
     }
-    
+
     PJ_LOG(4, (THIS_FILE, "Darwin video initialized with %d devices:",
 	       qf->dev_count));
     for (i = 0; i < qf->dev_count; i++) {
@@ -430,25 +451,6 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
                    qdi->info.driver, qdi->info.name));
     }
 
-    return PJ_SUCCESS;
-}
-
-/* API: destroy factory */
-static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
-{
-    struct darwin_factory *qf = (struct darwin_factory*)f;
-    pj_pool_t *pool = qf->pool;
-
-    qf->pool = NULL;
-    pj_pool_release(pool);
-
-    return PJ_SUCCESS;
-}
-
-/* API: refresh the list of devices */
-static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
-{
-    PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
 }
 
@@ -530,10 +532,15 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
 - (void)session_runtime_error:(NSNotification *)notification
 {
-    NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
-    PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
-    	       [error.localizedDescription UTF8String],
-    	       [error.localizedFailureReason UTF8String]));
+    /**
+     * This function is called from NSNotificationCenter and the
+     * calling thread may not be registered to pjsip, causing a crash.
+     *
+     * NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
+     * PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
+     * 	       [error.localizedDescription UTF8String],
+     * 	       [error.localizedFailureReason UTF8String]));
+     */
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
