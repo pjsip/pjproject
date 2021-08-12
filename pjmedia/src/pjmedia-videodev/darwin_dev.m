@@ -290,15 +290,15 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
     struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
     enum { MAX_DEV_COUNT = 8 };
-
+    
     set_preset_str();
-
+    
     /* Initialize input and output devices here */
     qf->dev_info = (struct darwin_dev_info*)
 		   pj_pool_calloc(qf->pool, MAX_DEV_COUNT,
 				  sizeof(struct darwin_dev_info));
     qf->dev_count = 0;
-
+    
 #if TARGET_OS_IPHONE
     /* Init output device */
     qdi = &qf->dev_info[qf->dev_count++];
@@ -308,7 +308,7 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
     qdi->info.dir = PJMEDIA_DIR_RENDER;
     qdi->info.has_callback = PJ_FALSE;
 #endif
-
+    
     /* Init input device */
     first_idx = qf->dev_count;
     if (NSClassFromString(@"AVCaptureSession")) {
@@ -374,7 +374,7 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
             qdi->dev = device;
         }
     }
-
+    
     /* Set front camera to be the first input device (as default dev) */
     if (front_idx != -1 && front_idx != first_idx) {
         struct darwin_dev_info tmp_dev_info = qf->dev_info[first_idx];
@@ -391,17 +391,17 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
                           PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION |
                           PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE |
                           PJMEDIA_VID_DEV_CAP_ORIENTATION;
-
+	
 	for (l = 0; l < PJ_ARRAY_SIZE(darwin_fmts); l++) {
             pjmedia_format *fmt;
-
+            
             /* Simple renderer UIView only supports BGRA */
             if (qdi->info.dir == PJMEDIA_DIR_RENDER &&
                 darwin_fmts[l].pjmedia_format != PJMEDIA_FORMAT_BGRA)
             {
                 continue;
             }
-
+            
             if (qdi->info.dir == PJMEDIA_DIR_RENDER) {
                 fmt = &qdi->info.fmt[qdi->info.fmt_cnt++];
                 pjmedia_format_init_video(fmt,
@@ -412,7 +412,7 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
             } else {
                 int m;
                 AVCaptureDevice *dev = qdi->dev;
-
+                
                 /* Set supported size for capture device */
                 for(m = 0;
                     m < PJ_ARRAY_SIZE(darwin_sizes) &&
@@ -437,11 +437,11 @@ struct darwin_factory *qf = (struct darwin_factory*)f;
                           	darwin_sizes[m].supported_size_w,
                                 DEFAULT_FPS, 1);
                     }
-                }
+                }                
             }
 	}
     }
-
+    
     PJ_LOG(4, (THIS_FILE, "Darwin video initialized with %d devices:",
 	       qf->dev_count));
     for (i = 0; i < qf->dev_count; i++) {
