@@ -961,10 +961,10 @@ static pj_status_t aac_codec_encode(pjmedia_codec *codec,
 		int in_buffer_size, in_buffer_element_size;
 		int out_buffer_identifier = OUT_BITSTREAM_DATA;
 		int out_buffer_size, out_buffer_element_size;
-		void *in_ptr, *out_ptr;
+		char *in_ptr, *out_ptr;
 
 		in_ptr = input->buf;
-		for (uint i = 0; i < processed_buffer; i++) {
+		for (unsigned i = 0; i < processed_buffer; i++) {
 			in_ptr++;
 		}
 		// in_ptr = processed_buffer;
@@ -981,7 +981,7 @@ static pj_status_t aac_codec_encode(pjmedia_codec *codec,
 
 		// p = out_bytes;
 		out_ptr = p;
-		for (uint i = 0; i < out_bytes; i++) {
+		for (unsigned i = 0; i < out_bytes; i++) {
 			out_ptr++;
 		}
 
@@ -1042,7 +1042,6 @@ static pj_status_t aac_codec_encode(pjmedia_codec *codec,
 /*
 * Get frames in the packet.
 */
-
 static pj_status_t aac_codec_parse(pjmedia_codec *codec, void *pkt,
 	pj_size_t pkt_size, const pj_timestamp *ts, unsigned *frame_cnt,
 	pjmedia_frame frames[]) {
