@@ -36,96 +36,85 @@
 #define THIS_FILE       "aac.c"
 
 
-/* 	Profesional Encoding Configuration
-
-encoder spesific config
-Caution config for LD,ELD, ELDV2 with dualrate
-
-LD  				= ptime 10   0x01					MAIN
-ELD Downsample 		= ptime 20   0x01 | 0x03			MAIN + SBR
-ELD Dualrate        = ptime 10   0x01 | 0x03 			MAIN + SBR
-ELDV2 Dualrate      = ptime 10   Ox01 | 0x03 | 0x08		MAIN + SBR + MPSC(SAC)
-for HE-AACv2 minimum audio encoded buffer was 8192;
-LC AAC-LC, HE-AAC, HE-AACv2 in Dualrate SBR mode.
------------------------------------------------------------------------------------
-Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
-|         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
-|                  |                [kHz]  |      Rate  |
-|                  |                       |     [kHz]  |
--------------------+------------------+-----------------------+------------+-------
-AAC LC + SBR + PS  |  40000 -  64000  |  32.00, 44.10, 48.00  |     48.00  | 2
-AAC LC + SBR       |  64000 - 128000  |  32.00, 44.10, 48.00  |     48.00  | 2
-AAC LC             | 320002 - 576000  |                48.00  |     48.00  | 2
-AAC-LD, AAC-ELD, AAC-ELD with SBR in Dualrate SBR
------------------------------------------------------------------------------------
-Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
-|         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
-|                  |                [kHz]  |      Rate  |
-|                  |                       |     [kHz]  |
--------------------+------------------+-----------------------+------------+-------
-ELD + SBR          |  52000 - 128000  |        32.00 - 48.00  |     48.00  | 2
-LD, ELD            | 136000 - 384000  |        44.10 - 48.00  |     48.00  | 2
-ELD AAC-ELD with SBR in Downsampled SBR mode.
------------------------------------------------------------------------------------
-Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
-|         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
-|                  |                [kHz]  |      Rate  |
-|                  |                       |     [kHz]  |
--------------------+------------------+-----------------------+------------+-------
-ELD + SBR          |  18000 - 24999   |        16.00 - 22.05  |     22.05  | 1
-(downsampled SBR)  |  25000 - 31999   |        16.00 - 24.00  |     24.00  | 1
-|  32000 - 47999   |        22.05 - 32.00  |     32.00  | 1
-|  48000 - 64000   |        22.05 - 48.00  |     32.00  | 1
--------------------+------------------+-----------------------+------------+-------
-ELD + SBR          |  32000 - 51999   |        16.00 - 24.00  |     24.00  | 2
-(downsampled SBR)  |  52000 - 59999   |        22.05 - 24.00  |     24.00  | 2
-|  60000 - 95999   |        22.05 - 32.00  |     32.00  | 2
-|  96000 - 128000  |        22.05 - 48.00  |     32.00  | 2
-ELDv2 AAC-ELD v2, AAC-ELD v2 with SBR.
------------------------------------------------------------------------------------
-Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
-|         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
-|                  |                [kHz]  |      Rate  |
-|                  |                       |     [kHz]  |
--------------------+------------------+-----------------------+------------+-------
-ELD-212            |  85000 - 192000  |        44.10 - 48.00  |     48.00  | 2
--------------------+------------------+-----------------------+------------+-------
-ELD-212 + SBR      |  32000 -  64000  |        32.00 - 48.00  |     48.00  | 2
-(dualrate SBR)     |                  |                       |            |
-
-Best Audio Quality setting
-ELD Dualrate:
-#define DEFAULT_AOT 				AOT_ER_AAC_ELD
-#define DEFAULT_USE_SBR				1
-#define DEFAULT_SBR_RATIO           2
-#define DEFAULT_GRANULE_LENGTH 		480
-#define DEFAULT_PTIME       		20
-#define DEFAULT_BITRATE_MODE 		3 // 0 constant, 1 -> 5;
-#define DEFAULT_IS_ELD_V2 			0
-#define DEFAULT_ELDV2_SBR			1
-#define DEFAULT_TRANSMUX			TT_MP4_RAW
-#define DEFAULT_SIGNALING_MODE		2
-#define DEFAULT_USE_INTERNAL_PLC    1
-AAC must mix with freq
-sine wave to upshifting
-dynamic high range
-AAC-LD 16500 Hz.
-*/
+/** 
+ * LD                  = ptime 10   0x01					MAIN
+ * ELD Downsample      = ptime 20   0x01 | 0x03			    MAIN + SBR
+ * ELD Dualrate        = ptime 10   0x01 | 0x03 			MAIN + SBR
+ * ELDV2 Dualrate      = ptime 10   Ox01 | 0x03 | 0x08		MAIN + SBR + MPSC(SAC)
+ * for HE-AACv2 minimum audio encoded buffer was 8192;
+ * LC AAC-LC, HE-AAC, HE-AACv2 in Dualrate SBR mode.
+ * -----------------------------------------------------------------------------------
+ * Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
+ * |         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
+ * |                  |                [kHz]  |      Rate  |
+ * |                  |                       |     [kHz]  |
+ * -------------------+------------------+-----------------------+------------+-------
+ * AAC LC + SBR + PS  |  40000 -  64000  |  32.00, 44.10, 48.00  |     48.00  | 2
+ * AAC LC + SBR       |  64000 - 128000  |  32.00, 44.10, 48.00  |     48.00  | 2
+ * AAC LC             | 320002 - 576000  |                48.00  |     48.00  | 2
+ * AAC-LD, AAC-ELD, AAC-ELD with SBR in Dualrate SBR
+ * -----------------------------------------------------------------------------------
+ * Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
+ * |         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
+ * |                  |                [kHz]  |      Rate  |
+ * |                  |                       |     [kHz]  |
+ * -------------------+------------------+-----------------------+------------+-------
+ * ELD + SBR          |  52000 - 128000  |        32.00 - 48.00  |     48.00  | 2
+ * LD, ELD            | 136000 - 384000  |        44.10 - 48.00  |     48.00  | 2
+ * ELD AAC-ELD with SBR in Downsampled SBR mode.
+ * -----------------------------------------------------------------------------------
+ * Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
+ * |         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
+ * |                  |                [kHz]  |      Rate  |
+ * |                  |                       |     [kHz]  |
+ * -------------------+------------------+-----------------------+------------+-------
+ * ELD + SBR          |  32000 - 51999   |        16.00 - 24.00  |     24.00  | 2
+ * (downsampled SBR)  |  52000 - 59999   |        22.05 - 24.00  |     24.00  | 2
+ * |  60000 - 95999   |        22.05 - 32.00  |     32.00  | 2
+ * |  96000 - 128000  |        22.05 - 48.00  |     32.00  | 2
+ * 
+ * ELDv2 AAC-ELD v2, AAC-ELD v2 with SBR.
+ * -----------------------------------------------------------------------------------
+ * Audio Object Type  |  Bit Rate Range  |            Supported  | Preferred  | No.of
+ * |         [bit/s]  |       Sampling Rates  |    Sampl.  |  Chan.
+ * |                  |                [kHz]  |      Rate  |
+ * |                  |                       |     [kHz]  |
+ * -------------------+------------------+-----------------------+------------+-------
+ * ELD-212            |  85000 - 192000  |        44.10 - 48.00  |     48.00  | 2
+ * -------------------+------------------+-----------------------+------------+-------
+ * ELD-212 + SBR      |  32000 -  64000  |        32.00 - 48.00  |     48.00  | 2
+ * (dualrate SBR)     |                  |                       |            |
+ * 
+ * Best Audio Quality setting
+ * ELD Dualrate:
+ * #define DEFAULT_AOT 				AOT_ER_AAC_ELD
+ * #define DEFAULT_USE_SBR				1
+ * #define DEFAULT_SBR_RATIO           2
+ * #define DEFAULT_GRANULE_LENGTH 		480
+ * #define DEFAULT_PTIME       		20
+ * #define DEFAULT_BITRATE_MODE 		3 
+ * #define DEFAULT_IS_ELD_V2 			0
+ * #define DEFAULT_ELDV2_SBR			1
+ * #define DEFAULT_TRANSMUX			TT_MP4_RAW
+ * #define DEFAULT_SIGNALING_MODE		2
+ * #define DEFAULT_USE_INTERNAL_PLC    1
+ * 
+ */
 
 
 /* default internal aac config */
-#define DEFAULT_CLOCK_RATE  		48000
-#define DEFAULT_CHANNEL_COUNT 		2
-#define DEFAULT_AOT 				AOT_ER_AAC_ELD // AOT_PS,AOT_ER_AAC_ELD, AOT_ER_AAC_ELD AOT_PS 
-#define DEFAULT_USE_SBR				1 // -1 default configurator, 0 disable, 1 enable
-#define DEFAULT_SBR_RATIO           2 // 1 downsampled, 2 dualrate;
-#define DEFAULT_GRANULE_LENGTH 		480 // 480
-#define DEFAULT_PTIME       		20
-#define DEFAULT_BITRATE_MODE 		0 // 0 constant, 1 -> 5;
-#define DEFAULT_IS_ELD_V2 			0
-#define DEFAULT_ELDV2_SBR			1 
-#define DEFAULT_TRANSMUX			TT_MP4_RAW
-#define DEFAULT_SIGNALING_MODE		2
+#define DEFAULT_CLOCK_RATE          48000
+#define DEFAULT_CHANNEL_COUNT       2
+#define DEFAULT_AOT                 AOT_ER_AAC_ELD	// AOT_PS,AOT_ER_AAC_ELD, AOT_ER_AAC_ELD AOT_PS 
+#define DEFAULT_USE_SBR             1				// -1 default configurator, 0 disable, 1 enable
+#define DEFAULT_SBR_RATIO           2				// 1 downsampled, 2 dualrate;
+#define DEFAULT_GRANULE_LENGTH      480				// 480
+#define DEFAULT_PTIME               20
+#define DEFAULT_BITRATE_MODE        0				// 0 constant, 1 -> 5;
+#define DEFAULT_IS_ELD_V2           0
+#define DEFAULT_ELDV2_SBR           1 
+#define DEFAULT_TRANSMUX            TT_MP4_RAW
+#define DEFAULT_SIGNALING_MODE      2
 #define DEFAULT_USE_INTERNAL_PLC    1
 
 #define INDEX_BIT_LENGTH    		3
@@ -199,8 +188,8 @@ struct aac_private {
 	HANDLE_AACDECODER           hAacDec;
 	unsigned                    pcm_frame_size;  /**< PCM frame size in bytes */
 	unsigned 					enc_frameLength;
-	unsigned                    min_peak;
-	unsigned                    max_peak;
+//	unsigned                    min_peak;
+//	unsigned                    max_peak;
 };
 
 
@@ -252,8 +241,6 @@ static pj_status_t aac_encoder_open(HANDLE_AACENCODER* hAacEnc, const pjmedia_co
 		}
 	}
 
-
-	//error = aacEncOpen(hAacEnc, encModules, attr->info.channel_cnt);
 	error = aacEncOpen(hAacEnc, encModules, attr->info.channel_cnt);
 	if (error != AACENC_OK) {
 		PJ_LOG(1, (THIS_FILE, "Error while creating encoder %x", error));
@@ -344,21 +331,6 @@ static pj_status_t aac_encoder_open(HANDLE_AACENCODER* hAacEnc, const pjmedia_co
 		// PJ_LOG(1, (THIS_FILE, "CURRENT BITRATE: %d", bitrate)); 
 	}
 
-
-
-	/* configure bitrate with acording bitrate mode */
-	// int bitrate = 0;
-	// int peak_bitrate = 0;
-
-	// if (DEFAULT_BITRATE_MODE > 5) {
-	// 	bitrate = attr->info.max_bps;
-	// 	peak_bitrate = attr->info.max_bps;
-	// } else {
-	// 	bitrate = attr->info.avg_bps;
-	// 	peak_bitrate = attr->info.max_bps;
-	// }
-
-
 	if (DEFAULT_BITRATE_MODE > 5 && DEFAULT_ELDV2_SBR == 0) {
 		// /* setting bitrate */
 		if (error = aacEncoder_SetParam(*hAacEnc, AACENC_BITRATE, attr->info.avg_bps) == AACENC_OK) {
@@ -367,13 +339,6 @@ static pj_status_t aac_encoder_open(HANDLE_AACENCODER* hAacEnc, const pjmedia_co
 		else {
 			PJ_LOG(1, (THIS_FILE, "ERR AACENC_BITRATE: %x", error));
 		}
-
-		//   /* setting peak bitrate */ 
-		// if (error = aacEncoder_SetParam(*hAacEnc, AACENC_PEAK_BITRATE, attr->info.max_bps) == AACENC_OK) {
-		// 	PJ_LOG(1, (THIS_FILE, "SET AACENC_PEAK_BITRATE: %d", attr->info.max_bps));
-		// } else {
-		// 	PJ_LOG(1, (THIS_FILE, "ERR AACENC_PEAK_BITRATE: %x", error));
-		// }
 	}
 
 
@@ -384,16 +349,6 @@ static pj_status_t aac_encoder_open(HANDLE_AACENCODER* hAacEnc, const pjmedia_co
 	else {
 		PJ_LOG(1, (THIS_FILE, "ERR AACENC_PEAK_BITRATE: %x", error));
 	}
-
-
-	//   if (DEFAULT_ELDV2_SBR == 0) {
-	// if (error = aacEncoder_SetParam(*hAacEnc, AACENC_SBR_MODE, 0) == AACENC_OK) {
-	// 	PJ_LOG(1, (THIS_FILE, "SET ELDV2 AACENC_SBR_MODE: %d", -1));
-	// } else {
-	// 	PJ_LOG(1, (THIS_FILE, "ERR ELDV2 AACENC_SBR_MODE: %x", error));
-	// }
-	//   }
-
 
 	// PJ_LOG(1, (THIS_FILE, "Error Set Param %d", error));
 	error = aacEncEncode(*hAacEnc, NULL, NULL, NULL, NULL);
@@ -767,8 +722,8 @@ static pj_status_t factory_alloc_codec(pjmedia_codec_factory *factory, const pjm
 	// initialize default var
 	aac->enc_ready = PJ_FALSE;
 	aac->dec_ready = PJ_FALSE;
-	aac->min_peak = 1024;
-	aac->max_peak = 0;
+	// aac->min_peak = 1024;
+	// aac->max_peak = 0;
 
 	/* Create pool for codec instance */
 	aac->pool = pool;
@@ -1023,15 +978,15 @@ static pj_status_t aac_codec_encode(pjmedia_codec *codec,
 			output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 			*sp++ = (size & 0xFF00) >> 8;
 			*sp = (size & 0x00FF);
-			/* this code jus for finding max_peak bitrate and min_peak_bitrate */
-			if ((out_bytes + 4) < aac->min_peak) {
-				aac->min_peak = (out_bytes + 4);
-				PJ_LOG(2, (THIS_FILE, "min_peak: %d, max_peak: %d", aac->min_peak, aac->max_peak));
-			}
-			if ((out_bytes + 4) > aac->max_peak) {
-				aac->max_peak = (out_bytes + 4);
-				PJ_LOG(2, (THIS_FILE, "min_peak: %d, max_peak: %d", aac->min_peak, aac->max_peak));
-			}
+			// this code just for finding max_peak bitrate and min_peak_bitrate
+			// if ((out_bytes + 4) < aac->min_peak) {
+			//	aac->min_peak = (out_bytes + 4);
+			//	PJ_LOG(2, (THIS_FILE, "min_peak: %d, max_peak: %d", aac->min_peak, aac->max_peak));
+			// }
+			// if ((out_bytes + 4) > aac->max_peak) {
+			//	aac->max_peak = (out_bytes + 4);
+			// 	PJ_LOG(2, (THIS_FILE, "min_peak: %d, max_peak: %d", aac->min_peak, aac->max_peak));
+			// }
 		}
 	}
 
