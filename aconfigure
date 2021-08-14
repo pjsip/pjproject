@@ -632,6 +632,9 @@ ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
 ac_no_bcg729
+fdk_aac_present
+fdk_aac_h_present
+ac_no_fdk_aac
 opus_present
 opus_h_present
 ac_no_opus
@@ -773,6 +776,7 @@ infodir
 docdir
 oldincludedir
 includedir
+runstatedir
 localstatedir
 sharedstatedir
 sysconfdir
@@ -849,6 +853,8 @@ with_silk
 enable_silk
 with_opus
 enable_opus
+with_fdk_aac
+enable_fdk_aac
 with_bcg729
 enable_bcg729
 enable_libyuv
@@ -905,6 +911,7 @@ datadir='${datarootdir}'
 sysconfdir='${prefix}/etc'
 sharedstatedir='${prefix}/com'
 localstatedir='${prefix}/var'
+runstatedir='${localstatedir}/run'
 includedir='${prefix}/include'
 oldincludedir='/usr/include'
 docdir='${datarootdir}/doc/${PACKAGE_TARNAME}'
@@ -1157,6 +1164,15 @@ do
   | -silent | --silent | --silen | --sile | --sil)
     silent=yes ;;
 
+  -runstatedir | --runstatedir | --runstatedi | --runstated \
+  | --runstate | --runstat | --runsta | --runst | --runs \
+  | --run | --ru | --r)
+    ac_prev=runstatedir ;;
+  -runstatedir=* | --runstatedir=* | --runstatedi=* | --runstated=* \
+  | --runstate=* | --runstat=* | --runsta=* | --runst=* | --runs=* \
+  | --run=* | --ru=* | --r=*)
+    runstatedir=$ac_optarg ;;
+
   -sbindir | --sbindir | --sbindi | --sbind | --sbin | --sbi | --sb)
     ac_prev=sbindir ;;
   -sbindir=* | --sbindir=* | --sbindi=* | --sbind=* | --sbin=* \
@@ -1294,7 +1310,7 @@ fi
 for ac_var in	exec_prefix prefix bindir sbindir libexecdir datarootdir \
 		datadir sysconfdir sharedstatedir localstatedir includedir \
 		oldincludedir docdir infodir htmldir dvidir pdfdir psdir \
-		libdir localedir mandir
+		libdir localedir mandir runstatedir
 do
   eval ac_val=\$$ac_var
   # Remove trailing slashes.
@@ -1447,6 +1463,7 @@ Fine tuning of the installation directories:
   --sysconfdir=DIR        read-only single-machine data [PREFIX/etc]
   --sharedstatedir=DIR    modifiable architecture-independent data [PREFIX/com]
   --localstatedir=DIR     modifiable single-machine data [PREFIX/var]
+  --runstatedir=DIR       modifiable per-process data [LOCALSTATEDIR/run]
   --libdir=DIR            object code libraries [EPREFIX/lib]
   --includedir=DIR        C header files [PREFIX/include]
   --oldincludedir=DIR     C header files for non-gcc [/usr/include]
@@ -1527,6 +1544,9 @@ Optional Features:
   --disable-opus          Exclude OPUS support from the build (default:
                           autodetect)
 
+  --disable-fdk-aac       Exclude FDK-AAC support from the build (default:
+                          autodetect)
+
   --disable-bcg729        Disable bcg729 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
@@ -1591,6 +1611,7 @@ Optional Packages:
                           Specify alternate libvo-amrwbenc prefix
   --with-silk=DIR         Specify alternate SILK prefix
   --with-opus=DIR         Specify alternate OPUS prefix
+  --with-fdk-aac=DIR      Specify alternate FDK-AAC prefix
   --with-bcg729=DIR       Specify alternate bcg729 prefix
 
 Some influential environment variables:
@@ -9057,6 +9078,107 @@ $as_echo "OPUS library found, OPUS support enabled" >&6; }
 	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OPUS library not found, OPUS support disabled" >&5
 $as_echo "OPUS library not found, OPUS support disabled" >&6; }
 			$as_echo "#define PJMEDIA_HAS_OPUS_CODEC 0" >>confdefs.h
+
+		fi
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_fdk_aac" = "xno"; then
+    enable_fdk_aac=no
+fi
+
+
+# Check whether --with-fdk_aac was given.
+if test "${with_fdk_aac+set}" = set; then :
+  withval=$with_fdk_aac;
+else
+  with_fdk_aac=no
+
+fi
+
+
+
+# Check whether --enable-fdk_aac was given.
+if test "${enable_fdk_aac+set}" = set; then :
+  enableval=$enable_fdk_aac;
+		if test "$enable_fdk_aac" = "no"; then
+		 ac_no_fdk_aac=1
+		 $as_echo "#define PJMEDIA_HAS_AAC_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if AAC support is disabled... yes" >&5
+$as_echo "Checking if AAC support is disabled... yes" >&6; }
+	        fi
+
+else
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for FDK-AAC installations.." >&5
+$as_echo "checking for FDK-AAC installations.." >&6; }
+                if test "x$with_fdk_aac" != "xno" -a "x$with_fdk_aac" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_fdk_aac/include"
+                    CPPFLAGS="$CPPFLAGS -I$with_fdk_aac/include"
+                    LDFLAGS="$LDFLAGS -L$with_fdk_aac/lib"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using FDK-AAC prefix... $with_fdk_aac" >&5
+$as_echo "Using FDK-AAC prefix... $with_fdk_aac" >&6; }
+                fi
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "fdk-aac/aacenc_lib.h" "ac_cv_header_fdk_aac_aacenc_lib_h" "$ac_includes_default"
+if test "x$ac_cv_header_fdk_aac_aacenc_lib_h" = xyes; then :
+  fdk_aac_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for aacEncGetLibInfo in -lfdk-aac" >&5
+$as_echo_n "checking for aacEncGetLibInfo in -lfdk-aac... " >&6; }
+if ${ac_cv_lib_fdk_aac_aacEncGetLibInfo+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lfdk-aac  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char aacEncGetLibInfo ();
+int
+main ()
+{
+return aacEncGetLibInfo ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_fdk_aac_aacEncGetLibInfo=yes
+else
+  ac_cv_lib_fdk_aac_aacEncGetLibInfo=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_fdk_aac_aacEncGetLibInfo" >&5
+$as_echo "$ac_cv_lib_fdk_aac_aacEncGetLibInfo" >&6; }
+if test "x$ac_cv_lib_fdk_aac_aacEncGetLibInfo" = xyes; then :
+  fdk_aac_present=1 && LIBS="-lfdk-aac $LIBS"
+fi
+
+		if test "x$fdk_aac_h_present" = "x1" -a "x$fdk_aac_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: FDK-AAC library found, AAC support enabled" >&5
+$as_echo "FDK-AAC library found, AAC support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_AAC_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_fdk_aac=1
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: FDK-AAC library not found, AAC support disabled" >&5
+$as_echo "FDK-AAC library not found, AAC support disabled" >&6; }
+			$as_echo "#define PJMEDIA_HAS_AAC_CODEC 0" >>confdefs.h
 
 		fi
 
