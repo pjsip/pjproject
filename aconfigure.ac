@@ -2058,7 +2058,7 @@ AC_ARG_ENABLE(opus,
 		  
 dnl # Do not use default FDK-AAC installation if we are cross-compiling
 if test "x$ac_cross_compile" != "x" -a "x$with_fdk_aac" = "xno"; then
-    enable_enable_fdk_aac=no
+    enable_fdk_aac=no
 fi
 
 dnl # FDK-AAC prefix
@@ -2093,7 +2093,7 @@ AC_ARG_ENABLE(fdk_aac,
 		AC_SUBST(fdk_aac_h_present)
 		AC_SUBST(fdk_aac_present)
 		AC_CHECK_HEADER(fdk-aac/aacenc_lib.h,[fdk_aac_h_present=1])
-		AC_CHECK_LIB(fdk-aac,aacDecoder_GetLibInfo,[fdk_aac_present=1 && LIBS="-lfdk-aac $LIBS"])
+		AC_CHECK_LIB(fdk-aac,aacEncGetLibInfo,[fdk_aac_present=1 && LIBS="-lfdk-aac $LIBS"])
 		if test "x$fdk_aac_h_present" = "x1" -a "x$fdk_aac_present" = "x1"; then
 	        	AC_MSG_RESULT([FDK-AAC library found, AAC support enabled])
 	        	AC_DEFINE(PJMEDIA_HAS_AAC_CODEC,1)

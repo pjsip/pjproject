@@ -89,6 +89,11 @@
 #undef PJMEDIA_HAS_OPUS_CODEC
 #endif
 
+/* AAC codec */
+#ifndef PJMEDIA_HAS_AAC_CODEC
+#undef PJMEDIA_HAS_AAC_CODEC
+#endif
+
 /* G.729 codec with BCG729 backend */
 #ifndef PJMEDIA_HAS_BCG729
 #undef PJMEDIA_HAS_BCG729
