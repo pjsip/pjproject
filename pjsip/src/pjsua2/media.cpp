@@ -2048,7 +2048,6 @@ void VideoMedia::update() const PJSUA2_THROW(Error)
 #if PJSUA_HAS_VIDEO
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_update_port(id) );
 #else
-    PJ_UNUSED_ARG(sink);
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
 }
