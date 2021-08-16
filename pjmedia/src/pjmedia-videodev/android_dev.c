@@ -1153,8 +1153,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 {
     and_stream *strm = (and_stream*)(intptr_t)user_data;
     pjmedia_frame f;
-    pj_uint8_t *p0, *p1, *p2;
-    jlong p0_len, p1_len, p2_len;
+    pj_uint8_t *p0, *p1, *p2, *p0_end;
     pj_uint8_t *Y, *U, *V;
     pj_status_t status;
     void *frame_buf, *data_buf;
@@ -1177,12 +1176,10 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     p0 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane0);
     p1 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane1);
     p2 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane2);
-    p0_len = (*env)->GetDirectBufferCapacity(env, plane0);
-    p1_len = (*env)->GetDirectBufferCapacity(env, plane1);
-    p2_len = (*env)->GetDirectBufferCapacity(env, plane2);
     
     /* Assuming the buffers are originally a large contigue buffer */
-    pj_assert(p1 < p0+strm->vafp.framebytes && p2 < p0+strm->vafp.framebytes);
+    p0_end = p0+strm->vafp.size.h*rowStride0;
+    pj_assert(p1 == p0_end || p2 == p0_end);
 
     f.type = PJMEDIA_FRAME_TYPE_VIDEO;
     f.size = strm->vafp.framebytes;
@@ -1195,12 +1192,12 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
     /* Check if we need conversion here, this is the tricky part of camera2.
      * When we request I420, the returned buffer may not be actually I420,
-     * for example it is NV21 in Samsung S10. The camera2 'cheats' us via
-     * it's Plane type which has pixel stride attribute. For example, I420
-     * may be contained in the Plane array with the following attributes:
-     * - U/Plane[1] = Y/Plane[0] + Ysize + 1.
-     * - V/Plane[2] = Y/Plane[0] + Ysize.
-     * - pixel stride = 2 for U & V planes, and 1 for Y plane.
+     * for example NV21. The camera2 'cheats' us via it's Plane type which
+     * has pixel stride attribute. For example, NV21 buffer structure will
+     * be represented as I420 using Plane array with the following attributes:
+     * - Plane[1], or U plane, points to address of (Plane[0] + Ysize + 1).
+     * - Plane[2], or V plane, points to address of (Plane[0] + Ysize).
+     * - Pixel stride is set to 2 for U & V planes, and 1 for Y plane.
      */
 
     /* Already I420, nothing to do */
@@ -1223,7 +1220,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
      * We also need to strip out padding, if any.
      */
-    else if ((p2 == p0+rowStride0*strm->vafp.size.h) &&
+    else if ((p2 == p0_end) &&
 	     (p1 == p2+rowStride2*strm->vafp.size.h/2))
     {
 	/* Strip out Y padding */
@@ -1251,7 +1248,7 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 	} else if (rowStride1 > strm->vafp.size.w/2) {
 
 	    /* Strip & copy V plane into conversion buffer */
-	    pj_uint8_t *src = Y + rowStride0*strm->vafp.size.h;
+	    pj_uint8_t *src = p0_end;
 	    pj_uint8_t *dst = strm->convert_buf;
 	    unsigned dst_stride = strm->vafp.size.w/2;
 	    int i;
@@ -1277,6 +1274,12 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     
     /* Else, let's just print log for now */
     else {
+	jlong p0_len, p1_len, p2_len;
+
+	p0_len = (*env)->GetDirectBufferCapacity(env, plane0);
+	p1_len = (*env)->GetDirectBufferCapacity(env, plane1);
+	p2_len = (*env)->GetDirectBufferCapacity(env, plane2);
+
 	PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
 			     "please report the following plane format:"));
 	PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
