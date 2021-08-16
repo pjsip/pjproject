@@ -1635,28 +1635,10 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 		if (event->epub == w->vp_rend) {
-		    /* Renderer just changed format, reregister it to conf,
-		     * and reconnect stream.
+		    /* Renderer just changed format, update its
+		     * conference bridge port.
 		     */
-		    status = pjsua_vid_conf_remove_port(w->rend_slot);
-		    if (status == PJ_SUCCESS) {
-			status =
-			    pjsua_vid_conf_add_port(
-				w->pool,
-				pjmedia_vid_port_get_passive_port(w->vp_rend),
-				NULL, &w->rend_slot);
-		    }
-		    if (status == PJ_SUCCESS) {
-			status = pjsua_vid_conf_connect(
-					call_med->strm.v.strm_dec_slot,
-					w->rend_slot, NULL);
-		    }
-		    if (status != PJ_SUCCESS) {
-			PJ_PERROR(3,(THIS_FILE, status,
-				     "Call %d: Media %d: failed reregistering "
-				     "incoming video renderer after format "
-				     "changed", call->index, call_med->idx));
-		    }
+		    pjsua_vid_conf_update_port(w->rend_slot);
 		}
 	    }
 
@@ -1679,36 +1661,10 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		if (event->epub != strm_dec)
 		    break;
 
-		/* Stream decoder just changed format, reregister it
-		 * to video conf.
+		/* Stream decoder just changed format, update its
+		 * conference bridge port.
 		 */
-		status = pjsua_vid_conf_remove_port(dec_pid);
-		if (status == PJ_SUCCESS) {
-		    /* Note: conf will create another pool instead of using
-		     * invite pool directly, it only needs the pool factory
-		     * (invite pool itself will not grow).
-		     */
-		    status = pjsua_vid_conf_add_port(call->inv->pool, strm_dec,
-					NULL, &call_med->strm.v.strm_dec_slot);
-		}
-
-		if (status != PJ_SUCCESS) {
-		    PJ_PERROR(3,(THIS_FILE, status,
-				 "Call %d: Media %d: failed reregistering "
-				 "video stream decoder after format changed",
-				 call->index, call_med->idx));
-		    break;
-		}
-
-		dec_pid = call_med->strm.v.strm_dec_slot;
-		status = pjsua_vid_conf_get_port_info(dec_pid, &pi);
-		if (status != PJ_SUCCESS)
-		    break;
-
-		for (i = 0; i < pi.listener_cnt; i++) {
-		    pjsua_vid_conf_disconnect(dec_pid, pi.listeners[i]);
-		    pjsua_vid_conf_connect(dec_pid, pi.listeners[i], NULL);
-		}
+		pjsua_vid_conf_update_port(call_med->strm.v.strm_dec_slot);
 	    }
 	    break;
 
