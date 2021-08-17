@@ -1176,6 +1176,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_update_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(1,(THIS_FILE, "pjmedia_vid_conf_update_port(): "
 				 "unrecognized format %04X",
 				 new_fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return PJMEDIA_EBADFMT;
 	}
 
@@ -1186,6 +1187,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_update_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(1,(THIS_FILE, "pjmedia_vid_conf_update_port(): "
 				 "Failed to apply format %04X",
 				 new_fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return status;
 	}
 	if (cport->port->put_frame) {
