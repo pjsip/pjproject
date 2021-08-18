@@ -916,8 +916,10 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 		}
 
 		if (j == cand_cnt) {
-		    pj_sockaddr_copy_addr(&cand_addr[cand_cnt], 
-					  &cand_addr[start_if+i]);
+		    if (cand_cnt != (start_if + i)) {
+			pj_sockaddr_copy_addr(&cand_addr[cand_cnt],
+					      &cand_addr[start_if + i]);
+		    }
 		    cand_weight[cand_cnt] += WEIGHT_INTERFACE;
 		    ++cand_cnt;
 		}
