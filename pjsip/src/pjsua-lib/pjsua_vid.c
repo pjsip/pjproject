@@ -2826,6 +2826,16 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
     return pjmedia_vid_conf_disconnect_port(pjsua_var.vid_conf, source, sink);
 }
 
+
+/*
+ * Update or refresh port states from video port info.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id id)
+{
+    return pjmedia_vid_conf_update_port(pjsua_var.vid_conf, id);
+}
+
+
 /*
  * Get the video window associated with the call.
  */

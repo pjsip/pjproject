@@ -8519,6 +8519,20 @@ PJ_DECL(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
 					       pjsua_conf_port_id sink);
 
 
+/**
+ * Update or refresh port states from video port info. Some port may
+ * change its port info in the middle of a session, for example when
+ * a video stream decoder learns that incoming video size or frame rate
+ * has changed, video conference needs to be informed to update its
+ * internal states.
+ *
+ * @param port_id	The slot id of the port to be updated.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error
+ *			code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_conf_update_port(pjsua_conf_port_id port_id);
+
 
 /* end of VIDEO API */
 /**

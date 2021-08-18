@@ -285,6 +285,23 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_disconnect_port(
 					    unsigned sink_slot);
 
 
+/**
+ * Update or refresh port states from video port info. Some port may
+ * change its port info in the middle of a session, for example when
+ * a video stream decoder learns that incoming video size or frame rate
+ * has changed, video conference needs to be informed to update its
+ * internal states.
+ *
+ * @param vid_conf	The video conference bridge.
+ * @param slot		The media port's slot index to be updated.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error
+ *			code.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_conf_update_port(pjmedia_vid_conf *vid_conf,
+						  unsigned slot);
+
+
 PJ_END_DECL
 
 /**
