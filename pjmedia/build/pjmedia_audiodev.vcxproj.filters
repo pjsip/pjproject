@@ -44,9 +44,6 @@
     <ClCompile Include="..\src\pjmedia-audiodev\wmme_dev.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pjmedia-audiodev\wasapi_dev.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjmedia-audiodev\audiodev.h">

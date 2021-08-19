@@ -76,9 +76,6 @@
     <ClInclude Include="..\include\pjnath\stun_config.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\pjnath\stun_doc.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\pjnath\stun_msg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
