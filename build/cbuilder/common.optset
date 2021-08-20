@@ -1,8 +1,9 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <IncludePath>..\include;..\..\pjlib\include;..\..\pjlib-util\include;..\..\pjnath\include;..\..\pjmedia\include;..\..\third_party\speex\include;..\..\third_party\srtp\include;..\..\third_party\srtp\crypto\include;$(IncludePath)</IncludePath>
+        <IncludePath>..\include;..\..\pjlib\include;..\..\pjlib-util\include;..\..\pjnath\include;..\..\pjmedia\include;..\..\pjsip\include;..\..\third_party\speex\include;..\..\third_party\srtp\include;..\..\third_party\srtp\crypto\include;$(IncludePath)</IncludePath>
         <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
         <FinalOutputDir>..\lib\$(Platform)\$(Config)</FinalOutputDir>
+        <ILINK_LibraryPath>..\..\pjlib\lib\$(Platform)\$(Config);..\..\pjlib-util\lib\$(Platform)\$(Config);..\..\pjnath\lib\$(Platform)\$(Config);..\..\pjmedia\lib\$(Platform)\$(Config);..\..\pjsip\lib\$(Platform)\$(Config);..\..\third_party\lib\$(Platform)\$(Config);$(ILINK_LibraryPath)</ILINK_LibraryPath>
     </PropertyGroup>
     <ProjectExtensions>
         <Borland.Personality>CPlusPlusBuilder.Personality.12</Borland.Personality>

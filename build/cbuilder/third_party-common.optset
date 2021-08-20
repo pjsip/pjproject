@@ -1,6 +1,6 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <IncludePath>..\..\speex\include;..\..\..\pjlib\include;..\..\resample\include;$(IncludePath)</IncludePath>
+        <IncludePath>..\..\speex\include;..\..\..\pjlib\include;..\..\resample\include;..\..\gsm\inc;$(IncludePath)</IncludePath>
         <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
         <FinalOutputDir>..\..\lib\$(Platform)\$(Config)</FinalOutputDir>
     </PropertyGroup>

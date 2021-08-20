@@ -59,7 +59,7 @@
 #ifdef __cplusplus
 #  define PJ_INLINE_SPECIFIER	inline
 #else
-#  define PJ_INLINE_SPECIFIER	__inline
+#  define PJ_INLINE_SPECIFIER	static __inline
 #endif
 
 #define PJ_EXPORT_DECL_SPECIFIER    __declspec(dllexport)
@@ -83,6 +83,8 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_UNREACHED(x)	    	
 
 #define PJ_ALIGN_DATA(declaration, alignment) __declspec(align(alignment)) declaration
+
+#define PJ_HAS_NO_SNPRINTF	1
 
 
 #endif	/* __PJ_COMPAT_CC_BCB_H__ */

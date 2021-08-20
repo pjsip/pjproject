@@ -1,13 +1,13 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{4769F4D6-6017-4ADD-B78A-DDC1E3D67809}</ProjectGuid>
+        <ProjectGuid>{DA8EE2EA-AB0D-4EBE-A8F1-73FA54867430}</ProjectGuid>
         <ProjectVersion>19.2</ProjectVersion>
         <FrameworkType>None</FrameworkType>
         <Base>True</Base>
         <Config Condition="'$(Config)'==''">Debug</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <TargetedPlatforms>3</TargetedPlatforms>
-        <AppType>StaticLibrary</AppType>
+        <AppType>Console</AppType>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -27,9 +27,21 @@
         <CfgParent>Base</CfgParent>
         <Base>true</Base>
     </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_1)'=='true') or '$(Cfg_1_Win32)'!=''">
+        <Cfg_1_Win32>true</Cfg_1_Win32>
+        <CfgParent>Cfg_1</CfgParent>
+        <Cfg_1>true</Cfg_1>
+        <Base>true</Base>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Release' or '$(Cfg_2)'!=''">
         <Cfg_2>true</Cfg_2>
         <CfgParent>Base</CfgParent>
+        <Base>true</Base>
+    </PropertyGroup>
+    <PropertyGroup Condition="('$(Platform)'=='Win32' and '$(Cfg_2)'=='true') or '$(Cfg_2_Win32)'!=''">
+        <Cfg_2_Win32>true</Cfg_2_Win32>
+        <CfgParent>Cfg_2</CfgParent>
+        <Cfg_2>true</Cfg_2>
         <Base>true</Base>
     </PropertyGroup>
     <Import Project="..\..\build\cbuilder\common.optset" Condition="'$(Base)'!='' And Exists('..\..\build\cbuilder\common.optset')"/>
@@ -39,24 +51,38 @@
         <BCC_OptimizeForSpeed>true</BCC_OptimizeForSpeed>
         <BCC_ExtendedErrorInfo>true</BCC_ExtendedErrorInfo>
         <ILINK_TranslatedLibraryPath>$(BDSLIB)\$(PLATFORM)\release\$(LANGDIR);$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
-        <ProjectType>CppStaticLibrary</ProjectType>
-        <ILINK_LibraryPath>.\output\pjmedia_codec-x86_64-$(Platform)-bcb21-$(Config)-Static;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <ProjectType>CppConsoleApplication</ProjectType>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;$(DCC_Namespace)</DCC_Namespace>
-        <SanitizedProjectName>pjmedia_codec</SanitizedProjectName>
-        <_TCHARMapping>char</_TCHARMapping>
-        <VerInfo_Locale>1033</VerInfo_Locale>
         <Multithreaded>true</Multithreaded>
-        <IncludePath>..\src\pjmedia-codec\g722\;..\src\pjmedia-codec\;$(IncludePath)</IncludePath>
+        <IncludePath>..\src\pjsua\;..\..\build\;D:\Project\Lib\pjproject\pjsip-apps\src\pjsua\;$(IncludePath)</IncludePath>
+        <_TCHARMapping>char</_TCHARMapping>
+        <IntermediateOutputDir>.\output\pjsua-x86_64-$(Platform)-bcb21-$(Config)-Static</IntermediateOutputDir>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <SanitizedProjectName>pjsua</SanitizedProjectName>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
+        <ILINK_LibraryPath>..\src\pjsua\;$(ILINK_LibraryPath)</ILINK_LibraryPath>
+        <FinalOutputDir>..\bin\$(Platform)\$(Config)</FinalOutputDir>
+        <ILINK_AdditionalOptions>netapi32.lib mswsock.lib ws2_32.lib Iphlpapi.lib</ILINK_AdditionalOptions>
         <CfgDependentOn>..\..\build\cbuilder\common.optset</CfgDependentOn>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindcompvclsmp;bindcompvclwinx;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;svn;tethering;vcl;vclactnband;vcldb;vcldsnap;vcledge;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
+        <BT_BuildType>Debug</BT_BuildType>
+        <UWP_CppLogo44>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_44.png</UWP_CppLogo44>
+        <Manifest_File>(None)</Manifest_File>
+        <UWP_CppLogo150>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_150.png</UWP_CppLogo150>
         <Defines>WIN32;PJ_WIN32=1;PJ_M_I=386;$(Defines)</Defines>
+        <ILINK_AdditionalOptions>pjlib.lib pjlib-util.lib pjnath.lib pjmedia.lib pjmedia_audiodev.lib pjmedia_videodev.lib pjmedia_codec.lib pjsip_core.lib pjsip_simple.lib pjsip_ua.lib pjsua_lib.lib libsrtp.lib libg7221codec.lib libilbccodec.lib libgsmcodec.lib libspeex.lib libresample.lib</ILINK_AdditionalOptions>
+        <DynamicRTL>true</DynamicRTL>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindcompvclsmp;bindcompvclwinx;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;tethering;vcl;vclactnband;vcldb;vcldsnap;vcledge;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
+        <UWP_CppLogo44>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_44.png</UWP_CppLogo44>
+        <UWP_CppLogo150>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_150.png</UWP_CppLogo150>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
+        <BT_BuildType>Debug</BT_BuildType>
+        <Manifest_File>(None)</Manifest_File>
         <Defines>WIN64;PJ_WIN64=1;PJ_M_X86_64=1;$(Defines)</Defines>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
@@ -81,125 +107,57 @@
         <ILINK_LibraryPath>$(BDSLIB)\$(PLATFORM)\debug;$(ILINK_LibraryPath)</ILINK_LibraryPath>
         <ILINK_TranslatedLibraryPath>$(BDSLIB)\$(PLATFORM)\debug\$(LANGDIR);$(ILINK_TranslatedLibraryPath)</ILINK_TranslatedLibraryPath>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
+        <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
+        <VerInfo_Locale>1033</VerInfo_Locale>
+        <Manifest_File>(None)</Manifest_File>
+    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <Defines>NDEBUG;$(Defines)</Defines>
         <TASM_Debugging>None</TASM_Debugging>
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
+        <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
+    </PropertyGroup>
     <ItemGroup>
-        <CppCompile Include="..\src\pjmedia-codec\aac.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>0</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\amr_sdp_match.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <None Include="pjsuaPCH1.h">
+            <BuildOrder>1</BuildOrder>
+        </None>
+        <CppCompile Include="..\src\pjsua\main.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>1</BuildOrder>
         </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\and_aud_mediacodec.cpp">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <CppCompile Include="..\src\pjsua\pjsua_app.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>2</BuildOrder>
         </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\and_vid_mediacodec.cpp">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <None Include="..\src\pjsua\pjsua_app.h">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>3</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\audio_codecs.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        </None>
+        <CppCompile Include="..\src\pjsua\pjsua_app_cli.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>4</BuildOrder>
         </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\bcg729.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <CppCompile Include="..\src\pjsua\pjsua_app_common.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>5</BuildOrder>
         </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\ffmpeg_vid_codecs.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <None Include="..\src\pjsua\pjsua_app_common.h">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>6</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\g722.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        </None>
+        <CppCompile Include="..\src\pjsua\pjsua_app_config.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>7</BuildOrder>
         </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\g7221.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        <None Include="..\src\pjsua\pjsua_app_config.h">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>8</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\g7221_sdp_match.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
+        </None>
+        <CppCompile Include="..\src\pjsua\pjsua_app_legacy.c">
+            <VirtualFolder>{7FAD2136-1D30-45FC-AF38-E89215068167}</VirtualFolder>
             <BuildOrder>9</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\g722\g722_dec.c">
-            <VirtualFolder>{F67523FB-B10E-4812-858C-85B1AF70415F}</VirtualFolder>
-            <BuildOrder>25</BuildOrder>
-        </CppCompile>
-        <None Include="..\src\pjmedia-codec\g722\g722_dec.h">
-            <VirtualFolder>{F67523FB-B10E-4812-858C-85B1AF70415F}</VirtualFolder>
-            <BuildOrder>26</BuildOrder>
-        </None>
-        <CppCompile Include="..\src\pjmedia-codec\g722\g722_enc.c">
-            <VirtualFolder>{F67523FB-B10E-4812-858C-85B1AF70415F}</VirtualFolder>
-            <BuildOrder>27</BuildOrder>
-        </CppCompile>
-        <None Include="..\src\pjmedia-codec\g722\g722_enc.h">
-            <VirtualFolder>{F67523FB-B10E-4812-858C-85B1AF70415F}</VirtualFolder>
-            <BuildOrder>28</BuildOrder>
-        </None>
-        <CppCompile Include="..\src\pjmedia-codec\gsm.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>10</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\h263_packetizer.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>11</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\h264_packetizer.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>12</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\ilbc.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>13</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\ipp_codecs.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>14</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\l16.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>15</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\opencore_amr.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>16</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\openh264.cpp">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>17</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\opus.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>18</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\passthrough.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>19</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\silk.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>20</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\speex_codec.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>21</BuildOrder>
-        </CppCompile>
-        <None Include="..\src\pjmedia-codec\vid_toolbox.m">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-        </None>
-        <CppCompile Include="..\src\pjmedia-codec\vpx.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>23</BuildOrder>
-        </CppCompile>
-        <CppCompile Include="..\src\pjmedia-codec\vpx_packetizer.c">
-            <VirtualFolder>{BA594EAF-B16F-4FA0-B900-CD641021D6DF}</VirtualFolder>
-            <BuildOrder>24</BuildOrder>
         </CppCompile>
         <BuildConfiguration Include="Release">
             <Key>Cfg_2</Key>
@@ -216,7 +174,7 @@
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>CPlusPlusBuilder.Personality.12</Borland.Personality>
-        <Borland.ProjectType>CppStaticLibrary</Borland.ProjectType>
+        <Borland.ProjectType>CppConsoleApplication</Borland.ProjectType>
         <BorlandProject>
             <CPlusPlusBuilder.Personality>
                 <ProjectProperties>
@@ -226,10 +184,12 @@
                     <ProjectProperties Name="IndexFiles">False</ProjectProperties>
                 </ProjectProperties>
                 <VFOLDERS>
-                    <VFOLDER ID="{BA594EAF-B16F-4FA0-B900-CD641021D6DF}" name="SourceFiles">
-                        <VFOLDER ID="{F67523FB-B10E-4812-858C-85B1AF70415F}" name="g722Files"/>
-                    </VFOLDER>
+                    <VFOLDER ID="{7FAD2136-1D30-45FC-AF38-E89215068167}" name="SourceFiles"/>
                 </VFOLDERS>
+                <Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\bcboffice2k270.bpl">Embarcadero C++Builder Office 2000 Servers Package</Excluded_Packages>
+                    <Excluded_Packages Name="$(BDSBIN)\bcbofficexp270.bpl">Embarcadero C++Builder Office XP Servers Package</Excluded_Packages>
+                </Excluded_Packages>
             </CPlusPlusBuilder.Personality>
             <Deployment Version="3">
                 <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'=='true'" LocalName="$(BDS)\bin\cc32270mt.dll" Class="DependencyModule">
@@ -252,12 +212,12 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(UsingDelphiRTL)'=='true'" LocalName="$(BDS)\bin\borlndmm.dll" Class="DependencyModule">
+                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32270.dll" Class="DependencyModule">
                     <Platform Name="Win32">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32270.dll" Class="DependencyModule">
+                <DeployFile Condition="'$(UsingDelphiRTL)'=='true'" LocalName="$(BDS)\bin\borlndmm.dll" Class="DependencyModule">
                     <Platform Name="Win32">
                         <Overwrite>true</Overwrite>
                     </Platform>
@@ -282,9 +242,15 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName="..\lib\Win32\Debug\pjmedia_codec.tds" Configuration="Debug" Class="DebugSymbols">
+                <DeployFile LocalName=".\Win32\Debug\pjsua.tds" Configuration="Debug" Class="DebugSymbols">
                     <Platform Name="Win32">
-                        <RemoteName>pjmedia_codec.tds</RemoteName>
+                        <RemoteName>pjsua.tds</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
+                <DeployFile LocalName=".\Win32\Debug\pjsua.exe" Configuration="Debug" Class="ProjectOutput">
+                    <Platform Name="Win32">
+                        <RemoteName>pjsua.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -295,18 +261,6 @@
                 </DeployFile>
                 <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin64\cc64270.dll" Class="DependencyModule">
                     <Platform Name="Win64">
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="..\src\pjmedia-codec\vid_toolbox.m" Configuration="Debug" Class="ProjectFile">
-                    <Platform Name="Win32">
-                        <RemoteDir>.\</RemoteDir>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="..\lib\Win32\Debug\pjmedia_codec.lib" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>pjmedia_codec.lib</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

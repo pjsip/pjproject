@@ -147,6 +147,10 @@
             <VirtualFolder>{84A458CA-B3E8-49B8-8CE7-E8C2EAE56977}</VirtualFolder>
             <BuildOrder>21</BuildOrder>
         </CppCompile>
+        <CppCompile Include="..\..\speex\libspeex\high_lsp_tables.c">
+            <VirtualFolder>{84A458CA-B3E8-49B8-8CE7-E8C2EAE56977}</VirtualFolder>
+            <BuildOrder>38</BuildOrder>
+        </CppCompile>
         <CppCompile Include="..\..\speex\libspeex\kiss_fft.c">
             <VirtualFolder>{84A458CA-B3E8-49B8-8CE7-E8C2EAE56977}</VirtualFolder>
             <BuildOrder>22</BuildOrder>
@@ -279,8 +283,8 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32c270.dll" Class="DependencyModule">
-                    <Platform Name="Win32">
+                <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx64\libcgcrtl.dylib" Class="DependencyModule">
+                    <Platform Name="OSX64">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -350,8 +354,8 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx64\libcgcrtl.dylib" Class="DependencyModule">
-                    <Platform Name="OSX64">
+                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32c270.dll" Class="DependencyModule">
+                    <Platform Name="Win32">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

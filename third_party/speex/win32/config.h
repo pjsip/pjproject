@@ -1,5 +1,7 @@
 // Microsoft version of 'inline'
-#define inline __inline
+#ifndef __CODEGEARC__
+#define inline static __inline
+#endif
 
 // Visual Studio support alloca(), but it always align variables to 16-bit
 // boundary, while SSE need 128-bit alignment. So we disable alloca() when

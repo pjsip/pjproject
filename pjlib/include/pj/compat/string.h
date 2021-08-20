@@ -51,6 +51,14 @@
 #   define snwprintf	_snwprintf
 #   define wcsicmp	_wcsicmp
 #   define wcsnicmp	_wcsnicmp
+#elif defined(__CODEGEARC__)
+#   define strcasecmp	stricmp
+#   define strncasecmp	strnicmp
+//#   define snprintf	_snprintf
+//#   define vsnprintf	_vsnprintf
+//#   define snwprintf	_snwprintf
+#   define wcsicmp	_wcsicmp
+#   define wcsnicmp	_wcsnicmp
 #else
 #   define stricmp	strcasecmp
 #   define strnicmp	strncasecmp
