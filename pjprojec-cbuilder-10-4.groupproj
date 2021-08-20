@@ -1,0 +1,192 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{26326305-3A11-42B1-8511-4885C80C6E64}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="pjlib\build\pjlib.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjlib-util\build\pjlib-util.cbproj">
+            <Dependencies>pjlib\build\pjlib.cbproj</Dependencies>
+        </Projects>
+        <Projects Include="pjnath\build\pjnath.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="third_party\build\speex\libspeex.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjmedia\build\pjmedia.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="third_party\build\resample\libresample.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="third_party\build\srtp\libsrtp.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjmedia\build\pjmedia_audiodev.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjmedia\build\pjmedia_videodev.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjmedia\build\pjmedia_codec.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjsip\build\pjsip_core.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjsip\build\pjsip_simple.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjsip\build\pjsip_ua.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjsip\build\pjsua_lib.cbproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="pjlib">
+        <MSBuild Projects="pjlib\build\pjlib.cbproj"/>
+    </Target>
+    <Target Name="pjlib:Clean">
+        <MSBuild Projects="pjlib\build\pjlib.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjlib:Make">
+        <MSBuild Projects="pjlib\build\pjlib.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjlib-util" DependsOnTargets="pjlib">
+        <MSBuild Projects="pjlib-util\build\pjlib-util.cbproj"/>
+    </Target>
+    <Target Name="pjlib-util:Clean" DependsOnTargets="pjlib:Clean">
+        <MSBuild Projects="pjlib-util\build\pjlib-util.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjlib-util:Make" DependsOnTargets="pjlib:Make">
+        <MSBuild Projects="pjlib-util\build\pjlib-util.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjnath">
+        <MSBuild Projects="pjnath\build\pjnath.cbproj"/>
+    </Target>
+    <Target Name="pjnath:Clean">
+        <MSBuild Projects="pjnath\build\pjnath.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjnath:Make">
+        <MSBuild Projects="pjnath\build\pjnath.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="libspeex">
+        <MSBuild Projects="third_party\build\speex\libspeex.cbproj"/>
+    </Target>
+    <Target Name="libspeex:Clean">
+        <MSBuild Projects="third_party\build\speex\libspeex.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libspeex:Make">
+        <MSBuild Projects="third_party\build\speex\libspeex.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjmedia">
+        <MSBuild Projects="pjmedia\build\pjmedia.cbproj"/>
+    </Target>
+    <Target Name="pjmedia:Clean">
+        <MSBuild Projects="pjmedia\build\pjmedia.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjmedia:Make">
+        <MSBuild Projects="pjmedia\build\pjmedia.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="libresample">
+        <MSBuild Projects="third_party\build\resample\libresample.cbproj"/>
+    </Target>
+    <Target Name="libresample:Clean">
+        <MSBuild Projects="third_party\build\resample\libresample.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libresample:Make">
+        <MSBuild Projects="third_party\build\resample\libresample.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="libsrtp">
+        <MSBuild Projects="third_party\build\srtp\libsrtp.cbproj"/>
+    </Target>
+    <Target Name="libsrtp:Clean">
+        <MSBuild Projects="third_party\build\srtp\libsrtp.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libsrtp:Make">
+        <MSBuild Projects="third_party\build\srtp\libsrtp.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjmedia_audiodev">
+        <MSBuild Projects="pjmedia\build\pjmedia_audiodev.cbproj"/>
+    </Target>
+    <Target Name="pjmedia_audiodev:Clean">
+        <MSBuild Projects="pjmedia\build\pjmedia_audiodev.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjmedia_audiodev:Make">
+        <MSBuild Projects="pjmedia\build\pjmedia_audiodev.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjmedia_videodev">
+        <MSBuild Projects="pjmedia\build\pjmedia_videodev.cbproj"/>
+    </Target>
+    <Target Name="pjmedia_videodev:Clean">
+        <MSBuild Projects="pjmedia\build\pjmedia_videodev.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjmedia_videodev:Make">
+        <MSBuild Projects="pjmedia\build\pjmedia_videodev.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjmedia_codec">
+        <MSBuild Projects="pjmedia\build\pjmedia_codec.cbproj"/>
+    </Target>
+    <Target Name="pjmedia_codec:Clean">
+        <MSBuild Projects="pjmedia\build\pjmedia_codec.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjmedia_codec:Make">
+        <MSBuild Projects="pjmedia\build\pjmedia_codec.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjsip_core">
+        <MSBuild Projects="pjsip\build\pjsip_core.cbproj"/>
+    </Target>
+    <Target Name="pjsip_core:Clean">
+        <MSBuild Projects="pjsip\build\pjsip_core.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjsip_core:Make">
+        <MSBuild Projects="pjsip\build\pjsip_core.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjsip_simple">
+        <MSBuild Projects="pjsip\build\pjsip_simple.cbproj"/>
+    </Target>
+    <Target Name="pjsip_simple:Clean">
+        <MSBuild Projects="pjsip\build\pjsip_simple.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjsip_simple:Make">
+        <MSBuild Projects="pjsip\build\pjsip_simple.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjsip_ua">
+        <MSBuild Projects="pjsip\build\pjsip_ua.cbproj"/>
+    </Target>
+    <Target Name="pjsip_ua:Clean">
+        <MSBuild Projects="pjsip\build\pjsip_ua.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjsip_ua:Make">
+        <MSBuild Projects="pjsip\build\pjsip_ua.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjsua_lib">
+        <MSBuild Projects="pjsip\build\pjsua_lib.cbproj"/>
+    </Target>
+    <Target Name="pjsua_lib:Clean">
+        <MSBuild Projects="pjsip\build\pjsua_lib.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjsua_lib:Make">
+        <MSBuild Projects="pjsip\build\pjsua_lib.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="pjlib;pjlib-util;pjnath;libspeex;pjmedia;libresample;libsrtp;pjmedia_audiodev;pjmedia_videodev;pjmedia_codec;pjsip_core;pjsip_simple;pjsip_ua;pjsua_lib"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="pjlib:Clean;pjlib-util:Clean;pjnath:Clean;libspeex:Clean;pjmedia:Clean;libresample:Clean;libsrtp:Clean;pjmedia_audiodev:Clean;pjmedia_videodev:Clean;pjmedia_codec:Clean;pjsip_core:Clean;pjsip_simple:Clean;pjsip_ua:Clean;pjsua_lib:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="pjlib:Make;pjlib-util:Make;pjnath:Make;libspeex:Make;pjmedia:Make;libresample:Make;libsrtp:Make;pjmedia_audiodev:Make;pjmedia_videodev:Make;pjmedia_codec:Make;pjsip_core:Make;pjsip_simple:Make;pjsip_ua:Make;pjsua_lib:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

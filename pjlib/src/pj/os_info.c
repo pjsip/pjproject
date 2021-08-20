@@ -42,7 +42,7 @@
 #   include <limits.h>
 #endif
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) || defined(__CODEGEARC__)
 /* For all Windows including mobile */
 #   include <windows.h>
 #endif
@@ -195,7 +195,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	si.os_ver = parse_version(u.release);
     }
     #endif
-#elif defined(_MSC_VER)
+#elif defined(_MSC_VER) || defined(__CODEGEARC__)
     {
     #if defined(PJ_WIN32_WINPHONE8) && PJ_WIN32_WINPHONE8
 	si.os_name = pj_str("winphone");
@@ -315,7 +315,11 @@ get_sdk_info:
     si.sdk_ver = ((_MSC_VER / 100) << 24) |
     	         (((_MSC_VER % 100) / 10) << 16) |
     	         ((_MSC_VER % 10) << 8);
-    si.sdk_name = pj_str("msvc");
+	si.sdk_name = pj_str("msvc");
+#elif defined (__CODEGEARC__)
+	/* addition for cbuilder compiler family */
+	si.sdk_ver = ((__CODEGEARC_VERSION__ & 0xFF000000) >> 24);
+    si.sdk_name = pj_str("cbuider");
 #elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
     pj_symbianos_get_sdk_info(&si.sdk_name, &si.sdk_ver);
 #endif

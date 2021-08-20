@@ -38,7 +38,7 @@
 #if defined(PJ_TIMESTAMP_USE_RDTSC) && PJ_TIMESTAMP_USE_RDTSC!=0 && \
     defined(PJ_M_I386) && PJ_M_I386 != 0 && \
     defined(PJ_HAS_PENTIUM) && PJ_HAS_PENTIUM!=0 && \
-    defined(_MSC_VER)
+    (defined(_MSC_VER) || defined(__CODEGEARC__))
 
 /*
  * Use rdtsc to get the OS timestamp.

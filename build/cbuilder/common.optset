@@ -1,0 +1,15 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <IncludePath>..\include;..\..\pjlib\include;..\..\pjlib-util\include;..\..\pjnath\include;..\..\pjmedia\include;..\..\third_party\speex\include;..\..\third_party\srtp\include;..\..\third_party\srtp\crypto\include;$(IncludePath)</IncludePath>
+        <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
+        <FinalOutputDir>..\lib\$(Platform)\$(Config)</FinalOutputDir>
+    </PropertyGroup>
+    <ProjectExtensions>
+        <Borland.Personality>CPlusPlusBuilder.Personality.12</Borland.Personality>
+        <Borland.ProjectType>OptionSet</Borland.ProjectType>
+        <BorlandProject>
+            <CPlusPlusBuilder.Personality/>
+        </BorlandProject>
+        <ProjectFileVersion>12</ProjectFileVersion>
+    </ProjectExtensions>
+</Project>

@@ -41,6 +41,8 @@
 #  include <pj/compat/cc_gcce.h>
 #elif defined(__ARMCC__)
 #  include <pj/compat/cc_armcc.h>
+#elif defined(__CODEGEARC__) && defined(__TURBOC__)
+#  include <pj/compat/cc_bcb.h>
 #else
 #  error "Unknown compiler."
 #endif

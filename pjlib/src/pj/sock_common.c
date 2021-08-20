@@ -809,7 +809,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     /* May not be used if TRACE_ is disabled */
     PJ_UNUSED_ARG(strip);
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__CODEGEARC__)
     /* Get rid of "uninitialized he variable" with MS compilers */
     pj_bzero(&ai, sizeof(ai));
 #endif
