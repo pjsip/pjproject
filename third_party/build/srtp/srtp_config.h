@@ -98,7 +98,7 @@
 
 #define HAVE_INT16_T	    1
 #define HAVE_INT32_T	    1
-#define HAVE_INT8_T	    1
+#define HAVE_INT8_T	        1
 #define HAVE_UINT8_T	    1
 #define HAVE_UINT16_T	    1
 #define HAVE_UINT32_T	    1
@@ -108,14 +108,18 @@
 #if defined(PJ_HAS_STDINT_H) && PJ_HAS_STDINT_H!=0
 #   define HAVE_STDINT_H    1
 #else
-    typedef pj_uint8_t	    uint8_t;
-    typedef pj_uint16_t	    uint16_t;
-    typedef pj_uint32_t	    uint32_t;
-    typedef pj_uint64_t	    uint64_t;
-    typedef pj_int8_t	    int8_t;
-    typedef pj_int16_t	    int16_t;
-    typedef pj_int32_t	    int32_t;
-    typedef pj_int64_t	    int64_t;
+#   ifndef __CODEGEARC__
+	typedef pj_uint8_t	    uint8_t;
+	typedef pj_uint16_t	    uint16_t;
+	typedef pj_uint32_t	    uint32_t;
+	typedef pj_uint64_t	    uint64_t;
+	typedef pj_int8_t	    int8_t;
+	typedef pj_int16_t	    int16_t;
+	typedef pj_int32_t	    int32_t;
+	typedef pj_int64_t	    int64_t;
+#   else
+#   define HAVE_STDINT_H    1
+#   endif
 #endif
 
 /* These shouldn't really matter as long as HAVE_UINT64_T is set */
