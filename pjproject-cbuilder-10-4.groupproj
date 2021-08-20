@@ -45,6 +45,15 @@
         <Projects Include="pjsip\build\pjsua_lib.cbproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="third_party\build\g7221\libg7221codec.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="third_party\build\gsm\libgsmcodec.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="third_party\build\ilbc\libilbccodec.cbproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -179,14 +188,41 @@
     <Target Name="pjsua_lib:Make">
         <MSBuild Projects="pjsip\build\pjsua_lib.cbproj" Targets="Make"/>
     </Target>
+    <Target Name="libg7221codec">
+        <MSBuild Projects="third_party\build\g7221\libg7221codec.cbproj"/>
+    </Target>
+    <Target Name="libg7221codec:Clean">
+        <MSBuild Projects="third_party\build\g7221\libg7221codec.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libg7221codec:Make">
+        <MSBuild Projects="third_party\build\g7221\libg7221codec.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="libgsmcodec">
+        <MSBuild Projects="third_party\build\gsm\libgsmcodec.cbproj"/>
+    </Target>
+    <Target Name="libgsmcodec:Clean">
+        <MSBuild Projects="third_party\build\gsm\libgsmcodec.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libgsmcodec:Make">
+        <MSBuild Projects="third_party\build\gsm\libgsmcodec.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="libilbccodec">
+        <MSBuild Projects="third_party\build\ilbc\libilbccodec.cbproj"/>
+    </Target>
+    <Target Name="libilbccodec:Clean">
+        <MSBuild Projects="third_party\build\ilbc\libilbccodec.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="libilbccodec:Make">
+        <MSBuild Projects="third_party\build\ilbc\libilbccodec.cbproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="pjlib;pjlib-util;pjnath;libspeex;pjmedia;libresample;libsrtp;pjmedia_audiodev;pjmedia_videodev;pjmedia_codec;pjsip_core;pjsip_simple;pjsip_ua;pjsua_lib"/>
+        <CallTarget Targets="pjlib;pjlib-util;pjnath;libspeex;pjmedia;libresample;libsrtp;pjmedia_audiodev;pjmedia_videodev;pjmedia_codec;pjsip_core;pjsip_simple;pjsip_ua;pjsua_lib;libg7221codec;libgsmcodec;libilbccodec"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="pjlib:Clean;pjlib-util:Clean;pjnath:Clean;libspeex:Clean;pjmedia:Clean;libresample:Clean;libsrtp:Clean;pjmedia_audiodev:Clean;pjmedia_videodev:Clean;pjmedia_codec:Clean;pjsip_core:Clean;pjsip_simple:Clean;pjsip_ua:Clean;pjsua_lib:Clean"/>
+        <CallTarget Targets="pjlib:Clean;pjlib-util:Clean;pjnath:Clean;libspeex:Clean;pjmedia:Clean;libresample:Clean;libsrtp:Clean;pjmedia_audiodev:Clean;pjmedia_videodev:Clean;pjmedia_codec:Clean;pjsip_core:Clean;pjsip_simple:Clean;pjsip_ua:Clean;pjsua_lib:Clean;libg7221codec:Clean;libgsmcodec:Clean;libilbccodec:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="pjlib:Make;pjlib-util:Make;pjnath:Make;libspeex:Make;pjmedia:Make;libresample:Make;libsrtp:Make;pjmedia_audiodev:Make;pjmedia_videodev:Make;pjmedia_codec:Make;pjsip_core:Make;pjsip_simple:Make;pjsip_ua:Make;pjsua_lib:Make"/>
+        <CallTarget Targets="pjlib:Make;pjlib-util:Make;pjnath:Make;libspeex:Make;pjmedia:Make;libresample:Make;libsrtp:Make;pjmedia_audiodev:Make;pjmedia_videodev:Make;pjmedia_codec:Make;pjsip_core:Make;pjsip_simple:Make;pjsip_ua:Make;pjsua_lib:Make;libg7221codec:Make;libgsmcodec:Make;libilbccodec:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
