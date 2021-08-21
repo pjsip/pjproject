@@ -2042,3 +2042,12 @@ void VideoMedia::stopTransmit(const VideoMedia &sink) const
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
 }
+
+void VideoMedia::update() const PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    PJSUA2_CHECK_EXPR( pjsua_vid_conf_update_port(id) );
+#else
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}

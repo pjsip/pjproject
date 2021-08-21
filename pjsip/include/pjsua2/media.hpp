@@ -1683,6 +1683,16 @@ public:
     void stopTransmit(const VideoMedia &sink) const PJSUA2_THROW(Error);
 
     /**
+     * Update or refresh port states from video port info. Some port may
+     * change its port info in the middle of a session, for example when
+     * a video stream decoder learns that incoming video size or frame rate
+     * has changed, video conference needs to be informed to update its
+     * internal states.
+     *
+     */
+    void update() const PJSUA2_THROW(Error);
+
+    /**
      * Default Constructor.
      *
      * Normally application will not create VideoMedia object directly,

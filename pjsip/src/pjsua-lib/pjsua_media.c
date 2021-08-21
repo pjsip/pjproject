@@ -1635,11 +1635,10 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 	    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 		if (event->epub == w->vp_rend) {
-		    /* Renderer just changed format, reconnect stream */
-		    pjsua_vid_conf_disconnect(call_med->strm.v.strm_dec_slot,
-					      w->rend_slot);
-		    pjsua_vid_conf_connect(call_med->strm.v.strm_dec_slot,
-					   w->rend_slot, NULL);
+		    /* Renderer just changed format, update its
+		     * conference bridge port.
+		     */
+		    pjsua_vid_conf_update_port(w->rend_slot);
 		}
 	    }
 
@@ -1662,14 +1661,10 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		if (event->epub != strm_dec)
 		    break;
 
-		status = pjsua_vid_conf_get_port_info(dec_pid, &pi);
-		if (status != PJ_SUCCESS)
-		    break;
-
-		for (i = 0; i < pi.listener_cnt; i++) {
-		    pjsua_vid_conf_disconnect(dec_pid, pi.listeners[i]);
-		    pjsua_vid_conf_connect(dec_pid, pi.listeners[i], NULL);
-		}
+		/* Stream decoder just changed format, update its
+		 * conference bridge port.
+		 */
+		pjsua_vid_conf_update_port(call_med->strm.v.strm_dec_slot);
 	    }
 	    break;
 
