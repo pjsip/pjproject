@@ -136,40 +136,52 @@
             <PCH>true</PCH>
         </PCHCompile>
         <CppCompile Include="..\src\pjnath-test\concur_test.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>2</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\pjnath-test\ice_test.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>3</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\pjnath-test\main.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>1</BuildOrder>
         </CppCompile>
         <None Include="..\src\pjnath-test\main_win32.c">
             <Exclude>True</Exclude>
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>4</BuildOrder>
         </None>
         <CppCompile Include="..\src\pjnath-test\server.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>5</BuildOrder>
         </CppCompile>
         <None Include="..\src\pjnath-test\server.h">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>6</BuildOrder>
         </None>
         <CppCompile Include="..\src\pjnath-test\sess_auth.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>7</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\pjnath-test\stun.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>8</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\pjnath-test\stun_sock_test.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>9</BuildOrder>
         </CppCompile>
         <CppCompile Include="..\src\pjnath-test\test.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>10</BuildOrder>
         </CppCompile>
         <None Include="..\src\pjnath-test\test.h">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>11</BuildOrder>
         </None>
         <CppCompile Include="..\src\pjnath-test\turn_sock_test.c">
+            <VirtualFolder>{A4EF9405-3BF2-4E6E-BC88-F519E26A5F45}</VirtualFolder>
             <BuildOrder>12</BuildOrder>
         </CppCompile>
         <BuildConfiguration Include="Release">
@@ -210,14 +222,8 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'=='true'" LocalName="$(BDS)\bin\cc32c270mt.dll" Class="DependencyModule">
+                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32c270.dll" Class="DependencyModule">
                     <Platform Name="Win32">
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\pjnath-test.exe" Configuration="Debug" Class="ProjectOutput">
-                    <Platform Name="Win32">
-                        <RemoteName>pjnath-test.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -261,9 +267,9 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile LocalName=".\Win32\Debug\pjnath-test.tds" Configuration="Debug" Class="DebugSymbols">
+                <DeployFile LocalName=".\Win32\Debug\pjnath-test.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
-                        <RemoteName>pjnath-test.tds</RemoteName>
+                        <RemoteName>pjnath-test.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
@@ -277,18 +283,24 @@
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
+                <DeployFile LocalName=".\Win32\Debug\pjnath-test.tds" Configuration="Debug" Class="DebugSymbols">
+                    <Platform Name="Win32">
+                        <RemoteName>pjnath-test.tds</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'=='true'" LocalName="$(BDS)\bin64\cc64270mt.dll" Class="DependencyModule">
                     <Platform Name="Win64">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx64\libcgcrtl.dylib" Class="DependencyModule">
-                    <Platform Name="OSX64">
+                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'=='true'" LocalName="$(BDS)\bin\cc32c270mt.dll" Class="DependencyModule">
+                    <Platform Name="Win32">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>
-                <DeployFile Condition="'$(DynamicRTL)'=='true' And '$(Multithreaded)'!='true'" LocalName="$(BDS)\bin\cc32c270.dll" Class="DependencyModule">
-                    <Platform Name="Win32">
+                <DeployFile Condition="'$(DynamicRTL)'=='true'" LocalName="$(BDS)\Redist\osx64\libcgcrtl.dylib" Class="DependencyModule">
+                    <Platform Name="OSX64">
                         <Overwrite>true</Overwrite>
                     </Platform>
                 </DeployFile>

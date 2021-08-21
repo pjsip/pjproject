@@ -77,7 +77,7 @@
         <UWP_CppLogo44>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_44.png</UWP_CppLogo44>
         <UWP_CppLogo150>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_150.png</UWP_CppLogo150>
         <Manifest_File>(None)</Manifest_File>
-        <BCC_PCHName_Clang>pjmedia-testPCH.h</BCC_PCHName_Clang>
+        <BCC_PCHName_Clang>pjmedia_testPCH.h</BCC_PCHName_Clang>
         <Defines>WIN32;PJ_WIN32=1;PJ_M_I=386;$(Defines)</Defines>
         <ILINK_AdditionalOptions>pjlib.lib pjlib-util.lib pjmedia.lib libsrtp.lib libspeex.lib pjmedia_audiodev.lib pjmedia_videodev.lib pjmedia_codec.lib libilbccodec.lib libgsmcodec.lib libresample.lib</ILINK_AdditionalOptions>
     </PropertyGroup>
@@ -85,7 +85,7 @@
         <PackageImports>adortl;appanalytics;bcbie;bcbsmp;bindcomp;bindcompdbx;bindcompfmx;bindcompvcl;bindcompvclsmp;bindcompvclwinx;bindengine;CloudService;CustomIPTransport;dbexpress;dbrtl;dbxcds;DbxClientDriver;DbxCommonDriver;DBXInterBaseDriver;DBXMySQLDriver;DBXSqliteDriver;dsnap;dsnapcon;dsnapxml;FireDAC;FireDACADSDriver;FireDACCommon;FireDACCommonDriver;FireDACCommonODBC;FireDACIBDriver;FireDACMSAccDriver;FireDACMySQLDriver;FireDACPgDriver;FireDACSqliteDriver;fmx;fmxase;fmxdae;fmxFireDAC;fmxobj;IndyCore;IndyIPClient;IndyIPCommon;IndyIPServer;IndyProtocols;IndySystem;inet;inetdb;inetdbxpress;RESTBackendComponents;RESTComponents;rtl;soapmidas;soaprtl;soapserver;tethering;vcl;vclactnband;vcldb;vcldsnap;vcledge;vclFireDAC;vclie;vclimg;VCLRESTComponents;VclSmp;vcltouch;vclwinx;vclx;xmlrtl;$(PackageImports)</PackageImports>
         <UWP_CppLogo44>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_44.png</UWP_CppLogo44>
         <UWP_CppLogo150>$(BDS)\bin\Artwork\Windows\UWP\cppreg_UwpDefault_150.png</UWP_CppLogo150>
-        <BCC_PCHName_Clang>pjmedia-testPCH.h</BCC_PCHName_Clang>
+        <BCC_PCHName_Clang>pjmedia_testPCH.h</BCC_PCHName_Clang>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
         <BT_BuildType>Debug</BT_BuildType>
         <Manifest_File>(None)</Manifest_File>
@@ -125,13 +125,13 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <BCC_UseClassicCompiler>false</BCC_UseClassicCompiler>
-        <BCC_PCHName_Clang>pjmedia-testPCH.h</BCC_PCHName_Clang>
+        <BCC_PCHName_Clang>pjmedia_testPCH.h</BCC_PCHName_Clang>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
-        <BCC_PCHName_Clang>pjmedia-testPCH.h</BCC_PCHName_Clang>
+        <BCC_PCHName_Clang>pjmedia_testPCH.h</BCC_PCHName_Clang>
     </PropertyGroup>
     <ItemGroup>
-        <PCHCompile Include="pjmedia-testPCH.h">
+        <PCHCompile Include="pjmedia_testPCH.h">
             <BuildOrder>0</BuildOrder>
             <PCH>true</PCH>
         </PCHCompile>
