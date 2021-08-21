@@ -57,6 +57,21 @@
         <Projects Include="pjsip-apps\build\pjsua.cbproj">
             <Dependencies/>
         </Projects>
+        <Projects Include="pjlib\build\pjlib-test.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjlib-util\build\pjlib-util-test.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjnath\build\pjnath-test.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjmedia\build\pjmedia-test.cbproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="pjsip\build\pjsip-test.cbproj">
+            <Dependencies/>
+        </Projects>
     </ItemGroup>
     <ProjectExtensions>
         <Borland.Personality>Default.Personality.12</Borland.Personality>
@@ -227,14 +242,59 @@
     <Target Name="pjsua:Make">
         <MSBuild Projects="pjsip-apps\build\pjsua.cbproj" Targets="Make"/>
     </Target>
+    <Target Name="pjlib-test">
+        <MSBuild Projects="pjlib\build\pjlib-test.cbproj"/>
+    </Target>
+    <Target Name="pjlib-test:Clean">
+        <MSBuild Projects="pjlib\build\pjlib-test.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjlib-test:Make">
+        <MSBuild Projects="pjlib\build\pjlib-test.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjlib-util-test">
+        <MSBuild Projects="pjlib-util\build\pjlib-util-test.cbproj"/>
+    </Target>
+    <Target Name="pjlib-util-test:Clean">
+        <MSBuild Projects="pjlib-util\build\pjlib-util-test.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjlib-util-test:Make">
+        <MSBuild Projects="pjlib-util\build\pjlib-util-test.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjnath-test">
+        <MSBuild Projects="pjnath\build\pjnath-test.cbproj"/>
+    </Target>
+    <Target Name="pjnath-test:Clean">
+        <MSBuild Projects="pjnath\build\pjnath-test.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjnath-test:Make">
+        <MSBuild Projects="pjnath\build\pjnath-test.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjmedia-test">
+        <MSBuild Projects="pjmedia\build\pjmedia-test.cbproj"/>
+    </Target>
+    <Target Name="pjmedia-test:Clean">
+        <MSBuild Projects="pjmedia\build\pjmedia-test.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjmedia-test:Make">
+        <MSBuild Projects="pjmedia\build\pjmedia-test.cbproj" Targets="Make"/>
+    </Target>
+    <Target Name="pjsip-test">
+        <MSBuild Projects="pjsip\build\pjsip-test.cbproj"/>
+    </Target>
+    <Target Name="pjsip-test:Clean">
+        <MSBuild Projects="pjsip\build\pjsip-test.cbproj" Targets="Clean"/>
+    </Target>
+    <Target Name="pjsip-test:Make">
+        <MSBuild Projects="pjsip\build\pjsip-test.cbproj" Targets="Make"/>
+    </Target>
     <Target Name="Build">
-        <CallTarget Targets="pjlib;pjlib-util;pjnath;libspeex;pjmedia;libresample;libsrtp;pjmedia_audiodev;pjmedia_videodev;pjmedia_codec;pjsip_core;pjsip_simple;pjsip_ua;pjsua_lib;libg7221codec;libgsmcodec;libilbccodec;pjsua"/>
+        <CallTarget Targets="pjlib;pjlib-util;pjnath;libspeex;pjmedia;libresample;libsrtp;pjmedia_audiodev;pjmedia_videodev;pjmedia_codec;pjsip_core;pjsip_simple;pjsip_ua;pjsua_lib;libg7221codec;libgsmcodec;libilbccodec;pjsua;pjlib-test;pjlib-util-test;pjnath-test;pjmedia-test;pjsip-test"/>
     </Target>
     <Target Name="Clean">
-        <CallTarget Targets="pjlib:Clean;pjlib-util:Clean;pjnath:Clean;libspeex:Clean;pjmedia:Clean;libresample:Clean;libsrtp:Clean;pjmedia_audiodev:Clean;pjmedia_videodev:Clean;pjmedia_codec:Clean;pjsip_core:Clean;pjsip_simple:Clean;pjsip_ua:Clean;pjsua_lib:Clean;libg7221codec:Clean;libgsmcodec:Clean;libilbccodec:Clean;pjsua:Clean"/>
+        <CallTarget Targets="pjlib:Clean;pjlib-util:Clean;pjnath:Clean;libspeex:Clean;pjmedia:Clean;libresample:Clean;libsrtp:Clean;pjmedia_audiodev:Clean;pjmedia_videodev:Clean;pjmedia_codec:Clean;pjsip_core:Clean;pjsip_simple:Clean;pjsip_ua:Clean;pjsua_lib:Clean;libg7221codec:Clean;libgsmcodec:Clean;libilbccodec:Clean;pjsua:Clean;pjlib-test:Clean;pjlib-util-test:Clean;pjnath-test:Clean;pjmedia-test:Clean;pjsip-test:Clean"/>
     </Target>
     <Target Name="Make">
-        <CallTarget Targets="pjlib:Make;pjlib-util:Make;pjnath:Make;libspeex:Make;pjmedia:Make;libresample:Make;libsrtp:Make;pjmedia_audiodev:Make;pjmedia_videodev:Make;pjmedia_codec:Make;pjsip_core:Make;pjsip_simple:Make;pjsip_ua:Make;pjsua_lib:Make;libg7221codec:Make;libgsmcodec:Make;libilbccodec:Make;pjsua:Make"/>
+        <CallTarget Targets="pjlib:Make;pjlib-util:Make;pjnath:Make;libspeex:Make;pjmedia:Make;libresample:Make;libsrtp:Make;pjmedia_audiodev:Make;pjmedia_videodev:Make;pjmedia_codec:Make;pjsip_core:Make;pjsip_simple:Make;pjsip_ua:Make;pjsua_lib:Make;libg7221codec:Make;libgsmcodec:Make;libilbccodec:Make;pjsua:Make;pjlib-test:Make;pjlib-util-test:Make;pjnath-test:Make;pjmedia-test:Make;pjsip-test:Make"/>
     </Target>
     <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
 </Project>
