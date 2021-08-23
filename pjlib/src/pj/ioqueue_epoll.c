@@ -231,6 +231,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     ioqueue->epfd = os_epoll_create(max_fd);
     if (ioqueue->epfd < 0) {
+    	pj_lock_acquire(ioqueue->lock);
 	ioqueue_destroy(ioqueue);
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
