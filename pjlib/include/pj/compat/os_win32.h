@@ -135,6 +135,14 @@
  */
 #define PJ_THREAD_ALLOCATE_STACK    	0
 
+/* Endianness */
+#if defined(_M_ARM64)
+#   ifndef PJ_IS_LITTLE_ENDIAN
+#       define PJ_IS_LITTLE_ENDIAN	1
+#       define PJ_IS_BIG_ENDIAN	0
+#   endif
+#endif
+
 
 #endif	/* __PJ_COMPAT_OS_WIN32_H__ */
 

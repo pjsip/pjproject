@@ -26,6 +26,7 @@
         <BuildToolset>v140</BuildToolset>
         <PreprocessorDef Condition="'$(Platform)'=='Win32'">WIN32;PJ_WIN32=1;PJ_M_I386=1;</PreprocessorDef>
         <PreprocessorDef Condition="'$(Platform)'=='x64'">WIN64;PJ_WIN64=1;PJ_M_X86_64=1;</PreprocessorDef>
+	<PreprocessorDef Condition="'$(Platform)'=='ARM64'">PJ_M_ARM64=1;</PreprocessorDef>
       </PropertyGroup>
     </When>
     <When Condition="'$(API_Family)'=='UWP'">
