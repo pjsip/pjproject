@@ -63,3 +63,18 @@ index a333d8397..e0e669b5e 100644
  
  #if defined(WEBRTC_WIN)
 +#include <winsock2.h>
+
+5. ARM64 support build for Visual Studio.
+diff --git a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+index d76d35167..2d8b1037f 100644
+--- a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
++++ b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+@@ -148,7 +148,7 @@ typedef __m128 v4sf;
+ /*
+   ARM NEON support macros
+ */
+-#elif !defined(PFFFT_SIMD_DISABLE) && (defined(__arm__) || defined(__aarch64__) || defined(__arm64__))
++#elif !defined(PFFFT_SIMD_DISABLE) && (defined(__arm__) || defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64))
+ #  include <arm_neon.h>
+ typedef float32x4_t v4sf;
+ #  define SIMD_SZ 4
