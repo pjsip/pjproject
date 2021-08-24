@@ -2424,6 +2424,11 @@ static void start_nominated_check(pj_ice_sess *ice)
 	pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap, &ice->timer,
 	                               TIMER_NONE);
     }
+	
+    /* Sort the list since some checks (with prflx cand in particular) 
+     * may have been added since the last sort.
+     */
+    sort_checklist(ice, &ice->clist);
 
     /* For each component, set the check state of valid check with
      * highest priority to Waiting (it should have Success state now).
