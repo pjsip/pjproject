@@ -1248,6 +1248,7 @@ static void turn_on_state(pj_turn_session *sess,
 					 turn_sock->setting.port_range,
 					 max_bind_retry);
 	    if (status != PJ_SUCCESS) {
+	    	pj_sock_close(sock);
 		pj_turn_sock_destroy(turn_sock);
 		return;
 	    }
@@ -1258,6 +1259,7 @@ static void turn_on_state(pj_turn_session *sess,
 				    turn_sock->pool->obj_name, NULL);
 	    if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error) 
 	    {
+	    	pj_sock_close(sock);
 		pj_turn_sock_destroy(turn_sock);
 		return;
 	    }
@@ -1314,7 +1316,9 @@ static void turn_on_state(pj_turn_session *sess,
 					  sock_type, &asock_cfg,
 					  turn_sock->cfg.ioqueue, &asock_cb,
 					  turn_sock,
-					  &turn_sock->active_sock);
+					  &turn_sock->active_sock);                                                                                                                                                                                                                                                                             
+	    if (status != PJ_SUCCESS)
+	    	pj_sock_close(sock);
 	}
 #if PJ_HAS_SSL_SOCK
 	else {
