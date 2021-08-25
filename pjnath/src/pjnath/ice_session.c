@@ -3464,10 +3464,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	     ice->clist.count));
 	pj_log_push_indent();
 
-	ice->clist.count++;
+	perform_check(ice, &ice->clist, ice->clist.count++, nominate);
     	/* Re-sort the list because of the newly added pair. */
     	sort_checklist(ice, &ice->clist);
-	perform_check(ice, &ice->clist, ice->clist.count, nominate);
 
 	pj_log_pop_indent();
 
