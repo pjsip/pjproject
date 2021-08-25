@@ -2424,11 +2424,6 @@ static void start_nominated_check(pj_ice_sess *ice)
 	pj_timer_heap_cancel_if_active(ice->stun_cfg.timer_heap, &ice->timer,
 	                               TIMER_NONE);
     }
-	
-    /* Sort the list since some checks (with prflx cand in particular) 
-     * may have been added since the last sort.
-     */
-    sort_checklist(ice, &ice->clist);
 
     /* For each component, set the check state of valid check with
      * highest priority to Waiting (it should have Success state now).
@@ -3468,7 +3463,12 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	LOG4((ice->obj_name, "New triggered check added: %d", 
 	     ice->clist.count));
 	pj_log_push_indent();
-	perform_check(ice, &ice->clist, ice->clist.count++, nominate);
+
+	ice->clist.count++;
+    	/* Re-sort the list because of the newly added pair. */
+    	sort_checklist(ice, &ice->clist);
+	perform_check(ice, &ice->clist, ice->clist.count, nominate);
+
 	pj_log_pop_indent();
 
     } else {
