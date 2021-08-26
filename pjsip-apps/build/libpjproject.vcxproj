@@ -815,9 +815,6 @@
     <ProjectReference Include="..\..\third_party\build\webrtc\libwebrtc.vcxproj">
       <Project>{5BCF2773-3825-4D91-9D72-3E2F650DF1DB}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\..\third_party\build\webrtc_aec3\libwebrtc_aec3.vcxproj">
-      <Project>{d738a812-ce37-40a4-b2fa-d81488c12c87}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\..\third_party\build\yuv\libyuv.vcxproj">
       <Project>{6ac9b65f-0862-4a5c-8a9d-141516993130}</Project>
     </ProjectReference>
