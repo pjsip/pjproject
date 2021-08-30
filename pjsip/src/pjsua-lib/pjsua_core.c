@@ -1553,7 +1553,7 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	stun_sock_cb.on_status = &test_stun_on_status;
 	sess->async_wait = PJ_FALSE;
 	status = pj_stun_sock_create(&pjsua_var.stun_cfg, "stunresolve",
-				     sess->af, &stun_sock_cb,
+				     sess->af, PJ_STUN_TP_UDP, &stun_sock_cb,
 				     NULL, sess, &sess->stun_sock);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];

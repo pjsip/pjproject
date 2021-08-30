@@ -383,6 +383,15 @@
 #   define ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT	10000
 #endif
 
+/**
+ * For TCP transport, this timer is time that a controlling agent must wait for
+ * incoming checks if the local candidate is of type "passive" or "s-o".
+ *
+ * Default: 10000 (milliseconds)
+ */
+#ifndef ICE_CONTROLLING_PASSIVE_TIMEOUT
+#   define ICE_CONTROLLING_PASSIVE_TIMEOUT	10000
+#endif
 
 /**
  * For controlling agent if it uses regular nomination, specify the delay to

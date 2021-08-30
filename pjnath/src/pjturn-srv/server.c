@@ -156,7 +156,7 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
 
     status = pj_stun_session_create(&srv->core.stun_cfg, srv->obj_name,
 				    &sess_cb, PJ_FALSE, NULL,
-				    &srv->core.stun_sess);
+				    &srv->core.stun_sess, PJ_STUN_TP_UDP);
     if (status != PJ_SUCCESS) {
 	goto on_error;
     }

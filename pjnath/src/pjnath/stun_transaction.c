@@ -396,6 +396,9 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
                                                   pj_bool_t mod_count)
 {
+    if (!tsx)
+	return PJ_EINVAL;
+
     if (tsx->destroy_timer.id != 0) {
 	return PJ_SUCCESS;
     }

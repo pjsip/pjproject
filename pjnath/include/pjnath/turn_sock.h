@@ -623,6 +623,17 @@ PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
 					       const pj_sockaddr_t *peer,
 					       unsigned addr_len);
 
+/**
+ *  Check if peer is a dataconn
+ *
+ * @param turn_sock    The turn sock
+ * @param peer         The peer addr to check
+ *
+ * @return true if dataconn else false
+ */
+PJ_DECL(pj_bool_t) pj_turn_sock_has_dataconn(pj_turn_sock *turn_sock,
+					     const pj_sockaddr_t *peer);
+
 
 /**
  * @}

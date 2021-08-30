@@ -894,12 +894,7 @@ static pj_bool_t on_data_sent(pj_turn_sock *turn_sock,
     }
 
     if (turn_sock->cb.on_data_sent) {
-	pj_ssize_t header_len, sent_size;
-
-        /* Remove the length of packet header from sent size. */
-	header_len = turn_sock->pkt_len - turn_sock->body_len;
-	sent_size = (sent > header_len)? (sent - header_len) : 0;
-	(*turn_sock->cb.on_data_sent)(turn_sock, sent_size);
+	(*turn_sock->cb.on_data_sent)(turn_sock, sent);
     }
 
     return PJ_TRUE;
@@ -1765,4 +1760,21 @@ static void turn_on_connection_bind_status(pj_turn_session *sess,
 	(*turn_sock->cb.on_connection_status)(turn_sock, status, conn_id,
 					      peer_addr, addr_len);
     }
+}
+
+pj_bool_t pj_turn_sock_has_dataconn(pj_turn_sock *turn_sock,
+				    const pj_sockaddr_t *peer)
+{
+    if (!turn_sock) return PJ_FALSE;
+
+    for (int i = 0; i < turn_sock->data_conn_cnt; ++i) {
+	tcp_data_conn_t* dataconn = &turn_sock->data_conn[i];
+	if (dataconn) {
+	    pj_sockaddr_t* conn_peer = &dataconn->peer_addr;
+	    if (pj_sockaddr_cmp(conn_peer, peer) == 0)
+		return PJ_TRUE;
+	}
+    }
+
+    return PJ_FALSE;
 }

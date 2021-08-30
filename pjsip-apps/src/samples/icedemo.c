@@ -44,6 +44,7 @@ static struct app_t
 	pj_str_t    stun_srv;
 	pj_str_t    turn_srv;
 	pj_bool_t   turn_tcp;
+	pj_bool_t   ice_tcp;
 	pj_str_t    turn_username;
 	pj_str_t    turn_password;
 	pj_bool_t   turn_fingerprint;
@@ -341,6 +342,12 @@ static pj_status_t icedemo_init(void)
     else
 	icedemo.ice_cfg.opt.aggressive = PJ_TRUE;
 
+    /* Connection type to STUN server */
+    if (icedemo.opt.ice_tcp)
+	icedemo.ice_cfg.stun.conn_type = PJ_STUN_TP_TCP;
+    else
+	icedemo.ice_cfg.stun.conn_type = PJ_STUN_TP_UDP;
+
     /* Configure STUN/srflx candidate resolution */
     if (icedemo.opt.stun_srv.slen) {
 	char *pos;
@@ -384,7 +391,7 @@ static pj_status_t icedemo_init(void)
 	icedemo.ice_cfg.turn.auth_cred.data.static_cred.data = icedemo.opt.turn_password;
 
 	/* Connection type to TURN server */
-	if (icedemo.opt.turn_tcp)
+	if (icedemo.opt.ice_tcp)
 	    icedemo.ice_cfg.turn.conn_type = PJ_TURN_TP_TCP;
 	else
 	    icedemo.ice_cfg.turn.conn_type = PJ_TURN_TP_UDP;
@@ -393,6 +400,10 @@ static pj_status_t icedemo_init(void)
 	 * so that it does't clutter the screen output.
 	 */
 	icedemo.ice_cfg.turn.alloc_param.ka_interval = KA_INTERVAL;
+    }
+
+    if (icedemo.opt.ice_tcp) {
+	icedemo.ice_cfg.protocol = PJ_ICE_TP_TCP;
     }
 
     /* -= That's it for now, initialization is complete =- */
@@ -530,10 +541,27 @@ static int print_cand(char buffer[], unsigned maxlen,
     char *p = buffer;
     int printed;
 
-    PRINT("a=candidate:%.*s %u UDP %u %s %u typ ",
+    /**   Section 4.5, RFC 6544 (https://tools.ietf.org/html/rfc6544)
+     *    candidate-attribute   = "candidate" ":" foundation SP component-id SP
+     *                             "TCP" SP
+     *                             priority SP
+     *                             connection-address SP
+     *                             port SP
+     *                             cand-type
+     *                             [SP rel-addr]
+     *                             [SP rel-port]
+     *                             SP tcp-type-ext
+     *                             *(SP extension-att-name SP
+     *                                  extension-att-value)
+     *
+     *     tcp-type-ext          = "tcptype" SP tcp-type
+     *     tcp-type              = "active" / "passive" / "so"
+     */
+    PRINT("a=candidate:%.*s %u %s %u %s %u typ ",
 	  (int)cand->foundation.slen,
 	  cand->foundation.ptr,
 	  (unsigned)cand->comp_id,
+	  cand->transport == PJ_CAND_UDP? "UDP" : "TCP",
 	  cand->prio,
 	  pj_sockaddr_print(&cand->addr, ipaddr, 
 			    sizeof(ipaddr), 0),
@@ -541,6 +569,23 @@ static int print_cand(char buffer[], unsigned maxlen,
 
     PRINT("%s\n",
 	  pj_ice_get_cand_type_name(cand->type));
+
+    if (cand->transport != PJ_CAND_UDP) {
+	PRINT(" tcptype");
+	switch (cand->transport) {
+	case PJ_CAND_TCP_ACTIVE:
+	    PRINT(" active");
+	    break;
+	case PJ_CAND_TCP_PASSIVE:
+	    PRINT(" passive");
+	    break;
+	case PJ_CAND_TCP_SO:
+	default:
+	    PRINT(" so");
+	    break;
+	}
+    }
+    PRINT("\n");
 
     if (p == buffer+maxlen)
 	return -PJ_ETOOSMALL;
@@ -606,6 +651,26 @@ static int encode_session(char buffer[], unsigned maxlen)
 		  (int)pj_sockaddr_get_port(&cand[0].addr),
 		  pj_sockaddr_print(&cand[0].addr, ipaddr,
 				    sizeof(ipaddr), 0));
+	}
+
+	if (cand[0].transport != PJ_CAND_UDP) {
+	    /** RFC 6544, Section 4.5:
+	     * If the default candidate is TCP-based, the agent MUST include the
+	     * a=setup and a=connection attributes from RFC 4145 [RFC4145],
+	     * following the procedures defined there as if ICE were not in use.
+	     */
+	    PRINT("a=setup:");
+	    switch (cand[0].transport) {
+	    case PJ_CAND_TCP_ACTIVE:
+		PRINT("active\n");
+		break;
+	    case PJ_CAND_TCP_PASSIVE:
+		PRINT("passive\n");
+		break;
+	    default:
+		return PJ_EINVALIDOP;
+	    }
+	    PRINT("a=connection:new\n");
 	}
 
 	/* Enumerate all candidates for this component */
@@ -709,7 +774,7 @@ static void icedemo_show_ice(void)
  */
 static void icedemo_input_remote(void)
 {
-    char linebuf[80];
+    char linebuf[120];
     unsigned media_cnt = 0;
     unsigned comp0_port = 0;
     char     comp0_addr[80];
@@ -819,25 +884,41 @@ static void icedemo_input_remote(void)
 		    pj_sockaddr_set_port(&icedemo.rem.def_addr[1], (pj_uint16_t)port);
 
 		} else if (strcmp(attr, "candidate")==0) {
+		    /**   Section 4.5, RFC 6544 (https://tools.ietf.org/html/rfc6544)
+		     *    candidate-attribute   = "candidate" ":" foundation SP component-id
+		     * SP "TCP" SP priority SP connection-address SP port SP cand-type [SP
+		     * rel-addr] [SP rel-port] SP tcp-type-ext
+		     *                             *(SP extension-att-name SP
+		     *                                  extension-att-value)
+		     *
+		     *     tcp-type-ext          = "tcptype" SP tcp-type
+		     *     tcp-type              = "active" / "passive" / "so"
+		     */
 		    char *sdpcand = attr+strlen(attr)+1;
 		    int af, cnt;
-		    char foundation[32], transport[12], ipaddr[80], type[32];
+		    char foundation[32], transport[12], ipaddr[80], type[32], tcp_type[32];
 		    pj_str_t tmpaddr;
 		    int comp_id, prio, port;
 		    pj_ice_sess_cand *cand;
 		    pj_status_t status;
+		    pj_bool_t is_tcp = PJ_FALSE;
 
-		    cnt = sscanf(sdpcand, "%s %d %s %d %s %d typ %s",
+		    cnt = sscanf(sdpcand, "%s %d %s %d %s %d typ %s tcptype %s\n",
 				 foundation,
 				 &comp_id,
 				 transport,
 				 &prio,
 				 ipaddr,
 				 &port,
-				 type);
-		    if (cnt != 7) {
+				 type,
+				 tcp_type);
+		    if (cnt != 7 && cnt != 8) {
 			PJ_LOG(1, (THIS_FILE, "error: Invalid ICE candidate line"));
 			goto on_error;
+		    }
+
+		    if (strcmp(transport, "TCP") == 0) {
+			is_tcp = PJ_TRUE;
 		    }
 
 		    cand = &icedemo.rem.cand[icedemo.rem.cand_cnt];
@@ -853,6 +934,23 @@ static void icedemo_input_remote(void)
 			PJ_LOG(1, (THIS_FILE, "Error: invalid candidate type '%s'", 
 				   type));
 			goto on_error;
+		    }
+
+		    if (is_tcp) {
+			if (strcmp(tcp_type, "active") == 0)
+			    cand->transport = PJ_CAND_TCP_ACTIVE;
+			else if (strcmp(tcp_type, "passive") == 0)
+			    cand->transport = PJ_CAND_TCP_PASSIVE;
+			else if (strcmp(tcp_type, "so") == 0)
+			    cand->transport = PJ_CAND_TCP_SO;
+			else {
+			    PJ_LOG(1, (THIS_FILE,
+				       "Error: invalid transport type '%s'",
+				       tcp_type));
+			    goto on_error;
+			}
+		    } else {
+			cand->transport = PJ_CAND_UDP;
 		    }
 
 		    cand->comp_id = (pj_uint8_t)comp_id;
@@ -879,6 +977,10 @@ static void icedemo_input_remote(void)
 
 		    if (cand->comp_id > icedemo.rem.comp_cnt)
 			icedemo.rem.comp_cnt = cand->comp_id;
+		} else if (strcmp(attr, "setup") == 0) {
+		    // TODO
+		} else if (strcmp(attr, "connection") == 0) {
+		    // TODO
 		}
 	    }
 	    break;

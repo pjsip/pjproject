@@ -163,15 +163,58 @@ typedef enum pj_ice_cand_type
 
 } pj_ice_cand_type;
 
+/**
+ * ICE candidates types like described by RFC 6544.
+ */
+typedef enum pj_ice_cand_transport {
+    /**
+     * Candidates UDP compatible
+     */
+    PJ_CAND_UDP,
+    /**
+     * Candidates sending outgoing TCP connections
+     */
+    PJ_CAND_TCP_ACTIVE,
+    /**
+     * Candidates accepting incoming TCP connections
+     */
+    PJ_CAND_TCP_PASSIVE,
+    /**
+     * Candidates capable of receiving incoming connections and sending
+     * connections
+     */
+    PJ_CAND_TCP_SO
+} pj_ice_cand_transport;
+
+/**
+ * ICE transport types, which will be used both to specify the connection
+ * type for reaching candidates and other client
+ */
+typedef enum pj_ice_tp_type {
+    /**
+     * UDP transport, which value corresponds to IANA protocol number.
+     */
+    PJ_ICE_TP_UDP = 17,
+
+    /**
+     * TCP transport, which value corresponds to IANA protocol number.
+     */
+    PJ_ICE_TP_TCP = 6,
+
+    /**
+     * TLS transport. The TLS transport will only be used as the connection
+     * type to reach the server and never as the allocation transport type.
+     */
+    PJ_ICE_TP_TLS = 255
+
+} pj_ice_tp_type;
+
 
 /** Forward declaration for pj_ice_sess */
 typedef struct pj_ice_sess pj_ice_sess;
 
 /** Forward declaration for pj_ice_sess_check */
 typedef struct pj_ice_sess_check pj_ice_sess_check;
-
-/** Forward declaration for pj_ice_sess_cand */
-typedef struct pj_ice_sess_cand pj_ice_sess_cand;
 
 /**
  * This structure describes ICE component. 
@@ -206,32 +249,6 @@ typedef struct pj_ice_sess_comp
 
 
 /**
- * Data structure to be attached to internal message processing.
- */
-typedef struct pj_ice_msg_data
-{
-    /** Transport ID for this message */
-    unsigned	transport_id;
-
-    /** Flag to indicate whether data.req contains data */
-    pj_bool_t	has_req_data;
-
-    /** The data */
-    union data {
-	/** Request data */
-	struct request_data {
-	    pj_ice_sess		    *ice;   /**< ICE session	*/
-	    pj_ice_sess_checklist   *clist; /**< Checklist	*/
-	    unsigned		     ckid;  /**< Check ID	*/
-	    pj_ice_sess_cand	    *lcand; /**< Local cand	*/
-	    pj_ice_sess_cand	    *rcand; /**< Remote cand	*/
-	} req;
-    } data;
-
-} pj_ice_msg_data;
-
-
-/**
  * This structure describes an ICE candidate.
  * ICE candidate is a transport address that is to be tested by ICE
  * procedures in order to determine its suitability for usage for
@@ -239,7 +256,7 @@ typedef struct pj_ice_msg_data
  * (server reflexive, relayed or host), priority, foundation, and
  * base.
  */
-struct pj_ice_sess_cand
+typedef struct pj_ice_sess_cand
 {
     /**
      * The candidate ID.
@@ -318,7 +335,37 @@ struct pj_ice_sess_cand
      */
     pj_sockaddr		 rel_addr;
 
-};
+    /**
+     * Transport used (TCP or UDP)
+     */
+    pj_ice_cand_transport transport;
+
+} pj_ice_sess_cand;
+
+/**
+ * Data structure to be attached to internal message processing.
+ */
+typedef struct pj_ice_msg_data
+{
+    /** Transport ID for this message */
+    unsigned	transport_id;
+
+    /** Flag to indicate whether data.req contains data */
+    pj_bool_t	has_req_data;
+
+    /** The data */
+    union data {
+	/** Request data */
+	struct request_data {
+	    pj_ice_sess		    *ice;   /**< ICE session	*/
+	    pj_ice_sess_checklist   *clist; /**< Checklist	*/
+	    unsigned		     ckid;  /**< Check ID	*/
+	    pj_ice_sess_cand	    *lcand; /**< Local cand	*/
+	    pj_ice_sess_cand	    *rcand; /**< Remote cand	*/
+	} req;
+    } data;
+
+} pj_ice_msg_data;
 
 
 /**
@@ -334,11 +381,33 @@ typedef enum pj_ice_sess_check_state
     PJ_ICE_SESS_CHECK_STATE_FROZEN,
 
     /**
+     * The following status is used when a packet sent via TURN got a
+     * "Connection reset by peer". This mean that the peer didn't allow
+     * us to connect yet. The socket will be reconnected during the next
+     * loop.
+     */
+    PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY,
+
+    /**
+     * TODO (sblin): REMOVE THIS! - https://github.com/coturn/coturn/issues/408
+     * For now, this status is only used because sometimes, the first packet
+     * doesn't receive any response. So, we retry to send the packet every
+     * 50 loops.
+     */
+    PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET,
+
+    /**
      * A check has not been performed for this pair, and can be
      * performed as soon as it is the highest priority Waiting pair on
      * the check list.
      */
     PJ_ICE_SESS_CHECK_STATE_WAITING,
+
+    /**
+     * A check has not been performed for this pair, but TCP socket
+     * is currently connecting to the pair. Wait to finish the connection.
+     */
+    PJ_ICE_SESS_CHECK_STATE_PENDING,
 
     /**
      * A check has not been performed for this pair, and can be
@@ -544,6 +613,41 @@ typedef struct pj_ice_sess_cb
 			      void *pkt, pj_size_t size,
 			      const pj_sockaddr_t *src_addr,
 			      unsigned src_addr_len);
+
+    /**
+     * Wait for TCP and send connectivity check
+     *
+     * @param ice			The ICE session.
+     * @param clist			The ICE connection list
+     * @param check_id		The wanted check.
+     */
+    pj_status_t (*wait_tcp_connection)(pj_ice_sess *ice,
+                                       pj_ice_sess_checklist *clist,
+                                       unsigned check_id);
+
+    /**
+     * Reconnect a resetted TCP connection and send connectivity check
+     * cf. PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY
+     *
+     * @param ice			The ICE session.
+     * @param clist			The ICE connection list
+     * @param check_id		The wanted check.
+     */
+    pj_status_t (*reconnect_tcp_connection)(pj_ice_sess *ice,
+                                            pj_ice_sess_checklist *clist,
+                                            unsigned check_id);
+
+    /**
+     * Close TCP socket
+     *
+     * @param ice			The ICE session.
+     * @param clist			The ICE connection list
+     * @param check_id		The wanted check.
+     */
+    pj_status_t (*close_tcp_connection)(pj_ice_sess *ice,
+                                        pj_ice_sess_checklist *clist,
+                                        unsigned check_id);
+
 } pj_ice_sess_cb;
 
 
@@ -673,6 +777,13 @@ typedef struct pj_ice_sess_options
      */
     pj_ice_sess_trickle	trickle;
 
+    /**
+     * For a controlling agent, specify how long it wants to wait
+     * in milliseconds for passive candidates and wait for connection
+     * attempts
+     */
+    int         controlling_agent_passive_timeout;
+
 } pj_ice_sess_options;
 
 
@@ -705,6 +816,7 @@ struct pj_ice_sess
     pj_status_t		 ice_status;		    /**< Error status.	    */
     pj_timer_entry	 timer;			    /**< ICE timer.	    */
     pj_timer_entry	 timer_end_of_cand;	    /**< End-of-cand timer. */
+    pj_timer_entry	 timer_connect;		    /**< ICE timer tcp timeout*/
     pj_ice_sess_cb	 cb;			    /**< Callback.	    */
 
     pj_stun_config	 stun_cfg;		    /**< STUN settings.	    */
@@ -928,6 +1040,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
  * @param rel_addr	Optional related address.
  * @param addr_len	Length of addresses.
  * @param p_cand_id	Optional pointer to receive the candidate ID.
+ * @param transport	Candidate's type
  *
  * @return		PJ_SUCCESS if candidate is successfully added.
  */
@@ -941,7 +1054,8 @@ PJ_DECL(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 					  const pj_sockaddr_t *base_addr,
 					  const pj_sockaddr_t *rel_addr,
 					  int addr_len,
-					  unsigned *p_cand_id);
+					  unsigned *p_cand_id,
+					  pj_ice_cand_transport transport);
 
 /**
  * Find default candidate for the specified component ID, using this
@@ -1088,6 +1202,44 @@ PJ_DECL(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					   const pj_sockaddr_t *src_addr,
 					   int src_addr_len);
 
+/**
+ * Notification when ICE session get a new incoming connection
+ *
+ * @param ice          The ICE session.
+ * @param transport_id Related transport
+ * @param status       PJ_SUCCESS when connection is made, or any errors
+ *                     if the connection has failed (or if the peer has
+ *                     disconnected after an established connection).
+ * @param remote_addr  Connected remove address
+ */
+PJ_DECL(void) ice_sess_on_peer_connection(pj_ice_sess *ice,
+					  pj_uint8_t transport_id,
+					  pj_status_t status,
+					  pj_sockaddr_t* remote_addr);
+
+/**
+ * Notification when ICE session get a new resetted connection
+ * cf PJ_ICE_SESS_CHECK_STATE_NEEDS_RETRY
+ *
+ * @param ice          The ICE session.
+ * @param transport_id Related transport
+ * @param remote_addr  Connected remove address
+ */
+PJ_DECL(void) ice_sess_on_peer_reset_connection(pj_ice_sess *ice,
+						pj_uint8_t transport_id,
+						pj_sockaddr_t* remote_addr);
+
+/**
+ * Notification when ICE session get a new packet
+ * Used to remove the PJ_ICE_SESS_CHECK_STATE_NEEDS_FIRST_PACKET status
+ *
+ * @param ice          The ICE session.
+ * @param transport_id Related transport
+ * @param remote_addr  Connected remove address
+ */
+PJ_DECL(void) ice_sess_on_peer_packet(pj_ice_sess *ice,
+				      pj_uint8_t transport_id,
+				      pj_sockaddr_t* remote_addr);
 
 
 /**
