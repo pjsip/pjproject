@@ -3463,7 +3463,11 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	LOG4((ice->obj_name, "New triggered check added: %d", 
 	     ice->clist.count));
 	pj_log_push_indent();
+
 	perform_check(ice, &ice->clist, ice->clist.count++, nominate);
+    	/* Re-sort the list because of the newly added pair. */
+    	sort_checklist(ice, &ice->clist);
+
 	pj_log_pop_indent();
 
     } else {
