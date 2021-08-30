@@ -532,15 +532,19 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
 - (void)session_runtime_error:(NSNotification *)notification
 {
-    /**
-     * This function is called from NSNotificationCenter and the
-     * calling thread may not be registered to pjsip, causing a crash.
-     *
-     * NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
-     * PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
-     * 	       [error.localizedDescription UTF8String],
-     * 	       [error.localizedFailureReason UTF8String]));
-     */
+    // This function is called from NSNotificationCenter.
+    // Make sure the thread is registered.
+    if (!pj_thread_is_registered()) {
+        pj_thread_t *thread;
+        static pj_thread_desc thread_desc;
+        pj_bzero(thread_desc, sizeof(pj_thread_desc));
+        pj_thread_register("NSNotificationCenter", thread_desc, &thread);
+    }
+
+    NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
+    PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
+    	       [error.localizedDescription UTF8String],
+    	       [error.localizedFailureReason UTF8String]));
 }
 
 - (void)captureOutput:(AVCaptureOutput *)captureOutput 
