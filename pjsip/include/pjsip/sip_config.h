@@ -1242,6 +1242,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
 #endif
 
+
+/**
+ * Specify the default expire refresh value when the registers sent a Contact
+ * header with expire parameter 0 in the 200/OK REGISTER response.
+ * This value will be used when the REGISTER request doesn't include a 
+ * Expire header.
+ *
+ * Default is 30.
+ */
+#ifndef PJSIP_REGISTER_EXP_REFRESH
+#   define PJSIP_REGISTER_EXP_REFRESH	30
+#endif
+
+
 /**
  * Maximum size of pool allowed for auth client session in pjsip_regc.
  * After the size exceeds because of Digest authentication processing,

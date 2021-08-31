@@ -1359,6 +1359,14 @@ handle_err:
 						       PJSIP_REGC_MAX_CONTACT,
 						       contact);
 
+	    if (expiration == 0 && regc->current_op != REGC_UNREGISTERING) {
+		if (regc->expires_hdr && regc->expires_hdr->ivalue) {
+		    expiration = regc->expires_hdr->ivalue;
+		} else {
+		    expiration = PJSIP_REGISTER_EXP_REFRESH;
+		}
+	    }
+
 	    /* Schedule next registration */
             schedule_registration(regc, expiration);
 
