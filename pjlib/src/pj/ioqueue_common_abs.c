@@ -1338,6 +1338,31 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
     return PJ_EINVALIDOP;
 }
 
+
+PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
+{
+    PJ_ASSERT_RETURN(key, PJ_EINVAL);
+
+    pj_ioqueue_lock_key(key);
+
+    /* Reset pending lists */
+    pj_list_init(&key->read_list);
+    pj_list_init(&key->write_list);
+    pj_list_init(&key->accept_list);
+    key->connecting = 0;
+
+    /* Remove key from set */
+    ioqueue_remove_from_set(key->ioqueue, key, READABLE_EVENT);
+    ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
+    ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
+
+    pj_ioqueue_unlock_key(key);
+
+    return PJ_SUCCESS;
+
+}
+
+
 PJ_DEF(pj_status_t) pj_ioqueue_set_default_concurrency( pj_ioqueue_t *ioqueue,
 							pj_bool_t allow)
 {
