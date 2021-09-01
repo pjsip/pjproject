@@ -284,7 +284,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback rtp_cb, rtcp_cb;
-    unsigned i;
     pj_status_t status;
 
 
@@ -351,12 +350,12 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+#if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i)
 	pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
 			       sizeof(tp->rtp_pending_write[i].op_key));
 
-#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTP read from the ioqueue */
     tp->rtp_addrlen = sizeof(tp->rtp_src_addr);
     size = sizeof(tp->rtp_pkt);
@@ -381,11 +380,10 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+#if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtcp_read_op, sizeof(tp->rtcp_read_op));
     pj_ioqueue_op_key_init(&tp->rtcp_write_op, sizeof(tp->rtcp_write_op));
 
-
-#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTCP read from the ioqueue */
     size = sizeof(tp->rtcp_pkt);
     tp->rtcp_addr_len = sizeof(tp->rtcp_src_addr);
@@ -1167,6 +1165,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t size;
     pj_status_t status;
+    unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
@@ -1178,6 +1177,15 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     /* Just return success if there is already pending read */
     if (udp->started)
 	return PJ_SUCCESS;
+
+    pj_ioqueue_op_key_init(&udp->rtp_read_op, sizeof(udp->rtp_read_op));
+    for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
+	pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key, 
+			       sizeof(udp->rtp_pending_write[i].op_key));
+    }
+
+    pj_ioqueue_op_key_init(&udp->rtcp_read_op, sizeof(udp->rtcp_read_op));
+    pj_ioqueue_op_key_init(&udp->rtcp_write_op, sizeof(udp->rtcp_write_op));
 
     /* Kick off pending RTP read from the ioqueue */
     udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
