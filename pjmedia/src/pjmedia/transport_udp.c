@@ -931,8 +931,6 @@ static void transport_detach( pjmedia_transport *tp,
 
     //if (udp->attached) {
     if (1) {
-	int i;
-
 	/* Lock the ioqueue keys to make sure that callbacks are
 	 * not executed. See ticket #460 for details.
 	 */
@@ -955,11 +953,8 @@ static void transport_detach( pjmedia_transport *tp,
 	udp->user_data = NULL;
 
 	/* Cancel any outstanding send */
-	for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
-	    pj_ioqueue_post_completion(udp->rtp_key,
-				       &udp->rtp_pending_write[i].op_key, 0);
-	}
-	pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_write_op, 0);
+	pj_ioqueue_clear_key(udp->rtp_key);
+	pj_ioqueue_clear_key(udp->rtcp_key);
 
 	/* Unlock keys */
 	pj_ioqueue_unlock_key(udp->rtcp_key);
@@ -1200,8 +1195,10 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				 udp->rtcp_pkt, &size,
 				 PJ_IOQUEUE_ALWAYS_ASYNC,
 				 &udp->rtcp_src_addr, &udp->rtcp_addr_len);
-    if (status != PJ_EPENDING)
+    if (status != PJ_EPENDING) {
+	pj_ioqueue_clear_key(udp->rtp_key);
 	return status;
+    }
 
     udp->started = PJ_TRUE;
 
@@ -1218,11 +1215,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     if (!udp->started)
 	return PJ_SUCCESS;
 
-    pj_ioqueue_post_completion(udp->rtp_key, &udp->rtp_read_op,
-			       -PJ_ECANCELLED);
-
-    pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_read_op,
-			       -PJ_ECANCELLED);
+    pj_ioqueue_clear_key(udp->rtp_key);
+    pj_ioqueue_clear_key(udp->rtcp_key);
 
     udp->started = PJ_FALSE;
 
