@@ -1351,7 +1351,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key )
     pj_list_init(&key->accept_list);
     key->connecting = 0;
 
-    /* Remove key from set */
+    /* Remove key from sets */
     ioqueue_remove_from_set(key->ioqueue, key, READABLE_EVENT);
     ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
     ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
