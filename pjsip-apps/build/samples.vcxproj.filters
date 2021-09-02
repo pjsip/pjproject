@@ -93,12 +93,6 @@
     <ClCompile Include="..\src\samples\sipstateless.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\samples\sndinfo.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\samples\sndtest.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\samples\stateful_proxy.c">
       <Filter>Source Files</Filter>
     </ClCompile>
