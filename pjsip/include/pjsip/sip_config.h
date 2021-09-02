@@ -1244,15 +1244,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
- * Specify the default expire refresh value when the registers sent a Contact
+ * Allow client to send refresh registration when the registrar sent a Contact
  * header with expire parameter 0 in the 200/OK REGISTER response.
- * This value will be used when the REGISTER request doesn't include a 
- * Expire header.
+ * Refer to https://github.com/pjsip/pjproject/pull/2809 for more info.
  *
- * Default is 30.
+ * Default is 1.
  */
-#ifndef PJSIP_REGISTER_EXP_REFRESH
-#   define PJSIP_REGISTER_EXP_REFRESH	30
+#ifndef PJSIP_REGISTER_ALLOW_EXP_REFRESH
+#   define PJSIP_REGISTER_ALLOW_EXP_REFRESH	1
 #endif
 
 

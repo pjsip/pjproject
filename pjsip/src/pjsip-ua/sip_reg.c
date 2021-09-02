@@ -1359,14 +1359,21 @@ handle_err:
 						       PJSIP_REGC_MAX_CONTACT,
 						       contact);
 
+#if PJSIP_REGISTER_ALLOW_EXP_REFRESH
 	    if (expiration == 0 && regc->current_op != REGC_UNREGISTERING) {
+		/* Response contain expires contact param 0, allow client to
+		 * continue refresh registration.
+		 * Refer to: https://github.com/pjsip/pjproject/pull/2809
+		 */
 		if (regc->expires_hdr && regc->expires_hdr->ivalue) {
 		    expiration = regc->expires_hdr->ivalue;
 		} else {
-		    expiration = PJSIP_REGISTER_EXP_REFRESH;
+		    expiration = 3600;
 		}
+		PJ_LOG(4, (THIS_FILE, "Modify response's expiration from 0 "
+			   "to %d", expiration));
 	    }
-
+#endif
 	    /* Schedule next registration */
             schedule_registration(regc, expiration);
 
