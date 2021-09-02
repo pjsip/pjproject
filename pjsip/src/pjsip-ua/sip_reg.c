@@ -1365,7 +1365,14 @@ handle_err:
 		 * continue refresh registration.
 		 * Refer to: https://github.com/pjsip/pjproject/pull/2809
 		 */
-		if (regc->expires_hdr && regc->expires_hdr->ivalue) {
+		const pjsip_msg *msg = rdata->msg_info.msg;
+		const pjsip_expires_hdr *expires;
+		expires = (const pjsip_expires_hdr*) pjsip_msg_find_hdr(msg, 
+							PJSIP_H_EXPIRES, NULL);
+
+		if (expires) {
+		    expiration = expires->ivalue;
+		} else if (regc->expires_hdr && regc->expires_hdr->ivalue) {
 		    expiration = regc->expires_hdr->ivalue;
 		} else {
 		    expiration = 3600;
