@@ -1392,7 +1392,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    /* Allow empty newlines at the end of the message */
 		    while (!pj_scan_is_eof(&scanner)) {
 			if (*scanner.curptr != 13 && *scanner.curptr != 10) {
-			    ctx.last_error = PJMEDIA_SDP_EINSDP;
 			    on_scanner_error(&scanner);
 			}
 			pj_scan_get_char(&scanner);
@@ -1421,7 +1420,6 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    if (cur_name >= 'a' && cur_name <= 'z')
 			parse_generic_line(&scanner, &dummy, &ctx);
 		    else  {
-			ctx.last_error = PJMEDIA_SDP_EINSDP;
 			on_scanner_error(&scanner);
 		    }
 		    break;
@@ -1433,6 +1431,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     }
     PJ_CATCH_ANY {
 	
+	ctx.last_error = PJMEDIA_SDP_EINSDP;
 	PJ_PERROR(4, (THIS_FILE, ctx.last_error,
 		      "Error parsing SDP in line %d col %d",
 		      scanner.line, pj_scan_get_col(&scanner)));
