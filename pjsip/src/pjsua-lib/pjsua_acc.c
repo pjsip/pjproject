@@ -1613,8 +1613,8 @@ done:
 		reg_contact.slen = pj_ansi_snprintf(
 					    reg_contact.ptr, len,
 					    "<%.*s%.*s>%.*s",
-					    tmp_len, tmp_uri,
-					    uri_param.slen, uri_param.ptr,
+					    (int)tmp_len, tmp_uri,
+					    (int)uri_param.slen, uri_param.ptr,
 					    (int)acc->cfg.contact_params.slen,
 					    acc->cfg.contact_params.ptr);
 		pj_assert(reg_contact.slen > 0);
