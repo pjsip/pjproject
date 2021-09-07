@@ -3693,6 +3693,17 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	    reg_contact_params;
 
+    /**
+     * Additional URI parameters that will be appended in the Contact URI
+     * for this account. This will only affect REGISTER requests and
+     * will be appended after \a contact_uri_params;
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    pj_str_t	    reg_contact_uri_params;
+
     /** 
      * The optional custom SIP headers to be put in the presence
      * subscription request.

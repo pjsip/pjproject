@@ -90,6 +90,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
     pj_strdup_with_null(pool, &dst->reg_contact_params,
 			&src->reg_contact_params);
+    pj_strdup_with_null(pool, &dst->reg_contact_uri_params,
+			&src->reg_contact_uri_params);
     pj_strdup_with_null(pool, &dst->contact_params, &src->contact_params);
     pj_strdup_with_null(pool, &dst->contact_uri_params,
                         &src->contact_uri_params);
@@ -1030,6 +1032,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	unreg_first = PJ_TRUE;
     }
 
+    /* Register contact URI params */
+    if (pj_strcmp(&acc->cfg.reg_contact_uri_params,
+		  &cfg->reg_contact_uri_params))
+    {
+	pj_strdup_with_null(acc->pool, &acc->cfg.reg_contact_uri_params,
+			    &cfg->reg_contact_uri_params);
+	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
+    }
+
     /* Contact param */
     if (pj_strcmp(&acc->cfg.contact_params, &cfg->contact_params)) {
 	pj_strdup_with_null(acc->pool, &acc->cfg.contact_params,
@@ -1527,7 +1539,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
-/* Create reg_contact, mainly for SIP outbound */
+/* Create reg_contact, adding SIP outbound params and other REGISTER specific
+ * Contact params, i.e: reg_contact_params, reg_contact_uri_params.
+ */
 static void update_regc_contact(pjsua_acc *acc)
 {
     pjsua_acc_config *acc_cfg = &acc->cfg;
@@ -1561,6 +1575,7 @@ done:
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
 	len = acc->contact.slen + acc->cfg.reg_contact_params.slen +
+	      acc->cfg.reg_contact_uri_params.slen +
 	      (need_outbound?
 	       (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
 	if (len > acc->contact.slen) {
@@ -1568,6 +1583,44 @@ done:
 
 	    pj_strcpy(&reg_contact, &acc->contact);
 	
+	    /* Contact URI params */
+	    if (acc->cfg.reg_contact_uri_params.slen) {
+		pj_pool_t *pool;
+		pjsip_contact_hdr *contact_hdr;
+		pjsip_sip_uri *uri;
+		pj_str_t uri_param = acc->cfg.reg_contact_uri_params;
+		const pj_str_t STR_CONTACT = { "Contact", 7 };
+		char tmp_uri[PJSIP_MAX_URL_SIZE];
+		pj_ssize_t tmp_len;
+
+		/* Get the URI string */
+		pool = pjsua_pool_create("tmp", 512, 512);
+		contact_hdr = (pjsip_contact_hdr*)
+			      pjsip_parse_hdr(pool, &STR_CONTACT,
+					      reg_contact.ptr,
+					      reg_contact.slen, NULL);
+		pj_assert(contact_hdr != NULL);
+		uri = (pjsip_sip_uri*) contact_hdr->uri;
+		pj_assert(uri != NULL);
+		uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+		tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+					  uri, tmp_uri,
+					  sizeof(tmp_uri));
+		pj_assert(tmp_len > 0);
+		pj_pool_release(pool);
+
+		/* Regenerate Contact */
+		reg_contact.slen = pj_ansi_snprintf(
+					    reg_contact.ptr, len,
+					    "<%.*s%.*s>%.*s",
+					    tmp_len, tmp_uri,
+					    uri_param.slen, uri_param.ptr,
+					    (int)acc->cfg.contact_params.slen,
+					    acc->cfg.contact_params.ptr);
+		pj_assert(reg_contact.slen > 0);
+	    }
+
+	    /* Outbound */
     	    if (need_outbound) {
     	    	acc->rfc5626_status = OUTBOUND_WANTED;
 
@@ -1580,6 +1633,7 @@ done:
 	    	acc->rfc5626_status = OUTBOUND_NA;
 	    }
 
+	    /* Contact params */
 	    pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
 	    
 	    acc->reg_contact = reg_contact;
