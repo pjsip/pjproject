@@ -1643,7 +1643,7 @@ static pj_status_t app_init(void)
     }
 
     /* Add UDP transport unless it's disabled. */
-    if (!app_config.no_udp) {
+    if (!app_config.no_udp && !app_config.ipv6) {
 	pjsua_acc_id aid;
 	pjsip_transport_type_e type = PJSIP_TRANSPORT_UDP;
 
