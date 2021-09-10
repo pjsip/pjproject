@@ -98,7 +98,7 @@ PJ_BEGIN_DECL
  *    data will be sent using the candidate from the successful/nominated
  *    pair. The ICE stream transport may not be able to send data while 
  *    negotiation is in progress.\n\n
- *  - application sends data by using #pj_ice_strans_sendto(). Incoming
+ *  - application sends data by using #pj_ice_strans_sendto2(). Incoming
  *    data will be reported in \a on_rx_data() callback of the
  *    #pj_ice_strans_cb.\n\n
  *  - once the media session has finished (e.g. user hangs up the call),
@@ -112,6 +112,14 @@ PJ_BEGIN_DECL
  *    and this will consume power which is an important issue for mobile
  *    applications.\n\n
  */
+
+/* Deprecated API pj_ice_strans_sendto() due to its limitations. See
+ * below for more info and refer to
+ * https://trac.pjsip.org/repos/ticket/2229 for more details.
+ */
+#ifndef DEPRECATED_FOR_TICKET_2229
+#  define DEPRECATED_FOR_TICKET_2229	0
+#endif
 
 /** Forward declaration for ICE stream transport. */
 typedef struct pj_ice_strans pj_ice_strans;
@@ -161,6 +169,27 @@ typedef struct pj_ice_strans_cb
 			  unsigned src_addr_len);
 
     /**
+     * This callback is optional and will be called to notify the status of
+     * async send operations.
+     *
+     * @param ice_st	    The ICE stream transport.
+     * @param sent	    If value is positive non-zero it indicates the
+     *			    number of data sent. When the value is negative,
+     *			    it contains the error code which can be retrieved
+     *			    by negating the value (i.e. status=-sent).
+     */
+    void    (*on_data_sent)(pj_ice_strans *sock,
+			    pj_ssize_t sent);
+
+    /**
+     * An optional callback that will be called by the ICE transport when a
+     * valid pair has been found during ICE negotiation.
+     *
+     * @param ice_st	    The ICE stream transport.
+     */
+    void (*on_valid_pair)(pj_ice_strans *ice_st);
+
+    /**
      * Callback to report status of various ICE operations.
      * 
      * @param ice_st	    The ICE stream transport.
@@ -170,6 +199,25 @@ typedef struct pj_ice_strans_cb
     void    (*on_ice_complete)(pj_ice_strans *ice_st, 
 			       pj_ice_strans_op op,
 			       pj_status_t status);
+
+    /**
+     * Callback to report a new ICE local candidate, e.g: after successful
+     * STUN Binding, after a successful TURN allocation. Only new candidates
+     * whose type is server reflexive or relayed will be notified via this
+     * callback. This callback also indicates end-of-candidate via parameter
+     * 'last'.
+     *
+     * Trickle ICE can use this callback to convey the new candidate
+     * to remote agent and monitor end-of-candidate indication.
+     *
+     * @param ice_st	    The ICE stream transport.
+     * @param cand	    The new local candidate, can be NULL when the last
+     *			    local candidate initialization failed/timeout.
+     * @param end_of_cand   PJ_TRUE if this is the last of local candidate.
+     */
+    void    (*on_new_candidate)(pj_ice_strans *ice_st,
+				const pj_ice_sess_cand *cand,
+				pj_bool_t end_of_cand);
 
 } pj_ice_strans_cb;
 
@@ -417,6 +465,26 @@ typedef struct pj_ice_strans_cfg
     pj_ice_strans_turn_cfg turn_tp[PJ_ICE_MAX_TURN];
 
     /**
+     * Number of send buffers used for pj_ice_strans_sendto2(). If the send
+     * buffers are full, pj_ice_strans_sendto()/sendto2() will return
+     * PJ_EBUSY.
+     *
+     * Set this to 0 to disable buffering (then application will have to
+     * maintain the buffer passed to pj_ice_strans_sendto()/sendto2()
+     * until it has been sent).
+     *
+     * Default: 4
+     */
+    unsigned 		 num_send_buf;
+
+    /**
+     * Buffer size used for pj_ice_strans_sendto2().
+     *
+     * Default: 0 (size determined by the size of the first packet sent).
+     */
+    unsigned 		 send_buf_size;
+
+    /**
      * Component specific settings, which will override the settings in
      * the STUN and TURN settings above. For example, setting the QoS
      * parameters here allows the application to have different QoS
@@ -653,6 +721,19 @@ PJ_DECL(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
 					       const pj_ice_sess_options *opt);
 
 /**
+ * Update number of components of the ICE stream transport. This can only
+ * reduce the number of components from the initial value specified in
+ * pj_ice_strans_create() and before ICE session is initialized.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param comp_cnt	Number of components.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_update_comp_cnt(pj_ice_strans *ice_st,
+						   unsigned comp_cnt);
+
+/**
  * Get the group lock for this ICE stream transport.
  *
  * @param ice_st	The ICE stream transport.
@@ -864,6 +945,36 @@ PJ_DECL(pj_status_t) pj_ice_strans_start_ice(pj_ice_strans *ice_st,
 					     unsigned rcand_cnt,
 					     const pj_ice_sess_cand rcand[]);
 
+
+/**
+ * Update check list after receiving new remote ICE candidates or after
+ * new local ICE candidates are found and conveyed to remote. This function
+ * can also be called after receiving end of candidate indication from
+ * either remote or local agent.
+ *
+ * This function is only applicable when trickle ICE is not disabled and
+ * after ICE session has been created using pj_ice_strans_init_ice().
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param rem_ufrag	Remote ufrag, as seen in the SDP received from
+ *			the remote agent.
+ * @param rem_passwd	Remote password, as seen in the SDP received from
+ *			the remote agent.
+ * @param rcand_cnt	Number of new remote candidates in the array.
+ * @param rcand		New remote candidates array.
+ * @param rcand_end	Set to PJ_TRUE if remote has signalled
+ *			end-of-candidate.
+ *
+ * @return		PJ_SUCCESS, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_update_check_list(
+					     pj_ice_strans *ice_st,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
+					     unsigned rcand_cnt,
+					     const pj_ice_sess_cand rcand[],
+					     pj_bool_t rcand_end);
+
 /**
  * Retrieve the candidate pair that has been nominated and successfully
  * checked for the specified component. If ICE negotiation is still in
@@ -904,6 +1015,7 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
 PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
 
 
+#if !DEPRECATED_FOR_TICKET_2229
 /**
  * Send outgoing packet using this transport. 
  * Application can send data (normally RTP or RTCP packets) at any time
@@ -916,6 +1028,19 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
  * successfully, this function will send the data to the nominated remote 
  * address, as negotiated by ICE.
  *
+ * Limitations:
+ * 1. This function cannot inform the app whether the data has been sent,
+ *    or currently still pending.
+ * 2. In case that the data is still pending, the application has no way
+ *    of knowing the status of the send operation (whether it's a success
+ *    or failure).
+ * Due to these limitations, the API is deprecated and will be removed
+ * in the future.
+ *
+ * Note that application shouldn't mix using pj_ice_strans_sendto() and
+ * pj_ice_strans_sendto2() to avoid inconsistent calling of
+ * on_data_sent() callback.
+ *
  * @param ice_st	The ICE stream transport.
  * @param comp_id	Component ID.
  * @param data		The data or packet to be sent.
@@ -923,7 +1048,8 @@ PJ_DECL(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st);
  * @param dst_addr	The destination address.
  * @param dst_addr_len	Length of destination address.
  *
- * @return		PJ_SUCCESS if data is sent successfully.
+ * @return		PJ_SUCCESS if data has been sent, or will be sent
+ *			later. No callback will be called.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
 					  unsigned comp_id,
@@ -931,6 +1057,47 @@ PJ_DECL(pj_status_t) pj_ice_strans_sendto(pj_ice_strans *ice_st,
 					  pj_size_t data_len,
 					  const pj_sockaddr_t *dst_addr,
 					  int dst_addr_len);
+#endif
+
+
+/**
+ * Send outgoing packet using this transport.
+ * Application can send data (normally RTP or RTCP packets) at any time
+ * by calling this function. This function takes a destination
+ * address as one of the arguments, and this destination address should
+ * be taken from the default transport address of the component (that is
+ * the address in SDP c= and m= lines, or in a=rtcp attribute).
+ * If ICE negotiation is in progress, this function will try to send the data
+ * via any valid candidate pair (which has passed ICE connectivity test).
+ * If ICE negotiation has completed successfully, this function will send
+ * the data to the nominated remote address, as negotiated by ICE.
+ * If the ICE negotiation fails or valid candidate pair is not yet available,
+ * this function will send the data using default candidate to the specified
+ * destination address.
+ *
+ * Note that application shouldn't mix using pj_ice_strans_sendto() and
+ * pj_ice_strans_sendto2() to avoid inconsistent calling of
+ * on_data_sent() callback.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param comp_id	Component ID.
+ * @param data		The data or packet to be sent.
+ * @param data_len	Size of data or packet, in bytes.
+ * @param dst_addr	The destination address.
+ * @param dst_addr_len	Length of destination address.
+ *
+ * @return		PJ_SUCCESS if data has been sent, or
+ *		    	PJ_EPENDING if data cannot be sent immediately. In
+ *		    	this case the \a on_data_sent() callback will be
+ *		    	called when data is actually sent. Any other return
+ *		    	value indicates error condition.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_sendto2(pj_ice_strans *ice_st,
+					   unsigned comp_id,
+					   const void *data,
+					   pj_size_t data_len,
+					   const pj_sockaddr_t *dst_addr,
+					   int dst_addr_len);
 
 
 /**

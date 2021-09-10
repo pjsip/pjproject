@@ -404,6 +404,7 @@ Creating config_site.h file
      * mingw (i386),
      * FreeBSD and maybe other BSD's (i386, Opteron, etc.),
      * RTEMS with cross compilation (ARM, powerpc),
+     * Embox RTOS (i386, ARM including STM32),
      * etc.
 
 

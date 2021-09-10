@@ -34,7 +34,7 @@
 #ifndef SPEEX_BUFFER_H
 #define SPEEX_BUFFER_H
 
-#include "speex/speex_types.h"
+#include "speexdsp_types.h"
 
 #ifdef __cplusplus
 extern "C" {

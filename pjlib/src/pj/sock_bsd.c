@@ -244,7 +244,7 @@ PJ_DEF(char*) pj_inet_ntoa(pj_in_addr inaddr)
  * numbers-and-dots notation into binary data and stores it in the structure
  * that inp points to. 
  */
-PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, struct pj_in_addr *inp)
+PJ_DEF(int) pj_inet_aton(const pj_str_t *cp, pj_in_addr *inp)
 {
     char tempaddr[PJ_INET_ADDRSTRLEN];
 
@@ -600,7 +600,7 @@ PJ_DEF(pj_status_t) pj_sock_bind_in( pj_sock_t sock,
 
     PJ_SOCKADDR_SET_LEN(&addr, sizeof(pj_sockaddr_in));
     addr.sin_family = PJ_AF_INET;
-    pj_bzero(addr.sin_zero, sizeof(addr.sin_zero));
+    pj_bzero(addr.sin_zero_pad, sizeof(addr.sin_zero_pad));
     addr.sin_addr.s_addr = pj_htonl(addr32);
     addr.sin_port = pj_htons(port);
 

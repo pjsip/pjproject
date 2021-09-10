@@ -46,7 +46,7 @@ PJ_BEGIN_DECL
  *   typedef struct pj_str_t
  *   {
  *       char      *ptr;
- *       pj_size_t  slen;
+ *       pj_ssize_t  slen;
  *   } pj_str_t;
  * </pre>
  *
@@ -68,6 +68,18 @@ PJ_BEGIN_DECL
  * For some examples, please see:
  *  - @ref page_pjlib_string_test
  */
+
+/**
+ * Check if a string is truncated and if yes, put a suffix of ".."
+ * to indicate the truncation.
+ * This macro is used to check the result of pj_ansi_snprintf().
+ *
+ * @param ret	    The return value of pj_ansi_snprintf().
+ * @param str	    The string.
+ * @param len	    The length of the string buffer.
+ */
+#define PJ_CHECK_TRUNC_STR(ret, str, len) \
+    if ((ret) >= (len) || (ret) < 0) pj_ansi_strcpy((str) + (len) - 3, "..")
 
 /**
  * Create string initializer from a normal C string.

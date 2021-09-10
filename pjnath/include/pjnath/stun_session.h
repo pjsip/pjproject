@@ -341,6 +341,7 @@ struct pj_stun_tx_data
     pj_pool_t		*pool;		/**< Pool.			    */
     pj_stun_session	*sess;		/**< The STUN session.		    */
     pj_stun_msg		*msg;		/**< The STUN message.		    */
+    pj_bool_t		 is_destroying; /**< Is destroying?		    */
 
     void		*token;		/**< The token.			    */
 
@@ -348,6 +349,8 @@ struct pj_stun_tx_data
     pj_bool_t		 retransmit;	/**< Retransmit request?	    */
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
     pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */
+    
+    pj_grp_lock_t	*grp_lock;	/**< Group lock (for resp cache).   */
 
     pj_stun_req_cred_info auth_info;	/**< Credential info		    */
 

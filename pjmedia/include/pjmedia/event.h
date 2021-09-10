@@ -25,7 +25,9 @@
  */
 #include <pjmedia/audiodev.h>
 #include <pjmedia/format.h>
+#include <pjmedia/rtcp_fb.h>
 #include <pjmedia/signatures.h>
+#include <pjmedia/videodev.h>
 
 PJ_BEGIN_DECL
 
@@ -96,9 +98,19 @@ typedef enum pjmedia_event_type
     PJMEDIA_EVENT_AUD_DEV_ERROR = PJMEDIA_FOURCC('A', 'E', 'R', 'R'),
 
     /**
+     * Video device stopped on error.
+     */
+    PJMEDIA_EVENT_VID_DEV_ERROR = PJMEDIA_FOURCC('V', 'E', 'R', 'R'),
+
+    /**
      * Transport media error.
      */
-    PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R')
+    PJMEDIA_EVENT_MEDIA_TP_ERR = PJMEDIA_FOURCC('T', 'E', 'R', 'R'),
+
+    /**
+     * Callback event. Currently for internal use only.
+     */
+    PJMEDIA_EVENT_CALLBACK = PJMEDIA_FOURCC('C', 'B', ' ', ' ')
 
 } pjmedia_event_type;
 
@@ -158,7 +170,24 @@ typedef struct pjmedia_event_aud_dev_err_data
 
     /** The error code */
     pj_status_t		     status;
+
 } pjmedia_event_aud_dev_err_data;
+
+/**
+ * Additional data/parameters for video device error event.
+ */
+typedef struct pjmedia_event_vid_dev_err_data
+{
+    /** The media direction that fails */
+    pjmedia_dir		     dir;
+
+    /** The video device ID */
+    pjmedia_vid_dev_index    id;
+
+    /** The error code */
+    pj_status_t		     status;
+
+} pjmedia_event_vid_dev_err_data;
 
 /**
  * Additional data/parameters for media transmit error event.
@@ -265,11 +294,17 @@ typedef struct pjmedia_event
 	/** Audio device error event data */
 	pjmedia_event_aud_dev_err_data		aud_dev_err;
 
+	/** Video device error event data */
+	pjmedia_event_vid_dev_err_data		vid_dev_err;
+
 	/** Storage for user event data */
 	pjmedia_event_user_data			user;
 
 	/** Media transport error event data */
 	pjmedia_event_media_tp_err_data		med_tp_err;
+
+	/** Receiving RTCP-FB event data */
+	pjmedia_event_rx_rtcp_fb_data		rx_rtcp_fb;
 
 	/** Pointer to storage to user event data, if it's outside
 	 * this struct

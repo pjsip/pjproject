@@ -1036,15 +1036,15 @@ retry_on_restart:
 			PJ_PERROR(4, (THIS_FILE, status,
 				      "Send error for socket %d, retrying",
 				      key->fd));
-			replace_udp_sock(key);
-			restart_retry = PJ_TRUE;
-			goto retry_on_restart;
-		    } else {
-			status = PJ_ESOCKETSTOP;
+			status = replace_udp_sock(key);
+			if (status == PJ_SUCCESS) {
+			    restart_retry = PJ_TRUE;
+			    goto retry_on_restart;
+			}
 		    }
+		    status = PJ_ESOCKETSTOP;
 		}
 #endif
-
                 return status;
             }
         }
@@ -1282,6 +1282,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
         if (op_rec == (void*)op_key) {
             pj_list_erase(op_rec);
             op_rec->op = PJ_IOQUEUE_OP_NONE;
+            ioqueue_remove_from_set(key->ioqueue, key, READABLE_EVENT);
             pj_ioqueue_unlock_key(key);
 
             if (key->cb.on_read_complete)
@@ -1297,6 +1298,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
         if (op_rec == (void*)op_key) {
             pj_list_erase(op_rec);
             op_rec->op = PJ_IOQUEUE_OP_NONE;
+            ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
             pj_ioqueue_unlock_key(key);
 
             if (key->cb.on_write_complete)
@@ -1322,6 +1324,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
             return PJ_SUCCESS;
         }
         op_rec = op_rec->next;
+    }
+
+    /* Clear connecting operation. */
+    if (key->connecting) {
+        key->connecting = 0;
+        ioqueue_remove_from_set(key->ioqueue, key, WRITEABLE_EVENT);
+        ioqueue_remove_from_set(key->ioqueue, key, EXCEPTION_EVENT);
     }
 
     pj_ioqueue_unlock_key(key);

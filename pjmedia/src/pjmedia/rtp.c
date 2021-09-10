@@ -113,6 +113,11 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init2(
 	ses->peer_ssrc = settings.peer_ssrc;
     }
 
+    PJ_LOG(5, (THIS_FILE,
+	       "pjmedia_rtp_session_init2: ses=%p, seq=%d, ts=%d, peer_ssrc=%d",
+	       ses, pj_ntohs(ses->out_hdr.seq), pj_ntohl(ses->out_hdr.ts),
+	       ses->has_peer_ssrc? ses->peer_ssrc : 0));
+
     return PJ_SUCCESS;
 }
 

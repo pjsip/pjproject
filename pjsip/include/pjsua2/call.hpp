@@ -306,6 +306,30 @@ struct CallSetting
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
     unsigned        videoCount;
+
+    /**
+     * Media direction. This setting will only be used if the flag
+     * PJSUA_CALL_SET_MEDIA_DIR is set, and it will persist for subsequent
+     * offers or answers.
+     * For example, a media that is set as PJMEDIA_DIR_ENCODING can only
+     * mark the stream in the SDP as sendonly or inactive, but will not
+     * become sendrecv in subsequent offers and answers.
+     * Application can update the media direction in any API or callback
+     * that accepts CallSetting as a parameter, such as via
+     * Call::reinvite/update() or in onCallRxOffer/Reinvite()
+     * callback.
+     *
+     * The index of the media dir will correspond to the provisional media
+     * in CallInfo.provMedia.
+     * For offers that involve adding new medias (such as initial offer),
+     * the index will correspond to all new audio media first, then video.
+     * For example, for a new call with 2 audios and 1 video, mediaDir[0]
+     * and mediaDir[1] will be for the audios, and mediaDir[2] video.
+     *
+     * Default: empty vector
+     */
+    std::vector<pjmedia_dir> mediaDir;
+
     
 public:
     /**
@@ -515,6 +539,15 @@ struct CallInfo
 
 public:
     /**
+     * Default constructor
+     */
+    CallInfo() : id(PJSUA_INVALID_ID),
+		 role(PJSIP_ROLE_UAC),
+		 state(PJSIP_INV_STATE_NULL),
+		 lastStatusCode(PJSIP_SC_NULL)
+    {}
+
+    /**
      * Convert from pjsip
      */
     void fromPj(const pjsua_call_info &pci);
@@ -580,7 +613,53 @@ struct StreamInfo
      */
     VidCodecParam       vidCodecParam;
 
+    /**
+     * Jitter buffer init delay in msec.
+     */
+    int                 jbInit;
+
+    /**
+     * Jitter buffer minimum prefetch delay in msec.
+     */
+    int                 jbMinPre;
+
+    /**
+     * Jitter buffer maximum prefetch delay in msec.
+     */
+    int                 jbMaxPre;
+
+    /**
+     * Jitter buffer max delay in msec.
+     */
+    int                 jbMax;
+
+    /**
+     * Jitter buffer discard algorithm.
+     */
+    pjmedia_jb_discard_algo jbDiscardAlgo;
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    /**
+     * Stream keep-alive and NAT hole punch (see #PJMEDIA_STREAM_ENABLE_KA) is
+     * enabled?
+     */
+    bool                useKa;
+#endif
+
+    /**
+     * Disable automatic sending of RTCP SDES and BYE.
+     */
+    bool                rtcpSdesByeDisabled;
+
 public:
+    /**
+     * Default constructor
+     */
+    StreamInfo() : type(PJMEDIA_TYPE_NONE),
+		   proto(PJMEDIA_TP_PROTO_NONE),
+		   dir(PJMEDIA_DIR_NONE)
+    {}
+
     /**
      * Convert from pjsip
      */
@@ -655,18 +734,35 @@ struct OnCallSdpCreatedParam
 };
 
 /**
+ * This structure contains parameters for Call::onStreamPreCreate()
+ * callback.
+ */
+struct OnStreamPreCreateParam
+{
+    /**
+     * Stream index in the media session, read-only.
+     */
+    unsigned    streamIdx;
+
+    /**
+     * Parameters that the stream will be created from.
+     */
+    StreamInfo streamInfo;
+};
+
+/**
  * This structure contains parameters for Call::onStreamCreated()
  * callback.
  */
 struct OnStreamCreatedParam
 {
     /**
-     * Media stream, read-only.
+     * Audio media stream, read-only.
      */
     MediaStream stream;
     
     /**
-     * Stream index in the media session, read-only.
+     * Stream index in the audio media session, read-only.
      */
     unsigned    streamIdx;
     
@@ -681,7 +777,7 @@ struct OnStreamCreatedParam
     bool 	destroyPort;
 
     /**
-     * On input, it specifies the media port of the stream. Application
+     * On input, it specifies the audio media port of the stream. Application
      * may modify this pointer to point to different media port to be
      * registered to the conference bridge.
      */
@@ -695,12 +791,12 @@ struct OnStreamCreatedParam
 struct OnStreamDestroyedParam
 {
     /**
-     * Media stream.
+     * Audio media stream.
      */
     MediaStream stream;
     
     /**
-     * Stream index in the media session.
+     * Stream index in the audio media session.
      */
     unsigned    streamIdx;
 };
@@ -722,10 +818,60 @@ struct OnDtmfDigitParam
     string		digit;
 
     /**
-     * DTMF signal duration which might be included when sending DTMF using 
-     * SIP INFO.
+     * DTMF signal duration. If the duration is unknown, this value is set to
+     * PJSUA_UNKNOWN_DTMF_DURATION.
      */
     unsigned		duration;
+};
+
+/**
+ * This structure contains parameters for Call::onDtmfEvent()
+ * callback.
+ */
+struct OnDtmfEventParam
+{
+    /**
+     * DTMF sending method.
+     */
+    pjsua_dtmf_method   method;
+
+    /**
+     * The timestamp identifying the begin of the event. Timestamp units are
+     * expressed in milliseconds.
+     * Note that this value should only be used to compare multiple events
+     * received via the same method relatively to each other, as the time-base
+     * is randomized.
+     */
+    unsigned            timestamp;
+
+    /**
+     * DTMF ASCII digit.
+     */
+    string              digit;
+
+    /**
+     * DTMF signal duration in milliseconds. Interpretation of the duration
+     * depends on the flag PJMEDIA_STREAM_DTMF_IS_END.
+     * depends on the method.
+     * If the method is PJSUA_DTMF_METHOD_SIP_INFO, this contains the total
+     * duration of the DTMF signal or PJSUA_UNKNOWN_DTMF_DURATION if no signal
+     * duration was indicated.
+     * If the method is PJSUA_DTMF_METHOD_RFC2833, this contains the total
+     * duration of the DTMF signal received up to this point in time.
+     */
+    unsigned            duration;
+
+    /**
+     * Flags indicating additional information about the DTMF event.
+     * If PJMEDIA_STREAM_DTMF_IS_UPDATE is set, the event was already
+     * indicated earlier. The new indication contains an updated event
+     * duration.
+     * If PJMEDIA_STREAM_DTMF_IS_END is set, the event has ended and this
+     * indication contains the final event duration. Note that end
+     * indications might get lost. Hence it is not guaranteed to receive
+     * an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
+     */
+    unsigned            flags;
 };
 
 /**
@@ -876,7 +1022,7 @@ struct OnCallRxReinviteParam
      * On input, it is false. Set to true if app wants to manually answer
      * the re-INVITE.
      */
-    bool		async;
+    bool		isAsync;
     
     /**
      * Status code to be returned for answering the offer. On input,
@@ -1692,12 +1838,25 @@ public:
      */
     virtual void onCallSdpCreated(OnCallSdpCreatedParam &prm)
     { PJ_UNUSED_ARG(prm); }
-    
+
     /**
-     * Notify application when media session is created and before it is
+     * Notify application when an audio media session is about to be created
+     * (as opposed to #on_stream_created() and #on_stream_created2() which are
+     * called *after* the session has been created). The application may change
+     * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
+     * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
+     * vidCodecParam.encFmt (video).
+     *
+     * @param prm       Callback parameter.
+     */
+    virtual void onStreamPreCreate(OnStreamPreCreateParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application when audio media session is created and before it is
      * registered to the conference bridge. Application may return different
-     * media port if it has added media processing port to the stream. This
-     * media port then will be added to the conference bridge instead.
+     * audio media port if it has added media processing port to the stream.
+     * This media port then will be added to the conference bridge instead.
      *
      * @param prm	Callback parameter.
      */
@@ -1705,8 +1864,8 @@ public:
     { PJ_UNUSED_ARG(prm); }
     
     /**
-     * Notify application when media session has been unregistered from the
-     * conference bridge and about to be destroyed.
+     * Notify application when audio media session has been unregistered from
+     * the conference bridge and about to be destroyed.
      *
      * @param prm	Callback parameter.
      */
@@ -1720,7 +1879,15 @@ public:
      */
     virtual void onDtmfDigit(OnDtmfDigitParam &prm)
     { PJ_UNUSED_ARG(prm); }
-    
+
+    /**
+     * Notify application upon incoming DTMF events.
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onDtmfEvent(OnDtmfEventParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
     /**
      * Notify application on call being transferred (i.e. REFER is received).
      * Application can decide to accept/reject transfer request by setting

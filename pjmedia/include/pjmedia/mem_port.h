@@ -86,6 +86,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_player_create(pj_pool_t *pool,
 					       pjmedia_port **p_port );
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the buffer reading has reached the
  * end of buffer. If the player is set to play repeatedly, then the callback
@@ -106,7 +107,30 @@ pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
 			       void *user_data,
 			       pj_status_t (*cb)(pjmedia_port *port,
 						 void *usr_data));
+#endif
 
+
+/**
+ * Register a callback to be called when the buffer reading has reached the
+ * end of buffer. If the player is set to play repeatedly, then the callback
+ * will be called multiple times. Note that only one callback can be 
+ * registered for each player port.
+ *
+ * @param port		The memory player port.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. Note that if
+ *			application wishes to stop the playback, it
+ *			can disconnect the port in the callback, and
+ *			only after all connections have been removed
+ *			could the application safely destroy the port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_mem_player_set_eof_cb2(pjmedia_port *port,
+			       void *user_data,
+			       void (*cb)(pjmedia_port *port,
+					  void *usr_data));
 
 /**
  * @}
@@ -151,6 +175,7 @@ PJ_DECL(pj_status_t) pjmedia_mem_capture_create(pj_pool_t *pool,
 						pjmedia_port **p_port);
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when no space left in the buffer.
  * Note that when a callback is registered, this callback will also be
@@ -174,6 +199,28 @@ pjmedia_mem_capture_set_eof_cb(pjmedia_port *port,
                                void *user_data,
                                pj_status_t (*cb)(pjmedia_port *port,
 						 void *usr_data));
+#endif
+
+
+/**
+ * Register a callback to be called when no space left in the buffer.
+ *
+ * @param port		The memory recorder port.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. Note that if
+ *			application wishes to stop the recording, it
+ *			can disconnect the port in the callback, and
+ *			only after all connections have been removed
+ *			could the application safely destroy the port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_mem_capture_set_eof_cb2(pjmedia_port *port,
+                                void *user_data,
+                                void (*cb)(pjmedia_port *port,
+					   void *usr_data));
+
 
 /**
  * Return the current size of the recorded data in the buffer.

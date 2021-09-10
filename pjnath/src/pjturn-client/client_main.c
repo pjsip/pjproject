@@ -478,7 +478,7 @@ static void console_main(void)
 					strlen(input)+1, 
 					&peer->mapped_addr, 
 					pj_sockaddr_get_len(&peer->mapped_addr));
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS && status != PJ_EPENDING)
 		my_perror("turn_udp_sendto() failed", status);
 	    break;
 	case 'b':

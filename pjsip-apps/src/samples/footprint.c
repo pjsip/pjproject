@@ -222,7 +222,7 @@ int dummy_function()
     pj_ice_strans_init_ice(NULL, PJ_ICE_SESS_ROLE_CONTROLLED, NULL, NULL);
     pj_ice_strans_start_ice(NULL, NULL, NULL, 0, NULL);
     pj_ice_strans_stop_ice(NULL);
-    pj_ice_strans_sendto(NULL, 0, NULL, 0, NULL, 0);
+    pj_ice_strans_sendto2(NULL, 0, NULL, 0, NULL, 0);
 #endif
 
 #ifdef HAS_PJSIP_CORE_MSG_ELEM
@@ -403,7 +403,7 @@ int dummy_function()
     pjsip_evsub_terminate(NULL, PJ_FALSE);
     pjsip_evsub_get_state(NULL);
     pjsip_evsub_get_state_name(NULL);
-    pjsip_evsub_initiate(NULL, NULL, -1, NULL);
+    pjsip_evsub_initiate(NULL, NULL, PJSIP_EXPIRES_NOT_SPECIFIED, NULL);
     pjsip_evsub_accept(NULL, NULL, 200, NULL);
     pjsip_evsub_notify(NULL, PJSIP_EVSUB_STATE_ACTIVE, NULL, NULL, NULL);
     pjsip_evsub_current_notify(NULL, NULL);
@@ -587,13 +587,13 @@ int dummy_function()
     pjmedia_wav_player_port_create(NULL, NULL, 0, 0, 0, NULL);
     pjmedia_wav_player_port_set_pos(NULL, 0);
     pjmedia_wav_player_port_get_pos(NULL);
-    pjmedia_wav_player_set_eof_cb(NULL, NULL, NULL);
+    pjmedia_wav_player_set_eof_cb2(NULL, NULL, NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_FILE_CAPTURE
     pjmedia_wav_writer_port_create(NULL, NULL, 8000, 1, 80, 16, 0, 0, NULL);
     pjmedia_wav_writer_port_get_pos(NULL);
-    pjmedia_wav_writer_port_set_cb(NULL, 0, NULL, NULL);
+    pjmedia_wav_writer_port_set_cb2(NULL, 0, NULL, NULL);
 #endif
 
 #ifdef HAS_PJMEDIA_MEM_PLAYER

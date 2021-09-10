@@ -622,6 +622,10 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 ac_main_obj
 ac_host
+ac_webrtc_aec3_ldflags
+ac_webrtc_aec3_cflags
+ac_webrtc_aec3_instset
+ac_no_webrtc_aec3
 ac_webrtc_ldflags
 ac_webrtc_cflags
 ac_webrtc_instset
@@ -650,6 +654,9 @@ openssl_h_present
 ac_ssl_backend
 ac_ssl_has_aes_gcm
 ac_no_ssl
+ac_no_mediacodec
+ac_vpx_ldflags
+ac_vpx_cflags
 ac_openh264_ldflags
 ac_openh264_cflags
 ac_v4l2_ldflags
@@ -679,6 +686,9 @@ ac_darwin_cflags
 ac_pjmedia_video_has_ios_opengl
 ac_pjmedia_video_has_vtoolbox
 ac_pjmedia_video_has_darwin
+ac_dshow_ldflags
+ac_dshow_cflags
+ac_pjmedia_video_dev_has_dshow
 ac_android_cflags
 ac_pjmedia_video_has_android
 ac_pjmedia_video
@@ -687,6 +697,7 @@ ac_pa_cflags
 ac_external_pa
 ac_pjmedia_snd
 ac_pjmedia_resample
+ac_external_webrtc_aec3
 ac_external_webrtc
 ac_external_yuv
 ac_srtp_shutdown_present
@@ -695,6 +706,7 @@ ac_external_srtp_lib
 ac_external_srtp
 ac_external_gsm
 ac_external_speex
+ac_no_pjsua2
 ac_shared_libraries
 ac_linux_poll
 ac_os_objs
@@ -704,6 +716,7 @@ GREP
 CPP
 ac_cross_compile
 ac_shlib_suffix
+ac_cflags
 ac_build_mak_vars
 ac_pjdir
 CC_CFLAGS
@@ -785,11 +798,13 @@ enable_option_checking
 enable_floating_point
 enable_epoll
 enable_shared
+enable_pjsua2
 with_external_speex
 with_external_gsm
 with_external_srtp
 with_external_yuv
 with_external_webrtc
+with_external_webrtc_aec3
 enable_resample
 enable_sound
 with_external_pa
@@ -807,6 +822,7 @@ enable_speex_codec
 enable_ilbc_codec
 enable_libsamplerate
 enable_resample_dll
+enable_speex_resample
 with_sdl
 enable_sdl
 with_ffmpeg
@@ -814,10 +830,13 @@ enable_ffmpeg
 enable_v4l2
 with_openh264
 enable_openh264
+with_vpx
+enable_vpx
 enable_ipp
 with_ipp
 with_ipp_samples
 with_ipp_arch
+enable_android_mediacodec
 with_ssl
 with_gnutls
 enable_darwin_ssl
@@ -834,6 +853,7 @@ with_bcg729
 enable_bcg729
 enable_libyuv
 enable_libwebrtc
+enable_libwebrtc_aec3
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1465,6 +1485,8 @@ Optional Features:
                           Disable floating point where possible
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --enable-shared         Build shared libraries
+  --disable-pjsua2        Exclude pjsua2 library and application from the
+                          build
   --disable-resample      Disable resampling implementations
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-video         Disable video feature
@@ -1481,14 +1503,18 @@ Optional Features:
   --disable-ilbc-codec    Exclude iLBC codec in the build
   --enable-libsamplerate  Link with libsamplerate when available.
   --enable-resample-dll   Build libresample as shared library
+  --enable-speex-resample Enable Speex resample
   --disable-sdl           Disable SDL (default: not disabled)
   --disable-ffmpeg        Disable ffmpeg (default: not disabled)
   --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --disable-openh264      Disable OpenH264 (default: not disabled)
+  --disable-vpx           Disable VPX (default: not disabled)
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
                           --with-ipp-samples options
+  --disable-android-mediacodec
+                          Exclude Android MediaCodec (default: autodetect)
   --disable-darwin-ssl    Exclude Darwin SSL (default: autodetect)
   --disable-ssl           Exclude SSL support the build (default: autodetect)
 
@@ -1504,6 +1530,7 @@ Optional Features:
   --disable-bcg729        Disable bcg729 (default: not disabled)
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
+  --enable-libwebrtc-aec3 Build libwebrtc-aec3 that's included in PJSIP
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1533,6 +1560,12 @@ Optional Packages:
                           make sure that webrtc is accessible to use (hint:
                           use CFLAGS and LDFLAGS env var to set the
                           include/lib paths)
+  --with-external-webrtc-aec3
+                          Use external webrtc AEC3 development files, not the
+                          one in "third_party" directory. When this option is
+                          set, make sure that webrtc is accessible to use
+                          (hint: use CFLAGS and LDFLAGS env var to set the
+                          include/lib paths)
   --with-external-pa      Use external PortAudio development files. When this
                           option is set, make sure that PortAudio is
                           accessible to use (hint: use CFLAGS and LDFLAGS env
@@ -1540,6 +1573,7 @@ Optional Packages:
   --with-sdl=DIR          Specify alternate libSDL prefix
   --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-openh264=DIR     Specify alternate OpenH264 prefix
+  --with-vpx=DIR          Specify alternate VPX prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -3946,6 +3980,7 @@ if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 
 
 
+
 case $host in
     *mingw* | *cygw* | *win32* | *w32* )
 	if pwd -W 2&> /dev/null; then
@@ -5132,8 +5167,10 @@ $as_echo "#define AC_APPLE_UNIVERSAL_BUILD 1" >>confdefs.h
 
 if test "x$ac_cv_c_bigendian" = "xyes"; then
   CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
+  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
 else
   CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
+  ac_cflags="$ac_cflags -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
 fi
 
 
@@ -5150,6 +5187,12 @@ case $target in
 
 	$as_echo "#define WIN32_LEAN_AND_MEAN 1" >>confdefs.h
 
+	case $target in
+	    *_64-w64-mingw* )
+		$as_echo "#define PJ_WIN64 1" >>confdefs.h
+
+	    ;;
+	esac
 	;;
     *darwin*)
 	$as_echo "#define PJ_DARWINOS 1" >>confdefs.h
@@ -5923,6 +5966,21 @@ fi
 
 
 
+# Check whether --enable-pjsua2 was given.
+if test "${enable_pjsua2+set}" = set; then :
+  enableval=$enable_pjsua2; if test "$enable_pjsua2" = "no"; then
+		ac_no_pjsua2=1
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Building pjsua2 library and application... no" >&5
+$as_echo "Building pjsua2 library and application... no" >&6; }
+	       fi
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Building pjsua2 library and application... yes" >&5
+$as_echo "Building pjsua2 library and application... yes" >&6; }
+
+fi
+
+
+
 case $target in
   *mingw* | *cygw* | *win32* | *w32* )
 	ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o sock_qos_bsd.o unicode_win32.o"
@@ -5946,10 +6004,22 @@ case $target in
 		ac_os_objs="$ac_os_objs sock_qos_bsd.o"
 		;;
 	esac
+	# SSL
+	case $target in
+	  *darwin*)
+		ac_os_objs="$ac_os_objs ssl_sock_apple.o"
+		;;
+	esac
 	# UUID
 	case $target in
 	  *android*)
 	  	ac_os_objs="$ac_os_objs guid_android.o"
+	  	;;
+	  *darwin*)
+	  	ac_os_objs="$ac_os_objs guid_darwin.o"
+	  	;;
+	  *bsd*)
+	  	ac_os_objs="$ac_os_objs guid_bsd.o"
 	  	;;
 	  *)
 		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
@@ -6306,6 +6376,44 @@ fi
 
 
 
+ac_external_webrtc_aec3=0
+
+
+# Check whether --with-external-webrtc-aec3 was given.
+if test "${with_external_webrtc_aec3+set}" = set; then :
+  withval=$with_external_webrtc_aec3;
+	if test "x$with_external_webrtc_aec3" != "xno"; then
+		# Test webrtc AEC3 installation
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking if external webrtc AEC3 is installed" >&5
+$as_echo_n "checking if external webrtc AEC3 is installed... " >&6; }
+		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include "modules/audio_processing/aec3/echo_canceller3.h"
+
+int
+main ()
+{
+EchoCanceller3 ec(EchoCanceller3Config(), 16000, 1, 1);
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes!!" >&5
+$as_echo "yes!!" >&6; }
+				   ac_external_webrtc_aec3="1"
+
+else
+  as_fn_error $? "Unable to use external webrtc AEC3. If webrtc development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths" "$LINENO" 5
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+	fi
+
+
+fi
+
+
+
 ac_pjmedia_resample=libresample
 
 # Check whether --enable-resample was given.
@@ -6459,10 +6567,12 @@ fi
 
 
 
-# Disable video on mingw
+# Disable video on mingw by default (but respect --enable-video=yes)
 case $target in
  *mingw*)
+	if test ! "$enable_video" = "yes"; then
 	enable_video="no"
+	fi
 	;;
 esac
 
@@ -6477,6 +6587,7 @@ $as_echo "Video is disabled" >&6; }
                 enable_v4l2="no"
                 enable_openh264="no"
                 enable_libyuv="no"
+                enable_vpx="no"
                fi
 fi
 
@@ -6532,6 +6643,18 @@ $as_echo "Checking if OpenGL ES 2 is available... yes" >&6; }
 $as_echo "Checking if OpenGL ES 2 is available... no" >&6; }
 	fi
 	ac_android_cflags="$ac_android_cflags -DPJMEDIA_VIDEO_DEV_HAS_ANDROID=1"
+	;;
+  *mingw*)
+	if test "$enable_video" = "yes"; then
+	  ac_pjmedia_video=windows_os
+
+	  ac_pjmedia_video_dev_has_dshow=yes
+
+	  ac_dshow_cflags="-DPJMEDIA_HAS_VIDEO=1 -DPJMEDIA_VIDEO_DEV_HAS_DSHOW=1"
+
+	  ac_dshow_ldflags=" -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	  LIBS="$LIBS -lstdc++ -lquartz -lole32 -loleaut32 -lrpcrt4 -lwinmm -luuid -lmingwex -lstrmiids "
+	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=darwin_os
@@ -6910,6 +7033,24 @@ $as_echo "Building libresample as shared library... no" >&6; }
 fi
 
 
+# Check whether --enable-speex-resample was given.
+if test "${enable_speex_resample+set}" = set; then :
+  enableval=$enable_speex_resample;
+           if test "$enable_speex_resample" = "yes"; then
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... yes" >&5
+$as_echo "Checking if Speex resample is enabled... yes" >&6; }
+             ac_pjmedia_resample=speex
+           else
+             { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... no" >&5
+$as_echo "Checking if Speex resample is enabled... no" >&6; }
+           fi
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Speex resample is enabled... no" >&5
+$as_echo "Checking if Speex resample is enabled... no" >&6; }
+fi
+
+
 
 # Check whether --with-sdl was given.
 if test "${with_sdl+set}" = set; then :
@@ -7041,6 +7182,7 @@ $as_echo "not found" >&6; }
 			ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			ac_sdl_ldflags=`$SDL_CONFIG --libs`
+			ac_sdl_ldflags=${ac_sdl_ldflags//-mwindows/}
 			LIBS="$LIBS $ac_sdl_ldflags"
 		  else
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Unsupported SDL version" >&5
@@ -7589,8 +7731,94 @@ _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
    ac_openh264_cflags="-DPJMEDIA_HAS_OPENH264_CODEC=1 $OPENH264_CFLAGS"
 		  		   ac_openh264_ldflags="$OPENH264_LDFLAGS $OPENH264_LIBS"
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+else
+
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+
+
+
+# Check whether --with-vpx was given.
+if test "${with_vpx+set}" = set; then :
+  withval=$with_vpx;
+else
+  with_vpx=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_vpx" = "xno"; then
+    enable_vpx=no
+fi
+
+
+
+# Check whether --enable-vpx was given.
+if test "${enable_vpx+set}" = set; then :
+  enableval=$enable_vpx;
+		if test "$enable_vpx" = "no"; then
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if VPX is disabled... yes" >&5
+$as_echo "Checking if VPX is disabled... yes" >&6; }
+		fi
+
+else
+
+		  if test "x$with_vpx" != "xno" -a "x$with_vpx" != "x"; then
+		        VPX_PREFIX=$with_vpx
+		  	VPX_CFLAGS="-I$VPX_PREFIX/include"
+			VPX_LDFLAGS="-L$VPX_PREFIX/lib"
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using VPX prefix... $with_vpx" >&5
+$as_echo "Using VPX prefix... $with_vpx" >&6; }
+		  else
+		  	VPX_CFLAGS=""
+			VPX_LDFLAGS=""
+		  fi
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking VPX usability" >&5
+$as_echo_n "checking VPX usability... " >&6; }
+
+		  VPX_LIBS="-lvpx"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$VPX_LIBS $LIBS"
+		  LDFLAGS="$VPX_LDFLAGS $LDFLAGS"
+		  CFLAGS="$VPX_CFLAGS $CFLAGS"
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <vpx/vpx_encoder.h>
+						    #include <vpx/vp8cx.h>
+
+int
+main ()
+{
+vpx_codec_iface_t *(*enc_if)() = &vpx_codec_vp8_cx;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+   ac_vpx_cflags="-DPJMEDIA_HAS_VPX_CODEC=1 $VPX_CFLAGS"
+		  		   ac_vpx_ldflags="$VPX_LDFLAGS $VPX_LIBS"
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 else
 
@@ -7752,8 +7980,8 @@ ippStaticInit();
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -7879,8 +8107,8 @@ extern USC_Fxns USC_G729AFP_Fxns;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
@@ -7910,6 +8138,73 @@ export IPP_LIBS=$IPP_LIBS"
 else
     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Skipping Intel IPP settings (not wanted)" >&5
 $as_echo "Skipping Intel IPP settings (not wanted)" >&6; }
+fi
+
+
+
+# Check whether --enable-android-mediacodec was given.
+if test "${enable_android_mediacodec+set}" = set; then :
+  enableval=$enable_android_mediacodec; if test "$enable_android_mediacodec" = "no"; then
+	     ac_no_mediacodec=1
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android MediaCodec support is disabled... yes" >&5
+$as_echo "Checking if Android MediaCodec support is disabled... yes" >&6; }
+	        fi
+else
+
+		case $target in
+        *android*)
+	      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for AMediaCodec_createDecoderByType in -lmediandk" >&5
+$as_echo_n "checking for AMediaCodec_createDecoderByType in -lmediandk... " >&6; }
+if ${ac_cv_lib_mediandk_AMediaCodec_createDecoderByType+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lmediandk  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char AMediaCodec_createDecoderByType ();
+int
+main ()
+{
+return AMediaCodec_createDecoderByType ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=yes
+else
+  ac_cv_lib_mediandk_AMediaCodec_createDecoderByType=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&5
+$as_echo "$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" >&6; }
+if test "x$ac_cv_lib_mediandk_AMediaCodec_createDecoderByType" = xyes; then :
+  ac_pjmedia_has_amediacodec=1 && LIBS="-lmediandk $LIBS"
+fi
+
+	      if test "x$ac_pjmedia_has_amediacodec" = "x1"; then
+		    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... yes" >&5
+$as_echo "Checking if Android AMediaCodec library is available... yes" >&6; }
+		    $as_echo "#define PJMEDIA_HAS_ANDROID_MEDIACODEC 1" >>confdefs.h
+
+	      else
+		    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Android AMediaCodec library is available... no" >&5
+$as_echo "Checking if Android AMediaCodec library is available... no" >&6; }
+	      fi
+		  ;;
+		esac
+
 fi
 
 
@@ -7953,6 +8248,8 @@ else
 
 		case $target in
 	  	*darwin*)
+	            SAVED_CFLAGS="$CFLAGS"
+	            CFLAGS="-Werror"
 	            SAVED_LIBS="$LIBS"
 	            LIBS="-framework Security"
 		    cat confdefs.h - <<_ACEOF >conftest.$ac_ext
@@ -7961,7 +8258,7 @@ else
 int
 main ()
 {
-if (__builtin_available(macOS 10.3, iOS 11.3, *)) {
+if (__builtin_available(macOS 10.12, iOS 10.0, *)) {
 			     SSLContextRef ssl_ctx;
 			     SSLReHandshake(ssl_ctx);
 			 }
@@ -7973,6 +8270,7 @@ if ac_fn_c_try_compile "$LINENO"; then :
   ac_ssl_backend=darwin
 fi
 rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+		    CFLAGS="$SAVED_CFLAGS"
 		    LIBS="$SAVED_LIBS"
 	            if test "x$ac_ssl_backend" = "xdarwin"; then
 		        $as_echo "#define PJ_HAS_SSL_SOCK 1" >>confdefs.h
@@ -7980,11 +8278,11 @@ rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 		        $as_echo "#define PJ_SSL_SOCK_IMP PJ_SSL_SOCK_IMP_DARWIN" >>confdefs.h
 
 		        LIBS="$LIBS -framework Security"
-	  	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... yes" >&5
-$as_echo "Checking if Security framework for Darwin SSL is available... yes" >&6; }
+	  	        { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... yes" >&5
+$as_echo "Checking if Darwin SSL is available... yes" >&6; }
 	            else
-	                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Security framework for Darwin SSL is available... no" >&5
-$as_echo "Checking if Security framework for Darwin SSL is available... no" >&6; }
+	                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if Darwin SSL is available... no" >&5
+$as_echo "Checking if Darwin SSL is available... no" >&6; }
 		    fi
 		    ;;
 		esac
@@ -8838,8 +9136,8 @@ if ac_fn_c_try_link "$LINENO"; then :
 
 				   $as_echo "#define PJMEDIA_HAS_BCG729 1" >>confdefs.h
 
-		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+		  		   { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
 
 else
 
@@ -8930,8 +9228,11 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 			    mips*)
 			    	ac_webrtc_instset=mips
 			        ;;
+			    x86*)
+			    	ac_webrtc_instset=sse2
+			    	;;
 			    *)
-				ac_webrtc_instset=sse2
+				ac_webrtc_instset=generic
 			    	;;
 			esac
 		        ;;
@@ -8945,6 +9246,10 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
                                  ac_webrtc_instset=neon
                                  ac_webrtc_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
                                  ;;
+			     arm-apple-darwin*)
+				 ac_webrtc_instset=neon
+				 ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
+			    	 ;;
                              *)
                                  ac_webrtc_instset=sse2
                                  ;;
@@ -8953,6 +9258,140 @@ $as_echo "Checking if libwebrtc is disabled...no" >&6; }
 		     *)
 			;;
 		esac
+
+fi
+
+
+
+
+
+
+
+# Check whether --enable-libwebrtc_aec3 was given.
+if test "${enable_libwebrtc_aec3+set}" = set; then :
+  enableval=$enable_libwebrtc_aec3;
+           	if test "$enable_libwebrtc_aec3" = "yes"; then
+		  # Test if we can build WebRtc AEC3
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking if WebRtc AEC3 can be compiled with C++17" >&5
+$as_echo_n "checking if WebRtc AEC3 can be compiled with C++17... " >&6; }
+
+		  SAVED_CXXFLAGS="$CXXFLAGS"
+		  CXXFLAGS="$CXXFLAGS -std=c++17"
+
+		  ac_ext=cpp
+ac_cpp='$CXXCPP $CPPFLAGS'
+ac_compile='$CXX -c $CXXFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CXX -o conftest$ac_exeext $CXXFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_cxx_compiler_gnu
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+		   LD="$CXX"
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+		   CXXFLAGS="$SAVED_CXXFLAGS"
+		   ac_no_webrtc_aec3=1
+		   $as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
+
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+		  ac_ext=c
+ac_cpp='$CPP $CPPFLAGS'
+ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
+ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
+ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+		  case $target in
+		      *-apple-darwin_ios*)
+			case $target in
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    *arm*)
+				ac_webrtc_aec3_instset=neon
+			    	;;
+			    *)
+				ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		      *android*)
+			case $TARGET_ABI in
+			    armeabi-v7a)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mfloat-abi=softfp -mfpu=neon"
+			    	;;
+			    armeabi)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-mthumb -mfloat-abi=softfp -mfpu=neon -march=armv7"
+			    	;;
+			    arm64*)
+				ac_webrtc_aec3_instset=neon
+				ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	;;
+			    x86*)
+			    	ac_webrtc_aec3_instset=sse2
+			    	;;
+			esac
+		        ;;
+		     *mingw* | *cygw*)
+			ac_webrtc_aec3_instset=sse2
+			ac_webrtc_aec3_cflags="-msse2"
+			;;
+		     *win32* | *w32* | *darwin* | *linux*)
+                         case $target in
+                             armv7l*gnueabihf)
+                                 ac_webrtc_aec3_instset=neon
+                                 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
+                                 ;;
+			     arm-apple-darwin*)
+				 ac_webrtc_aec3_instset=neon
+				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
+			    	 ;;
+                             *)
+                                 ac_webrtc_aec3_instset=sse2
+                                 ;;
+                         esac
+                         case $target in
+                             *darwin*)
+                                 ac_webrtc_aec3_cflags+=" -DWEBRTC_MAC=1"
+                                 ;;
+                         esac
+			;;
+		     *)
+			;;
+		  esac
+		  ac_webrtc_aec3_cflags+=" -DWEBRTC_APM_DEBUG_DUMP=0 -DWEBRTC_POSIX=1"
+           	else
+           	  ac_no_webrtc_aec3=1
+           	  $as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
+
+             	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is enabled...no" >&5
+$as_echo "Checking if libwebrtc-aec3 is enabled...no" >&6; }
+          	fi
+
+else
+  ac_no_webrtc_aec3=1
+	       $as_echo "#define PJMEDIA_HAS_LIBWEBRTC_AEC3 0" >>confdefs.h
+
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if libwebrtc-aec3 is enabled...no" >&5
+$as_echo "Checking if libwebrtc-aec3 is enabled...no" >&6; }
 
 fi
 

@@ -1,0 +1,907 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-Dynamic|ARM">
+      <Configuration>Debug-Dynamic</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Dynamic|ARM64">
+      <Configuration>Debug-Dynamic</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Dynamic|Win32">
+      <Configuration>Debug-Dynamic</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Dynamic|x64">
+      <Configuration>Debug-Dynamic</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Static|ARM">
+      <Configuration>Debug-Static</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Static|ARM64">
+      <Configuration>Debug-Static</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Static|Win32">
+      <Configuration>Debug-Static</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Static|x64">
+      <Configuration>Debug-Static</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Dynamic|ARM">
+      <Configuration>Release-Dynamic</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Dynamic|ARM64">
+      <Configuration>Release-Dynamic</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Dynamic|Win32">
+      <Configuration>Release-Dynamic</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Dynamic|x64">
+      <Configuration>Release-Dynamic</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Static|ARM">
+      <Configuration>Release-Static</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Static|ARM64">
+      <Configuration>Release-Static</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Static|Win32">
+      <Configuration>Release-Static</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Static|x64">
+      <Configuration>Release-Static</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM">
+      <Configuration>Release</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- Check the instruction set -->
+  <PropertyGroup>
+    <InstSet Condition="$(Platform)==Win32">SSE</InstSet>
+    <InstSet Condition="$(Platform)==x64">SSE</InstSet>
+    <InstSet Condition="$(Platform)==ARM">NEON</InstSet>
+    <InstSet Condition="$(Platform)==ARM64">NEON</InstSet>
+  </PropertyGroup>    
+  <ItemGroup>
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\config.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_control.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\webrtc_aec3\src\absl\types\bad_optional_access.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\channel_layout.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_config.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_factory.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_detector_creator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\audio_util.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_resampler.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_sinc_resampler.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_avx2.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_sse.cc" />
+    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_neon.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\signal_processing\splitting_filter2.c" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_sse2.cc" />
+    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_neon.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_256\fft4g.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_common.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_fft.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec_state.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\alignment_mixer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\api_call_jitter_metrics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_delay_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_framer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor_metrics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\clockdrift_detector.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\coarse_filter_update_gain.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\comfort_noise_generator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\decimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\dominant_nearend_detector.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\downsampled_render_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_audibility.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_canceller3.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_delay_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_variability.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover_metrics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erle_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erl_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_buffer.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_data_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\filter_analyzer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\frame_blocker.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fullband_erle_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_lag_aggregator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\moving_average.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\refined_filter_update_gain.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller_metrics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_signal_analyzer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\residual_echo_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_decay_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_frequency_response.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\signal_dependent_erle_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\spectrum_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\stationarity_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_erle_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_nearend_detector.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output_analyzer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_gain.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\transparent_mode.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\vector_math_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_agc.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_digital_gain_applier.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_mode_level_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\biquad_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\compute_interpolated_gain_curve.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\cpu_features.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\down_sampler.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\fixed_digital_level_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\gain_applier.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\interpolated_gain_curve.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter_db_gain_curve.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_level_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_spectrum_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\auto_correlation.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\features_extraction.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\lp_residual.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search_internal.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_fc.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_gru.cc" />
+    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_vector_math_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features_internal.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\signal_classifier.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vad_with_level.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vector_float_frame.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\audio_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\gain_controller2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\high_pass_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\logging\apm_data_dumper.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\fast_math.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\histograms.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_suppressor.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\ns_fft.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\quantile_noise_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\speech_probability_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\suppression_params.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\wiener_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\splitting_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\three_band_filter_bank.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\cascaded_biquad_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator_wrapper.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\pffft_wrapper.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\checks.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\experiments\field_trial_parser.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\logging.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\memory\aligned_malloc.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\platform_thread_types.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\race_checker.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\strings\string_builder.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_encode.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_to_number.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_utils.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\synchronization\yield.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system\file_wrapper.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system_time.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\time_utils.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\cpu_features2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\field_trial.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\metrics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\third_party\pffft\src\pffft.c" />
+    <ClCompile Include="..\..\webrtc_aec3\src\third_party\rnnoise\src\rnn_vad_weights.cc" />
+  </ItemGroup>
+  <!-- Import common config -->
+  <Import Project="..\..\..\build\vs\pjproject-vs14-common-config.props" />
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{D738A812-CE37-40A4-B2FA-D81488C12C87}</ProjectGuid>
+    <RootNamespace>libwebrtc_aec3</RootNamespace>
+    <!-- Specific UWP property -->
+    <DefaultLanguage>en-US</DefaultLanguage>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v142</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <!-- Override the PlatformToolset -->
+  <PropertyGroup>
+    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
+    </CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>14.0.24730.2</_ProjectFileVersion>
+    <OutDir>..\..\lib\</OutDir>
+  </PropertyGroup>
+  <!-- Compile and link option definition -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">
+    <Midl>
+      <TargetEnvironment>X64</TargetEnvironment>
+    </Midl>
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

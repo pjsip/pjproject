@@ -74,6 +74,8 @@ struct playlist_port
     int              max_file;	    /* how many files.		*/
 
     pj_status_t	   (*cb)(pjmedia_port*, void*);
+    pj_bool_t	     subscribed;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 
@@ -101,6 +103,20 @@ static struct playlist_port *create_file_list_port(pj_pool_t *pool,
     port->base.on_destroy = &file_list_on_destroy;
 
     return port;
+}
+
+
+static pj_status_t file_on_event(pjmedia_event *event,
+                                 void *user_data)
+{
+    struct playlist_port *fport = (struct playlist_port*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (fport->cb2)
+	    (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
+    }
+    
+    return PJ_SUCCESS;
 }
 
 
@@ -175,8 +191,46 @@ static pj_status_t file_fill_buffer(struct playlist_port *fport)
 		}
 
 		/* All files have been played. Call callback, if any. */
-		if (fport->cb)
-		{
+		if (fport->cb2) {
+	    	    pj_bool_t no_loop = (fport->options & PJMEDIA_FILE_NO_LOOP);
+
+	    	    if (!fport->subscribed) {
+	    		status = pjmedia_event_subscribe(NULL, &file_on_event,
+	    				         	 fport, fport);
+	    		fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+	    			    	    PJ_FALSE;
+	    	    }
+
+	    	    if (fport->subscribed && fport->eof != 2) {
+	    	    	pjmedia_event event;
+
+	    		if (no_loop) {
+	    	    	    /* To prevent the callback from being called
+	    	    	     * repeatedly.
+	    	    	     */
+	    	    	    fport->eof = 2;
+	    		} else {
+	    	    	    fport->eof = PJ_FALSE;
+		    	    /* start with first file again. */
+		    	    fport->current_file = current_file = 0;
+		    	    fport->fpos_list[0] = fport->start_data_list[0];
+		    	    pj_file_setpos(fport->fd_list[0],
+		    	    		   fport->fpos_list[0], PJ_SEEK_SET);
+		    	    fport->data_left_list[0] = fport->data_len_list[0];
+	    		}
+
+	    	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	       	   NULL, fport);
+	    	    	pjmedia_event_publish(NULL, fport, &event,
+	                              	  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	            }
+
+	    	    /* Should not access player port after this since
+	     	     * it might have been destroyed by the callback.
+	     	     */
+	    	    return (no_loop? PJ_EEOF: PJ_SUCCESS);
+
+	    	} else if (fport->cb) {
 		    PJ_LOG(5,(THIS_FILE,
 			      "File port %.*s EOF, calling callback",
 			      (int)fport->base.info.name.slen,
@@ -577,6 +631,7 @@ on_error:
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register a callback to be called when the file reading has reached the
  * end of the last file.
@@ -594,10 +649,40 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
     /* Check that this is really a playlist port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_wav_playlist_set_eof_cb() is deprecated. "
+    	       "Use pjmedia_wav_playlist_set_eof_cb2() instead."));
+
     fport = (struct playlist_port*) port;
 
     fport->base.port_data.pdata = user_data;
     fport->cb = cb;
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of the last file.
+ */
+PJ_DEF(pj_status_t) pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
+			        void *user_data,
+			        void (*cb)(pjmedia_port *port,
+					   void *usr_data))
+{
+    struct playlist_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+
+    /* Check that this is really a playlist port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+    fport = (struct playlist_port*) port;
+
+    fport->base.port_data.pdata = user_data;
+    fport->cb2 = cb;
 
     return PJ_SUCCESS;
 }
@@ -674,6 +759,11 @@ static pj_status_t file_list_on_destroy(pjmedia_port *this_port)
     int index;
 
     pj_assert(this_port->info.signature == SIGNATURE);
+
+    if (fport->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+    	fport->subscribed = PJ_FALSE;
+    }
 
     for (index=0; index<fport->max_file; index++)
 	pj_file_close(fport->fd_list[index]);

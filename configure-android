@@ -21,9 +21,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "                   android-9. By default, configure will use the"
   echo "                   maximum platform level detected."
   echo "  TARGET_ABI       Optionally specify a single target architecture,"
-  echo "                   e.g. armeabi-v7a, mips, x86. By default, the target"
-  echo "                   architecture is armeabi. Only used when"
-  echo "                   --use-ndk-cflags is specified."
+  echo "                   e.g. armeabi-v7a, arm64-v8a, mips, x86. By default, "
+  echo "                   the target architecture is arm64-v8a."
   echo "  IGNORE_CFLAGS    Optionally specify compilation flags to be ignored."
   echo "                   Each grepped flag that satisfies the criteria will"
   echo "                   be ignored. Default:"
@@ -43,18 +42,19 @@ fi
 NDK_VER=`sed -n -E 's/^Pkg.Revision *= *([0-9]+).*/\1/p' ${ANDROID_NDK_ROOT}/source.properties`
 
 if test "x$APP_PLATFORM" = "x"; then
-  APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
-  APP_PLATFORM="android-${APP_PLATFORM}"
+  if test -d ${ANDROID_NDK_ROOT}/platforms; then
+    APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
+  fi
+  if test "x$APP_PLATFORM" != "x"; then
+    APP_PLATFORM="android-${APP_PLATFORM}"
+  else
+    APP_PLATFORM="latest"
+  fi
   echo "$F: APP_PLATFORM not specified, using ${APP_PLATFORM}"
 fi
 
 if test "x$TARGET_ABI" = "x"; then
-  # armeabi was removed since NDK r17
-  if [ "${NDK_VER}" -ge "17" ]; then
-    TARGET_ABI="armeabi-v7a"
-  else
-    TARGET_ABI="armeabi"
-  fi
+  TARGET_ABI="arm64-v8a"
   echo "$F: TARGET_ABI not specified, using ${TARGET_ABI}"
 fi
 
@@ -72,10 +72,14 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
 
   ADD_CFLAGS="0"
   ADD_CXXFLAGS="0"
+  ADD_LDFLAGS="0"
   ADD_NDK_TOOLCHAIN="0"
   ADD_NDK_TARGET="0"
   if test "x${IGNORE_CFLAGS}" = "x"; then
-    IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias\|\-\<g\>"
+    IGNORE_CFLAGS="\-M\|\-f*stack\|\-f*alias\|\-\<g\>\|\-DNDEBUG\|\-O"
+  fi
+  if test "x${IGNORE_CPPFLAGS}" = "x"; then
+    IGNORE_CPPFLAGS="\-M\|\-f*stack\|\-f*alias\|\-\<g\>\|\-DNDEBUG\|\-O\|\-std\="
   fi
   
   if test -f ${ANDROID_NDK_ROOT}/build/ndk-build; then    
@@ -90,9 +94,9 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
     exit 1
   fi
 
-   echo "====="
-   echo "NDK_OUT : ${NDK_OUT}"
-   echo "====="
+  #echo "====="
+  #echo "NDK_OUT : ${NDK_OUT}"
+  #echo "====="
 
   for i in $NDK_OUT; do
 
@@ -102,11 +106,25 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
         ADD_CXXFLAGS="0"
         continue
       fi
+      if test "$i" = "-c"; then
+        continue
+      fi
       if test "x`echo $i|grep 'dummy'`" != "x"; then
         continue
       fi
-      if test "x`echo $i|grep '\-\-sysroot='`" != "x"; then
-        ANDROID_SYSROOT=`echo $i|sed 's/--sysroot=//'`;
+      if test "x`echo $i|grep ${IGNORE_CPPFLAGS}`" != "x"; then
+        continue
+      fi
+      # Check if flag is already in CFLAGS
+      ISDUP="0"
+      for j in $NDK_CFLAGS; do
+        if test "$i" = "$j"; then
+	  ISDUP="1"
+	  break
+	fi
+      done
+      if test "${ISDUP}" = "1"; then
+        continue
       fi
       NDK_CXXFLAGS="${NDK_CXXFLAGS} $i"
       continue
@@ -138,6 +156,22 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
       continue
     fi
 
+    # Parse NDK LDFLAGS
+    if test "${ADD_LDFLAGS}" = "1"; then
+      if test "$i" = "-o"; then
+        ADD_LDFLAGS="0"
+        continue
+      fi
+      if test "x`echo $i|grep 'dummy'`" != "x"; then
+        continue
+      fi
+      if test "x`echo $i|grep '.so'`" != "x"; then
+        continue
+      fi
+      NDK_LDFLAGS="${NDK_LDFLAGS} $i"
+      continue
+    fi
+
     # Find gcc or clang
     if test "x${NDK_CC}" = "x"; then
       if test "x`echo $i | grep 'gcc'`" != "x" -o "x`echo $i | grep 'clang'`" != "x"; then
@@ -147,6 +181,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
 	  IS_USING_LLVM="1"
 	  #echo "---using llvm"
 	fi
+	continue
       fi
     fi
 
@@ -155,23 +190,34 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
       if test "x`echo $i | grep 'g++'`" != "x"; then
         NDK_CXX=$i
         ADD_CXXFLAGS="1"
+	continue
+      fi
+    fi
+
+    # Find linking/LDFLAGS
+    if test "x${NDK_LDFLAGS}" = "x"; then
+      if test "x`echo $i | grep '\-\<shared\>'`" != "x"; then
+        ADD_LDFLAGS="1"
+	continue
       fi
     fi
 
     # Find ar tool
-    if test "x${NDK_AR}" = "x" -a "x${NDK_CC}" != "x" -a "x`echo $i|grep '\-ar'`" != "x"; then
-      if test "$(dirname \"${NDK_CC}\")" = "$(dirname \"${i}\")"; then
+    if test "x${NDK_AR}" = "x" -a "x${NDK_CC}" != "x" -a "x`echo $i|grep '\-\<ar\>'`" != "x"; then
+      # In some NDKs, e.g: r17c, gcc/clang and ar have different path
+      #if test "$(dirname \"${NDK_CC}\")" = "$(dirname \"${i}\")"; then
         NDK_AR=$i
         #echo "--- found AR=${NDK_AR}"
-      fi
+	continue
+      #fi
     fi
 
     # Find ranlib tool
-    if test "x${NDK_RANLIB}" = "x" -a "x${NDK_CC}" != "x" -a "x`echo $i|grep '\-ranlib'`" != "x"; then
-      if test "$(dirname \"${NDK_CC}\")" = "$(dirname \"${i}\")"; then
+    if test "x${NDK_RANLIB}" = "x" -a "x${NDK_CC}" != "x" -a "x`echo $i|grep '\-\<ranlib\>'`" != "x"; then
+      #if test "$(dirname \"${NDK_CC}\")" = "$(dirname \"${i}\")"; then
         NDK_RANLIB=$i
         #echo "--- found RANLIB=${NDK_RANLIB}"
-      fi
+      #fi
     fi
   done
 
@@ -198,7 +244,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
       NDK_CC_DIR=$(dirname "${NDK_CC}")
       NDK_AR=`find ${NDK_CC_DIR} -name "*ar" | grep -m 1 -v "gcc"`
     fi
-    export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT}"
+    export LDFLAGS="${LDFLAGS}"
   else
     # find ar and ranlib
     if test "x${NDK_AR}" = "x"; then
@@ -207,7 +253,7 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
     if test "x${NDK_RANLIB}" = "x"; then
       NDK_RANLIB=`find ${NDK_TOOLCHAIN}/bin/ -name "*-ranlib" | grep -m 1 -v "gcc"`
     fi
-    export LDFLAGS="${LDFLAGS} --sysroot=${ANDROID_SYSROOT} -target ${NDK_TARGET} -gcc-toolchain ${NDK_TOOLCHAIN}"
+    export LDFLAGS="${LDFLAGS} -target ${NDK_TARGET} -gcc-toolchain ${NDK_TOOLCHAIN}"
   fi
 
   if test "x${NDK_RANLIB}" = "x"; then
@@ -225,10 +271,11 @@ if test "$1" = "--use-ndk-cflags" || [ "${NDK_VER}" -ge "17" ]; then
   export CC="${NDK_CC}"
   export CXX="${NDK_CXX}"
 
-  export LIBS="${LIBS} -lc -lgcc -ldl"
-  export CFLAGS="${NDK_CFLAGS} ${CFLAGS}"
-  export CPPFLAGS="${CFLAGS} -fexceptions -frtti"
-  export CXXFLAGS="${NDK_CXXFLAGS} -fexceptions -frtti"
+  export CPPFLAGS="${CPPFLAGS}"
+  export CFLAGS="${NDK_CFLAGS} ${CFLAGS} ${CPPFLAGS}"
+  export CXXFLAGS="${NDK_CXXFLAGS} ${CPPFLAGS}"
+  export LDFLAGS="${NDK_LDFLAGS} ${LDFLAGS}"
+  export LIBS="${LIBS}"
 
 else
 
@@ -277,9 +324,10 @@ fi
 if test "${IS_USING_LLVM}" = "1"; then
   # llvm
   STDCPP_TC="${ANDROID_NDK_ROOT}/sources/cxx-stl/llvm-libc++"
-  STDCPP_CFLAGS="-I${STDCPP_TC}/include"
-  STDCPP_LIBS="-lc++_static -lc++abi"
-  STDCPP_LDFLAGS="-L${STDCPP_TC}/libs/${TARGET_ABI}/"
+  #STDCPP_CFLAGS="-I${STDCPP_TC}/include"
+  #STDCPP_LIBS="-lc++_static -lc++abi"
+  STDCPP_LIBS="${STDCPP_TC}/libs/${TARGET_ABI}/libc++_shared.so"
+  #STDCPP_LDFLAGS="-L${STDCPP_TC}/libs/${TARGET_ABI}/"
 else
   # gnustl
   STDCPP_TC_VER=`ls -d ${ANDROID_NDK_ROOT}/sources/cxx-stl/gnu-libstdc++/[0-9]* | sort -gr | head -1`
@@ -293,9 +341,11 @@ fi
 #STDCPP_LIBS="-lstlport_static -ldl"
 #STDCPP_LDFLAGS="-L${ANDROID_NDK_ROOT}/sources/cxx-stl/stlport/libs/${TARGET_ABI}"
 
-export CFLAGS="${CFLAGS} ${STDCPP_CFLAGS}"
-export LIBS="${STDCPP_LIBS} ${LIBS}"
+export CFLAGS="${CFLAGS}"
+export LIBS="${LIBS} ${STDCPP_LIBS}"
 export LDFLAGS="${LDFLAGS} ${STDCPP_LDFLAGS}"
+export CPPFLAGS="${CPPFLAGS}"
+export CXXFLAGS="${CXXFLAGS} ${STDCPP_CFLAGS}"
 
 # Print settings
 if test "1" = "1"; then

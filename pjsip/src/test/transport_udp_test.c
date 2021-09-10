@@ -27,7 +27,7 @@
 static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
 {
     pj_status_t status;
-    pj_uint16_t i = 0;
+    unsigned i = 0;
     pj_str_t s;
     pjsip_transport *udp_tp;
     pj_sockaddr_in rem_addr;    
@@ -37,7 +37,7 @@ static pj_status_t multi_transport_test(pjsip_transport *tp[], unsigned num_tp)
     {
 	pj_sockaddr_in addr;
 
-	pj_sockaddr_in_init(&addr, NULL, TEST_UDP_PORT+i);
+	pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)(TEST_UDP_PORT+i));
 
 	/* Start UDP transport. */
 	status = pjsip_udp_transport_start( endpt, &addr, NULL, 1, &udp_tp);

@@ -595,7 +595,7 @@ static pj_status_t  ilbc_codec_parse( pjmedia_codec *codec,
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = ilbc_codec->dec_frame_size;
-	frames[count].timestamp.u64 = ts->u64 + count * 
+	frames[count].timestamp.u64 = ts->u64 + (pj_uint64_t)count * 
 				      ilbc_codec->dec_samples_per_frame;
 
 	pkt = ((char*)pkt) + ilbc_codec->dec_frame_size;

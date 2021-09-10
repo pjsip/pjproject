@@ -178,7 +178,6 @@
 #   define PJ_IS_LITTLE_ENDIAN	1
 #   define PJ_IS_BIG_ENDIAN	0
 
-
 #elif defined (PJ_M_X86_64) || defined(__amd64__) || defined(__amd64) || \
 	defined(__x86_64__) || defined(__x86_64) || \
 	defined(_M_X64) || defined(_M_AMD64)
@@ -255,7 +254,8 @@
 #   define PJ_IS_LITTLE_ENDIAN	0
 #   define PJ_IS_BIG_ENDIAN	1
 
-#elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || defined(_M_ARM)
+#elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || \
+       defined(_M_ARM) || defined(_M_ARM64)
 #   define PJ_HAS_PENTIUM	0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
@@ -271,6 +271,10 @@
 #	undef PJ_M_ARMV4
 #	define PJ_M_ARMV4		1
 #	define PJ_M_NAME		"armv4"
+#   elif defined (PJ_M_ARM64) || defined(ARM64)
+#	undef PJ_M_ARM64
+#	define PJ_M_ARM64		1
+#	define PJ_M_NAME		"arm64"
 #   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
@@ -532,17 +536,60 @@
 
 
 /**
- * Enable timer heap debugging facility. When this is enabled, application
- * can call pj_timer_heap_dump() to show the contents of the timer heap
- * along with the source location where the timer entries were scheduled.
- * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ * If enabled, when calling pj_pool_release(), the memory pool content
+ * will be wiped out first before released.
  *
  * Default: 0
  */
-#ifndef PJ_TIMER_DEBUG
-#  define PJ_TIMER_DEBUG	    0
+#ifndef PJ_POOL_RELEASE_WIPE_DATA
+#  define PJ_POOL_RELEASE_WIPE_DATA 	0
 #endif
 
+
+/**
+ * Enable timer debugging facility. When this is enabled, application
+ * can call pj_timer_heap_dump() to show the contents of the timer
+ * along with the source location where the timer entries were scheduled.
+ * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ *
+ * Default: 1
+ */
+#ifndef PJ_TIMER_DEBUG
+#  define PJ_TIMER_DEBUG	    1
+#endif
+
+
+/**
+ * If enabled, the timer will keep internal copies of the timer entries.
+ * This will increase the robustness and stability of the timer (against
+ * accidental modification or premature deallocation of the timer entries) and
+ * makes it easier to troubleshoot any timer related issues, with the overhead
+ * of additional memory space required.
+ *
+ * Note that the detection against premature deallocation only works if the
+ * freed memory content has changed (such as if it's been reallocated and
+ * overwritten by another data. Alternatively, you can enable
+ * PJ_POOL_RELEASE_WIPE_DATA which will erase the data first before releasing
+ * the memory).
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_TIMER_USE_COPY
+#  define PJ_TIMER_USE_COPY    1
+#endif
+
+
+/**
+ * If enabled, the timer use sorted linked list instead of binary heap tree
+ * structure. Note that using sorted linked list is intended for debugging
+ * purposes and will hamper performance significantly when scheduling large
+ * number of entries.
+ *
+ * Default: 0 (Use binary heap tree)
+ */
+#ifndef PJ_TIMER_USE_LINKED_LIST
+#  define PJ_TIMER_USE_LINKED_LIST    0
+#endif
 
 /**
  * Set this to 1 to enable debugging on the group lock. Default: 0
@@ -761,6 +808,19 @@
 #  define PJ_HAS_SEMAPHORE	    1
 #endif
 
+/**
+ * Use dispatch semaphores on Darwin.
+ *
+ * Default: 1 on Darwin, 0 otherwise
+ */
+#ifndef PJ_SEMAPHORE_USE_DISPATCH_SEM
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	1
+#   else
+#	define PJ_SEMAPHORE_USE_DISPATCH_SEM	0
+#   endif
+#endif
+
 
 /**
  * Event object (for synchronization, e.g. in Win32)
@@ -930,7 +990,11 @@
 #define PJ_SSL_SOCK_IMP_NONE 	    0	/**< Disable SSL socket.    */
 #define PJ_SSL_SOCK_IMP_OPENSSL	    1	/**< Using OpenSSL.	    */
 #define PJ_SSL_SOCK_IMP_GNUTLS      2	/**< Using GnuTLS.	    */
-
+#define PJ_SSL_SOCK_IMP_DARWIN      3	/**< Using Apple's Secure
+					     Transport (deprecated in
+					     MacOS 10.15 & iOS 13.0)*/
+#define PJ_SSL_SOCK_IMP_APPLE       4	/**< Using Apple's Network 
+					     framework.	    	    */
 
 /**
  * Select which SSL socket implementation to use. Currently pjlib supports
@@ -979,6 +1043,18 @@
  */
 #ifndef PJ_SSL_SOCK_MAX_CURVES
 #  define PJ_SSL_SOCK_MAX_CURVES   32
+#endif
+
+/**
+ * Use OpenSSL thread locking callback. This is only applicable for OpenSSL
+ * version prior to 1.1.0
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_SSL_SOCK_OSSL_USE_THREAD_CB
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   1
+#else
+#   define PJ_SSL_SOCK_OSSL_USE_THREAD_CB   0
 #endif
 
 
@@ -1323,7 +1399,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR	2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	9
+#define PJ_VERSION_NUM_MINOR	11
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV      0
@@ -1332,7 +1408,7 @@ PJ_BEGIN_DECL
  * Extra suffix for the version (e.g. "-trunk"), or empty for
  * web release version.
  */
-#define PJ_VERSION_NUM_EXTRA	""
+#define PJ_VERSION_NUM_EXTRA	"-dev"
 
 /**
  * PJLIB version number consists of three bytes with the following format:

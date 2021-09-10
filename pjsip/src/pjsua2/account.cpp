@@ -389,6 +389,7 @@ void AccountNatConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
     NODE_READ_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_READ_BOOL    ( this_node, iceEnabled);
+    NODE_READ_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
     NODE_READ_INT     ( this_node, iceMaxHostCands);
     NODE_READ_BOOL    ( this_node, iceAggressiveNomination);
     NODE_READ_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
@@ -422,6 +423,7 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_WRITE_BOOL    ( this_node, iceEnabled);
+    NODE_WRITE_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
     NODE_WRITE_INT     ( this_node, iceMaxHostCands);
     NODE_WRITE_BOOL    ( this_node, iceAggressiveNomination);
     NODE_WRITE_UNSIGNED( this_node, iceNominatedCheckDelayMsec);
@@ -635,6 +637,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.nat64_opt		= natConfig.nat64Opt;
     ret.ice_cfg_use		= PJSUA_ICE_CONFIG_USE_CUSTOM;
     ret.ice_cfg.enable_ice	= natConfig.iceEnabled;
+    ret.ice_cfg.ice_opt.trickle	= natConfig.iceTrickle;
     ret.ice_cfg.ice_max_host_cands = natConfig.iceMaxHostCands;
     ret.ice_cfg.ice_opt.aggressive = natConfig.iceAggressiveNomination;
     ret.ice_cfg.ice_opt.nominated_check_delay =
@@ -792,6 +795,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     natConfig.nat64Opt		= prm.nat64_opt;
     if (prm.ice_cfg_use == PJSUA_ICE_CONFIG_USE_CUSTOM) {
 	natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);
+	natConfig.iceTrickle = prm.ice_cfg.ice_opt.trickle;
 	natConfig.iceMaxHostCands = prm.ice_cfg.ice_max_host_cands;
 	natConfig.iceAggressiveNomination =
 			PJ2BOOL(prm.ice_cfg.ice_opt.aggressive);
@@ -929,7 +933,8 @@ void AccountInfo::fromPj(const pjsua_acc_info &pai)
     uri			= pj2Str(pai.acc_uri);
     regIsConfigured	= pai.has_registration != 0;
     regIsActive		= pai.has_registration && pai.expires > 0 &&
-			    (pai.status / 100 == 2);
+    			  pai.expires != PJSIP_EXPIRES_NOT_SPECIFIED &&
+			  (pai.status / 100 == 2);
     regExpiresSec	= pai.expires;
     regStatus		= pai.status;
     regStatusText	= pj2Str(pai.status_text);
@@ -966,11 +971,13 @@ void Account::create(const AccountConfig &acc_cfg,
 void Account::shutdown()
 {
     if (isValid() && pjsua_get_state() < PJSUA_STATE_CLOSING) {
+#if !DEPRECATED_FOR_TICKET_2232
         // Cleanup buddies in the buddy list
 	while(buddyList.size() > 0) {
 	    Buddy *b = buddyList[0];
 	    delete b; /* this will remove itself from the list */
 	}
+#endif
 
 	// This caused error message of "Error: cannot find Account.."
 	// when Endpoint::on_reg_started() is called for unregistration.
@@ -1063,10 +1070,12 @@ void Account::presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error)
 					 &msg_data) );
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 const BuddyVector& Account::enumBuddies() const PJSUA2_THROW(Error)
 {
     return buddyList;
 }
+#endif
 
 BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
 {
@@ -1082,6 +1091,7 @@ BuddyVector2 Account::enumBuddies2() const PJSUA2_THROW(Error)
     return bv2;
 }
 
+#if !DEPRECATED_FOR_TICKET_2232
 Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
 		PJSUA2_THROW(Error)
 {
@@ -1096,6 +1106,7 @@ Buddy* Account::findBuddy(string uri, FindBuddyMatch *buddy_match) const
     }
     PJSUA2_RAISE_ERROR(PJ_ENOTFOUND);
 }
+#endif
 
 Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 {
@@ -1115,13 +1126,18 @@ Buddy Account::findBuddy2(string uri) const PJSUA2_THROW(Error)
 
 void Account::addBuddy(Buddy *buddy)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     pj_assert(buddy);
 
     buddyList.push_back(buddy);
+#else
+    PJ_UNUSED_ARG(buddy);
+#endif
 }
 
 void Account::removeBuddy(Buddy *buddy)
 {
+#if !DEPRECATED_FOR_TICKET_2232
     pj_assert(buddy);
 
     BuddyVector::iterator it;
@@ -1133,4 +1149,7 @@ void Account::removeBuddy(Buddy *buddy)
     }
 
     pj_assert(!"Bug! Buddy to be removed is not in the buddy list!");
+#else
+    PJ_UNUSED_ARG(buddy);
+#endif
 }

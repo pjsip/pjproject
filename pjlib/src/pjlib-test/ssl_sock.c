@@ -22,7 +22,8 @@
 
 
 #define CERT_DIR		    "../build/"
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
 /* If we use Darwin SSL, use the cert in DER format. */
 #   define CERT_CA_FILE		    CERT_DIR "cacert.der"
 #else
@@ -30,7 +31,7 @@
 #endif
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
-#define CERT_PRIVKEY_PASS	    ""
+#define CERT_PRIVKEY_PASS	    "privkeypass"
 
 #define TEST_LOAD_FROM_FILES 1
 
@@ -174,10 +175,13 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
 	    goto on_return;
 	}
 
-	if (status == PJ_SUCCESS)
+	if (status == PJ_SUCCESS) {
 	    st->sent += size;
-	else
+	} else {
+	    if (status == PJ_EPENDING)
+	    	status = PJ_SUCCESS;
 	    break;
+	}
     }
 
 on_return:
@@ -196,7 +200,8 @@ on_return:
 static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 					pj_ssl_sock_t *newsock,
 					const pj_sockaddr_t *src_addr,
-					int src_addr_len)
+					int src_addr_len,
+					pj_status_t accept_status)
 {
     struct test_state *parent_st = (struct test_state*) 
 				   pj_ssl_sock_get_user_data(ssock);
@@ -207,6 +212,14 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
+    
+    if (accept_status != PJ_SUCCESS) {
+    	if (newsock) {
+    	    st = (struct test_state*) pj_ssl_sock_get_user_data(newsock);
+    	    st->err = accept_status;
+    	}
+    	return PJ_FALSE;
+    }
 
     /* Duplicate parent test state to newly accepted test state */
     st = (struct test_state*)pj_pool_zalloc(parent_st->pool, sizeof(struct test_state));
@@ -245,10 +258,13 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 	    goto on_return;
 	}
 
-	if (status == PJ_SUCCESS)
+	if (status == PJ_SUCCESS) {
 	    st->sent += size;
-	else
+	} else {
+	    if (status == PJ_EPENDING)
+	    	status = PJ_SUCCESS;
 	    break;
+	}
     }
 
 on_return:
@@ -304,8 +320,11 @@ static pj_bool_t ssl_on_data_read(pj_ssl_sock_t *ssock,
 		goto on_return;
 	    }
 
-	    if (status == PJ_SUCCESS)
+	    if (status == PJ_SUCCESS) {
 		st->sent += size_;
+	    } else if (status == PJ_EPENDING) {
+	    	status = PJ_SUCCESS;
+	    }
 	}
 
 	/* Verify echoed data when specified to */
@@ -526,6 +545,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
     pj_ssl_sock_t *ssock_serv = NULL;
     pj_ssl_sock_t *ssock_cli = NULL;
     pj_ssl_sock_param param;
@@ -543,12 +563,18 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	goto on_return;
     }
 
+    status = pj_timer_heap_create(pool, 4, &timer);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
     pj_ssl_sock_param_default(&param);
-    param.cb.on_accept_complete = &ssl_on_accept_complete;
+    param.cb.on_accept_complete2 = &ssl_on_accept_complete;
     param.cb.on_connect_complete = &ssl_on_connect_complete;
     param.cb.on_data_read = &ssl_on_data_read;
     param.cb.on_data_sent = &ssl_on_data_sent;
     param.ioqueue = ioqueue;
+    param.timer_heap = timer;
     param.ciphers = ciphers;
 
     /* Init default bind address */
@@ -733,12 +759,25 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     PJ_LOG(3, ("", ".....Sent/recv: %d/%d bytes", state_cli.sent, state_cli.recv));
 
 on_return:
+#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN) || \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(3, ("", "Apple SSL requires the private key to be "
+		       "inside the Keychain. So double click on "
+		       "the file pjlib/build/privkey.p12 to "
+		       "place it in the Keychain. "
+		       "The password is \"pjsip\"."));
+    }
+#endif
+
     if (ssock_serv)
 	pj_ssl_sock_close(ssock_serv);
     if (ssock_cli && !state_cli.err && !state_cli.done) 
 	pj_ssl_sock_close(ssock_cli);
     if (ioqueue)
 	pj_ioqueue_destroy(ioqueue);
+    if (timer)
+	pj_timer_heap_destroy(timer);
     if (pool)
 	pj_pool_release(pool);
 
@@ -892,14 +931,6 @@ static int client_non_ssl(unsigned ms_timeout)
 	pj_str_t privkey_file = pj_str(CERT_PRIVKEY_FILE);
 	pj_str_t privkey_pass = pj_str(CERT_PRIVKEY_PASS);
 
-#if (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_DARWIN)
-	PJ_LOG(3, ("", "Darwin SSL requires the private key to be "
-		       "inside the Keychain. So double click on "
-		       "the file pjlib/build/privkey.p12 to "
-		       "place it in the Keychain. "
-		       "The password is \"pjsip\"."));
-#endif
-
 #if (defined(TEST_LOAD_FROM_FILES) && TEST_LOAD_FROM_FILES==1)
 	status = pj_ssl_cert_load_from_files(pool, &ca_file, &cert_file, 
 					     &privkey_file, &privkey_pass,
@@ -932,7 +963,7 @@ static int client_non_ssl(unsigned ms_timeout)
     }
 
     pj_ssl_sock_param_default(&param);
-    param.cb.on_accept_complete = &ssl_on_accept_complete;
+    param.cb.on_accept_complete2 = &ssl_on_accept_complete;
     param.cb.on_data_read = &ssl_on_data_read;
     param.cb.on_data_sent = &ssl_on_data_sent;
     param.ioqueue = ioqueue;
@@ -1263,7 +1294,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     }
 
     pj_ssl_sock_param_default(&param);
-    param.cb.on_accept_complete = &ssl_on_accept_complete;
+    param.cb.on_accept_complete2 = &ssl_on_accept_complete;
     param.cb.on_connect_complete = &ssl_on_connect_complete;
     param.cb.on_data_read = &ssl_on_data_read;
     param.cb.on_data_sent = &ssl_on_data_sent;
@@ -1510,19 +1541,49 @@ int ssl_sock_test(void)
     if (ret != 0)
 	return ret;
 
-    PJ_LOG(3,("", "..echo test w/ incompatible proto"));
+    PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2 vs client TLSv1.2"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_2, 
+		    -1, -1,
+		    PJ_FALSE, PJ_FALSE);
+    if (ret != 0)
+	return ret;
+
+    PJ_LOG(3,("", "..echo test w/ compatible proto: server TLSv1.2+1.3 vs client TLSv1.3"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2 | PJ_SSL_SOCK_PROTO_TLS1_3, PJ_SSL_SOCK_PROTO_TLS1_3, 
+		    -1, -1,
+		    PJ_FALSE, PJ_FALSE);
+    if (ret != 0)
+	return ret;
+
+    PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1 vs client SSL3"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3, 
 		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA,
 		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
 
+/* We can't set min/max proto for TLS protocol higher than 1.0. */
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_DARWIN)
+    PJ_LOG(3,("", "..echo test w/ incompatible proto: server TLSv1.2 vs client TLSv1.3"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1_2, PJ_SSL_SOCK_PROTO_TLS1_3, 
+		    -1, -1,
+		    PJ_FALSE, PJ_FALSE);
+    if (ret == 0)
+	return PJ_EBUG;
+#endif
+
+/* We can't seem to enable certain ciphers only. SSLSetEnabledCiphers() is
+ * deprecated and we only have sec_protocol_options_append_tls_ciphersuite(),
+ * but there's no API to remove certain or all ciphers.
+ */
+#if (PJ_SSL_SOCK_IMP != PJ_SSL_SOCK_IMP_APPLE)
     PJ_LOG(3,("", "..echo test w/ incompatible ciphers"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
 		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
 		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
+#endif
 
     PJ_LOG(3,("", "..echo test w/ client cert required but not provided"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
@@ -1538,15 +1599,16 @@ int ssl_sock_test(void)
     if (ret != 0)
 	return ret;
 
+#if WITH_BENCHMARK
     PJ_LOG(3,("", "..performance test"));
     ret = perf_test(PJ_IOQUEUE_MAX_HANDLES/2 - 1, 0);
     if (ret != 0)
 	return ret;
+#endif
 
     PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));
     ret = client_non_ssl(5000);
-    /* PJ_TIMEDOUT won't be returned as accepted socket is deleted silently */
-    if (ret != 0)
+    if (ret != PJ_ETIMEDOUT)
 	return ret;
 
 #endif

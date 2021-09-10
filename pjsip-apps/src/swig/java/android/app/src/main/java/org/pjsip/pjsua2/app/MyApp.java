@@ -27,8 +27,7 @@ import org.pjsip.pjsua2.*;
 /* Interface to separate UI & engine a bit better */
 interface MyAppObserver
 {
-    abstract void notifyRegState(pjsip_status_code code, String reason,
-				 int expiration);
+    abstract void notifyRegState(int code, String reason, long expiration);
     abstract void notifyIncomingCall(MyCall call);
     abstract void notifyCallState(MyCall call);
     abstract void notifyCallMediaState(MyCall call);
@@ -281,21 +280,7 @@ class MyAccountConfig
 }
 
 
-class MyApp {
-    static {
-	try{
-	    System.loadLibrary("openh264");
-            // Ticket #1937: libyuv is now included as static lib
-            //System.loadLibrary("yuv");
-	} catch (UnsatisfiedLinkError e) {
-	    System.out.println("UnsatisfiedLinkError: " + e.getMessage());
-	    System.out.println("This could be safely ignored if you " +
-			       "don't need video.");
-	}
-	System.loadLibrary("pjsua2");
-	System.out.println("Library loaded");
-    }
-
+class MyApp extends pjsua2 {
     public static Endpoint ep = new Endpoint();
     public static MyAppObserver observer;
     public ArrayList<MyAccount> accList = new ArrayList<MyAccount>();
@@ -351,8 +336,8 @@ class MyApp {
 	logWriter = new MyLogWriter();
 	log_cfg.setWriter(logWriter);
 	log_cfg.setDecor(log_cfg.getDecor() & 
-			 ~(pj_log_decoration.PJ_LOG_HAS_CR.swigValue() | 
-			 pj_log_decoration.PJ_LOG_HAS_NEWLINE.swigValue()));
+			 ~(pj_log_decoration.PJ_LOG_HAS_CR | 
+			 pj_log_decoration.PJ_LOG_HAS_NEWLINE));
 
 	/* Write log to file (just uncomment whenever needed) */
 	//String log_path = android.os.Environment.getExternalStorageDirectory().toString();

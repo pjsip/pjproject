@@ -45,8 +45,15 @@ pjsua_msg_data	    msg_data;
 int my_atoi(const char *cs)
 {
     pj_str_t s;
-
     pj_cstr(&s, cs);
+    return my_atoi2(&s);
+}
+
+int my_atoi2(const pj_str_t *str)
+{
+    const char *cs = str->ptr;
+    pj_str_t s = *str;
+
     if (cs[0] == '-') {
 	s.ptr++; s.slen--;
 	return 0 - (int)pj_strtoul(&s);

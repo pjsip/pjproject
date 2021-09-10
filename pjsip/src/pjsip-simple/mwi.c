@@ -303,7 +303,7 @@ PJ_DEF(pj_status_t) pjsip_mwi_terminate( pjsip_evsub *sub,
  * Create SUBSCRIBE
  */
 PJ_DEF(pj_status_t) pjsip_mwi_initiate( pjsip_evsub *sub,
-					pj_int32_t expires,
+					pj_uint32_t expires,
 					pjsip_tx_data **p_tdata)
 {
     return pjsip_evsub_initiate(sub, &pjsip_subscribe_method, expires, 
@@ -566,7 +566,7 @@ static void mwi_on_evsub_client_refresh(pjsip_evsub *sub)
 	pj_status_t status;
 	pjsip_tx_data *tdata;
 
-	status = pjsip_mwi_initiate(sub, -1, &tdata);
+	status = pjsip_mwi_initiate(sub, PJSIP_EXPIRES_NOT_SPECIFIED, &tdata);
 	if (status == PJ_SUCCESS)
 	    pjsip_mwi_send_request(sub, tdata);
     }

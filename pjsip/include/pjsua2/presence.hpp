@@ -170,6 +170,14 @@ struct BuddyInfo
     PresenceStatus	 presStatus;
 
 public:
+    /**
+     * Default constructor
+     */
+    BuddyInfo() : subState(PJSIP_EVSUB_STATE_UNKNOWN),
+		  subTermCode(PJSIP_SC_NULL)
+    {}
+		    
+
     /** Import from pjsip structure */
     void fromPj(const pjsua_buddy_info &pbi);
 };
@@ -240,6 +248,13 @@ public:
      * @return			True if it is.
      */
     bool isValid() const;
+
+    /**
+     * Get PJSUA-LIB buddy ID or index associated with this buddy.
+     *
+     * @return			Integer greater than or equal to zero.
+     */
+    int getId() const;
 
     /**
      * Get detailed buddy info.

@@ -337,6 +337,7 @@ public:
     }
 };
 
+#ifdef _MSC_VER
 // Ensures that memory is not read past the length source buffer
 // and that memory is not written past the length of the dst buffer
 //   dst - buffer to copy to
@@ -358,13 +359,14 @@ HRESULT AMSafeMemMoveOffset(
     __in size_t src_size,
     __in DWORD cb_src_offset,
     __in size_t count);
+#endif
 
 extern "C"
 void * __stdcall memmoveInternal(void *, const void *, size_t);
 
 inline void * __cdecl memchrInternal(const void *buf, int chr, size_t cnt)
 {
-#ifdef _X86_
+#if defined(_X86_) && defined(_MSC_VER)
     void *pRet = NULL;
 
     _asm {

@@ -64,9 +64,9 @@ enum tp_type
 #   define HOST_PREF   65535
 #   define RELAY_PREF  65535
 #else
-#   define SRFLX_PREF  0
-#   define HOST_PREF   0
-#   define RELAY_PREF  0
+#   define SRFLX_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define HOST_PREF   ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
+#   define RELAY_PREF  ((1 << PJ_ICE_LOCAL_PREF_BITS) - 1)
 #endif
 
 
@@ -89,6 +89,7 @@ static pj_uint8_t srflx_pref_table[PJ_ICE_CAND_TYPE_MAX] =
 
 
 /* ICE callbacks */
+static void	   on_valid_pair(pj_ice_sess *ice);
 static void	   on_ice_complete(pj_ice_sess *ice, pj_status_t status);
 static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
 			      unsigned comp_id,
@@ -127,12 +128,16 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len);
+static pj_bool_t turn_on_data_sent(pj_turn_sock *turn_sock,
+				   pj_ssize_t sent);
 static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 			  pj_turn_state_t new_state);
 
 
 
 /* Forward decls */
+static pj_bool_t on_data_sent(pj_ice_strans *ice_st, pj_ssize_t sent);
+static void check_pending_send(pj_ice_strans *ice_st);
 static void ice_st_on_destroy(void *obj);
 static void destroy_ice_st(pj_ice_strans *ice_st);
 #define ice_st_perror(ice_st,msg,rc) pjnath_perror(ice_st->obj_name,msg,rc)
@@ -178,12 +183,23 @@ typedef struct pj_ice_strans_comp
 } pj_ice_strans_comp;
 
 
+/* Pending send buffer */
+typedef struct pending_send
+{
+    void       	       *buffer;
+    unsigned 		comp_id;
+    pj_size_t 		data_len;
+    pj_sockaddr       	dst_addr;
+    int 		dst_addr_len;
+} pending_send;
+
 /**
  * This structure represents the ICE stream transport.
  */
 struct pj_ice_strans
 {
     char		    *obj_name;	/**< Log ID.			*/
+    pj_pool_factory	    *pf;	/**< Pool factory.		*/
     pj_pool_t		    *pool;	/**< Pool used by this object.	*/
     void		    *user_data;	/**< Application data.		*/
     pj_ice_strans_cfg	     cfg;	/**< Configuration.		*/
@@ -197,10 +213,24 @@ struct pj_ice_strans
     unsigned		     comp_cnt;	/**< Number of components.	*/
     pj_ice_strans_comp	   **comp;	/**< Components array.		*/
 
+    pj_pool_t		    *buf_pool;  /**< Pool for buffers.		*/
+    unsigned		     num_buf;	/**< Number of buffers.		*/
+    unsigned		     buf_idx;	/**< Index of buffer.		*/
+    unsigned		     empty_idx;	/**< Index of empty buffer.	*/
+    unsigned		     buf_size;  /**< Buffer size.		*/
+    pending_send	    *send_buf;	/**< Send buffers.		*/
+    pj_bool_t		     is_pending;/**< Any pending send?		*/
+
     pj_timer_entry	     ka_timer;	/**< STUN keep-alive timer.	*/
 
     pj_bool_t		     destroy_req;/**< Destroy has been called?	*/
     pj_bool_t		     cb_called;	/**< Init error callback called?*/
+    pj_bool_t		     call_send_cb;/**< Need to call send cb?	*/
+
+    pj_bool_t		     rem_cand_end;/**< Trickle ICE: remote has
+					       signalled end of candidate? */
+    pj_bool_t		     loc_cand_end;/**< Trickle ICE: local has
+					       signalled end of candidate? */
 };
 
 
@@ -241,6 +271,8 @@ PJ_DEF(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg)
     pj_ice_strans_stun_cfg_default(&cfg->stun);
     pj_ice_strans_turn_cfg_default(&cfg->turn);
     pj_ice_sess_options_default(&cfg->opt);
+
+    cfg->num_send_buf = 4;
 }
 
 
@@ -312,7 +344,8 @@ PJ_DEF(void) pj_ice_strans_cfg_copy( pj_pool_t *pool,
  */
 static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 				   pj_ice_strans_comp *comp,
-				   unsigned idx)
+				   unsigned idx,
+				   unsigned max_cand_cnt)
 {
     pj_ice_sess_cand *cand = NULL;
     pj_ice_strans_turn_cfg *turn_cfg = &ice_st->cfg.turn_tp[idx];
@@ -321,6 +354,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
     pj_turn_sock_cb turn_sock_cb;
     sock_user_data *data;
     unsigned i;
+    pj_bool_t new_cand = PJ_FALSE;
     pj_uint8_t tp_id;
     pj_status_t status;
 
@@ -365,6 +399,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
     /* Init TURN socket */
     pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
     turn_sock_cb.on_rx_data = &turn_on_rx_data;
+    turn_sock_cb.on_data_sent = &turn_on_data_sent;
     turn_sock_cb.on_state = &turn_on_state;
 
     /* Override with component specific QoS settings, if any */
@@ -383,12 +418,15 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 
     /* Add relayed candidate with pending status if there's no existing one */
     if (cand == NULL) {
+	PJ_ASSERT_RETURN(max_cand_cnt > 0, PJ_ETOOSMALL);
+
 	cand = &comp->cand_list[comp->cand_cnt];
 	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
 	cand->status = PJ_EPENDING;
-	cand->local_pref = RELAY_PREF;
+	cand->local_pref = (pj_uint16_t)(RELAY_PREF - idx);
 	cand->transport_id = tp_id;
 	cand->comp_id = (pj_uint8_t) comp->comp_id;
+	new_cand = PJ_TRUE;
     }
 
     /* Allocate and initialize TURN socket data */
@@ -405,6 +443,14 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	return status;
     }
 
+    if (new_cand) {
+	/* Commit the relayed candidate before pj_turn_sock_alloc(), as
+	 * otherwise there can be race condition, please check
+	 * https://github.com/pjsip/pjproject/pull/2525 for more info.
+	 */
+	comp->cand_cnt++;
+    }
+
     /* Add pending job */
     ///sess_add_ref(ice_st);
 
@@ -417,11 +463,9 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 			      &turn_cfg->alloc_param);
     if (status != PJ_SUCCESS) {
 	///sess_dec_ref(ice_st);
+	cand->status = status;
 	return status;
     }
-
-    /* Commit the relayed candidate. */
-    comp->cand_cnt++;
 
     PJ_LOG(4,(ice_st->obj_name,
 		  "Comp %d/%d: TURN relay candidate (tpid=%d) "
@@ -445,7 +489,8 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
         || lcand->status != rcand->status
         || lcand->comp_id != rcand->comp_id
         || lcand->transport_id != rcand->transport_id
-        || lcand->local_pref != rcand->local_pref
+	// local pref is no longer a constant, so it may be different
+        //|| lcand->local_pref != rcand->local_pref
         || lcand->prio != rcand->prio
         || pj_sockaddr_cmp(&lcand->addr, &rcand->addr) != 0
         || pj_sockaddr_cmp(&lcand->base_addr, &rcand->base_addr) != 0)
@@ -459,7 +504,8 @@ static pj_bool_t ice_cand_equals(pj_ice_sess_cand *lcand,
 
 static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 				     pj_ice_strans_comp *comp,
-				     unsigned idx)
+				     unsigned idx,
+				     unsigned max_cand_cnt)
 {
     pj_ice_sess_cand *cand;
     pj_ice_strans_stun_cfg *stun_cfg = &ice_st->cfg.stun_tp[idx];
@@ -468,6 +514,8 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
     pj_stun_sock_cb stun_sock_cb;
     sock_user_data *data;
     pj_status_t status;
+
+    PJ_ASSERT_RETURN(max_cand_cnt > 0, PJ_ETOOSMALL);
 
     /* Check if STUN transport or host candidate is configured */
     if (stun_cfg->server.slen == 0 && stun_cfg->max_host_cands == 0)
@@ -501,7 +549,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
     cand = &comp->cand_list[comp->cand_cnt];
     cand->type = PJ_ICE_CAND_TYPE_SRFLX;
     cand->status = PJ_EPENDING;
-    cand->local_pref = SRFLX_PREF;
+    cand->local_pref = (pj_uint16_t)(SRFLX_PREF - idx);
     cand->transport_id = CREATE_TP_ID(TP_STUN, idx);
     cand->comp_id = (pj_uint8_t) comp->comp_id;
 
@@ -565,6 +613,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
 			       cand->type, &cand->base_addr);
 	comp->cand_cnt++;
+	max_cand_cnt--;
 
 	/* Set default candidate to srflx */
 	if (comp->cand_list[comp->default_cand].type != PJ_ICE_CAND_TYPE_SRFLX
@@ -604,8 +653,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	    char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 	    const pj_sockaddr *addr = &stun_sock_info.aliases[i];
 
-	    /* Leave one candidate for relay */
-	    if (comp->cand_cnt >= PJ_ICE_ST_MAX_CAND-1) {
+	    if (max_cand_cnt==0) {
 		PJ_LOG(4,(ice_st->obj_name, "Too many host candidates"));
 		break;
 	    }
@@ -618,7 +666,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 		    continue;
 		}
 		else if (stun_cfg->af == pj_AF_INET6()) {
-		    pj_in6_addr in6addr = {{0}};
+		    pj_in6_addr in6addr = {{{0}}};
 		    in6addr.s6_addr[15] = 1;
 		    if (pj_memcmp(&in6addr, &addr->ipv6.sin6_addr,
 				  sizeof(in6addr))==0)
@@ -641,7 +689,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 
 	    cand->type = PJ_ICE_CAND_TYPE_HOST;
 	    cand->status = PJ_SUCCESS;
-	    cand->local_pref = HOST_PREF;
+	    cand->local_pref = (pj_uint16_t)(HOST_PREF - cand_cnt);
 	    cand->transport_id = CREATE_TP_ID(TP_STUN, idx);
 	    cand->comp_id = (pj_uint8_t) comp->comp_id;
 	    pj_sockaddr_cp(&cand->addr, addr);
@@ -668,6 +716,7 @@ static pj_status_t add_stun_and_host(pj_ice_strans *ice_st,
 	    } else {
 		comp->cand_cnt+=1;
 		cand_cnt++;
+		max_cand_cnt--;
 	    }
             
 	    pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
@@ -725,7 +774,14 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
     /* Create STUN transport if configured */
     for (i=0; i<ice_st->cfg.stun_tp_cnt; ++i) {
-	status = add_stun_and_host(ice_st, comp, i);
+	unsigned max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt -
+				ice_st->cfg.turn_tp_cnt;
+
+	status = PJ_ETOOSMALL;
+
+	if ((max_cand_cnt > 0) && (max_cand_cnt <= PJ_ICE_ST_MAX_CAND))
+	    status = add_stun_and_host(ice_st, comp, i, max_cand_cnt);
+
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(ice_st->obj_name, status,
 			 "Failed creating STUN transport #%d for comp %d",
@@ -736,12 +792,21 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
     /* Create TURN relay if configured. */
     for (i=0; i<ice_st->cfg.turn_tp_cnt; ++i) {
-	status = add_update_turn(ice_st, comp, i);
+	unsigned max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt;
+
+	status = PJ_ETOOSMALL;
+
+	if ((max_cand_cnt > 0) && (max_cand_cnt <= PJ_ICE_ST_MAX_CAND))
+	    status = add_update_turn(ice_st, comp, i, max_cand_cnt);
+
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(3,(ice_st->obj_name, status,
 			 "Failed creating TURN transport #%d for comp %d",
 			 i, comp->comp_id));
+
 	    //return status;
+	} else if (max_cand_cnt > 0) {
+	    max_cand_cnt = PJ_ICE_ST_MAX_CAND - comp->cand_cnt;
 	}
     }
 
@@ -758,6 +823,36 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
     return PJ_SUCCESS;
 }
 
+static pj_status_t alloc_send_buf(pj_ice_strans *ice_st, unsigned buf_size)
+{
+    if (buf_size > ice_st->buf_size) {
+        unsigned i;
+        
+        if (ice_st->is_pending) {
+            /* The current buffer is insufficient, but still currently used.*/
+            return PJ_EBUSY;
+        }
+
+    	pj_pool_safe_release(&ice_st->buf_pool);
+
+    	ice_st->buf_pool = pj_pool_create(ice_st->pf, "ice_buf",
+    			       (buf_size + sizeof(pending_send)) *
+    			       ice_st->num_buf, 512, NULL);
+	if (!ice_st->buf_pool)
+	    return PJ_ENOMEM;
+
+	ice_st->buf_size = buf_size;
+	ice_st->send_buf = pj_pool_calloc(ice_st->buf_pool, ice_st->num_buf,
+			       		  sizeof(pending_send));
+	for (i = 0; i < ice_st->num_buf; i++) {
+	    ice_st->send_buf[i].buffer = pj_pool_alloc(ice_st->buf_pool,
+	    					       buf_size);
+	}
+	ice_st->buf_idx = ice_st->empty_idx = 0;
+    }
+    
+    return PJ_SUCCESS;
+}
 
 /*
  * Create ICE stream transport
@@ -788,6 +883,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
 			  PJNATH_POOL_INC_ICE_STRANS, NULL);
     ice_st = PJ_POOL_ZALLOC_T(pool, pj_ice_strans);
     ice_st->pool = pool;
+    ice_st->pf = cfg->stun_cfg.pf;
     ice_st->obj_name = pool->obj_name;
     ice_st->user_data = user_data;
 
@@ -799,6 +895,15 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     status = pj_grp_lock_create(pool, NULL, &ice_st->grp_lock);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);
+	pj_log_pop_indent();
+	return status;
+    }
+
+    /* Allocate send buffer */
+    ice_st->num_buf = cfg->num_send_buf;
+    status = alloc_send_buf(ice_st, cfg->send_buf_size);
+    if (status != PJ_SUCCESS) {
+	destroy_ice_st(ice_st);
 	pj_log_pop_indent();
 	return status;
     }
@@ -861,6 +966,15 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     /* Check if all candidates are ready (this may call callback) */
     sess_init_update(ice_st);
 
+    /* If ICE init done, notify app about end of candidate gathering via
+     * on_new_candidate() callback.
+     */
+    if (ice_st->state==PJ_ICE_STRANS_STATE_READY &&
+	ice_st->cb.on_new_candidate)
+    {
+	(*ice_st->cb.on_new_candidate)(ice_st, NULL, PJ_TRUE);
+    }
+
     pj_log_pop_indent();
 
     return PJ_SUCCESS;
@@ -874,7 +988,8 @@ static void ice_st_on_destroy(void *obj)
     PJ_LOG(4,(ice_st->obj_name, "ICE stream transport %p destroyed", obj));
 
     /* Done */
-    pj_pool_release(ice_st->pool);
+    pj_pool_safe_release(&ice_st->buf_pool);
+    pj_pool_safe_release(&ice_st->pool);
 }
 
 /* Destroy ICE */
@@ -979,6 +1094,7 @@ static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
 static void sess_init_update(pj_ice_strans *ice_st)
 {
     unsigned i;
+    pj_status_t status = PJ_EUNKNOWN;
 
     /* Ignore if ICE is destroying or init callback has been called */
     if (ice_st->destroy_req || ice_st->cb_called)
@@ -998,6 +1114,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
 	    return;
 	}
 
+	status = PJ_EUNKNOWN;
 	for (j=0; j<comp->cand_cnt; ++j) {
 	    pj_ice_sess_cand *cand = &comp->cand_list[j];
 
@@ -1008,15 +1125,35 @@ static void sess_init_update(pj_ice_strans *ice_st)
 			   pj_ice_get_cand_type_name(cand->type)));
 		return;
 	    }
+	    
+	    if (status == PJ_EUNKNOWN) {
+	    	status = cand->status;
+	    } else {
+	    	/* We only need one successful candidate. */
+	    	if (cand->status == PJ_SUCCESS)
+	    	    status = PJ_SUCCESS;
+	    }
 	}
+	
+	if (status != PJ_SUCCESS)
+	    break;
     }
 
-    /* All candidates have been gathered */
+    /* All candidates have been gathered or there's no successful
+     * candidate for a component.
+     */
     ice_st->cb_called = PJ_TRUE;
     ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
 	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT,
-				      PJ_SUCCESS);
+				      status);
+
+    /* Tell ICE session that trickling is done */
+    ice_st->loc_cand_end = PJ_TRUE;
+    if (ice_st->ice && ice_st->ice->is_trickling && ice_st->rem_cand_end) {
+	pj_ice_sess_update_check_list(ice_st->ice, NULL, NULL, 0, NULL,
+				      PJ_TRUE);
+    }
 }
 
 /*
@@ -1063,6 +1200,49 @@ PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
     return PJ_SUCCESS;
 }
 
+/*
+ * Update number of components of the ICE stream transport.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_update_comp_cnt( pj_ice_strans *ice_st,
+						   unsigned comp_cnt)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(ice_st && comp_cnt < ice_st->comp_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice == NULL, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    for (i=comp_cnt; i<ice_st->comp_cnt; ++i) {
+	pj_ice_strans_comp *comp = ice_st->comp[i];
+	unsigned j;
+
+	/* Destroy the component */
+	for (j = 0; j < ice_st->cfg.stun_tp_cnt; ++j) {
+	    if (comp->stun[j].sock) {
+		pj_stun_sock_destroy(comp->stun[j].sock);
+		comp->stun[j].sock = NULL;
+	    }
+	}
+	for (j = 0; j < ice_st->cfg.turn_tp_cnt; ++j) {
+	    if (comp->turn[j].sock) {
+		pj_turn_sock_destroy(comp->turn[j].sock);
+		comp->turn[j].sock = NULL;
+	    }
+	}
+	comp->cand_cnt = 0;
+	ice_st->comp[i] = NULL;
+    }
+    ice_st->comp_cnt = comp_cnt;
+    pj_grp_lock_release(ice_st->grp_lock);
+
+    PJ_LOG(4,(ice_st->obj_name,
+	      "Updated ICE stream transport components number to %d",
+	      comp_cnt));
+
+    return PJ_SUCCESS;
+}
+
 /**
  * Get the group lock for this ICE stream transport.
  */
@@ -1094,6 +1274,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
     /* Init callback */
     pj_bzero(&ice_cb, sizeof(ice_cb));
+    ice_cb.on_valid_pair   = &on_valid_pair;
     ice_cb.on_ice_complete = &on_ice_complete;
     ice_cb.on_rx_data = &ice_rx_data;
     ice_cb.on_tx_pkt = &ice_tx_pkt;
@@ -1202,7 +1383,9 @@ PJ_DEF(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st)
  */
 PJ_DEF(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st)
 {
-    return ice_st && ice_st->ice && ice_st->ice->rcand_cnt &&
+    // Trickle ICE can start ICE before remote candidate list is received
+    return ice_st && ice_st->ice && /* ice_st->ice->rcand_cnt && */
+	   ice_st->ice->clist.state == PJ_ICE_SESS_CHECKLIST_ST_RUNNING &&
 	   !pj_ice_strans_sess_is_complete(ice_st);
 }
 
@@ -1246,7 +1429,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_ufrag_pwd( pj_ice_strans *ice_st,
     if (loc_pwd) *loc_pwd = ice_st->ice->rx_pass;
 
     if (rem_ufrag || rem_pwd) {
-	PJ_ASSERT_RETURN(ice_st->ice->rcand_cnt != 0, PJ_EINVALIDOP);
+	// In trickle ICE, remote may send initial SDP with empty candidates
+	//PJ_ASSERT_RETURN(ice_st->ice->rcand_cnt != 0, PJ_EINVALIDOP);
 	if (rem_ufrag) *rem_ufrag = ice_st->ice->tx_ufrag;
 	if (rem_pwd) *rem_pwd = ice_st->ice->tx_pass;
     }
@@ -1344,40 +1528,36 @@ PJ_DEF(pj_status_t) pj_ice_strans_change_role( pj_ice_strans *ice_st,
     return pj_ice_sess_change_role(ice_st->ice, new_role);
 }
 
-/*
- * Start ICE processing !
- */
-PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
-					     const pj_str_t *rem_ufrag,
-					     const pj_str_t *rem_passwd,
-					     unsigned rem_cand_cnt,
-					     const pj_ice_sess_cand rem_cand[])
+static pj_status_t setup_turn_perm( pj_ice_strans *ice_st)
 {
     unsigned n;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(ice_st && rem_ufrag && rem_passwd &&
-		     rem_cand_cnt && rem_cand, PJ_EINVAL);
-
-    /* Mark start time */
-    pj_gettimeofday(&ice_st->start_time);
-
-    /* Build check list */
-    status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag, rem_passwd,
-					   rem_cand_cnt, rem_cand);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* If we have TURN candidate, now is the time to create the permissions */
     for (n = 0; n < ice_st->cfg.turn_tp_cnt; ++n) {
-	unsigned i;
+	unsigned i, comp_cnt;
 
-	for (i=0; i<ice_st->comp_cnt; ++i) {
+	comp_cnt = pj_ice_strans_get_running_comp_cnt(ice_st);
+	for (i=0; i<comp_cnt; ++i) {
 	    pj_ice_strans_comp *comp = ice_st->comp[i];
+	    pj_turn_session_info info;
 	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
 	    unsigned j, count=0;
+	    unsigned rem_cand_cnt;
+	    const pj_ice_sess_cand *rem_cand;
+
+	    if (!comp->turn[n].sock)
+		continue;
+
+	    status = pj_turn_sock_get_info(comp->turn[n].sock, &info);
+	    if (status != PJ_SUCCESS || info.state != PJ_TURN_STATE_READY)
+		continue;
 
 	    /* Gather remote addresses for this component */
+	    rem_cand_cnt = ice_st->ice->rcand_cnt;
+	    rem_cand = ice_st->ice->rcand;
+	    if (status != PJ_SUCCESS)
+		continue;
+
 	    for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
 		if (rem_cand[j].comp_id==i+1 &&
 		    rem_cand[j].addr.addr.sa_family==
@@ -1388,14 +1568,49 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	    }
 
 	    if (count && !comp->turn[n].err_cnt && comp->turn[n].sock) {
-		status = pj_turn_sock_set_perm(comp->turn[n].sock, count,
-					       addrs, 0);
+		status = pj_turn_sock_set_perm(
+				    comp->turn[n].sock, count,
+				    addrs, PJ_ICE_ST_USE_TURN_PERMANENT_PERM);
 		if (status != PJ_SUCCESS) {
 		    pj_ice_strans_stop_ice(ice_st);
 		    return status;
 		}
 	    }
 	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Start ICE processing !
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
+					     const pj_str_t *rem_ufrag,
+					     const pj_str_t *rem_passwd,
+					     unsigned rem_cand_cnt,
+					     const pj_ice_sess_cand rem_cand[])
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice, PJ_EINVALIDOP);
+
+    /* Mark start time */
+    pj_gettimeofday(&ice_st->start_time);
+
+    /* Update check list */
+    status = pj_ice_strans_update_check_list(ice_st, rem_ufrag, rem_passwd,
+					     rem_cand_cnt, rem_cand,
+					     !ice_st->ice->is_trickling);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* If we have TURN candidate, now is the time to create the permissions */
+    status = setup_turn_perm(ice_st);
+    if (status != PJ_SUCCESS) {
+	pj_ice_strans_stop_ice(ice_st);
+	return status;
     }
 
     /* Start ICE negotiation! */
@@ -1408,6 +1623,78 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     ice_st->state = PJ_ICE_STRANS_STATE_NEGO;
     return status;
 }
+
+
+/*
+ * Update check list after discovering and conveying new local ICE candidate,
+ * or receiving update of remote ICE candidates in trickle ICE.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_update_check_list(
+					 pj_ice_strans *ice_st,
+					 const pj_str_t *rem_ufrag,
+					 const pj_str_t *rem_passwd,
+					 unsigned rem_cand_cnt,
+					 const pj_ice_sess_cand rem_cand[],
+					 pj_bool_t rcand_end)
+{
+    pj_bool_t checklist_created;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(ice_st && ((rem_cand_cnt==0) ||
+			        (rem_ufrag && rem_passwd && rem_cand)),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st->ice, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    checklist_created = ice_st->ice->tx_ufrag.slen > 0;
+
+    /* Create checklist (if not yet) */
+    if (rem_ufrag && !checklist_created) {
+	status = pj_ice_sess_create_check_list(ice_st->ice, rem_ufrag,
+					       rem_passwd, rem_cand_cnt,
+					       rem_cand);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed setting up remote ufrag"));
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
+    }
+
+    /* Update checklist for trickling ICE */
+    if (ice_st->ice->is_trickling) {
+	if (rcand_end && !ice_st->rem_cand_end)
+	    ice_st->rem_cand_end = PJ_TRUE;
+
+	status = pj_ice_sess_update_check_list(
+			    ice_st->ice, rem_ufrag, rem_passwd,
+			    (checklist_created? rem_cand_cnt:0), rem_cand,
+			    (ice_st->rem_cand_end && ice_st->loc_cand_end));
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed updating checklist"));
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
+    }
+
+    /* Update TURN permissions if periodic check has been started. */
+    if (pj_ice_strans_sess_is_running(ice_st)) {
+	status = setup_turn_perm(ice_st);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ice_st->obj_name, status,
+			 "Failed setting up TURN permission"));
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    return status;
+	}
+    }
+
+    pj_grp_lock_release(ice_st->grp_lock);
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Get valid pair.
@@ -1433,7 +1720,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
     
     /* Protect with group lock, since this may cause race condition with
-     * pj_ice_strans_sendto().
+     * pj_ice_strans_sendto2().
      * See ticket #1877.
      */
     pj_grp_lock_acquire(ice_st->grp_lock);
@@ -1450,18 +1737,63 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
     return PJ_SUCCESS;
 }
 
+static pj_status_t use_buffer( pj_ice_strans *ice_st,
+			       unsigned comp_id,
+			       const void *data,
+			       pj_size_t data_len,
+			       const pj_sockaddr_t *dst_addr,
+			       int dst_addr_len,
+			       void **buffer )
+{
+    unsigned idx;
+    pj_status_t status;
+
+    /* Allocate send buffer, if necessary. */
+    status = alloc_send_buf(ice_st, data_len);
+    if (status != PJ_SUCCESS)
+    	return status;
+    
+    if (ice_st->is_pending && ice_st->empty_idx == ice_st->buf_idx) {
+    	/* We don't use buffer or there's no more empty buffer. */
+    	return PJ_EBUSY;
+    }
+
+    idx = ice_st->empty_idx;
+    ice_st->empty_idx = (ice_st->empty_idx + 1) % ice_st->num_buf;
+    ice_st->send_buf[idx].comp_id = comp_id;
+    ice_st->send_buf[idx].data_len = data_len;
+    pj_assert(ice_st->buf_size >= data_len);
+    pj_memcpy(ice_st->send_buf[idx].buffer, data, data_len);
+    pj_sockaddr_cp(&ice_st->send_buf[idx].dst_addr, dst_addr);
+    ice_st->send_buf[idx].dst_addr_len = dst_addr_len;
+    *buffer = ice_st->send_buf[idx].buffer;
+    
+    if (ice_st->is_pending) {
+        /* We'll continue later since there's still a pending send. */
+    	return PJ_EPENDING;
+    }
+    
+    ice_st->is_pending = PJ_TRUE;
+    ice_st->buf_idx = idx;
+
+    return PJ_SUCCESS;
+}
+
 /*
  * Application wants to send outgoing packet.
  */
-PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
-					  unsigned comp_id,
-					  const void *data,
-					  pj_size_t data_len,
-					  const pj_sockaddr_t *dst_addr,
-					  int dst_addr_len)
+static pj_status_t send_data(pj_ice_strans *ice_st,
+			     unsigned comp_id,
+		      	     const void *data,
+		      	     pj_size_t data_len,
+			     const pj_sockaddr_t *dst_addr,
+			     int dst_addr_len,
+			     pj_bool_t use_buf,
+			     pj_bool_t call_cb)
 {
     pj_ice_strans_comp *comp;
     pj_ice_sess_cand *def_cand;
+    void *buf = (void *)data;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ice_st && comp_id && comp_id <= ice_st->comp_cnt &&
@@ -1470,8 +1802,12 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
     comp = ice_st->comp[comp_id-1];
 
     /* Check that default candidate for the component exists */
-    if (comp->default_cand >= comp->cand_cnt)
-	return PJ_EINVALIDOP;
+    if (comp->default_cand >= comp->cand_cnt) {
+	status = PJ_EINVALIDOP;
+	if (call_cb)
+    	    on_data_sent(ice_st, -status);
+    	return status;
+    }
 
     /* Protect with group lock, since this may cause race condition with
      * pj_ice_strans_stop_ice().
@@ -1479,20 +1815,32 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
      */
     pj_grp_lock_acquire(ice_st->grp_lock);
 
-    /* If ICE is available, send data with ICE, otherwise send with the
-     * default candidate selected during initialization.
+    if (use_buf && ice_st->num_buf > 0) {
+    	status = use_buffer(ice_st, comp_id, data, data_len, dst_addr,
+    			    dst_addr_len, &buf);
+
+    	if (status == PJ_EPENDING || status != PJ_SUCCESS) {
+    	    pj_grp_lock_release(ice_st->grp_lock);
+    	    return status;
+    	}
+    }
+
+    /* If ICE is available, send data with ICE. If ICE nego is not completed
+     * yet, ICE will try to send using any valid candidate pair. For any
+     * failure, it will fallback to sending with the default candidate
+     * selected during initialization.
      *
      * https://trac.pjsip.org/repos/ticket/1416:
      * Once ICE has failed, also send data with the default candidate.
      */
-    if (ice_st->ice && ice_st->state == PJ_ICE_STRANS_STATE_RUNNING) {
-	status = pj_ice_sess_send_data(ice_st->ice, comp_id, data, data_len);
-	
-	pj_grp_lock_release(ice_st->grp_lock);
-	
-	return status;
+    if (ice_st->ice && ice_st->state <= PJ_ICE_STRANS_STATE_RUNNING) {
+	status = pj_ice_sess_send_data(ice_st->ice, comp_id, buf, data_len);
+	if (status == PJ_SUCCESS || status == PJ_EPENDING) {
+	    pj_grp_lock_release(ice_st->grp_lock);
+	    goto on_return;
+	}
     } 
-    
+
     pj_grp_lock_release(ice_st->grp_lock);
 
     def_cand = &comp->cand_list[comp->default_cand];
@@ -1511,7 +1859,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 	    /* https://trac.pjsip.org/repos/ticket/1316 */
 	    if (comp->turn[tp_idx].sock == NULL) {
 		/* TURN socket error */
-		return PJ_EINVALIDOP;
+		status = PJ_EINVALIDOP;
+		goto on_return;
 	    }
 
 	    if (!comp->turn[tp_idx].log_off) {
@@ -1525,11 +1874,10 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 	    }
 
 	    status = pj_turn_sock_sendto(comp->turn[tp_idx].sock,
-					 (const pj_uint8_t*)data,
+					 (const pj_uint8_t*)buf,
 					 (unsigned)data_len,
 					 dst_addr, dst_addr_len);
-	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ?
-		    PJ_SUCCESS : status;
+	    goto on_return;
 	} else {
     	    const pj_sockaddr_t *dest_addr;
     	    unsigned dest_addr_len;
@@ -1542,7 +1890,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
     	    					    &comp->synth_addr,
     	    					    dst_addr);
     	    	    if (status != PJ_SUCCESS)
-    	            	return status;
+    	            	goto on_return;
 
     	    	    pj_sockaddr_cp(&comp->dst_addr, dst_addr);
     	    	    comp->synth_addr_len = pj_sockaddr_get_len(
@@ -1555,15 +1903,150 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
     		dest_addr_len = dst_addr_len;
     	    }
 
-	    status = pj_stun_sock_sendto(comp->stun[tp_idx].sock, NULL, data,
+	    status = pj_stun_sock_sendto(comp->stun[tp_idx].sock, NULL, buf,
 					 (unsigned)data_len, 0, dest_addr,
 					 dest_addr_len);
-	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ?
-		    PJ_SUCCESS : status;
+	    goto on_return;
 	}
 
     } else
-	return PJ_EINVALIDOP;
+	status = PJ_EINVALIDOP;
+
+on_return:
+    /* We continue later in on_data_sent() callback. */
+    if (status == PJ_EPENDING)
+    	return status;
+
+    if (call_cb) {
+    	on_data_sent(ice_st, (status == PJ_SUCCESS? data_len: -status));
+    } else {
+    	check_pending_send(ice_st);
+    }
+
+    return status;
+}
+
+
+#if !DEPRECATED_FOR_TICKET_2229
+/*
+ * Application wants to send outgoing packet.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
+					  unsigned comp_id,
+					  const void *data,
+					  pj_size_t data_len,
+					  const pj_sockaddr_t *dst_addr,
+					  int dst_addr_len)
+{
+    pj_status_t status;
+
+    PJ_LOG(1, (ice_st->obj_name, "pj_ice_strans_sendto() is deprecated. "
+    				 "Application is recommended to use "
+    				 "pj_ice_strans_sendto2() instead."));
+    status = send_data(ice_st, comp_id, data, data_len, dst_addr,
+    		       dst_addr_len, PJ_TRUE, PJ_FALSE);
+    if (status == PJ_EPENDING)
+    	status = PJ_SUCCESS;
+    
+    return status;
+}
+#endif
+
+
+/*
+ * Application wants to send outgoing packet.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_sendto2(pj_ice_strans *ice_st,
+					  unsigned comp_id,
+					  const void *data,
+					  pj_size_t data_len,
+					  const pj_sockaddr_t *dst_addr,
+					  int dst_addr_len)
+{
+    ice_st->call_send_cb = PJ_TRUE;
+    return send_data(ice_st, comp_id, data, data_len, dst_addr,
+    		     dst_addr_len, PJ_TRUE, PJ_FALSE);
+}
+
+static void on_valid_pair(pj_ice_sess *ice)
+{
+    pj_time_val t;
+    unsigned msec;
+    pj_ice_strans *ice_st = (pj_ice_strans *)ice->user_data;
+    pj_ice_strans_cb cb   = ice_st->cb;
+    pj_status_t status    = PJ_SUCCESS;
+
+    pj_grp_lock_add_ref(ice_st->grp_lock);
+
+    pj_gettimeofday(&t);
+    PJ_TIME_VAL_SUB(t, ice_st->start_time);
+    msec = PJ_TIME_VAL_MSEC(t);
+
+    if (cb.on_valid_pair) {
+	unsigned i;
+	enum {
+	    msg_disable_ind = 0xFFFF & ~(PJ_STUN_SESS_LOG_TX_IND |
+	                                 PJ_STUN_SESS_LOG_RX_IND)
+	};
+
+	PJ_LOG(4,
+	       (ice_st->obj_name, "First ICE candidate nominated in %ds:%03d",
+	        msec / 1000, msec % 1000));
+
+	for (i = 0; i < ice_st->comp_cnt; ++i) {
+	    const pj_ice_sess_check *check;
+	    pj_ice_strans_comp *comp = ice_st->comp[i];
+
+	    check = pj_ice_strans_get_valid_pair(ice_st, i + 1);
+	    if (check) {
+		char lip[PJ_INET6_ADDRSTRLEN + 10];
+		char rip[PJ_INET6_ADDRSTRLEN + 10];
+		unsigned tp_idx = GET_TP_IDX(check->lcand->transport_id);
+		unsigned tp_typ = GET_TP_TYPE(check->lcand->transport_id);
+
+		pj_sockaddr_print(&check->lcand->addr, lip, sizeof(lip), 3);
+		pj_sockaddr_print(&check->rcand->addr, rip, sizeof(rip), 3);
+
+		if (tp_typ == TP_TURN) {
+		    /* Activate channel binding for the remote address
+		     * for more efficient data transfer using TURN.
+		     */
+		    status = pj_turn_sock_bind_channel(
+		            comp->turn[tp_idx].sock, &check->rcand->addr,
+		            sizeof(check->rcand->addr));
+
+		    /* Disable logging for Send/Data indications */
+		    PJ_LOG(5, (ice_st->obj_name,
+		               "Disabling STUN Indication logging for "
+		               "component %d",
+		               i + 1));
+		    pj_turn_sock_set_log(comp->turn[tp_idx].sock,
+		                         msg_disable_ind);
+		    comp->turn[tp_idx].log_off = PJ_TRUE;
+		}
+
+		PJ_LOG(4, (ice_st->obj_name,
+		           " Comp %d: "
+		           "sending from %s candidate %s to "
+		           "%s candidate %s",
+		           i + 1, pj_ice_get_cand_type_name(check->lcand->type),
+		           lip, pj_ice_get_cand_type_name(check->rcand->type),
+		           rip));
+
+	    } else {
+		PJ_LOG(4, (ice_st->obj_name, "Comp %d: disabled", i + 1));
+	    }
+	}
+
+	ice_st->state = (status == PJ_SUCCESS) ? PJ_ICE_STRANS_STATE_RUNNING :
+	                                         PJ_ICE_STRANS_STATE_FAILED;
+
+	pj_log_push_indent();
+	(*cb.on_valid_pair)(ice_st);
+	pj_log_pop_indent();
+    }
+
+    pj_grp_lock_dec_ref(ice_st->grp_lock);
 }
 
 /*
@@ -1675,6 +2158,8 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     pj_ice_strans *ice_st = (pj_ice_strans*)ice->user_data;
     pj_ice_strans_comp *comp;
     pj_status_t status;
+    void *buf = (void *)pkt;
+    pj_bool_t use_buf = PJ_FALSE;
 #if defined(ENABLE_TRACE) && (ENABLE_TRACE != 0)
     char daddr[PJ_INET6_ADDRSTRLEN];
 #endif
@@ -1682,6 +2167,21 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     unsigned tp_typ = GET_TP_TYPE(transport_id);
 
     PJ_ASSERT_RETURN(comp_id && comp_id <= ice_st->comp_cnt, PJ_EINVAL);
+
+    pj_grp_lock_acquire(ice_st->grp_lock);
+    if (ice_st->num_buf > 0 &&
+        (!ice_st->send_buf ||
+         ice_st->send_buf[ice_st->buf_idx].buffer != pkt))
+    {
+        use_buf = PJ_TRUE;
+    	status = use_buffer(ice_st, comp_id, pkt, size, dst_addr,
+    			    dst_addr_len, &buf);
+    	if (status == PJ_EPENDING || status != PJ_SUCCESS) {
+    	    pj_grp_lock_release(ice_st->grp_lock);
+    	    return status;
+    	}
+    }
+    pj_grp_lock_release(ice_st->grp_lock);
 
     comp = ice_st->comp[comp_id-1];
 
@@ -1695,7 +2195,7 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     if (tp_typ == TP_TURN) {
 	if (comp->turn[tp_idx].sock) {
 	    status = pj_turn_sock_sendto(comp->turn[tp_idx].sock,
-					 (const pj_uint8_t*)pkt,
+					 (const pj_uint8_t*)buf,
 					 (unsigned)size,
 					 dst_addr, dst_addr_len);
 	} else {
@@ -1711,8 +2211,9 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     	    {
     	    	status = pj_sockaddr_synthesize(pj_AF_INET6(),
     	    					&comp->synth_addr, dst_addr);
-    	    	if (status != PJ_SUCCESS)
-    	    	    return status;
+    	    	if (status != PJ_SUCCESS) {
+    	    	    goto on_return;
+    	    	}
     	    
     	    	pj_sockaddr_cp(&comp->dst_addr, dst_addr);
     	    	comp->synth_addr_len = pj_sockaddr_get_len(&comp->synth_addr);
@@ -1725,14 +2226,25 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     	}
 
 	status = pj_stun_sock_sendto(comp->stun[tp_idx].sock, NULL,
-				     pkt, (unsigned)size, 0,
+				     buf, (unsigned)size, 0,
 				     dest_addr, dest_addr_len);
     } else {
 	pj_assert(!"Invalid transport ID");
 	status = PJ_EINVALIDOP;
     }
 
-    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
+on_return:
+    if (use_buf && status != PJ_EPENDING) {
+        pj_grp_lock_acquire(ice_st->grp_lock);
+    	if (ice_st->num_buf > 0) {
+    	    ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
+    	    pj_assert(ice_st->buf_idx == ice_st->empty_idx);
+    	}
+    	ice_st->is_pending = PJ_FALSE;
+    	pj_grp_lock_release(ice_st->grp_lock);
+    }
+
+    return status;
 }
 
 /*
@@ -1753,6 +2265,43 @@ static void ice_rx_data(pj_ice_sess *ice,
 	(*ice_st->cb.on_rx_data)(ice_st, comp_id, pkt, size,
 				 src_addr, src_addr_len);
     }
+}
+
+static void check_pending_send(pj_ice_strans *ice_st)
+{
+    pj_grp_lock_acquire(ice_st->grp_lock);
+
+    if (ice_st->num_buf > 0)
+        ice_st->buf_idx = (ice_st->buf_idx + 1) % ice_st->num_buf;
+    
+    if (ice_st->num_buf > 0 && ice_st->buf_idx != ice_st->empty_idx) {
+	/* There's some pending send. Send it one by one. */
+        pending_send *ps = &ice_st->send_buf[ice_st->buf_idx];
+
+	pj_grp_lock_release(ice_st->grp_lock);
+    	send_data(ice_st, ps->comp_id, ps->buffer, ps->data_len,
+    	    	  &ps->dst_addr, ps->dst_addr_len, PJ_FALSE, PJ_TRUE);
+    } else {
+    	ice_st->is_pending = PJ_FALSE;
+    	pj_grp_lock_release(ice_st->grp_lock);
+    }
+}
+
+/* Notifification when asynchronous send operation via STUN/TURN
+ * has completed.
+ */
+static pj_bool_t on_data_sent(pj_ice_strans *ice_st, pj_ssize_t sent)
+{
+    if (ice_st->destroy_req || !ice_st->is_pending)
+	return PJ_TRUE;
+
+    if (ice_st->call_send_cb && ice_st->cb.on_data_sent) {
+	(*ice_st->cb.on_data_sent)(ice_st, sent);
+    }
+
+    check_pending_send(ice_st);
+
+    return PJ_TRUE;
 }
 
 /* Notification when incoming packet has been received from
@@ -1814,10 +2363,14 @@ static pj_bool_t stun_on_data_sent(pj_stun_sock *stun_sock,
 				   pj_ioqueue_op_key_t *send_key,
 				   pj_ssize_t sent)
 {
-    PJ_UNUSED_ARG(stun_sock);
+    sock_user_data *data;
+
     PJ_UNUSED_ARG(send_key);
-    PJ_UNUSED_ARG(sent);
-    return PJ_TRUE;
+
+    data = (sock_user_data *)pj_stun_sock_get_user_data(stun_sock);
+    if (!data || !data->comp || !data->comp->ice_st) return PJ_TRUE;
+
+    return on_data_sent(data->comp->ice_st, sent);
 }
 
 /* Notification when the status of the STUN transport has changed. */
@@ -1893,6 +2446,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 				    "Binding discovery complete" :
 				    "srflx address changed";
 		pj_bool_t dup = PJ_FALSE;
+		pj_bool_t init_done;
 
 		if (info.mapped_addr.addr.sa_family == pj_AF_INET() &&
 		    cand->base_addr.addr.sa_family == pj_AF_INET6())
@@ -1961,6 +2515,22 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    /* Otherwise update the address */
 		    pj_sockaddr_cp(&cand->addr, &info.mapped_addr);
 		    cand->status = PJ_SUCCESS;
+
+		    /* Add the candidate (for trickle ICE) */
+		    if (pj_ice_strans_has_sess(ice_st)) {
+			status = pj_ice_sess_add_cand(
+					ice_st->ice,
+					comp->comp_id,
+					cand->transport_id,
+					cand->type,
+					cand->local_pref,
+					&cand->foundation,
+					&cand->addr,
+					&cand->base_addr,
+					&cand->rel_addr,
+					pj_sockaddr_get_len(&cand->addr),
+					NULL);
+		    }
 		}
 
 		PJ_LOG(4,(comp->ice_st->obj_name,
@@ -1971,7 +2541,16 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 					     sizeof(ipaddr), 3)));
 
 		sess_init_update(ice_st);
-		
+
+		/* Invoke on_new_candidate() callback */
+		init_done = (ice_st->state==PJ_ICE_STRANS_STATE_READY);
+		if (op == PJ_STUN_SOCK_BINDING_OP && status == PJ_SUCCESS &&
+		    ice_st->cb.on_new_candidate && (!dup || init_done))
+		{
+		    (*ice_st->cb.on_new_candidate)
+					(ice_st, (dup? NULL:cand), init_done);
+		}
+
 		if (op == PJ_STUN_SOCK_MAPPED_ADDR_CHANGE &&
 		    ice_st->cb.on_ice_complete)
 		{
@@ -1992,6 +2571,8 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
 			  "STUN binding request failed", status);
 	    } else {
+		pj_bool_t init_done;
+
 		PJ_LOG(4,(ice_st->obj_name,
 			  "STUN error is ignored for comp %d",
 			  comp->comp_id));
@@ -2006,6 +2587,14 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		}
 
 		sess_init_update(ice_st);
+
+		/* Invoke on_new_candidate() callback */
+		init_done = (ice_st->state==PJ_ICE_STRANS_STATE_READY);
+		if (op == PJ_STUN_SOCK_BINDING_OP &&
+		    ice_st->cb.on_new_candidate && init_done)
+		{
+		    (*ice_st->cb.on_new_candidate) (ice_st, NULL, PJ_TRUE);
+		}
 	    }
 	}
 	break;
@@ -2075,6 +2664,19 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
     pj_grp_lock_dec_ref(comp->ice_st->grp_lock);
 }
 
+/* Notifification when asynchronous send operation to the TURN socket
+ * has completed.
+ */
+static pj_bool_t turn_on_data_sent(pj_turn_sock *turn_sock,
+				   pj_ssize_t sent)
+{
+    sock_user_data *data;
+
+    data = (sock_user_data *)pj_turn_sock_get_user_data(turn_sock);
+    if (!data || !data->comp || !data->comp->ice_st) return PJ_TRUE;
+
+    return on_data_sent(data->comp->ice_st, sent);
+}
 
 /* Callback when TURN client state has changed */
 static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
@@ -2125,9 +2727,11 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		break;
 	    }
 	}
-	pj_assert(cand != NULL);
 
 	pj_grp_lock_release(comp->ice_st->grp_lock);
+
+	if (cand == NULL)
+	    goto on_return;
 
 	/* Update candidate */
 	pj_sockaddr_cp(&cand->addr, &rel_info.relay_addr);
@@ -2171,11 +2775,71 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		  pj_sockaddr_print(&rel_info.relay_addr, ipaddr,
 				     sizeof(ipaddr), 3)));
 
+	/* For trickle ICE, add the candidate to ICE session and setup TURN
+	 * permission for remote candidates.
+	 */
+	if (comp->ice_st->cfg.opt.trickle != PJ_ICE_SESS_TRICKLE_DISABLED &&
+	    pj_ice_strans_has_sess(comp->ice_st))
+	{
+	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
+	    pj_ice_sess *sess = comp->ice_st->ice;
+	    unsigned j, count=0;
+	    pj_status_t status;
+
+	    /* Add the candidate */
+	    status = pj_ice_sess_add_cand(comp->ice_st->ice,
+					  comp->comp_id,
+					  cand->transport_id,
+					  cand->type,
+					  cand->local_pref,
+					  &cand->foundation,
+					  &cand->addr,
+					  &cand->base_addr, 
+					  &cand->rel_addr,
+					  pj_sockaddr_get_len(&cand->addr),
+					  NULL);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(comp->ice_st->obj_name, status,
+			  "Comp %d/%d: failed to add TURN (tpid=%d) to ICE",
+			  comp->comp_id, cand_idx, cand->transport_id));
+		sess_fail(comp->ice_st, PJ_ICE_STRANS_OP_INIT,
+			  "adding TURN candidate failed", status);
+	    }
+
+	    /* Gather remote addresses for this component */
+	    for (j=0; j<sess->rcand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
+		if (sess->rcand[j].addr.addr.sa_family==
+		    rel_info.relay_addr.addr.sa_family)
+		{
+		    pj_sockaddr_cp(&addrs[count++], &sess->rcand[j].addr);
+		}
+	    }
+
+	    if (count) {
+		status = pj_turn_sock_set_perm(turn_sock, count, addrs, 0);
+		if (status != PJ_SUCCESS) {
+		    PJ_PERROR(4,(comp->ice_st->obj_name, status,
+			      "Comp %d/%d: TURN set perm (tpid=%d) failed",
+			      comp->comp_id, cand_idx, cand->transport_id));
+		    sess_fail(comp->ice_st, PJ_ICE_STRANS_OP_INIT,
+			      "TURN set permission failed", status);
+		}
+	    }
+	}
+
 	sess_init_update(comp->ice_st);
 
+	/* Invoke on_new_candidate() callback */
+	if (comp->ice_st->cb.on_new_candidate) {
+	    (*comp->ice_st->cb.on_new_candidate)
+			(comp->ice_st, cand,
+			 (comp->ice_st->state==PJ_ICE_STRANS_STATE_READY));
+	}
+
     } else if ((old_state == PJ_TURN_STATE_RESOLVING ||
-                old_state == PJ_TURN_STATE_RESOLVED) &&
-	       new_state == PJ_TURN_STATE_DESTROYING)
+                old_state == PJ_TURN_STATE_RESOLVED ||
+                old_state == PJ_TURN_STATE_ALLOCATING) &&
+	       new_state >= PJ_TURN_STATE_DEALLOCATING)
     {
 	pj_ice_sess_cand *cand = NULL;
 	unsigned i, cand_idx = 0xFF;
@@ -2210,13 +2874,25 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	 * to the list.
 	 */
 	if (cand) {
-	    cand->status = PJ_ERESOLVE;
+	    pj_turn_session_info info;
+
+	    pj_turn_sock_get_info(turn_sock, &info);
+	    cand->status = (old_state == PJ_TURN_STATE_RESOLVING)?
+	    		   PJ_ERESOLVE : info.last_status;
 	    PJ_LOG(4,(comp->ice_st->obj_name,
-		      "Comp %d/%d: TURN resolving (tpid=%d) failed",
-		      comp->comp_id, cand_idx, cand->transport_id));
+		      "Comp %d/%d: TURN error (tpid=%d) during state %s",
+		      comp->comp_id, cand_idx, cand->transport_id,
+		      pj_turn_state_name(old_state)));
 	}
 
 	sess_init_update(comp->ice_st);
+
+	/* Invoke on_new_candidate() callback */
+	if (comp->ice_st->cb.on_new_candidate &&
+	    comp->ice_st->state==PJ_ICE_STRANS_STATE_READY)
+	{
+	    (*comp->ice_st->cb.on_new_candidate)(comp->ice_st, NULL, PJ_TRUE);
+	}
 
     } else if (new_state >= PJ_TURN_STATE_DEALLOCATING) {
 	pj_turn_session_info info;
@@ -2244,11 +2920,13 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 		PJ_PERROR(4,(comp->ice_st->obj_name, info.last_status,
 			  "Comp %d: TURN allocation failed, retrying",
 			  comp->comp_id));
-		add_update_turn(comp->ice_st, comp, tp_idx);
+		add_update_turn(comp->ice_st, comp, tp_idx,
+				PJ_ICE_ST_MAX_CAND - comp->cand_cnt);
 	    }
 	}
     }
 
+on_return:
     pj_grp_lock_dec_ref(comp->ice_st->grp_lock);
 
     pj_log_pop_indent();

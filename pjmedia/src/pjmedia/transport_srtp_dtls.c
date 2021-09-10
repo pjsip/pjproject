@@ -135,6 +135,33 @@ static const pj_str_t ID_ACTIVE       = { "active", 6 };
 static const pj_str_t ID_PASSIVE      = { "passive", 7 };
 static const pj_str_t ID_FINGERPRINT  = { "fingerprint", 11 };
 
+/* Map of OpenSSL-pjmedia SRTP cryptos. Currently OpenSSL seems to
+ * support few cryptos only (based on ssl/d1_srtp.c of OpenSSL 1.1.0c).
+ */
+#define OPENSSL_PROFILE_NUM 4
+
+static char* ossl_profiles[OPENSSL_PROFILE_NUM] =
+{
+     "SRTP_AES128_CM_SHA1_80",
+     "SRTP_AES128_CM_SHA1_32",
+     "SRTP_AEAD_AES_256_GCM",
+     "SRTP_AEAD_AES_128_GCM"
+};
+static char* pj_profiles[OPENSSL_PROFILE_NUM] =
+{
+    "AES_CM_128_HMAC_SHA1_80",
+    "AES_CM_128_HMAC_SHA1_32",
+    "AEAD_AES_256_GCM",
+    "AEAD_AES_128_GCM"
+};
+
+/* This will store the valid OpenSSL profiles which is mapped from 
+ * OpenSSL-pjmedia SRTP cryptos.
+ */
+static char *valid_pj_profiles_list[OPENSSL_PROFILE_NUM];
+static char *valid_ossl_profiles_list[OPENSSL_PROFILE_NUM];
+static unsigned valid_profiles_cnt;
+
 
 /* Certificate & private key */
 static X509	*dtls_cert;
@@ -161,6 +188,43 @@ static pj_status_t dtls_init()
 	}
     }
 
+    if (valid_profiles_cnt == 0) {
+	unsigned n, j;
+	int rc;
+	char *p, *end, buf[OPENSSL_PROFILE_NUM*25];
+
+	/* Create DTLS context */
+	SSL_CTX *ctx = SSL_CTX_new(DTLS_method());
+	if (ctx == NULL) {
+	    return PJ_ENOMEM;
+	}
+
+	p = buf;
+	end = buf + sizeof(buf);
+	for (j=0; j<PJ_ARRAY_SIZE(ossl_profiles); ++j) {
+	    rc = SSL_CTX_set_tlsext_use_srtp(ctx, ossl_profiles[j]);
+	    if (rc == 0) {
+		valid_pj_profiles_list[valid_profiles_cnt] =
+		    pj_profiles[j];
+		valid_ossl_profiles_list[valid_profiles_cnt++] =
+		    ossl_profiles[j];
+
+		n = pj_ansi_snprintf(p, end - p, ":%s", pj_profiles[j]);
+		p += n;
+	    }
+	}
+	SSL_CTX_free(ctx);
+
+	if (valid_profiles_cnt > 0) {
+	    PJ_LOG(4,("DTLS-SRTP", "%s profile is supported", buf));
+	} else {
+	    PJ_PERROR(4, ("DTLS-SRTP", PJMEDIA_SRTP_DTLS_ENOPROFILE,
+			  "Error getting SRTP profile"));
+
+	    return PJMEDIA_SRTP_DTLS_ENOPROFILE;
+	}
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -173,6 +237,8 @@ static void dtls_deinit()
 	EVP_PKEY_free(dtls_priv_key);
 	dtls_priv_key = NULL;
     }
+
+    valid_profiles_cnt = 0;
 }
 
 
@@ -351,26 +417,6 @@ on_error:
     return PJ_EUNKNOWN;
 }
 
-
-/* Map of OpenSSL-pjmedia SRTP cryptos. Currently OpenSSL seems to
- * support few cryptos only (based on ssl/d1_srtp.c of OpenSSL 1.1.0c).
- */
-static char* ossl_profiles[] =
-{
-     "SRTP_AES128_CM_SHA1_80",
-     "SRTP_AES128_CM_SHA1_32",
-     "SRTP_AEAD_AES_256_GCM",
-     "SRTP_AEAD_AES_128_GCM"
-};
-static char* pj_profiles[] =
-{
-    "AES_CM_128_HMAC_SHA1_80",
-    "AES_CM_128_HMAC_SHA1_32",
-    "AEAD_AES_256_GCM",
-    "AEAD_AES_128_GCM"
-};
-
-
 /* Create and initialize new SSL context and instance */
 static pj_status_t ssl_create(dtls_srtp *ds)
 {
@@ -388,6 +434,10 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	return GET_SSL_STATUS(ds);
     }
 
+    if (valid_profiles_cnt == 0) {	
+	return PJMEDIA_SRTP_DTLS_ENOPROFILE;
+    }
+
     /* Set crypto */
     if (1) {
 	char *p, *end, buf[PJ_ARRAY_SIZE(ossl_profiles)*25];
@@ -398,9 +448,12 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	for (i=0; i<ds->srtp->setting.crypto_count && p < end; ++i) {
 	    pjmedia_srtp_crypto *crypto = &ds->srtp->setting.crypto[i];
 	    unsigned j;
-	    for (j=0; j<PJ_ARRAY_SIZE(pj_profiles); ++j) {
-		if (!pj_ansi_strcmp(crypto->name.ptr, pj_profiles[j])) {
-		    n = pj_ansi_snprintf(p, end-p, ":%s", ossl_profiles[j]);
+	    for (j=0; j < valid_profiles_cnt; ++j) {
+		if (!pj_ansi_strcmp(crypto->name.ptr,
+				    valid_pj_profiles_list[j]))
+		{
+		    n = pj_ansi_snprintf(p, end-p, ":%s",
+					 valid_ossl_profiles_list[j]);
 		    p += n;
 		    break;
 		}
@@ -409,7 +462,10 @@ static pj_status_t ssl_create(dtls_srtp *ds)
 	}
 	rc = SSL_CTX_set_tlsext_use_srtp(ctx, buf+1);
 	PJ_LOG(4,(ds->base.name, "Setting crypto [%s], errcode=%d", buf, rc));
-	pj_assert(rc == 0);
+	if (rc != 0) {
+	    SSL_CTX_free(ctx);
+	    return GET_SSL_STATUS(ds);
+	}
     }
 
     /* Set ciphers */
@@ -472,6 +528,9 @@ static void ssl_destroy(dtls_srtp *ds)
 	}
 	SSL_free(ds->ossl_ssl); /* this will also close BIOs */
 	ds->ossl_ssl = NULL;
+	/* thus reset the BIOs as well */
+	ds->ossl_rbio = NULL;
+	ds->ossl_wbio = NULL;
     }
 
     /* Destroy SSL context */
@@ -633,6 +692,8 @@ static pj_status_t ssl_flush_wbio(dtls_srtp *ds)
 {
     pj_size_t len;
     pj_status_t status = PJ_SUCCESS;
+
+	if (ds->ossl_wbio == NULL) return PJ_EGONE;
 
     /* Check whether there is data to send */
     if (BIO_ctrl_pending(ds->ossl_wbio) > 0) {
@@ -842,60 +903,97 @@ static pj_status_t parse_setup_finger_attr(dtls_srtp *ds,
     return PJ_SUCCESS;
 }
 
-
 static pj_status_t get_rem_addrs(dtls_srtp *ds,
 				 const pjmedia_sdp_session *sdp_remote,
-				 unsigned media_index)
+				 unsigned media_index,
+                                 pj_sockaddr *rem_rtp,
+                                 pj_sockaddr *rem_rtcp,
+                                 pj_bool_t *rtcp_mux)
 {
     pjmedia_sdp_media *m_rem = sdp_remote->media[media_index];
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_attr *a;
     int af = pj_AF_UNSPEC();
+    pj_bool_t use_ice_info = PJ_FALSE;
 
-    /* Get RTP address */
-    conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
-    if (pj_stricmp2(&conn->net_type, "IN")==0) {
-	if (pj_stricmp2(&conn->addr_type, "IP4")==0) {
-	    af = pj_AF_INET();
-	} else if (pj_stricmp2(&conn->addr_type, "IP6")==0) {
-	    af = pj_AF_INET6();
+    /* Init RTP & RTCP address */
+    pj_bzero(rem_rtp, sizeof(*rem_rtp));
+    pj_bzero(rem_rtcp, sizeof(*rem_rtcp));
+
+    /* If underlying transport is ICE, get remote addresses from ICE */
+    if (ds->use_ice) {
+	pjmedia_transport_info info;
+	pjmedia_ice_transport_info *ice_info;
+
+	pjmedia_transport_info_init(&info);
+	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+	ice_info = (pjmedia_ice_transport_info*)
+		   pjmedia_transport_info_get_spc_info(
+				    &info, PJMEDIA_TRANSPORT_TYPE_ICE);
+	if (ice_info) {
+	    *rem_rtp = ice_info->comp[0].rcand_addr;
+	    if (ice_info->comp_cnt > 1)
+		*rem_rtcp = ice_info->comp[1].rcand_addr;
+
+	    use_ice_info = PJ_TRUE;
 	}
     }
-    if (af != pj_AF_UNSPEC()) {
-	pj_sockaddr_init(af, &ds->rem_addr, &conn->addr,
-			 m_rem->desc.port);
-    } else {
-	return PJ_EAFNOTSUP;
-    }
 
-    /* Get RTCP address. If "rtcp" attribute is present in the SDP,
-     * set the RTCP address from that attribute. Otherwise, calculate
-     * from RTP address.
-     */
-    a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
-			       "rtcp", NULL);
-    if (a) {
-	pjmedia_sdp_rtcp_attr rtcp;
-	pj_status_t status;
-	status = pjmedia_sdp_attr_get_rtcp(a, &rtcp);
-	if (status == PJ_SUCCESS) {
-	    if (rtcp.addr.slen) {
-		pj_sockaddr_init(af, &ds->rem_rtcp, &rtcp.addr,
-				 (pj_uint16_t)rtcp.port);
-	    } else {
-		pj_sockaddr_init(af, &ds->rem_rtcp, NULL,
-				 (pj_uint16_t)rtcp.port);
-		pj_memcpy(pj_sockaddr_get_addr(&ds->rem_rtcp),
-			  pj_sockaddr_get_addr(&ds->rem_addr),
-			  pj_sockaddr_get_addr_len(&ds->rem_addr));
+    /* Get remote addresses from SDP */
+    if (!use_ice_info) {
+
+	/* Get RTP address */
+	conn = m_rem->conn ? m_rem->conn : sdp_remote->conn;
+	if (pj_stricmp2(&conn->net_type, "IN")==0) {
+	    if (pj_stricmp2(&conn->addr_type, "IP4")==0) {
+		af = pj_AF_INET();
+	    } else if (pj_stricmp2(&conn->addr_type, "IP6")==0) {
+		af = pj_AF_INET6();
 	    }
 	}
+	if (af != pj_AF_UNSPEC()) {
+	    pj_sockaddr_init(af, rem_rtp, &conn->addr,
+			     m_rem->desc.port);
+	} else {
+	    return PJ_EAFNOTSUP;
+	}
+
+	/* Get RTCP address. If "rtcp" attribute is present in the SDP,
+	 * set the RTCP address from that attribute. Otherwise, calculate
+	 * from RTP address.
+	 */
+	a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
+				   "rtcp", NULL);
+	if (a) {
+	    pjmedia_sdp_rtcp_attr rtcp;
+	    pj_status_t status;
+	    status = pjmedia_sdp_attr_get_rtcp(a, &rtcp);
+	    if (status == PJ_SUCCESS) {
+		if (rtcp.addr.slen) {
+		    pj_sockaddr_init(af, rem_rtcp, &rtcp.addr,
+				     (pj_uint16_t)rtcp.port);
+		} else {
+		    pj_sockaddr_init(af, rem_rtcp, NULL,
+				     (pj_uint16_t)rtcp.port);
+		    pj_memcpy(pj_sockaddr_get_addr(rem_rtcp),
+			      pj_sockaddr_get_addr(rem_rtp),
+			      pj_sockaddr_get_addr_len(rem_rtp));
+		}
+	    }
+	}
+	if (!pj_sockaddr_has_addr(rem_rtcp)) {
+	    int rtcp_port;
+	    pj_memcpy(rem_rtcp, rem_rtp, sizeof(pj_sockaddr));
+	    rtcp_port = pj_sockaddr_get_port(rem_rtp) + 1;
+	    pj_sockaddr_set_port(rem_rtcp, (pj_uint16_t)rtcp_port);
+	}
     }
-    if (!pj_sockaddr_has_addr(&ds->rem_rtcp)) {
-	int rtcp_port;
-	pj_memcpy(&ds->rem_rtcp, &ds->rem_addr, sizeof(pj_sockaddr));
-	rtcp_port = pj_sockaddr_get_port(&ds->rem_addr) + 1;
-	pj_sockaddr_set_port(&ds->rem_rtcp, (pj_uint16_t)rtcp_port);
+
+    /* Check if remote indicates the desire to use rtcp-mux in its SDP. */
+    if (rtcp_mux) {
+    	a = pjmedia_sdp_attr_find2(m_rem->attr_count, m_rem->attr,
+			       	   "rtcp-mux", NULL);
+	*rtcp_mux = (a? PJ_TRUE: PJ_FALSE);
     }
 
     return PJ_SUCCESS;
@@ -911,6 +1009,8 @@ static pj_status_t ssl_on_recv_packet(dtls_srtp *ds,
 {
     char tmp[128];
     pj_size_t nwritten;
+
+	if (ds->ossl_rbio == NULL) return PJ_EGONE;
 
     nwritten = BIO_write(ds->ossl_rbio, data, (int)len);
     if (nwritten < len) {
@@ -1179,6 +1279,7 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	/* As answerer */
 	dtls_setup last_setup = ds->setup;
 	pj_str_t last_rem_fp = ds->rem_fingerprint;
+        pj_bool_t rem_addr_changed = PJ_FALSE;
 
 	/* Parse a=setup and a=fingerprint */
 	status = parse_setup_finger_attr(ds, PJ_TRUE, sdp_remote,
@@ -1191,12 +1292,47 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 		    (ds->setup==DTLS_SETUP_ACTIVE? &ID_ACTIVE:&ID_PASSIVE));
 	pjmedia_sdp_media_add_attr(m_loc, a);
 
+        if (last_setup != DTLS_SETUP_UNKNOWN && sdp_remote) {
+            pj_sockaddr rem_rtp;
+            pj_sockaddr rem_rtcp;
+            pj_bool_t use_rtcp_mux;
+
+            status = get_rem_addrs(ds, sdp_remote, media_index, &rem_rtp,
+                                   &rem_rtcp, &use_rtcp_mux);
+            if (status == PJ_SUCCESS) {
+            	if (use_rtcp_mux) {
+            	    /* Remote indicates it wants to use rtcp-mux */
+		    pjmedia_transport_info info;
+
+		    pjmedia_transport_info_init(&info);
+		    pjmedia_transport_get_info(ds->srtp->member_tp, &info);
+		    if (pj_sockaddr_cmp(&info.sock_info.rtp_addr_name,
+	    		&info.sock_info.rtcp_addr_name))
+		    {
+		    	/* But we do not wish to use rtcp mux */
+	    		use_rtcp_mux = PJ_FALSE;
+		    }
+            	}
+                if (pj_sockaddr_has_addr(&ds->rem_addr) &&
+		    pj_sockaddr_has_addr(&rem_rtp) &&
+		    pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
+                    (!use_rtcp_mux &&
+		     pj_sockaddr_has_addr(&ds->rem_rtcp) &&
+		     pj_sockaddr_has_addr(&rem_rtcp) &&
+                     pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp)))
+                {
+                    rem_addr_changed = PJ_TRUE;
+                }
+            }
+        }
+
 	/* Check if remote signals DTLS re-nego by changing its
-	 * setup/fingerprint in SDP.
+	 * setup/fingerprint in SDP or media transport address in SDP.
 	 */
 	if ((last_setup != DTLS_SETUP_UNKNOWN && last_setup != ds->setup) ||
 	    (last_rem_fp.slen &&
-	     pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t))))
+	     pj_memcmp(&last_rem_fp, &ds->rem_fingerprint, sizeof(pj_str_t)))||
+            (rem_addr_changed))
 	{
 	    ssl_destroy(ds);
 	    ds->nego_started = PJ_FALSE;
@@ -1250,8 +1386,10 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
 	ap.user_data = ds->srtp;
 	pjmedia_transport_get_info(ds->srtp->member_tp, &info);
 
-	if (sdp_remote)
-	    get_rem_addrs(ds, sdp_remote, media_index);
+        if (sdp_remote) {
+            get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
+                          &ds->rem_rtcp, NULL);
+        }
 
 	if (pj_sockaddr_has_addr(&ds->rem_addr)) {
 	    pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
@@ -1335,6 +1473,7 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     pj_ice_strans_state ice_state;
     pj_bool_t use_rtcp_mux = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+    struct transport_srtp *srtp = (struct transport_srtp*)tp->user_data;
 
 #if DTLS_DEBUG
     PJ_LOG(2,(ds->base.name, "dtls_media_start()"));
@@ -1390,6 +1529,10 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 				    &info, PJMEDIA_TRANSPORT_TYPE_ICE);
 	ds->use_ice = ice_info && ice_info->active;
 	ice_state = ds->use_ice? ice_info->sess_state : 0;
+
+	/* Update remote RTP & RTCP addresses */
+	get_rem_addrs(ds, sdp_remote, media_index, &ds->rem_addr,
+                      &ds->rem_rtcp, NULL);
     }
 
     /* Check if the background DTLS nego has completed */
@@ -1416,6 +1559,8 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
     ds->srtp->keying_pending_cnt++;
     ds->pending_start = PJ_TRUE;
 
+    srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
+
     /* If our DTLS setup is ACTIVE:
      * - start DTLS nego after ICE nego, or
      * - start it now if there is no ICE.
@@ -1436,9 +1581,6 @@ static pj_status_t dtls_media_start( pjmedia_transport *tp,
 	    ap.user_data = ds->srtp;
 
 	    /* Attach ourselves to member transport for DTLS nego. */
-	    if (!pj_sockaddr_has_addr(&ds->rem_addr))
-		get_rem_addrs(ds, sdp_remote, media_index);
-
 	    if (pj_sockaddr_has_addr(&ds->rem_addr))
 		pj_sockaddr_cp(&ap.rem_addr, &ds->rem_addr);
 	    else
@@ -1497,6 +1639,16 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
 
     if (ds->clock)
 	pjmedia_clock_stop(ds->clock);
+    
+    /* Reset DTLS state */
+    ssl_destroy(ds);
+    ds->setup = DTLS_SETUP_UNKNOWN;
+	ds->use_ice = PJ_FALSE;
+    ds->nego_started = PJ_FALSE;
+    ds->nego_completed = PJ_FALSE;
+    ds->got_keys = PJ_FALSE;
+    ds->rem_fingerprint.slen = 0;
+    ds->rem_fprint_status = PJ_EPENDING;
 
     return PJ_SUCCESS;
 }

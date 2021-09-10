@@ -233,8 +233,11 @@ typedef struct pj_turn_session_cb
 {
     /**
      * This callback will be called by the TURN session whenever it
-     * needs to send outgoing message. Since the TURN session doesn't
-     * have a socket on its own, this callback must be implemented.
+     * needs to send data or outgoing messages. Since the TURN session
+     * doesn't have a socket on its own, this callback must be implemented.
+     *
+     * If the callback \a on_stun_send_pkt() is implemented, outgoing
+     * messages will use that callback instead.
      *
      * @param sess	The TURN session.
      * @param pkt	The packet/data to be sent.
@@ -250,6 +253,28 @@ typedef struct pj_turn_session_cb
 			       unsigned pkt_len,
 			       const pj_sockaddr_t *dst_addr,
 			       unsigned addr_len);
+
+    /**
+     * This callback will be called by the TURN session whenever it
+     * needs to send outgoing STUN requests/messages for TURN signalling
+     * purposes (data sending will not invoke this callback). If this
+     * callback is not implemented, the callback \a on_send_pkt()
+     * will be called instead.
+     *
+     * @param sess	The TURN session.
+     * @param pkt	The packet/data to be sent.
+     * @param pkt_len	Length of the packet/data.
+     * @param dst_addr	Destination address of the packet.
+     * @param addr_len	Length of the destination address.
+     *
+     * @return		The callback should return the status of the
+     *			send operation. 
+     */
+    pj_status_t (*on_stun_send_pkt)(pj_turn_session *sess,
+			       	    const pj_uint8_t *pkt,
+			       	    unsigned pkt_len,
+			       	    const pj_sockaddr_t *dst_addr,
+			       	    unsigned addr_len);
 
     /**
      * Notification when peer address has been bound successfully to 
@@ -335,6 +360,22 @@ typedef struct pj_turn_session_cb
 				      pj_uint32_t conn_id,
 				      const pj_sockaddr_t *peer_addr,
 				      unsigned addr_len);
+
+    /**
+     * Notification for Connect request sent using
+     * pj_turn_session_connect().
+     *
+     * @param sess	The TURN session.
+     * @param status	The status code.
+     * @param conn_id	The connection ID.
+     * @param peer_addr	Peer address.
+     * @param addr_len	Length of the peer address.
+     */
+    void (*on_connect_complete)(pj_turn_session *sess,
+		       pj_status_t status,
+		       pj_uint32_t conn_id,
+		       const pj_sockaddr_t *peer_addr,
+		       unsigned addr_len);
 
 } pj_turn_session_cb;
 
@@ -762,8 +803,10 @@ PJ_DECL(pj_status_t) pj_turn_session_set_perm(pj_turn_session *sess,
  *			of the data, and not the TURN server address).
  * @param addr_len	Length of the address.
  *
- * @return		PJ_SUCCESS if the operation has been successful,
- *			or the appropriate error code on failure.
+ * @return		If the callback \a on_send_pkt() is called, this
+ *			will contain the return value of the callback.
+ *			Otherwise, it will indicate failure with
+ * 			the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_turn_session_sendto(pj_turn_session *sess,
 					    const pj_uint8_t *pkt,
@@ -870,6 +913,29 @@ PJ_DECL(pj_status_t) pj_turn_session_connection_bind(
 					    pj_uint32_t conn_id,
 					    const pj_sockaddr_t *peer_addr,
 					    unsigned addr_len);
+/**
+ * Initiate connection to the specified peer using Connect request.
+ * Application must call this function when it uses RFC 6062 (TURN TCP
+ * allocations) to initiate a data connection to a peer. When Connect response
+ * received, on_connect_complete will be called, application must implement
+ * this callback and initiate a new data connection to the specified peer.
+ *
+ * According to RFC 6062, a control connection must be a TCP connection,
+ * and application must send TCP Allocate request
+ * (with pj_turn_session_alloc()，set TURN allocation parameter peer_conn_type
+ * to PJ_TURN_TP_TCP) before calling this function.
+ *
+ * @param sess		The TURN client session.
+ * @param peer_addr	Peer address.
+ * @param addr_len	Length of the peer address.
+ *
+ * @return		PJ_SUCCESS if the operation has been successfully
+ *			issued, or the appropriate error code. Note that
+ *			the operation itself will complete asynchronously.
+ */
+PJ_DECL(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
+                        const pj_sockaddr_t *peer_addr,
+                        unsigned addr_len);
 
 /**
  * @}

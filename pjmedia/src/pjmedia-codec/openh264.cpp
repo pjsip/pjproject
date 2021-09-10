@@ -56,6 +56,14 @@
 #define MAX_RX_WIDTH		1200
 #define MAX_RX_HEIGHT		800
 
+/* OpenH264 default PT */
+#define OH264_PT                PJMEDIA_RTP_PT_H264
+
+/* Minimum interval (in msec) between generating two missing keyframe events.
+ * This is to avoid sending too many events during consecutive decode
+ * failures.
+ */
+#define MISSING_KEYFRAME_EV_MIN_INTERVAL	1000
 
 /*
  * Factory operations.
@@ -159,6 +167,8 @@ typedef struct oh264_codec_data
     ISVCDecoder			*dec;
     pj_uint8_t			*dec_buf;
     unsigned			 dec_buf_size;
+    unsigned			 missing_kf_interval;
+    unsigned			 last_missing_kf_event;
 } oh264_codec_data;
 
 struct SLayerPEncCtx
@@ -166,6 +176,11 @@ struct SLayerPEncCtx
     pj_int32_t			iDLayerQp;
     SSliceArgument		sSliceArgument;
 };
+
+static void log_print(void* ctx, int level, const char* string) {
+    PJ_UNUSED_ARG(ctx);
+    PJ_LOG(4,("[OPENH264_LOG]", "[L%d] %s", level, string));
+}
 
 PJ_DEF(pj_status_t) pjmedia_codec_openh264_vid_init(pjmedia_vid_codec_mgr *mgr,
                                                     pj_pool_factory *pf)
@@ -243,7 +258,7 @@ static pj_status_t oh264_test_alloc(pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory == &oh264_factory.base, PJ_EINVAL);
 
     if (info->fmt_id == PJMEDIA_FORMAT_H264 &&
-	info->pt != 0)
+	info->pt == OH264_PT)
     {
 	return PJ_SUCCESS;
     }
@@ -299,7 +314,7 @@ static pj_status_t oh264_enum_info(pjmedia_vid_codec_factory *factory,
 
     *count = 1;
     info->fmt_id = PJMEDIA_FORMAT_H264;
-    info->pt = PJMEDIA_RTP_PT_H264;
+    info->pt = OH264_PT;
     info->encoding_name = pj_str((char*)"H264");
     info->encoding_desc = pj_str((char*)"OpenH264 codec");
     info->clock_rate = 90000;
@@ -328,6 +343,8 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     pjmedia_vid_codec *codec;
     oh264_codec_data *oh264_data;
     int rc;
+    WelsTraceCallback log_cb = &log_print;
+    int log_level = PJMEDIA_CODEC_OPENH264_LOG_LEVEL;
 
     PJ_ASSERT_RETURN(factory == &oh264_factory.base && info && p_codec,
                      PJ_EINVAL);
@@ -359,6 +376,11 @@ static pj_status_t oh264_alloc_codec(pjmedia_vid_codec_factory *factory,
     rc = WelsCreateDecoder(&oh264_data->dec);
     if (rc != 0)
 	goto on_error;
+
+    oh264_data->enc->SetOption(ENCODER_OPTION_TRACE_LEVEL, &log_level);
+    oh264_data->enc->SetOption(ENCODER_OPTION_TRACE_CALLBACK, &log_cb);
+    oh264_data->dec->SetOption(DECODER_OPTION_TRACE_LEVEL, &log_level);
+    oh264_data->dec->SetOption(DECODER_OPTION_TRACE_CALLBACK, &log_cb);
 
     *p_codec = codec;
     return PJ_SUCCESS;
@@ -571,6 +593,13 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     sDecParam.uiTargetDqLayer		= (pj_uint8_t) - 1;
     sDecParam.eEcActiveIdc          	= ERROR_CON_SLICE_COPY;
     sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
+
+    /* Calculate minimum missing keyframe event interval in frames. */
+    oh264_data->missing_kf_interval =
+	(unsigned)((1.0f * param->dec_fmt.det.vid.fps.num /
+	param->dec_fmt.det.vid.fps.denum) *
+	MISSING_KEYFRAME_EV_MIN_INTERVAL/1000);
+    oh264_data->last_missing_kf_event = oh264_data->missing_kf_interval;
 
     //TODO:
     // Apply "sprop-parameter-sets" here
@@ -960,6 +989,7 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     const pj_uint8_t nal_start[] = { 0, 0, 1 };
     SBufferInfo sDstBufInfo;
     pj_bool_t has_frame = PJ_FALSE;
+    pj_bool_t kf_requested = PJ_FALSE;
     unsigned buf_pos, whole_len = 0;
     unsigned i, frm_cnt;
     pj_status_t status = PJ_SUCCESS;
@@ -970,6 +1000,10 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
 
     oh264_data = (oh264_codec_data*) codec->codec_data;
+    oh264_data->last_missing_kf_event++;
+    /* Check if we have recently generated missing keyframe event. */
+    if (oh264_data->last_missing_kf_event < oh264_data->missing_kf_interval)
+    	kf_requested = PJ_TRUE;
 
     /*
      * Step 1: unpacketize the packets/frames
@@ -1044,7 +1078,19 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
 	start = oh264_data->dec_buf + buf_pos;
 
 	/* Decode */
-	oh264_data->dec->DecodeFrame2( start, frm_size, pData, &sDstBufInfo);
+	ret = oh264_data->dec->DecodeFrame2( start, frm_size, pData,
+					     &sDstBufInfo);
+
+	if (ret != dsErrorFree && !kf_requested) {
+	    /* Broadcast missing keyframe event */
+	    pjmedia_event event;
+	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
+			       &packets[0].timestamp, codec);
+	    pjmedia_event_publish(NULL, codec, &event,
+				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	    kf_requested = PJ_TRUE;
+	    oh264_data->last_missing_kf_event = 0;
+	}
 
 	if (0 && sDstBufInfo.iBufferStatus == 1) {
 	    // Better to just get the frame later after all NALs are consumed
@@ -1088,13 +1134,15 @@ static pj_status_t oh264_codec_decode(pjmedia_vid_codec *codec,
     }
 
     if (ret != dsErrorFree) {
-	pjmedia_event event;
-
-	/* Broadcast missing keyframe event */
-	pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
-	                   &packets[0].timestamp, codec);
-	pjmedia_event_publish(NULL, codec, &event,
-	                      PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	if (!kf_requested) {
+	    /* Broadcast missing keyframe event */
+	    pjmedia_event event;
+	    pjmedia_event_init(&event, PJMEDIA_EVENT_KEYFRAME_MISSING,
+	                       &packets[0].timestamp, codec);
+	    pjmedia_event_publish(NULL, codec, &event,
+				  PJMEDIA_EVENT_PUBLISH_DEFAULT);
+	    oh264_data->last_missing_kf_event = 0;
+	}
 
 	if (has_frame) {
 	    PJ_LOG(5,(oh264_data->pool->obj_name,

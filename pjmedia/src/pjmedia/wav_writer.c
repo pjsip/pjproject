@@ -48,6 +48,9 @@ struct file_port
 
     pj_size_t	     cb_size;
     pj_status_t	   (*cb)(pjmedia_port*, void*);
+    pj_bool_t	     subscribed;
+    pj_bool_t	     cb_called;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
@@ -244,6 +247,7 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_writer_port_get_pos( pjmedia_port *port )
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register callback.
  */
@@ -261,11 +265,43 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
     /* Check that this is really a writer port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_wav_writer_port_set_cb() is deprecated. "
+    	       "Use pjmedia_wav_writer_port_set_cb2() instead."));
+
     fport = (struct file_port*) port;
 
     fport->cb_size = pos;
     fport->base.port_data.pdata = user_data;
     fport->cb = cb;
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register callback.
+ */
+PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb2(pjmedia_port *port,
+				pj_size_t pos,
+				void *user_data,
+			        void (*cb)(pjmedia_port *port,
+					   void *usr_data))
+{
+    struct file_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port && cb, PJ_EINVAL);
+
+    /* Check that this is really a writer port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
+
+    fport = (struct file_port*) port;
+
+    fport->cb_size = pos;
+    fport->base.port_data.pdata = user_data;
+    fport->cb2 = cb;
+    fport->cb_called = PJ_FALSE;
 
     return PJ_SUCCESS;
 }
@@ -301,6 +337,19 @@ static pj_status_t flush_buffer(struct file_port *fport)
     fport->writepos = fport->buf;
 
     return status;
+}
+
+static pj_status_t file_on_event(pjmedia_event *event,
+                                 void *user_data)
+{
+    struct file_port *fport = (struct file_port*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (fport->cb2)
+	    (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
+    }
+    
+    return PJ_SUCCESS;
 }
 
 /*
@@ -353,15 +402,38 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 
     /* Increment total written, and check if we need to call callback */
     fport->total += frame_size;
-    if (fport->cb && fport->total >= fport->cb_size) {
-	pj_status_t (*cb)(pjmedia_port*, void*);
-	pj_status_t status;
+    if (fport->total >= fport->cb_size) {
+	if (fport->cb2) {
+	    if (!fport->subscribed) {
+	        pj_status_t status;
 
-	cb = fport->cb;
-	fport->cb = NULL;
+	    	status = pjmedia_event_subscribe(NULL, &file_on_event,
+	    				         fport, fport);
+	    	fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+	    			    PJ_FALSE;
+	    }
 
-	status = (*cb)(this_port, this_port->port_data.pdata);
-	return status;
+	    if (fport->subscribed && !fport->cb_called) {
+	    	pjmedia_event event;
+
+	    	/* To prevent the callback from being called more than once. */
+	    	fport->cb_called = PJ_TRUE;
+
+	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	   NULL, fport);
+	    	pjmedia_event_publish(NULL, fport, &event,
+	                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	    }
+	} else if (fport->cb) {
+	    pj_status_t (*cb)(pjmedia_port*, void*);
+	    pj_status_t status;
+
+	    cb = fport->cb;
+	    fport->cb = NULL;
+
+	    status = (*cb)(this_port, this_port->port_data.pdata);
+	    return status;
+	}
     }
 
     return PJ_SUCCESS;
@@ -391,6 +463,11 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     pj_uint32_t wave_data_len;
     pj_status_t status;
     pj_uint32_t data_len_pos = DATA_LEN_POS;
+
+    if (fport->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+    	fport->subscribed = PJ_FALSE;
+    }
 
     /* Flush remaining buffers. */
     if (fport->writepos != fport->buf) 

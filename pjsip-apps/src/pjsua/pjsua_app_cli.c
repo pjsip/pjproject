@@ -452,9 +452,10 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 
     for (i=0; i<count; ++i) {
 	char slot_id[8];
-	char desc[256];
+	char desc[512];
 	char txlist[256];
 	unsigned j;
+	int len;
 	pjsua_conf_port_info info;
 
 	pjsua_conf_get_port_info(id[i], &info);
@@ -470,7 +471,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	    pj_ansi_strcat(txlist, s);
 	}
 
-	pj_ansi_snprintf(desc,
+	len = pj_ansi_snprintf(desc,
 	       sizeof(desc),
 	       "[%2dKHz/%dms/%d] %20.*s  transmitting to: %s",
 	       info.clock_rate/1000,
@@ -479,6 +480,7 @@ static void get_media_port(pj_cli_dyn_choice_param *param)
 	       (int)info.name.slen,
 	       info.name.ptr,
 	       txlist);
+	PJ_CHECK_TRUNC_STR(len, desc, sizeof(desc));
 
 	pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	if (++param->cnt >= param->max_cnt)
@@ -493,22 +495,28 @@ static void get_audio_codec_id(pj_cli_dyn_choice_param *param)
 	unsigned i, count = PJ_ARRAY_SIZE(c);
 	char codec_id[64];
 	char desc[128];
+	pj_str_t all_codec_id = pj_str("*");
 
 	pjsua_enum_codecs(c, &count);
-	for (i=0; i<count; ++i) {
+	for (i=0; i<=count; ++i) {
+	    pj_str_t cid;
+	    cid = (i==count?all_codec_id : c[i].codec_id);
+
 	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
-			     "%.*s", (int)c[i].codec_id.slen,
-			     c[i].codec_id.ptr);
+			     "%.*s", (int)cid.slen, cid.ptr);
 
-	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
-
-	    pj_ansi_snprintf(desc, sizeof(desc),
-			     "Audio, prio: %d%s%.*s",
-			     c[i].priority,
-			     c[i].desc.slen? " - ":"",
-			     (int)c[i].desc.slen,
-			     c[i].desc.ptr);
-
+	    if (i < count) {
+		pj_ansi_snprintf(desc, sizeof(desc),
+				 "Audio, prio: %d%s%.*s",
+				 c[i].priority,
+				 c[i].desc.slen ? " - " : "",
+				 (int)c[i].desc.slen,
+				 c[i].desc.ptr);
+	    } else {
+		pj_ansi_snprintf(desc, sizeof(desc), "Audio (All)");
+	    }
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value,
+		       codec_id);
 	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
 		break;
@@ -617,32 +625,45 @@ static void get_video_codec_id(pj_cli_dyn_choice_param *param)
 	unsigned i, count = PJ_ARRAY_SIZE(ci);
 	char codec_id[64];
 	char desc[128];
+	pj_str_t all_codec_id = pj_str("*");
 
 	pjsua_vid_enum_codecs(ci, &count);
-	for (i=0; i<count; ++i) {
+	for (i = 0; i <= count; ++i) {
 	    pjmedia_vid_codec_param cp;
 	    pjmedia_video_format_detail *vfd;
 	    pj_status_t status = PJ_SUCCESS;
+	    pj_str_t cur_ci;
 
-	    status = pjsua_vid_codec_get_param(&ci[i].codec_id, &cp);
-	    if (status != PJ_SUCCESS)
-		continue;
+	    pj_bzero(&cur_ci, sizeof(cur_ci));
+	    if (i < count) {
+		status = pjsua_vid_codec_get_param(&ci[i].codec_id, &cp);
+		if (status != PJ_SUCCESS)
+		    continue;
 
+		cur_ci = ci[i].codec_id;
+
+	    } else {
+		cur_ci = all_codec_id;
+	    }
 	    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt, PJ_TRUE);
 
 	    pj_ansi_snprintf(codec_id, sizeof(codec_id),
-			     "%.*s", (int)ci[i].codec_id.slen,
-			     ci[i].codec_id.ptr);
+			     "%.*s", (int)cur_ci.slen,
+			     cur_ci.ptr);
 
-	    pj_strdup2(param->pool, &param->choice[param->cnt].value, codec_id);
+	    if (i < count) {
+		pj_ansi_snprintf(desc, sizeof(desc),
+				 "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]",
+				 ci[i].priority,
+				 (vfd->fps.num*1.0 / vfd->fps.denum),
+				 vfd->avg_bps / 1000, vfd->max_bps / 1000,
+				 vfd->size.w, vfd->size.h);
+	    } else {
+		pj_ansi_snprintf(desc, sizeof(desc), "Video (All)");
+	    }
 
-	    pj_ansi_snprintf(desc, sizeof(desc),
-	    		     "Video, p[%d], f[%.2f], b[%d/%d], s[%dx%d]",
-	    		     ci[i].priority,
-			     (vfd->fps.num*1.0/vfd->fps.denum),
-			     vfd->avg_bps/1000, vfd->max_bps/1000,
-			     vfd->size.w, vfd->size.h);
-
+	    pj_strdup2(param->pool, &param->choice[param->cnt].value,
+		       codec_id);
 	    pj_strdup2(param->pool, &param->choice[param->cnt].desc, desc);
 	    if (++param->cnt >= param->max_cnt)
 		break;
@@ -798,7 +819,7 @@ static pj_status_t cmd_del_account(pj_cli_cmd_val *cval)
     char out_str[64];
     unsigned str_len;
 
-    int i = my_atoi(cval->argv[1].ptr);
+    int i = my_atoi2(&cval->argv[1]);
 
     if (!pjsua_acc_is_valid(i)) {
 	pj_ansi_snprintf(out_str, sizeof(out_str),
@@ -839,7 +860,7 @@ static pj_status_t cmd_unreg_account()
 /* Select account to be used for sending outgoing request */
 static pj_status_t cmd_next_account(pj_cli_cmd_val *cval)
 {
-    int i = my_atoi(cval->argv[1].ptr);
+    int i = my_atoi2(&cval->argv[1]);
     if (pjsua_acc_is_valid(i)) {
 	pjsua_acc_set_default(i);
 	PJ_LOG(3,(THIS_FILE, "Current account changed to %d", i));
@@ -967,7 +988,7 @@ static pj_status_t cmd_add_buddy(pj_cli_cmd_val *cval)
 /* Delete buddy */
 static pj_status_t cmd_del_buddy(pj_cli_cmd_val *cval)
 {
-    int i = my_atoi(cval->argv[1].ptr) - 1;
+    int i = my_atoi2(&cval->argv[1]) - 1;
     char out_str[80];
 
     if (!pjsua_buddy_is_valid(i)) {
@@ -1777,8 +1798,6 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	pj_str_t STR_FALSE = { "false", 5 };
 	pjsua_call_id ids[PJSUA_MAX_CALLS];
 	pjsua_msg_data msg_data_;
-	char buf[8] = {0};
-	pj_str_t tmp = pj_str(buf);
 	unsigned count;
 	static const pj_str_t err_invalid_num =
 				    {"Invalid destination call number\n", 32 };
@@ -1794,8 +1813,7 @@ static pj_status_t cmd_transfer_replace_call(pj_cli_cmd_val *cval)
 	    return PJ_SUCCESS;
 	}
 
-	pj_strncpy_with_null(&tmp, &cval->argv[1], sizeof(buf));
-	dst_call = my_atoi(tmp.ptr);
+	dst_call = my_atoi2(&cval->argv[1]);
 
 	/* Check if call is still there. */
 	if (call != current_call) {
@@ -2501,18 +2519,18 @@ static pj_status_t cmd_vid_conf_list()
 
 	li_list[0] = '\0';
 	for (j=0; j<info.listener_cnt; ++j) {
-	    char s[10];
-	    pj_ansi_snprintf(s, sizeof(s), "%d%s",
+	    char str_info[10];
+	    pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
 			     info.listeners[j],
 			     (j==info.listener_cnt-1)?"":",");
-	    pj_ansi_strcat(li_list, s);
+	    pj_ansi_strcat(li_list, str_info);
 	}
 	tr_list[0] = '\0';
 	for (j=0; j<info.transmitter_cnt; ++j) {
-	    char s[10];
-	    pj_ansi_snprintf(s, sizeof(s), "%d%s", info.transmitters[j],
+	    char str_info[10];
+	    pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s", info.transmitters[j],
 			     (j==info.transmitter_cnt-1)?"":",");
-	    pj_ansi_strcat(tr_list, s);
+	    pj_ansi_strcat(tr_list, str_info);
 	}
 	pjmedia_fourcc_name(info.format.id, s);
 	s[4] = ' ';

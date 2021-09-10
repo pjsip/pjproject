@@ -248,7 +248,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 
 	/* Process remaining samples. */
 	for (; i<template_cnt; ++i) {
-	    corr += ((float)frm[i]) * ((float)sr[i]);
+	    corr += ((double)frm[i]) * ((float)sr[i]);
 	}
 
 	if (first) {

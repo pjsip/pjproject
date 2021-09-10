@@ -63,6 +63,9 @@ static pj_status_t apply_planar_422(const pjmedia_video_format_info *fi,
 static pj_status_t apply_planar_444(const pjmedia_video_format_info *fi,
 	                            pjmedia_video_apply_fmt_param *aparam);
 
+static pj_status_t apply_biplanar_420(const pjmedia_video_format_info *fi,
+				      pjmedia_video_apply_fmt_param *aparam);
+
 struct pjmedia_video_format_mgr
 {
     unsigned			max_info;
@@ -87,6 +90,8 @@ static pjmedia_video_format_info built_in_vid_fmt_info[] =
     {PJMEDIA_FORMAT_I422,  "I422", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
     {PJMEDIA_FORMAT_I420JPEG, "I420JPG", PJMEDIA_COLOR_MODEL_YUV, 12, 3, &apply_planar_420},
     {PJMEDIA_FORMAT_I422JPEG, "I422JPG", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
+    {PJMEDIA_FORMAT_NV12,  "NV12", PJMEDIA_COLOR_MODEL_YUV, 12, 2, &apply_biplanar_420},
+    {PJMEDIA_FORMAT_NV21,  "NV21", PJMEDIA_COLOR_MODEL_YUV, 12, 2, &apply_biplanar_420},
 };
 
 PJ_DEF(void) pjmedia_format_init_video( pjmedia_format *fmt,
@@ -260,6 +265,39 @@ static pj_status_t apply_planar_444(const pjmedia_video_format_info *fi,
 
     return PJ_SUCCESS;
 }
+
+static pj_status_t apply_biplanar_420(const pjmedia_video_format_info *fi,
+	                              pjmedia_video_apply_fmt_param *aparam)
+{
+    unsigned i;
+    pj_size_t Y_bytes;
+
+    PJ_UNUSED_ARG(fi);
+
+    /* Calculate memsize */
+    Y_bytes = (pj_size_t)(aparam->size.w * aparam->size.h);
+    aparam->framebytes = Y_bytes + (Y_bytes>>1);
+
+    /* Planar formats use 2 plane */
+    aparam->strides[0] = aparam->size.w;
+    aparam->strides[1] = aparam->size.w;
+
+    aparam->planes[0] = aparam->buffer;
+    aparam->planes[1] = aparam->planes[0] + Y_bytes;
+
+    aparam->plane_bytes[0] = Y_bytes;
+    aparam->plane_bytes[1] = (Y_bytes>>1);
+
+    /* Zero unused planes */
+    for (i=2; i<PJMEDIA_MAX_VIDEO_PLANES; ++i) {
+	aparam->strides[i] = 0;
+	aparam->planes[i] = NULL;
+        aparam->plane_bytes[i] = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t)
 pjmedia_video_format_mgr_create(pj_pool_t *pool,

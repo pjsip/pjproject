@@ -330,6 +330,7 @@ static void update_transport_info(struct tcp_listener *listener)
     enum { INFO_LEN = 100 };
     char local_addr[PJ_INET6_ADDRSTRLEN + 10];
     char pub_addr[PJ_INET6_ADDRSTRLEN + 10];
+    int len;
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
     /* Set transport info. */
@@ -341,9 +342,10 @@ static void update_transport_info(struct tcp_listener *listener)
     pj_addr_str_print(&listener->factory.addr_name.host, 
 		      listener->factory.addr_name.port, pub_addr, 
 		      sizeof(pub_addr), 1);
-    pj_ansi_snprintf(
+    len = pj_ansi_snprintf(
 	    listener->factory.info, INFO_LEN, "tcp %s [published as %s]",
 	    local_addr, pub_addr);
+    PJ_CHECK_TRUNC_STR(len, listener->factory.info, INFO_LEN);
 
     if (listener->asock) {	
 	char addr[PJ_INET6_ADDRSTRLEN+10];
@@ -681,12 +683,12 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.factory = &listener->factory;
 
     /* Create group lock */
-    status = pj_grp_lock_create(pool, NULL, &tcp->grp_lock);
+    status = pj_grp_lock_create_w_handler(pool, NULL, tcp, &tcp_on_destroy,
+    					  &tcp->grp_lock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     pj_grp_lock_add_ref(tcp->grp_lock);
-    pj_grp_lock_add_handler(tcp->grp_lock, pool, tcp, &tcp_on_destroy);
 
     tcp->base.grp_lock = tcp->grp_lock;
 
@@ -776,6 +778,9 @@ static void tcp_flush_pending_tx(struct tcp_transport *tcp)
         if (pending_tx->timeout.sec > 0 &&
             PJ_TIME_VAL_GT(now, pending_tx->timeout))
         {
+            pj_lock_release(tcp->base.lock);
+	    on_data_sent(tcp->asock, op_key, -PJ_ETIMEDOUT);
+            pj_lock_acquire(tcp->base.lock);
             continue;
         }
 

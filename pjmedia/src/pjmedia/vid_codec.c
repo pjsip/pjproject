@@ -409,10 +409,7 @@ PJ_DEF(char*) pjmedia_vid_codec_info_to_id(
 
 
 /*
- * Find codecs by the unique codec identifier. This function will find
- * all codecs that match the codec identifier prefix. For example, if
- * "L16" is specified, then it will find "L16/8000/1", "L16/16000/1",
- * and so on, up to the maximum count specified in the argument.
+ * Find codecs by the unique codec identifier.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_find_codecs_by_id(
                                      pjmedia_vid_codec_mgr *mgr,

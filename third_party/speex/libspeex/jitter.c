@@ -55,8 +55,6 @@ TODO:
 
 
 #include "arch.h"
-#include <speex/speex.h>
-#include <speex/speex_bits.h>
 #include <speex/speex_jitter.h>
 #include "os_support.h"
 
@@ -466,7 +464,6 @@ EXPORT int jitter_buffer_get(JitterBuffer *jitter, JitterBufferPacket *packet, s
 {
    int i;
    unsigned int j;
-   int incomplete = 0;
    spx_int16_t opt;
    
    if (start_offset != NULL)
@@ -571,7 +568,6 @@ EXPORT int jitter_buffer_get(JitterBuffer *jitter, JitterBufferPacket *packet, s
       if (found)
       {
          i=besti;
-         incomplete = 1;
          /*fprintf (stderr, "incomplete: %d %d %d %d\n", jitter->packets[i].timestamp, jitter->pointer_timestamp, chunk_size, jitter->packets[i].span);*/
       }
    }

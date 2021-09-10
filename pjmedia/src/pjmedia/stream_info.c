@@ -23,7 +23,6 @@
 #include <pj/ctype.h>
 #include <pj/rand.h>
 
-static const pj_str_t ID_AUDIO = { "audio", 5};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
@@ -84,6 +83,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     const pjmedia_sdp_attr *attr;
     pjmedia_sdp_rtpmap *rtpmap;
     unsigned i, fmti, pt = 0;
+    unsigned rx_ev_clock_rate = 0;
     pj_status_t status;
 
     /* Find the first codec which is not telephone-event */
@@ -316,6 +316,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
 	    si->rx_event_pt = pj_strtoul(&r.pt);
+	    rx_ev_clock_rate = r.clock_rate;
 	    break;
 	}
     }
@@ -331,8 +332,13 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	if (pjmedia_sdp_attr_get_rtpmap(attr, &r) != PJ_SUCCESS)
 	    continue;
 	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) == 0) {
-	    si->tx_event_pt = pj_strtoul(&r.pt);
-	    break;
+	    /* Check if the clock rate matches local event's clock rate. */
+	    if (r.clock_rate == rx_ev_clock_rate) {
+	    	si->tx_event_pt = pj_strtoul(&r.pt);
+	    	break;
+	    } else if (si->tx_event_pt == -1) {
+	    	si->tx_event_pt = pj_strtoul(&r.pt);
+	    }
 	}
     }
 
@@ -386,7 +392,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJMEDIA_SDP_EMISSINGCONN;
 
     /* Media type must be audio */
-    if (pj_stricmp(&local_m->desc.media, &ID_AUDIO) != 0)
+    if (pjmedia_get_type(&local_m->desc.media) != PJMEDIA_TYPE_AUDIO)
 	return PJMEDIA_EINVALIMEDIATYPE;
 
     /* Get codec manager. */
@@ -599,16 +605,17 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Set default jitter buffer parameter. */
     si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
+    si->jb_discard_algo = PJMEDIA_JB_DISCARD_PROGRESSIVE;
 
     /* Get local RTCP-FB info */
-    status = pjmedia_rtcp_fb_decode_sdp(pool, endpt, NULL, local, stream_idx,
-					&si->loc_rtcp_fb);
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local, stream_idx,
+					 si->rx_pt, &si->loc_rtcp_fb);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Get remote RTCP-FB info */
-    status = pjmedia_rtcp_fb_decode_sdp(pool, endpt, NULL, remote, stream_idx,
-					&si->rem_rtcp_fb);
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote, stream_idx,
+					 si->tx_pt, &si->rem_rtcp_fb);
     if (status != PJ_SUCCESS)
 	return status;
 

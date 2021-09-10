@@ -75,13 +75,31 @@ PJ_DEF(pj_status_t) pj_time_encode(const pj_parsed_time *pt, pj_time_val *tv)
 #endif /* !PJ_WIN32 */
 
 
+static int get_tz_offset_secs()
+{
+    time_t epoch_plus_11h = 60 * 60 * 11;
+    struct tm ltime, gtime;
+    int offset_min;
+
+#if defined(PJ_HAS_LOCALTIME_R) && PJ_HAS_LOCALTIME_R != 0
+    localtime_r(&epoch_plus_11h, &ltime);
+    gmtime_r(&epoch_plus_11h, &gtime);
+#else
+    ltime = *localtime(&epoch_plus_11h);
+    gtime = *gmtime(&epoch_plus_11h);
+#endif
+
+    offset_min = (ltime.tm_hour*60+ltime.tm_min) - (gtime.tm_hour*60+gtime.tm_min);
+    return offset_min*60;
+}
+
 /**
  * Convert local time to GMT.
  */
 PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv)
 {
-    PJ_UNUSED_ARG(tv);
-    return PJ_EBUG;
+    tv->sec -= get_tz_offset_secs();
+    return PJ_SUCCESS;
 }
 
 /**
@@ -89,8 +107,8 @@ PJ_DEF(pj_status_t) pj_time_local_to_gmt(pj_time_val *tv)
  */
 PJ_DEF(pj_status_t) pj_time_gmt_to_local(pj_time_val *tv)
 {
-    PJ_UNUSED_ARG(tv);
-    return PJ_EBUG;
+    tv->sec += get_tz_offset_secs();
+    return PJ_SUCCESS;
 }
 
 

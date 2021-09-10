@@ -4,6 +4,7 @@ pj/log.h			pj_log_decoration
 pj/sock_qos.h			pj_qos_type pj_qos_flag pj_qos_wmm_prio pj_qos_params
 pj/ssl_sock.h			pj_ssl_cipher pj_ssl_sock_proto pj_ssl_cert_name_type pj_ssl_cert_verify_flag_t
 
+pjnath/ice_session.h          	pj_ice_sess_trickle
 pjnath/nat_detect.h          	pj_stun_nat_type
 pjnath/turn_session.h          	pj_turn_tp_type
 
@@ -11,7 +12,7 @@ pjmedia/echo.h                  pjmedia_echo_flag
 pjmedia/event.h                 pjmedia_event_type
 pjmedia/transport_srtp.h	pjmedia_srtp_use pjmedia_srtp_crypto_option pjmedia_srtp_keying_method
 pjmedia/vid_stream.h		pjmedia_vid_stream_rc_method
-pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index pjmedia_vid_dev_cap
+pjmedia-videodev/videodev.h	pjmedia_vid_dev_index pjmedia_vid_dev_std_index pjmedia_vid_dev_cap pjmedia_vid_dev_fullscreen_flag
 pjmedia-audiodev/audiodev.h 	pjmedia_aud_dev_route pjmedia_aud_dev_cap
 pjmedia/wav_port.h              pjmedia_file_writer_option pjmedia_file_player_option
 pjmedia/tonegen.h		pjmedia_tone_digit pjmedia_tone_digit_map pjmedia_tone_desc

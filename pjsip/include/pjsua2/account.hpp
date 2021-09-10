@@ -327,6 +327,14 @@ struct AccountCallConfig : public PersistentObject
 
 public:
     /**
+     * Default constructor
+     */
+    AccountCallConfig() : holdType(PJSUA_CALL_HOLD_TYPE_DEFAULT),
+			  prackUse(PJSUA_100REL_NOT_USED),
+			  timerUse(PJSUA_SIP_TIMER_OPTIONAL)
+    {}
+
+    /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.
@@ -483,6 +491,13 @@ struct AccountNatConfig : public PersistentObject
     bool		iceEnabled;
 
     /**
+     * Set trickle ICE mode for ICE media transport.
+     *
+     * Default: PJ_ICE_SESS_TRICKLE_DISABLED
+     */
+    pj_ice_sess_trickle	iceTrickle;
+
+    /**
      * Set the maximum number of ICE host candidates.
      *
      * Default: -1 (maximum not set)
@@ -583,7 +598,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * See also contactRewriteMethod field.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			contactRewriteUse;
 
@@ -608,7 +623,7 @@ struct AccountNatConfig : public PersistentObject
      * TCP socket when it is still connecting. In these cases, this
      * feature will also be turned off.
      *
-     * Default: 1 (yes).
+     * Default: 1 (PJ_TRUE / yes).
      */
     int			contactUseSrcPort;
 
@@ -618,7 +633,7 @@ struct AccountNatConfig : public PersistentObject
      * the REGISTER request, as long as the request uses the same transport
      * instance as the previous REGISTER request.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			viaRewriteUse;
 
@@ -645,7 +660,7 @@ struct AccountNatConfig : public PersistentObject
      * transports. If UDP is used for the registration, the SIP outbound
      * feature will be silently ignored for the account.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			sipOutboundUse;
 
@@ -687,6 +702,31 @@ struct AccountNatConfig : public PersistentObject
     string		udpKaData;
 
 public:
+    /**
+     * Default constructor
+     */
+    AccountNatConfig() : sipStunUse(PJSUA_STUN_USE_DEFAULT),
+      mediaStunUse(PJSUA_STUN_USE_DEFAULT),
+      nat64Opt(PJSUA_NAT64_DISABLED),
+      iceEnabled(false),
+      iceTrickle(PJ_ICE_SESS_TRICKLE_DISABLED),
+      iceMaxHostCands(-1),
+      iceAggressiveNomination(true),
+      iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
+      iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceNoRtcp(false),
+      iceAlwaysUpdate(true),
+      turnConnType(PJ_TURN_TP_UDP),
+      contactRewriteUse(PJ_TRUE),
+      contactRewriteMethod(PJSUA_CONTACT_REWRITE_METHOD),
+      contactUseSrcPort(PJ_TRUE),
+      viaRewriteUse(PJ_TRUE),
+      sdpNatRewriteUse(PJ_FALSE),
+      sipOutboundUse(PJ_TRUE),
+      udpKaIntervalSec(15),
+      udpKaData("\r\n")
+    {}
+
     /**
      * Read this object from a container node.
      *
@@ -967,6 +1007,13 @@ struct AccountMediaConfig : public PersistentObject
 
 public:
     /**
+     * Default constructor
+     */
+    AccountMediaConfig() : srtpUse(PJSUA_DEFAULT_USE_SRTP),
+			   ipv6Use(PJSUA_IPV6_DISABLED)
+    {}
+
+    /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.
@@ -1072,6 +1119,13 @@ struct AccountVideoConfig : public PersistentObject
 
 
 public:
+    /**
+     * Default constructor
+     */
+    AccountVideoConfig() :
+		    rateControlMethod(PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
+    {}
+
     /**
      * Read this object from a container node.
      *
@@ -1281,7 +1335,7 @@ struct AccountInfo
     /**
      * An up to date expiration interval for account registration session.
      */
-    int			regExpiresSec;
+    unsigned		regExpiresSec;
 
     /**
      * Last registration status code. If status code is zero, the account
@@ -1314,6 +1368,12 @@ struct AccountInfo
     string		onlineStatusText;
 
 public:
+    /**
+     * Default constructor
+     */
+    AccountInfo() : regStatus(PJSIP_SC_NULL)
+    {}
+
     /** Import from pjsip data */
     void fromPj(const pjsua_acc_info &pai);
 };
@@ -1373,7 +1433,7 @@ struct OnRegStateParam
     /**
      * Next expiration interval.
      */
-    int			expiration;
+    unsigned		expiration;
 };
 
 /**
@@ -1761,6 +1821,7 @@ public:
      */
     void presNotify(const PresNotifyParam &prm) PJSUA2_THROW(Error);
     
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumBuddies2() instead. This function is not
      * safe in multithreaded environment.
@@ -1770,6 +1831,7 @@ public:
      * @return			The buddy list.
      */
     const BuddyVector& enumBuddies() const PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enumerate all buddies of the account.
@@ -1778,6 +1840,7 @@ public:
      */
     BuddyVector2 enumBuddies2() const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use findBuddy2 instead. This function is not
      * safe in multithreaded environment.
@@ -1793,6 +1856,7 @@ public:
      */
     Buddy* findBuddy(string uri, FindBuddyMatch *buddy_match = NULL) const
 		    PJSUA2_THROW(Error);
+#endif
 
     /**
      * Find a buddy in the buddy list with the specified URI. 
@@ -1931,7 +1995,9 @@ private:
 private:
     pjsua_acc_id 	 id;
     string		 tmpReason;	// for saving response's reason
+#if !DEPRECATED_FOR_TICKET_2232
     BuddyVector		 buddyList;
+#endif
 };
 
 /**

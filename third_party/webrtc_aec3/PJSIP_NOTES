@@ -1,0 +1,80 @@
+The WebRtc source is cloned from the repo:
+https://webrtc.googlesource.com/src
+dated Apr 21 2021
+license: third_party/webrtc_aec3/LICENSE
+
+The abseil's source in src/absl is not part of WebRtc and taken separately from:
+https://github.com/abseil/abseil-cpp
+dated Apr 20 2021
+abseil's license: src/absl/LICENSE
+
+src/third_party's source is obtained from:
+* rnnoise
+https://chromium.googlesource.com/chromium/src/+/HEAD/third_party/rnnoise
+dated Apr 30 2021
+license: src/third_party/rnnoise/COPYING
+
+* pffft
+https://bitbucket.org/jpommier/pffft/src/master/
+dated Apr 30 2021
+license: src/third_party/pffft/README.txt
+
+Local changes:
+1. Undeclared PR_SET_NAME on Android.
+diff --git a/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc b/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
+index b0243b41d..fc7a09000 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
++++ b/third_party/webrtc_aec3/src/rtc_base/platform_thread_types.cc
+@@ -105,7 +105,7 @@ void SetCurrentThreadName(const char* name) {
+   } __except (EXCEPTION_EXECUTE_HANDLER) {  // NOLINT
+   }
+ #pragma warning(pop)
+-#elif defined(WEBRTC_LINUX) || defined(WEBRTC_ANDROID)
++#elif defined(WEBRTC_LINUX) // || defined(WEBRTC_ANDROID)
+   prctl(PR_SET_NAME, reinterpret_cast<unsigned long>(name));  // NOLINT
+ #elif defined(WEBRTC_MAC) || defined(WEBRTC_IOS)
+   pthread_setname_np(name);
+
+2. Error: 'unique_ptr' is not a member of 'std' on Linux.
+diff --git a/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h b/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
+index 3b9971aba..e4e954067 100644
+--- a/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
++++ b/third_party/webrtc_aec3/src/modules/audio_processing/aec3/reverb_model_estimator.h
+@@ -12,6 +12,7 @@
+ #define MODULES_AUDIO_PROCESSING_AEC3_REVERB_MODEL_ESTIMATOR_H_
+ 
+ #include <array>
++#include <memory>
+ #include <vector>
+
+3. Visual Studio will choose one implementation from the source code with the same file name.
+   Rename these files:
+   - third_party/webrtc_aec3/src/common_audio/signal_processing/{splitting_filter.c => splitting_filter2.c}
+   - third_party/webrtc_aec3/src/modules/audio_processing/agc2/rnn_vad/{vector_math_avx2.cc => rnn_vector_math_avx2.cc}
+   - third_party/webrtc_aec3/src/system_wrappers/source/{cpu_features.cc => cpu_features2.cc}
+
+4. error C2011: 'sockaddr': 'struct' type redefinition
+diff --git a/third_party/webrtc_aec3/src/rtc_base/logging.cc b/third_party/webrtc_aec3/src/rtc_base/logging.cc
+index a333d8397..e0e669b5e 100644
+--- a/third_party/webrtc_aec3/src/rtc_base/logging.cc
++++ b/third_party/webrtc_aec3/src/rtc_base/logging.cc
+@@ -15,6 +15,7 @@
+ #if RTC_LOG_ENABLED()
+ 
+ #if defined(WEBRTC_WIN)
++#include <winsock2.h>
+
+5. ARM64 support build for Visual Studio.
+diff --git a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+index d76d35167..2d8b1037f 100644
+--- a/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
++++ b/third_party/webrtc_aec3/src/third_party/pffft/src/pffft.c
+@@ -148,7 +148,7 @@ typedef __m128 v4sf;
+ /*
+   ARM NEON support macros
+ */
+-#elif !defined(PFFFT_SIMD_DISABLE) && (defined(__arm__) || defined(__aarch64__) || defined(__arm64__))
++#elif !defined(PFFFT_SIMD_DISABLE) && (defined(__arm__) || defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64))
+ #  include <arm_neon.h>
+ typedef float32x4_t v4sf;
+ #  define SIMD_SZ 4

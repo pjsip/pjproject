@@ -85,7 +85,7 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_channel pjmedia_channel;
 
-/** 
+/**
  * This structure describes media stream information. Each media stream
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
@@ -138,16 +138,51 @@ typedef struct pjmedia_stream_info
     int			jb_max_pre; /**< Jitter buffer maximum prefetch
 					 delay in msec (-1 for default).    */
     int			jb_max;	    /**< Jitter buffer max delay in msec.   */
+    pjmedia_jb_discard_algo jb_discard_algo;
+                                    /**< Jitter buffer discard algorithm.   */
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
+    pjmedia_stream_ka_config ka_cfg;
+                                    /**< Stream send kep-alive settings.    */
 #endif
     pj_bool_t           rtcp_sdes_bye_disabled; 
                                     /**< Disable automatic sending of RTCP
                                          SDES and BYE.                      */
 } pjmedia_stream_info;
+
+/**
+ * This enumeration defines flags used by #pjmedia_stream_dtmf_event.
+ */
+typedef enum pjmedia_stream_dtmf_event_flags {
+    /**
+     * The event was already indicated earlier. The new indication contains an
+     * updated event duration.
+     */
+    PJMEDIA_STREAM_DTMF_IS_UPDATE = (1 << 0),
+
+    /**
+     * The event has ended and the indication contains the final event
+     * duration.
+     * Note that end indications might get lost. Hence it is not guaranteed
+     * to receive an event with PJMEDIA_STREAM_DTMF_IS_END for every event.
+     */
+    PJMEDIA_STREAM_DTMF_IS_END = (1 << 1),
+} pjmedia_stream_dtmf_event_flags;
+
+/**
+ * This structure describes DTMF telephony-events indicated through
+ * #pjmedia_stream_set_dtmf_event_callback().
+ */
+typedef struct pjmedia_stream_dtmf_event {
+    int                 digit;      /**< DTMF digit as ASCII character.     */
+    pj_uint32_t         timestamp;  /**< RTP timestamp of the event.        */
+    pj_uint16_t         duration;   /**< Event duration, in milliseconds.   */
+    pj_uint16_t         flags;      /**< Event flags (see
+                                         #pjmedia_stream_dtmf_event_flags). */
+} pjmedia_stream_dtmf_event;
 
 
 /**
@@ -401,6 +436,8 @@ PJ_DECL(pj_status_t) pjmedia_stream_get_dtmf( pjmedia_stream *stream,
  * Set callback to be called upon receiving DTMF digits. If callback is
  * registered, the stream will not buffer incoming DTMF but rather call
  * the callback as soon as DTMF digit is received completely.
+ * This callback will not be called if another callback is set via
+ * #pjmedia_stream_set_dtmf_event_callback() as well.
  *
  * @param stream	The media stream.
  * @param cb		Callback to be called upon receiving DTMF digits.
@@ -417,6 +454,26 @@ pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 					    void *user_data, 
 					    int digit), 
 				 void *user_data);
+
+/**
+ * Set callback to be called upon receiving DTMF digits. If callback is
+ * registered, the stream will not buffer incoming DTMF but rather call
+ * the callback as soon as DTMF digit is received.
+ *
+ * @param stream	The media stream.
+ * @param cb		Callback to be called upon receiving DTMF digits.
+ *			See #pjmedia_stream_dtmf_event.
+ * @param user_data	User data to be returned back when the callback
+ *			is called.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_set_dtmf_event_callback(pjmedia_stream *stream,
+                                       void (*cb)(pjmedia_stream*,
+                                                  void *user_data,
+                                                  const pjmedia_stream_dtmf_event *event),
+                                       void *user_data);
 
 
 /**

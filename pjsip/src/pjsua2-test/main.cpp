@@ -20,6 +20,7 @@
 
 using namespace pj;
 
+extern "C"
 int main(int argc, char *argv[])
 {
     Endpoint ep;

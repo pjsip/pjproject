@@ -59,32 +59,34 @@ typedef enum pjmedia_echo_flag
 {
     /**
      * Use any available backend echo canceller algorithm. This is
-     * the default settings. This setting is mutually exclusive with
-     * PJMEDIA_ECHO_SIMPLE and PJMEDIA_ECHO_SPEEX.
+     * the default settings. You can only choose one backend.
      */
     PJMEDIA_ECHO_DEFAULT= 0,
 
     /**
      * Force to use Speex AEC as the backend echo canceller algorithm.
-     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
-     * PJMEDIA_ECHO_WEBRTC.
+     * You can only choose one backend.
      */
     PJMEDIA_ECHO_SPEEX	= 1,
 
     /**
      * If PJMEDIA_ECHO_SIMPLE flag is specified during echo canceller
      * creation, then a simple echo suppressor will be used instead of
-     * an accoustic echo cancellation. This setting is mutually exclusive
-     * with PJMEDIA_ECHO_SPEEX and PJMEDIA_ECHO_WEBRTC.
+     * an accoustic echo cancellation. You can only choose one backend.
      */
     PJMEDIA_ECHO_SIMPLE	= 2,
 
     /**
      * Force to use WebRTC AEC as the backend echo canceller algorithm.
-     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE and
-     * PJMEDIA_ECHO_SPEEX.
+     * You can only choose one backend.
      */
     PJMEDIA_ECHO_WEBRTC = 3,
+
+    /**
+     * Force to use WebRTC AEC3 as the backend echo canceller algorithm.
+     * You can only choose one backend.
+     */
+    PJMEDIA_ECHO_WEBRTC_AEC3 = 4,
 
     /**
      * For internal use.
@@ -116,6 +118,12 @@ typedef enum pjmedia_echo_flag
      * canceller will also apply noise suppressor method to reduce noise.
      */
     PJMEDIA_ECHO_USE_NOISE_SUPPRESSOR = 128,
+
+    /**
+     * If PJMEDIA_ECHO_USE_GAIN_CONTROLLER flag is specified, the echo
+     * canceller will also apply automatic gain control.
+     */
+    PJMEDIA_ECHO_USE_GAIN_CONTROLLER = 256,
     
     /**
      * Use default aggressiveness setting for the echo canceller algorithm. 
@@ -129,30 +137,124 @@ typedef enum pjmedia_echo_flag
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x100,
+    PJMEDIA_ECHO_AGGRESSIVENESS_CONSERVATIVE = 0x1000,
     
     /**
      * Use moderate aggressiveness setting for the echo canceller algorithm. 
      * This setting is mutually exclusive with the other aggressiveness
      * settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x200,
+    PJMEDIA_ECHO_AGGRESSIVENESS_MODERATE = 0x2000,
     
     /**
      * Use aggressive aggressiveness setting for the echo canceller
      * algorithm. This setting is mutually exclusive with the other
      * aggressiveness settings.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x300,
+    PJMEDIA_ECHO_AGGRESSIVENESS_AGGRESSIVE = 0x3000,
     
     /**
      * For internal use.
      */
-    PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF00
+    PJMEDIA_ECHO_AGGRESSIVENESS_MASK = 0xF000
 
 } pjmedia_echo_flag;
 
 
+/** Statistic not specified. */
+#define PJMEDIA_ECHO_STAT_NOT_SPECIFIED		999999
+
+/**
+ * Echo cancellation statistics.
+ */
+typedef struct pjmedia_echo_stat
+{
+    /**
+     * The name of the EC backend.
+     * NULL if not specified.
+     */    
+    const char *name;
+
+    /**
+     * Echo delay value (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    int 	delay;
+
+    /**
+     * Echo return loss.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    double 	return_loss;
+
+    /**
+     * Echo return loss enhancement.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    double 	return_loss_enh;
+
+    /**
+     * Echo delay standard deviation (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    int 	std;
+
+    /**
+     * Fraction of poor delay. Value between 0 to 1. The closer to 1,
+     * the poorer the EC quality.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    float 	frac_delay;
+
+    /**
+     * Learning still in progress? PJ_TRUE if yes, false if done.
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    unsigned 	learning;
+
+    /**
+     * Learning duration (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    unsigned 	duration;
+
+    /**
+     * Detected echo tail length (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    unsigned 	tail;
+
+    /**
+     * Minimum scaling factor (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    int 	min_factor;
+
+    /**
+     * Average scaling factor (in ms).
+     * PJMEDIA_ECHO_STAT_NOT_SPECIFIED if unavailable.
+     */
+    int 	avg_factor;
+
+    /**
+     * Text describing the statistic.
+     */
+    pj_str_t	stat_info;
+
+    /**
+     * Internal buffer.
+     */
+    char 	buf_[128];
+
+} pjmedia_echo_stat;
+
+
+/**
+ * Initialize Echo cancellation stat.
+ *
+ * @param stat		    The statistic to be initialized.
+ */
+PJ_DECL(void) pjmedia_echo_stat_default(pjmedia_echo_stat *stat);
 
 
 /**
@@ -229,6 +331,18 @@ PJ_DECL(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo );
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo );
+
+
+/**
+ * Get the echo canceller statistics.
+ *
+ * @param echo		The Echo Canceller.
+ * @param p_stat	Pointer to receive the stat.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_echo_get_stat(pjmedia_echo_state *echo,
+					   pjmedia_echo_stat *p_stat);
 
 
 /**

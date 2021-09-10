@@ -131,6 +131,12 @@ struct pj_ioqueue_t
 static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h);
 #endif
 
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+    /* Call SSL Network framework poll */
+pj_status_t ssl_network_event_poll();
+#endif
+
 /* Include implementation for common abstraction after we declare
  * pj_ioqueue_key_t and pj_ioqueue_t.
  */
@@ -502,14 +508,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     /* Ticket #520, key will be erased more than once */
     pj_list_erase(key);
 #endif
-    PJ_FD_CLR(key->fd, &ioqueue->rfdset);
-    PJ_FD_CLR(key->fd, &ioqueue->wfdset);
+
+    /* Remove socket from sets and close socket. */
+    if (key->fd != PJ_INVALID_SOCKET) {
+	PJ_FD_CLR(key->fd, &ioqueue->rfdset);
+	PJ_FD_CLR(key->fd, &ioqueue->wfdset);
 #if PJ_HAS_TCP
-    PJ_FD_CLR(key->fd, &ioqueue->xfdset);
+	PJ_FD_CLR(key->fd, &ioqueue->xfdset);
 #endif
 
-    /* Close socket. */
-    if (key->fd != PJ_INVALID_SOCKET) {
         pj_sock_close(key->fd);
         key->fd = PJ_INVALID_SOCKET;
     }
@@ -925,6 +932,12 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     } event[MAX_EVENTS];
 
     PJ_ASSERT_RETURN(ioqueue, -PJ_EINVAL);
+
+#if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
+    (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_APPLE)
+    /* Call SSL Network framework event poll */
+    ssl_network_event_poll();
+#endif
 
     /* Lock ioqueue before making fd_set copies */
     pj_lock_acquire(ioqueue->lock);

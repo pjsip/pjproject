@@ -1,0 +1,551 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		3A6FC61C25CBD4540065F472 /* ipjsua_swiftApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */; };
+		3A6FC61E25CBD4540065F472 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC61D25CBD4540065F472 /* ContentView.swift */; };
+		3A6FC62025CBD4550065F472 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3A6FC61F25CBD4550065F472 /* Assets.xcassets */; };
+		3A6FC62325CBD4550065F472 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3A6FC62225CBD4550065F472 /* Preview Assets.xcassets */; };
+		3A6FC77125CBDB620065F472 /* pjsip.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A6FC77025CBDB620065F472 /* pjsip.m */; };
+		3A6FC77625CBE3700065F472 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC75B25CBD6E10065F472 /* AudioToolbox.framework */; };
+		3A6FC77725CBE3700065F472 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76B25CBD6E10065F472 /* AVFoundation.framework */; };
+		3A6FC77825CBE3700065F472 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76925CBD6E10065F472 /* CFNetwork.framework */; };
+		3A6FC77925CBE3700065F472 /* CoreAudio.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76525CBD6E10065F472 /* CoreAudio.framework */; };
+		3A6FC77A25CBE3700065F472 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76725CBD6E10065F472 /* CoreFoundation.framework */; };
+		3A6FC77B25CBE3700065F472 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC75C25CBD6E10065F472 /* CoreGraphics.framework */; };
+		3A6FC77C25CBE3700065F472 /* CoreImage.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC75E25CBD6E10065F472 /* CoreImage.framework */; };
+		3A6FC77D25CBE3700065F472 /* CoreMedia.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76025CBD6E10065F472 /* CoreMedia.framework */; };
+		3A6FC77E25CBE3700065F472 /* CoreVideo.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76225CBD6E10065F472 /* CoreVideo.framework */; };
+		3A6FC77F25CBE3700065F472 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC75F25CBD6E10065F472 /* Foundation.framework */; };
+		3A6FC78025CBE3700065F472 /* libc++.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC75D25CBD6E10065F472 /* libc++.tbd */; };
+		3A6FC78125CBE3700065F472 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76825CBD6E10065F472 /* OpenGLES.framework */; };
+		3A6FC78225CBE3700065F472 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76625CBD6E10065F472 /* QuartzCore.framework */; };
+		3A6FC78325CBE3700065F472 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76425CBD6E10065F472 /* Security.framework */; };
+		3A6FC78425CBE3700065F472 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76325CBD6E10065F472 /* SystemConfiguration.framework */; };
+		3A6FC78525CBE3700065F472 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76A25CBD6E10065F472 /* UIKit.framework */; };
+		3A6FC78625CBE3700065F472 /* VideoToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC76125CBD6E10065F472 /* VideoToolbox.framework */; };
+		3A6FC7E125CD1A3D0065F472 /* libpjsip-simple.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7CD25CD1A3D0065F472 /* libpjsip-simple.a */; };
+		3A6FC7E225CD1A3D0065F472 /* libgsmcodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7CE25CD1A3D0065F472 /* libgsmcodec.a */; };
+		3A6FC7E325CD1A3D0065F472 /* libpj.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7CF25CD1A3D0065F472 /* libpj.a */; };
+		3A6FC7E425CD1A3D0065F472 /* libpjsip-ua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D025CD1A3D0065F472 /* libpjsip-ua.a */; };
+		3A6FC7E525CD1A3E0065F472 /* libresample.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D125CD1A3D0065F472 /* libresample.a */; };
+		3A6FC7E625CD1A3E0065F472 /* libsrtp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D225CD1A3D0065F472 /* libsrtp.a */; };
+		3A6FC7E725CD1A3E0065F472 /* libyuv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D325CD1A3D0065F472 /* libyuv.a */; };
+		3A6FC7E825CD1A3E0065F472 /* libpjmedia-videodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D425CD1A3D0065F472 /* libpjmedia-videodev.a */; };
+		3A6FC7E925CD1A3E0065F472 /* libpjlib-util.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D525CD1A3D0065F472 /* libpjlib-util.a */; };
+		3A6FC7EA25CD1A3E0065F472 /* libpjnath.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D625CD1A3D0065F472 /* libpjnath.a */; };
+		3A6FC7EB25CD1A3E0065F472 /* libpjsua.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D725CD1A3D0065F472 /* libpjsua.a */; };
+		3A6FC7EC25CD1A3E0065F472 /* libpjmedia.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D825CD1A3D0065F472 /* libpjmedia.a */; };
+		3A6FC7ED25CD1A3E0065F472 /* libspeex.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7D925CD1A3D0065F472 /* libspeex.a */; };
+		3A6FC7EE25CD1A3E0065F472 /* libg7221codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DA25CD1A3D0065F472 /* libg7221codec.a */; };
+		3A6FC7EF25CD1A3E0065F472 /* libpjsip.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DB25CD1A3D0065F472 /* libpjsip.a */; };
+		3A6FC7F025CD1A3E0065F472 /* libpjsua2.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DC25CD1A3D0065F472 /* libpjsua2.a */; };
+		3A6FC7F125CD1A3E0065F472 /* libilbccodec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DD25CD1A3D0065F472 /* libilbccodec.a */; };
+		3A6FC7F225CD1A3E0065F472 /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DE25CD1A3D0065F472 /* libwebrtc.a */; };
+		3A6FC7F325CD1A3E0065F472 /* libpjmedia-codec.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7DF25CD1A3D0065F472 /* libpjmedia-codec.a */; };
+		3A6FC7F425CD1A3E0065F472 /* libpjmedia-audiodev.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A6FC7E025CD1A3D0065F472 /* libpjmedia-audiodev.a */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		3A6FC61825CBD4540065F472 /* ipjsua-swift.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ipjsua-swift.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ipjsua_swiftApp.swift; sourceTree = "<group>"; };
+		3A6FC61D25CBD4540065F472 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		3A6FC61F25CBD4550065F472 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		3A6FC62225CBD4550065F472 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		3A6FC62425CBD4550065F472 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3A6FC75B25CBD6E10065F472 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
+		3A6FC75C25CBD6E10065F472 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		3A6FC75D25CBD6E10065F472 /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		3A6FC75E25CBD6E10065F472 /* CoreImage.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreImage.framework; path = System/Library/Frameworks/CoreImage.framework; sourceTree = SDKROOT; };
+		3A6FC75F25CBD6E10065F472 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		3A6FC76025CBD6E10065F472 /* CoreMedia.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMedia.framework; path = System/Library/Frameworks/CoreMedia.framework; sourceTree = SDKROOT; };
+		3A6FC76125CBD6E10065F472 /* VideoToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = VideoToolbox.framework; path = System/Library/Frameworks/VideoToolbox.framework; sourceTree = SDKROOT; };
+		3A6FC76225CBD6E10065F472 /* CoreVideo.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreVideo.framework; path = System/Library/Frameworks/CoreVideo.framework; sourceTree = SDKROOT; };
+		3A6FC76325CBD6E10065F472 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
+		3A6FC76425CBD6E10065F472 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		3A6FC76525CBD6E10065F472 /* CoreAudio.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreAudio.framework; path = System/Library/Frameworks/CoreAudio.framework; sourceTree = SDKROOT; };
+		3A6FC76625CBD6E10065F472 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		3A6FC76725CBD6E10065F472 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
+		3A6FC76825CBD6E10065F472 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
+		3A6FC76925CBD6E10065F472 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
+		3A6FC76A25CBD6E10065F472 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		3A6FC76B25CBD6E10065F472 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
+		3A6FC76F25CBDB620065F472 /* ipjsua-swift-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ipjsua-swift-Bridging-Header.h"; sourceTree = "<group>"; };
+		3A6FC77025CBDB620065F472 /* pjsip.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = pjsip.m; sourceTree = "<group>"; };
+		3A6FC7CD25CD1A3D0065F472 /* libpjsip-simple.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjsip-simple.a"; sourceTree = "<group>"; };
+		3A6FC7CE25CD1A3D0065F472 /* libgsmcodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libgsmcodec.a; sourceTree = "<group>"; };
+		3A6FC7CF25CD1A3D0065F472 /* libpj.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpj.a; sourceTree = "<group>"; };
+		3A6FC7D025CD1A3D0065F472 /* libpjsip-ua.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjsip-ua.a"; sourceTree = "<group>"; };
+		3A6FC7D125CD1A3D0065F472 /* libresample.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libresample.a; sourceTree = "<group>"; };
+		3A6FC7D225CD1A3D0065F472 /* libsrtp.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libsrtp.a; sourceTree = "<group>"; };
+		3A6FC7D325CD1A3D0065F472 /* libyuv.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libyuv.a; sourceTree = "<group>"; };
+		3A6FC7D425CD1A3D0065F472 /* libpjmedia-videodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-videodev.a"; sourceTree = "<group>"; };
+		3A6FC7D525CD1A3D0065F472 /* libpjlib-util.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjlib-util.a"; sourceTree = "<group>"; };
+		3A6FC7D625CD1A3D0065F472 /* libpjnath.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpjnath.a; sourceTree = "<group>"; };
+		3A6FC7D725CD1A3D0065F472 /* libpjsua.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpjsua.a; sourceTree = "<group>"; };
+		3A6FC7D825CD1A3D0065F472 /* libpjmedia.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpjmedia.a; sourceTree = "<group>"; };
+		3A6FC7D925CD1A3D0065F472 /* libspeex.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libspeex.a; sourceTree = "<group>"; };
+		3A6FC7DA25CD1A3D0065F472 /* libg7221codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libg7221codec.a; sourceTree = "<group>"; };
+		3A6FC7DB25CD1A3D0065F472 /* libpjsip.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpjsip.a; sourceTree = "<group>"; };
+		3A6FC7DC25CD1A3D0065F472 /* libpjsua2.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libpjsua2.a; sourceTree = "<group>"; };
+		3A6FC7DD25CD1A3D0065F472 /* libilbccodec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libilbccodec.a; sourceTree = "<group>"; };
+		3A6FC7DE25CD1A3D0065F472 /* libwebrtc.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libwebrtc.a; sourceTree = "<group>"; };
+		3A6FC7DF25CD1A3D0065F472 /* libpjmedia-codec.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-codec.a"; sourceTree = "<group>"; };
+		3A6FC7E025CD1A3D0065F472 /* libpjmedia-audiodev.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = "libpjmedia-audiodev.a"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		3A6FC61525CBD4540065F472 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A6FC7EE25CD1A3E0065F472 /* libg7221codec.a in Frameworks */,
+				3A6FC7F025CD1A3E0065F472 /* libpjsua2.a in Frameworks */,
+				3A6FC77625CBE3700065F472 /* AudioToolbox.framework in Frameworks */,
+				3A6FC7ED25CD1A3E0065F472 /* libspeex.a in Frameworks */,
+				3A6FC7E425CD1A3D0065F472 /* libpjsip-ua.a in Frameworks */,
+				3A6FC77725CBE3700065F472 /* AVFoundation.framework in Frameworks */,
+				3A6FC77825CBE3700065F472 /* CFNetwork.framework in Frameworks */,
+				3A6FC77925CBE3700065F472 /* CoreAudio.framework in Frameworks */,
+				3A6FC77A25CBE3700065F472 /* CoreFoundation.framework in Frameworks */,
+				3A6FC77B25CBE3700065F472 /* CoreGraphics.framework in Frameworks */,
+				3A6FC77C25CBE3700065F472 /* CoreImage.framework in Frameworks */,
+				3A6FC77D25CBE3700065F472 /* CoreMedia.framework in Frameworks */,
+				3A6FC77E25CBE3700065F472 /* CoreVideo.framework in Frameworks */,
+				3A6FC7F225CD1A3E0065F472 /* libwebrtc.a in Frameworks */,
+				3A6FC77F25CBE3700065F472 /* Foundation.framework in Frameworks */,
+				3A6FC7EB25CD1A3E0065F472 /* libpjsua.a in Frameworks */,
+				3A6FC78025CBE3700065F472 /* libc++.tbd in Frameworks */,
+				3A6FC7EC25CD1A3E0065F472 /* libpjmedia.a in Frameworks */,
+				3A6FC7E525CD1A3E0065F472 /* libresample.a in Frameworks */,
+				3A6FC7E325CD1A3D0065F472 /* libpj.a in Frameworks */,
+				3A6FC7E225CD1A3D0065F472 /* libgsmcodec.a in Frameworks */,
+				3A6FC78125CBE3700065F472 /* OpenGLES.framework in Frameworks */,
+				3A6FC7E825CD1A3E0065F472 /* libpjmedia-videodev.a in Frameworks */,
+				3A6FC7E925CD1A3E0065F472 /* libpjlib-util.a in Frameworks */,
+				3A6FC7EF25CD1A3E0065F472 /* libpjsip.a in Frameworks */,
+				3A6FC78225CBE3700065F472 /* QuartzCore.framework in Frameworks */,
+				3A6FC7E625CD1A3E0065F472 /* libsrtp.a in Frameworks */,
+				3A6FC7F125CD1A3E0065F472 /* libilbccodec.a in Frameworks */,
+				3A6FC7E725CD1A3E0065F472 /* libyuv.a in Frameworks */,
+				3A6FC78325CBE3700065F472 /* Security.framework in Frameworks */,
+				3A6FC7F425CD1A3E0065F472 /* libpjmedia-audiodev.a in Frameworks */,
+				3A6FC7EA25CD1A3E0065F472 /* libpjnath.a in Frameworks */,
+				3A6FC7E125CD1A3D0065F472 /* libpjsip-simple.a in Frameworks */,
+				3A6FC78425CBE3700065F472 /* SystemConfiguration.framework in Frameworks */,
+				3A6FC7F325CD1A3E0065F472 /* libpjmedia-codec.a in Frameworks */,
+				3A6FC78525CBE3700065F472 /* UIKit.framework in Frameworks */,
+				3A6FC78625CBE3700065F472 /* VideoToolbox.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3A6FC60F25CBD4540065F472 = {
+			isa = PBXGroup;
+			children = (
+				3A6FC75A25CBD6CF0065F472 /* Frameworks */,
+				3A6FC6AF25CBD5790065F472 /* Libraries */,
+				3A6FC61A25CBD4540065F472 /* ipjsua-swift */,
+				3A6FC61925CBD4540065F472 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		3A6FC61925CBD4540065F472 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3A6FC61825CBD4540065F472 /* ipjsua-swift.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		3A6FC61A25CBD4540065F472 /* ipjsua-swift */ = {
+			isa = PBXGroup;
+			children = (
+				3A6FC61B25CBD4540065F472 /* ipjsua_swiftApp.swift */,
+				3A6FC61D25CBD4540065F472 /* ContentView.swift */,
+				3A6FC61F25CBD4550065F472 /* Assets.xcassets */,
+				3A6FC62425CBD4550065F472 /* Info.plist */,
+				3A6FC62125CBD4550065F472 /* Preview Content */,
+				3A6FC77025CBDB620065F472 /* pjsip.m */,
+				3A6FC76F25CBDB620065F472 /* ipjsua-swift-Bridging-Header.h */,
+			);
+			path = "ipjsua-swift";
+			sourceTree = "<group>";
+		};
+		3A6FC62125CBD4550065F472 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				3A6FC62225CBD4550065F472 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		3A6FC6AF25CBD5790065F472 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				3A6FC7DA25CD1A3D0065F472 /* libg7221codec.a */,
+				3A6FC7CE25CD1A3D0065F472 /* libgsmcodec.a */,
+				3A6FC7DD25CD1A3D0065F472 /* libilbccodec.a */,
+				3A6FC7CF25CD1A3D0065F472 /* libpj.a */,
+				3A6FC7D525CD1A3D0065F472 /* libpjlib-util.a */,
+				3A6FC7E025CD1A3D0065F472 /* libpjmedia-audiodev.a */,
+				3A6FC7DF25CD1A3D0065F472 /* libpjmedia-codec.a */,
+				3A6FC7D425CD1A3D0065F472 /* libpjmedia-videodev.a */,
+				3A6FC7D825CD1A3D0065F472 /* libpjmedia.a */,
+				3A6FC7D625CD1A3D0065F472 /* libpjnath.a */,
+				3A6FC7CD25CD1A3D0065F472 /* libpjsip-simple.a */,
+				3A6FC7D025CD1A3D0065F472 /* libpjsip-ua.a */,
+				3A6FC7DB25CD1A3D0065F472 /* libpjsip.a */,
+				3A6FC7D725CD1A3D0065F472 /* libpjsua.a */,
+				3A6FC7DC25CD1A3D0065F472 /* libpjsua2.a */,
+				3A6FC7D125CD1A3D0065F472 /* libresample.a */,
+				3A6FC7D925CD1A3D0065F472 /* libspeex.a */,
+				3A6FC7D225CD1A3D0065F472 /* libsrtp.a */,
+				3A6FC7DE25CD1A3D0065F472 /* libwebrtc.a */,
+				3A6FC7D325CD1A3D0065F472 /* libyuv.a */,
+			);
+			path = Libraries;
+			sourceTree = "<group>";
+		};
+		3A6FC75A25CBD6CF0065F472 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				3A6FC75B25CBD6E10065F472 /* AudioToolbox.framework */,
+				3A6FC76B25CBD6E10065F472 /* AVFoundation.framework */,
+				3A6FC76925CBD6E10065F472 /* CFNetwork.framework */,
+				3A6FC76525CBD6E10065F472 /* CoreAudio.framework */,
+				3A6FC76725CBD6E10065F472 /* CoreFoundation.framework */,
+				3A6FC75C25CBD6E10065F472 /* CoreGraphics.framework */,
+				3A6FC75E25CBD6E10065F472 /* CoreImage.framework */,
+				3A6FC76025CBD6E10065F472 /* CoreMedia.framework */,
+				3A6FC76225CBD6E10065F472 /* CoreVideo.framework */,
+				3A6FC75F25CBD6E10065F472 /* Foundation.framework */,
+				3A6FC75D25CBD6E10065F472 /* libc++.tbd */,
+				3A6FC76825CBD6E10065F472 /* OpenGLES.framework */,
+				3A6FC76625CBD6E10065F472 /* QuartzCore.framework */,
+				3A6FC76425CBD6E10065F472 /* Security.framework */,
+				3A6FC76325CBD6E10065F472 /* SystemConfiguration.framework */,
+				3A6FC76A25CBD6E10065F472 /* UIKit.framework */,
+				3A6FC76125CBD6E10065F472 /* VideoToolbox.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3A6FC61725CBD4540065F472 /* ipjsua-swift */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3A6FC62725CBD4550065F472 /* Build configuration list for PBXNativeTarget "ipjsua-swift" */;
+			buildPhases = (
+				3A6FC61425CBD4540065F472 /* Sources */,
+				3A6FC61525CBD4540065F472 /* Frameworks */,
+				3A6FC61625CBD4540065F472 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "ipjsua-swift";
+			productName = "ipjsua-swift";
+			productReference = 3A6FC61825CBD4540065F472 /* ipjsua-swift.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3A6FC61025CBD4540065F472 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1240;
+				LastUpgradeCheck = 1240;
+				TargetAttributes = {
+					3A6FC61725CBD4540065F472 = {
+						CreatedOnToolsVersion = 12.4;
+						LastSwiftMigration = 1240;
+					};
+				};
+			};
+			buildConfigurationList = 3A6FC61325CBD4540065F472 /* Build configuration list for PBXProject "ipjsua-swift" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 3A6FC60F25CBD4540065F472;
+			productRefGroup = 3A6FC61925CBD4540065F472 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3A6FC61725CBD4540065F472 /* ipjsua-swift */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		3A6FC61625CBD4540065F472 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A6FC62325CBD4550065F472 /* Preview Assets.xcassets in Resources */,
+				3A6FC62025CBD4550065F472 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		3A6FC61425CBD4540065F472 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A6FC77125CBDB620065F472 /* pjsip.m in Sources */,
+				3A6FC61E25CBD4540065F472 /* ContentView.swift in Sources */,
+				3A6FC61C25CBD4540065F472 /* ipjsua_swiftApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		3A6FC62525CBD4550065F472 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_BITCODE = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					../../../../pjsip/include,
+					../../../../pjlib/include,
+					"../../../../pjlib-util/include",
+					../../../../pjnath/include,
+					../../../../pjmedia/include,
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		3A6FC62625CBD4550065F472 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_BITCODE = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					../../../../pjsip/include,
+					../../../../pjlib/include,
+					"../../../../pjlib-util/include",
+					../../../../pjnath/include,
+					../../../../pjmedia/include,
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 14.4;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		3A6FC62825CBD4550065F472 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
+				DEVELOPMENT_TEAM = 93NHJQ455P;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/lib\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
+					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
+					"\"$(SRCROOT)/../../../../pjnath/lib\"",
+					"\"$(SRCROOT)/../../../../pjsip/lib\"",
+					"\"$(SRCROOT)/../../../../third_party/lib\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swift";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ipjsua-swift/ipjsua-swift-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3A6FC62925CBD4550065F472 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_ASSET_PATHS = "\"ipjsua-swift/Preview Content\"";
+				DEVELOPMENT_TEAM = 93NHJQ455P;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = "ipjsua-swift/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 14.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(SRCROOT)",
+					"$(SRCROOT)/Libraries",
+					"\"$(SRCROOT)/../../../../pjlib/lib\"",
+					"\"$(SRCROOT)/../../../../pjlib-util/lib\"",
+					"\"$(SRCROOT)/../../../../pjmedia/lib\"",
+					"\"$(SRCROOT)/../../../../pjnath/lib\"",
+					"\"$(SRCROOT)/../../../../pjsip/lib\"",
+					"\"$(SRCROOT)/../../../../third_party/lib\"",
+					"$(PROJECT_DIR)",
+					"$(PROJECT_DIR)/Libraries",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.teluu.ipjsua-swift";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "ipjsua-swift/ipjsua-swift-Bridging-Header.h";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		3A6FC61325CBD4540065F472 /* Build configuration list for PBXProject "ipjsua-swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A6FC62525CBD4550065F472 /* Debug */,
+				3A6FC62625CBD4550065F472 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		3A6FC62725CBD4550065F472 /* Build configuration list for PBXNativeTarget "ipjsua-swift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A6FC62825CBD4550065F472 /* Debug */,
+				3A6FC62925CBD4550065F472 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3A6FC61025CBD4540065F472 /* Project object */;
+}

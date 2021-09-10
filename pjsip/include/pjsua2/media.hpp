@@ -59,6 +59,13 @@ struct MediaFormat
      * The top-most type of the media, as an information.
      */
     pjmedia_type	type;
+
+public:
+    /**
+     * Default constructor
+     */
+    MediaFormat() : id(0), type(PJMEDIA_TYPE_NONE)
+    {}
 };
 
 /**
@@ -445,6 +452,13 @@ struct AudioMediaPlayerInfo
      * The WAV payload size in samples.
      */
     pj_uint32_t		sizeSamples;
+
+public:
+    /**
+     * Default constructor
+     */
+    AudioMediaPlayerInfo() : formatId(PJMEDIA_FORMAT_L16)
+    {}
 };
 
 /**
@@ -534,6 +548,9 @@ public:
      * Callbacks
      */
 
+
+/* Unfortunately for pjsua2, a hard deprecation is inevitable. */
+#if 0 // !DEPRECATED_FOR_TICKET_2251
     /**
      * Register a callback to be called when the file player reading has
      * reached the end of file, or when the file reading has reached the
@@ -548,7 +565,21 @@ public:
      */
     virtual bool onEof()
     { return true; }
+#endif
 
+    /**
+     * Register a callback to be called when the file player reading has
+     * reached the end of file, or when the file reading has reached the
+     * end of file of the last file for a playlist. If the file or playlist
+     * is set to play repeatedly, then the callback will be called multiple
+     * times.
+     *
+     * If application wishes to stop the playback, it can stop the media
+     * transmission in the callback, and only after all transmissions have
+     * been stopped, could the application safely destroy the player.
+     */
+    virtual void onEof2()
+    { }
 
 private:
     /**
@@ -559,8 +590,8 @@ private:
     /**
      *  Low level PJMEDIA callback
      */
-    static pj_status_t eof_cb(pjmedia_port *port,
-                              void *usr_data);
+    static void eof_cb(pjmedia_port *port,
+                       void *usr_data);
 };
 
 /**
@@ -896,6 +927,7 @@ public:
      */
     void setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumDev2 instead. This function is not
      * safe in multithreaded environment.
@@ -906,6 +938,7 @@ public:
      * @return			The list of audio device info.
      */
     const AudioDevInfoVector &enumDev() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all audio devices installed in the system.
@@ -933,7 +966,8 @@ public:
     MediaPort *setNoDev();
 
     /**
-     * Set sound device mode.
+     * Set sound device mode. Note that calling the APIs to set sound device
+     * (setPlaybackDev()/setCaptureDev()) will reset the mode.
      * 
      * @param mode		The sound device mode, as bitmask combination 
      *				of #pjsua_snd_dev_mode
@@ -1451,7 +1485,9 @@ public:
     bool getPlc() const PJSUA2_THROW(Error);
 
 private:
+#if !DEPRECATED_FOR_TICKET_2232
     AudioDevInfoVector		 audioDevList;
+#endif
     AudioMedia			*devMedia;
 
     /**
@@ -1647,6 +1683,16 @@ public:
     void stopTransmit(const VideoMedia &sink) const PJSUA2_THROW(Error);
 
     /**
+     * Update or refresh port states from video port info. Some port may
+     * change its port info in the middle of a session, for example when
+     * a video stream decoder learns that incoming video size or frame rate
+     * has changed, video conference needs to be informed to update its
+     * internal states.
+     *
+     */
+    void update() const PJSUA2_THROW(Error);
+
+    /**
      * Default Constructor.
      *
      * Normally application will not create VideoMedia object directly,
@@ -1833,7 +1879,28 @@ public:
      * @param win		The new output window.
      */
     void setWindow(const VideoWindowHandle &win) PJSUA2_THROW(Error);
-    
+
+    /**
+     * Set video window full-screen. This operation is valid only when the
+     * underlying video device supports PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN
+     * capability. Currently it is only supported on SDL backend.
+     *
+     * @param enabled   	Set to true if full screen is desired, false
+     *				otherwise.
+     */
+    void setFullScreen(bool enabled) PJSUA2_THROW(Error);
+
+    /**
+     * Set video window full-screen. This operation is valid only when the
+     * underlying video device supports PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN
+     * capability. Currently it is only supported on SDL backend.
+     *
+     * @param mode		Fullscreen mode, see
+     *				pjmedia_vid_dev_fullscreen_flag.
+     */
+    void setFullScreen2(pjmedia_vid_dev_fullscreen_flag mode)
+							PJSUA2_THROW(Error);
+
 private:
     pjsua_vid_win_id		winId;
 };
@@ -1942,6 +2009,8 @@ public:
 
 private:
     pjmedia_vid_dev_index devId;
+    pjsua_vid_win_id winId;
+    void updateDevId();
 };
 
 /**
@@ -1982,6 +2051,13 @@ struct VideoDevInfo
      * to zero, it indicates that the exact format combination is being used.
      */
     MediaFormatVideoVector fmt;
+
+public:
+    /**
+     * Default constructor
+     */
+    VideoDevInfo() : id(-1), dir(PJMEDIA_DIR_NONE)
+    {}
 
     /**
      * Construct from pjmedia_vid_dev_info.
@@ -2047,6 +2123,7 @@ public:
      */
     VideoDevInfo getDevInfo(int dev_id) const PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use enumDev2() instead. This function is not
      * safe in multithreaded environment.
@@ -2056,6 +2133,7 @@ public:
      * @return		The list of video device info
      */
     const VideoDevInfoVector &enumDev() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all video devices installed in the system.
@@ -2254,7 +2332,9 @@ public:
     			  bool keep=true) PJSUA2_THROW(Error);
 
 private:
+#if !DEPRECATED_FOR_TICKET_2232
     VideoDevInfoVector videoDevList;
+#endif
 
     void clearVideoDevList();
 
@@ -2342,6 +2422,12 @@ struct CodecParamInfo
     pjmedia_format_id fmtId;		/**< Source format, it's format of
 					     encoder input and decoder
 					     output.			    */
+public:
+    /**
+     * Default constructor
+     */
+    CodecParamInfo() : fmtId(PJMEDIA_FORMAT_L16)
+    {}
 };
 
 /**
@@ -2379,6 +2465,23 @@ struct CodecParam
 };
 
 /**
+ * Opus codec parameters setting;
+ */
+struct CodecOpusConfig
+{
+    unsigned   sample_rate; /**< Sample rate in Hz.                     */
+    unsigned   channel_cnt; /**< Number of channels.                    */
+    unsigned   frm_ptime;   /**< Frame time in msec.   			*/
+    unsigned   bit_rate;    /**< Encoder bit rate in bps.		*/
+    unsigned   packet_loss; /**< Encoder's expected packet loss pct.	*/
+    unsigned   complexity;  /**< Encoder complexity, 0-10(10 is highest)*/
+    bool       cbr;         /**< Constant bit rate?			*/
+
+    pjmedia_codec_opus_config toPj() const;
+    void fromPj(const pjmedia_codec_opus_config &config);
+};
+
+/**
  * Detailed codec attributes used in configuring a video codec and in querying
  * the capability of video codec factories. 
  *
@@ -2404,6 +2507,14 @@ struct VidCodecParam
 					     true, the codec will apply
 					     format settings specified in
 					     encFmt and decFmt only.	    */
+
+public:
+    /**
+     * Default constructor
+     */
+    VidCodecParam() : dir(PJMEDIA_DIR_NONE),
+		      packing(PJMEDIA_VID_PACKING_UNKNOWN)
+    {}
 
     void fromPj(const pjmedia_vid_codec_param &param);
 
@@ -2480,6 +2591,12 @@ struct MediaEvent
     void                       *pjMediaEvent;
 
 public:
+    /**
+     * Default constructor
+     */
+    MediaEvent() : type(PJMEDIA_EVENT_NONE)
+    {}
+
     /**
      * Convert from pjsip
      */

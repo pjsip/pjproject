@@ -8,6 +8,13 @@ else
 	OS=ios
     endif
 endif
+SWIG_FLAGS=-I../../../../pjlib/include \
+		   -I../../../../pjlib-util/include \
+		   -I../../../../pjmedia/include \
+		   -I../../../../pjsip/include \
+		   -I../../../../pjnath/include -c++ 
+SRC_DIR=../../../../pjsip/include
+SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
 
 SWIG_FLAGS += -w312
 

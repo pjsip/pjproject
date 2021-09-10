@@ -19,8 +19,8 @@ endif
 export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CFLAGS) $(CC_INC). $(CC_INC)../../yuv/include \
 		   $(CC_INC)../../../pjlib/include
-export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
@@ -70,8 +70,8 @@ export YUV_OBJS = \
 	scale_win.o         \
 	video_common.o
 
-export YUV_CFLAGS = -fomit-frame-pointer $(_CFLAGS)
-export YUV_CXXFLAGS = $(YUV_CFLAGS)
+export YUV_CFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CFLAGS)
+export YUV_CXXFLAGS = -fomit-frame-pointer -fno-strict-aliasing -Wno-memset-elt-size -Wno-unknown-warning-option -Wno-pragmas $(_CXXFLAGS)
 
 
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 

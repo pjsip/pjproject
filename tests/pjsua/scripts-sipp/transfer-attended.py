@@ -50,3 +50,42 @@ PJSUA_EXPECTS = [
 		 [2, const.MEDIA_ACTIVE, ""],
 		 [1, const.STATE_DISCONNECTED, ""]
 		]
+
+PJSUA_CLI_EXPECTS = [
+		 # A calls B
+		 [0, "", "call new $PJSUA_URI[1]"],
+		 [0, const.STATE_CALLING, ""],
+		 [1, const.EVENT_INCOMING_CALL, "call answer 200"],
+		 [0, const.STATE_CONFIRMED, ""],
+		 [1, const.STATE_CONFIRMED, ""],
+
+		 # B holds A
+		 [1, "", "call hold"],
+		 [0, const.MEDIA_HOLD, ""],
+		 [1, const.MEDIA_HOLD, ""],
+
+		 # B calls C
+		 [1, "", "call new $PJSUA_URI[2]"],
+		 [1, const.STATE_CALLING, ""],
+		 [2, const.EVENT_INCOMING_CALL, "call answer 200"],
+		 [1, const.STATE_CONFIRMED, ""],
+		 [2, const.STATE_CONFIRMED, ""],
+
+		 # B holds C
+		 [1, "", "call next"],
+		 [1, "", "call hold"],
+		 [2, const.MEDIA_HOLD, ""],
+		 [1, const.MEDIA_HOLD, ""],
+		 [1, "", "call next"],
+
+		 # B transfer A to C
+		 [1, "", "call transfer_replaces 1"],
+		 [0, "Call .* is being transferred", ""],
+		 [1, "Subscription state .* ACCEPTED", ""],
+		 [0, const.STATE_CALLING, ""],
+		 [2, "Call .* is being replaced", ""],
+		 [1, "call transferred successfully", ""],
+		 [0, const.MEDIA_ACTIVE, ""],
+		 [2, const.MEDIA_ACTIVE, ""],
+		 [1, const.STATE_DISCONNECTED, ""]
+		]

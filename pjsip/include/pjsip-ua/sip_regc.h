@@ -51,7 +51,7 @@ typedef struct pjsip_regc pjsip_regc;
 #define PJSIP_REGC_MAX_CONTACT	10
 
 /** Expiration not specified. */
-#define PJSIP_REGC_EXPIRATION_NOT_SPECIFIED	((pj_uint32_t)0xFFFFFFFFUL)
+#define PJSIP_REGC_EXPIRATION_NOT_SPECIFIED	PJSIP_EXPIRES_NOT_SPECIFIED
 
 /** Buffer to hold all contacts. */
 #define PJSIP_REGC_CONTACT_BUF_SIZE	512
@@ -74,7 +74,9 @@ struct pjsip_regc_cbparam
     int			 code;	    /**< SIP status code received.	    */
     pj_str_t		 reason;    /**< SIP reason phrase received.	    */
     pjsip_rx_data	*rdata;	    /**< The complete received response.    */
-    int			 expiration;/**< Next expiration interval.	    */
+    unsigned		 expiration;/**< Next expiration interval,
+    					 PJSIP_REGC_EXPIRATION_NOT_SPECIFIED
+    					 if not specified.	    	    */
     int			 contact_cnt;/**<Number of contacts in response.    */
     pjsip_contact_hdr	*contact[PJSIP_REGC_MAX_CONTACT]; /**< Contacts.    */
     pj_bool_t		 is_unreg;  /**< Expire header, if any, set to zero?*/
@@ -109,8 +111,8 @@ struct pjsip_regc_info
     pj_str_t	client_uri; /**< Client URI (From header).		    */
     pj_bool_t	is_busy;    /**< Have pending transaction?		    */
     pj_bool_t	auto_reg;   /**< Will register automatically?		    */
-    int		interval;   /**< Registration interval (seconds).	    */
-    int		next_reg;   /**< Time until next registration (seconds).    */
+    unsigned	interval;   /**< Registration interval (seconds).	    */
+    unsigned	next_reg;   /**< Time until next registration (seconds).    */
     pjsip_transport *transport; /**< Last transport used.		    */
 };
 
@@ -153,6 +155,24 @@ PJ_DECL(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc);
+
+
+/**
+ * Destroy client registration structure. If a registration transaction is
+ * in progress:
+ * - if force is PJ_TRUE, then the structure will be deleted only after
+ *   a final response has been received, and in this case, the callback
+ *   won't be called (this behavior is the same as calling
+ *   pjsip_regc_destroye()).
+ * - if force is PJ_FALSE, the function will return PJ_EBUSY
+ *
+ * @param regc	    The client registration structure.
+ * @param force	    Specify if the function must destroy the structure.
+ *
+ * @return	    PJ_SUCCESS on success, or PJ_EBUSY.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_destroy2(pjsip_regc *regc, pj_bool_t force);
+
 
 /**
  * Get registration info.
@@ -206,6 +226,29 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     int ccnt,
 				     const pj_str_t contact[],
 				     pj_uint32_t expires);
+
+
+/**
+ * Increment busy counter temporarily, to prevent client registration
+ * structure from being destroyed.
+ *
+ * @param regc	    The client registration structure.
+ */
+PJ_DECL(void) pjsip_regc_add_ref( pjsip_regc *regc );
+
+
+/**
+ * Decrement temporary busy counter. After this function
+ * is called, client registration structure may have been destroyed
+ * if there's a pending destroy.
+ *
+ * @param regc	    The client registration structure.
+ *
+ * @return	    PJ_SUCCESS on success. PJ_EGONE if the registration
+ *		    structure has been destroyed inside the function.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_dec_ref( pjsip_regc *regc );
+
 
 /**
  * Set callback to be called when the registration received a final response.

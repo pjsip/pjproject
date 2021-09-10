@@ -67,6 +67,30 @@ using namespace pj;
 
 
 // Constants from PJSIP libraries
+
+#ifdef SWIGJAVA
+%include "enumtypeunsafe.swg"
+%javaconst(1);
+
+%pragma(java) jniclasscode=%{
+  static {
+    try {
+	System.loadLibrary("openh264");
+    } catch (UnsatisfiedLinkError e) {
+	System.err.println("Failed to load native library openh264\n" + e);
+	System.out.println("This could be safely ignored if you " +
+			   "don't use OpenH264 video codec.");
+    }
+    try {
+	System.loadLibrary("pjsua2");
+    } catch (UnsatisfiedLinkError e) {
+	System.err.println("Failed to load native library pjsua2\n" + e);
+    }
+  }
+%}
+
+#endif
+
 %include "symbols.i"
 
 
@@ -96,13 +120,8 @@ using namespace pj;
 %ignore fromPj;
 %ignore toPj;
 
-// C++11 deprecated dynamic exception specification, but SWIG needs it.
-#ifndef SWIG
-#   define PJSUA2_THROW(x)
-#else
-#   define PJSUA2_THROW(x) throw(x)
-#endif
-
+%import "pj/config_site.h"
+%import "pjsua2/config.hpp"
 
 //
 // Now include the API itself.
@@ -194,4 +213,3 @@ using namespace pj;
 #endif
 
 %include "pjsua2/endpoint.hpp"
-

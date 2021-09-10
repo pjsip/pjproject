@@ -35,4 +35,4 @@ Notes:
     diff += __popcnt(x);
     --------------------------------------------------------------------------------------
     So, we use the default method HammingDistance_C() to calculate Hamming Distance.
-    
+

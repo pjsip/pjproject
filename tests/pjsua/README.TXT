@@ -61,5 +61,6 @@ contains specific test flows, and we have few of them:
 Example:
   $ python run.py mod_run.py scripts-run/100_simple.py
   $ python run.py mod_call.py scripts-call/100_simple.py
+  $ python run.py mod_sipp.py scripts-sipp/uac-bad-ack.xml
 
 

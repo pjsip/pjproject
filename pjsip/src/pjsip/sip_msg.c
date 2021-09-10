@@ -162,9 +162,11 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[181], "Call Is Being Forwarded");
     pj_strset2( &status_phrase[182], "Queued");
     pj_strset2( &status_phrase[183], "Session Progress");
+    pj_strset2( &status_phrase[199], "Early Dialog Terminated");
 
     pj_strset2( &status_phrase[200], "OK");
     pj_strset2( &status_phrase[202], "Accepted");
+    pj_strset2( &status_phrase[204], "No Notification");
 
     pj_strset2( &status_phrase[300], "Multiple Choices");
     pj_strset2( &status_phrase[301], "Moved Permanently");
@@ -181,15 +183,31 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[406], "Not Acceptable");
     pj_strset2( &status_phrase[407], "Proxy Authentication Required");
     pj_strset2( &status_phrase[408], "Request Timeout");
+    pj_strset2( &status_phrase[409], "Conflict");
     pj_strset2( &status_phrase[410], "Gone");
+    pj_strset2( &status_phrase[411], "Length Required");
+    pj_strset2( &status_phrase[412], "Conditional Request Failed");
     pj_strset2( &status_phrase[413], "Request Entity Too Large");
-    pj_strset2( &status_phrase[414], "Request URI Too Long");
+    pj_strset2( &status_phrase[414], "Request-URI Too Long");
     pj_strset2( &status_phrase[415], "Unsupported Media Type");
     pj_strset2( &status_phrase[416], "Unsupported URI Scheme");
+    pj_strset2( &status_phrase[417], "Unknown Resource-Priority");
     pj_strset2( &status_phrase[420], "Bad Extension");
     pj_strset2( &status_phrase[421], "Extension Required");
-    pj_strset2( &status_phrase[422], "Session Timer Too Small");
+    pj_strset2( &status_phrase[422], "Session Interval Too Small");
     pj_strset2( &status_phrase[423], "Interval Too Brief");
+    pj_strset2( &status_phrase[424], "Bad Location Information");
+    pj_strset2( &status_phrase[428], "Use Identity Header");
+    pj_strset2( &status_phrase[429], "Provide Referrer Identity");
+    pj_strset2( &status_phrase[430], "Flow Failed");
+    pj_strset2( &status_phrase[433], "Anonymity Disallowed");
+    pj_strset2( &status_phrase[436], "Bad Identity-Info");
+    pj_strset2( &status_phrase[437], "Unsupported Certificate");
+    pj_strset2( &status_phrase[438], "Invalid Identity Header");
+    pj_strset2( &status_phrase[439], "First Hop Lacks Outbound Support");
+    pj_strset2( &status_phrase[440], "Max-Breadth Exceeded");
+    pj_strset2( &status_phrase[469], "Bad Info Package");
+    pj_strset2( &status_phrase[470], "Consent Needed");
     pj_strset2( &status_phrase[480], "Temporarily Unavailable");
     pj_strset2( &status_phrase[481], "Call/Transaction Does Not Exist");
     pj_strset2( &status_phrase[482], "Loop Detected");
@@ -203,20 +221,24 @@ static int init_status_phrase()
     pj_strset2( &status_phrase[490], "Request Updated");
     pj_strset2( &status_phrase[491], "Request Pending");
     pj_strset2( &status_phrase[493], "Undecipherable");
+    pj_strset2( &status_phrase[494], "Security Agreement Required");
 
-    pj_strset2( &status_phrase[500], "Internal Server Error");
+    pj_strset2( &status_phrase[500], "Server Internal Error");
     pj_strset2( &status_phrase[501], "Not Implemented");
     pj_strset2( &status_phrase[502], "Bad Gateway");
     pj_strset2( &status_phrase[503], "Service Unavailable");
-    pj_strset2( &status_phrase[504], "Server Timeout");
+    pj_strset2( &status_phrase[504], "Server Time-out");
     pj_strset2( &status_phrase[505], "Version Not Supported");
     pj_strset2( &status_phrase[513], "Message Too Large");
+    pj_strset2( &status_phrase[555], "Push Notification Service Not Supported");
     pj_strset2( &status_phrase[580], "Precondition Failure");
 
     pj_strset2( &status_phrase[600], "Busy Everywhere");
     pj_strset2( &status_phrase[603], "Decline");
     pj_strset2( &status_phrase[604], "Does Not Exist Anywhere");
     pj_strset2( &status_phrase[606], "Not Acceptable");
+    pj_strset2( &status_phrase[607], "Unwanted");
+    pj_strset2( &status_phrase[608], "Rejected");
 
     pj_strset2( &status_phrase[701], "No response from destination server");
     pj_strset2( &status_phrase[702], "Unable to resolve destination server");
@@ -813,7 +835,7 @@ static pjsip_hdr_vptr generic_int_hdr_vptr =
 PJ_DEF(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_init(  pj_pool_t *pool,
 							    void *mem,
 							    const pj_str_t *hnames,
-							    int value)
+							    unsigned value)
 {
     pjsip_generic_int_hdr *hdr = (pjsip_generic_int_hdr*) mem;
 
@@ -828,7 +850,7 @@ PJ_DEF(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_init(  pj_pool_t *pool,
 
 PJ_DEF(pjsip_generic_int_hdr*) pjsip_generic_int_hdr_create( pj_pool_t *pool,
 						     const pj_str_t *hnames,
-						     int value)
+						     unsigned value)
 {
     void *mem = pj_pool_alloc(pool, sizeof(pjsip_generic_int_hdr));
     return pjsip_generic_int_hdr_init(pool, mem, hnames, value);
@@ -1195,7 +1217,7 @@ PJ_DEF(pjsip_contact_hdr*) pjsip_contact_hdr_init( pj_pool_t *pool,
 
     pj_bzero(mem, sizeof(pjsip_contact_hdr));
     init_hdr(hdr, PJSIP_H_CONTACT, &contact_hdr_vptr);
-    hdr->expires = -1;
+    hdr->expires = PJSIP_EXPIRES_NOT_SPECIFIED;
     pj_list_init(&hdr->other_param);
     return hdr;
 }
@@ -1263,7 +1285,7 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	    }
 	}
 
-	if (hdr->expires >= 0) {
+	if (hdr->expires != PJSIP_EXPIRES_NOT_SPECIFIED) {
 	    if (buf+23 >= endbuf)
 		return -1;
 
@@ -1422,7 +1444,7 @@ static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool,
  */
 PJ_DEF(pjsip_expires_hdr*) pjsip_expires_hdr_init( pj_pool_t *pool,
 						   void *mem,
-						   int value)
+						   unsigned value)
 {
     pjsip_expires_hdr *hdr = (pjsip_expires_hdr*) mem;
 
@@ -1435,7 +1457,7 @@ PJ_DEF(pjsip_expires_hdr*) pjsip_expires_hdr_init( pj_pool_t *pool,
 }
 
 PJ_DEF(pjsip_expires_hdr*) pjsip_expires_hdr_create( pj_pool_t *pool,
-						     int value )
+						     unsigned value )
 {
     void *mem = pj_pool_alloc(pool, sizeof(pjsip_expires_hdr));
     return pjsip_expires_hdr_init(pool, mem, value);
@@ -1585,7 +1607,7 @@ pjsip_fromto_hdr_shallow_clone( pj_pool_t *pool,
  */
 PJ_DEF(pjsip_max_fwd_hdr*) pjsip_max_fwd_hdr_init( pj_pool_t *pool,
 						   void *mem,
-						   int value)
+						   unsigned value)
 {
     pjsip_max_fwd_hdr *hdr = (pjsip_max_fwd_hdr*) mem;
 
@@ -1598,7 +1620,7 @@ PJ_DEF(pjsip_max_fwd_hdr*) pjsip_max_fwd_hdr_init( pj_pool_t *pool,
 }
 
 PJ_DEF(pjsip_max_fwd_hdr*) pjsip_max_fwd_hdr_create(pj_pool_t *pool,
-						    int value)
+						    unsigned value)
 {
     void *mem = pj_pool_alloc(pool, sizeof(pjsip_max_fwd_hdr));
     return pjsip_max_fwd_hdr_init(pool, mem, value);
@@ -1611,7 +1633,7 @@ PJ_DEF(pjsip_max_fwd_hdr*) pjsip_max_fwd_hdr_create(pj_pool_t *pool,
  */
 PJ_DEF(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_init( pj_pool_t *pool,
 							   void *mem,
-							   int value )
+							   unsigned value )
 {
     pjsip_min_expires_hdr *hdr = (pjsip_min_expires_hdr*) mem;
 
@@ -1623,7 +1645,7 @@ PJ_DEF(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_init( pj_pool_t *pool,
 }
 
 PJ_DEF(pjsip_min_expires_hdr*) pjsip_min_expires_hdr_create(pj_pool_t *pool,
-							    int value )
+							    unsigned value )
 {
     void *mem = pj_pool_alloc(pool, sizeof(pjsip_min_expires_hdr));
     return pjsip_min_expires_hdr_init(pool, mem, value );

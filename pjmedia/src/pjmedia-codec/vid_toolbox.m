@@ -21,6 +21,7 @@
 #include <pjmedia/vid_codec_util.h>
 #include <pjmedia/errno.h>
 #include <pj/log.h>
+#include <pj/math.h>
 
 #if defined(PJMEDIA_HAS_VID_TOOLBOX_CODEC) && \
             PJMEDIA_HAS_VID_TOOLBOX_CODEC != 0 && \
@@ -60,6 +61,8 @@
 /* Maximum duration from one key frame to the next (in seconds). */
 #define KEYFRAME_INTERVAL	5
 
+/* vidtoolbox H264 default PT */
+#define VT_H264_PT		PJMEDIA_RTP_PT_H264_RSV1
 /*
  * Factory operations.
  */
@@ -166,6 +169,7 @@ typedef struct vtool_codec_data
     pj_uint8_t			*dec_buf;
     unsigned			 dec_buf_size;
     CMFormatDescriptionRef	 dec_format;
+    OSStatus             dec_status;
 
     unsigned			 dec_sps_size;
     unsigned			 dec_pps_size;
@@ -178,6 +182,17 @@ typedef struct vtool_codec_data
 
 /* Prototypes */
 static OSStatus create_decoder(struct vtool_codec_data *vtool_data);
+
+#if TARGET_OS_IPHONE
+static void dispatch_sync_on_main_queue(void (^block)(void))
+{
+    if ([NSThread isMainThread]) {
+        block();
+    } else {
+        dispatch_sync(dispatch_get_main_queue(), block);
+    }
+}
+#endif
 
 PJ_DEF(pj_status_t) pjmedia_codec_vid_toolbox_init(pjmedia_vid_codec_mgr *mgr,
                                                    pj_pool_factory *pf)
@@ -255,7 +270,7 @@ static pj_status_t vtool_test_alloc(pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory == &vtool_factory.base, PJ_EINVAL);
 
     if (info->fmt_id == PJMEDIA_FORMAT_H264 &&
-	info->pt != 0)
+	info->pt == VT_H264_PT)
     {
 	return PJ_SUCCESS;
     }
@@ -311,7 +326,7 @@ static pj_status_t vtool_enum_info(pjmedia_vid_codec_factory *factory,
 
     *count = 1;
     info->fmt_id = PJMEDIA_FORMAT_H264;
-    info->pt = PJMEDIA_RTP_PT_H264;
+    info->pt = VT_H264_PT;
     info->encoding_name = pj_str((char*)"H264");
     info->encoding_desc = pj_str((char*)"Video Toolbox codec");
     info->clock_rate = 90000;
@@ -758,24 +773,9 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     size_t plane_w[3], plane_h[3], plane_bpr[3];
     NSDictionary *frm_prop = NULL;
     OSStatus ret;
-#if TARGET_OS_IPHONE
-    UIApplicationState state;
-#endif
  
     PJ_ASSERT_RETURN(codec && input && out_size && output && has_more,
                      PJ_EINVAL);
-
-#if TARGET_OS_IPHONE
-    /* Skip encoding if app is not active, i.e. in the bg. */
-    state = [UIApplication sharedApplication].applicationState;
-    if (state != UIApplicationStateActive) {
-    	*has_more = PJ_FALSE;
-    	output->size = 0;
-    	output->type = PJMEDIA_FRAME_TYPE_NONE;
-
-    	return PJ_SUCCESS;
-    }
-#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -802,11 +802,17 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
 
 	count = CVPixelBufferGetPlaneCount(image_buf);
 	for (i = 0; i < count; i++) {
-    	    void *ptr = CVPixelBufferGetBaseAddressOfPlane(image_buf, i);
-    	    size_t bpr = CVPixelBufferGetBytesPerRow(image_buf);
-    	    
-    	    pj_assert(bpr = plane_bpr[i]);
-    	    pj_memcpy(ptr, base_addr[i], plane_bpr[i] * plane_h[i]);
+    	    char *ptr = (char*)CVPixelBufferGetBaseAddressOfPlane(image_buf, i);
+    	    char *src = (char*)base_addr[i];
+    	    size_t bpr = CVPixelBufferGetBytesPerRowOfPlane(image_buf, i);
+	    int j;
+
+    	    pj_assert(bpr >= plane_bpr[i]);
+	    for (j = 0; j < plane_h[i]; ++j) {
+		pj_memcpy(ptr, src, plane_bpr[i]);
+		src += plane_bpr[i];
+		ptr += bpr;
+	    }
 	}
 
 	CVPixelBufferUnlockBaseAddress(image_buf, 0);
@@ -847,6 +853,23 @@ static pj_status_t vtool_codec_encode_begin(pjmedia_vid_codec *codec,
     				    	  (__bridge CFDictionaryRef)frm_prop,
     				    	  NULL, NULL);
     if (ret == kVTInvalidSessionErr) {
+#if TARGET_OS_IPHONE
+	/* Just return if app is not active, i.e. in the bg. */
+	__block UIApplicationState state;
+
+	dispatch_sync_on_main_queue(^{
+	    state = [UIApplication sharedApplication].applicationState;
+	});
+	if (state != UIApplicationStateActive) {
+    	    *has_more = PJ_FALSE;
+    	    output->size = 0;
+    	    output->type = PJMEDIA_FRAME_TYPE_NONE;
+
+	    CVPixelBufferRelease(image_buf);
+    	    return PJ_SUCCESS;
+	}
+#endif
+
 	/* Reset compression session */
         ret = create_encoder(vtool_data);
 	PJ_LOG(3,(THIS_FILE, "Encoder needs to be reset [1]: %s (%d)",
@@ -1000,10 +1023,10 @@ static void decode_cb(void *decompressionOutputRefCon,
     /* This callback can be called from another, unregistered thread.
      * So do not call pjlib functions here.
      */
-
-    if (status != noErr) return;
-
     vtool_data = (struct vtool_codec_data *)decompressionOutputRefCon;
+    vtool_data->dec_status = status;
+    if (vtool_data->dec_status != noErr)
+        return;
 
     CVPixelBufferLockBaseAddress(imageBuffer,0);
     
@@ -1111,24 +1134,10 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
     pj_status_t status = PJ_SUCCESS;
     pj_bool_t decode_whole = DECODE_WHOLE;
     OSStatus ret;
-#if TARGET_OS_IPHONE
-    UIApplicationState state;
-#endif
 
     PJ_ASSERT_RETURN(codec && count && packets && out_size && output,
                      PJ_EINVAL);
     PJ_ASSERT_RETURN(output->buf, PJ_EINVAL);
-
-#if TARGET_OS_IPHONE
-    /* Skip decoding if app is not active, i.e. in the bg. */
-    state = [UIApplication sharedApplication].applicationState;
-    if (state != UIApplicationStateActive) {
-	output->type = PJMEDIA_FRAME_TYPE_NONE;
-	output->size = 0;
-	output->timestamp = packets[0].timestamp;
-    	return PJ_SUCCESS;
-    }
-#endif
 
     vtool_data = (vtool_codec_data*) codec->codec_data;
 
@@ -1228,12 +1237,14 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 
 	if (nalu_type == 7) {
  	    /* NALU type 7 is the SPS parameter NALU */
- 	    vtool_data->dec_sps_size = frm_size - code_size;
+ 	    vtool_data->dec_sps_size = PJ_MIN(frm_size - code_size,
+ 	    				      sizeof(vtool_data->dec_sps));
  	    pj_memcpy(vtool_data->dec_sps, &start[code_size],
  	    	      vtool_data->dec_sps_size);
     	} else if (nalu_type == 8) {
     	    /* NALU type 8 is the PPS parameter NALU */
- 	    vtool_data->dec_pps_size = frm_size - code_size;
+ 	    vtool_data->dec_pps_size = PJ_MIN(frm_size - code_size,
+ 	    				      sizeof(vtool_data->dec_pps));
  	    pj_memcpy(vtool_data->dec_pps, &start[code_size],
  	    	      vtool_data->dec_pps_size);
  	    
@@ -1277,6 +1288,23 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 		          vtool_data->dec, sample_buf, 0,
 			  NULL, NULL);
 		if (ret == kVTInvalidSessionErr) {
+#if TARGET_OS_IPHONE
+		    /* Just return if app is not active, i.e. in the bg. */
+		    __block UIApplicationState state;
+
+		    dispatch_sync_on_main_queue(^{
+		        state = [UIApplication sharedApplication].applicationState;
+		    });
+		    if (state != UIApplicationStateActive) {
+			output->type = PJMEDIA_FRAME_TYPE_NONE;
+			output->size = 0;
+			output->timestamp = packets[0].timestamp;
+
+			CFRelease(block_buf);
+			CFRelease(sample_buf);
+			return PJ_SUCCESS;
+		    }
+#endif
 		    if (vtool_data->dec_format)
 		        CFRelease(vtool_data->dec_format);
 		    vtool_data->dec_format = NULL;
@@ -1292,10 +1320,13 @@ static pj_status_t vtool_codec_decode(pjmedia_vid_codec *codec,
 		    }
 		}
 
-		if (ret != noErr) {
+		if ((ret != noErr) || (vtool_data->dec_status != noErr)) {
+            char *ret_err = (ret != noErr)?"decode err":"cb err";
+            OSStatus err_code = (ret != noErr)?ret:vtool_data->dec_status;
+
 		    PJ_LOG(5,(THIS_FILE, "Failed to decode frame %d of size "
-		    			 "%d: %d", nalu_type, frm_size,
-		    			 ret));
+                                 "%d %s:%d", nalu_type, frm_size, ret_err,
+                                 err_code));
 		} else {
     		    has_frame = PJ_TRUE;
     		    output->type = PJMEDIA_FRAME_TYPE_VIDEO;

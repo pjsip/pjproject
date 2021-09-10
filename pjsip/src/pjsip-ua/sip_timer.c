@@ -385,6 +385,11 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 	    pjsip_endpt_schedule_timer(inv->dlg->endpt, &inv->timer->timer,
 				       &delay);
 	    pjsip_dlg_dec_lock(inv->dlg);
+
+	    PJ_LOG(3, (obj_name,
+		       "Reschedule refresh request after %d seconds as "
+		       "there is another SDP negotiation in progress",
+		       delay.sec));
 	    return;
 	}
 

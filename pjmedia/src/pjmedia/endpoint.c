@@ -40,7 +40,8 @@ static const pj_str_t STR_IP6 = { "IP6", 3};
 static const pj_str_t STR_RTP_AVP = { "RTP/AVP", 7 };
 static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
-
+static const pj_str_t STR_SENDONLY = { "sendonly", 8 };
+static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 
 
 /* Config to control rtpmap inclusion for static payload types */
@@ -102,6 +103,13 @@ struct pjmedia_endpt
     exit_cb		  exit_cb_list;
 };
 
+
+PJ_DEF(void)
+pjmedia_endpt_create_sdp_param_default(pjmedia_endpt_create_sdp_param *param)
+{
+    param->dir = PJMEDIA_DIR_ENCODING_DECODING;
+}
+
 /**
  * Initialize and get the instance of media endpoint.
  */
@@ -122,7 +130,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create2(pj_pool_factory *pf,
     PJ_ASSERT_RETURN(pf && p_endpt, PJ_EINVAL);
     PJ_ASSERT_RETURN(worker_cnt <= MAX_THREADS, PJ_EINVAL);
 
-    pool = pj_pool_create(pf, "med-ept", 512, 512, NULL);
+    pool = pj_pool_create(pf, "med-ept", PJMEDIA_POOL_LEN_ENDPT,
+						PJMEDIA_POOL_INC_ENDPT, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 
@@ -359,7 +368,8 @@ PJ_DEF(pj_pool_t*) pjmedia_endpt_create_pool( pjmedia_endpt *endpt,
 static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
                                   pj_pool_t *pool,
                                   const pj_str_t *media_type,
-				  const pjmedia_sock_info *sock_info)
+				  const pjmedia_sock_info *sock_info,
+				  pjmedia_dir dir)
 {
     char tmp_addr[PJ_INET6_ADDRSTRLEN];
     pjmedia_sdp_attr *attr;
@@ -397,18 +407,26 @@ static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
 
     /* Add sendrecv attribute. */
     attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = STR_SENDRECV;
+    if (dir == PJMEDIA_DIR_ENCODING) {
+    	attr->name = STR_SENDONLY;
+    } else if (dir == PJMEDIA_DIR_DECODING) {
+    	attr->name = STR_RECVONLY;
+    } else {
+    	attr->name = STR_SENDRECV;
+    }
+
     m->attr[m->attr_count++] = attr;
 
     return PJ_SUCCESS;
 }
 
 /* Create m=audio SDP media line */
-PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
-                                                   pj_pool_t *pool,
-                                                   const pjmedia_sock_info *si,
-                                                   unsigned options,
-                                                   pjmedia_sdp_media **p_m)
+PJ_DEF(pj_status_t)
+pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m)
 {
     const pj_str_t STR_AUDIO = { "audio", 5 };
     pjmedia_sdp_media *m;
@@ -416,16 +434,38 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
     unsigned i;
     unsigned max_bitrate = 0;
     pj_status_t status;
-
-    PJ_UNUSED_ARG(options);
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    unsigned televent_num = 0;
+    unsigned televent_clockrates[8];
+#endif
+    unsigned used_pt_num = 0;
+    unsigned used_pt[PJMEDIA_MAX_SDP_FMT];
+    pjmedia_endpt_create_sdp_param param;
 
     /* Check that there are not too many codecs */
     PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
 		     PJ_ETOOMANY);
 
+    /* Insert PJMEDIA_RTP_PT_TELEPHONE_EVENTS as used PT */
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+    if (endpt->has_telephone_event) {
+	used_pt[used_pt_num++] = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+
+#  if PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES==0
+	televent_num = 1;
+	televent_clockrates[0] = 8000;
+#  endif
+
+    }
+#endif
+
     /* Create and init basic SDP media */
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-    status = init_sdp_media(m, pool, &STR_AUDIO, si);
+    pjmedia_endpt_create_sdp_param_default(&param);
+    status = init_sdp_media(m, pool, &STR_AUDIO, si, options? options->dir:
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -437,6 +477,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	char tmp_param[3];
 	pjmedia_codec_param codec_param;
 	pj_str_t *fmt;
+	unsigned pt;
 
 	if (endpt->codec_mgr.codec_desc[i].prio == PJMEDIA_CODEC_PRIO_DISABLED)
 	    break;
@@ -445,15 +486,43 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	pjmedia_codec_mgr_get_default_param(&endpt->codec_mgr, codec_info,
 					    &codec_param);
 	fmt = &m->desc.fmt[m->desc.fmt_count++];
+	pt = codec_info->pt;
+
+	/* Rearrange dynamic payload type to make sure it is inside 96-127
+	 * range and not being used by other codec/tel-event.
+	 */
+	if (pt >= 96) {
+	    unsigned pt_check = 96;
+	    unsigned j = 0;
+	    while (j < used_pt_num && pt_check <= 127) {
+		if (pt_check==used_pt[j]) {
+		    pt_check++;
+		    j = 0;
+		} else {
+		    j++;
+		}
+	    }
+	    if (pt_check > 127) {
+		/* No more available PT */
+		PJ_LOG(4,(THIS_FILE, "Warning: no available dynamic "
+			  "payload type for audio codec"));
+		break;
+	    }
+	    pt = pt_check;
+	}
+
+	/* Take a note of used dynamic PT */
+	if (pt >= 96)
+	    used_pt[used_pt_num++] = pt;
 
 	fmt->ptr = (char*) pj_pool_alloc(pool, 8);
-	fmt->slen = pj_utoa(codec_info->pt, fmt->ptr);
+	fmt->slen = pj_utoa(pt, fmt->ptr);
 
 	rtpmap.pt = *fmt;
 	rtpmap.enc_name = codec_info->encoding_name;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG != 0)
-	if (codec_info->pt == PJMEDIA_RTP_PT_G722)
+	if (pt == PJMEDIA_RTP_PT_G722)
 	    rtpmap.clock_rate = 8000;
 	else
 	    rtpmap.clock_rate = codec_info->clock_rate;
@@ -480,7 +549,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    rtpmap.param.slen = 0;
 	}
 
-	if (codec_info->pt >= 96 || pjmedia_add_rtpmap_for_static_pt) {
+	if (pt >= 96 || pjmedia_add_rtpmap_for_static_pt) {
 	    pjmedia_sdp_rtpmap_to_attr(pool, &rtpmap, &attr);
 	    m->attr[m->attr_count++] = attr;
 	}
@@ -489,14 +558,13 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	if (codec_param.setting.dec_fmtp.cnt > 0) {
 	    enum { MAX_FMTP_STR_LEN = 160 };
 	    char buf[MAX_FMTP_STR_LEN];
-	    unsigned buf_len = 0, ii;
+	    unsigned buf_len = 0, n, ii;
 	    pjmedia_codec_fmtp *dec_fmtp = &codec_param.setting.dec_fmtp;
 
 	    /* Print codec PT */
-	    buf_len += pj_ansi_snprintf(buf,
-					MAX_FMTP_STR_LEN - buf_len,
-					"%d",
-					codec_info->pt);
+	    n = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN - buf_len,
+				 "%d", pt);
+	    buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 
 	    for (ii = 0; ii < dec_fmtp->cnt; ++ii) {
 		pj_size_t test_len = 2;
@@ -508,26 +576,28 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 		    return PJ_ETOOBIG;
 
 		/* Print delimiter */
-		buf_len += pj_ansi_snprintf(&buf[buf_len], 
-					    MAX_FMTP_STR_LEN - buf_len,
-					    (ii == 0?" ":";"));
+		n = pj_ansi_snprintf(&buf[buf_len], 
+				     MAX_FMTP_STR_LEN - buf_len,
+				     (ii == 0?" ":";"));
+		buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 
 		/* Print an fmtp param */
 		if (dec_fmtp->param[ii].name.slen)
-		    buf_len += pj_ansi_snprintf(
-					    &buf[buf_len],
-					    MAX_FMTP_STR_LEN - buf_len,
-					    "%.*s=%.*s",
-					    (int)dec_fmtp->param[ii].name.slen,
-					    dec_fmtp->param[ii].name.ptr,
-					    (int)dec_fmtp->param[ii].val.slen,
-					    dec_fmtp->param[ii].val.ptr);
+		    n = pj_ansi_snprintf(&buf[buf_len],
+					 MAX_FMTP_STR_LEN - buf_len,
+					 "%.*s=%.*s",
+					 (int)dec_fmtp->param[ii].name.slen,
+					 dec_fmtp->param[ii].name.ptr,
+					 (int)dec_fmtp->param[ii].val.slen,
+					  dec_fmtp->param[ii].val.ptr);
 		else
-		    buf_len += pj_ansi_snprintf(&buf[buf_len], 
-					    MAX_FMTP_STR_LEN - buf_len,
-					    "%.*s", 
-					    (int)dec_fmtp->param[ii].val.slen,
-					    dec_fmtp->param[ii].val.ptr);
+		    n = pj_ansi_snprintf(&buf[buf_len], 
+					 MAX_FMTP_STR_LEN - buf_len,
+					 "%.*s", 
+					 (int)dec_fmtp->param[ii].val.slen,
+					 dec_fmtp->param[ii].val.ptr);
+		
+		buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 	    }
 
 	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
@@ -540,33 +610,105 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	/* Find maximum bitrate in this media */
 	if (max_bitrate < codec_param.info.max_bps)
 	    max_bitrate = codec_param.info.max_bps;
+
+	/* List clock rate of audio codecs for generating telephone-event */
+#if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0 && \
+	    PJMEDIA_TELEPHONE_EVENT_ALL_CLOCKRATES != 0
+	if (endpt->has_telephone_event) {
+	    unsigned j;
+
+	    for (j=0; j<televent_num; ++j) {
+		if (televent_clockrates[j] == rtpmap.clock_rate)
+		    break;
+	    }
+	    if (j==televent_num &&
+		televent_num<PJ_ARRAY_SIZE(televent_clockrates))
+	    {
+		/* List this clockrate for tel-event generation */
+		televent_clockrates[televent_num++] = rtpmap.clock_rate;
+	    }
+	}
+#endif
     }
 
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
-    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
+	    PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
     /*
      * Add support telephony event
      */
     if (endpt->has_telephone_event) {
-	m->desc.fmt[m->desc.fmt_count++] =
-	    pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
+	for (i=0; i<televent_num; i++) {
+	    char buf[160];
+	    unsigned j = 0;
+	    unsigned pt;
 
-	/* Add rtpmap. */
-	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-	attr->name = pj_str("rtpmap");
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR
-			     " telephone-event/8000");
-	m->attr[m->attr_count++] = attr;
+	    /* Find PT for this tel-event */
+	    if (i == 0) {
+		/* First telephony-event always uses preconfigured PT
+		 * PJMEDIA_RTP_PT_TELEPHONE_EVENTS.
+		 */
+		pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS;
+	    } else {
+		/* Otherwise, find any free PT slot, starting from
+		 * (PJMEDIA_RTP_PT_TELEPHONE_EVENTS + 1).
+		 */
+		pt = PJMEDIA_RTP_PT_TELEPHONE_EVENTS + 1;
+		while (j < used_pt_num && pt <= 127) {
+		    if (pt == used_pt[j]) {
+			pt++;
+			j = 0;
+		    } else {
+			j++;
+		    }
+		}
+		if (pt > 127) {
+		    /* Not found? Find more, but now starting from 96 */
+		    pt = 96;
+		    j = 0;
+		    while (j < used_pt_num &&
+			   pt < PJMEDIA_RTP_PT_TELEPHONE_EVENTS)
+		    {
+			if (pt == used_pt[j]) {
+			    pt++;
+			    j = 0;
+			} else {
+			    j++;
+			}
+		    }
+		    if (pt >= PJMEDIA_RTP_PT_TELEPHONE_EVENTS) {
+			/* No more available PT */
+			PJ_LOG(4,(THIS_FILE, "Warning: no available dynamic "
+				  "payload type for telephone-event"));
+			break;
+		    }
+		}
+	    }
+	    used_pt[used_pt_num++] = pt;
 
-	/* Add fmtp */
-	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-	attr->name = pj_str("fmtp");
+	    /* Print tel-event PT */
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d", pt);
+	    m->desc.fmt[m->desc.fmt_count++] = pj_strdup3(pool, buf);
+
+	    /* Add rtpmap. */
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	    attr->name = pj_str("rtpmap");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d telephone-event/%d",
+			     pt, televent_clockrates[i]);
+	    attr->value = pj_strdup3(pool, buf);
+	    m->attr[m->attr_count++] = attr;
+
+	    /* Add fmtp */
+	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	    attr->name = pj_str("fmtp");
 #if defined(PJMEDIA_HAS_DTMF_FLASH) && PJMEDIA_HAS_DTMF_FLASH!= 0
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-16");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d 0-16", pt);
 #else
-	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
+	    pj_ansi_snprintf(buf, sizeof(buf), "%d 0-15", pt);
 #endif
-	m->attr[m->attr_count++] = attr;
+	    attr->value = pj_strdup3(pool, buf);
+	    m->attr[m->attr_count++] = attr;
+	}
     }
 #endif
 
@@ -591,11 +733,12 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 /* Create m=video SDP media line */
-PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
-                                                   pj_pool_t *pool,
-                                                   const pjmedia_sock_info *si,
-                                                   unsigned options,
-                                                   pjmedia_sdp_media **p_m)
+PJ_DEF(pj_status_t)
+pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
+                               pj_pool_t *pool,
+                               const pjmedia_sock_info *si,
+                               const pjmedia_endpt_create_sdp_param *options,
+                               pjmedia_sdp_media **p_m)
 {
 
 
@@ -606,17 +749,18 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     pjmedia_sdp_attr *attr;
     unsigned cnt, i;
     unsigned max_bitrate = 0;
+    pjmedia_endpt_create_sdp_param param;
     pj_status_t status;
-
-    PJ_UNUSED_ARG(options);
 
     /* Make sure video codec manager is instantiated */
     if (!pjmedia_vid_codec_mgr_instance())
 	pjmedia_vid_codec_mgr_create(endpt->pool, NULL);
 
     /* Create and init basic SDP media */
+    pjmedia_endpt_create_sdp_param_default(&param);
     m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-    status = init_sdp_media(m, pool, &STR_VIDEO, si);
+    status = init_sdp_media(m, pool, &STR_VIDEO, si, options? options->dir:
+    			    param.dir);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -649,9 +793,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	    break;
 	}
 
-	/* Must support RTP packetization and bidirectional */
-	if ((codec_info[i].packings & PJMEDIA_VID_PACKING_PACKETS) == 0 ||
-	    codec_info[i].dir != PJMEDIA_DIR_ENCODING_DECODING)
+        /* Must support RTP packetization */
+        if ((codec_info[i].packings & PJMEDIA_VID_PACKING_PACKETS) == 0)
 	{
 	    continue;
 	}
@@ -679,14 +822,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	if (codec_param.dec_fmtp.cnt > 0) {
 	    enum { MAX_FMTP_STR_LEN = 160 };
 	    char buf[MAX_FMTP_STR_LEN];
-	    unsigned buf_len = 0, j;
+	    unsigned buf_len = 0, n, j;
 	    pjmedia_codec_fmtp *dec_fmtp = &codec_param.dec_fmtp;
 
 	    /* Print codec PT */
-	    buf_len += pj_ansi_snprintf(buf, 
-					MAX_FMTP_STR_LEN - buf_len, 
-					"%d", 
-					codec_info[i].pt);
+	    n = pj_ansi_snprintf(buf, MAX_FMTP_STR_LEN - buf_len, 
+				 "%d", 
+				 codec_info[i].pt);
+	    buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 
 	    for (j = 0; j < dec_fmtp->cnt; ++j) {
 		pj_size_t test_len = 2;
@@ -698,26 +841,28 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 		    return PJ_ETOOBIG;
 
 		/* Print delimiter */
-		buf_len += pj_ansi_snprintf(&buf[buf_len], 
-					    MAX_FMTP_STR_LEN - buf_len,
-					    (j == 0?" ":";"));
+		n = pj_ansi_snprintf(&buf[buf_len], 
+				     MAX_FMTP_STR_LEN - buf_len,
+				     (j == 0?" ":";"));
+	    	buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 
 		/* Print an fmtp param */
 		if (dec_fmtp->param[j].name.slen)
-		    buf_len += pj_ansi_snprintf(
-					    &buf[buf_len],
-					    MAX_FMTP_STR_LEN - buf_len,
-					    "%.*s=%.*s",
-					    (int)dec_fmtp->param[j].name.slen,
-					    dec_fmtp->param[j].name.ptr,
-					    (int)dec_fmtp->param[j].val.slen,
-					    dec_fmtp->param[j].val.ptr);
+		    n = pj_ansi_snprintf(&buf[buf_len],
+					 MAX_FMTP_STR_LEN - buf_len,
+					 "%.*s=%.*s",
+					 (int)dec_fmtp->param[j].name.slen,
+					 dec_fmtp->param[j].name.ptr,
+					 (int)dec_fmtp->param[j].val.slen,
+					 dec_fmtp->param[j].val.ptr);
 		else
-		    buf_len += pj_ansi_snprintf(&buf[buf_len], 
-					    MAX_FMTP_STR_LEN - buf_len,
-					    "%.*s", 
-					    (int)dec_fmtp->param[j].val.slen,
-					    dec_fmtp->param[j].val.ptr);
+		    n = pj_ansi_snprintf(&buf[buf_len], 
+					 MAX_FMTP_STR_LEN - buf_len,
+					 "%.*s", 
+					 (int)dec_fmtp->param[j].val.slen,
+					 dec_fmtp->param[j].val.ptr);
+		
+		buf_len = PJ_MIN(buf_len + n, MAX_FMTP_STR_LEN);
 	    }
 
 	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);

@@ -20,6 +20,7 @@
 #include <pjmedia/mem_port.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 
 
@@ -43,7 +44,8 @@ struct mem_player
     void	    *user_data;
     pj_status_t    (*cb)(pjmedia_port *port,
 			 void *user_data);
-
+    pj_bool_t	     subscribed;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 
@@ -101,7 +103,7 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_create( pj_pool_t *pool,
 }
 
 
-
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register a callback to be called when the file reading has reached the
  * end of buffer.
@@ -116,9 +118,35 @@ PJ_DEF(pj_status_t) pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
 		     PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_mem_player_set_eof_cb() is deprecated. "
+    	       "Use pjmedia_mem_player_set_eof_cb2() instead."));
+
     player = (struct mem_player*) port;
     player->user_data = user_data;
     player->cb = cb;
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of buffer.
+ */
+PJ_DEF(pj_status_t) pjmedia_mem_player_set_eof_cb2( pjmedia_port *port,
+			       void *user_data,
+			       void (*cb)(pjmedia_port *port,
+				          void *usr_data))
+{
+    struct mem_player *player;
+
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
+		     PJ_EINVALIDOP);
+
+    player = (struct mem_player*) port;
+    player->user_data = user_data;
+    player->cb2 = cb;
 
     return PJ_SUCCESS;
 }
@@ -134,12 +162,27 @@ static pj_status_t mem_put_frame( pjmedia_port *this_port,
 }
 
 
+static pj_status_t player_on_event(pjmedia_event *event,
+                                   void *user_data)
+{
+    struct mem_player *player = (struct mem_player *)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (player->cb2)
+	    (*player->cb2)(&player->base, player->user_data);
+    }
+    
+    return PJ_SUCCESS;
+}
+
+
 static pj_status_t mem_get_frame( pjmedia_port *this_port, 
 				  pjmedia_frame *frame)
 {
     struct mem_player *player;
     char *endpos;
     pj_size_t size_needed, size_written;
+    pj_bool_t delayed_cb = PJ_FALSE;
 
     PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
 		     PJ_EINVALIDOP);
@@ -148,17 +191,55 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
     if (player->eof) {
 	pj_status_t status = PJ_SUCCESS;
+	pj_bool_t no_loop = (player->options & PJMEDIA_MEM_NO_LOOP);
 
 	/* Call callback, if any */
-	if (player->cb)
+	if (player->cb2) {
+	    if (!player->subscribed) {
+		pj_status_t status2;
+	    	status2 = pjmedia_event_subscribe(NULL, &player_on_event,
+	    				         player, player);
+	    	player->subscribed = (status2 == PJ_SUCCESS)? PJ_TRUE:
+	    			     PJ_FALSE;
+	    }
+
+	    if (player->subscribed && player->eof != 2) {
+	    	if (no_loop) {
+	    	    pjmedia_event event;
+
+	    	    /* To prevent the callback from being called repeatedly */
+	    	    player->eof = 2;
+
+	    	    pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	       NULL, player);
+	    	    pjmedia_event_publish(NULL, player, &event,
+					  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+		    /* Should not access player port after this since
+		     * it might have been destroyed by the callback.
+		     */
+		} else {
+		    delayed_cb = PJ_TRUE;
+		}
+	    }
+
+	    if (no_loop) {
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		frame->size = 0;
+		return PJ_EEOF;
+	    }
+
+	} else if (player->cb) {
 	    status = (*player->cb)(this_port, player->user_data);
+	}
 
 	/* If callback returns non PJ_SUCCESS or 'no loop' is specified
 	 * return immediately (and don't try to access player port since
 	 * it might have been destroyed by the callback).
 	 */
-	if ((status != PJ_SUCCESS) || (player->options & PJMEDIA_MEM_NO_LOOP)) {
+	if ((status != PJ_SUCCESS) || no_loop)
+	{
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
 	    return PJ_EEOF;
 	}
 	
@@ -206,14 +287,34 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
     player->timestamp.u64 += PJMEDIA_PIA_SPF(&this_port->info);
 
+    if (delayed_cb) {
+	pjmedia_event event;
+	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+          		   NULL, player);
+	pjmedia_event_publish(NULL, player, &event,
+			      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	/* Should not access player port after this since
+	* it might have been destroyed by the callback.
+	*/
+    }
+
     return PJ_SUCCESS;
 }
 
 
 static pj_status_t mem_on_destroy(pjmedia_port *this_port)
 {
+    struct mem_player *player;
+
     PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
-		     PJ_EINVALIDOP);
+                     PJ_EINVALIDOP);
+
+    player = (struct mem_player*) this_port;
+
+    if (player->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &player_on_event, player, player);
+    	player->subscribed = PJ_FALSE;
+    }
 
     /* Destroy signature */
     this_port->info.signature = 0;

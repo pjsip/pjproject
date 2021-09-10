@@ -26,6 +26,10 @@
 #include <pj/types.h>
 #include <pj/lock.h>
 
+#if PJ_TIMER_USE_LINKED_LIST
+#  include <pj/list.h>
+#endif
+
 PJ_BEGIN_DECL
 
 /**
@@ -88,6 +92,13 @@ typedef void pj_timer_heap_callback(pj_timer_heap_t *timer_heap,
  */
 typedef struct pj_timer_entry
 {
+#if !PJ_TIMER_USE_COPY && PJ_TIMER_USE_LINKED_LIST
+    /**
+    * Standard list members.
+    */
+    PJ_DECL_LIST_MEMBER(struct pj_timer_entry);
+#endif
+
     /** 
      * User data to be associated with this entry. 
      * Applications normally will put the instance of object that
@@ -109,10 +120,14 @@ typedef struct pj_timer_entry
 
     /** 
      * Internal unique timer ID, which is assigned by the timer heap. 
-     * Application should not touch this ID.
+     * Positive values indicate that the timer entry is running, 
+     * while -1 means that it's not. Any other value may indicate that it 
+     * hasn't been properly initialised or is in a bad state.
+     * Application should not touch this ID. 
      */
     pj_timer_id_t _timer_id;
 
+#if !PJ_TIMER_USE_COPY
     /** 
      * The future time when the timer expires, which the value is updated
      * by timer heap when the timer is scheduled.
@@ -128,6 +143,8 @@ typedef struct pj_timer_entry
 #if PJ_TIMER_DEBUG
     const char	*src_file;
     int		 src_line;
+#endif
+
 #endif
 } pj_timer_entry;
 

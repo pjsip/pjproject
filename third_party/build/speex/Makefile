@@ -39,7 +39,7 @@ export SPEEX_OBJS = 	bits.o cb_search.o exc_10_16_table.o  \
 			nb_celp.o preprocess.o \
 			quant_lsp.o resample.o sb_celp.o smallft.o \
 			speex.o speex_callbacks.o speex_header.o \
-			stereo.o vbr.o vq.o window.o
+			scal.o stereo.o vbr.o vq.o window.o
 
 export SPEEX_CFLAGS = -DHAVE_CONFIG_H $(_CFLAGS)
 export SPEEX_LDFLAGS := $(PJLIB_LDLIB) $(_LDFLAGS)

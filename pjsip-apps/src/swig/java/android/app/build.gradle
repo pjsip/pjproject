@@ -1,17 +1,12 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 15
-    buildToolsVersion "23.0.3"
+    compileSdkVersion 26
 
     defaultConfig {
         applicationId "org.pjsip.pjsua2.app"
         minSdkVersion 11
-        targetSdkVersion 15
-
-        ndk {
-            moduleName "libpjsua2"
-        }
+        targetSdkVersion 26
     }
 
     buildTypes {
@@ -20,4 +15,8 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
         }
     }
+}
+
+dependencies {
+    implementation project(path: ':pjsua2')
 }

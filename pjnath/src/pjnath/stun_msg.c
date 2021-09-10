@@ -1763,6 +1763,9 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
     /* Get pointer to the string in the message */
     value.ptr = ((char*)buf + ATTR_HDR_LEN + 4);
     value.slen = attr->hdr.length - 4;
+    /* Make sure the length is never negative */
+    if (value.slen < 0)
+    	value.slen = 0;
 
     /* Copy the string to the attribute */
     pj_strdup(pool, &attr->reason, &value);

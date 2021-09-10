@@ -46,8 +46,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib-util/include \
 		   $(CC_INC)../../pjnath/include \
 		   $(CC_INC)../../pjmedia/include
-export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
-		   $(HOST_CXXFLAGS) $(CXXFLAGS)
+export _CXXFLAGS:= $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
+		   $(HOST_CXXFLAGS) $(CXXFLAGS) $(_CFLAGS)
 export _LDFLAGS := $(APP_THIRD_PARTY_LIBS) \
 		   $(APP_THIRD_PARTY_EXT) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
@@ -140,7 +140,7 @@ export PJSUA2_LIB_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   account.o endpoint.o json.o persistent.o types.o \
 			   siptypes.o call.o presence.o media.o
 export PJSUA2_LIB_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_LIB_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS)
 export PJSUA2_LIB_LDFLAGS += $(PJSUA_LIB_LDLIB) \
 			     $(PJSIP_UA_LDLIB) \
 			     $(PJSIP_SIMPLE_LDLIB) \
@@ -163,7 +163,7 @@ export PJSUA2_TEST_SRCDIR = ../src/pjsua2-test
 export PJSUA2_TEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			   main.o
 export PJSUA2_TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
-export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) 
+export PJSUA2_TEST_CXXFLAGS = $(_CXXFLAGS) $(PJSUA2_LIB_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export PJSUA2_TEST_LDFLAGS += $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(LDFLAGS)
 ifeq ($(EXCLUDE_APP),0)
 export PJSUA2_TEST_EXE := pjsua2-test-$(TARGET_NAME)$(HOST_EXE)
@@ -182,7 +182,7 @@ export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    tsx_basic_test.o tsx_bench.o tsx_uac_test.o \
 		    tsx_uas_test.o txdata_test.o uri_test.o \
 		    inv_offer_answer_test.o
-export TEST_CFLAGS += $(_CFLAGS)
+export TEST_CFLAGS += $(_CFLAGS) $(PJ_VIDEO_CFLAGS)
 export TEST_CXXFLAGS += $(_CXXFLAGS)
 export TEST_LDFLAGS += $(PJSIP_LDLIB) \
 		       $(PJSIP_UA_LDLIB) \
@@ -208,9 +208,13 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 TARGETS := $(PJSIP_LIB) $(PJSIP_SONAME) \
 	   $(PJSIP_SIMPLE_LIB) $(PJSIP_SIMPLE_SONAME) \
 	   $(PJSIP_UA_LIB) $(PJSIP_UA_SONAME) \
-	   $(PJSUA_LIB_LIB) $(PJSUA_LIB_SONAME) \
-	   $(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME)
-TARGETS_EXE := $(TEST_EXE) $(PJSUA2_TEST_EXE)
+	   $(PJSUA_LIB_LIB) $(PJSUA_LIB_SONAME)
+TARGETS_EXE := $(TEST_EXE)
+
+ifeq ($(PJ_EXCLUDE_PJSUA2),)
+TARGETS += $(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME)
+TARGETS_EXE += $(PJSUA2_TEST_EXE)
+endif
 
 all: $(TARGETS) $(TARGETS_EXE)
 
@@ -262,7 +266,7 @@ $(PJSUA_LIB_LIB) $(PJSUA_LIB_SONAME): $(PJSIP_LIB) $(PJSIP_SONAME) $(PJSIP_SIMPL
 
 pjsua2-lib: $(PJSUA2_LIB_LIB)
 $(PJSUA2_LIB_SONAME): $(PJSUA2_LIB_LIB)
-$(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME): $(PJSUA_LIB) $(PSJUA_LIB_SONAME) $(PJSIP_LIB) $(PJSIP_SONAME) $(PJSIP_SIMPLE_LIB) $(PJSIP_SIMPLE_SONAME) $(PJSIP_UA_LIB) $(PJSIP_UA_SONAME)
+$(PJSUA2_LIB_LIB) $(PJSUA2_LIB_SONAME): $(PJSUA_LIB_LIB) $(PJSUA_LIB_SONAME) $(PJSIP_LIB) $(PJSIP_SONAME) $(PJSIP_SIMPLE_LIB) $(PJSIP_SIMPLE_SONAME) $(PJSIP_UA_LIB) $(PJSIP_UA_SONAME)
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA2_LIB app=pjsua2-lib $(subst /,$(HOST_PSEP),$(LIBDIR)/$@)
 
 pjsip-test: $(TEST_EXE)

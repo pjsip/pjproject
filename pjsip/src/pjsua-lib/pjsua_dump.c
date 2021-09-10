@@ -369,6 +369,26 @@ static void dump_media_session(const char *indent,
 	}
 	p += len;
 
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    if (pjsua_snd_is_active()) {
+	    	pjmedia_echo_stat ec_stat;
+	    	pj_status_t status;
+	    	
+	    	status = pjsua_get_ec_stat(&ec_stat);
+	    	if (status == PJ_SUCCESS) {
+		    len = pj_ansi_snprintf(p, end-p, "   %s  EC stat: %.*s\n",
+		    			   indent,
+		    			   (int)ec_stat.stat_info.slen,
+		    			   ec_stat.stat_info.ptr);
+		    if (len < 1 || len >= end-p) {
+	    	    	*p = '\0';
+	    	    	return;
+		    }
+		    p += len;
+	    	}
+	    }
+	}
+
 	/* Get and ICE SRTP status */
 	if (call_med->tp) {
 	    if (tp_info.specific_info_cnt > 0) {
@@ -887,13 +907,14 @@ void print_call(const char *title,
 	        char *buf, pj_size_t size)
 {
     int len;
-    pjsip_inv_session *inv = pjsua_var.calls[call_id].inv;
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pjsip_inv_session *inv = call->inv;
     pjsip_dialog *dlg;
     char userinfo[PJSIP_MAX_URL_SIZE];
 
     /* Dump invite sesion info. */
 
-    dlg = (inv? inv->dlg: pjsua_var.calls[call_id].async_call.dlg);
+    dlg = (inv? inv->dlg: call->async_call.dlg);
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 0)
 	pj_ansi_strcpy(userinfo, "<--uri too long-->");
@@ -902,8 +923,9 @@ void print_call(const char *title,
 
     len = pj_ansi_snprintf(buf, size, "%s[%s] %s",
 			   title,
-                           pjsip_inv_state_name(inv? inv->state:
-                                                PJSIP_INV_STATE_DISCONNECTED),
+                           pjsip_inv_state_name((call->hanging_up || !inv)?
+                                                PJSIP_INV_STATE_DISCONNECTED:
+                                                inv->state),
 			   userinfo);
     if (len < 1 || len >= (int)size) {
 	pj_ansi_strcpy(buf, "<--uri too long-->");

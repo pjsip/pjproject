@@ -385,13 +385,13 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 {
     cmd_history *in_history;
     pj_str_t cmd;
-    cmd.ptr = cmd_val;
-    cmd.slen = pj_ansi_strlen(cmd_val)-1;
-
-    if (cmd.slen == 0)
-	return PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
+
+    cmd = pj_str(cmd_val);
+    pj_strtrim(&cmd);
+    if (cmd.slen == 0)
+	return PJ_SUCCESS;
 
     /* Find matching history */
     in_history = pj_list_search(sess->history, (void*)&cmd, compare_str);
@@ -407,11 +407,12 @@ static pj_status_t insert_history(cli_telnet_sess *sess,
 	} else {
 	    /* Get the oldest history */
 	    in_history = sess->history->prev;
+	    pj_list_erase(in_history);
 	}
+	pj_strncpy(&in_history->command, &cmd, PJ_CLI_MAX_CMDBUF);
     } else {
-	pj_list_insert_nodes_after(in_history->prev, in_history->next);
+	pj_list_erase(in_history);
     }
-    pj_strcpy(&in_history->command, pj_strtrim(&cmd));
     pj_list_push_front(sess->history, in_history);
     sess->active_history = sess->history;
 
@@ -1408,9 +1409,15 @@ static void telnet_fe_destroy(pj_cli_front_end *fe)
 
     pj_mutex_unlock(tfe->mutex);
 
-    pj_activesock_close(tfe->asock);
-    if (tfe->own_ioqueue)
+    if (tfe->asock) {
+	pj_activesock_close(tfe->asock);
+	tfe->asock = NULL;
+    }
+
+    if (tfe->own_ioqueue && tfe->cfg.ioqueue) {
         pj_ioqueue_destroy(tfe->cfg.ioqueue);
+	tfe->cfg.ioqueue = NULL;
+    }
 
     if (tfe->worker_thread) {
 	pj_thread_destroy(tfe->worker_thread);
@@ -1418,6 +1425,7 @@ static void telnet_fe_destroy(pj_cli_front_end *fe)
     }
 
     pj_mutex_destroy(tfe->mutex);
+
     pj_pool_release(tfe->pool);
 }
 
@@ -1602,9 +1610,18 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
         return PJ_FALSE;
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	TRACE_((THIS_FILE, "Error on data accept %d", status));
-	if (status == PJ_ESOCKETSTOP)
-	    telnet_restart(fe);
+	TRACE_((THIS_FILE, "Error on data accept (status=%d)", status));
+	if (status == PJ_ESOCKETSTOP) {
+	    sstatus = telnet_restart(fe);
+	    if (sstatus != PJ_SUCCESS) {
+		if (fe->own_ioqueue && fe->cfg.ioqueue) {
+		    pj_ioqueue_destroy(fe->cfg.ioqueue);
+		    fe->cfg.ioqueue = NULL;
+		}
+		TRACE_((THIS_FILE, "Error restarting telnet (status=%d)",
+			status));
+	    }
+	}
 
         return PJ_FALSE;
     }
@@ -1749,14 +1766,20 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     if (p_fe)
         *p_fe = &fe->base;
 
+    TRACE_((THIS_FILE, "Telnet started"));
+
     return PJ_SUCCESS;
 
 on_exit:
-    if (fe->own_ioqueue)
+    if (fe->own_ioqueue && fe->cfg.ioqueue) {
         pj_ioqueue_destroy(fe->cfg.ioqueue);
+	fe->cfg.ioqueue = NULL;
+    }
 
-    if (fe->mutex)
+    if (fe->mutex) {
         pj_mutex_destroy(fe->mutex);
+	fe->mutex = NULL;
+    }
 
     pj_pool_release(pool);
     return status;
@@ -1856,18 +1879,14 @@ on_exit:
 	(*fe->cfg.on_started)(status);
     }
 
-    if (fe->asock)
+    if (fe->asock) {
         pj_activesock_close(fe->asock);
-    else if (sock != PJ_INVALID_SOCKET)
+	fe->asock = NULL;
+    } else if (sock != PJ_INVALID_SOCKET) {
         pj_sock_close(sock);
+	sock = PJ_INVALID_SOCKET;
+    }
 
-    if (fe->own_ioqueue)
-        pj_ioqueue_destroy(fe->cfg.ioqueue);
-
-    if (fe->mutex)
-        pj_mutex_destroy(fe->mutex);
-
-    pj_pool_release(fe->pool);
     return status;
 }
 
@@ -1879,6 +1898,8 @@ static pj_status_t telnet_restart(cli_telnet_fe *fe)
     fe->is_quitting = PJ_TRUE;
     if (fe->worker_thread) {
 	pj_thread_join(fe->worker_thread);
+	pj_thread_destroy(fe->worker_thread);
+	fe->worker_thread = NULL;
     }
 
     pj_mutex_lock(fe->mutex);
@@ -1897,21 +1918,20 @@ static pj_status_t telnet_restart(cli_telnet_fe *fe)
     if (status != PJ_SUCCESS)
 	goto on_exit;
 
-    if (fe->worker_thread) {
-	pj_thread_destroy(fe->worker_thread);
-	fe->worker_thread = NULL;
-    }
-
+    fe->asock = NULL;
     fe->is_quitting = PJ_FALSE;
 
     /** Start Telnet **/
     status = telnet_start(fe);
-    if (status == PJ_SUCCESS) {
-	if (fe->cfg.on_started) {
-	    (*fe->cfg.on_started)(status);
-	}
-	TRACE_((THIS_FILE, "Telnet Restarted"));
+    if (status != PJ_SUCCESS)
+	goto on_exit;
+
+    if (fe->cfg.on_started) {
+	(*fe->cfg.on_started)(PJ_SUCCESS);
     }
+
+    TRACE_((THIS_FILE, "Telnet restarted"));
+
 on_exit:
     return status;
 }

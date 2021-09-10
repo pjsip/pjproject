@@ -64,7 +64,8 @@ int test_main(void)
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
     pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
 
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+		     PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT);
     pj_log_set_level(3);
 
     mem = &caching_pool.factory;

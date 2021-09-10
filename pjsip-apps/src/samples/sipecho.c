@@ -434,7 +434,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 	/* Let me be a registrar! */
 	pjsip_hdr hdr_list, *h;
 	pjsip_msg *msg;
-	int expires = -1;
+	unsigned expires = PJSIP_EXPIRES_NOT_SPECIFIED;
 
 	pj_list_init(&hdr_list);
 	msg = rdata->msg_info.msg;
@@ -444,7 +444,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 	    pj_list_push_back(&hdr_list, pjsip_hdr_clone(rdata->tp_info.pool, h));
 	    PJ_LOG(3,(THIS_FILE, " Expires=%d", expires));
 	}
-	if (expires != 0) {
+	if (expires != 0 && expires != PJSIP_EXPIRES_NOT_SPECIFIED) {
 	    h = (pjsip_hdr*)pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
 	    if (h)
 		pj_list_push_back(&hdr_list, pjsip_hdr_clone(rdata->tp_info.pool, h));

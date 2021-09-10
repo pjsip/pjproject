@@ -24,7 +24,6 @@
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-static const pj_str_t ID_VIDEO = { "video", 5};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
@@ -216,7 +215,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 	return PJMEDIA_SDP_EMISSINGCONN;
 
     /* Media type must be video */
-    if (pj_stricmp(&local_m->desc.media, &ID_VIDEO) != 0)
+    if (pjmedia_get_type(&local_m->desc.media) != PJMEDIA_TYPE_VIDEO)
 	return PJMEDIA_EINVALIMEDIATYPE;
 
 
@@ -401,6 +400,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 
     /* Set default jitter buffer parameter. */
     si->jb_init = si->jb_max = si->jb_min_pre = si->jb_max_pre = -1;
+
+    /* Get local RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, local, stream_idx,
+					 si->rx_pt, &si->loc_rtcp_fb);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Get remote RTCP-FB info */
+    status = pjmedia_rtcp_fb_decode_sdp2(pool, endpt, NULL, remote, stream_idx,
+					 si->tx_pt, &si->rem_rtcp_fb);
+    if (status != PJ_SUCCESS)
+	return status;
 
     return status;
 }

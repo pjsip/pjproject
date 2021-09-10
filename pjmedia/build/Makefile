@@ -62,8 +62,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			bidirectional.o clock_thread.o codec.o conference.o \
 			conf_switch.o converter.o  converter_libswscale.o converter_libyuv.o \
 			delaybuf.o echo_common.o \
-			echo_port.o echo_suppress.o echo_webrtc.o endpoint.o errno.o \
-			event.o format.o ffmpeg_util.o \
+			echo_port.o echo_suppress.o echo_webrtc.o echo_webrtc_aec3.o \
+			endpoint.o errno.o event.o format.o ffmpeg_util.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o port.o splitcomb.o \
 			resample_resample.o resample_libsamplerate.o resample_speex.o \
@@ -136,10 +136,11 @@ export PJSDP_LDFLAGS += $(PJMEDIA_LDLIB) \
 #
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o openh264.o \
-			h263_packetizer.o h264_packetizer.o \
+			h263_packetizer.o h264_packetizer.o vpx_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o silk.o opus.o $(CODEC_OBJS) \
-                        g7221_sdp_match.o amr_sdp_match.o
+                        g7221_sdp_match.o amr_sdp_match.o passthrough.o \
+                        vpx.o
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
 export PJMEDIA_CODEC_CXXFLAGS += $(_CXXFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \

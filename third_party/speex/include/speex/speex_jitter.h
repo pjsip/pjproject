@@ -41,7 +41,7 @@
  *  @{
  */
 
-#include "speex/speex_types.h"
+#include "speexdsp_types.h"
 
 #ifdef __cplusplus
 extern "C" {

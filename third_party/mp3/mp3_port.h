@@ -112,6 +112,8 @@ pjmedia_mp3_writer_port_create(pj_pool_t *pool,
 			       const pjmedia_mp3_encoder_option *option,
 			       pjmedia_port **p_port );
 
+
+#if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register the callback to be called when the file writing has reached
  * certain size. Application can use this callback, for example, to limit
@@ -133,7 +135,33 @@ pjmedia_mp3_writer_port_set_cb( pjmedia_port *port,
 				pj_size_t pos,
 				void *user_data,
 				pj_status_t (*cb)(pjmedia_port *port,
-							void *usr_data));
+						  void *usr_data));
+#endif
+
+
+/**
+ * Register the callback to be called when the file writing has reached
+ * certain size. Application can use this callback, for example, to limit
+ * the size of the output file.
+ *
+ * @param port		The file writer port.
+ * @param pos		The file position on which the callback will be called.
+ * @param user_data	User data to be specified in the callback, and will be
+ *			given on the callback.
+ * @param cb		Callback to be called. Note that if
+ *			application wishes to stop the playback, it
+ *			can disconnect the port in the callback, and
+ *			only after all connections have been removed
+ *			could the application safely destroy the port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_mp3_writer_port_set_cb2(pjmedia_port *port,
+				pj_size_t pos,
+				void *user_data,
+				void (*cb)(pjmedia_port *port,
+					   void *usr_data));
 
 
 /**

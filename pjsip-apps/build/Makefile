@@ -70,10 +70,14 @@ pjsua: $(PJSUA_EXE)
 $(PJSUA_EXE):
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(subst /,$(HOST_PSEP),$(BINDIR)/$@)
 	@if echo "$(TARGET_NAME)" | grep -q "apple-darwin_ios$$"; then \
+	  mkdir ../src/pjsua/ios-swift/Libraries ; \
+	  mkdir ../src/pjsua2/ios-swift-pjsua2/Libraries ; \
 	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
 	    if test -f $$F; then \
 	      tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
 	      ln -sf $$F ../src/pjsua/ios/$$tmp; \
+	      ln -sf $$F ../src/pjsua/ios-swift/Libraries/$$tmp; \
+	      ln -sf $$F ../src/pjsua2/ios-swift-pjsua2/Libraries/$$tmp; \
 	    fi; \
 	  done; \
 	fi;
@@ -101,5 +105,6 @@ clean depend realclean:
 	  for F in $(filter %$(TARGET_NAME).a,$(PJ_LIBXX_FILES)); do \
 	    tmp=`echo $${F##*/} | sed -e "s/\-$(TARGET_NAME)\.a/.a/"`; \
 	    rm -f ../src/pjsua/ios/$$tmp; \
+	    rm -f ../src/pjsua/ios-swift/Libraries/$$tmp; \
 	  done; \
 	fi;

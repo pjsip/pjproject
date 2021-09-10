@@ -350,17 +350,17 @@ static struct fmt_prop find_closest_fmt(pj_uint32_t req_fmt_id,
 	/* Fill the nearest width list. */
 	if (diff_width1 <= diff_width2) {
 	    int k = 1;
-	    pjmedia_rect_size tmp_size = vfd->size;	    
+	    pjmedia_rect_size tmp_size = vfd->size;
 
-	    while(((GET_DIFF(tmp_size.w, req_fmt_size->w) <
-		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w))) && 
-		  (k < PJ_ARRAY_SIZE(nearest_width))))    	
+	    while(((k < PJ_ARRAY_SIZE(nearest_width)) &&
+		   (GET_DIFF(tmp_size.w, req_fmt_size->w) <
+		   (GET_DIFF(nearest_width[k].w, req_fmt_size->w)))))
 	    {
 		nearest_width[k-1] = nearest_width[k];
 		++k;
 	    }
 	    nearest_width[k-1] = tmp_size;
-	}		
+	}
     }
     /* No need to calculate ratio if exact match is found. */
     if (!found_exact_match) {
@@ -792,7 +792,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
         const pjmedia_video_format_info *vfi;
         const pjmedia_format *fmt;
 	pjmedia_video_apply_fmt_param vafp;
-	pj_status_t status;
 	pjmedia_frame frame;
 
 	pj_bzero(&frame, sizeof(pjmedia_frame));
@@ -857,18 +856,26 @@ PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
 
     PJ_LOG(4,(THIS_FILE, "Closing %s..", vp->dev_name.ptr));
 
+    /* Unsubscribe events first, otherwise the event callbacks can be called
+     * and try to access already destroyed objects.
+     */
+    if (vp->strm) {
+        pjmedia_event_unsubscribe(NULL, &vidstream_event_cb, vp, vp->strm);
+    }
+    if (vp->client_port) {
+        pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
+                                  vp->client_port);
+    }
+
     if (vp->clock) {
 	pjmedia_clock_destroy(vp->clock);
 	vp->clock = NULL;
     }
     if (vp->strm) {
-        pjmedia_event_unsubscribe(NULL, &vidstream_event_cb, vp, vp->strm);
 	pjmedia_vid_dev_stream_destroy(vp->strm);
 	vp->strm = NULL;
     }
     if (vp->client_port) {
-        pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
-                                  vp->client_port);
 	if (vp->destroy_client_port)
 	    pjmedia_port_destroy(vp->client_port);
 	vp->client_port = NULL;
@@ -1003,11 +1010,22 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
                                                 PJMEDIA_VID_DEV_CAP_FORMAT,
                                                 &vp->conv.conv_param.dst);
             if (status != PJ_SUCCESS) {
+		pjmedia_event e;
+
                 PJ_PERROR(3,(THIS_FILE, status,
 		    "failure in changing the format of the video device"));
                 PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
                                       status != PJMEDIA_EVID_ERR ? "success" :
                                       "failure"));
+
+		pjmedia_event_init(&e, PJMEDIA_EVENT_VID_DEV_ERROR, NULL, vp);
+		e.data.vid_dev_err.dir = vp->dir;
+		e.data.vid_dev_err.status = status;
+		e.data.vid_dev_err.id = (vp->dir==PJMEDIA_DIR_ENCODING?
+					 vid_param.cap_id : vid_param.rend_id);
+		pjmedia_event_publish(NULL, vp, &e,
+				      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+
                 return status;
             }
         }

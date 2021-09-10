@@ -251,10 +251,13 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 			     pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
+static pj_status_t destroy_port(pjmedia_port *this_port);
+
+#if !DEPRECATED_FOR_TICKET_2234
 static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
-static pj_status_t destroy_port(pjmedia_port *this_port);
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
+#endif
 
 
 /*
@@ -667,6 +670,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 	    continue;
 	
 	++ci;
+
+	if (cport->rx_resample) {
+	    pjmedia_resample_destroy(cport->rx_resample);
+	    cport->rx_resample = NULL;
+	}
+	if (cport->tx_resample) {
+	    pjmedia_resample_destroy(cport->tx_resample);
+	    cport->tx_resample = NULL;
+	}
 	if (cport->delay_buf) {
 	    pjmedia_delay_buf_destroy(cport->delay_buf);
 	    cport->delay_buf = NULL;
@@ -690,6 +702,7 @@ static pj_status_t destroy_port(pjmedia_port *this_port)
     return pjmedia_conf_destroy(conf);
 }
 
+#if !DEPRECATED_FOR_TICKET_2234
 static pj_status_t destroy_port_pasv(pjmedia_port *this_port) {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];
@@ -701,6 +714,7 @@ static pj_status_t destroy_port_pasv(pjmedia_port *this_port) {
 
     return status;
 }
+#endif
 
 /*
  * Get port zero interface.
@@ -814,6 +828,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2234
 /*
  * Add passive port.
  */
@@ -915,6 +930,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 
     return PJ_SUCCESS;
 }
+#endif
 
 
 
@@ -1062,6 +1078,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 		  dst_port->transmitter_cnt < conf->max_ports);
 	pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE), 
 		       src_port->listener_cnt, i);
+        pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
+                       src_port->listener_cnt, i);
 	--conf->connect_cnt;
 	--src_port->listener_cnt;
 	--dst_port->transmitter_cnt;
@@ -1089,6 +1107,102 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Disconnect port from all sources
+ */
+PJ_DEF(pj_status_t)
+pjmedia_conf_disconnect_port_from_sources( pjmedia_conf *conf,
+					   unsigned sink_slot)
+{
+    unsigned i;
+
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf && sink_slot<conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Remove this port from transmit array of other ports. */
+    for (i=0; i<conf->max_ports; ++i) {
+	unsigned j;
+	struct conf_port *src_port;
+
+	src_port = conf->ports[i];
+
+	if (!src_port)
+	    continue;
+
+	if (src_port->listener_cnt == 0)
+	    continue;
+
+	for (j=0; j<src_port->listener_cnt; ++j) {
+	    if (src_port->listener_slots[j] == sink_slot) {
+		pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
+			       src_port->listener_cnt, j);
+		pj_array_erase(src_port->listener_adj_level, sizeof(unsigned),
+			       src_port->listener_cnt, j);
+		pj_assert(conf->connect_cnt > 0);
+		--conf->connect_cnt;
+		--src_port->listener_cnt;
+		break;
+	    }
+	}
+    }
+
+    if (conf->connect_cnt == 0) {
+	pause_sound(conf);
+    }
+
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Disconnect port from all sinks
+ */
+PJ_DEF(pj_status_t)
+pjmedia_conf_disconnect_port_from_sinks( pjmedia_conf *conf,
+					 unsigned src_slot)
+{
+    struct conf_port *src_port;
+
+    /* Check arguments */
+    PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports, PJ_EINVAL);
+
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
+    src_port = conf->ports[src_slot];
+    if (!src_port) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
+
+    /* Update transmitter_cnt of ports we're transmitting to */
+    while (src_port->listener_cnt) {
+	unsigned dst_slot;
+	struct conf_port *dst_port;
+
+	dst_slot = src_port->listener_slots[src_port->listener_cnt-1];
+	dst_port = conf->ports[dst_slot];
+	--dst_port->transmitter_cnt;
+	--src_port->listener_cnt;
+	pj_assert(conf->connect_cnt > 0);
+	--conf->connect_cnt;
+    }
+
+    if (conf->connect_cnt == 0) {
+	pause_sound(conf);
+    }
+
+    pj_mutex_unlock(conf->mutex);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Get number of ports currently registered to the conference bridge.
  */
@@ -1113,7 +1227,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 					      unsigned port )
 {
     struct conf_port *conf_port;
-    unsigned i;
 
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && port < conf->max_ports, PJ_EINVAL);
@@ -1135,48 +1248,29 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
     conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 
-    /* Remove this port from transmit array of other ports. */
-    for (i=0; i<conf->max_ports; ++i) {
-	unsigned j;
-	struct conf_port *src_port;
+    /* disconnect port from all sources which are transmitting to it */
+    pjmedia_conf_disconnect_port_from_sources(conf, port);
 
-	src_port = conf->ports[i];
+    /* disconnect port from all sinks to which it is transmitting to */
+    pjmedia_conf_disconnect_port_from_sinks(conf, port);
 
-	if (!src_port)
-	    continue;
-
-	if (src_port->listener_cnt == 0)
-	    continue;
-
-	for (j=0; j<src_port->listener_cnt; ++j) {
-	    if (src_port->listener_slots[j] == port) {
-		pj_array_erase(src_port->listener_slots, sizeof(SLOT_TYPE),
-			       src_port->listener_cnt, j);
-		pj_assert(conf->connect_cnt > 0);
-		--conf->connect_cnt;
-		--src_port->listener_cnt;
-		break;
-	    }
-	}
+    /* Destroy resample if this conf port has it. */
+    if (conf_port->rx_resample) {
+	pjmedia_resample_destroy(conf_port->rx_resample);
+	conf_port->rx_resample = NULL;
     }
-
-    /* Update transmitter_cnt of ports we're transmitting to */
-    while (conf_port->listener_cnt) {
-	unsigned dst_slot;
-	struct conf_port *dst_port;
-
-	dst_slot = conf_port->listener_slots[conf_port->listener_cnt-1];
-	dst_port = conf->ports[dst_slot];
-	--dst_port->transmitter_cnt;
-	--conf_port->listener_cnt;
-	pj_assert(conf->connect_cnt > 0);
-	--conf->connect_cnt;
+    if (conf_port->tx_resample) {
+	pjmedia_resample_destroy(conf_port->tx_resample);
+	conf_port->tx_resample = NULL;
     }
 
     /* Destroy pjmedia port if this conf port is passive port,
      * i.e: has delay buf.
      */
     if (conf_port->delay_buf) {
+	pjmedia_delay_buf_destroy(conf_port->delay_buf);
+	conf_port->delay_buf = NULL;
+
 	pjmedia_port_destroy(conf_port->port);
 	conf_port->port = NULL;
     }
@@ -1186,12 +1280,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     --conf->port_cnt;
 
     pj_mutex_unlock(conf->mutex);
-
-
-    /* Stop sound if there's no connection. */
-    if (conf->connect_cnt == 0) {
-	pause_sound(conf);
-    }
 
     return PJ_SUCCESS;
 }
@@ -1249,6 +1337,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
 
     info->slot = slot;
     info->name = conf_port->name;
+    if (conf_port->port) {
+        pjmedia_format_copy(&info->format, &conf_port->port->info.fmt);
+    } else {
+        pj_bzero(&info->format, sizeof(info->format));
+        info->format.id = (pj_uint32_t)PJMEDIA_FORMAT_INVALID;
+    }
     info->tx_setting = conf_port->tx_setting;
     info->rx_setting = conf_port->rx_setting;
     info->listener_cnt = conf_port->listener_cnt;
@@ -1624,11 +1718,17 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
     *frm_type = PJMEDIA_FRAME_TYPE_AUDIO;
 
+    /* Skip port if it is disabled */
+    if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
+	cport->tx_level = 0;
+	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
     /* If port is muted or nobody is transmitting to this port, 
      * transmit NULL frame. 
      */
-    if (cport->tx_setting == PJMEDIA_PORT_MUTE || cport->transmitter_cnt==0) {
-
+    else if ((cport->tx_setting == PJMEDIA_PORT_MUTE) ||
+	     (cport->transmitter_cnt == 0)) {
 	pjmedia_frame frame;
 
 	/* Clear left-over samples in tx_buffer, if any, so that it won't
@@ -1661,11 +1761,6 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	    }
 	}
 
-	cport->tx_level = 0;
-	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
-
-    } else if (cport->tx_setting != PJMEDIA_PORT_ENABLE) {
 	cport->tx_level = 0;
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
@@ -2173,6 +2268,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 }
 
 
+#if !DEPRECATED_FOR_TICKET_2234
 /*
  * get_frame() for passive port
  */
@@ -2184,6 +2280,7 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
     PJ_UNUSED_ARG(frame);
     return -1;
 }
+#endif
 
 
 /*

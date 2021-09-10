@@ -209,7 +209,11 @@ static int loopback_test(void)
 {
     unsigned count, i;
     pjmedia_format_id test_fmts[] = {
+#if defined(PJ_DARWINOS) && PJ_DARWINOS
+	PJMEDIA_FORMAT_I420
+#else
         PJMEDIA_FORMAT_YUY2
+#endif
     };
     pjmedia_rect_size test_sizes[] = {
 	{176,144},	/* QCIF */

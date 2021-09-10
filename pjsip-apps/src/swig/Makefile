@@ -2,42 +2,35 @@ include ../../../build.mak
 
 ifneq ($(findstring android,$(TARGET_NAME)),)
     # no python for android
-    DIRS = java csharp
+    LANG = java csharp
 else
     ifneq ($(findstring ios,$(TARGET_NAME)),)
-  	DIRS = csharp
+  	LANG = csharp
     else
-  	DIRS = python java
+  	LANG = python java
     endif
 endif
 
-export SWIG_FLAGS=-I../../../../pjlib/include \
-		   -I../../../../pjlib-util/include \
-		   -I../../../../pjmedia/include \
-		   -I../../../../pjsip/include \
-		   -I../../../../pjnath/include -c++ 
-export SRC_DIR=../../../../pjsip/include
-export SRCS=$(SRC_DIR)/pjsua2/endpoint.hpp $(SRC_DIR)/pjsua2/types.hpp
+CMD_is_java := $(findstring java, $(MAKECMDGOALS))
+CMD_is_python := $(findstring python, $(MAKECMDGOALS))
+CMD_is_csharp := $(findstring csharp, $(MAKECMDGOALS))
+CMD_is_lang := $(or $(CMD_is_java), $(CMD_is_python), $(CMD_is_csharp))
 
-.PHONY: all clean dep depend distclean print realclean install uninstall
+.PHONY: all clean dep depend distclean print realclean install uninstall csharp java python
 
 all: symbols.i
+	
+all clean dep depend distclean print realclean install uninstall: $(LANG)
 
-all clean dep depend distclean print realclean install uninstall:
-	for dir in $(DIRS); do \
-		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
-		    true; \
-		else \
-		    exit 1; \
-		fi; \
-	done
-
-csharp:
-	$(MAKE) $(MAKE_FLAGS) -C csharp $@
+java python csharp:
+ifeq ($(CMD_is_lang),)
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@ $(MAKECMDGOALS)
+else
+	$(MAKE) $(MAKE_FLAGS) --no-print-directory -C $@
+endif
 
 symbols.i: symbols.lst
 	@echo warning: file symbols.i is out of date. Run 'make symbol'.
 
 symbol symbols:
 	python importsym.py
-

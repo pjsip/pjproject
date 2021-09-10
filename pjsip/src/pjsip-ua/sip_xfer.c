@@ -309,8 +309,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_initiate( pjsip_evsub *sub,
     pjsip_dlg_inc_lock(xfer->dlg);
 
     /* Create basic REFER request */
-    status = pjsip_evsub_initiate(sub, pjsip_get_refer_method(), -1, 
-				  &tdata);
+    status = pjsip_evsub_initiate(sub, pjsip_get_refer_method(),
+    				  PJSIP_EXPIRES_NOT_SPECIFIED, &tdata);
     if (status != PJ_SUCCESS)
 	goto on_return;
 

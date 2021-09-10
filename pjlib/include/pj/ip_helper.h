@@ -26,6 +26,7 @@
  */
 
 #include <pj/sock.h>
+#include <pj/string.h>
 
 PJ_BEGIN_DECL
 
@@ -52,6 +53,43 @@ typedef union pj_ip_route_entry
     } ipv4;
 } pj_ip_route_entry;
 
+/**
+ * This structure describes options for pj_enum_ip_interface2().
+ */
+typedef struct pj_enum_ip_option
+{
+    /**
+     * Family of the address to be retrieved. Application may specify
+     * pj_AF_UNSPEC() to retrieve all addresses, or pj_AF_INET() or
+     * pj_AF_INET6() to retrieve interfaces with specific address family.
+     *
+     * Default: pj_AF_UNSPEC().
+     */
+    int			af;
+
+    /**
+     * IPv6 addresses can have a DEPRECATED flag, if this flag is set, any
+     * DEPRECATED IPv6 address will be omitted. Currently this is only
+     * available for Linux, on other platforms, if this flag is set,
+     * pj_enum_ip_interface2() will return PJ_ENOTSUP.
+     *
+     * Default: PJ_FALSE.
+     */
+    pj_bool_t		omit_deprecated_ipv6;
+
+} pj_enum_ip_option;
+
+
+/**
+ * Get default values of IP enumeration option.
+ *
+ * @param opt	    The IP enumeration option.
+ */
+PJ_INLINE(void) pj_enum_ip_option_default(pj_enum_ip_option *opt)
+{
+    pj_bzero(opt, sizeof(*opt));
+}
+
 
 /**
  * Enumerate the local IP interfaces currently active in the host.
@@ -73,6 +111,24 @@ PJ_DECL(pj_status_t) pj_enum_ip_interface(int af,
 					  unsigned *count,
 					  pj_sockaddr ifs[]);
 
+
+/**
+ * Enumerate the local IP interfaces currently active in the host with
+ * capability to filter DEPRECATED IPv6 addresses (currently only for Linux).
+ *
+ * @param opt	    The option, default option will be used if NULL.
+ * @param count	    On input, specify the number of entries. On output,
+ *		    it will be filled with the actual number of entries.
+ * @param ifs	    Array of socket (with flags) addresses, which address part
+ *		    will be filled with the interface address. The address
+ *		    family part will be initialized with the address
+ *		    family of the IP address.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_enum_ip_interface2(const pj_enum_ip_option *opt,
+					   unsigned *count,
+					   pj_sockaddr ifs[]);
 
 /**
  * Enumerate the IP routing table for this host.

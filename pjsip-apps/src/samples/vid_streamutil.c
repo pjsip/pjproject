@@ -104,10 +104,6 @@ static const char *desc =
 #define DEF_RENDERER_HEIGHT		    480
 
 
-/* Prototype */
-static void print_stream_stat(pjmedia_vid_stream *stream,
-			      const pjmedia_vid_codec_param *codec_param);
-
 /* Hexa string to octet array */
 int my_hex_string_to_octet_string(char *raw, char *hex, int len)
 {
@@ -138,6 +134,17 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #endif
 
+#if defined(PJMEDIA_HAS_VID_TOOLBOX_CODEC) && \
+    PJMEDIA_HAS_VID_TOOLBOX_CODEC != 0
+    status = pjmedia_codec_vid_toolbox_init(NULL, pf);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
+
+#if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    status = pjmedia_codec_vpx_vid_init(NULL, pf);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
+
 #if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
     status = pjmedia_codec_ffmpeg_vid_init(NULL, pf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -157,6 +164,15 @@ static void deinit_codecs()
 
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     pjmedia_codec_openh264_vid_deinit();
+#endif
+
+#if defined(PJMEDIA_HAS_VID_TOOLBOX_CODEC) && \
+    PJMEDIA_HAS_VID_TOOLBOX_CODEC != 0
+    pjmedia_codec_vid_toolbox_deinit();
+#endif
+
+#if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+    pjmedia_codec_vpx_vid_deinit();
 #endif
 
 }

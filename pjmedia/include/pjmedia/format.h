@@ -180,6 +180,14 @@ typedef enum pjmedia_format_id
      * This is planar 4:2:0/12bpp YUV format, the data can be treated as
      * two planes of color components, where the first plane contains
      * only the Y samples, the second plane contains interleaved
+     * U (Cb) - V (Cr) samples.
+     */
+    PJMEDIA_FORMAT_NV12	    = PJMEDIA_FORMAT_PACK('N', 'V', '1', '2'),
+    
+    /**
+     * This is planar 4:2:0/12bpp YUV format, the data can be treated as
+     * two planes of color components, where the first plane contains
+     * only the Y samples, the second plane contains interleaved
      * V (Cr) - U (Cb) samples.
      */
     PJMEDIA_FORMAT_NV21	    = PJMEDIA_FORMAT_PACK('N', 'V', '2', '1'),
@@ -211,10 +219,15 @@ typedef enum pjmedia_format_id
     PJMEDIA_FORMAT_H263P    = PJMEDIA_FORMAT_PACK('P', '2', '6', '3'),
     PJMEDIA_FORMAT_H264     = PJMEDIA_FORMAT_PACK('H', '2', '6', '4'),
 
+    PJMEDIA_FORMAT_VP8      = PJMEDIA_FORMAT_PACK('V', 'P', '8', '0'),
+    PJMEDIA_FORMAT_VP9      = PJMEDIA_FORMAT_PACK('V', 'P', '9', '0'),
+
     PJMEDIA_FORMAT_MJPEG    = PJMEDIA_FORMAT_PACK('M', 'J', 'P', 'G'),
     PJMEDIA_FORMAT_MPEG1VIDEO = PJMEDIA_FORMAT_PACK('M', 'P', '1', 'V'),
     PJMEDIA_FORMAT_MPEG2VIDEO = PJMEDIA_FORMAT_PACK('M', 'P', '2', 'V'),
     PJMEDIA_FORMAT_MPEG4    = PJMEDIA_FORMAT_PACK('M', 'P', 'G', '4'),
+
+    PJMEDIA_FORMAT_INVALID  = 0xFFFFFFFF
 
 } pjmedia_format_id;
 

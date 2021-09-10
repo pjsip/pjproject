@@ -115,27 +115,26 @@ PJ_DEF(pj_status_t) pjrpid_add_element(pjpidf_pres *pres,
 
     PJ_UNUSED_ARG(options);
 
-    /* Check if we need to add RPID information into the PIDF document. */
-    if (elem->id.slen==0 && 
-	elem->activity==PJRPID_ACTIVITY_UNKNOWN &&
-	elem->note.slen==0)
-    {
-	/* No RPID information to be added. */
-	return PJ_SUCCESS;
-    }
-
-    /* Add <note> to <tuple> */
+    /* Add <note> to <tuple>, if none */
     if (elem->note.slen != 0) {
 	pj_xml_node *nd_tuple;
 
 	nd_tuple = find_node(pres, "tuple");
-
-	if (nd_tuple) {
+	nd_note = nd_tuple? find_node(nd_tuple, "note"):NULL;
+	if (!nd_note) {
 	    nd_note = pj_xml_node_new(pool, &NOTE);
 	    pj_strdup(pool, &nd_note->content, &elem->note);
 	    pj_xml_add_node(nd_tuple, nd_note);
 	    nd_note = NULL;
 	}
+    }
+
+    /* Check if we need to add RPID information into the PIDF document. */
+    if (elem->id.slen==0 &&
+	elem->activity==PJRPID_ACTIVITY_UNKNOWN)
+    {
+	/* No RPID information to be added. */
+	return PJ_SUCCESS;
     }
 
     /* Update namespace */
@@ -204,7 +203,7 @@ static pj_status_t get_tuple_note(const pjpidf_pres *pres,
     if (!nd_tuple)
 	return PJSIP_SIMPLE_EBADRPID;
 
-    nd_note = find_node(pres, "note");
+    nd_note = find_node(nd_tuple, "note");
     if (nd_note) {
 	pj_strdup(pool, &elem->note, &nd_note->content);
 	return PJ_SUCCESS;

@@ -50,6 +50,24 @@ static const char *addr_string(const pj_sockaddr_t *addr)
 		 str, sizeof(str));
     return str;
 }
+static const char* print_tpsel_info(const pjsip_tpselector *sel)
+{
+    static char tpsel_info_buf[80];
+    if (!sel) return "(null)";
+    if (sel->type==PJSIP_TPSELECTOR_LISTENER)
+	pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+			 "listener[%s], reuse=%d", sel->u.listener->obj_name,
+			 !sel->disable_connection_reuse);
+    else if (sel->type==PJSIP_TPSELECTOR_TRANSPORT)
+	pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+			 "transport[%s], reuse=%d", sel->u.transport->info,
+			 !sel->disable_connection_reuse);
+    else
+	pj_ansi_snprintf(tpsel_info_buf, sizeof(tpsel_info_buf),
+			 "unknown[%p], reuse=%d", sel->u.ptr,
+			 !sel->disable_connection_reuse);
+    return tpsel_info_buf;
+}
 #else
 #   define TRACE_(x)
 #endif
@@ -201,6 +219,13 @@ static struct transport_names_t
 	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
     },
     { 
+	PJSIP_TRANSPORT_DTLS,
+	5061, 
+	{"DTLS", 4}, 
+	"DTLS transport", 
+	PJSIP_TRANSPORT_SECURE
+    },
+    { 
 	PJSIP_TRANSPORT_SCTP, 
 	5060, 
 	{"SCTP", 4}, 
@@ -241,6 +266,13 @@ static struct transport_names_t
 	{"TLS", 3},
 	"TLS IPv6 transport",
 	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
+    },
+    {
+	PJSIP_TRANSPORT_DTLS6,
+	5061,
+	{"DTLS", 4},
+	"DTLS IPv6 transport",
+	PJSIP_TRANSPORT_SECURE
     },
 };
 
@@ -700,7 +732,11 @@ PJ_DEF(pj_status_t) pjsip_tx_data_clone(const pjsip_tx_data *src,
     if (src->msg->body)
 	msg->body = pjsip_msg_body_clone(dst->pool, src->msg->body);
 
-    dst->is_pending = src->is_pending;
+    /* We shouldn't copy is_pending since it's src's internal state,
+     * indicating that it's currently being sent by the transport.
+     * While the cloned tdata is of course not.
+     */
+    //dst->is_pending = src->is_pending;
 
     PJ_LOG(5,(THIS_FILE,
 	     "Tx data %s cloned",
@@ -755,7 +791,8 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
     pj_memcpy(&dst->pkt_info, &src->pkt_info, sizeof(src->pkt_info));
 
     /* msg_info needs deep clone */
-    dst->msg_info.msg_buf = dst->pkt_info.packet;
+    dst->msg_info.msg_buf = dst->pkt_info.packet +
+			    (src->msg_info.msg_buf - src->pkt_info.packet);
     dst->msg_info.len = src->msg_info.len;
     dst->msg_info.msg = pjsip_msg_clone(pool, src->msg_info.msg);
     pj_list_init(&dst->msg_info.parse_err);
@@ -1034,6 +1071,19 @@ static void transport_idle_callback(pj_timer_heap_t *timer_heap,
 	return;
 
     entry->id = PJ_FALSE;
+
+    /* Set is_destroying flag under transport manager mutex to avoid
+     * race condition with pjsip_tpmgr_acquire_transport2().
+     */
+    pj_lock_acquire(tp->tpmgr->lock);
+    if (pj_atomic_get(tp->ref_cnt) == 0) {
+	tp->is_destroying = PJ_TRUE;
+    } else {
+	pj_lock_release(tp->tpmgr->lock);
+	return;
+    }
+    pj_lock_release(tp->tpmgr->lock);
+
     pjsip_transport_destroy(tp);
 }
 
@@ -1210,10 +1260,14 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
 	 * new transport to the list.
 	 */
 	pj_list_push_back(tp_ref, tp_add);
+	TRACE_((THIS_FILE, "Remote address already registered, "
+			   "appended the transport to the list"));
     } else {
 	/* Transport list not found, add it to the hash table. */
 	pj_hash_set_np(mgr->table, &tp->key, key_len, hval, tp_add->tp_buf,
 		       tp_add);
+	TRACE_((THIS_FILE, "Remote address not registered, "
+			   "added the transport to the hash"));
     }
 
     /* Add ref transport group lock, if any */
@@ -1283,6 +1337,13 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 			/* The transport list has multiple entry. */
 			pj_hash_set_np(mgr->table, &tp_next->tp->key, key_len,
 				       hval, tp_next->tp_buf, tp_next);
+			TRACE_((THIS_FILE, "Hash entry updated after "
+					   "transport %d being destroyed",
+					   tp->obj_name));
+		    } else {
+			TRACE_((THIS_FILE, "Hash entry deleted after "
+					   "transport %d being destroyed",
+					   tp->obj_name));
 		    }
 		}
 
@@ -1294,6 +1355,14 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 	    }
 	    tp_iter = tp_iter->next;
 	} while (tp_iter != tp_ref);
+
+	if (tp_iter->tp != tp) {
+	    PJ_LOG(3, (THIS_FILE, "Warning: transport %s being destroyed is "
+				  "not registered", tp->obj_name));
+	}
+    } else {
+	PJ_LOG(3, (THIS_FILE, "Warning: transport %s being destroyed is "
+			      "not found in the hash table", tp->obj_name));
     }
 
     pj_lock_release(mgr->lock);
@@ -1336,8 +1405,8 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown2(pjsip_transport *tp,
     mgr = tp->tpmgr;
     pj_lock_acquire(mgr->lock);
 
-    /* Do nothing if transport is being shutdown already */
-    if (tp->is_shutdown) {
+    /* Do nothing if transport is being shutdown/destroyed already */
+    if (tp->is_shutdown || tp->is_destroying) {
 	pj_lock_release(mgr->lock);
 	pj_lock_release(tp->lock);
 	return PJ_SUCCESS;
@@ -2159,6 +2228,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 					  NULL, tp);
 }
 
+
 /*
  * pjsip_tpmgr_acquire_transport2()
  *
@@ -2176,8 +2246,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
     pjsip_tpfactory *factory;
     pj_status_t status;
 
-    TRACE_((THIS_FILE,"Acquiring transport type=%s, remote=%s:%d",
+    TRACE_((THIS_FILE,"Acquiring transport type=%s, sel=%s remote=%s:%d",
 		       pjsip_transport_get_type_name(type),
+		       print_tpsel_info(sel),
 		       addr_string(remote),
 		       pj_sockaddr_get_port(remote)));
 
@@ -2194,7 +2265,15 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	/* See if the transport is (not) suitable */
 	if (seltp->key.type != type) {
 	    pj_lock_release(mgr->lock);
+	    TRACE_((THIS_FILE, "Transport type in tpsel not matched"));
 	    return PJSIP_ETPNOTSUITABLE;
+	}
+
+	/* Make sure the transport is not being destroyed */
+	if (seltp->is_destroying) {
+	    pj_lock_release(mgr->lock);
+	    TRACE_((THIS_FILE,"Transport to be acquired is being destroyed"));
+	    return PJ_ENOTFOUND;
 	}
 
 	/* We could also verify that the destination address is reachable
@@ -2225,7 +2304,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	int key_len;
 	pjsip_transport *tp_ref = NULL;
 	transport *tp_entry = NULL;
-
+	unsigned flag = pjsip_transport_get_flag_from_type(type);
 
 	/* If listener is specified, verify that the listener type matches
 	 * the destination type.
@@ -2234,6 +2313,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	{
 	    if (sel->u.listener->type != type) {
 		pj_lock_release(mgr->lock);
+		TRACE_((THIS_FILE, "Listener type in tpsel not matched"));
 		return PJSIP_ETPNOTSUITABLE;
 	    }
 	}
@@ -2249,34 +2329,52 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	    tp_entry = (transport *)pj_hash_get(mgr->table, &key, key_len,
 						NULL);
 	    if (tp_entry) {
-		if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER) {
-		    transport *tp_iter = tp_entry;
-		    do {
+		transport *tp_iter = tp_entry;
+		do {
+		    /* Don't use transport being shutdown/destroyed */
+		    if (!tp_iter->tp->is_shutdown &&
+			!tp_iter->tp->is_destroying)
+		    {
+			if ((flag & PJSIP_TRANSPORT_SECURE) && tdata) {
+			    /* For secure transport, make sure tdata's
+			     * destination host matches the transport's
+			     * remote host.
+			     */
+			    if (pj_stricmp(&tdata->dest_info.name,
+				  	   &tp_iter->tp->remote_name.host))
+			    {
+			    	tp_iter = tp_iter->next;
+			    	continue;
+			    }
+			}
+
 			if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
-			    sel->u.listener &&
-			    tp_iter->tp->factory == sel->u.listener)
+			    sel->u.listener)
 			{
+			    /* Match listener if selector is set */
+			    if (tp_iter->tp->factory == sel->u.listener) {
+				tp_ref = tp_iter->tp;
+				break;
+			    }
+			} else {
 			    tp_ref = tp_iter->tp;
 			    break;
 			}
-			tp_iter = tp_iter->next;
-		    } while (tp_iter != tp_entry);
-		} else {
-		    tp_ref = tp_entry->tp;
-		}
+		    }
+		    tp_iter = tp_iter->next;
+		} while (tp_iter != tp_entry);
 	    }
 	}
 
 	if (tp_ref == NULL &&
 	    (!sel || sel->disable_connection_reuse == PJ_FALSE))
 	{
-	    unsigned flag = pjsip_transport_get_flag_from_type(type);
 	    const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
 
 
 	    /* Ignore address for loop transports. */
 	    if (type == PJSIP_TRANSPORT_LOOP ||
-		     type == PJSIP_TRANSPORT_LOOP_DGRAM)
+		type == PJSIP_TRANSPORT_LOOP_DGRAM)
 	    {
 		pj_sockaddr *addr = &key.rem_addr;
 
@@ -2315,9 +2413,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	     * 'duplicate' of the existing transport (same type & remote addr,
 	     * but different factory).
 	     */
+	    TRACE_((THIS_FILE, "Transport found but from different listener"));
 	}
 
-	if (tp_ref!=NULL && !tp_ref->is_shutdown) {
+	if (tp_ref!=NULL && !tp_ref->is_shutdown && !tp_ref->is_destroying) {
 	    /*
 	     * Transport found!
 	     */
@@ -2347,10 +2446,13 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	     */
 
 	    /* Verify that the listener type matches the destination type */
+	    /* Already checked above. */
+	    /*
 	    if (sel->u.listener->type != type) {
 		pj_lock_release(mgr->lock);
 		return PJSIP_ETPNOTSUITABLE;
 	    }
+	    */
 
 	    /* We'll use this listener to create transport */
 	    factory = sel->u.listener;
@@ -2556,7 +2658,7 @@ PJ_DEF(pj_status_t) pjsip_transport_add_state_listener (
 
     PJ_ASSERT_RETURN(tp && cb && key, PJ_EINVAL);
 
-    if (tp->is_shutdown) {
+    if (tp->is_shutdown || tp->is_destroying) {
 	*key = NULL;
 	return PJ_EINVALIDOP;
     }

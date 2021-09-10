@@ -129,7 +129,7 @@ endif
 $(OBJDIR)/$(app).o: $(OBJDIRS) $(OBJS)
 	$(CROSS_COMPILE)ld -r -o $@ $(OBJS)
 
-$(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o
+$(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o | $(OBJDIRS)
 	@echo Creating kbuild Makefile...
 	@echo "# Our module name:" > $(OBJDIR)/Makefile
 	@echo 'obj-m += $(app).o' >> $(OBJDIR)/Makefile
@@ -154,27 +154,32 @@ $(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o
 ../lib/$(app).ko: $(LIB) $(OBJDIR)/$(app).ko
 	cp $(OBJDIR)/$(app).ko ../lib
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m | $(OBJDIRS)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c | $(OBJDIRS)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.S | $(OBJDIRS)
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<) 
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp
+$(OBJDIR)/dshowclasses.o: $(SRCDIR)/dshowclasses.cpp | $(OBJDIRS)
+	$(CXX) $($(APP)_CXXFLAGS) -I$(SRCDIR)/../../../third_party/BaseClasses -fpermissive \
+		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
+		$(subst /,$(HOST_PSEP),$<)
+
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cpp | $(OBJDIRS)
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
 
-$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.cc | $(OBJDIRS)
 	$(CXX) $($(APP)_CXXFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
 		$(subst /,$(HOST_PSEP),$<)
@@ -223,8 +228,8 @@ depend:
 	for F in $(FULL_SRCS); do \
 	   if test -f $$F; then \
 	     echo "$(OBJDIR)/" | tr -d '\n' >> $(DEP_FILE); \
-	     if echo $$F | grep -q .cpp$$; then \
-		dep="$(CC) -M $(DEPCXXFLAGS) $$F"; \
+	     if echo $$F | grep -q "\.c[c|pp]"; then \
+		dep="$(CXX) -M $(DEPCXXFLAGS) $$F"; \
 	     else \
 		dep="$(CC) -M $(DEPCFLAGS) $$F"; \
 	     fi; \

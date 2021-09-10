@@ -205,8 +205,11 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    find_next_call();
 	}
 
-	/* Dump media state upon disconnected */
-	if (1) {
+	/* Dump media state upon disconnected.
+	 * Moved to on_stream_destroyed() since media has been deactivated
+	 * upon disconnection.
+	 */
+	if (0) {
 	    PJ_LOG(5,(THIS_FILE, 
 		      "Call %d disconnected, dumping media stats..", 
 		      call_id));
@@ -268,6 +271,22 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	if (current_call==PJSUA_INVALID_ID)
 	    current_call = call_id;
 
+    }
+}
+
+/*
+ * Handler when audio stream is destroyed.
+ */
+static void on_stream_destroyed(pjsua_call_id call_id,
+                                pjmedia_stream *strm,
+				unsigned stream_idx)
+{
+    PJ_UNUSED_ARG(strm);
+    if (1) {
+	PJ_LOG(5,(THIS_FILE, 
+		  "Call %d stream %d destroyed, dumping media stats..", 
+		  call_id, stream_idx));
+	log_call_dump(call_id);
     }
 }
 
@@ -822,9 +841,11 @@ static void on_transport_state(pjsip_transport *tp,
     case PJSIP_TP_STATE_DISCONNECTED:
 	{
 	    char buf[100];
+	    int len;
 
-	    snprintf(buf, sizeof(buf), "SIP %s transport is disconnected "
-		    "from %s", tp->type_name, host_port);
+	    len = pj_ansi_snprintf(buf, sizeof(buf), "SIP %s transport is "
+	    	      "disconnected from %s", tp->type_name, host_port);
+	    PJ_CHECK_TRUNC_STR(len, buf, sizeof(buf));
 	    pjsua_perror(THIS_FILE, buf, info->status);
 	}
 	break;
@@ -1001,7 +1022,7 @@ static pjmedia_transport* on_create_media_transport(pjsua_call_id call_id,
 #endif
 
 /* Playfile done notification, set timer to hangup calls */
-pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
+void on_playfile_done(pjmedia_port *port, void *usr_data)
 {
     pj_time_val delay;
 
@@ -1011,12 +1032,11 @@ pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
     /* Just rewind WAV when it is played outside of call */
     if (pjsua_call_get_count() == 0) {
 	pjsua_player_set_pos(app_config.wav_id, 0);
-	return PJ_SUCCESS;
     }
 
     /* Timer is already active */
     if (app_config.auto_hangup_timer.id == 1)
-	return PJ_SUCCESS;
+	return;
 
     app_config.auto_hangup_timer.id = 1;
     delay.sec = 0;
@@ -1024,8 +1044,73 @@ pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
     pjsip_endpt_schedule_timer(pjsua_get_pjsip_endpt(), 
 			       &app_config.auto_hangup_timer, 
 			       &delay);
+}
 
-    return PJ_SUCCESS;
+/* IP change progress callback. */
+void on_ip_change_progress(pjsua_ip_change_op op,
+			   pj_status_t status,
+			   const pjsua_ip_change_op_info *info)
+{
+    char info_str[128];
+    pjsua_acc_info acc_info;
+    pjsua_transport_info tp_info;
+
+    if (status == PJ_SUCCESS) {
+	switch (op) {
+	case PJSUA_IP_CHANGE_OP_RESTART_LIS:
+	    pjsua_transport_get_info(info->lis_restart.transport_id, &tp_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "restart transport %.*s",
+			     (int)tp_info.info.slen, tp_info.info.ptr);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_SHUTDOWN_TP:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "transport shutdown for account %.*s",
+			     (int)acc_info.acc_uri.slen,
+			     acc_info.acc_uri.ptr);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    if (info->acc_update_contact.code) {
+		pj_ansi_snprintf(info_str, sizeof(info_str),
+				 "update contact for account %.*s, code[%d]",
+				 (int)acc_info.acc_uri.slen,
+				 acc_info.acc_uri.ptr,
+				 info->acc_update_contact.code);
+	    } else {
+		pj_ansi_snprintf(info_str, sizeof(info_str),
+				 "update contact for account %.*s",
+				 (int)acc_info.acc_uri.slen,
+				 acc_info.acc_uri.ptr);
+	    }
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_HANGUP_CALLS:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "hangup call for account %.*s, call_id[%d]",
+			     (int)acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     info->acc_hangup_calls.call_id);
+	    break;
+	case PJSUA_IP_CHANGE_OP_ACC_REINVITE_CALLS:
+	    pjsua_acc_get_info(info->acc_shutdown_tp.acc_id, &acc_info);
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "reinvite call for account %.*s, call_id[%d]",
+			     (int)acc_info.acc_uri.slen, acc_info.acc_uri.ptr,
+			     info->acc_reinvite_calls.call_id);
+	    break;
+	case PJSUA_IP_CHANGE_OP_COMPLETED:
+	    pj_ansi_snprintf(info_str, sizeof(info_str),
+			     "done");
+	default:
+	    break;
+	}
+	PJ_LOG(3,(THIS_FILE, "IP change progress report : %s", info_str));
+
+    } else {
+	PJ_PERROR(3,(THIS_FILE, status, "IP change progress fail"));
+    }
 }
 
 /* Auto hangup timer callback */
@@ -1063,9 +1148,9 @@ static void simple_registrar(pjsip_rx_data *rdata)
     while (h != &rdata->msg_info.msg->hdr) {
 	if (h->type == PJSIP_H_CONTACT) {
 	    const pjsip_contact_hdr *c = (const pjsip_contact_hdr*)h;
-	    int e = c->expires;
+	    unsigned e = c->expires;
 
-	    if (e < 0) {
+	    if (e != PJSIP_EXPIRES_NOT_SPECIFIED) {
 		if (exp)
 		    e = exp->ivalue;
 		else
@@ -1251,10 +1336,10 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
+
 static pj_status_t app_init(void)
 {
     pjsua_transport_id transport_id = -1;
-    pjsua_transport_id udp6_tp_id = -1, tcp6_tp_id = -1, tls6_tp_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_pool_t *tmp_pool;
@@ -1283,12 +1368,10 @@ static pj_status_t app_init(void)
 	pj_pool_release(tmp_pool);
 	return status;
     }
-    
-    if (app_config.ipv6)
-    	app_config.cfg.stun_try_ipv6 = PJ_TRUE;
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
+    app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;
@@ -1307,6 +1390,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.cfg.cb.on_call_media_event = &on_call_media_event;
+    app_config.cfg.cb.on_ip_change_progress = &on_ip_change_progress;
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif
@@ -1364,8 +1448,8 @@ static pj_status_t app_init(void)
 		pjmedia_port *port;
 
 		pjsua_player_get_port(app_config.wav_id, &port);
-		status = pjmedia_wav_player_set_eof_cb(port, NULL, 
-						       &on_playfile_done);
+		status = pjmedia_wav_player_set_eof_cb2(port, NULL, 
+						        &on_playfile_done);
 		if (status != PJ_SUCCESS)
 		    goto on_error;
 
@@ -1612,7 +1696,6 @@ static pj_status_t app_init(void)
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	udp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1678,7 +1761,6 @@ static pj_status_t app_init(void)
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	tcp6_tp_id = transport_id;
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
@@ -1718,7 +1800,6 @@ static pj_status_t app_init(void)
 	tcp_cfg.port--;
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-	tls6_tp_id = transport_id;
 	
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
@@ -1781,58 +1862,6 @@ static pj_status_t app_init(void)
 	app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
 	app_config.acc_cfg[i].reg_retry_interval = 300;
 	app_config.acc_cfg[i].reg_first_retry_interval = 60;
-	if (app_config.ipv6) {
-	    pj_str_t *dst_uri = NULL;
-	    pj_str_t tmp;
-	    pjsip_uri *uri;
-
-	    // Uncomment this for testing in a NAT64 network
-	    // app_config.acc_cfg[i].nat64_opt = PJSUA_NAT64_ENABLED;
-	    app_config.acc_cfg[i].ipv6_media_use = PJSUA_IPV6_ENABLED;
-
-	    if ((app_config.cfg.outbound_proxy_cnt > 0) &&
-	        (app_config.acc_cfg[i].reg_use_proxy == 1 /* outbound */ ||
-	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
-	    {
-	    	dst_uri = &app_config.cfg.outbound_proxy[0];
-	    } else if ((app_config.acc_cfg[i].proxy_cnt > 0) &&
-	        (app_config.acc_cfg[i].reg_use_proxy == 2 /* acc */ ||
-	         app_config.acc_cfg[i].reg_use_proxy == 3 /* all */))
-	    {
-	    	dst_uri = &app_config.acc_cfg[i].proxy[0];
-	    } else if (app_config.acc_cfg[i].reg_uri.slen > 0) {
-	    	dst_uri = &app_config.acc_cfg[i].reg_uri;
-	    }
-	    
-	    pj_strdup_with_null(app_config.pool, &tmp, dst_uri);
-
-	    uri = pjsip_parse_uri(app_config.pool, tmp.ptr, tmp.slen, 0);
-	    if (uri != NULL) {
-		pjsip_sip_uri *sip_uri;
-		pjsip_transport_type_e tp_type = PJSIP_TRANSPORT_UNSPECIFIED;	
-		
-		sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
-
-    		/* Get transport type of the URI */
-    		if (PJSIP_URI_SCHEME_IS_SIPS(sip_uri)) {
-		    tp_type = PJSIP_TRANSPORT_TLS;
-    		} else if (sip_uri->transport_param.slen == 0) {
-		    tp_type = PJSIP_TRANSPORT_UDP;
-    		} else {
-		    tp_type = pjsip_transport_get_type_from_name(
-		    		  &sip_uri->transport_param);
-		    tp_type &= ~ PJSIP_TRANSPORT_IPV6;
-		}
-		
-		if (tp_type == PJSIP_TRANSPORT_UDP) {
-	    	    app_config.acc_cfg[i].transport_id = udp6_tp_id;
-		} else if (tp_type == PJSIP_TRANSPORT_TCP) {
-	    	    app_config.acc_cfg[i].transport_id = tcp6_tp_id;
-		} else if (tp_type == PJSIP_TRANSPORT_TLS) {
-	    	    app_config.acc_cfg[i].transport_id = tls6_tp_id;
-		}
-	    }
-	}
 
 	app_config_init_video(&app_config.acc_cfg[i]);
 

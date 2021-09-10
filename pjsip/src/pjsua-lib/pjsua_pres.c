@@ -979,7 +979,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     if (expires_hdr)
 	uapres->expires = expires_hdr->ivalue;
     else
-	uapres->expires = -1;
+	uapres->expires = PJSIP_EXPIRES_NOT_SPECIFIED;
 
     st_code = (pjsip_status_code)200;
     reason = pj_str("OK");
@@ -1907,7 +1907,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     pjsip_evsub_add_header(buddy->sub, &acc->cfg.sub_hdr_list);
     pjsip_evsub_set_mod_data(buddy->sub, pjsua_var.mod.id, buddy);
 
-    status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
+    status = pjsip_pres_initiate(buddy->sub, PJSIP_EXPIRES_NOT_SPECIFIED,
+    				 &tdata);
     if (status != PJ_SUCCESS) {
 	if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
 	if (buddy->sub) {

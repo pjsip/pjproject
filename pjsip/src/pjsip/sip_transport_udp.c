@@ -621,6 +621,7 @@ static void udp_set_pub_name(struct udp_transport *tp,
     enum { INFO_LEN = 80 };
     char local_addr[PJ_INET6_ADDRSTRLEN+10];
     char pub_addr[PJ_INET6_ADDRSTRLEN+10];
+    int len;
 
     pj_assert(a_name->host.slen != 0);
     
@@ -644,8 +645,9 @@ static void udp_set_pub_name(struct udp_transport *tp,
 		      tp->base.local_name.port, 
 		      pub_addr, sizeof(pub_addr), 1),
 
-    pj_ansi_snprintf( tp->base.info, INFO_LEN, "udp %s [published as %s]",
+    len = pj_ansi_snprintf( tp->base.info, INFO_LEN, "udp %s [published as %s]",
 		      local_addr, pub_addr);
+    PJ_CHECK_TRUNC_STR(len, tp->base.info, INFO_LEN);
 }
 
 /* Set the socket handle of the transport */

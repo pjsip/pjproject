@@ -41,6 +41,26 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
 }
 
 /*
+ * Enumerate the local IP interface currently active in the host.
+ */
+PJ_DEF(pj_status_t) pj_enum_ip_interface2( const pj_enum_ip_option *opt,
+					   unsigned *p_cnt,
+					   pj_sockaddr ifs[])
+{
+    PJ_UNUSED_ARG(opt);
+    PJ_UNUSED_ARG(ifs);
+
+    PJ_ASSERT_RETURN(p_cnt, PJ_EINVAL);
+
+    *p_cnt = 0;
+
+    return PJ_ENOTSUP;
+}
+
+
+
+
+/*
  * Enumerate the IP routing table for this host.
  */
 PJ_DEF(pj_status_t) pj_enum_ip_route(unsigned *p_cnt,

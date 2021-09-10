@@ -34,7 +34,8 @@ VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
     setAttribute(Qt::WA_UpdatesDisabled);
     setAttribute(Qt::WA_PaintOnScreen);
     setAttribute(Qt::WA_NoSystemBackground);
-    setAttribute(Qt::WA_PaintOutsidePaintEvent);
+    //Deprecated in Qt5
+    //setAttribute(Qt::WA_PaintOutsidePaintEvent);
     setUpdatesEnabled(false);
 
     pj_bzero(&hwnd, sizeof(hwnd));
@@ -209,7 +210,7 @@ void VidWin::get_size()
 {
     if (!hwnd.info.cocoa.window) return;
 
-    NSWindow *w = (NSWindow*)hwnd.info.cocoa.window;
+    //NSWindow *w = (NSWindow*)hwnd.info.cocoa.window;
 
     size_hint = QSize(300, 200);
 

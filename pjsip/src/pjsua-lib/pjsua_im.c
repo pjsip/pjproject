@@ -394,6 +394,12 @@ static void im_callback(void *token, pjsip_event *e)
 		    return;
 		}
 		pjsip_auth_clt_deinit(&auth);
+
+		/* Don't invoke callback if another callback (with auth,
+		 * different tsx) has been called.
+		 */
+                if (im_data2->acc_id == PJSUA_INVALID_ID)
+                    return;
 	    }
 	}
 
@@ -411,9 +417,15 @@ static void im_callback(void *token, pjsip_event *e)
 	}
 
 	if (pjsua_var.ua_cfg.cb.on_pager_status) {
+	    pj_str_t im_body = im_data->body;
+	    if (im_body.slen==0) {
+		pjsip_msg_body *body = tsx->last_tx->msg->body;
+		pj_strset(&im_body, body->data, body->len);
+	    }
+
 	    pjsua_var.ua_cfg.cb.on_pager_status(im_data->call_id, 
 					        &im_data->to,
-						&im_data->body,
+						&im_body,
 						im_data->user_data,
 						(pjsip_status_code) 
 						    tsx->status_code,
@@ -422,15 +434,21 @@ static void im_callback(void *token, pjsip_event *e)
 
 	if (pjsua_var.ua_cfg.cb.on_pager_status2) {
 	    pjsip_rx_data *rdata;
+	    pj_str_t im_body = im_data->body;
 
 	    if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
 		rdata = e->body.tsx_state.src.rdata;
 	    else
 		rdata = NULL;
 
+	    if (im_body.slen==0) {
+		pjsip_msg_body *body = tsx->last_tx->msg->body;
+		pj_strset(&im_body, body->data, body->len);
+	    }
+
 	    pjsua_var.ua_cfg.cb.on_pager_status2(im_data->call_id, 
 					         &im_data->to,
-					 	 &im_data->body,
+					 	 &im_body,
 						 im_data->user_data,
 						 (pjsip_status_code) 
 						    tsx->status_code,
@@ -438,6 +456,9 @@ static void im_callback(void *token, pjsip_event *e)
 						 tsx->last_tx,
 						 rdata, im_data->acc_id);
 	}
+
+	/* Reset acc_id after invoking callback */
+	im_data->acc_id = PJSUA_INVALID_ID;
     }
 }
 
@@ -521,10 +542,14 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsip_media_type media_type;
     pjsua_im_data *im_data;
     pjsua_acc *acc;
+    pj_bool_t content_in_msg_data;
     pj_status_t status;
 
+    content_in_msg_data = msg_data && (msg_data->msg_body.slen ||
+				       msg_data->multipart_ctype.type.slen);
+
     /* To and message body must be specified. */
-    PJ_ASSERT_RETURN(to && content, PJ_EINVAL);
+    PJ_ASSERT_RETURN(to && (content || content_in_msg_data), PJ_EINVAL);
 
     acc = &pjsua_var.acc[acc_id];
 
@@ -585,26 +610,30 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     im_data->acc_id = acc_id;
     im_data->call_id = PJSUA_INVALID_ID;
     pj_strdup_with_null(tdata->pool, &im_data->to, to);
-    pj_strdup_with_null(tdata->pool, &im_data->body, content);
     im_data->user_data = user_data;
 
 
-    /* Set default media type if none is specified */
-    if (mime_type == NULL) {
-	mime_type = &mime_text_plain;
-    }
+    /* Add message body, if content is set */
+    if (content) {
+	pj_strdup_with_null(tdata->pool, &im_data->body, content);
 
-    /* Parse MIME type */
-    pjsua_parse_media_type(tdata->pool, mime_type, &media_type);
+	/* Set default media type if none is specified */
+	if (mime_type == NULL) {
+	    mime_type = &mime_text_plain;
+	}
 
-    /* Add message body */
-    tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
-					      &media_type.subtype, 
-					      &im_data->body);
-    if (tdata->msg->body == NULL) {
-	pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
-	pjsip_tx_data_dec_ref(tdata);
-	return PJ_ENOMEM;
+	/* Parse MIME type */
+	pjsua_parse_media_type(tdata->pool, mime_type, &media_type);
+
+	/* Add message body */
+	tdata->msg->body = pjsip_msg_body_create( tdata->pool, &media_type.type,
+						  &media_type.subtype, 
+						  &im_data->body);
+	if (tdata->msg->body == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to create msg body", PJ_ENOMEM);
+	    pjsip_tx_data_dec_ref(tdata);
+	    return PJ_ENOMEM;
+	}
     }
 
     /* Add additional headers etc. */

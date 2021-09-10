@@ -296,6 +296,7 @@ static void vid_show_help()
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
     puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
     puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
+    puts("| vid win full off|on|dt ID Set fullscreen off/on/desktop for window ID	|");
     puts("| vid conf list             List all video ports in video conference bridge   |");
     puts("| vid conf cc P Q           Connect port P to Q in the video conf bridge      |");
     puts("| vid conf cd P Q           Disconnect port P to Q in the video conf bridge   |");
@@ -307,7 +308,7 @@ static void vid_show_help()
 
 static void vid_handle_menu(char *menuin)
 {
-    char *argv[8];
+    char *argv[8] = {NULL};
     int argc = 0;
 
     /* Tokenize */
@@ -499,6 +500,15 @@ static void vid_handle_menu(char *menuin)
 	    status = pjsua_vid_win_set_size(wid, &size);
 	} else if (argc==3 && strcmp(argv[2], "arrange")==0) {
 	    arrange_window(PJSUA_INVALID_ID);
+	} else if (argc==5 && (strcmp(argv[2], "full")==0))
+	{
+	    pjsua_vid_win_id wid = atoi(argv[4]);
+	    pjmedia_vid_dev_fullscreen_flag mode = PJMEDIA_VID_DEV_WINDOWED;
+	    if (strcmp(argv[3], "on")==0)
+		mode = PJMEDIA_VID_DEV_FULLSCREEN;
+	    else if (strcmp(argv[3], "dt")==0)
+		mode = PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP;
+	    status = pjsua_vid_win_set_fullscreen(wid, mode);
 	} else
 	    goto on_error;
 
@@ -625,19 +635,19 @@ static void vid_handle_menu(char *menuin)
 
 		    li_list[0] = '\0';
 		    for (j=0; j<info.listener_cnt; ++j) {
-			char s[10];
-			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+			char str_info[10];
+			pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
 					 info.listeners[j],
 					 (j==info.listener_cnt-1)?"":",");
-			pj_ansi_strcat(li_list, s);
+			pj_ansi_strcat(li_list, str_info);
 		    }
 		    tr_list[0] = '\0';
 		    for (j=0; j<info.transmitter_cnt; ++j) {
-			char s[10];
-			pj_ansi_snprintf(s, sizeof(s), "%d%s",
+			char str_info[10];
+			pj_ansi_snprintf(str_info, sizeof(str_info), "%d%s",
 					 info.transmitters[j],
 					 (j==info.transmitter_cnt-1)?"":",");
-			pj_ansi_strcat(tr_list, s);
+			pj_ansi_strcat(tr_list, str_info);
 		    }
 		    pjmedia_fourcc_name(info.format.id, s);
 		    s[4] = ' ';
@@ -1585,7 +1595,7 @@ static void ui_change_online_status()
 static void ui_conf_list()
 {
     unsigned i, count;
-    pjsua_conf_port_id id[PJSUA_MAX_CALLS];
+    pjsua_conf_port_id id[PJSUA_MAX_CONF_PORTS];
 
     printf("Conference ports:\n");
 
@@ -1749,6 +1759,12 @@ static void ui_call_redirect(char menuin[])
     }
 }
 
+static void ui_handle_ip_change()
+{
+    pjsua_ip_change_param param;
+    pjsua_ip_change_param_default(&param);
+    pjsua_handle_ip_change(&param);
+}
 
 /*
  * Main "user interface" loop.
@@ -1998,6 +2014,10 @@ void legacy_main(void)
 
 	case 'R':
 	    ui_call_redirect(menuin);
+	    break;
+
+	case 'I': /* Handle IP change. */
+	    ui_handle_ip_change();
 	    break;
 
 	default:

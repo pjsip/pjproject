@@ -73,7 +73,10 @@ typedef enum pjsip_transport_type_e
     /** TLS. */
     PJSIP_TRANSPORT_TLS,
 
-    /** SCTP. */
+    /** DTLS, not implemented yet. */
+    PJSIP_TRANSPORT_DTLS,
+
+    /** SCTP, not implemented yet. */
     PJSIP_TRANSPORT_SCTP,
 
     /** Loopback (stream, reliable) */
@@ -95,7 +98,10 @@ typedef enum pjsip_transport_type_e
     PJSIP_TRANSPORT_TCP6 = PJSIP_TRANSPORT_TCP + PJSIP_TRANSPORT_IPV6,
 
     /** TLS over IPv6 */
-    PJSIP_TRANSPORT_TLS6 = PJSIP_TRANSPORT_TLS + PJSIP_TRANSPORT_IPV6
+    PJSIP_TRANSPORT_TLS6 = PJSIP_TRANSPORT_TLS + PJSIP_TRANSPORT_IPV6,
+
+    /** DTLS over IPv6, not implemented yet */
+    PJSIP_TRANSPORT_DTLS6 = PJSIP_TRANSPORT_DTLS + PJSIP_TRANSPORT_IPV6
 
 } pjsip_transport_type_e;
 

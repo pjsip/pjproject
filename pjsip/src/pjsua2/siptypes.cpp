@@ -147,7 +147,8 @@ void AuthCredInfo::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TlsConfig::TlsConfig()
+TlsConfig::TlsConfig() : method(PJSIP_SSL_UNSPECIFIED_METHOD),
+			 qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsip_tls_setting ts;
     pjsip_tls_setting_default(&ts);
@@ -254,7 +255,7 @@ void TlsConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-TransportConfig::TransportConfig()
+TransportConfig::TransportConfig() : qosType(PJ_QOS_TYPE_BEST_EFFORT)
 {
     pjsua_transport_config tc;
     pjsua_transport_config_default(&tc);
@@ -546,7 +547,8 @@ void SipTxData::fromPj(pjsip_tx_data &tdata)
 }
 
 SipTransaction::SipTransaction()
-: role(PJSIP_ROLE_UAC), statusCode(PJSIP_SC_NULL), state(PJSIP_TSX_STATE_NULL), pjTransaction(NULL)
+: role(PJSIP_ROLE_UAC), statusCode(PJSIP_SC_NULL),
+  state(PJSIP_TSX_STATE_NULL), pjTransaction(NULL)
 {
 }
 

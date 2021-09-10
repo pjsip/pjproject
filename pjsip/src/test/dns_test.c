@@ -362,10 +362,7 @@ static int test_resolve(const char *title,
     if (ref) {
 	unsigned i;
 
-	/* Result may have double the number of addresses, for IPv4 and IPv6 */
-	if (ref->count != result.servers.count &&
-	    2*ref->count != result.servers.count)
-	{
+	if (ref->count != result.servers.count) {
 	    PJ_LOG(3,(THIS_FILE, "  test_resolve() error 10: result count mismatch"));
 	    return 10;
 	}
@@ -401,7 +398,7 @@ static int test_resolve(const char *title,
  */
 static int round_robin_test(pj_pool_t *pool)
 {
-    enum { COUNT = 400, PCT_ALLOWANCE = 5 };
+    enum { COUNT = 400, PCT_ALLOWANCE = 10 };
     unsigned i;
     struct server_hit
     {

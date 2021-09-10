@@ -391,7 +391,7 @@ PJ_DECL(pj_status_t) pj_stun_sock_create(pj_stun_config *stun_cfg,
  *			queued, or the appropriate error code on failure.
  *			When this function returns PJ_SUCCESS, the final
  *			result of the allocation process will be notified
- *			to application in \a on_state() callback.
+ *			to application in \a on_status() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_sock_start(pj_stun_sock *stun_sock,
 				        const pj_str_t *domain,

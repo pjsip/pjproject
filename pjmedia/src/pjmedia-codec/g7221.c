@@ -167,7 +167,7 @@ typedef struct codec_private {
     pj_uint16_t		 frame_size;	    /**< Coded frame size.	    */
     pj_uint16_t		 frame_size_bits;   /**< Coded frame size in bits.  */
     pj_uint16_t		 number_of_regions; /**< Number of regions.	    */
-    int			 pcm_shift;	    /**< Adjustment for PCM in/out  */
+    pj_int16_t		 pcm_shift_val;	    /**< Adjustment for PCM in/out  */
     
     /* Encoder specific state */
     Word16		*enc_frame;	    /**< 16bit to 14bit buffer	    */
@@ -699,7 +699,7 @@ static pj_status_t codec_open( pjmedia_codec *codec,
     codec_data->number_of_regions = (pj_uint16_t)
 				    (attr->info.clock_rate <= WB_SAMPLE_RATE?
 				     NUMBER_OF_REGIONS:MAX_NUMBER_OF_REGIONS);
-    codec_data->pcm_shift = codec_factory.pcm_shift;
+    codec_data->pcm_shift_val =  1 << (pj_int16_t)codec_factory.pcm_shift;
 
     /* Initialize encoder state */
     tmp = codec_data->samples_per_frame << 1;
@@ -844,11 +844,11 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 	out_bits = (pj_int8_t*)output->buf + output->size;
 
 	/* Encoder adjust the input signal level */
-	if (codec_data->pcm_shift) {
+	if (codec_data->pcm_shift_val > 1) {
 	    unsigned i;
 	    for (i=0; i<codec_data->samples_per_frame; ++i) {
 		codec_data->enc_frame[i] = 
-			(Word16)(pcm_input[i] >> codec_data->pcm_shift);
+			(Word16)(pcm_input[i] / codec_data->pcm_shift_val);
 	    }
 	    pcm_input = codec_data->enc_frame;
 	}
@@ -943,12 +943,12 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 			  mag_shift);
 
     /* Decoder adjust PCM signal */
-    if (codec_data->pcm_shift) {
+    if (codec_data->pcm_shift_val > 1) {
 	unsigned i;
 	pj_int16_t *buf = (Word16*)output->buf;
 
 	for (i=0; i<codec_data->samples_per_frame; ++i) {
-	    buf[i] <<= codec_data->pcm_shift;
+	    buf[i] = buf[i] * codec_data->pcm_shift_val;
 	}
     }
 

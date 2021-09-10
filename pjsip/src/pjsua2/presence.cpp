@@ -143,6 +143,11 @@ void Buddy::create(Account &account, const BuddyConfig &cfg)
     
     account.addBuddy(this);
 }
+
+int Buddy::getId() const
+{
+    return id;
+}
     
 /*
  * Check if this buddy is valid.

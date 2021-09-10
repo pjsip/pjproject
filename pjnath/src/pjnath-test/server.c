@@ -27,7 +27,9 @@
 #define CERT_CA_FILE		    CERT_DIR "cacert.pem"
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
-#define CERT_PRIVKEY_PASS	    ""
+#define CERT_PRIVKEY_PASS	    "privkeypass"
+
+#define RETURN_ERROR(rc)	    {app_perror("", rc);return rc;}
 
 static pj_bool_t stun_on_data_recvfrom(pj_activesock_t *asock,
 				       void *data,
@@ -101,7 +103,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
     } else {
 	status = pj_gethostip(GET_AF(use_ipv6), &hostip);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    RETURN_ERROR(status);
     }
 
     pool = pj_pool_create(mem, THIS_FILE, 512, 512, NULL);
@@ -122,7 +124,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 				      0, &test_srv->dns_server);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	/* Add DNS A record for the domain, for fallback */
@@ -161,14 +163,14 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 					  &test_srv->stun_sock, NULL);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	status = pj_activesock_start_recvfrom(test_srv->stun_sock, pool,
 					      MAX_STUN_PKT, 0);
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	if (test_srv->dns_server && (flags & CREATE_STUN_SERVER_DNS_SRV)) {
@@ -222,7 +224,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 
 	    if (status != PJ_SUCCESS) {
 		destroy_test_server(test_srv);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_start_recvfrom(test_srv->turn_sock, pool,
@@ -236,20 +238,26 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 	    status = pj_sock_socket(GET_AF(use_ipv6), pj_SOCK_STREAM(), 0,
 				    &sock_fd);
 	    if (status != PJ_SUCCESS) {
-		return status;
+		RETURN_ERROR(status);
+	    }
+
+	    {
+		int val = 1;
+		pj_sock_setsockopt(sock_fd, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
+				   &val, sizeof(val));
 	    }
 
 	    status = pj_sock_bind(sock_fd, &bound_addr, 
 				  pj_sockaddr_get_len(&bound_addr));
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_sock_listen(sock_fd, 4);
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_create(pool, sock_fd, pj_SOCK_STREAM(), 
@@ -259,7 +267,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 					  &test_srv->turn_sock);
 	    if (status != PJ_SUCCESS) {
 		pj_sock_close(sock_fd);
-		return status;
+		RETURN_ERROR(status);
 	    }
 
 	    status = pj_activesock_start_accept(test_srv->turn_sock,
@@ -309,7 +317,7 @@ pj_status_t create_test_server(pj_stun_config *stun_cfg,
 #endif
 	if (status != PJ_SUCCESS) {
 	    destroy_test_server(test_srv);
-	    return status;
+	    RETURN_ERROR(status);
 	}
 
 	if (test_srv->dns_server && (flags & CREATE_TURN_SERVER_DNS_SRV)) {
@@ -576,7 +584,9 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 	/* Not STUN message, this probably is a ChannelData */
 	pj_turn_channel_data cd;
 	const pj_turn_channel_data *pcd = (const pj_turn_channel_data*)data;
+	char peer_info[PJ_INET6_ADDRSTRLEN];
 	pj_ssize_t sent;
+	unsigned j;
 
 	if (i==test_srv->turn_alloc_cnt) {
 	    /* Invalid data */
@@ -598,23 +608,26 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 	}
 
 	/* Lookup peer */
-	for (i=0; i<alloc->perm_cnt; ++i) {
-	    if (alloc->chnum[i] == cd.ch_number)
+	for (j=0; j<alloc->perm_cnt; ++j) {
+	    if (alloc->chnum[j] == cd.ch_number)
 		break;
 	}
 
-	if (i==alloc->perm_cnt) {
+	if (j==alloc->perm_cnt) {
 	    PJ_LOG(1,(THIS_FILE, 
 		      "TURN Server: ChannelData discarded: invalid channel number"));
 	    goto on_return;
 	}
 
 	/* Relay the data to peer */
+	pj_sockaddr_print(&alloc->perm[j], peer_info, sizeof(peer_info), 3);
+	PJ_LOG(5,(THIS_FILE, "Relaying %d bytes data from client %s to peer %s",
+			      cd.length, client_info, peer_info));
 	sent = cd.length;
 	pj_activesock_sendto(alloc->sock, &alloc->send_key,
 			     pcd+1, &sent, 0,
-			     &alloc->perm[i],
-			     pj_sockaddr_get_len(&alloc->perm[i]));
+			     &alloc->perm[j],
+			     pj_sockaddr_get_len(&alloc->perm[j]));
 
 	/* Done */
 	goto on_return;
@@ -871,15 +884,15 @@ static pj_bool_t turn_on_data_read(test_server *test_srv,
 		    break;
 	    }
 
-	    if (i==alloc->perm_cnt) {
+	    if (j==alloc->perm_cnt) {
 		if (alloc->perm_cnt==MAX_TURN_PERM) {
 		    pj_stun_msg_create_response(pool, req, PJ_STUN_SC_INSUFFICIENT_CAPACITY, NULL, &resp);
 		    goto send_pkt;
 		}
-		pj_sockaddr_cp(&alloc->perm[i], &pa->sockaddr);
+		pj_sockaddr_cp(&alloc->perm[j], &pa->sockaddr);
 		++alloc->perm_cnt;
 	    }
-	    alloc->chnum[i] = cn;
+	    alloc->chnum[j] = cn;
 
 	    resp = create_success_response(test_srv, alloc, req, pool, 0, &auth_key);
 

@@ -21,6 +21,7 @@
 #define __PJMEDIA_ECHO_INTERNAL_H__
 
 #include <pjmedia/types.h>
+#include <pjmedia/echo.h>
 
 PJ_BEGIN_DECL
 
@@ -35,6 +36,8 @@ PJ_DECL(pj_status_t) echo_supp_create(pj_pool_t *pool,
 				      unsigned options,
 				      void **p_state );
 PJ_DECL(pj_status_t) echo_supp_destroy(void *state);
+PJ_DECL(pj_status_t) echo_supp_get_stat(void *state,
+					pjmedia_echo_stat *p_stat);
 PJ_DECL(void) echo_supp_reset(void *state);
 PJ_DECL(pj_status_t) echo_supp_cancel_echo(void *state,
 					   pj_int16_t *rec_frm,
@@ -85,6 +88,8 @@ PJ_DECL(pj_status_t) webrtc_aec_create(pj_pool_t *pool,
                                        unsigned options,
                                        void **p_echo );
 PJ_DECL(pj_status_t) webrtc_aec_destroy(void *state );
+PJ_DECL(pj_status_t) webrtc_aec_get_stat(void *state,
+					 pjmedia_echo_stat *p_stat);
 PJ_DECL(void) webrtc_aec_reset(void *state );
 PJ_DECL(pj_status_t) webrtc_aec_cancel_echo(void *state,
                                             pj_int16_t *rec_frm,
@@ -92,6 +97,22 @@ PJ_DECL(pj_status_t) webrtc_aec_cancel_echo(void *state,
                                             unsigned options,
                                             void *reserved );
 
+PJ_DECL(pj_status_t) webrtc_aec3_create(pj_pool_t *pool,
+                                        unsigned clock_rate,
+                                        unsigned channel_count,
+                                        unsigned samples_per_frame,
+                                        unsigned tail_ms,
+                                        unsigned options,
+                                        void **p_echo );
+PJ_DECL(pj_status_t) webrtc_aec3_destroy(void *state );
+PJ_DECL(pj_status_t) webrtc_aec3_get_stat(void *state,
+					  pjmedia_echo_stat *p_stat);
+PJ_DECL(void) webrtc_aec3_reset(void *state );
+PJ_DECL(pj_status_t) webrtc_aec3_cancel_echo(void *state,
+                                             pj_int16_t *rec_frm,
+                                             const pj_int16_t *play_frm,
+                                             unsigned options,
+                                             void *reserved );
 
 PJ_END_DECL
 

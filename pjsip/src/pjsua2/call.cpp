@@ -31,6 +31,9 @@ using namespace std;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/* Avoid conflict with predefined standard macros. */
+#undef max
+#undef min
 
 MathStat::MathStat()
 : n(0), max(0), min(0), last(0), mean(0)
@@ -225,27 +228,49 @@ bool CallSetting::isEmpty() const
 
 void CallSetting::fromPj(const pjsua_call_setting &prm)
 {
+    int i, mi;
+
     this->flag              = prm.flag;
     this->reqKeyframeMethod = prm.req_keyframe_method;
     this->audioCount        = prm.aud_cnt;
     this->videoCount        = prm.vid_cnt;
+    this->mediaDir.clear();
+    /* Since we don't know the size of media_dir array, we populate
+     * mediaDir vector up to the element with non-default value.
+     */
+    for (mi = PJMEDIA_MAX_SDP_MEDIA - 1; mi >= 0; mi--) {
+    	if (prm.media_dir[mi] != PJMEDIA_DIR_ENCODING_DECODING) break;
+    }
+    for (i = 0; i <= mi; i++) {
+    	this->mediaDir.push_back(prm.media_dir[i]);
+    }
 }
 
 pjsua_call_setting CallSetting::toPj() const
 {
     pjsua_call_setting setting;
+    unsigned mi;
+
+    /* This is important to initialize media_dir array. */
+    pjsua_call_setting_default(&setting);
 
     setting.flag                = this->flag;
     setting.req_keyframe_method = this->reqKeyframeMethod;
     setting.aud_cnt             = this->audioCount;
     setting.vid_cnt             = this->videoCount;
+    for (mi = 0; mi < this->mediaDir.size(); mi++) {
+    	setting.media_dir[mi] = this->mediaDir[mi];
+    }
     
     return setting;
 }
 
 
 CallMediaInfo::CallMediaInfo()
-: audioConfSlot(PJSUA_INVALID_ID),
+: type(PJMEDIA_TYPE_NONE),
+  dir(PJMEDIA_DIR_NONE),
+  status(PJSUA_CALL_MEDIA_NONE),
+  audioConfSlot(PJSUA_INVALID_ID),
   videoIncomingWindowId(PJSUA_INVALID_ID),
   videoWindow(PJSUA_INVALID_ID),
   videoCapDev(PJMEDIA_VID_INVALID_DEV)
@@ -321,6 +346,15 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         codecName = pj2Str(info.info.aud.fmt.encoding_name);
         codecClockRate = info.info.aud.fmt.clock_rate;
         audCodecParam.fromPj(*info.info.aud.param);
+        jbInit = info.info.aud.jb_init;
+        jbMinPre = info.info.aud.jb_min_pre;
+        jbMaxPre = info.info.aud.jb_max_pre;
+        jbMax = info.info.aud.jb_max;
+        jbDiscardAlgo = info.info.aud.jb_discard_algo;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+        useKa = PJ2BOOL(info.info.aud.use_ka);
+#endif
+        rtcpSdesByeDisabled = PJ2BOOL(info.info.aud.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
         proto = info.info.vid.proto;
         dir = info.info.vid.dir;
@@ -331,8 +365,17 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
         txPt = info.info.vid.tx_pt;
         rxPt = info.info.vid.rx_pt;
         codecName = pj2Str(info.info.vid.codec_info.encoding_name);
-        codecClockRate = info.info.vid.codec_info.clock_rate;        
-	vidCodecParam.fromPj(*info.info.vid.codec_param);
+        codecClockRate = info.info.vid.codec_info.clock_rate;
+        vidCodecParam.fromPj(*info.info.vid.codec_param);
+        jbInit = info.info.vid.jb_init;
+        jbMinPre = info.info.vid.jb_min_pre;
+        jbMaxPre = info.info.vid.jb_max_pre;
+        jbMax = info.info.vid.jb_max;
+        jbDiscardAlgo = PJMEDIA_JB_DISCARD_NONE;
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+        useKa = PJ2BOOL(info.info.vid.use_ka);
+#endif
+        rtcpSdesByeDisabled = PJ2BOOL(info.info.vid.rtcp_sdes_bye_disabled);
     }
 }
 

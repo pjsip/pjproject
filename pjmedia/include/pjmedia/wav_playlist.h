@@ -72,6 +72,7 @@ PJ_DECL(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 						 pjmedia_port **p_port);
 
 
+#if !DEPRECATED_FOR_TICKET_2251
 /**
  * Register a callback to be called when the file reading has reached the
  * end of file of the last file. If the file is set to play repeatedly, 
@@ -92,6 +93,30 @@ pjmedia_wav_playlist_set_eof_cb(pjmedia_port *port,
 			        void *user_data,
 			        pj_status_t (*cb)(pjmedia_port *port,
 						  void *usr_data));
+#endif
+
+
+/**
+ * Register a callback to be called when the file reading has reached the
+ * end of file of the last file. If the file is set to play repeatedly, 
+ * then the callback will be called multiple times. Note that only one 
+ * callback can be registered for each file port.
+ *
+ * @param port		The WAV play list port.
+ * @param user_data	User data to be specified in the callback
+ * @param cb		Callback to be called. Note that if
+ *			application wishes to stop the playback, it
+ *			can disconnect the port in the callback, and
+ *			only after all connections have been removed
+ *			could the application safely destroy the port.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_wav_playlist_set_eof_cb2(pjmedia_port *port,
+			         void *user_data,
+			         void (*cb)(pjmedia_port *port,
+					    void *usr_data));
 
 
 /**

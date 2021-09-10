@@ -28,7 +28,7 @@
 #include <pj/string.h>
 
 
-struct user
+struct tp_user
 {
     pj_bool_t		rx_disabled;	/**< Doesn't want to receive pkt?   */
     void	       *user_data;	/**< Only valid when attached	    */
@@ -47,7 +47,7 @@ struct transport_loop
 
     pj_pool_t	       *pool;		/**< Memory pool		    */
     unsigned		user_cnt;	/**< Number of attachments	    */
-    struct user		users[4];	/**< Array of users.		    */
+    struct tp_user	users[4];	/**< Array of users.		    */
     pj_bool_t		disable_rx;	/**< Disable RX.		    */
 
     pjmedia_loop_tp_setting setting;	/**< Setting.			    */
@@ -175,7 +175,7 @@ pjmedia_transport_loop_create2(pjmedia_endpt *endpt,
 
     tp = PJ_POOL_ZALLOC_T(pool, struct transport_loop);
     tp->pool = pool;
-    pj_ansi_strncpy(tp->base.name, tp->pool->obj_name, PJ_MAX_OBJ_NAME-1);
+    pj_memcpy(tp->base.name, tp->pool->obj_name, PJ_MAX_OBJ_NAME);
     tp->base.op = &transport_udp_op;
     tp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
 

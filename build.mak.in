@@ -24,6 +24,10 @@ ifeq (@ac_shared_libraries@,1)
 export PJ_SHARED_LIBRARIES := 1
 endif
 
+ifeq (@ac_no_pjsua2@,1)
+export PJ_EXCLUDE_PJSUA2 := 1
+endif
+
 ifndef EXCLUDE_APP
 ifeq ($(findstring android,$(TARGET_NAME)),)
 export EXCLUDE_APP := 0
@@ -148,6 +152,20 @@ endif
 endif
 endif
 
+ifneq (@ac_no_webrtc_aec3@,1)
+ifeq (@ac_external_webrtc_aec3@,1)
+APP_THIRD_PARTY_EXT += -lwebrtc-aec3
+else
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc-aec3-$(LIB_SUFFIX)
+ifeq ($(PJ_SHARED_LIBRARIES),)
+APP_THIRD_PARTY_LIBS += -lwebrtc-aec3-$(TARGET_NAME)
+else
+APP_THIRD_PARTY_LIBS += -lwebrtc-aec3
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libwebrtc-aec3.$(SHLIB_SUFFIX).$(PJ_VERSION_MAJOR) $(PJ_DIR)/third_party/lib/libwebrtc.$(SHLIB_SUFFIX)
+endif
+endif
+endif
+
 
 # Additional flags
 @ac_build_mak_vars@
@@ -173,6 +191,10 @@ V4L2_LDFLAGS = @ac_v4l2_ldflags@
 OPENH264_CFLAGS = @ac_openh264_cflags@ 
 OPENH264_LDFLAGS =  @ac_openh264_ldflags@
 
+# VPX flags
+VPX_CFLAGS = @ac_vpx_cflags@ 
+VPX_LDFLAGS =  @ac_vpx_ldflags@
+
 # QT
 AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
 # QT_CFLAGS = @ac_qt_cflags@
@@ -183,14 +205,23 @@ AC_PJMEDIA_VIDEO_HAS_VTOOLBOX = @ac_pjmedia_video_has_vtoolbox@
 AC_PJMEDIA_VIDEO_HAS_IOS_OPENGL = @ac_pjmedia_video_has_ios_opengl@
 DARWIN_CFLAGS = @ac_darwin_cflags@
 
+# mingw
+AC_PJMEDIA_VIDEO_DEV_HAS_DSHOW = @ac_pjmedia_video_dev_has_dshow@
+ifeq (@ac_pjmedia_video_dev_has_dshow@,yes)
+DSHOW_CFLAGS = @ac_dshow_cflags@
+DSHOW_LDFLAGS = @ac_dshow_ldflags@
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libbaseclasses-$(LIB_SUFFIX)
+APP_THIRD_PARTY_LIBS += -lbaseclasses-$(TARGET_NAME)
+endif
+
 # Android
 ANDROID_CFLAGS = @ac_android_cflags@
 
 # PJMEDIA features exclusion
-PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
-		   $(OPENH264_CFLAGS) $(DARWIN_CFLAGS)
-PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) \
-                   $(OPENH264_LDFLAGS)
+PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(DSHOW_CFLAGS) $(QT_CFLAGS) \
+		   $(OPENH264_CFLAGS) $(VPX_CFLAGS) $(DARWIN_CFLAGS)
+PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS) $(DSHOW_LDFLAGS) \
+                   $(OPENH264_LDFLAGS) $(VPX_LDFLAGS)
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export APP_CC := @CC@
@@ -276,6 +307,10 @@ APP_LIBXX_FILES += $(PJ_DIR)/pjsip/lib/libpjsua2.$(SHLIB_SUFFIX).$(PJ_VERSION_MA
 	$(ADD_LIB_FILES)
 endif
 
+ifeq ($(PJ_EXCLUDE_PJSUA2),1)
+export PJSUA2_LIB_LDLIB :=
+endif
+
 export APP_LDLIBS := $(PJSUA_LIB_LDLIB) \
 	$(PJSIP_UA_LDLIB) \
 	$(PJSIP_SIMPLE_LDLIB) \
@@ -295,7 +330,7 @@ export APP_LDXXLIBS := $(PJSUA2_LIB_LDLIB) \
 	-lstdc++ \
 	$(APP_LDLIBS)
 
-# Here are the variabels to use if application is using the library
+# Here are the variables to use if application is using the library
 # from within the source distribution
 export PJ_CC := $(APP_CC)
 export PJ_CXX := $(APP_CXX)
@@ -313,6 +348,6 @@ export PJ_LIBXX_FILES := $(APP_LIBXX_FILES)
 export PJ_INSTALL_DIR := @prefix@
 export PJ_INSTALL_INC_DIR := @includedir@
 export PJ_INSTALL_LIB_DIR := @libdir@
-export PJ_INSTALL_CFLAGS := -I$(PJ_INSTALL_INC_DIR) -DPJ_AUTOCONF=1 @CFLAGS@
-export PJ_INSTALL_CXXFLAGS := @CXXFLAGS@ $(PJ_INSTALL_CFLAGS)
-export PJ_INSTALL_LDFLAGS := -L$(PJ_INSTALL_LIB_DIR) $(APP_LDLIBS)
+export PJ_INSTALL_CFLAGS := -I$(PJ_INSTALL_INC_DIR) -DPJ_AUTOCONF=1 @ac_cflags@
+export PJ_INSTALL_LDFLAGS_PRIVATE := $(APP_THIRD_PARTY_LIBS) $(APP_THIRD_PARTY_EXT) @LIBS@
+export PJ_INSTALL_LDFLAGS := -L$(PJ_INSTALL_LIB_DIR) $(filter-out $(PJ_INSTALL_LDFLAGS_PRIVATE),$(APP_LDXXLIBS))

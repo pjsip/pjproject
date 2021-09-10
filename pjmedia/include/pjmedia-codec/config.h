@@ -144,6 +144,19 @@
 #   define PJMEDIA_HAS_G722_CODEC    1
 #endif
 
+/**
+ * Initial memory block for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_LEN_G722_CODEC
+#   define PJMEDIA_POOL_LEN_G722_CODEC  1000
+#endif
+
+/**
+ * Memory increment for G.722 codec implementation.
+ */
+#ifndef PJMEDIA_POOL_INC_G722_CODEC
+#   define PJMEDIA_POOL_INC_G722_CODEC  1000
+#endif
 
 /**
  * Default G.722 codec encoder and decoder level adjustment. The G.722
@@ -568,6 +581,104 @@
 #   else
 #	define PJMEDIA_HAS_FFMPEG_CODEC_H264	PJMEDIA_HAS_FFMPEG_VID_CODEC
 #   endif
+#endif
+
+/**
+ * Determine the log level of the native openH264 log which will be forwarded
+ * to the library's log.
+ * Set to WELS_LOG_QUIET to disable logging, or WELS_LOG_DETAIL for debugging.
+ *
+ * Default: WELS_LOG_ERROR.
+ */
+#ifndef PJMEDIA_CODEC_OPENH264_LOG_LEVEL
+#   define PJMEDIA_CODEC_OPENH264_LOG_LEVEL  WELS_LOG_ERROR
+#endif
+
+/**
+ * Enable VPX VP8 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_VPX_CODEC_VP8
+#   define PJMEDIA_HAS_VPX_CODEC_VP8		1
+#endif
+
+/**
+ * Enable VPX VP9 codec.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_HAS_VPX_CODEC_VP9
+#   define PJMEDIA_HAS_VPX_CODEC_VP9		0
+#endif
+
+/**
+ * Enable Android MediaCodec AMRNB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRNB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRNB		1
+#endif
+
+/**
+ * Enable Android MediaCodec AMRWB codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_AMRWB
+#   define PJMEDIA_HAS_AND_MEDIA_AMRWB		1
+#endif
+
+/**
+ * Enable Android MediaCodec AVC/H264 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_H264
+#   define PJMEDIA_HAS_AND_MEDIA_H264		1
+#endif
+
+/**
+ * Enable Android MediaCodec VP8 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP8
+#   define PJMEDIA_HAS_AND_MEDIA_VP8		1
+#endif
+
+/**
+ * Enable Android MediaCodec VP9 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_AND_MEDIA_VP9
+#   define PJMEDIA_HAS_AND_MEDIA_VP9		1
+#endif
+
+/**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software encoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_ENC 	1
+#endif
+
+/**
+ * Prioritize to use software video encoder on Android MediaCodec.
+ * Set to 0 to prioritize Hardware encoder.
+ * Note: based on test, software decoder configuration provided the most stable
+ * configuration.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC
+#    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
 #endif
 
 /**

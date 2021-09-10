@@ -173,9 +173,11 @@ static void wipe_buf(pj_str_t *buf);
 
 
 static void tls_perror(const char *sender, const char *title,
-		       pj_status_t status)
+		       pj_status_t status, pj_str_t *remote_name)
 {
-    PJ_PERROR(3,(sender, status, "%s: [code=%d]", title, status));
+    PJ_PERROR(3,(sender, status, "%s: [code=%d]%s%.*s", title, status,
+        remote_name ? " peer: " : "", remote_name ? remote_name->slen : 0,
+	remote_name ? remote_name->ptr : ""));
 }
 
 
@@ -215,6 +217,9 @@ static pj_uint32_t ssl_get_proto(pjsip_ssl_method ssl_method, pj_uint32_t proto)
 	break;
     case PJSIP_TLSV1_2_METHOD:
 	out_proto = PJ_SSL_SOCK_PROTO_TLS1_2;
+	break;
+    case PJSIP_TLSV1_3_METHOD:
+	out_proto = PJ_SSL_SOCK_PROTO_TLS1_3;
 	break;
     case PJSIP_SSLV23_METHOD:
 	out_proto = PJ_SSL_SOCK_PROTO_SSL23;
@@ -417,6 +422,7 @@ static void update_transport_info(struct tls_listener *listener)
     enum { INFO_LEN = 100 };
     char local_addr[PJ_INET6_ADDRSTRLEN + 10];
     char pub_addr[PJ_INET6_ADDRSTRLEN + 10];
+    int len;
     pj_sockaddr *listener_addr = &listener->factory.local_addr;
 
     if (listener->factory.info == NULL) {
@@ -427,9 +433,10 @@ static void update_transport_info(struct tls_listener *listener)
     pj_addr_str_print(&listener->factory.addr_name.host, 
 		      listener->factory.addr_name.port, pub_addr, 
 		      sizeof(pub_addr), 1);
-    pj_ansi_snprintf(
+    len = pj_ansi_snprintf(
 	    listener->factory.info, INFO_LEN, "tls %s [published as %s]",
 	    local_addr, pub_addr);
+    PJ_CHECK_TRUNC_STR(len, listener->factory.info, INFO_LEN);
 
     if (listener->ssock) {
 	char addr[PJ_INET6_ADDRSTRLEN+10];
@@ -730,7 +737,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
     status = pjsip_tls_transport_lis_start(factory, local, a_name);
     if (status != PJ_SUCCESS) {	
 	tls_perror(listener->factory.obj_name, 
-		   "Unable to start listener after closing it", status);
+		   "Unable to start listener after closing it", status, NULL);
 
 	return status;
     }
@@ -739,7 +746,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_restart(pjsip_tpfactory *factory,
 					    &listener->factory);
     if (status != PJ_SUCCESS) {
 	tls_perror(listener->factory.obj_name,
-		    "Unable to register the transport listener", status);
+		    "Unable to register the transport listener", status, NULL);
 
 	listener->is_registered = PJ_FALSE;	
     } else {
@@ -939,6 +946,9 @@ static void tls_flush_pending_tx(struct tls_transport *tls)
         if (pending_tx->timeout.sec > 0 &&
             PJ_TIME_VAL_GT(now, pending_tx->timeout))
         {
+            pj_lock_release(tls->base.lock);
+	    on_data_sent(tls->ssock, op_key, -PJ_ETIMEDOUT);
+            pj_lock_acquire(tls->base.lock);
             continue;
         }
 
@@ -1085,7 +1095,8 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
 				   PJSIP_POOL_RDATA_LEN,
 				   PJSIP_POOL_RDATA_INC);
     if (!pool) {
-	tls_perror(tls->base.obj_name, "Unable to create pool", PJ_ENOMEM);
+	tls_perror(tls->base.obj_name, "Unable to create pool", PJ_ENOMEM,
+		   NULL);
 	return PJ_ENOMEM;
     }
 
@@ -1322,9 +1333,26 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(src_addr_len);
 
     listener = (struct tls_listener*) pj_ssl_sock_get_user_data(ssock);
+    if (!listener) {
+	/* Listener already destroyed, e.g: after TCP accept but before SSL
+	 * handshake is completed.
+	 */
+	if (new_ssock && accept_status == PJ_SUCCESS) {
+	    /* Close the SSL socket if the accept op is successful */
+	    PJ_LOG(4,(THIS_FILE,
+		      "Incoming TLS connection from %s (sock=%d) is discarded "
+		      "because listener is already destroyed",
+		      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
+		      new_ssock));
+
+	    pj_ssl_sock_close(new_ssock);
+	}
+
+	return PJ_FALSE;
+    }
 
     if (accept_status != PJ_SUCCESS) {
-	if (listener && listener->tls_setting.on_accept_fail_cb) {
+	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_ssl_sock_info ssi;
 
@@ -1347,6 +1375,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
     PJ_ASSERT_RETURN(new_ssock, PJ_TRUE);
 
     if (!listener->is_registered) {
+	pj_ssl_sock_close(new_ssock);
+
 	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_bzero(&param, sizeof(param));
@@ -1398,6 +1428,8 @@ static pj_bool_t on_accept_complete2(pj_ssl_sock_t *ssock,
 			 ssl_info.grp_lock, &tls);
     
     if (status != PJ_SUCCESS) {
+	pj_ssl_sock_close(new_ssock);
+
 	if (listener->tls_setting.on_accept_fail_cb) {
 	    pjsip_tls_on_accept_fail_param param;
 	    pj_bzero(&param, sizeof(param));
@@ -1772,7 +1804,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
 
-	tls_perror(tls->base.obj_name, "TLS connect() error", status);
+	tls_perror(tls->base.obj_name, "TLS connect() error", status,
+		   &tls->remote_name);
 
 	/* Cancel all delayed transmits */
 	while (!pj_list_empty(&tls->delayed_list)) {
@@ -1916,7 +1949,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     pjsip_transport_dec_ref(&tls->base);
     if (is_shutdown) {
 	status = tls->close_reason;
-	tls_perror(tls->base.obj_name, "TLS connect() error", status);
+	tls_perror(tls->base.obj_name, "TLS connect() error", status, 
+		   &tls->remote_name);
 
 	/* Cancel all delayed transmits */
 	while (!pj_list_empty(&tls->delayed_list)) {
@@ -2015,7 +2049,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	tls_perror(tls->base.obj_name, 
-		   "Error sending keep-alive packet", status);
+		   "Error sending keep-alive packet", status,
+		   &tls->remote_name);
 
 	tls_init_shutdown(tls, status);
 	return;

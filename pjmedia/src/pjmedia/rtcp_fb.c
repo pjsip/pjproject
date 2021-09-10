@@ -21,6 +21,7 @@
 #include <pjmedia/codec.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/vid_codec.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -214,6 +215,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_setting_default(
 					pjmedia_rtcp_fb_setting *opt)
 {
     pj_bzero(opt, sizeof(*opt));
+    opt->dont_use_avpf = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
@@ -331,20 +333,38 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 {
     pjmedia_codec_mgr *codec_mgr;
     unsigned j, cnt = 0;
+    pjmedia_type type = PJMEDIA_TYPE_UNKNOWN;
     pj_status_t status;
+
+    type = pjmedia_get_type(&m->desc.media);
+    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO)
+	return PJMEDIA_EUNSUPMEDIATYPE;
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(endpt);
     for (j = 0; j < m->desc.fmt_count && cnt < *sci_cnt; ++j) {
 	unsigned pt = 0;
 	pt = pj_strtoul(&m->desc.fmt[j]);
 	if (pt < 96) {
-	    const pjmedia_codec_info *ci;
-	    status = pjmedia_codec_mgr_get_codec_info(codec_mgr,
-						      pt, &ci);
-	    if (status != PJ_SUCCESS)
-		continue;
+	    if (type == PJMEDIA_TYPE_AUDIO) {
+		const pjmedia_codec_info *ci;
+		status = pjmedia_codec_mgr_get_codec_info(codec_mgr, pt, &ci);
+		if (status != PJ_SUCCESS)
+		    continue;
 
-	    pjmedia_codec_info_to_id(ci, sci[cnt].id, sizeof(sci[0].id));
+		pjmedia_codec_info_to_id(ci, sci[cnt].id, sizeof(sci[0].id));
+	    } else {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+		const pjmedia_vid_codec_info *ci;
+		status = pjmedia_vid_codec_mgr_get_codec_info(NULL, pt, &ci);
+		if (status != PJ_SUCCESS)
+		    continue;
+
+		pjmedia_vid_codec_info_to_id(ci, sci[cnt].id,
+					     sizeof(sci[0].id));
+#else
+		continue;
+#endif
+	    }
 	} else {
 	    pjmedia_sdp_attr *a;
 	    pjmedia_sdp_rtpmap r;
@@ -355,17 +375,26 @@ static pj_status_t get_codec_info_from_sdp(pjmedia_endpt *endpt,
 	    status = pjmedia_sdp_attr_get_rtpmap(a, &r);
 	    if (status != PJ_SUCCESS)
 		continue;
-	    if (r.param.slen) {
-		pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
-				 "%.*s/%d/%.*s",
-				 (int)r.enc_name.slen, r.enc_name.ptr,
-				 r.clock_rate,
-				 (int)r.param.slen, r.param.ptr);
+
+	    if (type == PJMEDIA_TYPE_AUDIO) {
+		/* Audio codec id format: "name/clock-rate/channel-count" */
+		if (r.param.slen) {
+		    pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
+				     "%.*s/%d/%.*s",
+				     (int)r.enc_name.slen, r.enc_name.ptr,
+				     r.clock_rate,
+				     (int)r.param.slen, r.param.ptr);
+		} else {
+		    pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
+				     "%.*s/%d/1",
+				     (int)r.enc_name.slen, r.enc_name.ptr,
+				     r.clock_rate);
+		}
 	    } else {
+		/* Video codec id format: "name/payload-type" */
 		pj_ansi_snprintf(sci[cnt].id, sizeof(sci[0].id),
-				 "%.*s/%d/1",
-				 (int)r.enc_name.slen, r.enc_name.ptr,
-				 r.clock_rate);
+				 "%.*s/%d",
+				 (int)r.enc_name.slen, r.enc_name.ptr, pt);
 	    }
 	}
 	sci[cnt++].pt = pt;
@@ -395,19 +424,17 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_encode_sdp(
 
     PJ_UNUSED_ARG(sdp_remote);
 
-    PJ_ASSERT_RETURN(pool && endpt&& opt && sdp_local, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && endpt && opt && sdp_local, PJ_EINVAL);
     PJ_ASSERT_RETURN(med_idx < sdp_local->media_count, PJ_EINVAL);
 
     /* Add RTCP Feedback profile (AVPF), if configured to */
     if (!opt->dont_use_avpf) {
 	unsigned proto = pjmedia_sdp_transport_get_proto(&m->desc.transport);
 	if (!PJMEDIA_TP_PROTO_HAS_FLAG(proto, PJMEDIA_TP_PROFILE_RTCP_FB)) {
-	    char *new_tp;
-	    new_tp = (char*)pj_pool_zalloc(pool, m->desc.transport.slen+1);
-	    pj_ansi_strncpy(new_tp, m->desc.transport.ptr,
-			    m->desc.transport.slen);
-	    pj_ansi_strcat(new_tp, "F");
-	    pj_strset2(&m->desc.transport, new_tp);
+	    pj_str_t new_tp;
+	    pj_strdup_with_null(pool, &new_tp, &m->desc.transport);
+	    new_tp.ptr[new_tp.slen++] = 'F';
+	    m->desc.transport = new_tp;
 	}
     }
 
@@ -476,6 +503,22 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 				    unsigned med_idx,
 				    pjmedia_rtcp_fb_info *info)
 {
+    return pjmedia_rtcp_fb_decode_sdp2(pool, endpt, opt, sdp, med_idx, -1,
+				       info);
+}
+
+/*
+ * Decode RTCP Feedback specific information from SDP media.
+ */
+PJ_DEF(pj_status_t) pjmedia_rtcp_fb_decode_sdp2(
+				    pj_pool_t *pool,
+				    pjmedia_endpt *endpt,
+				    const void *opt,
+				    const pjmedia_sdp_session *sdp,
+				    unsigned med_idx,
+				    int pt,
+				    pjmedia_rtcp_fb_info *info)
+{
     unsigned sci_cnt = PJMEDIA_MAX_SDP_FMT;
     sdp_codec_info_t sci[PJMEDIA_MAX_SDP_FMT];
     const pjmedia_sdp_media *m;
@@ -486,6 +529,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 
     PJ_ASSERT_RETURN(pool && endpt && opt==NULL && sdp, PJ_EINVAL);
     PJ_ASSERT_RETURN(med_idx < sdp->media_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pt <= 127, PJ_EINVAL);
 
     m = sdp->media[med_idx];
     status = get_codec_info_from_sdp(endpt, m, &sci_cnt, sci);
@@ -514,20 +558,21 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_decode_sdp(
 	    continue;
 
 	if (pj_strcmp2(&token, "*") == 0) {
-	    /* Asterisk (all codecs) */
+	    /* All codecs */
 	    codec_id = "*";
 	} else {
-	    /* Specific PT */
-	    unsigned pt = (unsigned) pj_strtoul2(&token, NULL, 10);
+	    /* Specific PT/codec */
+	    unsigned pt_ = (unsigned) pj_strtoul2(&token, NULL, 10);
 	    for (j = 0; j < sci_cnt; ++j) {
-		if (pt == sci[j].pt) {
+		/* Check if payload type is valid and requested */
+		if (pt_ == sci[j].pt && (pt < 0 || pt == (int)pt_)) {
 		    codec_id = sci[j].id;
 		    break;
 		}
 	    }
 	}
 
-	/* Skip this a=rtcp-fb if PT is not recognized */
+	/* Skip this a=rtcp-fb if PT is not recognized or not requested */
 	if (!codec_id)
 	    continue;
 

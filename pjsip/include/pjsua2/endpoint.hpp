@@ -130,6 +130,13 @@ struct SslCertName
 {
     pj_ssl_cert_name_type  type;    	    /**< Name type		*/
     string		   name;    	    /**< The name		*/
+
+public:
+    /**
+     * Default constructor
+     */
+    SslCertName() : type(PJ_SSL_CERT_NAME_UNKNOWN)
+    {}
 };
 
 /** Array of SSL certificate type and name. */
@@ -340,6 +347,7 @@ struct IpChangeParam {
      * Default : PJSUA_TRANSPORT_RESTART_DELAY_TIME
      */
     unsigned	    restartLisDelay;
+
 public:
     /**
      * Constructor.
@@ -799,7 +807,9 @@ public:
     unsigned		rxDropPct;
 
     /**
-     * Echo canceller options (see pjmedia_echo_create())
+     * Echo canceller options (see pjmedia_echo_create()).
+     * Specify PJMEDIA_ECHO_USE_SW_ECHO here if application wishes
+     * to use software echo canceller instead of device EC.
      *
      * Default: 0.
      */
@@ -855,6 +865,14 @@ public:
      * Default: -1 (to use default stream settings, currently 360 msec)
      */
     int			jbMax;
+
+    /**
+     * Set the algorithm the jitter buffer uses to discard frames in order to
+     * adjust the latency.
+     *
+     * Default: PJMEDIA_JB_DISCARD_PROGRESSIVE
+     */
+    pjmedia_jb_discard_algo jbDiscardAlgo;
 
     /**
      * Specify idle time of sound device before it is automatically closed,
@@ -1089,6 +1107,11 @@ public:
 
     /**
      * Write a log entry.
+     * Application must implement its own custom LogWriter and
+     * this function will then call the LogWriter::write() method.
+     * Note that this function does not call PJSIP's internal
+     * logging functionality. For that, you should use
+     * utilLogWrite(prmLevel, prmSender, prmMsg) above.
      *
      * @param e			The log entry.
      */
@@ -1380,6 +1403,7 @@ public:
      */
     unsigned mediaActivePorts() const;
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use mediaEnumPorts2() instead. This function is
      * not safe in multithreaded environment.
@@ -1389,6 +1413,7 @@ public:
      * @return		The list of media port.
      */
     const AudioMediaVector &mediaEnumPorts() const PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enumerate all audio media port.
@@ -1422,6 +1447,7 @@ public:
      * Codec management operations
      */
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use codecEnum2() instead. This function is not
      * safe in multithreaded environment.
@@ -1431,6 +1457,7 @@ public:
      * @return		Array of codec info.
      */
     const CodecInfoVector &codecEnum() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all supported codecs in the system.
@@ -1473,6 +1500,7 @@ public:
     void codecSetParam(const string &codec_id,
 		       const CodecParam param) PJSUA2_THROW(Error);
 
+#if !DEPRECATED_FOR_TICKET_2232
     /**
      * Warning: deprecated, use videoCodecEnum2() instead. This function is
      * not safe in multithreaded environment.
@@ -1482,6 +1510,7 @@ public:
      * @return		Array of video codec info.
      */
     const CodecInfoVector &videoCodecEnum() PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enum all supported video codecs in the system.
@@ -1532,6 +1561,23 @@ public:
      *
      */
     void resetVideoCodecParam(const string &codec_id) PJSUA2_THROW(Error);
+
+#if defined(PJMEDIA_HAS_OPUS_CODEC) && (PJMEDIA_HAS_OPUS_CODEC!=0)
+    /**
+     * Get codec Opus config.
+     *
+     */
+     CodecOpusConfig getCodecOpusConfig() const PJSUA2_THROW(Error);
+
+    /**
+     * Set codec Opus config.
+     *
+     * @param opus_cfg	Codec Opus configuration.
+     *
+     */
+    void setCodecOpusConfig(const CodecOpusConfig &opus_cfg)
+			    PJSUA2_THROW(Error);
+#endif
 
     /**
      * Enumerate all SRTP crypto-suite names.
@@ -1653,14 +1699,18 @@ public:
 private:
     static Endpoint		*instance_;	// static instance
     LogWriter			*writer;	// Custom writer, if any
-    AudioMediaVector 	 	 mediaList;
     AudDevManager		 audioDevMgr;
     VidDevManager		 videoDevMgr;
+#if !DEPRECATED_FOR_TICKET_2232
     CodecInfoVector		 codecInfoList;
     CodecInfoVector		 videoCodecInfoList;
+#endif
     std::map<pj_thread_t*, pj_thread_desc*> threadDescMap;
     pj_mutex_t			*threadDescMutex;
+#if !DEPRECATED_FOR_TICKET_2232
+    AudioMediaVector 	 	 mediaList;
     pj_mutex_t			*mediaListMutex;
+#endif
 
     /* Pending logging */
     bool			 mainThreadOnly;
@@ -1745,6 +1795,8 @@ private:
                                     pjmedia_sdp_session *sdp,
                                     pj_pool_t *pool,
                                     const pjmedia_sdp_session *rem_sdp);
+    static void on_stream_precreate(pjsua_call_id call_id,
+                                    pjsua_on_stream_precreate_param *param);
     static void on_stream_created2(pjsua_call_id call_id,
 				   pjsua_on_stream_created_param *param);
     static void on_stream_destroyed(pjsua_call_id call_id,
@@ -1753,6 +1805,8 @@ private:
     static void on_dtmf_digit(pjsua_call_id call_id, int digit);
     static void on_dtmf_digit2(pjsua_call_id call_id, 
 			       const pjsua_dtmf_info *info);
+    static void on_dtmf_event(pjsua_call_id call_id,
+                              const pjsua_dtmf_event *event);
     static void on_call_transfer_request(pjsua_call_id call_id,
                                          const pj_str_t *dst,
                                          pjsip_status_code *code);

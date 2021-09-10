@@ -73,6 +73,8 @@ struct file_reader_port
     pj_oshandle_t    fd;
 
     pj_status_t	   (*cb)(pjmedia_port*, void*);
+    pj_bool_t	     subscribed;
+    void	   (*cb2)(pjmedia_port*, void*);
 };
 
 
@@ -538,14 +540,16 @@ PJ_DEF(pj_ssize_t) pjmedia_wav_player_port_get_pos( pjmedia_port *port )
     fport = (struct file_reader_port*) port;
 
     payload_pos = (pj_size_t)(fport->fpos - fport->start_data);
-    if (payload_pos >= fport->bufsize)
+    if (payload_pos == 0)
+	return 0;
+    else if (payload_pos >= fport->bufsize)
 	return payload_pos - fport->bufsize + (fport->readpos - fport->buf);
     else
 	return (fport->readpos - fport->buf) % payload_pos;
 }
 
 
-
+#if !DEPRECATED_FOR_TICKET_2251
 /*
  * Register a callback to be called when the file reading has reached the
  * end of file.
@@ -563,11 +567,55 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
     /* Check that this is really a player port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
 
+    PJ_LOG(1, (THIS_FILE, "pjmedia_wav_player_set_eof_cb() is deprecated. "
+    	       "Use pjmedia_wav_player_set_eof_cb2() instead."));
+
     fport = (struct file_reader_port*) port;
 
     fport->base.port_data.pdata = user_data;
     fport->cb = cb;
 
+    return PJ_SUCCESS;
+}
+#endif
+
+
+/*
+ * Register a callback to be called when the file reading has reached the
+ * end of file.
+ */
+PJ_DEF(pj_status_t) pjmedia_wav_player_set_eof_cb2(pjmedia_port *port,
+			       void *user_data,
+			       void (*cb)(pjmedia_port *port,
+					  void *usr_data))
+{
+    struct file_reader_port *fport;
+
+    /* Sanity check */
+    PJ_ASSERT_RETURN(port, -PJ_EINVAL);
+
+    /* Check that this is really a player port */
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, -PJ_EINVALIDOP);
+
+    fport = (struct file_reader_port*) port;
+
+    fport->base.port_data.pdata = user_data;
+    fport->cb2 = cb;
+
+    return PJ_SUCCESS;
+}
+
+
+static pj_status_t file_on_event(pjmedia_event *event,
+                                 void *user_data)
+{
+    struct file_reader_port *fport = (struct file_reader_port*)user_data;
+
+    if (event->type == PJMEDIA_EVENT_CALLBACK) {
+	if (fport->cb2)
+	    (*fport->cb2)(&fport->base, fport->base.port_data.pdata);
+    }
+    
     return PJ_SUCCESS;
 }
 
@@ -592,23 +640,59 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 		  fport->base.info.name.ptr));
 
 	/* Call callback, if any */
-	if (fport->cb)
+	if (fport->cb2) {
+	    pj_bool_t no_loop = (fport->options & PJMEDIA_FILE_NO_LOOP);
+
+	    if (!fport->subscribed) {
+	    	status = pjmedia_event_subscribe(NULL, &file_on_event,
+	    				         fport, fport);
+	    	fport->subscribed = (status == PJ_SUCCESS)? PJ_TRUE:
+	    			    PJ_FALSE;
+	    }
+
+	    if (fport->subscribed && fport->eof != 2) {
+	    	pjmedia_event event;
+
+	    	if (no_loop) {
+	    	    /* To prevent the callback from being called repeatedly */
+	    	    fport->eof = 2;
+	    	} else {
+	    	    fport->eof = PJ_FALSE;
+	    	}
+
+	    	pjmedia_event_init(&event, PJMEDIA_EVENT_CALLBACK,
+	                      	   NULL, fport);
+	    	pjmedia_event_publish(NULL, fport, &event,
+	                              PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	    }
+	    
+	    /* Should not access player port after this since
+	     * it might have been destroyed by the callback.
+	     */
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
+	    
+	    return (no_loop? PJ_EEOF: PJ_SUCCESS);
+
+	} else if (fport->cb) {
 	    status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+	}
 
 	/* If callback returns non PJ_SUCCESS or 'no loop' is specified,
 	 * return immediately (and don't try to access player port since
 	 * it might have been destroyed by the callback).
 	 */
-	if ((status != PJ_SUCCESS) || (fport->options & PJMEDIA_FILE_NO_LOOP)) {
+	if ((status != PJ_SUCCESS) || (fport->options & PJMEDIA_FILE_NO_LOOP))
+	{
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame->size = 0;
 	    return PJ_EEOF;
 	}
-    	
+
+        /* Rewind file */
 	PJ_LOG(5,(THIS_FILE, "File port %.*s rewinding..",
 		  (int)fport->base.info.name.slen,
 		  fport->base.info.name.ptr));
-	
 	fport->eof = PJ_FALSE;
     }
 
@@ -722,6 +806,12 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
     pj_assert(this_port->info.signature == SIGNATURE);
 
     pj_file_close(fport->fd);
+
+    if (fport->subscribed) {
+    	pjmedia_event_unsubscribe(NULL, &file_on_event, fport, fport);
+    	fport->subscribed = PJ_FALSE;
+    }
+
     return PJ_SUCCESS;
 }
 

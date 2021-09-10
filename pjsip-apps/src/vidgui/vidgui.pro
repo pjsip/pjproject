@@ -27,8 +27,9 @@ win32 {
 
 TEMPLATE = app
 CONFIG += thread debug
-TARGET = 
+TARGET = vidgui
 DEPENDPATH += .
+QT += core widgets
 
 # Input
 HEADERS += vidgui.h vidwin.h

@@ -61,6 +61,7 @@ typedef enum pjsip_ssl_method
     PJSIP_TLSV1_METHOD		 = 31,	/**< Use TLSv1 method.		*/
     PJSIP_TLSV1_1_METHOD	 = 32,	/**< Use TLSv1_1 method.	*/
     PJSIP_TLSV1_2_METHOD	 = 33,	/**< Use TLSv1_2 method.	*/
+    PJSIP_TLSV1_3_METHOD	 = 34,	/**< Use TLSv1_3 method.	*/
     PJSIP_SSLV23_METHOD		 = 23,	/**< Use SSLv23 method.		*/
 } pjsip_ssl_method;
 

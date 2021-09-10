@@ -306,7 +306,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
     pj_list_init(&mod_evsub.pkg_list);
 
     /* Create pool: */
-    mod_evsub.pool = pjsip_endpt_create_pool(endpt, "evsub", 512, 512);
+    mod_evsub.pool = pjsip_endpt_create_pool(endpt, "evsub",
+                                        PJSIP_POOL_EVSUB_LEN,
+                                        PJSIP_POOL_EVSUB_INC);
     if (!mod_evsub.pool)
 	return PJ_ENOMEM;
 
@@ -499,7 +501,7 @@ static void update_expires( pjsip_evsub *sub, pj_uint32_t interval )
  * Schedule timer.
  */
 static void set_timer( pjsip_evsub *sub, int timer_id,
-		       pj_int32_t seconds)
+		       pj_uint32_t seconds)
 {
     if (sub->timer.id != TIMER_TYPE_NONE) {
 	PJ_LOG(5,(sub->obj_name, "%s %s timer", 
@@ -509,7 +511,8 @@ static void set_timer( pjsip_evsub *sub, int timer_id,
 	sub->timer.id = TIMER_TYPE_NONE;
     }
 
-    if (timer_id != TIMER_TYPE_NONE && seconds > 0) {
+    if (timer_id != TIMER_TYPE_NONE && seconds != PJSIP_EXPIRES_NOT_SPECIFIED)
+    {
 	pj_time_val timeout;
 
 	PJ_ASSERT_ON_FAIL(timer_id>TIMER_TYPE_NONE && timer_id<TIMER_TYPE_MAX,
@@ -1068,7 +1071,7 @@ PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub)
  */
 PJ_DEF(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
 					  const pjsip_method *method,
-					  pj_int32_t expires,
+					  pj_uint32_t expires,
 					  pjsip_tx_data **p_tdata)
 {
     pjsip_tx_data *tdata;
@@ -1096,7 +1099,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->event));
 
     /* Update and add expires header: */
-    if (expires >= 0)
+    if (expires != PJSIP_EXPIRES_NOT_SPECIFIED)
 	sub->expires->ivalue = expires;
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->expires));
@@ -1996,11 +1999,11 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	 * is "active" or "pending", AND the header contains expires param.
 	 */
 	if (sub->expires->ivalue != 0 &&
-	    sub_state->expires_param >= 0 &&
+	    sub_state->expires_param != PJSIP_EXPIRES_NOT_SPECIFIED &&
 	    (pj_stricmp(&sub_state->sub_state, &STR_ACTIVE)==0 ||
 	     pj_stricmp(&sub_state->sub_state, &STR_PENDING)==0))
 	{
-	    int next_refresh = sub_state->expires_param;
+	    unsigned next_refresh = sub_state->expires_param;
 	    unsigned timeout;
 
 	    update_expires(sub, next_refresh);
@@ -2099,7 +2102,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	    evpkg = find_pkg(&event_hdr->event_type);
 	    if (evpkg) {
-		if (expires->ivalue < (pj_int32_t)evpkg->pkg_expires)
+		if (expires->ivalue < evpkg->pkg_expires)
 		    sub->expires->ivalue = expires->ivalue;
 		else
 		    sub->expires->ivalue = evpkg->pkg_expires;
@@ -2184,10 +2187,14 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Handle authentication */
 	if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 	    (tsx->status_code==401 || tsx->status_code==407))
-	{	    
+	{
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
 	    pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+
+	    /* Handled by other module already (e.g: invite module) */
+	    if (tsx->last_tx->auth_retry)
+		return;
 
 	    status = pjsip_auth_clt_reinit_req(&sub->dlg->auth_sess, rdata,
 					       tsx->last_tx, &tdata);

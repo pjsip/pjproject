@@ -1,6 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug-Dynamic|ARM64">
+      <Configuration>Debug-Dynamic</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-Dynamic|Win32">
       <Configuration>Debug-Dynamic</Configuration>
       <Platform>Win32</Platform>
@@ -8,6 +12,10 @@
     <ProjectConfiguration Include="Debug-Dynamic|x64">
       <Configuration>Debug-Dynamic</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug-Static|ARM64">
+      <Configuration>Debug-Static</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Debug-Static|Win32">
       <Configuration>Debug-Static</Configuration>
@@ -17,6 +25,10 @@
       <Configuration>Debug-Static</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
@@ -24,6 +36,10 @@
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Dynamic|ARM64">
+      <Configuration>Release-Dynamic</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release-Dynamic|Win32">
       <Configuration>Release-Dynamic</Configuration>
@@ -33,6 +49,10 @@
       <Configuration>Release-Dynamic</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Release-Static|ARM64">
+      <Configuration>Release-Static</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="Release-Static|Win32">
       <Configuration>Release-Static</Configuration>
       <Platform>Win32</Platform>
@@ -40,6 +60,10 @@
     <ProjectConfiguration Include="Release-Static|x64">
       <Configuration>Release-Static</Configuration>
       <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
     </ProjectConfiguration>
     <ProjectConfiguration Include="Release|Win32">
       <Configuration>Release</Configuration>
@@ -55,7 +79,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E378A1FC-0C9C-4462-860F-7E60BC1BF84E}</ProjectGuid>
     <RootNamespace>samples</RootNamespace>
-    <Keyword>MakeFileProj</Keyword>    
+    <Keyword>MakeFileProj</Keyword>
     <!-- Specific windows store/UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
   </PropertyGroup>
@@ -95,7 +119,17 @@
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -105,7 +139,17 @@
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -115,7 +159,17 @@
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <PlatformToolset>v140</PlatformToolset>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <ConfigurationType>Makefile</ConfigurationType>
     <PlatformToolset>v140</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
@@ -123,63 +177,106 @@
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
     <PlatformToolset>$(BuildToolset)</PlatformToolset>
-    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'"></CharacterSet>
+    <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
+    </CharacterSet>
     <ConfigurationType Condition="'$(API_Family)'=='UWP' Or '$(API_Family)'=='WinPhone8'">StaticLibrary</ConfigurationType>
-  </PropertyGroup>  
+  </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
-  </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win32-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="$(VCTargetsPath)Microsoft.CPP.UpgradeFromVC60.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros" />  
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>        
+    <_ProjectFileVersion>14.0.22823.1</_ProjectFileVersion>
   </PropertyGroup>
   <!-- Compile and link option definition -->
   <ItemDefinitionGroup>
@@ -187,106 +284,118 @@
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <CompileAsWinRT>false</CompileAsWinRT>
       <AdditionalIncludeDirectories>../../pjsip/include;../../pjlib/include;../../pjlib-util/include;../../pjmedia/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>      
+      <RuntimeLibrary Condition="'$(API_Family)'=='UWP'">MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Lib>
       <AdditionalOptions>/Ignore:4006 %(AdditionalOptions)</AdditionalOptions>
     </Lib>
-  </ItemDefinitionGroup>    
+  </ItemDefinitionGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
-    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14</NMakeBuildCommandLine>
-    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 /a</NMakeReBuildCommandLine>
-    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 clean</NMakeCleanCommandLine>
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win32</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win64 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=ARM64 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win32</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win64 /a </NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=ARM64 /a </NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win32s</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win64 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=ARM64 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-static VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win32</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win64 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=ARM64 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-dynamic VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win32</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win64 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=ARM64 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=debug-dynamic VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
-    <OutDir>.\output\$(ProjectName)-i386-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win32</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win32 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win32 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">
-    <OutDir>.\output\$(ProjectName)-x86_64-$(Platform)-vs8-$(Configuration)\</OutDir>
-    <IntDir>$(OutDir)</IntDir>
     <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win64</NMakeBuildCommandLine>
     <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win64 /a</NMakeReBuildCommandLine>
     <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=win64 clean</NMakeCleanCommandLine>
+    <NMakeOutput>All samples</NMakeOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
+    <NMakeBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=ARM64</NMakeBuildCommandLine>
+    <NMakeReBuildCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=ARM64 /a</NMakeReBuildCommandLine>
+    <NMakeCleanCommandLine>nmake /NOLOGO /S /f Samples-vc.mak BUILD_MODE=release-static VC_VER=14 ARCH=ARM64 clean</NMakeCleanCommandLine>
     <NMakeOutput>All samples</NMakeOutput>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -299,6 +408,12 @@
       <Path />
     </BuildLog>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <BuildLog>
       <Path />
@@ -307,6 +422,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <BuildLog>
       <Path />
+    </BuildLog>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
     </BuildLog>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
@@ -319,6 +440,12 @@
       <Path />
     </BuildLog>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
     <BuildLog>
       <Path />
@@ -327,6 +454,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'">
     <BuildLog>
       <Path />
+    </BuildLog>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
     </BuildLog>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
@@ -339,6 +472,12 @@
       <Path />
     </BuildLog>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
+    </BuildLog>
+  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
     <BuildLog>
       <Path />
@@ -347,6 +486,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'">
     <BuildLog>
       <Path />
+    </BuildLog>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
+    <BuildLog>
+      <Path>
+      </Path>
     </BuildLog>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -375,8 +520,8 @@
     <ClCompile Include="..\src\samples\sipecho.c" />
     <ClCompile Include="..\src\samples\siprtp.c">
       <ExcludedFromBuild Condition="'$(API_Family)'!='WinDesktop'">true</ExcludedFromBuild>
-    </ClCompile>  
-    <ClCompile Include="..\src\samples\siprtp_report.c">    
+    </ClCompile>
+    <ClCompile Include="..\src\samples\siprtp_report.c">
       <ExcludedFromBuild Condition="'$(API_Family)'!='WinDesktop'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\src\samples\sipstateless.c" />

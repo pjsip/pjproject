@@ -309,6 +309,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     struct splitcomb *sc = (struct splitcomb*) splitcomb;
     struct reverse_port *rport;
     unsigned buf_cnt;
+    unsigned buf_options;
     const pjmedia_audio_format_detail *sc_afd, *p_afd;
     pjmedia_port *port;
     pj_status_t status;
@@ -352,6 +353,9 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     if (buf_cnt == 0)
 	buf_cnt = MAX_BUF_CNT;
 
+    /* Buffer options */
+    buf_options = (options >> 8U) & 0xFF;
+
     rport->max_burst = MAX_BURST;
     rport->max_null_frames = MAX_NULL_FRAMES;
 
@@ -361,7 +365,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 				      PJMEDIA_PIA_SPF(&port->info),
 				      p_afd->channel_count,
 				      buf_cnt * p_afd->frame_time_usec / 1000,
-				      0, &rport->buf[DIR_DOWNSTREAM].dbuf);
+				      buf_options,
+				      &rport->buf[DIR_DOWNSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	return status;
     }
@@ -372,7 +377,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 				      PJMEDIA_PIA_SPF(&port->info),
 				      p_afd->channel_count,
 				      buf_cnt * p_afd->frame_time_usec / 1000,
-				      0, &rport->buf[DIR_UPSTREAM].dbuf);
+				      buf_options,
+				      &rport->buf[DIR_UPSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);
 	return status;

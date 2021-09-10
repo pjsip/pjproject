@@ -42,9 +42,11 @@ struct pjsua_call_media
     pjsua_call		*call;	    /**< Parent call.			    */
     pjmedia_type	 type;	    /**< Media type.			    */
     unsigned		 idx;       /**< This media index in parent call.   */
+    pj_str_t		 rem_mid;   /**< Remote SDP "a=mid" attribute.	    */
     pjsua_call_media_status state;  /**< Media state.			    */
     pjsua_call_media_status prev_state;/**< Previous media state.           */
-    pjmedia_dir		 dir;       /**< Media direction.		    */
+    pjmedia_dir		 def_dir;   /**< Default media direction.	    */
+    pjmedia_dir		 dir;       /**< Current media direction.	    */
 
     /** The stream */
     struct {
@@ -116,6 +118,14 @@ typedef struct call_answer
     pjsua_call_setting *opt;	    /**< Answer's call setting.	      */
 } call_answer;
 
+
+/* Generic states */
+typedef enum pjsua_op_state {
+    PJSUA_OP_STATE_NULL,
+    PJSUA_OP_STATE_READY,
+    PJSUA_OP_STATE_RUNNING,
+    PJSUA_OP_STATE_DONE,
+} pjsua_op_state;
 
 /** 
  * Structure to be attached to invite dialog. 
@@ -205,6 +215,22 @@ struct pjsua_call
 					    created yet. This temporary 
 					    variable is used to handle such 
 					    case, see ticket #1916.	    */
+
+    struct {
+	pj_bool_t	 enabled;
+	pj_bool_t	 remote_sup;
+	pj_bool_t	 remote_dlg_est;
+	pjsua_op_state	 trickling;
+	int		 retrans18x_count;
+	pj_bool_t	 pending_info;
+	pj_timer_entry	 timer;
+    } trickle_ice;
+
+    pj_timer_entry	 hangup_timer;	/**< Hangup retry timer.	    */
+    unsigned		 hangup_retry;	/**< Number of hangup retries.	    */
+    unsigned		 hangup_code;	/**< Hangup code.	    	    */
+    pj_str_t		 hangup_reason;	/**< Hangup reason.	    	    */
+    pjsua_msg_data	*hangup_msg_data;/**< Hangup message data.	    */
 };
 
 
@@ -218,7 +244,9 @@ struct pjsua_srv_pres
     char	    *remote;	    /**< Remote URI.			    */
     int		     acc_id;	    /**< Account ID.			    */
     pjsip_dialog    *dlg;	    /**< Dialog.			    */
-    int		     expires;	    /**< "expires" value in the request.    */
+    unsigned	     expires;	    /**< "expires" value in the request,
+    					 PJSIP_EXPIRES_NOT_SPECIFIED
+    					 if not present.    		    */
 };
 
 /**
@@ -423,6 +451,15 @@ typedef struct pjsua_timer_list
 } pjsua_timer_list;
 
 
+typedef struct pjsua_event_list 
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_event_list);
+    pjmedia_event       event;
+    pjsua_call_id	call_id;
+    unsigned           	med_idx;
+} pjsua_event_list;
+
+
 /**
  * Global pjsua application data.
  */
@@ -432,6 +469,7 @@ struct pjsua_data
     /* Control: */
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
+    pj_pool_t		*timer_pool;/**< pjsua's timer pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
     unsigned		 mutex_nesting_level; /**< Mutex nesting level.	*/
     pj_thread_t		*mutex_owner; /**< Mutex owner.			*/
@@ -534,8 +572,10 @@ struct pjsua_data
     pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
 #endif
 
-    /* Timer entry list */
+    /* Timer entry and event list */
+    pjsua_timer_list	 active_timer_list;
     pjsua_timer_list	 timer_list;
+    pjsua_event_list	 event_list;
     pj_mutex_t          *timer_mutex;
 };
 
@@ -683,6 +723,10 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
 
+void pjsua_ice_check_start_trickling(pjsua_call *call,
+				     pj_bool_t forceful,
+				     pjsip_event *e);
+
 /*
  * Error message when media operation is requested while another is in progress
  */
@@ -700,9 +744,11 @@ void pjsua_call_cleanup_flag(pjsua_call_setting *opt);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 void pjsua_media_prov_clean_up(pjsua_call_id call_id);
+void pjsua_media_prov_revert(pjsua_call_id call_id);
 
 /* Callback to receive media events */
 pj_status_t on_media_event(pjmedia_event *event, void *user_data);
+void call_med_event_cb(void *user_data);
 pj_status_t call_media_on_event(pjmedia_event *event,
                                 void *user_data);
 
@@ -894,6 +940,11 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc);
  * Call handling per account on IP change process.
  */
 pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc);
+
+/*
+ * End IP change process per account.
+ */
+void pjsua_acc_end_ip_change(pjsua_acc *acc);
 
 PJ_END_DECL
 

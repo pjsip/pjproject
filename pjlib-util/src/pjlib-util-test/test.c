@@ -43,8 +43,8 @@ void app_perror(const char *msg, pj_status_t rc)
 
 pj_pool_factory *mem;
 
-int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-		      PJ_LOG_HAS_MICRO_SEC;
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME |
+		      PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_INDENT;
 
 static int test_inner(void)
 {
@@ -78,7 +78,9 @@ static int test_inner(void)
 
 #if INCLUDE_ENCRYPTION_TEST
     DO_TEST(encryption_test());
+#   if WITH_BENCHMARK
     DO_TEST(encryption_benchmark());
+#   endif
 #endif
 
 #if INCLUDE_STUN_TEST

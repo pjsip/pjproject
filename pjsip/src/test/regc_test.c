@@ -216,7 +216,7 @@ struct client
     int		error;
     int		code;
     pj_bool_t	have_reg;
-    int		expiration;
+    unsigned	expiration;
     unsigned	contact_cnt;
     pj_bool_t	auth;
 
@@ -227,8 +227,8 @@ struct client
     pj_bool_t	done;
 
     /* Additional results */
-    int		interval;
-    int		next_reg;
+    unsigned	interval;
+    unsigned	next_reg;
 };
 
 /* regc callback */
@@ -250,8 +250,9 @@ static void client_cb(struct pjsip_regc_cbparam *param)
     if (client->error)
 	return;
 
-    client->have_reg = info.auto_reg && info.interval>0 &&
-		       param->expiration>0;
+    client->have_reg = info.auto_reg &&
+    		       info.interval != PJSIP_EXPIRES_NOT_SPECIFIED &&
+		       param->expiration != PJSIP_EXPIRES_NOT_SPECIFIED;
     client->expiration = param->expiration;
     client->contact_cnt = param->contact_cnt;
     client->interval = info.interval;

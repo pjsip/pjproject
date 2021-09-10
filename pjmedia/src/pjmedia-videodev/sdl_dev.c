@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 #include <pjmedia-videodev/videodev_imp.h>
+#include <pjmedia/event.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -700,6 +701,15 @@ static pj_status_t sdl_create_window(struct sdl_stream *strm,
             flags |= SDL_WINDOW_HIDDEN;
         }
 
+        if ((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) &&
+            strm->param.window_fullscreen)
+        {
+	    if (strm->param.window_fullscreen == PJMEDIA_VID_DEV_FULLSCREEN)
+		flags |= SDL_WINDOW_FULLSCREEN;
+	    else
+		flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+        }
+
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
@@ -918,12 +928,17 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 
     stream->last_ts.u64 = frame->timestamp.u64;
 
+    /* Video conference just trying to send heart beat for updating timestamp
+     * or keep-alive, this port doesn't need any, just ignore.
+     */
+    if (frame->size==0 || frame->buf==NULL)
+	return PJ_SUCCESS;
+
+    if (frame->size < stream->vafp.framebytes)
+	return PJ_ETOOSMALL;
+
     if (!stream->is_running)
 	return PJ_EINVALIDOP;
-
-    if (frame->size==0 || frame->buf==NULL ||
-	frame->size < stream->vafp.framebytes)
-	return PJ_SUCCESS;
 
     stream->frame = frame;
     job_queue_post_job(stream->sf->jq, put_frame, strm, 0, &status);
@@ -1016,6 +1031,11 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
     {
 	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
     }
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN,
+			   &pi->window_fullscreen) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1091,6 +1111,18 @@ static pj_status_t get_cap(void *data)
             *wnd_flags |= PJMEDIA_VID_DEV_WND_BORDER;
         if (flag & SDL_WINDOW_RESIZABLE)
             *wnd_flags |= PJMEDIA_VID_DEV_WND_RESIZABLE;
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	pjmedia_vid_dev_fullscreen_flag val = PJMEDIA_VID_DEV_WINDOWED;
+	if ((flag & SDL_WINDOW_FULLSCREEN_DESKTOP) ==
+		    SDL_WINDOW_FULLSCREEN_DESKTOP)
+	{
+	     val = PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP;
+	} else if ((flag & SDL_WINDOW_FULLSCREEN) == SDL_WINDOW_FULLSCREEN) {
+	     val = PJMEDIA_VID_DEV_FULLSCREEN;
+	}
+	*((pjmedia_vid_dev_fullscreen_flag*)pval) = val;
 	return PJ_SUCCESS;
     }
 
@@ -1170,9 +1202,24 @@ static pj_status_t set_cap(void *data)
 	return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
 	pjmedia_rect_size *new_size = (pjmedia_rect_size *)pval;
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	pj_status_t status;
+
+	/**
+	 * Exit full-screen if engaged, since resizing while in full-screen is
+         * not supported.
+	 */
+	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+	    SDL_SetWindowFullscreen(strm->window, 0);
 
 	SDL_SetWindowSize(strm->window, new_size->w, new_size->h);
-        return resize_disp(strm, new_size);
+	status = resize_disp(strm, new_size);
+
+	/* Restore full-screen if it was engaged. */
+	if (flag & SDL_WINDOW_FULLSCREEN_DESKTOP)
+	    SDL_SetWindowFullscreen(strm->window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+	return status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	pjmedia_vid_dev_hwnd *hwnd = (pjmedia_vid_dev_hwnd*)pval;
 	pj_status_t status = PJ_SUCCESS;
@@ -1187,6 +1234,32 @@ static pj_status_t set_cap(void *data)
 		      "Re-initializing SDL with native window %d",
 		      hwnd->info.window));
 	return status;	
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN) {
+        Uint32 flag;
+	pjmedia_vid_dev_fullscreen_flag val =
+				    *(pjmedia_vid_dev_fullscreen_flag*)pval;
+
+	flag = SDL_GetWindowFlags(strm->window);
+	if (val == PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP)
+	    flag |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+	else if (val == PJMEDIA_VID_DEV_FULLSCREEN)
+            flag |= SDL_WINDOW_FULLSCREEN;
+        else
+            flag &= (~SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+        SDL_SetWindowFullscreen(strm->window, flag);
+
+	/* Trying to restore the border after returning from fullscreen,
+	 * unfortunately not sure how to put back the resizable flag.
+	 */
+	if ((flag & SDL_WINDOW_FULLSCREEN)==0 &&
+	    (flag & SDL_WINDOW_BORDERLESS)==0)
+	{
+	    SDL_SetWindowBordered(strm->window, SDL_FALSE);
+	    SDL_SetWindowBordered(strm->window, SDL_TRUE);
+	}
+
+	return PJ_SUCCESS;
     }
 
     return PJMEDIA_EVID_INVCAP;

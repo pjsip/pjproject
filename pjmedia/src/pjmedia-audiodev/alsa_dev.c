@@ -101,6 +101,7 @@ struct alsa_factory
     unsigned			 dev_cnt;
     pjmedia_aud_dev_info	 devs[MAX_DEVICES];
     char                         pb_mixer_name[MAX_MIX_NAME_LEN];
+    char			 cap_mixer_name[MAX_MIX_NAME_LEN];
 };
 
 struct alsa_stream
@@ -305,14 +306,27 @@ static void get_mixer_name(struct alsa_factory *af)
     for (elem = snd_mixer_first_elem(handle); elem;
 	 elem = snd_mixer_elem_next(elem))
     {
-	if (snd_mixer_selem_is_active(elem) &&
-	    snd_mixer_selem_has_playback_volume(elem))
-	{
-	    pj_ansi_strncpy(af->pb_mixer_name, snd_mixer_selem_get_name(elem),
-	    		    sizeof(af->pb_mixer_name));
-	    TRACE_((THIS_FILE, "Playback mixer name: %s", af->pb_mixer_name));
-	    break;
-	}
+        const char* elemname;
+        elemname = snd_mixer_selem_get_name(elem);
+        if (snd_mixer_selem_is_active(elem))
+        {
+            if (snd_mixer_selem_has_playback_volume(elem))
+            {
+                pj_ansi_strncpy(af->pb_mixer_name, elemname,
+				sizeof(af->pb_mixer_name));
+                af->pb_mixer_name[sizeof(af->pb_mixer_name)-1] = 0;
+                TRACE_((THIS_FILE, "Playback mixer name: %s",
+			af->pb_mixer_name));
+            }
+            if (snd_mixer_selem_has_capture_volume(elem))
+            {
+                pj_ansi_strncpy(af->cap_mixer_name, elemname,
+                                sizeof(af->cap_mixer_name));
+                af->cap_mixer_name[sizeof(af->cap_mixer_name)-1] = 0;
+                TRACE_((THIS_FILE, "Capture mixer name: %s",
+			af->cap_mixer_name));
+            }
+         }
     }
     snd_mixer_close(handle);
 }
@@ -442,7 +456,10 @@ static pj_status_t alsa_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
-		 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+		 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY |
+		 PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
+		 PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+
     return PJ_SUCCESS;
 }
 
@@ -533,7 +550,7 @@ static int pb_thread_func (void *arg)
 	tstamp.u64 += nframes;
     }
 
-    snd_pcm_drain (pcm);
+    snd_pcm_drop(pcm);
     TRACE_((THIS_FILE, "pb_thread_func: Stopped"));
     return PJ_SUCCESS;
 }
@@ -604,7 +621,7 @@ static int ca_thread_func (void *arg)
 
 	tstamp.u64 += nframes;
     }
-    snd_pcm_drain (pcm);
+    snd_pcm_drop(pcm);
     TRACE_((THIS_FILE, "ca_thread_func: Stopped"));
 
     return PJ_SUCCESS;
@@ -672,8 +689,15 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_playback: set channels: %d",
 		       param->channel_count));
-    snd_pcm_hw_params_set_channels (stream->pb_pcm, params,
-				    param->channel_count);
+    result = snd_pcm_hw_params_set_channels (stream->pb_pcm, params,
+					     param->channel_count);
+    if (result < 0) {
+	PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
+		   "playback device '%s'", param->channel_count,
+		   stream->af->devs[param->play_id].name));
+	snd_pcm_close (stream->pb_pcm);
+	return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Set clock rate */
     rate = param->clock_rate;
@@ -689,6 +713,11 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     tmp_period_size = stream->pb_frames;
     snd_pcm_hw_params_set_period_size_near (stream->pb_pcm, params,
 					    &tmp_period_size, NULL);
+    /* Commenting this as it may cause the number of samples per frame
+     * to be incorrest.
+     */  
+    // stream->pb_frames = tmp_period_size > stream->pb_frames ?
+    //			tmp_period_size : stream->pb_frames;					    					    
     TRACE_((THIS_FILE, "open_playback: period size set to: %d",
 	    tmp_period_size));
 
@@ -697,6 +726,8 @@ static pj_status_t open_playback (struct alsa_stream* stream,
 	tmp_buf_size = (rate / 1000) * param->output_latency_ms;
     else
 	tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+    if (tmp_buf_size < tmp_period_size * 2)
+        tmp_buf_size = tmp_period_size * 2;
     snd_pcm_hw_params_set_buffer_size_near (stream->pb_pcm, params,
 					    &tmp_buf_size);
     stream->param.output_latency_ms = tmp_buf_size / (rate / 1000);
@@ -716,6 +747,12 @@ static pj_status_t open_playback (struct alsa_stream* stream,
     if (result < 0) {
 	snd_pcm_close (stream->pb_pcm);
 	return PJMEDIA_EAUD_SYSERR;
+    }
+
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+	alsa_stream_set_cap(&stream->base,
+			    PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+			    &param->output_vol);
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for playing, sample rate=%d"
@@ -790,8 +827,15 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     /* Set number of channels */
     TRACE_((THIS_FILE, "open_capture: set channels: %d",
 	    param->channel_count));
-    snd_pcm_hw_params_set_channels (stream->ca_pcm, params,
-				    param->channel_count);
+    result = snd_pcm_hw_params_set_channels (stream->ca_pcm, params,
+					     param->channel_count);
+    if (result < 0) {
+	PJ_LOG (3,(THIS_FILE, "Unable to set a channel count of %d for "
+		   "capture device '%s'", param->channel_count,
+		   stream->af->devs[param->rec_id].name));
+	snd_pcm_close (stream->ca_pcm);
+	return PJMEDIA_EAUD_SYSERR;
+    }
 
     /* Set clock rate */
     rate = param->clock_rate;
@@ -807,6 +851,11 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     tmp_period_size = stream->ca_frames;
     snd_pcm_hw_params_set_period_size_near (stream->ca_pcm, params,
 					    &tmp_period_size, NULL);
+    /* Commenting this as it may cause the number of samples per frame
+     * to be incorrest.
+     */
+    // stream->ca_frames = tmp_period_size > stream->ca_frames ?
+    //			tmp_period_size : stream->ca_frames;
     TRACE_((THIS_FILE, "open_capture: period size set to: %d",
 	    tmp_period_size));
 
@@ -815,6 +864,8 @@ static pj_status_t open_capture (struct alsa_stream* stream,
 	tmp_buf_size = (rate / 1000) * param->input_latency_ms;
     else
 	tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_REC_LATENCY;
+    if (tmp_buf_size < tmp_period_size * 2)
+        tmp_buf_size = tmp_period_size * 2;
     snd_pcm_hw_params_set_buffer_size_near (stream->ca_pcm, params,
 					    &tmp_buf_size);
     stream->param.input_latency_ms = tmp_buf_size / (rate / 1000);
@@ -834,6 +885,12 @@ static pj_status_t open_capture (struct alsa_stream* stream,
     if (result < 0) {
 	snd_pcm_close (stream->ca_pcm);
 	return PJMEDIA_EAUD_SYSERR;
+    }
+
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
+	alsa_stream_set_cap(&stream->base,
+			    PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
+			    &param->input_vol);
     }
 
     PJ_LOG (5,(THIS_FILE, "Opened device alsa(%s) for capture, sample rate=%d"
@@ -948,8 +1005,10 @@ static pj_status_t alsa_stream_set_cap(pjmedia_aud_stream *strm,
 {
     struct alsa_factory *af = ((struct alsa_stream*)strm)->af;
 
-    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING && 
-	pj_ansi_strlen(af->pb_mixer_name)) 
+    if ((cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+	pj_ansi_strlen(af->pb_mixer_name)) ||
+	(cap==PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING &&
+	pj_ansi_strlen(af->cap_mixer_name)))
     {
 	pj_ssize_t min, max;
 	snd_mixer_t *handle;
@@ -971,14 +1030,30 @@ static pj_status_t alsa_stream_set_cap(pjmedia_aud_stream *strm,
 
 	snd_mixer_selem_id_alloca(&sid);
 	snd_mixer_selem_id_set_index(sid, 0);
-	snd_mixer_selem_id_set_name(sid, af->pb_mixer_name);
+	if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING)
+	    snd_mixer_selem_id_set_name(sid, af->pb_mixer_name);
+	else if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING)
+	    snd_mixer_selem_id_set_name(sid, af->cap_mixer_name);
+
 	elem = snd_mixer_find_selem(handle, sid);
 	if (!elem)
 	    return PJMEDIA_EAUD_SYSERR;
 
-	snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
-	if (snd_mixer_selem_set_playback_volume_all(elem, vol * max / 100) < 0)
-	    return PJMEDIA_EAUD_SYSERR;
+	if (cap == PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+	    snd_mixer_selem_get_playback_volume_range(elem, &min, &max);
+	    if (snd_mixer_selem_set_playback_volume_all(elem,
+							vol * max / 100) < 0)
+	    {
+		return PJMEDIA_EAUD_SYSERR;
+	    }
+	} else if (cap == PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
+             snd_mixer_selem_get_capture_volume_range(elem, &min, &max);
+	     if (snd_mixer_selem_set_capture_volume_all(elem,
+							vol * max / 100) < 0)
+	     {
+		 return PJMEDIA_EAUD_SYSERR;
+	     }
+	}
 
 	snd_mixer_close(handle);
 	return PJ_SUCCESS;

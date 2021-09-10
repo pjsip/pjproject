@@ -446,19 +446,10 @@ static pj_status_t and_factory_init(pjmedia_vid_dev_factory *ff)
 static pj_status_t and_factory_destroy(pjmedia_vid_dev_factory *ff)
 {
     and_factory *f = (and_factory*)ff;
-    pj_pool_t *pool;
 
     jni_deinit_ids();
-    
-    pool = f->pool;
-    f->pool = NULL;
-    if (pool)
-	pj_pool_release(pool);
-    
-    pool = f->dev_pool;
-    f->dev_pool = NULL;
-    if (pool)
-	pj_pool_release(pool);
+    pj_pool_safe_release(&f->dev_pool);
+    pj_pool_safe_release(&f->pool);
 
     return PJ_SUCCESS;
 }

@@ -524,7 +524,8 @@ pjmedia_vid_codec_mgr_get_codec_info2(pjmedia_vid_codec_mgr *mgr,
 
 /**
  * Convert codec info struct into a unique codec identifier.
- * A codec identifier looks something like "H263/90000".
+ * A codec identifier looks something like "H263/34", where "H263" is the
+ * codec name and "34" is the (default) payload type.
  *
  * @param info	    The codec info
  * @param id	    Buffer to put the codec info string.
@@ -540,8 +541,8 @@ PJ_DECL(char*) pjmedia_vid_codec_info_to_id(const pjmedia_vid_codec_info *info,
 /**
  * Find codecs by the unique codec identifier. This function will find
  * all codecs that match the codec identifier prefix. For example, if
- * "H26" is specified, then it will find "H263/90000", "H264/90000",
- * and so on, up to the maximum count specified in the argument.
+ * "H26" is specified, then it will find "H263", "H264", and so on,
+ * up to the maximum count specified in the argument.
  *
  * @param mgr	    The codec manager instance. If NULL, the default codec
  *		    manager instance will be used.
