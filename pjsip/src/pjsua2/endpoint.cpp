@@ -60,13 +60,21 @@ void TlsInfo::fromPj(const pjsip_tls_state_info &info)
     pj_ssl_sock_info *ssock_info = info.ssl_sock_info;
     char straddr[PJ_INET6_ADDRSTRLEN+10];
     const char *verif_msgs[32];
+    const char *cipher_name;
     unsigned verif_msg_cnt;
     
     empty	= false;
     established = PJ2BOOL(ssock_info->established);
     protocol 	= ssock_info->proto;
     cipher 	= ssock_info->cipher;
-    cipherName	= pj_ssl_cipher_name(ssock_info->cipher);
+    cipher_name = pj_ssl_cipher_name(ssock_info->cipher);
+    if (cipher_name) {
+	cipherName = cipher_name;
+    } else {
+	char tmp[32];
+	pj_ansi_snprintf(tmp, sizeof(tmp), "Cipher 0x%x", cipher);
+	cipherName = tmp;
+    }
     pj_sockaddr_print(&ssock_info->local_addr, straddr, sizeof(straddr), 3);
     localAddr 	= straddr;
     pj_sockaddr_print(&ssock_info->remote_addr, straddr, sizeof(straddr),3);
