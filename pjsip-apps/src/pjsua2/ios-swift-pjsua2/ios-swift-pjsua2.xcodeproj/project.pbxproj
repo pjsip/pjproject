@@ -28,13 +28,14 @@
 		C351399225A5F70D00A090AA /* libsrtp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522525A5EC380037A8AB /* libsrtp.a */; };
 		C351399325A5F70D00A090AA /* libwebrtc.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522A25A5EC380037A8AB /* libwebrtc.a */; };
 		C351399425A5F70D00A090AA /* libyuv.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8522B25A5EC380037A8AB /* libyuv.a */; };
+		C36D296A26B9637E00371235 /* CallViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36D296926B9637E00371235 /* CallViewController.swift */; };
 		C374860825B84FA100FBE972 /* OutgoingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C374860725B84FA100FBE972 /* OutgoingViewController.swift */; };
 		C399A57125AF2721000F742A /* IncomingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C399A57025AF2721000F742A /* IncomingViewController.swift */; };
 		C3AB889B25A734B400224276 /* wrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = C3AB889A25A734B400224276 /* wrapper.mm */; };
 		C3AB88A025A7358700224276 /* CustomPJSUA2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = C3AB889E25A7358700224276 /* CustomPJSUA2.cpp */; };
 		C3B851FF25A5EA6C0037A8AB /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */; };
 		C3B8520125A5EA6C0037A8AB /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */; };
-		C3B8520325A5EA6C0037A8AB /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520225A5EA6C0037A8AB /* ViewController.swift */; };
+		C3B8520325A5EA6C0037A8AB /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B8520225A5EA6C0037A8AB /* SettingsViewController.swift */; };
 		C3B8520625A5EA6C0037A8AB /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520425A5EA6C0037A8AB /* Main.storyboard */; };
 		C3B8520825A5EA6D0037A8AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520725A5EA6D0037A8AB /* Assets.xcassets */; };
 		C3B8520B25A5EA6D0037A8AB /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C3B8520925A5EA6D0037A8AB /* LaunchScreen.storyboard */; };
@@ -42,10 +43,12 @@
 		C3B8524425A5EC940037A8AB /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524225A5EC940037A8AB /* Foundation.framework */; };
 		C3B8524725A5ED6D0037A8AB /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */; };
 		C3C4082E25B9A547002C19EB /* ActiveViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C4082D25B9A547002C19EB /* ActiveViewController.swift */; };
+		C3EE0CC426CB9B1C00DBE3CD /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3EE0CC326CB9B1C00DBE3CD /* Network.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		C337417225BADEEE007785D7 /* Model.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model.swift; sourceTree = "<group>"; };
+		C36D296926B9637E00371235 /* CallViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallViewController.swift; sourceTree = "<group>"; };
 		C374860725B84FA100FBE972 /* OutgoingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutgoingViewController.swift; sourceTree = "<group>"; };
 		C399A57025AF2721000F742A /* IncomingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingViewController.swift; sourceTree = "<group>"; };
 		C3AB889A25A734B400224276 /* wrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = wrapper.mm; sourceTree = "<group>"; };
@@ -55,7 +58,7 @@
 		C3B851FB25A5EA6C0037A8AB /* ios-swift-pjsua2.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ios-swift-pjsua2.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3B851FE25A5EA6C0037A8AB /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C3B8520025A5EA6C0037A8AB /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
-		C3B8520225A5EA6C0037A8AB /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
+		C3B8520225A5EA6C0037A8AB /* SettingsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewController.swift; sourceTree = "<group>"; };
 		C3B8520525A5EA6C0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		C3B8520725A5EA6D0037A8AB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		C3B8520A25A5EA6D0037A8AB /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
@@ -85,6 +88,10 @@
 		C3B8524225A5EC940037A8AB /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		C3C4082D25B9A547002C19EB /* ActiveViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveViewController.swift; sourceTree = "<group>"; };
+		C3EE0CBB26CB98FB00DBE3CD /* libcoretls.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcoretls.tbd; path = usr/lib/libcoretls.tbd; sourceTree = SDKROOT; };
+		C3EE0CBC26CB98FB00DBE3CD /* libETLSAHDynamic.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libETLSAHDynamic.tbd; path = usr/lib/libETLSAHDynamic.tbd; sourceTree = SDKROOT; };
+		C3EE0CBD26CB98FB00DBE3CD /* libcoretls_cfhelpers.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcoretls_cfhelpers.tbd; path = usr/lib/libcoretls_cfhelpers.tbd; sourceTree = SDKROOT; };
+		C3EE0CC326CB9B1C00DBE3CD /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -92,6 +99,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3EE0CC426CB9B1C00DBE3CD /* Network.framework in Frameworks */,
 				C351398125A5F70D00A090AA /* libg7221codec.a in Frameworks */,
 				C351398225A5F70D00A090AA /* libgsmcodec.a in Frameworks */,
 				C351398325A5F70D00A090AA /* libilbccodec.a in Frameworks */,
@@ -132,7 +140,8 @@
 		C337417625BADF12007785D7 /* Controller */ = {
 			isa = PBXGroup;
 			children = (
-				C3B8520225A5EA6C0037A8AB /* ViewController.swift */,
+				C36D296926B9637E00371235 /* CallViewController.swift */,
+				C3B8520225A5EA6C0037A8AB /* SettingsViewController.swift */,
 				C399A57025AF2721000F742A /* IncomingViewController.swift */,
 				C374860725B84FA100FBE972 /* OutgoingViewController.swift */,
 				C3C4082D25B9A547002C19EB /* ActiveViewController.swift */,
@@ -185,6 +194,10 @@
 		C3B8521725A5EC380037A8AB /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				C3EE0CC326CB9B1C00DBE3CD /* Network.framework */,
+				C3EE0CBD26CB98FB00DBE3CD /* libcoretls_cfhelpers.tbd */,
+				C3EE0CBB26CB98FB00DBE3CD /* libcoretls.tbd */,
+				C3EE0CBC26CB98FB00DBE3CD /* libETLSAHDynamic.tbd */,
 				C3B8524625A5ED6D0037A8AB /* AudioToolbox.framework */,
 				C3B8524125A5EC940037A8AB /* AVFoundation.framework */,
 				C3B8524225A5EC940037A8AB /* Foundation.framework */,
@@ -299,9 +312,10 @@
 				C399A57125AF2721000F742A /* IncomingViewController.swift in Sources */,
 				C3AB889B25A734B400224276 /* wrapper.mm in Sources */,
 				C374860825B84FA100FBE972 /* OutgoingViewController.swift in Sources */,
-				C3B8520325A5EA6C0037A8AB /* ViewController.swift in Sources */,
+				C3B8520325A5EA6C0037A8AB /* SettingsViewController.swift in Sources */,
 				C3B851FF25A5EA6C0037A8AB /* AppDelegate.swift in Sources */,
 				C3B8520125A5EA6C0037A8AB /* SceneDelegate.swift in Sources */,
+				C36D296A26B9637E00371235 /* CallViewController.swift in Sources */,
 				C3AB88A025A7358700224276 /* CustomPJSUA2.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -451,7 +465,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = PZ7LKWA782;
+				DEVELOPMENT_TEAM = TY2FWL588U;
 				ENABLE_BITCODE = NO;
 				ENABLE_TESTABILITY = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -490,7 +504,7 @@
 					"$(PROJECT_DIR)",
 					"$(PROJECT_DIR)/Libraries",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-swift-pjsua2";
+				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-corepjsua2";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "ios-swift-pjsua2/ios-swift-pjsua2-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -506,7 +520,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = PZ7LKWA782;
+				DEVELOPMENT_TEAM = TY2FWL588U;
 				ENABLE_BITCODE = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_PREPROCESSOR_DEFINITIONS = "PJ_AUTOCONF=1";
@@ -542,7 +556,7 @@
 					"$(PROJECT_DIR)/Libraries",
 				);
 				ONLY_ACTIVE_ARCH = YES;
-				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-swift-pjsua2";
+				PRODUCT_BUNDLE_IDENTIFIER = "tbtk.ios-corepjsua2";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_OBJC_BRIDGING_HEADER = "ios-swift-pjsua2/ios-swift-pjsua2-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

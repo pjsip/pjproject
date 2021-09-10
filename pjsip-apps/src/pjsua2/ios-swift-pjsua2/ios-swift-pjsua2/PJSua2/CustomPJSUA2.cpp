@@ -26,6 +26,7 @@ using namespace pj;
 // Listen swift code via function pointers
 void (*incomingCallPtr)() = 0;
 void (*callStatusListenerPtr)(int) = 0;
+int reinitFlag = 0;
 
 /**
  Dispatch queue to manage ios thread serially or concurrently on app's main thread
@@ -132,6 +133,7 @@ class MyAccount : public Account {
 Endpoint *ep = new Endpoint;
 MyAccount *acc = new MyAccount;
 
+
 void MyAccount::onRegState(OnRegStateParam &prm){
     AccountInfo ai = getInfo();
     std::cout << (ai.regIsActive? "*** Register: code=" : "*** Unregister: code=") << prm.code << std::endl;
@@ -146,11 +148,13 @@ void MyAccount::onIncomingCall(OnIncomingCallParam &iprm) {
     call = new MyCall(*this, iprm.callId);
 }
 
+EpConfig *ep_cfg = new EpConfig;
 
 /**
  Create Lib with EpConfig
  */
-void PJSua2::createLib() {
+void PJSua2::createLib(std::string stunIp, std::string stunPort, bool stunEnabled, bool tlsEnabled) {
+
     try {
         ep->libCreate();
     } catch (Error& err){
@@ -159,9 +163,24 @@ void PJSua2::createLib() {
     
     //LibInit
     try {
-        EpConfig ep_cfg;
-        ep->libInit( ep_cfg );
+     
+        //EpConfig ep_cfg;
+        //Stun Settings
+        std::cout<<"EP CONFIG SETTINGS giriyor";
+        if(stunEnabled == true && !stunIp.empty() && stunPort.empty()) {
+            std::cout<<"EP CONFIG SETTINGS...";
+            ep_cfg->uaConfig.stunServer.push_back(stunIp+":"+stunPort);
+            std::cout<<ep_cfg->uaConfig.stunServer[0];
+        }
+        ep_cfg->uaConfig.stunServer.push_back(stunIp+":"+stunPort);
+        
+        try {
+            ep->libInit(*ep_cfg);
+        } catch (Error& err){
+            std::cout << "libInit Error: " << err.info() << std::endl;
+        }
     
+        
     } catch(Error& err) {
         std::cout << "Initialization error: " << err.info() << std::endl;
     }
@@ -169,9 +188,12 @@ void PJSua2::createLib() {
     // Create SIP transport. Error handling sample is shown
     try {
     TransportConfig tcfg;
-    tcfg.port = 5060;
-    TransportId tid = ep->transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
+       
+        tcfg.port = 5061;
+        ep->transportCreate(PJSIP_TRANSPORT_TLS, tcfg);
+        ep->transportCreate(PJSIP_TRANSPORT_UDP, tcfg);
         
+    
     } catch(Error& err) {
     std::cout << "Transport creation error: " << err.info() << std::endl;
     }
@@ -190,48 +212,122 @@ void PJSua2::createLib() {
 void PJSua2::deleteLib() {
     
     // Here we don't have anything else to do..
-    pj_thread_sleep(500);
+    pj_thread_sleep(5000);
+    
+    try{
+        if(acc != NULL && acc->getId()>=0){
+            acc->shutdown();
+            delete acc;
+        }
+        
+        ep->libDestroy();
+        delete ep;
+        
+        
+        reinitFlag = 1;
+    } catch (Error& err){
+        std::cout<<"Error happened while destroying PJSIP lib. >>"<<err.info();
+    }
     
     // Delete the account. This will unregister from server
-    delete acc;
-    
-    ep->libDestroy();
-    delete ep;
+    //delete acc;
 }
 
 
 /**
  Create Account via following config(string username, string password, string ip, string port)
  */
-void PJSua2::createAccount(std::string username, std::string password, std::string ip, std::string port) {
+void PJSua2::createAccount(
+                           std::string username, std::string password, std::string ip, std::string port,
+                           std::string turnUsername, std::string turnPassword, std::string turnIp, std::string turnPort,
+                           bool turnEnabled, bool tlsEnabled, bool iceEnabled
+                           ) {
+    
+    
+    std::cout<<"STUN SERVER:";
+    std::cout<<ep_cfg->uaConfig.stunServer[0];
+    
+    
+    
+    AccountConfig acfg;
+    
+    //TLS CONFIG
+    if(tlsEnabled){
+        acfg.sipConfig.proxies.push_back("sip:" + ip + ";hide;transport=tls");
+    }
+    
+    //NAT CONFIGs
+    acfg.natConfig.iceEnabled = PJ_TRUE;
+    
+    // Ice Configs
+    if(iceEnabled == true){
+        //ICE
+        acfg.natConfig.iceMaxHostCands = -1;
+        
+        //STUN
+        acfg.natConfig.sipStunUse = PJSUA_STUN_USE_DEFAULT;
+        acfg.natConfig.mediaStunUse = PJSUA_STUN_RETRY_ON_FAILURE;
+        //ep->natUpdateStunServers(ep_cfg->uaConfig.stunServer, PJ_FALSE);
+        
+        //TURN
+        acfg.natConfig.turnEnabled = PJ_TRUE;
+        acfg.natConfig.turnServer = turnIp+":"+turnPort;
+        acfg.natConfig.turnUserName = turnUsername;
+        acfg.natConfig.turnPassword = turnPassword;
+        
+    } else {
+        acfg.natConfig.iceMaxHostCands = 0;
+    }
+    
+    // Turn Configs
+    acfg.natConfig.turnEnabled = turnEnabled;
+    if(turnEnabled == true && !turnIp.empty() && turnPort.empty()) {
+        acfg.natConfig.sipStunUse = PJSUA_STUN_USE_DISABLED;
+        acfg.natConfig.mediaStunUse = PJSUA_STUN_USE_DISABLED;
+        acfg.natConfig.iceMaxHostCands = 0;
+        acfg.natConfig.turnEnabled = PJ_TRUE;
+        acfg.natConfig.turnServer = turnIp+":"+turnPort;
+        acfg.natConfig.turnUserName = turnUsername;
+        acfg.natConfig.turnPassword = turnPassword;
+    }
     
     // Configure an AccountConfig
-    AccountConfig acfg;
     acfg.idUri = "sip:" + username + "@" + ip + ":" + port;
     acfg.regConfig.registrarUri = "sip:" + ip + ":" + port;
     AuthCredInfo cred("digest", "*", username, 0, password);
     acfg.sipConfig.authCreds.push_back(cred);
     
     
+    
+    
     //  TODO:: GET ID -1 IS EXPERIMENTAL, NOT SURE THAT, IT IS GOOD WAY TO CHECK ACC IS CREATED. FIX IT!
-    if(acc->getId() == -1){
+    if(reinitFlag == 0) {
+        if(acc->getId() <= 0){
+            // Create the account
+            try {
+                acc->create(acfg);
+            } catch(Error& err) {
+                std::cout << "Account creation error: " << err.info() << std::endl;
+            }
+        }else {
+            // Modify the account
+            try {
+                //Update the registration
+                acc->modify(acfg);
+                acc->setRegistration(true);
+            } catch(Error& err) {
+                std::cout << "Account modify error: " << err.info() << std::endl;
+            }
+        }
+    } else {
         // Create the account
         try {
             acc->create(acfg);
+            reinitFlag = 0;
         } catch(Error& err) {
             std::cout << "Account creation error: " << err.info() << std::endl;
         }
-    }else {
-        // Modify the account
-        try {
-            //Update the registration
-            acc->modify(acfg);
-            acc->setRegistration(true);
-        } catch(Error& err) {
-            std::cout << "Account modify error: " << err.info() << std::endl;
-        }
     }
-    
 }
 
 
@@ -239,7 +335,11 @@ void PJSua2::createAccount(std::string username, std::string password, std::stri
  Unregister account
  */
 void PJSua2::unregisterAccount() {
-    acc->setRegistration(false);
+
+    if(acc != NULL && acc->getId()>=0){
+        acc->setRegistration(false);
+    }
+    
 }
 
 
