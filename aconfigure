@@ -6039,6 +6039,9 @@ case $target in
 	  *darwin*)
 	  	ac_os_objs="$ac_os_objs guid_darwin.o"
 	  	;;
+	  *bsd*)
+	  	ac_os_objs="$ac_os_objs guid_bsd.o"
+	  	;;
 	  *)
 		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
 			ac_os_objs="$ac_os_objs guid_uuid.o"
