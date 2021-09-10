@@ -2094,42 +2094,56 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 				      int playback_dev)
 {
     pjsua_snd_dev_param param;
-
-    pjsua_snd_dev_param_default(&param);
-
+    pjsua_get_snd_dev2(&param);
     param.capture_dev = capture_dev;
     param.playback_dev = playback_dev;
+
     /* Always open the sound device. */
     param.mode = 0;
 
     return pjsua_set_snd_dev2(&param);
 }
 
+
+PJ_DEF(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param)
+{
+    PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
+
+    PJSUA_LOCK();
+    snd_param->capture_dev = pjsua_var.cap_dev;
+    snd_param->playback_dev = pjsua_var.play_dev;
+    snd_param->mode = pjsua_var.snd_mode;
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
  */
-PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
+PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 {
     unsigned alt_cr_cnt = 1;
     unsigned alt_cr[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned i;
     pj_status_t status = -1;
     unsigned orig_snd_dev_mode = pjsua_var.snd_mode;
-    pj_bool_t no_change = (pjsua_var.snd_is_on || (!pjsua_var.snd_is_on &&
-			   (snd_param->mode & 
-			    PJSUA_SND_DEV_NO_IMMEDIATE_OPEN)));
 
-    PJ_LOG(4,(THIS_FILE, "Set sound device: capture=%d, playback=%d",
-	      snd_param->capture_dev, snd_param->playback_dev));
+    PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
+
+    PJ_LOG(4,(THIS_FILE, "Set sound device: capture=%d, playback=%d, mode=%d",
+	      snd_param->capture_dev, snd_param->playback_dev,
+	      snd_param->mode));
+
     pj_log_push_indent();
 
     PJSUA_LOCK();
 
     if (pjsua_var.cap_dev == snd_param->capture_dev &&
 	pjsua_var.play_dev == snd_param->playback_dev &&
-	pjsua_var.snd_mode == snd_param->mode &&
-	!pjsua_var.no_snd && no_change)
+	pjsua_var.snd_mode == snd_param->mode)
     {
 	PJ_LOG(4, (THIS_FILE, "No changes in capture and playback devices"));
         PJSUA_UNLOCK();
@@ -2137,11 +2151,24 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
 	return PJ_SUCCESS;
     }
     
+    /* No sound */
+    if (snd_param->capture_dev == PJSUA_SND_NO_DEV &&
+	snd_param->playback_dev == PJSUA_SND_NO_DEV)
+    {
+	PJSUA_UNLOCK();
+	PJ_LOG(4, (THIS_FILE, "No sound device, mode setting is ignored"));
+	if (!pjsua_var.no_snd)
+	    pjsua_set_no_snd_dev();
+	pj_log_pop_indent();
+	return status;
+    }
+
     /* Null-sound */
     if (snd_param->capture_dev == PJSUA_SND_NULL_DEV && 
 	snd_param->playback_dev == PJSUA_SND_NULL_DEV) 
     {
 	PJSUA_UNLOCK();
+	PJ_LOG(4, (THIS_FILE, "Null sound device, mode setting is ignored"));
 	status = pjsua_set_null_snd_dev();
 	pj_log_pop_indent();
 	return status;
@@ -2149,7 +2176,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param)
 
     pjsua_var.snd_mode = snd_param->mode;
 
-    if (!pjsua_var.no_snd && !pjsua_var.snd_is_on &&
+    /* Just update the IDs if app does not want to open now and currently
+     * audio is off.
+     */
+    if (!pjsua_var.snd_is_on &&
 	(snd_param->mode & PJSUA_SND_DEV_NO_IMMEDIATE_OPEN))
     {
 	pjsua_var.cap_dev = snd_param->capture_dev;
