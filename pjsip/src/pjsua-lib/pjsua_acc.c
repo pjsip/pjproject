@@ -1733,7 +1733,10 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 				  acc->contact.slen, NULL);
     pj_assert(contact_hdr != NULL);
     uri = (pjsip_sip_uri*) contact_hdr->uri;
-    pj_assert(uri != NULL);
+    if (!uri) {
+	PJ_LOG(4, (THIS_FILE, "acc_check_nat_addr() No contact URI."));
+	return PJ_FALSE;
+    }
     uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
 
     if (uri->port == 0) {
