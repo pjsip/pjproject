@@ -1361,6 +1361,11 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     event_manager_remove_events(ssock);
+    /* We have removed all events that belong to this ssl socket, but
+     * since calling event callbacks are done without holding event manager's
+     * lock, there may be a race here with those callbacks.
+     */
+    pj_thread_sleep(1000);
 
     /* Important: if we are called from a blocking dispatch block,
      * we need to signal it before destroying ourselves.
