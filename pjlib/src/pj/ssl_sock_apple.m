@@ -201,7 +201,7 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_t *event;
     
     if (ssock->is_closing)
-    	return PJ_EGONE;
+    	return PJ_EEOF;
     
     [mgr->lock lock];
 
@@ -260,7 +260,7 @@ pj_status_t ssl_network_event_poll()
     	pj_ssl_sock_t *ssock;
     	applessl_sock_t *assock;
     	event_t *event;
-    	pj_bool_t ret = PJ_TRUE;
+    	pj_bool_t ret = PJ_TRUE, add_ref = PJ_FALSE;
     	
     	[event_mgr->lock lock];
     	/* Check again, this time by holding the lock */
@@ -279,6 +279,8 @@ pj_status_t ssl_network_event_poll()
 	    	/* Prevent ssock from being destroyed while
 	    	 * we are calling the callback.
 	    	 */
+	    	 printf("adding ref\n");
+	    	add_ref = PJ_TRUE;
 	    	pj_grp_lock_add_ref(ssock->param.grp_lock);
 	    } else {
 	    	event->type = EVENT_DISCARD;
@@ -330,12 +332,13 @@ pj_status_t ssl_network_event_poll()
 	    dispatch_semaphore_signal(assock->ev_semaphore);
 	}
 
-	if (ssock->param.grp_lock) {
+    	/* Put the event into the free list to be reused */
+    	[event_mgr->lock lock];
+	if (add_ref) {
+	    	 printf("dec ref %p\n", ssock);
 	    pj_grp_lock_dec_ref(ssock->param.grp_lock);
 	}
 	
-    	/* Put the event into the free list to be reused */
-    	[event_mgr->lock lock];
     	pj_list_push_back(&event_mgr->free_event_list, event);
     	[event_mgr->lock unlock];	
     }
@@ -777,7 +780,7 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 	     * closed in the reading direction.
 	     */
 	    if (is_complete)
-	    	status = PJ_EEOF;
+	    	return;
 
 	    dispatch_block_t schedule_next_receive = 
 	    ^{

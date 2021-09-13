@@ -657,7 +657,9 @@ static void ssl_on_destroy(void *arg)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)arg;
 
+printf("ssl on destroy %p\n", ssock);
     ssl_destroy(ssock);
+printf("ssl destroyed %p\n", ssock);
 
     if (ssock->circ_buf_input_mutex) {
         pj_lock_destroy(ssock->circ_buf_input_mutex);
@@ -1463,6 +1465,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
 {
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
 
+printf ("ssl sock close %p\n", ssock);
     if (!ssock->pool || ssock->is_closing)
 	return PJ_SUCCESS;
 
