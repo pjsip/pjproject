@@ -162,8 +162,8 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     }
 
     // This will connect the wav file to the call audio media
-    if (wav_player)
-    	wav_player->startTransmit(aud_med);
+//    if (wav_player)
+//    	wav_player->startTransmit(aud_med);
 
     // And this will connect the call audio media to the sound device/speaker
     aud_med.startTransmit(play_dev_med);
@@ -201,10 +201,10 @@ static void mainProg1(Endpoint &ep)
 
     // Add account
     AccountConfig acc_cfg;
-    acc_cfg.idUri = "sip:test1@pjsip.org";
+    acc_cfg.idUri = "sip:402@sip.pjsip.org";
     acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
-                                                        "test1", 0, "test1") );
+                                                        "402", 0, "pw402") );
     MyAccount *acc(new MyAccount);
     try {
 	acc->create(acc_cfg);
@@ -220,10 +220,10 @@ static void mainProg1(Endpoint &ep)
     CallOpParam prm(true);
     prm.opt.audioCount = 1;
     prm.opt.videoCount = 0;
-    call->makeCall("sip:test1@pjsip.org", prm);
+    call->makeCall("sip:401@sip.pjsip.org", prm);
     
     // Hangup all calls
-    pj_thread_sleep(4000);
+    pj_thread_sleep(8000);
     ep.hangupAllCalls();
     pj_thread_sleep(4000);
     
