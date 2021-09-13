@@ -429,6 +429,7 @@ static void mainProg4(Endpoint &ep)
 #endif
 
 
+extern "C"
 int main()
 {
     int ret = 0;
