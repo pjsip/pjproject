@@ -81,7 +81,8 @@ typedef struct applessl_sock_t {
     EVENT_VERIFY_CERT,
     EVENT_HANDSHAKE_COMPLETE,
     EVENT_DATA_READ,
-    EVENT_DATA_SENT
+    EVENT_DATA_SENT,
+    EVENT_DISCARD
 } event_id;
 
 typedef struct event_t
@@ -199,6 +200,9 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_manager *mgr = event_mgr;
     event_t *event;
     
+    if (ssock->is_closing)
+    	return PJ_EGONE;
+    
     [mgr->lock lock];
 
     if (pj_list_empty(&mgr->free_event_list)) {
@@ -253,7 +257,8 @@ pj_status_t ssl_network_event_poll()
     	return PJ_SUCCESS;
 
     while (!pj_list_empty(&event_mgr->event_list)) {
-    	applessl_sock_t * assock;
+    	pj_ssl_sock_t *ssock;
+    	applessl_sock_t *assock;
     	event_t *event;
     	pj_bool_t ret = PJ_TRUE;
     	
@@ -264,10 +269,25 @@ pj_status_t ssl_network_event_poll()
     	    break;
     	}
     	event = event_mgr->event_list.next;
+    	ssock = event->ssock;
     	pj_list_erase(event);
+
+	if (ssock->is_closing) {
+	    event->type = EVENT_DISCARD;
+	} else if (ssock->param.grp_lock) {
+	    if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
+	    	/* Prevent ssock from being destroyed while
+	    	 * we are calling the callback.
+	    	 */
+	    	pj_grp_lock_add_ref(ssock->param.grp_lock);
+	    } else {
+	    	event->type = EVENT_DISCARD;
+	    }
+	}
+
     	[event_mgr->lock unlock];
 
-	assock = (applessl_sock_t *)event->ssock;
+	assock = (applessl_sock_t *)ssock;
 	switch (event->type) {
 	    case EVENT_ACCEPT:
 		ret = ssock_on_accept_complete(event->ssock,
@@ -308,6 +328,10 @@ pj_status_t ssl_network_event_poll()
 	/* If not async and not destroyed, signal the waiting socket */
 	if (ret && !event->async && ret) {
 	    dispatch_semaphore_signal(assock->ev_semaphore);
+	}
+
+	if (ssock->param.grp_lock) {
+	    pj_grp_lock_dec_ref(ssock->param.grp_lock);
 	}
 	
     	/* Put the event into the free list to be reused */
@@ -681,6 +705,8 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
+
+    if (ssock->is_closing) return PJ_EGONE;
     
     content = dispatch_data_create(data, *size, assock->queue,
     				   DISPATCH_DATA_DESTRUCTOR_DEFAULT);
@@ -756,7 +782,9 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 	    dispatch_block_t schedule_next_receive = 
 	    ^{
 	    	/* If there was no error in receiving, request more data. */
-	    	if (!error && !is_complete && assock->connection) {
+	    	if (!error && !is_complete && !ssock->is_closing &&
+	    	    assock->connection)
+	    	{
 		    network_start_read(ssock, async_count, buff_size,
 				       readbuf, flags);
 	    	}
@@ -1361,11 +1389,6 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     }
 
     event_manager_remove_events(ssock);
-    /* We have removed all events that belong to this ssl socket, but
-     * since calling event callbacks are done without holding event manager's
-     * lock, there may be a race here with those callbacks.
-     */
-    pj_thread_sleep(1000);
 
     /* Important: if we are called from a blocking dispatch block,
      * we need to signal it before destroying ourselves.
@@ -1393,9 +1416,13 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    pj_lock_acquire(ssock->circ_buf_output_mutex);
+    if (ssock->circ_buf_output_mutex) {
+    	pj_lock_acquire(ssock->circ_buf_output_mutex);
+    }
     ssock->ssl_state = SSL_STATE_NULL;
-    pj_lock_release(ssock->circ_buf_output_mutex);
+    if (ssock->circ_buf_output_mutex) {
+    	pj_lock_release(ssock->circ_buf_output_mutex);
+    }
 
     ssl_close_sockets(ssock);
 }
