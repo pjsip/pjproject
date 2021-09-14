@@ -200,6 +200,9 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_manager *mgr = event_mgr;
     event_t *event;
     
+    if (ssock->is_closing)
+    	return PJ_EGONE;
+    
     [mgr->lock lock];
 
     if (pj_list_empty(&mgr->free_event_list)) {
@@ -269,7 +272,11 @@ pj_status_t ssl_network_event_poll()
     	ssock = event->ssock;
     	pj_list_erase(event);
 
-	if (ssock->param.grp_lock) {
+	if (ssock->is_closing || !ssock->pool) {
+            PJ_LOG(3, (THIS_FILE, "Discarding SSL event of a closing "
+            			  "socket"));
+            event->type = EVENT_DISCARD;
+	} else if (ssock->param.grp_lock) {
             if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
                 /* Prevent ssock from being destroyed while
                  * we are calling the callback.
