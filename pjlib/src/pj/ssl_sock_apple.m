@@ -200,9 +200,6 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_manager *mgr = event_mgr;
     event_t *event;
     
-    if (ssock->is_closing)
-    	return PJ_EEOF;
-    
     [mgr->lock lock];
 
     if (pj_list_empty(&mgr->free_event_list)) {
@@ -257,8 +254,8 @@ pj_status_t ssl_network_event_poll()
     	return PJ_SUCCESS;
 
     while (!pj_list_empty(&event_mgr->event_list)) {
-    	pj_ssl_sock_t *ssock;
-    	applessl_sock_t *assock;
+        pj_ssl_sock_t *ssock;
+    	applessl_sock_t * assock;
     	event_t *event;
     	pj_bool_t ret = PJ_TRUE, add_ref = PJ_FALSE;
     	
@@ -272,24 +269,23 @@ pj_status_t ssl_network_event_poll()
     	ssock = event->ssock;
     	pj_list_erase(event);
 
-	if (ssock->is_closing) {
-	    event->type = EVENT_DISCARD;
-	} else if (ssock->param.grp_lock) {
-	    if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
-	    	/* Prevent ssock from being destroyed while
-	    	 * we are calling the callback.
-	    	 */
-	    	 printf("adding ref\n");
-	    	add_ref = PJ_TRUE;
-	    	pj_grp_lock_add_ref(ssock->param.grp_lock);
-	    } else {
-	    	event->type = EVENT_DISCARD;
-	    }
-	}
+	if (ssock->param.grp_lock) {
+            if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
+                /* Prevent ssock from being destroyed while
+                 * we are calling the callback.
+                 */
+                add_ref = PJ_TRUE;
+                pj_grp_lock_add_ref(ssock->param.grp_lock);
+            } else {
+            	PJ_LOG(3, (THIS_FILE, "Discarding SSL event of a destroyed "
+            			      "socket"));
+                event->type = EVENT_DISCARD;
+            }
+        }
 
     	[event_mgr->lock unlock];
 
-	assock = (applessl_sock_t *)ssock;
+	assock = (applessl_sock_t *)event->ssock;
 	switch (event->type) {
 	    case EVENT_ACCEPT:
 		ret = ssock_on_accept_complete(event->ssock,
@@ -328,17 +324,15 @@ pj_status_t ssl_network_event_poll()
 	}
 
 	/* If not async and not destroyed, signal the waiting socket */
-	if (ret && !event->async && ret) {
+	if (event->type != EVENT_DISCARD && ret && !event->async && ret) {
 	    dispatch_semaphore_signal(assock->ev_semaphore);
 	}
-
+	
     	/* Put the event into the free list to be reused */
     	[event_mgr->lock lock];
-	if (add_ref) {
-	    	 printf("dec ref %p\n", ssock);
-	    pj_grp_lock_dec_ref(ssock->param.grp_lock);
-	}
-	
+        if (add_ref) {
+            pj_grp_lock_dec_ref(ssock->param.grp_lock);
+        }
     	pj_list_push_back(&event_mgr->free_event_list, event);
     	[event_mgr->lock unlock];	
     }
@@ -708,8 +702,6 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
-
-    if (ssock->is_closing) return PJ_EGONE;
     
     content = dispatch_data_create(data, *size, assock->queue,
     				   DISPATCH_DATA_DESTRUCTOR_DEFAULT);
@@ -763,6 +755,15 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 	{
 	    pj_status_t status = PJ_SUCCESS;
 	    
+	    /* If the context is marked as complete, and is the final context,
+	     * we're read-closed.
+	     */
+	    if (is_complete &&
+	        (context == NULL || nw_content_context_get_is_final(context)))
+	    {
+		return;
+	    }
+
 	    if (error != NULL) {
     	    	errno = nw_error_get_error_code(error);
     	    	if (errno == 89) {
@@ -776,18 +777,10 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
     	    	}
             }
 
-	    /* is_complete will be marked when the entire stream has been
-	     * closed in the reading direction.
-	     */
-	    if (is_complete)
-	    	return;
-
 	    dispatch_block_t schedule_next_receive = 
 	    ^{
 	    	/* If there was no error in receiving, request more data. */
-	    	if (!error && !is_complete && !ssock->is_closing &&
-	    	    assock->connection)
-	    	{
+	    	if (!error && !is_complete && assock->connection) {
 		    network_start_read(ssock, async_count, buff_size,
 				       readbuf, flags);
 	    	}
@@ -1380,12 +1373,23 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     /* Cancel the connection and release it */
     if (assock->connection) {
+    	/* This is important. Otherwise events can still be delivered
+    	 * even after we force cancel and release the connection below.
+    	 */
+	nw_connection_set_state_changed_handler(assock->connection, nil);
+
     	nw_connection_force_cancel(assock->connection);
     	nw_release(assock->connection);
     	assock->connection = nil;
     }
 
     if (assock->listener) {
+    	/* This is important. Otherwise events can still be delivered
+    	 * even after we cancel and release the listener below.
+    	 */
+	nw_listener_set_state_changed_handler(assock->listener, nil);
+	nw_listener_set_new_connection_handler(assock->listener, nil);
+
     	nw_listener_cancel(assock->listener);
 	nw_release(assock->listener);
   	assock->listener = nil;
@@ -1419,13 +1423,9 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 /* Reset socket state. */
 static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 {
-    if (ssock->circ_buf_output_mutex) {
-    	pj_lock_acquire(ssock->circ_buf_output_mutex);
-    }
+    pj_lock_acquire(ssock->circ_buf_output_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
-    if (ssock->circ_buf_output_mutex) {
-    	pj_lock_release(ssock->circ_buf_output_mutex);
-    }
+    pj_lock_release(ssock->circ_buf_output_mutex);
 
     ssl_close_sockets(ssock);
 }
