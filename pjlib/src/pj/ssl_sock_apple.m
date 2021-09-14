@@ -276,7 +276,7 @@ pj_status_t ssl_network_event_poll()
     	pj_list_erase(event);
 
 	if (ssock->is_closing || !ssock->pool) {
-            PJ_LOG(3, (THIS_FILE, "Discarding SSL event type %d of "
+            PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d of "
             	       "a closing socket %p", event->type, ssock));
             event->type = EVENT_DISCARD;
 	} else if (ssock->param.grp_lock) {
@@ -287,8 +287,8 @@ pj_status_t ssl_network_event_poll()
                 add_ref = PJ_TRUE;
                 pj_grp_lock_add_ref(ssock->param.grp_lock);
             } else {
-            	PJ_LOG(3, (THIS_FILE, "Discarding SSL event type %d of "
-            		   "a destroyed socket %p", event->type, ssock));
+            	PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d "
+            		   " of a destroyed socket %p", event->type, ssock));
                 event->type = EVENT_DISCARD;
             }
         }
@@ -1405,8 +1405,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	    pj_thread_sleep(50);
     	}
     	if (!assock->is_con_cancelled) {
-    	    PJ_LOG(3, (THIS_FILE, "Failed to cancel SSL connection %p",
-    	    			  assock));
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
+    	    			  "%p", assock));
     	}
     	nw_release(assock->connection);
     	assock->connection = nil;
@@ -1418,7 +1418,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	    pj_thread_sleep(50);
     	}
     	if (!assock->is_lis_cancelled) {
-    	    PJ_LOG(3, (THIS_FILE, "Failed to cancel SSL listener %p",
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener %p",
     	    			  assock));
     	}
 
