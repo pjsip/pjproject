@@ -1643,6 +1643,7 @@ static pj_status_t dtls_media_stop(pjmedia_transport *tp)
     /* Reset DTLS state */
     ssl_destroy(ds);
     ds->setup = DTLS_SETUP_UNKNOWN;
+	ds->use_ice = PJ_FALSE;
     ds->nego_started = PJ_FALSE;
     ds->nego_completed = PJ_FALSE;
     ds->got_keys = PJ_FALSE;
