@@ -57,14 +57,8 @@ class ViewController: UIViewController {
         
         loadUserDefaultsForm()
 
-        
         //Create Lib
-        if(stunSwitch.isOn){
-            CPPWrapper().createLibWrapper(stunIpTField.text, stunPortTField.text, stunSwitch.isOn, tlsSwitch.isOn)
-        }else {
-            //First craete lib
-            CPPWrapper().createLibWrapper("", "", false, false)
-        }
+        CPPWrapper().createLibWrapper()
         
         //Listen incoming call via function pointer
         CPPWrapper().incoming_call_wrapper(incoming_call_swift)
@@ -114,11 +108,13 @@ class ViewController: UIViewController {
                     sipPasswordTField.text,
                     sipIpTField.text,
                     sipPortTField.text,
+                    stunIpTField.text,
+                    stunPortTField.text,
                     turnUsernameTField.text,
                     turnPasswordTField.text,
                     turnIPTField.text,
                     turnPortTField.text,
-
+                    stunSwitch.isOn,
                     turnSwitch.isOn,
                     tlsSwitch.isOn,
                     iceSwitch.isOn
@@ -242,44 +238,7 @@ class ViewController: UIViewController {
         tlsSwitch.isOn = UserDefaults.standard.bool(forKey: "tlsSwitch")
         iceSwitch.isOn = UserDefaults.standard.bool(forKey: "iceSwitch")
         
-        
     }
-    
-    @IBAction func saveReinitBtnClick(_ sender: UIButton) {
-
-        let settings = UserDefaults.standard
-        
-        
-        //Sip Settings
-        settings.set(sipIpTField.text ?? "", forKey: "sipIP")
-        settings.set(sipPortTField.text ?? "", forKey: "sipPort")
-        settings.set(sipUsernameTField.text ?? "", forKey: "sipUsername")
-        settings.set(sipPasswordTField.text ?? "", forKey: "sipPassword")
-        
-        //NAT Settings
-        
-        //Turn Settings
-        settings.set(turnIPTField.text ?? "", forKey: "turnIP")
-        settings.set(turnPortTField.text ?? "", forKey: "turnPort")
-        settings.set(turnUsernameTField.text ?? "", forKey: "turnUsername")
-        settings.set(turnPasswordTField.text ?? "", forKey: "turnPassword")
-        
-        //Stun Settings
-        settings.set(stunIpTField.text ?? "", forKey: "stunIP")
-        settings.set(stunPortTField.text ?? "", forKey: "stunPort")
-        
-        //Switch Keys
-        //settings.set(udpSwitch.isOn, forKey: "udpSwitch")
-        settings.set(stunSwitch.isOn, forKey: "stunSwitch")
-        settings.set(turnSwitch.isOn, forKey: "turnSwitch")
-        settings.set(tlsSwitch.isOn, forKey: "tlsSwitch")
-        settings.set(iceSwitch.isOn, forKey: "iceSwitch")
-        
-        showAlert(alertTitle: "Successfully Saved", alertMessage: "Settings saved successfully. PJSIP Library  reinit process started...", duration: 3.0)
-        CPPWrapper().deleteLibWrapper()
-        CPPWrapper().createLibWrapper(stunIpTField.text, stunPortTField.text, stunSwitch.isOn, tlsSwitch.isOn)
-    }
-    
     
     @IBAction func stunInfoClick(_ sender: UIButton) {
         // create the alert

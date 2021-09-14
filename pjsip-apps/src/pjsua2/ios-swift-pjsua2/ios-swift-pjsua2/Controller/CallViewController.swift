@@ -74,57 +74,5 @@ class CallViewController: UIViewController {
 
     }
 
-
-    @IBAction func call9900(_ sender: UIButton) {
-        if(CPPWrapper().registerStateInfoWrapper() != false){
-            let vcToPresent = self.storyboard!.instantiateViewController(withIdentifier: "outgoingCallVC") as! OutgoingViewController
-            vcToPresent.outgoingCallId = "sip:" + "9900" + "@" + sipIp + ":" + sipPort
-            self.present(vcToPresent, animated: true, completion: nil)
-        }else {
-            let alert = UIAlertController(title: "Outgoing Call Error", message: "Please register to be able to make call", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
-                switch action.style{
-                    case .default:
-                    print("default")
-                    
-                    case .cancel:
-                    print("cancel")
-                    
-                    case .destructive:
-                    print("destructive")
-                    
-                @unknown default:
-                    fatalError()
-                }
-            }))
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
-    
-    @IBAction func call9901(_ sender: UIButton) {
-        if(CPPWrapper().registerStateInfoWrapper() != false){
-            let vcToPresent = self.storyboard!.instantiateViewController(withIdentifier: "outgoingCallVC") as! OutgoingViewController
-            vcToPresent.outgoingCallId = "sip:" + "9901" + "@" + sipIp + ":" + sipPort
-            self.present(vcToPresent, animated: true, completion: nil)
-        }else {
-            let alert = UIAlertController(title: "Outgoing Call Error", message: "Please register to be able to make call", preferredStyle: .alert)
-            alert.addAction(UIAlertAction(title: "OK", style: .default, handler: { action in
-                switch action.style{
-                    case .default:
-                    print("default")
-                    
-                    case .cancel:
-                    print("cancel")
-                    
-                    case .destructive:
-                    print("destructive")
-                    
-                @unknown default:
-                    fatalError()
-                }
-            }))
-            self.present(alert, animated: true, completion: nil)
-        }
-    }
     
 }

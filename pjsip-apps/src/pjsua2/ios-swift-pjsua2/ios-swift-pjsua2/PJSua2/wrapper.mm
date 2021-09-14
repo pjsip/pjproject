@@ -33,14 +33,9 @@ PJSua2 pjsua2;
 /**
  Create Lib with EpConfig
  */
--(void) createLibWrapper :(NSString*) stunIpNS :(NSString*) stunPortNS :(bool) stunEnabledNS :(bool) tlsEnabledNS
+-(void) createLibWrapper
 {
-    std::string stunIp = std::string([[stunIpNS componentsSeparatedByString:@"*"][0] UTF8String]);
-    std::string stunPort = std::string([[stunPortNS componentsSeparatedByString:@"*"][0] UTF8String]);
-    bool stunEnabled = stunEnabledNS;
-    bool tlsEnabled = tlsEnabledNS;
-    
-    return pjsua2.createLib(stunIp, stunPort, stunEnabled, tlsEnabled);
+    pjsua2.createLib();
 };
 
 /**
@@ -56,21 +51,26 @@ PJSua2 pjsua2;
 /**
  Create Account via following config(string username, string password, string ip, string port)
  */
--(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS :(NSString*) ipNS :(NSString*) portNS :(NSString*) turnUsernameNS :(NSString*) turnPasswordNS :(NSString*) turnIpNS :(NSString*) turnPortNS :(bool) turnEnabledNS :(bool) tlsEnabledNS :(bool) iceEnabledNS
+-(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS :(NSString*) ipNS :(NSString*) portNS :(NSString*) stunIpNS :(NSString*) stunPortNS :(NSString*) turnUsernameNS :(NSString*) turnPasswordNS :(NSString*) turnIpNS :(NSString*) turnPortNS :(bool) stunEnabledNS :(bool) turnEnabledNS :(bool) tlsEnabledNS :(bool) iceEnabledNS
 {
     std::string username = std::string([[usernameNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string password = std::string([[passwordNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string ip = std::string([[ipNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string port = std::string([[portNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string stunIp = std::string([[stunIpNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    std::string stunPort = std::string([[stunPortNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    
     std::string turnUsername = std::string([[turnUsernameNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string turnPassword = std::string([[turnPasswordNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string turnIp = std::string([[turnIpNS componentsSeparatedByString:@"*"][0] UTF8String]);
     std::string turnPort = std::string([[turnPortNS componentsSeparatedByString:@"*"][0] UTF8String]);
+    
+    bool stunEnabled = stunEnabledNS;
     bool turnEnabled = turnEnabledNS;
     bool tlsEnabled = tlsEnabledNS;
     bool iceEnabled = iceEnabledNS;
     
-    pjsua2.createAccount(username, password, ip, port, turnUsername, turnPassword, turnIp, turnPort, turnEnabled, tlsEnabled, iceEnabled);
+    pjsua2.createAccount(username, password, ip, port, stunIp, stunPort, turnUsername, turnPassword, turnIp, turnPort, stunEnabled, turnEnabled, tlsEnabled, iceEnabled);
 }   
 
 /**

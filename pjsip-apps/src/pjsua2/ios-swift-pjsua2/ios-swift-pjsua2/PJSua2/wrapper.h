@@ -28,7 +28,7 @@
 /**
  Create Lib with EpConfig
  */
--(void) createLibWrapper :(NSString*) stunIpNS :(NSString*) stunPortNS :(bool) stunEnabledNS :(bool) tlsEnabledNS;
+-(void) createLibWrapper;
 
 /**
  Delete lib
@@ -41,7 +41,7 @@
  Create Account via following config
  (string username, string password, string ip, string port, string turnUsername, string turnPassword, string turnIp, string turnPort, bool turnEnabled, bool tlsEnabled, bool iceEnabled)
  */
--(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS :(NSString*) ipNS :(NSString*) portNS :(NSString*) turnUsernameNS :(NSString*) turnPasswordNS :(NSString*) turnIpNS :(NSString*) turnPortNS :(bool) turnEnabledNS :(bool) tlsEnabledNS :(bool) iceEnabledNS;
+-(void) createAccountWrapper :(NSString*) usernameNS :(NSString*) passwordNS :(NSString*) ipNS :(NSString*) portNS :(NSString*) stunIpNS :(NSString*) stunPortNS :(NSString*) turnUsernameNS :(NSString*) turnPasswordNS :(NSString*) turnIpNS :(NSString*) turnPortNS :(bool) stunEnabledNS :(bool) turnEnabledNS :(bool) tlsEnabledNS :(bool) iceEnabledNS;
 
 /**
  Unregister account

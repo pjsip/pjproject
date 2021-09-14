@@ -31,7 +31,7 @@ public:
     /**
      Create Lib with EpConfig
      */
-    void createLib(std::string stunIp, std::string stunPort, bool stunEnabled, bool tlsEnabled);
+    void createLib();
     
     /**
      Delete lib
@@ -45,7 +45,7 @@ public:
      Create Account via following config(string username, string password, string ip, string port)
      */
     void createAccount(std::string username, std::string password, std::string ip, std::string port,
-                       std::string turnUsername, std::string turnPassword, std::string turnIp, std::string turnPort,
+                       std::string stunIp, std::string stunPort, std::string turnUsername, std::string turnPassword, std::string turnIp, std::string turnPort, bool stunEnabled,
                        bool turnEnabled, bool tlsEnabled, bool iceEnabled
                        );
     
