@@ -65,6 +65,9 @@ typedef struct applessl_sock_t {
     SecTrustRef		trust;
     tls_ciphersuite_t	cipher;
     sec_identity_t	identity;
+
+    pj_bool_t		is_con_cancelled;
+    pj_bool_t		is_lis_cancelled;
 } applessl_sock_t;
 
 
@@ -273,8 +276,8 @@ pj_status_t ssl_network_event_poll()
     	pj_list_erase(event);
 
 	if (ssock->is_closing || !ssock->pool) {
-            PJ_LOG(3, (THIS_FILE, "Discarding SSL event of a closing "
-            			  "socket"));
+            PJ_LOG(3, (THIS_FILE, "Discarding SSL event type %d of "
+            	       "a closing socket %p", event->type, ssock));
             event->type = EVENT_DISCARD;
 	} else if (ssock->param.grp_lock) {
             if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
@@ -284,8 +287,8 @@ pj_status_t ssl_network_event_poll()
                 add_ref = PJ_TRUE;
                 pj_grp_lock_add_ref(ssock->param.grp_lock);
             } else {
-            	PJ_LOG(3, (THIS_FILE, "Discarding SSL event of a destroyed "
-            			      "socket"));
+            	PJ_LOG(3, (THIS_FILE, "Discarding SSL event type %d of "
+            		   "a destroyed socket %p", event->type, ssock));
                 event->type = EVENT_DISCARD;
             }
         }
@@ -1096,6 +1099,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 
     nw_connection_set_queue(assock->connection, assock->queue);
 
+    assock->is_con_cancelled = PJ_FALSE;
     nw_connection_set_state_changed_handler(assock->connection,
     	^(nw_connection_state_t state, nw_error_t error)
     {
@@ -1134,6 +1138,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 	    }
 	    call_cb = PJ_TRUE;
 	} else if (state == nw_connection_state_cancelled) {
+	    assock->is_con_cancelled = PJ_TRUE;
 	    /* We release the reference in ssl_destroy() */
 	    // nw_release(assock->connection);
 	    // assock->connection = nil;
@@ -1185,6 +1190,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     /* Hold a reference until cancelled */
     nw_retain(assock->listener);
 
+    assock->is_lis_cancelled = PJ_FALSE;
     nw_listener_set_state_changed_handler(assock->listener, 
         ^(nw_listener_state_t state, nw_error_t error)
     {
@@ -1199,6 +1205,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     			         nw_listener_get_port(assock->listener));
 	    dispatch_semaphore_signal(assock->ev_semaphore);
 	} else if (state == nw_listener_state_cancelled) {
+	    assock->is_lis_cancelled = PJ_TRUE;
 	    /* We release the reference in ssl_destroy() */
 	    // nw_release(assock->listener);
 	    // assock->listener = nil;
@@ -1377,25 +1384,43 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
+    unsigned i;
 
-    /* Cancel the connection and release it */
-    if (assock->connection) {
-    	/* This is important. Otherwise events can still be delivered
-    	 * even after we force cancel and release the connection below.
-    	 */
-	nw_connection_set_state_changed_handler(assock->connection, nil);
-
+    if (assock->connection)
     	nw_connection_force_cancel(assock->connection);
+    if (assock->listener) {
+	nw_listener_set_new_connection_handler(assock->listener, nil);
+    	nw_listener_cancel(assock->listener);
+    }
+
+    if (assock->connection) {
+    	/* We need to wait until the connection is at cancelled state,
+    	 * otherwise events will still be delivered even though we
+    	 * already release the connection.
+    	 * Calling nw_connection_set_state_changed_handler(nil) won't
+    	 * help either as events are still delivered to the old handler.
+    	 */
+    	for (i = 0; i < 20; i++) {
+    	    if (assock->is_con_cancelled) break;
+    	    pj_thread_sleep(50);
+    	}
+    	if (!assock->is_con_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Failed to cancel SSL connection %p",
+    	    			  assock));
+    	}
     	nw_release(assock->connection);
     	assock->connection = nil;
     }
 
     if (assock->listener) {
-    	/* This is important. Otherwise events can still be delivered
-    	 * even after we cancel and release the listener below.
-    	 */
-	nw_listener_set_state_changed_handler(assock->listener, nil);
-	nw_listener_set_new_connection_handler(assock->listener, nil);
+    	for (i = 0; i < 20; i++) {
+    	    if (assock->is_lis_cancelled) break;
+    	    pj_thread_sleep(50);
+    	}
+    	if (!assock->is_lis_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Failed to cancel SSL listener %p",
+    	    			  assock));
+    	}
 
     	nw_listener_cancel(assock->listener);
 	nw_release(assock->listener);
@@ -1424,6 +1449,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
+    
+    PJ_LOG(4, (THIS_FILE, "SSL %p destroyed", ssock));
 }
 
 
