@@ -1397,8 +1397,6 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	/* We need to wait until the connection is at cancelled state,
     	 * otherwise events will still be delivered even though we
     	 * already release the connection.
-    	 * Calling nw_connection_set_state_changed_handler(nil) won't
-    	 * help either as events are still delivered to the old handler.
     	 */
     	for (i = 0; i < 20; i++) {
     	    if (assock->is_con_cancelled) break;
@@ -1408,6 +1406,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
     	    			  "%p", assock));
     	}
+	nw_connection_set_state_changed_handler(assock->connection, nil);
     	nw_release(assock->connection);
     	assock->connection = nil;
     }
@@ -1421,8 +1420,7 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener %p",
     	    			  assock));
     	}
-
-    	nw_listener_cancel(assock->listener);
+	nw_listener_set_state_changed_handler(assock->listener, nil);
 	nw_release(assock->listener);
   	assock->listener = nil;
     }
