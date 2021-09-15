@@ -55,19 +55,18 @@
 
 /* Secure socket structure definition. */
 typedef struct applessl_sock_t {
-    pj_ssl_sock_t  	base;
+    pj_ssl_sock_t  		base;
 
-    nw_listener_t 	listener;
-    nw_connection_t     connection;
-    dispatch_queue_t	queue;
-    dispatch_semaphore_t ev_semaphore;
+    nw_listener_t 		listener;
+    nw_listener_state_t		lis_state;
+    nw_connection_t     	connection;
+    nw_connection_state_t	con_state;
+    dispatch_queue_t		queue;
+    dispatch_semaphore_t 	ev_semaphore;
 
-    SecTrustRef		trust;
-    tls_ciphersuite_t	cipher;
-    sec_identity_t	identity;
-
-    pj_bool_t		is_con_cancelled;
-    pj_bool_t		is_lis_cancelled;
+    SecTrustRef			trust;
+    tls_ciphersuite_t		cipher;
+    sec_identity_t		identity;
 } applessl_sock_t;
 
 
@@ -1099,7 +1098,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 
     nw_connection_set_queue(assock->connection, assock->queue);
 
-    assock->is_con_cancelled = PJ_FALSE;
+    assock->con_state = nw_connection_state_invalid;
     nw_connection_set_state_changed_handler(assock->connection,
     	^(nw_connection_state_t state, nw_error_t error)
     {
@@ -1138,7 +1137,6 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 	    }
 	    call_cb = PJ_TRUE;
 	} else if (state == nw_connection_state_cancelled) {
-	    assock->is_con_cancelled = PJ_TRUE;
 	    /* We release the reference in ssl_destroy() */
 	    // nw_release(assock->connection);
 	    // assock->connection = nil;
@@ -1157,6 +1155,8 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 			     ssock->asock_rbuf, 0);
 	    }
 	}
+
+	assock->con_state = state;
     });
 
     nw_connection_start(assock->connection);
@@ -1190,11 +1190,12 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     /* Hold a reference until cancelled */
     nw_retain(assock->listener);
 
-    assock->is_lis_cancelled = PJ_FALSE;
+    assock->lis_state = nw_listener_state_invalid;
     nw_listener_set_state_changed_handler(assock->listener, 
         ^(nw_listener_state_t state, nw_error_t error)
     {
 	errno = error ? nw_error_get_error_code(error) : 0;
+
 	if (state == nw_listener_state_failed) {
 	    warn("listener failed\n");
 	    pj_sockaddr_set_port(&ssock->local_addr, 0);
@@ -1205,11 +1206,11 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     			         nw_listener_get_port(assock->listener));
 	    dispatch_semaphore_signal(assock->ev_semaphore);
 	} else if (state == nw_listener_state_cancelled) {
-	    assock->is_lis_cancelled = PJ_TRUE;
 	    /* We release the reference in ssl_destroy() */
 	    // nw_release(assock->listener);
 	    // assock->listener = nil;
 	}
+    	assock->lis_state = state;
     });
 
     nw_listener_set_new_connection_handler(assock->listener,
@@ -1357,6 +1358,31 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+static void close_connection(applessl_sock_t *assock)
+{
+    if (assock->connection) {
+    	unsigned i;
+
+    	nw_connection_cancel(assock->connection);
+
+    	/* We need to wait until the connection is at cancelled state,
+    	 * otherwise events will still be delivered even though we
+    	 * already release the connection.
+    	 */
+    	for (i = 0; i < 20; i++) {
+    	    if (assock->con_state == nw_connection_state_cancelled) break;
+    	    pj_thread_sleep(50);
+    	}
+    	if (assock->con_state != nw_connection_state_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
+    	    			  "%p %d", assock, assock->con_state));
+    	}
+	nw_connection_set_state_changed_handler(assock->connection, nil);
+    	nw_release(assock->connection);
+    	assock->connection = nil;
+    }
+}
+
 /* Close sockets */
 static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 {
@@ -1372,11 +1398,7 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
     	return;
 
     pj_lock_acquire(ssock->write_mutex);
-    if (assock->connection) {
-    	nw_connection_cancel(assock->connection);
-    	nw_release(assock->connection);
-    	assock->connection = nil;
-    }
+    close_connection(assock);
     pj_lock_release(ssock->write_mutex);
 }
 
@@ -1384,41 +1406,22 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
-    unsigned i;
 
-    if (assock->connection)
-    	nw_connection_force_cancel(assock->connection);
+    close_connection(assock);
+
     if (assock->listener) {
+    	unsigned i;
+	
 	nw_listener_set_new_connection_handler(assock->listener, nil);
     	nw_listener_cancel(assock->listener);
-    }
 
-    if (assock->connection) {
-    	/* We need to wait until the connection is at cancelled state,
-    	 * otherwise events will still be delivered even though we
-    	 * already release the connection.
-    	 */
     	for (i = 0; i < 20; i++) {
-    	    if (assock->is_con_cancelled) break;
+    	    if (assock->lis_state == nw_listener_state_cancelled) break;
     	    pj_thread_sleep(50);
     	}
-    	if (!assock->is_con_cancelled) {
-    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
-    	    			  "%p", assock));
-    	}
-	nw_connection_set_state_changed_handler(assock->connection, nil);
-    	nw_release(assock->connection);
-    	assock->connection = nil;
-    }
-
-    if (assock->listener) {
-    	for (i = 0; i < 20; i++) {
-    	    if (assock->is_lis_cancelled) break;
-    	    pj_thread_sleep(50);
-    	}
-    	if (!assock->is_lis_cancelled) {
-    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener %p",
-    	    			  assock));
+    	if (assock->lis_state != nw_listener_state_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener "
+    	    			  "%p %d", assock, assock->lis_state));
     	}
 	nw_listener_set_state_changed_handler(assock->listener, nil);
 	nw_release(assock->listener);
