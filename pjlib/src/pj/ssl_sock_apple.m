@@ -27,6 +27,9 @@
 
 #define THIS_FILE               "ssl_sock_apple.m"
 
+/* Set to 1 to enable debugging messages*/
+#define SSL_DEBUG  0
+
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 #define SSL_SOCK_IMP_USE_OWN_NETWORK
 
@@ -201,7 +204,12 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
 {
     event_manager *mgr = event_mgr;
     event_t *event;
-    
+
+#if SSL_DEBUG
+    /* Post event can be from dispatch queue, so we can't use PJ_LOG here */
+    printf("post event %p %d\n", ssock, event_item->type);
+#endif
+
     if (ssock->is_closing)
     	return PJ_EGONE;
     
@@ -272,9 +280,13 @@ pj_status_t ssl_network_event_poll()
     	}
     	event = event_mgr->event_list.next;
     	ssock = event->ssock;
+	assock = (applessl_sock_t *)ssock;
     	pj_list_erase(event);
 
-	if (ssock->is_closing || !ssock->pool) {
+	if (ssock->is_closing || !ssock->pool ||
+	    (!ssock->is_server && !assock->connection) ||
+	    (ssock->is_server && !assock->listener))
+	{
             PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d of "
             	       "a closing socket %p", event->type, ssock));
             event->type = EVENT_DISCARD;
@@ -294,7 +306,6 @@ pj_status_t ssl_network_event_poll()
 
     	[event_mgr->lock unlock];
 
-	assock = (applessl_sock_t *)event->ssock;
 	switch (event->type) {
 	    case EVENT_ACCEPT:
 		ret = ssock_on_accept_complete(event->ssock,
@@ -1110,11 +1121,17 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     {
     	pj_status_t status = PJ_SUCCESS;
     	pj_bool_t call_cb = PJ_FALSE;
+#if SSL_DEBUG
+        printf("ssl state change %p %d\n", assock, state);
+#endif
 
 	if (error && state != nw_connection_state_cancelled) {
     	    errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
+#if SSL_DEBUG
+            printf("ssl state and errno %d %d\n", state, errno);
+#endif
             call_cb = PJ_TRUE;	
 	}
 
@@ -1379,6 +1396,7 @@ static void close_connection(applessl_sock_t *assock)
     	    if (assock->con_state == nw_connection_state_cancelled) break;
     	    pj_thread_sleep(50);
     	}
+
     	if (assock->con_state != nw_connection_state_cancelled) {
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
     	    			  "%p %d", assock, assock->con_state));
