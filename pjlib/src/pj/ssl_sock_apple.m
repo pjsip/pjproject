@@ -711,6 +711,9 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
+
+    if (!assock->connection)
+    	return PJ_EGONE;
     
     content = dispatch_data_create(data, *size, assock->queue,
     				   DISPATCH_DATA_DESTRUCTOR_DEFAULT);
@@ -756,7 +759,10 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     unsigned i;
-    
+
+    if (!assock->connection)
+    	return PJ_EGONE;
+
     for (i = 0; i < async_count; i++) {
 	nw_connection_receive(assock->connection, 1, buff_size,
 	    ^(dispatch_data_t content, nw_content_context_t context,
@@ -1377,6 +1383,9 @@ static void close_connection(applessl_sock_t *assock)
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
     	    			  "%p %d", assock, assock->con_state));
     	}
+
+    	event_manager_remove_events(assock);
+
 	nw_connection_set_state_changed_handler(assock->connection, nil);
     	nw_release(assock->connection);
     	assock->connection = nil;
