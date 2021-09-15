@@ -313,9 +313,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
 	/* Expecting either '/' or EOF */
 	if (*scanner.curptr == '/') {
+	    /* Skip the '/' */
 	    pj_scan_get_char(&scanner);
-	    rtpmap->param.ptr = scanner.curptr;
-	    rtpmap->param.slen = scanner.end - scanner.curptr;
+	    pj_scan_get(&scanner, &cs_token, &rtpmap->param);
 	} else {
 	    rtpmap->param.slen = 0;
 	}
