@@ -27,7 +27,10 @@
 
 #define THIS_FILE               "ssl_sock_apple.m"
 
-/* Set to 1 to enable debugging messages*/
+/* Set to 1 to enable debugging messages.
+ * Note that some functions can be called from a dispatch queue, so we
+ * use regular printf() instead of PJ_LOG().
+ */
 #define SSL_DEBUG  0
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
@@ -206,7 +209,6 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_t *event;
 
 #if SSL_DEBUG
-    /* Post event can be from dispatch queue, so we can't use PJ_LOG here */
     printf("post event %p %d\n", ssock, event_item->type);
 #endif
 
@@ -977,6 +979,11 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	
 	sec_protocol_options_set_tls_renegotiation_enabled(sec_options,
 							   true);
+	/* This must be disabled, otherwise server may think this is
+	 * a resumption of a previously closed connection, and our
+	 * verify block may never be invoked!
+	 */
+    	sec_protocol_options_set_tls_resumption_enabled(sec_options, false);
 	
     	/* SSL verification options */
     	sec_protocol_options_set_peer_authentication_required(sec_options,
@@ -1404,7 +1411,10 @@ static void close_connection(applessl_sock_t *assock)
 
     	event_manager_remove_events(&assock->base);
 
-	nw_connection_set_state_changed_handler(assock->connection, nil);
+#if SSL_DEBUG
+	printf("SSL connection %p closed", assock);
+#endif
+
     	nw_release(assock->connection);
     	assock->connection = nil;
     }
@@ -1450,7 +1460,6 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener "
     	    			  "%p %d", assock, assock->lis_state));
     	}
-	nw_listener_set_state_changed_handler(assock->listener, nil);
 	nw_release(assock->listener);
   	assock->listener = nil;
     }
@@ -1488,6 +1497,10 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
     pj_lock_acquire(ssock->circ_buf_output_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
     pj_lock_release(ssock->circ_buf_output_mutex);
+
+#if SSL_DEBUG
+    printf("SSL reset sock state %p", ssock);
+#endif
 
     ssl_close_sockets(ssock);
 }
