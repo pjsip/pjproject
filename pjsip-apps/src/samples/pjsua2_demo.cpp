@@ -202,7 +202,7 @@ static void mainProg1(Endpoint &ep)
     // Add account
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:test1@pjsip.org";
-    acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
+    //acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
     acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
                                                         "test1", 0, "test1") );
     MyAccount *acc(new MyAccount);
@@ -220,10 +220,16 @@ static void mainProg1(Endpoint &ep)
     CallOpParam prm(true);
     prm.opt.audioCount = 1;
     prm.opt.videoCount = 0;
-    call->makeCall("sip:test1@pjsip.org", prm);
+
+
+    ep.audDevManager().setNoDev();
+    ep.audDevManager().setCaptureDev(0);
+    ep.audDevManager().setPlaybackDev(0);
+    ep.audDevManager().setSndDevMode(PJSUA_SND_DEV_SPEAKER_ONLY | PJSUA_SND_DEV_NO_IMMEDIATE_OPEN);
+    call->makeCall("sip:localhost:6000", prm);
     
     // Hangup all calls
-    pj_thread_sleep(4000);
+    pj_thread_sleep(40000);
     ep.hangupAllCalls();
     pj_thread_sleep(4000);
     
