@@ -2141,14 +2141,22 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
     PJSUA_LOCK();
 
+    /* Check if there are no changes in sound device settings */
     if (pjsua_var.cap_dev == snd_param->capture_dev &&
 	pjsua_var.play_dev == snd_param->playback_dev &&
 	pjsua_var.snd_mode == snd_param->mode)
     {
-	PJ_LOG(4, (THIS_FILE, "No changes in capture and playback devices"));
-        PJSUA_UNLOCK();
-        pj_log_pop_indent();
-	return PJ_SUCCESS;
+	/* If sound device is already opened, just print log and return.
+	 * Also if PJSUA_SND_DEV_NO_IMMEDIATE_OPEN is set.
+	 */
+	if (pjsua_var.snd_is_on || (snd_param->mode &
+				    PJSUA_SND_DEV_NO_IMMEDIATE_OPEN))
+	{
+	    PJ_LOG(4,(THIS_FILE,"No changes in capture and playback devices"));
+	    PJSUA_UNLOCK();
+	    pj_log_pop_indent();
+	    return PJ_SUCCESS;
+	}
     }
     
     /* No sound */
