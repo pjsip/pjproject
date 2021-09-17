@@ -1412,7 +1412,7 @@ static void close_connection(applessl_sock_t *assock)
     	event_manager_remove_events(&assock->base);
 
 #if SSL_DEBUG
-	printf("SSL connection %p closed", assock);
+	printf("SSL connection %p closed\n", assock);
 #endif
 
     	nw_release(assock->connection);
@@ -1499,7 +1499,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
     pj_lock_release(ssock->circ_buf_output_mutex);
 
 #if SSL_DEBUG
-    printf("SSL reset sock state %p", ssock);
+    printf("SSL reset sock state %p\n", ssock);
 #endif
 
     ssl_close_sockets(ssock);
