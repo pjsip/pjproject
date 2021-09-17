@@ -7606,6 +7606,10 @@ PJ_DECL(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
  *
+ * Note that this function will always try to open the sound device
+ * immediately. If immediate open is not preferred, use pjsua_set_snd_dev2()
+ * with PJSUA_SND_DEV_NO_IMMEDIATE_OPEN flag.
+ *
  * @param capture_dev   Device ID of the capture device.
  * @param playback_dev	Device ID of the playback device.
  *

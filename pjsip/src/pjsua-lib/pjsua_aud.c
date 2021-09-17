@@ -2099,7 +2099,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev(int capture_dev,
     param.playback_dev = playback_dev;
 
     /* Always open the sound device. */
-    param.mode = 0;
+    param.mode &= ~PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;
 
     return pjsua_set_snd_dev2(&param);
 }
