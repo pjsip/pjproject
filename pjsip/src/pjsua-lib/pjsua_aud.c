@@ -2192,6 +2192,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
     {
 	pjsua_var.cap_dev = snd_param->capture_dev;
 	pjsua_var.play_dev = snd_param->playback_dev;
+	pjsua_var.no_snd = PJ_FALSE;
 
 	PJSUA_UNLOCK();	
 	pj_log_pop_indent();
