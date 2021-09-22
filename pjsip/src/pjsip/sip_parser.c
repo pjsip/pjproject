@@ -220,7 +220,9 @@ PJ_INLINE(void) parser_get_and_unescape(pj_scanner *scanner, pj_pool_t *pool,
 #else
     PJ_UNUSED_ARG(unesc_spec);
     pj_scan_get(scanner, spec, token);
-    *token = pj_str_unescape(pool, token);
+    if (!pj_cis_match(spec, '%')) {
+        *token = pj_str_unescape(pool, token);
+    }
 #endif
 }
 
