@@ -589,6 +589,19 @@ PJ_DECL(pj_status_t) pj_ioqueue_post_completion( pj_ioqueue_key_t *key,
                                                  pj_ssize_t bytes_status );
 
 
+/**
+ * Clear ioqueue key states. This function will cancel any outstanding
+ * operations on that key, without invoking any completion callback.
+ * After calling this function, application should reinit its all operation
+ * keys, i.e: using pj_ioqueue_op_key_init(), before reusing them.
+ *
+ * @param key           The key.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_clear_key( pj_ioqueue_key_t *key );
+
+
 
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP != 0
 /**
