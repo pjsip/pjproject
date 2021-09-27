@@ -911,7 +911,6 @@ public:
      * Select or change capture sound device. Application may call this
      * function at any time to replace current sound device. Calling this 
      * method will not change the state of the sound device (opened/closed).
-     * Note that this method will override the mode set by setSndDevMode().
      *
      * @param capture_dev   	Device ID of the capture device.
      */
@@ -921,7 +920,6 @@ public:
      * Select or change playback sound device. Application may call this
      * function at any time to replace current sound device. Calling this 
      * method will not change the state of the sound device (opened/closed).
-     * Note that this method will override the mode set by setSndDevMode().
      *
      * @param playback_dev   	Device ID of the playback device.
      */
@@ -966,8 +964,11 @@ public:
     MediaPort *setNoDev();
 
     /**
-     * Set sound device mode. Note that calling the APIs to set sound device
-     * (setPlaybackDev()/setCaptureDev()) will reset the mode.
+     * Set sound device mode.
+     *
+     * Note that this method will open the sound device, using current
+     * active IDs set via setCaptureDev() or setPlaybackDev(), if the flag
+     * PJSUA_SND_DEV_NO_IMMEDIATE_OPEN is not specified.
      * 
      * @param mode		The sound device mode, as bitmask combination 
      *				of #pjsua_snd_dev_mode
