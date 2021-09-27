@@ -900,7 +900,7 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
         	opus_data->dec_frame_index = -1;
 
         	/* Signal to the stream about ptime change. */
-     	    	frames[i].bit_info |= 0x10000;
+		frames[i].bit_info = 0x10000 | nsamples;
     	    }
 	    samples_per_frame = nsamples;
    	}
