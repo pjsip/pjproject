@@ -1378,8 +1378,21 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     	    	    eve->med_idx == call_med->idx)
     	    	{
     	    	    PJSUA_UNLOCK();
-    	    	    pj_thread_sleep(20);
-    	    	    PJSUA_LOCK();
+
+		    /* If there is no worker thread or
+		     * the function is called from the only worker thread,
+		     * we have to handle the events here.
+		     */
+		    if (pjsua_var.thread[0] == NULL ||
+			(pj_thread_this() == pjsua_var.thread[0] &&
+			 pjsua_var.ua_cfg.thread_cnt == 1))
+		    {
+			pjsua_handle_events(10);
+		    } else {
+			pj_thread_sleep(10);
+		    }
+
+		    PJSUA_LOCK();
     	    	    break;
     	    	}
     	    }
