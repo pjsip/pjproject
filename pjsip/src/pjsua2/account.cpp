@@ -575,6 +575,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.unreg_timeout		= regConfig.unregWaitMsec;
     ret.reg_use_proxy		= regConfig.proxyUse;
     ret.reg_contact_params	= str2Pj(regConfig.contactParams);
+    ret.reg_contact_uri_params	= str2Pj(regConfig.contactUriParams);
     for (i=0; i<regConfig.headers.size(); ++i) {
 	pj_list_push_back(&ret.reg_hdr_list, &regConfig.headers[i].toPj());
     }
@@ -725,6 +726,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     regConfig.unregWaitMsec	= prm.unreg_timeout;
     regConfig.proxyUse		= prm.reg_use_proxy;
     regConfig.contactParams	= pj2Str(prm.reg_contact_params);
+    regConfig.contactUriParams	= pj2Str(prm.reg_contact_uri_params);
     regConfig.headers.clear();
     hdr = prm.reg_hdr_list.next;
     while (hdr != &prm.reg_hdr_list) {

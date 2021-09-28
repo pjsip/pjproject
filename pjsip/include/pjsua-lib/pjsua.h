@@ -3693,6 +3693,17 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	    reg_contact_params;
 
+    /**
+     * Additional URI parameters that will be appended in the Contact URI
+     * for this account. This will only affect REGISTER requests and
+     * will be appended after \a contact_uri_params;
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    pj_str_t	    reg_contact_uri_params;
+
     /** 
      * The optional custom SIP headers to be put in the presence
      * subscription request.
@@ -7606,6 +7617,10 @@ PJ_DECL(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
  *
+ * Note that this function will always try to open the sound device
+ * immediately. If immediate open is not preferred, use pjsua_set_snd_dev2()
+ * with PJSUA_SND_DEV_NO_IMMEDIATE_OPEN flag.
+ *
  * @param capture_dev   Device ID of the capture device.
  * @param playback_dev	Device ID of the playback device.
  *
@@ -7615,13 +7630,23 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 				       int playback_dev);
 
 /**
+ * Get sound device parameters such as playback & capture device IDs and mode.
+ *
+ * @param snd_param	On return, it is set with sound device param.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param);
+
+
+/**
  * Select or change sound device according to the specified param.
  *
  * @param snd_param	Sound device param. 
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param);
+PJ_DECL(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param);
 
 
 /**

@@ -770,6 +770,12 @@ static int print_media_desc( pjmedia_sdp_media *m, char *buf, int len)
     return (int)(p-buf);
 }
 
+PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
+			       char *buf, pj_size_t size)
+{
+	return print_media_desc(media, buf, size);
+}
+
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
 						 pj_pool_t *pool, 
 						 const pjmedia_sdp_media *rhs)

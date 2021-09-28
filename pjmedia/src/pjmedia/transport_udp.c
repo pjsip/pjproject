@@ -37,6 +37,13 @@
 /* Maximum pending write operations */
 #define MAX_PENDING 4
 
+#if 1
+#  define TRACE_(expr)
+#else
+#  define TRACE_(expr) PJ_LOG(3,expr)
+#endif
+
+
 /* Pending write buffer */
 typedef struct pending_write
 {
@@ -288,7 +295,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     pj_pool_t *pool;
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback rtp_cb, rtcp_cb;
-    unsigned i;
     pj_status_t status;
 
 
@@ -356,6 +362,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+#if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i) {
         tp->rtp_pending_write[i].is_pending = PJ_FALSE;
@@ -363,7 +370,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 			       sizeof(tp->rtp_pending_write[i].op_key));
     }
 
-#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTP read from the ioqueue */
     tp->rtp_addrlen = sizeof(tp->rtp_src_addr);
     size = sizeof(tp->rtp_pkt);
@@ -388,11 +394,10 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+#if 0 // See #2097: move read op kick-off to media_start()
     pj_ioqueue_op_key_init(&tp->rtcp_read_op, sizeof(tp->rtcp_read_op));
     pj_ioqueue_op_key_init(&tp->rtcp_write_op, sizeof(tp->rtcp_write_op));
 
-
-#if 0 // See #2097: move read op kick-off to media_start()
     /* Kick of pending RTCP read from the ioqueue */
     size = sizeof(tp->rtcp_pkt);
     tp->rtcp_addr_len = sizeof(tp->rtcp_src_addr);
@@ -451,6 +456,7 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
 	udp->rtcp_sock = PJ_INVALID_SOCKET;
     }
 
+    PJ_LOG(4,(udp->base.name, "UDP media transport destroyed"));
     pj_pool_release(udp->pool);
 
     return PJ_SUCCESS;
@@ -511,11 +517,16 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
-    if (-bytes_read == PJ_ECANCELLED) return;
-
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
+    if (-bytes_read == PJ_ECANCELLED) {
+	TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ECANCELLED"));
+	return;
+    }
+
     if (-bytes_read == PJ_ESOCKETSTOP) {
+	TRACE_((udp->base.name, "on_rx_rtp(): got PJ_ESOCKETSTOP"));
+
 	/* Try to recover by restarting the transport. */
 	status = transport_restart(PJ_TRUE, udp);
 	if (status != PJ_SUCCESS) {
@@ -620,6 +631,7 @@ static void on_rx_rtp(pj_ioqueue_key_t *key,
 		}
 	    }
 	    bytes_read = -status;
+	    TRACE_((udp->base.name, "on_rx_rtp(): recvfrom error=%d", status));
 	}
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
 	     udp->started);
@@ -657,11 +669,16 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
     PJ_UNUSED_ARG(op_key);
 
-    if (-bytes_read == PJ_ECANCELLED) return;
-
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
+    if (-bytes_read == PJ_ECANCELLED) {
+	TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ECANCELLED"));
+	return;
+    }
+
     if (-bytes_read == PJ_ESOCKETSTOP) {
+	TRACE_((udp->base.name, "on_rx_rtcp(): got PJ_ESOCKETSTOP"));
+
 	/* Try to recover by restarting the transport. */
 	status = transport_restart(PJ_FALSE, udp);
 	if (status != PJ_SUCCESS) {
@@ -740,6 +757,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 		}
 	    }
 	    bytes_read = -status;
+	    TRACE_((udp->base.name, "on_rx_rtcp(): recvfrom error=%d", status));
 	}	
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
 	     udp->started);
@@ -806,11 +824,15 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
     udp->use_rtcp_mux = (pj_sockaddr_has_addr(rem_addr) &&
 			 pj_sockaddr_cmp(rem_addr, rem_rtcp) == 0);
 
+    TRACE_((udp->base.name, "attach(): before locking keys"));
+
     /* Lock the ioqueue keys to make sure that callbacks are
      * not executed. See ticket #844 for details.
      */
     pj_ioqueue_lock_key(udp->rtp_key);
     pj_ioqueue_lock_key(udp->rtcp_key);
+
+    TRACE_((udp->base.name, "attach(): inside locked keys"));
 
     /* "Attach" the application: */
 
@@ -912,6 +934,8 @@ static pj_status_t tp_attach  	      (pjmedia_transport *tp,
     pj_ioqueue_unlock_key(udp->rtcp_key);
     pj_ioqueue_unlock_key(udp->rtp_key);
 
+    PJ_LOG(4,(udp->base.name, "UDP media transport attached"));
+
     return PJ_SUCCESS;
 }
 
@@ -956,13 +980,16 @@ static void transport_detach( pjmedia_transport *tp,
 
     //if (udp->attached) {
     if (1) {
-	int i;
-
 	/* Lock the ioqueue keys to make sure that callbacks are
 	 * not executed. See ticket #460 for details.
 	 */
+
+	TRACE_((udp->base.name, "detach(): before locking keys"));
+
 	pj_ioqueue_lock_key(udp->rtp_key);
 	pj_ioqueue_lock_key(udp->rtcp_key);
+
+	TRACE_((udp->base.name, "detach(): inside locked keys"));
 
 	/* User data is unreferenced on Release build */
 	PJ_UNUSED_ARG(user_data);
@@ -979,17 +1006,18 @@ static void transport_detach( pjmedia_transport *tp,
 	udp->rtcp_cb = NULL;
 	udp->user_data = NULL;
 
-	/* Cancel any outstanding send */
-	for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
-	    pj_ioqueue_post_completion(udp->rtp_key,
-				       &udp->rtp_pending_write[i].op_key, 0);
-	    udp->rtp_pending_write[i].is_pending = PJ_FALSE;
-	}
-	pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_write_op, 0);
+	/* Cancel any outstanding operations */
+	pj_ioqueue_clear_key(udp->rtp_key);
+	pj_ioqueue_clear_key(udp->rtcp_key);
+
+	/* Set key status to 'stopped' as keys have been cleared */
+	udp->started = PJ_FALSE;
 
 	/* Unlock keys */
 	pj_ioqueue_unlock_key(udp->rtcp_key);
 	pj_ioqueue_unlock_key(udp->rtp_key);
+
+	PJ_LOG(4,(udp->base.name, "UDP media transport detached"));
     }
 }
 
@@ -1120,6 +1148,8 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     PJ_UNUSED_ARG(sdp_remote);
     PJ_UNUSED_ARG(media_index);
 
+    PJ_LOG(4,(udp->base.name, "UDP media transport created"));
+
     return PJ_SUCCESS;
 }
 
@@ -1200,6 +1230,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     return PJ_SUCCESS;
 }
 
+
 static pj_status_t transport_media_start(pjmedia_transport *tp,
 				  pj_pool_t *pool,
 				  const pjmedia_sdp_session *sdp_local,
@@ -1209,6 +1240,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t size;
     pj_status_t status;
+    unsigned i;
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
@@ -1218,8 +1250,21 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     PJ_UNUSED_ARG(media_index);
 
     /* Just return success if there is already pending read */
-    if (udp->started)
+    if (udp->started) {
+	PJ_LOG(5,(udp->base.name, "UDP media transport already started"));
 	return PJ_SUCCESS;
+    }
+
+    pj_ioqueue_op_key_init(&udp->rtp_read_op, sizeof(udp->rtp_read_op));
+    for (i=0; i<PJ_ARRAY_SIZE(udp->rtp_pending_write); ++i) {
+	pj_ioqueue_op_key_init(&udp->rtp_pending_write[i].op_key, 
+			       sizeof(udp->rtp_pending_write[i].op_key));
+    }
+
+    pj_ioqueue_op_key_init(&udp->rtcp_read_op, sizeof(udp->rtcp_read_op));
+    pj_ioqueue_op_key_init(&udp->rtcp_write_op, sizeof(udp->rtcp_write_op));
+
+    TRACE_((udp->base.name, "media_start(): before recvfrom RTP"));
 
     /* Kick off pending RTP read from the ioqueue */
     udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
@@ -1227,8 +1272,13 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
 			         udp->rtp_pkt, &size, PJ_IOQUEUE_ALWAYS_ASYNC,
 				 &udp->rtp_src_addr, &udp->rtp_addrlen);
-    if (status != PJ_EPENDING)
+    if (status != PJ_EPENDING) {
+	PJ_PERROR(3, (udp->base.name, status,
+		      "media_start(): recvfrom RTP failed"));
 	return status;
+    }
+
+    TRACE_((udp->base.name, "media_start(): before recvfrom RTCP"));
 
     /* Kick off pending RTCP read from the ioqueue */
     udp->rtcp_addr_len = sizeof(udp->rtcp_src_addr);
@@ -1237,10 +1287,16 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				 udp->rtcp_pkt, &size,
 				 PJ_IOQUEUE_ALWAYS_ASYNC,
 				 &udp->rtcp_src_addr, &udp->rtcp_addr_len);
-    if (status != PJ_EPENDING)
+    if (status != PJ_EPENDING) {
+	PJ_PERROR(3, (udp->base.name, status,
+		      "media_start(): recvfrom RTCP failed"));
+	pj_ioqueue_clear_key(udp->rtp_key);
 	return status;
+    }
 
     udp->started = PJ_TRUE;
+
+    PJ_LOG(4,(udp->base.name, "UDP media transport started"));
 
     return PJ_SUCCESS;
 }
@@ -1252,16 +1308,17 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
     /* Just return success if there is no pending read */
-    if (!udp->started)
+    if (!udp->started) {
+	PJ_LOG(5, (udp->base.name, "UDP media transport already stopped"));
 	return PJ_SUCCESS;
+    }
 
-    pj_ioqueue_post_completion(udp->rtp_key, &udp->rtp_read_op,
-			       -PJ_ECANCELLED);
-
-    pj_ioqueue_post_completion(udp->rtcp_key, &udp->rtcp_read_op,
-			       -PJ_ECANCELLED);
+    pj_ioqueue_clear_key(udp->rtp_key);
+    pj_ioqueue_clear_key(udp->rtcp_key);
 
     udp->started = PJ_FALSE;
+
+    PJ_LOG(4, (udp->base.name, "UDP media transport stopped"));
 
     return PJ_SUCCESS;
 }
