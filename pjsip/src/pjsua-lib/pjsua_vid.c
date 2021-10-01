@@ -1374,22 +1374,29 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     	    	
     	    	eve = (pjsua_event_list *)act_timer->user_data;
 
-    	    	if (eve->call_id == call_med->call->index &&
+		if (eve->call_id == (int)call_med->call->index &&
     	    	    eve->med_idx == call_med->idx)
     	    	{
-    	    	    PJSUA_UNLOCK();
+		    pjsip_dialog *dlg = call_med->call->inv ?
+					    call_med->call->inv->dlg : NULL;
 
-		    /* If there is no worker thread or
-		     * the function is called from the only worker thread,
-		     * we have to handle the events here.
+		    /* The function may be called from worker thread, we have
+		     * to handle the events instead of simple sleep here
+		     * and must not hold any lock while handle the events:
+		     * https://trac.pjsip.org/repos/ticket/1737
 		     */
-		    if (pjsua_var.thread[0] == NULL ||
-			(pj_thread_this() == pjsua_var.thread[0] &&
-			 pjsua_var.ua_cfg.thread_cnt == 1))
-		    {
-			pjsua_handle_events(10);
-		    } else {
-			pj_thread_sleep(10);
+		    PJSUA_UNLOCK();
+
+		    if (dlg) {
+			pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+			pjsip_dlg_dec_lock(dlg);
+		    }
+
+		    pjsua_handle_events(10);
+
+		    if (dlg) {
+			pjsip_dlg_inc_lock(dlg);
+			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 		    }
 
 		    PJSUA_LOCK();
