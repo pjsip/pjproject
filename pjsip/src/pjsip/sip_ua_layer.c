@@ -165,6 +165,12 @@ static void mod_ua_on_tsx_state( pjsip_transaction *tsx, pjsip_event *e)
 {
     pjsip_dialog *dlg;
 
+    /* If the module id is -1, it could mean that the module has been
+     * destroyed.
+     */
+    if (mod_ua.mod.id == -1)
+	return;
+
     /* Get the dialog where this transaction belongs. */
     dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
     
