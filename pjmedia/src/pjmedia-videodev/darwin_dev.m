@@ -268,6 +268,24 @@ pjmedia_vid_dev_factory* pjmedia_darwin_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
 {
+    return darwin_factory_refresh(f);
+}
+
+/* API: destroy factory */
+static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
+{
+    struct darwin_factory *qf = (struct darwin_factory*)f;
+    pj_pool_t *pool = qf->pool;
+
+    qf->pool = NULL;
+    pj_pool_release(pool);
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
+{
     struct darwin_factory *qf = (struct darwin_factory*)f;
     struct darwin_dev_info *qdi;
     unsigned i, l, first_idx, front_idx = -1;
@@ -305,6 +323,9 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     	    AVCaptureDeviceDiscoverySession *dds;
 	    NSArray<AVCaptureDeviceType> *dev_types =
 	    	@[AVCaptureDeviceTypeBuiltInWideAngleCamera
+#if TARGET_OS_OSX && defined(__MAC_10_15)
+	    	  , AVCaptureDeviceTypeExternalUnknown
+#endif
 #if TARGET_OS_IPHONE && defined(__IPHONE_10_0)
 	    	  , AVCaptureDeviceTypeBuiltInDuoCamera
 	    	  , AVCaptureDeviceTypeBuiltInTelephotoCamera
@@ -433,25 +454,6 @@ static pj_status_t darwin_factory_init(pjmedia_vid_dev_factory *f)
     return PJ_SUCCESS;
 }
 
-/* API: destroy factory */
-static pj_status_t darwin_factory_destroy(pjmedia_vid_dev_factory *f)
-{
-    struct darwin_factory *qf = (struct darwin_factory*)f;
-    pj_pool_t *pool = qf->pool;
-
-    qf->pool = NULL;
-    pj_pool_release(pool);
-
-    return PJ_SUCCESS;
-}
-
-/* API: refresh the list of devices */
-static pj_status_t darwin_factory_refresh(pjmedia_vid_dev_factory *f)
-{
-    PJ_UNUSED_ARG(f);
-    return PJ_SUCCESS;
-}
-
 /* API: get number of devices */
 static unsigned darwin_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 {
@@ -530,6 +532,15 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 
 - (void)session_runtime_error:(NSNotification *)notification
 {
+    // This function is called from NSNotificationCenter.
+    // Make sure the thread is registered.
+    if (!pj_thread_is_registered()) {
+        pj_thread_t *thread;
+        static pj_thread_desc thread_desc;
+        pj_bzero(thread_desc, sizeof(pj_thread_desc));
+        pj_thread_register("NSNotificationCenter", thread_desc, &thread);
+    }
+
     NSError *error = notification.userInfo[AVCaptureSessionErrorKey];
     PJ_LOG(3, (THIS_FILE, "Capture session runtime error: %s, %s",
     	       [error.localizedDescription UTF8String],
