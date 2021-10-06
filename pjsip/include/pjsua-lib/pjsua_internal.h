@@ -657,18 +657,21 @@ PJ_INLINE(pj_bool_t) PJSUA_LOCK_IS_LOCKED()
 }
 
 /* Release all locks currently held by this thread. */
-#define PJSUA_RELEASE_LOCK() \
-    unsigned num_locks = 0; \
-    while (PJSUA_LOCK_IS_LOCKED()) { \
-        num_locks++; \
-        PJSUA_UNLOCK(); \
+PJ_INLINE(unsigned) PJSUA_RELEASE_LOCK()
+{
+    unsigned num_locks = 0;
+    while (PJSUA_LOCK_IS_LOCKED()) {
+        num_locks++;
+        PJSUA_UNLOCK();
     }
+    return num_locks;
+}
 
 /* Re-acquire all the locks released by PJSUA_RELEASE_LOCK(). */
-#define PJSUA_RELOCK() \
-{ \
-    for (; num_locks > 0; num_locks--) \
-        PJSUA_LOCK(); \
+PJ_INLINE(void) PJSUA_RELOCK(unsigned num_locks)
+{
+    for (; num_locks > 0; num_locks--)
+        PJSUA_LOCK();
 }
 
 #else

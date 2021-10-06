@@ -244,15 +244,16 @@ static pj_status_t media_event_unsubscribe(pjmedia_event_mgr* mgr,
 					   void* user_data,
 					   void* epub)
 {
+    unsigned num_locks = 0;
     pj_status_t status;
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    PJSUA_RELEASE_LOCK();
+    num_locks = PJSUA_RELEASE_LOCK();
 
     status = pjmedia_event_unsubscribe(mgr, cb, user_data, epub);
 
     /* Re-acquire the locks. */
-    PJSUA_RELOCK();
+    PJSUA_RELOCK(num_locks);
 
     return status;
 }
@@ -902,10 +903,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
     pj_log_push_indent();
 
     /* Release locks before unsubscribing/destroying, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     if (w->vp_cap) {
 	pjsua_vid_conf_remove_port(w->cap_slot);
@@ -922,8 +920,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
 	pjmedia_vid_port_destroy(w->vp_rend);
     }
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     pjsua_vid_win_reset(wid);
 
@@ -1372,6 +1369,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 		if (eve->call_id == (int)call_med->call->index &&
     	    	    eve->med_idx == call_med->idx)
     	    	{
+    	    	    unsigned num_locks;
 		    pjsip_dialog *dlg = call_med->call->inv ?
 					    call_med->call->inv->dlg : NULL;
 
@@ -1380,7 +1378,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 		     * and must not hold any lock while handling the events:
 		     * https://trac.pjsip.org/repos/ticket/1737
 		     */
-		    PJSUA_RELEASE_LOCK();
+		    num_locks = PJSUA_RELEASE_LOCK();
 
 		    if (dlg) {
 			pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
@@ -1394,7 +1392,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 		    }
 
-		    PJSUA_RELOCK();
+		    PJSUA_RELOCK(num_locks);
     	    	    break;
     	    	}
     	    }
