@@ -656,6 +656,21 @@ PJ_INLINE(pj_bool_t) PJSUA_LOCK_IS_LOCKED()
     return pjsua_var.mutex_owner == pj_thread_this();
 }
 
+/* Release all locks currently held by this thread. */
+#define PJSUA_RELEASE_LOCK() \
+    unsigned num_locks = 0; \
+    while (PJSUA_LOCK_IS_LOCKED()) { \
+        num_locks++; \
+        PJSUA_UNLOCK(); \
+    }
+
+/* Re-acquire all the locks released by PJSUA_RELEASE_LOCK(). */
+#define PJSUA_RELOCK() \
+{ \
+    for (; num_locks > 0; num_locks--) \
+        PJSUA_LOCK(); \
+}
+
 #else
 #define PJSUA_LOCK()
 #define PJSUA_TRY_LOCK()	PJ_SUCCESS

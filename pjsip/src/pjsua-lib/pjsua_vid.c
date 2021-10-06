@@ -244,20 +244,15 @@ static pj_status_t media_event_unsubscribe(pjmedia_event_mgr* mgr,
 					   void* user_data,
 					   void* epub)
 {
-    unsigned num_locks = 0;
     pj_status_t status;
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    PJSUA_RELEASE_LOCK();
 
     status = pjmedia_event_unsubscribe(mgr, cb, user_data, epub);
 
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK();
 
     return status;
 }
@@ -1382,10 +1377,10 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 
 		    /* The function may be called from worker thread, we have
 		     * to handle the events instead of simple sleep here
-		     * and must not hold any lock while handle the events:
+		     * and must not hold any lock while handling the events:
 		     * https://trac.pjsip.org/repos/ticket/1737
 		     */
-		    PJSUA_UNLOCK();
+		    PJSUA_RELEASE_LOCK();
 
 		    if (dlg) {
 			pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
@@ -1399,7 +1394,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 		    }
 
-		    PJSUA_LOCK();
+		    PJSUA_RELOCK();
     	    	    break;
     	    	}
     	    }
