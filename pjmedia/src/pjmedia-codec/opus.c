@@ -861,6 +861,12 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
     opus_repacketizer_cat(opus_data->dec_packer, tmp_buf, pkt_size);
 
     num_frames = opus_repacketizer_get_nb_frames(opus_data->dec_packer);
+    if (num_frames == 0) {
+      PJ_LOG(2, (THIS_FILE, "No frames retrieved (num_frames = 0)"));
+      pj_mutex_unlock(opus_data->mutex);
+      return PJMEDIA_CODEC_EFAILED;
+    }
+
     out_pos = 0;
     for (i = 0; i < num_frames; ++i) {
 	size = opus_repacketizer_out_range(opus_data->dec_packer, i, i+1,
