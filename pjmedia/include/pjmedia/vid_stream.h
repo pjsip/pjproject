@@ -152,6 +152,7 @@ typedef struct pjmedia_vid_stream_info
     pjmedia_type	type;	    /**< Media type (audio, video)	    */
     pjmedia_tp_proto	proto;	    /**< Transport protocol (RTP/AVP, etc.) */
     pjmedia_dir		dir;	    /**< Media direction.		    */
+    pj_sockaddr		local_addr; /**< Local RTP address		    */
     pj_sockaddr		rem_addr;   /**< Remote RTP address		    */
     pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
 					 sin_family is zero, the RTP address

@@ -32,6 +32,12 @@
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
+/* Enable this to test ROC initialization setting. For offerer,
+ * it will send packets with ROC 1 and expect to receive ROC 2.
+ * For answerer it will be the other way around.
+ */
+#define TEST_ROC 0
+
 #if defined(PJ_HAS_SSL_SOCK) && PJ_HAS_SSL_SOCK != 0 && \
     (PJ_SSL_SOCK_IMP == PJ_SSL_SOCK_IMP_OPENSSL)
 #  include <openssl/rand.h>
@@ -111,11 +117,6 @@
  * srtp_unprotect() returns err_status_replay_*
  */
 #define PROBATION_CNT_INIT	    100
-
-/* Specify if we should get stream ROC in order to maintain it upon
- * restart.
- */
-#define SRTP_MAINTAIN_ROC 0
 
 #define DEACTIVATE_MEDIA(pool, m)   pjmedia_sdp_media_deactivate(pool, m)
 
@@ -311,6 +312,8 @@ typedef struct transport_srtp
      * roll over counter (ROC) on SRTP restart.
      */
     pj_uint32_t		 rx_ssrc;
+
+    pj_uint32_t		 tx_ssrc;
 
 } transport_srtp;
 
@@ -817,6 +820,31 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
 
 /*
+ * Get SRTP media transport setting.
+ */
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_get_setting(
+				       pjmedia_transport *tp,
+				       pjmedia_srtp_setting *opt)
+{
+    transport_srtp  *srtp = (transport_srtp*) tp;
+    *opt = srtp->setting;
+    return PJ_SUCCESS;
+}
+
+/*
+ * Modify SRTP media transport setting.
+ */
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_modify_setting(
+				       pjmedia_transport *tp,
+				       const pjmedia_srtp_setting *opt)
+{
+    transport_srtp  *srtp = (transport_srtp*) tp;
+    srtp->setting = *opt;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Initialize and start SRTP session with the given parameters.
  */
 PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
@@ -827,7 +855,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     transport_srtp  *srtp = (transport_srtp*) tp;
     srtp_policy_t    tx_;
     srtp_policy_t    rx_;
-    uint32_t	     rx_roc = 0;
     srtp_err_status_t err;
     int		     cr_tx_idx = 0;
     int		     au_tx_idx = 0;
@@ -840,9 +867,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     pj_lock_acquire(srtp->mutex);
 
     if (srtp->session_inited) {
-#if SRTP_MAINTAIN_ROC
-	srtp_get_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, &rx_roc);
-#endif
 	pjmedia_transport_srtp_stop(tp);
     }
 
@@ -893,8 +917,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     else
 	tx_.rtp.sec_serv    = sec_serv_none;
     tx_.key		    = (uint8_t*)srtp->tx_key;
-    tx_.ssrc.type	    = ssrc_any_outbound;
-    tx_.ssrc.value	    = 0;
+    if (srtp->setting.tx_roc.roc != 0 &&
+        srtp->setting.tx_roc.ssrc != 0)
+    {
+	tx_.ssrc.type	    = ssrc_specific;
+	tx_.ssrc.value	    = srtp->setting.tx_roc.ssrc;
+    } else {
+	tx_.ssrc.type	    = ssrc_any_outbound;
+	tx_.ssrc.value	    = 0;
+    }
     tx_.rtp.cipher_type	    = crypto_suites[cr_tx_idx].cipher_type;
     tx_.rtp.cipher_key_len  = crypto_suites[cr_tx_idx].cipher_key_len;
     tx_.rtp.auth_type	    = crypto_suites[au_tx_idx].auth_type;
@@ -907,6 +938,18 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (err != srtp_err_status_ok) {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	goto on_return;
+    }
+    if (srtp->setting.tx_roc.roc != 0 &&
+        srtp->setting.tx_roc.ssrc != 0)
+    {
+	srtp_err_status_t status;
+	status = srtp_set_stream_roc(srtp->srtp_tx_ctx,
+				     srtp->setting.tx_roc.ssrc,
+			    	     srtp->setting.tx_roc.roc);
+    	PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
+    		   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
+    		   srtp->setting.tx_roc.roc,
+    	           (status == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->tx_policy = *tx;
     pj_strset(&srtp->tx_policy.key,  srtp->tx_key, tx->key.slen);
@@ -925,9 +968,11 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     else
 	rx_.rtp.sec_serv    = sec_serv_none;
     rx_.key		    = (uint8_t*)srtp->rx_key;
-    if (rx_roc != 0 && srtp->rx_ssrc != 0) {
+    if (srtp->setting.rx_roc.roc != 0 &&
+        srtp->setting.rx_roc.ssrc != 0)
+    {
 	rx_.ssrc.type	    = ssrc_specific;
-	rx_.ssrc.value	    = srtp->rx_ssrc;
+	rx_.ssrc.value	    = srtp->setting.rx_roc.ssrc;
     } else {
 	rx_.ssrc.type	    = ssrc_any_inbound;
 	rx_.ssrc.value	    = 0;
@@ -947,8 +992,17 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	goto on_return;
     }
-    if (rx_roc != 0 && srtp->rx_ssrc != 0) {
-	srtp_set_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, rx_roc);
+    if (srtp->setting.rx_roc.roc != 0 &&
+        srtp->setting.rx_roc.ssrc != 0)
+    {
+	srtp_err_status_t status;
+	status = srtp_set_stream_roc(srtp->srtp_rx_ctx,
+				     srtp->setting.rx_roc.ssrc,
+			    	     srtp->setting.rx_roc.roc);
+    	PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
+    		   "ROC %d %s\n",
+    	           srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
+    	       	   (status == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
@@ -1123,6 +1177,26 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     srtp_info.use = srtp->setting.use;
     srtp_info.peer_use = srtp->peer_use;
 
+    pj_bzero(&srtp_info.tx_roc, sizeof(srtp_info.tx_roc));
+    pj_bzero(&srtp_info.rx_roc, sizeof(srtp_info.rx_roc));
+
+    if (srtp->srtp_rx_ctx && srtp->rx_ssrc != 0) {
+    	srtp_info.rx_roc.ssrc = srtp->rx_ssrc;
+    	srtp_get_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc,
+    			    &srtp_info.rx_roc.roc);
+    } else if (srtp->setting.rx_roc.ssrc != 0) {
+    	srtp_info.rx_roc.ssrc = srtp->setting.rx_roc.ssrc;
+    	srtp_info.rx_roc.roc = srtp->setting.rx_roc.roc;
+    }
+    if (srtp->srtp_tx_ctx && srtp->tx_ssrc != 0) {
+    	srtp_info.tx_roc.ssrc = srtp->tx_ssrc;
+    	srtp_get_stream_roc(srtp->srtp_tx_ctx, srtp->tx_ssrc,
+    			    &srtp_info.tx_roc.roc);
+    } else if (srtp->setting.tx_roc.ssrc != 0) {
+    	srtp_info.tx_roc.ssrc = srtp->setting.tx_roc.ssrc;
+    	srtp_info.tx_roc.roc = srtp->setting.tx_roc.roc;
+    }
+
     spc_info_idx = info->specific_info_cnt++;
     info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_SRTP;
     info->spc_info[spc_info_idx].cbsize = sizeof(srtp_info);
@@ -1225,6 +1299,24 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 	pj_lock_release(srtp->mutex);
 	return PJMEDIA_SRTP_EKEYNOTREADY;
     }
+
+    /* Save outgoing SSRC */
+    srtp->tx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
+
+#if TEST_ROC
+    if (srtp->setting.tx_roc.ssrc == 0) {
+	srtp_err_status_t status;
+    	status = srtp_set_stream_roc(srtp->srtp_tx_ctx, srtp->tx_ssrc,
+    			    	     (srtp->offerer_side? 1: 2));
+    	if (status == srtp_err_status_ok) {
+    	    srtp->setting.tx_roc.ssrc = srtp->tx_ssrc;
+    	    srtp->setting.tx_roc.roc = (srtp->offerer_side? 1: 2);
+	    PJ_LOG(4, (THIS_FILE, "Setting TX ROC to SSRC %d to %d",
+		   srtp->tx_ssrc, srtp->setting.tx_roc.roc));
+	}
+    }
+#endif
+
     err = srtp_protect(srtp->srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
 
@@ -1401,6 +1493,26 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     	    return;
     	}
     }
+
+#if TEST_ROC
+    if (srtp->setting.rx_roc.ssrc == 0) {
+	srtp_err_status_t status;
+	
+	srtp->rx_ssrc = ntohl(((pjmedia_rtp_hdr*)pkt)->ssrc);
+    	status = srtp_set_stream_roc(srtp->srtp_rx_ctx, srtp->rx_ssrc, 
+    			    	     (srtp->offerer_side? 2: 1));
+	if (status == srtp_err_status_ok) {    	
+    	    srtp->setting.rx_roc.ssrc = srtp->rx_ssrc;
+	    srtp->setting.rx_roc.roc = (srtp->offerer_side? 2: 1);
+
+	    PJ_LOG(4, (THIS_FILE, "Setting RX ROC from SSRC %d to %d",
+		   		  srtp->rx_ssrc, srtp->setting.rx_roc.roc));
+	} else {
+	    PJ_LOG(4, (THIS_FILE, "Setting RX ROC %s",
+	    	       get_libsrtp_errstr(status)));
+	}
+    }
+#endif
     
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
     
@@ -1432,6 +1544,26 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	} else if (!srtp->bypass_srtp) {
 	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 	}
+    } else if (srtp->probation_cnt > 0 && err == srtp_err_status_auth_fail &&
+	       srtp->setting.prev_rx_roc.ssrc != 0 &&
+	       srtp->setting.prev_rx_roc.ssrc == srtp->setting.rx_roc.ssrc &&
+	       srtp->setting.prev_rx_roc.roc != srtp->setting.rx_roc.roc)
+    {
+        unsigned roc, new_roc;
+	srtp_err_status_t status;
+
+    	srtp_get_stream_roc(srtp->srtp_rx_ctx, srtp->setting.rx_roc.ssrc,
+    			    &roc);
+    	new_roc = (roc == srtp->setting.rx_roc.roc?
+    		   srtp->setting.prev_rx_roc.roc: srtp->setting.rx_roc.roc);
+    	status = srtp_set_stream_roc(srtp->srtp_rx_ctx,
+    				     srtp->setting.rx_roc.ssrc, new_roc);
+	if (status == srtp_err_status_ok) {
+	    PJ_LOG(4, (srtp->pool->obj_name,
+		       "Retrying to unprotect SRTP from ROC %d to new ROC %d",
+		       roc, new_roc));
+    	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
+    	}
     }
 
     if (err != srtp_err_status_ok) {
@@ -1525,6 +1657,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     pj_bzero(&srtp->rx_policy_neg, sizeof(srtp->rx_policy_neg));
     pj_bzero(&srtp->tx_policy_neg, sizeof(srtp->tx_policy_neg));
 
+    srtp->tx_ssrc = srtp->rx_ssrc = 0;
     srtp->media_option = member_tp_option = options;
     srtp->offerer_side = (sdp_remote == NULL);
 

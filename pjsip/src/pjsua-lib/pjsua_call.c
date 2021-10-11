@@ -683,6 +683,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 #endif
 
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
+    	PJ_LOG(4, (THIS_FILE, "PJSUA_CALL_REINIT_MEDIA"));
     	pjsua_media_channel_deinit(call->index);
     }
 
@@ -4131,6 +4132,9 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 		  (ice_need_reinv && need_lock_codec? ST_LOCK_CODEC : "")
 		  ));
     }
+
+    /* Clear reinit media flag. Should we also cleanup other flags here? */
+    call->opt.flag &= ~PJSUA_CALL_REINIT_MEDIA;
 
     /* Generate SDP re-offer */
     status = pjsua_media_channel_create_sdp(call->index, pool, NULL,

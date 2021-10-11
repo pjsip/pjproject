@@ -502,6 +502,8 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
     pjmedia_rtcp_stat stat;
 
     if (strm) {
+	pjmedia_stream_get_info(strm, &call_med->prev_aud_si);
+
 	/* Unsubscribe from stream events */
 	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
 
