@@ -2038,6 +2038,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	unsigned i, count = MAX;
 	unsigned ts_span;
 	pjmedia_frame frames[MAX];
+	pj_bzero(frames, sizeof(frames[0]) * MAX);
 
 	/* Get the timestamp of the first sample */
 	ts.u64 = pj_ntohl(hdr->ts);
@@ -2049,6 +2050,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    LOGERR_((stream->port.info.name.ptr, status,
 		     "Codec parse() error"));
 	    count = 0;
+	} else if (count == 0) {
+		PJ_LOG(2, (stream->port.info.name.ptr, "codec parsed 0 frames"));
 	} else if (stream->detect_ptime_change &&
 		   frames[0].bit_info > 0xFFFF)
 	{
