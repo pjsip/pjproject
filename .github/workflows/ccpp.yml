@@ -203,7 +203,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install openssl opencore-amr swig sipp
+      run: brew install openssl@1.1 opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
