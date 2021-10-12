@@ -203,11 +203,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: install dependencies
-      run: brew install opencore-amr swig sipp
+      run: brew install openssl opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl/lib" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g -I/usr/local/include -fPIC" LDFLAGS="-L/usr/local/lib" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: swig bindings
