@@ -206,8 +206,10 @@ jobs:
       run: brew install openssl@1.1 opencore-amr swig sipp
     - name: config site
       run: cd pjlib/include/pj && cp config_site_test.h config_site.h
+    - name: find openssl
+      run: ls /usr/local/opt/open*
     - name: configure
-      run: CFLAGS="-g -I/usr/local/include -fPIC" LDFLAGS="-L/usr/local/lib" CXXFLAGS="-g -fPIC" ./configure
+      run: CFLAGS="-g -I/usr/local/include -I/usr/local/opt/openssl@1/include -fPIC" LDFLAGS="-L/usr/local/lib -L/usr/local/opt/openssl@1/lib" CXXFLAGS="-g -fPIC" ./configure
     - name: make
       run: make
     - name: swig bindings
