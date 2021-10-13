@@ -3426,7 +3426,7 @@ static void check_srtp_roc(pjsua_call *call,
     	 */
     	setting.prev_rx_roc = call_med->prev_srtp_info.rx_roc;
 #if PJSUA_RESET_SRTP_ROC_ON_REM_ADDRESS_CHANGE
- 	if (!local change) {
+ 	if (!local_change) {
 	    PJ_LOG(4, (THIS_FILE, "Remote address change detected, "
 			      	  "resetting SRTP TX ROC"));
  	    setting.tx_roc.roc = 0;
