@@ -1346,6 +1346,35 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
         if (status != PJ_SUCCESS)
             return status;
 
+        /* Initialize buffer with black color if it is empty */
+        {
+            const pjmedia_video_format_info* vfi;
+            const pjmedia_format* fmt;
+            pjmedia_video_apply_fmt_param vafp;
+            pjmedia_frame* targetFrame = vp->conv.conv ? &frame_ : frame;
+
+            fmt = &vp->conv.conv_param.src;
+            status = get_vfi(fmt, &vfi, &vafp);
+
+            if (status == PJ_SUCCESS && targetFrame->buf) {
+                if (fmt->id == PJMEDIA_FORMAT_I420 || fmt->id == PJMEDIA_FORMAT_YV12) {
+                    pj_bool_t isBufEmpty = PJ_TRUE;
+                    unsigned i;
+                    for (i = 0; i < vafp.plane_bytes[0] + vafp.plane_bytes[1] * 2; ++i) {
+                        if (*((pj_uint8_t*)targetFrame->buf + i) > 64) {
+                            isBufEmpty = PJ_FALSE;
+                            break;
+                        }
+                    }
+
+                    if (isBufEmpty) {
+                        pj_memset(targetFrame->buf, 16, vafp.plane_bytes[0]);
+                        pj_memset((pj_uint8_t*)targetFrame->buf + vafp.plane_bytes[0], 0x80, vafp.plane_bytes[1] * 2);
+                    }
+                }
+            }
+        }
+
 	return pjmedia_vid_dev_stream_put_frame(vp->strm, (vp->conv.conv?
                                                            &frame_: frame));
     } else {
