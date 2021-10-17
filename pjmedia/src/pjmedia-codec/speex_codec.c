@@ -379,6 +379,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_deinit(void)
     if (!codec_mgr) {
 	pj_pool_release(spx_factory.pool);
 	spx_factory.pool = NULL;
+	pj_mutex_unlock(spx_factory.mutex);
 	return PJ_EINVALIDOP;
     }
 
