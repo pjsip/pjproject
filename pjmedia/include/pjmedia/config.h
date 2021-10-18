@@ -1644,6 +1644,18 @@
 
 
 /**
+ * Perform RTP payload type checking in the video stream. Normally the peer
+ * MUST send RTP with payload type as we specified in our SDP. Certain
+ * agents may not be able to follow this hence the only way to have
+ * communication is to disable this check.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_VID_STREAM_CHECK_RTP_PT
+#   define PJMEDIA_VID_STREAM_CHECK_RTP_PT		    1
+#endif
+
+/**
  * @}
  */
 
