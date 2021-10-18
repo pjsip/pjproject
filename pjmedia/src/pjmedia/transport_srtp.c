@@ -1515,7 +1515,8 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 #endif
     
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-    
+
+#if PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART
     if (srtp->probation_cnt > 0 &&
 	(err == srtp_err_status_replay_old ||
 	 err == srtp_err_status_replay_fail))
@@ -1544,10 +1545,17 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
 	} else if (!srtp->bypass_srtp) {
 	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 	}
-    } else if (srtp->probation_cnt > 0 && err == srtp_err_status_auth_fail &&
-	       srtp->setting.prev_rx_roc.ssrc != 0 &&
-	       srtp->setting.prev_rx_roc.ssrc == srtp->setting.rx_roc.ssrc &&
-	       srtp->setting.prev_rx_roc.roc != srtp->setting.rx_roc.roc)
+    }
+#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
+    else
+#endif
+#endif
+
+#if PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
+    if (srtp->probation_cnt > 0 && err == srtp_err_status_auth_fail &&
+	srtp->setting.prev_rx_roc.ssrc != 0 &&
+	srtp->setting.prev_rx_roc.ssrc == srtp->setting.rx_roc.ssrc &&
+	srtp->setting.prev_rx_roc.roc != srtp->setting.rx_roc.roc)
     {
         unsigned roc, new_roc;
 	srtp_err_status_t status;
@@ -1565,6 +1573,7 @@ static void srtp_rtp_cb(pjmedia_tp_cb_param *param)
     	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
     	}
     }
+#endif
 
     if (err != srtp_err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name,
