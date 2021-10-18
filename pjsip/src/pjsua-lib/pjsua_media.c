@@ -3114,6 +3114,59 @@ static void stop_media_session(pjsua_call_id call_id)
     }
 }
 
+
+/*
+ * Print log of call states. Since call states may be too long for logger,
+ * printing it is a bit tricky, it should be printed part by part as long 
+ * as the logger can accept.
+ */
+static void log_call_dump(int call_id) 
+{
+    pj_pool_t *pool;
+    unsigned call_dump_len;
+    unsigned part_len;
+    unsigned part_idx;
+    unsigned log_decor;
+    char *buf;
+    enum { BUF_LEN = 10*1024 };
+    pj_status_t status;
+
+    pool = pjsua_pool_create("tmp", 1024, 1024);
+    buf = pj_pool_alloc(pool, sizeof(char) * BUF_LEN);
+
+    status = pjsua_call_dump(call_id, PJ_TRUE, buf, BUF_LEN, "  ");
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    call_dump_len = (unsigned)pj_ansi_strlen(buf);
+
+    log_decor = pj_log_get_decor();
+    pj_log_set_decor(log_decor & ~(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
+    PJ_LOG(3,(THIS_FILE, "\n"));
+    pj_log_set_decor(0);
+
+    part_idx = 0;
+    part_len = PJ_LOG_MAX_SIZE-80;
+    while (part_idx < call_dump_len) {
+	char p_orig, *p;
+
+	p = buf + part_idx;
+	if (part_idx + part_len > call_dump_len)
+	    part_len = call_dump_len - part_idx;
+	p_orig = p[part_len];
+	p[part_len] = '\0';
+	PJ_LOG(3,(THIS_FILE, "%s", p));
+	p[part_len] = p_orig;
+	part_idx += part_len;
+    }
+    pj_log_set_decor(log_decor);
+
+on_return:
+    if (pool)
+	pj_pool_release(pool);
+}
+
+
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
@@ -3133,6 +3186,9 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
     pj_log_push_indent();
+
+    /* Print call dump first */
+    log_call_dump(call_id);
 
     stop_media_session(call_id);
 
