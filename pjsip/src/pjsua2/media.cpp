@@ -1493,6 +1493,17 @@ VideoDevInfo::~VideoDevInfo()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void VidDevManager::initSubsys() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO && PJSUA_DONT_INIT_VID_DEV_SUBSYS
+    /* Should init once only! */
+    if (pjmedia_get_vid_subsys()->init_count > 0)
+	return;
+
+    PJSUA2_CHECK_EXPR(pjmedia_vid_dev_subsys_init(pjsua_get_pool_factory()));
+#endif
+}
+
 void VidDevManager::refreshDevs() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
