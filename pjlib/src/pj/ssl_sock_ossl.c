@@ -63,6 +63,18 @@
 #	define USING_LIBRESSL 0
 #endif
 
+#if defined(OPENSSL_IS_BORINGSSL)
+#      define USING_BORINGSSL 1
+
+#      define TLSEXT_nid_unknown 0x1000000
+
+#undef SSL_CTRL_SET_ECDH_AUTO
+#      define SSL_CTRL_SET_ECDH_AUTO 94
+
+#else
+#      define USING_BORINGSSL 0
+#endif
+
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
 	&& OPENSSL_VERSION_NUMBER >= 0x1000200fL
 
@@ -368,7 +380,11 @@ static pj_str_t ssl_strerror(pj_status_t status,
 	ssl_err -= PJ_SSL_ERRNO_START;
 	l = ssl_err / MAX_OSSL_ERR_REASON;
 	r = ssl_err % MAX_OSSL_ERR_REASON;
+#if USING_BORINGSSL
+        ssl_err = ERR_PACK(l, r);
+#else
 	ssl_err = ERR_PACK(l, 0, r);
+#endif
     }
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
@@ -691,7 +707,11 @@ static pj_status_t init_openssl(void)
 	}
 	ssl_cipher_num = n;
 
+#if USING_BORINGSSL
+	ssl_sess = SSL_SESSION_new(ctx);
+#else
 	ssl_sess = SSL_SESSION_new();
+#endif
 	SSL_set_session(ssl, ssl_sess);
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
@@ -699,7 +719,12 @@ static pj_status_t init_openssl(void)
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 	ssl_curves_num = EC_get_builtin_curves(NULL, 0);
 #else
+
+#if USING_BORINGSSL
+        ssl_curves_num = SSL_get_curve_id(ssl);
+#else
 	ssl_curves_num = SSL_get_shared_curve(ssl,-1);
+#endif
 
 	if (ssl_curves_num > PJ_ARRAY_SIZE(ssl_curves))
 	    ssl_curves_num = PJ_ARRAY_SIZE(ssl_curves);
@@ -744,7 +769,11 @@ static pj_status_t init_openssl(void)
 		OPENSSL_free(curves);
 #else
 	for (i = 0; i < ssl_curves_num; i++) {
+#if USING_BORINGSSL
+            nid = SSL_get_curve_id(ssl);
+#else
 	    nid = SSL_get_shared_curve(ssl, i);
+#endif
 
 	    if (nid & TLSEXT_nid_unknown) {
 		cname = "curve unknown";
@@ -929,9 +958,19 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     return (pj_ssl_sock_t *)PJ_POOL_ZALLOC_T(pool, ossl_sock_t);
 }
 
+#if !USING_BORINGSSL
+
 static int xname_cmp(const X509_NAME * const *a, const X509_NAME * const *b) {
   return X509_NAME_cmp(*a, *b);
 }
+
+#else
+
+static int xname_cmp(const X509_NAME **a, const X509_NAME **b) {
+  return X509_NAME_cmp(*a, *b);
+}
+
+#endif
 
 /* Create and initialize new SSL context and instance */
 static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
@@ -1310,12 +1349,16 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	    pj_memcpy(p, "rsa", CERT_TYPE_LEN);
 	}
 
+#if USING_BORINGSSL
+        if (SSL_CTX_set_mode(ctx, SSL_CTRL_SET_ECDH_AUTO)) {
+#else
     #ifndef SSL_CTRL_SET_ECDH_AUTO
 	#define SSL_CTRL_SET_ECDH_AUTO 94
     #endif
 
 	/* SSL_CTX_set_ecdh_auto(ctx,on) requires OpenSSL 1.0.2 which wraps: */
 	if (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL)) {
+#endif
 	    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized "
 		      "(automatic), faster PFS ciphers enabled"));
     #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L && \
@@ -1374,7 +1417,11 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                     if ((xn = X509_NAME_dup(xn)) == NULL )
                         break;
 
+#if !USING_BORINGSSL
                     if (sk_X509_NAME_find(sk, xn) >= 0) {
+#else
+                    if (sk_X509_NAME_find(sk, NULL, xn) >= 0) {
+#endif
                         X509_NAME_free(xn);
                     } else {
                         sk_X509_NAME_push(sk, xn);
@@ -1635,6 +1682,7 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
     int ret;
 
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
+#if !USING_BORINGSSL
 	if (ssock->is_server) {
 	    ret = SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
 	    				       ssock->param.sigalgs.ptr);
@@ -1642,6 +1690,10 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 	    ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
 	    				ssock->param.sigalgs.ptr);
 	}
+#else
+	ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
+				    ssock->param.sigalgs.ptr);
+#endif
 
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
