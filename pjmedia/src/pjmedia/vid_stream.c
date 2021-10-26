@@ -803,7 +803,13 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
-    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st, PJ_TRUE);
+    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st,
+				PJMEDIA_VID_STREAM_CHECK_RTP_PT);
+#if !PJMEDIA_VID_STREAM_CHECK_RTP_PT
+    if (hdr->pt != channel->rtp.out_pt) {
+	seq_st.status.flag.badpt = 1;
+    }
+#endif
     if (seq_st.status.value) {
 	TRC_  ((channel->port.info.name.ptr,
 		"RTP status: badpt=%d, badssrc=%d, dup=%d, "

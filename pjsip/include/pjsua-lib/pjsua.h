@@ -7617,6 +7617,10 @@ PJ_DECL(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
  *
+ * Note that this function will always try to open the sound device
+ * immediately. If immediate open is not preferred, use pjsua_set_snd_dev2()
+ * with PJSUA_SND_DEV_NO_IMMEDIATE_OPEN flag.
+ *
  * @param capture_dev   Device ID of the capture device.
  * @param playback_dev	Device ID of the playback device.
  *
@@ -7626,13 +7630,23 @@ PJ_DECL(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 				       int playback_dev);
 
 /**
+ * Get sound device parameters such as playback & capture device IDs and mode.
+ *
+ * @param snd_param	On return, it is set with sound device param.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param);
+
+
+/**
  * Select or change sound device according to the specified param.
  *
  * @param snd_param	Sound device param. 
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsua_set_snd_dev2(pjsua_snd_dev_param *snd_param);
+PJ_DECL(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param);
 
 
 /**
@@ -7950,6 +7964,31 @@ pjsua_media_transports_attach( pjsua_media_transport tp[],
 /*
  * Video devices API
  */
+
+
+/**
+ * Controls whether PJSUA-LIB should not initialize video device subsystem
+ * in the PJSUA initialization. The video device subsystem initialization
+ * may need to open cameras to enumerates available cameras and their
+ * capabilities, which may not be preferable for some applications because
+ * it may trigger privacy-alert/permission notification on application startup
+ * (e.g: on Android app).
+ *
+ * If this is set, later application should manually initialize video device
+ * subsystem when it needs to use any video devices (camera and renderer),
+ * i.e: by invoking pjmedia_vid_dev_subsys_init() for PJSUA or
+ * VidDevManager::initSubsys() for PJSUA2.
+ *
+ * Note that pjmedia_vid_dev_subsys_init() should not be called multiple
+ * times (unless each has corresponding pjmedia_vid_dev_subsys_shutdown()),
+ * while VidDevManager::initSubsys() is safe to be called multiple times.
+ *
+ * Default: 0 (no)
+ */
+#ifndef PJSUA_DONT_INIT_VID_DEV_SUBSYS
+#   define PJSUA_DONT_INIT_VID_DEV_SUBSYS	0
+#endif
+
 
 /**
  * Get the number of video devices installed in the system.
