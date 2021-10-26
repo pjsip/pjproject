@@ -19,6 +19,7 @@
 #include <pjmedia-codec/ffmpeg_vid_codecs.h>
 #include <pjmedia-codec/h263_packetizer.h>
 #include <pjmedia-codec/h264_packetizer.h>
+#include <pjmedia-codec/vpx_packetizer.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/vid_codec_util.h>
 #include <pj/assert.h>
@@ -210,7 +211,7 @@ typedef struct ffmpeg_private
 #define FUNC_PACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, pj_uint8_t *bits, \
 		      pj_size_t bits_len, unsigned *bits_pos, \
-		      const pj_uint8_t **payload, pj_size_t *payload_len)
+		      const pj_uint8_t **payload, pj_size_t *payload_len, pj_bool_t is_keyframe)
 
 #define FUNC_UNPACKETIZE(name) \
     pj_status_t(name)(ffmpeg_private *ff, const pj_uint8_t *payload, \
@@ -270,6 +271,13 @@ struct ffmpeg_codec_desc
 #define PROFILE_H264_MAIN		77
 
 /* Codec specific functions */
+#if  PJMEDIA_HAS_FFMPEG_CODEC_VP8 || PJMEDIA_HAS_FFMPEG_CODEC_VP9
+static pj_status_t vpx_preopen(ffmpeg_private *ff);
+static pj_status_t vpx_postopen(ffmpeg_private *ff);
+static FUNC_PACKETIZE(vpx_packetize);
+static FUNC_UNPACKETIZE(vpx_unpacketize);
+#endif
+
 #if PJMEDIA_HAS_FFMPEG_CODEC_H264
 static pj_status_t h264_preopen(ffmpeg_private *ff);
 static pj_status_t h264_postopen(ffmpeg_private *ff);
@@ -285,6 +293,26 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 /* Internal codec info */
 static ffmpeg_codec_desc codec_desc[] =
 {
+#if PJMEDIA_HAS_FFMPEG_CODEC_VP8
+    {
+	{PJMEDIA_FORMAT_VP8, PJMEDIA_RTP_PT_VP8_RSV2, {"VP8",3},
+	 {"FF VP8", 6}},
+	0,
+	{720, 480},	{15, 1},	256000, 256000,
+	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen
+    },
+#endif
+
+#if PJMEDIA_HAS_FFMPEG_CODEC_VP9
+    {
+	{PJMEDIA_FORMAT_VP9, PJMEDIA_RTP_PT_VP9_RSV2, {"VP9",3},
+	 {"FF VP9", 6}},
+	0,
+	{720, 480},	{15, 1},	256000, 256000,
+	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen
+    },
+#endif
+
 #if PJMEDIA_HAS_FFMPEG_CODEC_H264
     {
 	{PJMEDIA_FORMAT_H264, AVC_H264_PT, {"H264",4},
@@ -325,6 +353,81 @@ static ffmpeg_codec_desc codec_desc[] =
 	PJMEDIA_FORMAT_MPEG4, {640, 480}, {25, 1},
     },
 };
+
+#if PJMEDIA_HAS_FFMPEG_CODEC_VP8 || PJMEDIA_HAS_FFMPEG_CODEC_VP9
+typedef struct vpx_data
+{
+    pjmedia_vpx_packetizer *pktz;
+} vpx_data;
+
+static pj_status_t vpx_preopen(ffmpeg_private *ff)
+{
+    vpx_data *data;
+    pjmedia_vpx_packetizer_cfg pktz_cfg;
+    pj_status_t status;
+
+    data = PJ_POOL_ZALLOC_T(ff->pool, vpx_data);
+    ff->data = data;
+
+    pktz_cfg.fmt_id = ff->desc->info.fmt_id;
+    pktz_cfg.mtu = ff->param.enc_mtu;
+    status = pjmedia_vpx_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
+    if (status != PJ_SUCCESS)
+    {
+        return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t vpx_postopen(ffmpeg_private *ff)
+{
+    vpx_data *data = (vpx_data *)ff->data;
+    PJ_UNUSED_ARG(data);
+    return PJ_SUCCESS;
+}
+
+static FUNC_PACKETIZE(vpx_packetize)
+{
+    vpx_data *data = (vpx_data *)ff->data;
+    pj_status_t status;
+    unsigned payload_desc_size = 1;
+    pj_uint8_t *outbuf = (pj_uint8_t *)*payload;
+    pj_size_t out_size = *payload_len;
+    out_size -= payload_desc_size;
+
+    status = pjmedia_vpx_packetize(data->pktz, bits_len, bits_pos, is_keyframe,
+                                   &outbuf, &out_size);
+    if (status != PJ_SUCCESS)
+        return status;
+    pj_memcpy(outbuf + payload_desc_size, bits + *bits_pos, out_size);
+    *payload_len = out_size + payload_desc_size;
+    *bits_pos += out_size;
+    return PJ_SUCCESS;
+}
+
+static FUNC_UNPACKETIZE(vpx_unpacketize)
+{
+    vpx_data *data = (vpx_data *)ff->data;
+    unsigned desc_len = 0;
+    pj_status_t status;
+    unsigned pos = *bits_pos;
+    status = pjmedia_vpx_unpacketize(data->pktz, payload, payload_len, &desc_len);
+    if (status != PJ_SUCCESS)
+        return status;
+    payload_len -= desc_len;
+    if (pos + payload_len > bits_len)
+    {
+        PJ_LOG(2, (THIS_FILE, "Vpx unpacketize buffer overflow"));
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+    }
+
+    pj_memcpy(bits + pos, (char *)payload + desc_len, payload_len);
+    pos += payload_len;
+    *bits_pos = pos;
+    return PJ_SUCCESS;
+}
+#endif  // PJMEDIA_HAS_FFMPEG_CODEC_VP8/VP9
 
 #if PJMEDIA_HAS_FFMPEG_CODEC_H264
 
@@ -475,8 +578,17 @@ static pj_status_t h264_postopen(ffmpeg_private *ff)
 static FUNC_PACKETIZE(h264_packetize)
 {
     h264_data *data = (h264_data*)ff->data;
-    return pjmedia_h264_packetize(data->pktz, bits, bits_len, bits_pos,
+    pj_status_t status;
+    pj_uint8_t *outbuf = (pj_uint8_t *) *payload;
+    pj_size_t out_size = *payload_len;
+    status = pjmedia_h264_packetize(data->pktz, bits, bits_len, bits_pos,
 				  payload, payload_len);
+    if (status != PJ_SUCCESS)
+        return status;
+    if (out_size < *payload_len)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+    pj_memcpy(outbuf, *payload, *payload_len);
+    return PJ_SUCCESS;
 }
 
 static FUNC_UNPACKETIZE(h264_unpacketize)
@@ -539,8 +651,17 @@ static pj_status_t h263_preopen(ffmpeg_private *ff)
 static FUNC_PACKETIZE(h263_packetize)
 {
     h263_data *data = (h263_data*)ff->data;
-    return pjmedia_h263_packetize(data->pktz, bits, bits_len, bits_pos,
+    pj_status_t status;
+    pj_uint8_t *outbuf = (pj_uint8_t *) *payload;
+    pj_size_t out_size = *payload_len;
+    status = pjmedia_h263_packetize(data->pktz, bits, bits_len, bits_pos,
 				  payload, payload_len);
+    if (status != PJ_SUCCESS)
+        return status;
+    if (out_size < *payload_len)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+    pj_memcpy(outbuf, *payload, *payload_len);
+    return PJ_SUCCESS;
 }
 
 static FUNC_UNPACKETIZE(h263_unpacketize)
@@ -1374,13 +1495,13 @@ static pj_status_t  ffmpeg_packetize ( pjmedia_vid_codec *codec,
                                        pj_size_t bits_len,
                                        unsigned *bits_pos,
                                        const pj_uint8_t **payload,
-                                       pj_size_t *payload_len)
+                                       pj_size_t *payload_len, pj_bool_t is_keyframe)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
 
     if (ff->desc->packetize) {
 	return (*ff->desc->packetize)(ff, bits, bits_len, bits_pos,
-                                      payload, payload_len);
+                                      payload, payload_len, is_keyframe);
     }
 
     return PJ_ENOTSUP;
@@ -1512,9 +1633,6 @@ static pj_status_t ffmpeg_codec_encode_begin(pjmedia_vid_codec *codec,
 					   output);
     } else {
 	pjmedia_frame whole_frm;
-        const pj_uint8_t *payload;
-        pj_size_t payload_len;
-
 	pj_bzero(&whole_frm, sizeof(whole_frm));
 	whole_frm.buf = ff->enc_buf;
 	whole_frm.size = ff->enc_buf_size;
@@ -1528,23 +1646,7 @@ static pj_status_t ffmpeg_codec_encode_begin(pjmedia_vid_codec *codec,
 				   PJMEDIA_VID_FRM_KEYFRAME);
 	ff->enc_frame_len = (unsigned)whole_frm.size;
 	ff->enc_processed = 0;
-        status = ffmpeg_packetize(codec, (pj_uint8_t*)whole_frm.buf,
-                                  whole_frm.size, &ff->enc_processed,
-				  &payload, &payload_len);
-        if (status != PJ_SUCCESS)
-            return status;
-
-        if (out_size < payload_len)
-            return PJMEDIA_CODEC_EFRMTOOSHORT;
-
-        output->type = PJMEDIA_FRAME_TYPE_VIDEO;
-        pj_memcpy(output->buf, payload, payload_len);
-        output->size = payload_len;
-
-	if (ff->enc_buf_is_keyframe)
-	    output->bit_info |= PJMEDIA_VID_FRM_KEYFRAME;
-
-        *has_more = (ff->enc_processed < ff->enc_frame_len);
+	ffmpeg_codec_encode_more(codec, out_size, output, has_more);
     }
 
     return status;
@@ -1556,8 +1658,8 @@ static pj_status_t ffmpeg_codec_encode_more(pjmedia_vid_codec *codec,
 					    pj_bool_t *has_more)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
-    const pj_uint8_t *payload;
-    pj_size_t payload_len;
+    const pj_uint8_t *payload = (pj_uint8_t *)output->buf;
+    pj_size_t payload_len = (pj_size_t) out_size;
     pj_status_t status;
 
     *has_more = PJ_FALSE;
@@ -1569,15 +1671,11 @@ static pj_status_t ffmpeg_codec_encode_more(pjmedia_vid_codec *codec,
 
     status = ffmpeg_packetize(codec, (pj_uint8_t*)ff->enc_buf,
                               ff->enc_frame_len, &ff->enc_processed,
-                              &payload, &payload_len);
+                              &payload, &payload_len, ff->enc_buf_is_keyframe);
     if (status != PJ_SUCCESS)
         return status;
 
-    if (out_size < payload_len)
-        return PJMEDIA_CODEC_EFRMTOOSHORT;
-
     output->type = PJMEDIA_FRAME_TYPE_VIDEO;
-    pj_memcpy(output->buf, payload, payload_len);
     output->size = payload_len;
 
     if (ff->enc_buf_is_keyframe)
