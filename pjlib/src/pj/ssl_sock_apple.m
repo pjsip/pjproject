@@ -1393,7 +1393,7 @@ static void close_connection(applessl_sock_t *assock)
     if (assock->connection) {
     	unsigned i;
 
-    	nw_connection_cancel(assock->connection);
+    	nw_connection_force_cancel(assock->connection);
 
     	/* We need to wait until the connection is at cancelled state,
     	 * otherwise events will still be delivered even though we
