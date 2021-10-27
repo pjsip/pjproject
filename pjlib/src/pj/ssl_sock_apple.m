@@ -1816,6 +1816,12 @@ static CFDictionaryRef get_cert_oid(SecCertificateRef cert, CFStringRef oid,
 
     vals = SecCertificateCopyValues(cert, key_arr, NULL);
     dict = CFDictionaryGetValue(vals, key[0]);
+    if (!dict) {
+    	CFRelease(key_arr);
+    	CFRelease(vals);
+    	return NULL;
+    }
+
     *value = CFDictionaryGetValue(dict, kSecPropertyKeyValue);
 
     CFRelease(key_arr);
