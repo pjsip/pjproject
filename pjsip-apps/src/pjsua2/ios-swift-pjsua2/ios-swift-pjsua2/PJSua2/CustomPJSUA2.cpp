@@ -174,9 +174,13 @@ void MyAccount::onRegState(OnRegStateParam &prm){
 }
 
 void MyAccount::onIncomingCall(OnIncomingCallParam &iprm) {
+    
     incomingCallPtr();
-    std::cout<<iprm.rdata.wholeMsg;
+    
+    //Incoming DevID
+    std::cout<<iprm.rdata.wholeMsg.substr(iprm.rdata.wholeMsg.find("DEV-ID") + 8 , 4);
     call = new MyCall(*this, iprm.callId);
+    
 }
 
 EpConfig *ep_cfg = new EpConfig;
@@ -404,6 +408,17 @@ void PJSua2::call_listener(void (* funcpntr)(int)){
 void PJSua2::answerCall(){
     CallOpParam op;
     op.statusCode = PJSIP_SC_OK;
+ 
+    SipHeader sHeader;
+    SipHeaderVector sHeaderVector;
+    SipTxOption sTxOption;
+    
+    sHeader.hName = "DEV-ID";
+    sHeader.hValue = "9902";
+    sHeaderVector.push_back(sHeader);
+    sTxOption.headers = sHeaderVector;
+    op.txOption = sTxOption;
+    
     call->answer(op);
 }
 
