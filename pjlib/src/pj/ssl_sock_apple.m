@@ -27,10 +27,7 @@
 
 #define THIS_FILE               "ssl_sock_apple.m"
 
-/* Set to 1 to enable debugging messages.
- * Note that some functions can be called from a dispatch queue, so we
- * use regular printf() instead of PJ_LOG().
- */
+/* Set to 1 to enable debugging messages. */
 #define SSL_DEBUG  0
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
@@ -147,6 +144,11 @@ typedef struct event_manager
 
 static event_manager *event_mgr = NULL;
 
+#if SSL_DEBUG
+static pj_thread_desc queue_th_desc;
+static pj_thread_t *queue_th;
+#endif
+
 /*
  *******************************************************************
  * Event manager's functions
@@ -209,14 +211,18 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     event_t *event;
 
 #if SSL_DEBUG
-    printf("post event %p %d\n", ssock, event_item->type);
+    if (!pj_thread_is_registered()) {
+    	pj_bzero(queue_th_desc, sizeof(pj_thread_desc));
+    	pj_thread_register("sslq", queue_th_desc, &queue_th);
+    }
+    PJ_LOG(3, (THIS_FILE, "Posting event %p %d", ssock, event_item->type));
 #endif
 
     if (ssock->is_closing || !ssock->pool || !mgr)
     	return PJ_EGONE;
 
 #if SSL_DEBUG
-    printf("post event 2 %p %d\n", ssock, event_item->type);
+    PJ_LOG(3,(THIS_FILE, "Post event success %p %d",ssock, event_item->type));
 #endif
     
     [mgr->lock lock];
@@ -1141,7 +1147,11 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
     	pj_status_t status = PJ_SUCCESS;
     	pj_bool_t call_cb = PJ_FALSE;
 #if SSL_DEBUG
-        printf("ssl state change %p %d\n", assock, state);
+    	if (!pj_thread_is_registered()) {
+    	    pj_bzero(queue_th_desc, sizeof(pj_thread_desc));
+    	    pj_thread_register("sslq", queue_th_desc, &queue_th);
+        }
+        PJ_LOG(3, (THIS_FILE, "SSL state change %p %d", assock, state));
 #endif
 
 	if (error && state != nw_connection_state_cancelled) {
@@ -1149,7 +1159,7 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
 #if SSL_DEBUG
-            printf("ssl state and errno %d %d\n", state, errno);
+            PJ_LOG(3, (THIS_FILE, "SSL state and errno %d %d", state, errno));
 #endif
             call_cb = PJ_TRUE;	
 	}
@@ -1427,7 +1437,7 @@ static void close_connection(applessl_sock_t *assock)
     	}
 
 #if SSL_DEBUG
-	printf("SSL connection %p closed\n", assock);
+	PJ_LOG(3, (THIS_FILE, "SSL connection %p closed", assock));
 #endif
 
     }
@@ -1512,7 +1522,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
     pj_lock_release(ssock->circ_buf_output_mutex);
 
 #if SSL_DEBUG
-    printf("SSL reset sock state %p\n", ssock);
+    PJ_LOG(3, (THIS_FILE, "SSL reset sock state %p", ssock));
 #endif
 
     ssl_close_sockets(ssock);
