@@ -31,7 +31,7 @@
  * Note that some functions can be called from a dispatch queue, so we
  * use regular printf() instead of PJ_LOG().
  */
-#define SSL_DEBUG  1
+#define SSL_DEBUG  0
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 #define SSL_SOCK_IMP_USE_OWN_NETWORK
