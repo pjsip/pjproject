@@ -701,6 +701,10 @@ public:
 	if (queue_size < 3) queue_size = 3;
 	if (queue_size > 10) queue_size = 10;
 
+	PJ_LOG(3,(THIS_FILE,
+		  "Oboe stream %s queue size=%d frames (latency=%d ms)",
+		  dir_st, queue_size, latency));
+
 	queue = new AtomicQueue(queue_size, stream->param.samples_per_frame*2,
 				dir_st);
 
@@ -800,7 +804,7 @@ public:
 	    if (!queue->get(audioData)) {
 		pj_bzero(audioData, stream->param.samples_per_frame*2);
 		__android_log_write(ANDROID_LOG_WARN, THIS_FILE,
-			"Oboe playback failed reading from empty queue");
+			"Oboe playback got an empty queue");
 	    }
 	}
 
@@ -896,10 +900,13 @@ private:
 		if (stop_stream)
 		    break;
 
+		/* Print log for debugging purpose */
 		if (cnt == 0) {
-		    PJ_PERROR(4,(THIS_FILE, PJ_ENOTFOUND,
-				 "Oboe %s failed reading from empty queue",
-				 this_->dir_st));
+		    PJ_LOG(5,(THIS_FILE, "Oboe %s got an empty queue",
+			      this_->dir_st));
+		} else if (cnt > 1) {
+		    PJ_LOG(5,(THIS_FILE, "Oboe %s got a burst of %d frames",
+			      this_->dir_st, cnt));
 		}
 	    } else {
 		/* Get audio frame from app via callback play_cb() */
