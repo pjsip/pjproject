@@ -31,7 +31,7 @@
  * Note that some functions can be called from a dispatch queue, so we
  * use regular printf() instead of PJ_LOG().
  */
-#define SSL_DEBUG  0
+#define SSL_DEBUG  1
 
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 #define SSL_SOCK_IMP_USE_OWN_NETWORK
@@ -212,8 +212,12 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
     printf("post event %p %d\n", ssock, event_item->type);
 #endif
 
-    if (ssock->is_closing)
+    if (ssock->is_closing || !ssock->pool || !mgr)
     	return PJ_EGONE;
+
+#if SSL_DEBUG
+    printf("post event 2 %p %d\n", ssock, event_item->type);
+#endif
     
     [mgr->lock lock];
 
@@ -1008,6 +1012,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	      sec_protocol_verify_complete_t complete)
 	{
 	    event_t event;
+	    pj_status_t status;
 	    bool result = true;
 
     	    assock->trust = trust_ref? sec_trust_copy_ref(trust_ref): nil;
@@ -1017,13 +1022,20 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
 	    /* For client, call on_connect_complete() callback first. */
 	    if (!ssock->is_server) {
+	    	if (!assock->connection)
+	    	    complete(false);
+
 	    	event.type = EVENT_CONNECT;
 	    	event.body.connect_ev.status = PJ_SUCCESS;
-	    	event_manager_post_event(ssock, &event, PJ_FALSE);
+	    	status = event_manager_post_event(ssock, &event, PJ_FALSE);
+	    	if (status == PJ_EGONE)
+	    	    complete(false);
 	    }
 
 	    event.type = EVENT_VERIFY_CERT;
-	    event_manager_post_event(ssock, &event, PJ_FALSE);
+	    status = event_manager_post_event(ssock, &event, PJ_FALSE);
+	    if (status == PJ_EGONE)
+	    	complete(false);
 
 	    /* Check the result of cert verification. */
 	    if (ssock->verify_status != PJ_SSL_CERT_ESUCCESS) {
@@ -1392,31 +1404,32 @@ static void close_connection(applessl_sock_t *assock)
 {
     if (assock->connection) {
     	unsigned i;
-
-    	nw_connection_cancel(assock->connection);
+	nw_connection_t conn = assock->connection;
+	
+	assock->connection = nil;
+    	nw_connection_force_cancel(conn);
+    	nw_release(conn);
 
     	/* We need to wait until the connection is at cancelled state,
     	 * otherwise events will still be delivered even though we
-    	 * already release the connection.
+    	 * already force cancel and release the connection.
     	 */
-    	for (i = 0; i < 20; i++) {
+    	for (i = 0; i < 40; i++) {
     	    if (assock->con_state == nw_connection_state_cancelled) break;
     	    pj_thread_sleep(50);
     	}
+
+    	event_manager_remove_events(&assock->base);
 
     	if (assock->con_state != nw_connection_state_cancelled) {
     	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
     	    			  "%p %d", assock, assock->con_state));
     	}
 
-    	event_manager_remove_events(&assock->base);
-
 #if SSL_DEBUG
 	printf("SSL connection %p closed\n", assock);
 #endif
 
-    	nw_release(assock->connection);
-    	assock->connection = nil;
     }
 }
 
