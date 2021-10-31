@@ -897,12 +897,15 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
 
 on_error2:
     if (status == AVI_EOF) {
+        fport->eof = PJ_TRUE;
+        if (size_read > 0)
+        {
         size_to_read -= size_read;
         pj_bzero((char *)frame->buf + frame->size - size_to_read,
                  size_to_read);
-        fport->eof = PJ_TRUE;
-
         return PJ_SUCCESS;
+        }
+        return PJ_EEOF;
     }
 
     return status;
