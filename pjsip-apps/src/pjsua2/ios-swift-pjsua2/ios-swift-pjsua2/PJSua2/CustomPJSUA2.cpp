@@ -20,8 +20,20 @@
 #include "CustomPJSUA2.hpp"
 #include <iostream>
 #include <list>
+#include <string.h>
+#include <regex>
 
 using namespace pj;
+
+// Split Function
+std::vector<std::string> split(std::string input, std::string regExp){
+    std::cout <<input <<std::endl;
+    std::regex ws_re(regExp);
+    std::vector<std::string> result{
+        std::sregex_token_iterator(input.begin(), input.end(), ws_re, -1), {}
+    };
+    return result;
+}
 
 // Listen swift code via function pointers
 void (*incomingCallPtr)() = 0;
@@ -71,6 +83,25 @@ public:
     // Notification when call's state has changed.
     virtual void onCallState(OnCallStateParam &prm){
         CallInfo ci = getInfo();
+        
+        if (ci.state == PJSIP_INV_STATE_INCOMING)   {
+            /**
+             Since, ci.remoteUri starts with <sip:xxxx@ip:port>
+             start with index 5 upto find position of character "@".
+             stoi -> string to integer.
+             */
+            
+            /**
+             There is no time to fix it... Always rush...
+             */
+            //FIXME:: Following part seems not good. Fix it.
+            std::cout<<"Ci remote uri";
+            std::cout<<ci.remoteUri;
+            int remoteUri = std::stoi(ci.remoteUri.substr(5, ci.remoteUri.find("@")-5));
+            std::cout<<"NUMBER:"<<remoteUri;
+            
+        }
+        
            if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
                callStatusListenerPtr(0);
                
@@ -144,6 +175,7 @@ void MyAccount::onRegState(OnRegStateParam &prm){
 
 void MyAccount::onIncomingCall(OnIncomingCallParam &iprm) {
     incomingCallPtr();
+    std::cout<<iprm.rdata.wholeMsg;
     call = new MyCall(*this, iprm.callId);
 }
 
@@ -430,6 +462,17 @@ void PJSua2::unholdCall(){
  */
 void PJSua2::outgoingCall(std::string dest_uri) {
     CallOpParam prm(true); // Use default call settings
+    
+    SipHeader sHeader;
+    SipHeaderVector sHeaderVector;
+    SipTxOption sTxOption;
+    
+    sHeader.hName = "DEV-ID";
+    sHeader.hValue = "9902";
+    sHeaderVector.push_back(sHeader);
+    sTxOption.headers = sHeaderVector;
+    prm.txOption = sTxOption;
+    
     try {
     call = new MyCall(*acc);
     call->makeCall(dest_uri, prm);
