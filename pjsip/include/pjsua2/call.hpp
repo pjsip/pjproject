@@ -26,6 +26,10 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua2/media.hpp>
 
+ // Change for ilogixx:
+#include <pjsua2/conferenceBridge.hpp>
+#include <memory>
+
 /** PJSUA2 API is inside pj namespace */
 namespace pj
 {
@@ -782,6 +786,9 @@ struct OnStreamCreatedParam
      * registered to the conference bridge.
      */
     MediaPort   pPort;
+
+    // Change for ilogixx:
+    unsigned clockRate;
 };
 
 /**
@@ -1339,11 +1346,16 @@ public:
  */
 class Call
 {
+    // Change for ilogixx:
+    friend class pj::Endpoint;
+
 public:
     /**
      * Constructor.
      */
     Call(Account& acc, int call_id = PJSUA_INVALID_ID);
+    // Change for ilogixx:
+    Call(Account& acc, ConferenceBridge* conference_bridge, int call_id = PJSUA_INVALID_ID);
 
     /**
      * Destructor.
@@ -1777,7 +1789,12 @@ public:
      */
     MediaTransportInfo getMedTransportInfo(unsigned med_idx) const
 					   PJSUA2_THROW(Error);
-
+    
+    // Change for ilogixx:
+    ///std::shared_ptr<ConferenceBridge> getConferenceBridge();
+    ///
+    ///void setConferenceBridge(std::shared_ptr<ConferenceBridge> bridge);
+    
     /**
      * Internal function (callled by Endpoint( to process update to call
      * medias when call media state changes.
@@ -1789,6 +1806,9 @@ public:
      */
     void processStateChange(OnCallStateParam &prm);
     
+    // Change for ilogixx:
+    std::string getSipFieldByName(const std::string& fieldName);
+
 public:
     /*
      * Callbacks
@@ -2133,8 +2153,19 @@ public:
     onCreateMediaTransportSrtp(OnCreateMediaTransportSrtpParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
+    // Change for ilogixx:
+    virtual void OnSipFieldsChanged(const std::vector<string>& fieldNames)
+    {
+        PJ_UNUSED_ARG(fieldNames);
+    }
+
+    ConferenceBridge* conferenceBridge;
+
 private:
     friend class Endpoint;
+
+    // Change for ilogixx:
+    std::map<std::string, std::string> sipValueByFieldName; //Key: The name of the sip field, Value: The last received value for that field
 
     Account             &acc;
     pjsua_call_id 	 id;
@@ -2142,6 +2173,9 @@ private:
     std::vector<Media *> medias;
     pj_pool_t		*sdp_pool;
     Call		*child;	    /* New outgoing call in call transfer.  */
+
+    // Change for ilogixx:
+    void updateSipFields(const pjsip_msg& sipMessage);
 };
 
 /**

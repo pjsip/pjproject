@@ -2243,7 +2243,8 @@ AC_ARG_ENABLE(libwebrtc_aec3,
 		  AC_LANG_PUSH([C++])
 		  AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],
 		  [AC_MSG_RESULT(yes)
-		   LD="$CXX"],
+		   LD="$CXX"
+		   LIBS="$LIBS -lstdc++"],
 		  [AC_MSG_RESULT(no)
 		   CXXFLAGS="$SAVED_CXXFLAGS"
 		   ac_no_webrtc_aec3=1

@@ -206,6 +206,7 @@ typedef union v4sf_union {
 } v4sf_union;
 
 #include <string.h>
+#include <corecrt_math_defines.h>
 
 #define assertv4(v,f0,f1,f2,f3) assert(v.f[0] == (f0) && v.f[1] == (f1) && v.f[2] == (f2) && v.f[3] == (f3))
 

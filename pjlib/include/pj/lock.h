@@ -203,7 +203,7 @@ PJ_DECL(void) pj_grp_lock_config_default(pj_grp_lock_config *cfg);
 
 /**
  * Create a group lock object. Initially the group lock will have reference
- * counter of zero.
+ * counter of one.
  *
  * @param pool		The group lock only uses the pool parameter to get
  * 			the pool factory, from which it will create its own
@@ -220,7 +220,7 @@ PJ_DECL(pj_status_t) pj_grp_lock_create(pj_pool_t *pool,
 /**
  * Create a group lock object, with the specified destructor handler, to be
  * called by the group lock when it is about to be destroyed. Initially the
- * group lock will have reference counter of zero.
+ * group lock will have reference counter of one.
  *
  * @param pool		The group lock only uses the pool parameter to get
  * 			the pool factory, from which it will create its own

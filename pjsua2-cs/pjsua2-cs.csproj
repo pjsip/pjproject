@@ -1,0 +1,350 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <ProjectGuid>{CD31E15B-8CB3-47F5-B579-0095218F50BD}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <RootNamespace>pjsua2</RootNamespace>
+    <AssemblyName>pjsua2-cs</AssemblyName>
+    <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="pjsua2-cs.nuspec" />
+    <None Include="pjsua2-cs.props" />
+    <None Include="pjsua2-cs.targets" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Account.cs" />
+    <Compile Include="AccountCallConfig.cs" />
+    <Compile Include="AccountConfig.cs" />
+    <Compile Include="AccountInfo.cs" />
+    <Compile Include="AccountIpChangeConfig.cs" />
+    <Compile Include="AccountMediaConfig.cs" />
+    <Compile Include="AccountMwiConfig.cs" />
+    <Compile Include="AccountNatConfig.cs" />
+    <Compile Include="AccountPresConfig.cs" />
+    <Compile Include="AccountRegConfig.cs" />
+    <Compile Include="AccountSipConfig.cs" />
+    <Compile Include="AccountVideoConfig.cs" />
+    <Compile Include="AudDevErrorEvent.cs" />
+    <Compile Include="AudDevManager.cs" />
+    <Compile Include="AudioDevInfo.cs" />
+    <Compile Include="AudioDevInfoVector.cs" />
+    <Compile Include="AudioDevInfoVector2.cs" />
+    <Compile Include="AudioInputDevice.cs" />
+    <Compile Include="AudioMedia.cs" />
+    <Compile Include="AudioMediaPlayer.cs" />
+    <Compile Include="AudioMediaPlayerInfo.cs" />
+    <Compile Include="AudioMediaRecorder.cs" />
+    <Compile Include="AudioMediaTransmitParam.cs" />
+    <Compile Include="AudioMediaVector.cs" />
+    <Compile Include="AudioMediaVector2.cs" />
+    <Compile Include="AudioOutputDevice.cs" />
+    <Compile Include="AudioPlayer.cs" />
+    <Compile Include="AudioRecorder.cs" />
+    <Compile Include="AuthCredInfo.cs" />
+    <Compile Include="AuthCredInfoVector.cs" />
+    <Compile Include="Buddy.cs" />
+    <Compile Include="BuddyConfig.cs" />
+    <Compile Include="BuddyInfo.cs" />
+    <Compile Include="BuddyVector.cs" />
+    <Compile Include="BuddyVector2.cs" />
+    <Compile Include="Call.cs" />
+    <Compile Include="CallInfo.cs" />
+    <Compile Include="CallMediaInfo.cs" />
+    <Compile Include="CallMediaInfoVector.cs" />
+    <Compile Include="CallOpParam.cs" />
+    <Compile Include="CallSendDtmfParam.cs" />
+    <Compile Include="CallSendRequestParam.cs" />
+    <Compile Include="CallSetting.cs" />
+    <Compile Include="CallVidSetStreamParam.cs" />
+    <Compile Include="CodecFmtp.cs" />
+    <Compile Include="CodecFmtpVector.cs" />
+    <Compile Include="CodecInfo.cs" />
+    <Compile Include="CodecInfoVector.cs" />
+    <Compile Include="CodecInfoVector2.cs" />
+    <Compile Include="CodecOpusConfig.cs" />
+    <Compile Include="CodecParam.cs" />
+    <Compile Include="CodecParamInfo.cs" />
+    <Compile Include="CodecParamSetting.cs" />
+    <Compile Include="ConferenceBridge.cs" />
+    <Compile Include="ConfPortInfo.cs" />
+    <Compile Include="ContainerNode.cs" />
+    <Compile Include="Endpoint.cs" />
+    <Compile Include="EpConfig.cs" />
+    <Compile Include="Error.cs" />
+    <Compile Include="ExtraAudioDevice.cs" />
+    <Compile Include="FindBuddyMatch.cs" />
+    <Compile Include="IntVector.cs" />
+    <Compile Include="IpChangeParam.cs" />
+    <Compile Include="JbufState.cs" />
+    <Compile Include="JsonDocument.cs" />
+    <Compile Include="LogConfig.cs" />
+    <Compile Include="LogEntry.cs" />
+    <Compile Include="LogWriter.cs" />
+    <Compile Include="LossType.cs" />
+    <Compile Include="MathStat.cs" />
+    <Compile Include="Media.cs" />
+    <Compile Include="MediaConfig.cs" />
+    <Compile Include="MediaCoordinate.cs" />
+    <Compile Include="MediaEvent.cs" />
+    <Compile Include="MediaEventData.cs" />
+    <Compile Include="MediaFmtChangedEvent.cs" />
+    <Compile Include="MediaFormat.cs" />
+    <Compile Include="MediaFormatAudio.cs" />
+    <Compile Include="MediaFormatAudioVector.cs" />
+    <Compile Include="MediaFormatVideo.cs" />
+    <Compile Include="MediaFormatVideoVector.cs" />
+    <Compile Include="MediaSize.cs" />
+    <Compile Include="MediaTransportInfo.cs" />
+    <Compile Include="OnBuddyEvSubStateParam.cs" />
+    <Compile Include="OnCallMediaEventParam.cs" />
+    <Compile Include="OnCallMediaStateParam.cs" />
+    <Compile Include="OnCallMediaTransportStateParam.cs" />
+    <Compile Include="OnCallRedirectedParam.cs" />
+    <Compile Include="OnCallReplacedParam.cs" />
+    <Compile Include="OnCallReplaceRequestParam.cs" />
+    <Compile Include="OnCallRxOfferParam.cs" />
+    <Compile Include="OnCallRxReinviteParam.cs" />
+    <Compile Include="OnCallSdpCreatedParam.cs" />
+    <Compile Include="OnCallStateParam.cs" />
+    <Compile Include="OnCallTransferRequestParam.cs" />
+    <Compile Include="OnCallTransferStatusParam.cs" />
+    <Compile Include="OnCallTsxStateParam.cs" />
+    <Compile Include="OnCallTxOfferParam.cs" />
+    <Compile Include="OnCreateMediaTransportParam.cs" />
+    <Compile Include="OnCreateMediaTransportSrtpParam.cs" />
+    <Compile Include="OnDtmfDigitParam.cs" />
+    <Compile Include="OnDtmfEventParam.cs" />
+    <Compile Include="OnIncomingCallParam.cs" />
+    <Compile Include="OnIncomingSubscribeParam.cs" />
+    <Compile Include="OnInstantMessageParam.cs" />
+    <Compile Include="OnInstantMessageStatusParam.cs" />
+    <Compile Include="OnIpChangeProgressParam.cs" />
+    <Compile Include="OnMediaEventParam.cs" />
+    <Compile Include="OnMwiInfoParam.cs" />
+    <Compile Include="OnNatCheckStunServersCompleteParam.cs" />
+    <Compile Include="OnNatDetectionCompleteParam.cs" />
+    <Compile Include="OnRegStartedParam.cs" />
+    <Compile Include="OnRegStateParam.cs" />
+    <Compile Include="OnSelectAccountParam.cs" />
+    <Compile Include="OnStreamCreatedParam.cs" />
+    <Compile Include="OnStreamDestroyedParam.cs" />
+    <Compile Include="OnStreamPreCreateParam.cs" />
+    <Compile Include="OnTimerParam.cs" />
+    <Compile Include="OnTransportStateParam.cs" />
+    <Compile Include="OnTypingIndicationParam.cs" />
+    <Compile Include="PendingJob.cs" />
+    <Compile Include="PersistentDocument.cs" />
+    <Compile Include="PersistentObject.cs" />
+    <Compile Include="pjmedia_aud_dev_cap.cs" />
+    <Compile Include="pjmedia_aud_dev_route.cs" />
+    <Compile Include="pjmedia_dir.cs" />
+    <Compile Include="pjmedia_echo_flag.cs" />
+    <Compile Include="pjmedia_event_type.cs" />
+    <Compile Include="pjmedia_file_player_option.cs" />
+    <Compile Include="pjmedia_file_writer_option.cs" />
+    <Compile Include="pjmedia_format_id.cs" />
+    <Compile Include="pjmedia_orient.cs" />
+    <Compile Include="pjmedia_rtcp_fb_type.cs" />
+    <Compile Include="pjmedia_srtp_crypto_option.cs" />
+    <Compile Include="pjmedia_srtp_keying_method.cs" />
+    <Compile Include="pjmedia_srtp_use.cs" />
+    <Compile Include="pjmedia_tone_desc.cs" />
+    <Compile Include="pjmedia_tone_digit.cs" />
+    <Compile Include="pjmedia_tone_digit_map.cs" />
+    <Compile Include="pjmedia_tp_proto.cs" />
+    <Compile Include="pjmedia_type.cs" />
+    <Compile Include="pjmedia_vid_dev_cap.cs" />
+    <Compile Include="pjmedia_vid_dev_fullscreen_flag.cs" />
+    <Compile Include="pjmedia_vid_dev_std_index.cs" />
+    <Compile Include="pjmedia_vid_packing.cs" />
+    <Compile Include="pjmedia_vid_stream_rc_method.cs" />
+    <Compile Include="pjrpid_activity.cs" />
+    <Compile Include="pjsip_cred_data_type.cs" />
+    <Compile Include="pjsip_dialog_cap_status.cs" />
+    <Compile Include="pjsip_event_id_e.cs" />
+    <Compile Include="pjsip_evsub_state.cs" />
+    <Compile Include="pjsip_hdr_e.cs" />
+    <Compile Include="pjsip_inv_state.cs" />
+    <Compile Include="pjsip_redirect_op.cs" />
+    <Compile Include="pjsip_role_e.cs" />
+    <Compile Include="pjsip_ssl_method.cs" />
+    <Compile Include="pjsip_status_code.cs" />
+    <Compile Include="pjsip_transport_flags_e.cs" />
+    <Compile Include="pjsip_transport_state.cs" />
+    <Compile Include="pjsip_transport_type_e.cs" />
+    <Compile Include="pjsip_tsx_state_e.cs" />
+    <Compile Include="pjsua2.cs" />
+    <Compile Include="pjsua2PINVOKE.cs" />
+    <Compile Include="pjsua_100rel_use.cs" />
+    <Compile Include="pjsua_buddy_status.cs" />
+    <Compile Include="pjsua_call_flag.cs" />
+    <Compile Include="pjsua_call_hold_type.cs" />
+    <Compile Include="pjsua_call_media_status.cs" />
+    <Compile Include="pjsua_call_vid_strm_op.cs" />
+    <Compile Include="pjsua_create_media_transport_flag.cs" />
+    <Compile Include="pjsua_destroy_flag.cs" />
+    <Compile Include="pjsua_dtmf_method.cs" />
+    <Compile Include="pjsua_invalid_id_const_.cs" />
+    <Compile Include="pjsua_ipv6_use.cs" />
+    <Compile Include="pjsua_ip_change_op.cs" />
+    <Compile Include="pjsua_med_tp_st.cs" />
+    <Compile Include="pjsua_nat64_opt.cs" />
+    <Compile Include="pjsua_sip_timer_use.cs" />
+    <Compile Include="pjsua_snd_dev_id.cs" />
+    <Compile Include="pjsua_snd_dev_mode.cs" />
+    <Compile Include="pjsua_state.cs" />
+    <Compile Include="pjsua_stun_use.cs" />
+    <Compile Include="pjsua_vid_req_keyframe_method.cs" />
+    <Compile Include="pj_constants_.cs" />
+    <Compile Include="pj_file_access.cs" />
+    <Compile Include="pj_ice_sess_trickle.cs" />
+    <Compile Include="pj_log_decoration.cs" />
+    <Compile Include="pj_qos_flag.cs" />
+    <Compile Include="pj_qos_params.cs" />
+    <Compile Include="pj_qos_type.cs" />
+    <Compile Include="pj_qos_wmm_prio.cs" />
+    <Compile Include="pj_ssl_cert_name_type.cs" />
+    <Compile Include="pj_ssl_cert_verify_flag_t.cs" />
+    <Compile Include="pj_ssl_cipher.cs" />
+    <Compile Include="pj_ssl_sock_proto.cs" />
+    <Compile Include="pj_stun_nat_type.cs" />
+    <Compile Include="pj_turn_tp_type.cs" />
+    <Compile Include="PresenceStatus.cs" />
+    <Compile Include="PresNotifyParam.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RegProgressParam.cs" />
+    <Compile Include="RtcpFbCap.cs" />
+    <Compile Include="RtcpFbCapVector.cs" />
+    <Compile Include="RtcpFbConfig.cs" />
+    <Compile Include="RtcpSdes.cs" />
+    <Compile Include="RtcpStat.cs" />
+    <Compile Include="RtcpStreamStat.cs" />
+    <Compile Include="RxMsgEvent.cs" />
+    <Compile Include="SdpSession.cs" />
+    <Compile Include="SendInstantMessageParam.cs" />
+    <Compile Include="SendTypingIndicationParam.cs" />
+    <Compile Include="SipEvent.cs" />
+    <Compile Include="SipEventBody.cs" />
+    <Compile Include="SipHeader.cs" />
+    <Compile Include="SipHeaderVector.cs" />
+    <Compile Include="SipMediaType.cs" />
+    <Compile Include="SipMultipartPart.cs" />
+    <Compile Include="SipMultipartPartVector.cs" />
+    <Compile Include="SipRxData.cs" />
+    <Compile Include="SipTransaction.cs" />
+    <Compile Include="SipTxData.cs" />
+    <Compile Include="SipTxOption.cs" />
+    <Compile Include="SrtpCrypto.cs" />
+    <Compile Include="SrtpCryptoVector.cs" />
+    <Compile Include="SrtpOpt.cs" />
+    <Compile Include="SslCertInfo.cs" />
+    <Compile Include="SslCertName.cs" />
+    <Compile Include="SslCertNameVector.cs" />
+    <Compile Include="StreamInfo.cs" />
+    <Compile Include="StreamStat.cs" />
+    <Compile Include="StringVector.cs" />
+    <Compile Include="SWIGTYPE_p_pjmedia_jb_discard_algo.cs" />
+    <Compile Include="SWIGTYPE_p_pjmedia_vid_dev_hwnd_type.cs" />
+    <Compile Include="SWIGTYPE_p_p_void.cs" />
+    <Compile Include="SWIGTYPE_p_std__vectorT_pjmedia_dir_t.cs" />
+    <Compile Include="SWIGTYPE_p_unsigned_char.cs" />
+    <Compile Include="SWIGTYPE_p_void.cs" />
+    <Compile Include="TimerEvent.cs" />
+    <Compile Include="TimeVal.cs" />
+    <Compile Include="TlsConfig.cs" />
+    <Compile Include="TlsInfo.cs" />
+    <Compile Include="ToneDesc.cs" />
+    <Compile Include="ToneDescVector.cs" />
+    <Compile Include="ToneDigit.cs" />
+    <Compile Include="ToneDigitMapDigit.cs" />
+    <Compile Include="ToneDigitMapVector.cs" />
+    <Compile Include="ToneDigitVector.cs" />
+    <Compile Include="ToneGenerator.cs" />
+    <Compile Include="TransportConfig.cs" />
+    <Compile Include="TransportInfo.cs" />
+    <Compile Include="TsxStateEvent.cs" />
+    <Compile Include="TsxStateEventSrc.cs" />
+    <Compile Include="TxErrorEvent.cs" />
+    <Compile Include="TxMsgEvent.cs" />
+    <Compile Include="UaConfig.cs" />
+    <Compile Include="UserEvent.cs" />
+    <Compile Include="Version.cs" />
+    <Compile Include="VidCodecParam.cs" />
+    <Compile Include="VidConfPortInfo.cs" />
+    <Compile Include="VidDevManager.cs" />
+    <Compile Include="VideoDevInfo.cs" />
+    <Compile Include="VideoDevInfoVector.cs" />
+    <Compile Include="VideoDevInfoVector2.cs" />
+    <Compile Include="VideoMedia.cs" />
+    <Compile Include="VideoMediaTransmitParam.cs" />
+    <Compile Include="VideoMediaVector.cs" />
+    <Compile Include="VideoPreview.cs" />
+    <Compile Include="VideoPreviewOpParam.cs" />
+    <Compile Include="VideoSwitchParam.cs" />
+    <Compile Include="VideoWindow.cs" />
+    <Compile Include="VideoWindowHandle.cs" />
+    <Compile Include="VideoWindowInfo.cs" />
+    <Compile Include="WindowHandle.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

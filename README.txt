@@ -361,7 +361,7 @@ What is config_site.h File
      * PJSIP Configuration (the pjsip/sip_config.h file)
 
    A     sample    config_site.h    file    is    also    available    in
-   pjlib/include/pj/config_site_sample.h.
+   pjlib/include/config_site_sample.h.
 
 
 Creating config_site.h file

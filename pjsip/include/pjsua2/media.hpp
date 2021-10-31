@@ -543,6 +543,38 @@ public:
      */
     virtual ~AudioMediaPlayer();
 
+    // Change for ilogixx:
+    //  If problems with the AudioPlayer occur, the AudioMediaPlayer can be used. Currently, 
+    //  only the conference bridge can not be controlled and it is used the interen
+    pj_status_t SetPosition(int seconds);
+    pj_status_t Jump(int seconds);
+    double GetTotalLength();
+
+private:
+    struct file_reader_port
+    {
+        pjmedia_port     base;
+        unsigned	     options;
+        pjmedia_wave_fmt_tag fmt_tag;
+        pj_uint16_t	     bytes_per_sample;
+        pj_bool_t	     eof;
+        pj_uint32_t	     bufsize;
+        char* buf;
+        char* readpos;
+        char* eofpos;
+
+        pj_off_t	     fsize;
+        unsigned	     start_data;
+        unsigned         data_len;
+        unsigned         data_left;
+        pj_off_t	     fpos;
+        pj_oshandle_t    fd;
+
+        pj_status_t(*cb)(pjmedia_port*, void*);
+        pj_bool_t	     subscribed;
+        void	   (*cb2)(pjmedia_port*, void*);
+    };
+
 public:
     /*
      * Callbacks
@@ -592,6 +624,10 @@ private:
      */
     static void eof_cb(pjmedia_port *port,
                        void *usr_data);
+    
+    // Change for ilogixx:
+    void onFileEndCallback(pjmedia_port* port, void* usr_data);
+    unsigned int GetSlot();
 };
 
 /**

@@ -1,0 +1,15 @@
+# see top-level Makefile.in
+class
+constants
+contract
+enum
+funcptr
+import
+multimap
+operator
+pointer
+reference
+simple
+std_vector
+value
+variables

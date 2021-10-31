@@ -719,8 +719,6 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
 
     jb_framelist_reset(&jb->jb_framelist);
 
-    PJ_LOG(5, (jb->jb_name.ptr, "Jitter buffer reset"));
-
     return PJ_SUCCESS;
 }
 

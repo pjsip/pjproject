@@ -14,6 +14,24 @@ using namespace std;
 using namespace pj;
 %}
 
+// Change for ilogixx:
+//
+// Convert Char* to byte[]
+//
+%include "arrays_csharp.i"
+
+%typemap(imtype) unsigned char *frameBuffer "System.IntPtr"
+%typemap(cstype) unsigned char *frameBuffer "System.IntPtr"
+%typemap(csin)   unsigned char *frameBuffer "$csinput"
+%typemap(out)    unsigned char *frameBuffer %{ $result = $1; %}
+%typemap(csout)  unsigned char *frameBuffer { return $imcall; }
+%typemap(csvarout, excode=SWIGEXCODE2) unsigned char* frameBuffer %{ 
+  get { 
+	    global::System.IntPtr ret = pjsua2PINVOKE.AudioInputDevice_OnBufferReceivedParam_frameBuffer_get(swigCPtr);       
+        return ret;
+  } 
+%} 
+
 #ifdef SWIGPYTHON
   %feature("director:except") {
     if( $error != NULL ) {
@@ -26,13 +44,13 @@ using namespace pj;
   }
 #endif
 
+ // Change for ilogixx:
+//Allow application exceptions to be enriched with pj specific information
 #ifdef SWIGCSHARP
-  %typemap(throws, canthrow=1) pj::Error {
-    SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, 
-    	(std::string("C++ pj::Error:\n") + $1.info(true).c_str()).c_str());
-    
-    return $null;
-  }
+	%typemap(throws, canthrow=1) pj::Error {
+		SWIG_CSharpSetPendingException(SWIG_CSharpApplicationException, (std::string("C++ pj::Error:\nStatus: ") + std::to_string($1.status).c_str() + "\nTitle: " + $1.title.c_str() + "\nReason: " + $1.reason.c_str() + "\n" + $1.info(true).c_str()).c_str());
+	    return $null;
+	}
 #endif
 
 // Allow C++ exceptions to be handled in Java
@@ -105,6 +123,11 @@ using namespace pj;
 %feature("director") FindBuddyMatch;
 %feature("director") AudioMediaPlayer;
 
+ // Change for ilogixx:
+%feature("director") AudioPlayer;
+%feature("director") AudioInputDevice;
+%feature("director") AudioOutputDevice;
+
 //
 // STL stuff.
 //
@@ -120,21 +143,24 @@ using namespace pj;
 %ignore fromPj;
 %ignore toPj;
 
-%import "pj/config_site.h"
-%import "pjsua2/config.hpp"
+ // Change for ilogixx:
+%import "../../pjlib/include/pj/config_site.h"
+%import "../../pjsip/include/pjsua2/config.hpp"
 
 //
 // Now include the API itself.
 //
-%include "pjsua2/types.hpp"
+ // Change for ilogixx:
+%include "../../pjsip/include/pjsua2/types.hpp"
 
 %ignore pj::ContainerNode::op;
 %ignore pj::ContainerNode::data;
 %ignore container_node_op;
 %ignore container_node_internal_data;
-%include "pjsua2/persistent.hpp"
+ // Change for ilogixx:
+%include "../../pjsip/include/pjsua2/persistent.hpp"
 
-%include "pjsua2/siptypes.hpp"
+%include "../../pjsip/include/pjsua2/siptypes.hpp"
 
 %template(SipHeaderVector)		std::vector<pj::SipHeader>;
 %template(AuthCredInfoVector)		std::vector<pj::AuthCredInfo>;
@@ -185,14 +211,17 @@ using namespace pj;
 }
 #endif
 
-%include "pjsua2/media.hpp"
-%include "pjsua2/presence.hpp"
-%include "pjsua2/account.hpp"
-%include "pjsua2/call.hpp"
+// Change for ilogixx:
+%include "../../pjsip/include/pjsua2/media.hpp"
+%include "../../pjsip/include/pjsua2/presence.hpp"
+%include "../../pjsip/include/pjsua2/account.hpp"
+%include "../../pjsip/include/pjsua2/call.hpp"
 
 %ignore pj::JsonDocument::allocElement;
 %ignore pj::JsonDocument::getPool;
-%include "pjsua2/json.hpp"
+
+// Change for ilogixx:
+%include "../../pjsip/include/pjsua2/json.hpp"
 
 // Try force Java GC before destroying the lib:
 // - to avoid late destroy of PJ objects by GC
@@ -212,4 +241,10 @@ using namespace pj;
 %}
 #endif
 
-%include "pjsua2/endpoint.hpp"
+// Change for ilogixx:
+%include "../../pjsip/include/pjsua2/endpoint.hpp"
+%include "../../pjsip/include/pjsua2/conferenceBridge.hpp"
+%include "../../pjsip/include/pjsua2/audioRecorder.hpp"
+%include "../../pjsip/include/pjsua2/audioPlayer.hpp"
+%include "../../pjsip/include/pjsua2/audioInputDevice.hpp"
+%include "../../pjsip/include/pjsua2/audioOutputDevice.hpp"

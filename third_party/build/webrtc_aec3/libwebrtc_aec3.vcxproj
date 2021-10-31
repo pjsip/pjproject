@@ -98,39 +98,265 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <!-- Check the instruction set -->
-  <PropertyGroup>
-    <InstSet Condition="$(Platform)==Win32">SSE</InstSet>
-    <InstSet Condition="$(Platform)==x64">SSE</InstSet>
-    <InstSet Condition="$(Platform)==ARM">NEON</InstSet>
-    <InstSet Condition="$(Platform)==ARM64">NEON</InstSet>
-  </PropertyGroup>    
   <ItemGroup>
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\attributes.h" />
     <ClInclude Include="..\..\webrtc_aec3\src\absl\base\config.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\const_init.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\atomic_hook.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\identity.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\inline_variable.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\invoke.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\raw_logging.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\internal\throw_delegate.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\log_severity.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\macros.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\optimization.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\options.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\policy_checks.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\port.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\memory\memory.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\meta\type_traits.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\strings\string_view.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\types\bad_optional_access.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\types\internal\optional.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\types\optional.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\utility\utility.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\array_view.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\audio_frame.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\audio_frame_processor.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\audio_mixer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\channel_layout.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_config.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_config_json.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_factory.h" />
     <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_control.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_detector_creator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\function_view.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\rtp_headers.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\rtp_packet_info.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\scoped_refptr.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\units\timestamp.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\api\units\time_delta.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\channel_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\include\audio_util.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\resampler\include\push_resampler.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\resampler\include\resampler.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\resampler\push_sinc_resampler.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\signal_processing\dot_product_with_scale.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\signal_processing\include\signal_processing_library.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\signal_processing\include\spl_inl.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\signal_processing\include\spl_inl_armv7.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\signal_processing\include\spl_inl_mips.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_tables_common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_tables_neon_sse2.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_256\fft4g.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\common_audio\third_party\spl_sqrt_floor\spl_sqrt_floor.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_fft.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec_state.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\alignment_mixer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\api_call_jitter_metrics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_delay_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_framer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor_metrics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\clockdrift_detector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\coarse_filter_update_gain.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\comfort_noise_generator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\decimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\delay_estimate.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\dominant_nearend_detector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\downsampled_render_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_audibility.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_canceller3.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_delay_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_variability.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover_metrics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erle_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erl_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_data.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\filter_analyzer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\frame_blocker.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fullband_erle_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_lag_aggregator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\moving_average.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\nearend_detector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\refined_filter_update_gain.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller_metrics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_signal_analyzer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\residual_echo_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_decay_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_frequency_response.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\signal_dependent_erle_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\spectrum_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\stationarity_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_erle_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_nearend_detector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output_analyzer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_gain.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\transparent_mode.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\vector_math.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_agc.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_digital_gain_applier.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_mode_level_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\agc2_common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\agc2_testing_common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\biquad_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\compute_interpolated_gain_curve.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\cpu_features.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\down_sampler.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\fixed_digital_level_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\gain_applier.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\interpolated_gain_curve.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter_db_gain_curve.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_level_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_spectrum_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\auto_correlation.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\features_extraction.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\lp_residual.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search_internal.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\ring_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_fc.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_gru.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\sequence_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features_internal.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\symmetric_matrix_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\vector_math.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\signal_classifier.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vad_with_level.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vector_float_frame.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\audio_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\circular_buffer.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\mean_variance_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\moving_max.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\normalized_covariance_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\gain_controller2.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\high_pass_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\include\audio_frame_view.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\include\audio_processing.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\include\audio_processing_statistics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\include\config.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\logging\apm_data_dumper.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\fast_math.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\histograms.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_suppressor.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\ns_common.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\ns_config.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\ns_fft.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\quantile_noise_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\speech_probability_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\suppression_params.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\wiener_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\residual_echo_detector.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\splitting_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\three_band_filter_bank.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\cascaded_biquad_filter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator_internal.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator_wrapper.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\pffft_wrapper.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\arraysize.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\atomic_ops.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\checks.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\compile_assert_c.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\constructor_magic.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\experiments\field_trial_parser.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\gtest_prod_util.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\logging.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\memory\aligned_malloc.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\numerics\safe_compare.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\numerics\safe_conversions.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\numerics\safe_conversions_impl.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\numerics\safe_minmax.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\platform_thread_types.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\race_checker.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\random.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\ref_count.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\ref_counted_object.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\ref_counter.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\strings\string_builder.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\string_encode.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\string_to_number.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\string_utils.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\swap_queue.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex_abseil.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex_critical_section.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex_pthread.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex_race_check.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\synchronization\yield.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\system\arch.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\system\file_wrapper.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\system\inline.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\system\rtc_export.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\system_time.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\thread_annotations.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\time_utils.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\type_traits.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\rtc_base\units\unit_base.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\system_wrappers\include\cpu_features_wrapper.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\system_wrappers\include\field_trial.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\system_wrappers\include\metrics.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\third_party\pffft\src\pffft.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\third_party\rnnoise\src\rnn_activations.h" />
+    <ClInclude Include="..\..\webrtc_aec3\src\third_party\rnnoise\src\rnn_vad_weights.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\webrtc_aec3\src\absl\base\internal\raw_logging.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\absl\base\internal\throw_delegate.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\absl\base\log_severity.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\absl\types\bad_optional_access.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\api\audio\channel_layout.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_config.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_factory.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_detector_creator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\units\timestamp.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\api\units\time_delta.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\audio_util.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\channel_buffer.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_resampler.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_sinc_resampler.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_avx2.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_sse.cc" />
-    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_neon.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_sse.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\signal_processing\dot_product_with_scale.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\signal_processing\splitting_filter2.c" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_sse2.cc" />
-    <ClCompile Condition="$(InstSet)==NEON" Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_neon.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_sse2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_256\fft4g.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\spl_sqrt_floor\spl_sqrt_floor.c" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_avx2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl_avx2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_common.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_fft.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec_state.cc" />
@@ -156,12 +382,38 @@
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erle_estimator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erl_estimator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_buffer.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_data_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_data_avx2.cc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\filter_analyzer.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\frame_blocker.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fullband_erle_estimator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_avx2.cc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_lag_aggregator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\moving_average.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\refined_filter_update_gain.cc" />
@@ -186,10 +438,24 @@
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_filter.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_gain.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\transparent_mode.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\vector_math_avx2.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\vector_math_avx2.cc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_agc.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_digital_gain_applier.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_mode_level_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\agc2_testing_common.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\biquad_filter.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\compute_interpolated_gain_curve.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\cpu_features.cc" />
@@ -209,17 +475,23 @@
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_fc.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_gru.cc" />
-    <ClCompile Condition="$(InstSet)==SSE" Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_vector_math_avx2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features.cc" />
-    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features_internal.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features_internal.cc" />    
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector_buffer.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\signal_classifier.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vad_with_level.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vector_float_frame.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\audio_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\circular_buffer.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\mean_variance_estimator.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\moving_max.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\echo_detector\normalized_covariance_estimator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\gain_controller2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\high_pass_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\include\audio_processing.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\include\audio_processing_statistics.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\include\config.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\logging\apm_data_dumper.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\fast_math.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\histograms.cc" />
@@ -234,6 +506,7 @@
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\speech_probability_estimator.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\suppression_params.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\wiener_filter.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\residual_echo_detector.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\splitting_filter.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\three_band_filter_bank.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\cascaded_biquad_filter.cc" />
@@ -246,6 +519,7 @@
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\memory\aligned_malloc.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\platform_thread_types.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\race_checker.cc" />
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\random.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\strings\string_builder.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_encode.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_to_number.cc" />
@@ -255,7 +529,6 @@
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system\file_wrapper.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system_time.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\time_utils.cc" />
-    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\cpu_features2.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\field_trial.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\metrics.cc" />
     <ClCompile Include="..\..\webrtc_aec3\src\third_party\pffft\src\pffft.c" />
@@ -264,10 +537,11 @@
   <!-- Import common config -->
   <Import Project="..\..\..\build\vs\pjproject-vs14-common-config.props" />
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{D738A812-CE37-40A4-B2FA-D81488C12C87}</ProjectGuid>
-    <RootNamespace>libwebrtc_aec3</RootNamespace>
+    <ProjectGuid>{CDC26604-0877-4229-8964-A9205321D242}</ProjectGuid>
+    <RootNamespace>libwebrtc</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
@@ -278,144 +552,144 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
-    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
     </CharacterSet>
   </PropertyGroup>
@@ -489,7 +763,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-release-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="PropertySheets">
@@ -499,7 +773,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-debug-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="PropertySheets">
@@ -509,7 +783,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="PropertySheets">
@@ -519,7 +793,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
@@ -529,7 +803,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-release-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-release-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-release-dynamic-defaults.props" />
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
@@ -539,7 +813,7 @@
   </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\..\..\build\vs\pjproject-vs14-arm64-common-defaults.props" />
+    <Import Project="..\..\..\build\vs\pjproject-vs14-win64-common-defaults.props" />
     <Import Project="..\..\..\build\vs\pjproject-vs14-debug-static-defaults.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
@@ -555,12 +829,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -568,12 +841,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -581,12 +853,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -594,12 +865,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -607,12 +877,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -620,12 +889,11 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -633,12 +901,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -646,12 +912,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -659,12 +923,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -672,12 +934,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -685,12 +945,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -698,12 +956,10 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">
     <ClCompile>
-      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;__ARMEL__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
-      <ExceptionHandling>false</ExceptionHandling>
-      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Lib>
       <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
@@ -714,10 +970,41 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -747,10 +1034,39 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -778,10 +1094,41 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -811,10 +1158,39 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -842,10 +1218,41 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -875,10 +1282,39 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
+      <AdditionalOptions>/wd4100 /wd4244 /wd4127 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;%(PreprocessorDefinitions);WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile />
+      <ObjectFileName>$(IntDir)%(RelativeDir)</ObjectFileName>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
+    <Midl />
+    <ClCompile>
       <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PrecompiledHeaderOutputFile />
+      <PreprocessorDefinitions>_LIB;__arm64__;WEBRTC_HAS_NEON;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
+      <ExceptionHandling>false</ExceptionHandling>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Lib>
+      <OutputFile>..\..\lib\$(ProjectName)-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
+    </Lib>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
+    <Midl />
+    <ClCompile>
+      <AdditionalOptions>/wd4305 /wd4456 /wd4530 /wd4100 /wd4244 /wd4715 /wd4127 /wd4005 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalIncludeDirectories>.;../../webrtc_aec3/src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_LIB;_WINDOWS;HAVE_CONFIG_H;WEBRTC_WIN;WEBRTC_APM_DEBUG_DUMP=0;NOMINMAX;_CRT_SECURE_NO_WARNINGS;_SILENCE_CXX17_RESULT_OF_DEPRECATION_WARNING;_USE_MATH_DEFINES;WEBRTC_HAS_NEON;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PrecompiledHeaderOutputFile>
+      </PrecompiledHeaderOutputFile>
       <ExceptionHandling>false</ExceptionHandling>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>

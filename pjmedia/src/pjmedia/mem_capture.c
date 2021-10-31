@@ -119,8 +119,9 @@ PJ_DEF(pj_status_t) pjmedia_mem_capture_set_eof_cb( pjmedia_port *port,
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE,
 		     PJ_EINVALIDOP);
 
-    PJ_LOG(1, (THIS_FILE, "pjmedia_mem_capture_set_eof_cb() is deprecated. "
-    	       "Use pjmedia_mem_capture_set_eof_cb2() instead."));
+    // Change for ilogixx:
+    //PJ_LOG(3, (THIS_FILE, "pjmedia_mem_capture_set_eof_cb() is deprecated. "
+    //       "Use pjmedia_mem_capture_set_eof_cb2() instead."));
 
     rec = (struct mem_rec*) port;
     rec->user_data = user_data;

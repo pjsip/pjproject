@@ -2488,6 +2488,12 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
      * Modifying a shared object might lead to a deadlock.
      * Refer to ticket #2137 for more detail.
      */
+
+	// fix from ilogixx: While registering the client, calls are coming in, inv->last_Answer is NULL
+	if (inv->last_answer == NULL)
+	{
+		goto on_return;
+	}
     status = pjsip_tx_data_clone(inv->last_answer, 0, &last_res);
     if (status != PJ_SUCCESS)
 	goto on_return;

@@ -105,155 +105,156 @@
     <RootNamespace>pjsua2_lib</RootNamespace>
     <!-- Specific UWP property -->
     <DefaultLanguage>en-US</DefaultLanguage>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <UseOfMfc>false</UseOfMfc>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <!-- Override the PlatformToolset -->
   <PropertyGroup>
-    <PlatformToolset>$(BuildToolset)</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet Condition="'$(API_Family)'!='WinDesktop'">
     </CharacterSet>
   </PropertyGroup>
@@ -400,6 +401,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
@@ -426,6 +431,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <Midl />
@@ -439,6 +448,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -449,6 +462,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <ClCompile>
@@ -456,10 +473,17 @@
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile>
       </PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderFile>stdafx.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation />
+      <IntrinsicFunctions>false</IntrinsicFunctions>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Midl>
@@ -469,10 +493,15 @@
       <AdditionalIncludeDirectories>../include;../../pjmedia/include;../../pjlib-util/include;../../pjlib/include;../../pjnath/include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PrecompiledHeaderOutputFile />
+      <OmitFramePointers>false</OmitFramePointers>
     </ClCompile>
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <Midl />
@@ -485,6 +514,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+  <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|Win32'">
     <ClCompile>
@@ -495,6 +528,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM'">
     <ClCompile>
@@ -520,6 +557,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Static|ARM64'">
     <Midl />
@@ -543,6 +584,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM'">
     <ClCompile>
@@ -567,6 +612,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Dynamic|ARM64'">
     <Midl />
@@ -589,6 +638,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM'">
     <ClCompile>
@@ -614,6 +667,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug-Dynamic|ARM64'">
     <Midl />
@@ -637,6 +694,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM'">
     <ClCompile>
@@ -661,6 +722,10 @@
     <Lib>
       <OutputFile>..\lib\pjsua2-lib-$(TargetCPU)-$(Platform)-vc$(VSVer)-$(Configuration).lib</OutputFile>
     </Lib>
+    <PostBuildEvent>
+      <Command>move $(SolutionDir)pjsip-apps\src\swig\*.cs $(SolutionDir)pjsua2-cs\
+move $(SolutionDir)pjsip-apps\src\swig\*_wrap.* $(SolutionDir)pjsua2\</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release-Static|ARM64'">
     <Midl />
@@ -676,7 +741,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\pjsua2\account.cpp" />
+    <ClCompile Include="..\src\pjsua2\audioInputDevice.cpp" />
+    <ClCompile Include="..\src\pjsua2\audioOutputDevice.cpp" />
+    <ClCompile Include="..\src\pjsua2\audioPlayer.cpp" />
+    <ClCompile Include="..\src\pjsua2\audioRecorder.cpp" />
     <ClCompile Include="..\src\pjsua2\call.cpp" />
+    <ClCompile Include="..\src\pjsua2\conferenceBridge.cpp" />
     <ClCompile Include="..\src\pjsua2\endpoint.cpp" />
     <ClCompile Include="..\src\pjsua2\json.cpp" />
     <ClCompile Include="..\src\pjsua2\media.cpp" />
@@ -687,7 +757,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjsua2\account.hpp" />
+    <ClInclude Include="..\include\pjsua2\audioInputDevice.hpp" />
+    <ClInclude Include="..\include\pjsua2\audioOutputDevice.hpp" />
+    <ClInclude Include="..\include\pjsua2\audioPlayer.hpp" />
+    <ClInclude Include="..\include\pjsua2\audioRecorder.hpp" />
     <ClInclude Include="..\include\pjsua2\call.hpp" />
+    <ClInclude Include="..\include\pjsua2\conferenceBridge.hpp" />
     <ClInclude Include="..\include\pjsua2\config.hpp" />
     <ClInclude Include="..\include\pjsua2\doxygen.hpp" />
     <ClInclude Include="..\include\pjsua2\endpoint.hpp" />
@@ -698,6 +773,34 @@
     <ClInclude Include="..\include\pjsua2\siptypes.hpp" />
     <ClInclude Include="..\include\pjsua2\types.hpp" />
     <ClInclude Include="..\src\pjsua2\util.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="..\..\pjsip-apps\src\swig\pjsua2.i">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">echo Invoking SWIG...
+echo on
+$(SolutionDir)swigwin-4.0.2\swig.exe -c++ -namespace "pj" -csharp "%(FullPath)" 
+%40echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(Filename)_wrap.cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">echo Invoking SWIG...
+echo on
+$(SolutionDir)swigwin-4.0.2\swig.exe -c++ -namespace "pj" -csharp "%(FullPath)" 
+%40echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(Filename)_wrap.cpp;%(Outputs)</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">%(Filename)_wrap.cpp;%(Outputs)</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">echo Invoking SWIG...
+echo on
+$(SolutionDir)swigwin-4.0.2\swig.exe -c++ -namespace "pj" -csharp "%(FullPath)" 
+%40echo off</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">echo Invoking SWIG...
+echo on
+$(SolutionDir)swigwin-4.0.2\swig.exe -c++ -namespace "pj" -csharp "%(FullPath)" 
+%40echo off</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">%(Filename)_wrap.cpp;%(Outputs)</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\pjsip-apps\src\swig\symbols.i" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

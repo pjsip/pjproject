@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>pjsua2_cs</RootNamespace>
+    <Platforms>x64</Platforms>
+    <PackageId>pjsua2_cs</PackageId>
+    <Version>2.11.1.28</Version>
+    <Authors>pjsua2_cs</Authors>
+    <Company>ilogixx</Company>
+    <Product>pjsua2_cs</Product>
+    <Description>A .NET wrapper for pjsip, created using SWIG</Description>
+    <Copyright>Copyright ©  2021</Copyright>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PlatformTarget>x64</PlatformTarget>
+    <NoWarn />
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <WarningsAsErrors />
+    <OutputPath>bin\Debug</OutputPath>
+  </PropertyGroup>
+
+</Project>

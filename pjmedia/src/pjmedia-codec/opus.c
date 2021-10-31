@@ -861,43 +861,25 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
     opus_repacketizer_cat(opus_data->dec_packer, tmp_buf, pkt_size);
 
     num_frames = opus_repacketizer_get_nb_frames(opus_data->dec_packer);
-    if (num_frames == 0) {
-      PJ_LOG(2, (THIS_FILE, "No frames retrieved (num_frames = 0)"));
-      pj_mutex_unlock(opus_data->mutex);
-      return PJMEDIA_CODEC_EFAILED;
-    }
-
     out_pos = 0;
     for (i = 0; i < num_frames; ++i) {
 	size = opus_repacketizer_out_range(opus_data->dec_packer, i, i+1,
 					   ((unsigned char*)pkt) + out_pos,
 					   sizeof(tmp_buf));
 	if (size < 0) {
-	    PJ_LOG(5, (THIS_FILE, "Parse failed! (pkt_size=%d, err=%d)",
-		       pkt_size, size));
+	    PJ_LOG(5, (THIS_FILE, "Parse failed! (%d)", pkt_size));
             pj_mutex_unlock (opus_data->mutex);
 	    return PJMEDIA_CODEC_EFAILED;
 	}
 	frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[i].buf = ((char*)pkt) + out_pos;
 	frames[i].size = size;
-	frames[i].bit_info = 0;
+	frames[i].bit_info = opus_packet_get_nb_samples(frames[i].buf,
+			     frames[i].size, opus_data->cfg.sample_rate);
 
 	if (i == 0) {
-	    int nsamples;
-	    unsigned ptime;
-
-	    nsamples = opus_packet_get_nb_samples(frames[i].buf,
-						  frames[i].size,
-						  opus_data->cfg.sample_rate);
-	    if (nsamples <= 0) {
-		PJ_LOG(5, (THIS_FILE, "Parse failed to get samples number! "
-				      "(err=%d)", nsamples));
-		pj_mutex_unlock (opus_data->mutex);
-		return PJMEDIA_CODEC_EFAILED;
-	    }
-
-	    ptime = nsamples * 1000 / opus_data->cfg.sample_rate;
+    	    unsigned ptime = frames[i].bit_info * 1000 /
+    	    		     opus_data->cfg.sample_rate;
     	    if (ptime != opus_data->dec_ptime) {
              	PJ_LOG(4, (THIS_FILE, "Opus ptime change detected: %d ms "
              			      "--> %d ms",
@@ -906,9 +888,9 @@ static pj_status_t  codec_parse( pjmedia_codec *codec,
         	opus_data->dec_frame_index = -1;
 
         	/* Signal to the stream about ptime change. */
-		frames[i].bit_info = 0x10000 | nsamples;
+     	    	frames[i].bit_info |= 0x10000;
     	    }
-	    samples_per_frame = nsamples;
+     	    samples_per_frame = frames[i].bit_info;
    	}
 
 	frames[i].timestamp.u64 = ts->u64 + i * samples_per_frame;

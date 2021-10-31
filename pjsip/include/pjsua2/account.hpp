@@ -1985,11 +1985,6 @@ public:
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-
-private:
-    friend class Endpoint;
-    friend class Buddy;
-
     /**
      * An internal function to add a Buddy to Account buddy list.
      * This method is used by Buddy::create().
@@ -2002,6 +1997,10 @@ private:
      */
     void removeBuddy(Buddy *buddy);
 
+    // Change for ilogixx:
+private:
+    friend class Endpoint;
+    friend class Buddy;
 
 private:
     pjsua_acc_id 	 id;

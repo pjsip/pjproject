@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <Target Name="CopyPjsua2DllsTarget" AfterTargets="Build">
+        <CreateItem Include="$(MSBuildThisFileDirectory)$(PlatformName)\*.dll">
+            <Output TaskParameter="Include" ItemName="DependencyAssemblies" />
+        </CreateItem>
+        <Copy SourceFiles="$(Pjsua2-csLibDir)\pjsua2-cs.dll" DestinationFolder="$(OutDir)" />
+        <Copy SourceFiles="$(Pjsua2-csLibDir)\pjsua2-cs.pdb" DestinationFolder="$(OutDir)" />
+        <Copy SourceFiles="$(Pjsua2-csNativeLibDir)\pjsua2.dll" DestinationFolder="$(OutDir)" />
+        <Copy SourceFiles="$(Pjsua2-csNativeLibDir)\pjsua2.pdb" DestinationFolder="$(OutDir)" />
+        <Copy Condition="'$(PlatformName)' == 'x64'" SourceFiles="$(Pjsua2-csNativeLibDir)\libcrypto-1_1-x64.dll" DestinationFolder="$(OutDir)" /> 
+        <Copy Condition="'$(PlatformName)' == 'x64'" SourceFiles="$(Pjsua2-csNativeLibDir)\libssl-1_1-x64.dll" DestinationFolder="$(OutDir)" />
+        <Copy Condition="'$(PlatformName)' == 'x86'" SourceFiles="$(Pjsua2-csNativeLibDir)\libcrypto-1_1.dll" DestinationFolder="$(OutDir)" /> 
+        <Copy Condition="'$(PlatformName)' == 'x86'" SourceFiles="$(Pjsua2-csNativeLibDir)\libssl-1_1.dll" DestinationFolder="$(OutDir)" />
+    </Target>
+</Project>

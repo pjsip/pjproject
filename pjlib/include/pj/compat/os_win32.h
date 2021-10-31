@@ -109,9 +109,9 @@
 
 #define PJ_HAS_HIGH_RES_TIMER		1
 #define PJ_HAS_MALLOC			1
-#ifndef PJ_OS_HAS_CHECK_STACK
-#   define PJ_OS_HAS_CHECK_STACK	1
-#endif
+//#ifndef PJ_OS_HAS_CHECK_STACK
+//#   define PJ_OS_HAS_CHECK_STACK	1
+//#endif
 
 #ifdef UNICODE
 #   define PJ_NATIVE_STRING_IS_UNICODE    1

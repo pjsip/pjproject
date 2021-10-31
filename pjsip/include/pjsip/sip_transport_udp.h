@@ -124,6 +124,8 @@ typedef struct pjsip_udp_transport_cfg
 } pjsip_udp_transport_cfg;
 
 
+
+
 /**
  * Initialize pjsip_udp_transport_cfg structure with default values for
  * the specifed address family.
@@ -133,6 +135,8 @@ typedef struct pjsip_udp_transport_cfg
  */
 PJ_DECL(void) pjsip_udp_transport_cfg_default(pjsip_udp_transport_cfg *cfg,
 					      int af);
+
+
 
 
 /**
@@ -379,6 +383,8 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart2(pjsip_transport *transport,
 					        pj_sock_t sock,
 					        const pj_sockaddr *local,
 					        const pjsip_host_port *a_name);
+
+
 
 
 PJ_END_DECL

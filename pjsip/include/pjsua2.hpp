@@ -26,4 +26,10 @@
 #include <pjsua2/media.hpp>
 #include <pjsua2/json.hpp>
 
+ // Change for ilogixx:
+#include <pjsua2/audioPlayer.hpp>
+#include <pjsua2/audioRecorder.hpp>
+#include <pjsua2/audioInputDevice.hpp>
+#include <pjsua2/audioOutputDevice.hpp>
+
 #endif

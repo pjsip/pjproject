@@ -411,6 +411,14 @@
 #   define PJMEDIA_FILE_PORT_BUFSIZE		4000
 #endif
 
+ // Change for ilogixx:
+/**
+  * Default audio capture buffer size.
+  */
+#ifndef PJMEDIA_CAPTURE_PORT_BUFSIZE
+#   define PJMEDIA_CAPTURE_PORT_BUFSIZE		4000
+#endif
+  /**
 
 /**
  * Maximum frame duration (in msec) to be supported.
@@ -631,7 +639,7 @@
 #endif
 
 /**
- * Perform RTP payload type checking in the audio stream. Normally the peer
+ * Perform RTP payload type checking in the stream. Normally the peer
  * MUST send RTP with payload type as we specified in our SDP. Certain
  * agents may not be able to follow this hence the only way to have
  * communication is to disable this check.
@@ -1642,18 +1650,6 @@
 #   define PJMEDIA_VID_STREAM_DECODE_MIN_DELAY_MSEC	    100
 #endif
 
-
-/**
- * Perform RTP payload type checking in the video stream. Normally the peer
- * MUST send RTP with payload type as we specified in our SDP. Certain
- * agents may not be able to follow this hence the only way to have
- * communication is to disable this check.
- *
- * Default: PJMEDIA_STREAM_CHECK_RTP_PT (follow audio stream's setting)
- */
-#ifndef PJMEDIA_VID_STREAM_CHECK_RTP_PT
-#   define PJMEDIA_VID_STREAM_CHECK_RTP_PT	PJMEDIA_STREAM_CHECK_RTP_PT
-#endif
 
 /**
  * @}

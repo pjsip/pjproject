@@ -1574,9 +1574,7 @@ done:
 	pj_str_t reg_contact;
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
-	len = acc->contact.slen +
-	      acc->cfg.contact_params.slen +
-	      acc->cfg.reg_contact_params.slen +
+	len = acc->contact.slen + acc->cfg.reg_contact_params.slen +
 	      acc->cfg.reg_contact_uri_params.slen +
 	      (need_outbound?
 	       (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);

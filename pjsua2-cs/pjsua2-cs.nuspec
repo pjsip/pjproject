@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <description>$description$</description>
+    <tags>Native, native</tags>
+  </metadata>
+  <files>
+	<file src="pjsua2-cs.targets" target="build"/>
+	<file src="pjsua2-cs.props" target="build"/>
+    <file src="..\pjsua2-cs\bin\x86\pjsua2-cs.dll" target="runtimes/x86" />
+    <file src="..\pjsua2-cs\bin\x64\pjsua2-cs.dll" target="runtimes/x64" />
+	<file src="..\pjsua2\Build\Win32\pjsua2.dll" target="runtimes/x86/native" />
+	<file src="..\pjsua2\Build\x64\pjsua2.dll" target="runtimes/x64/native" />
+	<file src="..\pjsua2-cs\bin\x86\pjsua2-cs.pdb" target="runtimes/x86" />
+	<file src="..\pjsua2-cs\bin\x64\pjsua2-cs.pdb" target="runtimes/x64" />
+	<file src="..\pjsua2\Build\Win32\pjsua2.pdb" target="runtimes/x86/native" />
+	<file src="..\pjsua2\Build\x64\pjsua2.pdb" target="runtimes/x64/native" />
+	<file src="..\openssl\bin\Win32\libssl-*.dll" target="runtimes/x86/native" />
+	<file src="..\openssl\bin\x64\libssl-*.dll" target="runtimes/x64/native" />
+	<file src="..\openssl\bin\Win32\libcrypto-*.dll" target="runtimes/x86/native" />
+	<file src="..\openssl\bin\x64\libcrypto-*.dll" target="runtimes/x64/native" />
+  </files>
+</package>

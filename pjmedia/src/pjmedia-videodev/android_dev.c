@@ -130,8 +130,7 @@ typedef struct and_stream
     pjmedia_vid_dev_conv    conv;
     
     /** Frame format param for NV21/YV12 -> I420 conversion */
-    pjmedia_video_apply_fmt_param
-			    vafp;
+    pjmedia_video_apply_fmt_param vafp;
 } and_stream;
 
 
@@ -197,8 +196,22 @@ static pjmedia_vid_dev_stream_op stream_op =
  * JNI stuff
  */
 extern JavaVM *pj_jni_jvm;
-#define PJ_CAMERA_CLASS_PATH		"org/pjsip/PjCamera"
-#define PJ_CAMERA_INFO_CLASS_PATH	"org/pjsip/PjCameraInfo"
+
+/* Use camera2 (since Android API level 21) */
+#define USE_CAMERA2	1
+
+#if USE_CAMERA2
+#define PJ_CAMERA			"PjCamera2"
+#define PJ_CAMERA_INFO			"PjCameraInfo2"
+#else
+#define PJ_CAMERA			"PjCamera"
+#define PJ_CAMERA_INFO			"PjCameraInfo"
+#endif
+
+#define PJ_CLASS_PATH			"org/pjsip/"
+#define PJ_CAMERA_CLASS_PATH		PJ_CLASS_PATH PJ_CAMERA
+#define PJ_CAMERA_INFO_CLASS_PATH	PJ_CLASS_PATH PJ_CAMERA_INFO
+
 
 static struct jni_objs_t
 {
@@ -224,9 +237,17 @@ static struct jni_objs_t
 } jobjs;
 
 
+#if USE_CAMERA2
+static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
+				jlong user_data,
+				jobject plane0, jint rowStride0, jint pixStride0,
+				jobject plane1, jint rowStride1, jint pixStride1,
+				jobject plane2, jint rowStride2, jint pixStride2);
+#else
 static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jbyteArray data, jint length,
 			       jlong user_data);
+#endif
 
 
 static pj_bool_t jni_get_env(JNIEnv **jni_env)
@@ -310,33 +331,33 @@ static pj_status_t jni_init_ids()
     }
 
     /* PjCamera class info */
-    GET_CLASS(PJ_CAMERA_CLASS_PATH, "PjCamera", jobjs.cam.cls);
-    GET_METHOD_ID(jobjs.cam.cls, "PjCamera", "<init>",
+    GET_CLASS(PJ_CAMERA_CLASS_PATH, PJ_CAMERA, jobjs.cam.cls);
+    GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "<init>",
 		  "(IIIIIJLandroid/view/SurfaceView;)V",
 		  jobjs.cam.m_init);
-    GET_METHOD_ID(jobjs.cam.cls, "PjCamera", "Start", "()I",
+    GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "Start", "()I",
 		  jobjs.cam.m_start);
-    GET_METHOD_ID(jobjs.cam.cls, "PjCamera", "Stop", "()V",
+    GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "Stop", "()V",
 		  jobjs.cam.m_stop);
-    GET_METHOD_ID(jobjs.cam.cls, "PjCamera", "SwitchDevice", "(I)I",
+    GET_METHOD_ID(jobjs.cam.cls, PJ_CAMERA, "SwitchDevice", "(I)I",
 		  jobjs.cam.m_switch);
 
     /* PjCameraInfo class info */
-    GET_CLASS(PJ_CAMERA_INFO_CLASS_PATH, "PjCameraInfo", jobjs.cam_info.cls);
-    GET_SMETHOD_ID(jobjs.cam_info.cls, "PjCameraInfo", "GetCameraCount", "()I",
+    GET_CLASS(PJ_CAMERA_INFO_CLASS_PATH, PJ_CAMERA_INFO, jobjs.cam_info.cls);
+    GET_SMETHOD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "GetCameraCount", "()I",
 		   jobjs.cam_info.m_get_cnt);
-    GET_SMETHOD_ID(jobjs.cam_info.cls, "PjCameraInfo", "GetCameraInfo",
+    GET_SMETHOD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "GetCameraInfo",
 		   "(I)L" PJ_CAMERA_INFO_CLASS_PATH ";",
 		   jobjs.cam_info.m_get_info);
-    GET_FIELD_ID(jobjs.cam_info.cls, "PjCameraInfo", "facing", "I",
+    GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "facing", "I",
 		 jobjs.cam_info.f_facing);
-    GET_FIELD_ID(jobjs.cam_info.cls, "PjCameraInfo", "orient", "I",
+    GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "orient", "I",
 		 jobjs.cam_info.f_orient);
-    GET_FIELD_ID(jobjs.cam_info.cls, "PjCameraInfo", "supportedSize", "[I",
+    GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedSize", "[I",
 		 jobjs.cam_info.f_sup_size);
-    GET_FIELD_ID(jobjs.cam_info.cls, "PjCameraInfo", "supportedFormat", "[I",
+    GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedFormat", "[I",
 		 jobjs.cam_info.f_sup_fmt);
-    GET_FIELD_ID(jobjs.cam_info.cls, "PjCameraInfo", "supportedFps1000", "[I",
+    GET_FIELD_ID(jobjs.cam_info.cls, PJ_CAMERA_INFO, "supportedFps1000", "[I",
 		 jobjs.cam_info.f_sup_fps);
 
 #undef GET_CLASS_ID
@@ -346,7 +367,11 @@ static pj_status_t jni_init_ids()
 
     /* Register native function */
     {
+#if USE_CAMERA2
+	JNINativeMethod m = { "PushFrame2", "(JLjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;IILjava/nio/ByteBuffer;II)V", (void*)&OnGetFrame2 };
+#else
 	JNINativeMethod m = { "PushFrame", "([BIJ)V", (void*)&OnGetFrame };
+#endif
 	if ((*jni_env)->RegisterNatives(jni_env, jobjs.cam.cls, &m, 1)) {
 	    PJ_LOG(3, (THIS_FILE, "[JNI] Failed in registering native "
 				  "function 'OnGetFrame()'"));
@@ -808,8 +833,13 @@ static pj_status_t and_factory_create_stream(
     pj_memcpy(&strm->vafp, &vafp, sizeof(vafp));
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
 
-    /* Allocate buffer for YV12 -> I420 conversion */
-    if (convert_to_i420) {
+    /* Allocate buffer for YV12 -> I420 conversion.
+     * The camera2 is a bit tricky with format, for example it reports
+     * for I420 support (and no NV21 support), however the incoming frame
+     * buffers are actually in NV21 format (e.g: pixel stride is 2), so
+     * we should always check and conversion buffer may be needed.
+     */
+    if (USE_CAMERA2 || convert_to_i420) {
 	pj_assert(vfi->plane_cnt > 1);
 	strm->convert_to_i420 = convert_to_i420;
 	strm->convert_buf = pj_pool_alloc(pool, vafp.plane_bytes[1]);
@@ -829,7 +859,11 @@ static pj_status_t and_factory_create_stream(
 				 strm->cam_size.w,	/* w */
 				 strm->cam_size.h,	/* h */
 				 and_fmt,		/* fmt */
+#if USE_CAMERA2
+				 vfd->fps.num/
+#else
 				 vfd->fps.num*1000/
+#endif
 				 vfd->fps.denum,	/* fps */
 				 (jlong)(intptr_t)strm,	/* user data */
 				 NULL			/* SurfaceView */
@@ -1109,6 +1143,165 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
     return PJ_SUCCESS;
 }
 
+#if USE_CAMERA2
+
+static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
+				jlong user_data,
+				jobject plane0, jint rowStride0, jint pixStride0,
+				jobject plane1, jint rowStride1, jint pixStride1,
+				jobject plane2, jint rowStride2, jint pixStride2)
+{
+    and_stream *strm = (and_stream*)(intptr_t)user_data;
+    pjmedia_frame f;
+    pj_uint8_t *p0, *p1, *p2, *p0_end;
+    pj_uint8_t *Y, *U, *V;
+    pj_status_t status;
+    void *frame_buf, *data_buf;
+    
+    strm->frame_ts.u64 += strm->ts_inc;
+    if (!strm->vid_cb.capture_cb)
+	return;
+
+    if (strm->thread_initialized == 0 || !pj_thread_is_registered()) {
+	pj_status_t status;
+	pj_bzero(strm->thread_desc, sizeof(pj_thread_desc));
+	status = pj_thread_register("and_cam", strm->thread_desc,
+				    &strm->thread);
+	if (status != PJ_SUCCESS)
+	    return;
+	strm->thread_initialized = 1;
+	PJ_LOG(5,(THIS_FILE, "Android camera thread registered"));
+    }
+
+    p0 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane0);
+    p1 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane1);
+    p2 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane2);
+    
+    /* Assuming the buffers are originally a large contigue buffer */
+    p0_end = p0+strm->vafp.size.h*rowStride0;
+    pj_assert(p1 == p0_end || p2 == p0_end);
+
+    f.type = PJMEDIA_FRAME_TYPE_VIDEO;
+    f.size = strm->vafp.framebytes;
+    f.timestamp.u64 = strm->frame_ts.u64;
+    f.buf = data_buf = p0;
+
+    Y = (pj_uint8_t*)f.buf;
+    U = Y + strm->vafp.plane_bytes[0];
+    V = U + strm->vafp.plane_bytes[1];
+
+    /* Check if we need conversion here, this is the tricky part of camera2.
+     * When we request I420, the returned buffer may not be actually I420,
+     * for example NV21. The camera2 'cheats' us via it's Plane type which
+     * has pixel stride attribute. For example, NV21 buffer structure will
+     * be represented as I420 using Plane array with the following attributes:
+     * - Plane[1], or U plane, points to address of (Plane[0] + Ysize + 1).
+     * - Plane[2], or V plane, points to address of (Plane[0] + Ysize).
+     * - Pixel stride is set to 2 for U & V planes, and 1 for Y plane.
+     */
+
+    /* Already I420, nothing to do */
+    if (p1 == U && p2 == V) {}
+
+    /* The buffer may be originally NV21, i.e: V/U is interleaved */
+    else if (p2==U && p1-p2==1 && pixStride1==2 && pixStride2==2)
+    {
+	pj_uint8_t *src = U;
+	pj_uint8_t *dst_u = U;
+	pj_uint8_t *end_u = U + strm->vafp.plane_bytes[1];
+	pj_uint8_t *dst_v = strm->convert_buf;
+	while (dst_u < end_u) {
+	    *dst_v++ = *src++;
+	    *dst_u++ = *src++;
+	}
+	pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+    }
+    
+    /* The buffer may be originally YV12, i.e: U & V planes are swapped.
+     * We also need to strip out padding, if any.
+     */
+    else if ((p2 == p0_end) &&
+	     (p1 == p2+rowStride2*strm->vafp.size.h/2))
+    {
+	/* Strip out Y padding */
+	if (rowStride0 > strm->vafp.size.w) {
+	    int i;
+	    pj_uint8_t *src = Y + rowStride0;
+	    pj_uint8_t *dst = Y + strm->vafp.size.w;
+
+	    for (i = 1; i < strm->vafp.size.h; ++i) {
+		memmove(dst, src, strm->vafp.size.w);
+		src += rowStride0;
+		dst += strm->vafp.size.w;
+	    }
+	}
+
+	/* Swap U & V planes */
+	if (rowStride1 == strm->vafp.size.w/2) {
+
+	    /* No padding, note Y plane should be no padding too! */
+	    pj_assert(rowStride0 == strm->vafp.size.w);
+	    pj_memcpy(strm->convert_buf, U, strm->vafp.plane_bytes[1]);
+	    pj_memmove(U, V, strm->vafp.plane_bytes[1]);
+	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
+
+	} else if (rowStride1 > strm->vafp.size.w/2) {
+
+	    /* Strip & copy V plane into conversion buffer */
+	    pj_uint8_t *src = p0_end;
+	    pj_uint8_t *dst = strm->convert_buf;
+	    unsigned dst_stride = strm->vafp.size.w/2;
+	    int i;
+	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
+		memmove(dst, src, dst_stride);
+		src += rowStride1;
+		dst += dst_stride;
+	    }
+
+	    /* Strip U plane */
+	    dst = U;
+	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
+		memmove(dst, src, dst_stride);
+		src += rowStride1;
+		dst += dst_stride;
+	    }
+
+	    /* Get V plane data from conversion buffer */
+	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+
+	}
+    }
+    
+    /* Else, let's just print log for now */
+    else {
+	jlong p0_len, p1_len, p2_len;
+
+	p0_len = (*env)->GetDirectBufferCapacity(env, plane0);
+	p1_len = (*env)->GetDirectBufferCapacity(env, plane1);
+	p2_len = (*env)->GetDirectBufferCapacity(env, plane2);
+
+	PJ_LOG(1,(THIS_FILE, "Unrecognized image format from Android camera2, "
+			     "please report the following plane format:"));
+	PJ_LOG(1,(THIS_FILE, " Planes (buf/len/row_stride/pix_stride):"
+			     " p0=%p/%d/%d/%d p1=%p/%d/%d/%d p2=%p/%d/%d/%d",
+			     p0, p0_len, rowStride0, pixStride0,
+			     p1, p1_len, rowStride1, pixStride1,
+			     p2, p2_len, rowStride2, pixStride2));
+	return;
+    }
+
+    status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
+    						    f.buf,
+    				       		    &frame_buf);
+    if (status == PJ_SUCCESS) {
+        f.buf = frame_buf;
+    }
+
+    (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &f);
+}
+
+#else
+
 static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
                                jbyteArray data, jint length,
 			       jlong user_data)
@@ -1224,5 +1417,7 @@ static void JNICALL OnGetFrame(JNIEnv *env, jobject obj,
     (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &f);
     (*env)->ReleaseByteArrayElements(env, data, data_buf, JNI_ABORT);
 }
+
+#endif /* USE_CAMERA2 */
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_ANDROID */

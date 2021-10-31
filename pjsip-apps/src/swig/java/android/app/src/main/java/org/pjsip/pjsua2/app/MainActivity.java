@@ -19,6 +19,7 @@
 package org.pjsip.pjsua2.app;
 
 import android.content.IntentFilter;
+import android.hardware.camera2.CameraManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -46,6 +47,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.pjsip.PjCameraInfo2;
 import org.pjsip.pjsua2.*;
 
 public class MainActivity extends Activity
@@ -127,6 +129,9 @@ public class MainActivity extends Activity
     {
 	super.onCreate(savedInstanceState);
 	setContentView(R.layout.activity_main);
+
+	CameraManager cm = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+	PjCameraInfo2.SetCameraManager(cm);
 
 	if (app == null) {
 	    app = new MyApp();

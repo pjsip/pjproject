@@ -1028,6 +1028,10 @@ void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	return;
     }
     
+    // Change for ilogixx:
+    pjsua_call_info call_info;
+    pjsua_call_get_info(call_id, &call_info);
+
     OnCallStateParam prm;
     prm.e.fromPj(*e);
     
@@ -1158,7 +1162,12 @@ void Endpoint::on_stream_created2(pjsua_call_id call_id,
     prm.streamIdx = param->stream_idx;
     prm.destroyPort = (param->destroy_port != PJ_FALSE);
     prm.pPort = (MediaPort)param->port;
-    
+   
+    // Change for ilogixx:
+    pjmedia_stream_info streamInfo;
+    pjmedia_stream_get_info(param->stream, &streamInfo);
+    prm.clockRate = streamInfo.fmt.clock_rate;
+
     call->onStreamCreated(prm);
     
     param->destroy_port = prm.destroyPort;
@@ -2256,6 +2265,17 @@ bool Endpoint::mediaExists(const AudioMedia &media) const
     return (pjsua_conf_get_port_info(id, &pi) == PJ_SUCCESS);
 }
 
+// Change for ilogixx:
+bool Endpoint::AudioPlayerExists(int portId) const
+{
+    pjsua_conf_port_id id = portId;
+    if (id == PJSUA_INVALID_ID || id >= (int)mediaMaxPorts())
+        return false;
+
+    pjsua_conf_port_info pi;
+    return (pjsua_conf_get_port_info(id, &pi) == PJ_SUCCESS);
+}
+
 AudDevManager &Endpoint::audDevManager()
 {
     return audioDevMgr;
@@ -2492,4 +2512,10 @@ void Endpoint::handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error)
 {
     pjsua_ip_change_param ip_change_param = param.toPj();
     PJSUA2_CHECK_EXPR(pjsua_handle_ip_change(&ip_change_param));
+}
+
+// Change for ilogixx:
+void Endpoint::logDump()
+{
+    pjsip_endpt_dump(pjsua_var.endpt, 1);
 }

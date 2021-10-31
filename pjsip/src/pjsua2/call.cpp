@@ -466,6 +466,14 @@ Call::Call(Account& account, int call_id)
         pjsua_call_set_user_data(call_id, this);
 }
 
+// Change for ilogixx:
+Call::Call(Account& account, ConferenceBridge* conference_bridge, int call_id)
+    : acc(account), conferenceBridge(conference_bridge), id(call_id)
+{
+    if (call_id != PJSUA_INVALID_ID)
+        pjsua_call_set_user_data(call_id, this);
+}
+
 Call::~Call()
 {
     /* Remove reference to this instance from PJSUA library */
@@ -903,6 +911,17 @@ MediaTransportInfo Call::getMedTransportInfo(unsigned med_idx) const
     return mti;
 }
 
+// Change for ilogixx:
+//std::shared_ptr<ConferenceBridge> pj::Call::getConferenceBridge()
+//{
+//	return this->conferenceBridge;
+//}
+//
+//void pj::Call::setConferenceBridge(std::shared_ptr<ConferenceBridge> bridge) 
+//{
+//	this->conferenceBridge = bridge;
+//}
+
 void Call::processMediaUpdate(OnCallMediaStateParam &prm)
 {
     pjsua_call_info pj_ci;
@@ -991,4 +1010,42 @@ void Call::processStateChange(OnCallStateParam &prm)
     /* If the state is DISCONNECTED, this call may have already been deleted
      * by the application in the callback, so do not access it anymore here.
      */
+}
+
+// Change for ilogixx:
+void Call::updateSipFields(const pjsip_msg& sipMessage)
+{
+    pjsip_hdr* currentHeader = sipMessage.hdr.next;
+    SipHeader sipHeader;
+    std::vector<std::string> changedFields;
+    while (currentHeader != &sipMessage.hdr)
+    {
+        sipHeader.fromPj(currentHeader);
+
+        auto iterator = sipValueByFieldName.find(sipHeader.hName);
+        if (iterator == sipValueByFieldName.end()) //Sip header is new
+        {
+            sipValueByFieldName.insert(std::pair<std::string, std::string>(sipHeader.hName, sipHeader.hValue));
+            changedFields.push_back(sipHeader.hName);
+        }
+        else if (iterator->second.compare(sipHeader.hValue) != 0) //Sip header has changed
+        {
+            iterator->second = sipHeader.hValue;
+            changedFields.push_back(sipHeader.hName);
+        }
+        currentHeader = currentHeader->next;
+    }
+
+    OnSipFieldsChanged(changedFields);
+}
+
+std::string Call::getSipFieldByName(const std::string& fieldName)
+{
+    auto iterator = sipValueByFieldName.find(fieldName);
+    if (iterator == sipValueByFieldName.end())
+    {
+        return "";
+    }
+
+    return iterator->second;
 }

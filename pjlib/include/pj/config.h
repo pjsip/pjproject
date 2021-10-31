@@ -889,7 +889,7 @@
  * Default: 0
  */
 #ifndef PJ_EXCEPTION_USE_WIN32_SEH
-#  define PJ_EXCEPTION_USE_WIN32_SEH 0
+#  define PJ_EXCEPTION_USE_WIN32_SEH 1
 #endif
 
 /**
@@ -1402,7 +1402,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MINOR	11
 
 /** PJLIB version revision number. */
-#define PJ_VERSION_NUM_REV      0
+#define PJ_VERSION_NUM_REV      1
 
 /**
  * Extra suffix for the version (e.g. "-trunk"), or empty for

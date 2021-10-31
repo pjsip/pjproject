@@ -1389,6 +1389,9 @@ public:
      */
     bool mediaExists(const AudioMedia &media) const;
 
+    // Change for ilogixx:
+    bool AudioPlayerExists(int portId) const;
+
     /**
      * Get maximum number of media port.
      *
@@ -1610,6 +1613,12 @@ public:
      * @return		PJ_SUCCESS on success, other on error.
      */
     void handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error);
+
+/**
+* CUSTOM ilogixx ADDITION:
+* Prints the endpoint memory dump to the log with loglevel 3
+*/
+    void logDump();
 
 public:
     /*

@@ -257,23 +257,8 @@
     <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\sqrt_of_one_minus_x_squared.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\cross_correlation_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\downsample_fast_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\common_audio\signal_processing\min_max_operations_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\ns\nsx_core_neon.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+    <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_core_sse2.c" />
+    <ClCompile Include="..\..\webrtc\src\webrtc\modules\audio_processing\aec\aec_rdft_sse2.c" />
+    <ClCompile Include="..\..\webrtc\src\webrtc\system_wrappers\source\cpu_features.cc" />
   </ItemGroup>
 </Project>

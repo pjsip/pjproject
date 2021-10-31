@@ -206,7 +206,8 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	}
 
 	/* Dump media state upon disconnected.
-	 * Now pjsua_media_channel_deinit() automatically log the call dump.
+	 * Moved to on_stream_destroyed() since media has been deactivated
+	 * upon disconnection.
 	 */
 	if (0) {
 	    PJ_LOG(5,(THIS_FILE, 
@@ -281,9 +282,7 @@ static void on_stream_destroyed(pjsua_call_id call_id,
 				unsigned stream_idx)
 {
     PJ_UNUSED_ARG(strm);
-
-    /* Now pjsua_media_channel_deinit() automatically log the call dump. */
-    if (0) {
+    if (1) {
 	PJ_LOG(5,(THIS_FILE, 
 		  "Call %d stream %d destroyed, dumping media stats..", 
 		  call_id, stream_idx));

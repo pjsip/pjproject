@@ -265,7 +265,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_set_cb( pjmedia_port *port,
     /* Check that this is really a writer port */
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVALIDOP);
 
-    PJ_LOG(1, (THIS_FILE, "pjmedia_wav_writer_port_set_cb() is deprecated. "
+    // Change for ilogixx:
+    PJ_LOG(3, (THIS_FILE, "pjmedia_wav_writer_port_set_cb() is deprecated. "
     	       "Use pjmedia_wav_writer_port_set_cb2() instead."));
 
     fport = (struct file_port*) port;

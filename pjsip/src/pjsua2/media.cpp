@@ -409,6 +409,103 @@ void AudioMediaPlayer::eof_cb(pjmedia_port *port,
     player->onEof2();
 }
 
+// Change for ilogixx:
+// 
+//  If problems with the AudioPlayer occur, the AudioMediaPlayer can be used. Currently, 
+//  only the conference bridge can not be controlled and it is used the interen
+
+void AudioMediaPlayer::onFileEndCallback(pjmedia_port* port, void* usr_data)
+{
+    PJ_UNUSED_ARG(port);
+    AudioMediaPlayer* audioMediaPlayer = (AudioMediaPlayer*)usr_data;
+    audioMediaPlayer->onEof2();
+}
+
+unsigned int AudioMediaPlayer::GetSlot()
+{
+    //return slot;
+    return -1;
+}
+
+pj_status_t AudioMediaPlayer::SetPosition(int seconds)
+{
+    pjmedia_port* port;
+    pj_status_t status;
+
+    status = pjsua_player_get_port(playerId, &port);
+
+    double totalLengthInSeconds = GetTotalLength();
+    double relativePosition = seconds / totalLengthInSeconds;
+    if (relativePosition < 0) relativePosition = 0;
+    if (relativePosition >= 1)
+    {
+        struct file_reader_port* filePort = (struct file_reader_port*)port;
+        return pjmedia_wav_player_port_set_pos(port, filePort->data_len - 1);
+    }
+
+    pj_ssize_t fileSizeInBytes = pjmedia_wav_player_get_len(port);
+    pj_uint32_t position = (pj_uint32_t)(fileSizeInBytes * relativePosition);
+
+    pjmedia_wav_player_info info;
+    pjmedia_wav_player_get_info(port, &info);
+
+    position = position - (position % 8);
+
+    return pjmedia_wav_player_port_set_pos(port, position);
+}
+
+pj_status_t AudioMediaPlayer::Jump(int seconds)
+{
+    pjmedia_port* port;
+    pj_status_t status;
+
+    status = pjsua_player_get_port(playerId, &port);
+
+    double totalLengthInSeconds = GetTotalLength();
+    pj_uint32_t position = pjmedia_wav_player_port_get_pos(port);
+    pj_ssize_t fileSizeInBytes = pjmedia_wav_player_get_len(port);
+    pj_uint32_t bytesToMove = (pj_uint32_t)((abs(seconds) / totalLengthInSeconds) * fileSizeInBytes);
+
+    if (seconds < 0)
+    {
+        if (position < bytesToMove)
+        {
+            position = 0;
+        }
+        else
+        {
+            position = position - bytesToMove;
+        }
+    }
+    else
+    {
+        position = position + bytesToMove;
+        struct file_reader_port* filePort = (struct file_reader_port*)port;
+
+        if (position >= filePort->data_len)
+        {
+            position = filePort->data_len - 1;
+        }
+    }
+
+    return pjmedia_wav_player_port_set_pos(port, position);
+}
+
+double AudioMediaPlayer::GetTotalLength()
+{
+    pjmedia_port* port;
+    pj_status_t status;
+
+    status = pjsua_player_get_port(playerId, &port);
+    pjmedia_wav_player_info info;
+    pjmedia_wav_player_get_info(port, &info);
+
+    struct file_reader_port* filePort = (struct file_reader_port*)port;
+    pjmedia_audio_format_detail* audioFormatDetail = pjmedia_format_get_audio_format_detail(&filePort->base.info.fmt, 1);
+
+    return info.size_samples / audioFormatDetail->clock_rate;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 AudioMediaRecorder::AudioMediaRecorder()
 : recorderId(PJSUA_INVALID_ID)
