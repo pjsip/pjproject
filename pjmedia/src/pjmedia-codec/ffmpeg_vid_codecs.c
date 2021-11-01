@@ -313,7 +313,9 @@ static ffmpeg_codec_desc codec_desc[] =
 	 {"FF VP8", 6}},
 	0,
 	{720, 480},	{15, 1},	256000, 256000,
-	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen
+	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen, NULL,
+	{2, { {{"max-fr",6},   {"30",2}}, 
+	      {{" max-fs",7},  {"580",3}}, } },
     },
 #endif
 
@@ -323,7 +325,9 @@ static ffmpeg_codec_desc codec_desc[] =
 	 {"FF VP9", 6}},
 	0,
 	{720, 480},	{15, 1},	256000, 256000,
-	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen
+	&vpx_packetize, &vpx_unpacketize, &vpx_preopen, &vpx_postopen, NULL,
+	{2, { {{"max-fr",6},   {"30",2}}, 
+	      {{" max-fs",7},  {"580",3}}, } },
     },
 #endif
 
@@ -369,6 +373,27 @@ static pj_status_t vpx_preopen(ffmpeg_private *ff)
     data = PJ_POOL_ZALLOC_T(ff->pool, vpx_data);
     ff->data = data;
 
+    /* Parse local fmtp */
+    if (!ff->param.ignore_fmtp)
+    {
+        pjmedia_vid_codec_vpx_fmtp vpx_fmtp;
+        const unsigned MAX_RX_RES = 1200;
+        unsigned max_res = MAX_RX_RES;
+
+        status = pjmedia_vid_codec_vpx_parse_fmtp(&ff->param.dec_fmtp, &vpx_fmtp);
+        if (status != PJ_SUCCESS)
+        {
+            PJ_LOG(2, (THIS_FILE, "Parse vpx fmtp fail, status:%d", status));
+            return status;
+        }
+        if (vpx_fmtp.max_fs > 0)
+        {
+            max_res = ((int)pj_isqrt(vpx_fmtp.max_fs * 8)) * 16;
+        }
+        ff->dec_buf_size = (max_res * max_res * 3 >> 1) + (max_res);
+    }
+
+    /* Create packetizer */
     pktz_cfg.fmt_id = ff->desc->info.fmt_id;
     pktz_cfg.mtu = ff->param.enc_mtu;
     status = pjmedia_vpx_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
@@ -1417,7 +1442,7 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
 	ff->enc_buf_size = (unsigned)ff->enc_vafp.framebytes;
 	ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
 
-	ff->dec_buf_size = (unsigned)ff->dec_vafp.framebytes;
+	ff->dec_buf_size = PJ_MAX((unsigned)ff->dec_vafp.framebytes, ff->dec_buf_size);
 	ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
     }
 
