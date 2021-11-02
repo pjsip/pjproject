@@ -587,19 +587,19 @@
  * Enable FFMPEG VPX codec (requires libvpx)
  */
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP8
-#	if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8	0
-#	else
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8	1
-#	endif
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		0
+#   else
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		1
+#   endif
 #endif
 
 #ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP9
-#	if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9	0
-#	else
-#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9	1
-#	endif
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		0
+#   else
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		1
+#   endif
 #endif
 
 
