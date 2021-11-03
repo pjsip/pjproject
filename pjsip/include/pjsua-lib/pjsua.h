@@ -1110,6 +1110,17 @@ typedef struct pjsua_callback
     void (*on_incoming_call)(pjsua_acc_id acc_id, pjsua_call_id call_id,
 			     pjsip_rx_data *rdata);
 
+
+    /**
+     * TUBITAK BILGEM
+     * This is a custom header notification callback which is called whenever
+     * a transaction within the call has changed state. Application can
+     * implement this callback for example to monitor confirmed call header 
+     *
+     * @param prm	Callback parameter.
+     */
+    void (*on_call_rx_data_handler)(pjsua_call_id call_id, pjsip_event *e, pjsip_rx_data *rdata);    
+
     /**
      * This is a general notification callback which is called whenever
      * a transaction within the call has changed state. Application can

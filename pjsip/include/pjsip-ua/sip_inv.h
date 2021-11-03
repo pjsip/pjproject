@@ -141,6 +141,23 @@ typedef struct pjsip_inv_callback
      */
     void (*on_new_session)(pjsip_inv_session *inv, pjsip_event *e);
 
+    /** 
+     * TUBITAK BILGEM
+     * This callback is called when transaction state has changed in INVITE
+     * session. We use this to trap:
+     *  - incoming ACK request.
+     * 
+     * This callback is optional.
+     *
+     * @param inv	The invite session.
+     * @param e	The event which has caused the transation state's.
+     * @param rdata		The remote ack
+     *			to change.
+     */
+    void (*on_rx_handler_changed)(pjsip_inv_session *inv,
+				 pjsip_event *e,
+				 pjsip_rx_data *rdata);
+
     /**
      * This callback is called whenever any transactions within the session
      * has changed their state. Application MAY implement this callback, 

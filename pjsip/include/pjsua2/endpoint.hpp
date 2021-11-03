@@ -1787,6 +1787,7 @@ private:
 				     pjsip_event *event);
     // Call callbacks
     static void on_call_state(pjsua_call_id call_id, pjsip_event *e);
+    static void on_call_rx_data_handler(pjsua_call_id call_id, pjsip_event *e, pjsip_rx_data *rdata);
     static void on_call_tsx_state(pjsua_call_id call_id,
                                   pjsip_transaction *tsx,
                                   pjsip_event *e);

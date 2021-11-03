@@ -100,6 +100,15 @@ static pj_status_t pjsua_call_on_rx_reinvite(pjsip_inv_session *inv,
 static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 				       pjmedia_sdp_session **offer);
 
+/** 
+ * TUBITAK BILGEM
+ * This callback is called when transaction state has changed in INVITE
+ * session. We use this to trap:
+ *  - incoming ACK request.
+ */
+static void pjsua_call_on_rx_handler_changed(pjsip_inv_session *inv,
+					    pjsip_rx_data *rdata);
+
 /*
  * This callback is called when transaction state has changed in INVITE
  * session. We use this to trap:
@@ -231,6 +240,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_media_update = &pjsua_call_on_media_update;
     inv_cb.on_rx_offer2 = &pjsua_call_on_rx_offer;
     inv_cb.on_create_offer = &pjsua_call_on_create_offer;
+	inv_cb.on_rx_handler_changed = &pjsua_call_on_rx_handler_changed;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
     inv_cb.on_redirected = &pjsua_call_on_redirected;
     if (pjsua_var.ua_cfg.cb.on_call_rx_reinvite) {
@@ -6043,7 +6053,56 @@ on_return:
     pj_log_pop_indent();
 }
 
+/** 
+ * TUBITAK BILGEM
+ * This callback is called when transaction state has changed in INVITE
+ * session. We use this to trap:
+ *  - incoming ACK request.
+ */
+static void pjsua_call_on_rx_handler_changed(pjsip_inv_session *inv,
+					    pjsip_rx_data *rdata){
 
+    pj_str_t contact;
+    pjsip_dialog *dlg = pjsip_rdata_get_dlg(rdata);
+    pjsip_dialog *replaced_dlg = NULL;
+    pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
+    pjsip_msg *msg = rdata->msg_info.msg;
+    pjsip_tx_data *response = NULL;
+    unsigned options = 0;
+    int acc_id;
+    int call_id = -1;
+    int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+    pjmedia_sdp_session *offer=NULL;
+    pj_bool_t should_dec_dlg = PJ_FALSE;
+    pj_status_t status;
+
+    pjsua_call *call;
+
+    pj_log_push_indent();
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (call == NULL)
+	goto on_return;
+
+    if (call->inv == NULL || call->hanging_up) {
+	/* Call has been disconnected. */
+	goto on_return;
+    }
+
+    /* Notify application callback first */
+    if (pjsua_var.ua_cfg.cb.on_call_rx_data_handler) {
+	(*pjsua_var.ua_cfg.cb.on_call_rx_data_handler)(call->index, NULL, rdata);
+    }
+
+	if (inv->state == PJSIP_INV_STATE_CONFIRMED) {
+				(*pjsua_var.ua_cfg.cb.on_call_rx_data_handler)(call->index, NULL, rdata);
+	}
+
+	on_return:
+	pj_log_pop_indent();
+
+}
 
 /*
  * This callback is called when transaction state has changed in INVITE

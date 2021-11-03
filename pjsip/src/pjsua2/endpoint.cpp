@@ -1029,6 +1029,28 @@ void Endpoint::on_call_state(pjsua_call_id call_id, pjsip_event *e)
      */
 }
 
+/** 
+ * TUBITAK BILGEM
+ * RX DATA HANDLER WHEN CALL ACCEPTED
+ */ 
+void Endpoint::on_call_rx_data_handler(pjsua_call_id call_id,
+                                 pjsip_event *e,
+                                 pjsip_rx_data *rdata)
+{
+    PJ_UNUSED_ARG(e);
+
+    Call *call = Call::lookup(call_id);
+    if (!call) {
+	return;
+    }
+    
+    OnCallRxDataHandlerParam prm;
+    prm.rdata.fromPj(*rdata);
+    //prm.e.fromPj(*e);
+    
+    call->onCallRxDataHandler(prm);
+}
+
 void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
                                  pjsip_transaction *tsx,
                                  pjsip_event *e)
@@ -1771,6 +1793,7 @@ void Endpoint::libInit(const EpConfig &prmEpConfig) PJSUA2_THROW(Error)
 
     /* Call callbacks */
     ua_cfg.cb.on_call_state             = &Endpoint::on_call_state;
+    ua_cfg.cb.on_call_rx_data_handler   = &Endpoint::on_call_rx_data_handler;
     ua_cfg.cb.on_call_tsx_state         = &Endpoint::on_call_tsx_state;
     ua_cfg.cb.on_call_media_state       = &Endpoint::on_call_media_state;
     ua_cfg.cb.on_call_sdp_created       = &Endpoint::on_call_sdp_created;

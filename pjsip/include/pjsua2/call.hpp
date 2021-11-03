@@ -700,6 +700,19 @@ struct OnCallStateParam
 };
 
 /**
+ * TUBITAK BILGEM
+ * This structure contains parameters for Call::onCallRxDataHandler() callback.
+ */
+struct OnCallRxDataHandlerParam
+{
+    /**
+     * The received HEADER of SIP message.
+     */
+
+    SipRxData   rdata;
+};
+
+/**
  * This structure contains parameters for Call::onCallTsxState() callback.
  */
 struct OnCallTsxStateParam
@@ -1802,7 +1815,19 @@ public:
      */
     virtual void onCallState(OnCallStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
-    
+
+
+    /**
+     * TUBITAK BILGEM
+     * This is a custom header notification callback which is called whenever
+     * a transaction within the call has changed state. Application can
+     * implement this callback for example to monitor confirmed call header 
+     *
+     * @param prm	Callback parameter.
+     */
+    virtual void onCallRxDataHandler(OnCallRxDataHandlerParam &prm)
+    { PJ_UNUSED_ARG(prm); }
+
     /**
      * This is a general notification callback which is called whenever
      * a transaction within the call has changed state. Application can
