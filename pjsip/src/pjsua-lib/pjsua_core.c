@@ -664,8 +664,28 @@ static pj_bool_t mod_pjsua_on_rx_request(pjsip_rx_data *rdata)
     if (rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD) {
 
 	processed = pjsua_call_on_incoming(rdata);
-    }
+    
+	} else if (rdata->msg_info.msg->line.req.method.id == PJSIP_ACK_METHOD) {
+	
+	//processed = pjsua_call_on_rx_ack(rdata);
+    char addr[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t input_str = pj_str(rdata->pkt_info.src_name);
 
+    PJ_LOG(4,(THIS_FILE, "TEST WHEN ACK ! -> RX %d bytes %s from %s %s:\n"
+			 "%.*s\n"
+			 "--end msg--",
+			 rdata->msg_info.len,
+			 pjsip_rx_data_get_info(rdata),
+			 rdata->tp_info.transport->type_name,	      
+			 pj_addr_str_print(&input_str, 
+					   rdata->pkt_info.src_port, 
+					   addr,
+					   sizeof(addr), 
+					   1),
+			 (int)rdata->msg_info.len,
+			 rdata->msg_info.msg_buf));
+
+	}
     PJSUA_UNLOCK();
 
     return processed;
