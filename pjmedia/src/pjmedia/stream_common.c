@@ -29,6 +29,7 @@ pjmedia_stream_ka_config_default(pjmedia_stream_ka_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
     cfg->start_count = PJMEDIA_STREAM_START_KA_CNT;
     cfg->start_interval = PJMEDIA_STREAM_START_KA_INTERVAL_MSEC;
+    cfg->ka_interval = PJMEDIA_STREAM_KA_INTERVAL;
 }
 
 #endif
