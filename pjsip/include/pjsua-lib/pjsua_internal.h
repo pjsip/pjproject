@@ -755,7 +755,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 /**
  * Init presence.
  */
-pj_status_t pjsua_pres_init();
+pj_status_t pjsua_pres_init(void);
 
 /*
  * Start presence subsystem.
@@ -904,7 +904,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                      pjmedia_stream_info *si,
 				     const pjmedia_sdp_session *local_sdp,
 				     const pjmedia_sdp_session *remote_sdp);
-void pjsua_check_snd_dev_idle();
+void pjsua_check_snd_dev_idle(void);
 
 /*
  * Video

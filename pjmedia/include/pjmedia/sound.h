@@ -123,7 +123,7 @@ typedef pj_status_t (*pjmedia_snd_play_cb)(/* in */   void *user_data,
  *
  * @param user_data	User data associated with the stream.
  * @param timestamp	Timestamp, in samples.
- * @param output	Buffer containing the captured audio samples.
+ * @param input	Buffer containing the captured audio samples.
  * @param size		The size of the data in the buffer, in bytes.
  *
  * @return		Non-zero to stop the stream.

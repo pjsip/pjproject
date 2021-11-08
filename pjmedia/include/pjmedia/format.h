@@ -641,8 +641,6 @@ PJ_INLINE(void) pjmedia_format_init_audio(pjmedia_format *fmt,
  * @param height	Image heigth.
  * @param fps_num	FPS numerator.
  * @param fps_denum	FPS denumerator.
- * @param avg_bps	Average bitrate.
- * @param max_bps	Maximum bitrate.
  */
 PJ_DECL(void) pjmedia_format_init_video(pjmedia_format *fmt,
 					pj_uint32_t fmt_id,

@@ -6041,7 +6041,7 @@ PJ_DECL(pj_status_t) pjsua_call_get_stream_info(pjsua_call_id call_id,
  *
  * @param call_id	The call identification.
  * @param med_idx	Media stream index.
- * @param psi		To be filled with the stream statistic.
+ * @param stat		To be filled with the stream statistic.
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */
@@ -7458,7 +7458,7 @@ PJ_DECL(pj_status_t) pjsua_player_get_port(pjsua_player_id id,
  * Get additional info about the file player. This operation is not valid
  * for playlist.
  *
- * @param port		The file player ID.
+ * @param id		The file player ID.
  * @param info		The info.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
@@ -7809,7 +7809,7 @@ typedef struct pjsua_ext_snd_dev pjsua_ext_snd_dev;
 /**
  * Create an extra sound device and register it to conference bridge.
  *
- * @param snd_param	Sound device port param. Currently this only supports
+ * @param param	Sound device port param. Currently this only supports
  *			mono channel, so channel count must be set to 1.
  * @param p_snd		The extra sound device instance.
  *
@@ -7822,7 +7822,7 @@ PJ_DECL(pj_status_t) pjsua_ext_snd_dev_create(pjmedia_snd_port_param *param,
 /**
  * Destroy an extra sound device and unregister it from conference bridge.
  *
- * @param p_snd		The extra sound device instance.
+ * @param snd		The extra sound device instance.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
@@ -8260,7 +8260,7 @@ typedef struct pjsua_vid_win_info
 /**
  * Enumerates all video windows.
  *
- * @param id		Array of window ID to be initialized.
+ * @param wids		Array of window ID to be initialized.
  * @param count		On input, specifies max elements in the array.
  *			On return, it contains actual number of elements
  *			that have been initialized.

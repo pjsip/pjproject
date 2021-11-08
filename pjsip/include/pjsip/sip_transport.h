@@ -1247,7 +1247,7 @@ PJ_DECL(void) pjsip_tpmgr_fla2_param_default(pjsip_tpmgr_fla2_param *prm);
  *
  * @param tpmgr	    The transport manager.
  * @param pool	    Pool to allocate memory for the IP address.
- * @param param	    Function input and output parameters.
+ * @param prm	    Function input and output parameters.
  *
  * @return	    PJ_SUCCESS, or the appropriate error code.
  */

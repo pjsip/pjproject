@@ -348,7 +348,7 @@ typedef struct pjmedia_sdp_ssrc_attr
  *
  * @param attr		Generic attribute to be converted to ssrc, which
  *			name must be "ssrc".
- * @param ssrc		SDP ssrc attribute to be initialized.
+ * @param rtcp		SDP ssrc attribute to be initialized.
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -408,7 +408,7 @@ PJ_DECL(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone(pj_pool_t *pool,
  * Compare connection info. 
  * 
  * @param conn1	    The first connection info to compare.
- * @param conn1	    The second connection info to compare.
+ * @param conn2	    The second connection info to compare.
  * @param option    Comparison option, which should be zero for now.
  *
  * @return	    PJ_SUCCESS when both connection info are equal, otherwise

@@ -289,7 +289,7 @@ typedef void (*pj_cli_get_dyn_choice) (pj_cli_dyn_choice_param *param);
  * This specifies the callback type for command handlers, which will be
  * executed when the specified command is invoked.
  *
- * @param cmd_val   The command that is specified by the user.
+ * @param cval   The command that is specified by the user.
  *
  * @return          Return the status of the command execution.
  */
@@ -390,7 +390,7 @@ PJ_DECL(void) pj_cli_cfg_default(pj_cli_cfg *param);
 /**
  * Register a front end to the CLI application.
  *
- * @param CLI		The CLI application.
+ * @param cli		The CLI application.
  * @param fe		The CLI front end to be registered.
  */
 PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
