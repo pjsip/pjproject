@@ -262,6 +262,10 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
 	    char buf[PJ_INET6_ADDRSTRLEN+10];
 
+	    if (!ssock->parent) {
+		return PJ_FALSE;
+	    }
+
 	    PJ_PERROR(3,(ssock->pool->obj_name, status,
 			 "Handshake failed in accepting %s",
 			 pj_sockaddr_print(&ssock->rem_addr, buf,
@@ -275,7 +279,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 	    }
 
 	    /* Decrement ref count of parent */
-	    if (ssock->parent->param.grp_lock) {
+	    if (ssock->parent && ssock->parent->param.grp_lock) {
 		pj_grp_lock_dec_ref(ssock->parent->param.grp_lock);
 		ssock->parent = NULL;
 	    }
@@ -339,7 +343,7 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 	/* Decrement ref count of parent and reset parent (we don't need it
 	 * anymore, right?).
 	 */
-	if (ssock->parent->param.grp_lock) {
+	if (ssock->parent && ssock->parent->param.grp_lock) {
 	    pj_grp_lock_dec_ref(ssock->parent->param.grp_lock);
 	    ssock->parent = NULL;
 	}
