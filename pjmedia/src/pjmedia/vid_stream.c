@@ -162,7 +162,9 @@ struct pjmedia_vid_stream
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
 						    codec-VAD mechanism is
 						    enabled?		    */
-    pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
+    unsigned	             ka_interval;      /**< The keepalive sending 
+					            interval                */
+    pj_time_val	             last_frm_ts_sent; /**< Time of last sending
 					            packet		    */
     unsigned	             start_ka_count;   /**< The number of keep-alive
                                                     to be sent after it is
@@ -1067,19 +1069,22 @@ static pj_status_t put_frame(pjmedia_port *port,
     if (stream->use_ka)
     {
         pj_uint32_t dtx_duration, ka_interval;
+	pj_time_val tm_now, tmp;
 
-        dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
-                                           &frame->timestamp);
+	pj_gettimeofday(&tm_now);
+
+	tmp = tm_now;
+	PJ_TIME_VAL_SUB(tmp, stream->last_frm_ts_sent);
+	dtx_duration = PJ_TIME_VAL_MSEC(tmp);
+
         if (stream->start_ka_count) {
-            ka_interval = stream->start_ka_interval *
-                                     stream->info.codec_info.clock_rate / 1000;
+	    ka_interval = stream->start_ka_interval;
         }  else {
-            ka_interval = PJMEDIA_STREAM_KA_INTERVAL *
-                                            stream->info.codec_info.clock_rate;
+            ka_interval = stream->ka_interval * 1000;
         }
         if (dtx_duration > ka_interval) {
             send_keep_alive_packet(stream);
-            stream->last_frm_ts_sent = frame->timestamp;
+            stream->last_frm_ts_sent = tm_now;
 
             if (stream->start_ka_count)
                 stream->start_ka_count--;
@@ -1294,8 +1299,8 @@ static pj_status_t put_frame(pjmedia_port *port,
     }
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-    /* Update timestamp of last sending packet. */
-    stream->last_frm_ts_sent = frame->timestamp;
+    /* Update time of last sending packet. */
+    pj_gettimeofday(&stream->last_frm_ts_sent);
 #endif
 
     return PJ_SUCCESS;
@@ -1794,8 +1799,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
+    stream->ka_interval = info->ka_cfg.ka_interval;
     stream->start_ka_count = info->ka_cfg.start_count;
-    stream->start_ka_interval = info->ka_cfg.start_interval;
+    stream->start_ka_interval = info->ka_cfg.start_interval;    
 #endif
     stream->num_keyframe = info->sk_cfg.count;
 
