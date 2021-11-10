@@ -143,6 +143,8 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	goto on_return;
 
     if (-bytes_read == PJ_ESOCKETSTOP) {
+#if 0
+	/* Auto restart is disabled, see #xyz */
 	--tp->read_loop_spin;
 	/* Try to recover by restarting the transport. */
 	PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
@@ -158,6 +160,9 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 			 "Error restarting SIP UDP transport"));
 	}
         return;
+#else
+	goto on_return;
+#endif
     }
 
     /*
@@ -321,6 +326,8 @@ static void udp_on_write_complete( pj_ioqueue_key_t *key,
 
     tdata_op_key->tdata = NULL;
 
+#if 0
+    /* Auto restart is disabled, see #xyz */
     if (-bytes_sent == PJ_ESOCKETSTOP) {
 	pj_status_t status;
 	/* Try to recover by restarting the transport. */
@@ -338,6 +345,7 @@ static void udp_on_write_complete( pj_ioqueue_key_t *key,
 	}
         return;
     }
+#endif
 
     if (tdata_op_key->callback) {
 	tdata_op_key->callback(&tp->base, tdata_op_key->token, bytes_sent);
@@ -380,6 +388,8 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 			       rem_addr, addr_len);
 
     if (status != PJ_EPENDING) {
+#if 0
+	/* Auto restart is disabled, see #xyz */
 	if (status == PJ_ESOCKETSTOP) {
 	    /* Try to recover by restarting the transport. */
 	    PJ_LOG(4,(tp->base.obj_name, "Restarting SIP UDP transport"));
@@ -395,6 +405,7 @@ static pj_status_t udp_send_msg( pjsip_transport *transport,
 			     "Error restarting SIP UDP transport"));
 	    }
 	}
+#endif
 	tdata->op_key.tdata = NULL;
     }
 

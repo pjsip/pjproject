@@ -1343,6 +1343,21 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 static pj_status_t transport_restart(pj_bool_t is_rtp, 
 				     struct transport_udp *udp)
 {
+    return PJ_ENOTSUP;
+
+/* This code is disabled for the following reason:
+ * The following code will set ioqueue key to NULL or replace with a new one,
+ * and that may introduces issues, e.g:
+ * - this code is invoked from on_rx_rtp/rtcp(), which is invoked by
+ *   ioqueue_dispatch_read_event(), which may need to unlock ioqueue key
+ *   after returning from the callback (when allow_concurrent is false),
+ *   if the ioqueue key has been unregistered by this code, a crash may occur
+ *   when unlocking the invalid ioqueue key.
+ * - this code may set ioqueue key to NULL, while other code may assume
+ *   it may never be changed to NULL, and cause crash, e.g: transport_detach().
+ */
+#if 0
+
     pj_ioqueue_key_t *key = (is_rtp ? udp->rtp_key : udp->rtcp_key);
     pj_sock_t *sock = (is_rtp ? &udp->rtp_sock : &udp->rtcp_sock);
     pj_status_t status;
@@ -1447,4 +1462,6 @@ on_error:
     PJ_PERROR(1, (udp->base.name, status, 
 		 "Error restarting %s transport", (is_rtp)?"RTP":"RTCP"));
     return status;
+
+#endif
 }
