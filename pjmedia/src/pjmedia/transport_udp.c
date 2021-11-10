@@ -1345,7 +1345,7 @@ static pj_status_t transport_restart(pj_bool_t is_rtp,
 {
     return PJ_ENOTSUP;
 
-/* This code is disabled for the following reason:
+/* This code is disabled for the following reason (see also #2881):
  * The following code will set ioqueue key to NULL or replace with a new one,
  * and that may introduces issues, e.g:
  * - this code is invoked from on_rx_rtp/rtcp(), which is invoked by
