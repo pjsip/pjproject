@@ -257,14 +257,14 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
     if (ssock->is_server) {
 	pj_bool_t ret = PJ_TRUE;
 
+	if (!ssock->parent) {
+	    return PJ_FALSE;
+	}
+
 	if (status != PJ_SUCCESS) {
 	    /* Handshake failed in accepting, destroy our self silently. */
 
 	    char buf[PJ_INET6_ADDRSTRLEN+10];
-
-	    if (!ssock->parent) {
-		return PJ_FALSE;
-	    }
 
 	    PJ_PERROR(3,(ssock->pool->obj_name, status,
 			 "Handshake failed in accepting %s",
