@@ -222,7 +222,7 @@ PJ_DECL(unsigned) pjmedia_vid_conf_get_port_count(pjmedia_vid_conf *vid_conf);
 /**
  * Enumerate occupied slots in the video conference bridge.
  *
- * @param conf		The video conference bridge.
+ * @param vid_conf		The video conference bridge.
  * @param slots		Array of slot to be filled in.
  * @param count		On input, specifies the maximum number of slot
  *			in the array. On return, it will be filled with
@@ -254,7 +254,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_get_port_info(
  * Enable unidirectional video flow from the specified source slot to
  * the specified sink slot.
  *
- * @param conf		The video conference bridge.
+ * @param vid_conf		The video conference bridge.
  * @param src_slot	Source slot.
  * @param sink_slot	Sink slot.
  * @param opt		The option, for future use, currently this must
@@ -273,7 +273,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_conf_connect_port(
  * Disconnect unidirectional video flow from the specified source to
  * the specified sink slot.
  *
- * @param conf		The video conference bridge.
+ * @param vid_conf		The video conference bridge.
  * @param src_slot	Source slot.
  * @param sink_slot	Sink slot.
  *

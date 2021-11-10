@@ -227,7 +227,6 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_fb_setting_default(
  * @param dst		Destination configuration.
  * @param src		Source configuration.
  *
- * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(void) pjmedia_rtcp_fb_setting_dup(pj_pool_t *pool,
 					  pjmedia_rtcp_fb_setting *dst,
@@ -241,7 +240,6 @@ PJ_DECL(void) pjmedia_rtcp_fb_setting_dup(pj_pool_t *pool,
  * @param dst		Destination info.
  * @param src		Source info.
  *
- * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(void) pjmedia_rtcp_fb_info_dup(pj_pool_t *pool,
 				       pjmedia_rtcp_fb_info *dst,

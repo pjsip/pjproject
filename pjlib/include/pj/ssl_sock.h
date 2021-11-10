@@ -250,9 +250,9 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files2(
  * Create credential from data buffer. The certificate expected is in 
  * PEM format.
  *
- * @param CA_file	The buffer of trusted CA list.
- * @param cert_file	The buffer of certificate.
- * @param privkey_file	The buffer of private key.
+ * @param CA_buf	The buffer of trusted CA list.
+ * @param cert_buf	The buffer of certificate.
+ * @param privkey_buf	The buffer of private key.
  * @param privkey_pass	The password of private key, if any.
  * @param p_cert	Pointer to credential instance to be created.
  *
@@ -479,7 +479,7 @@ typedef enum pj_ssl_curve
  * Get curve list supported by SSL/TLS backend.
  *
  * @param curves	The curves buffer to receive curve list.
- * @param curves_num	Maximum number of curves to be received.
+ * @param curve_num	Maximum number of curves to be received.
  *
  * @return		PJ_SUCCESS when successful.
  */
@@ -1356,7 +1356,7 @@ PJ_DECL(pj_status_t) pj_ssl_sock_sendto(pj_ssl_sock_t *ssock,
  * @param ssock		The secure socket.
  * @param pool		Pool used to allocate some internal data for the
  *			operation.
- * @param localaddr	Local address to bind on.
+ * @param local_addr	Local address to bind on.
  * @param addr_len	Length of buffer containing local address.
  *
  * @return		PJ_SUCCESS if the operation has been successful,
@@ -1377,7 +1377,7 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_accept(pj_ssl_sock_t *ssock,
  * @param ssock		The secure socket.
  * @param pool		Pool used to allocate some internal data for the
  *			operation.
- * @param localaddr	Local address to bind on.
+ * @param local_addr	Local address to bind on.
  * @param addr_len	Length of buffer containing local address.
  * @param newsock_param	Secure socket parameter for new accepted sockets.
  *

@@ -887,7 +887,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
 
     unsigned i, max_pkt_size;
 
-    max_pkt_size = *pkt_size;
+    max_pkt_size = (unsigned)*pkt_size;
 
     if (setting->amr_nb) {
 	SID_FT		= 8;
