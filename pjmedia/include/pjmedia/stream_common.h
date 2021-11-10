@@ -82,7 +82,7 @@ typedef struct pjmedia_stream_ka_config
      * The keepalive sending interval, after #start_count number keepalive 
      * was sent.
      * 
-     * Defautt: PJMEDIA_STREAM_KA_INTERVAL (seconds)
+     * Default: PJMEDIA_STREAM_KA_INTERVAL (seconds)
      */
     unsigned			    ka_interval;
 
