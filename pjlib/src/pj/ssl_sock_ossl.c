@@ -1520,6 +1520,7 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
 
     pj_lock_acquire(ssock->write_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
+    ssock->handshake_status = PJ_SUCCESS;
     pj_lock_release(ssock->write_mutex);
 
     ssl_close_sockets(ssock);
@@ -2067,21 +2068,27 @@ static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
 static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
-    pj_status_t status;
+    pj_status_t status = PJ_EPENDING;
     int err;
 
     /* Perform SSL handshake */
     pj_lock_acquire(ssock->write_mutex);
-    err = SSL_do_handshake(ossock->ossl_ssl);
-    pj_lock_release(ssock->write_mutex);
+
+    if (ssock->is_server && ssock->handshake_status != PJ_SUCCESS &&
+	ssock->handshake_status != PJ_EPENDING) 
+    {
+	/* Error detected on previous handshake, no need to continue. */
+	pj_lock_release(ssock->write_mutex);
+	return PJ_EINVALIDOP;
+    }
+    err = SSL_do_handshake(ossock->ossl_ssl);    
 
     /* SSL_do_handshake() may put some pending data into SSL write BIO, 
      * flush it if any.
      */
     status = flush_circ_buf_output(ssock, &ssock->handshake_op_key, 0, 0);
-    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	return status;
-    }
+    if (status != PJ_SUCCESS && status != PJ_EPENDING)
+	goto on_return;
 
     if (err < 0) {
 	int err2 = SSL_get_error(ossock->ossl_ssl, err);
@@ -2089,17 +2096,21 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 	{
 	    /* Handshake fails */
 	    status = STATUS_FROM_SSL_ERR2("Handshake", ssock, err, err2, 0);
-	    return status;
+	    goto on_return;
 	}
     }
+    status = PJ_EPENDING;
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
-	return PJ_SUCCESS;
+	status = PJ_SUCCESS;
     }
 
-    return PJ_EPENDING;
+on_return:
+    ssock->handshake_status = status;
+    pj_lock_release(ssock->write_mutex);
+    return status;
 }
 
 

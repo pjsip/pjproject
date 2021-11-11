@@ -243,6 +243,11 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock, 
 				       pj_status_t status)
 {
+    /* Previously error handshake detected. */
+    if (ssock->is_server && status == PJ_EINVALIDOP) {
+	return PJ_FALSE;
+    }
+
     /* Cancel handshake timer */
     if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
 	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
@@ -256,10 +261,6 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
     /* Accepting */
     if (ssock->is_server) {
 	pj_bool_t ret = PJ_TRUE;
-
-	if (!ssock->parent) {
-	    return PJ_FALSE;
-	}
 
 	if (status != PJ_SUCCESS) {
 	    /* Handshake failed in accepting, destroy our self silently. */
