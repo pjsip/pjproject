@@ -801,8 +801,12 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	if (got_frame) {
 	    frame.buf = sink->put_buf;
 	    frame.size = sink->put_buf_size;
+		
+	  status = pjmedia_port_put_frame(sink->port, &frame);
 	}
-	status = pjmedia_port_put_frame(sink->port, &frame);
+	    /*if not got_frame,frame.buf is null,and pjmedia_port_put_frame not check it.will cause crash when convert*/
+	   //status = pjmedia_port_put_frame(sink->port, &frame);
+
 	if (got_frame && status != PJ_SUCCESS) {
 	    sink->last_err_cnt++;
 	    if (sink->last_err != status ||
