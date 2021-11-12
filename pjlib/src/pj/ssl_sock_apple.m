@@ -1453,6 +1453,11 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
    	assock->identity = nil;
     }
 
+    if (assock->trust) {
+	nw_release(assock->trust);
+	assock->trust = nil;
+    }
+
     /* This can happen when pj_ssl_sock_create() fails. */
     if (!ssock->write_mutex)
     	return;
