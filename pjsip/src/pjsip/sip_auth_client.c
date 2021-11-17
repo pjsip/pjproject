@@ -802,7 +802,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
     //if (sess->pref.algorithm.slen == 0)
-    //	sess->pref.algorithm = pj_str("md5");
+    //	sess->pref.algorithm = pj_str("MD5");
 
     return PJ_SUCCESS;
 }
