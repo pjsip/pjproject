@@ -288,7 +288,9 @@ static struct transport_names_t *get_tpname(pjsip_transport_type_e type)
 	if (transport_names[i].type == type)
 	    return &transport_names[i];
     }
-    pj_assert(!"Invalid transport type!");
+
+    /* Just return intstead of raising assertion. */
+    //pj_assert(!"Invalid transport type!");
     return NULL;
 }
 
@@ -358,7 +360,8 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_name(const pj_str_t
 	}
     }
 
-    pj_assert(!"Invalid transport name");
+    /* Just return intstead of raising assertion. */
+    //pj_assert(!"Invalid transport name");
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
 
@@ -377,7 +380,8 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_flag(unsigned flag)
 	}
     }
 
-    pj_assert(!"Invalid transport type");
+    /* Just return intstead of raising assertion. */
+    //pj_assert(!"Invalid transport type");
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
 
@@ -394,8 +398,13 @@ PJ_DEF(int) pjsip_transport_type_get_af(pjsip_transport_type_e type)
 
 PJ_DEF(unsigned) pjsip_transport_get_flag_from_type(pjsip_transport_type_e type)
 {
-    /* Return transport flag. */
-    return get_tpname(type)->flag;
+    struct transport_names_t *tp_name = get_tpname(type);
+    if (tp_name) {
+	/* Return transport flag. */
+	return tp_name->flag;
+    }
+
+    return 0;
 }
 
 /*
@@ -403,8 +412,13 @@ PJ_DEF(unsigned) pjsip_transport_get_flag_from_type(pjsip_transport_type_e type)
  */
 PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e type)
 {
-    /* Return the port. */
-    return get_tpname(type)->port;
+    struct transport_names_t *tp_name = get_tpname(type);
+    if (tp_name) {
+	/* Return transport port. */
+	return tp_name->port;
+    }
+
+    return 0;
 }
 
 /*
@@ -412,8 +426,13 @@ PJ_DEF(int) pjsip_transport_get_default_port_for_type(pjsip_transport_type_e typ
  */
 PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
 {
-    /* Return the name. */
-    return get_tpname(type)->name.ptr;
+    struct transport_names_t *tp_name = get_tpname(type);
+    if (tp_name) {
+	/* Return the name. */
+	return tp_name->name.ptr;
+    }
+
+    return NULL;
 }
 
 /*
@@ -421,8 +440,13 @@ PJ_DEF(const char*) pjsip_transport_get_type_name(pjsip_transport_type_e type)
  */
 PJ_DEF(const char*) pjsip_transport_get_type_desc(pjsip_transport_type_e type)
 {
-    /* Return the description. */
-    return get_tpname(type)->description;
+    struct transport_names_t *tp_name = get_tpname(type);
+    if (tp_name) {
+	/* Return the description. */
+	return tp_name->description;
+    }
+
+    return NULL;
 }
 
 
