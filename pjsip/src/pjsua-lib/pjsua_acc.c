@@ -2830,11 +2830,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    PJ_UNUSED_ARG(d);
 
 	    h = pjsip_authorization_hdr_create(tdata->pool);
-	    h->scheme = pj_str("Digest");
+	    h->scheme = pjsip_DIGEST_STR;
 	    h->credential.digest.username = acc->cred[0].username;
 	    h->credential.digest.realm = acc->srv_domain;
 	    h->credential.digest.uri = pj_str(uri);
-	    h->credential.digest.algorithm = pj_str("md5");
+	    h->credential.digest.algorithm = pjsip_MD5_STR;
 
 	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
 	}
