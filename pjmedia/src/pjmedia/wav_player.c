@@ -342,8 +342,13 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 
     /* Validate length. */
     if (wave_hdr.data_hdr.len > fport->fsize - fport->start_data) {
-	pj_file_close(fport->fd);
-	return PJMEDIA_EWAVEUNSUPP;
+    	/* Actual data length may be shorter than declared. We should still
+    	 * try to play whatever data is there instead of immediately returning
+    	 * error.
+    	 */
+    	wave_hdr.data_hdr.len = fport->fsize - fport->start_data;
+	// pj_file_close(fport->fd);
+	// return PJMEDIA_EWAVEUNSUPP;
     }
     if (wave_hdr.data_hdr.len < ptime * wave_hdr.fmt_hdr.sample_rate *
 				wave_hdr.fmt_hdr.nchan / 1000)
