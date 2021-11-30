@@ -209,6 +209,7 @@ struct pj_ice_strans
     pj_ice_strans_state	     state;	/**< Session state.		*/
     pj_ice_sess		    *ice;	/**< ICE session.		*/
     pj_ice_sess		    *ice_prev;	/**< Previous ICE session.	*/
+    pj_grp_lock_handler	     ice_prev_hndlr; /**< Handler of prev ICE	*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
 
     unsigned		     comp_cnt;	/**< Number of components.	*/
@@ -986,6 +987,12 @@ static void ice_st_on_destroy(void *obj)
 {
     pj_ice_strans *ice_st = (pj_ice_strans*)obj;
 
+    /* Destroy any previous ICE session */
+    if (ice_st->ice_prev) {
+	(*ice_st->ice_prev_hndlr)(ice_st->ice_prev);
+	ice_st->ice_prev = NULL;
+    }
+
     PJ_LOG(4,(ice_st->obj_name, "ICE stream transport %p destroyed", obj));
 
     /* Done */
@@ -1019,6 +1026,7 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
     if (ice_st->ice) {
 	ice_st->ice_prev = ice_st->ice;
 	ice_st->ice = NULL;
+	pj_ice_sess_detach_grp_lock(ice_st->ice_prev, &ice_st->ice_prev_hndlr);
 	pj_ice_sess_destroy(ice_st->ice_prev);
     }
 
@@ -1286,7 +1294,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
      * (due to group lock).
      */
     if (ice_st->ice_prev) {
-	pj_pool_safe_release(&ice_st->ice_prev->pool);
+	(*ice_st->ice_prev_hndlr)(ice_st->ice_prev);
 	ice_st->ice_prev = NULL;
     }
 
@@ -1739,6 +1747,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
     if (ice_st->ice) {
 	ice_st->ice_prev = ice_st->ice;
 	ice_st->ice = NULL;
+	pj_ice_sess_detach_grp_lock(ice_st->ice_prev, &ice_st->ice_prev_hndlr);
 	pj_ice_sess_destroy(ice_st->ice_prev);
     }
 

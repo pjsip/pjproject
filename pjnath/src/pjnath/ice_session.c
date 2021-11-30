@@ -536,6 +536,22 @@ PJ_DEF(pj_status_t) pj_ice_sess_destroy(pj_ice_sess *ice)
 
 
 /*
+ * Detach ICE session from group lock.
+ */
+PJ_DEF(pj_status_t) pj_ice_sess_detach_grp_lock(pj_ice_sess *ice,
+						pj_grp_lock_handler *handler)
+{
+    PJ_ASSERT_RETURN(ice && handler, PJ_EINVAL);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+    pj_grp_lock_del_handler(ice->grp_lock, ice, &ice_on_destroy);
+    *handler = &ice_on_destroy;
+    pj_grp_lock_release(ice->grp_lock);
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Change session role. 
  */
 PJ_DEF(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
