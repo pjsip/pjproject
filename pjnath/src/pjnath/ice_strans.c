@@ -208,6 +208,7 @@ struct pj_ice_strans
 
     pj_ice_strans_state	     state;	/**< Session state.		*/
     pj_ice_sess		    *ice;	/**< ICE session.		*/
+    pj_ice_sess		    *ice_prev;	/**< Previous ICE session.	*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
 
     unsigned		     comp_cnt;	/**< Number of components.	*/
@@ -1016,8 +1017,9 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 
     /* Destroy ICE if we have ICE */
     if (ice_st->ice) {
-	pj_ice_sess_destroy(ice_st->ice);
+	ice_st->ice_prev = ice_st->ice;
 	ice_st->ice = NULL;
+	pj_ice_sess_destroy(ice_st->ice_prev);
     }
 
     /* Destroy all components */
@@ -1278,6 +1280,15 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
     ice_cb.on_ice_complete = &on_ice_complete;
     ice_cb.on_rx_data = &ice_rx_data;
     ice_cb.on_tx_pkt = &ice_tx_pkt;
+
+    /* Release the pool of previous ICE session to avoid memory bloat,
+     * as otherwise it will only be released after ICE strans is destroyed
+     * (due to group lock).
+     */
+    if (ice_st->ice_prev) {
+	pj_pool_safe_release(&ice_st->ice_prev->pool);
+	ice_st->ice_prev = NULL;
+    }
 
     /* Create! */
     status = pj_ice_sess_create(&ice_st->cfg.stun_cfg, ice_st->obj_name, role,
@@ -1726,8 +1737,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
     pj_grp_lock_acquire(ice_st->grp_lock);
 
     if (ice_st->ice) {
-	pj_ice_sess_destroy(ice_st->ice);
+	ice_st->ice_prev = ice_st->ice;
 	ice_st->ice = NULL;
+	pj_ice_sess_destroy(ice_st->ice_prev);
     }
 
     ice_st->state = PJ_ICE_STRANS_STATE_INIT;
