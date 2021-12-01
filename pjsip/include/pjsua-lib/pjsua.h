@@ -3001,6 +3001,13 @@ typedef struct pjsua_transport_config
      * port number specified in \a port. Note that this setting is only
      * applicable when the start port number is non zero.
      *
+     * Example: \a port=5000, \a port_range=4
+     * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
+     * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
+     *                    5001, 5003, 5005 (Media/RTCP transport)
+     * 
+     * Available ports are in the range of [\a port, \a port + \a port_range]. 
+     * 
      * Default value is zero.
      */
     unsigned		port_range;
