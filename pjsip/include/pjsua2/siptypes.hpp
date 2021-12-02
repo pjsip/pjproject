@@ -318,8 +318,6 @@ struct TransportConfig : public PersistentObject
      * 
      * Example: \a port=5000, \a portRange=4
      * - Available ports: 5000, 5001, 5002, 5003, 5004 (SIP transport)
-     * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
-     *                    5001, 5003, 5005 (Media/RTCP transport)
      * 
      * Available ports are in the range of [\a port, \a port + \a portRange]. 
      *
