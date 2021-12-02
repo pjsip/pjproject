@@ -59,7 +59,7 @@
 #define DECODE_WHOLE		PJ_TRUE
 
 /* Maximum duration from one key frame to the next (in seconds). */
-#define KEYFRAME_INTERVAL	PJMEDIA_CODEC_VID_TOOLBOX_KEYFRAME_INTERVAL
+#define KEYFRAME_INTERVAL	PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL
 
 /* vidtoolbox H264 default PT */
 #define VT_H264_PT		PJMEDIA_RTP_PT_H264_RSV1
