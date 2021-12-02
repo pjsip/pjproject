@@ -2472,9 +2472,6 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	    call_med->def_dir = PJMEDIA_DIR_ENCODING_DECODING;
 	}
 	call_med->dir = call_med->def_dir;
-	if (call_med->dir == PJMEDIA_DIR_NONE) {
-	    enabled = PJ_FALSE;
-	}
 
 	if (enabled) {
 	    call_med->enable_rtcp_mux = acc->cfg.enable_rtcp_mux;
