@@ -33,6 +33,21 @@ using namespace pj;
  */
 #define USE_TEST 1
 
+class MyEndpoint : public Endpoint
+{
+public:
+    MyEndpoint() : Endpoint() {};
+    virtual pj_status_t onCredAuth(OnCredAuthParam &prm)
+    {
+        std::cout << "*** Callback onCredAuth called ***" << std::endl;
+        /* Return PJ_ENOTSUP to use
+         * pjsip_auth_create_aka_response()/<b>libmilenage</b> (default),
+         * if PJSIP_HAS_DIGEST_AKA_AUTH is defined.
+         */
+        return PJ_ENOTSUP;
+    }
+};
+
 class MyAccount;
 
 class MyCall : public Call
@@ -139,7 +154,7 @@ void MyCall::onCallMediaState(OnCallMediaStateParam &prm)
     CallInfo ci = getInfo();
     AudioMedia aud_med;
     AudioMedia& play_dev_med =
-    	Endpoint::instance().audDevManager().getPlaybackDevMedia();
+    	MyEndpoint::instance().audDevManager().getPlaybackDevMedia();
 
     try {
     	// Get the first audio media
@@ -183,7 +198,7 @@ void MyCall::onCallReplaced(OnCallReplacedParam &prm)
 
 
 #if USE_TEST == 1
-static void mainProg1(Endpoint &ep)
+static void mainProg1(MyEndpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;
@@ -203,8 +218,15 @@ static void mainProg1(Endpoint &ep)
     AccountConfig acc_cfg;
     acc_cfg.idUri = "sip:test1@pjsip.org";
     acc_cfg.regConfig.registrarUri = "sip:sip.pjsip.org";
-    acc_cfg.sipConfig.authCreds.push_back( AuthCredInfo("digest", "*",
-                                                        "test1", 0, "test1") );
+
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+    AuthCredInfo aci("Digest", "*", "test", PJSIP_CRED_DATA_EXT_AKA | PJSIP_CRED_DATA_PLAIN_PASSWD, "passwd");
+    aci.akaK = "passwd";
+#else
+    AuthCredInfo aci("digest", "*", "test1", 0, "test1");
+#endif
+
+    acc_cfg.sipConfig.authCreds.push_back(aci);
     MyAccount *acc(new MyAccount);
     try {
 	acc->create(acc_cfg);
@@ -283,7 +305,7 @@ static void mainProg2()
 
 
 #if USE_TEST == 3
-static void mainProg3(Endpoint &ep)
+static void mainProg3(MyEndpoint &ep)
 {
     const char *paths[] = { "../../../../tests/pjsua/wavs/input.16.wav",
 			    "../../tests/pjsua/wavs/input.16.wav",
@@ -344,7 +366,7 @@ static void mainProg3(Endpoint &ep)
 
 
 #if USE_TEST == 0
-static void mainProg()
+static void mainProg(MyEndpoint &)
 {
     string json_str;
 
@@ -371,6 +393,11 @@ static void mainProg()
 	aci.username = "test";
 	aci.data = "passwd";
 	aci.realm = "*";
+	aci.dataType = PJSIP_CRED_DATA_PLAIN_PASSWD;
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+	aci.dataType |= PJSIP_CRED_DATA_EXT_AKA;
+	aci.akaK = "key";
+#endif
 	accCfg.sipConfig.authCreds.push_back(aci);
 
 	jdoc.writeObject(accCfg);
@@ -398,7 +425,7 @@ static void mainProg()
 
 
 #if USE_TEST == 4
-static void mainProg4(Endpoint &ep)
+static void mainProg4(MyEndpoint &ep)
 {
     // Init library
     EpConfig ep_cfg;
@@ -433,7 +460,7 @@ extern "C"
 int main()
 {
     int ret = 0;
-    Endpoint ep;
+    MyEndpoint ep;
 
     try {
 	ep.libCreate();

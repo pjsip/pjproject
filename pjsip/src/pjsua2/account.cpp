@@ -966,6 +966,11 @@ void Account::create(const AccountConfig &acc_cfg,
     pjsua_acc_config pj_acc_cfg;
     
     acc_cfg.toPj(pj_acc_cfg);
+
+    for (unsigned i = 0; i < pj_acc_cfg.cred_count; ++i) {
+	    pjsip_cred_info *dst = &pj_acc_cfg.cred_info[i];
+	    dst->ext.aka.cb = (pjsip_cred_cb)Endpoint::on_auth_create_aka_response_callback;
+    }
     pj_acc_cfg.user_data = (void*)this;
     PJSUA2_CHECK_EXPR( pjsua_acc_add(&pj_acc_cfg, make_default, &id) );
 }

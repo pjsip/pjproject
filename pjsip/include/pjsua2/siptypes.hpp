@@ -100,6 +100,16 @@ public:
                  const string data);
 
     /**
+     * Convert from pjsip
+     */
+    void fromPj(const pjsip_cred_info &prm);
+
+    /**
+     * Convert to pjsip
+     */
+    pjsip_cred_info toPj() const;
+
+    /**
      * Read this object from a container node.
      *
      * @param node		Container to read values from.
