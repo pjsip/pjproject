@@ -701,6 +701,17 @@
 #    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
 #endif
 
+
+/**
+ * Maximum interval between keyframes for Apple VideoToolbox codecs,
+ * in second.
+ *
+ * Default: 5 (seconds)
+ */
+#ifndef PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL
+#   define PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL	5
+#endif
+
 /**
  * @}
  */
