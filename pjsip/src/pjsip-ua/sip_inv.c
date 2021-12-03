@@ -2066,6 +2066,14 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	return PJMEDIA_SDP_EINSDP;
     }
 
+    /* Process the SDP body. */
+    if (sdp_info->sdp_err) {
+        PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
+             "Error parsing SDP in %s",
+             pjsip_rx_data_get_info(rdata)));
+        return PJMEDIA_SDP_EINSDP;
+    }
+
     /* Get/attach invite session's transaction data */
     tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
     if (tsx_inv_data == NULL) {
@@ -2162,14 +2170,6 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	    }
 	    return PJ_SUCCESS;
 	}
-    }
-
-    /* Process the SDP body. */
-    if (sdp_info->sdp_err) {
-	PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
-		     "Error parsing SDP in %s",
-		     pjsip_rx_data_get_info(rdata)));
-	return PJMEDIA_SDP_EINSDP;
     }
 
     pj_assert(sdp_info->sdp != NULL);
