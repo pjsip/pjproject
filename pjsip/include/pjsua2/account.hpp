@@ -953,6 +953,12 @@ struct AccountMediaConfig : public PersistentObject
 {
     /**
      * Media transport (RTP) configuration.
+     * 
+     * For \a port and \a portRange settings, RTCP port is selected as 
+     * RTP port+1.
+     * Example: \a port=5000, \a portRange=4
+     * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
+     *                    5001, 5003, 5005 (Media/RTCP transport)
      */
     TransportConfig	transportConfig;
 
