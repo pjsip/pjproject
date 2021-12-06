@@ -403,6 +403,10 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 
 	call_conf_slot = ci->media[mi].stream.aud.conf_slot;
 
+	/* Make sure conf slot is valid (e.g: media dir is not "inactive") */
+	if (call_conf_slot == PJSUA_INVALID_ID)
+	    return;
+
 	/* Loopback sound, if desired */
 	if (app_config.auto_loop) {
 	    pjsua_conf_connect(call_conf_slot, call_conf_slot);
