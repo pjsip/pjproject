@@ -164,8 +164,8 @@ pjmedia_vid_dev_conv_create_converter(pjmedia_vid_dev_conv *conv,
     
     conv->wxh = conv->dst_size.w * conv->dst_size.h;
     conv->src_frame_size = dst_size.w * dst_size.h * vfi->bpp / 8;
-    conv->conv_frame_size = conv->rot_size.w * conv->rot_size.h;
-    conv->conv_frame_size *= vfi->bpp / 8;
+    conv->conv_frame_size = conv->rot_size.w * conv->rot_size.h *
+			    vfi->bpp / 8;
     conv->conv_buf = pj_pool_alloc(pool, conv->src_frame_size);
     
     pjmedia_vid_dev_conv_set_rotation(conv, PJMEDIA_ORIENT_NATURAL);

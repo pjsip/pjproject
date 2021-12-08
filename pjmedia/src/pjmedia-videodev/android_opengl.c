@@ -96,6 +96,8 @@ struct andgl_stream
     EGLSurface 		    surface;
     EGLContext 		    context;
     ANativeWindow 	   *window;
+
+    pjmedia_video_apply_fmt_param vafp;
 };
 
 
@@ -409,6 +411,11 @@ static pj_status_t andgl_stream_set_cap(pjmedia_vid_dev_stream *s,
         if (!vfi)
             return PJMEDIA_EVID_BADFORMAT;
         
+	strm->vafp.size = fmt->det.vid.size;
+	strm->vafp.buffer = NULL;
+	if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS)
+	    return PJMEDIA_EVID_BADFORMAT;
+
         /* Re-init OpenGL */
         if (strm->window)
             job_queue_post_job(strm->jq, deinit_opengl, strm, 0, NULL);
@@ -479,6 +486,10 @@ static pj_status_t andgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     if (frame->size==0 || frame->buf==NULL)
 	return PJ_SUCCESS;
 	
+    if (frame->size != stream->vafp.framebytes) {
+	return PJ_EIGNORED;
+    }
+
     if (!stream->is_running || stream->display == EGL_NO_DISPLAY)
 	return PJ_EINVALIDOP;
     
