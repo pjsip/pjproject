@@ -1024,10 +1024,9 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 
     /* Destroy ICE if we have ICE */
     if (ice_st->ice) {
-	ice_st->ice_prev = ice_st->ice;
+	pj_ice_sess *ice = ice_st->ice;
 	ice_st->ice = NULL;
-	pj_ice_sess_detach_grp_lock(ice_st->ice_prev, &ice_st->ice_prev_hndlr);
-	pj_ice_sess_destroy(ice_st->ice_prev);
+	pj_ice_sess_destroy(ice);
     }
 
     /* Destroy all components */
