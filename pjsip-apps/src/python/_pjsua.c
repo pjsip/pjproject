@@ -4434,7 +4434,8 @@ init_pjsua(void)
     PyObject* m = NULL;
 #define ADD_CONSTANT(mod,name)	PyModule_AddIntConstant(mod,#name,name)
 
-    
+    pj_log_set_level(1);
+
     PyEval_InitThreads();
 
     if (PyType_Ready(&PyTyp_pjsua_callback) < 0)
