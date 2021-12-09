@@ -44,7 +44,7 @@ PJ_DECL(pj_status_t) pjsip_auth_init_parser(void);
 /**
  * DeInitialize authorization parser module.
  */
-PJ_DECL(void) pjsip_auth_deinit_parser();
+PJ_DECL(void) pjsip_auth_deinit_parser(void);
 
 
 
