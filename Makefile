@@ -122,13 +122,13 @@ cmp_wav:
 install:
 	mkdir -p $(DESTDIR)$(libdir)/
 	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
-	    cp -af $(APP_LIBXX_FILES) $(DESTDIR)$(libdir)/; \
+	    cp -af --no-preserve=ownership $(APP_LIBXX_FILES) $(DESTDIR)$(libdir)/; \
 	else \
-	    cp -af $(APP_LIB_FILES) $(DESTDIR)$(libdir)/; \
+	    cp -af --no-preserve=ownership $(APP_LIB_FILES) $(DESTDIR)$(libdir)/; \
 	fi
 	mkdir -p $(DESTDIR)$(includedir)/
 	for d in pjlib pjlib-util pjnath pjmedia pjsip; do \
-		cp -RLf $$d/include/* $(DESTDIR)$(includedir)/; \
+		cp -RLf --no-preserve=ownership $$d/include/* $(DESTDIR)$(includedir)/; \
 	done
 	mkdir -p $(DESTDIR)$(libdir)/pkgconfig
 	sed -e "s!@PREFIX@!$(prefix)!" libpjproject.pc.in | \
