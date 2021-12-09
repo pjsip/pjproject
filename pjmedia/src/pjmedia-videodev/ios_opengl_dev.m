@@ -77,8 +77,6 @@ struct iosgl_stream
     gl_buffers             *gl_buf;
     GLView                 *gl_view;
     EAGLContext            *ogl_context;
-
-    pjmedia_video_apply_fmt_param vafp;
 };
 
 
@@ -410,11 +408,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
             return PJMEDIA_EVID_BADFORMAT;
         
         pjmedia_format_copy(&strm->param.fmt, fmt);
-        strm->vafp.size = fmt->det.vid.size;
-        strm->vafp.buffer = NULL;
-        if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS)
-            return PJMEDIA_EVID_BADFORMAT;
-
+        
         [strm->gl_view performSelectorOnMainThread:@selector(change_format)
                        withObject:nil waitUntilDone:YES];
 
@@ -482,10 +476,6 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
      */
     if (frame->size==0 || frame->buf==NULL)
 	return PJ_SUCCESS;
-
-    if (frame->size != stream->vafp.framebytes) {
-        return PJ_EIGNORED;
-    }
 	
     if (!stream->is_running)
 	return PJ_EINVALIDOP;

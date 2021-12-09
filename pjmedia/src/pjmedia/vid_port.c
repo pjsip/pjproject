@@ -111,6 +111,7 @@ struct pjmedia_vid_port
     pjmedia_frame           *frm_buf;
     pj_size_t                frm_buf_size;
     pj_mutex_t              *frm_mutex;
+    pj_size_t		     src_size;
 };
 
 struct vid_pasv_port
@@ -184,6 +185,13 @@ static pj_status_t get_vfi(const pjmedia_format *fmt,
 
 static pj_status_t create_converter(pjmedia_vid_port *vp)
 {
+    pj_status_t status;
+    pjmedia_video_apply_fmt_param vafp;
+
+    /* Allocate buffer for conversion */
+    status = get_vfi(&vp->conv.conv_param.src, NULL, &vafp);
+    vp->src_size = vafp.framebytes;
+
     if (vp->conv.conv) {
         pjmedia_converter_destroy(vp->conv.conv);
 	vp->conv.conv = NULL;
@@ -196,8 +204,6 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
 	(vp->conv.conv_param.src.det.vid.size.h !=
          vp->conv.conv_param.dst.det.vid.size.h))
     {
-	pj_status_t status;
-
 	/* Yes, we need converter */
 	status = pjmedia_converter_create(NULL, vp->pool, &vp->conv.conv_param,
 					  &vp->conv.conv);
@@ -210,9 +216,6 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     if (vp->conv.conv ||
         (vp->role==ROLE_ACTIVE && (vp->dir & PJMEDIA_DIR_ENCODING)))
     {
-	pj_status_t status;
-	pjmedia_video_apply_fmt_param vafp;
-
 	/* Allocate buffer for conversion */
 	status = get_vfi(&vp->conv.conv_param.dst, NULL, &vafp);
 	if (status != PJ_SUCCESS)
@@ -1334,6 +1337,12 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
     struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
     pjmedia_vid_port *vp = vpp->vp;
 
+    if (frame->size > 0 && frame->size != vp->src_size) {
+    	PJ_LOG(4, (THIS_FILE, "Unexpected source frame size"));
+    	frame->buf = NULL;
+    	frame->size = 0;
+    }
+    
     if (vp->stream_role==ROLE_PASSIVE) {
         /* We are passive and the stream is passive.
          * The encoding counterpart is in vid_pasv_port_get_frame().

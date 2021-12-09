@@ -1106,13 +1106,6 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
     pj_status_t status;
     render_state *rs = sink->render_states[transmitter_idx];
     
-    if (pj_memcmp(&sink->format, &sink->port->info.fmt,
-    		  sizeof(pjmedia_format)))
-    {
-    	PJ_LOG(4, (THIS_FILE, "Format mismatched"));
-    	return PJMEDIA_EVID_BADFORMAT;
-    }
-
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
 	/* The only transmitter and no conversion needed */
 	pj_assert(src->get_buf_size <= sink->put_buf_size);
