@@ -120,17 +120,17 @@ cmp_wav:
 	cd tests/pjsua/tools && make
 
 install:
-	mkdir -p $(DESTDIR)$(libdir)/
+	install -d $(DESTDIR)$(libdir)/
 	if [ "$(PJ_EXCLUDE_PJSUA2)x" = "x" ] ; then \
-	    cp -af --no-preserve=ownership $(APP_LIBXX_FILES) $(DESTDIR)$(libdir)/; \
+	    install $(APP_LIBXX_FILES) $(DESTDIR)$(libdir)/; \
 	else \
-	    cp -af --no-preserve=ownership $(APP_LIB_FILES) $(DESTDIR)$(libdir)/; \
+	    install $(APP_LIB_FILES) $(DESTDIR)$(libdir)/; \
 	fi
-	mkdir -p $(DESTDIR)$(includedir)/
+	install -d $(DESTDIR)$(includedir)/
 	for d in pjlib pjlib-util pjnath pjmedia pjsip; do \
-		cp -RLf --no-preserve=ownership $$d/include/* $(DESTDIR)$(includedir)/; \
+		install $$d/include/* $(DESTDIR)$(includedir)/; \
 	done
-	mkdir -p $(DESTDIR)$(libdir)/pkgconfig
+	install $(DESTDIR)$(libdir)/pkgconfig
 	sed -e "s!@PREFIX@!$(prefix)!" libpjproject.pc.in | \
 		sed -e "s!@INCLUDEDIR@!$(includedir)!" | \
 		sed -e "s!@LIBDIR@!$(libdir)!" | \
