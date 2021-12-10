@@ -3167,6 +3167,7 @@ on_return:
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
+    pjsip_dialog *dlg;
     unsigned mi;
 
     for (mi=0; mi<call->med_cnt; ++mi) {
@@ -3185,7 +3186,9 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     pj_log_push_indent();
 
     /* Print call dump first */
-    log_call_dump(call_id);
+    dlg = (call->inv? call->inv->dlg : call->async_call.dlg);
+    if (dlg)
+    	log_call_dump(call_id);
 
     stop_media_session(call_id);
 

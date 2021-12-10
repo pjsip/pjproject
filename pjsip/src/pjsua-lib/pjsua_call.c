@@ -1011,6 +1011,7 @@ on_error:
     if (dlg) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
+	call->async_call.dlg = NULL;
     }
 
     if (call_id != -1) {
