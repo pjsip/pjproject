@@ -681,7 +681,6 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
     pj_int32_t ts_diff;
     pjmedia_frame frame;
     pj_status_t status;
-    pj_bool_t frame_rendered = PJ_FALSE;
 
     pj_mutex_lock(vid_conf->mutex);
 
@@ -714,15 +713,6 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	ts_diff = pj_timestamp_diff32(&sink->ts_next, now);
 	if (ts_diff < 0 || ts_diff > TS_CLOCK_RATE)
 	    continue;
-
-    	/* There is a possibility that the port's format has changed,
-    	 * but we haven't received the event yet.
-    	 */
-    	if (pj_memcmp(&sink->format, &sink->port->info.fmt,
-    		      sizeof(pjmedia_format)))
-    	{
-    	    pjmedia_vid_conf_update_port(vid_conf, i);
-    	}
 
 	/* Iterate transmitters of this sink port */
 	for (j=0; j < sink->transmitter_cnt; ++j) {
@@ -762,13 +752,20 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    }
 
 	    if (src->got_frame) {
+    		/* There is a possibility that the sink port's format has
+    		 * changed, but we haven't received the event yet.
+    	 	 */
+    		if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		      	      sizeof(pjmedia_format)))
+    		{
+    	    	    pjmedia_vid_conf_update_port(vid_conf, i);
+    		}
+
 		/* Render src get buffer to sink put buffer (based on
 		 * sink layout settings, if any)
 		 */
 		status = render_src_frame(src, sink, j);
-		if (status == PJ_SUCCESS) {
-		    frame_rendered = PJ_TRUE;
-		} else {
+		if (status != PJ_SUCCESS) {
 		    PJ_PERROR(5, (THIS_FILE, status,
 				  "Failed to render frame from port %d [%s] "
 				  "to port %d [%s]",
@@ -786,10 +783,8 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	pj_bzero(&frame, sizeof(frame));
 	frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
 	frame.timestamp = *now;
-	if (frame_rendered) {
-	    frame.buf = sink->put_buf;
-	    frame.size = sink->put_buf_size;
-	}
+	frame.buf = sink->put_buf;
+	frame.size = sink->put_buf_size;
 	status = pjmedia_port_put_frame(sink->port, &frame);
 	if (status != PJ_SUCCESS) {
 	    sink->last_err_cnt++;
@@ -870,6 +865,35 @@ static void cleanup_render_state(vconf_port *cp,
     }
 }
 
+static void init_buf(vconf_port* cp, void *buf, pj_size_t buf_size)
+{
+    pjmedia_format_id fmt = cp->port->info.fmt.id;
+    const pjmedia_video_format_info *vfi;
+    pjmedia_video_apply_fmt_param vafp;
+
+    vfi = pjmedia_get_video_format_info(NULL, fmt);
+    pj_bzero(&vafp, sizeof(vafp));
+    vafp.size = cp->port->info.fmt.det.vid.size;
+    (*vfi->apply_fmt)(vfi, &vafp);
+
+    if (buf_size < vafp.framebytes) return;
+
+    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
+	pj_memset(buf, 0, vafp.framebytes);
+    } else if (fmt == PJMEDIA_FORMAT_I420 || fmt == PJMEDIA_FORMAT_YV12) {
+	pj_memset(buf, 16, vafp.plane_bytes[0]);
+	pj_memset((pj_uint8_t*)buf + vafp.plane_bytes[0], 0x80,
+		  vafp.plane_bytes[1] * 2);
+    } else if (fmt == PJMEDIA_FORMAT_YUY2) {
+	pj_uint8_t *ptr = (pj_uint8_t *)buf;
+	unsigned i;
+        
+	for (i = vafp.framebytes / 2; i > 0; i--) {
+	    *(ptr++) = 0x10; *(ptr++) = 0x80;
+	}
+    }
+}
+
 /* This function will do:
  * - Recalculate layout setting, i.e: get video pos and size
  *   for each transmitter
@@ -889,44 +913,12 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 
     /* Initialize sink buffer with black color. */
     if (cp->port->put_frame) {
-	const pjmedia_video_format_info *vfi;
-	pjmedia_video_apply_fmt_param vafp;
-
-	vfi = pjmedia_get_video_format_info(NULL, fmt_id);
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = size;
-	(*vfi->apply_fmt)(vfi, &vafp);
-	
-	if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	    pj_memset(cp->put_buf, 0, vafp.framebytes);
-	} else if (cp->port->info.fmt.id == PJMEDIA_FORMAT_I420 ||
-		   cp->port->info.fmt.id == PJMEDIA_FORMAT_YV12)
-	{
-	    pj_memset(cp->put_buf, 16, vafp.plane_bytes[0]);
-	    pj_memset((pj_uint8_t*)cp->put_buf + vafp.plane_bytes[0],
-		      0x80, vafp.plane_bytes[1] * 2);
-	}
+    	init_buf(cp, cp->put_buf, cp->put_buf_size);
     }
 
     /* Initialize source buffer with black color. */
     if (cp->port->get_frame) {
-	const pjmedia_video_format_info *vfi;
-	pjmedia_video_apply_fmt_param vafp;
-
-	vfi = pjmedia_get_video_format_info(NULL, fmt_id);
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = size;
-	(*vfi->apply_fmt)(vfi, &vafp);
-
-	if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	    pj_memset(cp->get_buf, 0, vafp.framebytes);
-	} else if (cp->port->info.fmt.id == PJMEDIA_FORMAT_I420 ||
-		   cp->port->info.fmt.id == PJMEDIA_FORMAT_YV12)
-	{
-	    pj_memset(cp->get_buf, 16, vafp.plane_bytes[0]);
-	    pj_memset((pj_uint8_t*)cp->get_buf + vafp.plane_bytes[0],
-		      0x80, vafp.plane_bytes[1] * 2);
-	}
+    	init_buf(cp, cp->get_buf, cp->get_buf_size);
     }
 
     /* Nothing to render, just return */
@@ -1105,7 +1097,7 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
 {
     pj_status_t status;
     render_state *rs = sink->render_states[transmitter_idx];
-    
+
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
 	/* The only transmitter and no conversion needed */
 	pj_assert(src->get_buf_size <= sink->put_buf_size);

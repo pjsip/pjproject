@@ -934,8 +934,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     if (frame->size==0 || frame->buf==NULL)
 	return PJ_SUCCESS;
 
-    if (frame->size != stream->vafp.framebytes)
-	return PJ_EIGNORED;
+    if (frame->size < stream->vafp.framebytes)
+	return PJ_ETOOSMALL;
 
     if (!stream->is_running)
 	return PJ_EINVALIDOP;

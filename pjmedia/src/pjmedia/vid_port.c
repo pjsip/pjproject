@@ -1089,6 +1089,8 @@ static pj_status_t convert_frame(pjmedia_vid_port *vp,
 static void copy_frame_to_buffer(pjmedia_vid_port *vp,
                                  pjmedia_frame *frame)
 {
+    if (frame->size != vp->src_size) return;
+
     pj_mutex_lock(vp->frm_mutex);
     pjmedia_frame_copy(vp->frm_buf, frame);
     pj_mutex_unlock(vp->frm_mutex);
@@ -1337,18 +1339,21 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
     struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
     pjmedia_vid_port *vp = vpp->vp;
 
-    if (frame->size > 0 && frame->size != vp->src_size) {
-    	PJ_LOG(4, (THIS_FILE, "Unexpected source frame size"));
-    	frame->buf = NULL;
-    	frame->size = 0;
-    }
-    
     if (vp->stream_role==ROLE_PASSIVE) {
         /* We are passive and the stream is passive.
          * The encoding counterpart is in vid_pasv_port_get_frame().
          */
         pj_status_t status;
         pjmedia_frame frame_;
+
+	if (frame->size != vp->src_size) {
+    	    pj_memcpy(&frame_, frame, sizeof(pjmedia_frame));
+    	    frame_.buf = NULL;
+    	    frame_.size = 0;
+
+    	    /* Send heart beat for updating timestamp or keep-alive. */
+	    return pjmedia_vid_dev_stream_put_frame(vp->strm, &frame_);
+	}
         
         pj_bzero(&frame_, sizeof(frame_));
         status = convert_frame(vp, frame, &frame_);
