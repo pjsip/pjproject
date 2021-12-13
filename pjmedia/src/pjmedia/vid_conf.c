@@ -92,7 +92,6 @@ typedef struct vconf_port
     pj_timestamp	 ts_next;	/**< Time for next put/get_frame(). */
     void		*get_buf;	/**< Buffer for get_frame().	    */
     pj_size_t		 get_buf_size;	/**< Buffer size for get_frame().   */
-    pj_bool_t		 got_frame;	/**< Last get_frame() got frame?    */
     void		*put_buf;	/**< Buffer for put_frame().	    */
     pj_size_t		 put_buf_size;	/**< Buffer size for put_frame().   */
 
@@ -718,6 +717,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	/* Iterate transmitters of this sink port */
 	for (j=0; j < sink->transmitter_cnt; ++j) {
 	    vconf_port *src = vid_conf->ports[sink->transmitter_slots[j]];
+	    pj_bool_t got_frame = PJ_FALSE;
 	    pj_int32_t src_ts_diff;
 
 	    if (src->ts_next.u64 == 0)
@@ -742,9 +742,8 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    PJ_PERROR(5, (THIS_FILE, status,
 				  "Failed to get frame from port %d [%s]!",
 				  src->idx, src->port->info.name.ptr));
-		    src->got_frame = PJ_FALSE;
 		} else {
-		    src->got_frame = (frame.size == src->get_buf_size);
+		    got_frame = (frame.size == src->get_buf_size);
 		}
 
 		/* Update next src put/get */
@@ -752,7 +751,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		ts_incremented = src==sink;
 	    }
 
-	    if (src->got_frame) {
+	    if (got_frame) {
     		/* There is a possibility that the sink port's format has
     		 * changed, but we haven't received the event yet.
     	 	 */
@@ -1227,7 +1226,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_update_port( pjmedia_vid_conf *vid_conf,
 	    if (cport->get_buf_size < vafp.framebytes)
 		cport->get_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
 	    cport->get_buf_size = vafp.framebytes;
-	    cport->got_frame = PJ_FALSE;
 	}
 
 	/* Update render state */
