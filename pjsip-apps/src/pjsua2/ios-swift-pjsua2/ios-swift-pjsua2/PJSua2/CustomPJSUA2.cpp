@@ -48,7 +48,17 @@ dispatch_queue_t queue;
 
 //Getter & Setter function
 std::string callerId;
+std::string onIncomingCallHeader;
+
 bool registerState = false;
+
+void setOnIncomingCallerHeader(std::string onIncomingCallerHeaderStr){
+    onIncomingCallHeader = onIncomingCallerHeaderStr;
+}
+
+std::string getOnIncomingCallerHeader(){
+    return onIncomingCallHeader;
+}
 
 void setCallerId(std::string callerIdStr){
     callerId = callerIdStr;
@@ -80,47 +90,17 @@ public:
     ~MyCall()
     { }
 
-    virtual void onCallTsxState(OnCallTsxStateParam &prm){
-    
-        std::cout<<"ON CALL TSX STATE START"<<std::endl;
-        
-        //tsxState->src
-        
-
-        //If remote confirmed call
-        if(prm.e.body.tsxState.tsx.statusCode == 200){
-            
-            std::cout<<prm.e.body.tsxState.src.rdata.wholeMsg.substr(prm.e.body.tsxState.src.rdata.wholeMsg.find("DEV-ID") + 8 , 4);
-        }
-        
-        //std::cout<<prm.e.body.tsxState.src.rdata.wholeMsg.substr(prm.e.body.tsxState.src.rdata.wholeMsg.find(("DEV-ID") + 8 , 4))<<std::endl;
-
-        /*std::cout<<prm.e.body.tsxState.src.tdata.wholeMsg<<std::endl;
-
-        std::cout<<prm.e.body.rxMsg.rdata.wholeMsg<<std::endl;
-        
-        std::cout<<prm.e.body.tsxState.tsx.method<<std::endl;
-        std::cout<<prm.e.body.tsxState.tsx.statusText<<std::endl;
-        std::cout<<prm.e.body.txMsg.tdata.wholeMsg<<std::endl;*/
-
-        std::cout<<"ON CALL TSX STATE FINISH"<<std::endl;
-    }
-    
-    virtual void onCallRxDataHandler(OnCallRxDataHandlerParam &prm){
-        std::cout<<"EMRE FUNC ON CALL RX DATA HANDLER START";
-        std::cout<<prm.rdata.wholeMsg;
-        std::cout<<"EMRE FUNC ON CALL RX DATA HANDLER START";
-    }
-    
     // Notification when call's state has changed.
     virtual void onCallState(OnCallStateParam &prm){
         CallInfo ci = getInfo();
+        static std::string remoteHeader = "";
         
-
-        SipRxData rdata = prm.e.body.tsxState.src.rdata;
-        
-        //pjsip_rx_data* rdata = (pjsip_rx_data) prm.e.body.tsxState.src.rdata;
-        
+        if (prm.e.body.tsxState.tsx.statusText == "OK" && prm.e.body.tsxState.tsx.statusCode == 200){
+            if(remoteHeader.empty() == true){
+                remoteHeader = prm.e.body.tsxState.src.rdata.wholeMsg;
+            }
+        }
+                
         if (ci.state == PJSIP_INV_STATE_INCOMING)   {
             /**
              Since, ci.remoteUri starts with <sip:xxxx@ip:port>
@@ -141,16 +121,15 @@ public:
         
            if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
                callStatusListenerPtr(0);
-               
                /* Delete the call */
                delete call;
                call = NULL;
            }
+        
         if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
-            std::cout<<"emre";
-            std::cout<<rdata.wholeMsg;
-            std::cout<<rdata.info;
-            std::cout<<"emre- bitis";
+            if(remoteHeader.empty() != true){
+                std::cout<<remoteHeader.substr(remoteHeader.find("DEV-ID") + 8 , 4);
+            }
             callStatusListenerPtr(1);
         }
         
@@ -219,7 +198,7 @@ void MyAccount::onIncomingCall(OnIncomingCallParam &iprm) {
     incomingCallPtr();
     
     //Incoming DevID
-    std::cout<<iprm.rdata.wholeMsg.substr(iprm.rdata.wholeMsg.find("DEV-ID") + 8 , 4);
+    setOnIncomingCallerHeader(iprm.rdata.wholeMsg.substr(iprm.rdata.wholeMsg.find("DEV-ID") + 8 , 4));
     call = new MyCall(*this, iprm.callId);
     
 }
