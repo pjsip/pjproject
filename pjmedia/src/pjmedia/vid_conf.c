@@ -689,6 +689,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    ci<vid_conf->port_cnt; ++i)
     {
 	unsigned j;
+	pj_bool_t frame_rendered = PJ_FALSE;
 	pj_bool_t ts_incremented = PJ_FALSE;
 	vconf_port *sink = vid_conf->ports[i];
 
@@ -765,7 +766,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		 * sink layout settings, if any)
 		 */
 		status = render_src_frame(src, sink, j);
-		if (status != PJ_SUCCESS) {
+		if (status == PJ_SUCCESS) {
+		    frame_rendered = PJ_TRUE;
+		} else {
 		    PJ_PERROR(5, (THIS_FILE, status,
 				  "Failed to render frame from port %d [%s] "
 				  "to port %d [%s]",
@@ -783,10 +786,12 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	pj_bzero(&frame, sizeof(frame));
 	frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
 	frame.timestamp = *now;
-	frame.buf = sink->put_buf;
-	frame.size = sink->put_buf_size;
+	if (frame_rendered) {
+	    frame.buf = sink->put_buf;
+	    frame.size = sink->put_buf_size;
+	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
-	if (status != PJ_SUCCESS) {
+	if (frame_rendered && status != PJ_SUCCESS) {
 	    sink->last_err_cnt++;
 	    if (sink->last_err != status ||
 	        sink->last_err_cnt % MAX_ERR_COUNT == 0)

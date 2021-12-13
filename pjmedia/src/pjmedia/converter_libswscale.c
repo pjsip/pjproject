@@ -161,14 +161,6 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
     dst->apply_param.buffer = dst_frame->buf;
     (*dst->fmt_info->apply_fmt)(dst->fmt_info, &dst->apply_param);
 
-    /* Check input frame */
-    if (!src_frame->buf || src_frame->size < src->apply_param.framebytes)
-	return PJ_EINVAL;
-
-    /* Check output frame */
-    if (!dst_frame->buf || dst_frame->size < dst->apply_param.framebytes)
-	return PJ_EINVAL;
-
     h = sws_scale(fcv->sws_ctx,
 	          (const uint8_t* const *)src->apply_param.planes,
 	          src->apply_param.strides,
@@ -179,8 +171,6 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
     //sws_scale() returns zero but conversion seems to work okay.
     //return h==(int)dst->apply_param.size.h ? PJ_SUCCESS : PJ_EUNKNOWN;
     PJ_UNUSED_ARG(h);
-
-    dst_frame->size = dst->apply_param.framebytes;
 
     return PJ_SUCCESS;
 }

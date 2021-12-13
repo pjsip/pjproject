@@ -19,7 +19,6 @@
 
 #include <pjmedia/converter.h>
 #include <pj/errno.h>
-#include <pj/log.h>
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0) && \
     defined(PJMEDIA_HAS_LIBYUV) && (PJMEDIA_HAS_LIBYUV != 0)
@@ -435,8 +434,8 @@ static pj_bool_t check_converter_act(const converter_act *act,
 				     const pjmedia_rect_size *dst_size)
 {
     if (act_num) {
-	const fmt_info *first_fmt = &act[0].src_fmt_info;
-	const fmt_info *last_fmt = &act[act_num-1].dst_fmt_info;
+	const struct fmt_info *first_fmt = &act[0].src_fmt_info;
+	const struct fmt_info *last_fmt = &act[act_num-1].dst_fmt_info;	
 
 	if ((first_fmt->vid_fmt_info->id == src_id) &&
 	    (first_fmt->apply_param.size.h == src_size->h) &&
@@ -511,16 +510,6 @@ static pj_status_t factory_create_converter(pjmedia_converter_factory *cf,
 
     status = set_destination_buffer(pool, lconv);
 
-    /* Calculate frame size of source & destination */
-    {
-	fmt_info *src_fi = &lconv->act[0].src_fmt_info;
-	fmt_info *dst_fi = &lconv->act[lconv->act_num-1].dst_fmt_info;
-	(*src_fi->vid_fmt_info->apply_fmt)(src_fi->vid_fmt_info,
-					   &src_fi->apply_param);
-	(*dst_fi->vid_fmt_info->apply_fmt)(dst_fi->vid_fmt_info,
-					   &dst_fi->apply_param);
-    }
-
     *p_cv = &lconv->base;
 
     return status;
@@ -537,25 +526,13 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
 {
     struct libyuv_converter *lconv = (struct libyuv_converter*)converter;
     int i = 0;
-    fmt_info *src_fi = &lconv->act[0].src_fmt_info;
-    fmt_info *dst_fi = &lconv->act[lconv->act_num-1].dst_fmt_info;
-
-    //PJ_LOG(3, ("---", "src frame->size=%d vafp=%d", src_frame->size, src_fi->apply_param.framebytes));
-    //PJ_LOG(3, ("---", "dst frame->size=%d vafp=%d", dst_frame->size, dst_fi->apply_param.framebytes));
-
-    /* Check input frame */
-    if (!src_frame->buf || src_frame->size < src_fi->apply_param.framebytes)
-	return PJ_EINVAL;
-
-    /* Check output frame */
-    if (!dst_frame->buf || dst_frame->size < dst_fi->apply_param.framebytes)
-	return PJ_EINVAL;
 
     /* Set the first act buffer from src frame. */
-    src_fi->apply_param.buffer = src_frame->buf;
+    lconv->act[0].src_fmt_info.apply_param.buffer = src_frame->buf;
 
     /* Set the last act buffer from dst frame. */
-    dst_fi->apply_param.buffer = dst_frame->buf;
+    lconv->act[lconv->act_num-1].dst_fmt_info.apply_param.buffer = 
+								 dst_frame->buf;
 
     for (;i<lconv->act_num;++i) {	
 	/* Use destination info as the source info for the next act. */
@@ -657,9 +634,6 @@ static pj_status_t libyuv_conv_convert(pjmedia_converter *converter,
 	    break;	
 	};	
     }    
-
-    dst_frame->size = dst_fi->apply_param.framebytes;
-
     return PJ_SUCCESS;
 }
 

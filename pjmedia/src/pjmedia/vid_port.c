@@ -188,7 +188,6 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
     pj_status_t status;
     pjmedia_video_apply_fmt_param vafp;
 
-    /* Allocate buffer for conversion */
     status = get_vfi(&vp->conv.conv_param.src, NULL, &vafp);
     vp->src_size = vafp.framebytes;
 
@@ -1089,8 +1088,6 @@ static pj_status_t convert_frame(pjmedia_vid_port *vp,
 static void copy_frame_to_buffer(pjmedia_vid_port *vp,
                                  pjmedia_frame *frame)
 {
-    if (frame->size != vp->src_size) return;
-
     pj_mutex_lock(vp->frm_mutex);
     pjmedia_frame_copy(vp->frm_buf, frame);
     pj_mutex_unlock(vp->frm_mutex);
@@ -1370,7 +1367,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
          * frame in the buffer.
          * The encoding counterpart is located in vidstream_cap_cb()
          */
-        copy_frame_to_buffer(vp, frame);
+    	if (frame->size == vp->src_size)
+            copy_frame_to_buffer(vp, frame);
     }
 
     return PJ_SUCCESS;
