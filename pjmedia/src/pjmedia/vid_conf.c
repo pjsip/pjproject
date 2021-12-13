@@ -714,6 +714,15 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	if (ts_diff < 0 || ts_diff > TS_CLOCK_RATE)
 	    continue;
 
+    	/* There is a possibility that the sink port's format has
+    	 * changed, but we haven't received the event yet.
+    	 */
+    	if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		      sizeof(pjmedia_format)))
+    	{
+    	    pjmedia_vid_conf_update_port(vid_conf, i);
+    	}
+
 	/* Iterate transmitters of this sink port */
 	for (j=0; j < sink->transmitter_cnt; ++j) {
 	    vconf_port *src = vid_conf->ports[sink->transmitter_slots[j]];
@@ -752,15 +761,6 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    }
 
 	    if (got_frame) {
-    		/* There is a possibility that the sink port's format has
-    		 * changed, but we haven't received the event yet.
-    	 	 */
-    		if (pj_memcmp(&sink->format, &sink->port->info.fmt,
-    		      	      sizeof(pjmedia_format)))
-    		{
-    	    	    pjmedia_vid_conf_update_port(vid_conf, i);
-    		}
-
 		/* Render src get buffer to sink put buffer (based on
 		 * sink layout settings, if any)
 		 */
