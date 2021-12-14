@@ -391,7 +391,7 @@ static void dump_port_info(const pjmedia_vid_channel *chan,
     char fourcc_name[5];
 
     PJ_LOG(4, (pi->name.ptr,
-	       " %s format %s: %dx%d %s%s %d/%d(~%d)fps",
+	       "%s format %s: %dx%d %s%s %d/%d(~%d)fps",
 	       (chan->dir==PJMEDIA_DIR_DECODING? "Decoding":"Encoding"),
 	       event_name,
 	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
