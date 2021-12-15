@@ -195,6 +195,15 @@ typedef struct pj_grp_lock_config
 
 
 /**
+ * The group lock destroy handler, a destructor function called when
+ * a group lock is about to be destroyed.
+ *
+ * @param member	A pointer to be passed to the handler.
+ */
+typedef void (*pj_grp_lock_handler)(void *member);
+
+
+/**
  * Initialize the config with the default values.
  *
  * @param cfg		The config to be initialized.
@@ -235,7 +244,7 @@ PJ_DECL(pj_status_t) pj_grp_lock_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) pj_grp_lock_create_w_handler(pj_pool_t *pool,
                                         	  const pj_grp_lock_config *cfg,
                                         	  void *member,
-                                                  void (*handler)(void *member),
+                                                  pj_grp_lock_handler handler,
                                         	  pj_grp_lock_t **p_grp_lock);
 
 /**
@@ -303,7 +312,7 @@ PJ_DECL(pj_status_t) pj_grp_lock_release( pj_grp_lock_t *grp_lock);
 PJ_DECL(pj_status_t) pj_grp_lock_add_handler(pj_grp_lock_t *grp_lock,
                                              pj_pool_t *pool,
                                              void *member,
-                                             void (*handler)(void *member));
+                                             pj_grp_lock_handler handler);
 
 /**
  * Remove previously registered handler. All parameters must be the same
@@ -317,7 +326,7 @@ PJ_DECL(pj_status_t) pj_grp_lock_add_handler(pj_grp_lock_t *grp_lock,
  */
 PJ_DECL(pj_status_t) pj_grp_lock_del_handler(pj_grp_lock_t *grp_lock,
                                              void *member,
-                                             void (*handler)(void *member));
+                                             pj_grp_lock_handler handler);
 
 /**
  * Increment reference counter to prevent the group lock grom being destroyed.
