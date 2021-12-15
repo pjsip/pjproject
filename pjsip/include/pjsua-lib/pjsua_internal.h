@@ -305,6 +305,7 @@ typedef struct pjsua_acc
                                            2: acknowledged by servers   */
     pj_str_t	     rfc5626_instprm;/**< SIP outbound instance param.  */
     pj_str_t         rfc5626_regprm;/**< SIP outbound reg param.        */
+    unsigned         rfc5626_flowtmr;/**< SIP outbound flow timer.      */
 
     unsigned	     cred_cnt;	    /**< Number of credentials.		*/
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.	*/
