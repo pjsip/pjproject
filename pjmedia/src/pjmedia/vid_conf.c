@@ -1114,7 +1114,8 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
 
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
 	/* The only transmitter and no conversion needed */
-	pj_assert(src->get_buf_size <= sink->put_buf_size);
+	if (src->get_buf_size != sink->put_buf_size)
+	    return PJMEDIA_EVID_BADFORMAT;
 	pj_memcpy(sink->put_buf, src->get_buf, src->get_buf_size);
     } else if (rs && rs->converter) {
 	pjmedia_frame src_frame, dst_frame;
