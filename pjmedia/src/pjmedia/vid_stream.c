@@ -137,6 +137,8 @@ struct pjmedia_vid_stream
     pjmedia_ratio	     dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
     unsigned		     dec_delay_cnt; /**< Decoding delay (in frames).*/
+    pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
+                                                 to avoid deadlock	    */
     pjmedia_event            miss_keyframe_event;
 					    /**< Buffered missing keyframe
                                                  event for delayed republish*/
@@ -389,7 +391,7 @@ static void dump_port_info(const pjmedia_vid_channel *chan,
     char fourcc_name[5];
 
     PJ_LOG(4, (pi->name.ptr,
-	       "%s format %s: %dx%d %s%s %d/%d(~%d)fps",
+	       " %s format %s: %dx%d %s%s %d/%d(~%d)fps",
 	       (chan->dir==PJMEDIA_DIR_DECODING? "Decoding":"Encoding"),
 	       event_name,
 	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
@@ -406,47 +408,17 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
                                    void *user_data)
 {
     pjmedia_vid_stream *stream = (pjmedia_vid_stream*)user_data;
-    void *epub = stream;
-
-    /* Note: This function must not try to acquire jb_mutex to avoid
-     * deadlock.
-     */
 
     if (event->epub == stream->codec) {
 	/* This is codec event */
 	switch (event->type) {
 	case PJMEDIA_EVENT_FMT_CHANGED:
-	{
-	    pjmedia_event_fmt_changed_data *fmt_chg_data;
-	    
-	    fmt_chg_data = &event->data.fmt_changed;
-
-	    /* Update stream info and decoding channel port info */
-	    if (fmt_chg_data->dir == PJMEDIA_DIR_DECODING) {
-		epub = &stream->dec->port;
-
-		pjmedia_format_copy(&stream->info.codec_param->dec_fmt,
-				    &fmt_chg_data->new_fmt);
-	    	pjmedia_format_copy(&stream->dec->port.info.fmt,
-				    &fmt_chg_data->new_fmt);
-
-	    	/* Override the framerate to be 1.5x higher in the event
-	     	 * for the renderer.
-	     	 */
-	    	fmt_chg_data->new_fmt.det.vid.fps.num *= 3;
-	    	fmt_chg_data->new_fmt.det.vid.fps.num /= 2;
-	    } else {
-	    	epub = &stream->enc->port;
-
-	    	pjmedia_format_copy(&stream->info.codec_param->enc_fmt,
-				    &fmt_chg_data->new_fmt);
-	    	pjmedia_format_copy(&stream->enc->port.info.fmt,
-				    &fmt_chg_data->new_fmt);
-	    }
-
-	    dump_port_info(fmt_chg_data->dir==PJMEDIA_DIR_DECODING ?
-			   stream->dec : stream->enc, "changed");
-	}
+	    /* Copy the event to avoid deadlock if we publish the event
+	     * now. This happens because fmt_event may trigger restart
+	     * while we're still holding the jb_mutex.
+	     */
+	    pj_memcpy(&stream->fmt_event, event, sizeof(*event));
+	    return PJ_SUCCESS;
 
 	case PJMEDIA_EVENT_KEYFRAME_MISSING:
 	    /* Republish this event later from get_frame(). */
@@ -499,7 +471,7 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
     }
 
     /* Republish events */
-    return pjmedia_event_publish(NULL, epub, event,
+    return pjmedia_event_publish(NULL, stream, event,
 				 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 }
 
@@ -1511,24 +1483,25 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 
 		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
 		{
-		    pjmedia_event event;
+		    pjmedia_event *event = &stream->fmt_event;
 
 		    /* Update max fps of decoding dir */
 		    stream->dec_max_fps = vfd->fps;
 
-		    pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
-				       &frame->timestamp, &channel->port);
-		    event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
-		    pj_memcpy(&event.data.fmt_changed.new_fmt,
-			      &stream->info.codec_param->dec_fmt,
-			      sizeof(pjmedia_format));
-
-    		    /* Publish the event async. We are still holding
-    		     * jb_mutex here, so stream_event_cb() must not
-    		     * try to acquire jb_mutex to avoid deadlock.
-    		     */
-		    pjmedia_event_publish(NULL, &stream->dec->port, &event,
-			      		  PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+		    /* Use the buffered format changed event:
+		     * - just update the framerate if there is pending event,
+		     * - otherwise, init the whole event.
+		     */
+		    if (stream->fmt_event.type != PJMEDIA_EVENT_NONE) {
+			event->data.fmt_changed.new_fmt.det.vid.fps = vfd->fps;
+		    } else {
+			pjmedia_event_init(event, PJMEDIA_EVENT_FMT_CHANGED,
+					   &frame->timestamp, &channel->port);
+			event->data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
+			pj_memcpy(&event->data.fmt_changed.new_fmt,
+				  &stream->info.codec_param->dec_fmt,
+				  sizeof(pjmedia_format));
+		    }
 		}
 	    }
 	}
@@ -1553,6 +1526,45 @@ static pj_status_t get_frame(pjmedia_port *port,
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	frame->size = 0;
 	return PJ_SUCCESS;
+    }
+
+    /* Report pending events. Do not publish the event while holding the
+     * jb_mutex as that would lead to deadlock. It should be safe to
+     * operate on fmt_event without the mutex because format change normally
+     * would only occur once during the start of the media.
+     */
+    if (stream->fmt_event.type != PJMEDIA_EVENT_NONE) {
+	pjmedia_event_fmt_changed_data *fmt_chg_data;
+
+	fmt_chg_data = &stream->fmt_event.data.fmt_changed;
+
+	/* Update stream info and decoding channel port info */
+	if (fmt_chg_data->dir == PJMEDIA_DIR_DECODING) {
+	    pjmedia_format_copy(&stream->info.codec_param->dec_fmt,
+				&fmt_chg_data->new_fmt);
+	    pjmedia_format_copy(&stream->dec->port.info.fmt,
+				&fmt_chg_data->new_fmt);
+
+	    /* Override the framerate to be 1.5x higher in the event
+	     * for the renderer.
+	     */
+	    fmt_chg_data->new_fmt.det.vid.fps.num *= 3;
+	    fmt_chg_data->new_fmt.det.vid.fps.num /= 2;
+	} else {
+	    pjmedia_format_copy(&stream->info.codec_param->enc_fmt,
+				&fmt_chg_data->new_fmt);
+	    pjmedia_format_copy(&stream->enc->port.info.fmt,
+				&fmt_chg_data->new_fmt);
+	}
+
+	dump_port_info(fmt_chg_data->dir==PJMEDIA_DIR_DECODING ?
+			stream->dec : stream->enc,
+		       "changed");
+
+	pjmedia_event_publish(NULL, port, &stream->fmt_event,
+			      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+
+	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
     }
 
     if (stream->miss_keyframe_event.type != PJMEDIA_EVENT_NONE) {
