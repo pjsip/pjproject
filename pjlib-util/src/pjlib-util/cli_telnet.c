@@ -1492,6 +1492,13 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     if (tfe->is_quitting)
         return PJ_FALSE;
 
+    if (status == PJ_EEOF) {
+	TRACE_((THIS_FILE, "Connection closed"));
+	if (sess)
+	    pj_cli_sess_end_session(&(sess->base));
+        return PJ_FALSE;
+    }
+
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	TRACE_((THIS_FILE, "Error on data read %d", status));
         return PJ_FALSE;
