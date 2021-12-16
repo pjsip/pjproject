@@ -417,7 +417,7 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     const pjmedia_rtcp_xr_rb_voip_mtc *rb_voip_mtc = NULL;
     const pjmedia_rtcp_xr_rb_header   *rb_hdr = (pjmedia_rtcp_xr_rb_header*) 
 						rtcp_xr->buf;
-    unsigned pkt_len, rb_len;
+    unsigned pkt_len, rb_len, ck_len;
 
     if (rtcp_xr->common.pt != RTCP_XR)
 	return;
@@ -427,32 +427,49 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     if ((pkt_len + 1) > (size / 4))
 	return;
 
+    ck_len = pkt_len - 1;
+
     /* Parse report rpt_types */
     while ((pj_int32_t*)rb_hdr < (pj_int32_t*)pkt + pkt_len)
     {	
+	unsigned bl_len;
 	rb_len = pj_ntohs((pj_uint16_t)rb_hdr->length);
 
 	/* Just skip any block with length == 0 (no report content) */
 	if (rb_len) {
 	    switch (rb_hdr->bt) {
 		case BT_RR_TIME:
-		    rb_rr_time = (pjmedia_rtcp_xr_rb_rr_time*) rb_hdr;
+		    bl_len = sizeof(*rb_rr_time) / 4;
+		    if (ck_len >= bl_len) {
+			rb_rr_time = (pjmedia_rtcp_xr_rb_rr_time*)rb_hdr;
+		    }
 		    break;
 		case BT_DLRR:
-		    rb_dlrr = (pjmedia_rtcp_xr_rb_dlrr*) rb_hdr;
+		    bl_len = sizeof(*rb_dlrr) / 4;
+		    if (ck_len >= bl_len) {
+			rb_dlrr = (pjmedia_rtcp_xr_rb_dlrr*)rb_hdr;
+		    }
 		    break;
 		case BT_STATS:
-		    rb_stats = (pjmedia_rtcp_xr_rb_stats*) rb_hdr;
+		    bl_len = sizeof(*rb_stats) / 4;
+		    if (ck_len >= bl_len) {
+			rb_stats = (pjmedia_rtcp_xr_rb_stats*)rb_hdr;
+		    }
 		    break;
 		case BT_VOIP_METRICS:
-		    rb_voip_mtc = (pjmedia_rtcp_xr_rb_voip_mtc*) rb_hdr;
+		    bl_len = sizeof(*rb_voip_mtc) / 4;
+		    if (ck_len >= bl_len) {
+			rb_voip_mtc = (pjmedia_rtcp_xr_rb_voip_mtc*)rb_hdr;
+		    }
 		    break;
 		default:
 		    break;
 	    }
 	}
+	++rb_len;
+	ck_len = ((rb_len) >= ck_len) ? 0 : (ck_len - rb_len);
 	rb_hdr = (pjmedia_rtcp_xr_rb_header*)
-		 ((pj_int32_t*)rb_hdr + rb_len + 1);
+		 ((pj_int32_t*)rb_hdr + rb_len);
     }
 
     /* Receiving RR Time */
