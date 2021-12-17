@@ -2130,8 +2130,12 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	goto on_return;
 
     /* Reschedule next timer */
-    delay.sec = acc->rfc5626_flowtmr?acc->rfc5626_flowtmr:
-				     acc->cfg.ka_interval;
+    if (acc->rfc5626_flowtmr) {
+        unsigned tmr_exp = (pj_rand() % 20) + 80;
+        delay.sec = acc->rfc5626_flowtmr * tmr_exp / 100;
+    } else {
+        delay.sec = acc->cfg.ka_interval;
+    }
     delay.msec = 0;
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, te, &delay);
     if (status == PJ_SUCCESS) {
@@ -2171,9 +2175,8 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	      pjsip_msg_find_hdr_by_name(param->rdata->msg_info.msg,
 					 &STR_FLOW_TIMER, hsr);
 
-	if (hsr) {
-	    unsigned tmr_exp = (pj_rand() % 20) + 80;
-	    acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue) * tmr_exp / 100;
+	if (hsr) {	    
+	    acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue);
 	}
 
 	/* Only do keep-alive if:
@@ -2228,8 +2231,12 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_timer.cb = &keep_alive_timer_cb;
 	acc->ka_timer.user_data = (void*)acc;
 
-	delay.sec = acc->rfc5626_flowtmr?acc->rfc5626_flowtmr:
-					 acc->cfg.ka_interval;
+	if (acc->rfc5626_flowtmr) {
+	    unsigned tmr_exp = (pj_rand() % 20) + 80;
+	    delay.sec = acc->rfc5626_flowtmr * tmr_exp / 100;
+	} else {
+	    delay.sec = acc->cfg.ka_interval;
+	}
 	delay.msec = 0;
 	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
 					    &delay);
