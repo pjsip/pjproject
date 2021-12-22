@@ -757,8 +757,15 @@ static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
 
     /* Check and get BYE reason */
     if (size > 8) {
+    	/* Make sure the BYE reason does not exceed:
+    	 * - the size of the available buffer
+    	 * - the declared reason's length
+    	 * - the actual packet size
+    	 */
 	reason.slen = PJ_MIN(sizeof(sess->stat.peer_sdes_buf_),
                              *((pj_uint8_t*)pkt+8));
+        reason.slen = PJ_MIN(reason.slen, size-9);
+
 	pj_memcpy(sess->stat.peer_sdes_buf_, ((pj_uint8_t*)pkt+9),
 		  reason.slen);
 	reason.ptr = sess->stat.peer_sdes_buf_;
