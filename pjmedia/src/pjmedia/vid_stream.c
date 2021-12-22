@@ -760,7 +760,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_status_t status;
-    unsigned ts_diff;
+    long ts_diff;
     pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
