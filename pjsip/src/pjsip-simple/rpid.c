@@ -204,6 +204,10 @@ static pj_status_t get_tuple_note(const pjpidf_pres *pres,
 	return PJSIP_SIMPLE_EBADRPID;
 
     nd_note = find_node(nd_tuple, "note");
+    /* If we cannot find <note> inside <tuple>, try to get it from root. */
+    if (!nd_note)
+    	nd_note = find_node(pres, "note");
+
     if (nd_note) {
 	pj_strdup(pool, &elem->note, &nd_note->content);
 	return PJ_SUCCESS;
