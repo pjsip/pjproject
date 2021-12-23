@@ -137,6 +137,7 @@ struct pjmedia_vid_stream
     pjmedia_ratio	     dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
     unsigned		     dec_delay_cnt; /**< Decoding delay (in frames).*/
+    unsigned		     dec_max_delay; /**< Decoding max delay (in ts).*/
     pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
                                                  to avoid deadlock	    */
     pjmedia_event            miss_keyframe_event;
@@ -759,6 +760,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_status_t status;
+    long ts_diff;
     pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
@@ -912,7 +914,8 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
     /* Quickly see if there may be a full picture in the jitter buffer, and
      * decode them if so. More thorough check will be done in decode_frame().
      */
-    if ((pj_ntohl(hdr->ts) != stream->dec_frame.timestamp.u32.lo) || hdr->m) {
+    ts_diff = pj_ntohl(hdr->ts) - stream->dec_frame.timestamp.u32.lo;
+    if (ts_diff != 0 || hdr->m) {
 	if (PJMEDIA_VID_STREAM_SKIP_PACKETS_TO_REDUCE_LATENCY) {
 	    /* Always decode whenever we have picture in jb and
 	     * overwrite already decoded picture if necessary
@@ -934,6 +937,17 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    }
 	    else if (stream->dec_frame.size == 0) {
 		can_decode = PJ_TRUE;
+	    }
+	    /* For video, checking for a full jbuf above is not very useful
+	     * since video jbuf has a rather large capacity (to accommodate
+	     * many chunks per frame) and thus can typically store frames
+	     * that are much longer than max latency/delay specified in jb_max
+	     * setting.
+	     * So we need to compare the last decoded frame's timestamp with
+	     * the current timestamp.
+	     */
+	    else if (ts_diff > stream->dec_max_delay) {
+	    	can_decode = PJ_TRUE;
 	    }
 
 	    if (can_decode) {
@@ -1902,16 +1916,20 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->dec_frame.buf = pj_pool_alloc(pool, stream->dec_max_size);
 
     /* Init jitter buffer parameters: */
-    frm_ptime	    = 1000 * vfd_enc->fps.denum / vfd_enc->fps.num;
+    frm_ptime	    = 1000 * vfd_dec->fps.denum / vfd_dec->fps.num;
     chunks_per_frm  = stream->frame_size / PJMEDIA_MAX_MRU;
     if (chunks_per_frm < MIN_CHUNKS_PER_FRM)
 	chunks_per_frm = MIN_CHUNKS_PER_FRM;
 
     /* JB max count, default 500ms */
-    if (info->jb_max >= frm_ptime)
+    if (info->jb_max >= frm_ptime) {
 	jb_max	    = info->jb_max * chunks_per_frm / frm_ptime;
-    else
+	stream->dec_max_delay = info->codec_info.clock_rate * info->jb_max /
+				1000;
+    } else {
 	jb_max	    = 500 * chunks_per_frm / frm_ptime;
+	stream->dec_max_delay = info->codec_info.clock_rate * 500 / 1000;
+    }
 
     /* JB min prefetch, default 1 frame */
     if (info->jb_min_pre >= frm_ptime)

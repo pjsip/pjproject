@@ -6853,7 +6853,7 @@ struct pjsua_media_config
     /**
      * Set maximum delay that can be accomodated by the jitter buffer msec.
      *
-     * Default: -1 (to use default stream settings, currently 360 msec)
+     * Default: -1 (to use default stream settings, currently 500 msec)
      */
     int			jb_max;
 
