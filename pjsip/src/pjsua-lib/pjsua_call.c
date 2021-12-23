@@ -570,7 +570,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	/* Upon failure to send first request, the invite
 	 * session would have been cleared.
 	 */
-	inv = NULL;
+	call->inv = inv = NULL;
 	goto on_error;
     }
 
@@ -599,10 +599,12 @@ on_error:
     if (dlg) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
+	call->async_call.dlg = NULL;
     }
 
     if (inv != NULL) {
 	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+	call->inv = NULL;
     }
 
     if (call_id != -1) {
@@ -1011,6 +1013,7 @@ on_error:
     if (dlg) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
+	call->async_call.dlg = NULL;
     }
 
     if (call_id != -1) {
