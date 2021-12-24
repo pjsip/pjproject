@@ -5402,6 +5402,11 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	call->opt = opt;
     }
 
+    if (async) {
+	call->rx_reinv_async = async;
+	goto on_return;
+    }
+
     /* Re-init media for the new remote offer before creating SDP */
     status = apply_call_setting(call, &call->opt, offer);
     if (status != PJ_SUCCESS)
@@ -5412,11 +5417,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
-	goto on_return;
-    }
-
-    if (async) {
-	call->rx_reinv_async = async;
 	goto on_return;
     }
 
