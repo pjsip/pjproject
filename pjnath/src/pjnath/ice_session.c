@@ -1399,6 +1399,8 @@ static void update_comp_check(pj_ice_sess *ice, unsigned comp_id,
 {
     pj_ice_sess_comp *comp;
 
+    pj_assert(!ice->is_complete);
+
     comp = find_comp(ice, comp_id);
     if (comp->valid_check == NULL) {
 	comp->valid_check = check;
@@ -2689,6 +2691,15 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	return;
     }
 
+    /* Check if ICE has been completed */
+    if (ice->is_complete) {
+	LOG4((ice->obj_name,
+	     "Ignored completed STUN request after ICE nego has been "
+	     "completed!"));
+	pj_grp_lock_release(ice->grp_lock);
+	return;
+    }
+
     /* Verify check (check ID may change as trickle ICE re-sort the list */
     if (tdata != check->tdata) {
 	/* Okay, it was re-sorted, lookup using lcand & rcand */
@@ -3271,6 +3282,13 @@ static void handle_incoming_check(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand = NULL;
     pj_ice_sess_cand *rcand;
     unsigned i;
+
+    /* Check if ICE has been completed */
+    if (ice->is_complete) {
+	LOG4((ice->obj_name,
+	     "Ignored incoming check after ICE nego has been completed!"));
+	return;
+    }
 
     comp = find_comp(ice, rcheck->comp_id);
 
