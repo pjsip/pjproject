@@ -206,7 +206,7 @@ static int test_inner(void)
     rc = pj_init();
     if (rc != 0) {
 	app_perror("pj_init() error!!", rc);
-	return rc;
+	goto on_return;
     }
 
     pj_dump_config();
