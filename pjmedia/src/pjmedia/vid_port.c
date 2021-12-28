@@ -742,6 +742,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_subscribe_event(
     return pjmedia_event_subscribe(NULL, &client_port_event_cb, vp, port);
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_vid_port_unsubscribe_event(
+						pjmedia_vid_port *vp,
+						pjmedia_port *port)
+{
+    PJ_ASSERT_RETURN(vp && port, PJ_EINVAL);
+
+    /* Unsubscribe to port's events */
+    return pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp, port);
+}
+
+
 PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
 					      pjmedia_port *port,
 					      pj_bool_t destroy)

@@ -1333,6 +1333,7 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 {
     pjmedia_vid_stream *strm = call_med->strm.v.stream;
     pjmedia_rtcp_stat stat;
+    unsigned num_locks = 0;
 
     pj_assert(call_med->type == PJMEDIA_TYPE_VIDEO);
 
@@ -1344,7 +1345,11 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     
     pjmedia_vid_stream_send_rtcp_bye(strm);
 
-    PJSUA_LOCK();
+    /* Release locks before unsubscribing, to avoid deadlock. */
+    while (PJSUA_LOCK_IS_LOCKED()) {
+        num_locks++;
+        PJSUA_UNLOCK();
+    }
 
     /* Unsubscribe events first, otherwise the event callbacks
      * can be called and access already destroyed objects.
@@ -1353,19 +1358,37 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
 
 	/* Unsubscribe event */
-	media_event_unsubscribe(NULL, &call_media_on_event, call_med,
-				w->vp_cap);
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+				  w->vp_cap);
     }
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
+    	pj_status_t status;
+    	pjmedia_port *media_port;
 	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
 
 	/* Unsubscribe event, but stop the render first */
 	pjmedia_vid_port_stop(w->vp_rend);
-	media_event_unsubscribe(NULL, &call_media_on_event, call_med,
-                                w->vp_rend);
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                  w->vp_rend);
+
+	/* Retrieve stream decoding port */
+	status = pjmedia_vid_stream_get_port(strm, PJMEDIA_DIR_DECODING,
+					     &media_port);
+	if (status == PJ_SUCCESS) {
+	    pjmedia_event_unsubscribe(NULL, &call_media_on_event,
+                                    call_med, media_port);
+
+	    pjmedia_vid_port_unsubscribe_event(w->vp_rend, media_port);
+        }
     }
     /* Unsubscribe from video stream events */
-    media_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
+    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med, strm);
+
+    /* Re-acquire the locks. */
+    for (; num_locks > 0; num_locks--)
+        PJSUA_LOCK();
+
+    PJSUA_LOCK();
 
     /* Now that we have unsubscribed from all events, we no longer
      * receive future events. But we may have scheduled some timers
