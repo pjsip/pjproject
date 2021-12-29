@@ -378,17 +378,23 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pconst.pjsip_TOKEN_SPEC, TOKEN);
 
+    /* Token is allowed to have '%' so we do not need this. */
+    /*
     status = pj_cis_dup(&pconst.pjsip_TOKEN_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_del_str(&pconst.pjsip_TOKEN_SPEC_ESC, "%");
+    */
 
     status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC, &pconst.pjsip_TOKEN_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, "[:]");
 
+    /* Token is allowed to have '%' */
+    /*
     status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC_ESC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC_ESC, "[:]");
+    */
 
     status = pj_cis_dup(&pconst.pjsip_HOST_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
@@ -1210,7 +1216,11 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 			     unsigned option)
 {
     /* pname */
-    parser_get_and_unescape(scanner, pool, spec, esc_spec, pname);
+    if (!esc_spec) {
+    	pj_scan_get(scanner, spec, pname);
+    } else {
+	parser_get_and_unescape(scanner, pool, spec, esc_spec, pname);
+    }
 
     /* init pvalue */
     pvalue->ptr = NULL;
@@ -1240,7 +1250,12 @@ static void parse_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 		// pj_scan_get_until_ch(scanner, ']', pvalue);
 		// pj_scan_get_char(scanner);
 	    } else if(pj_cis_match(spec, *scanner->curptr)) {
-		parser_get_and_unescape(scanner, pool, spec, esc_spec, pvalue);
+	    	if (!esc_spec) {
+    		    pj_scan_get(scanner, spec, pvalue);
+    		} else {
+		    parser_get_and_unescape(scanner, pool, spec, esc_spec,
+		    			    pvalue);
+		}
 	    }
 	}
     }
@@ -1252,7 +1267,7 @@ PJ_DEF(void) pjsip_parse_param_imp(pj_scanner *scanner, pj_pool_t *pool,
 			     	   unsigned option)
 {
     parse_param_imp(scanner, pool, pname, pvalue, &pconst.pjsip_TOKEN_SPEC,
-		    &pconst.pjsip_TOKEN_SPEC_ESC, option);
+		    NULL, option);
 }
 
 
@@ -2168,7 +2183,7 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	pj_scan_get_char(scanner);
 	parse_param_imp(scanner, pool, &pname, &pvalue,
 			&pconst.pjsip_VIA_PARAM_SPEC,
-			&pconst.pjsip_VIA_PARAM_SPEC_ESC,
+			NULL,
 			0);
 
 	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
