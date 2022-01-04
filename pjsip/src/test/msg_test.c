@@ -953,7 +953,7 @@ static int hdr_test_subject_utf(pjsip_hdr *h);
 
 
 #define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
-#define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab:cd;p3"
+#define GENERIC_PARAM_PARSED "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
 #define PARAM_CHAR	     "][/:&+$"
 #define SIMPLE_ADDR_SPEC     "sip:host"
 #define ADDR_SPEC	     SIMPLE_ADDR_SPEC ";"PARAM_CHAR"="PARAM_CHAR ";p1=\";\""
@@ -1401,7 +1401,7 @@ static int generic_param_test(pjsip_param *param_head)
     param = param->next;
     if (pj_strcmp2(&param->name, "p2"))
 	return -956;
-    if (pj_strcmp2(&param->value, "ab:cd"))
+    if (pj_strcmp2(&param->value, "ab%3acd"))
 	return -957;
 
     param = param->next;
@@ -1621,7 +1621,7 @@ static int hdr_test_content_type(pjsip_hdr *h)
     prm = prm->next;
     if (prm == &hdr->media.param) return -1960;
     if (pj_strcmp2(&prm->name, "p2")) return -1961;
-    if (pj_strcmp2(&prm->value, "ab:cd")) return -1962;
+    if (pj_strcmp2(&prm->value, "ab%3acd")) return -1962;
 
     prm = prm->next;
     if (prm == &hdr->media.param) return -1970;
