@@ -939,6 +939,7 @@ static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
     }
     if (idx == -1) {
 	*p_codec = NULL;
+	pj_mutex_unlock(ipp_factory.mutex);
 	return PJMEDIA_CODEC_EFAILED;
     }
 

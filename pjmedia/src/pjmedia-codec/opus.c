@@ -723,6 +723,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
 			    OPUS_APPLICATION_VOIP);
     if (err != OPUS_OK) {
 	PJ_LOG(2, (THIS_FILE, "Unable to create encoder"));
+	pj_mutex_unlock (opus_data->mutex);
 	return PJMEDIA_CODEC_EFAILED;
     }
     
@@ -767,6 +768,7 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
 			     attr->info.channel_cnt);
     if (err != OPUS_OK) {
 	PJ_LOG(2, (THIS_FILE, "Unable to initialize decoder"));
+	pj_mutex_unlock (opus_data->mutex);
 	return PJMEDIA_CODEC_EFAILED;
     }
 

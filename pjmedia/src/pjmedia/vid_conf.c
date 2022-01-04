@@ -304,6 +304,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "unrecognized format %04X",
 				 port->info.fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return PJMEDIA_EBADFMT;
 	}
 
@@ -314,6 +315,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "Failed to apply format %04X",
 				 port->info.fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return status;
 	}
 	if (port->put_frame) {
@@ -331,28 +333,41 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 			    pj_pool_zalloc(pool,
 					   vid_conf->opt.max_slot_cnt *
 					   sizeof(unsigned));
-    PJ_ASSERT_RETURN(cport->listener_slots, PJ_ENOMEM);
+    if (!cport->listener_slots) {	
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create transmitter array */
     cport->transmitter_slots = (unsigned*)
 			       pj_pool_zalloc(pool,
 					      vid_conf->opt.max_slot_cnt *
-					      sizeof(unsigned));
-    PJ_ASSERT_RETURN(cport->transmitter_slots, PJ_ENOMEM);
+					      sizeof(unsigned));    
+    if (!cport->transmitter_slots) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create pointer-to-render_state array */
     cport->render_states = (render_state**)
 			   pj_pool_zalloc(pool,
 					  vid_conf->opt.max_slot_cnt *
 					  sizeof(render_state*));
-    PJ_ASSERT_RETURN(cport->render_states, PJ_ENOMEM);
+
+    if (!cport->render_states) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create pointer-to-render-pool array */
     cport->render_pool = (pj_pool_t**)
 			 pj_pool_zalloc(pool,
 					vid_conf->opt.max_slot_cnt *
-					sizeof(pj_pool_t*));
-    PJ_ASSERT_RETURN(cport->render_pool, PJ_ENOMEM);
+					sizeof(pj_pool_t*));    
+    if (!cport->render_pool) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Register the conf port. */
     vid_conf->ports[index] = cport;
@@ -420,6 +435,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_remove_port( pjmedia_vid_conf *vid_conf,
 	status = pjmedia_clock_stop(vid_conf->clock);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4, (THIS_FILE, status, "Failed to stop clock"));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return status;
 	}
     }
@@ -584,6 +600,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 	    status = pjmedia_clock_start(vid_conf->clock);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(4, (THIS_FILE, status, "Failed to start clock"));
+		pj_mutex_unlock(vid_conf->mutex);
 		return status;
 	    }
 	}
@@ -673,6 +690,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	    status = pjmedia_clock_stop(vid_conf->clock);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(4, (THIS_FILE, status, "Failed to stop clock"));
+		pj_mutex_unlock(vid_conf->mutex);
 		return status;
 	    }
 	}
