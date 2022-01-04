@@ -1267,6 +1267,9 @@ PJ_DEF(void) pjsip_parse_param_imp(pj_scanner *scanner, pj_pool_t *pool,
 			     	   unsigned option)
 {
     parse_param_imp(scanner, pool, pname, pvalue, &pconst.pjsip_TOKEN_SPEC,
+		    // Token does not need to be unescaped.
+		    // Refer to PR #2933.
+		    // &pconst.pjsip_TOKEN_SPEC_ESC,
 		    NULL, option);
 }
 
@@ -2183,6 +2186,9 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	pj_scan_get_char(scanner);
 	parse_param_imp(scanner, pool, &pname, &pvalue,
 			&pconst.pjsip_VIA_PARAM_SPEC,
+		    	// Token does not need to be unescaped.
+		     	// Refer to PR #2933.
+		    	// &pconst.pjsip_VIA_PARAM_SPEC_ESC,
 			NULL,
 			0);
 
