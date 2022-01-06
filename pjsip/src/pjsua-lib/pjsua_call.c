@@ -5056,7 +5056,7 @@ static void call_disconnect( pjsip_inv_session *inv,
     pj_status_t status;
 
     status = pjsip_inv_end_session(inv, code, NULL, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS || !tdata)
 	return;
 
 #if DISABLED_FOR_TICKET_1185
