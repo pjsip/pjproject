@@ -706,7 +706,7 @@ static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr,
     return p-buf;
 }
 
-static int print_media_desc( pjmedia_sdp_media *m, char *buf, int len)
+static int print_media_desc(const pjmedia_sdp_media *m, char *buf, int len)
 {
     char *p = buf;
     char *end = buf+len;

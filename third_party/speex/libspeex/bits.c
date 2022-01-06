@@ -106,7 +106,7 @@ EXPORT void speex_bits_rewind(SpeexBits *bits)
    bits->overflow=0;
 }
 
-EXPORT void speex_bits_read_from(SpeexBits *bits, char *chars, int len)
+EXPORT void speex_bits_read_from(SpeexBits *bits, const char *chars, int len)
 {
    int i;
    int nchars = len / BYTES_PER_CHAR;
@@ -153,7 +153,7 @@ static void speex_bits_flush(SpeexBits *bits)
    bits->charPtr=0;
 }
 
-EXPORT void speex_bits_read_whole_bytes(SpeexBits *bits, char *chars, int nbytes)
+EXPORT void speex_bits_read_whole_bytes(SpeexBits *bits, const char *chars, int nbytes)
 {
    int i,pos;
    int nchars = nbytes/BYTES_PER_CHAR;

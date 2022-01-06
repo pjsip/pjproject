@@ -184,6 +184,8 @@ static pj_status_t circ_write(circ_buf_t *cb,
  *******************************************************************
  */
 
+#ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
+
 /* Check IP address version. */
 static int get_ip_addr_ver(const pj_str_t *host)
 {
@@ -202,7 +204,6 @@ static int get_ip_addr_ver(const pj_str_t *host)
     return 0;
 }
 
-#ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
 /* Close sockets */
 static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 {
@@ -919,8 +920,8 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     pj_ssl_sock_t *ssock;
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
     pj_activesock_cb asock_cb;
-#endif
     pj_activesock_cfg asock_cfg;
+#endif
     unsigned i;
     pj_status_t status;
 
