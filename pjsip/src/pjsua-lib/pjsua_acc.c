@@ -2076,6 +2076,24 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 	      acc->index, uri_cnt));
 }
 
+/* Get random floating number. */
+static float get_float_rand(float min, float max)
+{
+    if (max == min) {
+	return min;
+    } else if (min < max) {
+	pj_time_val now;
+	float exp;
+
+	pj_gettimeofday(&now);
+	pj_srand((unsigned)now.sec);
+    
+	exp = ((float)(pj_rand() & RAND_MAX) / RAND_MAX);
+	return min + (exp * (max - min));    
+    }
+    return 0;
+}
+
 
 /* Keep alive timer callback */
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
@@ -2085,6 +2103,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     pj_time_val delay;
     char addrtxt[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
+    float rand_delay;
 
     PJ_UNUSED_ARG(th);
 
@@ -2129,12 +2148,12 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     if (acc->cfg.ka_interval == 0)
 	goto on_return;
 
+    rand_delay = get_float_rand(0.8f, 1.0f);
     /* Reschedule next timer */
-    if (acc->rfc5626_flowtmr) {
-        unsigned tmr_exp = (pj_rand() % 20) + 80;
-        delay.sec = acc->rfc5626_flowtmr * tmr_exp / 100;
+    if (acc->rfc5626_flowtmr) {        
+        delay.sec = (unsigned)(acc->rfc5626_flowtmr * rand_delay);
     } else {
-        delay.sec = acc->cfg.ka_interval;
+        delay.sec = (unsigned)(acc->cfg.ka_interval * rand_delay);
     }
     delay.msec = 0;
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, te, &delay);
@@ -2168,6 +2187,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	pj_time_val delay;
 	pj_status_t status;
 	pjsip_generic_string_hdr *hsr = NULL;
+	float rand_delay;
 
 	static const pj_str_t STR_FLOW_TIMER  = { "Flow-Timer", 10 };
 
@@ -2231,11 +2251,11 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_timer.cb = &keep_alive_timer_cb;
 	acc->ka_timer.user_data = (void*)acc;
 
+	rand_delay = get_float_rand(0.8f, 1.0f);
 	if (acc->rfc5626_flowtmr) {
-	    unsigned tmr_exp = (pj_rand() % 20) + 80;
-	    delay.sec = acc->rfc5626_flowtmr * tmr_exp / 100;
+	    delay.sec = (unsigned)(acc->rfc5626_flowtmr * rand_delay);
 	} else {
-	    delay.sec = acc->cfg.ka_interval;
+	    delay.sec = (unsigned)(acc->cfg.ka_interval * rand_delay);
 	}
 	delay.msec = 0;
 	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
