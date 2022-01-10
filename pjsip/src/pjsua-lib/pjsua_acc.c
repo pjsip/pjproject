@@ -2076,7 +2076,6 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 	      acc->index, uri_cnt));
 }
 
-
 /* Keep alive timer callback */
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 {
@@ -2085,6 +2084,8 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     pj_time_val delay;
     char addrtxt[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
+    unsigned ka_timer;
+    unsigned lower_bound;
 
     PJ_UNUSED_ARG(th);
 
@@ -2129,9 +2130,14 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     if (acc->cfg.ka_interval == 0)
 	goto on_return;
 
-    /* Reschedule next timer */
-    delay.sec = acc->cfg.ka_interval;
+    ka_timer = acc->rfc5626_flowtmr ? acc->rfc5626_flowtmr :
+				      acc->cfg.ka_interval;
+
+    lower_bound = (unsigned)((float)ka_timer * 0.8f);
+    delay.sec = pj_rand() % (ka_timer - lower_bound) + lower_bound;
     delay.msec = 0;
+
+    /* Reschedule next timer */
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, te, &delay);
     if (status == PJ_SUCCESS) {
 	te->id = PJ_TRUE;
@@ -2162,8 +2168,22 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
     if (start) {
 	pj_time_val delay;
 	pj_status_t status;
+	pjsip_generic_string_hdr *hsr = NULL;
+	unsigned ka_timer;
+	unsigned lower_bound;
+
+	static const pj_str_t STR_FLOW_TIMER  = { "Flow-Timer", 10 };
+
+	hsr = (pjsip_generic_string_hdr*)
+	      pjsip_msg_find_hdr_by_name(param->rdata->msg_info.msg,
+					 &STR_FLOW_TIMER, hsr);
+
+	if (hsr) {	    
+	    acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue);
+	}
 
 	/* Only do keep-alive if:
+	 *  - REGISTER response contain Flow-Timer header, otherwise
 	 *  - ka_interval is not zero in the account, and
 	 *  - transport is UDP.
 	 *
@@ -2178,9 +2198,9 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	 * is done by the transport layer.
 	 */
 	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
-	    acc->cfg.ka_interval == 0 ||
-	    (param->rdata->tp_info.transport->key.type &  
-	     ~PJSIP_TRANSPORT_IPV6)!= PJSIP_TRANSPORT_UDP)
+	    ((acc->cfg.ka_interval == 0) && (acc->rfc5626_flowtmr == 0)) ||
+	    (!hsr && ((param->rdata->tp_info.transport->key.type &
+		       ~PJSIP_TRANSPORT_IPV6) != PJSIP_TRANSPORT_UDP)))
 	{
 	    /* Keep alive is not necessary */
 	    return;
@@ -2214,7 +2234,11 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_timer.cb = &keep_alive_timer_cb;
 	acc->ka_timer.user_data = (void*)acc;
 
-	delay.sec = acc->cfg.ka_interval;
+	ka_timer = acc->rfc5626_flowtmr ? acc->rfc5626_flowtmr :
+					  acc->cfg.ka_interval;
+
+	lower_bound = (unsigned)((float)ka_timer * 0.8f);
+	delay.sec = pj_rand() % (ka_timer - lower_bound) + lower_bound;
 	delay.msec = 0;
 	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
 					    &delay);
@@ -2227,7 +2251,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 			      addr, sizeof(addr), 1);
 	    PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
 				 "destination:%s, interval:%ds",
-				 acc->index, addr, acc->cfg.ka_interval));
+				 acc->index, addr, delay.sec));
 	} else {
 	    acc->ka_timer.id = PJ_FALSE;
 	    pjsip_transport_dec_ref(acc->ka_transport);
@@ -2367,6 +2391,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	    acc->rfc5626_flowtmr = 0;
 	
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2386,6 +2411,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
 	acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	acc->rfc5626_flowtmr = 0;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2402,6 +2428,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	    acc->rfc5626_flowtmr = 0;
 
 	    /* Reset pointer to registration transport */
 	    //acc->auto_rereg.reg_tp = NULL;
