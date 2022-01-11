@@ -1492,15 +1492,9 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
     if (tfe->is_quitting)
         return PJ_FALSE;
 
-    if (status == PJ_EEOF) {
-	TRACE_((THIS_FILE, "Connection closed"));
-	if (sess)
-	    pj_cli_sess_end_session(&(sess->base));
-        return PJ_FALSE;
-    }
-
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	TRACE_((THIS_FILE, "Error on data read %d", status));
+	pj_cli_sess_end_session(&sess->base);
         return PJ_FALSE;
     }
 
@@ -1512,8 +1506,15 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
 	    if (*cdata == 0 || *cdata == '\n') {		
 		pj_mutex_unlock(sess->smutex);
 		is_valid = handle_return(sess);
-		if (!is_valid)
+		if (!is_valid) {
+		    // handle_return() can only return PJ_FALSE if
+		    // pj_cli_sess_exec() returns PJ_CLI_EEXIT,
+		    // in which case CLI session has been ended by
+		    // cmd_handler() of CLI_CMD_EXIT.
+		    //
+		    // pj_cli_sess_end_session(&sess->base);
 		    return PJ_FALSE;
+		}
 		pj_mutex_lock(sess->smutex);
 	    }
 	    break;
