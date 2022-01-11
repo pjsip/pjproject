@@ -311,9 +311,14 @@ static int aviplay(pj_pool_t *pool, const char *fname)
 	    
             /* Alloc encoding buffer */
             enc_buf_size =  codec_param.dec_fmt.det.vid.size.w *
-	    codec_param.dec_fmt.det.vid.size.h * 4
-	    + 16; /*< padding, just in case */
-            enc_buf = pj_pool_alloc(pool,enc_buf_size);
+	    codec_param.dec_fmt.det.vid.size.h * 4;
+            enc_buf = pj_pool_alloc(pool, enc_buf_size +
+            			    128 /*< padding, required for vid codecs
+            			    	    such as ffmpeg. Must be >=
+            			    	    AV_INPUT_BUFFER_PADDING_SIZE.
+            			    	    And must not be included in
+            			    	    the enc_buf_size calculation
+            			    	    above. */);
 	    
             /* Init codec port */
             pj_bzero(&codec_port, sizeof(codec_port));
