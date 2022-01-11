@@ -356,13 +356,13 @@ PJ_DEF(pjsip_msg*) pjsip_msg_clone( pj_pool_t *pool, const pjsip_msg *src)
     return dst;
 }
 
-PJ_DEF(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg, 
-				   pjsip_hdr_e hdr_type, const void *start)
+PJ_DEF(void*)  pjsip_hdr_find( const void *hdr_list,
+			       pjsip_hdr_e hdr_type, const void *start)
 {
-    const pjsip_hdr *hdr=(const pjsip_hdr*) start, *end=&msg->hdr;
+    const pjsip_hdr *hdr=(const pjsip_hdr*) start, *end=hdr_list;
 
     if (hdr == NULL) {
-	hdr = msg->hdr.next;
+	hdr = end->next;
     }
     for (; hdr!=end; hdr = hdr->next) {
 	if (hdr->type == hdr_type)
@@ -371,14 +371,14 @@ PJ_DEF(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg,
     return NULL;
 }
 
-PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg, 
-					   const pj_str_t *name, 
-					   const void *start)
+PJ_DEF(void*)  pjsip_hdr_find_by_name( const void *hdr_list,
+				       const pj_str_t *name,
+				       const void *start)
 {
-    const pjsip_hdr *hdr=(const pjsip_hdr*)start, *end=&msg->hdr;
+    const pjsip_hdr *hdr=(const pjsip_hdr*) start, *end=hdr_list;
 
     if (hdr == NULL) {
-	hdr = msg->hdr.next;
+	hdr = end->next;
     }
     for (; hdr!=end; hdr = hdr->next) {
 	if (pj_stricmp(&hdr->name, name) == 0)
@@ -387,15 +387,15 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
     return NULL;
 }
 
-PJ_DEF(void*)  pjsip_msg_find_hdr_by_names( const pjsip_msg *msg, 
-					    const pj_str_t *name, 
-					    const pj_str_t *sname,
-					    const void *start)
+PJ_DEF(void*)  pjsip_hdr_find_by_names( const void *hdr_list,
+					const pj_str_t *name,
+					const pj_str_t *sname,
+					const void *start)
 {
-    const pjsip_hdr *hdr=(const pjsip_hdr*)start, *end=&msg->hdr;
+    const pjsip_hdr *hdr=(const pjsip_hdr*) start, *end=hdr_list;
 
     if (hdr == NULL) {
-	hdr = msg->hdr.next;
+	hdr = end->next;
     }
     for (; hdr!=end; hdr = hdr->next) {
 	if (pj_stricmp(&hdr->name, name) == 0)
@@ -404,6 +404,27 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_names( const pjsip_msg *msg,
 	    return (void*)hdr;
     }
     return NULL;
+}
+
+PJ_DEF(void*)  pjsip_msg_find_hdr( const pjsip_msg *msg,
+				   pjsip_hdr_e hdr_type, const void *start)
+{
+    return pjsip_hdr_find(&msg->hdr, hdr_type, start);
+}
+
+PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
+					   const pj_str_t *name,
+					   const void *start)
+{
+    return pjsip_hdr_find_by_name(&msg->hdr, name, start);
+}
+
+PJ_DEF(void*)  pjsip_msg_find_hdr_by_names( const pjsip_msg *msg,
+					    const pj_str_t *name,
+					    const pj_str_t *sname,
+					    const void *start)
+{
+    return pjsip_hdr_find_by_names(&msg->hdr, name, sname, start);
 }
 
 PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg, 
