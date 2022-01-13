@@ -1022,6 +1022,24 @@ struct AccountMediaConfig : public PersistentObject
      */
     RtcpFbConfig	rtcpFbConfig;
 
+    /**
+     * Use loopback media transport. This may be useful if application
+     * doesn't want PJSUA2 to create real media transports/sockets, such as
+     * when using third party media.
+     *
+     * Default: false
+     */
+    bool		useLoopMedTp;
+
+    /**
+     * Enable local loopback when useLoopMedTp is set to TRUE.
+     * If enabled, packets sent to the transport will be sent back to
+     * the streams attached to the transport.
+     *
+     * Default: false
+     */
+    bool		enableLoopback;
+
 public:
     /**
      * Default constructor

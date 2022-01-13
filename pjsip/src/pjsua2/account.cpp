@@ -463,6 +463,8 @@ void AccountMediaConfig::readObject(const ContainerNode &node)
     NODE_READ_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_READ_OBJ     ( this_node, transportConfig);
     NODE_READ_BOOL    ( this_node, rtcpMuxEnabled);
+    NODE_READ_BOOL    ( this_node, useLoopMedTp);
+    NODE_READ_BOOL    ( this_node, enableLoopback);
 }
 
 void AccountMediaConfig::writeObject(ContainerNode &node) const
@@ -478,6 +480,8 @@ void AccountMediaConfig::writeObject(ContainerNode &node) const
     NODE_WRITE_NUM_T   ( this_node, pjsua_ipv6_use, ipv6Use);
     NODE_WRITE_OBJ     ( this_node, transportConfig);
     NODE_WRITE_BOOL    ( this_node, rtcpMuxEnabled);
+    NODE_WRITE_BOOL    ( this_node, useLoopMedTp);
+    NODE_WRITE_BOOL    ( this_node, enableLoopback);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -685,6 +689,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.ipv6_media_use		= mediaConfig.ipv6Use;
     ret.enable_rtcp_mux		= mediaConfig.rtcpMuxEnabled;
     ret.rtcp_fb_cfg		= mediaConfig.rtcpFbConfig.toPj();
+    ret.use_loop_med_tp		= mediaConfig.useLoopMedTp;
+    ret.enable_loopback		= mediaConfig.enableLoopback;
 
     // AccountVideoConfig
     ret.vid_in_auto_show	= videoConfig.autoShowIncoming;
@@ -875,6 +881,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     mediaConfig.ipv6Use		= prm.ipv6_media_use;
     mediaConfig.rtcpMuxEnabled	= PJ2BOOL(prm.enable_rtcp_mux);
     mediaConfig.rtcpFbConfig.fromPj(prm.rtcp_fb_cfg);
+    mediaConfig.useLoopMedTp	= PJ2BOOL(prm.use_loop_med_tp);
+    mediaConfig.enableLoopback	= PJ2BOOL(prm.enable_loopback);
 
     // AccountVideoConfig
     videoConfig.autoShowIncoming 	= PJ2BOOL(prm.vid_in_auto_show);
