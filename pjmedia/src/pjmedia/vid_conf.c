@@ -870,34 +870,6 @@ static void cleanup_render_state(vconf_port *cp,
     }
 }
 
-static void init_buf(vconf_port* cp, void *buf, pj_size_t buf_size)
-{
-    pjmedia_format_id fmt = cp->port->info.fmt.id;
-    const pjmedia_video_format_info *vfi;
-    pjmedia_video_apply_fmt_param vafp;
-
-    vfi = pjmedia_get_video_format_info(NULL, fmt);
-    pj_bzero(&vafp, sizeof(vafp));
-    vafp.size = cp->port->info.fmt.det.vid.size;
-    (*vfi->apply_fmt)(vfi, &vafp);
-
-    if (buf_size < vafp.framebytes) return;
-
-    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	pj_memset(buf, 0, vafp.framebytes);
-    } else if (fmt == PJMEDIA_FORMAT_I420 || fmt == PJMEDIA_FORMAT_YV12) {
-	pj_memset(buf, 16, vafp.plane_bytes[0]);
-	pj_memset((pj_uint8_t*)buf + vafp.plane_bytes[0], 0x80,
-		  vafp.plane_bytes[1] * 2);
-    } else if (fmt == PJMEDIA_FORMAT_YUY2) {
-	pj_uint8_t *ptr = (pj_uint8_t *)buf;
-	unsigned i;
-        
-	for (i = vafp.framebytes / 2; i > 0; i--) {
-	    *(ptr++) = 0x10; *(ptr++) = 0x80;
-	}
-    }
-}
 
 /* This function will do:
  * - Recalculate layout setting, i.e: get video pos and size
@@ -918,12 +890,24 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 
     /* Initialize sink buffer with black color. */
     if (cp->port->put_frame) {
-    	init_buf(cp, cp->put_buf, cp->put_buf_size);
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->put_buf,
+						 cp->put_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Failed to init sink buffer with black"));
+	}
     }
 
     /* Initialize source buffer with black color. */
     if (cp->port->get_frame) {
-    	init_buf(cp, cp->get_buf, cp->get_buf_size);
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->get_buf,
+						 cp->get_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Failed to init source buffer with black"));
+	}
     }
 
     /* Nothing to render, just return */

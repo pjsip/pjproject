@@ -790,33 +790,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
 	goto on_error;
 
     /* Initialize buffer with black color */
-    {
-        const pjmedia_video_format_info *vfi;
-        const pjmedia_format *fmt;
-	pjmedia_video_apply_fmt_param vafp;
-	pjmedia_frame frame;
-
-	pj_bzero(&frame, sizeof(pjmedia_frame));
-	frame.buf = vp->frm_buf->buf;
-	frame.size = vp->frm_buf_size;
-
-	fmt = &vp->conv.conv_param.src;
-	status = get_vfi(fmt, &vfi, &vafp);
-	if (status == PJ_SUCCESS && frame.buf) {
-	    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
-	    pj_assert(frame.size >= vafp.framebytes);
-	    frame.size = vafp.framebytes;
-	    
-	    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	    	pj_memset(frame.buf, 0, vafp.framebytes);
-	    } else if (fmt->id == PJMEDIA_FORMAT_I420 ||
-	  	       fmt->id == PJMEDIA_FORMAT_YV12)
-	    {	    	
-	    	pj_memset(frame.buf, 16, vafp.plane_bytes[0]);
-	    	pj_memset((pj_uint8_t*)frame.buf + vafp.plane_bytes[0],
-		      	  0x80, vafp.plane_bytes[1] * 2);
-	    }
-        }
+    status = pjmedia_video_format_fill_black(&vp->conv.conv_param.src,
+					     vp->frm_buf->buf,
+					     vp->frm_buf_size);
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(4,(THIS_FILE, status, "Failed to init buffer with black"));
     }
 
     if (vp->clock) {
