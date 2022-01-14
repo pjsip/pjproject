@@ -895,7 +895,7 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 						 cp->put_buf_size);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, status,
-			 "Failed to init sink buffer with black"));
+			 "Warning: failed to init sink buffer with black"));
 	}
     }
 
@@ -906,7 +906,7 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
 						 cp->get_buf_size);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, status,
-			 "Failed to init source buffer with black"));
+			 "Warning: failed to init source buffer with black"));
 	}
     }
 

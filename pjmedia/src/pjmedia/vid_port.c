@@ -672,6 +672,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
         vp->frm_buf->size = vp->frm_buf_size;
         vp->frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
 
+	/* Initialize buffer with black color */
+	status = pjmedia_video_format_fill_black(&vp->conv.conv_param.src,
+						 vp->frm_buf->buf,
+						 vp->frm_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: failed to init buffer with black"));
+	}
+
         status = pj_mutex_create_simple(pool, vp->dev_name.ptr,
                                         &vp->frm_mutex);
         if (status != PJ_SUCCESS)
@@ -785,17 +794,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vp)
 
     PJ_ASSERT_RETURN(vp, PJ_EINVAL);
 
-    status = pjmedia_vid_dev_stream_start(vp->strm);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
     /* Initialize buffer with black color */
     status = pjmedia_video_format_fill_black(&vp->conv.conv_param.src,
 					     vp->frm_buf->buf,
 					     vp->frm_buf_size);
     if (status != PJ_SUCCESS) {
-        PJ_PERROR(4,(THIS_FILE, status, "Failed to init buffer with black"));
+        PJ_PERROR(4,(THIS_FILE, status,
+		     "Warning: failed to init buffer with black"));
     }
+
+    status = pjmedia_vid_dev_stream_start(vp->strm);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     if (vp->clock) {
 	status = pjmedia_clock_start(vp->clock);
