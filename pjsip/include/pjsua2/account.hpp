@@ -2009,7 +2009,6 @@ public:
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-
 private:
     friend class Endpoint;
     friend class Buddy;
@@ -2025,7 +2024,6 @@ private:
      * This method is used by Buddy::~Buddy().
      */
     void removeBuddy(Buddy *buddy);
-
 
 private:
     pjsua_acc_id 	 id;

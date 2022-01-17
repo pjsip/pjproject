@@ -129,6 +129,86 @@ void SslCertInfo::fromPj(const pj_ssl_cert_info &info)
     }
 }
 
+void DigestCredential::fromPj(const pjsip_digest_credential &prm)
+{
+    realm = pj2Str(prm.realm);
+    pjsip_param *p = (pjsip_param*)prm.other_param.next;
+    while (p != &prm.other_param) {
+       otherParam[pj2Str(p->name)] = pj2Str(p->value);
+    p = p->next;
+    }
+    username = pj2Str(prm.username);
+    nonce = pj2Str(prm.nonce);
+    uri = pj2Str(prm.uri);
+    response = pj2Str(prm.response);
+    algorithm = pj2Str(prm.algorithm);
+    cnonce = pj2Str(prm.cnonce);
+    opaque = pj2Str(prm.opaque);
+    qop = pj2Str(prm.qop);
+    nc = pj2Str(prm.nc);
+}
+
+pjsip_digest_credential DigestCredential::toPj() const
+{
+    pjsip_digest_credential credentials;
+    pj_list_init(&credentials.other_param);
+    credentials.realm = str2Pj(realm);
+    credentials.username = str2Pj(username);
+    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
+           it != otherParam.end(); ++it) {
+        pjsip_param other_param;
+        other_param.name = str2Pj(it->first);
+        other_param.value = str2Pj(it->second);
+        pj_list_push_back(&credentials.other_param, &other_param);
+    }
+    credentials.nonce = str2Pj(nonce);
+    credentials.uri = str2Pj(uri);
+    credentials.response = str2Pj(response);
+    credentials.algorithm = str2Pj(algorithm);
+    credentials.cnonce = str2Pj(cnonce);
+    credentials.opaque = str2Pj(opaque);
+    credentials.qop = str2Pj(qop);
+    credentials.nc = str2Pj(nc);
+    return credentials;
+}
+
+void DigestChallenge::fromPj(const pjsip_digest_challenge &prm)
+{
+    realm = pj2Str(prm.realm);
+    pjsip_param *p = (pjsip_param*)prm.other_param.next;
+    while (p != &prm.other_param) {
+        otherParam[pj2Str(p->name)] = pj2Str(p->value);
+        p = p->next;
+    }
+    domain = pj2Str(prm.domain);
+    nonce = pj2Str(prm.nonce);
+    opaque = pj2Str(prm.opaque);
+    stale = prm.stale;
+    algorithm = pj2Str(prm.algorithm);
+    qop = pj2Str(prm.qop);
+}
+
+pjsip_digest_challenge DigestChallenge::toPj() const
+{
+    pjsip_digest_challenge challenge;
+    pj_list_init(&challenge.other_param);
+    challenge.realm = str2Pj(realm);
+    challenge.domain = str2Pj(domain);
+    for (std::map<std::string, std::string>::const_iterator it = otherParam.begin(); 
+           it != otherParam.end(); ++it) {
+        pjsip_param other_param;
+        other_param.name = str2Pj(it->first);
+        other_param.value = str2Pj(it->second);
+        pj_list_push_back(&challenge.other_param, &other_param);
+    }
+    challenge.nonce = str2Pj(nonce);
+    challenge.opaque = str2Pj(opaque);
+    challenge.stale = stale;
+    challenge.algorithm = str2Pj(algorithm);
+    challenge.qop = str2Pj(qop);
+    return challenge;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 IpChangeParam::IpChangeParam()
 {
@@ -581,6 +661,12 @@ void Endpoint::utilLogWrite(LogEntry &entry)
     } else {
 	writer->write(entry);
     }
+}
+
+pj_status_t Endpoint::onCredAuth(OnCredAuthParam &prm)
+{
+    PJ_UNUSED_ARG(prm);
+    return PJ_ENOTSUP;
 }
 
 /* Run pending jobs only in main thread */
@@ -2465,7 +2551,7 @@ void Endpoint::resetVideoCodecParam(const string &codec_id)
     
     PJSUA2_CHECK_EXPR(pjsua_vid_codec_set_param(&codec_str, NULL));
 #else
-    PJ_UNUSED_ARG(codec_id);    
+    PJ_UNUSED_ARG(codec_id);
 #endif	
 }
 
@@ -2492,4 +2578,42 @@ void Endpoint::handleIpChange(const IpChangeParam &param) PJSUA2_THROW(Error)
 {
     pjsua_ip_change_param ip_change_param = param.toPj();
     PJSUA2_CHECK_EXPR(pjsua_handle_ip_change(&ip_change_param));
+}
+
+pj_status_t Endpoint::on_auth_create_aka_response_callback(pj_pool_t *pool,
+                                           const pjsip_digest_challenge *chal,
+                                           const pjsip_cred_info *cred,
+                                           const pj_str_t *method,
+                                           pjsip_digest_credential *auth)
+{
+    OnCredAuthParam prm;
+    prm.digestChallenge.fromPj(*chal);
+    prm.credentialInfo.fromPj(*cred);
+    prm.method = pj2Str(*method);
+    prm.digestCredential.fromPj(*auth);
+
+    pj_status_t status = Endpoint::instance().onCredAuth(prm);
+
+   if (status == PJ_SUCCESS) {
+	    pjsip_digest_credential auth_new = prm.digestCredential.toPj();
+	    // Duplicate in the pool, so that digestCredential
+	    // is allowed to be destructed at the end of the method.
+	    pj_strdup(pool, &auth->realm, &auth_new.realm);
+	    pj_strdup(pool, &auth->username, &auth_new.username);
+	    pj_strdup(pool, &auth->nonce, &auth_new.nonce);
+	    pj_strdup(pool, &auth->uri, &auth_new.uri);
+	    pj_strdup(pool, &auth->response, &auth_new.response);
+	    pj_strdup(pool, &auth->algorithm, &auth_new.algorithm);
+	    pj_strdup(pool, &auth->cnonce, &auth_new.cnonce);
+	    pj_strdup(pool, &auth->opaque, &auth_new.opaque);
+	    pj_strdup(pool, &auth->qop, &auth_new.qop);
+	    pj_strdup(pool, &auth->nc, &auth_new.nc);
+	    pjsip_param_clone(pool, &auth->other_param, &auth_new.other_param);
+    }
+#if PJSIP_HAS_DIGEST_AKA_AUTH
+   else if (status == PJ_ENOTSUP) {
+	    status = pjsip_auth_create_aka_response(pool, chal, cred, method, auth);
+    }
+#endif
+    return status;
 }
