@@ -44,7 +44,7 @@
 
 
 
-int PJ_NO_MEMORY_EXCEPTION;
+PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
 
 PJ_DEF(int) pj_NO_MEMORY_EXCEPTION()
@@ -93,6 +93,24 @@ PJ_DEF(void) pj_pool_release_imp(pj_pool_t *pool)
 {
     pj_pool_reset(pool);
     free(pool);
+}
+
+/* Safe release pool */
+PJ_DEF(void) pj_pool_safe_release_imp( pj_pool_t **ppool )
+{
+    pj_pool_t *pool = *ppool;
+    *ppool = NULL;
+    if (pool)
+	pj_pool_release(pool);
+}
+
+/* Secure release pool */
+PJ_DEF(void) pj_pool_secure_release_imp( pj_pool_t **ppool )
+{
+    /* Secure release is not implemented, so we just call
+     * safe release.
+     */
+    pj_pool_safe_release_imp(ppool);
 }
 
 /* Get pool name */
