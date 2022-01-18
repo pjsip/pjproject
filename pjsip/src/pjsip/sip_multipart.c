@@ -19,6 +19,7 @@
 #include <pjsip/sip_multipart.h>
 #include <pjsip/sip_parser.h>
 #include <pjlib-util/scanner.h>
+#include <pjlib-util/string.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/errno.h>
@@ -416,6 +417,220 @@ pjsip_multipart_find_part( const pjsip_msg_body *mp,
     return NULL;
 }
 
+/*
+ * Find a body inside multipart bodies which has the header and value.
+ */
+PJ_DEF(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
+				    const pjsip_msg_body *mp,
+				    const pj_str_t *hdr_name,
+				    const pj_str_t *hdr_value,
+				    const pjsip_multipart_part *start)
+{
+    struct multipart_data *m_data;
+    pjsip_multipart_part *part;
+    pjsip_hdr *found_hdr;
+    pj_str_t found_hdr_str;
+    pj_str_t found_hdr_value;
+    pj_size_t expected_hdr_slen;
+    pj_size_t buf_size;
+    int hdr_name_len;
+#define REASONABLE_PADDING 32
+#define SEPARATOR_LEN 2
+    /* Must specify mandatory params */
+    PJ_ASSERT_RETURN(mp && hdr_name && hdr_value, NULL);
+
+    /* mp must really point to an actual multipart msg body */
+    PJ_ASSERT_RETURN(mp->print_body==&multipart_print_body, NULL);
+
+    /*
+     * We'll need to "print" each header we find to test it but
+     * allocating a buffer of PJSIP_MAX_URL_SIZE is overkill.
+     * Instead, we'll allocate one large enough to hold the search
+     * header name, the ": " separator, the search hdr value, and
+     * the NULL terminator.  If we can't print the found header
+     * into that buffer then it can't be a match.
+     *
+     * Some header print functions such as generic_int require enough
+     * space to print the maximum possible header length so we'll
+     * add a reasonable amount to the print buffer size.
+     */
+    expected_hdr_slen = hdr_name->slen + SEPARATOR_LEN + hdr_value->slen;
+    buf_size = expected_hdr_slen + REASONABLE_PADDING;
+    found_hdr_str.ptr = pj_pool_alloc(pool, buf_size);
+    found_hdr_str.slen = 0;
+    hdr_name_len = hdr_name->slen + SEPARATOR_LEN;
+
+    m_data = (struct multipart_data*)mp->data;
+
+    if (start)
+	part = start->next;
+    else
+	part = m_data->part_head.next;
+
+    while (part != &m_data->part_head) {
+	found_hdr = NULL;
+	while ((found_hdr = pjsip_hdr_find_by_name(&part->hdr, hdr_name,
+	    (found_hdr ? found_hdr->next : NULL))) != NULL) {
+
+	    found_hdr_str.slen = pjsip_hdr_print_on((void*) found_hdr, found_hdr_str.ptr, buf_size);
+	    /*
+	     * If the buffer was too small (slen = -1) or the result wasn't
+	     * the same length as the search header, it can't be a match.
+	     */
+	    if (found_hdr_str.slen != expected_hdr_slen) {
+		continue;
+	    }
+	    /*
+	     * Set the value overlay to start at the found header value...
+	     */
+	    found_hdr_value.ptr = found_hdr_str.ptr + hdr_name_len;
+	    found_hdr_value.slen = found_hdr_str.slen - hdr_name_len;
+	    /* ...and compare it to the supplied header value. */
+	    if (pj_strcmp(hdr_value, &found_hdr_value) == 0) {
+		return part;
+	    }
+	}
+	part = part->next;
+    }
+    return NULL;
+#undef SEPARATOR_LEN
+#undef REASONABLE_PADDING
+}
+
+PJ_DEF(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_header(pj_pool_t *pool,
+				    const pjsip_msg_body *mp,
+				    void *search_for,
+				    const pjsip_multipart_part *start)
+{
+    struct multipart_data *m_data;
+    pjsip_hdr *search_hdr = search_for;
+    pj_str_t search_buf;
+
+    /* Must specify mandatory params */
+    PJ_ASSERT_RETURN(mp && search_hdr, NULL);
+
+    /* mp must really point to an actual multipart msg body */
+    PJ_ASSERT_RETURN(mp->print_body==&multipart_print_body, NULL);
+
+    /*
+     * Unfortunately, there isn't enough information to determine
+     * the maximum printed size of search_hdr at this point so we
+     * have to allocate a reasonable max.
+     */
+    search_buf.ptr = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+    search_buf.slen = pjsip_hdr_print_on(search_hdr, search_buf.ptr, PJSIP_MAX_URL_SIZE - 1);
+    if (search_buf.slen <= 0) {
+	return NULL;
+    }
+    /*
+     * Set the header value to start after the header name plus the ":", then
+     * strip leading and trailing whitespace.
+     */
+    search_buf.ptr += (search_hdr->name.slen + 1);
+    search_buf.slen -= (search_hdr->name.slen + 1);
+    pj_strtrim(&search_buf);
+
+    return pjsip_multipart_find_part_by_header_str(pool, mp, &search_hdr->name, &search_buf, start);
+}
+
+/*
+ * Convert a Content-ID URI to it's corresponding header value.
+ * RFC2392 says...
+ * A "cid" URL is converted to the corresponding Content-ID message
+ * header by removing the "cid:" prefix, converting the % encoded
+ * character(s) to their equivalent US-ASCII characters, and enclosing
+ * the remaining parts with an angle bracket pair, "<" and ">".
+ *
+ * This implementation will accept URIs with or without the "cid:"
+ * scheme and optional angle brackets.
+ */
+static pj_str_t cid_uri_to_hdr_value(pj_pool_t *pool, pj_str_t *cid_uri)
+{
+    pj_size_t cid_len = pj_strlen(cid_uri);
+    pj_size_t alloc_len = cid_len + 2 /* for the leading and trailing angle brackets */;
+    pj_str_t uri_overlay;
+    pj_str_t cid_hdr;
+    pj_str_t hdr_overlay;
+
+    pj_strassign(&uri_overlay, cid_uri);
+    /* If the URI is already enclosed in angle brackets, remove them. */
+    if (uri_overlay.ptr[0] == '<') {
+	uri_overlay.ptr++;
+	uri_overlay.slen -= 2;
+    }
+    /* If the URI starts with the "cid:" scheme, skip over it. */
+    if (pj_strncmp2(&uri_overlay, "cid:", 4) == 0) {
+	uri_overlay.ptr += 4;
+	uri_overlay.slen -= 4;
+    }
+    /* Start building */
+    cid_hdr.ptr = pj_pool_alloc(pool, alloc_len);
+    cid_hdr.ptr[0] = '<';
+    cid_hdr.slen = 1;
+    hdr_overlay.ptr = cid_hdr.ptr + 1;
+    hdr_overlay.slen = 0;
+    pj_strcpy_unescape(&hdr_overlay, &uri_overlay);
+    cid_hdr.slen += hdr_overlay.slen;
+    cid_hdr.ptr[cid_hdr.slen] = '>';
+    cid_hdr.slen++;
+
+    return cid_hdr;
+}
+
+PJ_DEF(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
+				 const pjsip_msg_body *mp,
+				 pj_str_t *cid)
+{
+    struct multipart_data *m_data;
+    pjsip_multipart_part *part;
+    pjsip_generic_string_hdr *found_hdr;
+    pj_str_t found_hdr_value;
+    static pj_str_t hdr_name = { "Content-ID", 10};
+    pj_str_t hdr_value;
+
+    PJ_ASSERT_RETURN(pool && mp && cid && (pj_strlen(cid) > 0), NULL);
+
+    hdr_value = cid_uri_to_hdr_value(pool, cid);
+    if (pj_strlen(&hdr_value) == 0) {
+	return NULL;
+    }
+
+    m_data = (struct multipart_data*)mp->data;
+    part = m_data->part_head.next;
+
+    while (part != &m_data->part_head) {
+	found_hdr = NULL;
+	while ((found_hdr = pjsip_hdr_find_by_name(&part->hdr, &hdr_name,
+	    (found_hdr ? found_hdr->next : NULL))) != NULL) {
+	    if (pj_strcmp(&hdr_value, &found_hdr->hvalue) == 0) {
+		return part;
+	    }
+	}
+	part = part->next;
+    }
+    return NULL;
+}
+
+PJ_DEF(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_cid_uri(pj_pool_t *pool,
+				 const pjsip_msg_body *mp,
+				 pjsip_other_uri *cid_uri)
+{
+    PJ_ASSERT_RETURN(pool && mp && cid_uri, NULL);
+
+    if (pj_strcmp2(&cid_uri->scheme, "cid") != 0) {
+	return NULL;
+    }
+    /*
+     * We only need to pass the URI content so we
+     * can do that directly.
+     */
+    return pjsip_multipart_find_part_by_cid_str(pool, mp, &cid_uri->content);
+}
+
 /* Parse a multipart part. "pct" is parent content-type  */
 static pjsip_multipart_part *parse_multipart_part(pj_pool_t *pool,
 						  char *start,
@@ -584,6 +799,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 		(int)boundary.slen, boundary.ptr));
     }
 
+
     /* Build the delimiter:
      *   delimiter = "--" boundary
      */
@@ -630,6 +846,8 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 	if (*curptr=='\r') ++curptr;
 	if (*curptr!='\n') {
 	    /* Expecting a newline here */
+	    PJ_LOG(2, (THIS_FILE, "Failed to find newline"));
+
 	    return NULL;
 	}
 	++curptr;
@@ -645,6 +863,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 	    curptr = pj_strstr(&subbody, &delim);
 	    if (!curptr) {
 		/* We're really expecting end delimiter to be found. */
+		PJ_LOG(2, (THIS_FILE, "Failed to find end-delimiter"));
 		return NULL;
 	    }
 	}
@@ -670,9 +889,13 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
 	part = parse_multipart_part(pool, start_body, end_body - start_body,
 				    ctype);
 	if (part) {
+	    TRACE_((THIS_FILE, "Adding part"));
 	    pjsip_multipart_add_part(pool, body, part);
+	} else {
+	    PJ_LOG(2, (THIS_FILE, "Failed to add part"));
 	}
     }
+    TRACE_((THIS_FILE, "pjsip_multipart_parse finished: %p", body));
 
     return body;
 }
