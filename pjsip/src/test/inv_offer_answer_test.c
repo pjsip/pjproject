@@ -498,8 +498,10 @@ static int perform_test(inv_test_param_t *param)
     status = pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE, 0, &tdata);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pjsip_inv_send_msg(inv_test.uas, tdata);
-    pj_assert(status == PJ_SUCCESS);
+    if (tdata) {
+    	status = pjsip_inv_send_msg(inv_test.uas, tdata);
+    	pj_assert(status == PJ_SUCCESS);
+    }
 
     flush_events(500);
 
