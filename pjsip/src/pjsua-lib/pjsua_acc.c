@@ -2126,8 +2126,10 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     /* Check just in case keep-alive has been disabled. This shouldn't happen
      * though as when ka_interval is changed this timer should have been
      * cancelled.
+     *
+     * Also check if Flow Timer (rfc5626) is not set.
      */
-    if (acc->cfg.ka_interval == 0)
+    if (acc->cfg.ka_interval == 0 && acc->rfc5626_flowtmr == 0)
 	goto on_return;
 
     ka_timer = acc->rfc5626_flowtmr ? acc->rfc5626_flowtmr :
