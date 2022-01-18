@@ -57,6 +57,23 @@
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
+/* A single instance of server SSL context. */
+static SSL_CTX *server_ctx = NULL;
+
+/* Specify whether server supports session reuse using session ID. */
+#define SERVER_SUPPORT_SESSION_REUSE 1
+
+/* Each server application must set its own session id context,
+ * which is used to distinguish the contexts and is stored in
+ * exported sessions.
+ */
+#ifndef SERVER_SESSION_ID_CONTEXT
+#	define SERVER_SESSION_ID_CONTEXT 1
+#endif
+
+/* Server session timeout duration. Default is 300 sec. */
+#define SERVER_SESSION_TIMEOUT 300
+
 #if defined(LIBRESSL_VERSION_NUMBER)
 #	define USING_LIBRESSL 1
 #else
@@ -394,6 +411,14 @@ static pj_str_t ssl_strerror(pj_status_t status,
     if (errstr.slen < 1 || errstr.slen >= (int)bufsize)
 	errstr.slen = bufsize - 1;
     return errstr;
+}
+
+static void free_server_ctx(void)
+{
+    if (server_ctx) {
+    	SSL_CTX_free(server_ctx);
+    	server_ctx = NULL;
+    }
 }
 
 /* Additional ciphers recognized by SSL_set_cipher_list()
@@ -1054,19 +1079,44 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     }
 
     /* Create SSL context */
-    ctx = SSL_CTX_new(ssl_method);
-    if (ctx == NULL) {
-	return GET_SSL_STATUS(ssock);
+    if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
+	if (!server_ctx) {
+    	    server_ctx = SSL_CTX_new(ssl_method);
+    	    if (server_ctx == NULL) {
+	        return GET_SSL_STATUS(ssock);
+    	    }
+            status = pj_atexit(&free_server_ctx);
+            if (status != PJ_SUCCESS) {
+        	PJ_PERROR(1, (THIS_FILE, status, "Warning! Unable to set "
+                              "OpenSSL server context free method."));
+            }
+	}
+	ctx = server_ctx;
+    } else {
+    	ctx = SSL_CTX_new(ssl_method);
+    	if (ctx == NULL) {
+	    return GET_SSL_STATUS(ssock);
+    	}
     }
     ossock->ossl_ctx = ctx;
 
     if (ssock->is_server) {
+	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
+
     	/* Disable session tickets for TLSv1.2 and below. */
     	ssl_opt |= SSL_OP_NO_TICKET;
 #ifdef SSL_CTX_set_num_tickets
     	/* Set the number of TLSv1.3 session tickets issued to 0. */
     	SSL_CTX_set_num_tickets(ctx, 0);
 #endif
+
+	SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
+	if (!SSL_CTX_set_session_id_context(ctx,
+		 (const unsigned char *)&sid_ctx, sizeof(sid_ctx)))
+	{
+            PJ_LOG(1, (THIS_FILE, "Warning! Unable to set server session id "
+                 		  "context. Session reuse will not work."));
+	}
     }
 
     if (ssl_opt)
@@ -1493,7 +1543,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     /* Destroy SSL context */
     if (ossock->ossl_ctx) {
-	SSL_CTX_free(ossock->ossl_ctx);
+    	if (!SERVER_SUPPORT_SESSION_REUSE || !ssock->is_server)
+	    SSL_CTX_free(ossock->ossl_ctx);
 	ossock->ossl_ctx = NULL;
     }
 
@@ -2130,6 +2181,37 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
+    	if (ssock->is_server && ssock->ssl_state != SSL_STATE_ESTABLISHED) {
+    	    enum {BUF_SIZE = 64};
+	    unsigned int len = 0, i;
+	    const unsigned char *sctx, *sid;
+	    char buf[BUF_SIZE+1];
+	    SSL_SESSION *sess;
+	    
+	    sess = SSL_get_session(ossock->ossl_ssl);
+
+	    PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
+		       "timeout=%d",
+		       SSL_session_reused(ossock->ossl_ssl),
+		       SSL_SESSION_is_resumable(sess),
+		       SSL_SESSION_get_timeout(sess)));
+
+	    sid = SSL_SESSION_get_id(sess, &len);
+	    len *= 2;
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i+=2)
+	        pj_ansi_sprintf(buf+i, "%02X", sid[i/2]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session id: %s", buf));
+
+	    sctx = SSL_SESSION_get0_id_context(sess, &len);
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i++)
+	        pj_ansi_sprintf(buf + i, "%d", sctx[i]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session context id: %s", buf));
+    	}
+
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
 	return PJ_SUCCESS;
     }
