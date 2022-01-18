@@ -971,6 +971,9 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    /* Set peer name */
+    ssl_set_peer_name(ssock);
+
     /* Prepare read buffer */
     ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
 					       ssock->param.async_cnt,

@@ -1060,6 +1060,15 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     }
     ossock->ossl_ctx = ctx;
 
+    if (ssock->is_server) {
+    	/* Disable session tickets for TLSv1.2 and below. */
+    	ssl_opt |= SSL_OP_NO_TICKET;
+#ifdef SSL_CTX_set_num_tickets
+    	/* Set the number of TLSv1.3 session tickets issued to 0. */
+    	SSL_CTX_set_num_tickets(ctx, 0);
+#endif
+    }
+
     if (ssl_opt)
 	SSL_CTX_set_options(ctx, ssl_opt);
 
@@ -2039,27 +2048,53 @@ static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server)
 }
 
 
+/* Server Name Indication server callback */
+static int sni_cb(SSL *ssl, int *al, void *arg)
+{
+    pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)arg;
+    const char *sname;
+
+    PJ_UNUSED_ARG(al);
+
+    sname = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    if (!sname || pj_stricmp2(&ssock->param.server_name, sname)) {
+    	return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    return SSL_TLSEXT_ERR_OK;
+}
+
 static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
 {
-#ifdef SSL_set_tlsext_host_name
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
     /* Set server name to connect */
     if (ssock->param.server_name.slen &&
         get_ip_addr_ver(&ssock->param.server_name) == 0)
     {
-	/* Server name is null terminated already */
-	if (!SSL_set_tlsext_host_name(ossock->ossl_ssl, 
-				      ssock->param.server_name.ptr))
-	{
-	    char err_str[PJ_ERR_MSG_SIZE];
+    	if (ssock->is_server) {
+#if defined(SSL_CTX_set_tlsext_servername_callback) && \
+    defined(SSL_CTX_set_tlsext_servername_arg)
 
-	    ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
-	    PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
-		"failed: %s", err_str));
+	    SSL_CTX_set_tlsext_servername_callback(ossock->ossl_ctx, &sni_cb);
+	    SSL_CTX_set_tlsext_servername_arg(ossock->ossl_ctx, ssock);
+
+#endif
+    	} else {
+#ifdef SSL_set_tlsext_host_name
+	    /* Server name is null terminated already */
+	    if (!SSL_set_tlsext_host_name(ossock->ossl_ssl,
+				          ssock->param.server_name.ptr))
+	    {
+	        char err_str[PJ_ERR_MSG_SIZE];
+
+	        ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
+	        PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
+		          "failed: %s", err_str));
+	    }
+#endif
 	}
     }
-#endif
 }
 
 
