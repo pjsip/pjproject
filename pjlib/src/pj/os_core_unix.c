@@ -175,6 +175,9 @@ PJ_DEF(pj_status_t) pj_init(void)
 	return PJ_SUCCESS;
     }
 
+    /* Init logging */
+    pj_log_init();
+
 #if PJ_HAS_THREADS
     /* Init this thread's TLS. */
     if ((rc=pj_thread_init()) != 0) {
@@ -186,9 +189,6 @@ PJ_DEF(pj_status_t) pj_init(void)
 	return rc;
 
 #endif
-
-    /* Init logging */
-    pj_log_init();
 
     /* Initialize exception ID for the pool.
      * Must do so after critical section is configured.
