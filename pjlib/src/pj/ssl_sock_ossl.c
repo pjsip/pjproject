@@ -2188,6 +2188,8 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
     	if (ssock->is_server && ssock->ssl_state != SSL_STATE_ESTABLISHED) {
     	    enum {BUF_SIZE = 64};
 	    unsigned int len = 0, i;
@@ -2218,6 +2220,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 	    buf[len] = '\0';
 	    PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
     	}
+#endif
 
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
 	return PJ_SUCCESS;
