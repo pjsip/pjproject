@@ -63,12 +63,15 @@ static SSL_CTX *server_ctx = NULL;
 /* Specify whether server supports session reuse using session ID. */
 #define SERVER_SUPPORT_SESSION_REUSE 1
 
+/* Specify whether server should disable session tickets. */
+#define SERVER_DISABLE_SESSION_TICKETS 1
+
 /* Each server application must set its own session id context,
  * which is used to distinguish the contexts and is stored in
  * exported sessions.
  */
 #ifndef SERVER_SESSION_ID_CONTEXT
-#	define SERVER_SESSION_ID_CONTEXT 1
+#	define SERVER_SESSION_ID_CONTEXT 999
 #endif
 
 /* Server session timeout duration. Default is 300 sec. */
@@ -1103,11 +1106,14 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     if (ssock->is_server) {
 	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
 
+#if SERVER_DISABLE_SESSION_TICKETS
     	/* Disable session tickets for TLSv1.2 and below. */
     	ssl_opt |= SSL_OP_NO_TICKET;
 #ifdef SSL_CTX_set_num_tickets
     	/* Set the number of TLSv1.3 session tickets issued to 0. */
     	SSL_CTX_set_num_tickets(ctx, 0);
+#endif
+
 #endif
 
 	SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
@@ -2109,6 +2115,7 @@ static int sni_cb(SSL *ssl, int *al, void *arg)
 
     sname = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
     if (!sname || pj_stricmp2(&ssock->param.server_name, sname)) {
+    	PJ_LOG(4, (THIS_FILE, "Client SNI rejected: %s", sname));
     	return SSL_TLSEXT_ERR_ALERT_FATAL;
     }
 
@@ -2209,7 +2216,7 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 	    for (i = 0; i < len; i++)
 	        pj_ansi_sprintf(buf + i, "%d", sctx[i]);
 	    buf[len] = '\0';
-	    PJ_LOG(5, (THIS_FILE, "Session context id: %s", buf));
+	    PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
     	}
 
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
