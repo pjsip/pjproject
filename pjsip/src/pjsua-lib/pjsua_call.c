@@ -2611,6 +2611,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    if (call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+	PJ_LOG(3,(THIS_FILE, "Can not answer call that has been confirmed"));
+	status = PJSIP_ESESSIONSTATE;
+	goto on_return;
+    }
+
     /* Apply call setting, only if status code is 1xx or 2xx. */
     if (opt && code < 300) {
 	/* Check if it has not been set previously or it is different to
