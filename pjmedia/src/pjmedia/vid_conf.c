@@ -92,6 +92,7 @@ typedef struct vconf_port
     pj_timestamp	 ts_next;	/**< Time for next put/get_frame(). */
     void		*get_buf;	/**< Buffer for get_frame().	    */
     pj_size_t		 get_buf_size;	/**< Buffer size for get_frame().   */
+    pj_bool_t		 got_frame;	/**< Last get_frame() got frame?    */
     void		*put_buf;	/**< Buffer for put_frame().	    */
     pj_size_t		 put_buf_size;	/**< Buffer size for put_frame().   */
 
@@ -568,30 +569,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 	++src_port->listener_cnt;
 	++dst_port->transmitter_cnt;
 
-	if (src_port->listener_cnt == 1) {
-    	    /* If this is the first listener, initialize source's buffer
-    	     * with black color.
-    	     */
-	    const pjmedia_video_format_info *vfi;
-	    pjmedia_video_apply_fmt_param vafp;
-
-	    vfi = pjmedia_get_video_format_info(NULL,
-	    					src_port->port->info.fmt.id);
-	    pj_bzero(&vafp, sizeof(vafp));
-	    vafp.size = src_port->port->info.fmt.det.vid.size;
-	    (*vfi->apply_fmt)(vfi, &vafp);
-
-	    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	    	pj_memset(src_port->get_buf, 0, vafp.framebytes);
-	    } else if (src_port->port->info.fmt.id == PJMEDIA_FORMAT_I420 ||
-	  	       src_port->port->info.fmt.id == PJMEDIA_FORMAT_YV12)
-	    {	    	
-	    	pj_memset(src_port->get_buf, 16, vafp.plane_bytes[0]);
-	    	pj_memset((pj_uint8_t*)src_port->get_buf + vafp.plane_bytes[0],
-		      	  0x80, vafp.plane_bytes[1] * 2);
-	    }
-	}
-
 	update_render_state(vid_conf, dst_port);
 
 	++vid_conf->connect_cnt;
@@ -730,7 +707,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    ci<vid_conf->port_cnt; ++i)
     {
 	unsigned j;
-	pj_bool_t got_frame = PJ_FALSE;
+	pj_bool_t frame_rendered = PJ_FALSE;
 	pj_bool_t ts_incremented = PJ_FALSE;
 	vconf_port *sink = vid_conf->ports[i];
 
@@ -756,8 +733,14 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	if (ts_diff < 0 || ts_diff > TS_CLOCK_RATE)
 	    continue;
 
-	/* Clean up sink put buffer (should we draw black instead?) */
-	//pj_bzero(sink->put_buf, sink->put_buf_size);
+    	/* There is a possibility that the sink port's format has
+    	 * changed, but we haven't received the event yet.
+    	 */
+    	if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		      sizeof(pjmedia_format)))
+    	{
+    	    pjmedia_vid_conf_update_port(vid_conf, i);
+    	}
 
 	/* Iterate transmitters of this sink port */
 	for (j=0; j < sink->transmitter_cnt; ++j) {
@@ -786,6 +769,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    PJ_PERROR(5, (THIS_FILE, status,
 				  "Failed to get frame from port %d [%s]!",
 				  src->idx, src->port->info.name.ptr));
+		    src->got_frame = PJ_FALSE;
+		} else {
+		    src->got_frame = (frame.size == src->get_buf_size);
 		}
 
 		/* Update next src put/get */
@@ -793,19 +779,21 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		ts_incremented = src==sink;
 	    }
 
-	    /* Render src get buffer to sink put buffer (based on sink layout
-	     * settings, if any)
-	     */
-	    status = render_src_frame(src, sink, j);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(5, (THIS_FILE, status,
-			      "Failed to render frame from port %d [%s] to "
-			      "%d [%s]",
-			      src->idx, src->port->info.name.ptr,
-			      sink->idx, sink->port->info.name.ptr));
+	    if (src->got_frame) {
+		/* Render src get buffer to sink put buffer (based on
+		 * sink layout settings, if any)
+		 */
+		status = render_src_frame(src, sink, j);
+		if (status == PJ_SUCCESS) {
+		    frame_rendered = PJ_TRUE;
+		} else {
+		    PJ_PERROR(5, (THIS_FILE, status,
+				  "Failed to render frame from port %d [%s] "
+				  "to port %d [%s]",
+				  src->idx, src->port->info.name.ptr,
+				  sink->idx, sink->port->info.name.ptr));
+		}
 	    }
-
-	    got_frame = PJ_TRUE;
 	}
 
 	/* Call sink->put_frame()
@@ -816,12 +804,12 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	pj_bzero(&frame, sizeof(frame));
 	frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
 	frame.timestamp = *now;
-	if (got_frame) {
+	if (frame_rendered) {
 	    frame.buf = sink->put_buf;
 	    frame.size = sink->put_buf_size;
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
-	if (got_frame && status != PJ_SUCCESS) {
+	if (frame_rendered && status != PJ_SUCCESS) {
 	    sink->last_err_cnt++;
 	    if (sink->last_err != status ||
 	        sink->last_err_cnt % MAX_ERR_COUNT == 0)
@@ -900,6 +888,7 @@ static void cleanup_render_state(vconf_port *cp,
     }
 }
 
+
 /* This function will do:
  * - Recalculate layout setting, i.e: get video pos and size
  *   for each transmitter
@@ -914,6 +903,31 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     unsigned i;
     pj_status_t status;
 
+    fmt_id = cp->port->info.fmt.id;
+    size   = cp->port->info.fmt.det.vid.size;
+
+    /* Initialize sink buffer with black color. */
+    if (cp->port->put_frame) {
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->put_buf,
+						 cp->put_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: failed to init sink buffer with black"));
+	}
+    }
+
+    /* Initialize source buffer with black color. */
+    if (cp->port->get_frame) {
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->get_buf,
+						 cp->get_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: failed to init source buffer with black"));
+	}
+    }
+
     /* Nothing to render, just return */
     if (cp->transmitter_cnt == 0)
 	return;
@@ -921,8 +935,6 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     TRACE_((THIS_FILE, "Updating render state for port id %d (%d sources)..",
 	    cp->idx, cp->transmitter_cnt));
 
-    fmt_id = cp->port->info.fmt.id;
-    size   = cp->port->info.fmt.det.vid.size;
     for (i = 0; i < cp->transmitter_cnt; ++i) {
 	vconf_port *tr = vid_conf->ports[cp->transmitter_slots[i]];
 
@@ -1093,9 +1105,19 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
     pj_status_t status;
     render_state *rs = sink->render_states[transmitter_idx];
 
+    /* There is a possibility that the sink port's format has
+     * changed, but we haven't received the event yet.
+     */
+    if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		  sizeof(pjmedia_format)))
+    {
+    	return PJMEDIA_EVID_BADFORMAT;
+    }
+
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
 	/* The only transmitter and no conversion needed */
-	pj_assert(src->get_buf_size <= sink->put_buf_size);
+	if (src->get_buf_size != sink->put_buf_size)
+	    return PJMEDIA_EVID_BADFORMAT;
 	pj_memcpy(sink->put_buf, src->get_buf, src->get_buf_size);
     } else if (rs && rs->converter) {
 	pjmedia_frame src_frame, dst_frame;
@@ -1217,6 +1239,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_update_port( pjmedia_vid_conf *vid_conf,
 	    if (cport->get_buf_size < vafp.framebytes)
 		cport->get_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
 	    cport->get_buf_size = vafp.framebytes;
+	    cport->got_frame = PJ_FALSE;
 	}
 
 	/* Update render state */
