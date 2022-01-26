@@ -444,16 +444,21 @@ PJ_DEF(void) pj_scan_get_n( pj_scanner *scanner,
 
 PJ_DEF(int) pj_scan_get_char( pj_scanner *scanner )
 {
-    int chr = *scanner->curptr;
+    register char *s = scanner->curptr;
+    int chr;
 
-    if (!chr) {
+    if (s >= scanner->end || !*s) {
 	pj_scan_syntax_err(scanner);
 	return 0;
     }
 
-    ++scanner->curptr;
+    chr = *s;
 
-    if (PJ_SCAN_IS_PROBABLY_SPACE(*scanner->curptr) && scanner->skip_ws) {
+    ++s;
+    scanner->curptr = s;
+    if (PJ_SCAN_CHECK_EOF(s) && PJ_SCAN_IS_PROBABLY_SPACE(*s) &&
+    	scanner->skip_ws)
+    {
 	pj_scan_skip_whitespace(scanner);
     }
     return chr;
