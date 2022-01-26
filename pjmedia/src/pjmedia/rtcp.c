@@ -502,12 +502,22 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
     /* Parse RTCP */
     if (common->pt == RTCP_SR) {
+        if (sizeof (pjmedia_rtcp_common) + sizeof (pjmedia_rtcp_sr) > size) {
+	    TRACE_((sess->name, "Discarding RTCP SR due to truncated size "
+	    			"%d bytes", size));
+            return;
+        }
 	sr = (pjmedia_rtcp_sr*) (((char*)pkt) + sizeof(pjmedia_rtcp_common));
 	if (common->count > 0 && size >= (sizeof(pjmedia_rtcp_sr_pkt))) {
 	    rr = (pjmedia_rtcp_rr*)(((char*)pkt) + (sizeof(pjmedia_rtcp_common)
 				    + sizeof(pjmedia_rtcp_sr)));
 	}
     } else if (common->pt == RTCP_RR && common->count > 0) {
+	if (sizeof (pjmedia_rtcp_common) + sizeof (pjmedia_rtcp_rr) > size) {
+	    TRACE_((sess->name, "Discarding RTCP RR due to truncated size "
+	    			"%d bytes", size));
+	    return;
+	}
 	rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     } else if (common->pt == RTCP_XR) {
@@ -826,12 +836,20 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     p = (pj_uint8_t*)pkt;
     p_end = p + size;
     while (p < p_end) {
-	pjmedia_rtcp_common *common = (pjmedia_rtcp_common*)p;
+	pjmedia_rtcp_common *common;
 	unsigned len;
 
-	len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
-	if (p + len > p_end)
+	if (p + sizeof(pjmedia_rtcp_common) > p_end) {
+	    TRACE_((sess->name, "Receiving truncated RTCP packet (1)"));
 	    break;
+	}
+	common = (pjmedia_rtcp_common*)p;
+
+	len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
+	if (p + len > p_end) {
+	    TRACE_((sess->name, "Receiving truncated RTCP packet (2)"));
+	    break;
+	}
 
 	switch(common->pt) {
 	case RTCP_SR:
