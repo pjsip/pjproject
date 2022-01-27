@@ -128,11 +128,14 @@
     if (status != PJ_SUCCESS) {
 	// Something wrong with Replaces request.
 	//
+	pj_status_t status;
 	if (response) {
-	    pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
+	    status = pjsip_endpt_send_response(endpt, rdata, response, NULL, NULL);
+	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 	} else {
 	    // Respond with 500 (Internal Server Error)
-	    pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
+	    status = pjsip_endpt_respond_stateless(endpt, rdata, 500, NULL, NULL, NULL);
+	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 	}
     }
 
