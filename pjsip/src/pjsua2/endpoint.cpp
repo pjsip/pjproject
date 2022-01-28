@@ -1127,8 +1127,6 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
                                  pjsip_transaction *tsx,
                                  pjsip_event *e)
 {
-    PJ_UNUSED_ARG(tsx);
-
     Call *call = Call::lookup(call_id);
     if (!call) {
 	return;
@@ -1138,6 +1136,36 @@ void Endpoint::on_call_tsx_state(pjsua_call_id call_id,
     prm.e.fromPj(*e);
     
     call->onCallTsxState(prm);
+
+    if (tsx->role==PJSIP_ROLE_UAS && 
+        tsx->state==PJSIP_TSX_STATE_TRYING &&
+        pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0) {
+	OnIncomingInfo prm;
+	pjsip_rx_data* rdata = e->body.tsx_state.src.rdata;
+	pjsip_msg_body *body = rdata->msg_info.msg->body;
+	if (body->len) prm.body = std::string(static_cast<char*>(body->data), body->len);
+	prm.type = pj2Str(body->content_type.type);
+	prm.subtype = pj2Str(body->content_type.subtype);
+	pjsip_status_code responseStatusCode = call->onIncomingInfo(prm);
+	if (responseStatusCode == PJSIP_SC_NULL) {
+	   return;
+	}
+	bool statusCodeCorrectRFC2976 = responseStatusCode >= PJSIP_SC_OK;
+	pj_assert(statusCodeCorrectRFC2976);
+
+	pjsip_tx_data* tdata = nullptr;
+	pj_status_t status = pjsip_endpt_create_response(tsx->endpt, rdata, responseStatusCode, nullptr, &tdata);
+	if (status != PJ_SUCCESS) {
+	   PJ_PERROR(4,(THIS_FILE, status, "Failed to create response"));
+	   return;
+	}
+	status = pjsip_tsx_send_msg(tsx, tdata);
+	if (status != PJ_SUCCESS) {
+	   pjsip_tx_data_dec_ref(tdata);
+	   PJ_PERROR(4,(THIS_FILE, status, "Sending failed"));
+	   return;
+	}
+    }
 }
 
 void Endpoint::on_call_media_state(pjsua_call_id call_id)

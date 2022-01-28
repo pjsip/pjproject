@@ -715,6 +715,27 @@ struct OnCallTsxStateParam
 };
 
 /**
+ * This structure contains parameters for Call::onIncomingInfo() callback.
+ */
+struct OnIncomingInfo
+{
+    /**
+     * The SIP INFO's body.
+     */
+   std::string body;
+
+   /**
+    * MIME content type
+    */
+   std::string  type;
+
+   /**
+    * MIME content sub type
+    */
+   std::string  subtype;
+};
+
+/**
  * This structure contains parameters for Call::onCallMediaState() callback.
  */
 struct OnCallMediaStateParam
@@ -1818,6 +1839,22 @@ public:
      */
     virtual void onCallTsxState(OnCallTsxStateParam &prm)
     { PJ_UNUSED_ARG(prm); }
+
+    /**
+     * Notify application about an incoming INFO.
+     *
+     * @param prm	Callback parameter.
+     *
+     * @return
+     *  - Status code >= PJSIP_SC_OK triggers a response.
+     *  - Status code PJSIP_SC_NULL for no action.
+     *    (e.g. to use build-in support of DTMF content in SIP INFO)
+     */
+    virtual pjsip_status_code onIncomingInfo(OnIncomingInfo &prm)
+    { 
+	PJ_UNUSED_ARG(prm); 
+	return PJSIP_SC_NULL;
+    }
     
     /**
      * Notify application when media state in the call has changed.
