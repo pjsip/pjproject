@@ -167,12 +167,28 @@ pj_status_t pj_log_init(void)
     }
 #endif
     g_last_thread = NULL;
+
+    /* Normalize log decor, e.g: unset thread flags when threading is
+     * disabled.
+     */
+    pj_log_set_decor(pj_log_get_decor());
+
     return PJ_SUCCESS;
 }
 
 PJ_DEF(void) pj_log_set_decor(unsigned decor)
 {
     log_decor = decor;
+
+#if !PJ_HAS_THREADS
+    /* Unset thread related flags */
+    if (log_decor & PJ_LOG_HAS_THREAD_ID) {
+       log_decor &= ~(PJ_LOG_HAS_THREAD_ID);
+    }
+    if (log_decor & PJ_LOG_HAS_THREAD_SWC) {
+       log_decor &= ~(PJ_LOG_HAS_THREAD_SWC);
+    }
+#endif
 }
 
 PJ_DEF(unsigned) pj_log_get_decor(void)

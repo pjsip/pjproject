@@ -260,17 +260,25 @@ PJ_DEF(void) pj_grp_lock_config_default(pj_grp_lock_config *cfg)
 static void grp_lock_set_owner_thread(pj_grp_lock_t *glock)
 {
     if (!glock->owner) {
+#if PJ_HAS_THREADS
 	glock->owner = pj_thread_this();
+#else
+        glock->owner = (pj_thread_t *) -1;
+#endif
 	glock->owner_cnt = 1;
     } else {
+#if PJ_HAS_THREADS
 	pj_assert(glock->owner == pj_thread_this());
+#endif
 	glock->owner_cnt++;
     }
 }
 
 static void grp_lock_unset_owner_thread(pj_grp_lock_t *glock)
 {
+#if PJ_HAS_THREADS
     pj_assert(glock->owner == pj_thread_this());
+#endif
     pj_assert(glock->owner_cnt > 0);
     if (--glock->owner_cnt <= 0) {
 	glock->owner = NULL;
