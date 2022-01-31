@@ -668,6 +668,20 @@ typedef struct pj_ssl_sock_cb
      */
     pj_bool_t (*on_connect_complete)(pj_ssl_sock_t *ssock,
 				     pj_status_t status);
+    
+    /**
+     * This callback is called when certificate verification is being done.
+     * Certification info can be obtained from #pj_ssl_sock_info.
+     *
+     * @param ssock	The secure socket.
+     * @param is_server	PJ_TRUE to indicate an incoming connection.
+     *
+     * @return		Return PJ_TRUE if verification is successful. 
+     *                  If verification failed, then the connection will be 
+     *			dropped immediately.
+     * 
+     */
+    pj_bool_t (*on_verify_cb)(pj_ssl_sock_t *ssock, pj_bool_t is_server);
 
 } pj_ssl_sock_cb;
 

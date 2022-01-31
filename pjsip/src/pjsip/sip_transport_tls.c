@@ -113,6 +113,9 @@ struct tls_transport
 
     /* Group lock to be used by TLS transport and ioqueue key */
     pj_grp_lock_t	    *grp_lock;
+
+    /* Verify callback. */
+    pj_bool_t(*on_verify_cb)(const pjsip_tls_on_verify_param *param);
 };
 
 
@@ -138,6 +141,8 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
 static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 			      pj_ioqueue_op_key_t *send_key,
 			      pj_ssize_t sent);
+
+static pj_bool_t on_verify_cb(pj_ssl_sock_t *ssock, pj_bool_t is_server);
 
 /* This callback is called by transport manager to destroy listener */
 static pj_status_t lis_destroy(pjsip_tpfactory *factory);
@@ -304,6 +309,9 @@ static void set_ssock_param(pj_ssl_sock_param *ssock_param,
     pj_ssl_sock_param_default(ssock_param);
     ssock_param->sock_af = af;
     ssock_param->cb.on_accept_complete2 = &on_accept_complete2;
+    if (listener->tls_setting.on_verify_cb)
+	ssock_param->cb.on_verify_cb = &on_verify_cb;
+
     ssock_param->async_cnt = listener->async_cnt;
     ssock_param->ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     ssock_param->timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
@@ -885,6 +893,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls->base.factory = &listener->factory;
 
     tls->ssock = ssock;
+    tls->on_verify_cb = listener->tls_setting.on_verify_cb;
 
     /* Set up the group lock */
     tls->grp_lock = tls->base.grp_lock = glock;
@@ -1182,6 +1191,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_connect_complete = &on_connect_complete;
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
+    if (listener->tls_setting.on_verify_cb)
+	ssock_param.cb.on_verify_cb = &on_verify_cb;
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     ssock_param.timer_heap = pjsip_endpt_get_timer_heap(listener->endpt);
@@ -1572,6 +1583,40 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 	return PJ_FALSE;
     }
     
+    return PJ_TRUE;
+}
+
+static pj_bool_t on_verify_cb(pj_ssl_sock_t* ssock, pj_bool_t is_server)
+{
+    pj_bool_t(*verify_cb)(const pjsip_tls_on_verify_param * param) = NULL;
+
+    if (is_server) {
+	struct tls_listener* tls;
+
+	tls = (struct tls_listener*)pj_ssl_sock_get_user_data(ssock);
+	verify_cb = tls->tls_setting.on_verify_cb;
+    } else {
+	struct tls_transport* tls;
+
+	tls = (struct tls_transport*)pj_ssl_sock_get_user_data(ssock);
+	verify_cb = tls->on_verify_cb;
+    }
+
+    if (verify_cb) {
+	pjsip_tls_on_verify_param param;
+	pj_ssl_sock_info info;
+
+	pj_bzero(&param, sizeof(param));
+	pj_ssl_sock_get_info(ssock, &info);
+
+	param.local_addr = &info.local_addr;
+	param.remote_addr = &info.remote_addr;
+	param.local_cert_info = info.local_cert_info;
+	param.remote_cert_info = info.remote_cert_info;
+	param.tp_dir = is_server?PJSIP_TP_DIR_INCOMING:PJSIP_TP_DIR_OUTGOING;
+	
+	return (*verify_cb)(&param);
+    }
     return PJ_TRUE;
 }
 

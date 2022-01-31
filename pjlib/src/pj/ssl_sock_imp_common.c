@@ -1527,16 +1527,17 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 
     /* Local address */
     pj_sockaddr_cp(&info->local_addr, &ssock->local_addr);
+
+    /* Certificates info */
+    info->local_cert_info = &ssock->local_cert_info;
+    info->remote_cert_info = &ssock->remote_cert_info;
+
+    /* Remote address */
+    if (pj_sockaddr_has_addr(&ssock->rem_addr))
+	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
     
     if (info->established) {
 	info->cipher = ssl_get_cipher(ssock);
-
-	/* Remote address */
-	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
-
-	/* Certificates info */
-	info->local_cert_info = &ssock->local_cert_info;
-	info->remote_cert_info = &ssock->remote_cert_info;
 
 	/* Verification status */
 	info->verify_status = ssock->verify_status;
