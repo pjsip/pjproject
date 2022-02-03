@@ -377,7 +377,8 @@ typedef struct pjsip_tls_setting
     void(*on_accept_fail_cb)(const pjsip_tls_on_accept_fail_param *param);
 
     /**
-     * Callback to be called to verify a new connection.
+     * Callback to be called to verify a new connection.  Currently it's only 
+     * implemented for OpenSSL backend.
      *
      * @param param         The parameter to the callback.
      * 

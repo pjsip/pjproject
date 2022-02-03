@@ -671,7 +671,8 @@ typedef struct pj_ssl_sock_cb
     
     /**
      * This callback is called when certificate verification is being done.
-     * Certification info can be obtained from #pj_ssl_sock_info.
+     * Certification info can be obtained from #pj_ssl_sock_info. Currently
+     * it's only implemented for OpenSSL backend.
      *
      * @param ssock	The secure socket.
      * @param is_server	PJ_TRUE to indicate an incoming connection.
