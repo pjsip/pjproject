@@ -138,6 +138,7 @@ static void update_certs_info(pj_ssl_sock_t* ssock,
 #elif !USING_LIBRESSL
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
+#  define X509_STORE_CTX_get0_cert(ctx) ((ctx)->cert)
 #endif
 
 
