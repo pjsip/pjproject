@@ -57,9 +57,6 @@
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
-/* A single instance of server SSL context. */
-static SSL_CTX *server_ctx = NULL;
-
 /* Specify whether server supports session reuse using session ID. */
 #define SERVER_SUPPORT_SESSION_REUSE 1
 
@@ -195,6 +192,7 @@ typedef struct ossl_sock_t
     pj_ssl_sock_t  	  base;
 
     SSL_CTX		 *ossl_ctx;
+    pj_bool_t		  own_ctx;
     SSL			 *ossl_ssl;
     BIO			 *ossl_rbio;
     BIO			 *ossl_wbio;
@@ -414,14 +412,6 @@ static pj_str_t ssl_strerror(pj_status_t status,
     if (errstr.slen < 1 || errstr.slen >= (int)bufsize)
 	errstr.slen = bufsize - 1;
     return errstr;
-}
-
-static void free_server_ctx(void)
-{
-    if (server_ctx) {
-    	SSL_CTX_free(server_ctx);
-    	server_ctx = NULL;
-    }
 }
 
 /* Additional ciphers recognized by SSL_set_cipher_list()
@@ -986,33 +976,22 @@ static int xname_cmp(const X509_NAME * const *a, const X509_NAME * const *b) {
   return X509_NAME_cmp(*a, *b);
 }
 
-/* Create and initialize new SSL context and instance */
-static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+
+/* Initialize OpenSSL context for the ssock */
+static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    SSL_CTX *ctx = NULL;
 #if !defined(OPENSSL_NO_DH)
     BIO *bio;
     DH *dh;
     long options;
 #endif
     SSL_METHOD *ssl_method = NULL;
-    SSL_CTX *ctx;
     pj_uint32_t ssl_opt = 0;
-    pj_ssl_cert_t *cert;
-    int mode, rc;
+    pj_ssl_cert_t *cert = ssock->cert;
+    int rc;
     pj_status_t status;
-        
-    pj_assert(ssock);
-
-    cert = ssock->cert;
-
-    /* Make sure OpenSSL library has been initialized */
-    init_openssl();
-
-    set_entropy(ssock);
-
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
-	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
     /* Specific version methods are deprecated since 1.1.0 */
@@ -1081,27 +1060,10 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     }
 
-    /* Create SSL context */
-    if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
-	if (!server_ctx) {
-    	    server_ctx = SSL_CTX_new(ssl_method);
-    	    if (server_ctx == NULL) {
-	        return GET_SSL_STATUS(ssock);
-    	    }
-            status = pj_atexit(&free_server_ctx);
-            if (status != PJ_SUCCESS) {
-        	PJ_PERROR(1, (THIS_FILE, status, "Warning! Unable to set "
-                              "OpenSSL server context free method."));
-            }
-	}
-	ctx = server_ctx;
-    } else {
-    	ctx = SSL_CTX_new(ssl_method);
-    	if (ctx == NULL) {
-	    return GET_SSL_STATUS(ssock);
-    	}
+    ossock->ossl_ctx = ctx = SSL_CTX_new(ssl_method);
+    if (ctx == NULL) {
+	return GET_SSL_STATUS(ssock);
     }
-    ossock->ossl_ctx = ctx;
 
     if (ssock->is_server) {
 	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
@@ -1499,6 +1461,46 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	pj_ssl_cert_wipe_keys(cert);	
     }
 
+    return PJ_SUCCESS;
+}
+
+
+/* Create and initialize new SSL context and instance */
+static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+{
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    int mode;
+    pj_status_t status;
+
+    pj_assert(ssock);
+
+    /* Make sure OpenSSL library has been initialized */
+    init_openssl();
+
+    set_entropy(ssock);
+
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
+
+    /* Create SSL context */
+    if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
+    	SSL_CTX *server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+
+	if (!server_ctx) {
+	    status = init_ossl_ctx(ssock->parent);
+	    if (status != PJ_SUCCESS)
+	        return status;
+
+	    server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+	    ((ossl_sock_t *)ssock->parent)->own_ctx = PJ_TRUE;
+	}
+	ossock->ossl_ctx = server_ctx;
+    } else {
+	status = init_ossl_ctx(ssock);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     /* Create SSL instance */
     ossock->ossl_ssl = SSL_new(ossock->ossl_ctx);
     if (ossock->ossl_ssl == NULL) {
@@ -1549,8 +1551,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     /* Destroy SSL context */
     if (ossock->ossl_ctx) {
-    	if (!SERVER_SUPPORT_SESSION_REUSE || !ssock->is_server)
+    	if (ssock->is_server) {
+    	    if (!SERVER_SUPPORT_SESSION_REUSE || ossock->own_ctx)
+	    	SSL_CTX_free(ossock->ossl_ctx);
+	} else {
 	    SSL_CTX_free(ossock->ossl_ctx);
+	}
 	ossock->ossl_ctx = NULL;
     }
 
