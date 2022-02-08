@@ -445,6 +445,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     /* Set remote address: */
     status = pj_sockaddr_init(rem_af, &si->rem_addr, &rem_conn->addr,
 			      rem_m->desc.port);
+    if (status == PJ_ERESOLVE && rem_af == pj_AF_INET()) {
+	/* Handle special case in NAT64 scenario where for some reason, server
+	 * puts IPv6 (literal or FQDN) in SDP answer while indicating "IP4"
+	 * in its address type, let's retry resolving using AF_INET6.
+	 */
+	status = pj_sockaddr_init(pj_AF_INET6(), &si->rem_addr,
+				  &rem_conn->addr, rem_m->desc.port);
+    }
     if (status != PJ_SUCCESS) {
 	/* Invalid IP address. */
 	return PJMEDIA_EINVALIDIP;
