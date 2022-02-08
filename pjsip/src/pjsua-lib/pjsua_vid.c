@@ -251,16 +251,12 @@ static pj_status_t media_event_unsubscribe(pjmedia_event_mgr* mgr,
     pj_status_t status;
 
     /* Release locks before unsubscribing, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     status = pjmedia_event_unsubscribe(mgr, cb, user_data, epub);
 
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     return status;
 }
@@ -910,10 +906,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
     pj_log_push_indent();
 
     /* Release locks before unsubscribing/destroying, to avoid deadlock. */
-    while (PJSUA_LOCK_IS_LOCKED()) {
-        num_locks++;
-        PJSUA_UNLOCK();
-    }
+    num_locks = PJSUA_RELEASE_LOCK();
 
     if (w->vp_cap) {
 	pjsua_vid_conf_remove_port(w->cap_slot);
@@ -930,8 +923,7 @@ static void free_vid_win(pjsua_vid_win_id wid)
 	pjmedia_vid_port_destroy(w->vp_rend);
     }
     /* Re-acquire the locks. */
-    for (; num_locks > 0; num_locks--)
-        PJSUA_LOCK();
+    PJSUA_RELOCK(num_locks);
 
     pjsua_vid_win_reset(wid);
 
@@ -1407,12 +1399,33 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
     	    	
     	    	eve = (pjsua_event_list *)act_timer->user_data;
 
-    	    	if (eve->call_id == call_med->call->index &&
+		if (eve->call_id == (int)call_med->call->index &&
     	    	    eve->med_idx == call_med->idx)
     	    	{
-    	    	    PJSUA_UNLOCK();
-    	    	    pj_thread_sleep(20);
-    	    	    PJSUA_LOCK();
+    	    	    unsigned num_locks;
+		    pjsip_dialog *dlg = call_med->call->inv ?
+					    call_med->call->inv->dlg : NULL;
+
+		    /* The function may be called from worker thread, we have
+		     * to handle the events instead of simple sleep here
+		     * and must not hold any lock while handling the events:
+		     * https://trac.pjsip.org/repos/ticket/1737
+		     */
+		    num_locks = PJSUA_RELEASE_LOCK();
+
+		    if (dlg) {
+			pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+			pjsip_dlg_dec_lock(dlg);
+		    }
+
+		    pjsua_handle_events(10);
+
+		    if (dlg) {
+			pjsip_dlg_inc_lock(dlg);
+			pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+		    }
+
+		    PJSUA_RELOCK(num_locks);
     	    	    break;
     	    	}
     	    }
