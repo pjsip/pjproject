@@ -2830,6 +2830,9 @@ on_return:
     	/* Schedule a retry */
     	if (call->hangup_retry >= CALL_HANGUP_MAX_RETRY) {
     	    /* Forcefully terminate the invite session. */
+	    PJ_LOG(1,(THIS_FILE,"Call %d: failed to hangup after %d retries, "
+				"terminating the session forcefully now!",
+				call->index, call->hangup_retry));
     	    pjsip_inv_terminate(call->inv, call->hangup_code, PJ_TRUE);
     	    return PJ_SUCCESS;
     	}
@@ -2969,7 +2972,6 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     	} else {
     	    /* Destroy media session. */
     	    pjsua_media_channel_deinit(call_id);
-
 	    call->hanging_up = PJ_TRUE;
 	    pjsua_check_snd_dev_idle();
 	}
@@ -2984,10 +2986,13 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    					 &user_event);
 	}
 
+	if (call->inv)
+	    call_inv_end_session(call, code, reason, msg_data);
+    } else {
+	/* Already requested and on progress */
+        PJ_LOG(4,(THIS_FILE, "Call %d hangup request ignored as "
+			     "it is on progress", call_id));
     }
-
-    if (call->inv)
-    	call_inv_end_session(call, code, reason, msg_data);
 
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
