@@ -57,6 +57,23 @@
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
+/* Specify whether server supports session reuse using session ID. */
+#define SERVER_SUPPORT_SESSION_REUSE 1
+
+/* Specify whether server should disable session tickets. */
+#define SERVER_DISABLE_SESSION_TICKETS 1
+
+/* Each server application must set its own session id context,
+ * which is used to distinguish the contexts and is stored in
+ * exported sessions.
+ */
+#ifndef SERVER_SESSION_ID_CONTEXT
+#	define SERVER_SESSION_ID_CONTEXT 999
+#endif
+
+/* Server session timeout duration. Default is 300 sec. */
+#define SERVER_SESSION_TIMEOUT 300
+
 #if defined(LIBRESSL_VERSION_NUMBER)
 #	define USING_LIBRESSL 1
 #else
@@ -181,6 +198,7 @@ typedef struct ossl_sock_t
     pj_ssl_sock_t  	  base;
 
     SSL_CTX		 *ossl_ctx;
+    pj_bool_t		  own_ctx;
     SSL			 *ossl_ssl;
     BIO			 *ossl_rbio;
     BIO			 *ossl_wbio;
@@ -973,33 +991,22 @@ static int xname_cmp(const X509_NAME * const *a, const X509_NAME * const *b) {
   return X509_NAME_cmp(*a, *b);
 }
 
-/* Create and initialize new SSL context and instance */
-static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+
+/* Initialize OpenSSL context for the ssock */
+static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    SSL_CTX *ctx = NULL;
 #if !defined(OPENSSL_NO_DH)
     BIO *bio;
     DH *dh;
     long options;
 #endif
     SSL_METHOD *ssl_method = NULL;
-    SSL_CTX *ctx;
     pj_uint32_t ssl_opt = 0;
-    pj_ssl_cert_t *cert;
-    int mode, rc;
+    pj_ssl_cert_t *cert = ssock->cert;
+    int rc;
     pj_status_t status;
-        
-    pj_assert(ssock);
-
-    cert = ssock->cert;
-
-    /* Make sure OpenSSL library has been initialized */
-    init_openssl();
-
-    set_entropy(ssock);
-
-    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
-	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
 
     /* Determine SSL method to use */
     /* Specific version methods are deprecated since 1.1.0 */
@@ -1068,12 +1075,32 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     }
 
-    /* Create SSL context */
-    ctx = SSL_CTX_new(ssl_method);
+    ossock->ossl_ctx = ctx = SSL_CTX_new(ssl_method);
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ssock);
     }
-    ossock->ossl_ctx = ctx;
+
+    if (ssock->is_server) {
+	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
+
+#if SERVER_DISABLE_SESSION_TICKETS
+    	/* Disable session tickets for TLSv1.2 and below. */
+    	ssl_opt |= SSL_OP_NO_TICKET;
+#ifdef SSL_CTX_set_num_tickets
+    	/* Set the number of TLSv1.3 session tickets issued to 0. */
+    	SSL_CTX_set_num_tickets(ctx, 0);
+#endif
+
+#endif
+
+	SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
+	if (!SSL_CTX_set_session_id_context(ctx,
+		 (const unsigned char *)&sid_ctx, sizeof(sid_ctx)))
+	{
+            PJ_LOG(1, (THIS_FILE, "Warning! Unable to set server session id "
+                 		  "context. Session reuse will not work."));
+	}
+    }
 
     if (ssl_opt)
 	SSL_CTX_set_options(ctx, ssl_opt);
@@ -1449,6 +1476,46 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	pj_ssl_cert_wipe_keys(cert);	
     }
 
+    return PJ_SUCCESS;
+}
+
+
+/* Create and initialize new SSL context and instance */
+static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+{
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    int mode;
+    pj_status_t status;
+
+    pj_assert(ssock);
+
+    /* Make sure OpenSSL library has been initialized */
+    init_openssl();
+
+    set_entropy(ssock);
+
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
+
+    /* Create SSL context */
+    if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
+    	SSL_CTX *server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+
+	if (!server_ctx) {
+	    status = init_ossl_ctx(ssock->parent);
+	    if (status != PJ_SUCCESS)
+	        return status;
+
+	    server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+	    ((ossl_sock_t *)ssock->parent)->own_ctx = PJ_TRUE;
+	}
+	ossock->ossl_ctx = server_ctx;
+    } else {
+	status = init_ossl_ctx(ssock);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     /* Create SSL instance */
     ossock->ossl_ssl = SSL_new(ossock->ossl_ctx);
     if (ossock->ossl_ssl == NULL) {
@@ -1499,7 +1566,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     /* Destroy SSL context */
     if (ossock->ossl_ctx) {
-	SSL_CTX_free(ossock->ossl_ctx);
+    	if (ssock->is_server) {
+    	    if (!SERVER_SUPPORT_SESSION_REUSE || ossock->own_ctx)
+	    	SSL_CTX_free(ossock->ossl_ctx);
+	} else {
+	    SSL_CTX_free(ossock->ossl_ctx);
+	}
 	ossock->ossl_ctx = NULL;
     }
 
@@ -2075,27 +2147,54 @@ static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server)
 }
 
 
+/* Server Name Indication server callback */
+static int sni_cb(SSL *ssl, int *al, void *arg)
+{
+    pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)arg;
+    const char *sname;
+
+    PJ_UNUSED_ARG(al);
+
+    sname = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    if (!sname || pj_stricmp2(&ssock->param.server_name, sname)) {
+    	PJ_LOG(4, (THIS_FILE, "Client SNI rejected: %s", sname));
+    	return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    return SSL_TLSEXT_ERR_OK;
+}
+
 static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
 {
-#ifdef SSL_set_tlsext_host_name
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
     /* Set server name to connect */
     if (ssock->param.server_name.slen &&
         get_ip_addr_ver(&ssock->param.server_name) == 0)
     {
-	/* Server name is null terminated already */
-	if (!SSL_set_tlsext_host_name(ossock->ossl_ssl, 
-				      ssock->param.server_name.ptr))
-	{
-	    char err_str[PJ_ERR_MSG_SIZE];
+    	if (ssock->is_server) {
+#if defined(SSL_CTX_set_tlsext_servername_callback) && \
+    defined(SSL_CTX_set_tlsext_servername_arg)
 
-	    ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
-	    PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
-		"failed: %s", err_str));
+	    SSL_CTX_set_tlsext_servername_callback(ossock->ossl_ctx, &sni_cb);
+	    SSL_CTX_set_tlsext_servername_arg(ossock->ossl_ctx, ssock);
+
+#endif
+    	} else {
+#ifdef SSL_set_tlsext_host_name
+	    /* Server name is null terminated already */
+	    if (!SSL_set_tlsext_host_name(ossock->ossl_ssl,
+				          ssock->param.server_name.ptr))
+	    {
+	        char err_str[PJ_ERR_MSG_SIZE];
+
+	        ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
+	        PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
+		          "failed: %s", err_str));
+	    }
+#endif
 	}
     }
-#endif
 }
 
 
@@ -2131,6 +2230,40 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    	if (ssock->is_server && ssock->ssl_state != SSL_STATE_ESTABLISHED) {
+    	    enum {BUF_SIZE = 64};
+	    unsigned int len = 0, i;
+	    const unsigned char *sctx, *sid;
+	    char buf[BUF_SIZE+1];
+	    SSL_SESSION *sess;
+	    
+	    sess = SSL_get_session(ossock->ossl_ssl);
+
+	    PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
+		       "timeout=%d",
+		       SSL_session_reused(ossock->ossl_ssl),
+		       SSL_SESSION_is_resumable(sess),
+		       SSL_SESSION_get_timeout(sess)));
+
+	    sid = SSL_SESSION_get_id(sess, &len);
+	    len *= 2;
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i+=2)
+	        pj_ansi_sprintf(buf+i, "%02X", sid[i/2]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session id: %s", buf));
+
+	    sctx = SSL_SESSION_get0_id_context(sess, &len);
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i++)
+	        pj_ansi_sprintf(buf + i, "%d", sctx[i]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
+    	}
+#endif
+
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
 	return PJ_SUCCESS;
     }
