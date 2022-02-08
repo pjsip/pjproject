@@ -121,6 +121,11 @@ static unsigned get_nid_from_cid(unsigned cid)
 
 #endif
 
+static void update_certs_info(pj_ssl_sock_t* ssock,
+			      X509_STORE_CTX* ctx,
+			      pj_ssl_cert_info *local_cert_info,
+			      pj_ssl_cert_info *remote_cert_info,
+			      pj_bool_t is_verify);
 
 #if !USING_LIBRESSL && OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
@@ -133,6 +138,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #elif !USING_LIBRESSL
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
+#  define X509_STORE_CTX_get0_cert(ctx) ((ctx)->cert)
 #endif
 
 
@@ -856,6 +862,15 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	PJ_LOG(1,(THIS_FILE,
 		  "SSL verification callback failed to get SSL socket "
 		  "instance (sslsock_idx=%d).", sslsock_idx));
+	goto on_return;
+    }
+
+    if (ssock->param.cb.on_verify_cb) {
+	update_certs_info(ssock, x509_ctx, &ssock->local_cert_info, 
+			  &ssock->remote_cert_info, PJ_TRUE);
+	preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock, 
+						       ssock->is_server);
+
 	goto on_return;
     }
 
@@ -1980,39 +1995,60 @@ static void ssl_update_remote_cert_chain_info(pj_pool_t *pool,
  */
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
-    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
-    X509 *x;
-    STACK_OF(X509) *chain;
-
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
+
+    update_certs_info(ssock, NULL, &ssock->local_cert_info, 
+		      &ssock->remote_cert_info, PJ_FALSE);
+}
+
+
+static void update_certs_info(pj_ssl_sock_t* ssock,
+			      X509_STORE_CTX* ctx,
+			      pj_ssl_cert_info *local_cert_info,
+			      pj_ssl_cert_info *remote_cert_info,
+			      pj_bool_t is_verify)
+{
+    ossl_sock_t* ossock = (ossl_sock_t*)ssock;
+    X509* x;
+    STACK_OF(X509)* chain;
 
     /* Active local certificate */
     x = SSL_get_certificate(ossock->ossl_ssl);
     if (x) {
-	get_cert_info(ssock->pool, &ssock->local_cert_info, x, PJ_FALSE);
+	get_cert_info(ssock->pool, local_cert_info, x, PJ_FALSE);
 	/* Don't free local's X509! */
     } else {
-	pj_bzero(&ssock->local_cert_info, sizeof(pj_ssl_cert_info));
+	pj_bzero(local_cert_info, sizeof(pj_ssl_cert_info));
     }
 
     /* Active remote certificate */
-    x = SSL_get_peer_certificate(ossock->ossl_ssl);
-    if (x) {
-	get_cert_info(ssock->pool, &ssock->remote_cert_info, x, PJ_TRUE);
-	/* Free peer's X509 */
-	X509_free(x);
+    if (is_verify) {
+	x = X509_STORE_CTX_get0_cert(ctx);
     } else {
-	pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
+	x = SSL_get_peer_certificate(ossock->ossl_ssl);
+    }
+    if (x) {
+	get_cert_info(ssock->pool, remote_cert_info, x, PJ_TRUE);
+	if (!is_verify) {
+	    /* Free peer's X509 */
+	    X509_free(x);
+	}
+    } else {
+	pj_bzero(remote_cert_info, sizeof(pj_ssl_cert_info));
     }
 
-    chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
+    if (is_verify) {
+	chain = X509_STORE_CTX_get1_chain(ctx);
+    } else {
+	chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
+    }
     if (chain) {
 	pj_pool_reset(ssock->info_pool);
 	ssl_update_remote_cert_chain_info(ssock->info_pool,
-       					  &ssock->remote_cert_info,
+       					  remote_cert_info,
        					  chain, PJ_TRUE);
     } else {
-	ssock->remote_cert_info.raw_chain.cnt = 0;
+	remote_cert_info->raw_chain.cnt = 0;
     }
 }
 
