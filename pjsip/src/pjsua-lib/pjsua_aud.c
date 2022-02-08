@@ -1165,6 +1165,9 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     if (pjsua_var.player_cnt >= PJ_ARRAY_SIZE(pjsua_var.player))
 	return PJ_ETOOMANY;
 
+    if (filename->slen >= PJ_MAXPATH)
+    	return PJ_ENAMETOOLONG;
+
     PJ_LOG(4,(THIS_FILE, "Creating file player: %.*s..",
 	      (int)filename->slen, filename->ptr));
     pj_log_push_indent();
@@ -1481,6 +1484,11 @@ PJ_DEF(pj_status_t) pjsua_recorder_create( const pj_str_t *filename,
 
     /* Don't support encoding type at present */
     PJ_ASSERT_RETURN(enc_type == 0, PJ_EINVAL);
+
+    if (filename->slen >= PJ_MAXPATH)
+    	return PJ_ENAMETOOLONG;
+    if (filename->slen < 4)
+    	return PJ_EINVALIDOP;
 
     PJ_LOG(4,(THIS_FILE, "Creating recorder %.*s..",
 	      (int)filename->slen, filename->ptr));

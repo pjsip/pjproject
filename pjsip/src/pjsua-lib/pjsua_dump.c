@@ -954,6 +954,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(maxlen > 3, PJ_ETOOSMALL);
 
     status = acquire_call("pjsua_call_dump()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
@@ -967,11 +968,13 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     print_call(indent, call_id, tmp, sizeof(tmp));
 
     len = (int)pj_ansi_strlen(tmp);
-    pj_ansi_strcpy(buffer, tmp);
+    if (len + 3 > maxlen) len = maxlen - 3;
+    pj_ansi_strncpy(buffer, tmp, len);
 
     p += len;
     *p++ = '\r';
     *p++ = '\n';
+    *p = '\0';
 
     /* Calculate call duration */
     if (call->conn_time.sec != 0) {

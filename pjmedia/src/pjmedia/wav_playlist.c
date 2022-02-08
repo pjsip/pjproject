@@ -324,7 +324,9 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     /* Be sure all files exist	*/
     for (index=0; index<file_count; index++) {
 
-	PJ_ASSERT_RETURN(file_list[index].slen < PJ_MAXPATH, PJ_ENAMETOOLONG);
+	PJ_ASSERT_RETURN(file_list[index].slen >= 0, PJ_ETOOSMALL);
+	if (file_list[index].slen >= PJ_MAXPATH)
+	    return PJ_ENAMETOOLONG;
 
 	pj_memcpy(filename, file_list[index].ptr, file_list[index].slen);
 	filename[file_list[index].slen] = '\0';

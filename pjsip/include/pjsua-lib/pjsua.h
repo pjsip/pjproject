@@ -7412,6 +7412,7 @@ PJ_DECL(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
  *			WAV files are supported, and the WAV file MUST be
  *			formatted as 16bit PCM mono/single channel (any
  *			clock rate is supported).
+ *			Filename's length must be smaller than PJ_MAXPATH.
  * @param options	Optional option flag. Application may specify
  *			PJMEDIA_FILE_NO_LOOP to prevent playback loop.
  * @param p_id		Pointer to receive player ID.
@@ -7430,6 +7431,8 @@ PJ_DECL(pj_status_t) pjsua_player_create(const pj_str_t *filename,
  * @param file_names	Array of file names to be added to the play list.
  *			Note that the files must have the same clock rate,
  *			number of channels, and number of bits per sample.
+ *			Each filename's length must be smaller than
+ * 			PJ_MAXPATH.
  * @param file_count	Number of files in the array.
  * @param label		Optional label to be set for the media port.
  * @param options	Optional option flag. Application may specify
@@ -7524,6 +7527,7 @@ PJ_DECL(pj_status_t) pjsua_player_destroy(pjsua_player_id id);
  * @param filename	Output file name. The function will determine the
  *			default format to be used based on the file extension.
  *			Currently ".wav" is supported on all platforms.
+ *			Filename's length must be smaller than PJ_MAXPATH.
  * @param enc_type	Optionally specify the type of encoder to be used to
  *			compress the media, if the file can support different
  *			encodings. This value must be zero for now.
