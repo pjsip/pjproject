@@ -1646,10 +1646,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		/* Stream decoder changed format, update all conf listeners
 		 * by reconnecting.
 		 */
-		pjsua_conf_port_id dec_pid = call_med->strm.v.strm_dec_slot;
 		pjmedia_port *strm_dec;
-		pjsua_vid_conf_port_info pi;
-		unsigned i;
 
 		status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 						     PJMEDIA_DIR_DECODING,

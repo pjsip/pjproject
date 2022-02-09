@@ -504,7 +504,6 @@ pjsip_multipart_find_part_by_header(pj_pool_t *pool,
 				    void *search_for,
 				    const pjsip_multipart_part *start)
 {
-    struct multipart_data *m_data;
     pjsip_hdr *search_hdr = search_for;
     pj_str_t search_buf;
 
@@ -587,7 +586,6 @@ pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
     struct multipart_data *m_data;
     pjsip_multipart_part *part;
     pjsip_generic_string_hdr *found_hdr;
-    pj_str_t found_hdr_value;
     static pj_str_t hdr_name = { "Content-ID", 10};
     pj_str_t hdr_value;
 
