@@ -2611,9 +2611,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    if (call->inv->state >= PJSIP_INV_STATE_CONFIRMED) {
-	PJ_LOG(3,(THIS_FILE, "Can not answer call that has been confirmed"));
-	status = PJSIP_ESESSIONSTATE;
+    if (!call->inv->invite_tsx ||
+    	call->inv->invite_tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+    {
+	PJ_LOG(3,(THIS_FILE, "Unable to answer call (no incoming INVITE or "
+			     "already answered)"));
+	status = PJ_EINVALIDOP;
 	goto on_return;
     }
 
