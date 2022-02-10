@@ -263,10 +263,12 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
 	    char buf[PJ_INET6_ADDRSTRLEN+10];
 
-	    PJ_PERROR(3,(ssock->pool->obj_name, status,
-			 "Handshake failed in accepting %s",
-			 pj_sockaddr_print(&ssock->rem_addr, buf,
-					   sizeof(buf), 3)));
+            if (pj_sockaddr_has_addr(&ssock->rem_addr)) {
+                PJ_PERROR(3,(ssock->pool->obj_name, status,
+			  "Handshake failed in accepting %s",
+			  pj_sockaddr_print(&ssock->rem_addr, buf,
+					    sizeof(buf), 3)));
+            }
 
 	    if (ssock->param.cb.on_accept_complete2) {
 		(*ssock->param.cb.on_accept_complete2) 
@@ -1465,8 +1467,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
 {
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
 
-    if (!ssock->pool)
+    if (!ssock->pool || ssock->is_closing)
 	return PJ_SUCCESS;
+
+    ssock->is_closing = PJ_TRUE;
 
     if (ssock->timer.id != TIMER_NONE) {
 	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);

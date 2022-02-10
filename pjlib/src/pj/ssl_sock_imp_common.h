@@ -113,6 +113,7 @@ struct pj_ssl_sock_t
     pj_timer_entry	  timer;
     pj_status_t		  verify_status;
 
+    pj_bool_t		  is_closing;
     unsigned long	  last_err;
 
     pj_sock_t		  sock;

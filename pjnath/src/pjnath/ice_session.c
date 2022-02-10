@@ -2505,8 +2505,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
     /* Checklist must have been created */
-    PJ_ASSERT_RETURN(ice->clist.count > 0 || ice->is_trickling,
-		     PJ_EINVALIDOP);
+    if (ice->clist.count == 0 && !ice->is_trickling)
+    	return PJ_EINVALIDOP;
 
     /* Lock session */
     pj_grp_lock_acquire(ice->grp_lock);
