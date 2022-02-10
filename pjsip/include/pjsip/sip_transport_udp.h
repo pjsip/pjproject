@@ -294,6 +294,14 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_pause(pjsip_transport *transport,
  *    and set the \a local argument to NULL. In both cases, application
  *    may specify the published address of the socket in \a a_name
  *    argument.
+ * 
+ * Note that prior to calling this method, any locks acquired need to 
+ * be released temporarily to avoid any deadlock scenario.  
+ * This method will loop to wait for read operation to finish before actually 
+ * restart the transport. This might lead to deadlock if any other thread with 
+ * the read operation tries to acquire the same lock held by the thread calling
+ * this method. 
+ * Please see https://github.com/pjsip/pjproject/pull/2731 for more details. 
  *
  * @param transport	The UDP transport.
  * @param option	Restart option.
@@ -339,6 +347,14 @@ PJ_DECL(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
  *    may specify the published address of the socket in \a a_name
  *    argument. This is another version of pjsip_udp_transport_restart() 
  *    able to restart IPv6 transport.
+ * 
+ * Note that prior to calling this method, any locks acquired need to 
+ * be released temporarily to avoid any deadlock scenario.  
+ * This method will loop to wait for read operation to finish before actually 
+ * restart the transport. This might lead to deadlock if any other thread with 
+ * the read operation tries to acquire the same lock held by the thread calling
+ * this method. 
+ * Please see https://github.com/pjsip/pjproject/pull/2731 for more details.
  *
  * @param transport	The UDP transport.
  * @param option	Restart option.

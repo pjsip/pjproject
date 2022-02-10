@@ -225,7 +225,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
 	    pjmedia_vid_driver_deinit(i);
         }
 
-        vid_subsys->pf = NULL;
+        pj_bzero(vid_subsys, sizeof(pjmedia_vid_subsys));
     }
     return PJ_SUCCESS;
 }

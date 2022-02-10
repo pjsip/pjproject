@@ -305,6 +305,7 @@ typedef struct pjsua_acc
                                            2: acknowledged by servers   */
     pj_str_t	     rfc5626_instprm;/**< SIP outbound instance param.  */
     pj_str_t         rfc5626_regprm;/**< SIP outbound reg param.        */
+    unsigned         rfc5626_flowtmr;/**< SIP outbound flow timer.      */
 
     unsigned	     cred_cnt;	    /**< Number of credentials.		*/
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.	*/
@@ -656,6 +657,24 @@ PJ_INLINE(pj_bool_t) PJSUA_LOCK_IS_LOCKED()
     return pjsua_var.mutex_owner == pj_thread_this();
 }
 
+/* Release all locks currently held by this thread. */
+PJ_INLINE(unsigned) PJSUA_RELEASE_LOCK()
+{
+    unsigned num_locks = 0;
+    while (PJSUA_LOCK_IS_LOCKED()) {
+        num_locks++;
+        PJSUA_UNLOCK();
+    }
+    return num_locks;
+}
+
+/* Re-acquire all the locks released by PJSUA_RELEASE_LOCK(). */
+PJ_INLINE(void) PJSUA_RELOCK(unsigned num_locks)
+{
+    for (; num_locks > 0; num_locks--)
+        PJSUA_LOCK();
+}
+
 #else
 #define PJSUA_LOCK()
 #define PJSUA_TRY_LOCK()	PJ_SUCCESS
@@ -755,7 +774,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 /**
  * Init presence.
  */
-pj_status_t pjsua_pres_init();
+pj_status_t pjsua_pres_init(void);
 
 /*
  * Start presence subsystem.
@@ -904,7 +923,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                      pjmedia_stream_info *si,
 				     const pjmedia_sdp_session *local_sdp,
 				     const pjmedia_sdp_session *remote_sdp);
-void pjsua_check_snd_dev_idle();
+void pjsua_check_snd_dev_idle(void);
 
 /*
  * Video

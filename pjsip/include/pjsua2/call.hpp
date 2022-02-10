@@ -270,6 +270,10 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
+/** Array of media direction */
+typedef IntVector MediaDirVector;
+
+
 /**
  * Call settings.
  */
@@ -328,7 +332,7 @@ struct CallSetting
      *
      * Default: empty vector
      */
-    std::vector<pjmedia_dir> mediaDir;
+    MediaDirVector mediaDir;
 
     
 public:
@@ -1843,7 +1847,9 @@ public:
      * Notify application when an audio media session is about to be created
      * (as opposed to #on_stream_created() and #on_stream_created2() which are
      * called *after* the session has been created). The application may change
-     * stream parameters like the jitter buffer size.
+     * some stream info parameter values, i.e: jbInit, jbMinPre, jbMaxPre,
+     * jbMax, useKa, rtcpSdesByeDisabled, jbDiscardAlgo (audio),
+     * vidCodecParam.encFmt (video).
      *
      * @param prm       Callback parameter.
      */

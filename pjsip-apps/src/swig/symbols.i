@@ -299,6 +299,13 @@ typedef enum pjmedia_vid_dev_cap
   PJMEDIA_VID_DEV_CAP_MAX = 16384
 } pjmedia_vid_dev_cap;
 
+typedef enum pjmedia_vid_dev_fullscreen_flag
+{
+  PJMEDIA_VID_DEV_WINDOWED = 0,
+  PJMEDIA_VID_DEV_FULLSCREEN = 1,
+  PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP = 2
+} pjmedia_vid_dev_fullscreen_flag;
+
 typedef enum pjmedia_aud_dev_route
 {
   PJMEDIA_AUD_DEV_ROUTE_DEFAULT = 0,

@@ -536,6 +536,22 @@ PJ_DEF(pj_status_t) pj_ice_sess_destroy(pj_ice_sess *ice)
 
 
 /*
+ * Detach ICE session from group lock.
+ */
+PJ_DEF(pj_status_t) pj_ice_sess_detach_grp_lock(pj_ice_sess *ice,
+						pj_grp_lock_handler *handler)
+{
+    PJ_ASSERT_RETURN(ice && handler, PJ_EINVAL);
+
+    pj_grp_lock_acquire(ice->grp_lock);
+    pj_grp_lock_del_handler(ice->grp_lock, ice, &ice_on_destroy);
+    *handler = &ice_on_destroy;
+    pj_grp_lock_release(ice->grp_lock);
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Change session role. 
  */
 PJ_DEF(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
@@ -3382,14 +3398,22 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	if (c->state == PJ_ICE_SESS_CHECK_STATE_FROZEN ||
 	    c->state == PJ_ICE_SESS_CHECK_STATE_WAITING)
 	{
-	    /* See if we shall nominate this check */
-	    pj_bool_t nominate = (c->nominated || ice->is_nominating);
+	    /* If we are nominating in regular nomination, don't nominate this
+	     * triggered check immediately, just wait for its scheduled check.
+	     */
+	    if (ice->is_nominating && !ice->opt.aggressive) {
+		LOG5((ice->obj_name, "Triggered check for check %d not "
+		      "performed because nomination is in progress", i));
+	    } else {
+		/* See if we shall nominate this check */
+		pj_bool_t nominate = (c->nominated || ice->is_nominating);
 
-	    LOG5((ice->obj_name, "Performing triggered check for check %d",i));
-	    pj_log_push_indent();
-	    perform_check(ice, &ice->clist, i, nominate);
-	    pj_log_pop_indent();
-
+		LOG5((ice->obj_name, "Performing triggered check for "
+		      "check %d",i));
+		pj_log_push_indent();
+		perform_check(ice, &ice->clist, i, nominate);
+		pj_log_pop_indent();
+	    }
 	} else if (c->state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS) {
 	    /* Should retransmit immediately
 	     */
@@ -3449,7 +3473,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
     else if (ice->clist.count < PJ_ICE_MAX_CHECKS) {
 
 	pj_ice_sess_check *c = &ice->clist.checks[ice->clist.count];
-	pj_bool_t nominate;
+	unsigned check_id = ice->clist.count;
 
 	c->lcand = lcand;
 	c->rcand = rcand;
@@ -3457,14 +3481,37 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	c->state = PJ_ICE_SESS_CHECK_STATE_WAITING;
 	c->nominated = rcheck->use_candidate;
 	c->err_code = PJ_SUCCESS;
+	++ice->clist.count;
 
-	nominate = (c->nominated || ice->is_nominating);
+	LOG4((ice->obj_name, "New triggered check added: %d", check_id));
 
-	LOG4((ice->obj_name, "New triggered check added: %d", 
-	     ice->clist.count));
-	pj_log_push_indent();
-	perform_check(ice, &ice->clist, ice->clist.count++, nominate);
-	pj_log_pop_indent();
+	/* If we are nominating in regular nomination, don't nominate this
+	 * newly found pair.
+	 */
+	if (ice->is_nominating && !ice->opt.aggressive) {
+	    LOG5((ice->obj_name, "Triggered check for check %d not "
+		  "performed because nomination is in progress", check_id));
+
+	    /* Just in case the periodic check has been stopped (due to no more
+	     * pair to check), let's restart it for this pair.
+	     */
+	    if (!pj_timer_entry_running(&ice->clist.timer)) {
+		pj_time_val delay = {0, 0};
+		pj_timer_heap_schedule_w_grp_lock(ice->stun_cfg.timer_heap,
+						  &ice->clist.timer, &delay,
+						  PJ_TRUE, ice->grp_lock);
+	    }
+	} else {
+	    pj_bool_t nominate;
+	    nominate = (c->nominated || ice->is_nominating);
+
+	    pj_log_push_indent();
+	    perform_check(ice, &ice->clist, check_id, nominate);
+	    pj_log_pop_indent();
+	}
+
+    	/* Re-sort the list because of the newly added pair. */
+    	sort_checklist(ice, &ice->clist);
 
     } else {
 	LOG4((ice->obj_name, "Error: unable to perform triggered check: "

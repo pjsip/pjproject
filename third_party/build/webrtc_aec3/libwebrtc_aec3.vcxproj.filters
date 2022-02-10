@@ -1,0 +1,522 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{d1521b07-9b1c-41b7-b6f2-848cf25559b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{9d5ef30c-9759-4e25-8586-28896609c552}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\absl">
+      <UniqueIdentifier>{b4619809-e1d5-4d66-a6b3-953bf8c75ab0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\absl">
+      <UniqueIdentifier>{e3db4b13-c39c-40bd-b2d0-2d3df0bc0529}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\absl\types">
+      <UniqueIdentifier>{5eb3ceab-b77c-4cf7-b129-794dee1f66fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\api">
+      <UniqueIdentifier>{fa5d3cb5-3803-4944-a017-a260c8e59912}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\api\audio">
+      <UniqueIdentifier>{911f4305-1369-4531-a6cd-ec5771848f38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\api">
+      <UniqueIdentifier>{7f53e4f5-c002-46c2-94bc-b99eaac7a5d8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules">
+      <UniqueIdentifier>{58d34c2c-e442-4378-b9df-60b19cbe1dba}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing">
+      <UniqueIdentifier>{9b920eb8-1db7-4470-a913-8a24407d3af8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\aec3">
+      <UniqueIdentifier>{c4f36bdb-67e1-4bac-8f12-93cde19a8870}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\agc2">
+      <UniqueIdentifier>{7f7f5771-a653-4f26-b433-e71cf98a6c40}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\agc2\rnn_vad">
+      <UniqueIdentifier>{2ebe53aa-9c2f-4be2-a47d-32185868bf27}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\ns">
+      <UniqueIdentifier>{8fa7e856-f5d9-4b47-a45f-24992b26ed28}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\logging">
+      <UniqueIdentifier>{7bbaa4f6-c5c6-41b6-9dc3-11b60d997de0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\modules\audio_processing\utility">
+      <UniqueIdentifier>{81f55853-e41f-4ba1-927c-fec0d25e78dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\third_party">
+      <UniqueIdentifier>{82880ef6-a258-4350-aa90-44fb409f0bf4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\rtc_base">
+      <UniqueIdentifier>{a9dc81cd-8209-485a-b732-880b08597859}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\system_wrappers">
+      <UniqueIdentifier>{deffebea-dd2d-4900-b052-1e3ce7b2cade}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\third_party\rnnoise">
+      <UniqueIdentifier>{231eb606-3614-4416-8713-1f48b47155e5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\third_party\pffft">
+      <UniqueIdentifier>{4b48769a-fab5-49ef-840a-1f55a3a24d56}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio">
+      <UniqueIdentifier>{970f4aaf-69aa-415c-ba4f-51fa97d7b1a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\resampler">
+      <UniqueIdentifier>{ca3df877-a47f-482c-bea2-efce3958e51b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\signal_processing">
+      <UniqueIdentifier>{b2a0d4da-3350-4c76-a0fc-28b15b7666c7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\third_party">
+      <UniqueIdentifier>{dfb507ca-efdf-4ccf-93be-4e2367a87cfe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\third_party\ooura">
+      <UniqueIdentifier>{1c6d4fc0-9c1e-413a-bcb6-5afa5890410c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\third_party\ooura\fft_size_128">
+      <UniqueIdentifier>{f7d7a821-03c6-453c-811f-fbf827050175}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\common_audio\third_party\ooura\fft_size_256">
+      <UniqueIdentifier>{27f4991c-1ffd-4503-b28e-4c5cf193e33b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\webrtc_aec3\src\absl\base\config.h">
+      <Filter>Header Files\absl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\webrtc_aec3\src\api\audio\echo_control.h">
+      <Filter>Header Files\api</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\webrtc_aec3\src\absl\types\bad_optional_access.cc">
+      <Filter>Source Files\absl\types</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\channel_layout.cc">
+      <Filter>Source Files\api\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_config.cc">
+      <Filter>Source Files\api\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_canceller3_factory.cc">
+      <Filter>Source Files\api\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\api\audio\echo_detector_creator.cc">
+      <Filter>Source Files\api\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft.cc">
+      <Filter>Source Files\common_audio\third_party\ooura\fft_size_128</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_256\fft4g.cc">
+      <Filter>Source Files\common_audio\third_party\ooura\fft_size_256</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_resampler.cc">
+      <Filter>Source Files\common_audio\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\push_sinc_resampler.cc">
+      <Filter>Source Files\common_audio\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler.cc">
+      <Filter>Source Files\common_audio\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\signal_processing\splitting_filter2.c">
+      <Filter>Source Files\common_audio\signal_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\audio_buffer.cc">
+      <Filter>Source Files\modules\audio_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\gain_controller2.cc">
+      <Filter>Source Files\modules\audio_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\high_pass_filter.cc">
+      <Filter>Source Files\modules\audio_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\splitting_filter.cc">
+      <Filter>Source Files\modules\audio_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\three_band_filter_bank.cc">
+      <Filter>Source Files\modules\audio_processing</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\adaptive_fir_filter_erl.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec_state.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_common.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\aec3_fft.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\alignment_mixer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\api_call_jitter_metrics.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_delay_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_framer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\clockdrift_detector.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\coarse_filter_update_gain.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\comfort_noise_generator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\decimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\dominant_nearend_detector.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\downsampled_render_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_audibility.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_canceller3.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_delay_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_path_variability.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\echo_remover_metrics.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erl_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\erle_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fft_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\filter_analyzer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\frame_blocker.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\fullband_erle_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\matched_filter_lag_aggregator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\moving_average.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\refined_filter_update_gain.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_delay_controller_metrics.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\render_signal_analyzer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\residual_echo_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_decay_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_frequency_response.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\reverb_model_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\signal_dependent_erle_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\spectrum_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\stationarity_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_erle_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subband_nearend_detector.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\subtractor_output_analyzer.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_filter.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\suppression_gain.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\transparent_mode.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_agc.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_digital_gain_applier.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\adaptive_mode_level_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\biquad_filter.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\compute_interpolated_gain_curve.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\cpu_features.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\down_sampler.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\fixed_digital_level_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\gain_applier.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\interpolated_gain_curve.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\limiter_db_gain_curve.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_level_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\noise_spectrum_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\saturation_protector_buffer.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\signal_classifier.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vad_with_level.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\vector_float_frame.cc">
+      <Filter>Source Files\modules\audio_processing\agc2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\auto_correlation.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\features_extraction.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\lp_residual.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\pitch_search_internal.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_fc.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\rnn_gru.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\agc2\rnn_vad\spectral_features_internal.cc">
+      <Filter>Source Files\modules\audio_processing\agc2\rnn_vad</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\fast_math.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\histograms.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\noise_suppressor.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\ns_fft.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\prior_signal_model_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\quantile_noise_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\signal_model_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\speech_probability_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\suppression_params.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\ns\wiener_filter.cc">
+      <Filter>Source Files\modules\audio_processing\ns</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\logging\apm_data_dumper.cc">
+      <Filter>Source Files\modules\audio_processing\logging</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\cascaded_biquad_filter.cc">
+      <Filter>Source Files\modules\audio_processing\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator.cc">
+      <Filter>Source Files\modules\audio_processing\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\delay_estimator_wrapper.cc">
+      <Filter>Source Files\modules\audio_processing\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\utility\pffft_wrapper.cc">
+      <Filter>Source Files\modules\audio_processing\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\checks.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\logging.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\platform_thread_types.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\race_checker.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_encode.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_to_number.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\string_utils.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system_time.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\time_utils.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\cpu_features2.cc">
+      <Filter>Source Files\system_wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\field_trial.cc">
+      <Filter>Source Files\system_wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\system_wrappers\source\metrics.cc">
+      <Filter>Source Files\system_wrappers</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\third_party\pffft\src\pffft.c">
+      <Filter>Source Files\third_party\pffft</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\third_party\rnnoise\src\rnn_vad_weights.cc">
+      <Filter>Source Files\third_party\rnnoise</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\audio_util.cc">
+      <Filter>Source Files\common_audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\experiments\field_trial_parser.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\memory\aligned_malloc.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\strings\string_builder.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\synchronization\mutex.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\synchronization\yield.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\rtc_base\system\file_wrapper.cc">
+      <Filter>Source Files\rtc_base</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\modules\audio_processing\aec3\block_processor_metrics.cc">
+      <Filter>Source Files\modules\audio_processing\aec3</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\resampler\sinc_resampler_neon.cc">
+      <Filter>Source Files\common_audio\resampler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\webrtc_aec3\src\common_audio\third_party\ooura\fft_size_128\ooura_fft_neon.cc">
+      <Filter>Source Files\third_party</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

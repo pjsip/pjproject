@@ -1206,6 +1206,41 @@ on_return:
     return status;
 }
 
+/**
+ * Send Connect request.
+ */
+PJ_DEF(pj_status_t) pj_turn_session_connect(pj_turn_session *sess,
+					    const pj_sockaddr_t *peer_addr,
+					    unsigned addr_len)
+{
+    pj_stun_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && peer_addr && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->state == PJ_TURN_STATE_READY, PJ_EINVALIDOP);
+
+    pj_grp_lock_acquire(sess->grp_lock);
+
+    /* Create blank Connect request */
+    status = pj_stun_session_create_req(sess->stun, PJ_STUN_CONNECT_REQUEST,
+    					PJ_STUN_MAGIC, NULL, &tdata);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+					   PJ_STUN_ATTR_XOR_PEER_ADDR,
+					   PJ_TRUE, peer_addr, addr_len);
+    if (status != PJ_SUCCESS) goto on_return;
+    status = pj_stun_session_send_msg(sess->stun, (void *)peer_addr, PJ_FALSE,
+				      PJ_FALSE, sess->srv_addr,
+				      pj_sockaddr_get_len(sess->srv_addr),
+				      tdata);
+
+on_return:
+    pj_grp_lock_release(sess->grp_lock);
+    return status;
+}
+
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 					      void *pkt,
 					      pj_size_t pkt_len,
@@ -1761,6 +1796,49 @@ static void stun_on_request_complete(pj_stun_session *stun,
 	    (*sess->cb.on_connection_bind_status)
 			(sess, status, conn_bind->id,
 			&conn_bind->peer_addr, conn_bind->peer_addr_len);
+	}
+    } else if (method == PJ_STUN_CONNECT_METHOD) {
+	/* Handle Connct response */
+	struct pj_sockaddr_t *peer_addr = (struct pj_sockaddr_t*)token;
+	pj_uint32_t conn_id = 0;
+
+	if (status != PJ_SUCCESS ||
+	    !PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type))
+	{
+	    pj_str_t reason = {0};
+	    if (status == PJ_SUCCESS) {
+		const pj_stun_errcode_attr *err_attr;
+		err_attr = (const pj_stun_errcode_attr*)
+			   pj_stun_msg_find_attr(response,
+						 PJ_STUN_ATTR_ERROR_CODE, 0);
+		if (err_attr) {
+		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
+		    reason = err_attr->reason;
+		} else {
+		    status = PJNATH_EINSTUNMSG;
+		}
+	    }
+	    pj_perror(1, sess->obj_name, status, "Connect failed: %.*s",
+		      (int)reason.slen, reason.ptr);
+	} else {
+	    const pj_stun_uint_attr *conn_id_attr;
+	    conn_id_attr = (const pj_stun_uint_attr*)
+	    pj_stun_msg_find_attr(response, PJ_STUN_ATTR_CONNECTION_ID, 0);
+	    if (conn_id_attr == NULL) {
+		status = PJNATH_EINSTUNMSG;
+		pj_perror(1, sess->obj_name, status,
+			  "Error: Missing CONNECTION-ID attribute");
+	    }
+	    else {
+		conn_id = conn_id_attr->value;
+	    }
+	}
+
+	/* Notify app */
+	if (sess->cb.on_connect_complete) {
+	    (*sess->cb.on_connect_complete)
+			(sess, status, conn_id,
+			peer_addr, pj_sockaddr_get_len(peer_addr));
 	}
     } else {
 	PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s response",

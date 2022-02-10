@@ -3,13 +3,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 26
 
     defaultConfig {
-        minSdkVersion 11
-        targetSdkVersion 29
-        versionCode 1
-        versionName "1.0"
+        minSdkVersion 23
+        targetSdkVersion 26
 
 
         ndk {
@@ -37,3 +35,4 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 }
+

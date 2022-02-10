@@ -81,6 +81,17 @@ struct AccountRegConfig : public PersistentObject
     string	    	contactParams;
 
     /**
+     * Additional parameters that will be appended in the Contact URI
+     * of the registration requests. This will be appended after
+     * \a AccountSipConfig.contactUriParams;
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    string	    	contactUriParams;
+
+    /**
      * Optional interval for registration, in seconds. If the value is zero,
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */
@@ -598,7 +609,7 @@ struct AccountNatConfig : public PersistentObject
      *
      * See also contactRewriteMethod field.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			contactRewriteUse;
 
@@ -623,7 +634,7 @@ struct AccountNatConfig : public PersistentObject
      * TCP socket when it is still connecting. In these cases, this
      * feature will also be turned off.
      *
-     * Default: 1 (yes).
+     * Default: 1 (PJ_TRUE / yes).
      */
     int			contactUseSrcPort;
 
@@ -633,7 +644,7 @@ struct AccountNatConfig : public PersistentObject
      * the REGISTER request, as long as the request uses the same transport
      * instance as the previous REGISTER request.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			viaRewriteUse;
 
@@ -660,7 +671,7 @@ struct AccountNatConfig : public PersistentObject
      * transports. If UDP is used for the registration, the SIP outbound
      * feature will be silently ignored for the account.
      *
-     * Default: TRUE
+     * Default: 1 (PJ_TRUE / yes)
      */
     int			sipOutboundUse;
 
@@ -706,9 +717,25 @@ public:
      * Default constructor
      */
     AccountNatConfig() : sipStunUse(PJSUA_STUN_USE_DEFAULT),
-			 mediaStunUse(PJSUA_STUN_USE_DEFAULT),
-			 nat64Opt(PJSUA_NAT64_DISABLED),
-			 turnConnType(PJ_TURN_TP_UDP)
+      mediaStunUse(PJSUA_STUN_USE_DEFAULT),
+      nat64Opt(PJSUA_NAT64_DISABLED),
+      iceEnabled(false),
+      iceTrickle(PJ_ICE_SESS_TRICKLE_DISABLED),
+      iceMaxHostCands(-1),
+      iceAggressiveNomination(true),
+      iceNominatedCheckDelayMsec(PJ_ICE_NOMINATED_CHECK_DELAY),
+      iceWaitNominationTimeoutMsec(ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT),
+      iceNoRtcp(false),
+      iceAlwaysUpdate(true),
+      turnConnType(PJ_TURN_TP_UDP),
+      contactRewriteUse(PJ_TRUE),
+      contactRewriteMethod(PJSUA_CONTACT_REWRITE_METHOD),
+      contactUseSrcPort(PJ_TRUE),
+      viaRewriteUse(PJ_TRUE),
+      sdpNatRewriteUse(PJ_FALSE),
+      sipOutboundUse(PJ_TRUE),
+      udpKaIntervalSec(15),
+      udpKaData("\r\n")
     {}
 
     /**
@@ -926,6 +953,12 @@ struct AccountMediaConfig : public PersistentObject
 {
     /**
      * Media transport (RTP) configuration.
+     * 
+     * For \a port and \a portRange settings, RTCP port is selected as 
+     * RTP port+1.
+     * Example: \a port=5000, \a portRange=4
+     * - Available ports: 5000, 5002, 5004 (Media/RTP transport)
+     *                    5001, 5003, 5005 (Media/RTCP transport)
      */
     TransportConfig	transportConfig;
 
@@ -988,6 +1021,24 @@ struct AccountMediaConfig : public PersistentObject
      * RTCP Feedback settings.
      */
     RtcpFbConfig	rtcpFbConfig;
+
+    /**
+     * Use loopback media transport. This may be useful if application
+     * doesn't want PJSUA2 to create real media transports/sockets, such as
+     * when using third party media.
+     *
+     * Default: false
+     */
+    bool		useLoopMedTp;
+
+    /**
+     * Enable local loopback when useLoopMedTp is set to TRUE.
+     * If enabled, packets sent to the transport will be sent back to
+     * the streams attached to the transport.
+     *
+     * Default: false
+     */
+    bool		enableLoopback;
 
 public:
     /**
@@ -1958,7 +2009,6 @@ public:
     virtual void onMwiInfo(OnMwiInfoParam &prm)
     { PJ_UNUSED_ARG(prm); }
 
-
 private:
     friend class Endpoint;
     friend class Buddy;
@@ -1974,7 +2024,6 @@ private:
      * This method is used by Buddy::~Buddy().
      */
     void removeBuddy(Buddy *buddy);
-
 
 private:
     pjsua_acc_id 	 id;

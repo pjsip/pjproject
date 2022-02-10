@@ -197,15 +197,20 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	if (af!=PJ_AF_UNSPEC && res->ai_family != af)
 	    continue;
 
-	if (res->ai_socktype != pj_SOCK_DGRAM()
-                    && res->ai_socktype != pj_SOCK_STREAM()) {
+	if (res->ai_socktype != pj_SOCK_DGRAM() &&
+            res->ai_socktype != pj_SOCK_STREAM() &&
+            /* It is possible that the result's sock type
+             * is unspecified.
+             */
+            res->ai_socktype != 0)
+        {
 	        continue;
 	}
 
 	/* Add current address in the resulting list if there
 	 * is no duplicates only. */
 	for (j = 0; j < i; j++) {
-	    if (!pj_memcmp(&ai[j].ai_addr, res->ai_addr, res->ai_addrlen)) {
+	    if (!pj_sockaddr_cmp(&ai[j].ai_addr, res->ai_addr)) {
 		duplicate_found = PJ_TRUE;
 		break;
 	    }

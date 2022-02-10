@@ -308,6 +308,10 @@ typedef enum pj_stun_msg_type
      */
     PJ_STUN_CHANNEL_BIND_ERROR_RESPONSE	    = 0x0119,
 
+    /**
+     * STUN/TURN Connect Request
+     */
+    PJ_STUN_CONNECT_REQUEST                 = 0x000a,
 
     /**
      * STUN/TURN ConnectBind Request

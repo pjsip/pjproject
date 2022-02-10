@@ -3734,13 +3734,28 @@ static pj_status_t restart_listener(pjsua_transport_id id,
 
     switch (tp_info.type) {
     case PJSIP_TRANSPORT_UDP:
-    case PJSIP_TRANSPORT_UDP6:
+    case PJSIP_TRANSPORT_UDP6:    
+    {
+	unsigned num_locks = 0;
+
+	/* Release locks before restarting the transport, to avoid deadlock. */
+	while (PJSUA_LOCK_IS_LOCKED()) {
+    	    num_locks++;
+    	    PJSUA_UNLOCK();
+	}
+
 	status = pjsip_udp_transport_restart2(
 				       pjsua_var.tpdata[id].data.tp,
 				       PJSIP_UDP_TRANSPORT_DESTROY_SOCKET,
 				       PJ_INVALID_SOCKET,
 				       &bind_addr,
 				       NULL);
+
+	/* Re-acquire the locks. */
+	for (;num_locks > 0; num_locks--)
+    	    PJSUA_LOCK();
+
+    }
 	break;
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
@@ -3817,6 +3832,15 @@ static void restart_listener_cb(void *user_data)
 }
 
 
+static void ip_change_put_back_inv_config(void *user_data)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    PJ_LOG(4,(THIS_FILE,"IP change stops ignoring request timeout"));
+    pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = PJ_FALSE;
+}
+
+
 PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
 {
     pj_status_t status = PJ_SUCCESS;
@@ -3835,6 +3859,21 @@ PJ_DEF(pj_status_t) pjsua_handle_ip_change(const pjsua_ip_change_param *param)
     }
 
     PJ_LOG(3, (THIS_FILE, "Start handling IP address change"));
+
+    /* Avoid call disconnection due to request timeout. Some requests may
+     * be in progress when network is changing, they may eventually get
+     * timed out and cause call disconnection.
+     */
+    if (!pjsip_cfg()->endpt.keep_inv_after_tsx_timeout) {
+	pjsip_cfg()->endpt.keep_inv_after_tsx_timeout = PJ_TRUE;
+
+	/* Put it back after some time (transaction timeout setting value) */
+	pjsua_schedule_timer2(&ip_change_put_back_inv_config, NULL,
+			      pjsip_cfg()->tsx.td);
+
+	PJ_LOG(4,(THIS_FILE,"IP change temporarily ignores request timeout"));
+    }
+
     if (param->restart_listener) {
 	PJSUA_LOCK();
 	/* Restart listener/transport, handle_ip_change_on_acc() will

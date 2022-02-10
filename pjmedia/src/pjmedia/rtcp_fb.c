@@ -631,7 +631,8 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_nack(
     if (hdr->pt != RTCP_RTPFB || hdr->count != 1)
 	return PJ_ENOTFOUND;
 
-    cnt = pj_ntohs((pj_uint16_t)hdr->length) - 2;
+    cnt = pj_ntohs((pj_uint16_t)hdr->length);
+    if (cnt > 2) cnt -= 2; else cnt = 0;
     if (length < (cnt+3)*4)
 	return PJ_ETOOSMALL;
 
@@ -663,7 +664,9 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
     pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
 
     PJ_ASSERT_RETURN(buf, PJ_EINVAL);
-    PJ_ASSERT_RETURN(length >= 12, PJ_ETOOSMALL);
+
+    if (length < 12)
+    	return PJ_ETOOSMALL;
 
     /* PLI uses pt==RTCP_PSFB and FMT==1 */
     if (hdr->pt != RTCP_PSFB || hdr->count != 1)

@@ -3,6 +3,7 @@ import random
 import config_site
 import socket
 import errno
+import time
 
 DEFAULT_ECHO = True
 DEFAULT_TRACE = True
@@ -80,8 +81,10 @@ class InstanceParam:
 			cnt = 0
 			port = 0
 			while cnt < 10:
-				cnt = cnt + 1
 				port = random.randint(DEFAULT_START_SIP_PORT, 60000)
+				if port==self.telnet_port:
+					continue
+				cnt = cnt + 1
 				s = socket.socket(socket.AF_INET)
 				try:
 					s.bind(("0.0.0.0", port))
@@ -92,6 +95,8 @@ class InstanceParam:
 				s.close()
 				break;
 			self.sip_port = port
+			# Give some time for socket close
+			time.sleep(0.5)
 		else:
 			self.sip_port = sip_port
 		# Autogenerate URI if it's empty.

@@ -358,7 +358,8 @@ PJ_DEF(pjsip_transport_type_e) pjsip_transport_get_type_from_name(const pj_str_t
 	}
     }
 
-    pj_assert(!"Invalid transport name");
+    /* Just return instead of raising assertion. */
+    //pj_assert(!"Invalid transport name");
     return PJSIP_TRANSPORT_UNSPECIFIED;
 }
 

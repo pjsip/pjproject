@@ -163,6 +163,30 @@ enum pjmedia_vid_dev_std_index
 
 
 /**
+ * Enumeration of window fullscreen flags.
+ */
+typedef enum pjmedia_vid_dev_fullscreen_flag
+{
+    /**
+     * Windowed or disable fullscreen.
+     */
+    PJMEDIA_VID_DEV_WINDOWED = 0,
+
+    /**
+     * Fullscreen enabled, video mode may be changed.
+     */
+    PJMEDIA_VID_DEV_FULLSCREEN = 1,
+
+    /**
+     * Fullscreen enabled by resizing video frame to match to the desktop,
+     * video mode will not be changed.
+     */
+    PJMEDIA_VID_DEV_FULLSCREEN_DESKTOP = 2
+
+} pjmedia_vid_dev_fullscreen_flag;
+
+
+/**
  * This enumeration identifies various video device capabilities. These video
  * capabilities indicates what features are supported by the underlying
  * video device implementation.
@@ -469,10 +493,11 @@ typedef struct pjmedia_vid_dev_param
     unsigned window_flags;
 
     /**
-     * Video window's full screen status. This setting is optional, and will only be
-     * used if PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN is set in the flags.
+     * Video window's fullscreen status. This setting is optional, and will
+     * only be used if PJMEDIA_VID_DEV_CAP_OUTPUT_FULLSCREEN is set in the
+     * flags.
      */
-    pj_bool_t window_fullscreen;
+    pjmedia_vid_dev_fullscreen_flag window_fullscreen;
 
 } pjmedia_vid_dev_param;
 

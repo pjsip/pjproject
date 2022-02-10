@@ -625,6 +625,7 @@ static pj_status_t alloc_codec( pjmedia_codec_factory *factory,
     }
     if (idx == -1) {
 	*p_codec = NULL;
+	pj_mutex_unlock(codec_factory.mutex);
 	return PJMEDIA_CODEC_EUNSUP;
     }
 

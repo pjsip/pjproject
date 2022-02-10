@@ -60,8 +60,10 @@ const pj_str_t	pjsip_USERNAME_STR =	    { "username", 8 },
 		pjsip_PGP_STR =		    { "PGP", 3 },
 		pjsip_QUOTED_PGP_STR =	    { "\"PGP\"", 5 },
 		pjsip_BEARER_STR =          { "Bearer", 6 },
-		pjsip_MD5_STR =		    { "md5", 3 },
-		pjsip_QUOTED_MD5_STR =	    { "\"md5\"", 5},
+		pjsip_MD5_STR =		    { "MD5", 3 },
+		pjsip_QUOTED_MD5_STR =	    { "\"MD5\"", 5},
+		pjsip_SHA256_STR =	    { "SHA-256", 7 },
+		pjsip_QUOTED_SHA256_STR =   { "\"SHA-256\"", 9},
 		pjsip_AUTH_STR =	    { "auth", 4},
 		pjsip_QUOTED_AUTH_STR =	    { "\"auth\"", 6 };
 

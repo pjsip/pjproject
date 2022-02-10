@@ -36,7 +36,8 @@ pjsip_cfg_t pjsip_sip_cfg_var =
        PJSIP_RESOLVE_HOSTNAME_TO_GET_INTERFACE,
        0,
        PJSIP_ENCODE_SHORT_HNAME,
-       PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS
+       PJSIP_ACCEPT_MULTIPLE_SDP_ANSWERS,
+       0
     },
 
     /* Transaction settings */

@@ -622,6 +622,43 @@ PJ_DECL(pj_status_t) pj_turn_sock_sendto(pj_turn_sock *turn_sock,
 PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
 					       const pj_sockaddr_t *peer,
 					       unsigned addr_len);
+/**
+ * Initiate connection to the specified peer using Connect request.
+ * Application must call this function when it uses RFC 6062 (TURN TCP
+ * allocations) to initiate a data connection to a peer. The connection status
+ * will be notified via on_connection_status callback.
+ *
+ * According to RFC 6062, the TURN transport instance must be created with
+ * connection type are set to PJ_TURN_TP_TCP, application must send TCP
+ * Allocate request (with pj_turn_session_alloc()，set TURN allocation
+ * parameter peer_conn_type to PJ_TURN_TP_TCP) before calling this function.
+ *
+ *
+ * @param turn_sock	The TURN transport instance.
+ * @param peer		The remote peer address.
+ * @param addr_len	Length of the address.
+ *
+ * @return		PJ_SUCCESS if the operation has been successful,
+ *			or the appropriate error code on failure.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_connect(pj_turn_sock *turn_sock,
+					  const pj_sockaddr_t *peer,
+					  unsigned addr_len);
+/**
+ * Close previous TCP data connection for the specified peer.
+ * According to RFC 6062, when the client wishes to terminate its relayed
+ * connection to the peer, it closes the data connection to the server.
+ *
+ * @param turn_sock	The TURN transport instance.
+ * @param peer		The remote peer address.
+ * @param addr_len	Length of the address.
+ *
+ * @return		PJ_SUCCESS if the operation has been successful,
+ *			or the appropriate error code on failure.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_disconnect(pj_turn_sock *turn_sock,
+					   const pj_sockaddr_t *peer,
+					   unsigned addr_len);
 
 
 /**

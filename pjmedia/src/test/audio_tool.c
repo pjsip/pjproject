@@ -179,8 +179,9 @@ static pj_status_t record_file (const char *filename)
     info.samples_per_sec = 8000;
 
     stream = pj_snd_open_recorder(-1, &info, &rec_callback, NULL);
-    if (!stream)
-	return -1;
+    if (!stream){
+	goto on_error;
+    }
 
     status = pj_snd_stream_start(stream);
     if (status != 0)
@@ -199,6 +200,11 @@ static pj_status_t record_file (const char *filename)
     return 0;
 
 on_error:
+#if WRITE_ORIGINAL_PCM
+    fclose(fhnd_pcm);
+#endif
+    fclose(fhnd);
+
     pj_snd_stream_stop(stream);
     pj_snd_stream_close(stream);
     return -1;
@@ -226,8 +232,10 @@ static pj_status_t play_file (const char *filename)
     info.samples_per_sec = 8000;
 
     stream = pj_snd_open_player(-1, &info, &play_callback, NULL);
-    if (!stream)
+    if (!stream){
+	fclose(fhnd);
 	return -1;
+    }
 
     status = pj_snd_stream_start(stream);
     if (status != 0)

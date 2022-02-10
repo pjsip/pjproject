@@ -178,7 +178,6 @@
 #   define PJ_IS_LITTLE_ENDIAN	1
 #   define PJ_IS_BIG_ENDIAN	0
 
-
 #elif defined (PJ_M_X86_64) || defined(__amd64__) || defined(__amd64) || \
 	defined(__x86_64__) || defined(__x86_64) || \
 	defined(_M_X64) || defined(_M_AMD64)
@@ -255,7 +254,8 @@
 #   define PJ_IS_LITTLE_ENDIAN	0
 #   define PJ_IS_BIG_ENDIAN	1
 
-#elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || defined(_M_ARM)
+#elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || \
+       defined(_M_ARM) || defined(_M_ARM64)
 #   define PJ_HAS_PENTIUM	0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
@@ -271,6 +271,10 @@
 #	undef PJ_M_ARMV4
 #	define PJ_M_ARMV4		1
 #	define PJ_M_NAME		"armv4"
+#   elif defined (PJ_M_ARM64) || defined(ARM64)
+#	undef PJ_M_ARM64
+#	define PJ_M_ARM64		1
+#	define PJ_M_NAME		"arm64"
 #   endif 
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \

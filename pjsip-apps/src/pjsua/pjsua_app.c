@@ -206,8 +206,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	}
 
 	/* Dump media state upon disconnected.
-	 * Moved to on_stream_destroyed() since media has been deactivated
-	 * upon disconnection.
+	 * Now pjsua_media_channel_deinit() automatically log the call dump.
 	 */
 	if (0) {
 	    PJ_LOG(5,(THIS_FILE, 
@@ -282,7 +281,9 @@ static void on_stream_destroyed(pjsua_call_id call_id,
 				unsigned stream_idx)
 {
     PJ_UNUSED_ARG(strm);
-    if (1) {
+
+    /* Now pjsua_media_channel_deinit() automatically log the call dump. */
+    if (0) {
 	PJ_LOG(5,(THIS_FILE, 
 		  "Call %d stream %d destroyed, dumping media stats..", 
 		  call_id, stream_idx));
@@ -401,6 +402,10 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	pjsua_conf_port_id call_conf_slot;
 
 	call_conf_slot = ci->media[mi].stream.aud.conf_slot;
+
+	/* Make sure conf slot is valid (e.g: media dir is not "inactive") */
+	if (call_conf_slot == PJSUA_INVALID_ID)
+	    return;
 
 	/* Loopback sound, if desired */
 	if (app_config.auto_loop) {

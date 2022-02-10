@@ -436,16 +436,32 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	if (rb_len) {
 	    switch (rb_hdr->bt) {
 		case BT_RR_TIME:
-		    rb_rr_time = (pjmedia_rtcp_xr_rb_rr_time*) rb_hdr;
+		    if ((char*)rb_hdr + sizeof(*rb_rr_time) <=
+			(char*)pkt + size) 
+		    {
+			rb_rr_time = (pjmedia_rtcp_xr_rb_rr_time*)rb_hdr;
+		    }
 		    break;
 		case BT_DLRR:
-		    rb_dlrr = (pjmedia_rtcp_xr_rb_dlrr*) rb_hdr;
+		    if ((char*)rb_hdr + sizeof(*rb_dlrr) <=
+			(char*)pkt + size)
+		    {
+			rb_dlrr = (pjmedia_rtcp_xr_rb_dlrr*)rb_hdr;
+		    }
 		    break;
 		case BT_STATS:
-		    rb_stats = (pjmedia_rtcp_xr_rb_stats*) rb_hdr;
+		    if ((char*)rb_hdr + sizeof(*rb_stats) <=
+			(char*)pkt + size)
+		    {
+			rb_stats = (pjmedia_rtcp_xr_rb_stats*)rb_hdr;
+		    }
 		    break;
 		case BT_VOIP_METRICS:
-		    rb_voip_mtc = (pjmedia_rtcp_xr_rb_voip_mtc*) rb_hdr;
+		    if ((char*)rb_hdr + sizeof(*rb_voip_mtc) <=
+			(char*)pkt + size)
+		    {
+			rb_voip_mtc = (pjmedia_rtcp_xr_rb_voip_mtc*)rb_hdr;
+		    }
 		    break;
 		default:
 		    break;

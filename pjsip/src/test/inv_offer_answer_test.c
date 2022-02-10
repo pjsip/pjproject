@@ -137,6 +137,7 @@ typedef struct inv_test_param_t
     pj_bool_t	need_established;
     unsigned	count;
     oa_t	oa[4];
+    pj_bool_t	multipart_body;
 } inv_test_param_t;
 
 typedef struct inv_test_t
@@ -257,6 +258,17 @@ static void on_media_update(pjsip_inv_session *inv_ses,
 	    }
 	}
 
+	/* Special handling for standard offer/answer */
+	if (inv_test.param.count == 1 &&
+	    inv_test.param.oa[0] == OFFERER_UAC &&
+	    inv_test.param.need_established)
+	{
+	    jobs[job_cnt].type = ESTABLISH_CALL;
+	    jobs[job_cnt].who = PJSIP_ROLE_UAS;
+	    job_cnt++;
+	    TRACE_((THIS_FILE, "      C+++"));
+	}
+
 	pj_assert(job_cnt <= PJ_ARRAY_SIZE(jobs));
     }
 }
@@ -331,6 +343,15 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 	 */
 	status = pjsip_inv_initial_answer(inv_test.uas, rdata, 183, NULL,
 					  NULL, &tdata);
+	pj_assert(status == PJ_SUCCESS);
+
+	/* Use multipart body, if configured */
+	if (sdp && inv_test.param.multipart_body) {
+	     status = pjsip_create_multipart_sdp_body(
+				tdata->pool,
+				pjmedia_sdp_session_clone(tdata->pool, sdp),
+				&tdata->msg->body);
+	}
 	pj_assert(status == PJ_SUCCESS);
 
 	status = pjsip_inv_send_msg(inv_test.uas, tdata);
@@ -426,6 +447,7 @@ static int perform_test(inv_test_param_t *param)
 	sdp = NULL;
 
     status = pjsip_inv_create_uac(dlg, sdp, inv_test.param.inv_option, &inv_test.uac);
+    //inv_test.uac->create_multipart = param->multipart_body;
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -20);
 
     TRACE_((THIS_FILE, "    Sending INVITE %s offer", (sdp ? "with" : "without")));
@@ -436,8 +458,17 @@ static int perform_test(inv_test_param_t *param)
     status = pjsip_inv_invite(inv_test.uac, &tdata);
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, -30);
 
+    /* Use multipart body, if configured */
+    if (sdp && param->multipart_body) {
+	 status = pjsip_create_multipart_sdp_body(
+			    tdata->pool,
+			    pjmedia_sdp_session_clone(tdata->pool, sdp),
+			    &tdata->msg->body);
+    }
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, -40);
+
     status = pjsip_inv_send_msg(inv_test.uac, tdata);
-    PJ_ASSERT_RETURN(status==PJ_SUCCESS, -30);
+    PJ_ASSERT_RETURN(status==PJ_SUCCESS, -50);
 
     /*
      * Wait until test completes
@@ -467,8 +498,10 @@ static int perform_test(inv_test_param_t *param)
     status = pjsip_inv_end_session(inv_test.uas, PJSIP_SC_DECLINE, 0, &tdata);
     pj_assert(status == PJ_SUCCESS);
 
-    status = pjsip_inv_send_msg(inv_test.uas, tdata);
-    pj_assert(status == PJ_SUCCESS);
+    if (tdata) {
+    	status = pjsip_inv_send_msg(inv_test.uas, tdata);
+    	pj_assert(status == PJ_SUCCESS);
+    }
 
     flush_events(500);
 
@@ -525,13 +558,14 @@ static inv_test_param_t test_params[] =
     200/INVITE (answer)	<--
     ACK    		-->
  */
-#if 0
+#if 1
     {
 	"Standard INVITE with offer",
 	0,
 	PJ_TRUE,
 	1,
-	{ OFFERER_UAC }
+	{ OFFERER_UAC },
+	PJ_FALSE
     },
 
     {
@@ -539,7 +573,25 @@ static inv_test_param_t test_params[] =
 	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	1,
-	{ OFFERER_UAC }
+	{ OFFERER_UAC },
+	PJ_FALSE
+    },
+    {
+	"Standard INVITE with offer, with Multipart",
+	0,
+	PJ_TRUE,
+	1,
+	{ OFFERER_UAC },
+	PJ_TRUE
+    },
+
+    {
+	"Standard INVITE with offer, with 100rel, with Multipart",
+	PJSIP_INV_REQUIRE_100REL,
+	PJ_TRUE,
+	1,
+	{ OFFERER_UAC },
+	PJ_TRUE
     },
 #endif
 
@@ -555,7 +607,8 @@ static inv_test_param_t test_params[] =
 	0,
 	PJ_TRUE,
 	1,
-	{ OFFERER_UAS }
+	{ OFFERER_UAS },
+	PJ_FALSE
     },
 
     {
@@ -563,7 +616,25 @@ static inv_test_param_t test_params[] =
 	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	1,
-	{ OFFERER_UAS }
+	{ OFFERER_UAS },
+	PJ_FALSE
+    },
+    {
+	"INVITE with no offer, with Multipart",
+	0,
+	PJ_TRUE,
+	1,
+	{ OFFERER_UAS },
+	PJ_TRUE
+    },
+
+    {
+	"INVITE with no offer, with 100rel, with Multipart",
+	PJSIP_INV_REQUIRE_100REL,
+	PJ_TRUE,
+	1,
+	{ OFFERER_UAS },
+	PJ_TRUE
     },
 #endif
 
@@ -584,14 +655,24 @@ static inv_test_param_t test_params[] =
 	0,
 	PJ_TRUE,
 	2,
-	{ OFFERER_UAC, OFFERER_UAC }
+	{ OFFERER_UAC, OFFERER_UAC },
+	PJ_FALSE
+    },
+    {
+	"INVITE and UPDATE by UAC, with Multipart",
+	0,
+	PJ_TRUE,
+	2,
+	{ OFFERER_UAC, OFFERER_UAC },
+	PJ_TRUE
     },
     {
 	"INVITE and UPDATE by UAC, with 100rel",
 	PJSIP_INV_REQUIRE_100REL,
 	PJ_TRUE,
 	2,
-	{ OFFERER_UAC, OFFERER_UAC }
+	{ OFFERER_UAC, OFFERER_UAC },
+	PJ_FALSE
     },
 #endif
 
@@ -616,6 +697,14 @@ static inv_test_param_t test_params[] =
 	PJ_TRUE,
 	4,
 	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS }
+    },
+    {
+	"INVITE and many UPDATE by UAC and UAS, with Multipart",
+	0,
+	PJ_TRUE,
+	4,
+	{ OFFERER_UAC, OFFERER_UAS, OFFERER_UAC, OFFERER_UAS },
+	PJ_TRUE
     },
 
 };

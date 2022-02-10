@@ -463,11 +463,11 @@ struct pjsip_inv_session
 
 
 /**
- * This structure represents SDP information in a pjsip_rx_data. Application
- * retrieve this information by calling #pjsip_rdata_get_sdp_info(). This
+ * This structure represents SDP information in a pjsip_(rx|tx)_data. Application
+ * retrieve this information by calling #pjsip_get_sdp_info(). This
  * mechanism supports multipart message body.
  */
-typedef struct pjsip_rdata_sdp_info
+typedef struct pjsip_sdp_info
 {
     /**
      * Pointer and length of the text body in the incoming message. If
@@ -487,7 +487,15 @@ typedef struct pjsip_rdata_sdp_info
      */
     pjmedia_sdp_session *sdp;
 
-} pjsip_rdata_sdp_info;
+} pjsip_sdp_info;
+
+/**
+ * For backwards compatibility and completeness,
+ * pjsip_rdata_sdp_info and pjsip_tdata_sdp_info
+ * are typedef'd to pjsip_sdp_info.
+ */
+typedef pjsip_sdp_info pjsip_rdata_sdp_info;
+typedef pjsip_sdp_info pjsip_tdata_sdp_info;
 
 
 /**
@@ -1058,6 +1066,44 @@ PJ_DECL(pj_status_t) pjsip_create_sdp_body(pj_pool_t *pool,
 					   pjsip_msg_body **p_body);
 
 /**
+ * This is a utility function to create a multipart body with the
+ * SIP body as the first part.
+ *
+ * @param pool		Pool to allocate memory.
+ * @param sdp		SDP session to be put in the SIP message body.
+ * @param p_body	Pointer to receive SIP message body containing
+ *			the SDP session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_create_multipart_sdp_body( pj_pool_t *pool,
+                                           pjmedia_sdp_session *sdp,
+                                           pjsip_msg_body **p_body);
+
+/**
+ * Retrieve SDP information from a message body. Application should
+ * prefer to use this function rather than parsing the SDP manually since
+ * this function supports multipart message body.
+ *
+ * This function will only parse the SDP once, the first time it is called
+ * on the same message. Subsequent call on the same message will just pick
+ * up the already parsed SDP from the message.
+ *
+ * @param pool               Pool to allocate memory.
+ * @param body               The message body.
+ * @param msg_media_type     From the rdata or tdata Content-Type header, if available.
+ *                           If NULL, the content_type from the body will be used.
+ * @param search_media_type  The media type to search for.
+ *                           If NULL, "application/sdp" will be used.
+ *
+ * @return                   The SDP info.
+ */
+PJ_DECL(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
+					   pjsip_msg_body *body,
+					   pjsip_media_type *msg_media_type,
+					   const pjsip_media_type *search_media_type);
+
+/**
  * Retrieve SDP information from an incoming message. Application should
  * prefer to use this function rather than parsing the SDP manually since
  * this function supports multipart message body.
@@ -1082,14 +1128,49 @@ PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata);
  * on the same message. Subsequent call on the same message will just pick
  * up the already parsed SDP from the message.
  *
- * @param rdata		The incoming message.
- * @param med_type	The SDP media type.
+ * @param rdata               The incoming message.
+ * @param search_media_type   The SDP media type to search for.
+ *                            If NULL, "application/sdp" will be used.
  *
- * @return		The SDP info.
+ * @return                    The SDP info.
  */
 PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
 					    pjsip_rx_data *rdata,
-					    const pjsip_media_type *med_type);
+					    const pjsip_media_type *search_media_type);
+
+/**
+ * Retrieve SDP information from an outgoing message. Application should
+ * prefer to use this function rather than parsing the SDP manually since
+ * this function supports multipart message body.
+ *
+ * This function will only parse the SDP once, the first time it is called
+ * on the same message. Subsequent call on the same message will just pick
+ * up the already parsed SDP from the message.
+ *
+ * @param tdata    The outgoing message.
+ *
+ * @return         The SDP info.
+ */
+PJ_DECL(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info(pjsip_tx_data *tdata);
+
+/**
+ * Retrieve SDP information from an outgoing message. Application should
+ * prefer to use this function rather than parsing the SDP manually since
+ * this function supports multipart message body.
+ *
+ * This function will only parse the SDP once, the first time it is called
+ * on the same message. Subsequent call on the same message will just pick
+ * up the already parsed SDP from the message.
+ *
+ * @param tdata               The outgoing message.
+ * @param search_media_type   The SDP media type to search for.
+ *                            If NULL, "application/sdp" will be used.
+ *
+ * @return                    The SDP info.
+ */
+PJ_DECL(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info2(
+					    pjsip_tx_data *tdata,
+					    const pjsip_media_type *search_media_type);
 
 
 PJ_END_DECL

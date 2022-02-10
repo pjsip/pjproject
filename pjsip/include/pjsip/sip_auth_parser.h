@@ -44,7 +44,7 @@ PJ_DECL(pj_status_t) pjsip_auth_init_parser(void);
 /**
  * DeInitialize authorization parser module.
  */
-PJ_DECL(void) pjsip_auth_deinit_parser();
+PJ_DECL(void) pjsip_auth_deinit_parser(void);
 
 
 
@@ -65,7 +65,8 @@ extern const pj_str_t	pjsip_USERNAME_STR, /**< "username" string const.   */
 			pjsip_DIGEST_STR,   /**< "digest" string const.	    */
 			pjsip_PGP_STR,	    /**< "pgp" string const.	    */
 			pjsip_BEARER_STR,   /**< "bearer" string const.     */
-			pjsip_MD5_STR,	    /**< "md5" string const.	    */
+			pjsip_MD5_STR,	    /**< "MD5" string const.	    */
+			pjsip_SHA256_STR,   /**< "SHA-256" string const.    */
 			pjsip_AUTH_STR;	    /**< "auth" string const.	    */
 
 PJ_END_DECL

@@ -133,6 +133,8 @@ void gui_sleep(unsigned sec)
 
 int main()
 {
+    pj_log_set_level(1);
+
     if (systest_init() != PJ_SUCCESS)
 	return 1;
 

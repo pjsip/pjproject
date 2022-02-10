@@ -517,6 +517,12 @@ case $target in
 	  *android*)
 	  	ac_os_objs="$ac_os_objs guid_android.o"
 	  	;;
+	  *darwin*)
+	  	ac_os_objs="$ac_os_objs guid_darwin.o"
+	  	;;
+	  *bsd*)
+	  	ac_os_objs="$ac_os_objs guid_bsd.o"
+	  	;;
 	  *)
 		if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
 			ac_os_objs="$ac_os_objs guid_uuid.o"
@@ -750,14 +756,69 @@ else
   ac_pa_cflags="$ac_pa_cflags -DPA_LITTLE_ENDIAN"
 fi
 
+
+dnl # Enable Android Oboe audio device
+AC_SUBST(ac_oboe_cflags)
+AC_SUBST(ac_oboe_ldflags)
+AC_ARG_WITH(oboe,
+    AS_HELP_STRING([--with-oboe],
+		   [Enable Android Oboe audio device backend.]),
+    [
+	if test "x$with_oboe" != "xno" -a "x$with_oboe" != "x"; then
+		OBOE_PREFIX=$with_oboe
+		OBOE_CFLAGS="-I$OBOE_PREFIX/prefab/modules/oboe/include"
+		OBOE_LDFLAGS="-L$OBOE_PREFIX/prefab/modules/oboe/libs/android.$TARGET_ABI"
+		AC_MSG_RESULT([Using Oboe prefix... $with_oboe])
+	else
+		OBOE_CFLAGS=""
+		OBOE_LDFLAGS=""
+	fi
+
+	AC_MSG_CHECKING([Oboe usability])
+
+	OBOE_LIBS="-loboe -lOpenSLES -llog"
+
+	SAVED_LIBS="$LIBS"
+	SAVED_LDFLAGS="$LDFLAGS"
+	SAVED_CXXFLAGS="$CXXFLAGS"
+
+	LIBS="$OBOE_LIBS $LIBS"
+	LDFLAGS="$OBOE_LDFLAGS $LDFLAGS"
+	CXXFLAGS="$OBOE_CFLAGS $CXXFLAGS"
+
+	AC_LANG_PUSH([C++])
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <oboe/Oboe.h>]],
+					[oboe::AudioStreamBuilder sb; sb.setDeviceId(0);]
+			)],
+		 [ ac_oboe_cflags="-DPJMEDIA_AUDIO_DEV_HAS_OBOE=1 $OBOE_CFLAGS"
+		   ac_oboe_ldflags="$OBOE_LDFLAGS $OBOE_LIBS"
+		   AC_MSG_RESULT(yes)
+		  ],
+		 [
+		   LIBS="$SAVED_LIBS"
+		   LDFLAGS="$SAVED_LDFLAGS"
+		   AC_MSG_RESULT(no)
+		 ])
+	AC_LANG_POP([C++])
+
+	# Put back original CXXFLAGS as app won't needed it.
+	CXXFLAGS="$SAVED_CFLAGS"
+    ]
+    )
+
+
 if test "$enable_sound" = "no"; then
   true;
 else
  AC_SUBST(ac_pjmedia_audiodev_objs)
  case $target in
   *android*)
-	LIBS="$LIBS -lOpenSLES"
-	AC_MSG_RESULT([Checking sound device backend... OpenSL ES])
+	if test "x$ac_oboe_cflags" != "x"; then
+		AC_MSG_RESULT([Checking sound device backend... Oboe])
+	else
+		LIBS="$LIBS -lOpenSLES"
+		AC_MSG_RESULT([Checking sound device backend... Android])
+	fi
 	;;
   *-apple-darwin_ios*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit -framework AVFoundation"
@@ -1088,6 +1149,19 @@ AC_ARG_ENABLE(resample_dll,
 	       fi],
 	      AC_MSG_RESULT([Building libresample as shared library... no])
 	      )
+
+dnl # Include Speex resample
+AC_ARG_ENABLE(speex-resample,
+           AS_HELP_STRING([--enable-speex-resample],
+			  [Enable Speex resample]),
+           [
+           if test "$enable_speex_resample" = "yes"; then
+             AC_MSG_RESULT([Checking if Speex resample is enabled... yes])
+             [ac_pjmedia_resample=speex]
+           else
+             AC_MSG_RESULT([Checking if Speex resample is enabled... no])
+           fi
+           ], AC_MSG_RESULT([Checking if Speex resample is enabled... no]))
 
 dnl # SDL alt prefix
 AC_ARG_WITH(sdl,
@@ -2190,7 +2264,7 @@ AC_ARG_ENABLE(libwebrtc,
                                  ac_webrtc_instset=neon
                                  ac_webrtc_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
                                  ;;
-			     arm-apple-darwin*)
+			     arm-apple-darwin* | aarch64*)
 				 ac_webrtc_instset=neon
 				 ac_webrtc_cflags="-DWEBRTC_ARCH_ARM64"
 			    	 ;;
@@ -2275,7 +2349,7 @@ AC_ARG_ENABLE(libwebrtc_aec3,
                                  ac_webrtc_aec3_instset=neon
                                  ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARMV7 -mfloat-abi=hard -mfpu=neon"
                                  ;;
-			     arm-apple-darwin*)
+			     arm-apple-darwin* | aarch64*)
 				 ac_webrtc_aec3_instset=neon
 				 ac_webrtc_aec3_cflags="-DWEBRTC_ARCH_ARM64"
 			    	 ;;

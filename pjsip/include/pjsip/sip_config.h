@@ -181,6 +181,14 @@ typedef struct pjsip_cfg_t
          */
         pj_bool_t accept_multiple_sdp_answers;
 
+	/**
+	 * Don't disconnect the INVITE session after an outgoing request
+	 * gets timed out or responded with 408 (request timeout).
+	 *
+	 * Default is PJ_FALSE.
+	 */
+	pj_bool_t keep_inv_after_tsx_timeout;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -208,6 +216,9 @@ typedef struct pjsip_cfg_t
 
 	/** Transaction completed timer for INVITE, in msec. Default value is
 	 *  PJSIP_TD_TIMEOUT.
+	 *
+	 *  This setting is also used for transaction timeout timer for both
+	 *  INVITE and non-INVITE.
 	 */
 	unsigned td;
 
@@ -1099,7 +1110,12 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #  define PJSIP_T4_TIMEOUT	5000
 #endif
 
-/** Transaction completed timer for INVITE */
+/**
+ * Transaction completed timer for INVITE.
+ *
+ * This setting is also used for transaction timeout timer for both
+ * INVITE and non-INVITE.
+ */
 #if !defined(PJSIP_TD_TIMEOUT)
 #  define PJSIP_TD_TIMEOUT	32000
 #endif
@@ -1225,6 +1241,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #ifndef PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM
 #   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
 #endif
+
+
+/**
+ * Allow client to send refresh registration when the registrar sent a Contact
+ * header with expire parameter 0 in the 200/OK REGISTER response.
+ * Refer to https://github.com/pjsip/pjproject/pull/2809 for more info.
+ *
+ * Default is 1.
+ */
+#ifndef PJSIP_REGISTER_ALLOW_EXP_REFRESH
+#   define PJSIP_REGISTER_ALLOW_EXP_REFRESH	1
+#endif
+
 
 /**
  * Maximum size of pool allowed for auth client session in pjsip_regc.

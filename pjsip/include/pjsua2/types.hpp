@@ -32,6 +32,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 /** PJSUA2 API is inside pj namespace */
 namespace pj
@@ -51,6 +52,9 @@ typedef std::vector<std::string> StringVector;
 
 /** Array of integers */
 typedef std::vector<int> IntVector;
+
+/** Map string to string */
+typedef std::map<std::string, std::string> StringToStringMap;
 
 /**
  * Type of token, i.e. arbitrary application user data

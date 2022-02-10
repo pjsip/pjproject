@@ -1,0 +1,62 @@
+name: Bug Report
+description: File a bug report
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: bug-desc
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+      placeholder: |
+        E.g: Assertion in answering an incoming video call with response code 183.
+    validations:
+      required: true
+  - type: textarea
+    id: bug-repro
+    attributes:
+      label: Steps to reproduce
+      description: Describe how to reproduce the bug using sample apps such as [pjsua app](https://www.pjsip.org/pjsua.htm), [pjsua2 android](https://trac.pjsip.org/repos/wiki/Getting-Started/Android#Tryingoursampleapplicationandcreatingyourown), [iOS ipjsua](https://trac.pjsip.org/repos/wiki/Getting-Started/iPhone#BuildingPJSIP), or [other sample apps](https://github.com/pjsip/pjproject/tree/master/pjsip-apps/src/samples).
+      placeholder: |
+        E.g:
+        1. run pjsua app with parameter: `--video --registrar sip:some.sip.registrar ...`
+        2. make video call from other SIP client or another pjsua instance
+        3. answer the call with 180 and soon 183, assertion occurs!
+        The assertion didn't occur if the call was answered with 183 directly.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: PJSIP version
+      description: What PJSIP version are you using?
+      placeholder: |
+        E.g: 2.11
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        Context where the bug occurs, e.g: platform, device, OS version, configuration settings.
+      placeholder: |
+        E.g:
+        - The issue happens on Windows/Linux/MacOS desktop, iPhone 12, or Android device XYZ.
+        - App is built using Android NDK r20 or newer.
+        - 'configure-android' param: ...
+        - 'config_site.h' contents: ...
+        - Related third-party lib & version: ... (e.g: OpenSSL 1.1.1b)
+        - Applied patch(es): (e.g: patches from issue/PR #xyz)
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log, call stack, etc
+      description: Please copy and paste any relevant PJSIP log output (with verbosity level 5), call stack trace, etc which may be useful for the investigation. This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: true

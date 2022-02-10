@@ -259,7 +259,7 @@ pjsua_call_setting CallSetting::toPj() const
     setting.aud_cnt             = this->audioCount;
     setting.vid_cnt             = this->videoCount;
     for (mi = 0; mi < this->mediaDir.size(); mi++) {
-    	setting.media_dir[mi] = this->mediaDir[mi];
+	setting.media_dir[mi] = (pjmedia_dir)this->mediaDir[mi];
     }
     
     return setting;

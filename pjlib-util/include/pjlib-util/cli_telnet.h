@@ -151,7 +151,7 @@ PJ_DECL(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
 /**
  * Retrieve cli telnet info.
  *
- * @param telnet_info   The telnet runtime information.
+ * @param info   The telnet runtime information.
  *
  * @return		PJ_SUCCESS on success.
  */

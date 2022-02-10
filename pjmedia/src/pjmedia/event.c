@@ -29,6 +29,15 @@
 
 #define MAX_EVENTS 16
 
+/* Enable some tracing */
+// #define EVENT_TRACE
+
+#ifdef EVENT_TRACE
+    #define TRACE_(arg)	PJ_LOG(4, arg)
+#else
+    #define TRACE_(arg)
+#endif
+
 typedef struct esub esub;
 
 struct esub
@@ -96,6 +105,7 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
     pj_status_t err = PJ_SUCCESS;
     esub * sub = mgr->esub_list.next;
     pjmedia_event *ev = &ev_queue->events[ev_queue->head];
+    unsigned i = 0;
 
     while (sub != &mgr->esub_list) {
         *next_sub = sub->next;
@@ -116,6 +126,9 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
                 pj_mutex_unlock(mgr->mutex);
             }
 
+	    TRACE_((THIS_FILE, "Distributing event %d sub->epub %p ev->epub %p "
+	    	   "user data %p", i, sub->epub, ev->epub, sub->user_data));
+
             status = (*cb)(ev, user_data);
             if (status != PJ_SUCCESS && err == PJ_SUCCESS)
 	        err = status;
@@ -126,6 +139,7 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
             }
         }
 	sub = *next_sub;
+	i++;
     }
     *next_sub = NULL;
 
@@ -268,6 +282,7 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
                                              void *epub)
 {
     esub *sub;
+    unsigned i = 0;
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
@@ -289,6 +304,7 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
             return PJ_SUCCESS;
         }
 	sub = next;
+	i++;
     }
 
     if (mgr->free_esub_list.next != &mgr->free_esub_list) {
@@ -300,6 +316,10 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
     sub->user_data = user_data;
     sub->epub = epub;
     pj_list_push_back(&mgr->esub_list, sub);
+
+    TRACE_((THIS_FILE, "Media event: subscribing event %d epub %p "
+    		       "user data %p", i, epub, user_data));
+
     pj_mutex_unlock(mgr->mutex);
 
     return PJ_SUCCESS;
@@ -312,6 +332,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
                           void *epub)
 {
     esub *sub;
+    unsigned i = 0, j = 0;
 
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
@@ -334,6 +355,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
         if (sub->cb == cb && (sub->user_data == user_data || !user_data) &&
             (sub->epub == epub || !epub))
         {
+            j = i;
             /* If the worker thread or pjmedia_event_publish() API is
              * in the process of distributing events, make sure that
              * its pointer to the next subscriber stays valid.
@@ -348,7 +370,12 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
                 break;
         }
 	sub = next;
+	i++;
     }
+
+    TRACE_((THIS_FILE, "Media event: unsubscribing event %d/%d epub %p "
+    		       "user data %p", j, i, epub, user_data));
+
     pj_mutex_unlock(mgr->cb_mutex);
     pj_mutex_unlock(mgr->mutex);
 

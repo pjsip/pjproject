@@ -378,8 +378,10 @@ static int clock_thread(void *arg)
 	    (*clock->cb)(&clock->timestamp, clock->user_data);
 
 	/* Best effort way to detect if we've been destroyed in the callback */
-	if (clock->quitting)
+	if (clock->quitting) {
+	    pj_lock_release(clock->lock);
 	    break;
+	}
 
 	/* Increment timestamp */
 	clock->timestamp.u64 += clock->timestamp_inc;

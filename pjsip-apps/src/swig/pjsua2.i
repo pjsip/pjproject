@@ -110,9 +110,11 @@ using namespace pj;
 //
 %include "std_string.i"
 %include "std_vector.i"
+%include "std_map.i"
 
 %template(StringVector)			std::vector<std::string>;
 %template(IntVector) 			std::vector<int>;
+%template(StringToStringMap) 			std::map<string, string>;
 
 //
 // Ignore stuffs in pjsua2

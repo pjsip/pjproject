@@ -56,8 +56,12 @@ struct pj_pool_t
  * This constant denotes the exception number that will be thrown by default
  * memory factory policy when memory allocation fails.
  */
-extern int PJ_NO_MEMORY_EXCEPTION;
+PJ_DECL_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
+/**
+ * Get #PJ_NO_MEMORY_EXCEPTION constant.
+ */
+PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 
 
 /*
@@ -68,6 +72,8 @@ extern int PJ_NO_MEMORY_EXCEPTION;
 	pj_pool_create_imp(__FILE__, __LINE__, fc, nm, init, inc, cb)
 
 #define pj_pool_release(pool)		    pj_pool_release_imp(pool)
+#define pj_pool_safe_release(pool)	    pj_pool_safe_release_imp(pool)
+#define pj_pool_secure_release(pool)	    pj_pool_secure_release_imp(pool)
 #define pj_pool_getobjname(pool)	    pj_pool_getobjname_imp(pool)
 #define pj_pool_reset(pool)		    pj_pool_reset_imp(pool)
 #define pj_pool_get_capacity(pool)	    pj_pool_get_capacity_imp(pool)
@@ -97,6 +103,12 @@ PJ_DECL(pj_pool_t*) pj_pool_create_imp(const char *file, int line,
 
 /* Release pool */
 PJ_DECL(void) pj_pool_release_imp(pj_pool_t *pool);
+
+/* Safe release pool */
+PJ_DECL(void) pj_pool_safe_release_imp(pj_pool_t **pool);
+
+/* Secure release pool */
+PJ_DECL(void) pj_pool_secure_release_imp(pj_pool_t **pool);
 
 /* Get pool name */
 PJ_DECL(const char*) pj_pool_getobjname_imp(pj_pool_t *pool);

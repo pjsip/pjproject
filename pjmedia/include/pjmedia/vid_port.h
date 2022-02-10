@@ -168,6 +168,18 @@ PJ_DECL(pj_status_t) pjmedia_vid_port_subscribe_event(
 						pjmedia_port *port);
 
 /**
+ * Unsubscribe media event notifications from the specified media port.
+ *
+ * @param vid_port	The video port.
+ * @param port		The media port whose events to be unsubscribed.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_port_unsubscribe_event(
+						pjmedia_vid_port *vid_port,
+						pjmedia_port *port);
+
+/**
  * Connect the video port to a downstream (slave) media port. This operation
  * is only valid for video ports created with active interface selected.
  * Connecting a passive video port may raise an assertion.

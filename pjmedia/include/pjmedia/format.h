@@ -641,8 +641,6 @@ PJ_INLINE(void) pjmedia_format_init_audio(pjmedia_format *fmt,
  * @param height	Image heigth.
  * @param fps_num	FPS numerator.
  * @param fps_denum	FPS denumerator.
- * @param avg_bps	Average bitrate.
- * @param max_bps	Maximum bitrate.
  */
 PJ_DECL(void) pjmedia_format_init_video(pjmedia_format *fmt,
 					pj_uint32_t fmt_id,
@@ -794,6 +792,25 @@ pjmedia_register_video_format_info(pjmedia_video_format_mgr *mgr,
  * 			calling this function).
  */
 PJ_DECL(void) pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr *mgr);
+
+
+/*****************************************************************************
+ * FORMAT FUNCTION HELPER:
+ */
+
+/**
+ * Fill video frame buffer with black color.
+ *
+ * @param fmt		The video format.
+ * @param buf		The frame buffer.
+ * @param buf_size	The frame buffer size.
+ *
+ * @return		PJ_SUCCESS if successfull.
+ */
+PJ_DECL(pj_status_t) pjmedia_video_format_fill_black(const pjmedia_format *fmt,
+						     void *buf,
+						     pj_size_t buf_size);
+
 
 PJ_END_DECL
 
