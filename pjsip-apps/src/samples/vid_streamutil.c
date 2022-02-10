@@ -370,7 +370,7 @@ static void usage()
 /*
  * main()
  */
-int main(int argc, char *argv[])
+static int main_func(int argc, char *argv[])
 {
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
@@ -998,6 +998,11 @@ on_exit:
     return (status == PJ_SUCCESS) ? 0 : 1;
 }
 
+
+int main(int argc, char *argv[])
+{
+    return pj_run_app(&main_func, argc, argv, 0);
+}
 
 #else
 
