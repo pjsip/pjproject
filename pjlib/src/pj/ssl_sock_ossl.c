@@ -1046,6 +1046,9 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     int rc;
     pj_status_t status;
 
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
+
     /* Determine SSL method to use */
     /* Specific version methods are deprecated since 1.1.0 */
 #if (USING_LIBRESSL && LIBRESSL_VERSION_NUMBER < 0x2020100fL)\
