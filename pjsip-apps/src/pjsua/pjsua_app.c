@@ -308,8 +308,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	current_call = call_id;
 
 #ifdef USE_GUI
-    if (!showNotification(call_id))
-	return;
+    showNotification(call_id);
 #endif
 
     /* Start ringback */
