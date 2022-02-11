@@ -1599,6 +1599,12 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
         p += ff->enc_vafp.plane_bytes[i[0]];
     }
 
+#if LIBAVCODEC_VER_AT_LEAST(58,134)
+    avframe.height = ff->enc_ctx->height;
+    avframe.width = ff->enc_ctx->width;
+    avframe.format = ff->enc_ctx->pix_fmt;
+#endif
+
     /* Force keyframe */
     if (opt && opt->force_keyframe) {
 #if LIBAVCODEC_VER_AT_LEAST(53,20)
