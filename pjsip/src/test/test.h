@@ -115,9 +115,10 @@ int transport_load_test(char *target_url);
 int inv_offer_answer_test(void);
 
 /* Test main entry */
-int  test_main(void);
+int  test_main(char *testlist);
 
 /* Test utilities. */
+void list_tests(void);
 void app_perror(const char *msg, pj_status_t status);
 int  init_msg_logger(void);
 int  msg_logger_set_enabled(pj_bool_t enabled);
