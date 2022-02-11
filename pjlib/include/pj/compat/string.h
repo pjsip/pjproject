@@ -46,8 +46,13 @@
 #if defined(_MSC_VER)
 #   define strcasecmp	_stricmp
 #   define strncasecmp	_strnicmp
+
+/* snprintf() and vsnprintf() are available since Visual Studio 2015 */
+#if _MSC_VER < 1900
 #   define snprintf	_snprintf
 #   define vsnprintf	_vsnprintf
+#endif
+
 #   define snwprintf	_snwprintf
 #   define wcsicmp	_wcsicmp
 #   define wcsnicmp	_wcsnicmp
