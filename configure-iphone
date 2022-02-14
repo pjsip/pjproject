@@ -133,7 +133,7 @@ LDFLAGS="${LDFLAGS} ${MIN_IOS}"
 
 # Set CXX if not set
 if test "${CXX}" = ""; then
-  export CXX=`echo ${CC} | sed 's/gcc/g++/'`
+  export CXX=`echo ${CC} | sed 's/clang/clang++/'`
   echo "$F: CXX is not specified, using ${CXX}"
 fi
 
