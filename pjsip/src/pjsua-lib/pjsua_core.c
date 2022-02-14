@@ -2033,6 +2033,22 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
+
+	/* Destroy pool in the wav player object */
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.player); ++i) {
+	    if (pjsua_var.player[i].pool != NULL) {
+		pj_pool_release(pjsua_var.player[i].pool);
+		pjsua_var.player[i].pool = NULL;
+	    }
+        }
+
+	/* Destroy pool in the wav writer object */
+        for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.recorder); ++i) {
+	    if (pjsua_var.recorder[i].pool != NULL) {
+		pj_pool_release(pjsua_var.recorder[i].pool);
+		pjsua_var.recorder[i].pool = NULL;
+	    }
+        }
     }
 
     /* Destroy mutex */
