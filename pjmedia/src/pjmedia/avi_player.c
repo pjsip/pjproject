@@ -900,7 +900,7 @@ on_error2:
         fport->eof = PJ_TRUE;
 
         size_to_read -= size_read;
-        if (size_to_read == frame->size) {
+        if (size_to_read == (pj_ssize_t)frame->size) {
             /* Frame is empty */
  	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame->size = 0;

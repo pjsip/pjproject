@@ -1402,7 +1402,6 @@ void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 		if (eve->call_id == (int)call_med->call->index &&
     	    	    eve->med_idx == call_med->idx)
     	    	{
-    	    	    unsigned num_locks;
 		    pjsip_dialog *dlg = call_med->call->inv ?
 					    call_med->call->inv->dlg : NULL;
 

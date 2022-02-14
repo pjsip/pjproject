@@ -968,7 +968,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     print_call(indent, call_id, tmp, sizeof(tmp));
 
     len = (int)pj_ansi_strlen(tmp);
-    if (len + 3 > maxlen) len = maxlen - 3;
+    if (len + 3 > (int)maxlen) len = maxlen - 3;
     pj_ansi_strncpy(buffer, tmp, len);
 
     p += len;

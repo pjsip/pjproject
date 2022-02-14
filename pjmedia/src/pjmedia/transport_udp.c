@@ -1343,6 +1343,9 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 static pj_status_t transport_restart(pj_bool_t is_rtp, 
 				     struct transport_udp *udp)
 {
+    PJ_UNUSED_ARG(udp);
+    PJ_UNUSED_ARG(is_rtp);
+
     return PJ_ENOTSUP;
 
 /* This code is disabled for the following reason (see also #2881):

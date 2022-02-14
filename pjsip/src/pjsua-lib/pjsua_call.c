@@ -826,7 +826,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
-    pjsua_call *call;
+    pjsua_call *call = NULL;
     int call_id = -1;
     pj_str_t contact;
     pj_status_t status;
@@ -1010,7 +1010,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
 
 on_error:
-    if (dlg) {
+    if (dlg && call) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
 	call->async_call.dlg = NULL;

@@ -478,7 +478,7 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
 	     * If the buffer was too small (slen = -1) or the result wasn't
 	     * the same length as the search header, it can't be a match.
 	     */
-	    if (found_hdr_str.slen != expected_hdr_slen) {
+	    if (found_hdr_str.slen != (pj_ssize_t)expected_hdr_slen) {
 		continue;
 	    }
 	    /*
