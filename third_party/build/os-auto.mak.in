@@ -139,7 +139,7 @@ ifneq ($(findstring sse2,@ac_webrtc_aec3_instset@),)
 	modules/audio_processing/aec3/fft_data_avx2.o \
 	modules/audio_processing/aec3/matched_filter_avx2.o \
 	modules/audio_processing/aec3/vector_math_avx2.o \
-	modules/audio_processing/agc2/rnn_vad/vector_math_avx2.o
+	modules/audio_processing/agc2/rnn_vad/rnn_vector_math_avx2.o
     WEBRTC_AEC3_OTHER_CFLAGS += -mfma
 else ifneq ($(findstring neon,@ac_webrtc_aec3_instset@),)
     export WEBRTC_AEC3_SRC = \
