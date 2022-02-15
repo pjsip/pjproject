@@ -65,16 +65,19 @@ static pj_highprec_t elapsed_msec( const pj_timestamp *start,
     freq += ts_freq.u32.lo;
 #endif
 
-    /* Avoid division by zero. */
-    if (freq == 0) freq = 1;
-
     /* Get elapsed time in cycles. */
     elapsed = get_elapsed(start, stop);
 
     /* usec = elapsed * MSEC / freq */
-    pj_highprec_mul(elapsed, MSEC);
-    pj_highprec_div(elapsed, freq);
-
+    pj_highprec_div(freq, MSEC);
+     
+    /* Avoid division by zero. */
+    if (freq == 0) {
+      /* Regard freq = 1 */
+      pj_highprec_mul(elapsed, MSEC);
+    } else {
+      pj_highprec_div(elapsed, freq);
+    }
     return elapsed;
 }
 

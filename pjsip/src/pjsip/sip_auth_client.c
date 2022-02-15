@@ -802,7 +802,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_set_prefs(pjsip_auth_clt_sess *sess,
     pj_memcpy(&sess->pref, p, sizeof(*p));
     pj_strdup(sess->pool, &sess->pref.algorithm, &p->algorithm);
     //if (sess->pref.algorithm.slen == 0)
-    //	sess->pref.algorithm = pj_str("md5");
+    //	sess->pref.algorithm = pj_str("MD5");
 
     return PJ_SUCCESS;
 }
@@ -1348,7 +1348,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     chal_cnt = 0;
     auth_cnt = 0;
     last_auth_err = PJSIP_EAUTHNOAUTH;
-    while (hdr != &rdata->msg_info.msg->hdr) {
+    while (hdr != &rdata->msg_info.msg->hdr && auth_cnt == 0) {
 	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
 	pjsip_authorization_hdr *hauth;

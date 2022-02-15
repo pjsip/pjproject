@@ -270,6 +270,10 @@ public:
 
 //////////////////////////////////////////////////////////////////////////////
 
+/** Array of media direction */
+typedef IntVector MediaDirVector;
+
+
 /**
  * Call settings.
  */
@@ -328,7 +332,7 @@ struct CallSetting
      *
      * Default: empty vector
      */
-    std::vector<pjmedia_dir> mediaDir;
+    MediaDirVector mediaDir;
 
     
 public:

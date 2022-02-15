@@ -351,7 +351,7 @@ PJ_DECL(pj_status_t) pjmedia_srtp_enum_crypto(unsigned *count,
  * @param count	    On input, specifies the maximum length of keying method
  *		    array. On output, the number of available keying method
  *		    initialized by this function.
- * @param crypto    The SRTP keying method array output.
+ * @param keying    The SRTP keying method array output.
  *
  * @return	    PJ_SUCCESS on success.
  */

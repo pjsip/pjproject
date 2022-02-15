@@ -363,6 +363,59 @@ PJ_DECL(void*) pjsip_hdr_shallow_clone( pj_pool_t *pool, const void *hdr );
 PJ_DECL(int) pjsip_hdr_print_on( void *hdr, char *buf, pj_size_t len);
 
 /**
+ * Find a header in a header list by the header type.
+ *
+ * @param hdr_list  The "head" of the header list.
+ * @param type      The header type to find.
+ * @param start     The first header field where the search should begin.
+ *                  If NULL is specified, then the search will begin from the
+ *                  first header, otherwise the search will begin at the
+ *                  specified header.
+ *
+ * @return          The header field, or NULL if no header with the specified
+ *                  type is found.
+ */
+PJ_DECL(void*)  pjsip_hdr_find( const void *hdr_list,
+				pjsip_hdr_e type,
+				const void *start);
+
+/**
+ * Find a header in a header list by its name.
+ *
+ * @param hdr_list  The "head" of the header list.
+ * @param name      The header name to find.
+ * @param start     The first header field where the search should begin.
+ *                  If NULL is specified, then the search will begin from the
+ *                  first header, otherwise the search will begin at the
+ *                  specified header.
+ *
+ * @return          The header field, or NULL if no header with the specified
+ *                  type is found.
+ */
+PJ_DECL(void*)  pjsip_hdr_find_by_name( const void *hdr_list,
+					const pj_str_t *name,
+					const void *start);
+
+/**
+ * Find a header in a header list by its name and short name version.
+ *
+ * @param hdr_list  The "head" of the header list.
+ * @param name      The header name to find.
+ * @param sname     The short name version of the header name.
+ * @param start     The first header field where the search should begin.
+ *                  If NULL is specified, then the search will begin from the
+ *                  first header, otherwise the search will begin at the
+ *                  specified header.
+ *
+ * @return	    The header field, or NULL if no header with the specified
+ *		    type is found.
+ */
+PJ_DECL(void*)  pjsip_hdr_find_by_names( const void *hdr_list,
+					 const pj_str_t *name,
+					 const pj_str_t *sname,
+					 const void *start);
+
+/**
  * @}
  */
 
@@ -1075,7 +1128,6 @@ pjsip_generic_string_hdr_init( pj_pool_t *pool,
  *		    assign the header name with some string.
  * @param hvalue    Optional string to be assigned as the value.
  *
- * @return	    The header, or THROW exception.
  */
 PJ_DECL(void) pjsip_generic_string_hdr_init2(pjsip_generic_string_hdr *h,
 					     pj_str_t *hname,

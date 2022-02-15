@@ -87,10 +87,12 @@ typedef struct vconf_port
     unsigned		 idx;		/**< Port index.		    */
     pj_str_t		 name;		/**< Port name.			    */
     pjmedia_port	*port;		/**< Video port.		    */
+    pjmedia_format	 format;	/**< Copy of port format info.	    */
     pj_uint32_t		 ts_interval;	/**< Port put/get interval.	    */
     pj_timestamp	 ts_next;	/**< Time for next put/get_frame(). */
     void		*get_buf;	/**< Buffer for get_frame().	    */
     pj_size_t		 get_buf_size;	/**< Buffer size for get_frame().   */
+    pj_bool_t		 got_frame;	/**< Last get_frame() got frame?    */
     void		*put_buf;	/**< Buffer for put_frame().	    */
     pj_size_t		 put_buf_size;	/**< Buffer size for put_frame().   */
 
@@ -269,6 +271,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     /* Set pool, port, index, and name */
     cport->pool = pool;
     cport->port = port;
+    cport->format = port->info.fmt;
     cport->idx  = index;
     pj_strdup_with_null(pool, &cport->name, name);
 
@@ -302,6 +305,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "unrecognized format %04X",
 				 port->info.fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return PJMEDIA_EBADFMT;
 	}
 
@@ -312,6 +316,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "Failed to apply format %04X",
 				 port->info.fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return status;
 	}
 	if (port->put_frame) {
@@ -329,28 +334,41 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 			    pj_pool_zalloc(pool,
 					   vid_conf->opt.max_slot_cnt *
 					   sizeof(unsigned));
-    PJ_ASSERT_RETURN(cport->listener_slots, PJ_ENOMEM);
+    if (!cport->listener_slots) {	
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create transmitter array */
     cport->transmitter_slots = (unsigned*)
 			       pj_pool_zalloc(pool,
 					      vid_conf->opt.max_slot_cnt *
-					      sizeof(unsigned));
-    PJ_ASSERT_RETURN(cport->transmitter_slots, PJ_ENOMEM);
+					      sizeof(unsigned));    
+    if (!cport->transmitter_slots) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create pointer-to-render_state array */
     cport->render_states = (render_state**)
 			   pj_pool_zalloc(pool,
 					  vid_conf->opt.max_slot_cnt *
 					  sizeof(render_state*));
-    PJ_ASSERT_RETURN(cport->render_states, PJ_ENOMEM);
+
+    if (!cport->render_states) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Create pointer-to-render-pool array */
     cport->render_pool = (pj_pool_t**)
 			 pj_pool_zalloc(pool,
 					vid_conf->opt.max_slot_cnt *
-					sizeof(pj_pool_t*));
-    PJ_ASSERT_RETURN(cport->render_pool, PJ_ENOMEM);
+					sizeof(pj_pool_t*));    
+    if (!cport->render_pool) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_ENOMEM;
+    }
 
     /* Register the conf port. */
     vid_conf->ports[index] = cport;
@@ -418,6 +436,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_remove_port( pjmedia_vid_conf *vid_conf,
 	status = pjmedia_clock_stop(vid_conf->clock);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4, (THIS_FILE, status, "Failed to stop clock"));
+	    pj_mutex_unlock(vid_conf->mutex);
 	    return status;
 	}
     }
@@ -550,30 +569,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 	++src_port->listener_cnt;
 	++dst_port->transmitter_cnt;
 
-	if (src_port->listener_cnt == 1) {
-    	    /* If this is the first listener, initialize source's buffer
-    	     * with black color.
-    	     */
-	    const pjmedia_video_format_info *vfi;
-	    pjmedia_video_apply_fmt_param vafp;
-
-	    vfi = pjmedia_get_video_format_info(NULL,
-	    					src_port->port->info.fmt.id);
-	    pj_bzero(&vafp, sizeof(vafp));
-	    vafp.size = src_port->port->info.fmt.det.vid.size;
-	    (*vfi->apply_fmt)(vfi, &vafp);
-
-	    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
-	    	pj_memset(src_port->get_buf, 0, vafp.framebytes);
-	    } else if (src_port->port->info.fmt.id == PJMEDIA_FORMAT_I420 ||
-	  	       src_port->port->info.fmt.id == PJMEDIA_FORMAT_YV12)
-	    {	    	
-	    	pj_memset(src_port->get_buf, 16, vafp.plane_bytes[0]);
-	    	pj_memset((pj_uint8_t*)src_port->get_buf + vafp.plane_bytes[0],
-		      	  0x80, vafp.plane_bytes[1] * 2);
-	    }
-	}
-
 	update_render_state(vid_conf, dst_port);
 
 	++vid_conf->connect_cnt;
@@ -582,6 +577,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
 	    status = pjmedia_clock_start(vid_conf->clock);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(4, (THIS_FILE, status, "Failed to start clock"));
+		pj_mutex_unlock(vid_conf->mutex);
 		return status;
 	    }
 	}
@@ -671,6 +667,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	    status = pjmedia_clock_stop(vid_conf->clock);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(4, (THIS_FILE, status, "Failed to stop clock"));
+		pj_mutex_unlock(vid_conf->mutex);
 		return status;
 	    }
 	}
@@ -710,7 +707,7 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    ci<vid_conf->port_cnt; ++i)
     {
 	unsigned j;
-	pj_bool_t got_frame = PJ_FALSE;
+	pj_bool_t frame_rendered = PJ_FALSE;
 	pj_bool_t ts_incremented = PJ_FALSE;
 	vconf_port *sink = vid_conf->ports[i];
 
@@ -736,8 +733,14 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	if (ts_diff < 0 || ts_diff > TS_CLOCK_RATE)
 	    continue;
 
-	/* Clean up sink put buffer (should we draw black instead?) */
-	//pj_bzero(sink->put_buf, sink->put_buf_size);
+    	/* There is a possibility that the sink port's format has
+    	 * changed, but we haven't received the event yet.
+    	 */
+    	if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		      sizeof(pjmedia_format)))
+    	{
+    	    pjmedia_vid_conf_update_port(vid_conf, i);
+    	}
 
 	/* Iterate transmitters of this sink port */
 	for (j=0; j < sink->transmitter_cnt; ++j) {
@@ -766,6 +769,9 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		    PJ_PERROR(5, (THIS_FILE, status,
 				  "Failed to get frame from port %d [%s]!",
 				  src->idx, src->port->info.name.ptr));
+		    src->got_frame = PJ_FALSE;
+		} else {
+		    src->got_frame = (frame.size == src->get_buf_size);
 		}
 
 		/* Update next src put/get */
@@ -773,19 +779,21 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 		ts_incremented = src==sink;
 	    }
 
-	    /* Render src get buffer to sink put buffer (based on sink layout
-	     * settings, if any)
-	     */
-	    status = render_src_frame(src, sink, j);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(5, (THIS_FILE, status,
-			      "Failed to render frame from port %d [%s] to "
-			      "%d [%s]",
-			      src->idx, src->port->info.name.ptr,
-			      sink->idx, sink->port->info.name.ptr));
+	    if (src->got_frame) {
+		/* Render src get buffer to sink put buffer (based on
+		 * sink layout settings, if any)
+		 */
+		status = render_src_frame(src, sink, j);
+		if (status == PJ_SUCCESS) {
+		    frame_rendered = PJ_TRUE;
+		} else {
+		    PJ_PERROR(5, (THIS_FILE, status,
+				  "Failed to render frame from port %d [%s] "
+				  "to port %d [%s]",
+				  src->idx, src->port->info.name.ptr,
+				  sink->idx, sink->port->info.name.ptr));
+		}
 	    }
-
-	    got_frame = PJ_TRUE;
 	}
 
 	/* Call sink->put_frame()
@@ -796,12 +804,12 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	pj_bzero(&frame, sizeof(frame));
 	frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
 	frame.timestamp = *now;
-	if (got_frame) {
+	if (frame_rendered) {
 	    frame.buf = sink->put_buf;
 	    frame.size = sink->put_buf_size;
 	}
 	status = pjmedia_port_put_frame(sink->port, &frame);
-	if (got_frame && status != PJ_SUCCESS) {
+	if (frame_rendered && status != PJ_SUCCESS) {
 	    sink->last_err_cnt++;
 	    if (sink->last_err != status ||
 	        sink->last_err_cnt % MAX_ERR_COUNT == 0)
@@ -880,6 +888,7 @@ static void cleanup_render_state(vconf_port *cp,
     }
 }
 
+
 /* This function will do:
  * - Recalculate layout setting, i.e: get video pos and size
  *   for each transmitter
@@ -894,6 +903,31 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     unsigned i;
     pj_status_t status;
 
+    fmt_id = cp->port->info.fmt.id;
+    size   = cp->port->info.fmt.det.vid.size;
+
+    /* Initialize sink buffer with black color. */
+    if (cp->port->put_frame) {
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->put_buf,
+						 cp->put_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: failed to init sink buffer with black"));
+	}
+    }
+
+    /* Initialize source buffer with black color. */
+    if (cp->port->get_frame) {
+	status = pjmedia_video_format_fill_black(&cp->port->info.fmt,
+						 cp->get_buf,
+						 cp->get_buf_size);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Warning: failed to init source buffer with black"));
+	}
+    }
+
     /* Nothing to render, just return */
     if (cp->transmitter_cnt == 0)
 	return;
@@ -901,8 +935,6 @@ static void update_render_state(pjmedia_vid_conf *vid_conf, vconf_port *cp)
     TRACE_((THIS_FILE, "Updating render state for port id %d (%d sources)..",
 	    cp->idx, cp->transmitter_cnt));
 
-    fmt_id = cp->port->info.fmt.id;
-    size   = cp->port->info.fmt.det.vid.size;
     for (i = 0; i < cp->transmitter_cnt; ++i) {
 	vconf_port *tr = vid_conf->ports[cp->transmitter_slots[i]];
 
@@ -1073,9 +1105,19 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
     pj_status_t status;
     render_state *rs = sink->render_states[transmitter_idx];
 
+    /* There is a possibility that the sink port's format has
+     * changed, but we haven't received the event yet.
+     */
+    if (pj_memcmp(&sink->format, &sink->port->info.fmt,
+    		  sizeof(pjmedia_format)))
+    {
+    	return PJMEDIA_EVID_BADFORMAT;
+    }
+
     if (sink->transmitter_cnt == 1 && (!rs || !rs->converter)) {
 	/* The only transmitter and no conversion needed */
-	pj_assert(src->get_buf_size <= sink->put_buf_size);
+	if (src->get_buf_size != sink->put_buf_size)
+	    return PJMEDIA_EVID_BADFORMAT;
 	pj_memcpy(sink->put_buf, src->get_buf, src->get_buf_size);
     } else if (rs && rs->converter) {
 	pjmedia_frame src_frame, dst_frame;
@@ -1104,6 +1146,122 @@ static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
 	    return status;
 	}
     }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Update or refresh port states from video port info. */
+PJ_DEF(pj_status_t) pjmedia_vid_conf_update_port( pjmedia_vid_conf *vid_conf,
+						  unsigned slot)
+{
+    vconf_port *cport;
+    pjmedia_format old_fmt;
+    pjmedia_format new_fmt;
+
+    PJ_ASSERT_RETURN(vid_conf && slot<vid_conf->opt.max_slot_cnt, PJ_EINVAL);
+
+    pj_mutex_lock(vid_conf->mutex);
+
+    /* Port must be valid. */
+    cport = vid_conf->ports[slot];
+    if (cport == NULL) {
+	pj_mutex_unlock(vid_conf->mutex);
+	return PJ_EINVAL;
+    }
+
+    /* Get the old & new formats */
+    old_fmt = cport->format;
+    new_fmt = cport->port->info.fmt;
+
+    /* Update put/get_frame() intervals */
+    if (pj_memcmp(&new_fmt.det.vid.fps, &old_fmt.det.vid.fps,
+		  sizeof(pjmedia_ratio)))
+    {
+	pjmedia_ratio *fps = &new_fmt.det.vid.fps;
+	pj_uint32_t vconf_interval = (pj_uint32_t)
+				     (TS_CLOCK_RATE * 1.0 /
+				     vid_conf->opt.frame_rate);
+	cport->ts_interval = (pj_uint32_t)(TS_CLOCK_RATE * 1.0 /
+					   fps->num * fps->denum);
+
+	/* Normalize the interval */
+	if (cport->ts_interval < vconf_interval) {
+	    cport->ts_interval = vconf_interval;
+	    PJ_LOG(3,(THIS_FILE, "Warning: frame rate of port %s is higher "
+				 "than video conference bridge (%d > %d)",
+				 cport->name.ptr, (int)(fps->num/fps->denum),
+				 vid_conf->opt.frame_rate));
+	}
+
+	PJ_LOG(4,(THIS_FILE,
+		  "Port %d (%s): updated frame rate %d -> %d",
+		  slot, cport->name.ptr,
+		  (int)(old_fmt.det.vid.fps.num/old_fmt.det.vid.fps.denum),
+		  (int)(fps->num/fps->denum)));
+    }
+
+    /* Update buffer for put/get_frame() */
+    if (new_fmt.id != old_fmt.id ||
+	pj_memcmp(&new_fmt.det.vid.size, &old_fmt.det.vid.size,
+		  sizeof(pjmedia_rect_size)))
+    {
+	const pjmedia_video_format_info *vfi;
+	pjmedia_video_apply_fmt_param vafp;
+	pj_status_t status;
+	unsigned i;
+
+	vfi = pjmedia_get_video_format_info(NULL, new_fmt.id);
+	if (!vfi) {
+	    PJ_LOG(1,(THIS_FILE, "pjmedia_vid_conf_update_port(): "
+				 "unrecognized format %04X",
+				 new_fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
+	    return PJMEDIA_EBADFMT;
+	}
+
+	pj_bzero(&vafp, sizeof(vafp));
+	vafp.size = new_fmt.det.vid.size;
+	status = (*vfi->apply_fmt)(vfi, &vafp);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,(THIS_FILE, "pjmedia_vid_conf_update_port(): "
+				 "Failed to apply format %04X",
+				 new_fmt.id));
+	    pj_mutex_unlock(vid_conf->mutex);
+	    return status;
+	}
+	if (cport->port->put_frame) {
+	    if (cport->put_buf_size < vafp.framebytes)
+		cport->put_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
+	    cport->put_buf_size = vafp.framebytes;
+	}
+	if (cport->port->get_frame) {
+	    if (cport->get_buf_size < vafp.framebytes)
+		cport->get_buf = pj_pool_zalloc(cport->pool, vafp.framebytes);
+	    cport->get_buf_size = vafp.framebytes;
+	    cport->got_frame = PJ_FALSE;
+	}
+
+	/* Update render state */
+	update_render_state(vid_conf, cport);
+
+	/* Update render state of listeners */
+	for (i=0; i < cport->listener_cnt; ++i) {
+	    vconf_port *sink = vid_conf->ports[cport->listener_slots[i]];
+	    update_render_state(vid_conf, sink);
+	}
+
+	PJ_LOG(4,(THIS_FILE,
+		  "Port %d (%s): updated frame size %dx%d -> %dx%d",
+		  slot, cport->name.ptr,
+		  old_fmt.det.vid.size.w, old_fmt.det.vid.size.h,
+		  new_fmt.det.vid.size.w, new_fmt.det.vid.size.h));
+    }
+
+
+    /* Update cport format info */
+    cport->format = new_fmt;
+    pj_mutex_unlock(vid_conf->mutex);
 
     return PJ_SUCCESS;
 }

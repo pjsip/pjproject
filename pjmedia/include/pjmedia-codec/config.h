@@ -584,6 +584,26 @@
 #endif
 
 /**
+ * Enable FFMPEG VPX codec (requires libvpx)
+ */
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP8
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		0
+#   else
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP8		1
+#   endif
+#endif
+
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC_VP9
+#   if defined(PJMEDIA_HAS_VPX_CODEC) && PJMEDIA_HAS_VPX_CODEC != 0
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		0
+#   else
+#	define PJMEDIA_HAS_FFMPEG_CODEC_VP9		1
+#   endif
+#endif
+
+
+/**
  * Determine the log level of the native openH264 log which will be forwarded
  * to the library's log.
  * Set to WELS_LOG_QUIET to disable logging, or WELS_LOG_DETAIL for debugging.
@@ -679,6 +699,17 @@
  */
 #ifndef PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC
 #    define PJMEDIA_AND_MEDIA_PRIO_SW_VID_DEC 	1
+#endif
+
+
+/**
+ * Maximum interval between keyframes for Apple VideoToolbox codecs,
+ * in second.
+ *
+ * Default: 5 (seconds)
+ */
+#ifndef PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL
+#   define PJMEDIA_CODEC_VID_TOOLBOX_MAX_KEYFRAME_INTERVAL	5
 #endif
 
 /**

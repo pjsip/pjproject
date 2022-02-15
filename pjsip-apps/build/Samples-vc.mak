@@ -4,10 +4,13 @@ LIBEXT = .lib
 !if "$(ARCH)" == "win64"
 TARGET = x86_64-x64-vc$(VC_VER)-$(BUILD_MODE)
 TARGET_FLAGS = /DPJ_WIN64=1 /DPJ_M_X86_64=1 
-!else
+!elseif "$(ARCH)" == "win32"
 
 TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
-TARGET_FLAGS = /DPJ_WIN32=1 /DPJ_M_I386=1 
+TARGET_FLAGS = /DPJ_WIN32=1 /DPJ_M_I386=1
+!elseif "$(ARCH)" == "ARM64"
+
+TARGET = ARM64-ARM64-vc$(VC_VER)-$(BUILD_MODE)
 !endif
 
 !if "$(BUILD_MODE)" == "debug"

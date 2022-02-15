@@ -90,6 +90,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
     pj_strdup_with_null(pool, &dst->reg_contact_params,
 			&src->reg_contact_params);
+    pj_strdup_with_null(pool, &dst->reg_contact_uri_params,
+			&src->reg_contact_uri_params);
     pj_strdup_with_null(pool, &dst->contact_params, &src->contact_params);
     pj_strdup_with_null(pool, &dst->contact_uri_params,
                         &src->contact_uri_params);
@@ -1030,6 +1032,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	unreg_first = PJ_TRUE;
     }
 
+    /* Register contact URI params */
+    if (pj_strcmp(&acc->cfg.reg_contact_uri_params,
+		  &cfg->reg_contact_uri_params))
+    {
+	pj_strdup_with_null(acc->pool, &acc->cfg.reg_contact_uri_params,
+			    &cfg->reg_contact_uri_params);
+	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
+    }
+
     /* Contact param */
     if (pj_strcmp(&acc->cfg.contact_params, &cfg->contact_params)) {
 	pj_strdup_with_null(acc->pool, &acc->cfg.contact_params,
@@ -1527,7 +1539,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
-/* Create reg_contact, mainly for SIP outbound */
+/* Create reg_contact, adding SIP outbound params and other REGISTER specific
+ * Contact params, i.e: reg_contact_params, reg_contact_uri_params.
+ */
 static void update_regc_contact(pjsua_acc *acc)
 {
     pjsua_acc_config *acc_cfg = &acc->cfg;
@@ -1560,7 +1574,10 @@ done:
 	pj_str_t reg_contact;
 
 	acc->rfc5626_status = OUTBOUND_WANTED;
-	len = acc->contact.slen + acc->cfg.reg_contact_params.slen +
+	len = acc->contact.slen +
+	      acc->cfg.contact_params.slen +
+	      acc->cfg.reg_contact_params.slen +
+	      acc->cfg.reg_contact_uri_params.slen +
 	      (need_outbound?
 	       (acc->rfc5626_instprm.slen + acc->rfc5626_regprm.slen): 0);
 	if (len > acc->contact.slen) {
@@ -1568,6 +1585,44 @@ done:
 
 	    pj_strcpy(&reg_contact, &acc->contact);
 	
+	    /* Contact URI params */
+	    if (acc->cfg.reg_contact_uri_params.slen) {
+		pj_pool_t *pool;
+		pjsip_contact_hdr *contact_hdr;
+		pjsip_sip_uri *uri;
+		pj_str_t uri_param = acc->cfg.reg_contact_uri_params;
+		const pj_str_t STR_CONTACT = { "Contact", 7 };
+		char tmp_uri[PJSIP_MAX_URL_SIZE];
+		pj_ssize_t tmp_len;
+
+		/* Get the URI string */
+		pool = pjsua_pool_create("tmp", 512, 512);
+		contact_hdr = (pjsip_contact_hdr*)
+			      pjsip_parse_hdr(pool, &STR_CONTACT,
+					      reg_contact.ptr,
+					      reg_contact.slen, NULL);
+		pj_assert(contact_hdr != NULL);
+		uri = (pjsip_sip_uri*) contact_hdr->uri;
+		pj_assert(uri != NULL);
+		uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
+		tmp_len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
+					  uri, tmp_uri,
+					  sizeof(tmp_uri));
+		pj_assert(tmp_len > 0);
+		pj_pool_release(pool);
+
+		/* Regenerate Contact */
+		reg_contact.slen = pj_ansi_snprintf(
+					    reg_contact.ptr, len,
+					    "<%.*s%.*s>%.*s",
+					    (int)tmp_len, tmp_uri,
+					    (int)uri_param.slen, uri_param.ptr,
+					    (int)acc->cfg.contact_params.slen,
+					    acc->cfg.contact_params.ptr);
+		pj_assert(reg_contact.slen > 0);
+	    }
+
+	    /* Outbound */
     	    if (need_outbound) {
     	    	acc->rfc5626_status = OUTBOUND_WANTED;
 
@@ -1580,6 +1635,7 @@ done:
 	    	acc->rfc5626_status = OUTBOUND_NA;
 	    }
 
+	    /* Contact params */
 	    pj_strcat(&reg_contact, &acc->cfg.reg_contact_params);
 	    
 	    acc->reg_contact = reg_contact;
@@ -2020,7 +2076,6 @@ static void update_service_route(pjsua_acc *acc, pjsip_rx_data *rdata)
 	      acc->index, uri_cnt));
 }
 
-
 /* Keep alive timer callback */
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 {
@@ -2029,6 +2084,8 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     pj_time_val delay;
     char addrtxt[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
+    unsigned ka_timer;
+    unsigned lower_bound;
 
     PJ_UNUSED_ARG(th);
 
@@ -2069,13 +2126,20 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     /* Check just in case keep-alive has been disabled. This shouldn't happen
      * though as when ka_interval is changed this timer should have been
      * cancelled.
+     *
+     * Also check if Flow Timer (rfc5626) is not set.
      */
-    if (acc->cfg.ka_interval == 0)
+    if (acc->cfg.ka_interval == 0 && acc->rfc5626_flowtmr == 0)
 	goto on_return;
 
-    /* Reschedule next timer */
-    delay.sec = acc->cfg.ka_interval;
+    ka_timer = acc->rfc5626_flowtmr ? acc->rfc5626_flowtmr :
+				      acc->cfg.ka_interval;
+
+    lower_bound = (unsigned)((float)ka_timer * 0.8f);
+    delay.sec = pj_rand() % (ka_timer - lower_bound) + lower_bound;
     delay.msec = 0;
+
+    /* Reschedule next timer */
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, te, &delay);
     if (status == PJ_SUCCESS) {
 	te->id = PJ_TRUE;
@@ -2106,8 +2170,22 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
     if (start) {
 	pj_time_val delay;
 	pj_status_t status;
+	pjsip_generic_string_hdr *hsr = NULL;
+	unsigned ka_timer;
+	unsigned lower_bound;
+
+	static const pj_str_t STR_FLOW_TIMER  = { "Flow-Timer", 10 };
+
+	hsr = (pjsip_generic_string_hdr*)
+	      pjsip_msg_find_hdr_by_name(param->rdata->msg_info.msg,
+					 &STR_FLOW_TIMER, hsr);
+
+	if (hsr) {	    
+	    acc->rfc5626_flowtmr = pj_strtoul(&hsr->hvalue);
+	}
 
 	/* Only do keep-alive if:
+	 *  - REGISTER response contain Flow-Timer header, otherwise
 	 *  - ka_interval is not zero in the account, and
 	 *  - transport is UDP.
 	 *
@@ -2122,9 +2200,9 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	 * is done by the transport layer.
 	 */
 	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
-	    acc->cfg.ka_interval == 0 ||
-	    (param->rdata->tp_info.transport->key.type &  
-	     ~PJSIP_TRANSPORT_IPV6)!= PJSIP_TRANSPORT_UDP)
+	    ((acc->cfg.ka_interval == 0) && (acc->rfc5626_flowtmr == 0)) ||
+	    (!hsr && ((param->rdata->tp_info.transport->key.type &
+		       ~PJSIP_TRANSPORT_IPV6) != PJSIP_TRANSPORT_UDP)))
 	{
 	    /* Keep alive is not necessary */
 	    return;
@@ -2158,7 +2236,11 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	acc->ka_timer.cb = &keep_alive_timer_cb;
 	acc->ka_timer.user_data = (void*)acc;
 
-	delay.sec = acc->cfg.ka_interval;
+	ka_timer = acc->rfc5626_flowtmr ? acc->rfc5626_flowtmr :
+					  acc->cfg.ka_interval;
+
+	lower_bound = (unsigned)((float)ka_timer * 0.8f);
+	delay.sec = pj_rand() % (ka_timer - lower_bound) + lower_bound;
 	delay.msec = 0;
 	status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &acc->ka_timer, 
 					    &delay);
@@ -2171,7 +2253,7 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 			      addr, sizeof(addr), 1);
 	    PJ_LOG(4,(THIS_FILE, "Keep-alive timer started for acc %d, "
 				 "destination:%s, interval:%ds",
-				 acc->index, addr, acc->cfg.ka_interval));
+				 acc->index, addr, delay.sec));
 	} else {
 	    acc->ka_timer.id = PJ_FALSE;
 	    pjsip_transport_dec_ref(acc->ka_transport);
@@ -2311,6 +2393,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	    acc->rfc5626_flowtmr = 0;
 	
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2330,6 +2413,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	acc->contact.slen = 0;
 	acc->reg_mapped_addr.slen = 0;
 	acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	acc->rfc5626_flowtmr = 0;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2346,6 +2430,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    acc->contact.slen = 0;
 	    acc->reg_mapped_addr.slen = 0;
 	    acc->rfc5626_status = OUTBOUND_UNKNOWN;
+	    acc->rfc5626_flowtmr = 0;
 
 	    /* Reset pointer to registration transport */
 	    //acc->auto_rereg.reg_tp = NULL;
@@ -2774,11 +2859,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    PJ_UNUSED_ARG(d);
 
 	    h = pjsip_authorization_hdr_create(tdata->pool);
-	    h->scheme = pj_str("Digest");
+	    h->scheme = pjsip_DIGEST_STR;
 	    h->credential.digest.username = acc->cred[0].username;
 	    h->credential.digest.realm = acc->srv_domain;
 	    h->credential.digest.uri = pj_str(uri);
-	    h->credential.digest.algorithm = pj_str("md5");
+	    h->credential.digest.algorithm = pjsip_MD5_STR;
 
 	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
 	}

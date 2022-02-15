@@ -207,7 +207,7 @@ PJ_DECL(pj_status_t) pjsip_target_set_set_current(pjsip_target_set *tset,
  *
  * @param target    The target.
  * @param pool	    The memory pool to be used to duplicate the reason phrase.
- * @param code	    The SIP status code to be set to the target.
+ * @param status_code	    The SIP status code to be set to the target.
  * @param reason    The reason phrase  to be set to the target.
  *
  * @return	    PJ_SUCCESS on successful operation or the appropriate
@@ -322,7 +322,7 @@ pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
  * will construct all the Via, Record-Route, Call-ID, From, To, CSeq, and 
  * Call-ID headers from the request.
  *
- * Note: the txdata reference counter is set to ZERO!.
+ * Once a transmit data is created, the reference counter is initialized to 1.
  *
  * @param endpt	    The endpoint.
  * @param rdata	    The request receive data.
@@ -344,6 +344,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
  * an ACK request to 3xx-6xx final response.
  * The generation of ACK message for 2xx final response is different than
  * this one.
+ *
+ * Once a transmit data is created, the reference counter is initialized to 1.
  * 
  * @param endpt	    The endpoint.
  * @param tdata	    This contains the original INVITE request
@@ -360,6 +362,8 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_ack( pjsip_endpoint *endpt,
 
 /**
  * Construct CANCEL request for the previously sent request.
+ *
+ * Once a transmit data is created, the reference counter is initialized to 1.
  *
  * @param endpt	    The endpoint.
  * @param tdata	    The transmit buffer for the request being cancelled.

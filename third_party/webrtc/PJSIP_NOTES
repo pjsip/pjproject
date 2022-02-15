@@ -1,0 +1,15 @@
+Local changes:
+1. ARM64 support build for Visual Studio.
+diff --git a/third_party/webrtc/src/webrtc/typedefs.h b/third_party/webrtc/src/webrtc/typedefs.h
+index 3034c7e74..9385befc9 100644
+--- a/third_party/webrtc/src/webrtc/typedefs.h
++++ b/third_party/webrtc/src/webrtc/typedefs.h
+@@ -23,7 +23,7 @@
+ #define WEBRTC_ARCH_X86_64
+ #define WEBRTC_ARCH_64_BITS
+ #define WEBRTC_ARCH_LITTLE_ENDIAN
+-#elif defined(__aarch64__)
++#elif defined(__aarch64__) || defined(_M_ARM64)
+ #define WEBRTC_ARCH_64_BITS
+ #define WEBRTC_ARCH_LITTLE_ENDIAN
+ #elif defined(_M_IX86) || defined(__i386__)

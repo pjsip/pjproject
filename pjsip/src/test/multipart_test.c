@@ -28,6 +28,7 @@
 typedef pj_status_t (*verify_ptr)(pj_pool_t*,pjsip_msg_body*);
 
 static pj_status_t verify1(pj_pool_t *pool, pjsip_msg_body *body);
+static pj_status_t verify2(pj_pool_t *pool, pjsip_msg_body *body);
 
 static struct test_t
 {
@@ -68,7 +69,41 @@ static struct test_t
 		"This is epilogue, which should be ignored too",
 
 		&verify1
+	},
+	{
+		/* Content-type */
+		"multipart", "mixed", "12345",
+
+		/* Body: */
+		"This is the prolog, which should be ignored.\r\n"
+		"--12345\r\n"
+		"Content-Type: text/plain\r\n"
+		"Content-ID: <header1@example.org>\r\n"
+		"Content-ID: <\"header1\"@example.org>\r\n"
+		"Content-Length: 13\r\n"
+		"\r\n"
+		"has header1\r\n"
+		"--12345 \t\r\n"
+		"Content-Type: application/pidf+xml\r\n"
+		"Content-ID: <my header2@example.org>\r\n"
+		"Content-ID: <my\xffheader2@example.org>\r\n"
+		"Content-Length: 13\r\n"
+		"\r\n"
+		"has header2\r\n"
+		"--12345\r\n"
+		"Content-Type: text/plain\r\n"
+		"Content-ID: <my header3@example.org>\r\n"
+		"Content-ID: <header1@example.org>\r\n"
+		"Content-ID: <my header4@example.org>\r\n"
+		"Content-Length: 13\r\n"
+		"\r\n"
+		"has header4\r\n"
+		"--12345--\r\n"
+		"This is epilogue, which should be ignored too",
+
+		&verify2
 	}
+
 };
 
 static void init_media_type(pjsip_media_type *mt,
@@ -85,6 +120,195 @@ static void init_media_type(pjsip_media_type *mt,
 	prm.value = pj_str(boundary);
 	pj_list_push_back(&mt->param, &prm);
     }
+}
+
+static int verify_hdr(pj_pool_t *pool, pjsip_msg_body *multipart_body,
+    void *hdr, char *part_body)
+{
+    pjsip_media_type mt;
+    pjsip_multipart_part *part;
+    pj_str_t the_body;
+
+
+    part = pjsip_multipart_find_part_by_header(pool, multipart_body, hdr, NULL);
+    if (!part) {
+	return -1;
+    }
+
+    the_body.ptr = (char*)part->body->data;
+    the_body.slen = part->body->len;
+
+    if (pj_strcmp2(&the_body, part_body) != 0) {
+	return -2;
+    }
+
+    return 0;
+}
+
+static int verify_cid_str(pj_pool_t *pool, pjsip_msg_body *multipart_body,
+    pj_str_t cid_url, char *part_body)
+{
+    pjsip_media_type mt;
+    pjsip_multipart_part *part;
+    pj_str_t the_body;
+
+    part = pjsip_multipart_find_part_by_cid_str(pool, multipart_body, &cid_url);
+    if (!part) {
+	return -3;
+    }
+
+    the_body.ptr = (char*)part->body->data;
+    the_body.slen = part->body->len;
+
+    if (pj_strcmp2(&the_body, part_body) != 0) {
+	return -4;
+    }
+
+    return 0;
+}
+
+static int verify_cid_uri(pj_pool_t *pool, pjsip_msg_body *multipart_body,
+    pjsip_other_uri *cid_uri, char *part_body)
+{
+    pjsip_media_type mt;
+    pjsip_multipart_part *part;
+    pj_str_t the_body;
+
+    part = pjsip_multipart_find_part_by_cid_uri(pool, multipart_body, cid_uri);
+    if (!part) {
+	return -5;
+    }
+
+    the_body.ptr = (char*)part->body->data;
+    the_body.slen = part->body->len;
+
+    if (pj_strcmp2(&the_body, part_body) != 0) {
+	return -6;
+    }
+
+    return 0;
+}
+
+static pj_status_t verify2(pj_pool_t *pool, pjsip_msg_body *body)
+{
+    int rc = 0;
+    int rcbase = 300;
+    pjsip_other_uri *cid_uri;
+    pjsip_ctype_hdr *ctype_hdr = pjsip_ctype_hdr_create(pool);
+
+    ctype_hdr->media.type = pj_str("application");
+    ctype_hdr->media.subtype = pj_str("pidf+xml");
+
+    rc = verify_hdr(pool, body, ctype_hdr, "has header2");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("cid:header1@example.org"), "has header1");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("%22header1%22@example.org"), "has header1");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    cid_uri = pjsip_uri_get_uri(pjsip_parse_uri(pool, "<cid:%22header1%22@example.org>",
+	strlen("<cid:%22header1%22@example.org>"), 0));
+    rcbase += 10;
+    rc = verify_cid_uri(pool, body, cid_uri, "has header1");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("<cid:my%20header2@example.org>"), "has header2");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("cid:my%ffheader2@example.org"), "has header2");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    cid_uri = pjsip_uri_get_uri(pjsip_parse_uri(pool, "<cid:my%ffheader2@example.org>",
+	strlen("<cid:my%ffheader2@example.org>"), 0));
+    rcbase += 10;
+    rc = verify_cid_uri(pool, body, cid_uri, "has header2");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("cid:my%20header3@example.org"), "has header4");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("<cid:my%20header4@example.org>"), "has header4");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    cid_uri = pjsip_uri_get_uri(pjsip_parse_uri(pool, "<cid:my%20header4@example.org>",
+	strlen("<cid:my%20header4@example.org>"), 0));
+    rcbase += 10;
+    rc = verify_cid_uri(pool, body, cid_uri, "has header4");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("<my%20header3@example.org>"), "has header4");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    /* These should all fail for malformed or missing URI */
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("cid:"), "has header4");
+    if (!rc) {
+	return (rc - rcbase);
+    }
+
+    /* This will trigger assertion. */
+    /*
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str(""), "has header4");
+    if (!rc) {
+	return (rc - rcbase);
+    }
+    */
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("<>"), "has header4");
+    if (!rc) {
+	return (rc - rcbase);
+    }
+
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("<cid>"), "has header4");
+    if (!rc) {
+	return (rc - rcbase);
+    }
+
+    /*
+     * This is going to pass but the ' ' in the uri is un-encoded which is invalid
+     * so we should never see it.
+     */
+    rcbase += 10;
+    rc = verify_cid_str(pool, body, pj_str("cid:my header3@example.org"), "has header4");
+    if (rc) {
+	return (rc - rcbase);
+    }
+
+    return 0;
 }
 
 static int verify_part(pjsip_multipart_part *part,
@@ -236,8 +460,10 @@ static int parse_test(void)
 
 	pj_strdup2_with_null(pool, &str, p_tests[i].msg);
 	body = pjsip_multipart_parse(pool, str.ptr, str.slen, &ctype, 0);
-	if (!body)
+	if (!body) {
+	    pj_pool_release(pool);
 	    return -100;
+	}
 
 	if (p_tests[i].verify) {
 	    rc = p_tests[i].verify(pool, body);

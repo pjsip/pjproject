@@ -154,6 +154,89 @@ pjsip_multipart_find_part( const pjsip_msg_body *mp,
 			   const pjsip_multipart_part *start);
 
 /**
+ * Find a body inside multipart bodies which has a header matching the
+ * supplied one. Most useful for finding a part with a specific Content-ID.
+ *
+ * @param pool		Memory pool to use for temp space.
+ * @param mp		The multipart body.
+ * @param search_hdr	Header to search for.
+ * @param start		If specified, the search will begin at
+ * 			start->next part. Otherwise it will begin at
+ * 			the first part in the multipart bodies.
+ *
+ * @return		The first part which has a header matching the
+ * 			specified one, or NULL if not found.
+ */
+PJ_DECL(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_header(pj_pool_t *pool,
+				    const pjsip_msg_body *mp,
+				    void *search_hdr,
+				    const pjsip_multipart_part *start);
+
+/**
+ * Find a body inside multipart bodies which has a header matching the
+ * supplied name and value. Most useful for finding a part with a specific
+ * Content-ID.
+ *
+ * @param pool		Memory pool to use for temp space.
+ * @param mp		The multipart body.
+ * @param hdr_name	Header name to search for.
+ * @param hdr_value	Header value search for.
+ * @param start		If specified, the search will begin at
+ * 			start->next part. Otherwise it will begin at
+ * 			the first part in the multipart bodies.
+ *
+ * @return		The first part which has a header matching the
+ * 			specified one, or NULL if not found.
+ */
+PJ_DECL(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
+				    const pjsip_msg_body *mp,
+				    const pj_str_t *hdr_name,
+				    const pj_str_t *hdr_value,
+				    const pjsip_multipart_part *start);
+
+
+
+/**
+ * Find a body inside multipart bodies which has a Content-ID value matching the
+ * supplied "cid" URI in pj_str form.  The "cid:" scheme will be assumed if the
+ * URL doesn't start with it.  Enclosing angle brackets will also be handled
+ * correctly if they exist.
+ *
+ * @see RFC2392 Content-ID and Message-ID Uniform Resource Locators
+ *
+ * @param pool	Memory pool to use for temp space.
+ * @param mp	The multipart body.
+ * @param cid	The "cid" URI to search for in pj_str form.
+ *
+ * @return		The first part which has a Content-ID header matching the
+ * 			specified "cid" URI. or NULL if not found.
+ */
+PJ_DECL(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
+				 const pjsip_msg_body *mp,
+				 pj_str_t *cid);
+
+/**
+ * Find a body inside multipart bodies which has a Content-ID value matching the
+ * supplied "cid" URI.
+ *
+ * @see RFC2392 Content-ID and Message-ID Uniform Resource Locators
+ *
+ * @param pool	Memory pool to use for temp space.
+ * @param mp	The multipart body.
+ * @param cid	The "cid" URI to search for.
+ *
+ * @return		The first part which had a Content-ID header matching the
+ * 			specified "cid" URI. or NULL if not found.
+ */
+PJ_DECL(pjsip_multipart_part*)
+pjsip_multipart_find_part_by_cid_uri(pj_pool_t *pool,
+				 const pjsip_msg_body *mp,
+				 pjsip_other_uri *cid_uri);
+
+/**
  * Parse multipart message.
  *
  * @param pool		Memory pool.

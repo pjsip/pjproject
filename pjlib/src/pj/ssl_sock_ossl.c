@@ -57,10 +57,39 @@
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
+/* Specify whether server supports session reuse using session ID. */
+#define SERVER_SUPPORT_SESSION_REUSE 1
+
+/* Specify whether server should disable session tickets. */
+#define SERVER_DISABLE_SESSION_TICKETS 1
+
+/* Each server application must set its own session id context,
+ * which is used to distinguish the contexts and is stored in
+ * exported sessions.
+ */
+#ifndef SERVER_SESSION_ID_CONTEXT
+#	define SERVER_SESSION_ID_CONTEXT 999
+#endif
+
+/* Server session timeout duration. Default is 300 sec. */
+#define SERVER_SESSION_TIMEOUT 300
+
 #if defined(LIBRESSL_VERSION_NUMBER)
 #	define USING_LIBRESSL 1
 #else
 #	define USING_LIBRESSL 0
+#endif
+
+#if defined(OPENSSL_IS_BORINGSSL)
+#      define USING_BORINGSSL 1
+
+#      define TLSEXT_nid_unknown 0x1000000
+
+#undef SSL_CTRL_SET_ECDH_AUTO
+#      define SSL_CTRL_SET_ECDH_AUTO 94
+
+#else
+#      define USING_BORINGSSL 0
 #endif
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
@@ -121,6 +150,11 @@ static unsigned get_nid_from_cid(unsigned cid)
 
 #endif
 
+static void update_certs_info(pj_ssl_sock_t* ssock,
+			      X509_STORE_CTX* ctx,
+			      pj_ssl_cert_info *local_cert_info,
+			      pj_ssl_cert_info *remote_cert_info,
+			      pj_bool_t is_verify);
 
 #if !USING_LIBRESSL && OPENSSL_VERSION_NUMBER >= 0x10100000L
 #  define OPENSSL_NO_SSL2	    /* seems to be removed in 1.1.0 */
@@ -133,6 +167,7 @@ static unsigned get_nid_from_cid(unsigned cid)
 #elif !USING_LIBRESSL
 #  define SSL_CIPHER_get_id(c)	    (c)->id
 #  define SSL_set_session(ssl, s)   (ssl)->session = (s)
+#  define X509_STORE_CTX_get0_cert(ctx) ((ctx)->cert)
 #endif
 
 
@@ -175,6 +210,7 @@ typedef struct ossl_sock_t
     pj_ssl_sock_t  	  base;
 
     SSL_CTX		 *ossl_ctx;
+    pj_bool_t		  own_ctx;
     SSL			 *ossl_ssl;
     BIO			 *ossl_rbio;
     BIO			 *ossl_wbio;
@@ -370,7 +406,11 @@ static pj_str_t ssl_strerror(pj_status_t status,
 	ssl_err -= PJ_SSL_ERRNO_START;
 	l = ssl_err / MAX_OSSL_ERR_REASON;
 	r = ssl_err % MAX_OSSL_ERR_REASON;
+#if USING_BORINGSSL
+        ssl_err = ERR_PACK(l, r);
+#else
 	ssl_err = ERR_PACK(l, 0, r);
+#endif
     }
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
@@ -693,7 +733,11 @@ static pj_status_t init_openssl(void)
 	}
 	ssl_cipher_num = n;
 
+#if USING_BORINGSSL
+	ssl_sess = SSL_SESSION_new(ctx);
+#else
 	ssl_sess = SSL_SESSION_new();
+#endif
 	SSL_set_session(ssl, ssl_sess);
 
 #if !USING_LIBRESSL && !defined(OPENSSL_NO_EC) \
@@ -701,7 +745,12 @@ static pj_status_t init_openssl(void)
 #if OPENSSL_VERSION_NUMBER >= 0x1010100fL
 	ssl_curves_num = EC_get_builtin_curves(NULL, 0);
 #else
+
+#if USING_BORINGSSL
+        ssl_curves_num = SSL_get_curve_id(ssl);
+#else
 	ssl_curves_num = SSL_get_shared_curve(ssl,-1);
+#endif
 
 	if (ssl_curves_num > PJ_ARRAY_SIZE(ssl_curves))
 	    ssl_curves_num = PJ_ARRAY_SIZE(ssl_curves);
@@ -746,7 +795,11 @@ static pj_status_t init_openssl(void)
 		OPENSSL_free(curves);
 #else
 	for (i = 0; i < ssl_curves_num; i++) {
+#if USING_BORINGSSL
+            nid = SSL_get_curve_id(ssl);
+#else
 	    nid = SSL_get_shared_curve(ssl, i);
+#endif
 
 	    if (nid & TLSEXT_nid_unknown) {
 		cname = "curve unknown";
@@ -859,6 +912,15 @@ static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
 	goto on_return;
     }
 
+    if (ssock->param.cb.on_verify_cb) {
+	update_certs_info(ssock, x509_ctx, &ssock->local_cert_info, 
+			  &ssock->remote_cert_info, PJ_TRUE);
+	preverify_ok = (*ssock->param.cb.on_verify_cb)(ssock, 
+						       ssock->is_server);
+
+	goto on_return;
+    }
+
     /* Store verification status */
     err = X509_STORE_CTX_get_error(x509_ctx);
     switch (err) {
@@ -954,34 +1016,35 @@ static pj_ssl_sock_t *ssl_alloc(pj_pool_t *pool)
     return (pj_ssl_sock_t *)PJ_POOL_ZALLOC_T(pool, ossl_sock_t);
 }
 
+#if !USING_BORINGSSL
+
 static int xname_cmp(const X509_NAME * const *a, const X509_NAME * const *b) {
   return X509_NAME_cmp(*a, *b);
 }
 
-/* Create and initialize new SSL context and instance */
-static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+#else
+
+static int xname_cmp(const X509_NAME **a, const X509_NAME **b) {
+  return X509_NAME_cmp(*a, *b);
+}
+
+#endif
+
+/* Initialize OpenSSL context for the ssock */
+static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    SSL_CTX *ctx = NULL;
 #if !defined(OPENSSL_NO_DH)
     BIO *bio;
     DH *dh;
     long options;
 #endif
     SSL_METHOD *ssl_method = NULL;
-    SSL_CTX *ctx;
     pj_uint32_t ssl_opt = 0;
-    pj_ssl_cert_t *cert;
-    int mode, rc;
+    pj_ssl_cert_t *cert = ssock->cert;
+    int rc;
     pj_status_t status;
-        
-    pj_assert(ssock);
-
-    cert = ssock->cert;
-
-    /* Make sure OpenSSL library has been initialized */
-    init_openssl();
-
-    set_entropy(ssock);
 
     if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
 	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
@@ -1053,12 +1116,32 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 
     }
 
-    /* Create SSL context */
-    ctx = SSL_CTX_new(ssl_method);
+    ossock->ossl_ctx = ctx = SSL_CTX_new(ssl_method);
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ssock);
     }
-    ossock->ossl_ctx = ctx;
+
+    if (ssock->is_server) {
+	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
+
+#if SERVER_DISABLE_SESSION_TICKETS
+    	/* Disable session tickets for TLSv1.2 and below. */
+    	ssl_opt |= SSL_OP_NO_TICKET;
+#ifdef SSL_CTX_set_num_tickets
+    	/* Set the number of TLSv1.3 session tickets issued to 0. */
+    	SSL_CTX_set_num_tickets(ctx, 0);
+#endif
+
+#endif
+
+	SSL_CTX_set_timeout(ctx, SERVER_SESSION_TIMEOUT);
+	if (!SSL_CTX_set_session_id_context(ctx,
+		 (const unsigned char *)&sid_ctx, sizeof(sid_ctx)))
+	{
+            PJ_LOG(1, (THIS_FILE, "Warning! Unable to set server session id "
+                 		  "context. Session reuse will not work."));
+	}
+    }
 
     if (ssl_opt)
 	SSL_CTX_set_options(ctx, ssl_opt);
@@ -1335,12 +1418,16 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
 	    pj_memcpy(p, "rsa", CERT_TYPE_LEN);
 	}
 
+#if USING_BORINGSSL
+        if (SSL_CTX_set_mode(ctx, SSL_CTRL_SET_ECDH_AUTO)) {
+#else
     #ifndef SSL_CTRL_SET_ECDH_AUTO
 	#define SSL_CTRL_SET_ECDH_AUTO 94
     #endif
 
 	/* SSL_CTX_set_ecdh_auto(ctx,on) requires OpenSSL 1.0.2 which wraps: */
 	if (SSL_CTX_ctrl(ctx, SSL_CTRL_SET_ECDH_AUTO, 1, NULL)) {
+#endif
 	    PJ_LOG(4,(ssock->pool->obj_name, "SSL ECDH initialized "
 		      "(automatic), faster PFS ciphers enabled"));
     #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L && \
@@ -1399,7 +1486,11 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
                     if ((xn = X509_NAME_dup(xn)) == NULL )
                         break;
 
+#if !USING_BORINGSSL
                     if (sk_X509_NAME_find(sk, xn) >= 0) {
+#else
+                    if (sk_X509_NAME_find(sk, NULL, xn) >= 0) {
+#endif
                         X509_NAME_free(xn);
                     } else {
                         sk_X509_NAME_push(sk, xn);
@@ -1432,6 +1523,46 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
      */
     if (cert && (!ssock->is_server || ssock->parent)) {
 	pj_ssl_cert_wipe_keys(cert);	
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Create and initialize new SSL context and instance */
+static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
+{
+    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
+    int mode;
+    pj_status_t status;
+
+    pj_assert(ssock);
+
+    /* Make sure OpenSSL library has been initialized */
+    init_openssl();
+
+    set_entropy(ssock);
+
+    if (ssock->param.proto == PJ_SSL_SOCK_PROTO_DEFAULT)
+	ssock->param.proto = PJ_SSL_SOCK_PROTO_SSL23;
+
+    /* Create SSL context */
+    if (SERVER_SUPPORT_SESSION_REUSE && ssock->is_server) {
+    	SSL_CTX *server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+
+	if (!server_ctx) {
+	    status = init_ossl_ctx(ssock->parent);
+	    if (status != PJ_SUCCESS)
+	        return status;
+
+	    server_ctx = ((ossl_sock_t *)ssock->parent)->ossl_ctx;
+	    ((ossl_sock_t *)ssock->parent)->own_ctx = PJ_TRUE;
+	}
+	ossock->ossl_ctx = server_ctx;
+    } else {
+	status = init_ossl_ctx(ssock);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     /* Create SSL instance */
@@ -1484,7 +1615,12 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 
     /* Destroy SSL context */
     if (ossock->ossl_ctx) {
-	SSL_CTX_free(ossock->ossl_ctx);
+    	if (ssock->is_server) {
+    	    if (!SERVER_SUPPORT_SESSION_REUSE || ossock->own_ctx)
+	    	SSL_CTX_free(ossock->ossl_ctx);
+	} else {
+	    SSL_CTX_free(ossock->ossl_ctx);
+	}
 	ossock->ossl_ctx = NULL;
     }
 
@@ -1666,6 +1802,7 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
     int ret;
 
     if (ssock->param.sigalgs.ptr && ssock->param.sigalgs.slen) {
+#if !USING_BORINGSSL
 	if (ssock->is_server) {
 	    ret = SSL_set1_client_sigalgs_list(ossock->ossl_ssl,
 	    				       ssock->param.sigalgs.ptr);
@@ -1673,6 +1810,10 @@ static pj_status_t set_sigalgs(pj_ssl_sock_t *ssock)
 	    ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
 	    				ssock->param.sigalgs.ptr);
 	}
+#else
+	ret = SSL_set1_sigalgs_list(ossock->ossl_ssl,
+				    ssock->param.sigalgs.ptr);
+#endif
 
 	if (ret < 1)
 	    return GET_SSL_STATUS(ssock);
@@ -1980,39 +2121,60 @@ static void ssl_update_remote_cert_chain_info(pj_pool_t *pool,
  */
 static void ssl_update_certs_info(pj_ssl_sock_t *ssock)
 {
-    ossl_sock_t *ossock = (ossl_sock_t *)ssock;
-    X509 *x;
-    STACK_OF(X509) *chain;
-
     pj_assert(ssock->ssl_state == SSL_STATE_ESTABLISHED);
+
+    update_certs_info(ssock, NULL, &ssock->local_cert_info, 
+		      &ssock->remote_cert_info, PJ_FALSE);
+}
+
+
+static void update_certs_info(pj_ssl_sock_t* ssock,
+			      X509_STORE_CTX* ctx,
+			      pj_ssl_cert_info *local_cert_info,
+			      pj_ssl_cert_info *remote_cert_info,
+			      pj_bool_t is_verify)
+{
+    ossl_sock_t* ossock = (ossl_sock_t*)ssock;
+    X509* x;
+    STACK_OF(X509)* chain;
 
     /* Active local certificate */
     x = SSL_get_certificate(ossock->ossl_ssl);
     if (x) {
-	get_cert_info(ssock->pool, &ssock->local_cert_info, x, PJ_FALSE);
+	get_cert_info(ssock->pool, local_cert_info, x, PJ_FALSE);
 	/* Don't free local's X509! */
     } else {
-	pj_bzero(&ssock->local_cert_info, sizeof(pj_ssl_cert_info));
+	pj_bzero(local_cert_info, sizeof(pj_ssl_cert_info));
     }
 
     /* Active remote certificate */
-    x = SSL_get_peer_certificate(ossock->ossl_ssl);
-    if (x) {
-	get_cert_info(ssock->pool, &ssock->remote_cert_info, x, PJ_TRUE);
-	/* Free peer's X509 */
-	X509_free(x);
+    if (is_verify) {
+	x = X509_STORE_CTX_get0_cert(ctx);
     } else {
-	pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
+	x = SSL_get_peer_certificate(ossock->ossl_ssl);
+    }
+    if (x) {
+	get_cert_info(ssock->pool, remote_cert_info, x, PJ_TRUE);
+	if (!is_verify) {
+	    /* Free peer's X509 */
+	    X509_free(x);
+	}
+    } else {
+	pj_bzero(remote_cert_info, sizeof(pj_ssl_cert_info));
     }
 
-    chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
+    if (is_verify) {
+	chain = X509_STORE_CTX_get1_chain(ctx);
+    } else {
+	chain = SSL_get_peer_cert_chain(ossock->ossl_ssl);
+    }
     if (chain) {
 	pj_pool_reset(ssock->info_pool);
 	ssl_update_remote_cert_chain_info(ssock->info_pool,
-       					  &ssock->remote_cert_info,
+       					  remote_cert_info,
        					  chain, PJ_TRUE);
     } else {
-	ssock->remote_cert_info.raw_chain.cnt = 0;
+	remote_cert_info->raw_chain.cnt = 0;
     }
 }
 
@@ -2039,27 +2201,54 @@ static void ssl_set_state(pj_ssl_sock_t *ssock, pj_bool_t is_server)
 }
 
 
+/* Server Name Indication server callback */
+static int sni_cb(SSL *ssl, int *al, void *arg)
+{
+    pj_ssl_sock_t *ssock = (pj_ssl_sock_t *)arg;
+    const char *sname;
+
+    PJ_UNUSED_ARG(al);
+
+    sname = SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name);
+    if (!sname || pj_stricmp2(&ssock->param.server_name, sname)) {
+    	PJ_LOG(4, (THIS_FILE, "Client SNI rejected: %s", sname));
+    	return SSL_TLSEXT_ERR_ALERT_FATAL;
+    }
+
+    return SSL_TLSEXT_ERR_OK;
+}
+
 static void ssl_set_peer_name(pj_ssl_sock_t *ssock)
 {
-#ifdef SSL_set_tlsext_host_name
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
 
     /* Set server name to connect */
     if (ssock->param.server_name.slen &&
         get_ip_addr_ver(&ssock->param.server_name) == 0)
     {
-	/* Server name is null terminated already */
-	if (!SSL_set_tlsext_host_name(ossock->ossl_ssl, 
-				      ssock->param.server_name.ptr))
-	{
-	    char err_str[PJ_ERR_MSG_SIZE];
+    	if (ssock->is_server) {
+#if defined(SSL_CTX_set_tlsext_servername_callback) && \
+    defined(SSL_CTX_set_tlsext_servername_arg)
 
-	    ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
-	    PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
-		"failed: %s", err_str));
+	    SSL_CTX_set_tlsext_servername_callback(ossock->ossl_ctx, &sni_cb);
+	    SSL_CTX_set_tlsext_servername_arg(ossock->ossl_ctx, ssock);
+
+#endif
+    	} else {
+#ifdef SSL_set_tlsext_host_name
+	    /* Server name is null terminated already */
+	    if (!SSL_set_tlsext_host_name(ossock->ossl_ssl,
+				          ssock->param.server_name.ptr))
+	    {
+	        char err_str[PJ_ERR_MSG_SIZE];
+
+	        ERR_error_string_n(ERR_get_error(), err_str, sizeof(err_str));
+	        PJ_LOG(3,(ssock->pool->obj_name, "SSL_set_tlsext_host_name() "
+		          "failed: %s", err_str));
+	    }
+#endif
 	}
     }
-#endif
 }
 
 
@@ -2095,6 +2284,40 @@ static pj_status_t ssl_do_handshake(pj_ssl_sock_t *ssock)
 
     /* Check if handshake has been completed */
     if (SSL_is_init_finished(ossock->ossl_ssl)) {
+
+#if OPENSSL_VERSION_NUMBER >= 0x10100000L
+    	if (ssock->is_server && ssock->ssl_state != SSL_STATE_ESTABLISHED) {
+    	    enum {BUF_SIZE = 64};
+	    unsigned int len = 0, i;
+	    const unsigned char *sctx, *sid;
+	    char buf[BUF_SIZE+1];
+	    SSL_SESSION *sess;
+	    
+	    sess = SSL_get_session(ossock->ossl_ssl);
+
+	    PJ_LOG(5, (THIS_FILE, "Session info: reused=%d, resumable=%d, "
+		       "timeout=%d",
+		       SSL_session_reused(ossock->ossl_ssl),
+		       SSL_SESSION_is_resumable(sess),
+		       SSL_SESSION_get_timeout(sess)));
+
+	    sid = SSL_SESSION_get_id(sess, &len);
+	    len *= 2;
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i+=2)
+	        pj_ansi_sprintf(buf+i, "%02X", sid[i/2]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session id: %s", buf));
+
+	    sctx = SSL_SESSION_get0_id_context(sess, &len);
+	    if (len >= BUF_SIZE) len = BUF_SIZE;
+	    for (i = 0; i < len; i++)
+	        pj_ansi_sprintf(buf + i, "%d", sctx[i]);
+	    buf[len] = '\0';
+	    PJ_LOG(5, (THIS_FILE, "Session id context: %s", buf));
+    	}
+#endif
+
 	ssock->ssl_state = SSL_STATE_ESTABLISHED;
 	return PJ_SUCCESS;
     }

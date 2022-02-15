@@ -16,10 +16,11 @@ req1 = sip.RecvfromTransaction("Initial registration", 401,
 
 req2 = sip.RecvfromTransaction("Registration retry with auth", 200,
 				include=["REGISTER sip", 
-					 "Authorization:[\\s\\S]+Authorization:", # Must have 2 Auth hdrs
-					 "realm=\"python1\"", "realm=\"python2\"", 
-					 "username=\"theuser1\"", "username=\"theuser2\"", 
-					 "nonce=\"1234\"", "nonce=\"6789\"", 
+					 # Must only have 1 Auth hdr since #2887
+					 "Authorization:", # [\\s\\S]+Authorization:"
+					 "realm=\"python1\"", # "realm=\"python2\"", 
+					 "username=\"theuser1\"", # "username=\"theuser2\"", 
+					 "nonce=\"1234\"", # "nonce=\"6789\"", 
 					 "response="],
 				expect="registration success"	     
 			  )

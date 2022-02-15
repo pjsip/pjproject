@@ -623,8 +623,9 @@ static void process_incoming_call(pjsip_rx_data *rdata)
 	    pjsip_response_addr res_addr;
 	    
 	    pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
-	    pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata,
+	    pj_status_t status = pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata,
 		NULL, NULL);
+	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 	    
 	} else {
 	    

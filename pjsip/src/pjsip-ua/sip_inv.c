@@ -118,6 +118,8 @@ static pj_status_t handle_timer_response(pjsip_inv_session *inv,
 static pj_bool_t inv_check_secure_dlg(pjsip_inv_session *inv,
 				      pjsip_event *e);
 
+static int print_sdp(pjsip_msg_body *body, char *buf, pj_size_t len);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -965,79 +967,170 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pjsip_sdp_info*) pjsip_get_sdp_info(pj_pool_t *pool,
+                                           pjsip_msg_body *body,
+                                           pjsip_media_type *msg_media_type,
+                                           const pjsip_media_type *search_media_type)
+{
+    pjsip_sdp_info *sdp_info;
+    pjsip_media_type search_type;
+    pjsip_media_type multipart_mixed;
+    pjsip_media_type multipart_alternative;
+    pjsip_media_type *msg_type;
+    pj_status_t status;
+
+    sdp_info = PJ_POOL_ZALLOC_T(pool,
+                                pjsip_sdp_info);
+
+    PJ_ASSERT_RETURN(mod_inv.mod.id >= 0, sdp_info);
+
+    if (!body) {
+        return sdp_info;
+    }
+
+    if (msg_media_type) {
+	msg_type = msg_media_type;
+    } else {
+	if (body->content_type.type.slen == 0) {
+	    return sdp_info;
+	}
+	msg_type = &body->content_type;
+    }
+
+    if (!search_media_type) {
+        pjsip_media_type_init2(&search_type, "application", "sdp");
+    } else {
+        pj_memcpy(&search_type, search_media_type, sizeof(search_type));
+    }
+
+    pjsip_media_type_init2(&multipart_mixed, "multipart", "mixed");
+    pjsip_media_type_init2(&multipart_alternative, "multipart", "alternative");
+
+    if (pjsip_media_type_cmp(msg_type, &search_type, PJ_FALSE) == 0)
+    {
+	/*
+	 * If the print_body function is print_sdp, we know that
+	 * body->data is a pjmedia_sdp_session object and came from
+	 * a tx_data.  If not, it's the text representation of the
+	 * sdp from an rx_data.
+	 */
+        if (body->print_body == print_sdp) {
+            sdp_info->sdp = body->data;
+        } else {
+            sdp_info->body.ptr = (char*)body->data;
+            sdp_info->body.slen = body->len;
+        }
+    } else if (pjsip_media_type_cmp(&multipart_mixed, msg_type, PJ_FALSE) == 0 ||
+	pjsip_media_type_cmp(&multipart_alternative, msg_type, PJ_FALSE) == 0)
+    {
+        pjsip_multipart_part *part;
+        part = pjsip_multipart_find_part(body, &search_type, NULL);
+        if (part) {
+            if (part->body->print_body == print_sdp) {
+                sdp_info->sdp = part->body->data;
+            } else {
+                sdp_info->body.ptr = (char*)part->body->data;
+                sdp_info->body.slen = part->body->len;
+            }
+        }
+    }
+
+    /*
+     * If the body was already a pjmedia_sdp_session, we can just
+     * return it.  If not and there wasn't a text representation
+     * of the sdp either, we can also just return.
+     */
+    if (sdp_info->sdp || !sdp_info->body.ptr) {
+	return sdp_info;
+    }
+
+    /*
+     * If the body was the text representation of teh SDP, we need
+     * to parse it to create a pjmedia_sdp_session object.
+     */
+    status = pjmedia_sdp_parse(pool,
+				sdp_info->body.ptr,
+				sdp_info->body.slen,
+				&sdp_info->sdp);
+    if (status == PJ_SUCCESS)
+	status = pjmedia_sdp_validate2(sdp_info->sdp, PJ_FALSE);
+
+    if (status != PJ_SUCCESS) {
+	sdp_info->sdp = NULL;
+	PJ_PERROR(1, (THIS_FILE, status,
+	    "Error parsing/validating SDP body"));
+    }
+
+    sdp_info->sdp_err = status;
+
+    return sdp_info;
+}
+
+PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
+                                            pjsip_rx_data *rdata,
+                                            const pjsip_media_type *search_media_type)
+{
+    pjsip_media_type *msg_media_type = NULL;
+    pjsip_rdata_sdp_info *sdp_info;
+
+    if (rdata->endpt_info.mod_data[mod_inv.mod.id]) {
+	return (pjsip_rdata_sdp_info *)rdata->endpt_info.mod_data[mod_inv.mod.id];
+    }
+
+    /*
+     * rdata should have a Content-Type header at this point but we'll
+     * make sure.
+     */
+    if (rdata->msg_info.ctype) {
+	msg_media_type = &rdata->msg_info.ctype->media;
+    }
+    sdp_info = pjsip_get_sdp_info(rdata->tp_info.pool,
+				   rdata->msg_info.msg->body,
+				   msg_media_type,
+				   search_media_type);
+    rdata->endpt_info.mod_data[mod_inv.mod.id] = sdp_info;
+
+    return sdp_info;
+}
 
 PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
 {
     return pjsip_rdata_get_sdp_info2(rdata, NULL);
 }
 
-
-PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info2(
-					    pjsip_rx_data *rdata,
-					    const pjsip_media_type *med_type)
+PJ_DEF(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info2(
+                                            pjsip_tx_data *tdata,
+                                            const pjsip_media_type *search_media_type)
 {
-    pjsip_rdata_sdp_info *sdp_info;
-    pjsip_msg_body *body = rdata->msg_info.msg->body;
-    pjsip_ctype_hdr *ctype_hdr = rdata->msg_info.ctype;
-    pjsip_media_type app_sdp;
+    pjsip_ctype_hdr *ctype_hdr = NULL;
+    pjsip_media_type *msg_media_type = NULL;
+    pjsip_tdata_sdp_info *sdp_info;
 
-    sdp_info = (pjsip_rdata_sdp_info*)
-	       rdata->endpt_info.mod_data[mod_inv.mod.id];
-    if (sdp_info)
-	return sdp_info;
-
-    sdp_info = PJ_POOL_ZALLOC_T(rdata->tp_info.pool,
-				pjsip_rdata_sdp_info);
-    PJ_ASSERT_RETURN(mod_inv.mod.id >= 0, sdp_info);
-    rdata->endpt_info.mod_data[mod_inv.mod.id] = sdp_info;
-
-    if (!med_type) {
-	pjsip_media_type_init2(&app_sdp, "application", "sdp");
-    } else {
-	pj_memcpy(&app_sdp, med_type, sizeof(app_sdp));
+    if (tdata->mod_data[mod_inv.mod.id]) {
+	return (pjsip_tdata_sdp_info *)tdata->mod_data[mod_inv.mod.id];
+    }
+    /*
+     * tdata won't usually have a Content-Type header at this point
+     * but we'll check just the same,
+     */
+    ctype_hdr = pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTENT_TYPE, NULL);
+    if (ctype_hdr) {
+	msg_media_type = &ctype_hdr->media;
     }
 
-    if (body && ctype_hdr &&
-	pj_stricmp(&ctype_hdr->media.type, &app_sdp.type)==0 &&
-	pj_stricmp(&ctype_hdr->media.subtype, &app_sdp.subtype)==0)
-    {
-	sdp_info->body.ptr = (char*)body->data;
-	sdp_info->body.slen = body->len;
-    } else if  (body && ctype_hdr &&
-	    	pj_stricmp2(&ctype_hdr->media.type, "multipart")==0 &&
-	    	(pj_stricmp2(&ctype_hdr->media.subtype, "mixed")==0 ||
-	    	 pj_stricmp2(&ctype_hdr->media.subtype, "alternative")==0))
-    {
-	pjsip_multipart_part *part;
-
-	part = pjsip_multipart_find_part(body, &app_sdp, NULL);
-	if (part) {
-	    sdp_info->body.ptr = (char*)part->body->data;
-	    sdp_info->body.slen = part->body->len;
-	}
-    }
-
-    if (sdp_info->body.ptr) {
-	pj_status_t status;
-	status = pjmedia_sdp_parse(rdata->tp_info.pool,
-				   sdp_info->body.ptr,
-				   sdp_info->body.slen,
-				   &sdp_info->sdp);
-	if (status == PJ_SUCCESS)
-	    status = pjmedia_sdp_validate2(sdp_info->sdp, PJ_FALSE);
-
-	if (status != PJ_SUCCESS) {
-	    sdp_info->sdp = NULL;
-	    PJ_PERROR(1,(THIS_FILE, status,
-			 "Error parsing/validating SDP body"));
-	}
-
-	sdp_info->sdp_err = status;
-    }
+    sdp_info = pjsip_get_sdp_info(tdata->pool,
+				   tdata->msg->body,
+				   msg_media_type,
+				   search_media_type);
+    tdata->mod_data[mod_inv.mod.id] = sdp_info;
 
     return sdp_info;
 }
 
+PJ_DEF(pjsip_tdata_sdp_info*) pjsip_tdata_get_sdp_info(pjsip_tx_data *tdata)
+{
+    return pjsip_tdata_get_sdp_info2(tdata, NULL);
+}
 
 /*
  * Verify incoming INVITE request.
@@ -1781,13 +1874,55 @@ PJ_DEF(pj_status_t) pjsip_create_sdp_body( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+static pjsip_multipart_part* create_sdp_part(pj_pool_t *pool, pjmedia_sdp_session *sdp)
+{
+    pjsip_multipart_part *sdp_part;
+    pjsip_media_type media_type;
+
+    pjsip_media_type_init2(&media_type, "application", "sdp");
+
+    sdp_part = pjsip_multipart_create_part(pool);
+    PJ_ASSERT_RETURN(sdp_part != NULL, NULL);
+
+    sdp_part->body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
+    PJ_ASSERT_RETURN(sdp_part->body != NULL, NULL);
+
+    pjsip_media_type_cp(pool, &sdp_part->body->content_type, &media_type);
+
+    sdp_part->body->data = sdp;
+    sdp_part->body->clone_data = clone_sdp;
+    sdp_part->body->print_body = print_sdp;
+
+    return sdp_part;
+}
+
+PJ_DEF(pj_status_t) pjsip_create_multipart_sdp_body(pj_pool_t *pool,
+						     pjmedia_sdp_session *sdp,
+						     pjsip_msg_body **p_body)
+{
+    pjsip_media_type media_type;
+    pjsip_msg_body *multipart;
+    pjsip_multipart_part *sdp_part;
+
+    pjsip_media_type_init2(&media_type, "multipart", "mixed");
+    multipart = pjsip_multipart_create(pool, &media_type, NULL);
+    PJ_ASSERT_RETURN(multipart != NULL, PJ_ENOMEM);
+
+    sdp_part = create_sdp_part(pool, sdp);
+    PJ_ASSERT_RETURN(sdp_part != NULL, PJ_ENOMEM);
+    pjsip_multipart_add_part(pool, multipart, sdp_part);
+    *p_body = multipart;
+
+    return PJ_SUCCESS;
+}
+
 static pjsip_msg_body *create_sdp_body(pj_pool_t *pool,
 				       const pjmedia_sdp_session *c_sdp)
 {
     pjsip_msg_body *body;
     pj_status_t status;
 
-    status = pjsip_create_sdp_body(pool, 
+    status = pjsip_create_sdp_body(pool,
 				   pjmedia_sdp_session_clone(pool, c_sdp),
 				   &body);
 
@@ -2066,6 +2201,14 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	return PJMEDIA_SDP_EINSDP;
     }
 
+    /* Process the SDP body. */
+    if (sdp_info->sdp_err) {
+        PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
+             "Error parsing SDP in %s",
+             pjsip_rx_data_get_info(rdata)));
+        return PJMEDIA_SDP_EINSDP;
+    }
+
     /* Get/attach invite session's transaction data */
     tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
     if (tsx_inv_data == NULL) {
@@ -2119,6 +2262,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	       )
 	   )
 	{
+	    pjsip_sdp_info *tdata_sdp_info;
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
 
 	    if (pjmedia_sdp_neg_get_state(inv->neg) !=
@@ -2136,14 +2280,15 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 		      (st_code/10==18? "early" : "final" )));
 
 	    /* Retrieve original SDP offer from INVITE request */
-	    reoffer_sdp = (const pjmedia_sdp_session*) 
-			  tsx->last_tx->msg->body->data;
+	    tdata_sdp_info = pjsip_tdata_get_sdp_info(tsx->last_tx);
+	    reoffer_sdp = tdata_sdp_info->sdp;
 
 	    /* Feed the original offer to negotiator */
 	    status = pjmedia_sdp_neg_modify_local_offer2(inv->pool_prov, 
 							 inv->neg,
                                                          inv->sdp_neg_flags,
 						         reoffer_sdp);
+
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(1,(inv->obj_name, "Error updating local offer for "
 			  "forked 2xx/18x response (err=%d)", status));
@@ -2162,14 +2307,6 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	    }
 	    return PJ_SUCCESS;
 	}
-    }
-
-    /* Process the SDP body. */
-    if (sdp_info->sdp_err) {
-	PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
-		     "Error parsing SDP in %s",
-		     pjsip_rx_data_get_info(rdata)));
-	return PJMEDIA_SDP_EINSDP;
     }
 
     pj_assert(sdp_info->sdp != NULL);

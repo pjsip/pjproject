@@ -236,7 +236,9 @@ struct pjmedia_stream
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
 						    codec-VAD mechanism is
 						    enabled?		    */
-    pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
+    unsigned	             ka_interval;      /**< The keepalive sending 
+					            interval                */
+    pj_time_val	             last_frm_ts_sent; /**< Time of last sending
 					            packet		    */
     unsigned	             start_ka_count;   /**< The number of keep-alive
                                                     to be sent after it is
@@ -1331,19 +1333,20 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     if (stream->use_ka)
     {
         pj_uint32_t dtx_duration, ka_interval;
+	pj_time_val now, tmp;
 
-        dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent,
-                                           &frame->timestamp);
+	pj_gettimeofday(&now);
+	tmp = now;
+	PJ_TIME_VAL_SUB(tmp, stream->last_frm_ts_sent);
+	dtx_duration = PJ_TIME_VAL_MSEC(tmp);
         if (stream->start_ka_count) {
-            ka_interval = stream->start_ka_interval *
-                                  PJMEDIA_PIA_SRATE(&stream->port.info) / 1000;
+            ka_interval = stream->start_ka_interval;
         }  else {
-            ka_interval = PJMEDIA_STREAM_KA_INTERVAL *
-                                        PJMEDIA_PIA_SRATE(&stream->port.info);
+            ka_interval = stream->ka_interval * 1000;
         }
         if (dtx_duration > ka_interval) {
             send_keep_alive_packet(stream);
-            stream->last_frm_ts_sent = frame->timestamp;
+            stream->last_frm_ts_sent = now;
 
             if (stream->start_ka_count)
                 stream->start_ka_count--;
@@ -1467,6 +1470,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 					 (const void**)&rtphdr,
 					 &rtphdrlen);
 
+	return PJ_SUCCESS;
 
     /* Encode audio frame */
     } else if ((frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
@@ -1570,8 +1574,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-    /* Update timestamp of last sending packet. */
-    stream->last_frm_ts_sent = frame->timestamp;
+    /* Update time of last sending packet. */
+    pj_gettimeofday(&stream->last_frm_ts_sent);
 #endif
 
     return PJ_SUCCESS;
@@ -2038,6 +2042,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	unsigned i, count = MAX;
 	unsigned ts_span;
 	pjmedia_frame frames[MAX];
+	pj_bzero(frames, sizeof(frames[0]) * MAX);
 
 	/* Get the timestamp of the first sample */
 	ts.u64 = pj_ntohl(hdr->ts);
@@ -2049,13 +2054,15 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    LOGERR_((stream->port.info.name.ptr, status,
 		     "Codec parse() error"));
 	    count = 0;
+	} else if (count == 0) {
+		PJ_LOG(2, (stream->port.info.name.ptr, "codec parsed 0 frames"));
 	} else if (stream->detect_ptime_change &&
 		   frames[0].bit_info > 0xFFFF)
 	{
-	    unsigned dec_ptime;
+	    unsigned dec_ptime, old_ptime;
 
-	    PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
-	               "ptime change detected"));
+	    old_ptime = stream->dec_ptime;
+
 	    frames[0].bit_info &= 0xFFFF;
 	    dec_ptime = frames[0].bit_info * 1000 /
 	    		stream->codec_param.info.clock_rate;
@@ -2063,6 +2070,10 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	    				     dec_ptime / stream->dec_ptime;
 	    stream->dec_ptime = (pj_uint16_t)dec_ptime;
 	    pjmedia_jbuf_set_ptime(stream->jb, stream->dec_ptime);
+
+	    PJ_LOG(4, (stream->port.info.name.ptr, "codec decode "
+		       "ptime change detected: %d -> %d",
+		       old_ptime, dec_ptime));
 
 	    /* Reset jitter buffer after ptime changed */
 	    pjmedia_jbuf_reset(stream->jb);
@@ -2454,6 +2465,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     stream->use_ka = info->use_ka;
+    stream->ka_interval = info->ka_cfg.ka_interval;
     stream->start_ka_count = info->ka_cfg.start_count;
     stream->start_ka_interval = info->ka_cfg.start_interval;
 #endif

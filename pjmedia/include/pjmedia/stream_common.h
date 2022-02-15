@@ -58,8 +58,7 @@ typedef struct pjmedia_stream_rtp_sess_info
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 
 /**
- * Structure of configuration settings for stream keepalive after it
- * is created.
+ * Structure of configuration settings for stream keepalive.
  */
 typedef struct pjmedia_stream_ka_config
 {
@@ -78,6 +77,14 @@ typedef struct pjmedia_stream_ka_config
      * Default: PJMEDIA_STREAM_START_KA_INTERVAL_MSEC
      */
     unsigned			    start_interval;
+
+    /**
+     * The keepalive sending interval, after #start_count number keepalive 
+     * was sent.
+     * 
+     * Default: PJMEDIA_STREAM_KA_INTERVAL (seconds)
+     */
+    unsigned			    ka_interval;
 
 } pjmedia_stream_ka_config;
 

@@ -49,6 +49,8 @@ PJ_BEGIN_DECL
  * @param pool		Pool to create memory buffers for this port.
  * @param port_label	Optional label to set as the port name.
  * @param file_list	Array of WAV file names.
+ *			Each filename's length must be smaller than
+ * 			PJ_MAXPATH.
  * @param file_count	Number of files in the array.
  * @param ptime		The duration (in miliseconds) of each frame read
  *			from this port. If the value is zero, the default

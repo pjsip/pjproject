@@ -27,6 +27,9 @@
 
 #define THIS_FILE               "ssl_sock_apple.m"
 
+/* Set to 1 to enable debugging messages. */
+#define SSL_DEBUG  0
+
 #define SSL_SOCK_IMP_USE_CIRC_BUF
 #define SSL_SOCK_IMP_USE_OWN_NETWORK
 
@@ -55,16 +58,18 @@
 
 /* Secure socket structure definition. */
 typedef struct applessl_sock_t {
-    pj_ssl_sock_t  	base;
+    pj_ssl_sock_t  		base;
 
-    nw_listener_t 	listener;
-    nw_connection_t     connection;
-    dispatch_queue_t	queue;
-    dispatch_semaphore_t ev_semaphore;
+    nw_listener_t 		listener;
+    nw_listener_state_t		lis_state;
+    nw_connection_t     	connection;
+    nw_connection_state_t	con_state;
+    dispatch_queue_t		queue;
+    dispatch_semaphore_t 	ev_semaphore;
 
-    SecTrustRef		trust;
-    tls_ciphersuite_t	cipher;
-    sec_identity_t	identity;
+    SecTrustRef			trust;
+    tls_ciphersuite_t		cipher;
+    sec_identity_t		identity;
 } applessl_sock_t;
 
 
@@ -81,7 +86,8 @@ typedef struct applessl_sock_t {
     EVENT_VERIFY_CERT,
     EVENT_HANDSHAKE_COMPLETE,
     EVENT_DATA_READ,
-    EVENT_DATA_SENT
+    EVENT_DATA_SENT,
+    EVENT_DISCARD
 } event_id;
 
 typedef struct event_t
@@ -137,6 +143,11 @@ typedef struct event_manager
 } event_manager;
 
 static event_manager *event_mgr = NULL;
+
+#if SSL_DEBUG
+static pj_thread_desc queue_th_desc;
+static pj_thread_t *queue_th;
+#endif
 
 /*
  *******************************************************************
@@ -198,6 +209,21 @@ static pj_status_t event_manager_post_event(pj_ssl_sock_t *ssock,
 {
     event_manager *mgr = event_mgr;
     event_t *event;
+
+#if SSL_DEBUG
+    if (!pj_thread_is_registered()) {
+    	pj_bzero(queue_th_desc, sizeof(pj_thread_desc));
+    	pj_thread_register("sslq", queue_th_desc, &queue_th);
+    }
+    PJ_LOG(3, (THIS_FILE, "Posting event %p %d", ssock, event_item->type));
+#endif
+
+    if (ssock->is_closing || !ssock->pool || !mgr)
+    	return PJ_EGONE;
+
+#if SSL_DEBUG
+    PJ_LOG(3,(THIS_FILE, "Post event success %p %d",ssock, event_item->type));
+#endif
     
     [mgr->lock lock];
 
@@ -253,9 +279,10 @@ pj_status_t ssl_network_event_poll()
     	return PJ_SUCCESS;
 
     while (!pj_list_empty(&event_mgr->event_list)) {
+        pj_ssl_sock_t *ssock;
     	applessl_sock_t * assock;
     	event_t *event;
-    	pj_bool_t ret = PJ_TRUE;
+    	pj_bool_t ret = PJ_TRUE, add_ref = PJ_FALSE;
     	
     	[event_mgr->lock lock];
     	/* Check again, this time by holding the lock */
@@ -264,10 +291,33 @@ pj_status_t ssl_network_event_poll()
     	    break;
     	}
     	event = event_mgr->event_list.next;
+    	ssock = event->ssock;
+	assock = (applessl_sock_t *)ssock;
     	pj_list_erase(event);
+
+	if (ssock->is_closing || !ssock->pool ||
+	    (!ssock->is_server && !assock->connection) ||
+	    (ssock->is_server && !assock->listener))
+	{
+            PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d of "
+            	       "a closing socket %p", event->type, ssock));
+            event->type = EVENT_DISCARD;
+	} else if (ssock->param.grp_lock) {
+            if (pj_grp_lock_get_ref(ssock->param.grp_lock) > 0) {
+                /* Prevent ssock from being destroyed while
+                 * we are calling the callback.
+                 */
+                add_ref = PJ_TRUE;
+                pj_grp_lock_add_ref(ssock->param.grp_lock);
+            } else {
+            	PJ_LOG(3, (THIS_FILE, "Warning: Discarding SSL event type %d "
+            		   " of a destroyed socket %p", event->type, ssock));
+                event->type = EVENT_DISCARD;
+            }
+        }
+
     	[event_mgr->lock unlock];
 
-	assock = (applessl_sock_t *)event->ssock;
 	switch (event->type) {
 	    case EVENT_ACCEPT:
 		ret = ssock_on_accept_complete(event->ssock,
@@ -306,12 +356,15 @@ pj_status_t ssl_network_event_poll()
 	}
 
 	/* If not async and not destroyed, signal the waiting socket */
-	if (ret && !event->async && ret) {
+	if (event->type != EVENT_DISCARD && ret && !event->async && ret) {
 	    dispatch_semaphore_signal(assock->ev_semaphore);
 	}
 	
     	/* Put the event into the free list to be reused */
     	[event_mgr->lock lock];
+        if (add_ref) {
+            pj_grp_lock_dec_ref(ssock->param.grp_lock);
+        }
     	pj_list_push_back(&event_mgr->free_event_list, event);
     	[event_mgr->lock unlock];	
     }
@@ -681,6 +734,9 @@ static pj_status_t network_send(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     dispatch_data_t content;
+
+    if (!assock->connection)
+    	return PJ_EGONE;
     
     content = dispatch_data_create(data, *size, assock->queue,
     				   DISPATCH_DATA_DESTRUCTOR_DEFAULT);
@@ -726,7 +782,10 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
     unsigned i;
-    
+
+    if (!assock->connection)
+    	return PJ_EGONE;
+
     for (i = 0; i < async_count; i++) {
 	nw_connection_receive(assock->connection, 1, buff_size,
 	    ^(dispatch_data_t content, nw_content_context_t context,
@@ -734,6 +793,15 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
 	{
 	    pj_status_t status = PJ_SUCCESS;
 	    
+	    /* If the context is marked as complete, and is the final context,
+	     * we're read-closed.
+	     */
+	    if (is_complete &&
+	        (context == NULL || nw_content_context_get_is_final(context)))
+	    {
+		return;
+	    }
+
 	    if (error != NULL) {
     	    	errno = nw_error_get_error_code(error);
     	    	if (errno == 89) {
@@ -746,12 +814,6 @@ static pj_status_t network_start_read(pj_ssl_sock_t *ssock,
     	    	    status = PJ_EEOF;
     	    	}
             }
-
-	    /* is_complete will be marked when the entire stream has been
-	     * closed in the reading direction.
-	     */
-	    if (is_complete)
-	    	status = PJ_EEOF;
 
 	    dispatch_block_t schedule_next_receive = 
 	    ^{
@@ -927,6 +989,11 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	
 	sec_protocol_options_set_tls_renegotiation_enabled(sec_options,
 							   true);
+	/* This must be disabled, otherwise server may think this is
+	 * a resumption of a previously closed connection, and our
+	 * verify block may never be invoked!
+	 */
+    	sec_protocol_options_set_tls_resumption_enabled(sec_options, false);
 	
     	/* SSL verification options */
     	sec_protocol_options_set_peer_authentication_required(sec_options,
@@ -951,6 +1018,7 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 	      sec_protocol_verify_complete_t complete)
 	{
 	    event_t event;
+	    pj_status_t status;
 	    bool result = true;
 
     	    assock->trust = trust_ref? sec_trust_copy_ref(trust_ref): nil;
@@ -960,13 +1028,20 @@ static pj_status_t network_create_params(pj_ssl_sock_t * ssock,
 
 	    /* For client, call on_connect_complete() callback first. */
 	    if (!ssock->is_server) {
+	    	if (!assock->connection)
+	    	    complete(false);
+
 	    	event.type = EVENT_CONNECT;
 	    	event.body.connect_ev.status = PJ_SUCCESS;
-	    	event_manager_post_event(ssock, &event, PJ_FALSE);
+	    	status = event_manager_post_event(ssock, &event, PJ_FALSE);
+	    	if (status == PJ_EGONE)
+	    	    complete(false);
 	    }
 
 	    event.type = EVENT_VERIFY_CERT;
-	    event_manager_post_event(ssock, &event, PJ_FALSE);
+	    status = event_manager_post_event(ssock, &event, PJ_FALSE);
+	    if (status == PJ_EGONE)
+	    	complete(false);
 
 	    /* Check the result of cert verification. */
 	    if (ssock->verify_status != PJ_SSL_CERT_ESUCCESS) {
@@ -1065,16 +1140,27 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 
     nw_connection_set_queue(assock->connection, assock->queue);
 
+    assock->con_state = nw_connection_state_invalid;
     nw_connection_set_state_changed_handler(assock->connection,
     	^(nw_connection_state_t state, nw_error_t error)
     {
     	pj_status_t status = PJ_SUCCESS;
     	pj_bool_t call_cb = PJ_FALSE;
+#if SSL_DEBUG
+    	if (!pj_thread_is_registered()) {
+    	    pj_bzero(queue_th_desc, sizeof(pj_thread_desc));
+    	    pj_thread_register("sslq", queue_th_desc, &queue_th);
+        }
+        PJ_LOG(3, (THIS_FILE, "SSL state change %p %d", assock, state));
+#endif
 
 	if (error && state != nw_connection_state_cancelled) {
     	    errno = nw_error_get_error_code(error);
             warn("Connection failed %p", assock);
             status = PJ_STATUS_FROM_OS(errno);
+#if SSL_DEBUG
+            PJ_LOG(3, (THIS_FILE, "SSL state and errno %d %d", state, errno));
+#endif
             call_cb = PJ_TRUE;	
 	}
 
@@ -1121,6 +1207,8 @@ static pj_status_t network_setup_connection(pj_ssl_sock_t *ssock,
 			     ssock->asock_rbuf, 0);
 	    }
 	}
+
+	assock->con_state = state;
     });
 
     nw_connection_start(assock->connection);
@@ -1154,10 +1242,12 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
     /* Hold a reference until cancelled */
     nw_retain(assock->listener);
 
+    assock->lis_state = nw_listener_state_invalid;
     nw_listener_set_state_changed_handler(assock->listener, 
         ^(nw_listener_state_t state, nw_error_t error)
     {
 	errno = error ? nw_error_get_error_code(error) : 0;
+
 	if (state == nw_listener_state_failed) {
 	    warn("listener failed\n");
 	    pj_sockaddr_set_port(&ssock->local_addr, 0);
@@ -1172,6 +1262,7 @@ static pj_status_t network_start_accept(pj_ssl_sock_t *ssock,
 	    // nw_release(assock->listener);
 	    // assock->listener = nil;
 	}
+    	assock->lis_state = state;
     });
 
     nw_listener_set_new_connection_handler(assock->listener,
@@ -1319,6 +1410,39 @@ static pj_status_t ssl_create(pj_ssl_sock_t *ssock)
     return PJ_SUCCESS;
 }
 
+static void close_connection(applessl_sock_t *assock)
+{
+    if (assock->connection) {
+    	unsigned i;
+	nw_connection_t conn = assock->connection;
+	
+	assock->connection = nil;
+    	nw_connection_force_cancel(conn);
+    	nw_release(conn);
+
+    	/* We need to wait until the connection is at cancelled state,
+    	 * otherwise events will still be delivered even though we
+    	 * already force cancel and release the connection.
+    	 */
+    	for (i = 0; i < 40; i++) {
+    	    if (assock->con_state == nw_connection_state_cancelled) break;
+    	    pj_thread_sleep(50);
+    	}
+
+    	event_manager_remove_events(&assock->base);
+
+    	if (assock->con_state != nw_connection_state_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL connection "
+    	    			  "%p %d", assock, assock->con_state));
+    	}
+
+#if SSL_DEBUG
+	PJ_LOG(3, (THIS_FILE, "SSL connection %p closed", assock));
+#endif
+
+    }
+}
+
 /* Close sockets */
 static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 {
@@ -1329,16 +1453,17 @@ static void ssl_close_sockets(pj_ssl_sock_t *ssock)
    	assock->identity = nil;
     }
 
+    if (assock->trust) {
+	nw_release(assock->trust);
+	assock->trust = nil;
+    }
+
     /* This can happen when pj_ssl_sock_create() fails. */
     if (!ssock->write_mutex)
     	return;
 
     pj_lock_acquire(ssock->write_mutex);
-    if (assock->connection) {
-    	nw_connection_cancel(assock->connection);
-    	nw_release(assock->connection);
-    	assock->connection = nil;
-    }
+    close_connection(assock);
     pj_lock_release(ssock->write_mutex);
 }
 
@@ -1347,15 +1472,22 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
 {
     applessl_sock_t *assock = (applessl_sock_t *)ssock;
 
-    /* Cancel the connection and release it */
-    if (assock->connection) {
-    	nw_connection_force_cancel(assock->connection);
-    	nw_release(assock->connection);
-    	assock->connection = nil;
-    }
+    close_connection(assock);
 
     if (assock->listener) {
+    	unsigned i;
+	
+	nw_listener_set_new_connection_handler(assock->listener, nil);
     	nw_listener_cancel(assock->listener);
+
+    	for (i = 0; i < 20; i++) {
+    	    if (assock->lis_state == nw_listener_state_cancelled) break;
+    	    pj_thread_sleep(50);
+    	}
+    	if (assock->lis_state != nw_listener_state_cancelled) {
+    	    PJ_LOG(3, (THIS_FILE, "Warning: Failed to cancel SSL listener "
+    	    			  "%p %d", assock, assock->lis_state));
+    	}
 	nw_release(assock->listener);
   	assock->listener = nil;
     }
@@ -1382,6 +1514,8 @@ static void ssl_destroy(pj_ssl_sock_t *ssock)
     /* Destroy circular buffers */
     circ_deinit(&ssock->circ_buf_input);
     circ_deinit(&ssock->circ_buf_output);
+    
+    PJ_LOG(4, (THIS_FILE, "SSL %p destroyed", ssock));
 }
 
 
@@ -1391,6 +1525,10 @@ static void ssl_reset_sock_state(pj_ssl_sock_t *ssock)
     pj_lock_acquire(ssock->circ_buf_output_mutex);
     ssock->ssl_state = SSL_STATE_NULL;
     pj_lock_release(ssock->circ_buf_output_mutex);
+
+#if SSL_DEBUG
+    PJ_LOG(3, (THIS_FILE, "SSL reset sock state %p", ssock));
+#endif
 
     ssl_close_sockets(ssock);
 }
@@ -1693,6 +1831,12 @@ static CFDictionaryRef get_cert_oid(SecCertificateRef cert, CFStringRef oid,
 
     vals = SecCertificateCopyValues(cert, key_arr, NULL);
     dict = CFDictionaryGetValue(vals, key[0]);
+    if (!dict) {
+    	CFRelease(key_arr);
+    	CFRelease(vals);
+    	return NULL;
+    }
+
     *value = CFDictionaryGetValue(dict, kSecPropertyKeyValue);
 
     CFRelease(key_arr);

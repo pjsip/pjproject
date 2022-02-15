@@ -714,10 +714,9 @@ AudioMedia &AudDevManager::getPlaybackDevMedia() PJSUA2_THROW(Error)
 void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
 {    
     pjsua_snd_dev_param param;
-    pjsua_snd_dev_param_default(&param);    
 
+    PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.capture_dev = capture_dev;
-    param.playback_dev = getPlaybackDev();
     
     /* Normalize invalid ID or null device to default device */
     if (param.playback_dev == PJMEDIA_AUD_INVALID_DEV ||
@@ -726,7 +725,7 @@ void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
         param.playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
     }
 
-    param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
+    param.mode |= PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;
 
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
 }
@@ -734,10 +733,9 @@ void AudDevManager::setCaptureDev(int capture_dev) const PJSUA2_THROW(Error)
 void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
 {
     pjsua_snd_dev_param param;
-    pjsua_snd_dev_param_default(&param);    
 
+    PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.playback_dev = playback_dev;
-    param.capture_dev = getCaptureDev();
 
     /* Normalize invalid ID or null device to default device */
     if (param.capture_dev == PJMEDIA_AUD_INVALID_DEV ||
@@ -746,7 +744,7 @@ void AudDevManager::setPlaybackDev(int playback_dev) const PJSUA2_THROW(Error)
         param.capture_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
     }
 
-    param.mode = PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;    
+    param.mode |= PJSUA_SND_DEV_NO_IMMEDIATE_OPEN;
 
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );    
 }
@@ -800,15 +798,9 @@ MediaPort *AudDevManager::setNoDev()
 
 void AudDevManager::setSndDevMode(unsigned mode) const PJSUA2_THROW(Error)
 {    
-    int capture_dev = 0, playback_dev = 0;
     pjsua_snd_dev_param param;
-    pj_status_t status = pjsua_get_snd_dev(&capture_dev, &playback_dev);    
-    if (status != PJ_SUCCESS) {
-	PJSUA2_RAISE_ERROR2(status, "AudDevManager::setSndDevMode()");	
-    }
-    pjsua_snd_dev_param_default(&param);
-    param.capture_dev = capture_dev;
-    param.playback_dev = playback_dev;
+
+    PJSUA2_CHECK_EXPR(pjsua_get_snd_dev2(&param));
     param.mode = mode;
     PJSUA2_CHECK_EXPR( pjsua_set_snd_dev2(&param) );
 }
@@ -1501,6 +1493,17 @@ VideoDevInfo::~VideoDevInfo()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+void VidDevManager::initSubsys() PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO && PJSUA_DONT_INIT_VID_DEV_SUBSYS
+    /* Should init once only! */
+    if (pjmedia_get_vid_subsys()->init_count > 0)
+	return;
+
+    PJSUA2_CHECK_EXPR(pjmedia_vid_dev_subsys_init(pjsua_get_pool_factory()));
+#endif
+}
+
 void VidDevManager::refreshDevs() PJSUA2_THROW(Error)
 {
 #if PJSUA_HAS_VIDEO
@@ -2039,6 +2042,15 @@ void VideoMedia::stopTransmit(const VideoMedia &sink) const
     PJSUA2_CHECK_EXPR( pjsua_vid_conf_disconnect(id, sink.id) );
 #else
     PJ_UNUSED_ARG(sink);
+    PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
+#endif
+}
+
+void VideoMedia::update() const PJSUA2_THROW(Error)
+{
+#if PJSUA_HAS_VIDEO
+    PJSUA2_CHECK_EXPR( pjsua_vid_conf_update_port(id) );
+#else
     PJSUA2_RAISE_ERROR(PJ_EINVALIDOP);
 #endif
 }

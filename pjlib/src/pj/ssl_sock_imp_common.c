@@ -184,6 +184,7 @@ static pj_status_t circ_write(circ_buf_t *cb,
  *******************************************************************
  */
 
+#ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
 /* Check IP address version. */
 static int get_ip_addr_ver(const pj_str_t *host)
 {
@@ -202,7 +203,6 @@ static int get_ip_addr_ver(const pj_str_t *host)
     return 0;
 }
 
-#ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
 /* Close sockets */
 static void ssl_close_sockets(pj_ssl_sock_t *ssock)
 {
@@ -262,10 +262,12 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
 	    char buf[PJ_INET6_ADDRSTRLEN+10];
 
-	    PJ_PERROR(3,(ssock->pool->obj_name, status,
-			 "Handshake failed in accepting %s",
-			 pj_sockaddr_print(&ssock->rem_addr, buf,
-					   sizeof(buf), 3)));
+            if (pj_sockaddr_has_addr(&ssock->rem_addr)) {
+                PJ_PERROR(3,(ssock->pool->obj_name, status,
+			  "Handshake failed in accepting %s",
+			  pj_sockaddr_print(&ssock->rem_addr, buf,
+					    sizeof(buf), 3)));
+            }
 
 	    if (ssock->param.cb.on_accept_complete2) {
 		(*ssock->param.cb.on_accept_complete2) 
@@ -919,8 +921,8 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     pj_ssl_sock_t *ssock;
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
     pj_activesock_cb asock_cb;
-#endif
     pj_activesock_cfg asock_cfg;
+#endif
     unsigned i;
     pj_status_t status;
 
@@ -970,6 +972,9 @@ static pj_bool_t ssock_on_accept_complete (pj_ssl_sock_t *ssock_parent,
     status = ssl_create(ssock);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    /* Set peer name */
+    ssl_set_peer_name(ssock);
 
     /* Prepare read buffer */
     ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
@@ -1461,8 +1466,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
 {
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
 
-    if (!ssock->pool)
+    if (!ssock->pool || ssock->is_closing)
 	return PJ_SUCCESS;
+
+    ssock->is_closing = PJ_TRUE;
 
     if (ssock->timer.id != TIMER_NONE) {
 	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
@@ -1527,16 +1534,17 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 
     /* Local address */
     pj_sockaddr_cp(&info->local_addr, &ssock->local_addr);
+
+    /* Certificates info */
+    info->local_cert_info = &ssock->local_cert_info;
+    info->remote_cert_info = &ssock->remote_cert_info;
+
+    /* Remote address */
+    if (pj_sockaddr_has_addr(&ssock->rem_addr))
+	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
     
     if (info->established) {
 	info->cipher = ssl_get_cipher(ssock);
-
-	/* Remote address */
-	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
-
-	/* Certificates info */
-	info->local_cert_info = &ssock->local_cert_info;
-	info->remote_cert_info = &ssock->remote_cert_info;
 
 	/* Verification status */
 	info->verify_status = ssock->verify_status;

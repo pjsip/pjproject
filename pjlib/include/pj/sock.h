@@ -1519,7 +1519,7 @@ PJ_DECL(pj_status_t) pj_sock_shutdown( pj_sock_t sockfd,
  * @param port	    The port address.
  * @param buf	    Text buffer.
  * @param size	    Size of buffer.
- * @param flags	    Bitmask combination of these value:
+ * @param flag	    Bitmask combination of these value:
  *		    - 1: port number is included. 
  *
  * @return	The address string.

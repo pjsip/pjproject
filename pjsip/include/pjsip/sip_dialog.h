@@ -302,7 +302,7 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
  *
  * See \a pjsip_dlg_create_uac() for general info about this function.
  *
- * @param param		    The parameter, refer to
+ * @param create_param		    The parameter, refer to
  *			    \a pjsip_dlg_create_uac_param
  * @param p_dlg		    Pointer to receive the dialog.
  *

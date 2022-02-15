@@ -42,6 +42,7 @@ static const pj_str_t STR_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
 static const pj_str_t STR_SENDONLY = { "sendonly", 8 };
 static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
+static const pj_str_t STR_INACTIVE = { "inactive", 8 };
 
 
 /* Config to control rtpmap inclusion for static payload types */
@@ -405,17 +406,20 @@ static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
     }
 #endif
 
-    /* Add sendrecv attribute. */
-    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    if (dir == PJMEDIA_DIR_ENCODING) {
-    	attr->name = STR_SENDONLY;
-    } else if (dir == PJMEDIA_DIR_DECODING) {
-    	attr->name = STR_RECVONLY;
-    } else {
-    	attr->name = STR_SENDRECV;
+    /* Add direction attribute. */
+    if (m->desc.port != 0) {
+	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	if (dir == PJMEDIA_DIR_ENCODING) {
+	    attr->name = STR_SENDONLY;
+	} else if (dir == PJMEDIA_DIR_DECODING) {
+	    attr->name = STR_RECVONLY;
+	} else if (dir == PJMEDIA_DIR_NONE) {
+	    attr->name = STR_INACTIVE;
+	} else {
+	    attr->name = STR_SENDRECV;
+	}
+	m->attr[m->attr_count++] = attr;
     }
-
-    m->attr[m->attr_count++] = attr;
 
     return PJ_SUCCESS;
 }

@@ -223,7 +223,7 @@
 #undef PJ_HAS_SSL_SOCK
 #endif
 #ifndef PJ_SSL_SOCK_IMP
-#   define PJ_SSL_SOCK_IMP	PJ_SSL_SOCK_IMP_NONE
+#undef PJ_SSL_SOCK_IMP
 #endif
 
 

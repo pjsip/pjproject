@@ -50,21 +50,21 @@ typedef struct parse_context
 /*
  * Prototypes for line parser.
  */
-static void parse_version(pj_scanner *scanner, parse_context *ctx);
+static void parse_version(pj_scanner *scanner, volatile parse_context *ctx);
 static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
-			 parse_context *ctx);
+			 volatile parse_context *ctx);
 static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
-		       parse_context *ctx);
+		       volatile parse_context *ctx);
 static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
-			       parse_context *ctx);
+			       volatile parse_context *ctx);
 static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
-				  parse_context *ctx);
+				  volatile parse_context *ctx);
 static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
-				  parse_context *ctx);
+				 volatile parse_context *ctx);
 static pjmedia_sdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner,
-				    parse_context *ctx);
+				    volatile parse_context *ctx);
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
-			parse_context *ctx);
+			volatile parse_context *ctx);
 static void on_scanner_error(pj_scanner *scanner);
 
 /*
@@ -313,9 +313,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
 
 	/* Expecting either '/' or EOF */
 	if (*scanner.curptr == '/') {
+	    /* Skip the '/' */
 	    pj_scan_get_char(&scanner);
-	    rtpmap->param.ptr = scanner.curptr;
-	    rtpmap->param.slen = scanner.end - scanner.curptr;
+	    pj_scan_get(&scanner, &cs_token, &rtpmap->param);
 	} else {
 	    rtpmap->param.slen = 0;
 	}
@@ -770,6 +770,12 @@ static int print_media_desc( pjmedia_sdp_media *m, char *buf, int len)
     return (int)(p-buf);
 }
 
+PJ_DEF(int) pjmedia_sdp_media_print(const pjmedia_sdp_media *media,
+			       char *buf, pj_size_t size)
+{
+	return print_media_desc(media, buf, size);
+}
+
 PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
 						 pj_pool_t *pool, 
 						 const pjmedia_sdp_media *rhs)
@@ -962,7 +968,8 @@ static int print_session(const pjmedia_sdp_session *ses,
  * PARSERS
  */
 
-static void parse_version(pj_scanner *scanner, parse_context *ctx)
+static void parse_version(pj_scanner *scanner, 
+                          volatile parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINVER;
 
@@ -983,7 +990,7 @@ static void parse_version(pj_scanner *scanner, parse_context *ctx)
 }
 
 static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
-			 parse_context *ctx)
+			 volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1029,7 +1036,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
 }
 
 static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
-		       parse_context *ctx)
+		       volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1059,7 +1066,7 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
 }
 
 static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
-			       parse_context *ctx)
+			       volatile parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINSDP;
 
@@ -1080,7 +1087,7 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
 }
 
 static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
-				  parse_context *ctx)
+				  volatile parse_context *ctx)
 {
     ctx->last_error = PJMEDIA_SDP_EINCONN;
 
@@ -1104,7 +1111,7 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
 }
 
 static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
-				  parse_context *ctx)
+				 volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1126,7 +1133,7 @@ static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
 }
 
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
-			parse_context *ctx)
+			volatile parse_context *ctx)
 {
     pj_str_t str;
 
@@ -1198,7 +1205,7 @@ static void on_scanner_error(pj_scanner *scanner)
 }
 
 static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
-				    parse_context *ctx)
+				    volatile parse_context *ctx)
 {
     pjmedia_sdp_attr *attr;
 
@@ -1317,7 +1324,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     pjmedia_sdp_bandw *bandw;
     pj_str_t dummy;
     int cur_name = 254;
-    parse_context ctx;
+    volatile parse_context ctx;
     PJ_USE_EXCEPTION;
 
     ctx.last_error = PJ_SUCCESS;
@@ -1431,8 +1438,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 	ctx.last_error = PJ_SUCCESS;
 
     }
-    PJ_CATCH_ANY {
-	
+    PJ_CATCH_ANY {		
 	PJ_PERROR(4, (THIS_FILE, ctx.last_error,
 		      "Error parsing SDP in line %d col %d",
 		      scanner.line, pj_scan_get_col(&scanner)));

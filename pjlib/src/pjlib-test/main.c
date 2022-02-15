@@ -72,7 +72,7 @@ static void print_stack(int sig)
     exit(1);
 }
 
-static void init_signals()
+static void init_signals(void)
 {
     signal(SIGSEGV, &print_stack);
     signal(SIGABRT, &print_stack);
@@ -86,9 +86,9 @@ int main(int argc, char *argv[])
 {
     int rc;
     int interractive = 0;
+    int no_trap = 0;
 
     boost();
-    init_signals();
 
     while (argc > 1) {
         char *arg = argv[--argc];
@@ -96,6 +96,8 @@ int main(int argc, char *argv[])
 	if (*arg=='-' && *(arg+1)=='i') {
 	    interractive = 1;
 
+	} else if (*arg=='-' && *(arg+1)=='n') {
+	    no_trap = 1;
 	} else if (*arg=='-' && *(arg+1)=='p') {
             pj_str_t port = pj_str(argv[--argc]);
 
@@ -116,6 +118,10 @@ int main(int argc, char *argv[])
                 return 1;
             }
         }
+    }
+
+    if (!no_trap) {
+	init_signals();
     }
 
     rc = test_main();

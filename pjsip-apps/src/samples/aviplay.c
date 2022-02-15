@@ -25,6 +25,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef _MSC_VER
+#include <signal.h>
+#endif
+
 /**
  * \page page_pjmedia_samples_aviplay_c Samples: Playing AVI File to
  * Video and Sound Devices
@@ -219,6 +223,8 @@ static int aviplay(pj_pool_t *pool, const char *fname)
         /* Create renderer, set it to active  */
         param.active = PJ_TRUE;
         param.vidparam.dir = PJMEDIA_DIR_RENDER;
+        param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+        param.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER | PJMEDIA_VID_DEV_WND_RESIZABLE;
         vfd = pjmedia_format_get_video_format_detail(&vid_port->info.fmt,
                                                      PJ_TRUE);
         pjmedia_format_init_video(&param.vidparam.fmt, 
@@ -305,9 +311,14 @@ static int aviplay(pj_pool_t *pool, const char *fname)
 	    
             /* Alloc encoding buffer */
             enc_buf_size =  codec_param.dec_fmt.det.vid.size.w *
-	    codec_param.dec_fmt.det.vid.size.h * 4
-	    + 16; /*< padding, just in case */
-            enc_buf = pj_pool_alloc(pool,enc_buf_size);
+	    codec_param.dec_fmt.det.vid.size.h * 4;
+            enc_buf = pj_pool_alloc(pool, enc_buf_size +
+            			    128 /*< padding, required for vid codecs
+            			    	    such as ffmpeg. Must be >=
+            			    	    AV_INPUT_BUFFER_PADDING_SIZE.
+            			    	    And must not be included in
+            			    	    the enc_buf_size calculation
+            			    	    above. */);
 	    
             /* Init codec port */
             pj_bzero(&codec_port, sizeof(codec_port));
@@ -455,6 +466,19 @@ on_return:
     return rc;
 }
 
+#ifndef _MSC_VER
+static void sig_handler(int sig)
+{
+    switch (sig)
+    {
+    case SIGINT:
+    case SIGTERM:
+        break;
+    }
+    puts("exit..");
+    exit(1);
+}
+#endif
 
 static int main_func(int argc, char *argv[])
 {
@@ -469,6 +493,10 @@ static int main_func(int argc, char *argv[])
 	return 110;
     }
 
+#ifndef _MSC_VER
+    signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
+#endif
 
     /* Must init PJLIB first: */
     status = pj_init();
