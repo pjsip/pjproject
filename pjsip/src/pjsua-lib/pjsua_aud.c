@@ -472,7 +472,6 @@ pj_status_t pjsua_aud_subsys_destroy()
 	if (pjsua_var.player[i].port) {
 	    PJ_LOG(2,(THIS_FILE, "Destructor for player id=%d is not called"));
 	    pjsua_player_destroy(i);
-	    pjsua_var.player[i].port = NULL;
 	}
     }
 
@@ -481,8 +480,7 @@ pj_status_t pjsua_aud_subsys_destroy()
 	if (pjsua_var.recorder[i].port) {
 	    PJ_LOG(2,(THIS_FILE, "Destructor for recorder id=%d "
 		      "is not called"));
-	    pjsua_recorder_destroy(i);	    
-	    pjsua_var.recorder[i].port = NULL;
+	    pjsua_recorder_destroy(i);
 	}
     }
 

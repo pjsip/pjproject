@@ -2068,16 +2068,14 @@ static pj_status_t app_destroy(void)
     }
 
     /* Close wav player */
-    if (app_config.wav_id != PJSUA_INVALID_ID) 
-    {
+    if (app_config.wav_id != PJSUA_INVALID_ID) {
 	pjsua_player_destroy(app_config.wav_id);
 	app_config.wav_id = PJSUA_INVALID_ID;
 	app_config.wav_port = PJSUA_INVALID_ID;
     }
 
-    /* Close wav recorder */    
-    if (app_config.rec_id != PJSUA_INVALID_ID) 
-    {
+    /* Close wav recorder */
+    if (app_config.rec_id != PJSUA_INVALID_ID) {
 	pjsua_recorder_destroy(app_config.rec_id);
 	app_config.rec_id = PJSUA_INVALID_ID;
 	app_config.rec_port = PJSUA_INVALID_ID;
