@@ -467,6 +467,25 @@ pj_status_t pjsua_aud_subsys_destroy()
 
     close_snd_dev();
 
+    /* Destroy file players */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.player); ++i) {
+	if (pjsua_var.player[i].port) {
+	    PJ_LOG(2,(THIS_FILE, "Destructor for player id=%d is not called"));
+	    pjsua_player_destroy(i);
+	    pjsua_var.player[i].port = NULL;
+	}
+    }
+
+    /* Destroy file recorders */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.recorder); ++i) {
+	if (pjsua_var.recorder[i].port) {
+	    PJ_LOG(2,(THIS_FILE, "Destructor for recorder id=%d "
+		      "is not called"));
+	    pjsua_recorder_destroy(i);	    
+	    pjsua_var.recorder[i].port = NULL;
+	}
+    }
+
     if (pjsua_var.mconf) {
 	pjmedia_conf_destroy(pjsua_var.mconf);
 	pjsua_var.mconf = NULL;
@@ -475,28 +494,6 @@ pj_status_t pjsua_aud_subsys_destroy()
     if (pjsua_var.null_port) {
 	pjmedia_port_destroy(pjsua_var.null_port);
 	pjsua_var.null_port = NULL;
-    }
-
-    /* Destroy file players */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.player); ++i) {
-	if (pjsua_var.player[i].pool) {
-	    PJ_LOG(2,(THIS_FILE, "Pool for player id=%d is not released"));
-	}
-	if (pjsua_var.player[i].port) {
-	    pjmedia_port_destroy(pjsua_var.player[i].port);
-	    pjsua_var.player[i].port = NULL;
-	}
-    }
-
-    /* Destroy file recorders */
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.recorder); ++i) {
-	if (pjsua_var.recorder[i].pool) {
-	    PJ_LOG(2,(THIS_FILE, "Pool for recorder id=%d is not released"));
-	}
-	if (pjsua_var.recorder[i].port) {
-	    pjmedia_port_destroy(pjsua_var.recorder[i].port);
-	    pjsua_var.recorder[i].port = NULL;
-	}
     }
 
     return PJ_SUCCESS;
