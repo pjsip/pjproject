@@ -623,8 +623,8 @@ static void process_incoming_call(pjsip_rx_data *rdata)
 	    pjsip_response_addr res_addr;
 	    
 	    pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
-	    pj_status_t status = pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata,
-		NULL, NULL);
+	    status = pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata,
+										   NULL, NULL);
 	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 	    
 	} else {
@@ -733,7 +733,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 static void timer_disconnect_call( pj_timer_heap_t *timer_heap,
 				   struct pj_timer_entry *entry)
 {
-    struct call *call = entry->user_data;
+    struct call *call = (struct call *)(entry->user_data);
 
     PJ_UNUSED_ARG(timer_heap);
 
@@ -746,7 +746,7 @@ static void timer_disconnect_call( pj_timer_heap_t *timer_heap,
 static void call_on_state_changed( pjsip_inv_session *inv, 
 				   pjsip_event *e)
 {
-    struct call *call = inv->mod_data[mod_siprtp.id];
+    struct call *call = (struct call *)inv->mod_data[mod_siprtp.id];
 
     PJ_UNUSED_ARG(e);
 
@@ -1021,7 +1021,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     pjmedia_transport_get_info(audio->transport, &tpinfo);
 
     /* Create and initialize basic SDP session */
-    sdp = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_session));
+    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
 
     pj_gettimeofday(&tv);
     sdp->origin.user = pj_str("pjsip-siprtp");
@@ -1034,7 +1034,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     /* Since we only support one media stream at present, put the
      * SDP connection line in the session level.
      */
-    sdp->conn = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_conn));
+    sdp->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
     sdp->conn->net_type = pj_str("IN");
     sdp->conn->addr_type = pj_str("IP4");
     sdp->conn->addr = app.local_addr;
@@ -1047,7 +1047,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     /* Create media stream 0: */
 
     sdp->media_count = 1;
-    m = pj_pool_zalloc (pool, sizeof(pjmedia_sdp_media));
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
     sdp->media[0] = m;
 
     /* Standard media info: */
@@ -1076,7 +1076,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     }
 
     /* Add sendrecv attribute. */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("sendrecv");
     m->attr[m->attr_count++] = attr;
 
@@ -1086,12 +1086,12 @@ static pj_status_t create_sdp( pj_pool_t *pool,
      */
     m->desc.fmt[m->desc.fmt_count++] = pj_str("121");
     /* Add rtpmap. */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("rtpmap");
     attr->value = pj_str("121 telephone-event/8000");
     m->attr[m->attr_count++] = attr;
     /* Add fmtp */
-    attr = pj_pool_zalloc(pool, sizeof(pjmedia_sdp_attr));
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
     attr->name = pj_str("fmtp");
     attr->value = pj_str("121 0-15");
     m->attr[m->attr_count++] = attr;
@@ -1190,7 +1190,7 @@ static void on_rx_rtp(void *user_data, void *pkt, pj_ssize_t size)
     const void *payload;
     unsigned payload_len;
 
-    strm = user_data;
+    strm = (struct media_stream *)user_data;
 
     /* Discard packet if media is inactive */
     if (!strm->active)
@@ -1229,7 +1229,7 @@ static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size)
 {
     struct media_stream *strm;
 
-    strm = user_data;
+    strm = (struct media_stream *)user_data;
 
     /* Discard packet if media is inactive */
     if (!strm->active)
@@ -1254,7 +1254,7 @@ static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size)
 static int media_thread(void *arg)
 {
     enum { RTCP_INTERVAL = 5000, RTCP_RAND = 2000 };
-    struct media_stream *strm = arg;
+    struct media_stream *strm = (struct media_stream *)arg;
     char packet[1500];
     unsigned msec_interval;
     pj_timestamp freq, next_rtp, next_rtcp;
@@ -1403,7 +1403,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
     struct codec *codec_desc = NULL;
     unsigned i;
 
-    call = inv->mod_data[mod_siprtp.id];
+    call = (struct call *)inv->mod_data[mod_siprtp.id];
     audio = &call->media[0];
 
     /* If this is a mid-call media update, then destroy existing media */

@@ -634,7 +634,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_ptime( pjmedia_jbuf *jb,
 
     jb->jb_frame_ptime    = ptime;
     jb->jb_min_shrink_gap = PJMEDIA_JBUF_DISC_MIN_GAP / ptime;
-    jb->jb_max_burst	  = PJ_MAX(MAX_BURST_MSEC / ptime,
+    jb->jb_max_burst	  = (int)PJ_MAX(MAX_BURST_MSEC / ptime,
     				   jb->jb_max_count*3/4);
 
     return PJ_SUCCESS;
@@ -1193,7 +1193,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
     state->frame_size = (unsigned)jb->jb_frame_size;
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
-    state->max_count = jb->jb_max_count;
+    state->max_count = (unsigned)jb->jb_max_count;
 
     state->burst = jb->jb_eff_level;
     state->prefetch = jb->jb_prefetch;

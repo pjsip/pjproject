@@ -706,7 +706,7 @@ static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr,
     return p-buf;
 }
 
-static int print_media_desc(const pjmedia_sdp_media *m, char *buf, int len)
+static int print_media_desc(const pjmedia_sdp_media *m, char *buf, pj_size_t len)
 {
     char *p = buf;
     char *end = buf+len;
@@ -714,7 +714,7 @@ static int print_media_desc(const pjmedia_sdp_media *m, char *buf, int len)
     int printed;
 
     /* check length for the "m=" line. */
-    if (len < m->desc.media.slen+m->desc.transport.slen+12+24) {
+    if (len < (pj_size_t)m->desc.media.slen+m->desc.transport.slen+12+24) {
 	return -1;
     }
     *p++ = 'm';	    /* m= */

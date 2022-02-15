@@ -1699,8 +1699,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_response_addr res_addr;
 
 	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
-	    pj_status_t status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
-				      NULL, NULL);
+	    status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
+				                           NULL, NULL);
 	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
 
 	} else {

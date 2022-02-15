@@ -434,7 +434,7 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
     pj_str_t found_hdr_value;
     pj_size_t expected_hdr_slen;
     pj_size_t buf_size;
-    int hdr_name_len;
+    pj_ssize_t hdr_name_len;
 #define REASONABLE_PADDING 32
 #define SEPARATOR_LEN 2
     /* Must specify mandatory params */

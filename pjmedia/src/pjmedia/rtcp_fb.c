@@ -172,7 +172,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
 
     PJ_ASSERT_RETURN(session && buf && length && rpsi, PJ_EINVAL);
 
-    bitlen = rpsi->rpsi_bit_len + 16;
+    bitlen = (unsigned)rpsi->rpsi_bit_len + 16;
     padlen = (32 - (bitlen % 32)) % 32;
     len = (3 + (bitlen+padlen)/32) * 4;
     if (len > *length)
