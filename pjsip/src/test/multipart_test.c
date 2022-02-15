@@ -277,11 +277,14 @@ static pj_status_t verify2(pj_pool_t *pool, pjsip_msg_body *body)
 	return (rc - rcbase);
     }
 
+    /* This will trigger assertion. */
+    /*
     rcbase += 10;
     rc = verify_cid_str(pool, body, pj_str(""), "has header4");
     if (!rc) {
 	return (rc - rcbase);
     }
+    */
 
     rcbase += 10;
     rc = verify_cid_str(pool, body, pj_str("<>"), "has header4");
