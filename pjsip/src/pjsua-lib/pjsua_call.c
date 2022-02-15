@@ -2833,7 +2833,11 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
     }
     
 on_return:
-    if (status != PJ_SUCCESS) {
+    /* Failure in pjsip_inv_send_msg() can cause
+     * pjsua_call_on_state_changed() to be called and call to be reset,
+     * so we need to check for call->inv as well.
+     */
+    if (status != PJ_SUCCESS && call->inv) {
     	pj_time_val delay;
 
     	/* Schedule a retry */
