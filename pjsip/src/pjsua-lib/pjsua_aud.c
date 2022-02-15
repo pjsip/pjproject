@@ -479,6 +479,9 @@ pj_status_t pjsua_aud_subsys_destroy()
 
     /* Destroy file players */
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.player); ++i) {
+	if (pjsua_var.player[i].pool) {
+	    PJ_LOG(2,(THIS_FILE, "Pool for player id=%d is not released"));
+	}
 	if (pjsua_var.player[i].port) {
 	    pjmedia_port_destroy(pjsua_var.player[i].port);
 	    pjsua_var.player[i].port = NULL;
@@ -487,6 +490,9 @@ pj_status_t pjsua_aud_subsys_destroy()
 
     /* Destroy file recorders */
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.recorder); ++i) {
+	if (pjsua_var.recorder[i].pool) {
+	    PJ_LOG(2,(THIS_FILE, "Pool for recorder id=%d is not released"));
+	}
 	if (pjsua_var.recorder[i].port) {
 	    pjmedia_port_destroy(pjsua_var.recorder[i].port);
 	    pjsua_var.recorder[i].port = NULL;
