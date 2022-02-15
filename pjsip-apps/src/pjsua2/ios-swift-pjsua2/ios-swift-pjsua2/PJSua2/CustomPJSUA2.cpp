@@ -217,6 +217,10 @@ void PJSua2::createLib() {
     
     //LibInit
     try {
+        ep_cfg->uaConfig.userAgent = "CUSTOM AGENT";
+        ep_cfg->logConfig.level = 6;
+        ep_cfg->logConfig.consoleLevel = 6;
+        
         ep->libInit( *ep_cfg );
     } catch(Error& err) {
         std::cout << "Initialization error: " << err.info() << std::endl;
