@@ -50,7 +50,7 @@ static void print_stack(int sig)
     exit(1);
 }
 
-static void init_signals()
+static void init_signals(void)
 {
     signal(SIGSEGV, &print_stack);
     signal(SIGABRT, &print_stack);
@@ -64,13 +64,31 @@ static void init_signals()
 static int main_func(int argc, char *argv[])
 {
     int rc;
-    char s[10];
+    int interractive = 0;
+    int no_trap = 0;
+
+    while (argc > 1) {
+        char *arg = argv[--argc];
+
+	if (*arg=='-' && *(arg+1)=='i') {
+	    interractive = 1;
+
+	} else if (*arg=='-' && *(arg+1)=='n') {
+	    no_trap = 1;
+	}
+    }
+
+    if (!no_trap) {
+	init_signals();
+    }
 
     rc = test_main();
 
-    if (argc == 2 && argv[1][0]=='-' && argv[1][1]=='i') {
-	puts("\nPress <ENTER> to quit");
-	if (fgets(s, sizeof(s), stdin) == NULL)
+    if (interractive) {
+	char s[10];
+	puts("");
+	puts("Press <ENTER> to exit");
+	if (!fgets(s, sizeof(s), stdin))
 	    return rc;
     }
 
@@ -79,6 +97,5 @@ static int main_func(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-    init_signals();
     return pj_run_app(&main_func, argc, argv, 0);
 }

@@ -346,6 +346,7 @@ static pj_bool_t proxy_on_rx_response( pjsip_rx_data *rdata )
     status = pjsip_endpt_send_response(global.endpt, &res_addr, tdata,
 				       NULL, NULL);
     if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
 	app_perror("Error forwarding response", status);
 	return PJ_TRUE;
     }

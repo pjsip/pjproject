@@ -563,7 +563,8 @@ static void send_response_callback( pj_timer_heap_t *timer_heap,
 
     PJ_UNUSED_ARG(timer_heap);
 
-    pjsip_endpt_send_response(endpt, &r->res_addr, r->tdata, NULL, NULL);
+    pj_status_t status = pjsip_endpt_send_response(endpt, &r->res_addr, r->tdata, NULL, NULL);
+    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(r->tdata);
     if (tp)
 	pjsip_transport_dec_ref(tp);
 }
