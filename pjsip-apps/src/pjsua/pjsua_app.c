@@ -2072,6 +2072,20 @@ static pj_status_t app_destroy(void)
 	app_config.ring_port = NULL;
     }
 
+    /* Close wav player */
+    if (app_config.wav_id != PJSUA_INVALID_ID) {
+	pjsua_player_destroy(app_config.wav_id);
+	app_config.wav_id = PJSUA_INVALID_ID;
+	app_config.wav_port = PJSUA_INVALID_ID;
+    }
+
+    /* Close wav recorder */
+    if (app_config.rec_id != PJSUA_INVALID_ID) {
+	pjsua_recorder_destroy(app_config.rec_id);
+	app_config.rec_id = PJSUA_INVALID_ID;
+	app_config.rec_port = PJSUA_INVALID_ID;
+    }
+
     /* Close tone generators */
     for (i=0; i<app_config.tone_count; ++i) {
 	pjsua_conf_remove_port(app_config.tone_slots[i]);
@@ -2094,6 +2108,8 @@ static pj_status_t app_destroy(void)
 
     /* Reset config */
     pj_bzero(&app_config, sizeof(app_config));
+    app_config.wav_id = PJSUA_INVALID_ID;
+    app_config.rec_id = PJSUA_INVALID_ID;
 
     if (use_cli) {    
 	app_config.use_cli = use_cli;
