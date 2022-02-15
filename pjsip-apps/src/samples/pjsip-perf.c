@@ -460,11 +460,10 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 		pjsip_response_addr res_addr;
 
 		pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
-		pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata, 
+		status = pjsip_endpt_send_response(app.sip_endpt, &res_addr, tdata, 
 					  NULL, NULL);
-
+		if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(tdata);
 	    } else {
-
 		/* Respond with 500 (Internal Server Error) */
 		pjsip_endpt_respond_stateless(app.sip_endpt, rdata, 500, NULL,
 					      NULL, NULL);
