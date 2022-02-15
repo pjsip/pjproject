@@ -1181,7 +1181,7 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    tsx_update_transport(tsx, NULL);
 
 #if PJSIP_TSX_UAS_CONTINUE_ON_TP_ERROR
-	    if (tp_disc && tsx->method.id == PJSIP_INVITE_METHOD &&
+	    if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	    	tsx->role == PJSIP_ROLE_UAS && tsx->status_code < 200 &&
 	    	!(tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) &&
         	!(tsx->transport_flag & TSX_HAS_PENDING_DESTROY))
@@ -1190,16 +1190,40 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    if (0)
 #endif
 	    {
-	    	/* Upon transport disconnection event, if we receive
-	    	 * incoming INVITE and haven't responded with a final answer,
-	    	 * just return here and don't terminate the transaction,
-	    	 * in case that the library can switch to another working
-	    	 * transport.
-	     	 */
-	    	tsx->transport_flag = 0;
-           	tsx->addr_len = 0;
-            	tsx->res_addr.transport = NULL;
-            	tsx->res_addr.addr_len = 0;
+		/* We have received an incoming INVITE and haven't responded
+		 * with a final answer, while acting as a UAS. We want to notify
+		 * the TU in case that the library can switch to another working
+		 * transport.
+		 */
+		if (tp_disc) {
+		    /* If it was a transport disconnection event, reset the transport
+		     * fields so they are resolved again in future.
+		     */
+		     tsx->transport_flag = 0;
+		     tsx->addr_len = 0;
+		     tsx->res_addr.transport = NULL;
+		     tsx->res_addr.addr_len = 0;
+		}
+
+		PJ_LOG(5, (tsx->obj_name, "Transport error/disconnect on UAS tsx. Notify TU"));
+		if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
+		    /* When notifying the TU, we need to distinguish between a transport error in response
+		     * to an attempt to send a message, and one that is unsolicited (e.g. a TCP RST out of
+		     * the blue).
+		     * In the former case, we'll want the TU to try to resend the failed message. This is
+		     * what the TRANSPORT_DISC_TIMER is for.
+		     * In order to allow the TU to distinguish the two cases, we set the event data to
+		     * be non-null (we actually set it to the last_tx tdata, as the event data is set
+		     * to a tdata on transport errors for sending messages elsewhere)
+		     */
+		    pjsip_event e;
+		    PJSIP_EVENT_INIT_TSX_STATE(e,
+			tsx,
+			PJSIP_EVENT_TRANSPORT_ERROR,
+			tp_disc ? tsx->last_tx : NULL,
+			prev_state);
+		    (*tsx->tsx_user->on_tsx_state)(tsx, &e);
+		}
 	    	
 	    	pj_grp_lock_release(tsx->grp_lock);
 	    	return;
