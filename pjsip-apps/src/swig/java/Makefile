@@ -148,13 +148,14 @@ else
   ifeq ($(OS),android)
     MY_JNI_CFLAGS+= -D__ANDROID__
     MY_JNI_LDFLAGS+= -Wl,-soname,libpjsua2.so
+    MY_JNI_LDXXLIBS+= -landroid
     SWIG_FLAGS+= -D__ANDROID__
   endif
 endif
 
 # Build settings
 MY_CFLAGS	 := $(PJ_CXXFLAGS) $(MY_JNI_CFLAGS) $(CFLAGS)
-MY_LDFLAGS	 := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
+MY_LDFLAGS	 := $(PJ_LDXXFLAGS) $(PJ_LDXXLIBS) $(MY_JNI_LDXXLIBS) $(MY_JNI_LDFLAGS) $(LDFLAGS)
 MY_PACKAGE_NAME	 := org.pjsip.pjsua2
 ifeq ($(OS),android)
   MY_PACKAGE_PATH  := android/pjsua2/src/main/java/$(subst .,/,$(MY_PACKAGE_NAME))
