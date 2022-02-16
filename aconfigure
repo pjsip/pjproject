@@ -7241,7 +7241,7 @@ else
 
 
 	SAVED_LIBS="$LIBS"
-	LIBS="-lGLESv2 -lEGL -landroid -lgcc -lc"
+	LIBS="-lGLESv2 -lEGL -landroid -lc"
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
