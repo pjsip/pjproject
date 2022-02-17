@@ -604,12 +604,7 @@ static pj_status_t oh264_codec_open(pjmedia_vid_codec *codec,
     //TODO:
     // Apply "sprop-parameter-sets" here
 
-    rc = WelsCreateDecoder(&oh264_data->dec);
-    if (rc) {
-	PJ_LOG(4,(THIS_FILE, "Unable to create OpenH264 decoder"));
-	return PJMEDIA_CODEC_EFAILED;
-    }
-
+    /* Initialize decoder */
     rc = oh264_data->dec->Initialize (&sDecParam);
     if (rc) {
 	PJ_LOG(4,(THIS_FILE, "Decoder initialization failed, rc=%d", rc));
