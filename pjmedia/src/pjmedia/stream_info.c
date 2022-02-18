@@ -369,7 +369,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     const pjmedia_sdp_conn *local_conn;
     const pjmedia_sdp_conn *rem_conn;
     int rem_af, local_af;
-    pj_sockaddr local_addr;
     unsigned i;
     pj_status_t status;
 
@@ -474,7 +473,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     }
 
     /* Set remote address: */
-    status = pj_sockaddr_init(local_af, &local_addr, &local_conn->addr,
+    status = pj_sockaddr_init(local_af, &si->local_addr, &local_conn->addr,
 			      local_m->desc.port);
     if (status != PJ_SUCCESS) {
 	/* Invalid IP address. */
@@ -496,7 +495,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     /* Media direction: */
 
     if (local_m->desc.port == 0 ||
-	pj_sockaddr_has_addr(&local_addr)==PJ_FALSE ||
+	pj_sockaddr_has_addr(&si->local_addr)==PJ_FALSE ||
 	pj_sockaddr_has_addr(&si->rem_addr)==PJ_FALSE ||
 	pjmedia_sdp_media_find_attr(local_m, &STR_INACTIVE, NULL)!=NULL)
     {
