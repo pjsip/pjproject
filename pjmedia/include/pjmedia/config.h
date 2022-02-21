@@ -1137,6 +1137,28 @@
 
 
 /**
+ * Specify whether SRTP needs to handle condition that old packets with
+ * incorect RTP seq are still coming when SRTP is restarted.
+ *
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART
+#   define PJMEDIA_SRTP_CHECK_RTP_SEQ_ON_RESTART    1
+#endif
+
+
+/**
+ * Specify whether SRTP needs to handle condition that remote may reset
+ * or maintain ROC when SRTP is restarted.
+ *
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_SRTP_CHECK_ROC_ON_RESTART
+#   define PJMEDIA_SRTP_CHECK_ROC_ON_RESTART        1
+#endif
+
+
+/**
  * Let the library handle libsrtp initialization and deinitialization.
  * Application may want to disable this and manually perform libsrtp
  * initialization and deinitialization when it needs to use libsrtp

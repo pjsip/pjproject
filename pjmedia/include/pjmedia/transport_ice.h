@@ -118,6 +118,9 @@ typedef struct pjmedia_ice_transport_info
      */
     pj_ice_sess_role role;
 
+    pj_str_t	loc_ufrag;
+    pj_str_t	rem_ufrag;
+
     /**
      * Number of components in the component array. Before ICE negotiation
      * is complete, the number represents the number of components of the

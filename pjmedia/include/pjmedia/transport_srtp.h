@@ -179,6 +179,23 @@ typedef struct pjmedia_srtp_cb
 
 
 /**
+ * RTP sequence rollover counter settings.
+ */
+typedef struct pjmedia_srtp_roc
+{
+    /**
+     * The synchronization source.
+     */
+    pj_uint32_t	    ssrc;
+
+    /**
+     * The rollover counter.
+     */
+    pj_uint32_t	    roc;
+
+} pjmedia_srtp_roc;
+
+/**
  * Settings to be given when creating SRTP transport. Application should call
  * #pjmedia_srtp_setting_default() to initialize this structure with its 
  * default values.
@@ -230,6 +247,30 @@ typedef struct pjmedia_srtp_setting
     pjmedia_srtp_keying_method	 keying[PJMEDIA_SRTP_KEYINGS_COUNT];
 
     /**
+     * RTP sequence rollover counter initialization value for incoming
+     * direction. This is useful to maintain ROC after media transport
+     * recreation such as in IP change scenario.
+     */
+    pjmedia_srtp_roc		 rx_roc;
+
+    /**
+     * The previous value of RTP sequence rollover counter. This is
+     * useful in situations when we expect the remote to reset/maintain
+     * ROC but for some reason, they don't. Thus, when we encounter
+     * SRTP packet unprotect failure during probation, we will retry to
+     * unprotect with this ROC value as well.
+     * Set prev_rx_roc.ssrc to 0 to disable this feature.
+     */
+    pjmedia_srtp_roc		 prev_rx_roc;
+
+    /**
+     * RTP sequence rollover counter initialization value for outgoing
+     * direction. This is useful to maintain ROC after media transport
+     * recreation such as in IP change scenario.
+     */
+    pjmedia_srtp_roc		 tx_roc;
+
+    /**
      * Specify SRTP callback.
      */
     pjmedia_srtp_cb		 cb;
@@ -272,6 +313,16 @@ typedef struct pjmedia_srtp_info
      * Specify the peer's usage policy.
      */
     pjmedia_srtp_use		peer_use;
+
+    /**
+     * RTP sequence rollover counter info for incoming direction.
+     */
+    pjmedia_srtp_roc		rx_roc;
+
+    /**
+     * RTP sequence rollover counter info for outgoing direction.
+     */
+    pjmedia_srtp_roc		tx_roc;
 
 } pjmedia_srtp_info;
 
@@ -377,6 +428,31 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_create(
 				       pjmedia_transport *tp,
 				       const pjmedia_srtp_setting *opt,
 				       pjmedia_transport **p_tp);
+
+/**
+ * Get current SRTP media transport setting.
+ *
+ * @param srtp	    The SRTP transport.
+ * @param opt	    Structure to receive the SRTP setting
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_get_setting(
+				       pjmedia_transport *srtp,
+				       pjmedia_srtp_setting *opt);
+
+
+/**
+ * Modify SRTP media transport setting.
+ *
+ * @param srtp	    The SRTP transport.
+ * @param opt	    New setting
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_modify_setting(
+				       pjmedia_transport *srtp,
+				       const pjmedia_srtp_setting *opt);
 
 /**
  * Get fingerprint of local DTLS-SRTP certificate.

@@ -695,6 +695,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 #endif
 
     if (call->opt.flag & PJSUA_CALL_REINIT_MEDIA) {
+    	PJ_LOG(4, (THIS_FILE, "PJSUA_CALL_REINIT_MEDIA"));
     	pjsua_media_channel_deinit(call->index);
     }
 
@@ -2844,7 +2845,11 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
     }
     
 on_return:
-    if (status != PJ_SUCCESS) {
+    /* Failure in pjsip_inv_send_msg() can cause
+     * pjsua_call_on_state_changed() to be called and call to be reset,
+     * so we need to check for call->inv as well.
+     */
+    if (status != PJ_SUCCESS && call->inv) {
     	pj_time_val delay;
 
     	/* Schedule a retry */
@@ -4159,6 +4164,9 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 		  (ice_need_reinv && need_lock_codec? ST_LOCK_CODEC : "")
 		  ));
     }
+
+    /* Clear reinit media flag. Should we also cleanup other flags here? */
+    call->opt.flag &= ~PJSUA_CALL_REINIT_MEDIA;
 
     /* Generate SDP re-offer */
     status = pjsua_media_channel_create_sdp(call->index, pool, NULL,

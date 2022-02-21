@@ -65,6 +65,9 @@ struct dlg_set
     /* This is the buffer to store this entry in the hash table. */
     pj_hash_entry_buf ht_entry;
 
+    /* Entry key in the hash table */
+    pj_str_t ht_key;
+
     /* List of dialog in this dialog set. */
     struct dlg_set_head  dlg_list;
 };
@@ -327,6 +330,7 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 	     * Create the dialog set and add this dialog to it.
 	     */
 	    dlg_set = alloc_dlgset_node();
+	    dlg_set->ht_key = dlg->local.info->tag;
 	    pj_list_init(&dlg_set->dlg_list);
 	    pj_list_push_back(&dlg_set->dlg_list, dlg);
 
@@ -334,8 +338,8 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 
 	    /* Register the dialog set in the hash table. */
 	    pj_hash_set_np_lower(mod_ua.dlg_table, 
-			         dlg->local.info->tag.ptr,
-                                 (unsigned)dlg->local.info->tag.slen,
+			         dlg_set->ht_key.ptr,
+                                 (unsigned)dlg_set->ht_key.slen,
 			         dlg->local.tag_hval, dlg_set->ht_entry,
                                  dlg_set);
 	}
@@ -345,14 +349,15 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 	struct dlg_set *dlg_set;
 
 	dlg_set = alloc_dlgset_node();
+	dlg_set->ht_key = dlg->local.info->tag;
 	pj_list_init(&dlg_set->dlg_list);
 	pj_list_push_back(&dlg_set->dlg_list, dlg);
 
 	dlg->dlg_set = dlg_set;
 
 	pj_hash_set_np_lower(mod_ua.dlg_table, 
-		             dlg->local.info->tag.ptr,
-                             (unsigned)dlg->local.info->tag.slen,
+		             dlg_set->ht_key.ptr,
+                             (unsigned)dlg_set->ht_key.slen,
 		             dlg->local.tag_hval, dlg_set->ht_entry, dlg_set);
     }
 
@@ -397,12 +402,43 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
 
     /* If dialog list is empty, remove the dialog set from the hash table. */
     if (pj_list_empty(&dlg_set->dlg_list)) {
-	pj_hash_set_lower(NULL, mod_ua.dlg_table, dlg->local.info->tag.ptr,
-		          (unsigned)dlg->local.info->tag.slen, 
+
+	/* Verify that the dialog set is valid */
+	pj_assert(pj_hash_get_lower(mod_ua.dlg_table, dlg_set->ht_key.ptr,
+				    (unsigned)dlg_set->ht_key.slen,
+				    &dlg->local.tag_hval) == dlg_set);
+
+	pj_hash_set_lower(NULL, mod_ua.dlg_table, dlg_set->ht_key.ptr,
+		          (unsigned)dlg_set->ht_key.slen,
 			  dlg->local.tag_hval, NULL);
 
 	/* Return dlg_set to free nodes. */
 	pj_list_push_back(&mod_ua.free_dlgset_nodes, dlg_set);
+    } else {
+	/* If the just unregistered dialog is being used as hash key,
+	 * reset the dlg_set entry with a new key (i.e: from the first dialog
+	 * in dlg_set).
+	 */
+	if (dlg_set->ht_key.ptr  == dlg->local.info->tag.ptr &&
+	    dlg_set->ht_key.slen == dlg->local.info->tag.slen)
+	{
+	    pjsip_dialog* key_dlg = dlg_set->dlg_list.next;
+
+	    /* Verify that the old & new keys share the hash value */
+	    pj_assert(key_dlg->local.tag_hval == dlg->local.tag_hval);
+
+	    pj_hash_set_lower(NULL, mod_ua.dlg_table, dlg_set->ht_key.ptr,
+			      (unsigned)dlg_set->ht_key.slen,
+			      dlg->local.tag_hval, NULL);
+
+	    dlg_set->ht_key = key_dlg->local.info->tag;
+
+	    pj_hash_set_np_lower(mod_ua.dlg_table,
+				 dlg_set->ht_key.ptr,
+				 (unsigned)dlg_set->ht_key.slen,
+				 key_dlg->local.tag_hval, dlg_set->ht_entry,
+				 dlg_set);
+	}
     }
 
     /* Unlock user agent. */
