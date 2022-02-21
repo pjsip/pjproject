@@ -161,7 +161,7 @@ public class PjCamera2
 
 	/* Some say to put a larger maxImages to improve FPS */
 	imageReader = ImageReader.newInstance(w, h, fmt, 3);
-	imageReader.setOnImageAvailableListener(imageAvailListener, null);
+	//imageReader.setOnImageAvailableListener(imageAvailListener, null);
 
     }
 
@@ -248,6 +248,7 @@ public class PjCamera2
 	handlerThread = new HandlerThread("Cam2HandlerThread");
 	handlerThread.start();
 	handler = new Handler(handlerThread.getLooper());
+	imageReader.setOnImageAvailableListener(imageAvailListener, handler);
 	isRunning = true;
 
 	try {
