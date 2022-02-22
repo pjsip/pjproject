@@ -161,8 +161,6 @@ public class PjCamera2
 
 	/* Some say to put a larger maxImages to improve FPS */
 	imageReader = ImageReader.newInstance(w, h, fmt, 3);
-	//imageReader.setOnImageAvailableListener(imageAvailListener, null);
-
     }
 
     public int SwitchDevice(int idx)

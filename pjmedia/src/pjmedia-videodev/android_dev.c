@@ -622,6 +622,8 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 					  DEFAULT_FPS, 1);
 	    }
 
+/* Camera2 supports only I420 for now */
+#if !USE_CAMERA2
 	    /* YV12 */
 	    if (adi->has_yv12) {
 		for (k = 0; k < adi->sup_size_cnt &&
@@ -661,6 +663,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 					      DEFAULT_FPS, 1);
 		}
 	    }
+#endif
 	    
 	} else {
 	    goto on_skip_dev;
@@ -794,6 +797,12 @@ static pj_status_t and_factory_create_stream(
 		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
 		     PJ_EINVAL);
+
+/* Camera2 supports only I420 for now */
+#if USE_CAMERA2
+    if (param->fmt.id != PJMEDIA_FORMAT_I420)
+        return PJMEDIA_EVID_BADFORMAT;
+#endif
 
     pj_bzero(&vafp, sizeof(vafp));
     adi = &f->dev_info[param->cap_id];
@@ -1145,7 +1154,7 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
 
 #if USE_CAMERA2
 
-static void strip_padding(void *dst, void *src, int w, int h, int stride)
+PJ_INLINE(void) strip_padding(void *dst, void *src, int w, int h, int stride)
 {
     int i;
     for (i = 0; i < h; ++i) {
@@ -1197,6 +1206,10 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     f.size = strm->vafp.framebytes;
     f.timestamp.u64 = strm->frame_ts.u64;
     f.buf = data_buf = p0;
+
+    /* In this implementation, we only return I420 frames, so here we need to
+     * convert other formats and strip any padding.
+     */
 
     Y = (pj_uint8_t*)f.buf;
     U = Y + strm->vafp.plane_bytes[0];
