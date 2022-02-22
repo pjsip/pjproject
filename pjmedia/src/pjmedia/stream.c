@@ -1471,8 +1471,6 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 					 (const void**)&rtphdr,
 					 &rtphdrlen);
 
-	return PJ_SUCCESS;
-
     /* Encode audio frame */
     } else if ((frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
 	        frame->buf != NULL) ||

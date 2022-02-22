@@ -622,6 +622,8 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 					  DEFAULT_FPS, 1);
 	    }
 
+/* Camera2 supports only I420 for now */
+#if !USE_CAMERA2
 	    /* YV12 */
 	    if (adi->has_yv12) {
 		for (k = 0; k < adi->sup_size_cnt &&
@@ -661,6 +663,7 @@ static pj_status_t and_factory_refresh(pjmedia_vid_dev_factory *ff)
 					      DEFAULT_FPS, 1);
 		}
 	    }
+#endif
 	    
 	} else {
 	    goto on_skip_dev;
@@ -794,6 +797,12 @@ static pj_status_t and_factory_create_stream(
 		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
                      param->dir == PJMEDIA_DIR_CAPTURE,
 		     PJ_EINVAL);
+
+/* Camera2 supports only I420 for now */
+#if USE_CAMERA2
+    if (param->fmt.id != PJMEDIA_FORMAT_I420)
+        return PJMEDIA_EVID_BADFORMAT;
+#endif
 
     pj_bzero(&vafp, sizeof(vafp));
     adi = &f->dev_info[param->cap_id];
@@ -1145,6 +1154,16 @@ static pj_status_t and_stream_destroy(pjmedia_vid_dev_stream *s)
 
 #if USE_CAMERA2
 
+PJ_INLINE(void) strip_padding(void *dst, void *src, int w, int h, int stride)
+{
+    int i;
+    for (i = 0; i < h; ++i) {
+	pj_memmove(dst, src, w);
+	src += stride;
+	dst += w;
+    }
+}
+
 static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 				jlong user_data,
 				jobject plane0, jint rowStride0, jint pixStride0,
@@ -1177,14 +1196,20 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
     p1 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane1);
     p2 = (pj_uint8_t*)(*env)->GetDirectBufferAddress(env, plane2);
     
-    /* Assuming the buffers are originally a large contigue buffer */
-    p0_end = p0+strm->vafp.size.h*rowStride0;
-    pj_assert(p1 == p0_end || p2 == p0_end);
+    /* Assuming the buffers are originally a large contigue buffer,
+     * minimum check for now: plane 1 or 2 must be after plane 0.
+     */
+    p0_end = p0 + strm->vafp.size.h * rowStride0;
+    pj_assert(p1 >= p0_end || p2 >= p0_end);
 
     f.type = PJMEDIA_FRAME_TYPE_VIDEO;
     f.size = strm->vafp.framebytes;
     f.timestamp.u64 = strm->frame_ts.u64;
     f.buf = data_buf = p0;
+
+    /* In this implementation, we only return I420 frames, so here we need to
+     * convert other formats and strip any padding.
+     */
 
     Y = (pj_uint8_t*)f.buf;
     U = Y + strm->vafp.plane_bytes[0];
@@ -1200,40 +1225,70 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
      * - Pixel stride is set to 2 for U & V planes, and 1 for Y plane.
      */
 
-    /* Already I420, nothing to do */
+    /* Already I420 without padding, nothing to do */
     if (p1 == U && p2 == V) {}
 
-    /* The buffer may be originally NV21, i.e: V/U is interleaved */
-    else if (p2==U && p1-p2==1 && pixStride1==2 && pixStride2==2)
+    /* I420 with padding, remove padding */
+    else if (pixStride1==1 && pixStride2==1 && p2 > p1 && p1 > p0)
     {
-	pj_uint8_t *src = U;
-	pj_uint8_t *dst_u = U;
-	pj_uint8_t *end_u = U + strm->vafp.plane_bytes[1];
-	pj_uint8_t *dst_v = strm->convert_buf;
-	while (dst_u < end_u) {
-	    *dst_v++ = *src++;
-	    *dst_u++ = *src++;
+	/* Strip out Y padding */
+	if (rowStride0 > strm->vafp.size.w) {
+	    strip_padding(Y, p0, strm->vafp.size.w, strm->vafp.size.h,
+			  rowStride0);
 	}
-	pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+
+	/* Get U & V planes */
+
+	if (rowStride1 == strm->vafp.size.w/2) {
+	    /* No padding, simply bulk memmove U & V */
+	    pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
+	    pj_memmove(V, p2, strm->vafp.plane_bytes[2]);
+	} else if (rowStride1 > strm->vafp.size.w/2) {
+	    /* Strip padding */
+	    strip_padding(U, p1, strm->vafp.size.w/2, strm->vafp.size.h/2,
+			  rowStride1);
+	    strip_padding(V, p2, strm->vafp.size.w/2, strm->vafp.size.h/2,
+			  rowStride2);
+	}
+    }
+
+    /* The buffer may be originally NV21, i.e: V/U is interleaved */
+    else if (p1-p2==1 && pixStride0==1 &&  pixStride1==2 && pixStride2==2)
+    {
+	/* Strip out Y padding */
+	if (rowStride0 > strm->vafp.size.w) {
+	    strip_padding(Y, p0, strm->vafp.size.w, strm->vafp.size.h,
+			  rowStride0);
+	}
+
+	/* Get U & V, and strip if needed */
+	{
+	    pj_uint8_t *src = p2;
+	    pj_uint8_t *dst_u = U;
+	    pj_uint8_t *dst_v = strm->convert_buf;
+	    int diff = rowStride1 - strm->vafp.size.w;
+	    int i;
+	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
+		int j;
+		for (j = 0; j < strm->vafp.size.w/2; ++j) {
+		    *dst_v++ = *src++;
+		    *dst_u++ = *src++;
+		}
+		src += diff; /* stripping any padding */
+	    }
+	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+	}
     }
     
     /* The buffer may be originally YV12, i.e: U & V planes are swapped.
      * We also need to strip out padding, if any.
      */
-    else if ((p2 == p0_end) &&
-	     (p1 == p2+rowStride2*strm->vafp.size.h/2))
+    else if (pixStride1==1 && pixStride2==1 && p1 > p2 && p2 > p0)
     {
 	/* Strip out Y padding */
 	if (rowStride0 > strm->vafp.size.w) {
-	    int i;
-	    pj_uint8_t *src = Y + rowStride0;
-	    pj_uint8_t *dst = Y + strm->vafp.size.w;
-
-	    for (i = 1; i < strm->vafp.size.h; ++i) {
-		memmove(dst, src, strm->vafp.size.w);
-		src += rowStride0;
-		dst += strm->vafp.size.w;
-	    }
+	    strip_padding(Y, p0, strm->vafp.size.w, strm->vafp.size.h,
+			  rowStride0);
 	}
 
 	/* Swap U & V planes */
@@ -1241,30 +1296,17 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 
 	    /* No padding, note Y plane should be no padding too! */
 	    pj_assert(rowStride0 == strm->vafp.size.w);
-	    pj_memcpy(strm->convert_buf, U, strm->vafp.plane_bytes[1]);
-	    pj_memmove(U, V, strm->vafp.plane_bytes[1]);
+	    pj_memcpy(strm->convert_buf, p1, strm->vafp.plane_bytes[1]);
+	    pj_memmove(U, p1, strm->vafp.plane_bytes[1]);
 	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[1]);
 
 	} else if (rowStride1 > strm->vafp.size.w/2) {
 
-	    /* Strip & copy V plane into conversion buffer */
-	    pj_uint8_t *src = p0_end;
-	    pj_uint8_t *dst = strm->convert_buf;
-	    unsigned dst_stride = strm->vafp.size.w/2;
-	    int i;
-	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
-		memmove(dst, src, dst_stride);
-		src += rowStride1;
-		dst += dst_stride;
-	    }
-
-	    /* Strip U plane */
-	    dst = U;
-	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
-		memmove(dst, src, dst_stride);
-		src += rowStride1;
-		dst += dst_stride;
-	    }
+	    /* Strip padding */
+	    strip_padding(strm->convert_buf, p1, strm->vafp.size.w/2,
+			  strm->vafp.size.h/2, rowStride1);
+	    strip_padding(V, p2, strm->vafp.size.w/2, strm->vafp.size.h/2,
+			  rowStride2);
 
 	    /* Get V plane data from conversion buffer */
 	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
@@ -1287,7 +1329,40 @@ static void JNICALL OnGetFrame2(JNIEnv *env, jobject obj,
 			     p0, p0_len, rowStride0, pixStride0,
 			     p1, p1_len, rowStride1, pixStride1,
 			     p2, p2_len, rowStride2, pixStride2));
-	return;
+
+#if 1
+	/* Generic converter to I420, based on row stride & pixel stride */
+
+	/* Strip out Y padding */
+	if (rowStride0 > strm->vafp.size.w) {
+	    strip_padding(Y, p0, strm->vafp.size.w, strm->vafp.size.h,
+			  rowStride0);
+	}
+
+	/* Get U & V, and strip if needed */
+	{
+	    pj_uint8_t *src_u = p1;
+	    pj_uint8_t *src_v = p2;
+	    pj_uint8_t *dst_u = U;
+	    pj_uint8_t *dst_v = strm->convert_buf;
+	    int i;
+
+	    /* Note, we use convert buffer for V, just in case U & V are
+	     * swapped.
+	     */
+	    for (i = 0; i < strm->vafp.size.h/2; ++i) {
+		int j;
+		for (j = 0; j < strm->vafp.size.w/2; ++j) {
+		    *dst_v++ = *(src_v + j*pixStride2);
+		    *dst_u++ = *(src_u + j*pixStride1);
+		}
+		src_u += rowStride1;
+		src_v += rowStride2;
+	    }
+	    pj_memcpy(V, strm->convert_buf, strm->vafp.plane_bytes[2]);
+	}
+#endif
+
     }
 
     status = pjmedia_vid_dev_conv_resize_and_rotate(&strm->conv, 
