@@ -23,6 +23,8 @@ import java.lang.ref.WeakReference;
 
 import android.app.Activity;
 import android.content.pm.ApplicationInfo;
+import android.hardware.camera2.CameraManager;
+import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -30,6 +32,7 @@ import android.view.SurfaceView;
 import android.os.Handler;
 import android.os.Message;
 import android.widget.TextView;
+import org.pjsip.PjCameraInfo2;
 
 class CONST {
     public static final String LIB_FILENAME = "pjsua";
@@ -160,6 +163,8 @@ public class MainActivity extends Activity implements SurfaceHolder.Callback {
     protected void onCreate(Bundle savedInstanceState) {
 	LOG.DEBUG(ui_handler, "=== Activity::onCreate() ===");
 	super.onCreate(savedInstanceState);
+	CameraManager cm = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+	PjCameraInfo2.SetCameraManager(cm);
 
 	init_view();
 

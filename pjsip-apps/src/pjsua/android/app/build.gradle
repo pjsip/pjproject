@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 15
+    compileSdkVersion 26
     buildToolsVersion "23.0.3"
 
     defaultConfig {
         applicationId "org.pjsip.pjsua"
-        minSdkVersion 15
-        targetSdkVersion 15
+        minSdkVersion 23
+        targetSdkVersion 26
 
         ndk {
             moduleName "libpjsua"
