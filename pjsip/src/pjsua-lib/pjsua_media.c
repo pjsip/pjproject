@@ -3231,11 +3231,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     	    	       pjmedia_transport_info_get_spc_info(
 	            	   &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
 
-	    call_med->prev_srtp_use = (srtp_info? PJ_TRUE: PJ_FALSE);
-	    if (srtp_info)
+	    call_med->prev_srtp_use = (srtp_info && srtp_info->active)?
+	    			      PJ_TRUE: PJ_FALSE;
+	    if (call_med->prev_srtp_use)
 	    	call_med->prev_srtp_info = *srtp_info;
-	    call_med->prev_ice_use = (ice_info? PJ_TRUE: PJ_FALSE);
-	    if (ice_info)
+	    call_med->prev_ice_use = (ice_info && ice_info->active)?
+	    			     PJ_TRUE: PJ_FALSE;
+	    if (call_med->prev_ice_use)
 	    	call_med->prev_ice_info = *ice_info;
 
     	    /* Try to sync recent changes to provisional media */
@@ -3367,8 +3369,9 @@ static void check_srtp_roc(pjsua_call *call,
     } else {
     	call_med->prev_srtp_use = PJ_TRUE;
 	call_med->prev_srtp_info = *srtp_info;
-	call_med->prev_ice_use = (ice_info? PJ_TRUE: PJ_FALSE);
-	if (ice_info)
+	call_med->prev_ice_use = (ice_info && ice_info->active)?
+	    			 PJ_TRUE: PJ_FALSE;
+	if (call_med->prev_ice_use)
 	    call_med->prev_ice_info = *ice_info;
 
     	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
