@@ -71,7 +71,13 @@ if G_EXE == "":
                 "pjsua-i386-Win32-vc8-Debug-Static.exe",
                 "pjsua-i386-Win32-vc8-Release.exe",
                 "pjsua-i386-Win32-vc8-Release-Dynamic.exe",
-                "pjsua-i386-Win32-vc8-Release-Static.exe"
+                "pjsua-i386-Win32-vc8-Release-Static.exe",
+                "pjsua-i386-Win32-vc14-Debug.exe",
+                "pjsua-i386-Win32-vc14-Debug-Dynamic.exe",
+                "pjsua-i386-Win32-vc14-Debug-Static.exe",
+                "pjsua-i386-Win32-vc14-Release.exe",
+                "pjsua-i386-Win32-vc14-Release-Dynamic.exe",
+                "pjsua-i386-Win32-vc14-Release-Static.exe"                
                 ]
         e_ts = 0
         for e in EXECUTABLES:
