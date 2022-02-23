@@ -4843,6 +4843,14 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 		       sizeof(call->last_text_buf_));
 	    break;
 	case PJSIP_INV_STATE_CONFIRMED:
+	    if (call->hanging_up) {
+	    	/* This can happen if there is a crossover between
+	    	 * our CANCEL request and the remote's 200 response.
+	    	 * So we send BYE here.
+	    	 */
+	    	call_inv_end_session(call, 200, NULL, NULL);
+	    	return;
+	    }
 	    pj_gettimeofday(&call->conn_time);
 
 	    if (call->trickle_ice.enabled) {
