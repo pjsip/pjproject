@@ -2091,8 +2091,10 @@ static pj_status_t app_destroy(void)
 
     /* Close tone generators */
     for (i=0; i<app_config.tone_count; ++i) {
-	pjsua_conf_remove_port(app_config.tone_slots[i]);
-	app_config.tone_slots[i] = PJSUA_INVALID_ID;
+	if (app_config.tone_slots[i] != PJSUA_INVALID_ID) {
+	    pjsua_conf_remove_port(app_config.tone_slots[i]);
+	    app_config.tone_slots[i] = PJSUA_INVALID_ID;
+	}
     }
 
     pj_pool_safe_release(&app_config.pool);
