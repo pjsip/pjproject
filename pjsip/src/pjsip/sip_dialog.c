@@ -1227,9 +1227,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_request( pjsip_dialog *dlg,
     /* Lock dialog. */
     pjsip_dlg_inc_lock(dlg);
 
-    /* Use outgoing CSeq and increment it by one. */
+    /* Use outgoing CSeq, if set to -1 (other than ACK/CANCEL). */
     if (cseq < 0)
-	cseq = dlg->local.cseq + 1;
+	cseq = dlg->local.cseq;
 
     /* Keep compiler happy */
     status = PJ_EBUG;
