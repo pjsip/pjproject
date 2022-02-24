@@ -99,7 +99,7 @@ static pj_status_t select_tests(char *testlist)
     char *token;
     char *saveptr;
     int maxtok = PJ_ARRAY_SIZE(test_list);
-    int i, j;
+    int j;
 
     if (!testlist) {
 	return PJ_SUCCESS;

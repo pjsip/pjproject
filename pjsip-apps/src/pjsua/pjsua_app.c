@@ -2045,11 +2045,15 @@ static pj_status_t app_destroy(void)
 
     /* Close avi devs and ports */
     for (i=0; i<app_config.avi_cnt; ++i) {
-	if (app_config.avi[i].slot != PJSUA_INVALID_ID)
+	if (app_config.avi[i].slot != PJSUA_INVALID_ID) {
 	    pjsua_conf_remove_port(app_config.avi[i].slot);
+	    app_config.avi[i].slot = PJSUA_INVALID_ID;
+	}
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_VIDEO_DEV_HAS_AVI
-	if (app_config.avi[i].dev_id != PJMEDIA_VID_INVALID_DEV)
+	if (app_config.avi[i].dev_id != PJMEDIA_VID_INVALID_DEV) {
 	    pjmedia_avi_dev_free(app_config.avi[i].dev_id);
+	    app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+	}
 #endif
     }
 
@@ -2087,7 +2091,10 @@ static pj_status_t app_destroy(void)
 
     /* Close tone generators */
     for (i=0; i<app_config.tone_count; ++i) {
-	pjsua_conf_remove_port(app_config.tone_slots[i]);
+	if (app_config.tone_slots[i] != PJSUA_INVALID_ID) {
+	    pjsua_conf_remove_port(app_config.tone_slots[i]);
+	    app_config.tone_slots[i] = PJSUA_INVALID_ID;
+	}
     }
 
     pj_pool_safe_release(&app_config.pool);

@@ -89,8 +89,8 @@ PJ_DEF(pj_status_t) pjmedia_vpx_packetize(const pjmedia_vpx_packetizer *pktz,
 {
     unsigned payload_desc_size = 1;
     unsigned max_size = pktz->cfg.mtu - payload_desc_size;
-    unsigned remaining_size = bits_len - *bits_pos;
-    unsigned out_size = *payload_len;
+    unsigned remaining_size = (unsigned)bits_len - *bits_pos;
+    unsigned out_size = (unsigned)*payload_len;
     pj_uint8_t *bits = *payload;
 
     *payload_len = PJ_MIN(remaining_size, max_size);

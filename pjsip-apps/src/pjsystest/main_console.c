@@ -85,7 +85,7 @@ pj_status_t gui_start(gui_menu *menu)
 	puts("M E N U :");
 	puts("---------");
 	for (i=0; i<menu->submenu_cnt; ++i) {
-	    char menu_id[4];
+	    char menu_id[11];
 	    pj_ansi_sprintf(menu_id, "%u", i);
 	    print_menu("", menu_id, menu->submenus[i]);
 	}

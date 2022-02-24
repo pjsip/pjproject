@@ -185,6 +185,7 @@ static pj_status_t circ_write(circ_buf_t *cb,
  */
 
 #ifndef SSL_SOCK_IMP_USE_OWN_NETWORK
+
 /* Check IP address version. */
 static int get_ip_addr_ver(const pj_str_t *host)
 {

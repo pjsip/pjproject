@@ -1506,7 +1506,7 @@ static pj_bool_t dataconn_on_data_read(pj_activesock_t *asock,
 	if (conn->state == DATACONN_STATE_READY) {
 	    /* Application data */
 	    if (turn_sock->cb.on_rx_data) {
-		(*turn_sock->cb.on_rx_data)(turn_sock, data, *remainder,
+		(*turn_sock->cb.on_rx_data)(turn_sock, data, (unsigned)*remainder,
 					    &conn->peer_addr,
 					    conn->peer_addr_len);
 	    }

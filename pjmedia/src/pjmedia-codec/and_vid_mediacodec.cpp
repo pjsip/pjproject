@@ -1513,10 +1513,8 @@ static pj_status_t open_h264(and_media_codec_data *and_media_data)
         for (i = h264_fmtp.sprop_param_sets_len - code_size;
              i >= code_size; i--)
         {
-            pj_bool_t found = PJ_TRUE;
             for (j = 0; j < code_size; j++) {
                 if (h264_fmtp.sprop_param_sets[i + j] != start_code[j]) {
-                    found = PJ_FALSE;
                     break;
                 }
             }

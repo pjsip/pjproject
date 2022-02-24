@@ -434,7 +434,7 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
     pj_str_t found_hdr_value;
     pj_size_t expected_hdr_slen;
     pj_size_t buf_size;
-    int hdr_name_len;
+    pj_ssize_t hdr_name_len;
 #define REASONABLE_PADDING 32
 #define SEPARATOR_LEN 2
     /* Must specify mandatory params */
@@ -478,7 +478,7 @@ pjsip_multipart_find_part_by_header_str(pj_pool_t *pool,
 	     * If the buffer was too small (slen = -1) or the result wasn't
 	     * the same length as the search header, it can't be a match.
 	     */
-	    if (found_hdr_str.slen != expected_hdr_slen) {
+	    if (found_hdr_str.slen != (pj_ssize_t)expected_hdr_slen) {
 		continue;
 	    }
 	    /*
@@ -504,7 +504,6 @@ pjsip_multipart_find_part_by_header(pj_pool_t *pool,
 				    void *search_for,
 				    const pjsip_multipart_part *start)
 {
-    struct multipart_data *m_data;
     pjsip_hdr *search_hdr = search_for;
     pj_str_t search_buf;
 
@@ -587,7 +586,6 @@ pjsip_multipart_find_part_by_cid_str(pj_pool_t *pool,
     struct multipart_data *m_data;
     pjsip_multipart_part *part;
     pjsip_generic_string_hdr *found_hdr;
-    pj_str_t found_hdr_value;
     static pj_str_t hdr_name = { "Content-ID", 10};
     pj_str_t hdr_value;
 

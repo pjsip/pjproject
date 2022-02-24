@@ -125,7 +125,6 @@ static void init_media_type(pjsip_media_type *mt,
 static int verify_hdr(pj_pool_t *pool, pjsip_msg_body *multipart_body,
     void *hdr, char *part_body)
 {
-    pjsip_media_type mt;
     pjsip_multipart_part *part;
     pj_str_t the_body;
 
@@ -148,7 +147,6 @@ static int verify_hdr(pj_pool_t *pool, pjsip_msg_body *multipart_body,
 static int verify_cid_str(pj_pool_t *pool, pjsip_msg_body *multipart_body,
     pj_str_t cid_url, char *part_body)
 {
-    pjsip_media_type mt;
     pjsip_multipart_part *part;
     pj_str_t the_body;
 
@@ -170,7 +168,6 @@ static int verify_cid_str(pj_pool_t *pool, pjsip_msg_body *multipart_body,
 static int verify_cid_uri(pj_pool_t *pool, pjsip_msg_body *multipart_body,
     pjsip_other_uri *cid_uri, char *part_body)
 {
-    pjsip_media_type mt;
     pjsip_multipart_part *part;
     pj_str_t the_body;
 

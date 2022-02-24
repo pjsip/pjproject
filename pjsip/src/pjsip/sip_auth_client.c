@@ -558,7 +558,7 @@ static void update_digest_session( pjsip_cached_auth *cached_auth,
     PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY!=0
 	if (pj_strchr(&cached_auth->cnonce, '-')) {
 	    /* remove hyphen character. */
-	    int w, r, len = pj_strlen(&cached_auth->cnonce);
+	    pj_size_t w, r, len = pj_strlen(&cached_auth->cnonce);
 	    char *s = cached_auth->cnonce.ptr;
 
 	    w = r = 0;

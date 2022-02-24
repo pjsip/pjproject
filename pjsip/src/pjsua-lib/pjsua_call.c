@@ -827,7 +827,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
-    pjsua_call *call;
+    pjsua_call *call = NULL;
     int call_id = -1;
     pj_str_t contact;
     pj_status_t status;
@@ -1011,7 +1011,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
 
 on_error:
-    if (dlg) {
+    if (dlg && call) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
 	call->async_call.dlg = NULL;
@@ -1700,8 +1700,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_response_addr res_addr;
 
 	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
-	    pj_status_t status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
-				      NULL, NULL);
+	    status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
+				                           NULL, NULL);
 	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
 
 	} else {

@@ -1341,7 +1341,10 @@ pjsua_vid_preview_param VideoPreviewOpParam::toPj() const
 VideoPreview::VideoPreview(int dev_id) 
 : devId(dev_id), winId(PJSUA_INVALID_ID)
 {
-
+#if !PJSUA_HAS_VIDEO
+    /* Suppress warning of unused field when video is disabled */
+    PJ_UNUSED_ARG(winId);
+#endif
 }
 
 bool VideoPreview::hasNative()

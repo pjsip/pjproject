@@ -76,7 +76,7 @@ pjmedia_rtcp_fb_setting RtcpFbConfig::toPj() const
 
     pj_bzero(&setting, sizeof(setting));
     setting.dont_use_avpf   = this->dontUseAvpf;
-    setting.cap_count	    = this->caps.size();
+    setting.cap_count	    = (unsigned)this->caps.size();
     for (unsigned i = 0; i < setting.cap_count; ++i) {
 	setting.caps[i] = this->caps[i].toPj();
     }
@@ -166,12 +166,12 @@ pjsua_srtp_opt SrtpOpt::toPj() const
 
     pj_bzero(&opt, sizeof(opt));
 
-    opt.crypto_count = this->cryptos.size();
+    opt.crypto_count = (unsigned)this->cryptos.size();
     for (unsigned i = 0; i < opt.crypto_count; ++i) {
 	opt.crypto[i] = this->cryptos[i].toPj();
     }
 
-    opt.keying_count = this->keyings.size();
+    opt.keying_count = (unsigned)this->keyings.size();
     for (unsigned i = 0; i < opt.keying_count; ++i) {
 	opt.keying[i] = (pjmedia_srtp_keying_method)this->keyings[i];
     }

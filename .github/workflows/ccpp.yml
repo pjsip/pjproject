@@ -500,11 +500,25 @@ jobs:
         set LIB=%LIB%;%OPENSSL_DIR%\lib
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: build test tools cmp_wav
+      run: |
+        set /P OPENSSL_DIR=<openssl_dir.txt
+        cd tests/pjsua/tools
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include
+        set LIB=%LIB%;%OPENSSL_DIR%\lib
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: set up Python 2.7 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: 2.7
     - name: unit tests
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin"
-        cd pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe
+        cd tests/pjsua; python runall.py
+        cd ../../pjsip/bin; ./pjsip-test-i386-Win32-vc14-Release.exe
       shell: powershell
 
   build-windows-gnu-tls:
@@ -618,13 +632,29 @@ jobs:
         set LIB=%LIB%;%OPENSSL_DIR%\lib;%LIBVPX_DIR%\lib\x86;%LIBSDL_DIR%\lib\x86
         msbuild pjproject-vs14.sln /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
       shell: cmd
+    - name: build test tools cmp_wav
+      run: |
+        set /P OPENSSL_DIR=<openssl_dir.txt
+        set /P LIBVPX_DIR=<libvpx_dir.txt
+        set /P LIBSDL_DIR=<libsdl_dir.txt
+        cd tests/pjsua/tools
+        set INCLUDE=%INCLUDE%;%OPENSSL_DIR%\include;%LIBVPX_DIR%\include;%LIBSDL_DIR%\include\SDL
+        set LIB=%LIB%;%OPENSSL_DIR%\lib;%LIBVPX_DIR%\lib\x86;%LIBSDL_DIR%\lib\x86
+        call "%PROGRAMFILES%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat"
+        msbuild cmp_wav.vcxproj /p:PlatformToolset=v143 /p:Configuration=Release /p:Platform=win32 /p:UseEnv=true
+      shell: cmd
+    - name: set up Python 2.7 for pjsua test
+      uses: actions/setup-python@v2
+      with:
+        python-version: 2.7
     - name: unit tests
       run: |
         $env:OPENSSL_DIR = Get-Content .\openssl_dir.txt
         $env:LIBVPX_DIR = Get-Content .\libvpx_dir.txt
         $env:LIBSDL_DIR = Get-Content .\libsdl_dir.txt
         $env:PATH+=";$env:OPENSSL_DIR\bin;$env:LIBVPX_DIR\bin\x86;$env:LIBSDL_DIR\bin\x86;"
-        cd pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe
+        cd tests/pjsua; python runall.py        
+        cd ../../pjlib/bin; ./pjlib-test-i386-Win32-vc14-Release.exe
         cd ../../pjlib-util/bin; ./pjlib-util-test-i386-Win32-vc14-Release.exe
         cd ../../pjmedia/bin/; ./pjmedia-test-i386-Win32-vc14-Release.exe
       shell: powershell
