@@ -336,6 +336,16 @@ struct TransportConfig : public PersistentObject
     unsigned		portRange;
 
     /**
+     * Specify whether to randomly pick the starting port number from
+     * the range of [\a port, \a port + \a port_range]. This setting is
+     * used only if both port and port_range are non-zero, and only
+     * applicable for the port selection of UDP and loop media transport.
+     * 
+     * Default is PJ_FALSE.
+     */
+    bool		randomizePort;
+
+    /**
      * Optional address to advertise as the address of this transport.
      * Application can specify any address or hostname for this field,
      * for example it can point to one of the interface address in the
