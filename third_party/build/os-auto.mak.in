@@ -43,10 +43,12 @@ ifneq ($(findstring windows_os,@ac_pjmedia_video@),)
 DIRS += baseclasses
 endif
 
+ifneq (@ac_no_srtp@,1)
 ifneq (@ac_external_srtp@,0)
 # External SRTP
 else
 DIRS += srtp
+endif
 
 ifeq (@ac_ssl_has_aes_gcm@,0)
 CIPHERS_SRC = crypto/cipher/aes.o crypto/cipher/aes_icm.o       \

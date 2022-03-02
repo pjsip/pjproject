@@ -657,6 +657,7 @@ ac_webrtc_cflags
 ac_webrtc_instset
 ac_no_webrtc
 ac_no_yuv
+ac_no_srtp
 ac_no_bcg729
 opus_present
 opus_h_present
@@ -878,6 +879,7 @@ with_opus
 enable_opus
 with_bcg729
 enable_bcg729
+enable_libsrtp
 enable_libyuv
 enable_libwebrtc
 enable_libwebrtc_aec3
@@ -1563,6 +1565,7 @@ Optional Features:
                           autodetect)
 
   --disable-bcg729        Disable bcg729 (default: not disabled)
+  --disable-libsrtp       Exclude libsrtp in the build
   --disable-libyuv        Exclude libyuv in the build
   --disable-libwebrtc     Exclude libwebrtc in the build
   --enable-libwebrtc-aec3 Build libwebrtc-aec3 that's included in PJSIP
@@ -9854,6 +9857,23 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
     conftest$ac_exeext conftest.$ac_ext
 
 
+fi
+
+
+
+
+# Check whether --enable-libsrtp was given.
+if test ${enable_libsrtp+y}
+then :
+  enableval=$enable_libsrtp; if test "$enable_libsrtp" = "no"; then
+		ac_no_srtp=1
+		CFLAGS="$CFLAGS -DPJMEDIA_HAS_SRTP=0"
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if libsrtp is disabled...yes" >&5
+printf "%s\n" "Checking if libsrtp is disabled...yes" >&6; }
+	       fi
+else $as_nop
+  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if libsrtp is disabled...no" >&5
+printf "%s\n" "Checking if libsrtp is disabled...no" >&6; }
 fi
 
 
