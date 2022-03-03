@@ -287,8 +287,14 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	}
     }
 
-    if (acc->next_rtp_port == 0 || cfg->port == 0)
-	acc->next_rtp_port = (pj_uint16_t)cfg->port;
+    if (acc->next_rtp_port == 0 || cfg->port == 0) {
+	if (cfg->port != 0 && cfg->port_range != 0 && cfg->randomize_port) {
+	    unsigned offset = ((pj_rand() % (cfg->port_range)) / 2) * 2;
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port + offset;
+	} else {
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port;
+	}
+    }
 
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
@@ -678,8 +684,14 @@ static pj_status_t create_loop_media_transport(
     if (cfg->bound_addr.slen)
         opt.addr = cfg->bound_addr;
 
-    if (acc->next_rtp_port == 0 || cfg->port == 0)
-	acc->next_rtp_port = (pj_uint16_t)cfg->port;
+    if (acc->next_rtp_port == 0 || cfg->port == 0) {
+        if (cfg->port != 0 && cfg->port_range != 0 && cfg->randomize_port) {
+            unsigned offset = ((pj_rand() % (cfg->port_range)) / 2) * 2;
+ 	    acc->next_rtp_port = (pj_uint16_t)cfg->port + offset;
+        } else {
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port;
+	}
+    }
 
     if (cfg->port > 0 && cfg->port_range > 0 &&
         (acc->next_rtp_port > cfg->port + cfg->port_range ||

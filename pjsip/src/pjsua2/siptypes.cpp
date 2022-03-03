@@ -292,6 +292,7 @@ void TransportConfig::fromPj(const pjsua_transport_config &prm)
 {
     this->port 		= prm.port;
     this->portRange	= prm.port_range;
+    this->randomizePort	= PJ2BOOL(prm.randomize_port);
     this->publicAddress = pj2Str(prm.public_addr);
     this->boundAddress	= pj2Str(prm.bound_addr);
     this->tlsConfig.fromPj(prm.tls_setting);
@@ -306,6 +307,7 @@ pjsua_transport_config TransportConfig::toPj() const
 
     tc.port		= this->port;
     tc.port_range	= this->portRange;
+    tc.randomize_port	= this->randomizePort;
     tc.public_addr	= str2Pj(this->publicAddress);
     tc.bound_addr	= str2Pj(this->boundAddress);
     tc.tls_setting	= this->tlsConfig.toPj();
