@@ -190,7 +190,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp2(
 
     /* Decode RTP extension. */
     if ((*hdr)->x) {
-        if (offset + sizeof (pjmedia_rtp_ext_hdr) > pkt_len)
+        if (offset + sizeof (pjmedia_rtp_ext_hdr) > (unsigned)pkt_len)
             return PJMEDIA_RTP_EINLEN;
         dec_hdr->ext_hdr = (pjmedia_rtp_ext_hdr*)(((pj_uint8_t*)pkt) + offset);
         dec_hdr->ext = (pj_uint32_t*)(dec_hdr->ext_hdr + 1);

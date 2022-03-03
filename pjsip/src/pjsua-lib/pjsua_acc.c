@@ -1358,6 +1358,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.vid_stream_rc_cfg = cfg->vid_stream_rc_cfg;
 
     /* Media settings */
+    if (acc->cfg.rtp_cfg.port != cfg->rtp_cfg.port) {
+    	/* Note that changing port range only changes the calculation of
+    	 * the next rtp port but doesn't reset it.
+    	 */
+    	acc->next_rtp_port = 0;
+    }
+
     if (pj_stricmp(&acc->cfg.rtp_cfg.public_addr, &cfg->rtp_cfg.public_addr) ||
 	pj_stricmp(&acc->cfg.rtp_cfg.bound_addr, &cfg->rtp_cfg.bound_addr))
     {

@@ -334,6 +334,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
     esub *sub;
     unsigned i = 0, j = 0;
 
+    PJ_UNUSED_ARG(j);
     PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
     if (!mgr) mgr = pjmedia_event_mgr_instance();

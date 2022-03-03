@@ -128,6 +128,7 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
 
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(status);
+	PJ_UNUSED_ARG(pf);
 
 #if defined(PJMEDIA_HAS_OPENH264_CODEC) && PJMEDIA_HAS_OPENH264_CODEC != 0
     status = pjmedia_codec_openh264_vid_init(NULL, pf);

@@ -474,7 +474,7 @@ PJ_DEF(pj_status_t) pjmedia_video_format_fill_black(const pjmedia_format *fmt,
 		  vafp.plane_bytes[1]);
     } else if (fmt_id == PJMEDIA_FORMAT_YUY2) {
 	pj_uint8_t *ptr = (pj_uint8_t *)buf;
-	unsigned i;
+	pj_size_t i;
 
 	for (i = vafp.framebytes / 2; i > 0; i--) {
 	    *(ptr++) = 0x10; *(ptr++) = 0x80;

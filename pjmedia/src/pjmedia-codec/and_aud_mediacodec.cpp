@@ -1071,7 +1071,6 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
     pj_size_t tx = 0;
     pj_int16_t *pcm_in = (pj_int16_t*)input->buf;
     pj_uint8_t  *bits_out = (pj_uint8_t*) output->buf;
-    pj_uint8_t pt;
 
     /* Invoke external VAD if codec has no internal VAD */
     if (codec_data->vad && codec_data->vad_enabled) {
@@ -1101,7 +1100,6 @@ static pj_status_t and_media_codec_encode(pjmedia_codec *codec,
     }
     nsamples = input->size >> 1;
     samples_per_frame = and_media_data->samples_per_frame;
-    pt = and_media_data->pt;
     nframes = nsamples / samples_per_frame;
 
     PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
@@ -1230,7 +1228,6 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
     unsigned samples_per_frame;
     unsigned i;
 
-    pj_uint8_t pt;
     pj_ssize_t buf_idx = -1;
     pj_uint8_t *input_buf;
     pj_size_t input_size;
@@ -1241,7 +1238,6 @@ static pj_status_t and_media_codec_decode(pjmedia_codec *codec,
     pjmedia_frame input_;
 
     pj_bzero(&input_, sizeof(pjmedia_frame));
-    pt = and_media_data->pt;
     samples_per_frame = and_media_data->samples_per_frame;
 
     PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,

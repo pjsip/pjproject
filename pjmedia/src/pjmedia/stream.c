@@ -780,7 +780,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 				     	 stream->dec_buf_count);
 		}
 	    } else if (use_dec_buf) {
-	    	stream->dec_buf_count = frame_out.size / sizeof(pj_int16_t);
+	    	stream->dec_buf_count = (unsigned)frame_out.size /
+									sizeof(pj_int16_t);
 	    }
 
 	    if (stream->jb_last_frm != frame_type) {

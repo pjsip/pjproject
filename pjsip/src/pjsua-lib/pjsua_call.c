@@ -837,7 +837,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
     pjsua_acc *acc;
-    pjsua_call *call;
+    pjsua_call *call = NULL;
     int call_id = -1;
     pj_str_t contact;
     pj_status_t status;
@@ -1021,7 +1021,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
 
 on_error:
-    if (dlg) {
+    if (dlg && call) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
 	call->async_call.dlg = NULL;
@@ -1710,8 +1710,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_response_addr res_addr;
 
 	    pjsip_get_response_addr(response->pool, rdata, &res_addr);
-	    pj_status_t status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
-				      NULL, NULL);
+	    status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, response,
+				                           NULL, NULL);
 	    if (status != PJ_SUCCESS) pjsip_tx_data_dec_ref(response);
 
 	} else {
@@ -4853,6 +4853,14 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 		       sizeof(call->last_text_buf_));
 	    break;
 	case PJSIP_INV_STATE_CONFIRMED:
+	    if (call->hanging_up) {
+	    	/* This can happen if there is a crossover between
+	    	 * our CANCEL request and the remote's 200 response.
+	    	 * So we send BYE here.
+	    	 */
+	    	call_inv_end_session(call, 200, NULL, NULL);
+	    	return;
+	    }
 	    pj_gettimeofday(&call->conn_time);
 
 	    if (call->trickle_ice.enabled) {

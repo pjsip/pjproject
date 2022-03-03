@@ -649,6 +649,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    return PJ_EINVAL;
 
 	case OPT_VERSION:   /* version */
+	    if (pj_log_get_level() < 3)
+	        pj_log_set_level(3);
 	    pj_dump_config();
 	    return PJ_EINVAL;
 

@@ -946,7 +946,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	     * So we need to compare the last decoded frame's timestamp with
 	     * the current timestamp.
 	     */
-	    else if (ts_diff > stream->dec_max_delay) {
+	    else if (ts_diff > (long)stream->dec_max_delay) {
 	    	can_decode = PJ_TRUE;
 	    }
 

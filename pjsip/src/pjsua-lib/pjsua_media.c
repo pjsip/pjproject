@@ -287,8 +287,14 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	}
     }
 
-    if (acc->next_rtp_port == 0 || cfg->port == 0)
-	acc->next_rtp_port = (pj_uint16_t)cfg->port;
+    if (acc->next_rtp_port == 0 || cfg->port == 0) {
+	if (cfg->port != 0 && cfg->port_range != 0 && cfg->randomize_port) {
+	    unsigned offset = ((pj_rand() % (cfg->port_range)) / 2) * 2;
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port + offset;
+	} else {
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port;
+	}
+    }
 
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
@@ -678,8 +684,14 @@ static pj_status_t create_loop_media_transport(
     if (cfg->bound_addr.slen)
         opt.addr = cfg->bound_addr;
 
-    if (acc->next_rtp_port == 0 || cfg->port == 0)
-	acc->next_rtp_port = (pj_uint16_t)cfg->port;
+    if (acc->next_rtp_port == 0 || cfg->port == 0) {
+        if (cfg->port != 0 && cfg->port_range != 0 && cfg->randomize_port) {
+            unsigned offset = ((pj_rand() % (cfg->port_range)) / 2) * 2;
+ 	    acc->next_rtp_port = (pj_uint16_t)cfg->port + offset;
+        } else {
+	    acc->next_rtp_port = (pj_uint16_t)cfg->port;
+	}
+    }
 
     if (cfg->port > 0 && cfg->port_range > 0 &&
         (acc->next_rtp_port > cfg->port + cfg->port_range ||
@@ -1650,10 +1662,7 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 		/* Stream decoder changed format, update all conf listeners
 		 * by reconnecting.
 		 */
-		pjsua_conf_port_id dec_pid = call_med->strm.v.strm_dec_slot;
 		pjmedia_port *strm_dec;
-		pjsua_vid_conf_port_info pi;
-		unsigned i;
 
 		status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 						     PJMEDIA_DIR_DECODING,
@@ -3231,11 +3240,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     	    	       pjmedia_transport_info_get_spc_info(
 	            	   &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
 
-	    call_med->prev_srtp_use = (srtp_info? PJ_TRUE: PJ_FALSE);
-	    if (srtp_info)
+	    call_med->prev_srtp_use = (srtp_info && srtp_info->active)?
+	    			      PJ_TRUE: PJ_FALSE;
+	    if (call_med->prev_srtp_use)
 	    	call_med->prev_srtp_info = *srtp_info;
-	    call_med->prev_ice_use = (ice_info? PJ_TRUE: PJ_FALSE);
-	    if (ice_info)
+	    call_med->prev_ice_use = (ice_info && ice_info->active)?
+	    			     PJ_TRUE: PJ_FALSE;
+	    if (call_med->prev_ice_use)
 	    	call_med->prev_ice_info = *ice_info;
 
     	    /* Try to sync recent changes to provisional media */
@@ -3367,8 +3378,9 @@ static void check_srtp_roc(pjsua_call *call,
     } else {
     	call_med->prev_srtp_use = PJ_TRUE;
 	call_med->prev_srtp_info = *srtp_info;
-	call_med->prev_ice_use = (ice_info? PJ_TRUE: PJ_FALSE);
-	if (ice_info)
+	call_med->prev_ice_use = (ice_info && ice_info->active)?
+	    			 PJ_TRUE: PJ_FALSE;
+	if (call_med->prev_ice_use)
 	    call_med->prev_ice_info = *ice_info;
 
     	if (call_med->type == PJMEDIA_TYPE_AUDIO) {

@@ -1769,7 +1769,7 @@ static pj_status_t use_buffer( pj_ice_strans *ice_st,
     pj_status_t status;
 
     /* Allocate send buffer, if necessary. */
-    status = alloc_send_buf(ice_st, data_len);
+    status = alloc_send_buf(ice_st, (unsigned)data_len);
     if (status != PJ_SUCCESS)
     	return status;
     

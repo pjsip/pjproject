@@ -689,7 +689,7 @@ static pj_status_t libyuv_conv_convert2(
 	    pjmedia_video_apply_fmt_param *ap = &src_fmt_info->apply_param;
 	    unsigned j;
 	    for (j = 0; j < src_fmt_info->vid_fmt_info->plane_cnt; ++j) {
-		int y = src_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+		int y = src_pos->y * (int)ap->plane_bytes[j] / ap->strides[j] /
 			ap->size.h;
 		ap->planes[j] += y * ap->strides[j] + src_pos->x *
 				 ap->strides[j] / ap->size.w;
@@ -701,7 +701,7 @@ static pj_status_t libyuv_conv_convert2(
 	    unsigned j;
 	    for (j = 0; j < dst_fmt_info->vid_fmt_info->plane_cnt; ++j)
 	    {
-		int y = dst_pos->y * ap->plane_bytes[j] / ap->strides[j] /
+		int y = dst_pos->y * (int)ap->plane_bytes[j] / ap->strides[j] /
 			ap->size.h;
 		ap->planes[j] += y * ap->strides[j] + dst_pos->x *
 				 ap->strides[j] / ap->size.w;

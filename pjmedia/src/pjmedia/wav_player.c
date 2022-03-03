@@ -346,7 +346,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     	 * try to play whatever data is there instead of immediately returning
     	 * error.
     	 */
-    	wave_hdr.data_hdr.len = fport->fsize - fport->start_data;
+    	wave_hdr.data_hdr.len = (pj_uint32_t)fport->fsize - fport->start_data;
 	// pj_file_close(fport->fd);
 	// return PJMEDIA_EWAVEUNSUPP;
     }

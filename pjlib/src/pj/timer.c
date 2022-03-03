@@ -403,7 +403,7 @@ static pj_status_t grow_heap(pj_timer_heap_t *ht)
     memcpy(new_timer_dups, ht->timer_dups,
     	   ht->max_size * sizeof(pj_timer_entry_dup));
     for (i = 0; i < ht->cur_size; i++) {
-    	int idx = ht->heap[i] - ht->timer_dups;
+    	int idx = (int)(ht->heap[i] - ht->timer_dups);
         // Point to the address in the new array
         pj_assert(idx >= 0 && idx < (int)ht->max_size);
     	new_heap[i] = &new_timer_dups[idx];

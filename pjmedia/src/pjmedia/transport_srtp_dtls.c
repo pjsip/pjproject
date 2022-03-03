@@ -1315,11 +1315,11 @@ static pj_status_t dtls_encode_sdp( pjmedia_transport *tp,
             	}
                 if (pj_sockaddr_has_addr(&ds->rem_addr) &&
 		    pj_sockaddr_has_addr(&rem_rtp) &&
-		    pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
-                    (!use_rtcp_mux &&
-		     pj_sockaddr_has_addr(&ds->rem_rtcp) &&
-		     pj_sockaddr_has_addr(&rem_rtcp) &&
-                     pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp)))
+		    (pj_sockaddr_cmp(&ds->rem_addr, &rem_rtp) ||
+                     (!use_rtcp_mux &&
+		      pj_sockaddr_has_addr(&ds->rem_rtcp) &&
+		      pj_sockaddr_has_addr(&rem_rtcp) &&
+                      pj_sockaddr_cmp(&ds->rem_rtcp, &rem_rtcp))))
                 {
                     rem_addr_changed = PJ_TRUE;
                 }
