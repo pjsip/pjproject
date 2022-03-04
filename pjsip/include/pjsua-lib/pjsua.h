@@ -6849,14 +6849,14 @@ struct pjsua_media_config
     /**
      * Jitter buffer minimum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 60 msec)
+     * Default: -1 (to use default stream settings, currently codec ptime)
      */
     int			jb_min_pre;
     
     /**
      * Jitter buffer maximum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 240 msec)
+     * Default: -1 (to use default stream settings, currently 80% of jb_max)
      */
     int			jb_max_pre;
 
