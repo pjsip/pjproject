@@ -992,14 +992,14 @@ public:
     /**
      * Jitter buffer minimum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 60 msec)
+     * Default: -1 (to use default stream settings, currently codec ptime)
      */
     int			jbMinPre;
 
     /**
      * Jitter buffer maximum prefetch delay in msec.
      *
-     * Default: -1 (to use default stream settings, currently 240 msec)
+     * Default: -1 (to use default stream settings, currently 80% of jbMax)
      */
     int			jbMaxPre;
 
