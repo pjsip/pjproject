@@ -1067,12 +1067,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
-	acc->cfg.transport_id = cfg->transport_id;
-
-	if (acc->cfg.transport_id != PJSUA_INVALID_ID)
-	    acc->tp_type = pjsua_var.tpdata[acc->cfg.transport_id].type;
-	else
-	    acc->tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    	pjsua_acc_set_transport(acc_id, cfg->transport_id);
 
 	update_reg = PJ_TRUE;
 	unreg_first = PJ_TRUE;
@@ -3881,7 +3876,19 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 		     PJ_EINVAL);
     
     acc->cfg.transport_id = tp_id;
-    acc->tp_type = pjsua_var.tpdata[tp_id].type;
+
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	acc->tp_type = pjsua_var.tpdata[acc->cfg.transport_id].type;
+	if (acc->regc) {
+	    /* Update client registration's transport. */
+	    pjsip_tpselector tp_sel;
+
+	    pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	    pjsip_regc_set_transport(acc->regc, &tp_sel);
+	}
+    } else {
+	acc->tp_type = PJSIP_TRANSPORT_UNSPECIFIED;
+    }
 
     return PJ_SUCCESS;
 }
