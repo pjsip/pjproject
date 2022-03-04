@@ -3883,7 +3883,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
 	    /* Update client registration's transport. */
 	    pjsip_tpselector tp_sel;
 
-	    pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	    pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
 	    pjsip_regc_set_transport(acc->regc, &tp_sel);
 	}
     } else {
