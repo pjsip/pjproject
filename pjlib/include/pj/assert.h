@@ -55,21 +55,29 @@
  * If the expression yields false, assertion will be triggered
  * and the current function will return with the specified return value.
  */
+// #if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
 #define PJ_ASSERT_RETURN(expr,retval)    \
 	    do { \
 		if (!(expr)) { pj_assert(expr); return retval; } \
 	    } while (0)
+//#else
+//#   define PJ_ASSERT_RETURN(expr,retval)    pj_assert(expr)
+//#endif
 
 /**
  * @hideinitializer
  * If the expression yields false, assertion will be triggered
  * and @a exec_on_fail will be executed.
  */
+//#if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK != 0
 #define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    \
 	    do { \
 		pj_assert(expr); \
 		if (!(expr)) exec_on_fail; \
 	    } while (0)
+//#else
+//#   define PJ_ASSERT_ON_FAIL(expr,exec_on_fail)    pj_assert(expr)
+//#endif
 
 /** @} */
 

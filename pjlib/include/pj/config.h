@@ -921,7 +921,7 @@
  *
  * PJ_ENABLE_EXTRA_CHECK has been deprecated in 2.13.
  */
-#if defined(PJ_ENABLE_EXTRA_CHECK)
+#if defined(PJ_ENABLE_EXTRA_CHECK) && PJ_ENABLE_EXTRA_CHECK==0
 #   ifdef _MSC_VER
 #	pragma message("Warning: PJ_ENABLE_EXTRA_CHECK macro is deprecated"\
 		       " and has no effect")
