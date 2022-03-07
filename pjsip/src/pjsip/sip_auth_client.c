@@ -175,7 +175,7 @@ PJ_DEF(void) pjsip_auth_create_digest( pj_str_t *result,
     unsigned char digest[16];
     pj_md5_context pms;
 
-    PJ_ASSERT_RETURN(result->slen >= PJSIP_MD5STRLEN, );
+    pj_assert(result->slen >= PJSIP_MD5STRLEN);
 
     AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
 
@@ -194,7 +194,7 @@ PJ_DEF(void) pjsip_auth_create_digest( pj_str_t *result,
 	digestNtoStr(digest, 16, ha1);
 
     } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST) {
-	pj_assert(cred_info->data.slen == 32);
+	PJ_ASSERT_RETURN(cred_info->data.slen == 32, );
 	pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
     } else {
 	pj_assert(!"Invalid data_type");
