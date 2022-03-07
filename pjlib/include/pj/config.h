@@ -334,7 +334,6 @@
 #   undef FD_SETSIZE
 #   undef PJ_HAS_SEMAPHORE
 #   undef PJ_HAS_EVENT_OBJ
-#   undef PJ_ENABLE_EXTRA_CHECK
 #   undef PJ_EXCEPTION_USE_WIN32_SEH
 #   undef PJ_HAS_ERROR_STRING
 
@@ -841,22 +840,6 @@
 
 
 /**
- * Enable library's extra check.
- * If this macro is enabled, #PJ_ASSERT_RETURN macro will expand to
- * run-time checking. If this macro is disabled, #PJ_ASSERT_RETURN
- * will simply evaluate to #pj_assert().
- *
- * You can disable this macro to reduce size, at the risk of crashes
- * if invalid value (e.g. NULL) is passed to the library.
- *
- * Default: 1
- */
-#ifndef PJ_ENABLE_EXTRA_CHECK
-#   define PJ_ENABLE_EXTRA_CHECK    1
-#endif
-
-
-/**
  * Enable name registration for exceptions with #pj_exception_id_alloc().
  * If this feature is enabled, then the library will keep track of
  * names associated with each exception ID requested by application via
@@ -931,6 +914,20 @@
  */
 #ifndef PJ_HAS_STRICMP_ALNUM
 #   define PJ_HAS_STRICMP_ALNUM	    0
+#endif
+
+/*
+ * Warn about obsolete macros.
+ *
+ * PJ_ENABLE_EXTRA_CHECK has been deprecated in 2.13.
+ */
+#if defined(PJ_ENABLE_EXTRA_CHECK)
+#   ifdef _MSC_VER
+#	pragma message("Warning: PJ_ENABLE_EXTRA_CHECK macro is deprecated"\
+		       " and has no effect")
+#   else
+#	warning "PJ_ENABLE_EXTRA_CHECK macro is deprecated and has no effect"
+#   endif
 #endif
 
 
