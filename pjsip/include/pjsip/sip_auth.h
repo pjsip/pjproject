@@ -584,16 +584,46 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_challenge( pjsip_auth_srv *auth_srv,
  * @param realm		Realm.
  * @param cred_info	Credential info.
  * @param method	SIP method.
+ *
+ * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(void) pjsip_auth_create_digest(pj_str_t *result,
-				       const pj_str_t *nonce,
-				       const pj_str_t *nc,
-				       const pj_str_t *cnonce,
-				       const pj_str_t *qop,
-				       const pj_str_t *uri,
-				       const pj_str_t *realm,
-				       const pjsip_cred_info *cred_info,
-				       const pj_str_t *method);
+PJ_DECL(pj_status_t) pjsip_auth_create_digest(pj_str_t *result,
+					      const pj_str_t *nonce,
+					      const pj_str_t *nc,
+					      const pj_str_t *cnonce,
+					      const pj_str_t *qop,
+					      const pj_str_t *uri,
+					      const pj_str_t *realm,
+					      const pjsip_cred_info *cred_info,
+					      const pj_str_t *method);
+
+/**
+ * Helper function to create SHA-256 digest out of the specified 
+ * parameters.
+ *
+ * @param result	String to store the response digest. This string
+ *			must have been preallocated by caller with the 
+ *			buffer at least PJSIP_SHA256STRLEN (64 bytes) in size.
+ * @param nonce		Optional nonce.
+ * @param nc		Nonce count.
+ * @param cnonce	Optional cnonce.
+ * @param qop		Optional qop.
+ * @param uri		URI.
+ * @param realm		Realm.
+ * @param cred_info	Credential info.
+ * @param method	SIP method.
+ *
+ * @return		PJ_SUCCESS on success. 
+ */
+PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t* result,
+					    const pj_str_t* nonce,
+					    const pj_str_t* nc,
+					    const pj_str_t* cnonce,
+					    const pj_str_t* qop,
+					    const pj_str_t* uri,
+					    const pj_str_t* realm,
+					    const pjsip_cred_info* cred_info,
+					    const pj_str_t* method);
 
 /**
  * @}
