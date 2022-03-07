@@ -175,7 +175,7 @@ PJ_DEF(void) pjsip_auth_create_digest( pj_str_t *result,
     unsigned char digest[16];
     pj_md5_context pms;
 
-    pj_assert(result->slen >= PJSIP_MD5STRLEN);
+    PJ_ASSERT_RETURN(result->slen >= PJSIP_MD5STRLEN, );
 
     AUTH_TRACE_((THIS_FILE, "Begin creating digest"));
 
