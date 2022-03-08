@@ -57,18 +57,19 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     pj_uint8_t xmac[PJSIP_AKA_MACLEN];
     pjsip_cred_info aka_cred;
     int i, len;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Check the algorithm is supported. */
     if (chal->algorithm.slen==0 || pj_stricmp2(&chal->algorithm, "md5") == 0) {
 	/*
-	 * A normal MD5 authentication is requested. Fallbackt to the usual
+	 * A normal MD5 authentication is requested. Fallback to the usual
 	 * MD5 digest creation.
 	 */
-	pjsip_auth_create_digest(&auth->response, &auth->nonce, &auth->nc,
-				 &auth->cnonce, &auth->qop, &auth->uri,
-				 &auth->realm, cred, method);
-	return PJ_SUCCESS;
+	status = pjsip_auth_create_digest(&auth->response, &auth->nonce, 
+			         &auth->nc, &auth->cnonce, &auth->qop, 
+			         &auth->uri, &auth->realm, cred, method);
+
+	return status;
 
     } else if (pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5) == 0) {
 	/*
@@ -147,9 +148,9 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
 	aka_cred.data.ptr = (char*)res;
 	aka_cred.data.slen = PJSIP_AKA_RESLEN;
 
-	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+	status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
 				 &auth->nc, &auth->cnonce, &auth->qop, 
-				 &auth->uri, &chal->realm, &aka_cred, method);
+				 &auth->uri, &chal->realm, &aka_cred, method);	
 
     } else if (aka_version == 2) {
 
@@ -186,7 +187,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
 	                 aka_cred.data.ptr, &len);
 	aka_cred.data.slen = hmac64_len;
 
-	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
+	status = pjsip_auth_create_digest(&auth->response, &chal->nonce, 
 				 &auth->nc, &auth->cnonce, &auth->qop, 
 				 &auth->uri, &chal->realm, &aka_cred, method);
 
@@ -196,7 +197,7 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
     }
 
     /* Done */
-    return PJ_SUCCESS;
+    return status;
 }
 
 
