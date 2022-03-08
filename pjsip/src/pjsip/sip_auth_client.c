@@ -195,13 +195,17 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digest( pj_str_t *result,
 
     } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST) {
 	if (cred_info->data.slen != 32) {
+	    pj_assert(!"Invalid cred_info data length");
 	    pj_bzero(result->ptr, result->slen);
 	    result->slen = 0;
+	    return PJ_EINVAL;
 	}
-	PJ_ASSERT_RETURN(cred_info->data.slen == 32, PJ_EINVAL);
 	pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
     } else {
 	pj_assert(!"Invalid data_type");
+	pj_bzero(result->ptr, result->slen);
+	result->slen = 0;
+	return PJ_EINVAL;
     }
 
     AUTH_TRACE_((THIS_FILE, "  ha1=%.32s", ha1));
@@ -296,14 +300,18 @@ PJ_DEF(pj_status_t) pjsip_auth_create_digestSHA256(pj_str_t *result,
 
     } else if ((cred_info->data_type & PASSWD_MASK) == PJSIP_CRED_DATA_DIGEST)
     {
-	if (cred_info->data.slen != 32) {
+	if (cred_info->data.slen != 64) {
+	    pj_assert(!"Invalid cred_info data length");
 	    pj_bzero(result->ptr, result->slen);
 	    result->slen = 0;
+	    return PJ_EINVAL;
 	}
-	PJ_ASSERT_RETURN(cred_info->data.slen == 32, PJ_EINVAL);
 	pj_memcpy( ha1, cred_info->data.ptr, cred_info->data.slen );
     } else {
 	pj_assert(!"Invalid data_type");
+	pj_bzero(result->ptr, result->slen);
+	result->slen = 0;
+	return PJ_EINVAL;
     }
 
     AUTH_TRACE_((THIS_FILE, " ha1=%.64s", ha1));
