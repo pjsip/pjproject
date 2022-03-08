@@ -1348,7 +1348,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     chal_cnt = 0;
     auth_cnt = 0;
     last_auth_err = PJSIP_EAUTHNOAUTH;
-    while (hdr != &rdata->msg_info.msg->hdr && auth_cnt == 0) {
+    while (hdr != &rdata->msg_info.msg->hdr) {
 	pjsip_cached_auth *cached_auth;
 	const pjsip_www_authenticate_hdr *hchal;
 	pjsip_authorization_hdr *hauth;
@@ -1412,6 +1412,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 	/* Process next header. */
 	hdr = hdr->next;
 	auth_cnt++;
+
+#if defined(PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER) && \
+	    PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER==0
+	break;
+#endif
     }
 
     /* Check if challenge is present */
