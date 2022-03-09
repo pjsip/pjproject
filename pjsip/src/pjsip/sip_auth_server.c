@@ -79,6 +79,7 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
     if (pj_stricmp(&hdr->scheme, &pjsip_DIGEST_STR) == 0) {
 	char digest_buf[PJSIP_MD5STRLEN];
 	pj_str_t digest;
+	pj_status_t status;
 	const pjsip_digest_credential *dig = &hdr->credential.digest;
 
 	/* Check that username and realm match. 
@@ -95,7 +96,7 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
 	digest.slen = PJSIP_MD5STRLEN;
 
 	/* Create digest for comparison. */
-	pjsip_auth_create_digest(&digest, 
+	status = pjsip_auth_create_digest(&digest, 
 				 &hdr->credential.digest.nonce,
 				 &hdr->credential.digest.nc, 
 				 &hdr->credential.digest.cnonce,
@@ -104,6 +105,9 @@ static pj_status_t pjsip_auth_verify( const pjsip_authorization_hdr *hdr,
 				 &cred_info->realm,
 				 cred_info, 
 				 method );
+
+	if (status != PJ_SUCCESS)
+	    return status;
 
 	/* Compare digest. */
 	return (pj_stricmp(&digest, &hdr->credential.digest.response) == 0) ?

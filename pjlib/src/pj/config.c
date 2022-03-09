@@ -78,7 +78,6 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " PJ_LOG_USE_STACK_BUFFER   : %d", PJ_LOG_USE_STACK_BUFFER));
     PJ_LOG(3, (id, " PJ_HAS_SEMAPHORE          : %d", PJ_HAS_SEMAPHORE));
     PJ_LOG(3, (id, " PJ_HAS_EVENT_OBJ          : %d", PJ_HAS_EVENT_OBJ));
-    PJ_LOG(3, (id, " PJ_ENABLE_EXTRA_CHECK     : %d", PJ_ENABLE_EXTRA_CHECK));
     PJ_LOG(3, (id, " PJ_HAS_EXCEPTION_NAMES    : %d", PJ_HAS_EXCEPTION_NAMES));
     PJ_LOG(3, (id, " PJ_MAX_EXCEPTION_ID       : %d", PJ_MAX_EXCEPTION_ID));
     PJ_LOG(3, (id, " PJ_EXCEPTION_USE_WIN32_SEH: %d", PJ_EXCEPTION_USE_WIN32_SEH));
