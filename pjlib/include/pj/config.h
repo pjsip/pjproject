@@ -255,7 +255,7 @@
 #   define PJ_IS_BIG_ENDIAN	1
 
 #elif defined(ARM) || defined(_ARM_) ||  defined(__arm__) || \
-       defined(_M_ARM) || defined(_M_ARM64)
+       defined(_M_ARM) || defined(_M_ARM64) || defined(__aarch64__)
 #   define PJ_HAS_PENTIUM	0
     /*
      * ARM, bi-endian, so raise error if endianness is not configured
@@ -271,7 +271,7 @@
 #	undef PJ_M_ARMV4
 #	define PJ_M_ARMV4		1
 #	define PJ_M_NAME		"armv4"
-#   elif defined (PJ_M_ARM64) || defined(ARM64)
+#   elif defined (PJ_M_ARM64) || defined(ARM64) || defined(__aarch64__)
 #	undef PJ_M_ARM64
 #	define PJ_M_ARM64		1
 #	define PJ_M_NAME		"arm64"
