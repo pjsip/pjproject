@@ -33,7 +33,7 @@ enum
 
 
 static int get_ip_addr_ver(const pj_str_t *host);
-static void schedule_reregistration(pjsua_acc *acc);
+static pj_bool_t schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /*
@@ -2357,7 +2357,7 @@ static void handle_call_on_ip_change_cb(void *user_data)
  */
 static void regc_cb(struct pjsip_regc_cbparam *param)
 {
-
+    pj_bool_t sch_rereg = PJ_FALSE;
     pjsua_acc *acc = (pjsua_acc*) param->token;
 
     PJSUA_LOCK();
@@ -2520,7 +2520,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	 param->code == PJSIP_SC_TEMPORARILY_UNAVAILABLE ||
 	 PJSIP_IS_STATUS_IN_CLASS(param->code, 600))) /* Global failure */
     {
-	schedule_reregistration(acc);
+	sch_rereg = schedule_reregistration(acc);
     }
 
     /* Call the registration status callback */
@@ -2540,7 +2540,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
 
-    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT) {
+    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT && 
+	!sch_rereg)
+    {
 	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 	    pjsua_ip_change_op_info ip_chg_info;
 	    pjsip_regc_info rinfo;
@@ -2564,19 +2566,18 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 			   pjsua_var.acc[acc->index].cfg.id.ptr));
 
 		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
-		if ((status != PJ_SUCCESS) &&
-		    pjsua_var.ua_cfg.cb.on_ip_change_progress)
-		{
-		    pjsua_ip_change_op_info ip_chg_info;
+		if (status != PJ_SUCCESS) {
+		    if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+			pjsua_ip_change_op_info ip_chg_info;
 
-		    pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
-		    ip_chg_info.acc_update_contact.acc_id = acc->index;
-		    ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
-		    (*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
+			pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
+			ip_chg_info.acc_update_contact.acc_id = acc->index;
+			ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
+			(*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
 							    acc->ip_change_op,
 							    status,
 							    &ip_chg_info);
-
+		    }
 		    pjsua_acc_end_ip_change(acc);
 		}
 	    } else {
@@ -3969,7 +3970,7 @@ on_return:
  * re-registration after a registration failure will be done immediately.
  * Also note that this function should be called within PJSUA mutex.
  */
-static void schedule_reregistration(pjsua_acc *acc)
+static pj_bool_t schedule_reregistration(pjsua_acc *acc)
 {
     pj_time_val delay;
 
@@ -3977,7 +3978,7 @@ static void schedule_reregistration(pjsua_acc *acc)
 
     /* Validate the account and re-registration feature status */
     if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
-	return;
+	return PJ_FALSE;
     }
 
     /* If configured, disconnect calls of this account after the first
@@ -4038,6 +4039,7 @@ static void schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.id = PJ_TRUE;
     if (pjsua_schedule_timer(&acc->auto_rereg.timer, &delay) != PJ_SUCCESS)
 	acc->auto_rereg.timer.id = PJ_FALSE;
+    return PJ_TRUE;
 }
 
 
@@ -4147,24 +4149,43 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
 	       "by IP change", acc->cfg.id.slen,
 	       acc->cfg.id.ptr, (need_unreg ? "un-" : "")));
 
-    status = pjsua_acc_set_registration(acc->index, !need_unreg);
-
-    if ((status != PJ_SUCCESS) && (pjsua_var.ua_cfg.cb.on_ip_change_progress)
+    status = pjsua_acc_set_registration(acc->index, !need_unreg);    
+    if ((status != PJ_SUCCESS)
 	&& (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
-	/* If update contact fails, notification might already been triggered
-	 * from registration callback.
-	 */
-	pjsua_ip_change_op_info info;
+	if (status != PJ_EBUSY) {
+	    /* Retry registration by cancelling the existing one. */
+	    if (acc->regc) {
+		pjsip_regc_destroy(acc->regc);
+		acc->regc = NULL;
+                acc->contact.slen = 0;
+                acc->reg_mapped_addr.slen = 0;
+                acc->rfc5626_status = OUTBOUND_UNKNOWN;
+                acc->rfc5626_flowtmr = 0;
 
-	pj_bzero(&info, sizeof(info));
-	info.acc_update_contact.acc_id = acc->index;
-	info.acc_update_contact.is_register = !need_unreg;
+		update_keep_alive(acc, PJ_FALSE, NULL);
 
-	pjsua_var.ua_cfg.cb.on_ip_change_progress(acc->ip_change_op,
-						  status,
-						  &info);
+		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
+		if (status == PJ_SUCCESS) {
+		    return status;
+		}
+	    }
+	}
 
+	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+	    /* If update contact fails, notification might already been
+	     * triggered from registration callback.
+	     */
+	    pjsua_ip_change_op_info info;
+
+	    pj_bzero(&info, sizeof(info));
+	    info.acc_update_contact.acc_id = acc->index;
+	    info.acc_update_contact.is_register = !need_unreg;
+
+	    pjsua_var.ua_cfg.cb.on_ip_change_progress(acc->ip_change_op,
+						      status,
+						      &info);
+	}
 	pjsua_acc_end_ip_change(acc);
     }
     return status;
