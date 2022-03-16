@@ -1046,7 +1046,10 @@ public:
      */
     AccountMediaConfig() : srtpUse(PJSUA_DEFAULT_USE_SRTP),
 			   ipv6Use(PJSUA_IPV6_DISABLED)
-    {}
+    {
+        useLoopMedTp = false;
+        enableLoopback = false;
+    }
 
     /**
      * Read this object from a container node.
