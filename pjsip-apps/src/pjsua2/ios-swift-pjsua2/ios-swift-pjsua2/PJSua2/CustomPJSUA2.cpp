@@ -52,6 +52,13 @@ std::string onIncomingCallHeader;
 
 bool registerState = false;
 
+void setOnIncomingCallerHeader(std::string onIncomingCallerHeaderStr){
+    onIncomingCallHeader = onIncomingCallerHeaderStr;
+}
+
+std::string getOnIncomingCallerHeader(){
+    return onIncomingCallHeader;
+}
 
 void setCallerId(std::string callerIdStr){
     callerId = callerIdStr;
@@ -86,7 +93,13 @@ public:
     // Notification when call's state has changed.
     virtual void onCallState(OnCallStateParam &prm){
         CallInfo ci = getInfo();
+        static std::string remoteHeader = "";
         
+        if (prm.e.body.tsxState.tsx.statusText == "OK" && prm.e.body.tsxState.tsx.statusCode == 200){
+            if(remoteHeader.empty() == true){
+                remoteHeader = prm.e.body.tsxState.src.rdata.wholeMsg;
+            }
+        }
                 
         if (ci.state == PJSIP_INV_STATE_INCOMING)   {
             /**
@@ -114,6 +127,9 @@ public:
            }
         
         if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
+            if(remoteHeader.empty() != true){
+                std::cout<<remoteHeader.substr(remoteHeader.find("DEV-ID") + 8 , 4);
+            }
             callStatusListenerPtr(1);
         }
         
@@ -182,6 +198,7 @@ void MyAccount::onIncomingCall(OnIncomingCallParam &iprm) {
     incomingCallPtr();
     
     //Incoming DevID
+    setOnIncomingCallerHeader(iprm.rdata.wholeMsg.substr(iprm.rdata.wholeMsg.find("DEV-ID") + 8 , 4));
     call = new MyCall(*this, iprm.callId);
     
 }
@@ -415,6 +432,17 @@ void PJSua2::call_listener(void (* funcpntr)(int)){
 void PJSua2::answerCall(){
     CallOpParam op;
     op.statusCode = PJSIP_SC_OK;
+ 
+    SipHeader sHeader;
+    SipHeaderVector sHeaderVector;
+    SipTxOption sTxOption;
+    
+    sHeader.hName = "DEV-ID";
+    sHeader.hValue = "1100";
+    sHeaderVector.push_back(sHeader);
+    sTxOption.headers = sHeaderVector;
+    op.txOption = sTxOption;
+    
     call->answer(op);
 }
 
@@ -473,6 +501,16 @@ void PJSua2::unholdCall(){
  */
 void PJSua2::outgoingCall(std::string dest_uri) {
     CallOpParam prm(true); // Use default call settings
+    
+    SipHeader sHeader;
+    SipHeaderVector sHeaderVector;
+    SipTxOption sTxOption;
+    
+    sHeader.hName = "DEV-ID";
+    sHeader.hValue = "1155";
+    sHeaderVector.push_back(sHeader);
+    sTxOption.headers = sHeaderVector;
+    prm.txOption = sTxOption;
     
     try {
     call = new MyCall(*acc);
