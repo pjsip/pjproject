@@ -14,16 +14,31 @@ req1 = sip.RecvfromTransaction("Initial registration", 401,
 				expect="SIP/2.0 401"
 			  )
 
-req2 = sip.RecvfromTransaction("Registration retry with auth", 200,
+req2 = sip.RecvfromTransaction("Registration retry with auth (not allowed multiple auth)", 200,
 				include=["REGISTER sip", 
-					 # Must only have 1 Auth hdr since #2887
 					 "Authorization:", # [\\s\\S]+Authorization:"
 					 "realm=\"python1\"", # "realm=\"python2\"", 
 					 "username=\"theuser1\"", # "username=\"theuser2\"", 
 					 "nonce=\"1234\"", # "nonce=\"6789\"", 
 					 "response="],
-				expect="registration success"	     
+				expect="registration success",
+				pj_config="PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER.*: 0"
 			  )
 
+req3 = sip.RecvfromTransaction("Registration retry with auth (allowed multiple auth)", 200,
+				include=["REGISTER sip", 
+					 "Authorization:[\\s\\S]+Authorization:", # Must have 2 Auth hdrs
+					 "realm=\"python1\"", "realm=\"python2\"", 
+					 "username=\"theuser1\"", "username=\"theuser2\"", 
+					 "nonce=\"1234\"", "nonce=\"6789\"", 
+					 "Authorization:", # [\\s\\S]+Authorization:"
+					 "realm=\"python1\"", # "realm=\"python2\"", 
+					 "username=\"theuser1\"", # "username=\"theuser2\"", 
+					 "nonce=\"1234\"", # "nonce=\"6789\"", 
+					 "response="],
+				expect="registration success",
+				pj_config="PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER.*: 1"	     
+			  )                          
+
 recvfrom_cfg = sip.RecvfromCfg("Multiple authentication challenges",
-			       pjsua, [req1, req2])
+			       pjsua, [req1, req2, req3], pj_config="PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER")

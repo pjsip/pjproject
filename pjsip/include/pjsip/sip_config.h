@@ -1470,6 +1470,11 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
 
+/**
+ * Dump configuration to log with verbosity equal to info(3).
+ */
+PJ_DECL(void) pjsip_dump_config(void);
+
 PJ_END_DECL
 
 /**
