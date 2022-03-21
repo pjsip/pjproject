@@ -31,10 +31,6 @@ req3 = sip.RecvfromTransaction("Registration retry with auth (allowed multiple a
 					 "realm=\"python1\"", "realm=\"python2\"", 
 					 "username=\"theuser1\"", "username=\"theuser2\"", 
 					 "nonce=\"1234\"", "nonce=\"6789\"", 
-					 "Authorization:", # [\\s\\S]+Authorization:"
-					 "realm=\"python1\"", # "realm=\"python2\"", 
-					 "username=\"theuser1\"", # "username=\"theuser2\"", 
-					 "nonce=\"1234\"", # "nonce=\"6789\"", 
 					 "response="],
 				expect="registration success",
 				pj_config="PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER.*: 1"	     
