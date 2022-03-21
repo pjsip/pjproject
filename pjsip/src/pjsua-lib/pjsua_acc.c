@@ -2357,7 +2357,6 @@ static void handle_call_on_ip_change_cb(void *user_data)
  */
 static void regc_cb(struct pjsip_regc_cbparam *param)
 {
-    pj_bool_t sch_rereg = PJ_FALSE;
     pjsua_acc *acc = (pjsua_acc*) param->token;
 
     PJSUA_LOCK();
@@ -2520,7 +2519,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	 param->code == PJSIP_SC_TEMPORARILY_UNAVAILABLE ||
 	 PJSIP_IS_STATUS_IN_CLASS(param->code, 600))) /* Global failure */
     {
-	sch_rereg = schedule_reregistration(acc);
+	schedule_reregistration(acc);
     }
 
     /* Call the registration status callback */
@@ -2540,8 +2539,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
     }
 
-    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT && 
-	!sch_rereg)
+    if (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT)
     {
 	if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
 	    pjsua_ip_change_op_info ip_chg_info;
@@ -2566,8 +2564,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 			   pjsua_var.acc[acc->index].cfg.id.ptr));
 
 		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
-		if (status != PJ_SUCCESS) {
-		    if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+		if ((status != PJ_SUCCESS) &&
+		    pjsua_var.ua_cfg.cb.on_ip_change_progress)
+		{
 			pjsua_ip_change_op_info ip_chg_info;
 
 			pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
@@ -2577,7 +2576,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 							    acc->ip_change_op,
 							    status,
 							    &ip_chg_info);
-		    }
 		    pjsua_acc_end_ip_change(acc);
 		}
 	    } else {
@@ -3970,7 +3968,7 @@ on_return:
  * re-registration after a registration failure will be done immediately.
  * Also note that this function should be called within PJSUA mutex.
  */
-static pj_bool_t schedule_reregistration(pjsua_acc *acc)
+static void schedule_reregistration(pjsua_acc *acc)
 {
     pj_time_val delay;
 
@@ -3978,7 +3976,7 @@ static pj_bool_t schedule_reregistration(pjsua_acc *acc)
 
     /* Validate the account and re-registration feature status */
     if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
-	return PJ_FALSE;
+	return;
     }
 
     /* If configured, disconnect calls of this account after the first
@@ -4039,7 +4037,7 @@ static pj_bool_t schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.id = PJ_TRUE;
     if (pjsua_schedule_timer(&acc->auto_rereg.timer, &delay) != PJ_SUCCESS)
 	acc->auto_rereg.timer.id = PJ_FALSE;
-    return PJ_TRUE;
+    return;
 }
 
 
