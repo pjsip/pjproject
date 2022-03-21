@@ -823,6 +823,7 @@ ac_user_opts='
 enable_option_checking
 enable_floating_point
 enable_epoll
+enable_kqueue
 enable_shared
 enable_pjsua2
 with_external_speex
@@ -1519,6 +1520,7 @@ Optional Features:
   --disable-floating-point
                           Disable floating point where possible
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
+  --enable-kqueue         Use kqueue ioqueue on macos/BSD (experimental)
   --enable-shared         Build shared libraries
   --disable-pjsua2        Exclude pjsua2 library and application from the
                           build
@@ -6448,6 +6450,7 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam conftest.$ac_ext
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking ioqueue backend" >&5
 printf %s "checking ioqueue backend... " >&6; }
+
 # Check whether --enable-epoll was given.
 if test ${enable_epoll+y}
 then :
@@ -6458,6 +6461,25 @@ printf "%s\n" "/dev/epoll" >&6; }
 		printf "%s\n" "#define PJ_HAS_LINUX_EPOLL 1" >>confdefs.h
 
 		ac_linux_poll=epoll
+
+else $as_nop
+
+		ac_os_objs=ioqueue_select.o
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: select()" >&5
+printf "%s\n" "select()" >&6; }
+		ac_linux_poll=select
+
+fi
+
+
+# Check whether --enable-kqueue was given.
+if test ${enable_kqueue+y}
+then :
+  enableval=$enable_kqueue;
+		ac_os_objs=ioqueue_kqueue.o
+		{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: kqueue" >&5
+printf "%s\n" "kqueue" >&6; }
+		ac_linux_poll=kqueue
 
 else $as_nop
 
