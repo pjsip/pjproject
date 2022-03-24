@@ -4038,8 +4038,6 @@ static void schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.id = PJ_TRUE;
     if (pjsua_schedule_timer(&acc->auto_rereg.timer, &delay) != PJ_SUCCESS)
 	acc->auto_rereg.timer.id = PJ_FALSE;
-
-    return;
 }
 
 
