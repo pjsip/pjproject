@@ -1280,6 +1280,18 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_AUTH_CNONCE_USE_DIGITS_ONLY	1
 #endif
 
+/**
+ * Allow client to send multiple Authorization header when receiving multiple 
+ * WWW-Authenticate header fields. If this is disabled, the stack will send
+ * Authorization header field containing credentials that match the
+ * topmost header field.
+ *
+ * Default is 0
+ */
+#ifndef PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER
+#   define PJSIP_AUTH_ALLOW_MULTIPLE_AUTH_HEADER 0
+#endif
+
 /*****************************************************************************
  *  SIP Event framework and presence settings.
  */
@@ -1457,6 +1469,11 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #ifndef PJSIP_INV_ACCEPT_UNKNOWN_BODY
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
+
+/**
+ * Dump configuration to log with verbosity equal to info(3).
+ */
+PJ_DECL(void) pjsip_dump_config(void);
 
 PJ_END_DECL
 

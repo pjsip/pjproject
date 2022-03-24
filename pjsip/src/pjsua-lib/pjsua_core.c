@@ -3443,8 +3443,10 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     old_decor = pj_log_get_decor();
     pj_log_set_decor(old_decor & (PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
 
-    if (detail)
+    if (detail) {
 	pj_dump_config();
+	pjsip_dump_config();
+    }
 
     pjsip_endpt_dump(pjsua_get_pjsip_endpt(), detail);
 
