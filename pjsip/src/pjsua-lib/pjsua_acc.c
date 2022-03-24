@@ -33,7 +33,7 @@ enum
 
 
 static int get_ip_addr_ver(const pj_str_t *host);
-static pj_bool_t schedule_reregistration(pjsua_acc *acc);
+static void schedule_reregistration(pjsua_acc *acc);
 static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /*
@@ -4151,7 +4151,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
     if ((status != PJ_SUCCESS)
 	&& (acc->ip_change_op == PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT))
     {
-	if (status != PJ_EBUSY) {
+	if (status == PJSIP_EBUSY) {
 	    /* Retry registration by cancelling the existing one. */
 	    if (acc->regc) {
 		pjsip_regc_destroy(acc->regc);
