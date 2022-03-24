@@ -669,6 +669,8 @@ public:
 	sb.setChannelCount(stream->param.channel_count);
 	sb.setPerformanceMode(oboe::PerformanceMode::LowLatency);
 	sb.setFormat(oboe::AudioFormat::I16);
+	sb.setUsage(oboe::Usage::VoiceCommunication);
+	sb.setContentType(oboe::ContentType::Speech);
 	sb.setDataCallback(this);
 	sb.setErrorCallback(this);
 	sb.setFramesPerDataCallback(stream->param.samples_per_frame /
