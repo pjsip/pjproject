@@ -244,7 +244,7 @@ static void keystroke_help()
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
     puts("+-----------------------------------------------------------------------------+");
 #if PJSUA_HAS_VIDEO
-    puts("| Video: \"vid help\" for more info                                           |");
+    puts("| Video: \"vid help\" for more info                                             |");
     puts("+-----------------------------------------------------------------------------+");
 #endif
     puts("|  q  QUIT   L  ReLoad   sleep MS   echo [0|1|txt]     n: detect NAT type     |");
