@@ -3915,6 +3915,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    check_srtp_roc(call, mi, &stream_info,
 	    		   local_sdp->media[mi], remote_sdp->media[mi]);
 #endif
+#endif
 
 	    /* Check if this media is changed */
 	    if (pjsua_var.media_cfg.no_smart_media_update ||
