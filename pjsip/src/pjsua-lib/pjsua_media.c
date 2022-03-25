@@ -3909,10 +3909,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    stream_info.type = PJMEDIA_TYPE_AUDIO;
 	    stream_info.info.aud = the_si;
 
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	    /* Check if we need to reset or maintain SRTP ROC */
 	    check_srtp_roc(call, mi, &stream_info,
 	    		   local_sdp->media[mi], remote_sdp->media[mi]);
+#endif
 #endif
 
 	    /* Check if this media is changed */
