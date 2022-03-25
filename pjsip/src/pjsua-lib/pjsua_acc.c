@@ -221,9 +221,14 @@ static void init_outbound_setting(pjsua_acc *acc)
 /*
  * Helper function to deinit registration info on account.
  */
-static void regc_destroy(pjsua_acc *acc)
-{
-    acc->regc = NULL;
+static void regc_destroy(pjsua_acc *acc, pj_bool_t only_deinit)
+{    
+    if (acc->regc) {
+	if (!only_deinit)
+	    pjsip_regc_destroy(acc->regc);
+
+	acc->regc = NULL;
+    }
     acc->contact.slen = 0;
     acc->reg_mapped_addr.slen = 0;
     acc->rfc5626_status = OUTBOUND_UNKNOWN;
@@ -700,7 +705,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     /* Invalidate */
     acc->valid = PJ_FALSE;
-    regc_destroy(acc);
+    regc_destroy(acc, PJ_TRUE);
     pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
     acc->via_tp = NULL;
     acc->next_rtp_port = 0;
@@ -1444,11 +1449,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 		status = PJ_SUCCESS;
 	    }
 	}
-	if (acc->regc != NULL) {
-	    status = pjsip_regc_destroy(acc->regc);
-	    if (status == PJ_SUCCESS) 
-		regc_destroy(acc);
-	}
+	regc_destroy(acc, PJ_FALSE);
 	
 	if (!cfg->reg_uri.slen) {
 	    /* Reg URI still needed, delay unset after sending unregister. */
@@ -1891,11 +1892,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (contact_rewrite_method == PJSUA_CONTACT_REWRITE_UNREGISTER) {
 	/* Unregister current contact */
 	pjsua_acc_set_registration(acc->index, PJ_FALSE);
-	if (acc->regc != NULL) {
-	    status = pjsip_regc_destroy(acc->regc);
-	    if (status == PJ_SUCCESS)
-		regc_destroy(acc);
-	}
+	regc_destroy(acc, PJ_FALSE);
     }
 
     /*
@@ -2397,7 +2394,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	 */
 	status = pjsip_regc_destroy2(acc->regc, PJ_FALSE);
 	if (status == PJ_SUCCESS) {
-	    regc_destroy(acc);
+	    regc_destroy(acc, TRUE);
 	
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2412,9 +2409,8 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	PJ_LOG(2, (THIS_FILE, "SIP registration failed, status=%d (%.*s)", 
 		   param->code, 
 		   (int)param->reason.slen, param->reason.ptr));
-
-	if (pjsip_regc_destroy(acc->regc) == PJ_SUCCESS)
-	    regc_destroy(acc);
+	
+	regc_destroy(acc, PJ_FALSE);
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -2426,8 +2422,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	acc->auto_rereg.attempt_cnt = 0;
 
 	if (param->expiration < 1) {
-	    if (pjsip_regc_destroy(acc->regc) == PJ_SUCCESS)
-		regc_destroy(acc);
+	    regc_destroy(acc, PJ_FALSE);
 
 	    /* Reset pointer to registration transport */
 	    //acc->auto_rereg.reg_tp = NULL;
@@ -2607,11 +2602,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     }
 
     /* Destroy existing session, if any */
-    if (acc->regc) {
-	status = pjsip_regc_destroy(acc->regc);
-	if (status == PJ_SUCCESS)
-	    regc_destroy(acc);
-    }
+    regc_destroy(acc, PJ_FALSE);
 
     /* initialize SIP registration if registrar is configured */
 
@@ -2636,9 +2627,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 				    " for registration", 
 			 status);
 	    
-	    if (pjsip_regc_destroy(acc->regc) == PJ_SUCCESS)
-		regc_destroy(acc);
-
+	    regc_destroy(acc, PJ_FALSE);	    
 	    pj_pool_release(pool);	    
 	    return status;
 	}
@@ -2657,11 +2646,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsua_perror(THIS_FILE, 
 		     "Client registration initialization error", 
 		     status);
-	if (pjsip_regc_destroy(acc->regc) == PJ_SUCCESS)
-	    regc_destroy(acc);
 
+	regc_destroy(acc, PJ_FALSE);	
 	pj_pool_release(pool);
-
 	return status;
     }
 
@@ -4148,10 +4135,7 @@ pj_status_t pjsua_acc_update_contact_on_ip_change(pjsua_acc *acc)
 	if (status == PJSIP_EBUSY) {
 	    /* Retry registration by cancelling the existing one. */
 	    if (acc->regc) {
-		status = pjsip_regc_destroy(acc->regc);
-		if (status == PJ_SUCCESS)
-		    regc_destroy(acc);
-
+		regc_destroy(acc, PJ_FALSE);
 		update_keep_alive(acc, PJ_FALSE, NULL);
 
 		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
