@@ -922,7 +922,7 @@ PJ_DECL(pj_status_t) pj_turn_session_connection_bind(
  *
  * According to RFC 6062, a control connection must be a TCP connection,
  * and application must send TCP Allocate request
- * (with pj_turn_session_alloc()，set TURN allocation parameter peer_conn_type
+ * (with pj_turn_session_alloc(), set TURN allocation parameter peer_conn_type
  * to PJ_TURN_TP_TCP) before calling this function.
  *
  * @param sess		The TURN client session.

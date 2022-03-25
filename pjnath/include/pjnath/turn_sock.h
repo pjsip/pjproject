@@ -630,7 +630,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
  *
  * According to RFC 6062, the TURN transport instance must be created with
  * connection type are set to PJ_TURN_TP_TCP, application must send TCP
- * Allocate request (with pj_turn_session_alloc()，set TURN allocation
+ * Allocate request (with pj_turn_session_alloc(), set TURN allocation
  * parameter peer_conn_type to PJ_TURN_TP_TCP) before calling this function.
  *
  *
