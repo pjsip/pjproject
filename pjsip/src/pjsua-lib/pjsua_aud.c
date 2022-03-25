@@ -853,6 +853,8 @@ PJ_DEF(pj_status_t) pjsua_conf_get_port_info( pjsua_conf_port_id id,
     unsigned i;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(id >= 0, PJ_EINVAL);
+
     status = pjmedia_conf_get_port_info( pjsua_var.mconf, id, &cinfo);
     if (status != PJ_SUCCESS)
 	return status;
@@ -905,6 +907,8 @@ PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(id >= 0, PJ_EINVAL);
+
     status = pjmedia_conf_remove_port(pjsua_var.mconf, (unsigned)id);
     pjsua_check_snd_dev_idle();
 
@@ -937,6 +941,9 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
     PJ_LOG(4,(THIS_FILE, "%s connect: %d --> %d",
 	      (pjsua_var.is_mswitch ? "Switch" : "Conf"),
 	      source, sink));
+
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
     pj_log_push_indent();
 
     PJSUA_LOCK();
@@ -1090,6 +1097,8 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
     PJ_LOG(4,(THIS_FILE, "%s disconnect: %d -x- %d",
 	      (pjsua_var.is_mswitch ? "Switch" : "Conf"),
 	      source, sink));
+
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
     pj_log_push_indent();
 
     status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
@@ -1107,6 +1116,8 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
 PJ_DEF(pj_status_t) pjsua_conf_adjust_tx_level(pjsua_conf_port_id slot,
 					       float level)
 {
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
     return pjmedia_conf_adjust_tx_level(pjsua_var.mconf, slot,
 					(int)((level-1) * 128));
 }
@@ -1118,6 +1129,8 @@ PJ_DEF(pj_status_t) pjsua_conf_adjust_tx_level(pjsua_conf_port_id slot,
 PJ_DEF(pj_status_t) pjsua_conf_adjust_rx_level(pjsua_conf_port_id slot,
 					       float level)
 {
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
     return pjmedia_conf_adjust_rx_level(pjsua_var.mconf, slot,
 					(int)((level-1) * 128));
 }
@@ -1130,6 +1143,8 @@ PJ_DEF(pj_status_t) pjsua_conf_get_signal_level(pjsua_conf_port_id slot,
 						unsigned *tx_level,
 						unsigned *rx_level)
 {
+    PJ_ASSERT_RETURN(slot >= 0, PJ_EINVAL);
+
     return pjmedia_conf_get_signal_level(pjsua_var.mconf, slot,
 					 tx_level, rx_level);
 }

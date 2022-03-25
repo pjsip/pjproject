@@ -2792,6 +2792,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
     unsigned i;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(port_id >= 0, PJ_EINVAL);
+
     status = pjmedia_vid_conf_get_port_info(pjsua_var.vid_conf,
 					    (unsigned)port_id, &cinfo);
     if (status != PJ_SUCCESS)
@@ -2847,6 +2849,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_add_port( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjsua_vid_conf_remove_port(pjsua_conf_port_id id)
 {
+    PJ_ASSERT_RETURN(id >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_remove_port(pjsua_var.vid_conf, (unsigned)id);
 }
 
@@ -2859,6 +2863,9 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
 					    const void *param)
 {
     PJ_UNUSED_ARG(param);
+
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_connect_port(pjsua_var.vid_conf, source, sink,
 					 NULL);
 }
@@ -2870,6 +2877,8 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_connect( pjsua_conf_port_id source,
 PJ_DEF(pj_status_t) pjsua_vid_conf_disconnect(pjsua_conf_port_id source,
 					      pjsua_conf_port_id sink)
 {
+    PJ_ASSERT_RETURN(source >= 0 && sink >= 0, PJ_EINVAL);
+
     return pjmedia_vid_conf_disconnect_port(pjsua_var.vid_conf, source, sink);
 }
 
