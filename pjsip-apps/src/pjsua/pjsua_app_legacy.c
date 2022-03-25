@@ -227,12 +227,12 @@ static void keystroke_help()
     puts("+=============================================================================+");
     puts("|       Call Commands:         |   Buddy, IM & Presence:  |     Account:      |");
     puts("|                              |                          |                   |");
-    puts("|  m  Make new call            | +b  Add new buddy       .| +a  Add new accnt |");
+    puts("|  m  Make new call            | +b  Add new buddy        | +a  Add new accnt.|");
     puts("|  M  Make multiple calls      | -b  Delete buddy         | -a  Delete accnt. |");
     puts("|  a  Answer call              |  i  Send IM              | !a  Modify accnt. |");
     puts("|  h  Hangup call  (ha=all)    |  s  Subscribe presence   | rr  (Re-)register |");
     puts("|  H  Hold call                |  u  Unsubscribe presence | ru  Unregister    |");
-    puts("|  v  re-inVite (release hold) |  t  ToGgle Online status |  >  Cycle next ac.|");
+    puts("|  v  re-inVite (release hold) |  t  Toggle online status |  >  Cycle next ac.|");
     puts("|  U  send UPDATE              |  T  Set online status    |  <  Cycle prev ac.|");
     puts("| ],[ Select next/prev call    +--------------------------+-------------------+");
     puts("|  x  Xfer call                |      Media Commands:     |  Status & Config: |");
