@@ -2431,6 +2431,8 @@ struct CodecParamInfo
     unsigned	maxBps;			/**< Maximum bandwidth in bits/sec  */
     unsigned    maxRxFrameSize;		/**< Maximum frame size             */
     unsigned 	frameLen;		/**< Decoder frame ptime in msec.   */
+    unsigned 	encFrameLen;		/**< Encoder ptime, or zero if it's
+					     equal to decoder ptime.	    */
     unsigned  	pcmBitsPerSample;	/**< Bits/sample in the PCM side    */
     unsigned  	pt;			/**< Payload type.		    */
     pjmedia_format_id fmtId;		/**< Source format, it's format of
