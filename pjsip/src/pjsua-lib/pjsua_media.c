@@ -3205,7 +3205,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     /* Print call dump first */
     dlg = (call->inv? call->inv->dlg : call->async_call.dlg);
-    if (dlg)
+    if (dlg && pj_log_get_level() >= 3)
     	log_call_dump(call_id);
 
     stop_media_session(call_id);
