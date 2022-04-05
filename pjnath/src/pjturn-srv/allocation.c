@@ -932,18 +932,6 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 					   &pkt->src.clt_addr,
 					   pkt->src_addr_len);
 
-	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP) {
-	    pkt->len = 0;
-	} else if (parsed_len > 0) {
-	    if (parsed_len == pkt->len) {
-		pkt->len = 0;
-	    } else {
-		pj_memmove(pkt->pkt, pkt->pkt+parsed_len,
-			   pkt->len - parsed_len);
-		pkt->len -= parsed_len;
-	    }
-	}
-
 	if (status != PJ_SUCCESS) {
 	    alloc_err(alloc, "Error handling STUN packet", status);
 	    goto on_return;
@@ -959,12 +947,13 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 
 	pj_assert(sizeof(*cd)==4);
 
-	/* For UDP check the packet length */
-	if (alloc->transport->listener->tp_type == PJ_TURN_TP_UDP) {
-	    if (pkt->len < pj_ntohs(cd->length)+sizeof(*cd)) {
+	/* For UDP/TCP check the packet length */
+	if (alloc->transport->listener->tp_type == PJ_TURN_TP_UDP ||
+		alloc->transport->listener->tp_type == PJ_TURN_TP_TCP) {
+		if (pkt->len < pj_ntohs(cd->length)+sizeof(*cd)) {
 		PJ_LOG(4,(alloc->obj_name,
-			  "ChannelData from %s discarded: UDP size error",
-			  alloc->info));
+			  "ChannelData from %s discarded: %s size error",
+			  alloc->info, pj_turn_tp_type_name(alloc->transport->listener->tp_type)));
 		goto on_return;
 	    }
 	} else {
