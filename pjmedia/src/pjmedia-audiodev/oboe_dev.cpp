@@ -633,7 +633,7 @@ class MyOboeEngine : oboe::AudioStreamDataCallback,
 public:
     MyOboeEngine(struct oboe_aud_stream *stream_, pjmedia_dir dir_)
     : stream(stream_), dir(dir_), oboe_stream(NULL), dir_st(NULL),
-      thread(NULL), thread_quit(PJ_FALSE), queue(NULL),
+      thread(NULL), thread_quit(PJ_TRUE), queue(NULL),
       err_thread_registered(false), mutex(NULL)
     {
 	pj_assert(dir == PJMEDIA_DIR_CAPTURE || dir == PJMEDIA_DIR_PLAYBACK);
@@ -642,9 +642,6 @@ public:
     }
 
     pj_status_t Start() {
-	if (oboe_stream)
-	    return PJ_SUCCESS;
-
 	pj_status_t status;
 
 	if (!mutex) {
@@ -652,12 +649,19 @@ public:
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(3,(THIS_FILE, status,
 			     "Oboe stream %s failed creating mutex", dir_st));
+		return status;
 	    }
-	    return status;
 	}
 
 	int dev_id = 0;
 	oboe::AudioStreamBuilder sb;
+
+	pj_mutex_lock(mutex);
+
+	if (oboe_stream) {
+	    pj_mutex_unlock(mutex);
+	    return PJ_SUCCESS;
+	}
 
 	if (dir == PJMEDIA_DIR_CAPTURE) {
 	    sb.setDirection(oboe::Direction::Input);
@@ -722,6 +726,7 @@ public:
 
 	/* Create semaphore */
         if (sem_init(&sem, 0, 0) != 0) {
+	    pj_mutex_unlock(mutex);
 	    return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
 	}
 
@@ -729,8 +734,10 @@ public:
 	thread_quit = PJ_FALSE;
         status = pj_thread_create(stream->pool, "android_oboe",
                                   &AudioThread, this, 0, 0, &thread);
-        if (status != PJ_SUCCESS)
+        if (status != PJ_SUCCESS) {
+	    pj_mutex_unlock(mutex);
             return status;
+	}
 
 	/* Open & start oboe stream */
 	oboe::Result result = sb.openStream(&oboe_stream);
@@ -738,6 +745,7 @@ public:
 	    PJ_LOG(3,(THIS_FILE,
 		      "Oboe stream %s open failed (err=%d/%s)",
 		      dir_st, result, oboe::convertToText(result)));
+	    pj_mutex_unlock(mutex);
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
@@ -746,6 +754,7 @@ public:
 	    PJ_LOG(3,(THIS_FILE,
 		      "Oboe stream %s start failed (err=%d/%s)",
 		      dir_st, result, oboe::convertToText(result)));
+	    pj_mutex_unlock(mutex);
 	    return PJMEDIA_EAUD_SYSERR;
 	}
 
@@ -774,6 +783,7 @@ public:
 		oboe_stream->getFramesPerBurst()
 		));
 
+	pj_mutex_unlock(mutex);
 	return PJ_SUCCESS;
     }
 
