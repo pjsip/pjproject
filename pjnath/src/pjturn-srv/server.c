@@ -391,7 +391,6 @@ PJ_DEF(pj_status_t) pj_turn_listener_destroy(pj_turn_listener *listener)
     for (i=0; i<srv->core.lis_cnt; ++i) {
 	if (srv->core.listener[i] == listener) {
 	    srv->core.listener[i] = NULL;
-	    srv->core.lis_cnt--;
 	    listener->id = PJ_TURN_INVALID_LIS_ID;
 	    break;
 	}
@@ -625,30 +624,7 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 
 	status = pj_stun_msg_check(pkt->pkt, pkt->len, options);
 	if (status != PJ_SUCCESS) {
-	    /* If the first byte are not STUN, drop the packet. First byte
-	     * of STUN message is always 0x00 or 0x01. Otherwise wait for
-	     * more data as the data might have come from TCP.
-	     *
-	     * Also drop packet if it's unreasonably too big, as this might
-	     * indicate invalid data that's building up in the buffer.
-	     *
-	     * Or if packet is a datagram.
-	     */
-	    if ((*pkt->pkt != 0x00 && *pkt->pkt != 0x01) ||
-		pkt->len > 1600 ||
-		(options & PJ_STUN_IS_DATAGRAM))
-	    {
-		char errmsg[PJ_ERR_MSG_SIZE];
-		char ip[PJ_INET6_ADDRSTRLEN+10];
-
-		pkt->len = 0;
-
-		pj_strerror(status, errmsg, sizeof(errmsg));
-		PJ_LOG(5,(srv->obj_name,
-			  "Non-STUN packet from %s is dropped: %s",
-			  pj_sockaddr_print(&pkt->src.clt_addr, ip, sizeof(ip), 3),
-			  errmsg));
-	    }
+	    // Not a STUN message, discard
 	    return;
 	}
 
@@ -681,17 +657,6 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 		      errmsg));
 	}
 
-	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP) {
-	    pkt->len = 0;
-	} else if (parsed_len > 0) {
-	    if (parsed_len == pkt->len) {
-		pkt->len = 0;
-	    } else {
-		pj_memmove(pkt->pkt, pkt->pkt+parsed_len,
-			   pkt->len - parsed_len);
-		pkt->len -= parsed_len;
-	    }
-	}
     }
 }
 

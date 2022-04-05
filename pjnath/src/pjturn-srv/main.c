@@ -148,16 +148,20 @@ int main()
     if (status != PJ_SUCCESS)
 	return err("Error creating UDP listener", status);
 
+    status = pj_turn_srv_add_listener(srv, listener);
+    if (status != PJ_SUCCESS)
+	return err("Error adding UDP listener", status);
+
 #if PJ_HAS_TCP
     status = pj_turn_listener_create_tcp(srv, pj_AF_INET(), NULL, 
 					 TURN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
-	return err("Error creating listener", status);
-#endif
+	return err("Error creating TCP listener", status);
 
     status = pj_turn_srv_add_listener(srv, listener);
     if (status != PJ_SUCCESS)
-	return err("Error adding listener", status);
+	return err("Error adding TCP listener", status);
+#endif
 
     puts("Server is running");
 
