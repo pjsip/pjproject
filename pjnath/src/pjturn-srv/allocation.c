@@ -398,7 +398,7 @@ static void destroy_relay(pj_turn_relay_res *relay)
     if (relay->timer.id) {
 	pj_timer_heap_cancel(relay->allocation->server->core.timer_heap,
 			     &relay->timer);
-	relay->timer.id = PJ_FALSE;
+	relay->timer.id = TIMER_ID_NONE;
     }
 
     if (relay->tp.key) {
@@ -461,7 +461,7 @@ static void destroy_allocation(pj_turn_allocation *alloc)
 }
 
 
-PJ_DECL(void) pj_turn_allocation_destroy(pj_turn_allocation *alloc)
+PJ_DEF(void) pj_turn_allocation_destroy(pj_turn_allocation *alloc)
 {
     destroy_allocation(alloc);
 }
@@ -1215,6 +1215,44 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	    send_reply_ok(alloc, rdata);
 	}
 
+    } else if (msg->hdr.type == PJ_STUN_CREATE_PERM_REQUEST) {
+	/*
+	 * CreatePermission request.
+	 */
+	pj_stun_xor_peer_addr_attr *peer_attr;
+	pj_turn_permission *p;
+
+	peer_attr = (pj_stun_xor_peer_addr_attr*)
+		    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
+
+	if (!peer_attr) {
+	    send_reply_err(alloc, rdata, PJ_TRUE,
+			   PJ_STUN_SC_BAD_REQUEST, NULL);
+	    return PJ_SUCCESS;
+	}
+
+	/* If permission is not found, create a new one. Make sure the peer
+	 * has not alreadyy assigned with a channel number.
+	 */
+	p = lookup_permission_by_addr(alloc, &peer_attr->sockaddr,
+				       pj_sockaddr_get_len(&peer_attr->sockaddr));
+
+	/* Create permission if it doesn't exist */
+	if (!p) {
+	    p = create_permission(alloc, &peer_attr->sockaddr,
+				   pj_sockaddr_get_len(&peer_attr->sockaddr));
+	    if (!p)
+		return PJ_SUCCESS;
+	}
+
+	/* Update */
+	refresh_permission(p);
+
+	/* Reply */
+	send_reply_ok(alloc, rdata);
+
+	return PJ_SUCCESS;
+
     } else if (msg->hdr.type == PJ_STUN_CHANNEL_BIND_REQUEST) {
 	/*
 	 * ChannelBind request.
@@ -1359,8 +1397,8 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
     perm = lookup_permission_by_addr(alloc, &peer_attr->sockaddr,
 				     pj_sockaddr_get_len(&peer_attr->sockaddr));
     if (perm == NULL) {
-	perm = create_permission(alloc, &peer_attr->sockaddr,
-				 pj_sockaddr_get_len(&peer_attr->sockaddr));
+	// Discard if no permission
+	return PJ_SUCCESS;
     }
     refresh_permission(perm);
 
