@@ -664,9 +664,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
     pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
 
     PJ_ASSERT_RETURN(buf, PJ_EINVAL);
-
-    if (length < 12)
-    	return PJ_ETOOSMALL;
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_fb_common), PJ_ETOOSMALL);
 
     /* PLI uses pt==RTCP_PSFB and FMT==1 */
     if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 1)
