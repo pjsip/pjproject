@@ -144,6 +144,12 @@ static void trickle_ice_send_sip_info(pj_timer_heap_t *th,
 static void trickle_ice_retrans_18x(pj_timer_heap_t *th,
 				    struct pj_timer_entry *te);
 
+/* End call session */
+static pj_status_t call_inv_end_session(pjsua_call *call,
+					unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data);
+
 /*
  * Reset call descriptor.
  */
@@ -1144,6 +1150,34 @@ static void process_pending_call_answer(pjsua_call *call)
     }
 }
 
+static pj_status_t process_pending_call_hangup(pjsua_call *call)
+{
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    PJ_LOG(4,(THIS_FILE, "Call %d processing pending hangup: code=%d..",
+    			 call->index, call->last_code));
+    pj_log_push_indent();
+
+    status = acquire_call("pending_hangup()", call->index, &call, &dlg);
+    if (status != PJ_SUCCESS) {
+    	PJ_LOG(3, (THIS_FILE, "Call %d failed to process pending hangup",
+    			      call->index));
+	goto on_return;
+    }
+
+    pjsua_media_channel_deinit(call->index);
+    pjsua_check_snd_dev_idle();
+
+    if (call->inv)
+	call_inv_end_session(call, call->last_code, &call->last_text, NULL);
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    pj_log_pop_indent();
+    return status;
+}
+
 pj_status_t create_temp_sdp(pj_pool_t *pool,
 			    const pjmedia_sdp_session *rem_sdp,
     			    pjmedia_sdp_session **p_sdp)
@@ -2055,8 +2089,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	     * so let's process the answer/hangup now.
 	     */
 	    if (call->async_call.call_var.inc_call.hangup) {
-		pjsua_call_hangup(call_id, call->last_code, &call->last_text,
-				  NULL);
+		process_pending_call_hangup(call);
 	    } else if (call->med_ch_cb == NULL && call->inv) {
 		process_pending_call_answer(call);
 	    }
@@ -2937,6 +2970,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	goto on_return;
 
     if (!call->hanging_up) {
+    	pj_bool_t delay_hangup = PJ_FALSE;
 	pjsip_event user_event;
 
 	pj_gettimeofday(&call->dis_time);
@@ -2970,6 +3004,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    ((call->inv != NULL) &&
 	     (call->inv->state == PJSIP_INV_STATE_NULL)))
     	{
+    	    delay_hangup = PJ_TRUE;
             PJ_LOG(4,(THIS_FILE, "Will continue call %d hangup upon "
                              	 "completion of media transport", call_id));
 
@@ -3001,8 +3036,9 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
 	    					 &user_event);
 	}
 
-	if (call->inv)
+	if (call->inv && !delay_hangup) {
 	    call_inv_end_session(call, code, reason, msg_data);
+	}
     } else {
 	/* Already requested and on progress */
         PJ_LOG(4,(THIS_FILE, "Call %d hangup request ignored as "
