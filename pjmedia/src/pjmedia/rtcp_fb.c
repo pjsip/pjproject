@@ -43,7 +43,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
 					unsigned nack_cnt,
 					const pjmedia_rtcp_fb_nack nack[])
 {
-    pjmedia_rtcp_common *hdr;
+    pjmedia_rtcp_fb_common *hdr;
     pj_uint8_t *p;
     unsigned len, i;
 
@@ -54,11 +54,11 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_nack(
 	return PJ_ETOOSMALL;
 
     /* Build RTCP-FB NACK header */
-    hdr = (pjmedia_rtcp_common*)buf;
-    pj_memcpy(hdr, &session->rtcp_rr_pkt.common,  sizeof(*hdr));
-    hdr->pt = RTCP_RTPFB;
-    hdr->count = 1; /* FMT = 1 */
-    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+    hdr = (pjmedia_rtcp_fb_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->rtcp_common.pt = RTCP_RTPFB;
+    hdr->rtcp_common.count = 1; /* FMT = 1 */
+    hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
 
     /* Build RTCP-FB NACK FCI */
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
@@ -86,7 +86,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
 					void *buf,
 					pj_size_t *length)
 {
-    pjmedia_rtcp_common *hdr;
+    pjmedia_rtcp_fb_common *hdr;
     unsigned len;
 
     PJ_ASSERT_RETURN(session && buf && length, PJ_EINVAL);
@@ -96,11 +96,11 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_pli(
 	return PJ_ETOOSMALL;
 
     /* Build RTCP-FB PLI header */
-    hdr = (pjmedia_rtcp_common*)buf;
-    pj_memcpy(hdr, &session->rtcp_rr_pkt.common,  sizeof(*hdr));
-    hdr->pt = RTCP_PSFB;
-    hdr->count = 1; /* FMT = 1 */
-    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+    hdr = (pjmedia_rtcp_fb_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->rtcp_common.pt = RTCP_PSFB;
+    hdr->rtcp_common.count = 1; /* FMT = 1 */
+    hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
 
     /* Finally */
     *length = len;
@@ -119,7 +119,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
 					unsigned sli_cnt,
 					const pjmedia_rtcp_fb_sli sli[])
 {
-    pjmedia_rtcp_common *hdr;
+    pjmedia_rtcp_fb_common *hdr;
     pj_uint8_t *p;
     unsigned len, i;
 
@@ -130,11 +130,11 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_sli(
 	return PJ_ETOOSMALL;
 
     /* Build RTCP-FB SLI header */
-    hdr = (pjmedia_rtcp_common*)buf;
-    pj_memcpy(hdr, &session->rtcp_rr_pkt.common,  sizeof(*hdr));
-    hdr->pt = RTCP_PSFB;
-    hdr->count = 2; /* FMT = 2 */
-    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+    hdr = (pjmedia_rtcp_fb_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->rtcp_common.pt = RTCP_PSFB;
+    hdr->rtcp_common.count = 2; /* FMT = 2 */
+    hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
 
     /* Build RTCP-FB SLI FCI */
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
@@ -166,7 +166,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
 					    pj_size_t *length,
 					    const pjmedia_rtcp_fb_rpsi *rpsi)
 {
-    pjmedia_rtcp_common *hdr;
+    pjmedia_rtcp_fb_common *hdr;
     pj_uint8_t *p;
     unsigned bitlen, padlen, len;
 
@@ -179,11 +179,11 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_build_rpsi(
 	return PJ_ETOOSMALL;
 
     /* Build RTCP-FB RPSI header */
-    hdr = (pjmedia_rtcp_common*)buf;
-    pj_memcpy(hdr, &session->rtcp_rr_pkt.common,  sizeof(*hdr));
-    hdr->pt = RTCP_PSFB;
-    hdr->count = 3; /* FMT = 3 */
-    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+    hdr = (pjmedia_rtcp_fb_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_fb_com, sizeof(*hdr));
+    hdr->rtcp_common.pt = RTCP_PSFB;
+    hdr->rtcp_common.count = 3; /* FMT = 3 */
+    hdr->rtcp_common.length = pj_htons((pj_uint16_t)(len/4 - 1));
 
     /* Build RTCP-FB RPSI FCI */
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
@@ -620,18 +620,18 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_nack(
 					unsigned *nack_cnt,
 					pjmedia_rtcp_fb_nack nack[])
 {
-    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
     pj_uint8_t *p;
     unsigned cnt, i;
 
     PJ_ASSERT_RETURN(buf && nack_cnt && nack, PJ_EINVAL);
-    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_fb_common), PJ_ETOOSMALL);
 
     /* Generic NACK uses pt==RTCP_RTPFB and FMT==1 */
-    if (hdr->pt != RTCP_RTPFB || hdr->count != 1)
+    if (hdr->rtcp_common.pt != RTCP_RTPFB || hdr->rtcp_common.count != 1)
 	return PJ_ENOTFOUND;
 
-    cnt = pj_ntohs((pj_uint16_t)hdr->length);
+    cnt = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length);
     if (cnt > 2) cnt -= 2; else cnt = 0;
     if (length < (cnt+3)*4)
 	return PJ_ETOOSMALL;
@@ -661,7 +661,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
 					const void *buf,
 					pj_size_t length)
 {
-    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
 
     PJ_ASSERT_RETURN(buf, PJ_EINVAL);
 
@@ -669,7 +669,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
     	return PJ_ETOOSMALL;
 
     /* PLI uses pt==RTCP_PSFB and FMT==1 */
-    if (hdr->pt != RTCP_PSFB || hdr->count != 1)
+    if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 1)
 	return PJ_ENOTFOUND;
 
     return PJ_SUCCESS;
@@ -686,18 +686,18 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
 					unsigned *sli_cnt,
 					pjmedia_rtcp_fb_sli sli[])
 {
-    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
     pj_uint8_t *p;
     unsigned cnt, i;
 
     PJ_ASSERT_RETURN(buf && sli_cnt && sli, PJ_EINVAL);
-    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_fb_common), PJ_ETOOSMALL);
 
     /* PLI uses pt==RTCP_PSFB and FMT==2 */
-    if (hdr->pt != RTCP_PSFB || hdr->count != 2)
+    if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 2)
 	return PJ_ENOTFOUND;
 
-    cnt = pj_ntohs((pj_uint16_t)hdr->length) - 2;
+    cnt = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length) - 2;
     if (length < (cnt+3)*4)
 	return PJ_ETOOSMALL;
 
@@ -730,24 +730,43 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_rpsi(
 					pj_size_t length,
 					pjmedia_rtcp_fb_rpsi *rpsi)
 {
-    pjmedia_rtcp_common *hdr = (pjmedia_rtcp_common*) buf;
+    pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
     pj_uint8_t *p;
     pj_uint8_t padlen;
     pj_size_t rpsi_len;
 
     PJ_ASSERT_RETURN(buf && rpsi, PJ_EINVAL);
-    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_common), PJ_ETOOSMALL);
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_fb_common), PJ_ETOOSMALL);
 
     /* RPSI uses pt==RTCP_PSFB and FMT==3 */
-    if (hdr->pt != RTCP_PSFB || hdr->count != 3)
+    if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 3)
 	return PJ_ENOTFOUND;
 
-    rpsi_len = (pj_ntohs((pj_uint16_t)hdr->length)-2) * 4;
+    if (hdr->rtcp_common.length < 3) {    
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
+                      "Failed parsing FB RPSI, invalid header length"));
+	return PJ_ETOOSMALL;
+    }
+
+    rpsi_len = (pj_ntohs((pj_uint16_t)hdr->rtcp_common.length)-2) * 4;
     if (length < rpsi_len + 12)
 	return PJ_ETOOSMALL;
 
     p = (pj_uint8_t*)hdr + sizeof(*hdr);
     padlen = *p++;
+
+    if (padlen >= 32) {
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOBIG,
+                      "Failed parsing FB RPSI, invalid RPSI padding len"));
+	return PJ_ETOOBIG;
+    }
+
+    if ((rpsi_len * 8) < (unsigned)(16 + padlen)) {
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
+                      "Failed parsing FB RPSI, invalid RPSI bit len"));
+	return PJ_ETOOSMALL;
+    }
+
     rpsi->pt = (*p++ & 0x7F);
     rpsi->rpsi_bit_len = rpsi_len*8 - 16 - padlen;
     pj_strset(&rpsi->rpsi, (char*)p, (rpsi->rpsi_bit_len + 7)/8);

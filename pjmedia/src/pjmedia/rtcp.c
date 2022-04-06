@@ -242,6 +242,11 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     sess->rtcp_rr_pkt.common.pt = RTCP_RR;
     sess->rtcp_rr_pkt.common.length = pj_htons(7);
 
+    /* Copy to RTCP FB common header */
+    pj_memcpy(&sess->rtcp_fb_com, &sr_pkt->common, 
+	      sizeof(pjmedia_rtcp_common));
+    sess->rtcp_fb_com.ssrc_src = 0;
+
     /* Get time and timestamp base and frequency */
     pj_gettimeofday(&now);
     sess->tv_base = now;
