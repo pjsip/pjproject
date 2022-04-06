@@ -159,8 +159,13 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
 	} else {
 	    unsigned label_len = *p;
 
-	    /* Check that label length is valid */
-	    if (pkt+label_len > max)
+	    /* Check that label length is valid.
+	     * Each label consists of an octet length (of size 1) followed
+	     * by the octet of the specified length (label_len). Then it
+	     * must be followed by either another label's octet length or
+	     * a zero length octet (that terminates the sequence).
+	     */
+	    if (p+1+label_len+1 > max)
 		return PJLIB_UTIL_EDNSINNAMEPTR;
 
 	    p += (label_len + 1);
@@ -170,9 +175,6 @@ static pj_status_t get_name_len(int rec_counter, const pj_uint8_t *pkt,
 		++label_len;
 	    
 	    *name_len += label_len;
-
-	    if (p >= max)
-		return PJLIB_UTIL_EDNSINSIZE;
 	}
     }
     ++p;
@@ -222,8 +224,13 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
 	} else {
 	    unsigned label_len = *p;
 
-	    /* Check that label length is valid */
-	    if (pkt+label_len > max)
+	    /* Check that label length is valid.
+	     * Each label consists of an octet length (of size 1) followed
+	     * by the octet of the specified length (label_len). Then it
+	     * must be followed by either another label's octet length or
+	     * a zero length octet (that terminates the sequence).
+	     */
+	    if (p+1+label_len+1 > max)
 		return PJLIB_UTIL_EDNSINNAMEPTR;
 
 	    pj_memcpy(name->ptr + name->slen, p+1, label_len);
@@ -234,9 +241,6 @@ static pj_status_t get_name(int rec_counter, const pj_uint8_t *pkt,
 		*(name->ptr + name->slen) = '.';
 		++name->slen;
 	    }
-
-	    if (p >= max)
-		return PJLIB_UTIL_EDNSINSIZE;
 	}
     }
 
@@ -268,6 +272,10 @@ static pj_status_t parse_query(pj_dns_parsed_query *q, pj_pool_t *pool,
 	return status;
 
     p = (start + name_part_len);
+
+    /* Check the size can accomodate next few fields. */
+    if (p + 4 > max)
+    	return PJLIB_UTIL_EDNSINSIZE;
 
     /* Get the type */
     pj_memcpy(&q->type, p, 2);
