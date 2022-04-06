@@ -116,6 +116,15 @@ typedef struct pjmedia_rtcp_common
 
 
 /**
+ * RTCP feedback common header.
+ */
+typedef struct pjmedia_rtcp_fb_common
+{
+    pjmedia_rtcp_common rtcp_common;
+    pj_uint32_t	    ssrc_src;	/**< SSRC media source	    */
+} pjmedia_rtcp_fb_common;
+
+/**
  * This structure declares default RTCP packet (SR) that is sent by pjmedia.
  * Incoming RTCP packet may have different format, and must be parsed
  * manually by application.
@@ -234,6 +243,8 @@ typedef struct pjmedia_rtcp_session
     char		   *name;	/**< Name identification.	    */
     pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP SR packet.	    */
     pjmedia_rtcp_rr_pkt	    rtcp_rr_pkt;/**< Cached RTCP RR packet.	    */
+    pjmedia_rtcp_fb_common  rtcp_fb_com;/**< Cached RTCP feedback common 
+					     header packet.		    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
     unsigned		    rtp_last_ts;/**< Last timestamp in RX RTP pkt.  */
