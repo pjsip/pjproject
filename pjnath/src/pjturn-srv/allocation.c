@@ -947,13 +947,15 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 
 	pj_assert(sizeof(*cd)==4);
 
-	/* For UDP/TCP check the packet length */
+	/* Check the packet length */
 	if (alloc->transport->listener->tp_type == PJ_TURN_TP_UDP ||
-		alloc->transport->listener->tp_type == PJ_TURN_TP_TCP) {
-		if (pkt->len < pj_ntohs(cd->length)+sizeof(*cd)) {
-		PJ_LOG(4,(alloc->obj_name,
-			  "ChannelData from %s discarded: %s size error",
-			  alloc->info, pj_turn_tp_type_name(alloc->transport->listener->tp_type)));
+	    alloc->transport->listener->tp_type == PJ_TURN_TP_TCP) {
+	    if (pkt->len < pj_ntohs(cd->length) + sizeof(*cd)) {
+		PJ_LOG(4, (alloc->obj_name,
+			   "ChannelData from %s discarded: %s size error",
+			   alloc->info,
+			   pj_turn_tp_type_name(
+			       alloc->transport->listener->tp_type)));
 		goto on_return;
 	    }
 	} else {
@@ -1027,10 +1029,6 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
 
 	/* Copy data */
 	pj_memcpy(rel->tp.tx_pkt+sizeof(pj_turn_channel_data), pkt, len);
-
-	/* 4 byte alignment */
-	while (len & 0x3)
-		len++;
 
 	/* Send to client */
 	alloc->transport->sendto(alloc->transport, rel->tp.tx_pkt,
@@ -1215,25 +1213,23 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	pj_stun_xor_peer_addr_attr *peer_attr;
 	pj_turn_permission *p;
 
-	peer_attr = (pj_stun_xor_peer_addr_attr*)
-		    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
+	peer_attr = (pj_stun_xor_peer_addr_attr *)pj_stun_msg_find_attr(
+	    msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 
 	if (!peer_attr) {
-	    send_reply_err(alloc, rdata, PJ_TRUE,
-			   PJ_STUN_SC_BAD_REQUEST, NULL);
+	    send_reply_err(alloc, rdata, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, NULL);
 	    return PJ_SUCCESS;
 	}
 
-	/* If permission is not found, create a new one. Make sure the peer
-	 * has not alreadyy assigned with a channel number.
+	/* If permission is not found, create a new one.
 	 */
-	p = lookup_permission_by_addr(alloc, &peer_attr->sockaddr,
-				       pj_sockaddr_get_len(&peer_attr->sockaddr));
+	p = lookup_permission_by_addr(
+	    alloc, &peer_attr->sockaddr,
+	    pj_sockaddr_get_len(&peer_attr->sockaddr));
 
-	/* Create permission if it doesn't exist */
 	if (!p) {
 	    p = create_permission(alloc, &peer_attr->sockaddr,
-				   pj_sockaddr_get_len(&peer_attr->sockaddr));
+				  pj_sockaddr_get_len(&peer_attr->sockaddr));
 	    if (!p)
 		return PJ_SUCCESS;
 	}
@@ -1335,7 +1331,6 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 
 	/* Respond with Bad Request? */
 	send_reply_err(alloc, rdata, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, NULL);
-
     }
 
     return PJ_SUCCESS;

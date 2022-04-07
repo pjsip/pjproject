@@ -332,9 +332,9 @@ static void tcp_destroy(struct tcp_transport *tcp)
     }
 
     if (tcp->timer.id != TIMER_NONE) {
-        pj_timer_heap_cancel(tcp->base.listener->server->core.timer_heap,
-                             &tcp->timer);
-        tcp->timer.id = TIMER_NONE;
+	pj_timer_heap_cancel(tcp->base.listener->server->core.timer_heap,
+			     &tcp->timer);
+	tcp->timer.id = TIMER_NONE;
     }
 
     if (tcp->recv_op.pkt.pool) {
@@ -378,57 +378,56 @@ static void tcp_on_read_complete(pj_ioqueue_key_t *key,
 
 	    tcp_add_ref(&tcp->base, NULL);
 
-        pj_size_t left_len = pkt->len;
+	    pj_size_t left_len = pkt->len;
 
-        for (;;) {
-        if (left_len < 4)
-            break;
+	    for (;;) {
+		if (left_len < 4)
+		    break;
 
-        pj_uint16_t typ = pj_ntohs(*(pj_uint16_t *)pkt->pkt); // message type
-        pj_size_t len = pj_ntohs(*(pj_uint16_t *)(pkt->pkt + 2)); // message length
+		pj_uint16_t typ =
+		    pj_ntohs(*(pj_uint16_t *)pkt->pkt); // message type
+		pj_size_t len =
+		    pj_ntohs(*(pj_uint16_t *)(pkt->pkt + 2)); // message length
 
-        if (typ < 0x4000) {
-            len += sizeof(pj_stun_msg_hdr);
-        }
-        else if (typ < 0x8000) {
-            len += sizeof(pj_turn_channel_data);
-            /* 4 byte alignment */
-            while (len & 0x3)
-                len++;
-        }
-        else {
-            PJ_LOG(2, ("TCP", "Bad msg typ: 0x%04x", typ));
-            pkt->len = 0; //reset pkt
-            break;
-        }
+		if (typ < 0x4000) {
+		    len += sizeof(pj_stun_msg_hdr);
+		} else if (typ < 0x8000) {
+		    len += sizeof(pj_turn_channel_data);
+		    /* 4 byte alignment */
+		    while (len & 0x3)
+			len++;
+		} else {
+		    PJ_LOG(2, ("TCP", "Bad msg typ: 0x%04x", typ));
+		    pkt->len = 0; // reset pkt
+		    break;
+		}
 
-        /* check data size */
-        if (left_len < len) {
-            // no enough, wait more ..
-            break;
-        }
+		/* check data size */
+		if (left_len < len) {
+		    // no enough, wait more ..
+		    break;
+		}
 
-        /* Parse a whole msg */
-        pkt->len = len;
-        if (tcp->alloc) {
-            pj_turn_allocation_on_rx_client_pkt(tcp->alloc, pkt);
-        }
-        else {
-            pj_turn_srv_on_rx_pkt(tcp->base.listener->server, pkt);
-        }
+		/* Parse a whole msg */
+		pkt->len = len;
+		if (tcp->alloc) {
+		    pj_turn_allocation_on_rx_client_pkt(tcp->alloc, pkt);
+		} else {
+		    pj_turn_srv_on_rx_pkt(tcp->base.listener->server, pkt);
+		}
 
-        /* Continue to parse */
-        left_len -= len;
-        pkt->len = left_len;
-        if (left_len > 0)
-            pj_memmove(pkt->pkt, pkt->pkt + len, left_len);
-
-        }
+		/* Continue to parse */
+		left_len -= len;
+		pkt->len = left_len;
+		if (left_len > 0)
+		    pj_memmove(pkt->pkt, pkt->pkt + len, left_len);
+	    }
 
 	    pj_assert(tcp->ref_cnt > 0);
 	    tcp_dec_ref(&tcp->base, NULL);
 
-	} else if (bytes_read != -PJ_EPENDING && bytes_read != -PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
+	} else if (bytes_read != -PJ_EPENDING &&
+		   bytes_read != -PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
 	    /* TCP connection closed/error. Notify client and then destroy 
 	     * ourselves.
 	     * Note: the -PJ_EPENDING is the value passed during init.
@@ -489,6 +488,10 @@ static pj_status_t tcp_sendto(pj_turn_transport *tp,
 
     PJ_UNUSED_ARG(addr);
     PJ_UNUSED_ARG(addr_len);
+
+    /* 4 byte alignment */
+    while (length & 0x3)
+	length++;
 
     return pj_ioqueue_send(tcp->key, &tcp->send_op, packet, &length, flag);
 }
