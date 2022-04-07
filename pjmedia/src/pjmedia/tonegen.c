@@ -607,7 +607,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 
     if (tonegen->dig_samples>=(tonegen->digits[tonegen->cur_digit].on_msec+
 			       tonegen->digits[tonegen->cur_digit].off_msec)*
-			       clock_rate / 1000)
+			       clock_rate / 1000 *
+			       PJMEDIA_PIA_CCNT(&port->info))
     {
 	/* We have finished with current digit */
 	tonegen->cur_digit++;
@@ -645,8 +646,10 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	unsigned required, cnt, on_samp, off_samp;
 
 	required = (unsigned)(end - dst);
-	on_samp = dig->on_msec * clock_rate / 1000;
-	off_samp = dig->off_msec * clock_rate / 1000;
+	on_samp = dig->on_msec * clock_rate / 1000 *
+		  PJMEDIA_PIA_CCNT(&port->info);
+	off_samp = dig->off_msec * clock_rate / 1000 *
+		   PJMEDIA_PIA_CCNT(&port->info);
 
 	/* Init tonegen */
 	if (tonegen->dig_samples == 0 && 
