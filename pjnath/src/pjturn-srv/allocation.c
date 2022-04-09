@@ -1193,7 +1193,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 
 	    /* Update lifetime */
 	    if (lifetime) {
-		alloc->relay.lifetime = lifetime->value;
+		alloc->relay.lifetime = PJ_MIN(lifetime->value, MAX_LIFETIME);
 	    }
 
 	    /* Update bandwidth */
