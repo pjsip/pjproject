@@ -124,17 +124,97 @@ PJ_DEF(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
  */
 PJ_DEF(pj_status_t) pjmedia_port_destroy( pjmedia_port *port )
 {
-    pj_status_t status;
-
     PJ_ASSERT_RETURN(port, PJ_EINVAL);
 
+    if (port->grp_lock) {
+	pjmedia_port_dec_ref(port);
+	return PJ_SUCCESS;
+    }
+
+    if (port->on_destroy) {
+	return port->on_destroy(port);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+static void port_on_destroy(void *arg)
+{
+    pjmedia_port *port = (pjmedia_port*)arg;
     if (port->on_destroy)
-	status = port->on_destroy(port);
-    else
-	status = PJ_SUCCESS;
+	port->on_destroy(port);
+}
+
+
+/**
+ * Create and init group lock.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_init_glock(pjmedia_port *port,
+					    pj_pool_t *pool,
+					    pj_grp_lock_t *glock )
+{
+    pj_grp_lock_t *grp_lock = glock;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(port && pool, PJ_EINVAL);
+
+    /* We need to be caution on ports that do not have the on_destroy()!
+     * It can be uninitialized yet or it really does not have one.
+     * If it doesn't have one, then we'd expect a possible premature destroy!
+     */
+    PJ_ASSERT_RETURN(port->on_destroy, PJ_EINVALIDOP);
+
+    /* Check if it is already initialized */
+    if (port->grp_lock) {
+	pj_assert(glock == NULL || glock == port->grp_lock);
+	return PJ_EEXISTS;
+    }
+
+    if (!grp_lock) {
+	/* Create if not supplied */
+	status = pj_grp_lock_create_w_handler(pool, NULL, port,
+					      &port_on_destroy,
+					      &grp_lock);
+    } else {
+	/* Just add handler, and use internal group lock pool */
+	status = pj_grp_lock_add_handler(grp_lock, NULL, port,
+					 &port_on_destroy);
+    }
+
+    if (status == PJ_SUCCESS) {
+	status = pj_grp_lock_add_ref(grp_lock);
+    }
+
+    if (status == PJ_SUCCESS) {
+	port->grp_lock = grp_lock;
+    } else if (grp_lock && !glock) {
+	pj_grp_lock_destroy(grp_lock);
+    }
 
     return status;
 }
 
 
+/**
+ * Increase ref counter of the group lock.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_add_ref( pjmedia_port *port )
+{
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->grp_lock, PJ_EINVALIDOP);
 
+    return pj_grp_lock_add_ref(port->grp_lock);
+}
+
+
+/**
+ * Decrease ref counter of the group lock.
+ */
+PJ_DEF(pj_status_t) pjmedia_port_dec_ref( pjmedia_port *port )
+{
+    PJ_ASSERT_RETURN(port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->grp_lock, PJ_EINVALIDOP);
+
+    return pj_grp_lock_dec_ref(port->grp_lock);
+}

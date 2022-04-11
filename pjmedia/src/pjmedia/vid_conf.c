@@ -110,6 +110,37 @@ typedef struct vconf_port
 } vconf_port;
 
 
+/* As we don't hold mutex in the clock tick, some video conference operations
+ * that change video conference states (e.g: rendering states) need to be
+ * synchronized with the clock. So they needs to be executed within the
+ * clock tick context.
+ */
+typedef enum op_type
+{
+    OP_REMOVE_PORT,
+    OP_CONNECT_PORTS,
+    OP_DISCONNECT_PORTS,
+    OP_UPDATE_PORT;
+} op_type;
+
+
+typedef union op_param
+{
+    struct {
+    } remove_port;
+
+    struct {
+    } connect_ports;
+
+    struct {
+    } disconnect_ports;
+
+    struct {
+    } update_port;
+
+} op_param;
+
+
 /* Prototypes */
 static void on_clock_tick(const pj_timestamp *ts, void *user_data);
 static pj_status_t render_src_frame(vconf_port *src, vconf_port *sink,
@@ -231,9 +262,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 					       void *opt,
 					       unsigned *p_slot)
 {
-    pj_pool_t *pool;
-    vconf_port *cport;
+    pj_pool_t *pool = NULL;
+    vconf_port *cport = NULL;
     unsigned index;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(vid_conf && parent_pool && port, PJ_EINVAL);
     PJ_ASSERT_RETURN(port->info.fmt.type==PJMEDIA_TYPE_VIDEO &&
@@ -262,11 +294,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 
     /* Create pool */
     pool = pj_pool_create(parent_pool->factory, name->ptr, 500, 500, NULL);
-    PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
+    if (!pool) {
+	status = PJ_ENOMEM;
+	goto on_error;
+    }
 
     /* Create port. */
     cport = PJ_POOL_ZALLOC_T(pool, vconf_port);
-    PJ_ASSERT_RETURN(cport, PJ_ENOMEM);
+    if (!cport) {
+	status = PJ_ENOMEM;
+	goto on_error;
+    }
 
     /* Set pool, port, index, and name */
     cport->pool = pool;
@@ -274,6 +312,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     cport->format = port->info.fmt;
     cport->idx  = index;
     pj_strdup_with_null(pool, &cport->name, name);
+
+    /* Setup group lock */
+    status = pjmedia_port_init_glock(port, pool, NULL);
+    if (status == PJ_EEXISTS) status = PJ_SUCCESS;
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Increase port ref count */
+    pjmedia_port_add_ref(port);
 
     /* Init put/get_frame() intervals */
     {
@@ -298,15 +345,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     {
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
-	pj_status_t status;
 
 	vfi = pjmedia_get_video_format_info(NULL, port->info.fmt.id);
 	if (!vfi) {
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "unrecognized format %04X",
 				 port->info.fmt.id));
-	    pj_mutex_unlock(vid_conf->mutex);
-	    return PJMEDIA_EBADFMT;
+	    status = PJMEDIA_EBADFMT;
+	    goto on_error;
 	}
 
 	pj_bzero(&vafp, sizeof(vafp));
@@ -316,8 +362,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 	    PJ_LOG(4,(THIS_FILE, "pjmedia_vid_conf_add_port(): "
 				 "Failed to apply format %04X",
 				 port->info.fmt.id));
-	    pj_mutex_unlock(vid_conf->mutex);
-	    return status;
+	    goto on_error;
 	}
 	if (port->put_frame) {
 	    cport->put_buf_size = vafp.framebytes;
@@ -335,8 +380,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 					   vid_conf->opt.max_slot_cnt *
 					   sizeof(unsigned));
     if (!cport->listener_slots) {	
-	pj_mutex_unlock(vid_conf->mutex);
-	return PJ_ENOMEM;
+	status = PJ_ENOMEM;
+	goto on_error;
     }
 
     /* Create transmitter array */
@@ -345,8 +390,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 					      vid_conf->opt.max_slot_cnt *
 					      sizeof(unsigned));    
     if (!cport->transmitter_slots) {
-	pj_mutex_unlock(vid_conf->mutex);
-	return PJ_ENOMEM;
+	status = PJ_ENOMEM;
+	goto on_error;
     }
 
     /* Create pointer-to-render_state array */
@@ -356,8 +401,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 					  sizeof(render_state*));
 
     if (!cport->render_states) {
-	pj_mutex_unlock(vid_conf->mutex);
-	return PJ_ENOMEM;
+	status = PJ_ENOMEM;
+	goto on_error;
     }
 
     /* Create pointer-to-render-pool array */
@@ -366,8 +411,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
 					vid_conf->opt.max_slot_cnt *
 					sizeof(pj_pool_t*));    
     if (!cport->render_pool) {
-	pj_mutex_unlock(vid_conf->mutex);
-	return PJ_ENOMEM;
+	status = PJ_ENOMEM;
+	goto on_error;
     }
 
     /* Register the conf port. */
@@ -385,6 +430,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     }
 
     return PJ_SUCCESS;
+
+on_error:
+    if (pool)
+	pj_pool_release(pool);
+
+    pj_mutex_unlock(vid_conf->mutex);
+    return status;
 }
 
 
@@ -425,6 +477,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_remove_port( pjmedia_vid_conf *vid_conf,
 
     PJ_LOG(4,(THIS_FILE,"Removed port %d (%.*s)",
 	      slot, (int)cport->name.slen, cport->name.ptr));
+
+    /* Decrease port ref count */
+    pjmedia_port_dec_ref(cport->port);
 
     /* Release pool */
     pj_pool_safe_release(&cport->pool);
