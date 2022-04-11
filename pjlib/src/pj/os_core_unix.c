@@ -720,8 +720,10 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
 #if defined(PJ_THREAD_SET_STACK_SIZE) && PJ_THREAD_SET_STACK_SIZE!=0
     /* Set thread's stack size */
     rc = pthread_attr_setstacksize(&thread_attr, stack_size);
-    if (rc != 0)
+    if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
+    }
 #endif	/* PJ_THREAD_SET_STACK_SIZE */
 
 
@@ -731,8 +733,10 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(stack_addr, PJ_ENOMEM);
 
     rc = pthread_attr_setstackaddr(&thread_attr, stack_addr);
-    if (rc != 0)
+    if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
+    }
 #endif	/* PJ_THREAD_ALLOCATE_STACK */
 
 
@@ -741,8 +745,12 @@ PJ_DEF(pj_status_t) pj_thread_create( pj_pool_t *pool,
     rec->arg = arg;
     rc = pthread_create( &rec->thread, &thread_attr, &thread_main, rec);
     if (rc != 0) {
+	pthread_attr_destroy(&thread_attr);
 	return PJ_RETURN_OS_ERROR(rc);
     }
+
+    /* Destroy thread attributes */
+    pthread_attr_destroy(&thread_attr);
 
     *ptr_thread = rec;
 
