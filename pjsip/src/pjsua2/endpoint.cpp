@@ -1403,8 +1403,13 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
 	     */
 	    call->child = prm.newCall;
 	    call->child->id = PJSUA_INVALID_ID;
+
+	    /* The newCall shares the same user_data as the parent call,
+	     * the next Call::lookup(new_call_id) will assign the call ID
+	     * and update user_data for the newCall.
+	     */
 	} else {
-	    PJ_LOG(4,(THIS_FILE,
+	    PJ_LOG(3,(THIS_FILE,
 		      "Warning: application reuses Call instance in "
 		      "call transfer (call ID:%d)", call_id));
 	}
@@ -1449,37 +1454,78 @@ void Endpoint::on_call_replace_request2(pjsua_call_id call_id,
     prm.statusCode = (pjsip_status_code)*st_code;
     prm.reason = pj2Str(*st_text);
     prm.opt.fromPj(*opt);
+    prm.newCall = NULL;
     
     call->onCallReplaceRequest(prm);
     
     *st_code = prm.statusCode;
     *st_text = str2Pj(prm.reason);
     *opt = prm.opt.toPj();
+    if (prm.newCall && prm.newCall != call) {
+	/* Sanity checks */
+	pj_assert(prm.newCall->id == PJSUA_INVALID_ID);
+	pj_assert(prm.newCall->acc.getId() == call->acc.getId());
+
+	/* We don't manage (e.g: create, delete) the call child,
+	 * so let's just override any existing child.
+	 */
+	call->child = prm.newCall;
+	call->child->id = PJSUA_INVALID_ID;
+
+	/* The newCall shares the same user_data as the parent call,
+	 * the next Call::lookup(new_call_id) will assign the call ID
+	 * and update user_data for the newCall.
+	 */
+    } else {
+	PJ_LOG(3,(THIS_FILE,
+		  "Warning: application has not created new Call instance "
+		  "for call replace request (call ID:%d)", call_id));
+    }
 }
 
 void Endpoint::on_call_replaced(pjsua_call_id old_call_id,
                                 pjsua_call_id new_call_id)
 {
+    /* Lookup the new call first, to avoid Call::lookup() overwriting
+     * Call.id (to the new Call).
+     */
+    Call *new_call = Call::lookup(new_call_id);
+
     Call *call = Call::lookup(old_call_id);
     if (!call) {
 	return;
     }
+
+    /* Check if new call object has not been created in
+     * onCallReplaceRequest().
+     */
+    if (new_call == call)
+	new_call = NULL;
     
     OnCallReplacedParam prm;
     prm.newCallId = new_call_id;
-    prm.newCall = NULL;
+    prm.newCall = new_call;
     
     call->onCallReplaced(prm);
 
-    if (prm.newCall) {
+    if (prm.newCall && prm.newCall != call) {
 	/* Sanity checks */
 	pj_assert(prm.newCall->id == new_call_id);
 	pj_assert(prm.newCall->acc.getId() == call->acc.getId());
 	pj_assert(pjsua_call_get_user_data(new_call_id) == prm.newCall);
+
+	/* Warn if new_call created in onCallReplaceRequest() is changed */
+	if (new_call && new_call != prm.newCall) {
+	    PJ_LOG(3,(THIS_FILE,
+		      "Warning: application has created a new Call instance "
+		      "in onCallReplaceRequest, but created another in "
+		      "onCallReplaced (call ID:%d)",
+		      new_call_id));
+	}
     } else {
-	PJ_LOG(4,(THIS_FILE,
+	PJ_LOG(3,(THIS_FILE,
 		  "Warning: application has not created new Call instance "
-		  "for call replace (old call ID:%d, new call ID: %d)",
+		  "for call replace (old call ID:%d, new call ID:%d)",
 		  old_call_id, new_call_id));
     }
 }

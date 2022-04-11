@@ -965,6 +965,11 @@ struct OnCallReplaceRequestParam
      * the call being replaced.
      */
     CallSetting         opt;
+
+    /**
+     * New Call derived object instantiated by application.
+     */
+    Call		*newCall;
 };
 
 /**
@@ -1900,7 +1905,9 @@ public:
      *
      * If application decides to accept the transfer request, it must also
      * instantiate the new Call object for the transfer operation and return
-     * this new Call object to prm.newCall.
+     * this new Call object to prm.newCall. For the new Call instance,
+     * the account should use the same account as this call and the call ID
+     * must be set to PJSUA_INVALID_ID.
      * 
      * If application does not specify new Call object, library will reuse the
      * existing Call object for initiating the new call (to the transfer
@@ -1930,6 +1937,19 @@ public:
      * Notify application about incoming INVITE with Replaces header.
      * Application may reject the request by setting non-2xx code.
      *
+     * In this callback, application should create a new Call instance and
+     * return the Call object via prm.newCall. In creating the new Call
+     * instance, the account should use the same account as this call and
+     * the call ID must be set to PJSUA_INVALID_ID.
+     *
+     * If application does not specify new Call object, library will reuse the
+     * existing Call object for callbacks. In this case, any events from
+     * both calls (replaced and new) will be delivered to the same Call object,
+     * where the call ID will be switched back and forth between callbacks.
+     * Application must be careful to not destroy the Call object when
+     * receiving disconnection event of the replaced call after the transfer
+     * process is completed.
+     *
      * @param prm	Callback parameter.
      */
     virtual void onCallReplaceRequest(OnCallReplaceRequestParam &prm)
@@ -1941,11 +1961,24 @@ public:
      * request with Replaces header.
      *
      * After this callback is called, normally PJSUA-API will disconnect
-     * this call and establish a new call. To be able to control the call,
-     * e.g: hold, transfer, change media parameters, application must
-     * instantiate a new Call object for the new call using call ID
-     * specified in prm.newCallId, and return the Call object via
-     * prm.newCall.
+     * this call and establish a new call.
+     *
+     * If not yet done in onCallReplaceRequest(), application can create
+     * the new Call instance and return the Call object via prm.newCall.
+     * In creating the new Call instance, the account should use the same
+     * account as this call and the call ID must be set to prm.newCallId.
+     *
+     * If the new Call instance has been setup in onCallReplaceRequest(),
+     * the prm.newCall should contain the new Call instance and application
+     * MUST not change it.
+     *
+     * If application does not specify new Call object, library will reuse the
+     * existing Call object for callbacks. In this case, any events from
+     * both calls (replaced and new) will be delivered to the same Call object,
+     * where the call ID will be switched back and forth between callbacks.
+     * Application must be careful to not destroy the Call object when
+     * receiving disconnection event of the replaced call after the transfer
+     * process is completed.
      *
      * @param prm	Callback parameter.
      */
