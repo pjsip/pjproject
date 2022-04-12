@@ -1398,6 +1398,10 @@ void Endpoint::on_call_transfer_request2(pjsua_call_id call_id,
     *opt = prm.opt.toPj();
     if (*code/100 <= 2) {
 	if (prm.newCall) {
+	    /* Sanity checks */
+	    pj_assert(prm.newCall->id == PJSUA_INVALID_ID);
+	    pj_assert(prm.newCall->acc.getId() == call->acc.getId());
+
 	    /* We don't manage (e.g: create, delete) the call child,
 	     * so let's just override any existing child.
 	     */
