@@ -1617,16 +1617,23 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * call. We need the account to find which contact URI to put for
      * the call.
      */
-    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
-    if (acc_id == PJSUA_INVALID_ID) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
-				      NULL, NULL);
+    if (replaced_dlg) {
+	/* For call replace, use the same account as the replaced call */
+	pjsua_call *replaced_call;
+	replaced_call = (pjsua_call*)replaced_dlg->mod_data[pjsua_var.mod.id];
+	acc_id = call->acc_id = replaced_call->acc_id;
+    } else {
+	acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+	if (acc_id == PJSUA_INVALID_ID) {
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+					  PJSIP_SC_TEMPORARILY_UNAVAILABLE,
+					  NULL, NULL, NULL);
 
-	PJ_LOG(2,(THIS_FILE,
-		  "Unable to accept incoming call (no available account)"));
+	    PJ_LOG(2,(THIS_FILE,
+		      "Unable to accept incoming call (no available account)"));
 
-	goto on_return;
+	    goto on_return;
+	}
     }
     call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
 
