@@ -182,7 +182,7 @@ $(OUT_DIR)/pjsua2_wrap.o: $(OUT_DIR)/pjsua2_wrap.cpp Makefile
 	$(PJ_CXX) -c $(OUT_DIR)/pjsua2_wrap.cpp -o $(OUT_DIR)/pjsua2_wrap.o \
 		$(MY_CFLAGS)
 
-$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i $(SRCS)
+$(OUT_DIR)/pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i ../and_string.i $(SRCS)
 	mkdir -p $(MY_PACKAGE_PATH)
 	mkdir -p $(OUT_DIR)
 	swig $(SWIG_FLAGS) -java  -package $(MY_PACKAGE_NAME) \
