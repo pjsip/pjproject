@@ -147,7 +147,7 @@ struct pj_event_t
 static int initialized;
 
 #if PJ_HAS_THREADS
-    static pj_thread_t main_thread;
+    static pj_thread_desc main_thread;
     static long thread_tls_id;
     static pj_mutex_t critical_section;
 #else

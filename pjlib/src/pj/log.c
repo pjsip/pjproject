@@ -284,8 +284,8 @@ static void suspend_logging(int *saved_level)
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
-	pj_thread_local_set(thread_suspended_tls_id, 
-			    (void*)(pj_ssize_t)PJ_TRUE);
+	static int suspend_log = PJ_TRUE;
+	pj_thread_local_set(thread_suspended_tls_id, &suspend_log);
     } 
     else
 #endif
