@@ -3279,6 +3279,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     return PJ_SUCCESS;
 }
 
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 
 /* Match codec fmtp. This will compare the values and the order. */
 static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
@@ -3299,7 +3300,6 @@ static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
     return PJ_TRUE;
 }
 
-#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 
 static pj_bool_t is_ice_running(pjmedia_transport *tp)
 {
@@ -3314,6 +3314,7 @@ static pj_bool_t is_ice_running(pjmedia_transport *tp)
     return (ice_info && ice_info->sess_state == PJ_ICE_STRANS_STATE_RUNNING);
 }
 
+#endif
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 
@@ -3503,6 +3504,8 @@ static void check_srtp_roc(pjsua_call *call,
     pjmedia_transport_srtp_modify_setting(call_med->tp, &setting);
 }
 #endif
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
 
 static pj_bool_t is_media_changed(const pjsua_call *call,
 				  unsigned med_idx,
