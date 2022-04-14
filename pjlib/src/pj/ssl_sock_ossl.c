@@ -1174,6 +1174,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 				 cert->CA_path.ptr));
 		}
 		SSL_CTX_free(ctx);
+		ossock->ossl_ctx = NULL;
 		return status;
 	    } else {
 		PJ_LOG(4,(ssock->pool->obj_name,
@@ -1204,6 +1205,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 			     "Error loading certificate chain file '%s'",
 			     cert->cert_file.ptr));
 		SSL_CTX_free(ctx);
+		ossock->ossl_ctx = NULL;
 		return status;
 	    } else {
 		PJ_LOG(4,(ssock->pool->obj_name,
@@ -1225,6 +1227,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 			     "Error adding private key from '%s'",
 			     cert->privkey_file.ptr));
 		SSL_CTX_free(ctx);
+		ossock->ossl_ctx = NULL;
 		return status;
 	    } else {
 		PJ_LOG(4,(ssock->pool->obj_name,
@@ -1274,6 +1277,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 			X509_free(xcert);
 			BIO_free(cbio);
 			SSL_CTX_free(ctx);
+			ossock->ossl_ctx = NULL;
 			return status;
 		    } else {
 			PJ_LOG(4,(ssock->pool->obj_name,
@@ -1342,6 +1346,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 			EVP_PKEY_free(pkey);
 			BIO_free(kbio);
 			SSL_CTX_free(ctx);
+			ossock->ossl_ctx = NULL;
 			return status;
 		    } else {
 			PJ_LOG(4,(ssock->pool->obj_name,
