@@ -50,8 +50,11 @@ public class PjCamera2
     private int camIdx;
     private final long userData;
     private final int fps;
+    private final int w;
+    private final int h;
+    private final int fmt;
 
-    private final ImageReader imageReader;
+    private ImageReader imageReader;
     private HandlerThread handlerThread = null;
     private Handler handler;
 
@@ -151,16 +154,16 @@ public class PjCamera2
 	}
     };
 
-    public PjCamera2(int idx, int w, int h, int fmt, int fps_,
+    public PjCamera2(int idx, int w_, int h_, int fmt_, int fps_,
 	    	    long userData_, SurfaceView surface)
     {
 	camIdx = idx;
+	w = w_;
+	h = h_;
+	fmt = fmt_;
 	userData = userData_;
 	fps = fps_;
 	surfaceView = surface;
-
-	/* Some say to put a larger maxImages to improve FPS */
-	imageReader = ImageReader.newInstance(w, h, fmt, 3);
     }
 
     public int SwitchDevice(int idx)
@@ -246,6 +249,9 @@ public class PjCamera2
 	handlerThread = new HandlerThread("Cam2HandlerThread");
 	handlerThread.start();
 	handler = new Handler(handlerThread.getLooper());
+
+	/* Some say to put a larger maxImages to improve FPS */
+	imageReader = ImageReader.newInstance(w, h, fmt, 3);
 	imageReader.setOnImageAvailableListener(imageAvailListener, handler);
 	isRunning = true;
 
@@ -294,6 +300,11 @@ public class PjCamera2
 	    } catch (InterruptedException e) {
 		e.printStackTrace();
 	    }
+	}
+
+	if (imageReader != null) {
+	    imageReader.close();
+	    imageReader = null;
 	}
 
 	/* Reset setting */
