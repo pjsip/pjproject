@@ -30,6 +30,7 @@
 #include <pj/log.h>
 #include <pj/list.h>
 #include <pj/pool.h>
+#include <pj/pool_buf.h>
 #include <pj/string.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
@@ -64,12 +65,24 @@
  */
 #include "ioqueue_common_abs.h"
 
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+#define TMP_BUF_SIZE 280
+#endif
+
 /*
  * This describes each key.
  */
 struct pj_ioqueue_key_t
 {
     DECLARE_COMMON_KEY
+
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+#if PJ_DEBUG
+    char tmp_buf[TMP_BUF_SIZE + 48];
+#else
+    char tmp_buf[TMP_BUF_SIZE];
+#endif
+#endif
 };
 
 struct queue
@@ -163,7 +176,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
     pj_lock_t *lock;
-    int i;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+    pj_size_t i;
+    pj_ioqueue_key_t *array_keys;
+#endif
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
@@ -201,12 +217,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
 
     /* Pre-create all keys according to max_fd */
-    for ( i=0; i<max_fd; ++i) {
+    array_keys = (pj_ioqueue_key_t *)pj_pool_alloc(
+	pool, sizeof(pj_ioqueue_key_t) * max_fd);
+    for (i = 0; i < max_fd; ++i) {
 	pj_ioqueue_key_t *key;
+	pj_pool_t *tmp_pool;
 
-	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
+	key = array_keys + i;
 	key->ref_count = 0;
-	rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
+	tmp_pool =
+	    pj_pool_create_on_buf(NULL, key->tmp_buf, sizeof(key->tmp_buf));
+	rc = pj_lock_create_recursive_mutex(tmp_pool, NULL, &key->lock);
 	if (rc != PJ_SUCCESS) {
 	    key = ioqueue->free_list.next;
 	    while (key != &ioqueue->free_list) {

@@ -192,8 +192,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 {
     pj_ioqueue_t *ioqueue;
     pj_lock_t *lock;
-    unsigned i;
     pj_status_t rc;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+    pj_size_t i;
+    pj_ioqueue_key_t *array_keys;
+#endif
 
     /* Check that arguments are valid. */
     PJ_ASSERT_RETURN(pool != NULL && p_ioqueue != NULL && 
@@ -239,10 +242,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
 
     /* Pre-create all keys according to max_fd */
-    for (i=0; i<max_fd; ++i) {
+    array_keys = (pj_ioqueue_key_t *)pj_pool_alloc(
+	pool, sizeof(pj_ioqueue_key_t) * max_fd);
+    for (i = 0; i < max_fd; ++i) {
 	pj_ioqueue_key_t *key;
 
-	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
+	key = array_keys + i;
 	key->ref_count = 0;
 	rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
 	if (rc != PJ_SUCCESS) {

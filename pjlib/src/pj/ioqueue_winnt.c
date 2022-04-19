@@ -328,8 +328,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 				       pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
-    unsigned i;
     pj_status_t rc;
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+    pj_size_t i;
+    pj_ioqueue_key_t *array_keys;
+#endif
 
     PJ_UNUSED_ARG(max_fd);
     PJ_ASSERT_RETURN(pool && p_ioqueue, PJ_EINVAL);
@@ -367,10 +370,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     /* Preallocate keys according to max_fd setting, and put them
      * in free_list.
      */
-    for (i=0; i<max_fd; ++i) {
+    array_keys = (pj_ioqueue_key_t *)pj_pool_alloc(
+	pool, sizeof(pj_ioqueue_key_t) * max_fd);
+    for (i = 0; i < max_fd; ++i) {
 	pj_ioqueue_key_t *key;
 
-	key = pj_pool_alloc(pool, sizeof(pj_ioqueue_key_t));
+	key = array_keys + i;
 
 	rc = pj_atomic_create(pool, 0, &key->ref_count);
 	if (rc != PJ_SUCCESS) {
