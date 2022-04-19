@@ -470,7 +470,8 @@ pj_status_t pjsua_aud_subsys_destroy()
     /* Destroy file players */
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.player); ++i) {
 	if (pjsua_var.player[i].port) {
-	    PJ_LOG(2,(THIS_FILE, "Destructor for player id=%d is not called"));
+	    PJ_LOG(2,(THIS_FILE, "Destructor for player id=%d "
+		      "is not called", i));
 	    pjsua_player_destroy(i);
 	}
     }
@@ -479,7 +480,7 @@ pj_status_t pjsua_aud_subsys_destroy()
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.recorder); ++i) {
 	if (pjsua_var.recorder[i].port) {
 	    PJ_LOG(2,(THIS_FILE, "Destructor for recorder id=%d "
-		      "is not called"));
+		      "is not called", i));
 	    pjsua_recorder_destroy(i);
 	}
     }
