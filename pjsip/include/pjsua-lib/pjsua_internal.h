@@ -211,6 +211,8 @@ struct pjsua_call
 					    offer.			    */
     unsigned		 rem_vid_cnt;  /**< No of active video in last remote
 					    offer.			    */
+    pj_bool_t		 allow_ringtones;  /**< Allow ringtones to be played    */
+    pj_bool_t		 ringtones_requested;  /**< Allow ringtones to be played    */
     
     pj_bool_t		 rx_reinv_async;/**< on_call_rx_reinvite() async.   */
     pj_timer_entry	 reinv_timer;  /**< Reinvite retry timer.	    */

@@ -1100,6 +1100,16 @@ typedef struct pjsua_callback
     void (*on_call_state)(pjsua_call_id call_id, pjsip_event *e);
 
     /**
+     * Notify application that it is allowed to play ringtones.
+     *
+     * @param call_id	The call id that has just been created for
+     *			the call.
+     * @param allowed	Boolean value indicating if ring tones are
+     *			allowed to be played
+     */
+    void (*on_ringtones_allowed)(pjsua_call_id call_id, pj_bool_t allowed);
+
+    /**
      * Notify application on incoming call.
      *
      * @param acc_id	The account which match the incoming call.
@@ -5092,6 +5102,12 @@ typedef struct pjsua_call_info
 
     /** Flag if remote was SDP offerer */
     pj_bool_t		rem_offerer;
+
+    /** Flag if ring tones are allowed */
+    pj_bool_t		rem_ringtones_allowed;
+
+    /** Flag if ring tones have been requested */
+    pj_bool_t		rem_ringtones_requested;
 
     /** Number of audio streams offered by remote */
     unsigned		rem_aud_cnt;

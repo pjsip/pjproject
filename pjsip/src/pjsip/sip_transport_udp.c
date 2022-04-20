@@ -189,7 +189,6 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 	    pj_sockaddr_print(src_addr, rdata->pkt_info.src_name,
 			      sizeof(rdata->pkt_info.src_name), 0);
 	    rdata->pkt_info.src_port = pj_sockaddr_get_port(src_addr);
-
 	    size_eaten = 
 		pjsip_tpmgr_receive_packet(rdata->tp_info.transport->tpmgr, 
 					   rdata);

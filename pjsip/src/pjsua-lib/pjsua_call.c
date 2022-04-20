@@ -149,6 +149,7 @@ static pj_status_t call_inv_end_session(pjsua_call *call,
 					unsigned code,
 				        const pj_str_t *reason,
 				        const pjsua_msg_data *msg_data);
+static int localCounter = 0;
 
 /*
  * Reset call descriptor.
@@ -2077,6 +2078,18 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	 * otherwise hangup the call with 480
 	 */
 	if (pjsua_var.ua_cfg.cb.on_incoming_call) {
+		localCounter++;
+
+	    PJ_LOG(1,(THIS_FILE, "_RINGING_ %d", localCounter));
+
+
+	    /* Send signal via logging subsystem. Only keep /r/n decorator  */
+	    unsigned currentDecor = pj_log_get_decor();
+	    pj_log_set_decor( PJ_LOG_HAS_NEWLINE );
+	    PJ_LOG(1,(THIS_FILE, ":SIGNAL:INCOMING_CALL:"));
+	    pj_log_set_decor(currentDecor);
+	    call->allow_ringtones = PJ_FALSE;
+
 	    pjsua_var.ua_cfg.cb.on_incoming_call(acc_id, call_id, rdata);
 
             /* Notes:
@@ -2247,6 +2260,9 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     info->id = call_id;
     info->role = dlg->role;
     info->acc_id = call->acc_id;
+
+    info->rem_ringtones_allowed = call->allow_ringtones;
+    info->rem_ringtones_requested = call->ringtones_requested;
 
     /* local info */
     info->local_info.ptr = info->buf_.local_info;
@@ -4865,6 +4881,9 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	return;
     }
 
+    if (inv->state == PJSIP_INV_STATE_INCOMING) {
+	call->allow_ringtones = PJ_FALSE;
+    }
 
     /* Get call times */
     switch (inv->state) {
@@ -6580,7 +6599,7 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     if (!call->hanging_up && pjsua_var.ua_cfg.cb.on_call_redirected) {
 	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index,
 							 target, e);
-    } else {
+} else {
 	if (!call->hanging_up) {
 	    PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
 		      "(callback not implemented by application). "
@@ -6593,5 +6612,26 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     pj_log_pop_indent();
 
     return op;
+}
+
+/*
+ * Handle ringtones allowed.
+ */
+PJ_DEF(pj_status_t) pjsua_call_allow_ringtones(pjsua_call_id call_id)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+	call->allow_ringtones = PJ_TRUE;
+    pjsua_var.ua_cfg.cb.on_ringtones_allowed(call_id, PJ_TRUE);
+
+}
+
+/*
+ * Handle ringtones requested.
+ */
+PJ_DEF(pj_status_t) pjsua_call_ringtones_requested(pjsua_call_id call_id)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+	call->ringtones_requested = PJ_TRUE;
+
 }
 

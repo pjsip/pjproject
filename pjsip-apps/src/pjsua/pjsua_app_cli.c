@@ -59,6 +59,7 @@
 #define CMD_CALL_DUMP_Q		    ((CMD_CALL*10)+16)
 #define CMD_CALL_SEND_ARB	    ((CMD_CALL*10)+17)
 #define CMD_CALL_LIST		    ((CMD_CALL*10)+18)
+#define CMD_CALL_ALLOW_RINGTONES    ((CMD_CALL*10)+19)
 
 /* im & presence level 2 command */
 #define CMD_PRESENCE_ADD_BUDDY	    ((CMD_PRESENCE*10)+1)
@@ -1641,6 +1642,19 @@ static pj_status_t cmd_answer_call(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
+
+/* Allow ringtones in call */
+static pj_status_t cmd_ringtones_allowed(pj_cli_cmd_val *cval)
+{
+    if (current_call == PJSUA_INVALID_ID) {
+	static const pj_str_t err_msg = {"No current call\n", 17};
+	pj_cli_sess_write_msg(cval->sess, err_msg.ptr, err_msg.slen);
+    } else {
+	pjsua_call_allow_ringtones(current_call);
+    }
+    return PJ_SUCCESS;
+}
+
 /* Hangup call */
 static pj_status_t cmd_hangup_call(pj_cli_cmd_val *cval, pj_bool_t all)
 {
@@ -2135,6 +2149,10 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
 	break;
     case CMD_CALL_LIST:
 	status = cmd_show_current_call(cval);
+	break;
+    case CMD_CALL_ALLOW_RINGTONES:
+    	PJ_LOG(1,(THIS_FILE, "CMD RECEIVED"));
+	status = cmd_ringtones_allowed(cval);
 	break;
     }
 
@@ -2852,6 +2870,7 @@ static pj_status_t add_call_command(pj_cli_t *c)
 	"    </ARG>"
 	"  </CMD>"
 	"  <CMD name='list' id='1018' desc='Show current call'/>"
+	"  <CMD name='allow_ringtones' id='1019' desc='Allow ringtones to play in current call'/>"
 	"</CMD>";
 
     pj_str_t xml = pj_str(call_command);

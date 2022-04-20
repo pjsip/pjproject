@@ -86,6 +86,12 @@ static void ringback_start(pjsua_call_id call_id)
 
 static void ring_stop(pjsua_call_id call_id)
 {
+    pjsua_call_info call_info;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    call_info.rem_ringtones_requested = PJ_FALSE;
+
     if (app_config.no_tones)
 	return;
 
@@ -116,6 +122,15 @@ static void ring_stop(pjsua_call_id call_id)
 
 static void ring_start(pjsua_call_id call_id)
 {
+    pjsua_call_info call_info;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    pjsua_call_ringtones_requested(call_id);
+
+    if (call_info.rem_ringtones_allowed == PJ_FALSE)
+    return;
+
     if (app_config.no_tones)
 	return;
 
@@ -292,6 +307,21 @@ static void on_stream_destroyed(pjsua_call_id call_id,
 }
 
 /**
+ * Handler when ring_tones are allowed.
+ */
+static void on_ringtones_allowed(pjsua_call_id call_id)
+{
+    pjsua_call_info call_info;
+
+    pjsua_call_get_info(call_id, &call_info);
+
+    call_info.rem_ringtones_allowed = PJ_TRUE;
+    if (call_info.rem_ringtones_requested == PJ_TRUE)
+    	ring_start(call_id);
+
+}
+
+/**
  * Handler when there is incoming call.
  */
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
@@ -310,7 +340,6 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 #ifdef USE_GUI
     showNotification(call_id);
 #endif
-
     /* Start ringback */
     if (call_info.rem_aud_cnt)
     	ring_start(call_id);
@@ -1382,6 +1411,7 @@ static pj_status_t app_init(void)
     app_config.cfg.cb.on_call_state = &on_call_state;
     app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
+    app_config.cfg.cb.on_ringtones_allowed = &on_ringtones_allowed;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_dtmf_digit2 = &call_on_dtmf_callback2;
     app_config.cfg.cb.on_call_redirected = &call_on_redirected;

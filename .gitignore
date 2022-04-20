@@ -1,7 +1,13 @@
 pjlib/include/pj/config_site.h
+pjlib/docs/
 lib/
 bin/
 output/
+
+# eclipse stuff
+.cproject
+.project
+.settings/
 
 # VS stuff
 *.ncb
