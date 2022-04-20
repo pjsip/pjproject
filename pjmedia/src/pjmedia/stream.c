@@ -1443,7 +1443,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	       frame->buf == NULL &&
 	       stream->port.info.fmt.id == PJMEDIA_FORMAT_L16 &&
 	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
-	       stream->enc_samples_per_pkt < PJ_ARRAY_SIZE(zero_frame))
+	       stream->enc_samples_per_pkt <= PJ_ARRAY_SIZE(zero_frame))
     {
 	pjmedia_frame silence_frame;
 
