@@ -175,6 +175,7 @@ struct pjmedia_stream
     void		    *out_rtcp_pkt;  /**< Outgoing RTCP packet.	    */
     unsigned		     out_rtcp_pkt_size;
 					    /**< Outgoing RTCP packet size. */
+    pj_int16_t		    *zero_frame;    /**< Zero frame buffer.	    */
 
     /* RFC 2833 DTMF transmission queue: */
     unsigned		     dtmf_duration; /**< DTMF duration(in timestamp)*/
@@ -1442,13 +1443,12 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
 	       frame->buf == NULL &&
 	       stream->port.info.fmt.id == PJMEDIA_FORMAT_L16 &&
-	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
-	       stream->enc_samples_per_pkt <= PJ_ARRAY_SIZE(zero_frame))
+	       (stream->dir & PJMEDIA_DIR_ENCODING))
     {
 	pjmedia_frame silence_frame;
 
 	pj_bzero(&silence_frame, sizeof(silence_frame));
-	silence_frame.buf = zero_frame;
+	silence_frame.buf = stream->zero_frame;
 	silence_frame.size = stream->enc_samples_per_pkt * 2;
 	silence_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
@@ -2897,6 +2897,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Update the stream info's codec param */
     stream->si.param = &stream->codec_param;
+
+    /* Check the zero frame buffer. */
+    if (stream->enc_samples_per_pkt > PJ_ARRAY_SIZE(zero_frame)) {
+	stream->zero_frame = (pj_int16_t*)pj_pool_zalloc(pool, 
+			       sizeof(pj_int16_t)*stream->enc_samples_per_pkt);	
+    } else {
+	stream->zero_frame = zero_frame;
+    }
 
     /* Send RTCP SDES */
     if (!stream->rtcp_sdes_bye_disabled) {
