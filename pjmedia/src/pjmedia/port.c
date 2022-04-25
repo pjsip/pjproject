@@ -139,6 +139,7 @@ PJ_DEF(pj_status_t) pjmedia_port_destroy( pjmedia_port *port )
 }
 
 
+/* Group lock handler */
 static void port_on_destroy(void *arg)
 {
     pjmedia_port *port = (pjmedia_port*)arg;
@@ -150,9 +151,9 @@ static void port_on_destroy(void *arg)
 /**
  * Create and init group lock.
  */
-PJ_DEF(pj_status_t) pjmedia_port_init_glock(pjmedia_port *port,
-					    pj_pool_t *pool,
-					    pj_grp_lock_t *glock )
+PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
+						pj_pool_t *pool,
+						pj_grp_lock_t *glock )
 {
     pj_grp_lock_t *grp_lock = glock;
     pj_status_t status;
@@ -189,6 +190,7 @@ PJ_DEF(pj_status_t) pjmedia_port_init_glock(pjmedia_port *port,
     if (status == PJ_SUCCESS) {
 	port->grp_lock = grp_lock;
     } else if (grp_lock && !glock) {
+	/* Something wrong, destroy group lock if it is created here */
 	pj_grp_lock_destroy(grp_lock);
     }
 

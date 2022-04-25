@@ -417,7 +417,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     pj_strdup_with_null(pool, &cport->name, name);
 
     /* Setup group lock */
-    status = pjmedia_port_init_glock(port, pool, NULL);
+    status = pjmedia_port_init_grp_lock(port, pool, NULL);
     if (status == PJ_EEXISTS) status = PJ_SUCCESS;
     if (status != PJ_SUCCESS)
 	goto on_error;

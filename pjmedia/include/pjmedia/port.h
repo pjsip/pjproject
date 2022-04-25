@@ -531,9 +531,9 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
  *			    is already initialized, or the other appropriate
  *			    error code.
  */
-PJ_DECL(pj_status_t) pjmedia_port_init_glock( pjmedia_port *port,
-					      pj_pool_t *pool,
-					      pj_grp_lock_t *glock);
+PJ_DECL(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
+						 pj_pool_t *pool,
+						 pj_grp_lock_t *glock );
 
 
 /**

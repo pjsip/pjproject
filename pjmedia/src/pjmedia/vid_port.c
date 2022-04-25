@@ -147,6 +147,8 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
 					   pjmedia_frame *frame);
 
+static pj_status_t vid_pasv_port_on_destroy(struct pjmedia_port *this_port);
+
 
 PJ_DEF(void) pjmedia_vid_port_param_default(pjmedia_vid_port_param *prm)
 {
@@ -652,6 +654,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	    pp->base.get_frame = &vid_pasv_port_get_frame;
 	if (prm->vidparam.dir & PJMEDIA_DIR_RENDER)
 	    pp->base.put_frame = &vid_pasv_port_put_frame;
+	pp->base.on_destroy = &vid_pasv_port_on_destroy;
 	pjmedia_port_info_init2(&pp->base.info, &vp->dev_name,
 	                        PJMEDIA_SIG_VID_PORT,
 			        prm->vidparam.dir, &prm->vidparam.fmt);
@@ -1406,6 +1409,11 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
     }
 
     return status;
+}
+
+
+static pj_status_t vid_pasv_port_on_destroy(struct pjmedia_port *this_port)
+{
 }
 
 
