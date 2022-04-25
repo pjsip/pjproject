@@ -20,6 +20,7 @@
 #include <pj/file_io.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/limits.h>
 #include <stdio.h>
 #include <errno.h>
 
@@ -123,6 +124,12 @@ PJ_DEF(pj_status_t) pj_file_setpos( pj_oshandle_t fd,
                                     enum pj_file_seek_type whence)
 {
     int mode;
+
+    if ((sizeof(pj_off_t) > sizeof(long)) &&
+        (offset > PJ_MAXLONG || offset < PJ_MINLONG)) 
+    {
+        return PJ_ENOTSUP;
+    }
 
     switch (whence) {
     case PJ_SEEK_SET:
