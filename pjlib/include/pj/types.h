@@ -31,6 +31,7 @@
  * @{
  */
 #include <pj/config.h>
+#include <pj/limits.h>
 
 PJ_BEGIN_DECL
 
@@ -361,6 +362,13 @@ PJ_INLINE(pj_int32_t) pj_swap32(pj_int32_t val32)
     return val32;
 }
 
+/* This is to check if uint32 var will overflow if converted to signed long */
+#define PJ_CHECK_OVERFLOW_UINT32_TO_LONG(uint32_var, exec_on_overflow) \
+	do { \
+	    if (uint32_var > PJ_MAXLONG) { \
+		exec_on_overflow; \
+	    } \
+	} while (0)
 
 /**
  * @}

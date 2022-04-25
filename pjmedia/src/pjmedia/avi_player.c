@@ -282,7 +282,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     /* Read the headers of each stream. */
     for (i = 0; i < avi_hdr.avih_hdr.num_streams; i++) {
         pj_size_t elem = 0;
-        pj_ssize_t size_to_read;
+        pj_off_t size_to_read;
 
         /* Read strl header */
         status = file_read(fport[0]->fd, &avi_hdr.strl_hdr[i],
@@ -335,6 +335,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     do {
         pjmedia_avi_subchunk ch;
         int read = 0;
+        pj_off_t size_to_read;
 
         status = file_read(fport[0]->fd, &ch, sizeof(pjmedia_avi_subchunk));
         if (status != PJ_SUCCESS) {
@@ -349,7 +350,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 break;
         }
 
-        status = pj_file_setpos(fport[0]->fd, ch.len-read, PJ_SEEK_CUR);
+        if (ch.len < read) {
+            status = PJ_EINVAL;
+            goto on_error;
+        }
+        PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len - read, 
+                                         status = PJ_EINVAL; goto on_error;);
+        size_to_read = (pj_off_t)ch.len - read;
+
+        status = pj_file_setpos(fport[0]->fd, size_to_read, PJ_SEEK_CUR);
         if (status != PJ_SUCCESS) {
             goto on_error;
         }
@@ -775,6 +784,8 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
         /* Read new chunk data */
         if (fport->size_left == 0) {
             pj_off_t pos;
+            pj_off_t ch_len;
+
             pj_file_getpos(fport->fd, &pos);
 
             /* Data is padded to the nearest WORD boundary */
@@ -788,6 +799,10 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                 size_read = 0;
                 goto on_error2;
             }
+            
+            PJ_CHECK_OVERFLOW_UINT32_TO_LONG(ch.len, 
+                                         status = PJ_EINVAL;  goto on_error2;);
+            ch_len = ch.len;
 
             cid = (char *)&ch.id;
             if (cid[0] >= '0' && cid[0] <= '9' &&
@@ -814,8 +829,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
                     goto on_error2;
                 }
 
-                status = pj_file_setpos(fport->fd, ch.len,
-                                        PJ_SEEK_CUR);
+                status = pj_file_setpos(fport->fd, ch_len, PJ_SEEK_CUR);
                 continue;
             }
             fport->size_left = ch.len;
