@@ -3051,6 +3051,30 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 	    tdata->msg->line.req.uri = (pjsip_uri*)
 	       pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
 
+	    pjsip_uri *uri = tdata->msg->line.req.uri;
+            if (PJSIP_URI_SCHEME_IS_SIP(uri) ||
+                PJSIP_URI_SCHEME_IS_SIPS(uri))
+            {
+                pjsip_sip_uri *sip_uri = (pjsip_sip_uri *)pjsip_uri_get_uri(uri);
+                pjsip_param *param = sip_uri->header_param.next;
+                while (param != &sip_uri->header_param) {
+                    pjsip_generic_string_hdr *hdr;
+                    hdr = pjsip_msg_find_hdr_by_name(tdata->msg, &param->name, NULL);
+                    if (hdr) {
+                        pjsip_msg_find_remove_hdr(tdata->msg,
+                            PJSIP_H_OTHER, hdr);
+                    }
+                    hdr = pjsip_generic_string_hdr_create(tdata->pool,
+                        &param->name,
+                        &param->value);
+                    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hdr);
+                    param = param->next;
+                }
+                if (!pj_list_empty(&sip_uri->header_param)) {
+                    pj_list_init(&sip_uri->header_param);
+                }
+            }
+
 	    /* Remove branch param in Via header. */
 	    via = (pjsip_via_hdr*) 
 		  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
