@@ -1599,6 +1599,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				st_code, &st_text, NULL, NULL, NULL);
 	    goto on_return;
 	}
+
+	/* Set the user_data of the new call to the existing/parent call,
+	 * it is needed by PJSUA2 to update its states. While PJSUA app can
+	 * always override it anytime.
+	 */
+	pjsua_call_set_user_data(call_id, replaced_call->user_data);
     }
 
     if (!replaced_dlg) {
@@ -1611,16 +1617,23 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * call. We need the account to find which contact URI to put for
      * the call.
      */
-    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
-    if (acc_id == PJSUA_INVALID_ID) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
-				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
-				      NULL, NULL);
+    if (replaced_dlg) {
+	/* For call replace, use the same account as the replaced call */
+	pjsua_call *replaced_call;
+	replaced_call = (pjsua_call*)replaced_dlg->mod_data[pjsua_var.mod.id];
+	acc_id = call->acc_id = replaced_call->acc_id;
+    } else {
+	acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+	if (acc_id == PJSUA_INVALID_ID) {
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata,
+					  PJSIP_SC_TEMPORARILY_UNAVAILABLE,
+					  NULL, NULL, NULL);
 
-	PJ_LOG(2,(THIS_FILE,
-		  "Unable to accept incoming call (no available account)"));
+	    PJ_LOG(2,(THIS_FILE,
+		      "Unable to accept incoming call (no available account)"));
 
-	goto on_return;
+	    goto on_return;
+	}
     }
     call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
 
@@ -6071,7 +6084,11 @@ static void on_call_transferred( pjsip_inv_session *inv,
 	pj_list_push_back(&msg_data.hdr_list, dup);
     }
 
-    /* Now make the outgoing call. */
+    /* Now make the outgoing call.
+     * Note that the user_data of the new call is initialized to the
+     * original call, it is needed by PJSUA2 to update its states.
+     * While PJSUA app can always override it anytime.
+     */
     tmp = pj_str(uri);
     status = pjsua_call_make_call(existing_call->acc_id, &tmp, &call_opt,
 				  existing_call->user_data, &msg_data,
