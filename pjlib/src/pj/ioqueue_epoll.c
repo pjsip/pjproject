@@ -692,6 +692,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     pj_lock_acquire(ioqueue->lock);
 
     for (event_cnt=0, i=0; i<count; ++i) {
+	enum ioqueue_event_type event_type;
 	pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
 				events[i].epoll_data;
 
@@ -768,6 +769,15 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    }
 	    continue;
 	}
+
+	if (events[i].events & EPOLLIN) {
+	    event_type = READABLE_EVENT;
+	} else if (events[i].events & EPOLLOUT) {
+	    event_type = WRITEABLE_EVENT;
+	} else if (events[i].events & EPOLLERR) {
+	    event_type = EXCEPTION_EVENT;
+	}
+	ioqueue_remove_from_set(ioqueue, h, event_type);
     }
     for (i=0; i<event_cnt; ++i) {
 	if (queue[i].key->grp_lock)
@@ -787,22 +797,32 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
 	/* Just do not exceed PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL */
 	if (processed_cnt < PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL) {
+	    pj_bool_t event_done = PJ_FALSE;
 	    switch (queue[i].event_type) {
 	    case READABLE_EVENT:
-		if (ioqueue_dispatch_read_event(ioqueue, queue[i].key))
-		    ++processed_cnt;
+		event_done = ioqueue_dispatch_read_event(ioqueue,queue[i].key);
+
 		break;
 	    case WRITEABLE_EVENT:
-		if (ioqueue_dispatch_write_event(ioqueue, queue[i].key))
-		    ++processed_cnt;
+		event_done = ioqueue_dispatch_write_event(ioqueue,
+							  queue[i].key);
+
 		break;
 	    case EXCEPTION_EVENT:
-		if (ioqueue_dispatch_exception_event(ioqueue, queue[i].key))
-		    ++processed_cnt;
+		event_done = ioqueue_dispatch_exception_event(ioqueue,
+							      queue[i].key);
 		break;
 	    case NO_EVENT:
 		pj_assert(!"Invalid event!");
 		break;
+	    }
+	    if (event_done) {
+		++processed_cnt;
+	    } else {
+		pj_ioqueue_lock_key(queue[i].key);
+		ioqueue_remove_from_set(ioqueue, queue[i].key,
+					queue[i].event_type);
+		pj_ioqueue_unlock_key(queue[i].key);
 	    }
 	}
 
