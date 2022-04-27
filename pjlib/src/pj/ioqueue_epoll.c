@@ -175,7 +175,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     ioqueue = pj_pool_alloc(pool, sizeof(pj_ioqueue_t));
 
-    ioqueue_init(ioqueue);
+    ioqueue_init(ioqueue, pool);
 
     ioqueue->max = max_fd;
     ioqueue->count = 0;
@@ -242,6 +242,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue->queue = pj_pool_calloc(pool, max_fd, sizeof(struct queue));
     PJ_ASSERT_RETURN(ioqueue->queue != NULL, PJ_ENOMEM);
    */
+
+    /* wakeup init */
+    rc = ioqueue_wakeup_init(ioqueue);
+    if (rc != PJ_SUCCESS) {
+	ioqueue_wakeup_deinit(ioqueue);
+    }
+
     PJ_LOG(4, ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
 
     *p_ioqueue = ioqueue;
@@ -287,6 +294,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
     pj_mutex_destroy(ioqueue->ref_cnt_mutex);
 #endif
     return ioqueue_destroy(ioqueue);
+}
+
+/*
+ * pj_ioqueue_wakeup()
+ *
+ * Wakeup ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_wakeup(pj_ioqueue_t *ioqueue)
+{
+    return ioqueue_wakeup_notify(ioqueue);
 }
 
 /*
@@ -386,6 +403,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     ++ioqueue->count;
 
     //TRACE_((THIS_FILE, "socket registered, count=%d", ioqueue->count));
+
+    /* wakeup ioqueue */
+    ioqueue_wakeup_notify(ioqueue);
 
 on_return:
     if (rc != PJ_SUCCESS) {
@@ -542,6 +562,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_lock_destroy(key->lock);
 #endif
+
+    /* wakeup ioqueue */
+    ioqueue_wakeup_notify(ioqueue);
 
     return PJ_SUCCESS;
 }

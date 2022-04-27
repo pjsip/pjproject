@@ -682,6 +682,21 @@
 #   define PJ_IOQUEUE_MAX_HANDLES	(64)
 #endif
 
+/**
+ *
+ * When add new socket to ioqueue, poll maybe blocked waiting,
+ * new socket's events can't be real-time caught.
+ *
+ * Wakeup mechanism will make ioqueue exit poll blocked waiting state
+ * immediately, to poll sockets event again, which make it less delay for newly
+ * added socket.
+ *
+ * Default: 0
+ */
+
+#ifndef PJ_IOQUEUE_HAS_WAKEUP
+#   define PJ_IOQUEUE_HAS_WAKEUP 	0
+#endif
 
 /**
  * If PJ_IOQUEUE_HAS_SAFE_UNREG macro is defined, then ioqueue will do more

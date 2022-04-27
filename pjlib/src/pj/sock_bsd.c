@@ -905,4 +905,75 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 }
 #endif	/* PJ_HAS_TCP */
 
+#if defined(PJ_WIN32) || defined(PJ_WIN64)
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2])
+{
+    int status;
+    pj_sock_t rfd = PJ_INVALID_SOCKET;
+    pj_sock_t wfd = PJ_INVALID_SOCKET;
+    pj_sockaddr rsa;
+    int rsalen = sizeof(rsa);
+    pj_str_t loop_back = pj_str("127.0.0.1");
 
+    PJ_ASSERT_RETURN(family == pj_AF_UNIX(), PJ_EINVAL);
+
+    /* create read ,write socket */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &rfd);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &wfd);
+    if (status != PJ_SUCCESS)
+	goto err_line;
+
+    /* read socket bind and get address */
+    pj_sockaddr_init(pj_AF_INET(), &rsa, &loop_back, 0);
+    status = pj_sock_bind(rfd, &rsa, rsalen);
+    if (status != PJ_SUCCESS)
+	goto err_line;
+
+    status = pj_sock_getsockname(rfd, &rsa, &rsalen);
+    if (status != PJ_SUCCESS)
+	goto err_line;
+
+    /* Write socket connect to read socket */
+    status = pj_sock_connect(wfd, &rsa, rsalen);
+    if (status != PJ_SUCCESS)
+	goto err_line;
+
+    sv[0] = rfd;
+    sv[1] = wfd;
+    return PJ_SUCCESS;
+
+err_line:
+    if (rfd != PJ_INVALID_SOCKET)
+	pj_sock_close(rfd);
+    if (wfd != PJ_INVALID_SOCKET)
+	pj_sock_close(wfd);
+    return status;
+}
+
+#else
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2])
+{
+    int status;
+    int tmp_sv[2];
+
+    PJ_ASSERT_RETURN(family == pj_AF_UNIX(), PJ_EINVAL);
+
+    status = socketpair(family, type, protocol, tmp_sv);
+    if (status != PJ_SUCCESS) {
+	status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+	tmp_sv[0] = tmp_sv[1] = PJ_INVALID_SOCKET;
+    }
+    sv[0] = tmp_sv[0];
+    sv[1] = tmp_sv[1];
+    return status;
+}
+#endif

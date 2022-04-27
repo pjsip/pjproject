@@ -212,6 +212,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioq )
     return ioqueue_destroy(ioq);
 }
 
+/*
+ * Wakeup ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_wakeup(pj_ioqueue_t *ioq )
+{
+    PJ_UNUSED_ARG(ioq);
+    return PJ_SUCCESS;
+}
 
 /*
  * Register a socket to the I/O queue framework. 

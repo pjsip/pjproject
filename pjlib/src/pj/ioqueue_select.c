@@ -206,7 +206,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     /* Create and init common ioqueue stuffs */
     ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
-    ioqueue_init(ioqueue);
+    ioqueue_init(ioqueue, pool);
 
     ioqueue->max = (unsigned)max_fd;
     ioqueue->count = 0;
@@ -268,6 +268,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     if (rc != PJ_SUCCESS)
         return rc;
 
+    /* wakeup init */
+    rc = ioqueue_wakeup_init(ioqueue);
+    if (rc != PJ_SUCCESS) {
+	ioqueue_wakeup_deinit(ioqueue);
+    }
+
     PJ_LOG(4, ("pjlib", "select() I/O Queue created (%p)", ioqueue));
 
     *p_ioqueue = ioqueue;
@@ -311,6 +317,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
 #endif
 
     return ioqueue_destroy(ioqueue);
+}
+
+/*
+ * pj_ioqueue_wakeup()
+ *
+ * Wakeup ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_wakeup(pj_ioqueue_t *ioqueue)
+{
+    return ioqueue_wakeup_notify(ioqueue);
 }
 
 
@@ -404,6 +420,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Rescan fdset to get max descriptor */
     rescan_fdset(ioqueue);
+
+    /* wakeup ioqueue */
+    ioqueue_wakeup_notify(ioqueue);
 
 on_return:
     /* On error, socket may be left in non-blocking mode. */
@@ -569,6 +588,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_lock_destroy(key->lock);
 #endif
+
+    /* wakeup ioqueue */
+    ioqueue_wakeup_notify(ioqueue);
 
     return PJ_SUCCESS;
 }

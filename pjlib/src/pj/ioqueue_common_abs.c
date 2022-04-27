@@ -30,8 +30,116 @@
 
 #define PENDING_RETRY	2
 
-static void ioqueue_init( pj_ioqueue_t *ioqueue )
+#if PJ_IOQUEUE_HAS_WAKEUP
+
+//#define TRACE_WAKEUP(expr) PJ_LOG(3,expr)
+#define TRACE_WAKEUP(expr)
+
+static void wakeup_on_read_complete(pj_ioqueue_key_t *key,
+				    pj_ioqueue_op_key_t *op_key,
+				    pj_ssize_t bytes_read)
 {
+    pj_status_t status;
+    pj_ioqueue_t *ioqueue = (pj_ioqueue_t *)pj_ioqueue_get_user_data(key);
+    do {
+	if (bytes_read > 0) {
+	    TRACE_WAKEUP((THIS_FILE, "Hanle wakeup event"));
+	} else if (bytes_read != -PJ_EPENDING &&
+		   bytes_read != -PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
+	    return;
+	}
+	bytes_read = 1;
+	status =
+	    pj_ioqueue_recv(key, op_key, ioqueue->wakeup_buf, &bytes_read, 0);
+
+	if (status != PJ_EPENDING && status != PJ_SUCCESS)
+	    bytes_read = -status;
+
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+}
+
+static pj_status_t ioqueue_wakeup_init(pj_ioqueue_t *ioqueue)
+{
+    pj_status_t rc;
+    pj_pool_t *pool = ioqueue->pool;
+    pj_ioqueue_callback cb;
+    pj_ioqueue_key_t *read_key;
+    pj_ioqueue_op_key_t *read_op;
+
+    /* init fds */
+    ioqueue->wakeup_fd[0] = ioqueue->wakeup_fd[1] = PJ_INVALID_SOCKET;
+
+    /* create socket pair */
+    rc = pj_sock_socketpair(pj_AF_UNIX(), pj_SOCK_DGRAM(), 0,
+			    ioqueue->wakeup_fd);
+    if (rc != PJ_SUCCESS) {
+	PJ_LOG(1, (THIS_FILE, "socketpair error: %d", rc));
+	return rc;
+    }
+
+    /* Add read fd: wakeup_fd[0] to ioqueue */
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_read_complete = wakeup_on_read_complete;
+    rc = pj_ioqueue_register_sock(pool, ioqueue, ioqueue->wakeup_fd[0],
+                                  ioqueue, &cb, &read_key);
+    if (rc != PJ_SUCCESS)
+	return rc;
+
+    /* start read */
+    read_op = PJ_POOL_ZALLOC_T(pool, pj_ioqueue_op_key_t);
+    wakeup_on_read_complete(read_key, read_op, -PJ_EPENDING);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t ioqueue_wakeup_deinit(pj_ioqueue_t *ioqueue)
+{
+    if (ioqueue->wakeup_fd[0] != PJ_INVALID_SOCKET) {
+	pj_sock_close(ioqueue->wakeup_fd[0]);
+	ioqueue->wakeup_fd[0] = PJ_INVALID_SOCKET;
+    }
+
+    if (ioqueue->wakeup_fd[1] != PJ_INVALID_SOCKET) {
+	pj_sock_close(ioqueue->wakeup_fd[1]);
+	ioqueue->wakeup_fd[1] = PJ_INVALID_SOCKET;
+    }
+    return PJ_SUCCESS;
+}
+
+static pj_status_t ioqueue_wakeup_notify(pj_ioqueue_t *ioqueue)
+{
+    pj_ssize_t len = 1;
+    PJ_ASSERT_RETURN(ioqueue->wakeup_fd[1] != PJ_INVALID_SOCKET,
+		     PJ_EINVALIDOP);
+    if (ioqueue->wakeup_fd[1] == PJ_INVALID_SOCKET)
+	return PJ_EINVALIDOP;
+
+    pj_sock_send(ioqueue->wakeup_fd[1], "X", &len, 0);
+    return PJ_SUCCESS;
+}
+#else
+static pj_status_t ioqueue_wakeup_init(pj_ioqueue_t *ioqueue)
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t ioqueue_wakeup_deinit(pj_ioqueue_t *ioqueue)
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return PJ_SUCCESS;
+}
+
+static pj_status_t ioqueue_wakeup_notify(pj_ioqueue_t *ioqueue)
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return PJ_SUCCESS;
+}
+#endif
+
+static void ioqueue_init( pj_ioqueue_t *ioqueue, pj_pool_t *pool)
+{
+    ioqueue->pool = pool;
     ioqueue->lock = NULL;
     ioqueue->auto_delete_lock = 0;
     ioqueue->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
@@ -39,6 +147,9 @@ static void ioqueue_init( pj_ioqueue_t *ioqueue )
 
 static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
 {
+    /* wakeup deinit */
+    ioqueue_wakeup_deinit(ioqueue);
+
     if (ioqueue->auto_delete_lock && ioqueue->lock ) {
 	pj_lock_release(ioqueue->lock);
         return pj_lock_destroy(ioqueue->lock);

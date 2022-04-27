@@ -1529,6 +1529,27 @@ PJ_DECL(char *) pj_addr_str_print( const pj_str_t *host_str, int port,
 
 
 /**
+ * Create socket pair
+ * @param family    Specifies a communication domain; this selects the
+ *		    protocol family which will be used for communication.
+ * @param type	    The socket has the indicated type, which specifies the 
+ *		    communication semantics.
+ * @param protocol  Specifies  a  particular  protocol  to  be used with the
+ *		    socket.  Normally only a single protocol exists to support 
+ *		    a particular socket  type  within  a given protocol family, 
+ *		    in which a case protocol can be specified as 0.
+ * @param sv	    The new sockets vector
+ *
+ * @return	    Zero on success.
+ *
+ */
+PJ_DECL(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2]);
+
+
+/**
  * @}
  */
 
