@@ -345,7 +345,7 @@ static int PJ_THREAD_FUNC worker_proc(void *arg)
     pjmedia_endpt *endpt = (pjmedia_endpt*) arg;
 
     while (!endpt->quit_flag) {
-	pj_time_val timeout = { 0, 500 };
+	pj_time_val timeout = { 0, 10 };
 	pj_ioqueue_poll(endpt->ioqueue, &timeout);
     }
 
