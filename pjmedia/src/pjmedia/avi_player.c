@@ -334,7 +334,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     /* Skip any JUNK or LIST INFO until we get MOVI tag */
     do {
         pjmedia_avi_subchunk ch;
-        pj_uint32_t read = 0;
+        int read = 0;
         pj_off_t size_to_read;
 
         status = file_read(fport[0]->fd, &ch, sizeof(pjmedia_avi_subchunk));
@@ -354,7 +354,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 break;
         }
 
-        if (ch.len < read) {
+        if (ch.len < (pj_uint32_t)read) {
             status = PJ_EINVAL;
             goto on_error;
         }
