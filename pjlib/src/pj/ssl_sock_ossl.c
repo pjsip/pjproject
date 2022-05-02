@@ -2351,7 +2351,7 @@ static pj_status_t ssl_read(pj_ssl_sock_t *ssock, void *data, int *size)
 	/* SSL might just return SSL_ERROR_WANT_READ in 
 	 * re-negotiation.
 	 */
-	if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ) {
+	if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ && err != SSL_ERROR_ZERO_RETURN) {
 	    if (err == SSL_ERROR_SYSCALL && size_ == -1 &&
 		ERR_peek_error() == 0 && errno == 0)
 	    {
@@ -2392,7 +2392,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock, const void *data,
 	 */
 	int err;
 	err = SSL_get_error(ossock->ossl_ssl, *nwritten);
-	if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_NONE) {
+	if (err == SSL_ERROR_WANT_READ || err == SSL_ERROR_NONE || err == SSL_ERROR_ZERO_RETURN) {
 	    status = PJ_EEOF;
 	} else {
 	    /* Some problem occured */

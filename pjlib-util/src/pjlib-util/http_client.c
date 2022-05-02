@@ -19,6 +19,7 @@
 
 #include <pjlib-util/http_client.h>
 #include <pj/activesock.h>
+#include <pj/ssl_sock.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
 #include <pj/errno.h>
@@ -76,13 +77,15 @@ static const unsigned int http_default_port[NUM_PROTOCOL] =
 enum http_method
 {
     HTTP_GET,
+    HTTP_POST,
     HTTP_PUT,
     HTTP_DELETE
 };
 
-static const char *http_method_names[3] =
+static const char *http_method_names[4] =
 {
     "GET",
+    "POST",
     "PUT",
     "DELETE"
 };
@@ -117,7 +120,11 @@ struct pj_http_req
     pj_timer_heap_t         *timer;     /* Timer for timeout management */
     pj_ioqueue_t            *ioqueue;   /* Ioqueue to use */
     pj_http_req_callback    cb;         /* Callbacks */
+    pj_bool_t               ssl;        /* Whether to use SSL */
     pj_activesock_t         *asock;     /* Active socket */
+#if PJ_HAS_SSL_SOCK
+    pj_ssl_sock_t           *sslsock;   /* SSL socket */
+#endif
     pj_status_t             error;      /* Error status */
     pj_str_t                buffer;     /* Buffer to send/receive msgs */
     enum http_state         state;      /* State of the HTTP request */
@@ -173,21 +180,6 @@ static pj_uint16_t get_http_default_port(const pj_str_t *protocol)
     return 0;
 }
 
-static const char * get_protocol(const pj_str_t *protocol)
-{
-    int i;
-
-    for (i = 0; i < NUM_PROTOCOL; i++) {
-        if (!pj_stricmp2(protocol, http_protocol_names[i])) {
-            return http_protocol_names[i];
-        }
-    }
-
-    /* Should not happen */
-    pj_assert(0);
-    return NULL;
-}
-
 
 /* Syntax error handler for parser. */
 static void on_syntax_error(pj_scanner *scanner)
@@ -197,11 +189,9 @@ static void on_syntax_error(pj_scanner *scanner)
 }
 
 /* Callback when connection is established to the server */
-static pj_bool_t http_on_connect(pj_activesock_t *asock,
+static pj_bool_t http_on_connect(pj_http_req *hreq,
 				 pj_status_t status)
 {
-    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
-
     if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
@@ -217,12 +207,28 @@ static pj_bool_t http_on_connect(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
-static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
- 				   pj_ioqueue_op_key_t *op_key,
-				   pj_ssize_t sent)
+/* Callback when connection is established to the server (non-SSL) */
+static pj_bool_t http_on_connect_sock(pj_activesock_t *asock,
+				 pj_status_t status)
 {
     pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    return http_on_connect(hreq, status);
+}
 
+#if PJ_HAS_SSL_SOCK
+/* Callback when connection is established to the server (SSL) */
+static pj_bool_t http_on_connect_ssl(pj_ssl_sock_t *sslsock,
+				 pj_status_t status)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_ssl_sock_get_user_data(sslsock);
+    return http_on_connect(hreq, status);
+}
+#endif
+
+static pj_bool_t http_on_data_sent(pj_http_req *hreq,
+				   pj_ioqueue_op_key_t *op_key,
+				   pj_ssize_t sent)
+{
     PJ_UNUSED_ARG(op_key);
 
     if (hreq->state == ABORTING || hreq->state == IDLE)
@@ -289,14 +295,30 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
-static pj_bool_t http_on_data_read(pj_activesock_t *asock,
+static pj_bool_t http_on_data_sent_sock(pj_activesock_t *asock,
+				   pj_ioqueue_op_key_t *op_key,
+				   pj_ssize_t sent)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    return http_on_data_sent(hreq, op_key, sent);
+}
+
+#if PJ_HAS_SSL_SOCK
+static pj_bool_t http_on_data_sent_ssl(pj_ssl_sock_t *sslsock,
+				   pj_ioqueue_op_key_t *op_key,
+				   pj_ssize_t sent)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_ssl_sock_get_user_data(sslsock);
+    return http_on_data_sent(hreq, op_key, sent);
+}
+#endif
+
+static pj_bool_t http_on_data_read(pj_http_req *hreq,
 				  void *data,
 				  pj_size_t size,
 				  pj_status_t status,
 				  pj_size_t *remainder)
 {
-    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
-
     TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
     if (hreq->state == ABORTING || hreq->state == IDLE)
@@ -396,7 +418,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
             hreq->response.size = 0;
 
 	    if (rem > 0 || hreq->response.content_length == 0)
-		return http_on_data_read(asock, (rem == 0 ? NULL:
+		return http_on_data_read(hreq, (rem == 0 ? NULL:
 		   	                 (char *)data + size - rem),
 				         rem, PJ_SUCCESS, NULL);
         }
@@ -476,6 +498,28 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
     
     return PJ_TRUE;
 }
+
+static pj_bool_t http_on_data_read_sock(pj_activesock_t *asock,
+				  void *data,
+				  pj_size_t size,
+				  pj_status_t status,
+				  pj_size_t *remainder)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
+    return http_on_data_read(hreq, data, size, status, remainder);
+}
+
+#if PJ_HAS_SSL_SOCK
+static pj_bool_t http_on_data_read_ssl(pj_ssl_sock_t *sslsock,
+				  void *data,
+				  pj_size_t size,
+				  pj_status_t status,
+				  pj_size_t *remainder)
+{
+    pj_http_req *hreq = (pj_http_req*) pj_ssl_sock_get_user_data(sslsock);
+    return http_on_data_read(hreq, data, size, status, remainder);
+}
+#endif
 
 /* Callback to be called when query has timed out */
 static void on_timeout( pj_timer_heap_t *timer_heap,
@@ -820,9 +864,11 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
         if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTP])) {
             pj_strset2(&hurl->protocol,
         	       (char*)http_protocol_names[PROTOCOL_HTTP]);
+#if PJ_HAS_SSL_SOCK
         } else if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTPS])) {
             pj_strset2(&hurl->protocol,
 		       (char*)http_protocol_names[PROTOCOL_HTTPS]);
+#endif
         } else {
             PJ_THROW(PJ_ENOTSUP); // unsupported protocol
         }
@@ -915,6 +961,9 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
     hreq->ioqueue = ioqueue;
     hreq->timer = timer;
     hreq->asock = NULL;
+#if PJ_HAS_SSL_SOCK
+    hreq->sslsock = NULL;
+#endif
     pj_memcpy(&hreq->cb, hcb, sizeof(*hcb));
     hreq->state = IDLE;
     hreq->resolved = PJ_FALSE;
@@ -1007,39 +1056,12 @@ PJ_DEF(void*) pj_http_req_get_user_data(pj_http_req *http_req)
     return http_req->param.user_data;
 }
 
-static pj_status_t start_http_req(pj_http_req *http_req,
-                                  pj_bool_t notify_on_fail)
+static pj_status_t create_socket(pj_http_req *http_req)
 {
+    int retry = 0;
     pj_sock_t sock = PJ_INVALID_SOCKET;
     pj_status_t status;
     pj_activesock_cb asock_cb;
-    int retry = 0;
-
-    PJ_ASSERT_RETURN(http_req, PJ_EINVAL);
-    /* Http request is not idle, a request was initiated before and 
-     * is still in progress
-     */
-    PJ_ASSERT_RETURN(http_req->state == IDLE, PJ_EBUSY);
-
-    /* Reset few things to make sure restarting works */
-    http_req->error = 0;
-    http_req->response.headers.count = 0;
-    pj_bzero(&http_req->tcp_state, sizeof(http_req->tcp_state));
-
-    if (!http_req->resolved) {
-        /* Resolve the Internet address of the host */
-        status = pj_sockaddr_init(http_req->param.addr_family, 
-                                  &http_req->addr, &http_req->hurl.host,
-				  http_req->hurl.port);
-	if (status != PJ_SUCCESS ||
-	    !pj_sockaddr_has_addr(&http_req->addr) ||
-	    (http_req->param.addr_family==pj_AF_INET() &&
-	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE))
-	{
-	    goto on_return;
-        }
-        http_req->resolved = PJ_TRUE;
-    }
 
     status = pj_sock_socket(http_req->param.addr_family, pj_SOCK_STREAM(), 
                             0, &sock);
@@ -1047,9 +1069,9 @@ static pj_status_t start_http_req(pj_http_req *http_req,
         goto on_return; // error creating socket
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
-    asock_cb.on_data_read = &http_on_data_read;
-    asock_cb.on_data_sent = &http_on_data_sent;
-    asock_cb.on_connect_complete = &http_on_connect;
+    asock_cb.on_data_read = &http_on_data_read_sock;
+    asock_cb.on_data_sent = &http_on_data_sent_sock;
+    asock_cb.on_connect_complete = &http_on_connect_sock;
 	
     do
     {
@@ -1087,6 +1109,81 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 	goto on_return; // error creating activesock
     }
 
+on_return:
+    return status;
+}
+
+#if PJ_HAS_SSL_SOCK
+static pj_status_t create_ssl_socket(pj_http_req *http_req)
+{
+    pj_status_t status;
+    pj_ssl_sock_param param;
+
+    pj_ssl_sock_param_default(&param);
+
+    param.sock_af = http_req->param.addr_family;
+    param.sock_type = pj_SOCK_STREAM();
+    param.ioqueue = http_req->ioqueue;
+    param.timer_heap = http_req->timer;
+    param.user_data = http_req;
+    param.cb.on_data_read = &http_on_data_read_ssl;
+    param.cb.on_data_sent = &http_on_data_sent_ssl;
+    param.cb.on_connect_complete = &http_on_connect_ssl;
+
+    status = pj_ssl_sock_create(http_req->pool, &param, &http_req->sslsock);
+
+    return status;
+}
+#endif
+
+static pj_status_t start_http_req(pj_http_req *http_req,
+                                  pj_bool_t notify_on_fail)
+{
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(http_req, PJ_EINVAL);
+    /* Http request is not idle, a request was initiated before and
+     * is still in progress
+     */
+    PJ_ASSERT_RETURN(http_req->state == IDLE, PJ_EBUSY);
+
+    /* Reset few things to make sure restarting works */
+    http_req->error = 0;
+    http_req->response.headers.count = 0;
+    pj_bzero(&http_req->tcp_state, sizeof(http_req->tcp_state));
+
+    if (!http_req->resolved) {
+        /* Resolve the Internet address of the host */
+        status = pj_sockaddr_init(http_req->param.addr_family,
+                                  &http_req->addr, &http_req->hurl.host,
+                                  http_req->hurl.port);
+	if (status != PJ_SUCCESS ||
+	    !pj_sockaddr_has_addr(&http_req->addr) ||
+	    (http_req->param.addr_family==pj_AF_INET() &&
+	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE))
+	{
+	    goto on_return;
+        }
+        http_req->resolved = PJ_TRUE;
+    }
+
+    if (!pj_stricmp2(&http_req->hurl.protocol,
+		     http_protocol_names[PROTOCOL_HTTPS])) {
+#if PJ_HAS_SSL_SOCK
+	http_req->ssl = PJ_TRUE;
+	status = create_ssl_socket(http_req);
+#else
+	PJ_LOG(1, (THIS_FILE, "No SSL support"));
+	status = PJ_ENOTSUP;
+#endif
+    } else {
+	status = create_socket(http_req);
+    }
+
+    if (status != PJ_SUCCESS) {
+	goto on_return; // error creating socket
+    }
+
     /* Schedule timeout timer for the request */
     pj_assert(http_req->timer_entry.id == 0);
     http_req->timer_entry.id = 1;
@@ -1099,9 +1196,30 @@ static pj_status_t start_http_req(pj_http_req *http_req,
 
     /* Connect to host */
     http_req->state = CONNECTING;
-    status = pj_activesock_start_connect(http_req->asock, http_req->pool, 
-                                         (pj_sock_t *)&(http_req->addr), 
-                                         pj_sockaddr_get_len(&http_req->addr));
+#if PJ_HAS_SSL_SOCK
+    if (http_req->ssl) {
+        pj_ssl_start_connect_param param;
+
+        param.pool = http_req->pool;
+
+	pj_sockaddr_in bound_addr;
+	pj_sockaddr_in_init(&bound_addr, NULL,
+			    http_req->param.source_port_range_start);
+        param.localaddr = &bound_addr;
+        param.local_port_range = http_req->param.source_port_range_size;
+
+	param.remaddr = &http_req->addr;
+        param.addr_len = pj_sockaddr_get_len(&http_req->addr);
+
+        status = pj_ssl_sock_start_connect2(http_req->sslsock, &param);
+    } else {
+#endif
+        status = pj_activesock_start_connect(http_req->asock, http_req->pool,
+                                             (pj_sock_t *)&(http_req->addr),
+                                             pj_sockaddr_get_len(&http_req->addr));
+#if PJ_HAS_SSL_SOCK
+    }
+#endif
     if (status == PJ_SUCCESS) {
         http_req->state = SENDING_REQUEST;
         status =  http_req_start_sending(http_req);
@@ -1529,10 +1647,9 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
         pj_strassign(&pkt, &hreq->buffer);
         pkt.slen = 0;
         /* Start-line */
-        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s %.*s %s/%.*s\r\n",
+        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s %.*s HTTP/%.*s\r\n",
                      STR_PREC(hreq->param.method), 
                      STR_PREC(hreq->hurl.path),
-                     get_protocol(&hreq->hurl.protocol), 
                      STR_PREC(hreq->param.version));
         /* Header field "Host" */
         str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s:%d\r\n",
@@ -1572,11 +1689,21 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
     pj_ioqueue_op_key_init(&hreq->op_key, sizeof(hreq->op_key));
     hreq->tcp_state.send_size = len;
     hreq->tcp_state.current_send_size = 0;
-    status = pj_activesock_send(hreq->asock, &hreq->op_key, 
-                                pkt.ptr, &len, 0);
+
+#if PJ_HAS_SSL_SOCK
+    if (hreq->ssl) {
+        status = pj_ssl_sock_send(hreq->sslsock, &hreq->op_key,
+                                    pkt.ptr, &len, 0);
+    } else {
+#endif
+        status = pj_activesock_send(hreq->asock, &hreq->op_key,
+                                    pkt.ptr, &len, 0);
+#if PJ_HAS_SSL_SOCK
+    }
+#endif
 
     if (status == PJ_SUCCESS) {
-        http_on_data_sent(hreq->asock, &hreq->op_key, len);
+        http_on_data_sent(hreq, &hreq->op_key, len);
     } else if (status != PJ_EPENDING) {
         goto on_return; // error sending data
     }
@@ -1598,8 +1725,17 @@ static pj_status_t http_req_start_reading(pj_http_req *hreq)
     hreq->state = READING_RESPONSE;
     hreq->tcp_state.current_read_size = 0;
     pj_assert(hreq->buffer.ptr);
-    status = pj_activesock_start_read2(hreq->asock, hreq->pool, BUF_SIZE, 
-                                       (void**)&hreq->buffer.ptr, 0);
+#if PJ_HAS_SSL_SOCK
+    if (hreq->ssl) {
+        status = pj_ssl_sock_start_read2(hreq->sslsock, hreq->pool, BUF_SIZE,
+                                           (void**)&hreq->buffer.ptr, 0);
+    } else {
+#endif
+        status = pj_activesock_start_read2(hreq->asock, hreq->pool, BUF_SIZE,
+                                           (void**)&hreq->buffer.ptr, 0);
+#if PJ_HAS_SSL_SOCK
+    }
+#endif
     if (status != PJ_SUCCESS) {
         /* Error reading */
         http_req_end_request(hreq);
@@ -1615,6 +1751,13 @@ static pj_status_t http_req_end_request(pj_http_req *hreq)
 	pj_activesock_close(hreq->asock);
         hreq->asock = NULL;
     }
+
+#if PJ_HAS_SSL_SOCK
+    if (hreq->sslsock) {
+	pj_ssl_sock_close(hreq->sslsock);
+        hreq->sslsock = NULL;
+    }
+#endif
 
     /* Cancel query timeout timer. */
     if (hreq->timer_entry.id != 0) {
