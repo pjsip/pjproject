@@ -664,9 +664,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_pli(
     pjmedia_rtcp_fb_common *hdr = (pjmedia_rtcp_fb_common*) buf;
 
     PJ_ASSERT_RETURN(buf, PJ_EINVAL);
-
-    if (length < 12)
-    	return PJ_ETOOSMALL;
+    PJ_ASSERT_RETURN(length >= sizeof(pjmedia_rtcp_fb_common), PJ_ETOOSMALL);
 
     /* PLI uses pt==RTCP_PSFB and FMT==1 */
     if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 1)
@@ -696,6 +694,12 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_fb_parse_sli(
     /* PLI uses pt==RTCP_PSFB and FMT==2 */
     if (hdr->rtcp_common.pt != RTCP_PSFB || hdr->rtcp_common.count != 2)
 	return PJ_ENOTFOUND;
+
+    if (hdr->rtcp_common.length < 3) {    
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
+                      "Failed parsing FB SLI, invalid header length"));
+	return PJ_ETOOSMALL;
+    }
 
     cnt = pj_ntohs((pj_uint16_t)hdr->rtcp_common.length) - 2;
     if (length < (cnt+3)*4)

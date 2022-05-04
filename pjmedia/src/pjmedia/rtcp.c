@@ -803,6 +803,12 @@ static void parse_rtcp_fb(pjmedia_rtcp_session *sess,
     pjmedia_event ev;
     pj_timestamp ts_now;
 
+    if (size < sizeof(pjmedia_rtcp_fb_common)) {
+        PJ_PERROR(3, (THIS_FILE, PJ_ETOOSMALL,
+                      "Failed parsing RTCP FB, invalid packet length"));
+	return;
+    }    
+
     pj_get_timestamp(&ts_now);
 
     if (pjmedia_rtcp_fb_parse_nack(pkt, size, &cnt, nack)==PJ_SUCCESS)
