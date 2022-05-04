@@ -2201,6 +2201,19 @@ AC_ARG_ENABLE(bcg729,
 	      ])
 		  
 
+dnl # Include libsrtp
+AC_SUBST(ac_no_srtp)
+AC_ARG_ENABLE(libsrtp,
+	      AS_HELP_STRING([--disable-libsrtp],
+			     [Exclude libsrtp in the build]),
+	      [if test "$enable_libsrtp" = "no"; then
+		[ac_no_srtp=1]
+		CFLAGS="$CFLAGS -DPJMEDIA_HAS_SRTP=0"
+		AC_MSG_RESULT([Checking if libsrtp is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if libsrtp is disabled...no]))
+
+
 dnl # Include libyuv
 AC_SUBST(ac_no_yuv)
 AC_ARG_ENABLE(libyuv,
