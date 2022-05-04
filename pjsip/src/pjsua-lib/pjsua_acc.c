@@ -2512,6 +2512,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
      * considered to be recoverable in relatively short term.
      */
     if (acc->cfg.reg_retry_interval && 
+	acc->ip_change_op != PJSUA_IP_CHANGE_OP_ACC_UPDATE_CONTACT &&
 	(param->code == PJSIP_SC_REQUEST_TIMEOUT ||
 	 param->code == PJSIP_SC_INTERNAL_SERVER_ERROR ||
 	 param->code == PJSIP_SC_BAD_GATEWAY ||
@@ -2564,19 +2565,18 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 			   pjsua_var.acc[acc->index].cfg.id.ptr));
 
 		status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
-		if ((status != PJ_SUCCESS) &&
-		    pjsua_var.ua_cfg.cb.on_ip_change_progress)
-		{
-		    pjsua_ip_change_op_info ip_chg_info;
+		if (status != PJ_SUCCESS) {
+		    if (pjsua_var.ua_cfg.cb.on_ip_change_progress) {
+			pjsua_ip_change_op_info ip_chg_info;
 
-		    pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
-		    ip_chg_info.acc_update_contact.acc_id = acc->index;
-		    ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
-		    (*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
+			pj_bzero(&ip_chg_info, sizeof(ip_chg_info));
+			ip_chg_info.acc_update_contact.acc_id = acc->index;
+			ip_chg_info.acc_update_contact.is_register = PJ_TRUE;
+			(*pjsua_var.ua_cfg.cb.on_ip_change_progress)(
 							    acc->ip_change_op,
 							    status,
 							    &ip_chg_info);
-
+		    }
 		    pjsua_acc_end_ip_change(acc);
 		}
 	    } else {
