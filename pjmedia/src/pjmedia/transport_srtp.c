@@ -1087,6 +1087,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 		   "Failed to dealloc TX SRTP context: %s",
 		   get_libsrtp_errstr(err)));
     }
+    p_srtp->srtp_rx_ctx = NULL;
+    p_srtp->srtp_tx_ctx = NULL;
 
     p_srtp->session_inited = PJ_FALSE;
     pj_bzero(&p_srtp->rx_policy, sizeof(p_srtp->rx_policy));
