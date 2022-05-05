@@ -109,7 +109,7 @@ struct pjsip_inv_on_rx_offer_cb_param
 
 /**
  * This structure contains callbacks to be registered by application to 
- * receieve notifications from the framework about various events in
+ * receive notifications from the framework about various events in
  * the invite session.
  */
 typedef struct pjsip_inv_callback
