@@ -346,11 +346,15 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         {
             read = 4;
             status = file_read(fport[0]->fd, &ch, read);
+	    if (status != PJ_SUCCESS) {
+		goto on_error;
+	    }
+
             if (COMPARE_TAG(ch.id, PJMEDIA_AVI_MOVI_TAG))
                 break;
         }
 
-        if (ch.len < read) {
+        if (ch.len < (pj_uint32_t)read) {
             status = PJ_EINVAL;
             goto on_error;
         }
