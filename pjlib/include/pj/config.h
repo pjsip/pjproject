@@ -1402,7 +1402,7 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MINOR	12
 
 /** PJLIB version revision number. */
-#define PJ_VERSION_NUM_REV      0
+#define PJ_VERSION_NUM_REV      1
 
 /**
  * Extra suffix for the version (e.g. "-trunk"), or empty for
