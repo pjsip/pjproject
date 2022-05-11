@@ -3947,7 +3947,8 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	    if (acc->contact.slen < tmp_contact.slen) {
 		pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
 	    } else {
-		pj_strcpy(&acc->contact, &tmp_contact);
+		pj_strncpy_with_null(&acc->contact, &tmp_contact, 
+				     PJSIP_MAX_URL_SIZE);
 	    }
 	    update_regc_contact(acc);
 	    if (acc->regc)
