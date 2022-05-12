@@ -95,6 +95,7 @@ struct tls_transport
     pj_ssl_sock_t	    *ssock;
     pj_bool_t		     has_pending_connect;
     pj_bool_t		     verify_server;
+    pj_bool_t		     allow_wildcard_certs;
 
     /* Keep-alive timer. */
     pj_timer_entry	     ka_timer;
@@ -833,6 +834,8 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls = PJ_POOL_ZALLOC_T(pool, struct tls_transport);
     tls->is_server = is_server;
     tls->verify_server = listener->tls_setting.verify_server;
+
+    tls->allow_wildcard_certs = listener->tls_setting.allow_wildcard_certs;
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
 
@@ -1818,6 +1821,52 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
     return PJ_TRUE;
 }
 
+/*
+ * Validate a remote name against a given cert name
+ *
+ * If configured, also check for a wildcard match. Note, only validate full
+ * wildcard cert names matched against a single level of a subdomain, e.g.
+ *
+ *   *.example.com
+ *
+ * Will match against "bar.example.com", but not "foo.bar.example.com"
+ *
+ * No partial, or embedded wildcards allowed, e.g.
+ *
+ *   f*.example.com
+ *   foo.*.com
+ */
+static int validate_cert_name(const struct tls_transport *tls,
+	const pj_str_t *cert_name, const pj_str_t *remote_name)
+{
+	const char *p;
+	pj_ssize_t size;
+
+	if (!pj_stricmp(cert_name, remote_name)) {
+		return 1;
+	}
+
+	if (pj_strnicmp2(cert_name, "*.", 2)) {
+		return 0;
+	}
+
+	if (!tls->allow_wildcard_certs) {
+		PJ_LOG(1,(tls->base.obj_name,
+			"RFC 5922 (section 7.2) does not allow TLS wildcard "
+			"certificates. Advise your SIP provider, please!"));
+		return 0;
+	}
+
+	p = pj_strchr(remote_name, '.');
+	if (!p) {
+		return 0;
+	}
+
+	size = pj_strbuf(remote_name) + pj_strlen(remote_name) - ++p;
+
+	return size == pj_strlen(cert_name) - 2 ?
+		!pj_memcmp(pj_strbuf(cert_name) + 2,  p, size) : 0;
+}
 
 /* 
  * Callback from ioqueue when asynchronous connect() operation completes.
@@ -1909,6 +1958,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
 	    switch (serv_cert->subj_alt_name.entry[i].type) {
 	    case PJ_SSL_CERT_NAME_DNS:
+		matched = validate_cert_name(tls, cert_name, remote_name);
+		break;
 	    case PJ_SSL_CERT_NAME_IP:
 		matched = !pj_stricmp(remote_name, cert_name);
 		break;
@@ -1934,15 +1985,10 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	 * certificate, try with Common Name of Subject field.
 	 */
 	if (!matched) {
-	    matched = !pj_stricmp(remote_name, &serv_cert->subject.cn);
+	    matched = validate_cert_name(tls, &serv_cert->subject.cn, remote_name);
 	}
 
 	if (!matched) {
-	    if (pj_strnicmp2(&serv_cert->subject.cn, "*.", 2) == 0) {
-		PJ_LOG(1,(tls->base.obj_name,
-		    "RFC 5922 (section 7.2) does not allow TLS wildcard "
-			"certificates. Advise your SIP provider, please!"));
-	    }
 	    ssl_info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
 	}
     }

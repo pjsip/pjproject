@@ -269,6 +269,18 @@ typedef struct pjsip_tls_setting
     pj_str_t		entropy_path;
 
     /**
+     * Specifies whether or not to allow a certificate to be verified against
+     * names that start with a wildcard, i.e. '*.'.
+     * - If \allow_wildcard_certs is disabled (set to PJ_FALSE), then in accordance
+     *   with RFC5922 wildcard verification is not done.
+     * - If \allow_wildcard_certs is enabled (set to PJ_TRUE), then noncompliant
+     *   with RFC5922 wildcard verification is permitted.
+     *
+     * Default value is PJ_FALSE.
+     */
+    pj_bool_t	allow_wildcard_certs;
+
+    /**
      * Specifies TLS transport behavior on the server TLS certificate 
      * verification result:
      * - If \a verify_server is disabled (set to PJ_FALSE), TLS transport 
