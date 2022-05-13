@@ -861,9 +861,11 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     /* Special case:
      * When epoll returns > 0 but no descriptors are actually set!
      */
+#if 0
     if (count > 0 && !event_cnt && msec > 0) {
-	pj_thread_sleep(msec);
+	pj_thread_sleep(msec); // Is this necessary?
     }
+#endif
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
 		       count, event_cnt, processed_cnt));

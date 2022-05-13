@@ -979,9 +979,13 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #endif
 	pj_lock_release(ioqueue->lock);
 	TRACE__((THIS_FILE, "     poll: no fd is set"));
-        if (timeout)
-            pj_thread_sleep(PJ_TIME_VAL_MSEC(*timeout));
-        return 0;
+	if (timeout) {
+	    int msec = PJ_TIME_VAL_MSEC(*timeout);
+	    if (msec > 10)
+		msec = 10; // Limit sleep value to avoid long time delay
+	    pj_thread_sleep(msec);
+	}
+	return 0;
     }
 
     /* Copy ioqueue's pj_fd_set_t to local variables. */
