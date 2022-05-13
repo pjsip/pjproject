@@ -677,14 +677,12 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     enum { MAX_EVENTS = PJ_IOQUEUE_MAX_CAND_EVENTS };
     struct epoll_event events[MAX_EVENTS];
     struct queue queue[MAX_EVENTS];
-    pj_timestamp t1, t2;
     
     PJ_CHECK_STACK();
 
     msec = timeout ? PJ_TIME_VAL_MSEC(*timeout) : 9000;
 
     TRACE_((THIS_FILE, "start os_epoll_wait, msec=%d", msec));
-    pj_get_timestamp(&t1);
  
     //count = os_epoll_wait( ioqueue->epfd, events, ioqueue->max, msec);
     count = os_epoll_wait( ioqueue->epfd, events, MAX_EVENTS, msec);
@@ -706,10 +704,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	TRACE_((THIS_FILE, "os_epoll_wait error"));
 	return -pj_get_netos_error();
     }
-
-    pj_get_timestamp(&t2);
-    TRACE_((THIS_FILE, "os_epoll_wait returns %d, time=%d usec",
-		       count, pj_elapsed_usec(&t1, &t2)));
 
     /* Lock ioqueue. */
     pj_lock_acquire(ioqueue->lock);
@@ -869,10 +863,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
 		       count, event_cnt, processed_cnt));
-
-    pj_get_timestamp(&t1);
-    TRACE_((THIS_FILE, "ioqueue_poll() returns %d, time=%d usec",
-		       processed_cnt, pj_elapsed_usec(&t2, &t1)));
 
     return processed_cnt;
 }
