@@ -2927,7 +2927,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * address represents a new candidate - a peer reflexive candidate.
      */
     if (lcand == NULL) {
-	unsigned cand_id;
+	unsigned cand_id = ice->lcand_cnt;
 	pj_str_t foundation;
 
 	pj_ice_calc_foundation(ice->pool, &foundation, PJ_ICE_CAND_TYPE_PRFLX,
@@ -2943,7 +2943,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	 */
 
 	/* Add new peer reflexive candidate */
-	status = pj_ice_sess_add_cand(ice, check->lcand->comp_id, 
+	status = pj_ice_sess_add_cand(ice, check->lcand->comp_id,
 				      msg_data->transport_id,
 				      PJ_ICE_CAND_TYPE_PRFLX,
 #if PJNATH_ICE_PRIO_STD
@@ -2953,13 +2953,21 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				      ice->lcand_cnt,
 #endif
 				      &foundation,
-				      &xaddr->sockaddr, 
-				      &check->lcand->base_addr, 
+				      &xaddr->sockaddr,
+				      &check->lcand->base_addr,
 				      &check->lcand->base_addr,
 				      pj_sockaddr_get_len(&xaddr->sockaddr),
 				      &cand_id);
-	if (status != PJ_SUCCESS) {
-	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, 
+	// Note: for IPv6, pj_ice_sess_add_cand can return SUCCESS
+	// without adding any candidates if the candidate is
+	// deprecated (because the ICE MUST NOT fail)
+	// In this case, cand_id == ice->lcand_cnt will be true.
+	if (status != PJ_SUCCESS || cand_id == ice->lcand_cnt) {
+	    if (cand_id == ice->lcand_cnt) {
+                LOG4((ice->obj_name,
+                  "Cannot add any candidate, all IPv6 seems deprecated"));
+	    }
+	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED,
 			    status);
 	    on_check_complete(ice, check);
 	    pj_grp_lock_release(ice->grp_lock);
