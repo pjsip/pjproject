@@ -3826,6 +3826,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		goto on_check_med_status;
 	    }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	    /* Enable/disable RTCP XR based on account setting. */
+	    si->rtcp_xr_enabled = acc->cfg.enable_rtcp_xr;
+#endif
+
 	    /* Check if remote wants RTP and RTCP multiplexing,
 	     * but we don't enable it.
 	     */

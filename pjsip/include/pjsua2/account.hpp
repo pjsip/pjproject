@@ -1023,6 +1023,13 @@ struct AccountMediaConfig : public PersistentObject
     RtcpFbConfig	rtcpFbConfig;
 
     /**
+     * Enable RTCP Extended Report (RTCP XR).
+     *
+     * Default: PJMEDIA_STREAM_ENABLE_XR
+     */
+    bool		rtcpXrEnabled;
+
+    /**
      * Use loopback media transport. This may be useful if application
      * doesn't want PJSUA2 to create real media transports/sockets, such as
      * when using third party media.
