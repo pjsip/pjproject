@@ -295,6 +295,13 @@ static pj_status_t sdl_init(void * data)
 {
     PJ_UNUSED_ARG(data);
 
+#if SDL_VERSION_ATLEAST(2,0,2)
+    /* Since SDL 2.0.2, screensaver is disabled by default, to maintain
+     * the existing behavior, let's enable screensaver.
+     */
+    SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+#endif
+
     if (SDL_Init(SDL_INIT_VIDEO)) {
         sdl_log_err("SDL_Init()");
         return PJMEDIA_EVID_INIT;
