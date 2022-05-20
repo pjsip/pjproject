@@ -4329,6 +4329,13 @@ typedef struct pjsua_acc_config
      */
     pjmedia_rtcp_fb_setting rtcp_fb_cfg;
 
+    /**
+     * Enable RTCP Extended Report (RTCP XR).
+     *
+     * Default: PJMEDIA_STREAM_ENABLE_XR
+     */
+    pj_bool_t		enable_rtcp_xr;
+
 } pjsua_acc_config;
 
 

@@ -2972,7 +2972,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     /* Send RTCP BYE (also SDES & XR) */
     if (stream->transport && !stream->rtcp_sdes_bye_disabled) {
-	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE, PJ_FALSE);
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, stream->rtcp.xr_enabled, PJ_FALSE);
+#else
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+#endif
     }
 
     /* If we're in the middle of transmitting DTMF digit, send one last

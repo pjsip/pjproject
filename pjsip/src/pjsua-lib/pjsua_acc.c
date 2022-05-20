@@ -1379,6 +1379,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.ipv6_media_use = cfg->ipv6_media_use;
     acc->cfg.enable_rtcp_mux = cfg->enable_rtcp_mux;
     acc->cfg.lock_codec = cfg->lock_codec;
+    acc->cfg.enable_rtcp_xr = cfg->enable_rtcp_xr;
 
     /* STUN and Media customization */
     if (acc->cfg.sip_stun_use != cfg->sip_stun_use) {
