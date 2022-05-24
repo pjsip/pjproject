@@ -578,21 +578,28 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type)
 {
-#if USE_EPOLLONESHOT
-    /* For EPOLLONESHOT, always rearm ioqueue for events. */
-    PJ_UNUSED_ARG(event_type);
-    pj_uint32_t ev = EPOLLIN | EPOLLERR;
-    if (key_has_pending_write(key))
-	ev |= EPOLLOUT;
-    update_epoll_event_set(ioqueue, key, ev);
-#else
-    /* Remove EPOLLOUT if write event received and no pending send */
-    if (event_type == WRITEABLE_EVENT && !key_has_pending_write(key)) {
-	pj_uint32_t ev = EPOLLIN | EPOLLERR;
-	update_epoll_event_set(ioqueue, key, ev);
+    pj_uint32_t ev = 0;
+
+    pj_lock_acquire(ioqueue->lock);
+
+    if (event_type == WRITEABLE_EVENT) {
+        if (key_has_pending_read(key) || key_has_pending_accept(key))
+            ev |= EPOLLIN;
+
+        update_epoll_event_set(ioqueue, key, ev);
+    } else if (event_type == READABLE_EVENT) {
+	if (key_has_pending_connect(key) || key_has_pending_write(key))
+            ev |= EPOLLOUT;
+        update_epoll_event_set(ioqueue, key, ev);
+    } else if (event_type == EXCEPTION_EVENT) {
+	/* EPOLLERR and EPOLLHUP are always reported, we can't remove
+	 * them.
+         */
     }
-#endif
+
+    pj_lock_release(ioqueue->lock);
 }
+
 
 /*
  * ioqueue_add_to_set()
@@ -604,14 +611,26 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
-    /* Add EPOLLOUT if write-event requested (other events are always set) */
+    pj_uint32_t ev = 0;
+
+    pj_lock_acquire(ioqueue->lock);
+
     if (event_type == WRITEABLE_EVENT) {
-	pj_uint32_t ev = EPOLLIN | EPOLLERR;
+        /* Add EPOLLOUT if write-event requested */
 	if (key_has_pending_connect(key) || key_has_pending_write(key))
 	    ev |= EPOLLOUT;
 
 	update_epoll_event_set(ioqueue, key, ev);
+    } else if (event_type == READABLE_EVENT) {
+	ev |= EPOLLIN;
+	update_epoll_event_set(ioqueue, key, ev);
+    } else if (event_type == EXCEPTION_EVENT) {
+	/* EPOLLERR and EPOLLHUP are always reported, it is not
+	 * necessary to set it in events when calling epoll_ctl().
+         */
     }
+
+    pj_lock_release(ioqueue->lock);
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -692,7 +711,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     pj_lock_acquire(ioqueue->lock);
 
     for (event_cnt=0, i=0; i<count; ++i) {
-	enum ioqueue_event_type event_type;
 	pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
 				events[i].epoll_data;
 
@@ -769,15 +787,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    }
 	    continue;
 	}
-
-	if (events[i].events & EPOLLIN) {
-	    event_type = READABLE_EVENT;
-	} else if (events[i].events & EPOLLOUT) {
-	    event_type = WRITEABLE_EVENT;
-	} else if (events[i].events & EPOLLERR) {
-	    event_type = EXCEPTION_EVENT;
-	}
-	ioqueue_remove_from_set(ioqueue, h, event_type);
     }
     for (i=0; i<event_cnt; ++i) {
 	if (queue[i].key->grp_lock)
@@ -819,10 +828,18 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    if (event_done) {
 		++processed_cnt;
 	    } else {
-		pj_ioqueue_lock_key(queue[i].key);
-		ioqueue_remove_from_set(ioqueue, queue[i].key,
-					queue[i].event_type);
-		pj_ioqueue_unlock_key(queue[i].key);
+#if USE_EPOLLONESHOT
+		/* When using EPOLLONESHOT, we will receive one-shot
+                 * notification for the associated file descriptor.
+		 * This means that after an event is notified for
+                 * the file descriptor by epoll_wait(), the file
+		 * descriptor is disabled in the interest list and
+		 * no other events will be reported. So we need to
+                 * rearm the file descriptor with a new event mask.
+		 */
+		ioqueue_add_to_set(ioqueue, queue[i].key,
+				   queue[i].event_type);
+#endif
 	    }
 	}
 
@@ -836,10 +853,21 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     }
 
     /* Special case:
-     * When epoll returns > 0 but no descriptors are actually set!
+     * When epoll returns > 0 but event_cnt, the number of events
+     * we are interested to process, is zero.
+     * There are two possibilities this can happen:
+     * - Events EPOLLERR and EPOLLHUP will always be reported even
+     *   though we never specifically asked for them.
+     * - Valid read/write events are reported but we do not wish
+     *   to process them, such as when the key is closing.
      */
     if (count > 0 && !event_cnt && msec > 0) {
-	pj_thread_sleep(msec);
+        
+        /* Should we sleep in this case?
+         * Note that if we do, we should reduce the sleep period
+         * by the amount of time already used for epoll_wait().
+         */
+	// pj_thread_sleep(msec - pj_elapsed_usec(&t1, &t2)/1000);
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
