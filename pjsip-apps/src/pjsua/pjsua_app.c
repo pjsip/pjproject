@@ -1345,6 +1345,17 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
+static void on_call_tsx_state(pjsua_call_id call_id,
+                                 pjsip_transaction *tsx,
+                                 pjsip_event *e)
+{
+if (e->type == PJSIP_EVENT_TSX_STATE && e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+
+		pjsip_msg *msg = e->body.tsx_state.src.rdata->msg_info.msg;
+	printf("receive response %d\n", msg->line.status.code);
+
+}
+}
 
 static pj_status_t app_init(void)
 {
@@ -1380,6 +1391,7 @@ static pj_status_t app_init(void)
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
+    app_config.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     app_config.cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;

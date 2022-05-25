@@ -67,7 +67,7 @@
       SUBSCRIBE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
       Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=[branch]
       From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
-      To: sut <sip:[service]@[remote_ip]:[remote_port]>
+      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
       Call-ID: [call_id]
       CSeq: 2 SUBSCRIBE
       Contact: sip:sipp@[local_ip]:[local_port]
