@@ -124,13 +124,12 @@ struct pjsip_evsub_user
      * remote, along with additional headers and message body to be put 
      * in the response.
      *
-     * This callback is OPTIONAL.
+     * This callback is only applicable and required for UAS.
      *
-     * However, implementation MUST send NOTIFY request upon receiving this
-     * callback. The suggested behavior is to call 
-     * #pjsip_evsub_current_notify(), since this function takes care
-     * about unsubscription request and calculates the appropriate expiration
-     * interval.
+     * Upon receiving this callback, implementation MUST send NOTIFY request.
+     * The suggested behavior is to call  #pjsip_evsub_current_notify(),
+     * since this function takes care about unsubscription request and
+     * calculates the appropriate expiration interval.
      */
     void (*on_rx_refresh)( pjsip_evsub *sub, 
 			   pjsip_rx_data *rdata,
