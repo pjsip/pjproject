@@ -2147,6 +2147,8 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	sub->calling_on_rx_refresh = PJ_TRUE;
 
 	if (sub->expires->ivalue == 0) {
+	    PJ_LOG(4,(sub->obj_name, "Receiving unsubscription request "
+	    			     "(Expires=0)."));
 	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event, NULL);
 	} else  if (sub->state == PJSIP_EVSUB_STATE_NULL) {
 	    sub->state = PJSIP_EVSUB_STATE_ACCEPTED;

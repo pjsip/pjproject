@@ -124,13 +124,25 @@ struct pjsip_evsub_user
      * remote, along with additional headers and message body to be put 
      * in the response.
      *
-     * This callback is OPTIONAL.
+     * This callback is only applicable and required for UAS.
      *
-     * However, implementation MUST send NOTIFY request upon receiving this
-     * callback. The suggested behavior is to call 
-     * #pjsip_evsub_current_notify(), since this function takes care
-     * about unsubscription request and calculates the appropriate expiration
-     * interval.
+     * Upon receiving this callback, implementation MUST send NOTIFY request.
+     * The suggested behavior is to call  #pjsip_evsub_current_notify(),
+     * since this function takes care about unsubscription request and
+     * calculates the appropriate expiration interval.
+     *
+     * @param sub	The subscription instance.
+     * @param rdata	The received SUBSCRIBE request.
+     * @param p_st_code	Application MUST set the value of this argument with
+     *			final status code (200-699) upon returning from the
+     *			callback. Only applicable for refresh request. For
+     *			unsubscription, the library will always reply with
+     *			200.
+     * @param p_st_text	Custom status text, if any.
+     * @param res_hdr	Upon return, application can put additional headers 
+     *			to be sent in the response in this list.
+     * @param p_body	Application MAY specify message body to be sent in
+     *			the response.
      */
     void (*on_rx_refresh)( pjsip_evsub *sub, 
 			   pjsip_rx_data *rdata,
