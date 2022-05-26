@@ -493,10 +493,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
     if (status != 0) {
-	pj_status_t rc = pj_get_os_error();
-	pj_lock_release(ioqueue->lock);
-	pj_ioqueue_unlock_key(key);
-	return rc;
+        // pj_status_t rc = pj_get_os_error();
+        TRACE_((THIS_FILE,
+                "pj_ioqueue_unregister error: os_epoll_ctl rc=%d",
+                pj_get_os_error()));
+        /* From epoll doc: "Closing a file descriptor cause it to be
+         * removed from all epoll interest lists". So we should just
+         * proceed instead of returning failure here.
+         */
+        // pj_lock_release(ioqueue->lock);
+        // pj_ioqueue_unlock_key(key);
+        // return rc;
     }
 
     /* Destroy the key. */
