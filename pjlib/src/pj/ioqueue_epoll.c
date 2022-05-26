@@ -578,28 +578,12 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type)
 {
-    pj_uint32_t ev = 0;
-
-    pj_lock_acquire(ioqueue->lock);
-
-    if (event_type == WRITEABLE_EVENT) {
-        if (key_has_pending_read(key) || key_has_pending_accept(key))
-            ev |= EPOLLIN;
-
-        update_epoll_event_set(ioqueue, key, ev);
-    } else if (event_type == READABLE_EVENT) {
-	if (key_has_pending_connect(key) || key_has_pending_write(key))
-            ev |= EPOLLOUT;
-        update_epoll_event_set(ioqueue, key, ev);
-    } else if (event_type == EXCEPTION_EVENT) {
-	/* EPOLLERR and EPOLLHUP are always reported, we can't remove
-	 * them.
-         */
+    /* Remove EPOLLOUT if write event received and no pending send */
+    if (event_type == WRITEABLE_EVENT && !key_has_pending_write(key)) {
+	pj_uint32_t ev = EPOLLIN | EPOLLERR;
+	update_epoll_event_set(ioqueue, key, ev);
     }
-
-    pj_lock_release(ioqueue->lock);
 }
-
 
 /*
  * ioqueue_add_to_set()
@@ -611,26 +595,23 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
-    pj_uint32_t ev = 0;
-
-    pj_lock_acquire(ioqueue->lock);
-
+#if USE_EPOLLONESHOT
+    /* For EPOLLONESHOT, always rearm ioqueue for events. */
+    PJ_UNUSED_ARG(event_type);
+    pj_uint32_t ev = EPOLLIN | EPOLLERR;
+    if (key_has_pending_connect(key) || key_has_pending_write(key))
+	ev |= EPOLLOUT;
+    update_epoll_event_set(ioqueue, key, ev);
+#else
+    /* Add EPOLLOUT if write-event requested (other events are always set) */
     if (event_type == WRITEABLE_EVENT) {
-        /* Add EPOLLOUT if write-event requested */
+	pj_uint32_t ev = EPOLLIN | EPOLLERR;
 	if (key_has_pending_connect(key) || key_has_pending_write(key))
 	    ev |= EPOLLOUT;
 
 	update_epoll_event_set(ioqueue, key, ev);
-    } else if (event_type == READABLE_EVENT) {
-	ev |= EPOLLIN;
-	update_epoll_event_set(ioqueue, key, ev);
-    } else if (event_type == EXCEPTION_EVENT) {
-	/* EPOLLERR and EPOLLHUP are always reported, it is not
-	 * necessary to set it in events when calling epoll_ctl().
-         */
     }
-
-    pj_lock_release(ioqueue->lock);
+#endif
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -837,8 +818,10 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 		 * no other events will be reported. So we need to
                  * rearm the file descriptor with a new event mask.
 		 */
+		pj_ioqueue_lock_key(queue[i].key);
 		ioqueue_add_to_set(ioqueue, queue[i].key,
 				   queue[i].event_type);
+		pj_ioqueue_unlock_key(queue[i].key);
 #endif
 	    }
 	}
@@ -854,20 +837,25 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     /* Special case:
      * When epoll returns > 0 but event_cnt, the number of events
-     * we are interested to process, is zero.
-     * There are two possibilities this can happen:
-     * - Events EPOLLERR and EPOLLHUP will always be reported even
-     *   though we never specifically asked for them.
-     * - Valid read/write events are reported but we do not wish
-     *   to process them, such as when the key is closing.
+     * we want to process, is zero.
+     * There are several possibilities this can happen:
+     * - Multiple polling threads can receive the same event
+     *   (if not EXCLUSIVE nor ONESHOT), and only one thread will
+     *   process it.
+     * - Events EPOLLIN is always on, while EPOLLERR and EPOLLHUP
+     *   will always be automatically reported even though we
+     *   never specifically asked for them.
      */
     if (count > 0 && !event_cnt && msec > 0) {
-        
-        /* Should we sleep in this case?
-         * Note that if we do, we should reduce the sleep period
-         * by the amount of time already used for epoll_wait().
+	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
+        /* We need to sleep in order to avoid busy polling, such
+         * as in the case of the thread that doesn't process
+         * the event as explained above.
+         * Note that the sleep period should be reduced by
+         * the amount of time already used for epoll_wait().
          */
-	// pj_thread_sleep(msec - pj_elapsed_usec(&t1, &t2)/1000);
+        if (delay > 0)
+	    pj_thread_sleep(delay);
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
