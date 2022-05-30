@@ -2147,9 +2147,12 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	sub->calling_on_rx_refresh = PJ_TRUE;
 
 	if (sub->expires->ivalue == 0) {
+	    pj_str_t timeout = { "timeout", 7};
+
 	    PJ_LOG(4,(sub->obj_name, "Receiving unsubscription request "
 	    			     "(Expires=0)."));
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event, NULL);
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event,
+	    	      &timeout);
 	} else  if (sub->state == PJSIP_EVSUB_STATE_NULL) {
 	    sub->state = PJSIP_EVSUB_STATE_ACCEPTED;
 	    sub->state_str = evsub_state_names[sub->state];
@@ -2211,7 +2214,9 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	/* Send the pending NOTIFY sent by app from inside
 	 * on_rx_refresh() callback.
 	 */
+	pj_assert(sub->pending_notify);
 	status = pjsip_evsub_send_request(sub, sub->pending_notify);
+	sub->pending_notify = NULL;
 
     } else if (pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0) {
 
