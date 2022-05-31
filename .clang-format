@@ -1,0 +1,23 @@
+---
+BasedOnStyle: LLVM
+
+IndentWidth: 4
+TabWidth:   8
+UseTab: AlignWithSpaces
+BreakBeforeBraces: Linux
+ColumnLimit: 80
+IndentCaseLabels: false
+
+# Disable single line
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortBlocksOnASingleLine : false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false 
+AllowShortEnumsOnASingleLine: false
+
+# Function params
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackParameters: false
+
+
