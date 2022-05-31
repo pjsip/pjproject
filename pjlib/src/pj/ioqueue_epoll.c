@@ -119,16 +119,17 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 
 #  include <openssl/opensslv.h>
 #  if OPENSSL_VERSION_NUMBER < 0x10100000L
-#    define DONT_USE_EXCL_ONESHOT
+#    undef PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
+#    define PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT	0
 #  endif
 
 #endif
 
 /* Use EPOLLEXCLUSIVE or EPOLLONESHOT to signal one thread only at a time. */
-#if defined(EPOLLEXCLUSIVE) && !defined(DONT_USE_EXCL_ONESHOT)
+#if defined(EPOLLEXCLUSIVE) && PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
 #  define USE_EPOLLEXCLUSIVE	1
 #  define USE_EPOLLONESHOT	0
-#elif defined(EPOLLONESHOT) && !defined(DONT_USE_EXCL_ONESHOT)
+#elif defined(EPOLLONESHOT) && PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
 #  define USE_EPOLLEXCLUSIVE	0
 #  define USE_EPOLLONESHOT	1
 #else
@@ -854,15 +855,17 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      *   never specifically asked for them.
      */
     if (count > 0 && !event_cnt && msec > 0) {
-	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
+#if !USE_EPOLLEXCLUSIVE && !USE_EPOLLONESHOT
         /* We need to sleep in order to avoid busy polling, such
          * as in the case of the thread that doesn't process
          * the event as explained above.
          * Note that the sleep period should be reduced by
          * the amount of time already used for epoll_wait().
          */
+	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
         if (delay > 0)
 	    pj_thread_sleep(delay);
+#endif
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
