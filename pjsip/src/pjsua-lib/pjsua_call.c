@@ -5204,6 +5204,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	 * UAS dialog and if this is not a re-INVITE
 	 */
 	if (inv->state != PJSIP_INV_STATE_NULL &&
+	    inv->state != PJSIP_INV_STATE_EARLY &&
 	    inv->state != PJSIP_INV_STATE_CONFIRMED)
 	{
 	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
