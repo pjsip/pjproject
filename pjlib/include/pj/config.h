@@ -744,6 +744,15 @@
 #endif
 
 
+/* Setting to determine whether to enable epoll exclusive/oneshot feature.
+ *
+ * Default: 1 (enabled)
+ */
+#ifndef PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
+#   define PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT 1
+#endif
+
+
 /**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
  * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
