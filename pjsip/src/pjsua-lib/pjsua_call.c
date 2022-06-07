@@ -4159,15 +4159,18 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 	return PJ_EINVALIDOP;
     }
 
-    /* Delay this when the SDP negotiation done in call state EARLY and
-     * remote does not support UPDATE method.
-     */
-    if (inv->state == PJSIP_INV_STATE_EARLY &&
-	pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &ST_UPDATE)!=
-	PJSIP_DIALOG_CAP_SUPPORTED)
-    {
-        call->reinv_pending = PJ_TRUE;
-        return PJ_EPENDING;
+    if (inv->state == PJSIP_INV_STATE_EARLY) {
+    	if (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
+    	        &ST_UPDATE) == PJSIP_DIALOG_CAP_SUPPORTED &&
+    	    inv->sdp_done_early_rel)
+    	{
+    	    /* Yes, remote supports UPDATE and SDP negotiation was done
+    	     * using reliable provisional responses. We can proceed.
+    	     */
+    	} else {
+            call->reinv_pending = PJ_TRUE;
+            return PJ_EPENDING;
+        }
     }
 
     /* Check if ICE setup is complete and if it needs reinvite */
