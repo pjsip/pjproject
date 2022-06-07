@@ -41,7 +41,7 @@ gcc.exe: cc_mingw.c
 	cp gcc.exe g++.exe
 
 pjsua2_wrap.cpp: ../pjsua2.i ../symbols.i Makefile $(SRCS)
-	swig $(SWIG_FLAGS) -python -o pjsua2_wrap.cpp ../pjsua2.i
+	swig $(SWIG_FLAGS) -python -threads -o pjsua2_wrap.cpp ../pjsua2.i
 
 clean distclean realclean:
 	rm -rf $(PYTHON_SO) pjsua2_wrap.cpp pjsua2_wrap.h pjsua2.py build *.pyc
