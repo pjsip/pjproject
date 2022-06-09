@@ -2400,6 +2400,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	tsx_inv_data->done_early = (status_code/100==1);
 	tsx_inv_data->done_early_rel = tsx_inv_data->done_early &&
 				       pjsip_100rel_is_reliable(rdata);
+	if (!inv->sdp_done_early_rel)
+	   inv->sdp_done_early_rel = tsx_inv_data->done_early_rel;
 	pj_strdup(tsx->pool, &tsx_inv_data->done_tag, 
 		  &rdata->msg_info.to->tag);
 
@@ -3276,6 +3278,16 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 
     /* Process offer, if any */
     if (offer) {
+	if (inv->state == PJSIP_INV_STATE_EARLY && !inv->sdp_done_early_rel) {
+	    PJ_LOG(4,(inv->dlg->obj_name,
+		      "RFC 3311 section 5.1 recommends against sending UPDATE"
+		      " without reliable prov response"));
+#if PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
+	    status = PJ_EINVALIDOP;
+	    goto on_error;
+#endif
+	}
+
 	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
 	    PJ_LOG(4,(inv->dlg->obj_name,
 		      "Invalid SDP offer/answer state for UPDATE"));
@@ -4007,6 +4019,10 @@ static void inv_respond_incoming_prack(pjsip_inv_session *inv,
 	}
 	
 	tsx_inv_data->sdp_done = PJ_TRUE;
+    }
+
+    if (pjmedia_sdp_neg_get_state(inv->neg) == PJMEDIA_SDP_NEG_STATE_DONE) {
+    	inv->sdp_done_early_rel = PJ_TRUE;
     }
 }
 

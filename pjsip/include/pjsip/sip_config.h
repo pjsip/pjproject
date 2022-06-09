@@ -1470,6 +1470,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_INV_ACCEPT_UNKNOWN_BODY    PJ_FALSE
 #endif
 
+/** 
+ * Specify whether to check if UPDATE sent in EARLY state has already
+ * completed SDP negotiation using reliable provisional responses, as
+ * specified in RFC3311 section 5.1.
+ *
+ * By default, the library will disable the check and allow the UPDATE
+ * to be sent for backward compatibility.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE
+#   define PJSIP_INV_UPDATE_EARLY_CHECK_RELIABLE    0
+#endif
+
 /**
  * Dump configuration to log with verbosity equal to info(3).
  */

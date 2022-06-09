@@ -441,6 +441,8 @@ struct pjsip_inv_session
     pjsip_status_code	 cause;			    /**< Disconnect cause.  */
     pj_str_t		 cause_text;		    /**< Cause text.	    */
     pj_bool_t		 notify;		    /**< Internal.	    */
+    pj_bool_t		 sdp_done_early_rel;	    /**< Nego done in early
+    							 med was reliable?  */
     unsigned		 cb_called;		    /**< Cb has been called */
     pjsip_dialog	*dlg;			    /**< Underlying dialog. */
     pjsip_role_e	 role;			    /**< Invite role.	    */
