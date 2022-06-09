@@ -280,7 +280,8 @@ PJ_DECL(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
  *
  * @return		The Allow-Events header.
  */
-PJ_DECL(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(pjsip_module *m);
+PJ_DECL(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(
+			      const pjsip_module *m);
 
 
 /**
@@ -341,7 +342,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
  *
  * @return		Subscription state.
  */
-PJ_DECL(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub);
+PJ_DECL(pjsip_evsub_state) pjsip_evsub_get_state(const pjsip_evsub *sub);
 
 
 /**
@@ -351,7 +352,7 @@ PJ_DECL(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub);
  *
  * @return		NULL terminated string.
  */
-PJ_DECL(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub);
+PJ_DECL(const char*) pjsip_evsub_get_state_name(const pjsip_evsub *sub);
 
 
 /**
@@ -362,7 +363,18 @@ PJ_DECL(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub);
  *
  * @return		NULL terminated string.
  */
-PJ_DECL(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub);
+PJ_DECL(const pj_str_t*) pjsip_evsub_get_termination_reason(
+			     const pjsip_evsub *sub);
+
+
+/**
+ * Get subscription expiration time.
+ *
+ * @param sub		Event subscription instance.
+ *
+ * @return		Subscription expiration time, in seconds.
+ */
+PJ_DECL(pj_uint32_t) pjsip_evsub_get_expires(const pjsip_evsub *sub);
 
 
 /**
@@ -478,7 +490,7 @@ PJ_DECL(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
  * @return		The event subscription instance registered in the
  *			transaction, if any.
  */
-PJ_DECL(pjsip_evsub*) pjsip_tsx_get_evsub(pjsip_transaction *tsx);
+PJ_DECL(pjsip_evsub*) pjsip_tsx_get_evsub(const pjsip_transaction *tsx);
 
 
 /**
@@ -500,7 +512,8 @@ PJ_DECL(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,
  *
  * @return		Data previously set at the specified id.
  */
-PJ_DECL(void*) pjsip_evsub_get_mod_data( pjsip_evsub *sub, unsigned mod_id );
+PJ_DECL(void*) pjsip_evsub_get_mod_data( const pjsip_evsub *sub,
+					 unsigned mod_id );
 
 
 /**
@@ -528,6 +541,10 @@ PJ_DEF(pj_status_t) pjsip_evsub_dec_ref(pjsip_evsub *sub);
  * If there is an existing timer, it is cancelled before any
  * other action. A timeout of 0 is ignored except that any
  * existing timer is cancelled.
+ *
+ * The API is intended to be used to restore UAS' subscription
+ * timer from backup in the case of failure, and should not be
+ * used to modify an ongoing subscription's timeout.
  *
  * @param sub           The server subscription instance.
  * @param seconds       The new timeout.

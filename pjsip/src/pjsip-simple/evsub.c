@@ -356,7 +356,7 @@ PJ_DEF(pjsip_module*) pjsip_evsub_instance(void)
 /*
  * Get the event subscription instance in the transaction.
  */
-PJ_DEF(pjsip_evsub*) pjsip_tsx_get_evsub(pjsip_transaction *tsx)
+PJ_DEF(pjsip_evsub*) pjsip_tsx_get_evsub(const pjsip_transaction *tsx)
 {
     return (pjsip_evsub*) tsx->mod_data[mod_evsub.mod.id];
 }
@@ -376,7 +376,8 @@ PJ_DEF(void) pjsip_evsub_set_mod_data( pjsip_evsub *sub, unsigned mod_id,
 /*
  * Get event subscription's module data.
  */
-PJ_DEF(void*) pjsip_evsub_get_mod_data( pjsip_evsub *sub, unsigned mod_id )
+PJ_DEF(void*) pjsip_evsub_get_mod_data( const pjsip_evsub *sub,
+					unsigned mod_id )
 {
     PJ_ASSERT_RETURN(mod_id < PJSIP_MAX_MODULE, NULL);
     return sub->mod_data[mod_id];
@@ -476,7 +477,8 @@ PJ_DEF(pj_status_t) pjsip_evsub_register_pkg( pjsip_module *pkg_mod,
 /*
  * Retrieve Allow-Events header
  */
-PJ_DEF(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(pjsip_module *m)
+PJ_DEF(const pjsip_hdr*) pjsip_evsub_get_allow_events_hdr(
+			     const pjsip_module *m)
 {
     struct mod_evsub *mod;
 
@@ -1048,7 +1050,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
 /*
  * Get subscription state.
  */
-PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub)
+PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(const pjsip_evsub *sub)
 {
     return sub->state;
 }
@@ -1056,7 +1058,7 @@ PJ_DEF(pjsip_evsub_state) pjsip_evsub_get_state(pjsip_evsub *sub)
 /*
  * Get state name.
  */
-PJ_DEF(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub)
+PJ_DEF(const char*) pjsip_evsub_get_state_name(const pjsip_evsub *sub)
 {
     return sub->state_str.ptr;
 }
@@ -1064,9 +1066,18 @@ PJ_DEF(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub)
 /*
  * Get termination reason.
  */
-PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub)
+PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(
+			    const pjsip_evsub *sub)
 {
     return &sub->term_reason;
+}
+
+/**
+ * Get subscription expiration time.
+ */
+PJ_DEF(pj_uint32_t) pjsip_evsub_get_expires(const pjsip_evsub *sub)
+{
+    return sub->expires->ivalue;
 }
 
 /*
