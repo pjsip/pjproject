@@ -539,6 +539,11 @@ typedef struct pjmedia_transport_specific_info
      */
     char		     buffer[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE];
 
+    /**
+     * The media transport instance.
+     */
+    pjmedia_transport	    *tp;
+
 } pjmedia_transport_specific_info;
 
 
@@ -714,6 +719,29 @@ PJ_INLINE(void*) pjmedia_transport_info_get_spc_info(
     for (i = 0; i < info->specific_info_cnt; ++i) {
 	if (info->spc_info[i].type == type)
 	    return (void*)info->spc_info[i].buffer;
+    }
+    return NULL;
+}
+
+
+/**
+ * Utility API to get the transport instance from the specified media
+ * transport info.
+ *
+ * @param info	    Media transport info.
+ * @param type	    Media transport type.
+ *
+ * @return	    The media transport instance, or NULL if
+ * 		    the transport type is not found.
+ */
+PJ_INLINE(pjmedia_transport*) pjmedia_transport_info_get_transport(
+						pjmedia_transport_info *info,
+						pjmedia_transport_type type)
+{
+    unsigned i;
+    for (i = 0; i < info->specific_info_cnt; ++i) {
+	if (info->spc_info[i].type == type)
+	    return info->spc_info[i].tp;
     }
     return NULL;
 }

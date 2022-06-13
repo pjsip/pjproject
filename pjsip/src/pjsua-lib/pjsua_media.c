@@ -3326,6 +3326,7 @@ static void check_srtp_roc(pjsua_call *call,
     pjsua_call_media *call_med = &call->media[med_idx];
     pjmedia_transport_info tpinfo;
     pjmedia_srtp_info *srtp_info;
+    pjmedia_transport *srtp;
     pjmedia_ice_transport_info *ice_info;
     const pjmedia_stream_info *prev_aud_si = NULL;
     pjmedia_stream_info aud_si;
@@ -3340,8 +3341,11 @@ static void check_srtp_roc(pjsua_call *call,
     pjmedia_transport_get_info(call_med->tp, &tpinfo);
     srtp_info = (pjmedia_srtp_info *) pjmedia_transport_info_get_spc_info(
 	            &tpinfo, PJMEDIA_TRANSPORT_TYPE_SRTP);
+    srtp = pjmedia_transport_info_get_transport(&tpinfo,
+						PJMEDIA_TRANSPORT_TYPE_SRTP);
+
     /* We are not using SRTP. */
-    if (!srtp_info)
+    if (!srtp_info || !srtp)
     	return;
 
     ice_info = (pjmedia_ice_transport_info*)
@@ -3469,7 +3473,7 @@ static void check_srtp_roc(pjsua_call *call,
 	 }	    
     }
 
-    pjmedia_transport_srtp_get_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_get_setting(srtp, &setting);
     setting.tx_roc = call_med->prev_srtp_info.tx_roc;
     setting.rx_roc = call_med->prev_srtp_info.rx_roc;
     if (local_change) {
@@ -3500,7 +3504,7 @@ static void check_srtp_roc(pjsua_call *call,
  	}
 #endif 
     }
-    pjmedia_transport_srtp_modify_setting(call_med->tp, &setting);
+    pjmedia_transport_srtp_modify_setting(srtp, &setting);
 }
 #endif
 

@@ -1199,6 +1199,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 
     spc_info_idx = info->specific_info_cnt++;
     info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_SRTP;
+    info->spc_info[spc_info_idx].tp = tp;
     info->spc_info[spc_info_idx].cbsize = sizeof(srtp_info);
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &srtp_info,
 	      sizeof(srtp_info));
