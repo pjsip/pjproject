@@ -3,7 +3,8 @@ BasedOnStyle: LLVM
 
 IndentWidth: 4
 TabWidth:   8
-UseTab: AlignWithSpaces
+#UseTab: AlignWithSpaces
+UseTab: ForContinuationAndIndentation
 BreakBeforeBraces: Linux
 ColumnLimit: 80
 IndentCaseLabels: false
