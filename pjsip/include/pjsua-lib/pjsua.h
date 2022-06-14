@@ -2696,6 +2696,15 @@ typedef struct pjsua_ip_change_acc_cfg
      */
     unsigned		reinvite_flags;
     
+    /**
+     * For refreshing the call, use SIP UPDATE when remote supports it.
+     * If remote does not support UPDATE method (i.e: published in its Allow
+     * header), use SIP re-INVITE.
+     *
+     * Default: PJ_FALSE (using re-INVITE).
+     */
+    pj_bool_t		reinv_use_update;
+
 } pjsua_ip_change_acc_cfg;
 
 
