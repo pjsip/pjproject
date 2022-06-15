@@ -3344,7 +3344,7 @@ static void check_srtp_roc(pjsua_call *call,
     srtp = pjmedia_transport_info_get_transport(&tpinfo,
 						PJMEDIA_TRANSPORT_TYPE_SRTP);
 
-    /* We are not using SRTP. */
+    /* Just return if there is no SRTP transport in the transport stack. */
     if (!srtp_info || !srtp)
     	return;
 
