@@ -38,6 +38,7 @@
 #include <pj/rand.h>
 
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <errno.h>
 #include <unistd.h>
 
@@ -58,6 +59,12 @@
 
 //#define TRACE_(expr) PJ_LOG(3,expr)
 #define TRACE_(expr)
+
+#ifndef EPOLLEXCLUSIVE
+#define EPOLLEXCLUSIVE 	(1U << 28)
+#endif
+
+static const char *ioq_name = "epoll";
 
 /*
  * Include common ioqueue abstraction.
@@ -97,6 +104,9 @@ struct pj_ioqueue_t
     pj_ioqueue_key_t	closing_list;
     pj_ioqueue_key_t	free_list;
 #endif
+
+    pj_bool_t use_epollexlusive;
+    pj_bool_t use_epolloneshot;
 };
 
 /* Include implementation for common abstraction after we declare
@@ -125,17 +135,6 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 
 #endif
 
-/* Use EPOLLEXCLUSIVE or EPOLLONESHOT to signal one thread only at a time. */
-#if defined(EPOLLEXCLUSIVE) && PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
-#  define USE_EPOLLEXCLUSIVE	1
-#  define USE_EPOLLONESHOT	0
-#elif defined(EPOLLONESHOT) && PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
-#  define USE_EPOLLEXCLUSIVE	0
-#  define USE_EPOLLONESHOT	1
-#else
-#  define USE_EPOLLEXCLUSIVE	0
-#  define USE_EPOLLONESHOT	0
-#endif
 
 
 /*
@@ -143,12 +142,70 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
  */
 PJ_DEF(const char*) pj_ioqueue_name(void)
 {
-#if USE_EPOLLEXCLUSIVE
-    return "epoll-exclusive";
-#elif USE_EPOLLONESHOT
-    return "epoll-oneshot";
+    return ioq_name;
+}
+
+/*
+*  Run-time detect epoll exclusive/oneshot
+*/
+static void detect_epoll_exclusive_oneshot(pj_ioqueue_t *ioq)
+{
+#if PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
+    int rc;
+    int epfd = -1, evfd = -1;
+    struct epoll_event ev;
+    pj_bool_t support_epollex = PJ_FALSE;
+
+    do {
+	epfd = os_epoll_create(5);
+	if (epfd < 0) {
+	    break;
+	}
+
+	evfd = eventfd(0, 0);
+	if (evfd < 0) {
+	    break;
+	}
+
+	/*
+	 * Choose events that should cause an error on EPOLLEXCLUSIVE enabled
+	 * kernels - specifically the combination of EPOLLONESHOT and
+	 * EPOLLEXCLUSIVE
+	 */
+	pj_bzero(&ev, sizeof(ev));
+	ev.events = EPOLLIN | EPOLLEXCLUSIVE | EPOLLONESHOT;
+	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
+	if (rc == 0 || (rc != 0 && errno != EINVAL)) {
+	    break;
+	}
+
+	/* Check that EPOLLEXCLUSIVE is supported at all */
+	ev.events = EPOLLIN | EPOLLEXCLUSIVE;
+	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
+	if (rc != 0) {
+	    break;
+	}
+
+	support_epollex = PJ_TRUE;
+    } while (0);
+
+    /*
+     * Notice:
+     * When exclusive not support, use oneshot as default
+     * EPOLLONESHOT (since Linux 2.6.2, about year 2004/2005)
+     * pepole should not use that old linux kernel.
+     */
+    ioq->use_epollexlusive = support_epollex;
+    ioq->use_epolloneshot = !support_epollex;
+    ioq_name = support_epollex ? "epoll-exclusive" : "epoll-oneshot";
+    if (epfd > 0)
+	os_close(epfd);
+    if (evfd > 0)
+	os_close(evfd);
 #else
-    return "epoll";
+    ioq_name = "epoll";
+    ioq->use_epollexlusive = PJ_FALSE;
+    ioq->use_epolloneshot = PJ_FALSE;
 #endif
 }
 
@@ -243,6 +300,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue->queue = pj_pool_calloc(pool, max_fd, sizeof(struct queue));
     PJ_ASSERT_RETURN(ioqueue->queue != NULL, PJ_ENOMEM);
    */
+
+    detect_epoll_exclusive_oneshot(ioqueue);
+
     PJ_LOG(4, ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
 
     *p_ioqueue = ioqueue;
@@ -365,11 +425,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 */
     /* os_epoll_ctl. */
     ev.events = EPOLLIN | EPOLLERR;
-#if USE_EPOLLEXCLUSIVE
-    ev.events |= EPOLLEXCLUSIVE;
-#elif USE_EPOLLONESHOT
-    ev.events |= EPOLLONESHOT;
-#endif
+    if (ioqueue->use_epollexlusive)
+	ev.events |= EPOLLEXCLUSIVE;
+    else if (ioqueue->use_epolloneshot)
+	ev.events |= EPOLLONESHOT;
     ev.epoll_data = (epoll_data_type)key;
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
@@ -564,16 +623,20 @@ static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
     ev.epoll_data = (epoll_data_type)key;
     ev.events = events;
 
-#if USE_EPOLLEXCLUSIVE
-    ev.events |= EPOLLEXCLUSIVE;
-    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
-    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
-#elif USE_EPOLLONESHOT
-    ev.events |= EPOLLONESHOT;
-    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-#else
-    os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-#endif
+    if (ioqueue->use_epollexlusive) {
+	ev.events |= EPOLLEXCLUSIVE;
+	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
+	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
+    }
+
+    else if (ioqueue->use_epolloneshot) {
+	ev.events |= EPOLLONESHOT;
+	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+    }
+
+    else {
+	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
+    }
 }
 
 
@@ -603,23 +666,26 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type )
 {
-#if USE_EPOLLONESHOT
-    /* For EPOLLONESHOT, always rearm ioqueue for events. */
-    PJ_UNUSED_ARG(event_type);
-    pj_uint32_t ev = EPOLLIN | EPOLLERR;
-    if (key_has_pending_connect(key) || key_has_pending_write(key))
-	ev |= EPOLLOUT;
-    update_epoll_event_set(ioqueue, key, ev);
-#else
-    /* Add EPOLLOUT if write-event requested (other events are always set) */
-    if (event_type == WRITEABLE_EVENT) {
+    if (ioqueue->use_epolloneshot) {
+	/* For EPOLLONESHOT, always rearm ioqueue for events. */
+	PJ_UNUSED_ARG(event_type);
 	pj_uint32_t ev = EPOLLIN | EPOLLERR;
 	if (key_has_pending_connect(key) || key_has_pending_write(key))
 	    ev |= EPOLLOUT;
-
 	update_epoll_event_set(ioqueue, key, ev);
     }
-#endif
+
+    else {
+	/* Add EPOLLOUT if write-event requested (other events are always set)
+	 */
+	if (event_type == WRITEABLE_EVENT) {
+	    pj_uint32_t ev = EPOLLIN | EPOLLERR;
+	    if (key_has_pending_connect(key) || key_has_pending_write(key))
+		ev |= EPOLLOUT;
+
+	    update_epoll_event_set(ioqueue, key, ev);
+	}
+    }
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -828,28 +894,28 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	                            "ioqueue", 0);
     }
 
-#if USE_EPOLLONESHOT
-    /* When using EPOLLONESHOT, we will receive one-shot notification for
-     * the associated file descriptor, after which the file descriptor
-     * is disabled in the interest list and no other events will be
-     * reported.
-     * Note the following cases can happen:
-     * - we do not want to process a reported event (i.e. event_cnt < count)
-     * - we process the event, but the processing doesn't rearm the file
-     *   descriptor (such as during processing failure)
-     * So we need to make sure to rearm the file descriptor here with
-     * a new event mask.
-     */
-    for (i=0; i<count; ++i) {
-        pj_ioqueue_key_t *h = (pj_ioqueue_key_t*)(epoll_data_type)
-                              events[i].epoll_data;
+    if (ioqueue->use_epolloneshot) {
+	/* When using EPOLLONESHOT, we will receive one-shot notification for
+	 * the associated file descriptor, after which the file descriptor
+	 * is disabled in the interest list and no other events will be
+	 * reported.
+	 * Note the following cases can happen:
+	 * - we do not want to process a reported event (i.e. event_cnt < count)
+	 * - we process the event, but the processing doesn't rearm the file
+	 *   descriptor (such as during processing failure)
+	 * So we need to make sure to rearm the file descriptor here with
+	 * a new event mask.
+	 */
+	for (i = 0; i < count; ++i) {
+	    pj_ioqueue_key_t *h =
+		(pj_ioqueue_key_t *)(epoll_data_type)events[i].epoll_data;
 
-        pj_ioqueue_lock_key(h);
-        if (!IS_CLOSING(h))
-            ioqueue_add_to_set(ioqueue, h, 0);
-        pj_ioqueue_unlock_key(h);
+	    pj_ioqueue_lock_key(h);
+	    if (!IS_CLOSING(h))
+		ioqueue_add_to_set(ioqueue, h, 0);
+	    pj_ioqueue_unlock_key(h);
+	}
     }
-#endif
 
     /* Special case:
      * When epoll returns > 0 but event_cnt, the number of events
@@ -862,9 +928,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      *   will always be automatically reported even though we
      *   never specifically asked for them.
      */
-    if (count > 0 && !event_cnt && msec > 0) {
-#if !USE_EPOLLEXCLUSIVE && !USE_EPOLLONESHOT
-        /* We need to sleep in order to avoid busy polling, such
+    if (count > 0 && !event_cnt && msec > 0 && !ioqueue->use_epollexlusive &&
+	!ioqueue->use_epolloneshot) {
+	/* We need to sleep in order to avoid busy polling, such
          * as in the case of the thread that doesn't process
          * the event as explained above.
          * Note that the sleep period should be reduced by
@@ -873,7 +939,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
         if (delay > 0)
 	    pj_thread_sleep(delay);
-#endif
     }
 
     TRACE_((THIS_FILE, "     poll: count=%d events=%d processed=%d",
