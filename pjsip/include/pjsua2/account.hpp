@@ -1216,6 +1216,17 @@ typedef struct AccountIpChangeConfig
      */
     unsigned		reinviteFlags;
 
+    /**
+     * For refreshing the call, use SIP UPDATE, instead of re-INVITE, if
+     * remote supports it (by publishing it in Allow header). If remote
+     * does not support UPDATE method or somehow the UPDATE attempt fails,
+     * it will fallback to using re-INVITE. The \a reinviteFlags will be
+     * used regardless whether it is re-INVITE or UPDATE that is sent.
+     *
+     * Default: PJ_FALSE (using re-INVITE).
+     */
+    unsigned		reinvUseUpdate;
+
 public:
     /**
      * Virtual destructor

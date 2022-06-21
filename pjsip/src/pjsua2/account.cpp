@@ -710,6 +710,7 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     ret.ip_change_cfg.shutdown_tp = ipChangeConfig.shutdownTp;
     ret.ip_change_cfg.hangup_calls = ipChangeConfig.hangupCalls;
     ret.ip_change_cfg.reinvite_flags = ipChangeConfig.reinviteFlags;
+    ret.ip_change_cfg.reinv_use_update = ipChangeConfig.reinvUseUpdate;
 }
 
 /* Initialize from pjsip. */
@@ -903,6 +904,7 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     ipChangeConfig.shutdownTp = PJ2BOOL(prm.ip_change_cfg.shutdown_tp);
     ipChangeConfig.hangupCalls = PJ2BOOL(prm.ip_change_cfg.hangup_calls);
     ipChangeConfig.reinviteFlags = prm.ip_change_cfg.reinvite_flags;
+    ipChangeConfig.reinvUseUpdate = prm.ip_change_cfg.reinv_use_update;
 }
 
 void AccountConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
