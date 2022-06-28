@@ -6787,7 +6787,7 @@ struct pjsua_media_config
     /**
      * Disable VAD?
      *
-     * Default: 0 (no (meaning VAD is enabled))
+     * Default: 0 (codec specific)
      */
     pj_bool_t		no_vad;
 
