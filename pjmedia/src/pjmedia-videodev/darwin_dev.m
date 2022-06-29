@@ -150,7 +150,6 @@ struct darwin_stream
 #if TARGET_OS_IPHONE
     pj_bool_t		 is_running;
     pj_bool_t		 is_rendering;
-    NSLock		*render_lock;
     void		*render_buf;
     pj_size_t		 render_buf_size;
     CGDataProviderRef    render_data_provider;
@@ -518,7 +517,6 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
 {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
     CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-    [stream->render_lock lock];
 
     CGImageRef cgIm = CGImageCreate(stream->size.w, stream->size.h,
                                     8, 32, stream->bytes_per_row, colorSpace,
@@ -529,7 +527,6 @@ static pj_status_t darwin_factory_default_param(pj_pool_t *pool,
     CGColorSpaceRelease(colorSpace);
     
     stream->render_view.layer.contents = (__bridge id)(cgIm);
-    [stream->render_lock unlock];
     CGImageRelease(cgIm);
 
     [pool release];
@@ -977,7 +974,6 @@ static pj_status_t darwin_factory_create_stream(
 	    strm->vout_delegate->stream = strm;
 	}
         
-	strm->render_lock = [NSLock alloc];
 	strm->render_buf = pj_pool_alloc(pool, strm->frame_size);
 	strm->render_buf_size = strm->frame_size;
         strm->render_data_provider = CGDataProviderCreateWithData(NULL,
@@ -1370,12 +1366,10 @@ static pj_status_t darwin_stream_put_frame(pjmedia_vid_dev_stream *strm,
     if (stream->is_rendering)
     	return PJ_EIGNORED;
 
-    [stream->render_lock lock];
     if (stream->frame_size >= frame->size)
         pj_memcpy(stream->render_buf, frame->buf, frame->size);
     else
         pj_memcpy(stream->render_buf, frame->buf, stream->frame_size);
-    [stream->render_lock lock];
     
     /* Perform video display in the main thread */
     stream->is_rendering = PJ_TRUE;
@@ -1461,12 +1455,7 @@ static pj_status_t darwin_stream_destroy(pjmedia_vid_dev_stream *strm)
     if (stream->render_data_provider) {
         CGDataProviderRelease(stream->render_data_provider);
         stream->render_data_provider = nil;
-    }
-    
-    if (stream->render_lock) {
-    	[stream->render_lock release];
-    	stream->render_lock = nil;
-    }
+    }    
 #endif /* TARGET_OS_IPHONE */
 
     if (stream->queue) {
