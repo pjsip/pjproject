@@ -72,7 +72,12 @@ struct iosgl_stream
     pj_timestamp            frame_ts;
     unsigned                ts_inc;
     pjmedia_rect_size       vid_size;
-    const pjmedia_frame    *frame;
+    unsigned		    frame_size;
+
+    pj_bool_t		    is_rendering;
+    NSLock		   *buf_lock;
+    void		   *render_buf;
+    unsigned		    render_buf_size;
     
     gl_buffers             *gl_buf;
     GLView                 *gl_view;
@@ -228,10 +233,14 @@ static void dispatch_sync_on_main_queue(void (^block)(void))
         return;
     }
     
+    [stream->buf_lock lock];
     pjmedia_vid_dev_opengl_draw(stream->gl_buf, stream->vid_size.w, stream->vid_size.h,
-                                stream->frame->buf);
+                                stream->render_buf);
+    [stream->buf_lock unlock];
 
     [stream->ogl_context presentRenderbuffer:GL_RENDERBUFFER];
+    
+    stream->is_rendering = PJ_FALSE;
 }
 
 - (void)finish_render
@@ -262,7 +271,9 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
                                          pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct iosgl_stream *strm;
+    const pjmedia_video_format_info *vfi;
     const pjmedia_video_format_detail *vfd;
+    pjmedia_video_apply_fmt_param vafp;
     pj_status_t status = PJ_SUCCESS;
     CGRect rect;
     
@@ -329,6 +340,18 @@ pjmedia_vid_dev_opengl_imp_create_stream(pj_pool_t *pool,
         iosgl_stream_set_cap(&strm->base, PJMEDIA_VID_DEV_CAP_ORIENTATION,
                              &param->orient);
     }
+
+    vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
+    if (!vfi) return PJMEDIA_EVID_BADFORMAT;
+    vafp.size = param->fmt.det.vid.size;
+    vafp.buffer = NULL;
+    if (vfi->apply_fmt(vfi, &vafp) != PJ_SUCCESS)
+        return PJMEDIA_EVID_BADFORMAT;
+
+    strm->frame_size = vafp.framebytes;
+    strm->render_buf_size = strm->frame_size;
+    strm->render_buf = pj_pool_alloc(strm->pool, strm->render_buf_size);
+    strm->buf_lock = [NSLock alloc];
     
     PJ_LOG(4, (THIS_FILE, "iOS OpenGL ES renderer successfully created"));
                     
@@ -396,6 +419,7 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
     
     if (cap==PJMEDIA_VID_DEV_CAP_FORMAT) {
         const pjmedia_video_format_info *vfi;
+    	pjmedia_video_apply_fmt_param vafp;
         pjmedia_format *fmt = (pjmedia_format *)pval;
         iosgl_fmt_info *ifi;
         
@@ -406,8 +430,20 @@ static pj_status_t iosgl_stream_set_cap(pjmedia_vid_dev_stream *s,
                                             fmt->id);
         if (!vfi)
             return PJMEDIA_EVID_BADFORMAT;
+
+    	vafp.size = fmt->det.vid.size;
+    	vafp.buffer = NULL;
+    	if (vfi->apply_fmt(vfi, &vafp) != PJ_SUCCESS)
+            return PJMEDIA_EVID_BADFORMAT;
         
         pjmedia_format_copy(&strm->param.fmt, fmt);
+
+        strm->frame_size = vafp.framebytes;
+	if (strm->render_buf_size < strm->frame_size) {
+            /* Realloc only when needed */
+	    strm->render_buf_size = strm->frame_size;
+            strm->render_buf=pj_pool_alloc(strm->pool, strm->render_buf_size);
+        }
         
         [strm->gl_view performSelectorOnMainThread:@selector(change_format)
                        withObject:nil waitUntilDone:YES];
@@ -480,10 +516,21 @@ static pj_status_t iosgl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     if (!stream->is_running)
 	return PJ_EINVALIDOP;
     
-    stream->frame = frame;
+    /* Prevent more than one async rendering task. */
+    if (stream->is_rendering)
+    	return PJ_EIGNORED;
+
+    [stream->buf_lock lock];
+    if (stream->frame_size >= frame->size)
+        pj_memcpy(stream->render_buf, frame->buf, frame->size);
+    else
+        pj_memcpy(stream->render_buf, frame->buf, stream->frame_size);
+    [stream->buf_lock unlock];
+
     /* Perform OpenGL drawing in the main thread. */
+    stream->is_rendering = PJ_TRUE;
     [stream->gl_view performSelectorOnMainThread:@selector(render)
-                           withObject:nil waitUntilDone:YES];
+                           withObject:nil waitUntilDone:NO];
     
     return PJ_SUCCESS;
 }
@@ -513,6 +560,11 @@ static pj_status_t iosgl_stream_destroy(pjmedia_vid_dev_stream *strm)
     
     if (stream->is_running)
         iosgl_stream_stop(strm);
+
+    if (stream->buf_lock) {
+    	[stream->buf_lock release];
+    	stream->buf_lock = NULL;
+    }
     
     if (stream->gl_view) {
         [stream->gl_view performSelectorOnMainThread:@selector(deinit_gl)
