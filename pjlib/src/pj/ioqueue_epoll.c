@@ -61,7 +61,7 @@
 #define TRACE_(expr)
 
 #ifndef EPOLLEXCLUSIVE
-#define EPOLLEXCLUSIVE 	(1U << 28)
+#  define EPOLLEXCLUSIVE 	(1U << 28)
 #endif
 
 static const char *ioq_name = "epoll";
@@ -105,8 +105,8 @@ struct pj_ioqueue_t
     pj_ioqueue_key_t	free_list;
 #endif
 
-    pj_bool_t use_epollexlusive;
-    pj_bool_t use_epolloneshot;
+    pj_bool_t 		use_epollexlusive;
+    pj_bool_t 		use_epolloneshot;
 };
 
 /* Include implementation for common abstraction after we declare
@@ -146,7 +146,7 @@ PJ_DEF(const char*) pj_ioqueue_name(void)
 }
 
 /*
-*  Run-time detect epoll exclusive/oneshot
+*  Run-time detection of epoll exclusive/oneshot
 */
 static void detect_epoll_exclusive_oneshot(pj_ioqueue_t *ioq)
 {
@@ -189,12 +189,7 @@ static void detect_epoll_exclusive_oneshot(pj_ioqueue_t *ioq)
 	support_epollex = PJ_TRUE;
     } while (0);
 
-    /*
-     * Notice:
-     * When exclusive not support, use oneshot as default
-     * EPOLLONESHOT (since Linux 2.6.2, about year 2004/2005)
-     * pepole should not use that old linux kernel.
-     */
+    /* Note: When EXCLUSIVE is not supported, use ONESHOT as default. */
     ioq->use_epollexlusive = support_epollex;
     ioq->use_epolloneshot = !support_epollex;
     ioq_name = support_epollex ? "epoll-exclusive" : "epoll-oneshot";
@@ -627,14 +622,10 @@ static void update_epoll_event_set(pj_ioqueue_t *ioqueue,
 	ev.events |= EPOLLEXCLUSIVE;
 	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &ev);
 	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, key->fd, &ev);
-    }
-
-    else if (ioqueue->use_epolloneshot) {
+    } else if (ioqueue->use_epolloneshot) {
 	ev.events |= EPOLLONESHOT;
 	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
-    }
-
-    else {
+    } else {
 	os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_MOD, key->fd, &ev);
     }
 }
@@ -673,9 +664,7 @@ static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
 	if (key_has_pending_connect(key) || key_has_pending_write(key))
 	    ev |= EPOLLOUT;
 	update_epoll_event_set(ioqueue, key, ev);
-    }
-
-    else {
+    } else {
 	/* Add EPOLLOUT if write-event requested (other events are always set)
 	 */
 	if (event_type == WRITEABLE_EVENT) {
@@ -928,8 +917,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
      *   will always be automatically reported even though we
      *   never specifically asked for them.
      */
-    if (count > 0 && !event_cnt && msec > 0 && !ioqueue->use_epollexlusive &&
-	!ioqueue->use_epolloneshot) {
+    if (count > 0 && !event_cnt && msec > 0 &&
+    	!ioqueue->use_epollexlusive && !ioqueue->use_epolloneshot)
+    {
 	/* We need to sleep in order to avoid busy polling, such
          * as in the case of the thread that doesn't process
          * the event as explained above.
