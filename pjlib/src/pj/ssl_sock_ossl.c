@@ -263,8 +263,8 @@ static char *SSLErrorString (int err)
 #define ERROR_LOG(msg, err, ssock) \
 { \
     char err_str[PJ_ERR_MSG_SIZE]; \
+    char buf[PJ_INET6_ADDRSTRLEN + 10]; \
     ERR_error_string_n(err, err_str, sizeof(err_str)); \
-    char buf[PJ_INET6_ADDRSTRLEN+10]; \
     PJ_LOG(2,("SSL", "%s (%s): Level: %d err: <%lu> <%s> len: %d peer: %s", \
 	   msg, action, level, err, err_str, len, \
 	   (ssock && pj_sockaddr_has_addr(&ssock->rem_addr)? \
