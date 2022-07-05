@@ -57,6 +57,10 @@
 #include <openssl/opensslconf.h>
 #include <openssl/opensslv.h>
 
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#   include <openssl/decoder.h>
+#endif
+
 /* Specify whether server supports session reuse using session ID. */
 #define SERVER_SUPPORT_SESSION_REUSE 1
 
@@ -255,6 +259,18 @@ static char *SSLErrorString (int err)
     }
 }
 
+#  if OPENSSL_VERSION_NUMBER >= 0x30000000L
+#define ERROR_LOG(msg, err, ssock) \
+{ \
+    char err_str[PJ_ERR_MSG_SIZE]; \
+    ERR_error_string_n(err, err_str, sizeof(err_str)); \
+    char buf[PJ_INET6_ADDRSTRLEN+10]; \
+    PJ_LOG(2,("SSL", "%s (%s): Level: %d err: <%lu> <%s> len: %d peer: %s", \
+	   msg, action, level, err, err_str, len, \
+	   (ssock && pj_sockaddr_has_addr(&ssock->rem_addr)? \
+	    pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3):"???")));\
+}
+#  else
 #define ERROR_LOG(msg, err, ssock) \
 { \
     char buf[PJ_INET6_ADDRSTRLEN+10]; \
@@ -268,6 +284,7 @@ static char *SSLErrorString (int err)
 	   (ssock && pj_sockaddr_has_addr(&ssock->rem_addr)? \
 	    pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3):"???")));\
 }
+#  endif
 
 static void SSLLogErrors(char * action, int ret, int ssl_err, int len, 
 			 pj_ssl_sock_t *ssock)
@@ -656,6 +673,7 @@ static pj_status_t init_openssl(void)
 
     openssl_init_count = 1;
 
+    PJ_LOG(4, (THIS_FILE, "OpenSSL version : %x", OPENSSL_VERSION_NUMBER));
     /* Register error subsystem */
     status = pj_register_strerror(PJ_SSL_ERRNO_START, 
 				  PJ_SSL_ERRNO_SPACE_SIZE, 
@@ -1030,16 +1048,63 @@ static int xname_cmp(const X509_NAME **a, const X509_NAME **b) {
 
 #endif
 
+#if !defined(OPENSSL_NO_DH)
+
+static void set_option(const pj_ssl_sock_t* ssock, SSL_CTX* ctx) {
+    unsigned long options = SSL_OP_CIPHER_SERVER_PREFERENCE |
+#if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
+	SSL_OP_SINGLE_ECDH_USE |
+#endif
+	SSL_OP_SINGLE_DH_USE;
+    options = SSL_CTX_set_options(ctx, options);
+    PJ_LOG(4, (ssock->pool->obj_name, "SSL DH "
+	       "initialized, PFS cipher-suites enabled"));
+}
+
+static void set_dh_use_option(BIO *bio, const pj_ssl_sock_t* ssock,
+			      const pj_str_t *pass, SSL_CTX* ctx)
+{
+#if OPENSSL_VERSION_NUMBER < 0x30000000L
+    DH* dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
+    if (dh != NULL) {
+	if (SSL_CTX_set_tmp_dh(ctx, dh)) {
+	    set_option(ssock, ctx);
+	}
+	DH_free(dh);
+    }
+#else
+    OSSL_DECODER_CTX* dctx;
+    EVP_PKEY* dh_pkey = NULL;
+    const char* format = "PEM";
+    const char* structure = NULL;
+    const char* keytype = NULL;
+
+    dctx = OSSL_DECODER_CTX_new_for_pkey(&dh_pkey, format, structure, keytype,
+					 0, NULL, NULL);
+    if (dctx != NULL) {
+	if (pass->slen) {
+	    OSSL_DECODER_CTX_set_passphrase(dctx,
+					    (const unsigned char*)pass->ptr,
+					    pass->slen);
+	}
+
+	if (OSSL_DECODER_from_bio(dctx, bio)) {
+	    if (SSL_CTX_set0_tmp_dh_pkey(ctx, dh_pkey)) {
+		set_option(ssock, ctx);
+	    }
+	}
+	OSSL_DECODER_CTX_free(dctx);
+    }
+#endif
+}
+
+#endif
+
 /* Initialize OpenSSL context for the ssock */
 static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 {
     ossl_sock_t *ossock = (ossl_sock_t *)ssock;
     SSL_CTX *ctx = NULL;
-#if !defined(OPENSSL_NO_DH)
-    BIO *bio;
-    DH *dh;
-    long options;
-#endif
     SSL_METHOD *ssl_method = NULL;
     pj_uint32_t ssl_opt = 0;
     pj_ssl_cert_t *cert = ssock->cert;
@@ -1120,6 +1185,14 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
     if (ctx == NULL) {
 	return GET_SSL_STATUS(ssock);
     }
+
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+    if (ssock->param.proto <= PJ_SSL_SOCK_PROTO_TLS1_1) {
+        /* TLS 1.0, TLS 1.1 no longer working at the default security
+	 * level of 1 and instead requires security level 0. */
+	SSL_CTX_set_security_level(ossock->ossl_ctx, 0);
+    }
+#endif
 
     if (ssock->is_server) {
 	unsigned int sid_ctx = SERVER_SESSION_ID_CONTEXT;
@@ -1237,22 +1310,9 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 
 #if !defined(OPENSSL_NO_DH)
 	    if (ssock->is_server) {
-		bio = BIO_new_file(cert->privkey_file.ptr, "r");
+		BIO *bio = BIO_new_file(cert->privkey_file.ptr, "r");
 		if (bio != NULL) {
-		    dh = PEM_read_bio_DHparams(bio, NULL, NULL, NULL);
-		    if (dh != NULL) {
-			if (SSL_CTX_set_tmp_dh(ctx, dh)) {
-			    options = SSL_OP_CIPHER_SERVER_PREFERENCE |
-    #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
-				      SSL_OP_SINGLE_ECDH_USE |
-    #endif
-				      SSL_OP_SINGLE_DH_USE;
-			    options = SSL_CTX_set_options(ctx, options);
-			    PJ_LOG(4,(ssock->pool->obj_name, "SSL DH "
-				     "initialized, PFS cipher-suites enabled"));
-			}
-			DH_free(dh);
-		    }
+		    set_dh_use_option(bio, ssock, &cert->privkey_pass, ctx);
 		    BIO_free(bio);
 		}
 	    }
@@ -1359,20 +1419,7 @@ static pj_status_t init_ossl_ctx(pj_ssl_sock_t *ssock)
 		}
 
 		if (ssock->is_server) {
-		    dh = PEM_read_bio_DHparams(kbio, NULL, NULL, NULL);
-		    if (dh != NULL) {
-			if (SSL_CTX_set_tmp_dh(ctx, dh)) {
-			    options = SSL_OP_CIPHER_SERVER_PREFERENCE |
-    #if !defined(OPENSSL_NO_ECDH) && OPENSSL_VERSION_NUMBER >= 0x10000000L
-				      SSL_OP_SINGLE_ECDH_USE |
-    #endif
-				      SSL_OP_SINGLE_DH_USE;
-			    options = SSL_CTX_set_options(ctx, options);
-			    PJ_LOG(4,(ssock->pool->obj_name, "SSL DH "
-				     "initialized, PFS cipher-suites enabled"));
-			}
-			DH_free(dh);
-		    }
+		    set_dh_use_option(kbio, ssock, &cert->privkey_pass, ctx);
 		}
 		BIO_free(kbio);
 	    }	    
