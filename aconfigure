@@ -5714,6 +5714,10 @@ case $target in
 	printf "%s\n" "#define PJ_LINUX 1" >>confdefs.h
 
 	;;
+    *bsd*)
+	printf "%s\n" "#define PJ_BSD 1" >>confdefs.h
+
+	;;
     *rtems*)
 	printf "%s\n" "#define PJ_RTEMS 1" >>confdefs.h
 
@@ -5725,9 +5729,6 @@ case $target in
     *)
 	;;
 esac
-
-
-
 
 # Check whether --enable-floating-point was given.
 if test ${enable_floating_point+y}
@@ -10220,6 +10221,33 @@ case $target in
 
      { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: ** Setting non-blocking connect() retval to EINPROGRESS (please check)" >&5
 printf "%s\n" "** Setting non-blocking connect() retval to EINPROGRESS (please check)" >&6; }
+	;;
+esac
+
+
+case $target in
+  *linux* | *darwin* | *bsd*)
+	ac_fn_c_check_header_compile "$LINENO" "pthread_np.h" "ac_cv_header_pthread_np_h" "$ac_includes_default"
+if test "x$ac_cv_header_pthread_np_h" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_NP_H 1" >>confdefs.h
+
+fi
+
+	ac_fn_c_check_func "$LINENO" "pthread_setname_np" "ac_cv_func_pthread_setname_np"
+if test "x$ac_cv_func_pthread_setname_np" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_SETNAME_NP 1" >>confdefs.h
+
+fi
+
+	ac_fn_c_check_func "$LINENO" "pthread_set_name_np" "ac_cv_func_pthread_set_name_np"
+if test "x$ac_cv_func_pthread_set_name_np" = xyes
+then :
+  printf "%s\n" "#define PJ_HAS_PTHREAD_SET_NAME_NP 1" >>confdefs.h
+
+fi
+
 	;;
 esac
 
