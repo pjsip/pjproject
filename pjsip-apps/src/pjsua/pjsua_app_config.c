@@ -147,8 +147,8 @@ static void usage(void)
     puts  ("  --auto-rec          Automatically record conversation");
     puts  ("  --quality=N         Specify media quality (0-10, default="
     				  xstr(PJSUA_DEFAULT_CODEC_QUALITY) ")");
-    puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
-    puts  ("  --no-vad            Disable VAD/silence detector (default=specific)");
+    puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=codec specific)");
+    puts  ("  --no-vad            Disable VAD/silence detector (default=codec specific)");
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default="
 	   			  xstr(PJSUA_DEFAULT_EC_TAIL_LEN) ")");
     puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
