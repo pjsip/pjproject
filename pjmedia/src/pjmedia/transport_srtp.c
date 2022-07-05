@@ -943,8 +943,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         srtp->setting.tx_roc.ssrc != 0)
     {
 	err = srtp_set_stream_roc(srtp->srtp_tx_ctx,
-				     srtp->setting.tx_roc.ssrc,
-			    	 srtp->setting.tx_roc.roc);
+				  srtp->setting.tx_roc.ssrc,
+			    	  srtp->setting.tx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
     		   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
     		   srtp->setting.tx_roc.roc,
@@ -995,8 +995,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
         srtp->setting.rx_roc.ssrc != 0)
     {
 	err = srtp_set_stream_roc(srtp->srtp_rx_ctx,
-				     srtp->setting.rx_roc.ssrc,
-			    	 srtp->setting.rx_roc.roc);
+				  srtp->setting.rx_roc.ssrc,
+			    	  srtp->setting.rx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
     		   "ROC %d %s\n",
     	           srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
