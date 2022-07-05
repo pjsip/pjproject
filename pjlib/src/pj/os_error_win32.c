@@ -181,7 +181,7 @@ int platform_strerror( pj_os_err_type os_errcode,
 			     os_errcode,
 			     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), 
 			     wbuf,
-			     sizeof(wbuf),
+			     PJ_ARRAY_SIZE(wbuf),
 			     NULL);
 	if (len) {
 	    pj_unicode_to_ansi(wbuf, len, buf, bufsize);
