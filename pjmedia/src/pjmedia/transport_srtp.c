@@ -942,14 +942,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.tx_roc.roc != 0 &&
         srtp->setting.tx_roc.ssrc != 0)
     {
-	srtp_err_status_t status;
-	status = srtp_set_stream_roc(srtp->srtp_tx_ctx,
+	err = srtp_set_stream_roc(srtp->srtp_tx_ctx,
 				     srtp->setting.tx_roc.ssrc,
-			    	     srtp->setting.tx_roc.roc);
+			    	 srtp->setting.tx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP TX ROC to SSRC %d with "
     		   "ROC %d %s\n", srtp->setting.tx_roc.ssrc,
     		   srtp->setting.tx_roc.roc,
-    	           (status == srtp_err_status_ok)? "succeeded": "failed"));
+    	           (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->tx_policy = *tx;
     pj_strset(&srtp->tx_policy.key,  srtp->tx_key, tx->key.slen);
@@ -995,14 +994,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     if (srtp->setting.rx_roc.roc != 0 &&
         srtp->setting.rx_roc.ssrc != 0)
     {
-	srtp_err_status_t status;
-	status = srtp_set_stream_roc(srtp->srtp_rx_ctx,
+	err = srtp_set_stream_roc(srtp->srtp_rx_ctx,
 				     srtp->setting.rx_roc.ssrc,
-			    	     srtp->setting.rx_roc.roc);
+			    	 srtp->setting.rx_roc.roc);
     	PJ_LOG(4, (THIS_FILE, "Initializing SRTP RX ROC from SSRC %d with "
     		   "ROC %d %s\n",
     	           srtp->setting.rx_roc.ssrc, srtp->setting.rx_roc.roc,
-    	       	   (status == srtp_err_status_ok)? "succeeded": "failed"));
+    	       	   (err == srtp_err_status_ok)? "succeeded": "failed"));
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
