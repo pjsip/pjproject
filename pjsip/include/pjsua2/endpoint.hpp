@@ -923,7 +923,7 @@ public:
     /**
      * Disable VAD?
      *
-     * Default: 0 (no (meaning VAD is enabled))
+     * Default: 0 (codec specific)
      */
     bool		noVad;
 
