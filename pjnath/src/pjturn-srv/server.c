@@ -120,6 +120,11 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Bind the timer heap to the ioqueue */
+    pj_timer_heap_bind(srv->core.timer_heap, srv->core.ioqueue);
+#endif
+
     /* Configure lock for the timer heap */
     pj_timer_heap_set_lock(srv->core.timer_heap, srv->core.lock, PJ_FALSE);
 
