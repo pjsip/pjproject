@@ -37,7 +37,6 @@ static void wakeup_on_read_complete(pj_ioqueue_key_t *key,
 				    pj_ioqueue_op_key_t *op_key,
 				    pj_ssize_t bytes_read)
 {
-    pj_status_t status;
     pj_ioqueue_t *ioqueue = (pj_ioqueue_t *)pj_ioqueue_get_user_data(key);
 
     if (bytes_read > 0) {
