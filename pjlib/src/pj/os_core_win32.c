@@ -26,9 +26,12 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/except.h>
+#include <pj/unicode.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+#include <windows.h>
 
 #if defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H != 0
 #  include <winsock2.h>
@@ -200,7 +203,7 @@ PJ_DEF(pj_status_t) pj_init(void)
 	    return rc;
 	}
     }
-#endif   
+#endif
 
     /* Flag PJLIB as initialized */
     ++initialized;
@@ -446,6 +449,64 @@ pj_status_t pj_thread_init(void)
     return pj_thread_register("thr%p", main_thread, &thread);
 }
 
+/*
+ * Set current thread display name
+ * MSDN document:
+ * https://docs.microsoft.com/en-us/visualstudio/debugger/how-to-set-a-thread-name-in-native-code
+ */
+#pragma pack(push, 8)
+typedef struct tagTHREADNAME_INFO {
+    DWORD dwType;     // Must be 0x1000.
+    LPCSTR szName;    // Pointer to name (in user addr space).
+    DWORD dwThreadID; // Thread ID (-1=caller thread).
+    DWORD dwFlags;    // Reserved for future use, must be zero.
+} THREADNAME_INFO;
+#pragma pack(pop)
+
+// The SetThreadDescription API was brought in version 1607 of Windows 10.
+typedef HRESULT(WINAPI *FnSetThreadDescription)(HANDLE hThread,
+						PCWSTR lpThreadDescription);
+
+static void set_thread_display_name(const char *name)
+{
+    /* Set thread name by SetThreadDescription (if support) */
+    FnSetThreadDescription fn = (FnSetThreadDescription)GetProcAddress(
+	GetModuleHandle(PJ_T("Kernel32.dll")), "SetThreadDescription");
+    PJ_LOG(5, (THIS_FILE, "SetThreadDescription:%p, name:%s", fn, name));
+    if (fn) {
+	wchar_t wname[PJ_MAX_OBJ_NAME];
+	pj_ansi_to_unicode(name, pj_ansi_strlen(name), wname, PJ_MAX_OBJ_NAME);
+	fn(GetCurrentThread(), wname);
+	return;
+    }
+
+    /* Set thread name by throwing an exception */
+#if defined(__MINGW32__) || defined(__CYGWIN__)
+#pragma message("Warning: Not support exception")
+#else
+    // The debugger needs to be around to catch the name in the exception.
+    // If there isn't a debugger, we are needlessly throwing an exception.
+    if (!IsDebuggerPresent()) {
+	return;
+    }
+
+    const DWORD MS_VC_EXCEPTION = 0x406D1388;
+    THREADNAME_INFO info;
+    info.dwType = 0x1000;
+    info.szName = name;
+    info.dwThreadID = (DWORD)-1;
+    info.dwFlags = 0;
+#pragma warning(push)
+#pragma warning(disable : 6320 6322)
+    __try {
+	RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR),
+		       (ULONG_PTR *)&info);
+    } __except (EXCEPTION_EXECUTE_HANDLER) {
+    }
+#pragma warning(pop)
+#endif
+}
+
 static DWORD WINAPI thread_main(void *param)
 {
     pj_thread_t *rec = param;
@@ -460,6 +521,8 @@ static DWORD WINAPI thread_main(void *param)
     }
 
     PJ_LOG(6,(rec->obj_name, "Thread started"));
+
+    set_thread_display_name(rec->obj_name);
 
     result = (*rec->proc)(rec->arg);
 
