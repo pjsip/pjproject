@@ -831,6 +831,14 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    }
 	    continue;
 	}
+
+	if (ioqueue->use_epolloneshot) {
+	    /* We are not processing this event, but we still need to rearm
+	     * to receive future events.
+	     */
+	    if (!IS_CLOSING(h))
+		ioqueue_add_to_set(ioqueue, h, 0);
+	}
     }
     for (i=0; i<event_cnt; ++i) {
 	if (queue[i].key->grp_lock)
@@ -874,6 +882,24 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    }
 	}
 
+	if (ioqueue->use_epolloneshot) {
+	    /* When using EPOLLONESHOT, we will receive one-shot notification
+	     * for the associated file descriptor, after which the file
+	     * descriptor is disabled in the interest list and no other events
+	     * will be reported. Note the following cases can happen:
+	     * - we do not want to process a reported event (i.e. event_cnt <
+	     * count)
+	     * - we process the event, but the processing doesn't rearm the file
+	     *   descriptor (such as during processing failure)
+	     * So we need to make sure to rearm the file descriptor here with
+	     * a new event mask.
+	     */
+	    pj_ioqueue_lock_key(queue[i].key);
+	    if (!IS_CLOSING(queue[i].key))
+		ioqueue_add_to_set(ioqueue, queue[i].key, 0);
+	    pj_ioqueue_unlock_key(queue[i].key);
+	}
+
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	decrement_counter(queue[i].key);
 #endif
@@ -881,29 +907,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	if (queue[i].key->grp_lock)
 	    pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock,
 	                            "ioqueue", 0);
-    }
-
-    if (ioqueue->use_epolloneshot) {
-	/* When using EPOLLONESHOT, we will receive one-shot notification for
-	 * the associated file descriptor, after which the file descriptor
-	 * is disabled in the interest list and no other events will be
-	 * reported.
-	 * Note the following cases can happen:
-	 * - we do not want to process a reported event (i.e. event_cnt < count)
-	 * - we process the event, but the processing doesn't rearm the file
-	 *   descriptor (such as during processing failure)
-	 * So we need to make sure to rearm the file descriptor here with
-	 * a new event mask.
-	 */
-	for (i = 0; i < count; ++i) {
-	    pj_ioqueue_key_t *h =
-		(pj_ioqueue_key_t *)(epoll_data_type)events[i].epoll_data;
-
-	    pj_ioqueue_lock_key(h);
-	    if (!IS_CLOSING(h))
-		ioqueue_add_to_set(ioqueue, h, 0);
-	    pj_ioqueue_unlock_key(h);
-	}
     }
 
     /* Special case:
