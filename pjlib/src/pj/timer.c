@@ -37,6 +37,9 @@
 #include <pj/log.h>
 #include <pj/rand.h>
 #include <pj/limits.h>
+#if PJ_IOQUEUE_HAS_WAKEUP
+#include <pj/ioqueue.h>
+#endif
 
 #define THIS_FILE	"timer.c"
 
@@ -181,6 +184,13 @@ struct pj_timer_heap_t
 
     /** Callback to be called when a timer expires. */
     pj_timer_heap_callback *callback;
+
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /**
+     * The ioqueue that timer heap bound
+     */
+    pj_ioqueue_t *ioq;
+#endif
 
 };
 
@@ -653,6 +663,14 @@ PJ_DEF(void) pj_timer_heap_destroy( pj_timer_heap_t *ht )
     }
 }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+PJ_DEF(void) pj_timer_heap_bind(pj_timer_heap_t *ht, pj_ioqueue_t *ioq)
+{
+    pj_assert(ht && ioq);
+    ht->ioq = ioq;
+}
+#endif
+
 PJ_DEF(void) pj_timer_heap_set_lock(  pj_timer_heap_t *ht,
                                       pj_lock_t *lock,
                                       pj_bool_t auto_del )
@@ -716,6 +734,10 @@ static pj_status_t schedule_w_grp_lock(pj_timer_heap_t *ht,
 {
     pj_status_t status;
     pj_time_val expires;
+#if PJ_IOQUEUE_HAS_WAKEUP
+    pj_time_val min_time_node = {0, 0};
+    pj_bool_t wakeup = PJ_FALSE;
+#endif
 
     PJ_ASSERT_RETURN(ht && entry && delay, PJ_EINVAL);
     PJ_ASSERT_RETURN(entry->cb != NULL, PJ_EINVAL);
@@ -736,6 +758,24 @@ static pj_status_t schedule_w_grp_lock(pj_timer_heap_t *ht,
 	return PJ_EINVALIDOP;
     }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Check if need wakeup */
+    if (ht->ioq) {
+	if (ht->cur_size) {
+	    pj_timer_id_t slot = 0;
+#if PJ_TIMER_USE_LINKED_LIST
+	    slot = ht->timer_ids[GET_FIELD(ht->head_list.next, _timer_id)];
+#endif
+	    min_time_node = ht->heap[slot]->_timer_value;
+	    // When the timer smaller than mini-timer, need wakeup
+	    wakeup = PJ_TIME_VAL_LT(expires, min_time_node);
+	} else {
+	    // If there no timer in the heap, need wakeup
+	    wakeup = PJ_TRUE;
+	}
+    }
+#endif
+
     status = schedule_entry(ht, entry, &expires);
     if (status == PJ_SUCCESS) {
     	pj_timer_entry_dup *timer_copy = GET_TIMER(ht, entry);
@@ -752,6 +792,13 @@ static pj_status_t schedule_w_grp_lock(pj_timer_heap_t *ht,
 #endif
     }
     unlock_timer_heap(ht);
+
+#if PJ_IOQUEUE_HAS_WAKEUP
+    // Wakeup the bound ioqueue, avoid timer triggered later than expected
+    if (ht->ioq && status == PJ_SUCCESS && wakeup) {
+	pj_ioqueue_wakeup(ht->ioq);
+    }
+#endif
 
     return status;
 }

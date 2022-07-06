@@ -511,6 +511,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
 	goto on_error;
     }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Bind the timer heap to the ioqueue */
+    pj_timer_heap_bind(endpt->timer_heap, endpt->ioqueue);
+#endif
+
     /* Create transport manager. */
     status = pjsip_tpmgr_create( endpt->pool, endpt,
 			         &endpt_on_rx_msg,

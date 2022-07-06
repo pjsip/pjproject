@@ -473,3 +473,11 @@ PJ_DEF(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t * ht,
     return PJ_SUCCESS;
 }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+PJ_DEF(void) pj_timer_heap_bind( pj_timer_heap_t *ht, pj_ioqueue_t *ioq)
+{
+    PJ_UNUSED_ARG(ht);
+    PJ_UNUSED_ARG(ioq);
+    // Not support
+}
+#endif

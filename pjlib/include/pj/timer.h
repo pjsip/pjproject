@@ -183,6 +183,16 @@ PJ_DECL(pj_status_t) pj_timer_heap_create( pj_pool_t *pool,
  */
 PJ_DECL(void) pj_timer_heap_destroy( pj_timer_heap_t *ht );
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+/**
+ * Bind the timer heap to an ioqueue
+ *
+ * @param ht        The timer heap.
+ * @param ioq       The ioqueue to bind.
+ *
+ */
+PJ_DECL(void) pj_timer_heap_bind(pj_timer_heap_t *ht, pj_ioqueue_t *ioq);
+#endif
 
 /**
  * Set lock object to be used by the timer heap. By default, the timer heap
