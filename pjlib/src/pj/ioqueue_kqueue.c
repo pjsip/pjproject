@@ -570,11 +570,11 @@ PJ_DEF(int) pj_ioqueue_poll(pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
     if (timeout) {
 	xtimeout.tv_sec = timeout->sec;
-	xtimeout.tv_nsec = timeout->msec * 1000;
+	xtimeout.tv_nsec = timeout->msec * 1000000;
     }
 
     TRACE_((THIS_FILE, "start kqueue wait, msec=%d",
-	    xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000));
+	    xtimeout.tv_sec * 1000 + xtimeout.tv_nsec / 1000000));
     count =
 	os_kqueue_wait(ioqueue->kfd, NULL, 0, events, MAX_EVENTS, &xtimeout);
     if (count == 0) {
