@@ -325,6 +325,13 @@ PJ_DEF(pj_status_t) pjmedia_endpt_stop_threads(pjmedia_endpt *endpt)
 
     endpt->quit_flag = 1;
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Wakeup ioqueue, avoid block long time */
+    for (i = 0; i < endpt->thread_cnt; ++i) {
+	pj_ioqueue_wakeup(endpt->ioqueue);
+    }
+#endif
+
     /* Destroy threads */
     for (i=0; i<endpt->thread_cnt; ++i) {
 	if (endpt->thread[i]) {
@@ -345,7 +352,13 @@ static int PJ_THREAD_FUNC worker_proc(void *arg)
     pjmedia_endpt *endpt = (pjmedia_endpt*) arg;
 
     while (!endpt->quit_flag) {
-	pj_time_val timeout = { 0, 10 };
+#if PJ_IOQUEUE_HAS_WAKEUP
+	// If wakup mechanism is enable, poll timeout can be  a large value
+	pj_time_val timeout = {9, 0};
+#else
+	pj_time_val timeout = {0, 10};
+#endif
+
 	pj_ioqueue_poll(endpt->ioqueue, &timeout);
     }
 

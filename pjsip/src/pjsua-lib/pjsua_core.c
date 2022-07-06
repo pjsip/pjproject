@@ -779,6 +779,14 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 /* Worker thread function. */
 static int worker_thread(void *arg)
 {
+#if PJ_IOQUEUE_HAS_WAKEUP
+    // If wakup mechanism is enable, poll timeout can be  a large value
+    enum { TIMEOUT = 9000 };
+    PJ_UNUSED_ARG(arg);
+    while (!pjsua_var.thread_quit_flag) {
+	pjsua_handle_events(TIMEOUT);
+    }
+#else
     enum { TIMEOUT = 10 };
 
     PJ_UNUSED_ARG(arg);
@@ -790,6 +798,7 @@ static int worker_thread(void *arg)
 	if (count < 0)
 	    pj_thread_sleep(TIMEOUT);
     }
+#endif
 
     return 0;
 }
@@ -843,6 +852,14 @@ PJ_DEF(void) pjsua_stop_worker_threads(void)
     unsigned i;
 
     pjsua_var.thread_quit_flag = 1;
+
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Wakeup ioqueue, avoid block long time */
+    for (i = 0; i < (int)pjsua_var.ua_cfg.thread_cnt; ++i) {
+	pj_ioqueue_t *ioq = pjsip_endpt_get_ioqueue(pjsua_var.endpt);
+	pj_ioqueue_wakeup(ioq);
+    }
+#endif
 
     /* Wait worker threads to quit: */
     for (i=0; i<(int)pjsua_var.ua_cfg.thread_cnt; ++i) {
