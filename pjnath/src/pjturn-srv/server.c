@@ -256,7 +256,12 @@ static int server_thread_proc(void *arg)
     pj_turn_srv *srv = (pj_turn_srv*)arg;
 
     while (!srv->core.quit) {
+#if PJ_IOQUEUE_HAS_WAKEUP
+	// If wakup mechanism is enable, poll timeout can be  a large value
+	pj_time_val timeout_max = {9, 0};
+#else
 	pj_time_val timeout_max = {0, 100};
+#endif
 	srv_handle_events(srv, &timeout_max);
     }
 
@@ -273,6 +278,12 @@ PJ_DEF(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv)
 
     /* Stop all worker threads */
     srv->core.quit = PJ_TRUE;
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* Wakeup ioqueue, avoid block long time */
+    for (i = 0; i < srv->core.thread_cnt; ++i) {
+	pj_ioqueue_wakeup(srv->core.ioqueue);
+    }
+#endif
     for (i=0; i<srv->core.thread_cnt; ++i) {
 	if (srv->core.thread[i]) {
 	    pj_thread_join(srv->core.thread[i]);
