@@ -206,7 +206,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     /* Create and init common ioqueue stuffs */
     ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
-    ioqueue_init(ioqueue);
+    ioqueue_init(ioqueue, pool);
 
     ioqueue->max = (unsigned)max_fd;
     ioqueue->count = 0;
@@ -269,6 +269,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
         return rc;
 
     PJ_LOG(4, ("pjlib", "select() I/O Queue created (%p)", ioqueue));
+
+    /* Do some stuffs after ioqueue init */
+    ioqueue_init_done(ioqueue);
 
     *p_ioqueue = ioqueue;
     return PJ_SUCCESS;
@@ -404,6 +407,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     /* Rescan fdset to get max descriptor */
     rescan_fdset(ioqueue);
+
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* wakeup ioqueue */
+    pj_ioqueue_wakeup(ioqueue);
+#endif
 
 on_return:
     /* On error, socket may be left in non-blocking mode. */
@@ -568,6 +576,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     }
 
     pj_lock_destroy(key->lock);
+#endif
+
+#if PJ_IOQUEUE_HAS_WAKEUP
+    /* wakeup ioqueue */
+    pj_ioqueue_wakeup(ioqueue);
 #endif
 
     return PJ_SUCCESS;
@@ -950,6 +963,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
         && PJ_FD_COUNT(&ioqueue->xfdset)==0
 #endif
+#if PJ_IOQUEUE_HAS_WAKEUP
+        && ioqueue->wakeup_fd[0] == PJ_INVALID_SOCKET
+#endif
 	)
     {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -976,6 +992,17 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #endif
 
     nfds = ioqueue->nfds;
+
+#if PJ_IOQUEUE_HAS_WAKEUP && PJ_HAS_THREADS
+    /*
+     * Make sure that wakeupfd always be added to rfdset
+     * When multi-thread polling,  wakeupfd may has been removed
+     * (ioqueue_remove_from_set) by other thread
+     */
+    if (ioqueue->wakeup_fd[0] != PJ_INVALID_SOCKET) {
+	PJ_FD_SET(ioqueue->wakeup_fd[0], &rfdset);
+    }
+#endif
 
     /* Unlock ioqueue before select(). */
     pj_lock_release(ioqueue->lock);

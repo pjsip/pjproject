@@ -682,6 +682,15 @@
 #   define PJ_IOQUEUE_MAX_HANDLES	(64)
 #endif
 
+/**
+ * Enable ioqueue wakeup mechanism
+ *
+ * Default: 0
+ */
+
+#ifndef PJ_IOQUEUE_HAS_WAKEUP
+#   define PJ_IOQUEUE_HAS_WAKEUP 	0
+#endif
 
 /**
  * If PJ_IOQUEUE_HAS_SAFE_UNREG macro is defined, then ioqueue will do more

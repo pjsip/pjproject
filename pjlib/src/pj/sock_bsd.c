@@ -905,4 +905,100 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 }
 #endif	/* PJ_HAS_TCP */
 
+#if defined(PJ_WIN32) || defined(PJ_WIN64)
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2])
+{
+    /*
+     * Simulate unix-like socketpair()
+     * Use a pair of IPv4 local sockets (listening on 127.0.0.1)
+     */
+    int status;
+    pj_sock_t lfd = PJ_INVALID_SOCKET;
+    pj_sock_t cfd = PJ_INVALID_SOCKET;
+    pj_str_t loopback = pj_str("127.0.0.1");
+    pj_sockaddr sa;
+    int salen;
 
+    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM() || type == pj_SOCK_STREAM(),
+		     PJ_EINVAL);
+    family = pj_AF_INET(); // Always inet
+
+    do {
+	/* listen */
+	status = pj_sock_socket(family, type, protocol, &lfd);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	pj_sockaddr_init(pj_AF_INET(), &sa, &loopback, 0);
+	salen = pj_sockaddr_get_len(&sa);
+	status = pj_sock_bind(lfd, &sa, salen);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	status = pj_sock_getsockname(lfd, &sa, &salen);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	if (type == pj_SOCK_STREAM()) {
+	    status = pj_sock_listen(lfd, 1);
+	    if (status != PJ_SUCCESS)
+		break;
+	}
+
+	/* connect to listen fd */
+	status = pj_sock_socket(family, type, protocol, &cfd);
+	if (status != PJ_SUCCESS)
+	    break;
+	status = pj_sock_connect(cfd, &sa, salen);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	if (type == pj_SOCK_DGRAM()) {
+	    status = pj_sock_getsockname(cfd, &sa, &salen);
+	    if (status != PJ_SUCCESS)
+		break;
+	    status = pj_sock_connect(lfd, &sa, salen);
+	    if (status != PJ_SUCCESS)
+		break;
+	    sv[0] = lfd;
+	    sv[1] = cfd;
+	} else if (type == pj_SOCK_STREAM()) {
+	    pj_sock_t newfd = PJ_INVALID_SOCKET;
+	    status = pj_sock_accept(lfd, &newfd, NULL, NULL);
+	    if (status != PJ_SUCCESS)
+		break;
+	    pj_sock_close(lfd);
+	    sv[0] = newfd;
+	    sv[1] = cfd;
+	}
+	return PJ_SUCCESS;
+    } while (0);
+
+    if (lfd != PJ_INVALID_SOCKET)
+	pj_sock_close(lfd);
+    if (cfd != PJ_INVALID_SOCKET)
+	pj_sock_close(cfd);
+    return status;
+}
+#else
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2])
+{
+    int status;
+    int tmp_sv[2];
+
+    status = socketpair(family, type, protocol, tmp_sv);
+    if (status != PJ_SUCCESS) {
+	status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+	return status;
+    }
+    sv[0] = tmp_sv[0];
+    sv[1] = tmp_sv[1];
+    return PJ_SUCCESS;
+}
+#endif

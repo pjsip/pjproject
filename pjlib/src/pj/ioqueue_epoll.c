@@ -228,7 +228,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     ioqueue = pj_pool_alloc(pool, sizeof(pj_ioqueue_t));
 
-    ioqueue_init(ioqueue);
+    ioqueue_init(ioqueue, pool);
 
     ioqueue->max = max_fd;
     ioqueue->count = 0;
@@ -299,6 +299,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     detect_epoll_exclusive_oneshot(ioqueue);
 
     PJ_LOG(4, ("pjlib", "%s I/O Queue created (%p)", pj_ioqueue_name(), ioqueue));
+
+    /* Do some stuffs after ioqueue init */
+    ioqueue_init_done(ioqueue);
 
     *p_ioqueue = ioqueue;
     return PJ_SUCCESS;

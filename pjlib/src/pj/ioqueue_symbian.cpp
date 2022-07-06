@@ -482,6 +482,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioq )
     return PJ_SUCCESS;
 }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+/*
+ * Wakeup ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_wakeup(pj_ioqueue_t *ioq )
+{
+    PJ_UNUSED_ARG(ioq);
+    return PJ_ENOTSUP;
+}
+#endif
 
 /*
  * Set the lock object to be used by the I/O Queue. 

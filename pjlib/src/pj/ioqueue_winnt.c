@@ -463,6 +463,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioqueue )
     return PJ_SUCCESS;
 }
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+/*
+ * pj_ioqueue_wakeup
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_wakeup(pj_ioqueue_t *ioqueue )
+{
+    PJ_UNUSED_ARG(ioqueue);
+    return PJ_ENOTSUP;
+}
+#endif
 
 PJ_DEF(pj_status_t) pj_ioqueue_set_default_concurrency(pj_ioqueue_t *ioqueue,
 						       pj_bool_t allow)

@@ -74,6 +74,7 @@ PJ_DEF(void) pj_dump_config(void)
     PJ_LOG(3, (id, " ioqueue type              : %s", pj_ioqueue_name()));
     PJ_LOG(3, (id, " PJ_IOQUEUE_MAX_HANDLES    : %d", PJ_IOQUEUE_MAX_HANDLES));
     PJ_LOG(3, (id, " PJ_IOQUEUE_HAS_SAFE_UNREG : %d", PJ_IOQUEUE_HAS_SAFE_UNREG));
+    PJ_LOG(3, (id, " PJ_IOQUEUE_HAS_WAKEUP     : %d", PJ_IOQUEUE_HAS_WAKEUP));
     PJ_LOG(3, (id, " PJ_HAS_THREADS            : %d", PJ_HAS_THREADS));
     PJ_LOG(3, (id, " PJ_LOG_USE_STACK_BUFFER   : %d", PJ_LOG_USE_STACK_BUFFER));
     PJ_LOG(3, (id, " PJ_HAS_SEMAPHORE          : %d", PJ_HAS_SEMAPHORE));

@@ -362,6 +362,17 @@ PJ_DECL(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
  */
 PJ_DECL(pj_status_t) pj_ioqueue_destroy( pj_ioqueue_t *ioque );
 
+#if PJ_IOQUEUE_HAS_WAKEUP
+/**
+ * Wakeup the I/O queue.
+ *
+ * @param ioque	        The I/O Queue to be wakeuped
+ *
+ * @return              PJ_SUCCESS if success.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_wakeup( pj_ioqueue_t *ioque );
+#endif
+
 /**
  * Set the lock object to be used by the I/O Queue. This function can only
  * be called right after the I/O queue is created, before any handle is
