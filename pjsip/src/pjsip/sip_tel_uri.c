@@ -217,7 +217,10 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
 	return -1;
     buf += printed;
 
-    *buf = '\0';
+    if (buf < endbuf) {
+        // there still is space: add 0 in case it gets used as c-string
+        *buf = '\0';
+    }
 
     return (buf-startbuf);
 }

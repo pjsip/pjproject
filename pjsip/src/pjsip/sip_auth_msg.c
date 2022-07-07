@@ -156,7 +156,10 @@ static int pjsip_authorization_hdr_print( pjsip_authorization_hdr *hdr,
 	return -1;
 
     buf += printed;
-    *buf = '\0';
+    if (buf < endbuf) {
+        // there still is space: add 0 in case it gets used as c-string
+        *buf = '\0';
+    }
     return (int)(buf-startbuf);
 }
 
@@ -313,7 +316,10 @@ static int pjsip_www_authenticate_hdr_print( pjsip_www_authenticate_hdr *hdr,
 	return -1;
 
     buf += printed;
-    *buf = '\0';
+    if (buf < endbuf) {
+        // there still is space: add 0 in case it gets used as c-string
+        *buf = '\0';
+    }
     return (int)(buf-startbuf);
 }
 

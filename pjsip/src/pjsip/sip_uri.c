@@ -379,7 +379,10 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 	buf += printed;
     }
 
-    *buf = '\0';
+    if (buf < endbuf) {
+        // there still is space: add 0 in case it gets used as c-string
+        *buf = '\0';
+    }
     return buf-startbuf;
 }
 
@@ -584,7 +587,10 @@ static pj_ssize_t pjsip_name_addr_print(pjsip_uri_context_e context,
 	copy_advance_char_check(buf, '>');
     }
 
-    *buf = '\0';
+    if (buf < endbuf) {
+        // there still is space: add 0 in case it gets used as c-string
+        *buf = '\0';
+    }
     return buf-startbuf;
 }
 
