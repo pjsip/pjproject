@@ -147,8 +147,8 @@ struct darwin_stream
     dispatch_queue_t 		 queue;
     AVCaptureVideoPreviewLayer  *prev_layer;
     
-#if TARGET_OS_IPHONE
     pj_bool_t		 is_running;
+#if TARGET_OS_IPHONE
     pj_bool_t		 is_rendering;
     void		*render_buf;
     pj_size_t		 render_buf_size;
