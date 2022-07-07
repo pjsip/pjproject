@@ -822,6 +822,7 @@ SHELL'
 ac_subst_files=''
 ac_user_opts='
 enable_option_checking
+enable_libuuid
 enable_floating_point
 enable_kqueue
 enable_epoll
@@ -1519,6 +1520,7 @@ Optional Features:
   --disable-option-checking  ignore unrecognized --enable/--with options
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-libuuid       Exclude libuuid(default: autodetect)
   --disable-floating-point
                           Disable floating point where possible
   --enable-kqueue         Use kqueue ioqueue on macos/BSD (experimental)
@@ -5247,7 +5249,18 @@ then :
 
 fi
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for uuid_generate in -luuid" >&5
+
+# Check whether --enable-libuuid was given.
+if test ${enable_libuuid+y}
+then :
+  enableval=$enable_libuuid; if test "$enable_libuuid" = "no"; then
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if libuuid disabled... yes" >&5
+printf "%s\n" "Checking if libuuid disabled... yes" >&6; }
+	ac_has_uuid_lib=0
+	fi
+else $as_nop
+
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for uuid_generate in -luuid" >&5
 printf %s "checking for uuid_generate in -luuid... " >&6; }
 if test ${ac_cv_lib_uuid_uuid_generate+y}
 then :
@@ -5290,7 +5303,7 @@ then :
 
 fi
 
-{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for uuid_generate in -luuid" >&5
+	{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for uuid_generate in -luuid" >&5
 printf %s "checking for uuid_generate in -luuid... " >&6; }
 if test ${ac_cv_lib_uuid_uuid_generate+y}
 then :
@@ -5329,6 +5342,10 @@ if test "x$ac_cv_lib_uuid_uuid_generate" = xyes
 then :
   ac_has_uuid_lib=1
 fi
+
+
+fi
+
 
 { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for library containing gethostbyname" >&5
 printf %s "checking for library containing gethostbyname... " >&6; }
