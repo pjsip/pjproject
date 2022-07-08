@@ -91,6 +91,7 @@
 #undef PJ_SOCK_HAS_INET_PTON
 #undef PJ_SOCK_HAS_INET_NTOP
 #undef PJ_SOCK_HAS_GETADDRINFO
+#undef PJ_SOCK_HAS_SOCKETPAIR
 
 /* On these OSes, semaphore feature depends on semaphore.h */
 #if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H!=0

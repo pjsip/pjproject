@@ -344,6 +344,15 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 		   AC_MSG_RESULT(yes)],
 		  [AC_MSG_RESULT(no)])
 
+dnl # Determine if socketpair() is available
+AC_MSG_CHECKING([if socketpair() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+				     #include <sys/socket.h>]],
+		    		  [socketpair(0, 0, 0, 0);])],
+		  [AC_DEFINE(PJ_SOCK_HAS_SOCKETPAIR,1)
+		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
 dnl # Determine if sockaddr_in has sin_len member
 AC_MSG_CHECKING([if sockaddr_in has sin_len member])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>

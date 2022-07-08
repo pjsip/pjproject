@@ -905,7 +905,25 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
 }
 #endif	/* PJ_HAS_TCP */
 
-#if defined(PJ_WIN32) || defined(PJ_WIN64)
+#if defined(PJ_SOCK_HAS_SOCKETPAIR) && PJ_SOCK_HAS_SOCKETPAIR != 0
+PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
+				    int type,
+				    int protocol,
+				    pj_sock_t sv[2])
+{
+    int status;
+    int tmp_sv[2];
+
+    status = socketpair(family, type, protocol, tmp_sv);
+    if (status != PJ_SUCCESS) {
+	status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
+	return status;
+    }
+    sv[0] = tmp_sv[0];
+    sv[1] = tmp_sv[1];
+    return PJ_SUCCESS;
+}
+#else
 PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 				    int type,
 				    int protocol,
@@ -982,23 +1000,5 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
     if (cfd != PJ_INVALID_SOCKET)
 	pj_sock_close(cfd);
     return status;
-}
-#else
-PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
-				    int type,
-				    int protocol,
-				    pj_sock_t sv[2])
-{
-    int status;
-    int tmp_sv[2];
-
-    status = socketpair(family, type, protocol, tmp_sv);
-    if (status != PJ_SUCCESS) {
-	status = PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-	return status;
-    }
-    sv[0] = tmp_sv[0];
-    sv[1] = tmp_sv[1];
-    return PJ_SUCCESS;
 }
 #endif
