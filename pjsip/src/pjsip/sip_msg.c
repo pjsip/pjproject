@@ -1573,8 +1573,8 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     copy_advance(buf, (*hname));
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     printed = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, hdr->uri, 
 			      buf, endbuf-buf);
@@ -1777,8 +1777,8 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     /* Route and Record-Route don't compact forms */
 
     copy_advance(buf, hdr->name);
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     printed = pjsip_uri_print(PJSIP_URI_IN_ROUTING_HDR, &hdr->name_addr, buf, 
 			      endbuf-buf);
@@ -2051,8 +2051,8 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
 
     /* pjsip_hdr_names */
     copy_advance(buf, (*hname));
-    *buf++ = ':';
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ':');
+    copy_advance_char_check(buf, ' ');
 
     /* SIP/2.0/transport host:port */
     pj_memcpy(buf, sip_ver.ptr, sip_ver.slen);
@@ -2066,7 +2066,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
 	}
     }
     buf += hdr->transport.slen;
-    *buf++ = ' ';
+    copy_advance_char_check(buf, ' ');
 
     /* Check if host contains IPv6 */
     if (pj_strchr(&hdr->sent_by.host, ':')) {
@@ -2076,7 +2076,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     }
 
     if (hdr->sent_by.port != 0) {
-	*buf++ = ':';
+	copy_advance_char_check(buf, ':');
 	printed = pj_utoa(hdr->sent_by.port, buf);
 	buf += printed;
     }
@@ -2097,7 +2097,7 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
 	pj_memcpy(buf, ";rport", 6);
 	buf += 6;
 	if (hdr->rport_param > 0) {
-	    *buf++ = '=';
+	    copy_advance_char_check(buf, '=');
 	    buf += pj_utoa(hdr->rport_param, buf);
 	}
     }
