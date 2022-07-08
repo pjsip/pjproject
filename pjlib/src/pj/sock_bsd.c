@@ -940,8 +940,12 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
     pj_sockaddr sa;
     int salen;
 
+#if PJ_HAS_TCP
     PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM() || type == pj_SOCK_STREAM(),
 		     PJ_EINVAL);
+#else
+    PJ_ASSERT_RETURN(type == pj_SOCK_DGRAM(), PJ_EINVAL);
+#endif
     family = pj_AF_INET(); // Always inet
 
     do {
@@ -960,11 +964,13 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 	if (status != PJ_SUCCESS)
 	    break;
 
+#if PJ_HAS_TCP
 	if (type == pj_SOCK_STREAM()) {
 	    status = pj_sock_listen(lfd, 1);
 	    if (status != PJ_SUCCESS)
 		break;
 	}
+#endif
 
 	/* connect to listen fd */
 	status = pj_sock_socket(family, type, protocol, &cfd);
@@ -983,7 +989,9 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 		break;
 	    sv[0] = lfd;
 	    sv[1] = cfd;
-	} else if (type == pj_SOCK_STREAM()) {
+	}
+#if PJ_HAS_TCP
+	else if (type == pj_SOCK_STREAM()) {
 	    pj_sock_t newfd = PJ_INVALID_SOCKET;
 	    status = pj_sock_accept(lfd, &newfd, NULL, NULL);
 	    if (status != PJ_SUCCESS)
@@ -992,6 +1000,7 @@ PJ_DEF(pj_status_t) pj_sock_socketpair(int family,
 	    sv[0] = newfd;
 	    sv[1] = cfd;
 	}
+#endif
 	return PJ_SUCCESS;
     } while (0);
 
