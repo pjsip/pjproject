@@ -578,11 +578,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     pj_lock_destroy(key->lock);
 #endif
 
-#if PJ_IOQUEUE_HAS_WAKEUP
-    /* wakeup ioqueue */
-    pj_ioqueue_wakeup(ioqueue);
-#endif
-
     return PJ_SUCCESS;
 }
 
