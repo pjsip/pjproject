@@ -256,7 +256,11 @@ static int perform_test(pj_bool_t allow_concur,
     	     pj_pool_alloc(pool, thread_cnt*sizeof(pj_thread_t*));
 
     TRACE_((THIS_FILE, "     creating ioqueue.."));
+#if PJ_IOQUEUE_HAS_WAKEUP
+    rc = pj_ioqueue_create(pool, sockpair_cnt*2 + 2, &ioqueue);
+#else
     rc = pj_ioqueue_create(pool, sockpair_cnt*2, &ioqueue);
+#endif
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create ioqueue", rc);
         return -15;

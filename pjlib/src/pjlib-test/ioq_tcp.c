@@ -128,6 +128,20 @@ static pj_ioqueue_callback test_cb =
     &on_ioqueue_connect,
 };
 
+static void ioq_clear_events(pj_ioqueue_t *ioque)
+{
+#if PJ_IOQUEUE_HAS_WAKEUP
+    // Note: only select framework, pj_ioqueue_register_sock() send wakeup event
+    if (pj_ansi_strcmp(pj_ioqueue_name(), "select"))
+	return;
+    do {
+	pj_time_val timeout = {0, 0};
+	if (pj_ioqueue_poll(ioque, &timeout) <= 0)
+	    break;
+    } while (1);
+#endif
+}
+
 static int send_recv_test(pj_ioqueue_t *ioque,
 			  pj_ioqueue_key_t *skey,
 			  pj_ioqueue_key_t *ckey,
@@ -142,6 +156,9 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     pj_timestamp t1, t2;
     int pending_op = 0;
     pj_ioqueue_op_key_t read_op, write_op;
+
+    // Before continue testing make sure that no events in ioqueue
+    ioq_clear_events(ioque);
 
     // Init operation keys.
     pj_ioqueue_op_key_init(&read_op, sizeof(read_op));
@@ -334,6 +351,9 @@ static int compliance_test_0(pj_bool_t allow_concur)
 	status=-25; goto on_error;
     }
 
+    // Before continue testing make sure that no events in ioqueue
+    ioq_clear_events(ioque);
+
     // Server socket accept()
     client_addr_len = sizeof(pj_sockaddr_in);
     status = pj_ioqueue_accept(skey, &accept_op, &csock0, 
@@ -523,6 +543,9 @@ static int compliance_test_1(pj_bool_t allow_concur)
         app_perror("...ERROR in pj_ioqueue_register_sock()", rc);
 	status=-23; goto on_error;
     }
+
+    // Before continue testing make sure that no events in ioqueue
+    ioq_clear_events(ioque);
 
     // Initialize remote address.
     pj_sockaddr_in_init(&addr, pj_cstr(&s, "127.0.0.1"), NON_EXISTANT_PORT);
@@ -744,6 +767,9 @@ static int compliance_test_2(pj_bool_t allow_concur)
 		app_perror("...error ", rc);
 		status=-80; goto on_error;
 	    }
+
+	    // Before continue testing make sure that no events in ioqueue
+	    ioq_clear_events(ioque);
 
 	    // Server socket accept()
 	    pj_ioqueue_op_key_init(&server[i].accept_op, 

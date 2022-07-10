@@ -71,6 +71,20 @@ static pj_ioqueue_op_key_t  *callback_read_op,
                             *callback_write_op,
                             *callback_accept_op;
 
+static void ioq_clear_events(pj_ioqueue_t *ioque)
+{
+#if PJ_IOQUEUE_HAS_WAKEUP
+    // Note: only select framework, pj_ioqueue_register_sock() send wakeup event
+    if (pj_ansi_strcmp(pj_ioqueue_name(), "select"))
+	return;
+    do {
+	pj_time_val timeout = {0, 0};
+	if (pj_ioqueue_poll(ioque, &timeout) <= 0)
+	    break;
+    } while (1);
+#endif
+}
+
 static void on_ioqueue_read(pj_ioqueue_key_t *key, 
                             pj_ioqueue_op_key_t *op_key,
                             pj_ssize_t bytes_read)
@@ -426,6 +440,9 @@ static int unregister_test(pj_bool_t allow_concur)
 	return -140;
     }
 
+    /* Before continue testing make sure that no events in ioqueue */
+    ioq_clear_events(ioqueue);
+
     /* Init operation key. */
     pj_ioqueue_op_key_init(&opkey, sizeof(opkey));
 
@@ -566,7 +583,11 @@ static int many_handles_test(pj_bool_t allow_concur)
     }
 
     /* Register as many sockets. */
+#if PJ_IOQUEUE_HAS_WAKEUP
+    for (count=0; count<MAX-2; ++count) {
+#else
     for (count=0; count<MAX; ++count) {
+#endif
 	sock[count] = PJ_INVALID_SOCKET;
 	rc = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[count]);
 	if (rc != PJ_SUCCESS || sock[count] == PJ_INVALID_SOCKET) {
