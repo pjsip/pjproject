@@ -666,7 +666,7 @@ PJ_DEF(void) pj_timer_heap_destroy( pj_timer_heap_t *ht )
 #if PJ_IOQUEUE_HAS_WAKEUP
 PJ_DEF(void) pj_timer_heap_bind(pj_timer_heap_t *ht, pj_ioqueue_t *ioq)
 {
-    pj_assert(ht && ioq);
+    pj_assert(ht);
     ht->ioq = ioq;
 }
 #endif
