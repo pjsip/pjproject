@@ -416,11 +416,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_add_port( pjmedia_vid_conf *vid_conf,
     cport->idx  = index;
     pj_strdup_with_null(pool, &cport->name, name);
 
-    /* Setup group lock */
-    status = pjmedia_port_init_grp_lock(port, pool, NULL);
-    if (status == PJ_EEXISTS) status = PJ_SUCCESS;
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    /* Setup port's group lock if not yet */
+    if (!port->grp_lock) {
+	status = pjmedia_port_init_grp_lock(port, pool, NULL);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
 
     /* Increase port ref count */
     pjmedia_port_add_ref(port);
@@ -952,6 +953,10 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
     /* Handle synchronized operations */
     handle_op_queue(vid_conf);
 
+    pj_mutex_unlock(vid_conf->mutex);
+
+    /* No mutex from this point! */
+
     /* Iterate all (sink) ports */
     for (i=0, ci=0; i<vid_conf->opt.max_slot_cnt &&
 		    ci<vid_conf->port_cnt; ++i)
@@ -1084,8 +1089,6 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
 	    pj_add_timestamp32(&sink->ts_next, sink->ts_interval);
 	}
     }
-
-    pj_mutex_unlock(vid_conf->mutex);
 }
 
 static pj_bool_t is_landscape(const pjmedia_rect_size *size) {
