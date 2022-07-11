@@ -515,12 +515,12 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
 
 /**
  * This is a helper function to initialize the port's group lock. This
- * function will create the group lock if NULL is passed, add the port's
- * destructor to the group lock handler list, and increment the reference
- * counter.
+ * function will create a group lock if NULL is passed, initialize the group
+ * lock by adding the port's destructor to the group lock handler list, and
+ * increment the reference counter.
  *
- * Application should call this function after on_destroy() function has
- * been assigned.
+ * This function should only be called by a media port implementation and
+ * after port's on_destroy() function has been assigned.
  *
  * @param port		    The pjmedia port to be initialized.
  * @param pool		    The pool, this can be a temporary pool as

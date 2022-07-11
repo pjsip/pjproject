@@ -107,6 +107,7 @@ struct pjmedia_vid_stream
     pjmedia_endpt	    *endpt;	    /**< Media endpoint.	    */
     pjmedia_vid_codec_mgr   *codec_mgr;	    /**< Codec manager.		    */
     pjmedia_vid_stream_info  info;	    /**< Stream info.		    */
+    pj_grp_lock_t	    *grp_lock;	    /**< Stream lock.		    */
 
     pjmedia_vid_channel	    *enc;	    /**< Encoding channel.	    */
     pjmedia_vid_channel	    *dec;	    /**< Decoding channel.	    */
@@ -118,7 +119,6 @@ struct pjmedia_vid_stream
 
     pjmedia_transport	    *transport;	    /**< Stream transport.	    */
 
-    pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
     char		     jb_last_frm;   /**< Last frame type from jb    */
     unsigned		     jb_last_frm_cnt;/**< Last JB frame type counter*/
@@ -234,6 +234,10 @@ static pj_status_t send_rtcp(pjmedia_vid_stream *stream,
 static void on_rx_rtcp( void *data,
                         void *pkt,
                         pj_ssize_t bytes_read);
+
+static void on_destroy(void *arg);
+
+static void channel_on_destroy(void *arg) { PJ_UNUSED_ARG(arg); }
 
 #if TRACE_JB
 
@@ -416,7 +420,7 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
 	case PJMEDIA_EVENT_FMT_CHANGED:
 	    /* Copy the event to avoid deadlock if we publish the event
 	     * now. This happens because fmt_event may trigger restart
-	     * while we're still holding the jb_mutex.
+	     * while we're still holding the stream lock.
 	     */
 	    pj_memcpy(&stream->fmt_event, event, sizeof(*event));
 	    return PJ_SUCCESS;
@@ -516,6 +520,9 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
     pj_status_t status;
     void *pkt;
     int pkt_len;
+
+    if (!stream->transport)
+	return;
 
     TRC_((channel->port.info.name.ptr,
 	  "Sending keep-alive (RTCP and empty RTP)"));
@@ -909,7 +916,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 	}
     }
 
-    pj_mutex_lock( stream->jb_mutex );
+    pj_grp_lock_acquire( stream->grp_lock );
 
     /* Quickly see if there may be a full picture in the jitter buffer, and
      * decode them if so. More thorough check will be done in decode_frame().
@@ -975,7 +982,7 @@ static void on_rx_rtp( pjmedia_tp_cb_param *param)
 #endif
 
     }
-    pj_mutex_unlock( stream->jb_mutex );
+    pj_grp_lock_release( stream->grp_lock );
 
     /* Check if we need to send RTCP-FB generic NACK */
     if (stream->send_rtcp_fb_nack && seq_st.diff > 1 &&
@@ -1204,7 +1211,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	/* When the payload length is zero, we should not send anything,
 	 * but proceed the rest normally.
 	 */
-	if (frame_out.size != 0) {
+	if (frame_out.size != 0 && stream->transport) {
 	    /* Copy RTP header to the beginning of packet */
 	    pj_memcpy(channel->buf, rtphdr, sizeof(pjmedia_rtp_hdr));
 
@@ -1295,7 +1302,7 @@ static pj_status_t put_frame(pjmedia_port *port,
      * We only do this when stream direction is not "decoding only", because
      * when it is, check_tx_rtcp() will be handled by get_frame().
      */
-    if (stream->dir != PJMEDIA_DIR_DECODING) {
+    if (stream->dir != PJMEDIA_DIR_DECODING && stream->transport) {
 	check_tx_rtcp(stream);
     }
 
@@ -1543,7 +1550,7 @@ static pj_status_t get_frame(pjmedia_port *port,
     }
 
     /* Report pending events. Do not publish the event while holding the
-     * jb_mutex as that would lead to deadlock. It should be safe to
+     * stream lock as that would lead to deadlock. It should be safe to
      * operate on fmt_event without the mutex because format change normally
      * would only occur once during the start of the media.
      */
@@ -1587,7 +1594,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 	stream->miss_keyframe_event.type = PJMEDIA_EVENT_NONE;
     }
 
-    pj_mutex_lock( stream->jb_mutex );
+    pj_grp_lock_acquire( stream->grp_lock );
 
     if (stream->dec_frame.size == 0) {
 	/* Don't have frame in buffer, try to decode one */
@@ -1613,7 +1620,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 	stream->dec_frame.size = 0;
     }
 
-    pj_mutex_unlock( stream->jb_mutex );
+    pj_grp_lock_release( stream->grp_lock );
 
     return PJ_SUCCESS;
 }
@@ -1704,9 +1711,10 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	pi->fmt.id = info->codec_param->dec_fmt.id;
 	channel->port.put_frame = &put_frame;
     }
-
-    /* Init port. */
     channel->port.port_data.pdata = stream;
+
+    /* Use stream group lock */
+    channel->port.grp_lock = stream->grp_lock;
 
     PJ_LOG(5, (name.ptr,
 	       "%s channel created %dx%d %s%s%.*s %d/%d(~%d)fps",
@@ -1832,9 +1840,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     	stream->cname.slen = p - stream->cname.ptr;
     }
 
-    /* Create mutex to protect jitter buffer: */
+    /* Create group lock */
+    status = pj_grp_lock_create_w_handler(pool, NULL, stream, 
+					  &on_destroy,
+					  &stream->grp_lock);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
 
-    status = pj_mutex_create_simple(pool, NULL, &stream->jb_mutex);
+    /* Add ref count of group lock */
+    status = pj_grp_lock_add_ref(stream->grp_lock);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -2140,6 +2154,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 {
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
+    PJ_LOG(4,(THIS_FILE, "Destroy request on %s..", stream->name.ptr));
+
+    /* Stop the streaming */
+    if (stream->enc)
+	stream->enc->port.put_frame = NULL;
+    if (stream->dec)
+	stream->dec->port.get_frame = NULL;
+
 #if TRACE_RC
     {
 	unsigned total_time;
@@ -2153,7 +2175,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     }
 #endif
 
-    /* Unsubscribe events from RTCP */
+    /* Unsubscribe from events */
+    if (stream->codec) {
+        pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream,
+                                  stream->codec);
+    }
     pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream, &stream->rtcp);
 
     /* Send RTCP BYE (also SDES) */
@@ -2170,27 +2196,38 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 	stream->transport = NULL;
     }
 
-    /* This function may be called when stream is partly initialized. */
-    if (stream->jb_mutex)
-	pj_mutex_lock(stream->jb_mutex);
+    /* This function may be called when stream is partly initialized,
+     * i.e: group lock may not be created yet.
+     */
+    if (stream->grp_lock) {
+	return pj_grp_lock_dec_ref(stream->grp_lock);
+    } else {
+	on_destroy(stream);
+    }
 
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Destroy stream.
+ */
+static void on_destroy( void *arg )
+{
+    pjmedia_vid_stream *stream = (pjmedia_vid_stream*)arg;
+    pj_assert(stream);
+
+    PJ_LOG(4,(THIS_FILE, "Destroying %s..", stream->name.ptr));
 
     /* Free codec. */
     if (stream->codec) {
-        pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream,
-                                  stream->codec);
 	pjmedia_vid_codec_close(stream->codec);
 	pjmedia_vid_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
 	stream->codec = NULL;
     }
 
     /* Free mutex */
-
-    if (stream->jb_mutex) {
-	pj_mutex_unlock(stream->jb_mutex);
-	pj_mutex_destroy(stream->jb_mutex);
-	stream->jb_mutex = NULL;
-    }
+    stream->grp_lock = NULL;
 
     /* Destroy jitter buffer */
     if (stream->jb) {
@@ -2206,8 +2243,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 #endif
 
     pj_pool_safe_release(&stream->own_pool);
-
-    return PJ_SUCCESS;
 }
 
 
@@ -2358,9 +2393,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,
 	stream->dec->paused = 1;
 
 	/* Also reset jitter buffer */
-	pj_mutex_lock( stream->jb_mutex );
+	pj_grp_lock_acquire( stream->grp_lock );
 	pjmedia_jbuf_reset(stream->jb);
-	pj_mutex_unlock( stream->jb_mutex );
+	pj_grp_lock_release( stream->grp_lock );
 
 	PJ_LOG(4,(stream->dec->port.info.name.ptr, "Decoder stream paused"));
     }

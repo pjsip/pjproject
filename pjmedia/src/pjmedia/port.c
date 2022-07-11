@@ -159,18 +159,13 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(port && pool, PJ_EINVAL);
+    PJ_ASSERT_RETURN(port->grp_lock == NULL, PJ_EEXISTS);
 
     /* We need to be caution on ports that do not have the on_destroy()!
      * It can be uninitialized yet or it really does not have one.
      * If it doesn't have one, then we'd expect a possible premature destroy!
      */
     PJ_ASSERT_RETURN(port->on_destroy, PJ_EINVALIDOP);
-
-    /* Check if it is already initialized */
-    if (port->grp_lock) {
-	pj_assert(glock == NULL || glock == port->grp_lock);
-	return PJ_EEXISTS;
-    }
 
     if (!grp_lock) {
 	/* Create if not supplied */

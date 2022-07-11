@@ -2799,11 +2799,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     att_param.rtcp_cb = &on_rx_rtcp;
 
     /* Only attach transport when stream is ready. */
+    stream->transport = tp;
     status = pjmedia_transport_attach2(tp, &att_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
-
-    stream->transport = tp;
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     /* Enable RTCP XR and update stream info/config to RTCP XR */
