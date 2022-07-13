@@ -618,7 +618,7 @@ static void vid_handle_menu(char *menuin)
 	    } else {
 		unsigned i;
 		printf(" Video conference has %d ports:\n", count);
-		printf(" id name                   format               rx           tx    \n");
+		printf(" id name                   format               rx-from      tx-to \n");
 		printf(" ------------------------------------------------------------------\n");
 		for (i=0; i<count; ++i) {
 		    char li_list[PJSUA_MAX_CALLS*4];
