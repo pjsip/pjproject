@@ -327,6 +327,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
 
     PJ_ASSERT_RETURN(vid_conf, PJ_EINVAL);
 
+    PJ_LOG(5,(THIS_FILE, "Video conference bridge destroy requested"));
+
     /* Destroy clock */
     if (vid_conf->clock) {
 	pjmedia_clock_destroy(vid_conf->clock);
@@ -588,6 +590,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_remove_port( pjmedia_vid_conf *vid_conf,
 	return PJ_EINVAL;
     }
 
+    PJ_LOG(5,(THIS_FILE, "Video port %d remove requested", slot));
+
     /* Queue the operation */
     ope = get_free_op_entry(vid_conf);
     ope->type = OP_REMOVE_PORT;
@@ -767,6 +771,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_connect_port(
     /* Queue the operation */
     if (i == src_port->listener_cnt) {
 	op_entry *ope;
+
+	PJ_LOG(5,(THIS_FILE, "Video connect ports %d->%d requested",
+			     src_slot, sink_slot));
+
 	ope = get_free_op_entry(vid_conf);
 	ope->type = OP_CONNECT_PORTS;
 	ope->param.connect_ports.src = src_slot;
@@ -875,6 +883,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_disconnect_port(
 	/* Queue the operation */
 	if (i == src_port->listener_cnt) {
 	    op_entry *ope;
+
+	    PJ_LOG(5,(THIS_FILE, "Video disconnect ports %d->%d requested",
+				 src_slot, sink_slot));
+
 	    ope = get_free_op_entry(vid_conf);
 	    ope->type = OP_DISCONNECT_PORTS;
 	    ope->param.disconnect_ports.src = src_slot;
