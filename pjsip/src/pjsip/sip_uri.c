@@ -679,7 +679,7 @@ static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
 				  char *buf, pj_size_t size)
 {
     char *startbuf = buf;
-    char *endbuf = buf + size;
+    char *endbuf = buf + size - 1; // Need to minus one for NULL terminator
     
     PJ_UNUSED_ARG(context);
     
@@ -693,6 +693,7 @@ static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
     /* Print content. */
     copy_advance(buf, uri->content);
     
+    *buf = '\0';
     return (buf - startbuf);
 }
 
