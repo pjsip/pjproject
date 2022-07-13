@@ -39,7 +39,8 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
 				    unsigned clock_rate,
 				    unsigned channel_count,
 				    unsigned samples_per_frame,
-				    unsigned bits_per_sample);
+				    unsigned bits_per_sample,
+				    pj_bool_t use_default_settings);
 
 /*****************************************************************************
  *
@@ -1007,7 +1008,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
 					  peer_info.clock_rate,
 					  peer_info.channel_count,
 					  peer_info.samples_per_frame,
-					  peer_info.bits_per_sample);
+					  peer_info.bits_per_sample,
+					  PJ_FALSE);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror(THIS_FILE, "Error opening sound device",
 				 status);
@@ -1732,7 +1734,8 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
 				    unsigned clock_rate,
 				    unsigned channel_count,
 				    unsigned samples_per_frame,
-				    unsigned bits_per_sample)
+				    unsigned bits_per_sample,
+				    pj_bool_t use_default_settings)
 {
     pj_status_t status;
     pj_bool_t speaker_only = (pjsua_var.snd_mode & PJSUA_SND_DEV_SPEAKER_ONLY);
@@ -1757,17 +1760,22 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
     param->samples_per_frame = samples_per_frame;
     param->bits_per_sample = bits_per_sample;
 
-    /* Update the setting with user preference */
-#define update_param(cap, field)    \
-	if (pjsua_var.aud_param.flags & cap) { \
-	    param->flags |= cap; \
-	    param->field = pjsua_var.aud_param.field; \
+    if (use_default_settings) {
+	/* Reset the sound device settings. */
+	pjsua_var.aud_open_cnt = 0;
+    } else {
+	/* Update the setting with user preference */
+#define update_param(cap, field)			    \
+	if (pjsua_var.aud_param.flags & cap) {              \
+	    param->flags |= cap;                            \
+	    param->field = pjsua_var.aud_param.field;       \
 	}
-    update_param( PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, input_vol);
-    update_param( PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, output_vol);
-    update_param( PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE, input_route);
-    update_param( PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE, output_route);
+	update_param(PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, input_vol);
+	update_param(PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, output_vol);
+	update_param(PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE, input_route);
+	update_param(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE, output_route);
 #undef update_param
+    }
 
     /* Latency settings */
     param->flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
@@ -1805,8 +1813,7 @@ static pj_status_t update_initial_aud_param()
     pjmedia_aud_param param;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pjsua_var.snd_port != NULL, PJ_EBUG);
-
+    PJ_ASSERT_RETURN(pjsua_var.snd_port != NULL, PJ_EBUG);    
     strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
 
     status = pjmedia_aud_stream_get_param(strm, &param);
@@ -1815,6 +1822,7 @@ static pj_status_t update_initial_aud_param()
 				"device parameters", status);
 	return status;
     }
+    pjsua_var.aud_param.flags = 0;
 
 #define update_saved_param(cap, field)  \
 	if (param.flags & cap) { \
@@ -2121,6 +2129,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev(int capture_dev,
 				      int playback_dev)
 {
     pjsua_snd_dev_param param;
+
+    pjsua_snd_dev_param_default(&param);
     pjsua_get_snd_dev2(&param);
     param.capture_dev = capture_dev;
     param.playback_dev = playback_dev;
@@ -2160,9 +2170,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 
     PJ_ASSERT_RETURN(snd_param, PJ_EINVAL);
 
-    PJ_LOG(4,(THIS_FILE, "Set sound device: capture=%d, playback=%d, mode=%d",
+    PJ_LOG(4,(THIS_FILE, "Set sound device: capture=%d, playback=%d, mode=%d, "
+	      "use_default_settings=%d",
 	      snd_param->capture_dev, snd_param->playback_dev,
-	      snd_param->mode));
+	      snd_param->mode, snd_param->use_default_settings));
 
     pj_log_push_indent();
 
@@ -2255,7 +2266,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
 	status = create_aud_param(&param.base, snd_param->capture_dev, 
 				  snd_param->playback_dev, 
 				  alt_cr[i], pjsua_var.media_cfg.channel_count,
-				  samples_per_frame, 16);
+				  samples_per_frame, 16,
+				  snd_param->use_default_settings);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
