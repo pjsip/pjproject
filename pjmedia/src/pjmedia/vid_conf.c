@@ -335,7 +335,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_conf_destroy(pjmedia_vid_conf *vid_conf)
 
     /* Remove any registered ports (at least to cleanup their pool) */
     for (i=0; i < vid_conf->opt.max_slot_cnt; ++i) {
-	pjmedia_vid_conf_remove_port(vid_conf, i);
+	if (vid_conf->ports[i]) {
+	    op_param prm;
+	    prm.remove_port.port = i;
+	    op_remove_port(vid_conf, &prm);
+	}
     }
 
     /* Destroy mutex */
@@ -986,14 +990,23 @@ static void on_clock_tick(const pj_timestamp *now, void *user_data)
     pjmedia_frame frame;
     pj_status_t status;
 
-    pj_mutex_lock(vid_conf->mutex);
+    /* Perform any queued operations that need to be synchronized with
+     * the clock such as connect, disonnect, remove, update.
+     */
+    if (!pj_list_empty(vid_conf->op_queue)) {
+	pj_mutex_lock(vid_conf->mutex);
+	handle_op_queue(vid_conf);
+	pj_mutex_unlock(vid_conf->mutex);
+    }
 
-    /* Handle synchronized operations */
-    handle_op_queue(vid_conf);
-
-    pj_mutex_unlock(vid_conf->mutex);
-
-    /* No mutex from this point! */
+    /* No mutex from this point! Otherwise it may cause deadlock as
+     * put_frame()/get_frame() may invoke callback.
+     *
+     * Note that video conference states (e.g: port connection, render state)
+     * must not be changed when the execution reaches this point, so
+     * operations that change the states must be queued or sync-ed with
+     * the clock.
+     */
 
     /* Iterate all (sink) ports */
     for (i=0, ci=0; i<vid_conf->opt.max_slot_cnt &&
