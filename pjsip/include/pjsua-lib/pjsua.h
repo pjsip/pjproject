@@ -7195,10 +7195,12 @@ typedef struct pjsua_snd_dev_param
     unsigned		mode;
 
     /*
-     * When opening the sound device, the settings set from
-     * #pjsua_snd_set_setting() will be applied to any sound device.
-     * This might be undesirable, e.g: output volume changes when switching
-     * sound device due to the use of previously set volume settings.
+     * The library will maintain the global sound device settings set when
+     * opening the sound device for the first time and later can be modified
+     * using #pjsua_snd_set_setting(). These setings are then applied to any
+     * sound device when opening. This might be undesirable,
+     * e.g: output volume changes when switching sound device due to the
+     * use of previously set volume settings.
      *
      * To avoid such case, application can set this to PJ_TRUE and let the
      * sound device use default settings when opening. This will also reset
