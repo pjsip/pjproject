@@ -525,7 +525,7 @@ PJ_DECL(pj_status_t) pjmedia_port_destroy( pjmedia_port *port );
  * @param port		    The pjmedia port to be initialized.
  * @param pool		    The pool, this can be a temporary pool as
  *			    group lock will create and use its internal pool.
- * @param grp_lock	    The group lock, or create a new one if NULL.
+ * @param glock		    The group lock, or create a new one if NULL.
  *
  * @return		    PJ_SUCCESS on success, PJ_EEXISTS if group lock
  *			    is already initialized, or the other appropriate

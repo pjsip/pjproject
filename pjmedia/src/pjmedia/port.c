@@ -162,10 +162,16 @@ PJ_DEF(pj_status_t) pjmedia_port_init_grp_lock( pjmedia_port *port,
     PJ_ASSERT_RETURN(port->grp_lock == NULL, PJ_EEXISTS);
 
     /* We need to be caution on ports that do not have the on_destroy()!
-     * It can be uninitialized yet or it really does not have one.
-     * If it doesn't have one, then we'd expect a possible premature destroy!
+     * It is either uninitialized yet or the port does not have one.
+     * If the port doesn't have one, we'd expect a possible premature destroy!
      */
-    PJ_ASSERT_RETURN(port->on_destroy, PJ_EINVALIDOP);
+    if (port->on_destroy == NULL) {
+	PJ_LOG(3,(THIS_FILE, "Media port %s is using group lock but does not "
+			     "implement on_destroy()!",
+			     port->info.name.ptr));
+	pj_assert(!"Port using group lock should implement on_destroy()!");
+	return PJ_EINVALIDOP;
+    }
 
     if (!grp_lock) {
 	/* Create if not supplied */
