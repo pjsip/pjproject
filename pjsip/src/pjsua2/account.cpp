@@ -387,6 +387,8 @@ void AccountNatConfig::readObject(const ContainerNode &node)
 
     NODE_READ_NUM_T   ( this_node, pjsua_stun_use, sipStunUse);
     NODE_READ_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_upnp_use, sipUpnpUse);
+    NODE_READ_NUM_T   ( this_node, pjsua_upnp_use, mediaUpnpUse);
     NODE_READ_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_READ_BOOL    ( this_node, iceEnabled);
     NODE_READ_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
@@ -421,6 +423,8 @@ void AccountNatConfig::writeObject(ContainerNode &node) const
 
     NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, sipStunUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_stun_use, mediaStunUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_upnp_use, sipUpnpUse);
+    NODE_WRITE_NUM_T   ( this_node, pjsua_upnp_use, mediaUpnpUse);
     NODE_WRITE_NUM_T   ( this_node, pjsua_nat64_opt, nat64Opt);
     NODE_WRITE_BOOL    ( this_node, iceEnabled);
     NODE_WRITE_NUM_T   ( this_node, pj_ice_sess_trickle, iceTrickle);
@@ -641,6 +645,8 @@ void AccountConfig::toPj(pjsua_acc_config &ret) const
     // AccountNatConfig
     ret.sip_stun_use		= natConfig.sipStunUse;
     ret.media_stun_use		= natConfig.mediaStunUse;
+    ret.sip_upnp_use		= natConfig.sipUpnpUse;
+    ret.media_upnp_use		= natConfig.mediaUpnpUse;
     ret.nat64_opt		= natConfig.nat64Opt;
     ret.ice_cfg_use		= PJSUA_ICE_CONFIG_USE_CUSTOM;
     ret.ice_cfg.enable_ice	= natConfig.iceEnabled;
@@ -803,6 +809,8 @@ void AccountConfig::fromPj(const pjsua_acc_config &prm,
     // AccountNatConfig
     natConfig.sipStunUse	= prm.sip_stun_use;
     natConfig.mediaStunUse	= prm.media_stun_use;
+    natConfig.sipUpnpUse	= prm.sip_upnp_use;
+    natConfig.mediaUpnpUse	= prm.media_upnp_use;
     natConfig.nat64Opt		= prm.nat64_opt;
     if (prm.ice_cfg_use == PJSUA_ICE_CONFIG_USE_CUSTOM) {
 	natConfig.iceEnabled = PJ2BOOL(prm.ice_cfg.enable_ice);

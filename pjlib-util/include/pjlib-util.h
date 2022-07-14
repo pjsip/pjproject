@@ -61,6 +61,9 @@
 /* Old STUN */
 #include <pjlib-util/stun_simple.h>
 
+/* UPnP */
+#include <pjlib-util/upnp.h>
+
 /* PCAP */
 #include <pjlib-util/pcap.h>
 

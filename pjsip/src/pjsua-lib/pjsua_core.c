@@ -994,6 +994,14 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 }
 
 
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+/* UPnP callback. */
+static void upnp_cb(pj_status_t status)
+{
+    pjsua_var.upnp_status = status;
+}
+#endif
+
 /*
  * Initialize pjsua with the specified settings. All the settings are 
  * optional, and the default values will be used when the config is not
@@ -1193,6 +1201,25 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	goto on_error;
     }
+
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+    /* Initialize UPnP if enabled */
+    if (pjsua_var.ua_cfg.enable_upnp) {
+    	pj_upnp_init_param param;
+
+    	pj_bzero(&param, sizeof(param));
+    	param.factory = pjsua_var.pool->factory;
+    	if (pjsua_var.ua_cfg.upnp_if_name.slen > 0)
+    	    param.if_name = pjsua_var.ua_cfg.upnp_if_name.ptr;
+    	param.upnp_cb = &upnp_cb;
+
+	pjsua_var.upnp_status = pj_upnp_init(&param);
+        if (pjsua_var.upnp_status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing UPnP",
+	    			    pjsua_var.upnp_status);
+        }
+    }
+#endif
 
     /* Initialize PJSUA media subsystem */
     status = pjsua_media_subsys_init(media_cfg);
@@ -2008,6 +2035,12 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    }
 	}
 
+    	/* Close pjsua transports */
+    	for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
+	    if (pjsua_var.tpdata[i].data.ptr)
+	    	pjsua_transport_close(i, PJ_FALSE);
+    	}
+
 	/* Destroy media (to shutdown media endpoint, etc) */
 	pjsua_media_subsys_destroy(flags);
 
@@ -2035,6 +2068,13 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    }
 	}
     }
+
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+    /* Deinitialize UPnP */
+    if (pjsua_var.ua_cfg.enable_upnp) {
+        pj_upnp_deinit();
+    }
+#endif
 
     /* Destroy mutex */
     if (pjsua_var.mutex) {
@@ -2349,6 +2389,7 @@ static pj_status_t create_sip_udp_sock(int af,
     /* Get the published address, either by STUN or by resolving
      * the name of local host.
      */
+    status = PJ_SUCCESS;
     if (pj_sockaddr_has_addr(p_pub_addr)) {
 	/*
 	 * Public address is already specified, no need to resolve the 
@@ -2384,19 +2425,21 @@ static pj_status_t create_sip_udp_sock(int af,
 		pj_sock_close(sock);
 		return status;
 	    }
-
-	    /* Otherwise, just use host IP */
-	    pj_sockaddr_init(af, p_pub_addr, NULL, (pj_uint16_t)port);
-	    status = pj_gethostip(af, p_pub_addr);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Unable to get local host IP", status);
-		pj_sock_close(sock);
-		return status;
-	    }
 	}
+    }
 
-    } else {
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+    else if (pjsua_var.ua_cfg.enable_upnp &&
+    	     pjsua_var.upnp_status == PJ_SUCCESS)
+    {
+	status = pj_upnp_add_port_mapping(1, &sock, NULL, p_pub_addr);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error adding UPnP port mapping", status);
+	}
+    }
+#endif
 
+    if (!pj_sockaddr_has_addr(p_pub_addr)) {
 	pj_bzero(p_pub_addr, sizeof(pj_sockaddr));
 
 	if (pj_sockaddr_has_addr(&bind_addr)) {
@@ -2516,6 +2559,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_var.tpdata[id].type = type;
 	pjsua_var.tpdata[id].local_name = tp->local_name;
 	pjsua_var.tpdata[id].data.tp = tp;
+	pj_sockaddr_cp(&pjsua_var.tpdata[id].pub_addr, &pub_addr);
 	if (cfg->bound_addr.slen)
 	    pjsua_var.tpdata[id].has_bound_addr = PJ_TRUE;
 
@@ -2901,6 +2945,19 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
      */
     switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+    	    if (pjsua_var.ua_cfg.enable_upnp &&
+    	        pjsua_var.upnp_status == PJ_SUCCESS)
+            {
+		status = pj_upnp_del_port_mapping(
+			     &pjsua_var.tpdata[id].pub_addr);
+		if (status != PJ_SUCCESS) {
+	    	    pjsua_perror(THIS_FILE, "Error deleting pjsua_transport "
+	    	    		            "UPnP port mapping", status);
+	    	}
+    	    }
+#endif
+
 	    status = pjsip_transport_shutdown(pjsua_var.tpdata[id].data.tp);
 	    break;
 	case PJSIP_TRANSPORT_TLS:

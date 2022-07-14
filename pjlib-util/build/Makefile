@@ -40,7 +40,7 @@ export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		dns_dump.o dns_server.o getopt.o hmac_md5.o hmac_sha1.o \
 		http_client.o json.o md5.o pcap.o resolver.o scanner.o sha1.o \
 		srv_resolver.o string.o stun_simple.o \
-		stun_simple_client.o xml.o
+		stun_simple_client.o upnp.o xml.o
 export PJLIB_UTIL_CFLAGS += $(_CFLAGS)
 export PJLIB_UTIL_CXXFLAGS += $(_CXXFLAGS)
 export PJLIB_UTIL_LDFLAGS += $(PJLIB_LDLIB) $(_LDFLAGS)

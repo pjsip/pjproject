@@ -2797,6 +2797,24 @@ pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id)
 	   pjsua_var.ua_cfg.stun_srv_cnt != 0;
 }
 
+pj_bool_t pjsua_sip_acc_is_using_upnp(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.sip_upnp_use != PJSUA_STUN_USE_DISABLED &&
+	   pjsua_var.ua_cfg.enable_upnp &&
+	   pjsua_var.upnp_status == PJ_SUCCESS;
+}
+
+pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id)
+{
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
+
+    return acc->cfg.media_stun_use != PJSUA_STUN_USE_DISABLED &&
+	   pjsua_var.ua_cfg.enable_upnp &&
+	   pjsua_var.upnp_status == PJ_SUCCESS;
+}
+
 /*
  * Update registration or perform unregistration. 
  */
@@ -2892,9 +2910,11 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
             pjsip_regc_set_via_sent_by(pjsua_var.acc[acc_id].regc,
                                        &pjsua_var.acc[acc_id].via_addr,
                                        pjsua_var.acc[acc_id].via_tp);
-        } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+        } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+        	   !pjsua_sip_acc_is_using_upnp(acc_id))
+        {
             /* Choose local interface to use in Via if acc is not using
-             * STUN
+             * STUN nor UPnP.
              */
             pjsua_acc_get_uac_addr(acc_id, tdata->pool,
 	                           &acc->cfg.reg_uri,
@@ -3315,9 +3335,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     {
         tdata->via_addr = pjsua_var.acc[acc_id].via_addr;
         tdata->via_tp = pjsua_var.acc[acc_id].via_tp;
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
         /* Choose local interface to use in Via if acc is not using
-         * STUN
+         * STUN nor UPnP.
          */
         pjsua_acc_get_uac_addr(acc_id, tdata->pool,
 	                       target,
@@ -3428,7 +3450,8 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
     tfla2_prm.tp_type = tp_type;
     tfla2_prm.tp_sel = &tp_sel;
     tfla2_prm.dst_host = sip_uri->host;
-    tfla2_prm.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) ||
+    tfla2_prm.local_if = ((!pjsua_sip_acc_is_using_stun(acc_id) &&
+			   !pjsua_sip_acc_is_using_upnp(acc_id)) ||
 	                  (flag & PJSIP_TRANSPORT_RELIABLE));
 
     tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
@@ -3448,7 +3471,8 @@ pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
         
         tfla2_prm2.tp_type = PJSIP_TRANSPORT_UDP6;
         tfla2_prm2.tp_sel = NULL;
-        tfla2_prm2.local_if = (!pjsua_sip_acc_is_using_stun(acc_id));
+        tfla2_prm2.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) &&
+        		       !pjsua_sip_acc_is_using_upnp(acc_id));
         status = pjsip_tpmgr_find_local_addr2(tpmgr, pool, &tfla2_prm2);
     	if (status == PJ_SUCCESS) {
     	    update_addr = PJ_FALSE;
@@ -3806,7 +3830,8 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     tfla2_prm.tp_type = tp_type;
     tfla2_prm.tp_sel = &tp_sel;
     tfla2_prm.dst_host = sip_uri->host;
-    tfla2_prm.local_if = (!pjsua_sip_acc_is_using_stun(acc_id) ||
+    tfla2_prm.local_if = ((!pjsua_sip_acc_is_using_stun(acc_id) &&
+    			   !pjsua_sip_acc_is_using_upnp(acc_id)) ||
 	                  (flag & PJSIP_TRANSPORT_RELIABLE));
 
     tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
