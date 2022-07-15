@@ -2801,7 +2801,7 @@ pj_bool_t pjsua_sip_acc_is_using_upnp(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-    return acc->cfg.sip_upnp_use != PJSUA_STUN_USE_DISABLED &&
+    return acc->cfg.sip_upnp_use != PJSUA_UPNP_USE_DISABLED &&
 	   pjsua_var.ua_cfg.enable_upnp &&
 	   pjsua_var.upnp_status == PJ_SUCCESS;
 }
@@ -2810,7 +2810,7 @@ pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
-    return acc->cfg.media_stun_use != PJSUA_STUN_USE_DISABLED &&
+    return acc->cfg.media_upnp_use != PJSUA_UPNP_USE_DISABLED &&
 	   pjsua_var.ua_cfg.enable_upnp &&
 	   pjsua_var.upnp_status == PJ_SUCCESS;
 }
