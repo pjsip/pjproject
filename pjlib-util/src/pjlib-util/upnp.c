@@ -374,9 +374,9 @@ static void set_device_online(const char *dev_id)
 /* Update IGD status to offline. */
 static void set_device_offline(const char *dev_id)
 {
-    unsigned i;
+    int i;
 
-    for (i = 0; i < upnp_mgr.igd_cnt; i++) {
+    for (i = 0; i < (int)upnp_mgr.igd_cnt; i++) {
     	struct igd *igd = &upnp_mgr.igd_devs[i];
 
     	/* We are only interested in valid IGDs that we can use. */
@@ -575,7 +575,7 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
 #endif
 
     pj_bzero(&upnp_mgr, sizeof(upnp_mgr));
-    upnp_err = UpnpInit2(param->if_name, param->port);
+    upnp_err = UpnpInit2(param->if_name, (unsigned short)param->port);
     if (upnp_err != UPNP_E_SUCCESS) {
         PJ_LOG(1, (THIS_FILE, "Failed to initialize libupnp with "
         		      "interface %s: %s",
@@ -783,7 +783,7 @@ PJ_DECL(pj_status_t)pj_upnp_add_port_mapping(unsigned sock_cnt,
         pj_sockaddr_set_str_addr(bound_addr.addr.sa_family,
         			 &mapped_addr[i], &igd->public_ip);
         pj_sockaddr_set_port(&mapped_addr[i],
-        		     (ext_port? ext_port[i]: int_port));
+        		     (pj_uint16_t)(ext_port? ext_port[i]: int_port));
 
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -898,5 +898,10 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
     return status;
 }
 
+#if defined(_MSC_VER)
+#   pragma comment(lib, "libupnp")
+#   pragma comment(lib, "libixml")
+#   pragma comment(lib, "libpthread")
+#endif
 
 #endif  /* PJLIB_UTIL_HAS_UPNP */

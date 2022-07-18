@@ -23,8 +23,6 @@
  * @brief UPnP client.
  */
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
-
 #include <pj/sock.h>
 
 
@@ -151,7 +149,5 @@ PJ_END_DECL
 /**
  * @}
  */
-
-#endif  /* PJLIB_UTIL_HAS_UPNP */
 
 #endif	/* __PJ_UPNP_H__ */
