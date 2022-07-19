@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjlib-util/upnp.h>
+#include <pjlib-util/config.h>
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
@@ -581,7 +582,7 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
         		      "interface %s: %s",
         		      (param->if_name? param->if_name: "NULL"),
         		      UpnpGetErrorMessage(upnp_err)));
-        return PJ_EINVALIDOP;
+        return PJ_EUNKNOWN;
     }
 
     /* Register client. */
@@ -608,10 +609,11 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
     upnp_mgr.primary_igd_idx = -1;
     upnp_mgr.upnp_cb = param->upnp_cb;
     upnp_mgr.pool = pj_pool_create(param->factory, "upnp", 512, 512, NULL);
-    status = pj_mutex_create_recursive(upnp_mgr.pool, "upnp", &upnp_mgr.mutex);
-    if (status != PJ_SUCCESS) {
+    if (!upnp_mgr.pool) {
         pj_upnp_deinit();
+        return PJ_ENOMEM;
     }
+    pj_mutex_create_recursive(upnp_mgr.pool, "upnp", &upnp_mgr.mutex);
 
     ip_address = UpnpGetServerIpAddress();
     port = UpnpGetServerPort();
@@ -648,6 +650,9 @@ PJ_DEF(pj_status_t) pj_upnp_deinit()
      * complete.
      */
     UpnpFinish();
+
+    if (upnp_mgr.mutex)
+    	pj_mutex_destroy(upnp_mgr.mutex);
 
     if (upnp_mgr.pool)
     	pj_pool_release(upnp_mgr.pool);
@@ -863,6 +868,11 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
     } 
 
     ext_port = pj_sockaddr_get_port(mapped_addr);
+    if (ext_port == 0) {
+    	/* Deleting port zero should be harmless, but it's a waste of time. */
+    	PJ_LOG(3, (THIS_FILE, "Invalid port number to be deleted"));
+    	return PJ_EINVALIDOP;
+    }
     pj_utoa(ext_port, ext_port_buf);
 
     /* Create action XML. */

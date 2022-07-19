@@ -40,11 +40,6 @@ PJ_BEGIN_DECL
  * port to a local socket.
  */
 
-/* Default duration for searching IGD devices (in seconds).
- * Default: 5 seconds
- */
-#define PJ_UPNP_DEFAULT_SEARCH_TIME 	5
-
 /*
  * This structre describes the parameter to initialize UPnP.
  */

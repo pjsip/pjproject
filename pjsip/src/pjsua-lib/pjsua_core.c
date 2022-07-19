@@ -2037,8 +2037,24 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 
     	/* Close pjsua transports */
     	for (i = 0; i < (int)PJ_ARRAY_SIZE(pjsua_var.tpdata); i++) {
-	    if (pjsua_var.tpdata[i].data.ptr)
+	    if (pjsua_var.tpdata[i].data.ptr) {
+	    	pjsip_transport_type_e tp_type;
+	    	
+	    	tp_type = pjsua_var.tpdata[i].type & ~PJSIP_TRANSPORT_IPV6;
+		if ((flags & PJSUA_DESTROY_NO_TX_MSG) &&
+		    tp_type == PJSIP_TRANSPORT_UDP &&
+		    pjsua_var.ua_cfg.enable_upnp &&
+    	            pjsua_var.upnp_status == PJ_SUCCESS)
+    	        {
+    	            /* If we are not supposed to send any outgoing message
+    	             * at all, avoid sending UPnP message as it may take
+    	             * a while to time out.
+    	             */
+    	            continue;
+    	        }
+
 	    	pjsua_transport_close(i, PJ_FALSE);
+	    }
     	}
 
 	/* Destroy media (to shutdown media endpoint, etc) */
