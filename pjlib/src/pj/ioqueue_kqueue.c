@@ -97,10 +97,24 @@ PJ_DEF(const char *) pj_ioqueue_name(void)
 /*
  * pj_ioqueue_create()
  *
- * Create kqueue ioqueue.
+ * Create ioqueue.
  */
-PJ_DEF(pj_status_t)
-pj_ioqueue_create(pj_pool_t *pool, pj_size_t max_fd, pj_ioqueue_t **p_ioqueue)
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
+                                       pj_size_t max_fd,
+                                       pj_ioqueue_t **p_ioqueue)
+{
+    return pj_ioqueue_create2(pool, max_fd, NULL, p_ioqueue);
+}
+
+/*
+ * pj_ioqueue_create2()
+ *
+ * Create ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
+                                       pj_size_t max_fd,
+				       const pj_ioqueue_cfg *cfg,
+                                       pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
@@ -120,6 +134,10 @@ pj_ioqueue_create(pj_pool_t *pool, pj_size_t max_fd, pj_ioqueue_t **p_ioqueue)
 
     ioqueue_init(ioqueue);
 
+    if (cfg)
+	pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
+    else
+	pj_ioqueue_cfg_default(&ioqueue->cfg);
     ioqueue->max = max_fd;
     ioqueue->count = 0;
     pj_list_init(&ioqueue->active_list);
@@ -470,29 +488,32 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister(pj_ioqueue_key_t *key)
  * the ioqueue to remove the specified descriptor from ioqueue's descriptor
  * set for the specified event.
  */
-static void ioqueue_remove_from_set(pj_ioqueue_t *ioqueue,
-				    pj_ioqueue_key_t *key,
-				    enum ioqueue_event_type event_type)
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
+				     pj_ioqueue_key_t *key,
+				     unsigned event_types)
 {
     struct kevent event;
-    switch (event_type) {
-    case READABLE_EVENT:
+    if (event_types & READABLE_EVENT) {
 	/*
 	if (!key_has_pending_read(key) && !key_has_pending_accept(key)) {
 	    EV_SET(&event, key->fd, EVFILT_READ, EV_DISABLE, 0, 0, key);
 	    os_kqueue_ctl(ioqueue->kfd, &event, 1, NULL, 0, NULL);
 	}
 	*/
-	break;
-    case WRITEABLE_EVENT:
+    }
+    if (event_types & WRITEABLE_EVENT) {
 	if (!key_has_pending_write(key) && !key_has_pending_connect(key)) {
 	    EV_SET(&event, key->fd, EVFILT_WRITE, EV_DISABLE, 0, 0, key);
 	    os_kqueue_ctl(ioqueue->kfd, &event, 1, NULL, 0, NULL);
 	}
-	break;
-    default:
-	break;
     }
+}
+
+static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
+				     pj_ioqueue_key_t *key,
+				     enum ioqueue_event_type event_type )
+{
+    ioqueue_remove_from_set2(ioqueue, key, event_type);
 }
 
 /*
@@ -501,24 +522,29 @@ static void ioqueue_remove_from_set(pj_ioqueue_t *ioqueue,
  * to instruct the ioqueue to add the specified handle to ioqueue's descriptor
  * set for the specified event.
  */
-static void ioqueue_add_to_set(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *key,
-			       enum ioqueue_event_type event_type)
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *key,
+			        unsigned event_types)
 {
     struct kevent event;
-    switch (event_type) {
-    case READABLE_EVENT:
+
+    if (event_types & READABLE_EVENT) {
 	/*
 	EV_SET(&event, key->fd, EVFILT_READ, EV_ENABLE, 0, 0, key);
 	os_kqueue_ctl(ioqueue->kfd, &event, 1, NULL, 0, NULL);
 	*/
-	break;
-    case WRITEABLE_EVENT:
+    }
+
+    if (event_types & WRITEABLE_EVENT) {
 	EV_SET(&event, key->fd, EVFILT_WRITE, EV_ENABLE, 0, 0, key);
 	os_kqueue_ctl(ioqueue->kfd, &event, 1, NULL, 0, NULL);
-	break;
-    default:
-	break;
     }
+}
+
+static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+				enum ioqueue_event_type event_type )
+{
+    ioqueue_add_to_set2(ioqueue, key, event_type);
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
