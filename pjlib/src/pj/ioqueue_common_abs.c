@@ -516,15 +516,22 @@ pj_bool_t ioqueue_dispatch_read_event( pj_ioqueue_t *ioqueue,
         pj_ssize_t bytes_read;
 	pj_bool_t has_lock;
 
-        /* Get one pending read operation from the list. */
-        read_op = h->read_list.next;
-        pj_list_erase(read_op);
+	/* Get one pending read operation from the list. */
+	read_op = h->read_list.next;
+	pj_list_erase(read_op);
 
-        /* Clear fdset if there is no pending read. */
-        if (pj_list_empty(&h->read_list))
-            ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
+	/* Clear fdset if there is no pending read. */
+#if PJ_IOQUEUE_HAS_WAKEUP
+	if (h->fd != ioqueue->wakeup_fd[0] && pj_list_empty(&h->read_list)) {
+	    /* clear fdset except wakeup read fd */
+	    ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
+	}
+#else
+	if (pj_list_empty(&h->read_list))
+	    ioqueue_remove_from_set(ioqueue, h, READABLE_EVENT);
+#endif
 
-        bytes_read = read_op->size;
+	bytes_read = read_op->size;
 
 	if (read_op->op == PJ_IOQUEUE_OP_RECV_FROM) {
 	    read_op->op = PJ_IOQUEUE_OP_NONE;
