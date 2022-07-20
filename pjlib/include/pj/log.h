@@ -217,12 +217,26 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
 PJ_DECL(void) pj_log_add_indent(int indent);
 
 /**
- * Push indentation to the right by default value (PJ_LOG_INDENT).
+ * Set indentation to specific value.
+ *
+ * @param indent    The indentation value.
+ */
+PJ_DECL(void) pj_log_set_indent(int indent);
+
+/**
+ * Get current indentation value.
+ *
+ * @return 	    Current indentation value.
+ */
+PJ_DECL(int) pj_log_get_indent(void);
+
+/**
+ * Push indentation to the right by default value (PJ_LOG_INDENT_SIZE).
  */
 PJ_DECL(void) pj_log_push_indent(void);
 
 /**
- * Pop indentation (to the left) by default value (PJ_LOG_INDENT).
+ * Pop indentation (to the left) by default value (PJ_LOG_INDENT_SIZE).
  */
 PJ_DECL(void) pj_log_pop_indent(void);
 
@@ -304,12 +318,26 @@ pj_status_t pj_log_init(void);
 #  define pj_log_add_indent(indent)
 
 /**
- * Push indentation to the right by default value (PJ_LOG_INDENT).
+ * Set indentation to specific value.
+ *
+ * @param indent    The indentation value.
+ */
+#  define pj_log_set_indent(indent)
+
+/**
+ * Get current indentation value.
+ *
+ * @return 	    Current indentation value.
+ */
+#  define pj_log_get_indent()	0
+
+/**
+ * Push indentation to the right by default value (PJ_LOG_INDENT_SIZE).
  */
 #  define pj_log_push_indent()
 
 /**
- * Pop indentation (to the left) by default value (PJ_LOG_INDENT).
+ * Pop indentation (to the left) by default value (PJ_LOG_INDENT_SIZE).
  */
 #  define pj_log_pop_indent()
 
