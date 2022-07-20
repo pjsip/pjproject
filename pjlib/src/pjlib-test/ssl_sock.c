@@ -1223,6 +1223,7 @@ on_return:
 }
 
 
+#if WITH_BENCHMARK
 /* Test will perform multiple clients trying to connect to single server.
  * Once SSL connection established, echo test will be performed.
  */
@@ -1480,6 +1481,7 @@ on_return:
 
     return status;
 }
+#endif
 
 #if 0 && (!defined(PJ_SYMBIAN) || PJ_SYMBIAN==0)
 pj_status_t pj_ssl_sock_ossl_test_send_buf(pj_pool_t *pool);
