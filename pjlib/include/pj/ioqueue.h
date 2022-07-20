@@ -331,6 +331,65 @@ typedef enum pj_ioqueue_operation_e
  */
 #define PJ_IOQUEUE_ALWAYS_ASYNC	    ((pj_uint32_t)1 << (pj_uint32_t)31)
 
+
+/**
+ * Epoll flags.
+ */
+typedef enum pj_ioqueue_epoll_flag
+{
+    /** Use of EPOLLEXCLUSIVE.
+     */
+    PJ_IOQUEUE_EPOLL_EXCLUSIVE = 1,
+
+    /** Use of EPOLLONESHOT.
+     */
+    PJ_IOQUEUE_EPOLL_ONESHOT   = 2,
+
+    /**
+     * Default flag to specify which epoll type to use, which mean to use
+     * EPOLLEXCLUSIVE if available, otherwise EPOLLONESHOT, otherwise "bare"
+     * epoll when neither are available.
+     */
+    PJ_IOQUEUE_EPOLL_AUTO      = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
+				 PJ_IOQUEUE_EPOLL_ONESHOT,
+
+} pj_ioqueue_epoll_flag;
+
+
+/**
+ * Additional settings that can be given during ioqueue creation. Application
+ * MUST initialize this structure with #pj_ioqueue_cfg_default().
+ */
+typedef struct pj_ioqueue_cfg
+{
+    /**
+     * Specify flags to control e.g. how events are handled when epoll backend
+     * is used on Linux. The default value is PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
+     * which by default is set to PJ_IOQUEUE_EPOLL_AUTO. This setting will be
+     * ignored for other ioqueue backends.
+     */
+    unsigned  epoll_flags;
+
+    /**
+     * Default concurrency for the handles registered to this ioqueue. Setting
+     * this to non-zero enables a handle to process more than one operations
+     * at the same time using different threads. Default is
+     * PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY. This setting is equivalent to
+     * calling pj_ioqueue_set_default_concurrency() after creating the ioqueue.
+     */
+    pj_bool_t default_concurrency;
+
+} pj_ioqueue_cfg;
+
+
+/**
+ * Initialize the ioqueue configuration with the default values.
+ *
+ * @param cfg		The configuration to be initialized.
+ */
+PJ_DECL(void) pj_ioqueue_cfg_default(pj_ioqueue_cfg *cfg);
+
+
 /**
  * Return the name of the ioqueue implementation.
  *
@@ -352,6 +411,25 @@ PJ_DECL(const char*) pj_ioqueue_name(void);
 PJ_DECL(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
 					pj_size_t max_fd,
 					pj_ioqueue_t **ioqueue);
+
+/**
+ * Create a new I/O Queue framework.
+ *
+ * @param pool		The pool to allocate the I/O queue structure.
+ * @param max_fd	The maximum number of handles to be supported, which
+ *			should not exceed PJ_IOQUEUE_MAX_HANDLES.
+ * @param cfg           Optional ioqueue configuration. Application must
+ *                      initialize this structure with pj_ioqueue_cfg_default()
+ *                      first. If this is not specified, default config values
+ *                      as set pj_ioqueue_cfg_default() by will be used.
+ * @param ioqueue	Pointer to hold the newly created I/O Queue.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_create2( pj_pool_t *pool,
+					 pj_size_t max_fd,
+					 const pj_ioqueue_cfg *cfg,
+					 pj_ioqueue_t **ioqueue);
 
 /**
  * Destroy the I/O queue.

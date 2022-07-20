@@ -186,8 +186,22 @@ static void rescan_fdset(pj_ioqueue_t *ioqueue)
  *
  * Create select ioqueue.
  */
-PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool, 
+PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
                                        pj_size_t max_fd,
+                                       pj_ioqueue_t **p_ioqueue)
+{
+    return pj_ioqueue_create2(pool, max_fd, NULL, p_ioqueue);
+}
+
+
+/*
+ * pj_ioqueue_create2()
+ *
+ * Create select ioqueue.
+ */
+PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
+                                       pj_size_t max_fd,
+				       const pj_ioqueue_cfg *cfg,
                                        pj_ioqueue_t **p_ioqueue)
 {
     pj_ioqueue_t *ioqueue;
@@ -208,6 +222,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     ioqueue = PJ_POOL_ALLOC_T(pool, pj_ioqueue_t);
     ioqueue_init(ioqueue);
 
+    if (cfg)
+	pj_memcpy(&ioqueue->cfg, cfg, sizeof(*cfg));
+    else
+	pj_ioqueue_cfg_default(&ioqueue->cfg);
     ioqueue->max = (unsigned)max_fd;
     ioqueue->count = 0;
     PJ_FD_ZERO(&ioqueue->rfdset);
@@ -639,21 +657,26 @@ static void validate_sets(const pj_ioqueue_t *ioqueue,
  * set for the specified event.
  */
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
+				     pj_ioqueue_key_t *key,
+				     enum ioqueue_event_type event_type )
+{
+    ioqueue_remove_from_set2(ioqueue, key, event_type);
+}
+
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
-                                     enum ioqueue_event_type event_type)
+                                     unsigned event_types)
 {
     pj_lock_acquire(ioqueue->lock);
 
-    if (event_type == READABLE_EVENT)
+    if (event_types & READABLE_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->rfdset);
-    else if (event_type == WRITEABLE_EVENT)
+    if (event_types & WRITEABLE_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->wfdset);
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
-    else if (event_type == EXCEPTION_EVENT)
+    if (event_types & EXCEPTION_EVENT)
         PJ_FD_CLR((pj_sock_t)key->fd, &ioqueue->xfdset);
 #endif
-    else
-        pj_assert(0);
 
     pj_lock_release(ioqueue->lock);
 }
@@ -666,20 +689,25 @@ static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
  */
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
-                                enum ioqueue_event_type event_type )
+				enum ioqueue_event_type event_type )
+{
+    ioqueue_add_to_set2(ioqueue, key, event_type);
+}
+
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+                                unsigned event_types )
 {
     pj_lock_acquire(ioqueue->lock);
 
-    if (event_type == READABLE_EVENT)
+    if (event_types & READABLE_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->rfdset);
-    else if (event_type == WRITEABLE_EVENT)
+    if (event_types & WRITEABLE_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->wfdset);
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
-    else if (event_type == EXCEPTION_EVENT)
+    if (event_types & EXCEPTION_EVENT)
         PJ_FD_SET((pj_sock_t)key->fd, &ioqueue->xfdset);
 #endif
-    else
-        pj_assert(0);
 
     pj_lock_release(ioqueue->lock);
 }

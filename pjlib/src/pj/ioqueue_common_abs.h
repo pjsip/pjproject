@@ -120,21 +120,27 @@ union operation_key
 #define DECLARE_COMMON_IOQUEUE                      \
     pj_lock_t          *lock;                       \
     pj_bool_t           auto_delete_lock;	    \
-    pj_bool_t		default_concurrency;
+    pj_ioqueue_cfg      cfg;
 
 
 enum ioqueue_event_type
 {
     NO_EVENT,
-    READABLE_EVENT,
-    WRITEABLE_EVENT,
-    EXCEPTION_EVENT,
+    READABLE_EVENT  = 1,
+    WRITEABLE_EVENT = 2,
+    EXCEPTION_EVENT = 4,
 };
 
 static void ioqueue_add_to_set( pj_ioqueue_t *ioqueue,
                                 pj_ioqueue_key_t *key,
                                 enum ioqueue_event_type event_type );
+static void ioqueue_add_to_set2(pj_ioqueue_t *ioqueue,
+                                pj_ioqueue_key_t *key,
+                                unsigned event_types );
 static void ioqueue_remove_from_set( pj_ioqueue_t *ioqueue,
                                      pj_ioqueue_key_t *key, 
                                      enum ioqueue_event_type event_type);
+static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
+                                     pj_ioqueue_key_t *key,
+                                     unsigned event_types);
 

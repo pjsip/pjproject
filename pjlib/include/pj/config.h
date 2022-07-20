@@ -744,12 +744,13 @@
 #endif
 
 
-/* Setting to determine whether to enable epoll exclusive/oneshot feature.
+/**
+ * Default flags for epoll_flags in pj_ioqueue_cfg structure.
  *
- * Default: 1 (enabled)
+ * Default: PJ_IOQUEUE_EPOLL_AUTO
  */
-#ifndef PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT
-#   define PJ_IOQUEUE_EPOLL_ENABLE_EXCLUSIVE_ONESHOT 1
+#ifndef PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS
+#   define PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS PJ_IOQUEUE_EPOLL_AUTO
 #endif
 
 

@@ -155,12 +155,16 @@ int test_inner(void)
     DO_TEST( tcp_ioqueue_test() );
 #endif
 
-#if INCLUDE_IOQUEUE_PERF_TEST
-    DO_TEST( ioqueue_perf_test() );
-#endif
-
 #if INCLUDE_IOQUEUE_UNREG_TEST
     DO_TEST( udp_ioqueue_unreg_test() );
+#endif
+
+#if INCLUDE_IOQUEUE_STRESS_TEST
+    DO_TEST( ioqueue_stress_test() );
+#endif
+
+#if INCLUDE_IOQUEUE_PERF_TEST
+    DO_TEST( ioqueue_perf_test() );
 #endif
 
 #if INCLUDE_ACTIVESOCK_TEST
