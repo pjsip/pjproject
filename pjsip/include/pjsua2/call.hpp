@@ -47,7 +47,7 @@ using std::vector;
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Media stream, corresponds to pjmedia_stream
+ * Media stream, corresponds to pjmedia_stream or pjmedia_vid_stream
  */
 typedef void *MediaStream;
 
@@ -562,6 +562,11 @@ public:
  */
 struct StreamInfo
 {
+    /**
+     * Media stream instance, either audio or video.
+     */
+    MediaStream		stream;
+
     /**
      * Media type of this stream.
      */

@@ -581,6 +581,15 @@ typedef struct pjsua_stream_info
 	pjmedia_vid_stream_info	vid;
     } info;
 
+    /** Stream instance (union). */
+    union {
+	/** Audio stream */
+	pjmedia_stream 	       *aud_strm;
+
+	/** Video stream */
+	pjmedia_vid_stream     *vid_strm;
+    } strm;
+
 } pjsua_stream_info;
 
 

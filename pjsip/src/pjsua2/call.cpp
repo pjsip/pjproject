@@ -335,6 +335,7 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
 
     type = info.type;
     if (type == PJMEDIA_TYPE_AUDIO) {
+    	stream = info.strm.aud_strm;
         proto = info.info.aud.proto;
         dir = info.info.aud.dir;
         pj_sockaddr_print(&info.info.aud.rem_addr, straddr, sizeof(straddr), 3);
@@ -356,6 +357,7 @@ void StreamInfo::fromPj(const pjsua_stream_info &info)
 #endif
         rtcpSdesByeDisabled = PJ2BOOL(info.info.aud.rtcp_sdes_bye_disabled);
     } else if (type == PJMEDIA_TYPE_VIDEO) {
+    	stream = info.strm.vid_strm;
         proto = info.info.vid.proto;
         dir = info.info.vid.dir;
         pj_sockaddr_print(&info.info.vid.rem_addr, straddr, sizeof(straddr), 3);

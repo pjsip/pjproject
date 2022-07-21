@@ -3128,6 +3128,18 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
     return PJ_SUCCESS;
 }
 
+/*
+ * Modify codec parameter.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_modify_codec_param(pjmedia_stream *stream,
+			  	  const pjmedia_codec_param *param)
+{
+    PJ_ASSERT_RETURN(stream && param, PJ_EINVAL);
+
+    return pjmedia_codec_modify(stream->codec, param);
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_stream_get_info( const pjmedia_stream *stream,
 					     pjmedia_stream_info *info)

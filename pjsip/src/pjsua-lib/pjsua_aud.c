@@ -115,11 +115,13 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
     psi->type = call_med->type;
     switch (call_med->type) {
     case PJMEDIA_TYPE_AUDIO:
+    	psi->strm.aud_strm = call_med->strm.a.stream;
 	status = pjmedia_stream_get_info(call_med->strm.a.stream,
 					 &psi->info.aud);
 	break;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     case PJMEDIA_TYPE_VIDEO:
+    	psi->strm.vid_strm = call_med->strm.v.stream;
 	status = pjmedia_vid_stream_get_info(call_med->strm.v.stream,
 					     &psi->info.vid);
 	break;
