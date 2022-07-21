@@ -469,7 +469,7 @@ static int perform_test(const pj_ioqueue_cfg *cfg,
     }
 
     /* bandwidth = total_received*1000/total_elapsed_usec */
-    bandwidth = total_received;
+    bandwidth = (pj_highprec_t)total_received;
     pj_highprec_mul(bandwidth, 1000);
     pj_highprec_div(bandwidth, total_elapsed_usec);
     

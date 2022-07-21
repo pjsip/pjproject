@@ -644,7 +644,7 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
-    int i, bufsize = BUF_MIN_SIZE;
+    unsigned i, bufsize = BUF_MIN_SIZE;
     int status;
     int test_loop, pending_op = 0;
     pj_timestamp t_elapsed;
@@ -793,8 +793,6 @@ static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 	// There's no pending operation.
 	// When we poll the ioqueue, there must not be events.
 	if (pending_op == 0) {
-	    unsigned i;
-
 	    for (i=0; i<10; ++i) {
 		pj_time_val timeout = {0, 50};
 #ifdef PJ_SYMBIAN

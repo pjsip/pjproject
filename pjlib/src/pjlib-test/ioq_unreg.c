@@ -310,8 +310,6 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     pj_ioqueue_t *ioqueue;
     pj_pool_t *test_pool;
 
-    pj_log_set_decor(pj_log_get_decor() | PJ_LOG_HAS_THREAD_ID);
-
     PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
 
     test_method = UNREGISTER_IN_APP;

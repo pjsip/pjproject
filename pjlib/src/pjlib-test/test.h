@@ -22,12 +22,12 @@
 
 #include <pj/types.h>
 
-#define TEST_DEFAULT		    0
+#define TEST_DEFAULT		    1
 
 #define GROUP_LIBC                  TEST_DEFAULT
 #define GROUP_OS                    TEST_DEFAULT
 #define GROUP_DATA_STRUCTURE        TEST_DEFAULT
-#define GROUP_NETWORK               1	// TEST_DEFAULT
+#define GROUP_NETWORK               TEST_DEFAULT
 #if defined(PJ_SYMBIAN)
 #   define GROUP_FILE               0
 #else
@@ -37,7 +37,7 @@
 #if defined(PJ_EXCLUDE_BENCHMARK_TESTS) && (PJ_EXCLUDE_BENCHMARK_TESTS==1)
 #   define WITH_BENCHMARK	    0
 #else
-#   define WITH_BENCHMARK	    TEST_DEFAULT
+#   define WITH_BENCHMARK	    1
 #endif
 
 #define INCLUDE_ERRNO_TEST          GROUP_LIBC

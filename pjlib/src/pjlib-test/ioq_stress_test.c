@@ -31,7 +31,7 @@
 #define CLIENT	1
 
 /* epoll errors that can be ignored */
-#define IGNORE_ERROR(e)	(((e)==PJ_STATUS_FROM_OS(EAGAIN)))
+#define IGNORE_ERROR(e)	(((e)==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)))
 
 typedef struct test_desc test_desc;
 
@@ -40,27 +40,27 @@ typedef union op_key_user_data {
     struct {
 	int side;           /* CLIENT or SERVER */
 	pj_status_t status; /* PJ_SUCCESS: idle, PJ_EPENDING: pending, other: error */
-	int count;          /* how many times were used */
+	unsigned count;          /* how many times were used */
     } common;
 
     struct {
 	int side;
 	pj_status_t status;
-	int count;
+	unsigned count;
 
 	pj_sock_t new_sock;
 	pj_ioqueue_op_key_t recv_op;
-	int *recv_buf;
+	unsigned *recv_buf;
     } server;
 
     struct {
 	int side;
 	pj_status_t status;
-	int count;
+	unsigned count;
 
 	pj_ioqueue_op_key_t connect_op;
 	pj_ioqueue_op_key_t send_op;
-	int *send_buf;
+	unsigned *send_buf;
     } client;
 } op_key_user_data;
 
@@ -96,15 +96,15 @@ struct test_desc
 	pj_bool_t cancel_connect; /* TCP connect then cancel immediately */
 	pj_bool_t failed_connect; /* TCP connect to nowhere */
 	pj_bool_t reject_connect; /* close previously listen() without calling accept */
-	int tx_so_buf_size; /* SO_SNDBUF in multples of sizeof(int) */
-	int rx_so_buf_size; /* SO_RCVBUF in multples of sizeof(int) */
-	int pkt_len;        /* size of each send()/recv() in mult. sizeof(int)  */
-	int tx_cnt;         /* total number of ints to send  */
-	int rx_cnt;         /* total number of ints to read */
-	int n_servers;      /* number of servers (=parallel recv) to instantiate */
-	int n_clients;      /* number of clients (=parallel send) to instantiate */
-	int sequenced;      /* incoming packets must be in sequence */
-        int repeat;
+	unsigned tx_so_buf_size; /* SO_SNDBUF in multples of sizeof(int) */
+	unsigned rx_so_buf_size; /* SO_RCVBUF in multples of sizeof(int) */
+	unsigned pkt_len;        /* size of each send()/recv() in mult. sizeof(int)  */
+	unsigned tx_cnt;         /* total number of ints to send  */
+	unsigned rx_cnt;         /* total number of ints to read */
+	unsigned n_servers;      /* number of servers (=parallel recv) to instantiate */
+	unsigned n_clients;      /* number of clients (=parallel send) to instantiate */
+	pj_bool_t sequenced;      /* incoming packets must be in sequence */
+	unsigned repeat;
     } cfg;
 
     struct {
@@ -120,7 +120,7 @@ struct test_desc
 	pj_status_t connect_status;
 
 	int retcode;	/* test retcode */
-	int okuds_cnt[2];
+	unsigned okuds_cnt[2];
 	op_key_user_data okuds[2][MAX_ASYNC];
 
     } state;
@@ -163,7 +163,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	if (bytes_read != -12345 && bytes_read <= 0 && !IGNORE_ERROR(-bytes_read)) {
 	    TRACE((THIS_FILE, "op_key:%p: stopping due to read=%d",
 			       op_key, bytes_read));
-	    PJ_PERROR(1,(THIS_FILE, -bytes_read, "%d is", -bytes_read));
+	    PJ_PERROR(1,(THIS_FILE, (pj_status_t)-bytes_read, "%d is", -bytes_read));
 	    okud->server.status = (bytes_read == 0)? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
 				  (pj_status_t)-bytes_read;
 	    break;
@@ -172,7 +172,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	if (bytes_read > 0) {
 	    pj_lock_acquire((pj_lock_t*)test->state.grp_lock);
 	    if (test->cfg.sequenced) {
-		int *p, *start, *end;
+		unsigned *p, *start, *end;
 		pj_bool_t has_error = PJ_FALSE;
 
 		start = okud->server.recv_buf;
@@ -207,7 +207,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 		    }
 		}
 	    } else {
-		test->state.cnt[SERVER] += (bytes_read / 4);
+		test->state.cnt[SERVER] += (unsigned)(bytes_read / 4);
 	    }
 	    pj_lock_release((pj_lock_t*)test->state.grp_lock);
 	}
@@ -240,7 +240,7 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 {
     test_desc *test = (test_desc*)pj_ioqueue_get_user_data(key);
     op_key_user_data *okud = (op_key_user_data*)op_key->user_data;
-    int *p, *end;
+    unsigned *p, *end;
     unsigned counter;
 
     pj_assert(okud != NULL);
@@ -364,6 +364,22 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     test_desc *test = (test_desc*)pj_ioqueue_get_user_data(key);
     unsigned i;
 
+#if PJ_WIN64 || PJ_WIN32
+    if (test->cfg.expected_ret_code==RETCODE_CONNECT_FAILED && 
+	status==PJ_SUCCESS) 
+    {
+	/* On Windows, when the server socket is closed even without accept(),
+	* connect() returns success but subsequent write will return
+	* error
+	*/
+	pj_ioqueue_op_key_t op_key;
+	int send_buf = 0;
+	pj_ssize_t bytes_sent = sizeof(send_buf);
+
+	status = pj_ioqueue_send(key, &op_key, &send_buf, &bytes_sent, 0);
+    }
+#endif
+
     test->state.connect_status = status;
     if (status != PJ_SUCCESS) {
 	if (test->cfg.expected_ret_code != RETCODE_CONNECT_FAILED)
@@ -395,7 +411,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
 static int worker_thread(void *p)
 {
     test_desc *test = (test_desc*)p;
-    int n_events = 0;
+    unsigned n_events = 0;
 
     /* log indent is not propagated to other threads (bug in pjlib?),
      * so we set it explicitly here
@@ -473,9 +489,11 @@ static int worker_thread(void *p)
 /* Perform single pass of test loop, reusing the ioqueue/pool state */
 static int perform_single_pass(test_desc *test)
 {
-    int i, retcode = 0;
+    unsigned i;
+    int retcode = 0;
     pj_sockaddr addr;
     int namelen = sizeof(addr);
+    pj_str_t localhost = pj_str("127.0.0.1");
 
     /* Reset iteration states */
     test->state.retcode = 0;
@@ -574,6 +592,7 @@ static int perform_single_pass(test_desc *test)
      */
     CHECK(40, pj_sock_socket(pj_AF_INET(), test->cfg.sock_type, 0,
 			     &test->state.socks[CLIENT]));
+    addr.ipv4.sin_addr = pj_inet_addr(&localhost);
     if (test->cfg.tx_so_buf_size) {
 	int value = test->cfg.tx_so_buf_size * sizeof(int);
 	CHECK(41, pj_sock_setsockopt(test->state.socks[CLIENT],
@@ -590,8 +609,7 @@ static int perform_single_pass(test_desc *test)
 					&test->state.keys[CLIENT]));
     if (test->cfg.sock_type == pj_SOCK_STREAM()) {
 	if (test->cfg.failed_connect) {
-	    pj_str_t host = pj_str("127.0.0.1");
-	    pj_sockaddr_in_init((pj_sockaddr_in*)&addr, &host, 39275);
+	    pj_sockaddr_in_init((pj_sockaddr_in*)&addr, &localhost, 39275);
 	    test->state.connect_status = pj_ioqueue_connect(test->state.keys[CLIENT],
 							    &addr,
 							    sizeof(pj_sockaddr_in));
@@ -640,11 +658,11 @@ static int perform_single_pass(test_desc *test)
     if (test->cfg.n_threads==0)
 	worker_thread(test);
     else {
-	int n_threads = test->cfg.n_threads;
+	unsigned n_threads = test->cfg.n_threads;
 	pj_thread_t *threads[MAX_THREADS];
 
 	for (i=0; i<n_threads; ++i) {
-	    CHECK(49, pj_thread_create(test->state.pool, NULL,
+	    CHECK(49, pj_thread_create(test->state.pool, "ioq_stress_test",
 				       &worker_thread, test,
 				       0, PJ_THREAD_SUSPENDED,
 				       &threads[i]));
@@ -681,7 +699,8 @@ on_return:
 static int perform_test(test_desc *test)
 {
     pj_ioqueue_cfg ioqueue_cfg;
-    int rep, retcode;
+    unsigned rep;
+    int retcode;
 
     PJ_LOG(3,(THIS_FILE, "%s", test->cfg.title));
     pj_log_push_indent();
@@ -726,7 +745,6 @@ on_return:
 
 
 static test_desc tests[128] = {
-#if 0
     /* simplest test, no threads, no parallel send/recv, it's good for debugging.
      * max_fd is limited to test management of closing keys in ioqueue safe
      * unregistration.
@@ -1008,8 +1026,6 @@ static test_desc tests[128] = {
 	.cfg.repeat = 4
     },
     #endif
-#endif
-#if 1
     /* quite involved test (tcp). Multithreads, parallel send/recv operations,
      * limitation in recv buffer. max_fd is small/limited to test management of
      * closing keys in ioqueue safe unregistration.
@@ -1196,7 +1212,6 @@ static test_desc tests[128] = {
 	.cfg.n_clients = MAX_ASYNC,
 	.cfg.repeat = 4
     },
-#endif
 };
 
 int ioqueue_stress_test(void)

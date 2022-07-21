@@ -662,7 +662,7 @@ static void on_read_complete2(pj_ioqueue_key_t *key,
     parallel_recv_data *ud = (parallel_recv_data*)op_key->user_data;
 
     if (bytes_read < 0) {
-	pj_status_t status = -bytes_read;
+	pj_status_t status = (pj_status_t)-bytes_read;
 
 	if (status==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
 	    TRACE__((THIS_FILE, "......recv() fail with status=%d, retrying",
@@ -706,9 +706,10 @@ static int parallel_worker_thread(void *p)
     t_end.sec += arg->timeout;
 
     while (!arg->quit_flag) {
-	pj_time_val timeout = {arg->timeout, 0};
+	pj_time_val timeout = {0, 0};
 	int rc;
 
+	timeout.sec = arg->timeout;
 	rc = pj_ioqueue_poll(arg->ioqueue, &timeout);
 	if (rc >= 1) {
 	    assert(rc==1); /* we should receive packet one by one! */
@@ -746,7 +747,7 @@ static int parallel_recv_test(const pj_ioqueue_cfg *cfg)
     pj_pool_t *pool;
     pj_sock_t ssock = PJ_INVALID_SOCKET, csock = PJ_INVALID_SOCKET;
     pj_ioqueue_t *ioqueue = NULL;
-    pj_ioqueue_key_t *skey;
+    pj_ioqueue_key_t *skey = NULL;
     pj_ioqueue_callback cb;
     enum {
 	ASYNC_CNT = 16,
