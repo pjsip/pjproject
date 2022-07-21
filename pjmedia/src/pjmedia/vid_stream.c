@@ -237,7 +237,6 @@ static void on_rx_rtcp( void *data,
 
 static void on_destroy(void *arg);
 
-static void channel_on_destroy(void *arg) { PJ_UNUSED_ARG(arg); }
 
 #if TRACE_JB
 
