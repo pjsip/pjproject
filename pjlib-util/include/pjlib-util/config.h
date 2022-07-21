@@ -239,6 +239,18 @@
 
 
 /* **************************************************************************
+ * UPnP
+ */
+
+/* Default duration for searching UPnP Internet Gateway Devices (in seconds).
+ * Default: 5 seconds
+ */
+#ifndef PJ_UPNP_DEFAULT_SEARCH_TIME 
+#   define PJ_UPNP_DEFAULT_SEARCH_TIME 	5
+#endif
+
+
+/* **************************************************************************
  * ENCRYPTION
  */
 

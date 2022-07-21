@@ -488,6 +488,20 @@ struct AccountNatConfig : public PersistentObject
     pjsua_stun_use 	mediaStunUse;
 
     /**
+     * Control the use of UPnP for the SIP signaling.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 	sipUpnpUse;
+
+    /**
+     * Control the use of UPnP for the media transports.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 	mediaUpnpUse;
+
+    /**
      * Specify NAT64 options.
      *
      * Default: PJSUA_NAT64_DISABLED
@@ -718,6 +732,8 @@ public:
      */
     AccountNatConfig() : sipStunUse(PJSUA_STUN_USE_DEFAULT),
       mediaStunUse(PJSUA_STUN_USE_DEFAULT),
+      sipUpnpUse(PJSUA_UPNP_USE_DEFAULT),
+      mediaUpnpUse(PJSUA_UPNP_USE_DEFAULT),
       nat64Opt(PJSUA_NAT64_DISABLED),
       iceEnabled(false),
       iceTrickle(PJ_ICE_SESS_TRICKLE_DISABLED),

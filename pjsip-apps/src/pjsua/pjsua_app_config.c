@@ -109,6 +109,8 @@ static void usage(void)
     puts  ("                      May be specified multiple times");
     puts  ("  --stun-srv=FORMAT   Set STUN server host or domain. This option may be");
     puts  ("                      specified more than once. FORMAT is hostdom[:PORT]");
+    puts  ("  --upnp=if_name      Enable UPnP using the interface name. If interface is");
+    puts  ("                      not specified, the first interface found will be used");
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
     puts  ("");
@@ -367,7 +369,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
-	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_OUTB_RID,
+	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_UPNP, OPT_OUTB_RID,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -448,6 +450,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "reg-use-proxy", 1, 0, OPT_REG_USE_PROXY},
 	{ "nameserver", 1, 0, OPT_NAMESERVER},
 	{ "stun-srv",   1, 0, OPT_STUN_SRV},
+	{ "upnp",       2, 0, OPT_UPNP},
 	{ "add-buddy",  1, 0, OPT_ADD_BUDDY},
 	{ "offer-x-ms-msg",0,0,OPT_OFFER_X_MS_MSG},
 	{ "no-presence", 0, 0, OPT_NO_PRESENCE},
@@ -939,6 +942,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return PJ_ETOOMANY;
 	    }
 	    cfg->cfg.stun_srv[cfg->cfg.stun_srv_cnt++] = pj_str(pj_optarg);
+	    break;
+
+	case OPT_UPNP:       /* UPnP */
+	    cfg->cfg.enable_upnp = PJ_TRUE;
+	    cfg->cfg.upnp_if_name = pj_str(pj_optarg);
 	    break;
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */

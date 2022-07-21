@@ -2307,6 +2307,27 @@ typedef struct pjsua_config
      */
     pj_bool_t	     hangup_forked_call;
 
+    /**
+     * Specify whether to enable UPnP.
+     *
+     * Note that this setting can be further customized in account
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        enable_upnp;
+
+    /**
+     * Specify which interface to use for UPnP. If empty, UPnP will use
+     * the first suitable interface found.
+     *
+     * Note that this setting is only applicable if UPnP is enabled and
+     * the string must be NULL terminated.
+     *
+     * Default: empty string
+     */
+    pj_str_t         upnp_if_name;
+
 } pjsua_config;
 
 
@@ -3506,6 +3527,23 @@ typedef enum pjsua_stun_use
 } pjsua_stun_use;
 
 /**
+ * This enumeration controls the use of UPnP in the account.
+ */
+typedef enum pjsua_upnp_use
+{
+    /**
+     * Follow the default setting in the global \a pjsua_config.
+     */
+    PJSUA_UPNP_USE_DEFAULT,
+
+    /**
+     * Disable UPnP.
+     */
+    PJSUA_UPNP_USE_DISABLED
+
+} pjsua_upnp_use;
+
+/**
  * This enumeration controls the use of ICE settings in the account.
  */
 typedef enum pjsua_ice_config_use
@@ -4131,6 +4169,20 @@ typedef struct pjsua_acc_config
      * Default: PJSUA_STUN_RETRY_ON_FAILURE
      */
     pjsua_stun_use 		media_stun_use;
+
+    /**
+     * Control the use of UPnP for the SIP signaling.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 		sip_upnp_use;
+
+    /**
+     * Control the use of UPnP for the media transports.
+     *
+     * Default: PJSUA_UPNP_USE_DEFAULT
+     */
+    pjsua_upnp_use 		media_upnp_use;
 
     /**
      * Use loopback media transport. This may be useful if application

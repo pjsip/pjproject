@@ -704,6 +704,26 @@ struct UaConfig : public PersistentObject
      */
     bool	    	mwiUnsolicitedEnabled;
 
+    /**
+     * Specify whether to enable UPnP.
+     *
+     * Note that this setting can be further customized in account
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: FALSE
+     */
+    bool        	enableUpnp;
+
+    /**
+     * Specify which interface to use for UPnP. If empty, UPnP will use
+     * the first suitable interface found.
+     *
+     * Note that this setting is only applicable if UPnP is enabled.
+     *
+     * Default: empty string
+     */
+    string         	upnpIfName;
+
 public:
     /**
      * Default constructor to initialize with default values.

@@ -102,6 +102,9 @@ struct pjsua_call_media
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
     pj_timestamp	 last_req_keyframe;/**< Last TX keyframe request.   */
 
+    pj_bool_t		 use_upnp;  /**< Use UPnP?			    */
+    pj_sockaddr		 mapped_addr[2]; /* UPnP mapped address.	    */
+
     pjsua_med_tp_state_cb      med_init_cb;/**< Media transport
                                                 initialization callback.    */
 
@@ -342,6 +345,7 @@ typedef struct pjsua_transport_data
     int			     index;
     pjsip_transport_type_e   type;
     pjsip_host_port	     local_name;
+    pj_sockaddr		     pub_addr;
 
     union {
 	pjsip_transport	    *tp;
@@ -506,6 +510,9 @@ struct pjsua_data
     unsigned		 stun_srv_idx; /**< Resolved STUN server index	*/
     unsigned		 stun_opt;  /**< STUN resolution option.	*/
     pj_dns_resolver	*resolver;  /**< DNS resolver.			*/   
+
+    /* UPnP */
+    pj_status_t		 upnp_status; /**< UPnP status.			*/
 
     /* Detected NAT type */
     pj_stun_nat_type	 nat_type;	/**< NAT type.			*/
@@ -709,6 +716,10 @@ pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
 /* acc use stun? */
 pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id);
 pj_bool_t pjsua_media_acc_is_using_stun(pjsua_acc_id acc_id);
+
+/* acc use UPnP? */
+pj_bool_t pjsua_sip_acc_is_using_upnp(pjsua_acc_id acc_id);
+pj_bool_t pjsua_media_acc_is_using_upnp(pjsua_acc_id acc_id);
 
 /* acc use IPv6? */
 pj_bool_t pjsua_sip_acc_is_using_ipv6(pjsua_acc_id acc_id);

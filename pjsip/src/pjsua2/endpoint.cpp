@@ -269,6 +269,8 @@ void UaConfig::fromPj(const pjsua_config &ua_cfg)
     this->stunIgnoreFailure = PJ2BOOL(ua_cfg.stun_ignore_failure);
     this->natTypeInSdp = ua_cfg.nat_type_in_sdp;
     this->mwiUnsolicitedEnabled = PJ2BOOL(ua_cfg.enable_unsolicited_mwi);
+    this->enableUpnp = PJ2BOOL(ua_cfg.enable_upnp);
+    this->upnpIfName = pj2Str(ua_cfg.upnp_if_name);
 }
 
 pjsua_config UaConfig::toPj() const
@@ -307,6 +309,8 @@ pjsua_config UaConfig::toPj() const
     pua_cfg.enable_unsolicited_mwi = this->mwiUnsolicitedEnabled;
     pua_cfg.stun_try_ipv6 = this->stunTryIpv6;
     pua_cfg.stun_ignore_failure = this->stunIgnoreFailure;
+    pua_cfg.enable_upnp = this->enableUpnp;
+    pua_cfg.upnp_if_name = str2Pj(this->upnpIfName);
 
     return pua_cfg;
 }
@@ -325,6 +329,8 @@ void UaConfig::readObject(const ContainerNode &node) PJSUA2_THROW(Error)
     NODE_READ_BOOL    ( this_node, stunIgnoreFailure);
     NODE_READ_INT     ( this_node, natTypeInSdp);
     NODE_READ_BOOL    ( this_node, mwiUnsolicitedEnabled);
+    NODE_READ_BOOL    ( this_node, enableUpnp);
+    NODE_READ_STRING  ( this_node, upnpIfName);
 }
 
 void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
@@ -341,6 +347,8 @@ void UaConfig::writeObject(ContainerNode &node) const PJSUA2_THROW(Error)
     NODE_WRITE_BOOL    ( this_node, stunIgnoreFailure);
     NODE_WRITE_INT     ( this_node, natTypeInSdp);
     NODE_WRITE_BOOL    ( this_node, mwiUnsolicitedEnabled);
+    NODE_WRITE_BOOL    ( this_node, enableUpnp);
+    NODE_WRITE_STRING  ( this_node, upnpIfName);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
