@@ -19,7 +19,7 @@
 #include "test.h"
 #include <pjlib.h>
 
-#define THIS_FILE "ioq_common.c"
+#define THIS_FILE 	"ioq_stress_test.c"
 #define MAX_THREADS	16
 #define TRACE(log)	PJ_LOG(3,log)
 #define MAX_ASYNC	16
@@ -40,7 +40,7 @@ typedef union op_key_user_data {
     struct {
 	int side;           /* CLIENT or SERVER */
 	pj_status_t status; /* PJ_SUCCESS: idle, PJ_EPENDING: pending, other: error */
-	unsigned count;          /* how many times were used */
+	unsigned count;     /* how many times were used */
     } common;
 
     struct {
@@ -73,14 +73,14 @@ typedef union op_key_user_data {
  * server and client. (when TCP is used, a listening socket will be created
  * too).
  *
- * Each socket (server or client) may initiate 1-N number of simultaneous
+ * Each socket (server or client) will initiate MAX_ASYNC simultaneous
  * send() and recev() operations.
  *
  * One single pass of a test completes when the designated number of "packets"
- * have been exchanged by the client/server.
+ * have been exchanged by the client/server (cfg.rx_cnt).
  *
- * Then the test may be repeated "repeat" times, using the same ioqueue but
- * different set of sockets.
+ * Then the test may be repeated "cfg.repeat" times, using the same ioqueue but
+ * different set of sockets, to test ioqueue key recycling mechanism.
  */
 struct test_desc
 {
@@ -98,12 +98,12 @@ struct test_desc
 	pj_bool_t reject_connect; /* close previously listen() without calling accept */
 	unsigned tx_so_buf_size; /* SO_SNDBUF in multples of sizeof(int) */
 	unsigned rx_so_buf_size; /* SO_RCVBUF in multples of sizeof(int) */
-	unsigned pkt_len;        /* size of each send()/recv() in mult. sizeof(int)  */
-	unsigned tx_cnt;         /* total number of ints to send  */
-	unsigned rx_cnt;         /* total number of ints to read */
-	unsigned n_servers;      /* number of servers (=parallel recv) to instantiate */
-	unsigned n_clients;      /* number of clients (=parallel send) to instantiate */
-	pj_bool_t sequenced;      /* incoming packets must be in sequence */
+	unsigned pkt_len;       /* size of each send()/recv() in mult. sizeof(int)  */
+	unsigned tx_cnt;        /* total number of ints to send  */
+	unsigned rx_cnt;        /* total number of ints to read */
+	unsigned n_servers;     /* number of servers (=parallel recv) to instantiate */
+	unsigned n_clients;     /* number of clients (=parallel send) to instantiate */
+	pj_bool_t sequenced;    /* incoming packets must be in sequence */
 	unsigned repeat;
     } cfg;
 
@@ -115,11 +115,13 @@ struct test_desc
 	pj_ioqueue_key_t *listen_key;/* tcp listening key */
 
 	pj_sock_t socks[2];          /* server/client sockets */
-	unsigned cnt[2];         /* number of packets sent/received */
+	unsigned cnt[2];             /* number of packets sent/received */
 	pj_ioqueue_key_t *keys[2];   /* server/client keys */
 	pj_status_t connect_status;
 
-	int retcode;	/* test retcode */
+	int retcode;	             /* test retcode. non-zero will abort. */
+
+	/* okud: op_key user data */
 	unsigned okuds_cnt[2];
 	op_key_user_data okuds[2][MAX_ASYNC];
 
@@ -189,11 +191,12 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 			return;
 		    } else if (test->cfg.sock_type==pj_SOCK_DGRAM()) {
 			if (*p < counter && !has_error) {
-			    // As it turns out, this could happen sometimes
-			    // with UDP even when allow_concurrent is set to FALSE.
-			    // Maybe the kernel allows the packet to be out of
-			    // order? (tested on Linux epoll). Or could there be
-			    // bug somewhere?
+			    /* As it turns out, this could happen sometimes
+			     * with UDP even when allow_concurrent is set to FALSE.
+			     * Maybe the kernel allows the packet to be out of
+			     * order? (tested on Linux epoll). Or could there be
+			     * bug somewhere?
+			     */
 			    PJ_LOG(3,(THIS_FILE, "  UDP RX sequence mismatch at idx=%d. Expecting %d, got %d",
 				      p-start, counter, *p));
 			    //test->state.retcode = 413;
@@ -245,11 +248,6 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 
     pj_assert(okud != NULL);
     assert(okud->common.side == CLIENT);
-
-    /* Client don't loop. sending datagrams usually will return PJ_SUCCESS,
-     * so we will loop a lot of times if we loop here. Sending will be
-     * picked up by worker thread.
-     */
 
     PJ_ASSERT_ON_FAIL(bytes_sent<0 || bytes_sent%sizeof(int)==0,
 		      {
@@ -413,7 +411,7 @@ static int worker_thread(void *p)
     test_desc *test = (test_desc*)p;
     unsigned n_events = 0;
 
-    /* log indent is not propagated to other threads (bug in pjlib?),
+    /* log indent is not propagated to other threads,
      * so we set it explicitly here
      */
     pj_log_set_indent(3);

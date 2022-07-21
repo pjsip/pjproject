@@ -158,7 +158,7 @@ static unsigned detect_epoll_support()
 	return epoll_support;
 
 #ifdef DISABLE_EXCLUSIVE_ONESHOT
-    PJ_LOG(3,(THIS_FILE, "epoll support disabled, reason: %s",
+    PJ_LOG(3,(THIS_FILE, "epoll EXCLUSIVE/ONESHOT support disabled, reason: %s",
 	      DISABLE_EXCLUSIVE_ONESHOT));
     epoll_support = 0;
     return epoll_support;
@@ -278,7 +278,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
     pj_ioqueue_t *ioqueue;
     pj_status_t rc;
     pj_lock_t *lock;
-    unsigned type_mask, epoll_support, valid_types;
+    const unsigned type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE |
+			       PJ_IOQUEUE_EPOLL_ONESHOT;
+    unsigned epoll_support, valid_types;
     int i;
 
     /* Check that arguments are valid. */
@@ -311,7 +313,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_create2(pj_pool_t *pool,
      * epoll types in the future, hence be careful when clearing the
      * bits (only bits related to epoll types should be cleared)
      */
-    type_mask = PJ_IOQUEUE_EPOLL_EXCLUSIVE | PJ_IOQUEUE_EPOLL_ONESHOT;
     ioqueue->cfg.epoll_flags &= ~type_mask;
     if (valid_types & PJ_IOQUEUE_EPOLL_EXCLUSIVE) {
 	ioqueue->cfg.epoll_flags |= PJ_IOQUEUE_EPOLL_EXCLUSIVE;
@@ -468,7 +469,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     if ((rc=os_ioctl(sock, FIONBIO, (ioctl_val_type)&value))) {
 	TRACE_((THIS_FILE, "pj_ioqueue_register_sock error: ioctl rc=%d", 
                 rc));
-        rc = pj_get_netos_error();
+        status = pj_get_netos_error();
 	goto on_return;
     }
 
@@ -482,7 +483,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
     pj_assert(!pj_list_empty(&ioqueue->free_list));
     if (pj_list_empty(&ioqueue->free_list)) {
-	rc = PJ_ETOOMANY;
+	status = PJ_ETOOMANY;
 	goto on_return;
     }
 
@@ -493,8 +494,8 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     key = (pj_ioqueue_key_t*)pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
 #endif
 
-    rc = ioqueue_init_key(pool, ioqueue, key, sock, grp_lock, user_data, cb);
-    if (rc != PJ_SUCCESS) {
+    status = ioqueue_init_key(pool, ioqueue, key, sock, grp_lock, user_data, cb);
+    if (status != PJ_SUCCESS) {
 	key = NULL;
 	goto on_return;
     }
@@ -514,12 +515,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     }
 */
     /* os_epoll_ctl. */
-    status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &key->ev);
-    if (status < 0) {
-	rc = pj_get_os_error();
+    rc = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &key->ev);
+    if (rc < 0) {
+	status = pj_get_os_error();
 	pj_lock_destroy(key->lock);
 	key = NULL;
-	PJ_PERROR(1,(THIS_FILE, rc, "epol_ctl(ADD) error"));
+	PJ_PERROR(1,(THIS_FILE, status, "epol_ctl(ADD) error"));
 	goto on_return;
     }
     
@@ -530,14 +531,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
     //TRACE_((THIS_FILE, "socket registered, count=%d", ioqueue->count));
 
 on_return:
-    if (rc != PJ_SUCCESS) {
+    if (status != PJ_SUCCESS) {
 	if (key && key->grp_lock)
 	    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
     
-    return rc;
+    return status;
 }
 
 PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
@@ -630,12 +631,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     pj_list_erase(key);
 #endif
 
+    /* Note: although event argument is ignored on EPOLL_CTL_DEL, we still
+     * need to clear the IO flags to be safe (in case another thread is run
+     * after we exit this function).
+     */
     key->ev.events &= ~IO_MASK;
     status = os_epoll_ctl( ioqueue->epfd, EPOLL_CTL_DEL, key->fd, &key->ev);
     if (status != 0) {
 	status = pj_get_os_error();
-        TRACE_((THIS_FILE,
-                "pj_ioqueue_unregister error: os_epoll_ctl status=%d",
+        PJ_PERROR(2, (THIS_FILE,
+                "Ignoring pj_ioqueue_unregister error: os_epoll_ctl status=%d",
 		status));
         /* From epoll doc: "Closing a file descriptor cause it to be
          * removed from all epoll interest lists". So we should just
@@ -644,7 +649,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
         // pj_lock_release(ioqueue->lock);
         // pj_ioqueue_unlock_key(key);
         // return rc;
-        PJ_PERROR(2,(THIS_FILE, status, "Ignoring epol_ctl(DEL) error [1]"));
     }
 
     /* Destroy the key. */
@@ -965,24 +969,6 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	 *    sporadically, so probably it's fine. This is reproducible with
 	 *    "tcp (multithreads)" test in ioq_stress_test.c.
 	 */
-	if (0) {
-	    /* for debugging */
-	    pj_uint32_t e = events[i].events;
-	    int hpr = key_has_pending_read(h);
-	    int hpa = key_has_pending_accept(h);
-	    int hpw = key_has_pending_write(h);
-	    int connecting = h->connecting;
-	    int closing = IS_CLOSING(h);
-	    int dummy = 0;
-
-	    PJ_UNUSED_ARG(e);
-	    PJ_UNUSED_ARG(hpr);
-	    PJ_UNUSED_ARG(hpa);
-	    PJ_UNUSED_ARG(closing);
-	    PJ_UNUSED_ARG(connecting);
-	    PJ_UNUSED_ARG(hpw);
-	    PJ_UNUSED_ARG(dummy);
-	}
 	TRACE_WARN((THIS_FILE, "     UNHANDLED event %d: events=0x%x, h=%p",
 		    i, events[i].events, h));
     }
@@ -1036,13 +1022,15 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	 *
 	 * On the other hand, if thread A calls ioqueue_recv() again above,
 	 * this will result in double epoll_ctl() calls. This should be okay,
-	 * albeit inefficient.
+	 * albeit inefficient. We err on the safe side.
          */
 	if ((ioqueue->cfg.epoll_flags & PJ_IOQUEUE_EPOLL_ONESHOT) &&
 	    (queue[i].key->ev.events & IO_MASK))
 	{
+	    pj_ioqueue_lock_key(queue[i].key);
 	    update_epoll_event_set(ioqueue, queue[i].key,
 				   queue[i].key->ev.events);
+	    pj_ioqueue_unlock_key(queue[i].key);
 	}
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -1064,10 +1052,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	/* We need to sleep in order to avoid busy polling, such
          * as in the case of the thread that doesn't process
          * the event as explained above.
-         * Note that we don't need simulate the sleeping time here to be
-         * exactly as long as the requested timeout, especially if the
-         * requested timeout is very long. Doing pj_thread_sleep() for
-         * such a long time is just wasting time.
+         * Limit the duration of the sleep, as doing pj_thread_sleep() for
+         * a long time is very inefficient. The main objective here is just
+         * to avoid busy loop.
          */
 	int delay = msec - pj_elapsed_usec(&t1, &t2)/1000;
         if (delay > 10) delay = 10;
