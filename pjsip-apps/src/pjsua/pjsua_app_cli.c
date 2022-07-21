@@ -2502,7 +2502,7 @@ static pj_status_t cmd_vid_conf_list()
     }
 
     PJ_LOG(3,(THIS_FILE," Video conference has %d ports:\n", count));
-    PJ_LOG(3,(THIS_FILE," id name                   format               rx           tx    \n"));
+    PJ_LOG(3,(THIS_FILE," id name                   format               rx-from      tx-to \n"));
     PJ_LOG(3,(THIS_FILE," ------------------------------------------------------------------\n"));
     for (i=0; i<count; ++i) {
 	char li_list[PJSUA_MAX_CALLS*4];
