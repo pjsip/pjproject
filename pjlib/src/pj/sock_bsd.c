@@ -60,11 +60,11 @@ const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
  * Socket level values.
  */
 const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
-#ifdef SOL_IP
-const pj_uint16_t PJ_SOL_IP	= SOL_IP;
-#elif (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
+#if (defined(PJ_WIN32) && PJ_WIN32) || (defined(PJ_WIN64) && PJ_WIN64) || \
       (defined (IPPROTO_IP))
 const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
+#elif defined(SOL_IP)
+const pj_uint16_t PJ_SOL_IP	= SOL_IP;
 #else
 const pj_uint16_t PJ_SOL_IP	= 0;
 #endif /* SOL_IP */
