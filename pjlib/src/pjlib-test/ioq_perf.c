@@ -62,7 +62,7 @@ static unsigned last_error_counter;
  * -Linux/Unix: EAGAIN (Resource temporarily unavailable)
  * -Windows:    WSAEWOULDBLOCK
  */
-#define IS_ERROR_SILENCED(e)	(e==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
+#define IS_ERROR_SILENCED(e)	((e)==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
 
 /* Descriptor for each producer/consumer pair. */
 typedef struct test_item
@@ -190,13 +190,15 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     if (thread_quit_flag)
         return;
 
-    item->has_pending_send = 0;
-
     if (bytes_sent <= 0) {
-        PJ_LOG(3,(THIS_FILE, "...error: sending stopped. bytes_sent=%d", 
-                  bytes_sent));
+	if (!IS_ERROR_SILENCED(-bytes_sent)) {
+	    PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
+			  "...error: sending stopped. bytes_sent=%d",
+			 -bytes_sent));
+	}
+	item->has_pending_send = 0;
     } 
-    else {
+    else if (!item->has_pending_send) {
         pj_status_t rc;
 
         item->bytes_sent += bytes_sent;
