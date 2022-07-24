@@ -364,9 +364,10 @@ typedef struct pj_ioqueue_cfg
 {
     /**
      * Specify flags to control e.g. how events are handled when epoll backend
-     * is used on Linux. The default value is PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS,
-     * which by default is set to PJ_IOQUEUE_EPOLL_AUTO. This setting will be
-     * ignored for other ioqueue backends.
+     * is used on Linux. The values are combination of pj_ioqueue_epoll_flag.
+     * The default value is PJ_IOQUEUE_DEFAULT_EPOLL_FLAGS, which by default
+     * is set to PJ_IOQUEUE_EPOLL_AUTO. This setting will be ignored for other
+     * ioqueue backends.
      */
     unsigned  epoll_flags;
 

@@ -745,7 +745,8 @@
 
 
 /**
- * Default flags for epoll_flags in pj_ioqueue_cfg structure.
+ * Default flags for epoll_flags member of  pj_ioqueue_cfg structure.
+ * The values are combination of pj_ioqueue_epoll_flag constants.
  *
  * Default: PJ_IOQUEUE_EPOLL_AUTO
  */
