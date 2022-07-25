@@ -47,7 +47,7 @@ using std::vector;
 //////////////////////////////////////////////////////////////////////////////
 
 /**
- * Media stream, corresponds to pjmedia_stream or pjmedia_vid_stream
+ * Media stream, corresponds to pjmedia_stream
  */
 typedef void *MediaStream;
 
@@ -562,11 +562,6 @@ public:
  */
 struct StreamInfo
 {
-    /**
-     * Media stream instance, either audio or video.
-     */
-    MediaStream		stream;
-
     /**
      * Media type of this stream.
      */
@@ -1763,6 +1758,22 @@ public:
      */
     void vidSetStream(pjsua_call_vid_strm_op op,
                       const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
+
+    /**
+     * Modify the audio stream's codec parameter after the codec is opened.
+     * Note that not all codec parameters can be modified during run-time.
+     * Currently, only Opus codec supports changing key codec parameters
+     * such as bitrate and bandwidth, while other codecs may only be able to
+     * modify minor settings such as VAD or PLC.
+     *
+     * @param med_idx	    Media stream index, or -1 to specify default audio
+     * 			    media.
+     * @param param	    The new codec parameter.
+     *
+     * @return		    PJ_SUCCESS on success.
+     */
+    void audStreamModifyCodecParam(int med_idx, const CodecParam &param)
+    				   PJSUA2_THROW(Error);
 
     /**
      * Get media stream info for the specified media index.

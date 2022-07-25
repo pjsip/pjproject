@@ -88,6 +88,48 @@ on_return:
 
 
 /*
+ * Modify audio stream's codec parameters.
+ */
+PJ_DEF(pj_status_t)
+pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+			  	  	 const pjmedia_codec_param *param)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls &&
+    		     param, PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    /* Verify media index */
+    call = &pjsua_var.calls[call_id];
+    if (med_idx == -1) {
+	med_idx = call->audio_idx;
+    }
+    if (med_idx < 0 || med_idx >= (int)call->med_cnt) {
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    /* Verify if the media is audio */
+    call_med = &call->media[med_idx];
+    if (call_med->type == PJMEDIA_TYPE_AUDIO && call_med->strm.a.stream) {
+	PJSUA_UNLOCK();
+	return PJ_EINVALIDOP;
+    }
+
+    status = pjmedia_stream_modify_codec_param(call_med->strm.a.stream,
+    					       param);
+
+    PJSUA_UNLOCK();
+    return status;
+}
+
+
+/*
  * Get media stream info for the specified media index.
  */
 PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
@@ -115,13 +157,11 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
     psi->type = call_med->type;
     switch (call_med->type) {
     case PJMEDIA_TYPE_AUDIO:
-    	psi->strm.aud_strm = call_med->strm.a.stream;
 	status = pjmedia_stream_get_info(call_med->strm.a.stream,
 					 &psi->info.aud);
 	break;
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     case PJMEDIA_TYPE_VIDEO:
-    	psi->strm.vid_strm = call_med->strm.v.stream;
 	status = pjmedia_vid_stream_get_info(call_med->strm.v.stream,
 					     &psi->info.vid);
 	break;
