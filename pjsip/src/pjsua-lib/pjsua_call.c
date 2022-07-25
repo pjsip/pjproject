@@ -725,9 +725,11 @@ static void dlg_set_via(pjsip_dialog *dlg, pjsua_acc *acc)
 {
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc->index)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc->index) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc->index))
+    {
    	/* Choose local interface to use in Via if acc is not using
-   	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+   	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1804
    	 */
    	pjsip_host_port via_addr;
    	const void *via_tp;
@@ -1789,9 +1791,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     {
         pjsip_dlg_set_via_sent_by(dlg, &pjsua_var.acc[acc_id].via_addr,
                                   pjsua_var.acc[acc_id].via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN. See https://trac.pjsip.org/repos/ticket/1804
+	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1804
 	 */
 	char target_buf[PJSIP_MAX_URL_SIZE];
 	pj_str_t target;

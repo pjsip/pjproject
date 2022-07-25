@@ -249,7 +249,7 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 
 /*
  * Create RTP and RTCP socket pair, and possibly resolve their public
- * address via STUN.
+ * address via STUN/UPnP.
  */
 static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 					const pjsua_transport_config *cfg,
@@ -539,6 +539,43 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 			  pj_sockaddr_get_port(&mapped_addr[0])));
 	    }
 	    /* Success! */
+	    break;
+#endif
+
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+	} else if ((!use_ipv6 || use_nat64) &&
+	           pjsua_media_acc_is_using_upnp(call_med->call->acc_id) &&
+	    	   pjsua_var.upnp_status == PJ_SUCCESS)
+	{
+	    status = pj_upnp_add_port_mapping(2, sock, NULL, mapped_addr);
+	    if (status == PJ_SUCCESS) {
+	    	call_med->use_upnp = PJ_TRUE;
+	    	pj_sockaddr_cp(&call_med->mapped_addr[0], &mapped_addr[0]);
+	    	pj_sockaddr_cp(&call_med->mapped_addr[1], &mapped_addr[1]);
+	    } else {
+	    	pjsua_perror(THIS_FILE, "Error adding UPnP "
+	    	    			"port mapping", status);
+
+		if (!pj_sockaddr_has_addr(&bound_addr)) {
+		    pj_sockaddr addr;
+
+		    /* Get local IP address. */
+		    status = pj_gethostip(af, &addr);
+		    if (status != PJ_SUCCESS)
+			goto on_error;
+
+		    pj_sockaddr_copy_addr(&bound_addr, &addr);
+		}
+
+		for (i = 0; i < 2; ++i) {
+		    pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		    pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		    pj_sockaddr_set_port(&mapped_addr[i],
+					 (pj_uint16_t)(acc->next_rtp_port+i));
+		}
+		break;
+	    }
+
 	    break;
 #endif
 
@@ -3225,6 +3262,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     call->med_prov_cnt = 0;
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
+
+        if (call_med->use_upnp) {
+#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[0]);
+            pj_upnp_del_port_mapping(&call_med->mapped_addr[1]);
+#endif
+        }
 
         if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
     	    pjmedia_transport_info tpinfo;

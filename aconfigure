@@ -827,6 +827,8 @@ enable_kqueue
 enable_epoll
 enable_shared
 enable_pjsua2
+with_upnp
+enable_upnp
 with_external_speex
 with_external_gsm
 with_external_srtp
@@ -1526,6 +1528,7 @@ Optional Features:
   --enable-shared         Build shared libraries
   --disable-pjsua2        Exclude pjsua2 library and application from the
                           build
+  --disable-upnp          Disable UPnP (default: not disabled)
   --disable-resample      Disable resampling implementations
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-video         Disable video feature
@@ -1575,6 +1578,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-upnp=DIR         Specify alternate libupnp prefix
   --with-external-speex   Use external Speex development files, not the one in
                           "third_party" directory. When this option is set,
                           make sure that Speex is accessible to use (hint: use
@@ -6582,6 +6586,93 @@ case $target in
 	esac
 	;;
 esac
+
+
+
+
+# Check whether --with-upnp was given.
+if test ${with_upnp+y}
+then :
+  withval=$with_upnp;
+else $as_nop
+  with_upnp=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_upnp" = "xno"; then
+    enable_upnp=no
+fi
+
+# Check whether --enable-upnp was given.
+if test ${enable_upnp+y}
+then :
+  enableval=$enable_upnp;
+		if test "$enable_upnp" = "no"; then
+		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Checking if UPnP is disabled... yes" >&5
+printf "%s\n" "Checking if UPnP is disabled... yes" >&6; }
+		fi
+
+else $as_nop
+
+		  if test "x$with_upnp" != "xno" -a "x$with_upnp" != "x"; then
+		        UPNP_PREFIX=$with_upnp
+		  	UPNP_CFLAGS="-I$UPNP_PREFIX/upnp/inc -I$UPNP_PREFIX/ixml/inc"
+			UPNP_LDFLAGS="-L$UPNP_PREFIX/upnp/.libs -L$UPNP_PREFIX/imxl/.libs"
+			{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: Using UPnP prefix... $with_upnp" >&5
+printf "%s\n" "Using UPnP prefix... $with_upnp" >&6; }
+		  else
+		  	UPNP_CFLAGS=""
+			UPNP_LDFLAGS=""
+		  fi
+
+		  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking UPnP usability" >&5
+printf %s "checking UPnP usability... " >&6; }
+
+		  UPNP_LIBS="-lupnp -lixml"
+
+		  SAVED_LIBS="$LIBS"
+		  SAVED_LDFLAGS="$LDFLAGS"
+		  SAVED_CFLAGS="$CFLAGS"
+
+		  LIBS="$UPNP_LIBS $LIBS"
+		  LDFLAGS="$UPNP_LDFLAGS $LDFLAGS"
+		  CFLAGS="$UPNP_CFLAGS $CFLAGS"
+
+		  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <upnp/upnp.h>
+int
+main (void)
+{
+UpnpInit2(NULL, 0);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"
+then :
+   CFLAGS="$CFLAGS -DPJLIB_UTIL_HAS_UPNP=1 $UPNP_CFLAGS"
+		  		   LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
+		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+printf "%s\n" "yes" >&6; }
+
+else $as_nop
+
+				   LIBS="$SAVED_LIBS"
+				   LDFLAGS="$SAVED_LDFLAGS"
+				   CFLAGS="$SAVED_CFLAGS"
+		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+printf "%s\n" "no" >&6; }
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.beam \
+    conftest$ac_exeext conftest.$ac_ext
+
+
+fi
+
 
 
 ac_external_speex=0

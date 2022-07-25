@@ -769,6 +769,12 @@ typedef enum pjsua_stun_use
   PJSUA_STUN_RETRY_ON_FAILURE
 } pjsua_stun_use;
 
+typedef enum pjsua_upnp_use
+{
+  PJSUA_UPNP_USE_DEFAULT,
+  PJSUA_UPNP_USE_DISABLED
+} pjsua_upnp_use;
+
 typedef enum pjsua_call_hold_type
 {
   PJSUA_CALL_HOLD_TYPE_RFC3264,

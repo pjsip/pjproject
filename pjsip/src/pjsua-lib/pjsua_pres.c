@@ -882,9 +882,11 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN. See https://trac.pjsip.org/repos/ticket/1412
+	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1412
 	 */
 	char target_buf[PJSIP_MAX_URL_SIZE];
 	pj_str_t target;
@@ -1278,9 +1280,11 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_publishc_set_via_sent_by(acc->publish_sess, &acc->via_addr,
                                        acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN. See https://trac.pjsip.org/repos/ticket/1412
+	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1412
 	 */
 	pjsip_host_port via_addr;
 	const void *via_tp;
@@ -1848,9 +1852,11 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(buddy->dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
 	/* Choose local interface to use in Via if acc is not using
-	 * STUN. See https://trac.pjsip.org/repos/ticket/1412
+	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1412
 	 */
 	pjsip_host_port via_addr;
 	const void *via_tp;
@@ -2191,9 +2197,11 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 
     if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
         pjsip_dlg_set_via_sent_by(acc->mwi_dlg, &acc->via_addr, acc->via_tp);
-    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id) &&
+    	       !pjsua_sip_acc_is_using_upnp(acc_id))
+    {
    	/* Choose local interface to use in Via if acc is not using
-   	 * STUN. See https://trac.pjsip.org/repos/ticket/1412
+   	 * STUN nor UPnP. See https://trac.pjsip.org/repos/ticket/1412
    	 */
    	pjsip_host_port via_addr;
    	const void *via_tp;
