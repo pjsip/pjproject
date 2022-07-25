@@ -197,13 +197,15 @@ static unsigned detect_epoll_support()
     }
 
     /* Check EPOLLEXCLUSIVE support */
-    ev.events = EPOLLIN | EPOLLEXCLUSIVE;
-    rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
-    if (rc == 0) {
-	support_exclusive = 1;
-	rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
-	if (rc != 0)
-	    goto on_error;
+    if (!disable_exclusive) {
+	ev.events = EPOLLIN | EPOLLEXCLUSIVE;
+	rc = epoll_ctl(epfd, EPOLL_CTL_ADD, evfd, &ev);
+	if (rc == 0) {
+	    support_exclusive = 1;
+	    rc = epoll_ctl(epfd, EPOLL_CTL_DEL, evfd, &ev);
+	    if (rc != 0)
+		goto on_error;
+	}
     }
 
     /* Check EPOLLONESHOT support */
@@ -747,6 +749,12 @@ static void ioqueue_remove_from_set2(pj_ioqueue_t *ioqueue,
 	events &= ~EPOLLIN;
     if (event_types & WRITEABLE_EVENT)
 	events &= ~EPOLLOUT;
+
+    /* Note that although EPOLLERR is removed, epoll will still report
+     * EPOLLERR events to us and there is no way to disable it. But we
+     * still remove it from "events" anyway to make our interest correct
+     * in our own record.
+     */
     if (event_types & EXCEPTION_EVENT)
 	events &= ~EPOLLERR;
 
