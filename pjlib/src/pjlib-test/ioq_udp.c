@@ -544,10 +544,21 @@ static int unregister_test(const pj_ioqueue_cfg *cfg)
     }
 
 
-    /* We shouldn't be able to unregister using the first key */
+    /* We shouldn't be able to unregister using the first key. Or should we?
+     *
+     * So basically we're simulating buggy application that is unregistering
+     * an old key.
+     *
+     * With current ioqueue implementation, it will return success because
+     * "key" is the same as "key2" (because ioueue's max_handles is 1 and due to
+     * PJ_IOQUEUE_HAS_SAFE_UNREG in ioqueue). But what is the expected status
+     * anyway? Should it return an error? Ideally, I think so. But since we
+     * can't do that, I'm putting this as an INFO to remind us about this
+     * behavior.
+     */
     status = pj_ioqueue_unregister(key);
     if (status == PJ_SUCCESS) {
-	PJ_LOG(2,(THIS_FILE, "....Warning: unregistering dead key was successful"));
+	PJ_LOG(3,(THIS_FILE, "....info: unregistering dead key was successful"));
     }
 
     /* Success */
