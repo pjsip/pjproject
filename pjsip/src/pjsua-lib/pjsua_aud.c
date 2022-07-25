@@ -116,7 +116,7 @@ pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
 
     /* Verify if the media is audio */
     call_med = &call->media[med_idx];
-    if (call_med->type == PJMEDIA_TYPE_AUDIO && call_med->strm.a.stream) {
+    if (call_med->type != PJMEDIA_TYPE_AUDIO || !call_med->strm.a.stream) {
 	PJSUA_UNLOCK();
 	return PJ_EINVALIDOP;
     }
