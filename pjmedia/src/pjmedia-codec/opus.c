@@ -847,8 +847,7 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     PJ_LOG(4, (THIS_FILE, "Modifying Opus encoder, sample rate: %d, "
     			  "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
     			  "complexity: %d, constant bit rate: %d",
-               		  get_opus_bw_constant(
-    					    attr->info.clock_rate),
+    			  attr->info.clock_rate,
                		  (attr->info.avg_bps? attr->info.avg_bps: 0),
                		  (attr->info.avg_bps? "": "(auto)"),
                		  attr->setting.vad?1:0,

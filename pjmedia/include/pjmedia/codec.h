@@ -383,13 +383,11 @@ typedef struct pjmedia_codec_op
     pj_status_t (*close)(pjmedia_codec *codec);
 
     /** 
-     * Modify the codec parameter after the codec is open. 
-     * Note that not all codec parameters can be modified during run-time. 
-     * When the parameter cannot be changed, this function will return 
-     * non-PJ_SUCCESS, and the original parameters will not be changed.
-     *
-     * Application can expect changing trivial codec settings such as
-     * changing VAD setting to succeed.
+     * Modify the codec parameter after the codec is open.
+     * Note that not all codec parameters can be modified during run-time.
+     * Currently, only Opus codec supports changing key codec parameters
+     * such as bitrate and bandwidth, while other codecs may only be able to
+     * modify minor settings such as VAD or PLC.
      *
      * Application should call #pjmedia_codec_modify() instead of 
      * calling this function directly.
@@ -1001,13 +999,11 @@ PJ_INLINE(pj_status_t) pjmedia_codec_close( pjmedia_codec *codec )
 
 
 /** 
- * Modify the codec parameter after the codec is open. 
- * Note that not all codec parameters can be modified during run-time. 
- * When the parameter cannot be changed, this function will return 
- * non-PJ_SUCCESS, and the original parameters will not be changed.
- *
- * Application can expect changing trivial codec settings such as
- * changing VAD setting to succeed.
+ * Modify the codec parameter after the codec is open.
+ * Note that not all codec parameters can be modified during run-time.
+ * Currently, only Opus codec supports changing key codec parameters
+ * such as bitrate and bandwidth, while other codecs may only be able to
+ * modify minor settings such as VAD or PLC.
  *
  * @param codec	    The codec instance.
  * @param param	    The new codec parameter.

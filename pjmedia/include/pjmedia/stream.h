@@ -301,12 +301,9 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
 /**
  * Modify the stream's codec parameter after the codec is opened.
  * Note that not all codec parameters can be modified during run-time.
- * When the parameter cannot be changed, this function will return
- * non-PJ_SUCCESS, and the original parameters will not be changed.
- *
  * Currently, only Opus codec supports changing key codec parameters
  * such as bitrate and bandwidth, while other codecs may only be able to
- * modify minor settings such as VAD.
+ * modify minor settings such as VAD or PLC.
  *
  * @param stream	The media stream.
  * @param param		The new codec parameter.
