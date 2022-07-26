@@ -1760,6 +1760,22 @@ public:
                       const CallVidSetStreamParam &param) PJSUA2_THROW(Error);
 
     /**
+     * Modify the audio stream's codec parameter after the codec is opened.
+     * Note that not all codec parameters can be modified during run-time.
+     * Currently, only Opus codec supports changing key codec parameters
+     * such as bitrate and bandwidth, while other codecs may only be able to
+     * modify minor settings such as VAD or PLC.
+     *
+     * @param med_idx	    Media stream index, or -1 to specify default audio
+     * 			    media.
+     * @param param	    The new codec parameter.
+     *
+     * @return		    PJ_SUCCESS on success.
+     */
+    void audStreamModifyCodecParam(int med_idx, const CodecParam &param)
+    				   PJSUA2_THROW(Error);
+
+    /**
      * Get media stream info for the specified media index.
      *
      * @param med_idx       Media stream index.

@@ -6102,6 +6102,24 @@ PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
 				pjsua_call_vid_strm_op op,
 				const pjsua_call_vid_strm_op_param *param);
 
+/**
+ * Modify the audio stream's codec parameter after the codec is opened.
+ * Note that not all codec parameters can be modified during run-time.
+ * Currently, only Opus codec supports changing key codec parameters
+ * such as bitrate and bandwidth, while other codecs may only be able to
+ * modify minor settings such as VAD or PLC.
+ *
+ * @param call_id	Call identification.
+ * @param med_idx	Media stream index, or -1 to specify default audio
+ * 			media.
+ * @param param		The new codec parameter.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+			  	  	 const pjmedia_codec_param *param);
 
 /**
  * Get media stream info for the specified media index.

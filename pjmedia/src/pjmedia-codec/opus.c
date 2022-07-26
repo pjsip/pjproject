@@ -508,6 +508,9 @@ static pj_status_t factory_default_attr( pjmedia_codec_factory *factory,
     attr->info.pcm_bits_per_sample = 16;
     attr->setting.vad      	   = OPUS_DEFAULT_VAD;
     attr->setting.plc      	   = OPUS_DEFAULT_PLC;
+    attr->setting.packet_loss	   = opus_cfg.packet_loss;
+    attr->setting.complexity	   = opus_cfg.complexity;
+    attr->setting.cbr		   = opus_cfg.cbr;
 
     /* Set max RX frame size to 1275 (max Opus frame size) to anticipate
      * possible ptime change on the fly.
@@ -752,11 +755,13 @@ static pj_status_t  codec_open( pjmedia_codec *codec,
     opus_encoder_ctl(opus_data->enc,
     		     OPUS_SET_VBR(opus_data->cfg.cbr ? 0 : 1));
 
-    PJ_LOG(5, (THIS_FILE, "Initialize Opus encoder, sample rate: %d, "
-    			  "avg bitrate: %d, vad: %d, plc: %d, pkt loss: %d, "
+    PJ_LOG(4, (THIS_FILE, "Initialize Opus encoder, sample rate: %d, "
+    			  "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
     			  "complexity: %d, constant bit rate: %d",
                		  opus_data->cfg.sample_rate,
-               		  attr->info.avg_bps, attr->setting.vad?1:0,
+               		  (auto_bit_rate? 0: attr->info.avg_bps),
+               		  (auto_bit_rate? "(auto)": ""),
+               		  attr->setting.vad?1:0,
                		  attr->setting.plc?1:0,
                		  opus_data->cfg.packet_loss,
                		  opus_data->cfg.complexity,
@@ -824,6 +829,32 @@ static pj_status_t  codec_modify( pjmedia_codec *codec,
     /* Set PLC */
     opus_encoder_ctl(opus_data->enc,
     		     OPUS_SET_INBAND_FEC(attr->setting.plc ? 1 : 0));
+
+    /* Set bandwidth */
+    opus_encoder_ctl(opus_data->enc,
+    		     OPUS_SET_MAX_BANDWIDTH(get_opus_bw_constant(
+    					    attr->info.clock_rate)));
+    /* Set expected packet loss */
+    opus_encoder_ctl(opus_data->enc,
+    		     OPUS_SET_PACKET_LOSS_PERC(attr->setting.packet_loss));
+    /* Set complexity */
+    opus_encoder_ctl(opus_data->enc,
+		     OPUS_SET_COMPLEXITY(attr->setting.complexity));
+    /* Set constant bit rate */
+    opus_encoder_ctl(opus_data->enc,
+    		     OPUS_SET_VBR(attr->setting.cbr ? 0 : 1));
+
+    PJ_LOG(4, (THIS_FILE, "Modifying Opus encoder, sample rate: %d, "
+    			  "avg bitrate: %d%s, vad: %d, plc: %d, pkt loss: %d, "
+    			  "complexity: %d, constant bit rate: %d",
+    			  attr->info.clock_rate,
+               		  (attr->info.avg_bps? attr->info.avg_bps: 0),
+               		  (attr->info.avg_bps? "": "(auto)"),
+               		  attr->setting.vad?1:0,
+               		  attr->setting.plc?1:0,
+               		  attr->setting.packet_loss,
+               		  attr->setting.complexity,
+               		  attr->setting.cbr?1:0));
 
     pj_mutex_unlock (opus_data->mutex);
     return PJ_SUCCESS;

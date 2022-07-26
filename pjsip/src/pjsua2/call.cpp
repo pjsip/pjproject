@@ -875,6 +875,14 @@ void Call::vidSetStream(pjsua_call_vid_strm_op op,
 #endif
 }
 
+void Call::audStreamModifyCodecParam(int med_idx, const CodecParam &param)
+    				     PJSUA2_THROW(Error)
+{
+    pjmedia_codec_param prm = param.toPj();
+    PJSUA2_CHECK_EXPR( pjsua_call_aud_stream_modify_codec_param(id, med_idx,
+    								&prm) );
+}
+
 StreamInfo Call::getStreamInfo(unsigned med_idx) const PJSUA2_THROW(Error)
 {
     pjsua_stream_info pj_si;

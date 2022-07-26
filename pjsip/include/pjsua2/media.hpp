@@ -2459,6 +2459,9 @@ struct CodecParamSetting
     bool	reserved;	    /**< Reserved, must be zero.	*/
     CodecFmtpVector encFmtp;	    /**< Encoder's fmtp params.		*/
     CodecFmtpVector decFmtp;	    /**< Decoder's fmtp params.		*/
+    unsigned   	packetLoss;         /**< Encoder's expected pkt loss %.	*/
+    unsigned   	complexity;         /**< Encoder complexity, 0-10(max). */
+    bool  	cbr;                /**< Constant bit rate?		*/
 };
 
 /**
