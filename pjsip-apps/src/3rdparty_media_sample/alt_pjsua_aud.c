@@ -327,6 +327,16 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
     return PJSUA_INVALID_ID;
 }
 
+/* Modify audio stream's codec parameters. */
+PJ_DEF(pj_status_t)
+pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+			  	  	 const pjmedia_codec_param *param)
+{
+    UNIMPLEMENTED(pjsua_call_aud_stream_modify_codec_param)
+    return PJ_ENOTSUP;
+}
+
 /* Get media stream info for the specified media index. */
 PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
                                                 unsigned med_idx,

@@ -648,9 +648,7 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
     return PJ_FALSE;
 }
 
-/*
- * Enumerate all video conference ports.
- */
+/* Enumerate all video conference ports. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
 					       unsigned *count)
 {
@@ -658,9 +656,7 @@ PJ_DEF(pj_status_t) pjsua_vid_conf_enum_ports( pjsua_conf_port_id id[],
     return PJ_ENOTSUP;
 }
 
-/*
- * Get information about the specified video conference port
- */
+/* Get information about the specified video conference port. */
 PJ_DEF(pj_status_t) pjsua_vid_conf_get_port_info(
 					    pjsua_conf_port_id port_id,
 					    pjsua_vid_conf_port_info *info)
