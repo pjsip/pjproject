@@ -59,13 +59,15 @@ static unsigned last_error_counter;
 #define LIMIT_TRANSFER	0
 
 /* Silenced error(s):
- * -120011: EAGAIN (Resource temporarily unavailable)
+ * -Linux/Unix: EAGAIN (Resource temporarily unavailable)
+ * -Windows:    WSAEWOULDBLOCK
  */
-#define IS_ERROR_SILENCED(e)	(e==PJ_STATUS_FROM_OS(EAGAIN))
+#define IS_ERROR_SILENCED(e)	((e)==PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL))
 
 /* Descriptor for each producer/consumer pair. */
 typedef struct test_item
 {
+    const char		*type_name;
     pj_sock_t            server_fd, 
                          client_fd;
     pj_ioqueue_t        *ioqueue;
@@ -104,13 +106,24 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    rc = (pj_status_t)-bytes_read;
 	    if (rc != last_error) {
 	        //last_error = rc;
+
+		/* Note:
+		 * we can receive EAGAIN (on Linux/Unix) or EWOULDBLOCK (on Win)
+		 * when we have more than one threads competing to do recv().
+		 * This is a normal situation even when EPOLLEXCLUSIVE is used
+		 * (e.g two packets arrive at the same time, causing both
+		 * threads to wake up, but thread A greedily read the packets)
+		 * therefore we silence the error here.
+		 */
 		if (!IS_ERROR_SILENCED(rc)) {
 		    pj_strerror(rc, errmsg, sizeof(errmsg));
 		    PJ_LOG(3,(THIS_FILE,"...error: read error, bytes_read=%d (%s)",
 			      bytes_read, errmsg));
 		    PJ_LOG(3,(THIS_FILE,
-			      ".....additional info: total read=%u, total sent=%u",
-			      item->bytes_recv, item->bytes_sent));
+			      ".....additional info: type=%s, total read=%u, "
+			      "total sent=%u",
+			      item->type_name, item->bytes_recv,
+			      item->bytes_sent));
 		}
 	    } else {
 	        last_error_counter++;
@@ -177,13 +190,15 @@ static void on_write_complete(pj_ioqueue_key_t *key,
     if (thread_quit_flag)
         return;
 
-    item->has_pending_send = 0;
-
     if (bytes_sent <= 0) {
-        PJ_LOG(3,(THIS_FILE, "...error: sending stopped. bytes_sent=%d", 
-                  bytes_sent));
+	if (!IS_ERROR_SILENCED(-bytes_sent)) {
+	    PJ_PERROR(3, (THIS_FILE, (pj_status_t)-bytes_sent,
+			  "...error: sending stopped. bytes_sent=%d",
+			 -bytes_sent));
+	}
+	item->has_pending_send = 0;
     } 
-    else {
+    else if (!item->has_pending_send) {
         pj_status_t rc;
 
         item->bytes_sent += bytes_sent;
@@ -248,7 +263,7 @@ static int worker_thread(void *p)
  *  - measure the total bytes received by all consumers during a
  *    period of time.
  */
-static int perform_test(pj_bool_t allow_concur,
+static int perform_test(const pj_ioqueue_cfg *cfg,
 			int sock_type, const char *type_name,
                         unsigned thread_cnt, unsigned sockpair_cnt,
                         pj_size_t buffer_size, 
@@ -284,22 +299,17 @@ static int perform_test(pj_bool_t allow_concur,
     	     pj_pool_alloc(pool, thread_cnt*sizeof(pj_thread_t*));
 
     TRACE_((THIS_FILE, "     creating ioqueue.."));
-    rc = pj_ioqueue_create(pool, sockpair_cnt*2, &ioqueue);
+    rc = pj_ioqueue_create2(pool, sockpair_cnt*2, cfg, &ioqueue);
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create ioqueue", rc);
         return -15;
-    }
-
-    rc = pj_ioqueue_set_default_concurrency(ioqueue, allow_concur);
-    if (rc != PJ_SUCCESS) {
-	app_perror("...error: pj_ioqueue_set_default_concurrency()", rc);
-        return -16;
     }
 
     /* Initialize each producer-consumer pair. */
     for (i=0; i<sockpair_cnt; ++i) {
         pj_ssize_t bytes;
 
+        items[i].type_name = type_name;
         items[i].ioqueue = ioqueue;
         items[i].buffer_size = buffer_size;
         items[i].outgoing_buffer = (char*) pj_pool_alloc(pool, buffer_size);
@@ -461,7 +471,7 @@ static int perform_test(pj_bool_t allow_concur,
     }
 
     /* bandwidth = total_received*1000/total_elapsed_usec */
-    bandwidth = total_received;
+    bandwidth = (pj_highprec_t)total_received;
     pj_highprec_mul(bandwidth, 1000);
     pj_highprec_div(bandwidth, total_elapsed_usec);
     
@@ -476,7 +486,7 @@ static int perform_test(pj_bool_t allow_concur,
 	PJ_LOG(3,(THIS_FILE, "    ============================="));
 	PJ_LOG(3,(THIS_FILE, "    Thread  Loops  Events  Errors"));
 	PJ_LOG(3,(THIS_FILE, "    ============================="));
-	for (unsigned i=0; i<thread_cnt; ++i) {
+	for (i=0; i<thread_cnt; ++i) {
 	    struct thread_arg *arg = &args[i];
 	    PJ_LOG(3,(THIS_FILE, " %6d  %6d  %6d  %6d",
 		      arg->id, arg->loop_cnt, arg->event_cnt, arg->err_cnt));
@@ -486,7 +496,7 @@ static int perform_test(pj_bool_t allow_concur,
 	PJ_LOG(3,(THIS_FILE, "    ==================================="));
 	PJ_LOG(3,(THIS_FILE, "    Pair     Sent     Recv    Pct total"));
 	PJ_LOG(3,(THIS_FILE, "    ==================================="));
-	for (unsigned i=0; i<sockpair_cnt; ++i) {
+	for (i=0; i<sockpair_cnt; ++i) {
 	    test_item *item = &items[i];
 	    PJ_LOG(3,(THIS_FILE, "    %4d  %5.1f MB  %5.1f MB    %5.1f%%",
 		      i, item->bytes_sent/1000000.0,
@@ -506,7 +516,7 @@ static int perform_test(pj_bool_t allow_concur,
     return 0;
 }
 
-static int ioqueue_perf_test_imp(pj_bool_t allow_concur)
+static int ioqueue_perf_test_imp(const pj_ioqueue_cfg *cfg)
 {
     enum { BUF_SIZE = 512 };
     int i, rc;
@@ -533,7 +543,8 @@ static int ioqueue_perf_test_imp(pj_bool_t allow_concur)
     int best_index = 0;
 
     PJ_LOG(3,(THIS_FILE, " Benchmarking %s ioqueue:", pj_ioqueue_name()));
-    PJ_LOG(3,(THIS_FILE, "   Testing with concurency=%d", allow_concur));
+    PJ_LOG(3,(THIS_FILE, "   Testing with concurency=%d, epoll_flags=0x%x",
+	      cfg->default_concurrency, cfg->epoll_flags));
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
     PJ_LOG(3,(THIS_FILE, "   Type  Threads  Skt.Pairs      Bandwidth"));
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
@@ -542,7 +553,7 @@ static int ioqueue_perf_test_imp(pj_bool_t allow_concur)
     for (i=0; i<(int)(sizeof(test_param)/sizeof(test_param[0])); ++i) {
         pj_size_t bandwidth;
 
-        rc = perform_test(allow_concur,
+        rc = perform_test(cfg,
 			  test_param[i].type, 
                           test_param[i].type_name,
                           test_param[i].thread_cnt, 
@@ -578,11 +589,44 @@ static int ioqueue_perf_test_imp(pj_bool_t allow_concur)
  */
 int ioqueue_perf_test(void)
 {
+    pj_ioqueue_epoll_flag epoll_flags[] = {
+#if PJ_HAS_LINUX_EPOLL
+	PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+	PJ_IOQUEUE_EPOLL_ONESHOT,
+	0,
+#else
+        PJ_IOQUEUE_EPOLL_AUTO,
+#endif
+    };
     pj_size_t bandwidth;
-    int rc;
+    pj_ioqueue_cfg cfg;
+    int i, rc;
 
-    PJ_LOG(3,(THIS_FILE, " Detailed perf (concurrency=1):"));
-    rc = perform_test(PJ_TRUE,
+    /* Defailed performance report (concurrency=1) */
+    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+	pj_ioqueue_cfg_default(&cfg);
+	cfg.epoll_flags = epoll_flags[i];
+
+	PJ_LOG(3,(THIS_FILE, " Detailed perf (concurrency=%d, epoll_flags=0x%x):",
+		  cfg.default_concurrency, cfg.epoll_flags));
+	rc = perform_test(&cfg,
+			  pj_SOCK_DGRAM(),
+			  "udp",
+			  8,
+			  8,
+			  512,
+			  PJ_TRUE,
+			  &bandwidth);
+	if (rc != 0)
+	    return rc;
+    }
+
+    /* Defailed performance report (concurrency=0) */
+    pj_ioqueue_cfg_default(&cfg);
+    cfg.default_concurrency = PJ_FALSE;
+    PJ_LOG(3,(THIS_FILE, " Detailed perf (concurrency=%d, epoll_flags=0x%x):",
+	      cfg.default_concurrency, cfg.epoll_flags));
+    rc = perform_test(&cfg,
 		      pj_SOCK_DGRAM(),
                       "udp",
                       8,
@@ -590,24 +634,21 @@ int ioqueue_perf_test(void)
                       512,
 		      PJ_TRUE,
                       &bandwidth);
-
-    PJ_LOG(3,(THIS_FILE, " Detailed perf (concurrency=0):"));
-    rc = perform_test(PJ_FALSE,
-		      pj_SOCK_DGRAM(),
-                      "udp",
-                      8,
-                      8,
-                      512,
-		      PJ_TRUE,
-                      &bandwidth);
-
-    rc = ioqueue_perf_test_imp(PJ_TRUE);
     if (rc != 0)
 	return rc;
 
-    rc = ioqueue_perf_test_imp(PJ_FALSE);
-    if (rc != 0)
-	return rc;
+    /* The benchmark across configs */
+    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+	int concur;
+	for (concur=0; concur<2; ++concur) {
+	    pj_ioqueue_cfg_default(&cfg);
+	    cfg.epoll_flags = epoll_flags[i];
+	    cfg.default_concurrency = concur;
+	    rc = ioqueue_perf_test_imp(&cfg);
+	    if (rc != 0)
+		return rc;
+	}
+    }
 
     return 0;
 }

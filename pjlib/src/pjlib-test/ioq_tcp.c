@@ -140,7 +140,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
     pj_ssize_t bytes;
     pj_time_val timeout;
     pj_timestamp t1, t2;
-    int pending_op = 0;
+    int i, pending_op = 0;
     pj_ioqueue_op_key_t read_op, write_op;
 
     // Init operation keys.
@@ -220,14 +220,17 @@ static int send_recv_test(pj_ioqueue_t *ioque,
 
     // Pending op is zero.
     // Subsequent poll should yield zero too.
-    timeout.sec = timeout.msec = 0;
+    for (i=0; i<10; ++i) {
+	timeout.sec = 0;
+	timeout.msec = 50;
 #ifdef PJ_SYMBIAN
-    status = pj_symbianos_poll(-1, 1);
+	status = pj_symbianos_poll(-1, 1);
 #else
-    status = pj_ioqueue_poll(ioque, &timeout);
+	status = pj_ioqueue_poll(ioque, &timeout);
 #endif
-    if (status != 0)
-        return -173;
+	if (status != 0)
+	    return -173;
+    }
 
     // End time.
     pj_get_timestamp(&t2);
@@ -246,7 +249,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
 /*
  * Compliance test for success scenario.
  */
-static int compliance_test_0(pj_bool_t allow_concur)
+static int compliance_test_0(const pj_ioqueue_cfg *cfg)
 {
     pj_sock_t ssock=-1, csock0=-1, csock1=-1;
     pj_sockaddr_in addr, client_addr, rmt_addr;
@@ -300,7 +303,7 @@ static int compliance_test_0(pj_bool_t allow_concur)
     addr.sin_addr = pj_inet_addr(pj_cstr(&s, "127.0.0.1"));
 
     // Create I/O Queue.
-    rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
+    rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_ioqueue_create()", rc);
 	status=-20; goto on_error;
@@ -308,13 +311,6 @@ static int compliance_test_0(pj_bool_t allow_concur)
 
     // Init operation key.
     pj_ioqueue_op_key_init(&accept_op, sizeof(accept_op));
-
-    // Concurrency
-    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
-    if (rc != PJ_SUCCESS) {
-        app_perror("...ERROR in pj_ioqueue_set_default_concurrency()", rc);
-	status=-21; goto on_error;
-    }
 
     // Register server socket and client socket.
     rc = pj_ioqueue_register_sock(pool, ioque, ssock, NULL, &test_cb, &skey);
@@ -417,15 +413,19 @@ static int compliance_test_0(pj_bool_t allow_concur)
     // There's no pending operation.
     // When we poll the ioqueue, there must not be events.
     if (pending_op == 0) {
-        pj_time_val timeout = {1, 0};
+	unsigned i;
+
+	for (i=0; i<10; ++i) {
+	    pj_time_val timeout = {0, 50};
 #ifdef PJ_SYMBIAN
-	status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
+	    status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
-        status = pj_ioqueue_poll(ioque, &timeout);
+	    status = pj_ioqueue_poll(ioque, &timeout);
 #endif
-        if (status != 0) {
-            status=-60; goto on_error;
-        }
+	    if (status != 0) {
+		status=-60; goto on_error;
+	    }
+	}
     }
 
     // Check accepted socket.
@@ -482,7 +482,7 @@ on_error:
  * Compliance test for failed scenario.
  * In this case, the client connects to a non-existant service.
  */
-static int compliance_test_1(pj_bool_t allow_concur)
+static int compliance_test_1(const pj_ioqueue_cfg *cfg)
 {
     pj_sock_t csock1=PJ_INVALID_SOCKET;
     pj_sockaddr_in addr;
@@ -498,15 +498,9 @@ static int compliance_test_1(pj_bool_t allow_concur)
     pool = pj_pool_create(mem, NULL, POOL_SIZE, 4000, NULL);
 
     // Create I/O Queue.
-    rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
+    rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (!ioque) {
 	status=-20; goto on_error;
-    }
-
-    // Concurrency
-    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
-    if (rc != PJ_SUCCESS) {
-	status=-21; goto on_error;
     }
 
     // Create client socket
@@ -581,15 +575,19 @@ static int compliance_test_1(pj_bool_t allow_concur)
     // There's no pending operation.
     // When we poll the ioqueue, there must not be events.
     if (pending_op == 0) {
-        pj_time_val timeout = {1, 0};
+	unsigned i;
+
+	for (i=0; i<10; ++i) {
+	    pj_time_val timeout = {0, 50};
 #ifdef PJ_SYMBIAN
-	status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
+	    status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
-        status = pj_ioqueue_poll(ioque, &timeout);
+	    status = pj_ioqueue_poll(ioque, &timeout);
 #endif
-        if (status != 0) {
-            status=-60; goto on_error;
-        }
+	    if (status != 0) {
+		status=-60; goto on_error;
+	    }
+	}
     }
 
     // Success
@@ -611,7 +609,7 @@ on_error:
 /*
  * Repeated connect/accept on the same listener socket.
  */
-static int compliance_test_2(pj_bool_t allow_concur)
+static int compliance_test_2(const pj_ioqueue_cfg *cfg)
 {
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
     enum { MAX_PAIR = 1, TEST_LOOP = 2 };
@@ -646,7 +644,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
     pj_pool_t *pool = NULL;
     char *send_buf, *recv_buf;
     pj_ioqueue_t *ioque = NULL;
-    int i, bufsize = BUF_MIN_SIZE;
+    unsigned i, bufsize = BUF_MIN_SIZE;
     int status;
     int test_loop, pending_op = 0;
     pj_timestamp t_elapsed;
@@ -671,19 +669,12 @@ static int compliance_test_2(pj_bool_t allow_concur)
 
 
     // Create I/O Queue.
-    rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
+    rc = pj_ioqueue_create2(pool, PJ_IOQUEUE_MAX_HANDLES, cfg, &ioque);
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_ioqueue_create()", rc);
 	return -10;
     }
 
-
-    // Concurrency
-    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
-    if (rc != PJ_SUCCESS) {
-        app_perror("...ERROR in pj_ioqueue_set_default_concurrency()", rc);
-	return -11;
-    }
 
     // Allocate buffers for send and receive.
     send_buf = (char*)pj_pool_alloc(pool, bufsize);
@@ -802,14 +793,16 @@ static int compliance_test_2(pj_bool_t allow_concur)
 	// There's no pending operation.
 	// When we poll the ioqueue, there must not be events.
 	if (pending_op == 0) {
-	    pj_time_val timeout = {1, 0};
+	    for (i=0; i<10; ++i) {
+		pj_time_val timeout = {0, 50};
 #ifdef PJ_SYMBIAN
-	    status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
+		status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
-	    status = pj_ioqueue_poll(ioque, &timeout);
+		status = pj_ioqueue_poll(ioque, &timeout);
 #endif
-	    if (status != 0) {
-		status=-120; goto on_error;
+		if (status != 0) {
+		    status=-120; goto on_error;
+		}
 	    }
 	}
 
@@ -922,28 +915,31 @@ on_error:
 }
 
 
-static int tcp_ioqueue_test_impl(pj_bool_t allow_concur)
+static int tcp_ioqueue_test_impl(const pj_ioqueue_cfg *cfg)
 {
     int status;
+    char title[64];
 
-    PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
+    pj_ansi_snprintf(title, sizeof(title), "%s (concur:%d, epoll_flags:0x%x)",
+		     pj_ioqueue_name(), cfg->default_concurrency,
+		     cfg->epoll_flags);
 
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 0 (success scenario)",
-	       pj_ioqueue_name()));
-    if ((status=compliance_test_0(allow_concur)) != 0) {
+	       title));
+    if ((status=compliance_test_0(cfg)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 1 (failed scenario)",
-               pj_ioqueue_name()));
-    if ((status=compliance_test_1(allow_concur)) != 0) {
+	       title));
+    if ((status=compliance_test_1(cfg)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
 
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 2 (repeated accept)",
-               pj_ioqueue_name()));
-    if ((status=compliance_test_2(allow_concur)) != 0) {
+	       title));
+    if ((status=compliance_test_2(cfg)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
@@ -953,15 +949,44 @@ static int tcp_ioqueue_test_impl(pj_bool_t allow_concur)
 
 int tcp_ioqueue_test()
 {
-    int rc;
+    pj_ioqueue_epoll_flag epoll_flags[] = {
+        PJ_IOQUEUE_EPOLL_AUTO,
+#if PJ_HAS_LINUX_EPOLL
+	PJ_IOQUEUE_EPOLL_EXCLUSIVE,
+	PJ_IOQUEUE_EPOLL_ONESHOT,
+	0
+#endif
+    };
+    pj_bool_t concurs[] = { PJ_TRUE, PJ_FALSE };
+    int i, rc;
 
-    rc = tcp_ioqueue_test_impl(PJ_TRUE);
-    if (rc != 0)
-	return rc;
+    for (i=0; i<PJ_ARRAY_SIZE(epoll_flags); ++i) {
+	pj_ioqueue_cfg cfg;
 
-    rc = tcp_ioqueue_test_impl(PJ_FALSE);
-    if (rc != 0)
-	return rc;
+	pj_ioqueue_cfg_default(&cfg);
+	cfg.epoll_flags = epoll_flags[i];
+
+	PJ_LOG(3, (THIS_FILE, "..%s TCP compliance test, epoll_flags=0x%x",
+		   pj_ioqueue_name(), cfg.epoll_flags));
+
+	rc = tcp_ioqueue_test_impl(&cfg);
+	if (rc != 0)
+	    return rc;
+    }
+
+    for (i=0; i<PJ_ARRAY_SIZE(concurs); ++i) {
+	pj_ioqueue_cfg cfg;
+
+	pj_ioqueue_cfg_default(&cfg);
+	cfg.default_concurrency = concurs[i];
+
+	PJ_LOG(3, (THIS_FILE, "..%s TCP compliance test, concurrency=%d",
+		   pj_ioqueue_name(), cfg.default_concurrency));
+
+	rc = tcp_ioqueue_test_impl(&cfg);
+	if (rc != 0)
+	    return rc;
+    }
 
     return 0;
 }

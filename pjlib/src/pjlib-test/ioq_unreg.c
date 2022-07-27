@@ -35,6 +35,8 @@
 
 
 #define THIS_FILE   "ioq_unreg.c"
+//#define TRACE(expr) PJ_LOG(3,expr)
+#define TRACE(expr)
 
 
 enum test_method
@@ -69,12 +71,18 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     char *sendbuf = "Hello world";
     pj_status_t status;
 
-    if (sock_data.unregistered)
+    TRACE((THIS_FILE, "......on_read_complete(): unregistered=%d, bytes=%d",
+	   sock_data.unregistered, bytes_read));
+
+    if (sock_data.unregistered) {
+	TRACE((THIS_FILE, "........bailing out"));
 	return;
+    }
 
     pj_mutex_lock(sock_data.mutex);
 
     if (sock_data.unregistered) {
+	TRACE((THIS_FILE, "........bailing out"));
 	pj_mutex_unlock(sock_data.mutex);
 	return;
     }
@@ -92,6 +100,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	pj_gettimeofday(&now);
 	if (PJ_TIME_VAL_GTE(now, time_to_unregister)) { 
 	    sock_data.unregistered = 1;
+	    TRACE((THIS_FILE, "......on_read_complete(): unregistering"));
 	    pj_ioqueue_unregister(key);
 	    pj_mutex_unlock(sock_data.mutex);
 	    return;
@@ -101,6 +110,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     do { 
 	size = sock_data.bufsize;
 	status = pj_ioqueue_recv(key, op_key, sock_data.buffer, &size, 0);
+	TRACE((THIS_FILE, "........recv, status=%d", status));
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    app_perror("recv() error", status);
 
@@ -118,6 +128,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     if (status != PJ_SUCCESS)
 	app_perror("send() error", status);
 
+    TRACE((THIS_FILE, "........done"));
 } 
 
 static int worker_thread(void *arg)
@@ -125,7 +136,7 @@ static int worker_thread(void *arg)
     pj_ioqueue_t *ioqueue = (pj_ioqueue_t*) arg;
 
     while (!thread_quitting) {
-	pj_time_val timeout = { 0, 20 };
+	pj_time_val timeout = { 0, 200 };
 	pj_ioqueue_poll(ioqueue, &timeout);
     }
 
@@ -250,6 +261,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 	    !sock_data.unregistered) 
 	{
 	    sock_data.unregistered = 1;
+	    TRACE((THIS_FILE, "......main: unregistering"));
 	    /* Wait (as much as possible) for callback to complete */
 	    pj_mutex_lock(sock_data.mutex);
 	    pj_mutex_unlock(sock_data.mutex);
@@ -259,7 +271,7 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 	if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
 	    break;
 
-	timeout.sec = 0; timeout.msec = 10;
+	timeout.sec = 0; timeout.msec = 200;
 	n = pj_ioqueue_poll(ioqueue, &timeout);
 	if (n < 0) {
 	    app_perror("pj_ioqueue_poll error", -n);
@@ -297,7 +309,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     char title[30];
     pj_ioqueue_t *ioqueue;
     pj_pool_t *test_pool;
-	
+
     PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
 
     test_method = UNREGISTER_IN_APP;
