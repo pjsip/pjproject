@@ -4226,10 +4226,18 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 		if (use_update) {
 		    pjsua_call *call;
 		    pjsip_dialog *dlg = NULL;
+
+		    PJ_LOG(5, (THIS_FILE, "Call #%d: IP change is configured "
+			       "to using UPDATE", i));
+
 		    status = acquire_call("handle_call_on_ip_change()",
 					  i, &call, &dlg);
 		    if (status != PJ_SUCCESS) {
 			use_update = PJ_FALSE;
+			PJ_PERROR(3,(THIS_FILE, status,
+				     "Call #%d: IP change cannot "
+				     "check if remote supports UPDATE due to "
+				     "failure in acquiring dialog lock", i));
 		    } else {
 			const pj_str_t ST_UPDATE = {"UPDATE", 6};
 			use_update = pjsip_dlg_remote_has_cap(
@@ -4237,6 +4245,12 @@ pj_status_t pjsua_acc_handle_call_on_ip_change(pjsua_acc *acc)
 					    &ST_UPDATE)
 				     == PJSIP_DIALOG_CAP_SUPPORTED;
 			pjsip_dlg_dec_lock(dlg);
+
+			if (!use_update) {
+			    PJ_LOG(3, (THIS_FILE, "Call #%d: IP change will "
+				       "use re-INVITE because remote does "
+				       "not support UPDATE", i));
+			}
 		    }
 		}
 
