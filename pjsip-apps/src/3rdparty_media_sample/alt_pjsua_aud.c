@@ -327,6 +327,16 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
     return PJSUA_INVALID_ID;
 }
 
+/* Modify audio stream's codec parameters. */
+PJ_DEF(pj_status_t)
+pjsua_call_aud_stream_modify_codec_param(pjsua_call_id call_id,
+                                         int med_idx,
+			  	  	 const pjmedia_codec_param *param)
+{
+    UNIMPLEMENTED(pjsua_call_aud_stream_modify_codec_param)
+    return PJ_ENOTSUP;
+}
+
 /* Get media stream info for the specified media index. */
 PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
                                                 unsigned med_idx,
@@ -361,6 +371,11 @@ PJ_DEF(pj_status_t) pjsua_call_dial_dtmf( pjsua_call_id call_id,
  * Below are auxiliary API that we don't support (feel free to implement them
  * with the other media stack)
  */
+
+PJ_DEF(void) pjsua_conf_connect_param_default(pjsua_conf_connect_param *prm)
+{
+    UNIMPLEMENTED(pjsua_conf_connect_param_default)
+}
 
 /* Get maximum number of conference ports. */
 PJ_DEF(unsigned) pjsua_conf_get_max_ports(void)
@@ -418,6 +433,18 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 					pjsua_conf_port_id sink)
 {
     UNIMPLEMENTED(pjsua_conf_connect)
+    return PJ_ENOTSUP;
+}
+
+/*
+ * Establish unidirectional media flow from souce to sink, with signal
+ * level adjustment.
+ */
+PJ_DEF(pj_status_t) pjsua_conf_connect2( pjsua_conf_port_id source,
+					 pjsua_conf_port_id sink,
+					 const pjsua_conf_connect_param *prm)
+{
+    UNIMPLEMENTED(pjsua_conf_connect2)
     return PJ_ENOTSUP;
 }
 
@@ -597,6 +624,23 @@ PJ_DEF(pj_status_t) pjsua_get_snd_dev(int *capture_dev, int *playback_dev)
     return PJ_ENOTSUP;
 }
 
+/* Get sound dev parameters such as playback & capture device IDs and mode. */
+PJ_DEF(pj_status_t) pjsua_get_snd_dev2(pjsua_snd_dev_param *snd_param)
+{
+    UNIMPLEMENTED(pjsua_get_snd_dev2)
+    return PJ_ENOTSUP;
+}
+
+/*
+ * Select or change sound device. Application may call this function at
+ * any time to replace current sound device.
+ */
+PJ_DEF(pj_status_t) pjsua_set_snd_dev2(const pjsua_snd_dev_param *snd_param)
+{
+    UNIMPLEMENTED(pjsua_set_snd_dev2)
+    return PJ_SUCCESS;
+}
+
 /* Use null sound device. */
 PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 {
@@ -645,4 +689,35 @@ PJ_DEF(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap, void *pval)
 {
     UNIMPLEMENTED(pjsua_snd_get_setting)
     return PJ_ENOTSUP;
+}
+
+/* Create an extra sound device and register it to conference bridge. */
+PJ_DEF(pj_status_t) pjsua_ext_snd_dev_create( pjmedia_snd_port_param *param,
+					      pjsua_ext_snd_dev **p_snd)
+{
+    UNIMPLEMENTED(pjsua_ext_snd_dev_create)
+    return PJ_ENOTSUP;
+}
+
+/* Destroy an extra sound device and unregister it from conference bridge. */
+PJ_DEF(pj_status_t) pjsua_ext_snd_dev_destroy(pjsua_ext_snd_dev *snd)
+{
+    UNIMPLEMENTED(pjsua_ext_snd_dev_destroy)
+    return PJ_ENOTSUP;
+}
+
+/* Get sound port instance of an extra sound device. */
+PJ_DEF(pjmedia_snd_port*) pjsua_ext_snd_dev_get_snd_port(
+					    pjsua_ext_snd_dev *snd)
+{
+    UNIMPLEMENTED(pjsua_ext_snd_dev_get_snd_port)
+    return NULL;
+}
+
+/* Get conference port ID of an extra sound device. */
+PJ_DEF(pjsua_conf_port_id) pjsua_ext_snd_dev_get_conf_port(
+					    pjsua_ext_snd_dev *snd)
+{
+    UNIMPLEMENTED(pjsua_ext_snd_dev_get_conf_port)
+    return PJSUA_INVALID_ID;
 }
