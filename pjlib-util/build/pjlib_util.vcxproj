@@ -750,7 +750,6 @@
     <ClCompile Include="..\src\pjlib-util\stun_simple.c" />
     <ClCompile Include="..\src\pjlib-util\stun_simple_client.c" />
     <ClCompile Include="..\src\pjlib-util\symbols.c" />
-    <ClCompile Include="..\src\pjlib-util\upnp.c" />
     <ClCompile Include="..\src\pjlib-util\xml.c" />
   </ItemGroup>
   <ItemGroup>
@@ -781,7 +780,6 @@
     <ClInclude Include="..\include\pjlib-util\string.h" />
     <ClInclude Include="..\include\pjlib-util\stun_simple.h" />
     <ClInclude Include="..\include\pjlib-util\types.h" />
-    <ClInclude Include="..\include\pjlib-util\upnp.h" />
     <ClInclude Include="..\include\pjlib-util\xml.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
