@@ -40,5 +40,8 @@
 #include <pjnath/turn_sock.h>
 #include <pjnath/types.h>
 
+/* UPnP */
+#include <pjnath/upnp.h>
+
 #endif
 

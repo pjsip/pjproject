@@ -15,8 +15,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjlib-util/upnp.h>
-#include <pjlib-util/config.h>
+#include <pjnath/upnp.h>
+#include <pjnath/config.h>
 #include <pj/addr_resolv.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
@@ -25,7 +25,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
 
 #include <upnp/upnp.h>
 #include <upnp/upnpdebug.h>
@@ -560,7 +560,6 @@ PJ_DEF(pj_status_t) pj_upnp_init(const pj_upnp_init_param *param)
     unsigned short port;
     const char *ip_address6 = NULL;
     unsigned short port6 = 0;
-    pj_status_t status;
 
     if (upnp_mgr.initialized)
     	return PJ_SUCCESS;
@@ -914,4 +913,4 @@ PJ_DEF(pj_status_t)pj_upnp_del_port_mapping(const pj_sockaddr *mapped_addr)
 #   pragma comment(lib, "libpthread")
 #endif
 
-#endif  /* PJLIB_UTIL_HAS_UPNP */
+#endif  /* PJNATH_HAS_UPNP */

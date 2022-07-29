@@ -6653,7 +6653,7 @@ UpnpInit2(NULL, 0);
 _ACEOF
 if ac_fn_c_try_link "$LINENO"
 then :
-   CFLAGS="$CFLAGS -DPJLIB_UTIL_HAS_UPNP=1 $UPNP_CFLAGS"
+   CFLAGS="$CFLAGS -DPJNATH_HAS_UPNP=1 $UPNP_CFLAGS"
 		  		   LDFLAGS="$LDFLAGS $UPNP_LDFLAGS $UPNP_LIBS"
 		  		   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: yes" >&5
 printf "%s\n" "yes" >&6; }

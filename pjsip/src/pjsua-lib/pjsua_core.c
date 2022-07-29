@@ -994,7 +994,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 }
 
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
 /* UPnP callback. */
 static void upnp_cb(pj_status_t status)
 {
@@ -1202,7 +1202,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	goto on_error;
     }
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
     /* Initialize UPnP if enabled */
     if (pjsua_var.ua_cfg.enable_upnp) {
     	pj_upnp_init_param param;
@@ -2085,7 +2085,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	}
     }
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
     /* Deinitialize UPnP */
     if (pjsua_var.ua_cfg.enable_upnp) {
         pj_upnp_deinit();
@@ -2444,7 +2444,7 @@ static pj_status_t create_sip_udp_sock(int af,
 	}
     }
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
     else if (pjsua_var.ua_cfg.enable_upnp &&
     	     pjsua_var.upnp_status == PJ_SUCCESS)
     {
@@ -2961,7 +2961,7 @@ PJ_DEF(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
      */
     switch (tp_type) {
 	case PJSIP_TRANSPORT_UDP:
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
     	    if (pjsua_var.ua_cfg.enable_upnp &&
     	        pjsua_var.upnp_status == PJ_SUCCESS)
             {

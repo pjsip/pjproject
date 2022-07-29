@@ -542,7 +542,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    break;
 #endif
 
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
 	} else if ((!use_ipv6 || use_nat64) &&
 	           pjsua_media_acc_is_using_upnp(call_med->call->acc_id) &&
 	    	   pjsua_var.upnp_status == PJ_SUCCESS)
@@ -3264,7 +3264,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	pjsua_call_media *call_med = &call->media[mi];
 
         if (call_med->use_upnp) {
-#if defined(PJLIB_UTIL_HAS_UPNP) && (PJLIB_UTIL_HAS_UPNP != 0)
+#if defined(PJNATH_HAS_UPNP) && (PJNATH_HAS_UPNP != 0)
             pj_upnp_del_port_mapping(&call_med->mapped_addr[0]);
             pj_upnp_del_port_mapping(&call_med->mapped_addr[1]);
 #endif
