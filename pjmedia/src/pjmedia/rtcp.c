@@ -680,8 +680,8 @@ static void parse_rtcp_report( pjmedia_rtcp_session *sess,
 
 end_rtt_calc:
 
-    pj_gettimeofday(&sess->stat.tx.update);
-    sess->stat.tx.update_cnt++;
+    pj_gettimeofday(&sess->stat.rx.update);
+    sess->stat.rx.update_cnt++;
 }
 
 
@@ -1035,8 +1035,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     }
     
     /* Update counter */
-    pj_gettimeofday(&sess->stat.rx.update);
-    sess->stat.rx.update_cnt++;
+    pj_gettimeofday(&sess->stat.tx.update);
+    sess->stat.tx.update_cnt++;
 }
 
 
