@@ -29,8 +29,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJLIB_UTIL_UPNP Simple UPnP Client
- * @ingroup PJ_PROTOCOLS
+ * @defgroup PJNATH_UPNP Simple UPnP Client
  * @brief A simple UPnP client implementation.
  * @{
  *

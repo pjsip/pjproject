@@ -92,9 +92,6 @@
     <ClCompile Include="..\src\pjlib-util\xml.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\pjlib-util\upnp.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\pjlib-util\base64.h">
@@ -179,9 +176,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\include\pjlib-util\xml.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\pjlib-util\upnp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
